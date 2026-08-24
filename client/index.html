@@ -68,6 +68,17 @@
       .mm-row { padding: 5px 8px; border-bottom: 1px solid var(--line); font-size: 16px; }
       .mm-row .w { color: var(--good); } .mm-row .l { color: var(--home); } .mm-row .d { color: var(--warn); }
       .muted { color: #8aa; font-size: 15px; padding: 6px 2px; }
+      /* retro pixel loading spinner: four blocks chase clockwise around the corners */
+      .pixel-loader { display: flex; align-items: center; gap: 12px; padding: 12px 4px; }
+      .pixel-spinner { position: relative; width: 18px; height: 18px; flex: none; }
+      .pixel-spinner i { position: absolute; width: 8px; height: 8px; background: var(--cyan);
+        box-shadow: 1px 1px 0 rgba(0,0,0,0.6); opacity: 0.2; animation: pixspin 0.8s steps(1) infinite; }
+      .pixel-spinner i:nth-child(1) { top: 0; left: 0; animation-delay: 0s; }
+      .pixel-spinner i:nth-child(2) { top: 0; right: 0; animation-delay: 0.2s; }
+      .pixel-spinner i:nth-child(3) { bottom: 0; right: 0; animation-delay: 0.4s; }
+      .pixel-spinner i:nth-child(4) { bottom: 0; left: 0; animation-delay: 0.6s; }
+      @keyframes pixspin { 0% { opacity: 1; } 25%, 100% { opacity: 0.2; } }
+      .pixel-loader .txt { font-family: var(--display); font-size: 9px; color: var(--cyan); letter-spacing: 1px; }
       /* league table */
       #league-table { overflow-x: auto; margin-bottom: 6px; }
       table.league { width: 100%; border-collapse: collapse; font-size: 16px; }
