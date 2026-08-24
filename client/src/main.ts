@@ -25,6 +25,15 @@ const SLOT_ROLES: Record<Formation, string[]> = {
 
 const $ = (id: string) => document.getElementById(id)!;
 
+// Brief retro toast near top-centre; the CSS animation fades it out after ~2s.
+function toast(msg: string) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.classList.remove('show');
+  void el.offsetWidth; // restart the animation if a toast is already showing
+  el.classList.add('show');
+}
+
 function statColor(v: number): string {
   if (v >= 17) return '#3ad07a';
   if (v >= 14) return '#7bd88f';
@@ -240,7 +249,7 @@ class Game {
       playerIds: this.draftLineup.playerIds,
       tactics: { ...this.draftTactics },
     };
-    try { const r = await api.setStandingOrders(so); this.standingOrders = r.standingOrders; await this.showHub(); }
+    try { const r = await api.setStandingOrders(so); this.standingOrders = r.standingOrders; toast('Team saved ✓'); await this.showHub(); }
     catch { $('lineup-insight').innerHTML = '<span style="color:var(--home)">Could not save — check your XI.</span>'; }
   }
 
