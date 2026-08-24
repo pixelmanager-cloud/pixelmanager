@@ -327,7 +327,39 @@ class Game {
   private async onFullTime() {
     this.running = false;
     try { this.setMe(await api.me()); } catch { /* keep old rating */ }
-    setTimeout(() => this.showHub(), 1600);
+    this.showFullTimeCard();
+  }
+
+  // Arcade full-time overlay: final score, possession % and total shots (goal + shot_*)
+  // per side, then returns to the hub on tap or after a short auto-dismiss.
+  private showFullTimeCard() {
+    const s = this.engine!.state;
+    const tot = s.possession[0] + s.possession[1] || 1;
+    const hp = Math.round((s.possession[0] / tot) * 100);
+    const shots: [number, number] = [0, 0];
+    for (const e of s.events) if (e.type === 'goal' || e.type.startsWith('shot_')) shots[e.teamIdx]++;
+
+    $('ft-home-name').textContent = this.club.shortName;
+    $('ft-away-name').textContent = this.awayHandle;
+    $('ft-score').textContent = `${s.score[0]} - ${s.score[1]}`;
+    $('ft-home-poss').textContent = `${hp}%`;
+    $('ft-away-poss').textContent = `${100 - hp}%`;
+    $('ft-home-shots').textContent = `${shots[0]}`;
+    $('ft-away-shots').textContent = `${shots[1]}`;
+
+    const card = $('fulltime-card');
+    card.classList.remove('hidden');
+    let dismissed = false;
+    const dismiss = () => {
+      if (dismissed) return;
+      dismissed = true;
+      clearTimeout(timer);
+      card.removeEventListener('click', dismiss);
+      card.classList.add('hidden');
+      this.showHub();
+    };
+    const timer = setTimeout(dismiss, 4500);
+    card.addEventListener('click', dismiss);
   }
 
   onFrame(dMs: number) {
