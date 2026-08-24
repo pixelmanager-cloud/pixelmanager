@@ -98,6 +98,8 @@
       table.squad { width: 100%; border-collapse: collapse; font-size: 16px; }
       table.squad th, table.squad td { padding: 4px 5px; text-align: center; border-bottom: 1px solid var(--line); }
       table.squad th { font-family: var(--display); font-size: 8px; color: var(--cyan); font-weight: normal; position: sticky; top: 0; background: var(--panel); padding: 7px 4px; }
+      table.squad th.sortable { cursor: pointer; user-select: none; }
+      table.squad th.sortable:hover { color: #fff; }
       table.squad td.name { text-align: left; white-space: nowrap; }
       table.squad td.pos { font-family: var(--display); font-size: 8px; color: #0a0a16; }
       table.squad td.stat { color: #0a0a16; font-weight: bold; }
