@@ -84,6 +84,8 @@
       table.squad tr.inxi td.name { color: var(--good); font-weight: bold; }
       table.squad td.inxi-mark { color: var(--good); font-weight: bold; }
       #lineup .actions { display: flex; gap: 8px; margin-top: 14px; }
+      #subs-indicator { font-family: var(--display); font-size: 9px; color: var(--warn); margin-bottom: 10px; letter-spacing: 1px; }
+      #subs-indicator.warn { color: var(--home); }
       .insight { font-size: 16px; color: var(--cyan); margin: 8px 0; line-height: 1.5; }
       /* scouting report */
       #scout { border: 2px solid var(--warn); background: #241a06; padding: 10px 12px; margin-bottom: 14px; box-shadow: 3px 3px 0 rgba(0,0,0,0.4); }
@@ -130,6 +132,7 @@
       <!-- LINEUP EDITOR -->
       <div id="lineup" class="panel hidden">
         <h3 id="lineup-title">SET YOUR LINEUP</h3>
+        <div id="subs-indicator" class="hidden"></div>
         <div id="scout">
           <div class="scout-head">🔍 SCOUTING REPORT</div>
           <div id="scout-summary"></div>
