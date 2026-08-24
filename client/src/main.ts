@@ -346,7 +346,14 @@ class Game {
 
   private syncMatchHud() {
     const s = this.engine!.state;
-    $('score').textContent = `${s.score[0]} - ${s.score[1]}`;
+    const scoreText = `${s.score[0]} - ${s.score[1]}`;
+    const scoreEl = $('score');
+    if (scoreEl.textContent !== scoreText) {
+      scoreEl.textContent = scoreText;
+      scoreEl.classList.remove('pulse');
+      void scoreEl.offsetWidth; // restart the CSS animation
+      scoreEl.classList.add('pulse');
+    }
     const m = Math.floor(s.clockSec / 60), sec = Math.floor(s.clockSec % 60);
     $('clock').textContent = `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
     const tot = s.possession[0] + s.possession[1] || 1;
