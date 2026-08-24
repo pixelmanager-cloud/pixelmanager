@@ -28,6 +28,7 @@ async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
 }
 
 export interface Account { id: string; handle: string; rating: number }
+export interface TableRow { id: string; handle: string; rating: number; P: number; W: number; D: number; L: number; GF: number; GA: number; GD: number; Pts: number }
 export interface StandingOrders { formation: Lineup['formation']; playerIds: string[]; tactics: Tactics }
 export interface MatchPayload {
   matchId: string; seed: number; result: [number, number];
@@ -44,5 +45,6 @@ export const api = {
   opponents: () => req<{ opponents: Array<{ id: string; handle: string; rating: number; clubName: string }> }>('/opponents'),
   createMatch: (opponentId: string) => req<MatchPayload>('/matches', { method: 'POST', body: JSON.stringify({ opponentId }) }),
   leaderboard: () => req<{ leaderboard: Array<{ id: string; handle: string; rating: number }> }>('/leaderboard'),
+  table: () => req<{ table: TableRow[] }>('/table'),
   myMatches: () => req<{ matches: Array<{ id: string; home_id: string; away_id: string; home_score: number; away_score: number; created_at: number }> }>('/me/matches'),
 };

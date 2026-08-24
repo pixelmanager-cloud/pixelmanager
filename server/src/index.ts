@@ -3,7 +3,7 @@ import cors from '@fastify/cors';
 import { randomUUID } from 'node:crypto';
 import type { Lineup, Tactics } from '@fm/shared';
 import { db, type Account, type StandingOrders } from './db.js';
-import { makeClub, validateLineup, runMatch, elo, FORMATIONS } from './game.js';
+import { makeClub, validateLineup, runMatch, elo, buildTable, FORMATIONS } from './game.js';
 
 const app = Fastify({ logger: false });
 await app.register(cors, { origin: true });
@@ -97,6 +97,10 @@ app.get('/matches/:id', async (req, reply) => {
 
 app.get('/me/matches', { preHandler: requireAuth }, async (req) => ({ matches: await db.matchesFor(req.account!.id) }));
 app.get('/leaderboard', async () => ({ leaderboard: await db.leaderboard() }));
+app.get('/table', async () => {
+  const [accounts, results] = await Promise.all([db.allAccounts(), db.allResults()]);
+  return { table: buildTable(accounts, results) };
+});
 
 const port = Number(process.env.PORT ?? 8787);
 await db.init();

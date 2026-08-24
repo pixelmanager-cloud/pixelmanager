@@ -68,6 +68,16 @@
       .mm-row { padding: 5px 8px; border-bottom: 1px solid var(--line); font-size: 16px; }
       .mm-row .w { color: var(--good); } .mm-row .l { color: var(--home); } .mm-row .d { color: var(--warn); }
       .muted { color: #8aa; font-size: 15px; padding: 6px 2px; }
+      /* league table */
+      #league-table { overflow-x: auto; margin-bottom: 6px; }
+      table.league { width: 100%; border-collapse: collapse; font-size: 16px; }
+      table.league th, table.league td { padding: 5px 6px; text-align: center; border-bottom: 1px solid var(--line); white-space: nowrap; }
+      table.league th { font-family: var(--display); font-size: 8px; color: var(--cyan); font-weight: normal; }
+      table.league td.club { text-align: left; }
+      table.league td.pos { font-family: var(--display); font-size: 10px; color: var(--pink); }
+      table.league td.pts { font-family: var(--display); font-size: 11px; color: var(--good); }
+      table.league tr.me td { color: var(--good); }
+      table.league tr.me td.club { font-weight: bold; }
 
       /* lineup editor */
       #lineup .tacrow { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
@@ -141,12 +151,12 @@
       <!-- HUB -->
       <div id="hub" class="panel hidden">
         <div id="hub-head"><span id="me-name"></span><span id="me-rating"></span><button id="set-team">⚙ Set My Team</button></div>
-        <h3>OPPONENTS</h3>
+        <h3>LEAGUE TABLE</h3>
+        <div id="league-table"></div>
+        <h3>PLAY A MATCH</h3>
         <div id="opponents"></div>
-        <div id="hub-cols">
-          <div><h3>LEADERBOARD</h3><div id="leaderboard"></div></div>
-          <div><h3>RECENT MATCHES</h3><div id="my-matches"></div></div>
-        </div>
+        <h3>YOUR RECENT MATCHES</h3>
+        <div id="my-matches"></div>
       </div>
 
       <!-- LINEUP EDITOR (my standing orders) -->

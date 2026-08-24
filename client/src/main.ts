@@ -4,7 +4,7 @@ import {
   TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player,
 } from '@fm/shared';
 import { SCALE, makeBallTexture, makePitchTexture, makePlayerTexture } from './pixelart';
-import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload } from './api';
+import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow } from './api';
 
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
 
@@ -137,16 +137,15 @@ class Game {
     this.showScreen('hub');
     $('me-name').textContent = this.club.name;
     $('me-rating').textContent = `RATING ${this.account.rating}`;
-    $('opponents').innerHTML = '<div class="muted">Loading…</div>';
+    $('league-table').innerHTML = '<div class="muted">Loading…</div>';
     try {
-      const [opps, lb, mine] = await Promise.all([api.opponents(), api.leaderboard(), api.myMatches()]);
+      const [opps, tbl, mine] = await Promise.all([api.opponents(), api.table(), api.myMatches()]);
+      $('league-table').innerHTML = this.renderLeagueTable(tbl.table);
       $('opponents').innerHTML = opps.opponents.length
         ? opps.opponents.map((o) => `<div class="fixture"><span class="opp"><b>${o.clubName}</b> <span class="meta">${o.handle} · rating ${o.rating}</span></span><button data-opp="${o.id}" data-h="${o.handle}">Play ▶</button></div>`).join('')
         : '<div class="muted">No opponents yet — register another handle in a second browser/incognito window to play against.</div>';
       Array.from($('opponents').querySelectorAll('button[data-opp]')).forEach((b) =>
         b.addEventListener('click', () => this.play((b as HTMLElement).dataset.opp!, (b as HTMLElement).dataset.h!)));
-      $('leaderboard').innerHTML = lb.leaderboard.map((r, i) =>
-        `<div class="lb-row ${r.id === this.account.id ? 'me' : ''}"><span>${i + 1}. ${r.handle}</span><span class="r">${r.rating}</span></div>`).join('');
       $('my-matches').innerHTML = mine.matches.length
         ? mine.matches.map((m) => {
             const iAmHome = m.home_id === this.account.id;
@@ -158,6 +157,15 @@ class Game {
     } catch {
       $('opponents').innerHTML = '<div class="muted">Could not load — is the server running?</div>';
     }
+  }
+
+  private renderLeagueTable(rows: TableRow[]): string {
+    const head = '<tr><th>#</th><th style="text-align:left">Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th>Rtg</th></tr>';
+    const body = rows.map((r, i) => {
+      const gd = r.GD > 0 ? `+${r.GD}` : `${r.GD}`;
+      return `<tr class="${r.id === this.account.id ? 'me' : ''}"><td class="pos">${i + 1}</td><td class="club">${r.handle}</td><td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GF}</td><td>${r.GA}</td><td>${gd}</td><td class="pts">${r.Pts}</td><td>${r.rating}</td></tr>`;
+    }).join('');
+    return `<table class="league">${head}${body}</table>`;
   }
 
   // ---- lineup editor (my standing orders) ----

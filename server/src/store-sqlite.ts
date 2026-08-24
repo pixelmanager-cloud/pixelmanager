@@ -81,5 +81,7 @@ export function makeSqliteStore(file: string): Store {
         'SELECT id, home_id, away_id, home_score, away_score, created_at FROM matches WHERE home_id=? OR away_id=? ORDER BY created_at DESC LIMIT ?',
       ).all(accountId, accountId, limit) as MatchRow[];
     },
+    async allAccounts() { return db.prepare('SELECT id, handle, rating FROM accounts').all() as LeaderRow[]; },
+    async allResults() { return db.prepare('SELECT home_id, away_id, home_score, away_score FROM matches').all() as any[]; },
   };
 }

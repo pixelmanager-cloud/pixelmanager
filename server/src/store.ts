@@ -28,4 +28,6 @@ export interface Store {
   saveMatch(m: StoredMatch): Promise<void>;
   getMatch(id: string): Promise<StoredMatch | undefined>;
   matchesFor(accountId: string, limit?: number): Promise<MatchRow[]>;
+  allAccounts(): Promise<LeaderRow[]>;
+  allResults(): Promise<Array<{ home_id: string; away_id: string; home_score: number; away_score: number }>>;
 }
