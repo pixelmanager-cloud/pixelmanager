@@ -153,7 +153,7 @@ class Game {
             const iAmHome = m.home_id === this.account.id;
             const my = iAmHome ? m.home_score : m.away_score, opp = iAmHome ? m.away_score : m.home_score;
             const cls = my > opp ? 'w' : my < opp ? 'l' : 'd';
-            return `<div class="mm-row"><span class="${cls}">${cls.toUpperCase()}</span> ${my} - ${opp}</div>`;
+            return `<div class="mm-row"><span class="pill ${cls}">${cls.toUpperCase()}</span> <span>${my} - ${opp}</span></div>`;
           }).join('')
         : '<div class="muted">No matches yet.</div>';
     } catch {

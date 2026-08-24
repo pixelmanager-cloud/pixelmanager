@@ -65,8 +65,12 @@
       .lb-row { display: flex; justify-content: space-between; padding: 5px 8px; border-bottom: 1px solid var(--line); font-size: 17px; }
       .lb-row .r { font-family: var(--display); font-size: 11px; color: var(--warn); }
       .lb-row.me { color: var(--good); }
-      .mm-row { padding: 5px 8px; border-bottom: 1px solid var(--line); font-size: 16px; }
-      .mm-row .w { color: var(--good); } .mm-row .l { color: var(--home); } .mm-row .d { color: var(--warn); }
+      .mm-row { display: flex; align-items: center; gap: 10px; padding: 5px 8px; border-bottom: 1px solid var(--line); font-size: 16px; }
+      .mm-row .pill { font-family: var(--display); font-size: 9px; line-height: 1; padding: 4px 6px; border: 2px solid; border-radius: 6px;
+        background: rgba(0,0,0,0.35); text-shadow: 1px 1px 0 rgba(0,0,0,0.6); }
+      .mm-row .pill.w { color: var(--good); border-color: var(--good); }
+      .mm-row .pill.l { color: var(--home); border-color: var(--home); }
+      .mm-row .pill.d { color: var(--warn); border-color: var(--warn); }
       .muted { color: #8aa; font-size: 15px; padding: 6px 2px; }
       /* league table */
       #league-table { overflow-x: auto; margin-bottom: 6px; }
