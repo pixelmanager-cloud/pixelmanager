@@ -1,10 +1,25 @@
 export type Role = 'GK' | 'DF' | 'MF' | 'FW';
 
+/**
+ * Lean 8-stat model, all on a 1-20 scale (football-standard).
+ * Each stat maps to a concrete in-match mechanic the engine reads:
+ *  pace        — movement speed; springing/chasing behind a high line, recovery runs
+ *  strength    — physical & aerial duels, holding up long balls (target-man play)
+ *  passing     — pass completion, effectiveness of a patient/short tempo
+ *  shooting    — shot quality and finishing
+ *  tackling    — winning the ball; effectiveness of pressing
+ *  positioning — off-ball placement, interceptions, defensive shape
+ *  workrate    — how much ground a player covers pressing/tracking (and how fast they tire)
+ *  keeping     — shot-stopping (only meaningful for the GK)
+ */
 export interface PlayerAttrs {
-  pace: number;    // 1-99
-  pass: number;
-  shoot: number;
-  defend: number;
+  pace: number;
+  strength: number;
+  passing: number;
+  shooting: number;
+  tackling: number;
+  positioning: number;
+  workrate: number;
   keeping: number;
 }
 
@@ -13,7 +28,7 @@ export interface Player {
   name: string;
   role: Role;
   attrs: PlayerAttrs;
-  /** formation anchor in pitch coords, for the team attacking left->right */
+  /** formation anchor in pitch coords for a team attacking left->right */
   anchor: { x: number; y: number };
 }
 
@@ -21,16 +36,18 @@ export interface Team {
   id: string;
   name: string;
   shortName: string;
-  shirtColor: number;  // rgb hex
-  players: Player[];   // exactly 11, players[0] is GK
+  shirtColor: number;
+  players: Player[]; // exactly 11, players[0] is GK
 }
 
 export interface PlayerState {
   x: number;
   y: number;
+  /** current fitness 0..1; starts at 1 and drains with effort. Scales effective stats. */
+  fitness: number;
 }
 
-export type MatchEventType = 'kickoff' | 'goal' | 'shot_saved' | 'shot_missed' | 'halftime' | 'fulltime';
+export type MatchEventType = 'kickoff' | 'goal' | 'shot_saved' | 'shot_missed' | 'chance' | 'halftime' | 'fulltime';
 
 export interface MatchEvent {
   minute: number;
@@ -40,15 +57,16 @@ export interface MatchEvent {
 }
 
 export interface MatchState {
-  clockSec: number;          // 0..5400 game seconds
+  clockSec: number; // 0..5400 game seconds
   score: [number, number];
   ball: { x: number; y: number };
-  /** index of team in possession and player carrying the ball, or null when ball is loose/resetting */
   carrier: { teamIdx: 0 | 1; playerIdx: number } | null;
   players: [PlayerState[], PlayerState[]];
+  /** rolling possession tick counts per team, for a possession % readout */
+  possession: [number, number];
   events: MatchEvent[];
   finished: boolean;
 }
 
-// Pitch coordinate system used by the engine: 105 x 68 (metres), origin top-left.
+// Pitch coordinate system: 105 x 68 metres, origin top-left.
 export const PITCH = { w: 105, h: 68 } as const;

@@ -30,14 +30,39 @@ npm install
 npm run dev            # client at http://localhost:5173
 ```
 
-## Engine design notes
+## Strategy engine
+
+The core of the game. Everything is deterministic + seeded and lives in `@fm/shared`.
+
+**Player stats** — lean 8-stat model, 1-20 scale (`types.ts`): pace, strength,
+passing, shooting, tackling, positioning, workrate, keeping. Each maps to a
+concrete in-match mechanic.
+
+**Team tactics** (`tactics.ts`) — a formation plus five sliders (-2..+2):
+mentality, defensive line, pressing, tempo, width. Six presets ship (Gegenpress,
+Park the Bus, Tiki-Taka, Route One, Counter, Balanced). `deriveMods()` turns
+tactics into the numeric modifiers the engine reads.
+
+**How stats × tactics × stamina interact** (`engine.ts`):
+- Every player carries a `fitness` (1.0 → lower) that drains with effort; high
+  press / direct / attacking tactics drain faster, and low fitness scales down a
+  player's effective stats. So a high press dominates early and can fade late.
+- Pressing commits the nearest N outfielders (N grows with press intensity) to
+  close down the carrier; tackles resolve from tackling+workrate+fitness vs the
+  carrier's strength+pace.
+- A high defensive line pushes defenders up (compact, but exploitable): a direct
+  through-ball to a fast forward in behind becomes a clear-cut chance.
+- Passing weighs directness (tempo): patient favours short safe passes and
+  rewards passing/vision; direct favours forward balls and transitions.
+
+**Validated** by `shared/strategy_test.ts` (60-match batches): ~2.2 goals/match
+with realistic scorelines; stronger squads win ~77%; high press ≈77% possession
+but ends at ~0.54 fitness vs ~0.69; a high line concedes ~2× a deep line vs a
+direct attack. Run with `npx tsx strategy_test.ts` from `shared/`.
 
 - Tick-based (`TICK_SEC = 0.5` game-seconds/tick). One 90-minute match = 10800 ticks.
 - Coordinate system is real metres (105 × 68 pitch); the renderer scales by 8 px/m.
 - Team 0 attacks left→right, team 1 right→left (anchors mirrored).
-- On-ball model: tackle / shoot / pass / dribble decisions weighted by player
-  attributes (pace, pass, shoot, defend, keeping).
-- Calibrated to ~2.6 goals & ~26 shots per match (see `shared/calibrate.ts`).
 
 ## Multiplayer plan (why the split exists)
 
@@ -49,8 +74,10 @@ rendering. No per-frame netcode needed for spectating a simulated match.
 ## Roadmap
 
 1. **[done]** Walking skeleton: watchable 2D match, seeded engine, HUD + ticker.
-2. Manager layer: squad screen, formation/tactics selection feeding the engine.
-3. Season loop: league table, fixtures, results simulation.
+2. **[done]** Strategy engine: 8-stat players, team tactics (formation + 5 sliders +
+   presets) with stamina, wired to a live tactics panel in the client.
+3. Squad screen: view players and their stat ratings; per-player roles later.
+4. Season loop: league table, fixtures, results simulation.
 4. Transfer engine: player valuations, offers, budgets.
 5. Server-authoritative matches + accounts + persistence.
 6. (optional) web3: on-chain club/player ownership via viem; deploy target could

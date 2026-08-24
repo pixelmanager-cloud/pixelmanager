@@ -1,39 +1,34 @@
 import type { Player, PlayerAttrs, Role, Team } from './types.js';
 import { PITCH } from './types.js';
 import { makeRng } from './rng.js';
+import { FORMATIONS, type Formation } from './formations.js';
 
 const FIRST = ['Jan', 'Marco', 'Luis', 'Kofi', 'Sven', 'Timo', 'Ade', 'Ivan', 'Paulo', 'Ryo', 'Emil', 'Noah', 'Idris', 'Beto', 'Cato', 'Dario', 'Enzo', 'Felix'];
 const LAST = ['Berg', 'Silva', 'Okafor', 'Larsen', 'Costa', 'Novak', 'Tanaka', 'Mensah', 'Weber', 'Rossi', 'Dubois', 'Kovac', 'Moreau', 'Santos', 'Vidal', 'Haas', 'Ito', 'Zeman'];
 
-// 4-4-2 anchors for a team attacking left -> right
-const FORMATION_442: Array<{ role: Role; x: number; y: number }> = [
-  { role: 'GK', x: 5, y: 34 },
-  { role: 'DF', x: 22, y: 10 },
-  { role: 'DF', x: 20, y: 26 },
-  { role: 'DF', x: 20, y: 42 },
-  { role: 'DF', x: 22, y: 58 },
-  { role: 'MF', x: 45, y: 10 },
-  { role: 'MF', x: 42, y: 26 },
-  { role: 'MF', x: 42, y: 42 },
-  { role: 'MF', x: 45, y: 58 },
-  { role: 'FW', x: 68, y: 26 },
-  { role: 'FW', x: 68, y: 42 },
-];
-
+/** Roll 8 stats on a 1-20 scale, biased by role, around a team-quality centre. */
 function rollAttrs(rng: () => number, role: Role, quality: number): PlayerAttrs {
-  const base = (bias: number) => Math.max(30, Math.min(95, Math.round(quality + bias + (rng() - 0.5) * 24)));
+  // quality is a 1-20 centre; jitter +-3, then per-stat role bias.
+  const s = (bias: number) => Math.max(1, Math.min(20, Math.round(quality + bias + (rng() - 0.5) * 6)));
   switch (role) {
-    case 'GK': return { pace: base(-15), pass: base(-10), shoot: base(-30), defend: base(-5), keeping: base(10) };
-    case 'DF': return { pace: base(-2), pass: base(-5), shoot: base(-20), defend: base(10), keeping: base(-40) };
-    case 'MF': return { pace: base(0), pass: base(8), shoot: base(-5), defend: base(0), keeping: base(-40) };
-    case 'FW': return { pace: base(5), pass: base(-2), shoot: base(10), defend: base(-15), keeping: base(-40) };
+    case 'GK': return { pace: s(-4), strength: s(-1), passing: s(-3), shooting: s(-8), tackling: s(-6), positioning: s(2), workrate: s(-2), keeping: s(6) };
+    case 'DF': return { pace: s(0), strength: s(2), passing: s(-1), shooting: s(-5), tackling: s(4), positioning: s(3), workrate: s(1), keeping: s(-10) };
+    case 'MF': return { pace: s(1), strength: s(0), passing: s(3), shooting: s(0), tackling: s(0), positioning: s(1), workrate: s(3), keeping: s(-10) };
+    case 'FW': return { pace: s(3), strength: s(1), passing: s(0), shooting: s(4), tackling: s(-4), positioning: s(2), workrate: s(0), keeping: s(-10) };
   }
 }
 
-/** Generate a squad deterministically from a seed. quality ~ team strength (55-80 typical). */
-export function generateTeam(id: string, name: string, shortName: string, shirtColor: number, quality: number, seed: number): Team {
+/**
+ * Generate a squad deterministically from a seed, laid out in a formation.
+ * quality ~ team strength on the 1-20 stat scale (11-15 typical).
+ */
+export function generateTeam(
+  id: string, name: string, shortName: string, shirtColor: number,
+  quality: number, seed: number, formation: Formation = '4-4-2',
+): Team {
   const rng = makeRng(seed);
-  const players: Player[] = FORMATION_442.map((slot, i) => ({
+  const slots = FORMATIONS[formation];
+  const players: Player[] = slots.map((slot, i) => ({
     id: `${id}-${i}`,
     name: `${FIRST[Math.floor(rng() * FIRST.length)]} ${LAST[Math.floor(rng() * LAST.length)]}`,
     role: slot.role,
@@ -41,6 +36,18 @@ export function generateTeam(id: string, name: string, shortName: string, shirtC
     anchor: { x: slot.x, y: slot.y },
   }));
   return { id, name, shortName, shirtColor, players };
+}
+
+/** Overall rating 1-20: weighted average of the stats that matter for the role. */
+export function overall(p: Player): number {
+  const a = p.attrs;
+  const avg = (...xs: number[]) => xs.reduce((s, x) => s + x, 0) / xs.length;
+  switch (p.role) {
+    case 'GK': return Math.round(avg(a.keeping, a.keeping, a.positioning, a.strength));
+    case 'DF': return Math.round(avg(a.tackling, a.positioning, a.strength, a.pace, a.passing));
+    case 'MF': return Math.round(avg(a.passing, a.workrate, a.tackling, a.positioning, a.pace));
+    case 'FW': return Math.round(avg(a.shooting, a.pace, a.strength, a.positioning, a.passing));
+  }
 }
 
 /** Mirror an anchor for the team defending the right goal (attacking right -> left). */

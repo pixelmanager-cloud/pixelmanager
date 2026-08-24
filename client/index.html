@@ -5,13 +5,27 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pixel Manager</title>
     <style>
-      html, body { margin: 0; height: 100%; background: #10141c; color: #e8e8e8; font-family: 'Courier New', monospace; }
+      :root { --bg:#10141c; --panel:#0b0e14; --line:#223047; --accent:#3d5a80; --text:#e8e8e8; --home:#d23b3b; --away:#3b6bd2; }
+      html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: 'Courier New', monospace; }
       #app { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px; }
-      #hud { display: flex; gap: 16px; align-items: center; font-size: 18px; }
+      #hud { display: flex; gap: 14px; align-items: center; font-size: 18px; flex-wrap: wrap; justify-content: center; }
       #hud .score { font-size: 26px; font-weight: bold; letter-spacing: 2px; }
-      button { background: #223047; color: #e8e8e8; border: 2px solid #3d5a80; font-family: inherit; font-size: 14px; padding: 4px 12px; cursor: pointer; }
-      button.active { background: #3d5a80; }
-      #ticker { width: 840px; max-width: 95vw; height: 72px; overflow-y: auto; background: #0b0e14; border: 2px solid #223047; padding: 6px 10px; font-size: 13px; line-height: 1.5; }
+      button, select { background: #223047; color: var(--text); border: 2px solid var(--accent); font-family: inherit; font-size: 13px; padding: 4px 10px; cursor: pointer; }
+      button.active { background: var(--accent); }
+      #main { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+      #tactics { width: 240px; background: var(--panel); border: 2px solid var(--line); padding: 10px 12px; box-sizing: border-box; }
+      #tactics h3 { margin: 0 0 8px; font-size: 15px; letter-spacing: 1px; }
+      #tactics .row { display: flex; justify-content: space-between; align-items: center; margin: 6px 0; font-size: 12px; }
+      #tactics select { width: 128px; }
+      #tactics .presets { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
+      #tactics .presets button { padding: 3px 6px; font-size: 11px; }
+      #tactics .hint { font-size: 10px; color: #8aa; margin-top: 8px; line-height: 1.4; }
+      #right { display: flex; flex-direction: column; gap: 8px; }
+      #meters { display: flex; flex-direction: column; gap: 4px; font-size: 12px; width: 100%; }
+      #poss-bar { height: 14px; width: 100%; background: var(--away); border: 1px solid var(--line); position: relative; }
+      #poss-home { height: 100%; background: var(--home); width: 50%; }
+      #poss-label { display: flex; justify-content: space-between; }
+      #ticker { width: 100%; box-sizing: border-box; height: 84px; overflow-y: auto; background: var(--panel); border: 2px solid var(--line); padding: 6px 10px; font-size: 13px; line-height: 1.5; }
       canvas { image-rendering: pixelated; }
     </style>
   </head>
@@ -27,8 +41,28 @@
         <button id="spd12">12x</button>
         <button id="newmatch">New Match</button>
       </div>
-      <div id="game"></div>
-      <div id="ticker"></div>
+      <div id="main">
+        <div id="tactics">
+          <h3>YOUR TACTICS</h3>
+          <div class="row"><label>Formation</label><select id="t-formation"></select></div>
+          <div class="row"><label>Mentality</label><select id="t-mentality"></select></div>
+          <div class="row"><label>Def. line</label><select id="t-line"></select></div>
+          <div class="row"><label>Pressing</label><select id="t-press"></select></div>
+          <div class="row"><label>Tempo</label><select id="t-tempo"></select></div>
+          <div class="row"><label>Width</label><select id="t-width"></select></div>
+          <div class="presets" id="presets"></div>
+          <div class="hint">Sliders apply live. Changing formation or a preset starts a fresh match. Watch fitness fade if you press high.</div>
+        </div>
+        <div id="right">
+          <div id="game"></div>
+          <div id="meters">
+            <div id="poss-label"><span id="poss-home-l">50%</span><span>possession</span><span id="poss-away-l">50%</span></div>
+            <div id="poss-bar"><div id="poss-home"></div></div>
+            <div id="fit-label">Your squad fitness: 100%</div>
+          </div>
+          <div id="ticker"></div>
+        </div>
+      </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
