@@ -76,7 +76,9 @@ rendering. No per-frame netcode needed for spectating a simulated match.
 1. **[done]** Walking skeleton: watchable 2D match, seeded engine, HUD + ticker.
 2. **[done]** Strategy engine: 8-stat players, team tactics (formation + 5 sliders +
    presets) with stamina, wired to a live tactics panel in the client.
-3. Squad screen: view players and their stat ratings; per-player roles later.
+3. **[done]** Squad screen: persistent club, Match/Squad toggle, colour-coded
+   stat table with overall ratings and tactical insights (your squad + scout the
+   opponent). Per-player roles come later.
 4. Season loop: league table, fixtures, results simulation.
 4. Transfer engine: player valuations, offers, budgets.
 5. Server-authoritative matches + accounts + persistence.

@@ -27,6 +27,18 @@
       #poss-label { display: flex; justify-content: space-between; }
       #ticker { width: 100%; box-sizing: border-box; height: 84px; overflow-y: auto; background: var(--panel); border: 2px solid var(--line); padding: 6px 10px; font-size: 13px; line-height: 1.5; }
       canvas { image-rendering: pixelated; }
+      /* squad screen */
+      #squad { width: 840px; max-width: 96vw; background: var(--panel); border: 2px solid var(--line); padding: 12px 14px; box-sizing: border-box; }
+      #squad-head { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+      #sq-team { font-size: 16px; letter-spacing: 1px; margin-left: auto; }
+      #sq-insights { font-size: 12px; color: #9cf; line-height: 1.6; margin-bottom: 10px; min-height: 34px; }
+      table.squad { width: 100%; border-collapse: collapse; font-size: 12px; }
+      table.squad th, table.squad td { padding: 4px 5px; text-align: center; border-bottom: 1px solid var(--line); }
+      table.squad th { color: #8aa; font-weight: normal; letter-spacing: 1px; }
+      table.squad td.name { text-align: left; white-space: nowrap; }
+      table.squad td.pos { font-weight: bold; }
+      table.squad td.stat { color: #0b0e14; font-weight: bold; border-radius: 2px; }
+      table.squad tr.gk td.pos { color: #d4a017; }
     </style>
   </head>
   <body>
@@ -40,6 +52,17 @@
         <button id="spd4">4x</button>
         <button id="spd12">12x</button>
         <button id="newmatch">New Match</button>
+        <button id="view-match" class="active">Match</button>
+        <button id="view-squad">Squad</button>
+      </div>
+      <div id="squad" style="display:none">
+        <div id="squad-head">
+          <button id="sq-home" class="active">Your Squad</button>
+          <button id="sq-away">Opponent</button>
+          <span id="sq-team"></span>
+        </div>
+        <div id="sq-insights"></div>
+        <div id="sq-table"></div>
       </div>
       <div id="main">
         <div id="tactics">
