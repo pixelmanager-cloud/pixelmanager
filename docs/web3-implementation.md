@@ -40,6 +40,39 @@ stats, fills the rest of the XI with **free base players**, and feeds that into 
 **same deterministic engine**. Match logic is unchanged — stats just come from chain
 instead of a generator. This is clean *because* the engine is pure.
 
+### Star players vs base players (decided)
+
+- **Star players = NFTs.** ERC-721, on-chain, owned, tradeable, upgradeable. The *only*
+  players that are NFTs.
+- **Base players = off-chain fillers.** Server-generated, **low stats**, **not NFTs** —
+  no ownership, no trading, no upgrades. Pure squad filler.
+- **A squad = owned star NFTs + base fillers to reach 11.** 0 stars → 11 fillers (free
+  to play, weak); N stars → best N stars + (11−N) fillers. The upgrade path is to
+  **acquire stars to replace fillers**.
+- Base players are a fixed low-stat template per position (light generated names for
+  flavour is optional); they are never persisted on-chain and never upgradeable — that
+  keeps the star NFTs the clear source of squad strength and value.
+- **Free-to-play viability rides entirely on strength/rating-based matchmaking** so
+  all-filler squads mostly face similar squads. This is load-bearing.
+
+### Stat ranges (decided) — engine 1–20 scale
+
+| Tier | Individual stats | ~Overall | Notes |
+|---|---|---|---|
+| **Base / fake players** | ~3–9 (role-biased) | **~5–7** | Off-chain filler. Weak floor, kept high enough that all-filler matches still have action. Fixed low template, **not upgradeable**. |
+| **Common star** (NFT) | ~9–15 | ~11–13 | Entry-level stars. |
+| **Rare star** | ~11–17 | ~13–16 | |
+| **Epic star** | ~14–19 | ~16–18 | |
+| **Legendary star** | ~16–20 | **~18–20** | Elite; standout stats at the ceiling. |
+
+- Gap: filler (~6) → common star (~12) is ~6 points; → legendary (~19) is ~13 points —
+  stars are clearly powerful and aspirational, while f2p stays watchable.
+- **On-chain upgrades** (PlayerUpgrades) can raise a star's stats, **capped at 20** — a
+  common can be improved, but a legendary starts far ahead.
+- The star range gives **rarity tiers** for collectibility, pricing, and the secondary
+  market; NFT appeal also comes from ownership, upgradeability, and winning matches →
+  rank → rewards, not the stat gap alone.
+
 ## Acquisition (decided): capped genesis sale, priced in the token
 
 - A **fixed total supply** of PlayerNFTs sold once at genesis; afterwards **secondary
