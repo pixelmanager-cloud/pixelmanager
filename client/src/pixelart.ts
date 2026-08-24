@@ -59,6 +59,15 @@ export function makeBallTexture(scene: Phaser.Scene) {
   g.destroy();
 }
 
+/** Plain white ball silhouette (no panel spot) — reused at low alpha for a subtle motion trail. */
+export function makeBallGhostTexture(scene: Phaser.Scene) {
+  if (scene.textures.exists('ball-ghost')) return;
+  const g = scene.add.graphics();
+  g.fillStyle(0xffffff).fillRect(1, 0, 2, 1).fillRect(0, 1, 4, 2).fillRect(1, 3, 2, 1);
+  g.generateTexture('ball-ghost', 4, 4);
+  g.destroy();
+}
+
 /** Pitch: mown checkerboard grass, full markings, goal nets — drawn once at metre scale. */
 export function makePitchTexture(scene: Phaser.Scene) {
   if (scene.textures.exists('pitch')) return;
