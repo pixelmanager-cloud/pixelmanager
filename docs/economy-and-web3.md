@@ -42,8 +42,31 @@ deflationary, but no player stakes money against another player.
   (deflation) and partly routed to the reward pool** — so the economy loops
   (buy → spend on sinks → burn + fund prizes → paid to winners → hold/respend)
   instead of relying on new buyers to pay old winners.
-- Emission/treasury schedule: **TBD — must be modelled before mainnet.** Deflation is
-  good only until players can't afford to play; keep faucets and sinks balanced.
+
+**What gives the token durable value (not just buy pressure):**
+1. **Recurring consumptive utility is the primary anchor.** Prioritise sinks players
+   spend on *repeatedly* (contract/energy refills, seasonal passes, consumables,
+   cosmetic drops, higher-league entry) over one-time permanent upgrades. Recurring
+   consumption = steady, gameplay-driven demand.
+2. **Emissions ≤ sinks + buybacks — the make-or-break rule.** Prizes are a faucet; if
+   more is emitted than burned/absorbed, the token hyperinflates and rewards become
+   worthless (the play-to-earn death spiral). **Model the flows; keep total prize
+   emission below total absorption over time.** Fund prizes from treasury + recycled
+   sink revenue, never from unbounded printing.
+3. **Buyback-and-burn from *diversified* revenue.** Route protocol revenue into buying
+   the token off-market and burning it — but source it from **primary NFT sales +
+   secondary royalties + cosmetic/consumable/premium-feature sales + sponsorships**, not
+   secondary NFT trading fees alone (volatile, royalties often unenforced).
+4. **Token-gated prestige** (soft demand): exclusive cosmetics / limited NFTs buyable
+   *only* with the token (and burned on purchase); stake-for-**access** to higher leagues
+   — never stake-for-yield (that's a ponzi faucet).
+5. **Fun-first.** The game must be fun *without* the earning. If players only play to
+   extract, they leave when rewards dip and no buyback saves it. The token amplifies a
+   fun game; it cannot manufacture one. (This is why the off-chain loop is proven fun
+   first.)
+
+- Emission/treasury schedule: **TBD — must be modelled before mainnet**, keeping faucets
+  (prizes) below sinks (utility burns + buybacks).
 
 **Honest framing:** even in this model, in aggregate players spend more than the pool
 pays out (the burn is a net drain). This is entertainment + skill competition, **not
