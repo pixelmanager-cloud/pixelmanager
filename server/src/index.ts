@@ -20,7 +20,7 @@ async function requireAuth(req: any, reply: any) {
 
 const isFormation = (f: unknown): f is Lineup['formation'] => typeof f === 'string' && (FORMATIONS as string[]).includes(f);
 
-app.get('/health', async () => ({ ok: true, service: 'fm-server' }));
+app.get('/health', async () => ({ ok: true, service: 'fm-server', storage: process.env.DATABASE_URL ? 'postgres' : 'sqlite-ephemeral' }));
 
 app.post('/register', async (req, reply) => {
   const handle = String((req.body as any)?.handle ?? '').trim();

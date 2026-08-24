@@ -75,6 +75,8 @@ class Game {
   standingOrders!: StandingOrders;
   draftLineup!: Lineup;
   draftTactics!: Tactics;
+  editorMode: 'standing' | 'match' = 'standing';
+  pendingOpp?: { id: string; handle: string };
   awayHandle = '';
 
   async boot() {
@@ -103,9 +105,9 @@ class Game {
     $('register-btn').addEventListener('click', () => this.doRegister());
     $('handle-input').addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Enter') this.doRegister(); });
     $('logout').addEventListener('click', () => { clearToken(); this.showScreen('login'); });
-    $('set-team').addEventListener('click', () => this.openLineup());
+    $('set-team').addEventListener('click', () => this.openLineup('standing'));
     $('autopick').addEventListener('click', () => { this.draftLineup = autoPickXI(this.club, this.draftTactics.formation); this.renderLineupEditor(); });
-    $('save-team').addEventListener('click', () => this.saveTeam());
+    $('save-team').addEventListener('click', () => (this.editorMode === 'standing' ? this.saveTeam() : this.kickOffMatch()));
     $('lineup-back').addEventListener('click', () => this.showHub());
     $('toggle-squad').addEventListener('click', () => {
       const panel = $('squad-panel');
@@ -169,9 +171,15 @@ class Game {
   }
 
   // ---- lineup editor (my standing orders) ----
-  private openLineup() {
+  // Opens the pixel lineup editor either to save your standing orders, or to set a
+  // one-off lineup + tactics for a specific match (prefilled from your standing orders).
+  private openLineup(mode: 'standing' | 'match', opp?: { id: string; handle: string }) {
+    this.editorMode = mode;
+    this.pendingOpp = opp;
     this.draftTactics = { ...this.standingOrders.tactics, formation: this.standingOrders.formation };
     this.draftLineup = { formation: this.standingOrders.formation, playerIds: [...this.standingOrders.playerIds] };
+    $('lineup-title').textContent = mode === 'standing' ? 'SET MY TEAM' : `SET LINEUP  vs ${opp!.handle}`;
+    ($('save-team') as HTMLButtonElement).textContent = mode === 'standing' ? 'Save Team' : '▶ Kick Off';
     this.renderLineupEditor();
     this.showScreen('lineup');
   }
@@ -237,10 +245,18 @@ class Game {
   }
 
   // ---- match ----
-  private async play(opponentId: string, handle: string) {
-    $('opponents').innerHTML = '<div class="muted">Playing…</div>';
-    try { this.startMatch(await api.createMatch(opponentId), handle); }
-    catch { await this.showHub(); }
+  // "Play" opens the lineup editor so you set a lineup + tactics for THIS match.
+  private play(opponentId: string, handle: string) {
+    this.openLineup('match', { id: opponentId, handle });
+  }
+
+  private async kickOffMatch() {
+    if (!this.pendingOpp) return;
+    $('lineup-insight').innerHTML = '<span style="color:var(--cyan)">Playing…</span>';
+    try {
+      const payload = await api.createMatch(this.pendingOpp.id, this.draftLineup, this.draftTactics);
+      this.startMatch(payload, this.pendingOpp.handle);
+    } catch { await this.showHub(); }
   }
 
   private startMatch(payload: MatchPayload, awayHandle: string) {

@@ -43,7 +43,8 @@ export const api = {
   setStandingOrders: (so: StandingOrders) => req<{ ok: true; standingOrders: StandingOrders }>(
     '/standing-orders', { method: 'PUT', body: JSON.stringify(so) }),
   opponents: () => req<{ opponents: Array<{ id: string; handle: string; rating: number; clubName: string }> }>('/opponents'),
-  createMatch: (opponentId: string) => req<MatchPayload>('/matches', { method: 'POST', body: JSON.stringify({ opponentId }) }),
+  createMatch: (opponentId: string, myLineup?: Lineup, myTactics?: Tactics) =>
+    req<MatchPayload>('/matches', { method: 'POST', body: JSON.stringify({ opponentId, myLineup, myTactics }) }),
   leaderboard: () => req<{ leaderboard: Array<{ id: string; handle: string; rating: number }> }>('/leaderboard'),
   table: () => req<{ table: TableRow[] }>('/table'),
   myMatches: () => req<{ matches: Array<{ id: string; home_id: string; away_id: string; home_score: number; away_score: number; created_at: number }> }>('/me/matches'),
