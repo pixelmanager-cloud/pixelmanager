@@ -136,6 +136,9 @@
       #poss-bar { height: 16px; width: 100%; background: var(--away); border: 2px solid #000; }
       #poss-home { height: 100%; background: var(--home); width: 50%; }
       #poss-label { display: flex; justify-content: space-between; }
+      #fit-bar { position: relative; height: 18px; width: 100%; background: #0c0c22; border: 2px solid #000; overflow: hidden; }
+      #fit-fill { height: 100%; width: 100%; background: hsl(120, 70%, 45%); transition: width .2s linear, background-color .2s linear; }
+      #fit-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; text-shadow: 1px 1px 0 #000, -1px 1px 0 #000; }
       #ticker { width: 840px; max-width: 96vw; height: 84px; overflow-y: auto; background: #0c0c22; border: 2px solid var(--line); padding: 6px 10px; font-size: 17px; line-height: 1.45; }
       canvas { image-rendering: pixelated; }
     </style>
@@ -202,7 +205,7 @@
         <div id="meters">
           <div id="poss-label"><span id="poss-home-l">50%</span><span>possession</span><span id="poss-away-l">50%</span></div>
           <div id="poss-bar"><div id="poss-home"></div></div>
-          <div id="fit-label">Your squad fitness: 100%</div>
+          <div id="fit-bar"><div id="fit-fill"></div><span id="fit-label">Your squad fitness: 100%</span></div>
         </div>
         <div id="ticker"></div>
       </div>

@@ -309,7 +309,12 @@ class Game {
     $('poss-home-l').textContent = `${hp}%`;
     $('poss-away-l').textContent = `${100 - hp}%`;
     const fitAvg = s.players[0].slice(1).reduce((a, p) => a + p.fitness, 0) / 10;
-    $('fit-label').textContent = `Your squad fitness: ${Math.round(fitAvg * 100)}%`;
+    const fitPct = Math.round(fitAvg * 100);
+    const fill = $('fit-fill') as HTMLElement;
+    fill.style.width = `${fitPct}%`;
+    // hue sweeps 0 (red) → 120 (green) with fitness, so the bar shifts green→amber→red as it drops
+    fill.style.background = `hsl(${Math.round(fitAvg * 120)}, 70%, 45%)`;
+    $('fit-label').textContent = `Your squad fitness: ${fitPct}%`;
     while (this.eventsShown < s.events.length) this.pushTicker(s.events[this.eventsShown++]);
   }
 
