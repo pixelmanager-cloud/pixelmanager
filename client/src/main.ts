@@ -390,6 +390,7 @@ class Game {
     el.classList.remove('show');
     void el.offsetWidth; // restart the CSS animation
     el.classList.add('show');
+    this.scene?.goalShake();
   }
 }
 
@@ -474,6 +475,11 @@ class MatchScene extends Phaser.Scene {
       this.carrierRing.setVisible(true).setPosition(cs.x, cs.y + 1);
     } else this.carrierRing.setVisible(false);
   }
+
+  // Brief, subtle camera shake to punctuate a goal. Purely cosmetic: the shake
+  // runs on the render camera and never touches the (seeded) simulation, and its
+  // fixed real-time duration is independent of match speed.
+  goalShake() { this.cameras.main.shake(250, 0.004); }
 
   update(_t: number, deltaMs: number) { GAME.onFrame(deltaMs); }
 }
