@@ -1,0 +1,14 @@
+[Unit]
+Description=Pixel Manager on-server dev agent (one task per run)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=%i
+WorkingDirectory=%h/pixelmanager
+# Secrets live here (chmod 600), NOT in the repo. See agent/setup-vultr.md.
+EnvironmentFile=%h/pixelmanager/agent/.env
+ExecStart=/usr/bin/env bash %h/pixelmanager/agent/run.sh
+# Bound a single run so a stuck task can't run forever.
+TimeoutStartSec=1800

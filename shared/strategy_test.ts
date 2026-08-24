@@ -25,6 +25,11 @@ const N = 60;
 const mk = (id: string, q: number, seed: number, formation: any = '4-4-2') =>
   generateTeam(id, id, id.toUpperCase(), 0xff0000, q, seed, formation);
 
+// Collected metrics + assertions so this doubles as a CI regression gate:
+// any violation prints FAIL lines and exits non-zero.
+const failures: string[] = [];
+const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
+
 // ---- 1. Calibration: even sides, default tactics ----
 {
   let g = 0, sh = 0; const scores: string[] = [];
@@ -33,8 +38,10 @@ const mk = (id: string, q: number, seed: number, formation: any = '4-4-2') =>
     g += r.score[0] + r.score[1]; sh += r.shots[0] + r.shots[1];
     if (i < 12) scores.push(`${r.score[0]}-${r.score[1]}`);
   }
-  console.log(`[calibration] avg goals/match=${(g / N).toFixed(2)} avg shots/match=${(sh / N).toFixed(1)}`);
+  const goalsPerMatch = g / N;
+  console.log(`[calibration] avg goals/match=${goalsPerMatch.toFixed(2)} avg shots/match=${(sh / N).toFixed(1)}`);
   console.log(`             sample: ${scores.join('  ')}`);
+  assert(goalsPerMatch >= 1.6 && goalsPerMatch <= 3.6, `goals/match ${goalsPerMatch.toFixed(2)} outside realistic range [1.6, 3.6]`);
 }
 
 // ---- 2. Quality: strong squad should beat weak squad ----
@@ -45,7 +52,9 @@ const mk = (id: string, q: number, seed: number, formation: any = '4-4-2') =>
     if (r.score[0] > r.score[1]) winsStrong++;
     gd += r.score[0] - r.score[1];
   }
-  console.log(`[quality]   strong(15) vs weak(11): strong win rate=${(winsStrong / N * 100).toFixed(0)}%  avg GD=${(gd / N).toFixed(2)}`);
+  const winRate = winsStrong / N;
+  console.log(`[quality]   strong(15) vs weak(11): strong win rate=${(winRate * 100).toFixed(0)}%  avg GD=${(gd / N).toFixed(2)}`);
+  assert(winRate >= 0.62, `stronger squad win rate ${(winRate * 100).toFixed(0)}% below 62% — quality no longer decisive`);
 }
 
 // ---- 3. Pressing: high press should win more possession (equal squads) ----
@@ -57,12 +66,14 @@ const mk = (id: string, q: number, seed: number, formation: any = '4-4-2') =>
     const r = play(mk('hip', 13, i * 7 + 1), mk('lop', 13, i * 11 + 3), hi, lo, i * 31 + 5);
     possHi += r.poss[0]; fitHi += r.fitEnd[0]; fitLo += r.fitEnd[1];
   }
-  console.log(`[press]     high-press possession=${(possHi / N * 100).toFixed(0)}%  end-fitness high=${(fitHi / N).toFixed(2)} low=${(fitLo / N).toFixed(2)}`);
+  const possHiPct = possHi / N, fitHiAvg = fitHi / N, fitLoAvg = fitLo / N;
+  console.log(`[press]     high-press possession=${(possHiPct * 100).toFixed(0)}%  end-fitness high=${fitHiAvg.toFixed(2)} low=${fitLoAvg.toFixed(2)}`);
+  assert(possHiPct >= 0.6, `high press possession ${(possHiPct * 100).toFixed(0)}% below 60% — pressing no longer wins the ball`);
+  assert(fitHiAvg < fitLoAvg, `high press should tire more than low press (got ${fitHiAvg.toFixed(2)} vs ${fitLoAvg.toFixed(2)})`);
 }
 
-// ---- 4. High line vs fast forwards: should concede more clear chances ----
+// ---- 4. High line vs fast forwards: should concede more than a deep line ----
 {
-  // build a team with fast forwards by boosting via high quality forwards is implicit; compare high vs deep line for the SAME defence facing same attack
   let concededHigh = 0, concededDeep = 0;
   const highLine: Tactics = { ...DEFAULT_TACTICS, line: 2 };
   const deepLine: Tactics = { ...DEFAULT_TACTICS, line: -2 };
@@ -74,9 +85,10 @@ const mk = (id: string, q: number, seed: number, formation: any = '4-4-2') =>
     concededDeep += play(def, atk, deepLine, fastAttack, i * 31 + 5).score[1];
   }
   console.log(`[line]      goals conceded vs direct attack: HIGH line=${(concededHigh / N).toFixed(2)}  DEEP line=${(concededDeep / N).toFixed(2)}`);
+  assert(concededHigh > concededDeep, `high line should concede more than deep line vs a direct attack (got ${concededHigh} vs ${concededDeep})`);
 }
 
-// ---- 5. Preset head-to-heads ----
+// ---- 5. Preset head-to-heads (informational) ----
 {
   const matchups: Array<[string, string]> = [['Gegenpress', 'Park the Bus'], ['Tiki-Taka', 'Route One'], ['Counter', 'Gegenpress']];
   for (const [a, b] of matchups) {
@@ -88,3 +100,11 @@ const mk = (id: string, q: number, seed: number, formation: any = '4-4-2') =>
     console.log(`[preset]    ${a} vs ${b}: ${wa}W-${dr}D-${wb}L`);
   }
 }
+
+// ---- verdict ----
+if (failures.length) {
+  console.error('\nENGINE REGRESSION — assertions failed:');
+  for (const f of failures) console.error(`  ✗ ${f}`);
+  process.exit(1);
+}
+console.log('\n✓ all engine assertions passed');

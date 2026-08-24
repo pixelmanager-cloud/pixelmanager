@@ -2,3 +2,10 @@ node_modules/
 dist/
 *.log
 .DS_Store
+
+# on-server agent runtime files (never commit these)
+agent/.env
+agent/.runstate
+agent/last-report.txt
+agent/verify.log
+agent/STOP

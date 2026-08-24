@@ -1,0 +1,12 @@
+[Unit]
+Description=Run the Pixel Manager dev agent on a schedule
+
+[Timer]
+# First run 3 min after boot, then every 30 min. The daily cap in run.sh
+# (MAX_RUNS_PER_DAY) is the real spend guardrail; adjust this cadence to taste.
+OnBootSec=3min
+OnUnitActiveSec=30min
+Persistent=true
+
+[Install]
+WantedBy=timers.target
