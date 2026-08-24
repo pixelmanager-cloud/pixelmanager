@@ -76,10 +76,16 @@ rendering. No per-frame netcode needed for spectating a simulated match.
 1. **[done]** Walking skeleton: watchable 2D match, seeded engine, HUD + ticker.
 2. **[done]** Strategy engine: 8-stat players, team tactics (formation + 5 sliders +
    presets) with stamina, wired to a live tactics panel in the client.
-3. **[done]** Squad screen: persistent club, Match/Squad toggle, colour-coded
-   stat table with overall ratings and tactical insights (your squad + scout the
-   opponent). Per-player roles come later.
-4. Season loop: league table, fixtures, results simulation.
+3. **[done]** Squad screen: colour-coded stat table + tactical insights.
+4. **[done]** Round loop (Phase A, off-chain): ~20-player rosters with a picked
+   starting XI per fixture, an hourly gauntlet of 5 CPU opponents, tactics that
+   lock at kickoff, a half-time pause with one round of changes + manual resume,
+   and locked results with standings. State persists in localStorage.
+5. Season/league loop or per-player roles.
+6. Persistence + accounts (server).
+7. Onchain (Phase C): player NFTs (stats as metadata), commit-reveal match
+   settlement (the deterministic engine makes results re-verifiable by anyone),
+   ERC-20 token + wage/prize escrow — on XLayer testnet first.
 4. Transfer engine: player valuations, offers, budgets.
 5. Server-authoritative matches + accounts + persistence.
 6. (optional) web3: on-chain club/player ownership via viem; deploy target could
