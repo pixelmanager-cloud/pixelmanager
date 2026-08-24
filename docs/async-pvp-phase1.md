@@ -8,11 +8,10 @@ top without rework.
 
 - **A match = a pure function**: `simulate(teamA, tacticsA, teamB, tacticsB, seed)`
   → deterministic result. Same inputs always produce the same match.
-- **No half-time pause, no substitutions** in PvP/ranked matches. Tactics + lineup
-  are locked at kickoff and the sim runs straight to full-time. This keeps the match
-  fully determined by pre-kickoff inputs — ideal for onchain commit-reveal later.
-  (Half-time + subs may survive only as an optional solo "practice" mode, or be
-  removed entirely — decision pending.)
+- **No half-time pause, no substitutions — removed entirely** (decided). Tactics +
+  lineup are locked at kickoff and every match runs straight to full-time, in solo and
+  PvP alike, for one consistent match model. This keeps a match fully determined by
+  pre-kickoff inputs — ideal for onchain commit-reveal later.
 - **The server is authoritative**: it owns the seed and runs the sim. The client
   only *replays* the deterministic result for the 2D view — it never decides anything.
 
@@ -79,10 +78,15 @@ and dependency-free from day one.
 - **Server**: Fastify + TypeScript in `server/`, importing `@fm/shared`.
 - **DB**: Postgres on a managed free tier (Neon/Supabase) for durability with no ops —
   or SQLite (`better-sqlite3`) on the existing Vultr box for the simplest MVP.
-- **Auth v1**: passwordless email (magic link) or a simple handle+token; swap to
-  **wallet sign-in** (sign a nonce) when NFTs arrive.
-- **Hosting**: server on the existing Vultr box or a managed host (Fly/Railway);
-  the client stays static on Netlify and calls the server API (CORS configured).
+- **Auth v1 (decided)**: **simple handle + code** — pick a handle, get a token. Fast
+  to build for the prototype; no real account recovery yet. Swap to **wallet sign-in**
+  (sign a nonce) when NFTs arrive.
+- **Hosting (decided)**: **managed** — server on Fly/Railway free tier, **Postgres on
+  Neon/Supabase** free tier. The client stays static on Netlify and calls the server
+  API (CORS configured).
+- **Build order**: stand the whole loop up **locally first** (server + client on
+  localhost, dev DB) so it's verifiable with no accounts, then a guided deploy to the
+  managed host — same pattern as the Vultr agent setup.
 
 ## MVP slice (smallest first)
 

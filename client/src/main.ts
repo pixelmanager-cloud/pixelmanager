@@ -8,8 +8,6 @@ import { SCALE, makeBallTexture, makePitchTexture, makePlayerTexture } from './p
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
 const HOME_SEED = 990201, HOME_QUALITY = 14;
 const ROUND_INTERVAL_MS = 60 * 60 * 1000; // one gauntlet of 5 matches per hour
-const HALFTIME_SEC = 45 * 60;
-const MAX_SUBS = 3; // most substitutions a manager may make at half-time
 
 const LEVELS: Record<keyof Omit<Tactics, 'formation'>, string[]> = {
   mentality: ['Very Defensive', 'Defensive', 'Balanced', 'Attacking', 'Very Attacking'],
@@ -147,13 +145,11 @@ class Game {
 
   engine?: MatchEngine;
   activeFixture = -1;
-  running = false; paused = false; halftimeDone = false;
+  running = false;
   speed = 1; accum = 0; eventsShown = 0;
 
-  editorMode: 'prematch' | 'halftime' = 'prematch';
   draftLineup!: Lineup;
   draftTactics!: Tactics;
-  halfTimeStartIds = new Set<string>(); // XI that played the first half — sub count is measured against this
 
   constructor() {
     const saved = localStorage.getItem('fm_round_v2');
@@ -207,9 +203,7 @@ class Game {
       this.renderLineupEditor();
     });
     $('lineup-back').addEventListener('click', () => this.showScreen('hub'));
-    $('kickoff').addEventListener('click', () => (this.editorMode === 'prematch' ? this.kickOff() : this.resumeMatch(true)));
-    $('ht-adjust').addEventListener('click', () => this.openLineup(this.activeFixture, 'halftime'));
-    $('ht-resume').addEventListener('click', () => this.resumeMatch(false));
+    $('kickoff').addEventListener('click', () => this.kickOff());
   }
 
   // ---- HUB ----
@@ -233,7 +227,7 @@ class Game {
     }).join('');
     Array.from(document.querySelectorAll('.fixture')).forEach((el) => {
       const i = Number((el as HTMLElement).dataset.i);
-      if (!this.round.fixtures[i].result) el.addEventListener('click', () => this.openLineup(i, 'prematch'));
+      if (!this.round.fixtures[i].result) el.addEventListener('click', () => this.openLineup(i));
     });
     this.renderTimer();
   }
@@ -258,21 +252,12 @@ class Game {
   }
 
   // ---- LINEUP EDITOR (shared by pre-match & half-time) ----
-  private openLineup(fixtureIdx: number, mode: 'prematch' | 'halftime') {
+  private openLineup(fixtureIdx: number) {
     this.activeFixture = fixtureIdx;
-    this.editorMode = mode;
     const f = this.round.fixtures[fixtureIdx];
-    if (mode === 'prematch') {
-      this.draftTactics = f.myTactics ? { ...f.myTactics } : { ...TACTIC_PRESETS.Balanced };
-      this.draftLineup = f.myLineup ? { ...f.myLineup, playerIds: [...f.myLineup.playerIds] } : autoPickXI(this.club, this.draftTactics.formation);
-    } else {
-      // half-time keeps the current in-match lineup/tactics; the players on the
-      // pitch now are the baseline the 3-sub limit is measured against.
-      this.halfTimeStartIds = new Set(this.draftLineup.playerIds);
-    }
-    $('lineup-title').textContent = mode === 'prematch' ? `SET YOUR LINEUP  vs ${f.opp.name}` : 'HALF-TIME — ADJUST';
-    ($('kickoff') as HTMLButtonElement).textContent = mode === 'prematch' ? 'Kick Off' : 'Resume Match';
-    $('lineup-back').classList.toggle('hidden', mode === 'halftime');
+    this.draftTactics = f.myTactics ? { ...f.myTactics } : { ...TACTIC_PRESETS.Balanced };
+    this.draftLineup = f.myLineup ? { ...f.myLineup, playerIds: [...f.myLineup.playerIds] } : autoPickXI(this.club, this.draftTactics.formation);
+    $('lineup-title').textContent = `SET YOUR LINEUP  vs ${f.opp.name}`;
     this.renderLineupEditor();
     this.showScreen('lineup');
   }
@@ -286,11 +271,7 @@ class Game {
     $('tac-row').innerHTML = tac.join('');
     ($('e-formation') as HTMLSelectElement).addEventListener('change', (ev) => {
       this.draftTactics.formation = (ev.target as HTMLSelectElement).value as Formation;
-      // pre-match re-picks the best XI; at half-time a shape change keeps the same
-      // players (never costs a sub) and just re-arranges them into the new formation.
-      this.draftLineup = this.editorMode === 'prematch'
-        ? autoPickXI(this.club, this.draftTactics.formation)
-        : { formation: this.draftTactics.formation, playerIds: [...this.draftLineup.playerIds] };
+      this.draftLineup = autoPickXI(this.club, this.draftTactics.formation);
       this.renderLineupEditor();
     });
     (Object.keys(LEVELS) as Array<keyof typeof LEVELS>).forEach((k) => {
@@ -313,16 +294,7 @@ class Game {
     Array.from($('xi').querySelectorAll('select')).forEach((sel) => {
       sel.addEventListener('change', (ev) => {
         const t = ev.target as HTMLSelectElement;
-        const i = Number(t.dataset.i);
-        const prev = this.draftLineup.playerIds[i];
-        this.draftLineup.playerIds[i] = t.value;
-        // at half-time, block a change that would push subs over the limit
-        if (this.editorMode === 'halftime' && this.subsUsed() > MAX_SUBS) {
-          this.draftLineup.playerIds[i] = prev;
-          this.renderLineupEditor();
-          this.flashSubLimit();
-          return;
-        }
+        this.draftLineup.playerIds[Number(t.dataset.i)] = t.value;
         this.renderLineupEditor();
       });
     });
@@ -332,25 +304,8 @@ class Game {
     const bench = this.club.players.filter((p) => !inXI.has(p.id)).sort((a, b) => overall(b) - overall(a));
     $('bench').innerHTML = `<b>Bench:</b> ${bench.map((p) => `${p.name} (${p.role} ${overall(p)})`).join(' · ')}`;
     if (!$('squad-panel').classList.contains('hidden')) this.renderSquadPanel();
-    // half-time sub-limit UI: show the counter, hide "auto-pick" (it would ignore the limit)
-    const ht = this.editorMode === 'halftime';
-    $('autopick').classList.toggle('hidden', ht);
-    $('subs-indicator').classList.toggle('hidden', !ht);
-    if (ht) { $('subs-indicator').classList.remove('warn'); $('subs-indicator').textContent = `SUBS USED: ${this.subsUsed()} / ${MAX_SUBS}`; }
     this.renderScout();
     this.updateEditorInsight();
-  }
-
-  /** Players in the current draft XI who were not on the pitch at half-time = substitutions made. */
-  private subsUsed(): number {
-    return this.draftLineup.playerIds.filter((id) => !this.halfTimeStartIds.has(id)).length;
-  }
-
-  private flashSubLimit() {
-    const el = $('subs-indicator');
-    el.classList.add('warn');
-    el.textContent = `MAX ${MAX_SUBS} SUBS AT HALF-TIME`;
-    setTimeout(() => { if (this.editorMode === 'halftime') { el.classList.remove('warn'); el.textContent = `SUBS USED: ${this.subsUsed()} / ${MAX_SUBS}`; } }, 1300);
   }
 
   private renderSquadPanel() {
@@ -393,31 +348,11 @@ class Game {
     const myTeam = buildXI(this.club, f.myLineup);
     const oppTeam = buildXI(f.opp, f.oppLineup);
     this.engine = new MatchEngine([myTeam, oppTeam], f.matchSeed, [{ ...f.myTactics }, { ...f.oppTactics }]);
-    this.running = true; this.paused = false; this.halftimeDone = false; this.accum = 0; this.eventsShown = 0;
-    $('halftime').classList.add('hidden');
+    this.running = true; this.accum = 0; this.eventsShown = 0;
     $('home-name').textContent = this.club.name;
     $('away-name').textContent = `${f.opp.name} [${f.oppTactics.formation}]`;
     $('ticker').innerHTML = '';
     this.scene!.buildSprites(this.engine.teams);
-    this.showScreen('match');
-  }
-
-  private pauseHalfTime() {
-    this.paused = true;
-    $('halftime').classList.remove('hidden');
-  }
-
-  private resumeMatch(applyChanges: boolean) {
-    if (applyChanges && this.engine) {
-      const f = this.round.fixtures[this.activeFixture];
-      f.myLineup = { ...this.draftLineup, playerIds: [...this.draftLineup.playerIds] };
-      f.myTactics = { ...this.draftTactics };
-      const myTeam = buildXI(this.club, f.myLineup);
-      this.engine.applyHalfTimeChanges(0, myTeam, { ...f.myTactics });
-      this.scene!.buildSprites(this.engine.teams);
-    }
-    this.paused = false; this.halftimeDone = true;
-    $('halftime').classList.add('hidden');
     this.showScreen('match');
   }
 
@@ -431,12 +366,11 @@ class Game {
 
   onFrame(dMs: number) {
     if (this.screen !== 'match' || !this.engine) return;
-    if (this.running && !this.paused) {
+    if (this.running) {
       this.accum += (dMs / 1000) * 10 * this.speed;
       while (this.accum >= TICK_SEC && !this.engine.state.finished) {
         this.engine.tick();
         this.accum -= TICK_SEC;
-        if (!this.halftimeDone && this.engine.state.clockSec >= HALFTIME_SEC) { this.pauseHalfTime(); break; }
         if (this.engine.state.finished) { this.onFullTime(); break; }
       }
     }

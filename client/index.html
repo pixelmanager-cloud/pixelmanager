@@ -84,8 +84,6 @@
       table.squad tr.inxi td.name { color: var(--good); font-weight: bold; }
       table.squad td.inxi-mark { color: var(--good); font-weight: bold; }
       #lineup .actions { display: flex; gap: 8px; margin-top: 14px; }
-      #subs-indicator { font-family: var(--display); font-size: 9px; color: var(--warn); margin-bottom: 10px; letter-spacing: 1px; }
-      #subs-indicator.warn { color: var(--home); }
       .insight { font-size: 16px; color: var(--cyan); margin: 8px 0; line-height: 1.5; }
       /* scouting report */
       #scout { border: 2px solid var(--warn); background: #241a06; padding: 10px 12px; margin-bottom: 14px; box-shadow: 3px 3px 0 rgba(0,0,0,0.4); }
@@ -108,7 +106,6 @@
       #poss-home { height: 100%; background: var(--home); width: 50%; }
       #poss-label { display: flex; justify-content: space-between; }
       #ticker { width: 840px; max-width: 96vw; height: 84px; overflow-y: auto; background: #0c0c22; border: 2px solid var(--line); padding: 6px 10px; font-size: 17px; line-height: 1.45; }
-      #halftime { width: 840px; max-width: 96vw; background: #2a1e04; border: 2px solid var(--warn); padding: 10px 12px; display: flex; align-items: center; gap: 12px; font-size: 17px; }
       canvas { image-rendering: pixelated; }
     </style>
   </head>
@@ -132,7 +129,6 @@
       <!-- LINEUP EDITOR -->
       <div id="lineup" class="panel hidden">
         <h3 id="lineup-title">SET YOUR LINEUP</h3>
-        <div id="subs-indicator" class="hidden"></div>
         <div id="scout">
           <div class="scout-head">🔍 SCOUTING REPORT</div>
           <div id="scout-summary"></div>
@@ -163,11 +159,6 @@
           <button id="spd1" class="active">1x</button>
           <button id="spd4">4x</button>
           <button id="spd12">12x</button>
-        </div>
-        <div id="halftime" class="hidden">
-          <span>⏸ HALF-TIME — you may make one round of changes.</span>
-          <button id="ht-adjust">Adjust Lineup / Tactics</button>
-          <button id="ht-resume" class="primary">Resume Match</button>
         </div>
         <div id="game"></div>
         <div id="meters">
