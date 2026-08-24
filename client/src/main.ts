@@ -114,6 +114,13 @@ class Game {
     $('spd12').addEventListener('click', () => setSpeed(12, 'spd12'));
     $('new-round').addEventListener('click', () => this.tryNewRound());
     $('autopick').addEventListener('click', () => { this.draftLineup = autoPickXI(this.club, this.draftTactics.formation); this.renderLineupEditor(); });
+    $('toggle-squad').addEventListener('click', () => {
+      const panel = $('squad-panel');
+      const show = panel.classList.contains('hidden');
+      panel.classList.toggle('hidden', !show);
+      $('toggle-squad').textContent = show ? '▤ Hide squad stats' : '▤ View full squad stats';
+      if (show) this.renderSquadPanel();
+    });
     $('lineup-back').addEventListener('click', () => this.showScreen('hub'));
     $('kickoff').addEventListener('click', () => (this.editorMode === 'prematch' ? this.kickOff() : this.resumeMatch(true)));
     $('ht-adjust').addEventListener('click', () => this.openLineup(this.activeFixture, 'halftime'));
@@ -208,7 +215,7 @@ class Game {
         .sort((a, b) => overall(b) - overall(a))
         .map((p) => `<option value="${p.id}" ${p.id === pid ? 'selected' : ''}>${p.name} (${p.role} ${overall(p)})</option>`).join('');
       const cur = this.club.players.find((p) => p.id === pid)!;
-      return `<div class="slot"><span class="role">${roleForSlot}</span><select data-i="${i}">${opts}</select><span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span></div>`;
+      return `<div class="slot role-${roleForSlot}"><span class="role role-${roleForSlot}">${roleForSlot}</span><select data-i="${i}">${opts}</select><span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span></div>`;
     }).join('');
     Array.from($('xi').querySelectorAll('select')).forEach((sel) => {
       sel.addEventListener('change', (ev) => {
@@ -222,7 +229,26 @@ class Game {
     const inXI = new Set(slots);
     const bench = this.club.players.filter((p) => !inXI.has(p.id)).sort((a, b) => overall(b) - overall(a));
     $('bench').innerHTML = `<b>Bench:</b> ${bench.map((p) => `${p.name} (${p.role} ${overall(p)})`).join(' · ')}`;
+    if (!$('squad-panel').classList.contains('hidden')) this.renderSquadPanel();
     this.updateEditorInsight();
+  }
+
+  private renderSquadPanel() {
+    if (!this.draftLineup) return;
+    const inXI = new Set(this.draftLineup.playerIds);
+    const roleOrder: Record<string, number> = { GK: 0, DF: 1, MF: 2, FW: 3 };
+    const players = [...this.club.players].sort((a, b) => (roleOrder[a.role] - roleOrder[b.role]) || (overall(b) - overall(a)));
+    const cols: Array<[string, keyof (typeof players)[0]['attrs']]> = [
+      ['PAC', 'pace'], ['STR', 'strength'], ['PAS', 'passing'], ['SHO', 'shooting'],
+      ['TAK', 'tackling'], ['POS', 'positioning'], ['WRK', 'workrate'], ['KEE', 'keeping'],
+    ];
+    const head = `<tr><th></th><th>Pos</th><th style="text-align:left">Name</th><th>OVR</th>${cols.map(([l]) => `<th>${l}</th>`).join('')}</tr>`;
+    const rows = players.map((p) => {
+      const cells = cols.map(([, k]) => `<td class="stat" style="background:${statColor(p.attrs[k])}">${p.attrs[k]}</td>`).join('');
+      const mark = inXI.has(p.id) ? '<td class="inxi-mark">●</td>' : '<td></td>';
+      return `<tr class="${inXI.has(p.id) ? 'inxi' : ''}">${mark}<td class="pos role-${p.role}">${p.role}</td><td class="name">${p.name}</td><td class="stat" style="background:${statColor(overall(p))}">${overall(p)}</td>${cells}</tr>`;
+    }).join('');
+    $('squad-panel').innerHTML = `<table class="squad">${head}${rows}</table>`;
   }
 
   private slotRole(i: number): string {

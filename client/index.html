@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pixel Manager</title>
     <style>
-      :root { --bg:#10141c; --panel:#0b0e14; --line:#223047; --accent:#3d5a80; --text:#e8e8e8; --home:#d23b3b; --away:#3b6bd2; --good:#3ad07a; --warn:#d9a860; }
+      :root { --bg:#10141c; --panel:#0b0e14; --line:#223047; --accent:#3d5a80; --text:#e8e8e8; --home:#d23b3b; --away:#3b6bd2; --good:#3ad07a; --warn:#d9a860;
+              --gk:#e0b93a; --df:#4a90d9; --mf:#3fb567; --fw:#e0673a; }
       * { box-sizing: border-box; }
       html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: 'Courier New', monospace; }
       #app { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px; }
@@ -37,11 +38,25 @@
       #lineup .tacrow label { font-size: 11px; color: #8aa; display: flex; flex-direction: column; gap: 2px; }
       #lineup select { width: 118px; }
       .xi { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
-      .slot { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 2px 0; }
-      .slot .role { width: 26px; color: #8aa; font-weight: bold; }
+      .slot { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 2px 0 2px 6px; border-left: 4px solid var(--line); }
+      .slot .role { width: 30px; text-align: center; color: #0b0e14; font-weight: bold; border-radius: 3px; padding: 1px 0; }
       .slot select { flex: 1; }
       .slot .ovr { width: 30px; text-align: right; font-weight: bold; }
+      .slot.role-GK { border-left-color: var(--gk); } .slot.role-DF { border-left-color: var(--df); }
+      .slot.role-MF { border-left-color: var(--mf); } .slot.role-FW { border-left-color: var(--fw); }
+      .role-GK { background: var(--gk); } .role-DF { background: var(--df); } .role-MF { background: var(--mf); } .role-FW { background: var(--fw); }
       #bench { font-size: 11px; color: #9ab; margin-top: 10px; line-height: 1.5; }
+      /* full squad stats table */
+      #toggle-squad { margin-top: 10px; }
+      #squad-panel { margin-top: 10px; max-height: 300px; overflow-y: auto; }
+      table.squad { width: 100%; border-collapse: collapse; font-size: 12px; }
+      table.squad th, table.squad td { padding: 3px 5px; text-align: center; border-bottom: 1px solid var(--line); }
+      table.squad th { color: #8aa; font-weight: normal; letter-spacing: 1px; position: sticky; top: 0; background: var(--panel); }
+      table.squad td.name { text-align: left; white-space: nowrap; }
+      table.squad td.pos { color: #0b0e14; font-weight: bold; border-radius: 2px; }
+      table.squad td.stat { color: #0b0e14; font-weight: bold; border-radius: 2px; }
+      table.squad tr.inxi td.name { color: var(--good); font-weight: bold; }
+      table.squad td.inxi-mark { color: var(--good); font-weight: bold; }
       #lineup .actions { display: flex; gap: 8px; margin-top: 12px; }
       .insight { font-size: 11px; color: #9cf; margin: 8px 0; line-height: 1.5; }
 
@@ -82,6 +97,8 @@
         <div class="insight" id="lineup-insight"></div>
         <div class="xi" id="xi"></div>
         <div id="bench"></div>
+        <button id="toggle-squad">▤ View full squad stats</button>
+        <div id="squad-panel" class="hidden"></div>
         <div class="actions">
           <button id="autopick">Auto-pick best XI</button>
           <button id="kickoff" class="primary">Kick Off</button>
