@@ -3,6 +3,7 @@ import { PITCH } from './types.js';
 import { makeRng } from './rng.js';
 import { mirroredAnchor } from './teams.js';
 import { DEFAULT_TACTICS, deriveMods, type TacticMods, type Tactics } from './tactics.js';
+import { dutyMods, effectiveDuty, type DutyMods } from './duties.js';
 
 export const TICK_SEC = 0.5; // game-seconds per tick
 const MATCH_SEC = 90 * 60;
@@ -22,6 +23,8 @@ export class MatchEngine {
   readonly state: MatchState;
   tactics: [Tactics, Tactics];
   private mods: [TacticMods, TacticMods];
+  /** per-player duty modifiers, precomputed once (duties are fixed pre-kickoff). */
+  private dm: [DutyMods[], DutyMods[]];
   private rng: () => number;
   private halftimeDone = false;
 
@@ -29,6 +32,7 @@ export class MatchEngine {
     this.rng = makeRng(seed);
     this.tactics = tactics ?? [{ ...DEFAULT_TACTICS }, { ...DEFAULT_TACTICS }];
     this.mods = [deriveMods(this.tactics[0]), deriveMods(this.tactics[1])];
+    this.dm = [teams[0].players.map((p) => dutyMods(effectiveDuty(p))), teams[1].players.map((p) => dutyMods(effectiveDuty(p)))];
     this.state = {
       clockSec: 0,
       score: [0, 0],
@@ -128,7 +132,9 @@ export class MatchEngine {
     const order = [];
     for (let i = 1; i < 11; i++) {
       const ps = s.players[defTeam][i];
-      order.push({ i, d: Math.hypot(ps.x - cx, ps.y - cy) });
+      // duty press-eagerness shrinks a player's effective distance to the ball, so
+      // ball-winners/stoppers get picked to close down ahead of a sit-off cover man.
+      order.push({ i, d: Math.hypot(ps.x - cx, ps.y - cy) - this.dm[defTeam][i].press * 3 });
     }
     order.sort((a, b) => a.d - b.d);
     for (let k = 0; k < count && k < order.length; k++) set.add(order[k].i);
@@ -156,20 +162,22 @@ export class MatchEngine {
           return;
         }
 
-        // tactical target = width-scaled anchor, shifted by line height / attacking push, pulled toward ball
+        // tactical target = width-scaled anchor, shifted by line height / attacking push, pulled toward ball;
+        // the player's duty biases how far they push and how strongly they drift toward the ball.
+        const dm = this.dm[teamIdx][i];
         const a = this.baseAnchor(teamIdx, i);
         let tx = a.x;
         let ty = 34 + (a.y - 34) * mods.widthScale;
         if (p.role === 'DF') tx += dir * mods.lineShift;
-        if (attacking && p.role !== 'GK') tx += dir * mods.attackPush * PUSH_BY_ROLE[p.role];
-        const pullX = p.role === 'GK' ? 0.04 : attacking ? 0.22 : 0.34;
+        if (attacking && p.role !== 'GK') tx += dir * mods.attackPush * PUSH_BY_ROLE[p.role] * dm.push;
+        const pullX = clamp((p.role === 'GK' ? 0.04 : attacking ? 0.22 : 0.34) + (attacking ? dm.come : 0), 0, 0.6);
         const pullY = p.role === 'GK' ? 0.25 : attacking ? 0.30 : 0.46;
         tx += (s.ball.x - tx) * pullX;
         ty += (s.ball.y - ty) * pullY;
 
         tx = clamp(tx, 2, 103);
         ty = clamp(ty, 3, 65);
-        if (p.role === 'GK') tx = clamp(tx, teamIdx === 0 ? 2 : 89, teamIdx === 0 ? 16 : 103);
+        if (p.role === 'GK') tx = clamp(tx, teamIdx === 0 ? 2 : 89 - dm.gkStep, teamIdx === 0 ? 16 + dm.gkStep : 103);
 
         const moved = this.stepToward(ps, tx, ty, speed);
         if (moved > 0.3) this.drain(ps, p, mods, 1);
@@ -221,7 +229,8 @@ export class MatchEngine {
         const def = this.teams[defTeam].players[i];
         const defEff = norm(def.attrs.tackling) * fit(ds.fitness) * (0.6 + 0.4 * norm(def.attrs.workrate));
         const retain = (norm(carrier.attrs.strength) * 0.5 + norm(carrier.attrs.pace) * 0.3 + norm(carrier.attrs.passing) * 0.2) * fit(cs.fitness);
-        const pTackle = clamp(0.12 + 0.5 * (defEff / (defEff + retain)), 0.05, 0.8) * defMods.pressIntensity * TICK_SEC;
+        const pTackle = clamp(0.12 + 0.5 * (defEff / (defEff + retain)), 0.05, 0.8) * defMods.pressIntensity
+          * (1 + Math.max(0, this.dm[defTeam][i].press) * 0.25) * TICK_SEC;
         if (this.rng() < pTackle) {
           s.carrier = { teamIdx: defTeam, playerIdx: i };
           s.ball = { ...ds };
@@ -235,7 +244,7 @@ export class MatchEngine {
     if (distGoal < SHOOT_RANGE) {
       const closeness = 1 - distGoal / SHOOT_RANGE; // 0 at the edge of range, 1 at the goal
       const central = 1 - Math.abs(cs.y - PITCH.h / 2) / (PITCH.h / 2); // 1 dead-central, 0 at the touchline
-      const shootP = (0.0022 + norm(carrier.attrs.shooting) * 0.004) * closeness * (0.35 + 0.65 * central) * TICK_SEC;
+      const shootP = (0.0022 + norm(carrier.attrs.shooting) * 0.004) * closeness * (0.35 + 0.65 * central) * this.dm[teamIdx][playerIdx].shoot * TICK_SEC;
       if (this.rng() < shootP) {
         this.resolveShot(teamIdx, playerIdx, distGoal, false);
         return;
@@ -305,10 +314,12 @@ export class MatchEngine {
       if (dPass > 42 || dPass < 3) continue;
       const gain = myDistGoal - dGoal; // positive = progresses toward goal
       const pressure = this.pressureOn(defTeam, ts);
-      // directness>0 rewards forward gain and tolerates longer passes; <0 rewards safe short options
+      // directness>0 rewards forward gain and tolerates longer passes; <0 rewards safe short options.
+      // duty "magnet" makes playmakers/target-men more (and ball-winners less) sought as an out-ball.
       const score = gain * (0.7 + 0.6 * (mods.directness + 1))
         - dPass * (0.2 - mods.directness * 0.1)
         - pressure * 3
+        + this.dm[teamIdx][i].magnet
         + this.rng() * 6;
       const through = gain > 16 && this.teams[teamIdx].players[i].role === 'FW' && this.rng() < 0.5;
       if (gain > -6 && score > bestScore) { bestScore = score; best = { idx: i, through }; }

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import {
-  MatchEngine, autoPickXI, buildXI, overall, PITCH, TICK_SEC,
+  MatchEngine, autoPickXI, buildXI, overall, PITCH, TICK_SEC, defaultDuty, DUTY_LABEL,
   TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player,
 } from '@fm/shared';
 import { SCALE, makeBallTexture, makeBallGhostTexture, makePitchTexture, makePlayerFrames, makeShadowTexture, makeCarrierTexture } from './pixelart';
@@ -278,7 +278,8 @@ class Game {
         .sort((a, b) => overall(b) - overall(a))
         .map((p) => `<option value="${p.id}" ${p.id === pid ? 'selected' : ''}>${p.name} (${p.role} ${overall(p)})</option>`).join('');
       const cur = this.club.players.find((p) => p.id === pid)!;
-      return `<div class="slot role-${roleForSlot}"><span class="role role-${roleForSlot}">${roleForSlot}</span><select data-i="${i}">${opts}</select><span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span></div>`;
+      const duty = DUTY_LABEL[defaultDuty(cur)];
+      return `<div class="slot role-${roleForSlot}"><span class="role role-${roleForSlot}">${roleForSlot}</span><select data-i="${i}">${opts}</select><span class="duty" title="Auto duty from this player's strengths — how they'll play">${duty}</span><span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span></div>`;
     }).join('');
     Array.from($('xi').querySelectorAll('select')).forEach((sel) => {
       sel.addEventListener('change', (ev) => {

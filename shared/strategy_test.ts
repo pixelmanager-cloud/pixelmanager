@@ -2,7 +2,7 @@
 import { MatchEngine } from './src/engine.js';
 import { generateTeam } from './src/teams.js';
 import { TACTIC_PRESETS, DEFAULT_TACTICS, type Tactics } from './src/tactics.js';
-import type { Team } from './src/types.js';
+import type { Team, Role, Duty } from './src/types.js';
 
 interface Result { score: [number, number]; shots: [number, number]; poss: [number, number]; fitEnd: [number, number] }
 
@@ -99,6 +99,21 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
     }
     console.log(`[preset]    ${a} vs ${b}: ${wa}W-${dr}D-${wb}L`);
   }
+}
+
+// ---- 6. Duties: a poacher forward line shoots more than a target-man line ----
+{
+  const withDuty = (t: Team, role: Role, duty: Duty): Team =>
+    ({ ...t, players: t.players.map((p) => (p.role === role ? { ...p, duty } : p)) });
+  let shotsPoacher = 0, shotsTarget = 0;
+  for (let i = 0; i < N; i++) {
+    const base = mk('atk', 14, i * 7 + 1, '4-3-3');
+    const opp = mk('def', 13, i * 11 + 3);
+    shotsPoacher += play(withDuty(base, 'FW', 'poacher'), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).shots[0];
+    shotsTarget += play(withDuty(base, 'FW', 'target-man'), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).shots[0];
+  }
+  console.log(`[duty]      forward shots: POACHER line=${(shotsPoacher / N).toFixed(1)}  TARGET-MAN line=${(shotsTarget / N).toFixed(1)}`);
+  assert(shotsPoacher > shotsTarget, `poacher forwards should shoot more than target-men (got ${shotsPoacher} vs ${shotsTarget})`);
 }
 
 // ---- verdict ----

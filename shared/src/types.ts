@@ -1,6 +1,18 @@
 export type Role = 'GK' | 'DF' | 'MF' | 'FW';
 
 /**
+ * A per-player "duty" layered on top of the position — turns 11 stat-blocks into
+ * 11 characters. Deterministic and applied pre-kickoff (see duties.ts): it only
+ * biases how the player behaves in-sim, never adds power. Auto-derived from the
+ * player's strengths by default; a manager may override it later.
+ */
+export type Duty =
+  | 'keeper' | 'sweeper-keeper'
+  | 'cover' | 'stopper'
+  | 'box-to-box' | 'playmaker' | 'ball-winner'
+  | 'poacher' | 'target-man';
+
+/**
  * Lean 8-stat model, all on a 1-20 scale (football-standard).
  * Each stat maps to a concrete in-match mechanic the engine reads:
  *  pace        — movement speed; springing/chasing behind a high line, recovery runs
@@ -30,6 +42,8 @@ export interface Player {
   attrs: PlayerAttrs;
   /** formation anchor in pitch coords for a team attacking left->right */
   anchor: { x: number; y: number };
+  /** optional manager-assigned duty; when absent the engine auto-derives one from stats */
+  duty?: Duty;
 }
 
 export interface Team {
