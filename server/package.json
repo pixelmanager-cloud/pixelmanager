@@ -3,9 +3,12 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "node --experimental-strip-types src/index.ts"
+    "dev": "tsx watch src/index.ts",
+    "start": "tsx src/index.ts"
   },
   "dependencies": {
-    "@fm/shared": "*"
+    "@fastify/cors": "^9.0.1",
+    "@fm/shared": "*",
+    "fastify": "^4.28.1"
   }
 }

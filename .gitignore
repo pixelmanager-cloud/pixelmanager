@@ -9,3 +9,7 @@ agent/.runstate
 agent/last-report.txt
 agent/verify.log
 agent/STOP
+
+# server dev database
+server/*.db
+server/*.db-*
