@@ -74,7 +74,7 @@ mkdir -p ~/.config/systemd/user
 cp ~/pixelmanager/agent/agent-dev.service ~/.config/systemd/user/
 cp ~/pixelmanager/agent/agent-dev.timer   ~/.config/systemd/user/
 # the unit uses %h/%i; simplest is to hardcode paths for a single user:
-sed -i "s|%h|$HOME|g; s|User=%i|User=$USER|g" ~/.config/systemd/user/agent-dev.service
+# (no editing needed — the unit is a --user service; %h auto-expands and it has no User= line)
 systemctl --user daemon-reload
 systemctl --user enable --now agent-dev.timer
 sudo loginctl enable-linger "$USER"   # keep the timer running when you're logged out

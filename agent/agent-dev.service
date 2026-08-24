@@ -3,9 +3,11 @@ Description=Pixel Manager on-server dev agent (one task per run)
 After=network-online.target
 Wants=network-online.target
 
+# Install as a per-user unit (~/.config/systemd/user/). Do NOT add a User= line —
+# a --user service already runs as that user, and User= makes it fail 216/GROUP.
+# %h auto-expands to the user's home under `systemctl --user`.
 [Service]
 Type=oneshot
-User=%i
 WorkingDirectory=%h/pixelmanager
 # Secrets live here (chmod 600), NOT in the repo. See agent/setup-vultr.md.
 EnvironmentFile=%h/pixelmanager/agent/.env
