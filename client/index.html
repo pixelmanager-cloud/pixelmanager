@@ -47,17 +47,27 @@
       /* Off-screen rather than display:none so the Phaser canvas keeps a live context while hidden. */
       .hidden { position: absolute !important; left: -99999px !important; top: 0; visibility: hidden; }
 
+      /* login */
+      #handle-input { font-family: var(--body); font-size: 20px; background: var(--panel-2); color: var(--text); border: 2px solid var(--line); padding: 6px 10px; }
       /* hub */
-      #record2 { margin-bottom: 12px; }
+      #hub-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
+      #me-name { font-family: var(--display); font-size: 14px; color: var(--good); }
+      #me-rating { font-family: var(--display); font-size: 11px; color: var(--warn); }
+      #set-team { margin-left: auto; }
+      #hub-cols { display: flex; gap: 24px; margin-top: 14px; flex-wrap: wrap; }
+      #hub-cols > div { flex: 1; min-width: 240px; }
       .fixture { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 2px solid var(--line);
-        background: var(--panel-2); margin-bottom: 8px; font-size: 19px; cursor: pointer; }
-      .fixture:hover { border-color: var(--cyan); }
+        background: var(--panel-2); margin-bottom: 8px; font-size: 19px; }
       .fixture .num { font-family: var(--display); font-size: 12px; color: var(--pink); width: 26px; }
       .fixture .opp { flex: 1; }
       .fixture .opp b { font-size: 21px; color: #fff; }
       .fixture .meta { color: var(--cyan); font-size: 16px; }
-      .fixture .res { font-family: var(--display); font-size: 11px; width: 96px; text-align: center; }
-      .fixture .res.w { color: var(--good); } .fixture .res.l { color: var(--home); } .fixture .res.d { color: var(--warn); }
+      .lb-row { display: flex; justify-content: space-between; padding: 5px 8px; border-bottom: 1px solid var(--line); font-size: 17px; }
+      .lb-row .r { font-family: var(--display); font-size: 11px; color: var(--warn); }
+      .lb-row.me { color: var(--good); }
+      .mm-row { padding: 5px 8px; border-bottom: 1px solid var(--line); font-size: 16px; }
+      .mm-row .w { color: var(--good); } .mm-row .l { color: var(--home); } .mm-row .d { color: var(--warn); }
+      .muted { color: #8aa; font-size: 15px; padding: 6px 2px; }
 
       /* lineup editor */
       #lineup .tacrow { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
@@ -113,29 +123,35 @@
     <div id="app">
       <div id="topbar">
         <span class="title">PIXEL MANAGER</span>
-        <span id="record"></span>
         <span class="spacer"></span>
-        <span id="timer"></span>
+        <button id="logout" class="hidden">Log out</button>
       </div>
 
-      <!-- ROUND HUB -->
-      <div id="hub" class="panel">
-        <h3>THIS HOUR'S GAUNTLET — 5 MATCHES</h3>
-        <div id="record2" class="insight"></div>
-        <div id="fixtures"></div>
-        <div style="margin-top:12px"><button id="new-round">New Round</button></div>
-      </div>
-
-      <!-- LINEUP EDITOR -->
-      <div id="lineup" class="panel hidden">
-        <h3 id="lineup-title">SET YOUR LINEUP</h3>
-        <div id="scout">
-          <div class="scout-head">🔍 SCOUTING REPORT</div>
-          <div id="scout-summary"></div>
-          <button id="apply-counter">🎯 Apply suggested counter</button>
-          <button id="toggle-opp">👁 View opponent lineup</button>
-          <div id="opp-panel" class="hidden"></div>
+      <!-- LOGIN -->
+      <div id="login" class="panel hidden">
+        <h3>ENTER THE LEAGUE</h3>
+        <div class="insight">Pick a manager handle to create your club. (Prototype: your handle + a saved code are your login — keep this browser.)</div>
+        <div style="display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap">
+          <input id="handle-input" placeholder="your handle" maxlength="20" />
+          <button id="register-btn" class="primary">Create Club</button>
         </div>
+        <div id="login-error" style="color:var(--home); font-size:15px; margin-top:8px"></div>
+      </div>
+
+      <!-- HUB -->
+      <div id="hub" class="panel hidden">
+        <div id="hub-head"><span id="me-name"></span><span id="me-rating"></span><button id="set-team">⚙ Set My Team</button></div>
+        <h3>OPPONENTS</h3>
+        <div id="opponents"></div>
+        <div id="hub-cols">
+          <div><h3>LEADERBOARD</h3><div id="leaderboard"></div></div>
+          <div><h3>RECENT MATCHES</h3><div id="my-matches"></div></div>
+        </div>
+      </div>
+
+      <!-- LINEUP EDITOR (my standing orders) -->
+      <div id="lineup" class="panel hidden">
+        <h3 id="lineup-title">SET MY TEAM</h3>
         <div class="tacrow" id="tac-row"></div>
         <div class="insight" id="lineup-insight"></div>
         <div class="xi" id="xi"></div>
@@ -144,7 +160,7 @@
         <div id="squad-panel" class="hidden"></div>
         <div class="actions">
           <button id="autopick">Auto-pick best XI</button>
-          <button id="kickoff" class="primary">Kick Off</button>
+          <button id="save-team" class="primary">Save Team</button>
           <button id="lineup-back">Back</button>
         </div>
       </div>

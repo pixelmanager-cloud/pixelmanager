@@ -8,11 +8,13 @@ import type { StandingOrders } from './db.js';
 const BASE_QUALITY = 12; // baseline squad strength; base/star (NFT) tiers come later
 
 const short = (h: string) => (h.replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() || 'FC');
+// distinct kit colours so opponents are easy to tell apart on the pitch
+const KIT_COLORS = [0xd23b3b, 0x3b6bd2, 0x2fae6a, 0xe08a2a, 0x9b3bd2, 0x2ab0c0, 0xc0392b, 0xd23b7a, 0x7f8c2a];
 
 /** A fresh club + sensible default standing orders for a new account. */
 export function makeClub(accountId: string, handle: string): { club: Club; standingOrders: StandingOrders } {
   const seed = Math.floor(Math.random() * 2 ** 31);
-  const color = 0x3b6bd2;
+  const color = KIT_COLORS[Math.floor(Math.random() * KIT_COLORS.length)];
   const club = generateClub(accountId, `${handle}'s Club`, short(handle), color, BASE_QUALITY, seed);
   const lineup = autoPickXI(club, '4-4-2');
   return { club, standingOrders: { formation: '4-4-2', playerIds: lineup.playerIds, tactics: { ...TACTIC_PRESETS.Balanced } } };

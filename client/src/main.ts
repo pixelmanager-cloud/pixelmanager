@@ -1,13 +1,12 @@
 import Phaser from 'phaser';
 import {
-  MatchEngine, generateClub, autoPickXI, buildXI, overall, PITCH, TICK_SEC,
+  MatchEngine, autoPickXI, buildXI, overall, PITCH, TICK_SEC,
   TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player,
 } from '@fm/shared';
 import { SCALE, makeBallTexture, makePitchTexture, makePlayerTexture } from './pixelart';
+import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload } from './api';
 
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
-const HOME_SEED = 990201, HOME_QUALITY = 14;
-const ROUND_INTERVAL_MS = 60 * 60 * 1000; // one gauntlet of 5 matches per hour
 
 const LEVELS: Record<keyof Omit<Tactics, 'formation'>, string[]> = {
   mentality: ['Very Defensive', 'Defensive', 'Balanced', 'Attacking', 'Very Attacking'],
@@ -17,15 +16,14 @@ const LEVELS: Record<keyof Omit<Tactics, 'formation'>, string[]> = {
   width: ['Very Narrow', 'Narrow', 'Balanced', 'Wide', 'Very Wide'],
 };
 const FORMATIONS: Formation[] = ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1'];
-const CPU_CLUBS: Array<[string, string, number]> = [
-  ['Retro City', 'RET', 0x3b6bd2], ['Neon Rovers', 'NEO', 0x9b3bd2], ['Byte United', 'BYT', 0x2fae6a],
-  ['Sprite Athletic', 'SPR', 0xe08a2a], ['Vector Town', 'VEC', 0x2ab0c0], ['Glitch FC', 'GLI', 0xc0392b],
-  ['8-Bit Wanderers', 'WAN', 0x7f8c2a], ['Cyber Albion', 'CYB', 0x4a69bd], ['Pixel Rangers', 'RNG', 0xd23b7a],
-];
+const SLOT_ROLES: Record<Formation, string[]> = {
+  '4-4-2': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'FW', 'FW'],
+  '4-3-3': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'FW', 'FW', 'FW'],
+  '3-5-2': ['GK', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'MF', 'FW', 'FW'],
+  '4-2-3-1': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'MF', 'FW'],
+};
 
 const $ = (id: string) => document.getElementById(id)!;
-const rnd = () => Math.random();
-const pick = <T,>(a: T[]) => a[Math.floor(rnd() * a.length)];
 
 function statColor(v: number): string {
   if (v >= 17) return '#3ad07a';
@@ -35,7 +33,6 @@ function statColor(v: number): string {
   return '#d16a5a';
 }
 
-/** Colour-coded stats table for a set of players; players in `highlight` are marked. */
 function statsTableHTML(players: Player[], highlight?: Set<string>): string {
   const cols: Array<[string, keyof Player['attrs']]> = [
     ['PAC', 'pace'], ['STR', 'strength'], ['PAS', 'passing'], ['SHO', 'shooting'],
@@ -53,123 +50,49 @@ function statsTableHTML(players: Player[], highlight?: Set<string>): string {
   return `<table class="squad">${head}${rows}</table>`;
 }
 
-/** Human-readable description of a team's strategy (non-balanced traits only). */
-function tacticWords(t: Tactics): string {
-  const p: string[] = [];
-  const m: Record<number, string> = { [-2]: 'very defensive', [-1]: 'defensive', 1: 'attacking', 2: 'very attacking' };
-  const ln: Record<number, string> = { [-2]: 'a very deep line', [-1]: 'a deep line', 1: 'a high line', 2: 'a very high line' };
-  const pr: Record<number, string> = { [-2]: 'sitting off (contain)', [-1]: 'a low press', 1: 'a high press', 2: 'an intense gegenpress' };
-  const tp: Record<number, string> = { [-2]: 'very patient build-up', [-1]: 'patient build-up', 1: 'a direct tempo', 2: 'a very direct tempo' };
-  const wd: Record<number, string> = { [-2]: 'very narrow', [-1]: 'narrow', 1: 'wide', 2: 'very wide' };
-  if (t.mentality) p.push(m[t.mentality]);
-  if (t.line) p.push(ln[t.line]);
-  if (t.press) p.push(pr[t.press]);
-  if (t.tempo) p.push(tp[t.tempo]);
-  if (t.width) p.push(wd[t.width]);
-  return p.length ? p.join(', ') : 'a balanced approach';
-}
-
-/**
- * Ordered counter moves: each maps an opponent trait to advice text AND the
- * slider changes that enact it, so the "Apply suggested counter" button and the
- * scouting text always agree. Only outfield sliders are set; formation is kept.
- */
-interface CounterMove { when: (o: Tactics) => boolean; text: string; apply: (t: Tactics) => void; }
-const COUNTER_MOVES: CounterMove[] = [
-  { when: (o) => o.line >= 1, text: 'they hold a high line — go <b>Direct</b> and use pace in behind', apply: (t) => { t.tempo = 2; } },
-  { when: (o) => o.line <= -1 || o.mentality <= -1, text: 'they sit deep — be <b>Patient</b>, go <b>Wide</b> and keep probing', apply: (t) => { t.tempo = -2; t.width = 2; } },
-  { when: (o) => o.press >= 1, text: 'they press hard — play <b>Direct</b> to beat the press; they may tire late, so watch their fitness', apply: (t) => { t.tempo = 2; } },
-  { when: (o) => o.press <= -1, text: 'they give you time — dominate with <b>Patient</b> build-up', apply: (t) => { t.tempo = -2; } },
-  { when: (o) => o.mentality >= 1 && o.line >= 0, text: 'they commit forward — sit a touch <b>deeper</b> and counter', apply: (t) => { t.mentality = -1; t.line = -1; t.tempo = 2; } },
-];
-const BALANCED_COUNTER: CounterMove = { when: () => true, text: 'a balanced side — match them and let your better players decide it', apply: () => {} };
-
-/** The (up to two) counter moves that apply to this opponent — shared by the text and the button. */
-function activeCounterMoves(o: Tactics): CounterMove[] {
-  const moves = COUNTER_MOVES.filter((m) => m.when(o));
-  return (moves.length ? moves : [BALANCED_COUNTER]).slice(0, 2);
-}
-
-/** Suggest how to counter the opponent's tactics. */
-function counterAdvice(o: Tactics): string {
-  return activeCounterMoves(o).map((m) => m.text).join('; ') + '.';
-}
-
-/** Build the tactics sliders that enact the shown counter advice, keeping the chosen formation. */
-function counterTactics(o: Tactics, formation: Formation): Tactics {
-  const t: Tactics = { ...TACTIC_PRESETS.Balanced, formation };
-  for (const m of activeCounterMoves(o)) m.apply(t);
-  return t;
-}
-
-function insightFor(team: Team, isHome: boolean): string {
-  const byRole = (r: Team['players'][0]['role']) => team.players.filter((p) => p.role === r);
-  const avg = (ps: Team['players'], k: keyof Team['players'][0]['attrs']) => ps.length ? Math.round(ps.reduce((a, p) => a + p.attrs[k], 0) / ps.length) : 0;
+function squadInsight(team: Team): string {
+  const byRole = (r: Player['role']) => team.players.filter((p) => p.role === r);
+  const avg = (ps: Player[], k: keyof Player['attrs']) => ps.length ? Math.round(ps.reduce((a, p) => a + p.attrs[k], 0) / ps.length) : 0;
   const fw = byRole('FW'), df = byRole('DF');
-  const fwPace = avg(fw, 'pace'), fwStr = avg(fw, 'strength');
-  const dfPace = avg(df, 'pace');
   const best = team.players.reduce((a, b) => (overall(b) > overall(a) ? b : a));
-  const who = isHome ? 'Your' : 'Their';
-  const tips: string[] = [`★ Key player: <b>${best.name}</b> (${best.role}, OVR ${overall(best)})`];
-  if (fwPace >= 15) tips.push(`⚡ ${who} forwards are quick (pace ${fwPace}) — ${isHome ? 'a high line + direct tempo suit you' : "don't push your line too high"}.`);
-  else if (fwStr >= 15) tips.push(`💪 ${who} forwards are strong (strength ${fwStr}) — ${isHome ? 'long balls / Route One pay off' : 'they win aerial duels'}.`);
-  if (dfPace <= 11) tips.push(`⚠️ ${who} defenders are slow (pace ${dfPace}) — ${isHome ? 'a high line is risky' : 'exploit with pace in behind'}.`);
+  const tips = [`★ Key player: <b>${best.name}</b> (${best.role}, OVR ${overall(best)})`];
+  if (avg(fw, 'pace') >= 15) tips.push(`⚡ Your forwards are quick (pace ${avg(fw, 'pace')}) — a high line + direct tempo suit you.`);
+  else if (avg(fw, 'strength') >= 15) tips.push(`💪 Your forwards are strong (strength ${avg(fw, 'strength')}) — long balls pay off.`);
+  if (avg(df, 'pace') <= 11) tips.push(`⚠️ Your defenders are slow (pace ${avg(df, 'pace')}) — a high line is risky.`);
   return tips.join('<br>');
-}
-
-// ---- persisted round state ----
-interface Fixture {
-  opp: Club; oppLineup: Lineup; oppTactics: Tactics; matchSeed: number;
-  myLineup?: Lineup; myTactics?: Tactics; result?: [number, number];
-}
-interface Round { createdAt: number; fixtures: Fixture[]; }
-
-function newRound(now: number): Round {
-  const clubs = [...CPU_CLUBS].sort(() => rnd() - 0.5).slice(0, 5);
-  const fixtures: Fixture[] = clubs.map(([name, short, color], i) => {
-    const quality = 12 + Math.floor(rnd() * 4);
-    const opp = generateClub(`cpu${i}`, name, short, color, quality, Math.floor(rnd() * 2 ** 31));
-    const oppTactics: Tactics = { ...pick(Object.values(TACTIC_PRESETS)) };
-    return { opp, oppLineup: autoPickXI(opp, oppTactics.formation), oppTactics, matchSeed: Math.floor(rnd() * 2 ** 31) };
-  });
-  return { createdAt: now, fixtures };
 }
 
 let GAME: Game;
 
 class Game {
-  club: Club = generateClub('pix', 'Pixel United', 'PIX', 0xd23b3b, HOME_QUALITY, HOME_SEED);
-  round: Round;
-  screen: 'hub' | 'lineup' | 'match' = 'hub';
   scene?: MatchScene;
-
   engine?: MatchEngine;
-  activeFixture = -1;
   running = false;
   speed = 1; accum = 0; eventsShown = 0;
 
+  account!: Account;
+  club!: Club;
+  standingOrders!: StandingOrders;
   draftLineup!: Lineup;
   draftTactics!: Tactics;
+  awayHandle = '';
 
-  constructor() {
-    const saved = localStorage.getItem('fm_round_v2');
-    this.round = saved ? JSON.parse(saved) : newRound(Date.now());
-    if (!saved) this.save();
+  async boot() {
     this.wireStaticButtons();
-    setInterval(() => { if (this.screen === 'hub') this.renderTimer(); }, 1000);
+    if (hasToken()) {
+      try { this.setMe(await api.me()); await this.showHub(); return; }
+      catch { clearToken(); }
+    }
+    this.showScreen('login');
   }
 
-  private save() { localStorage.setItem('fm_round_v2', JSON.stringify(this.round)); }
+  private setMe(me: { account: Account; club: Club; standingOrders: StandingOrders }) {
+    this.account = me.account; this.club = me.club; this.standingOrders = me.standingOrders;
+  }
 
-  boot() { this.showScreen('hub'); }
-
-  // ---- screen switching ----
-  private showScreen(s: 'hub' | 'lineup' | 'match') {
-    this.screen = s;
-    $('hub').classList.toggle('hidden', s !== 'hub');
-    $('lineup').classList.toggle('hidden', s !== 'lineup');
-    $('matchwrap').classList.toggle('hidden', s !== 'match');
-    if (s === 'hub') this.renderHub();
+  private showScreen(s: 'login' | 'hub' | 'lineup' | 'match') {
+    for (const id of ['login', 'hub', 'lineup', 'matchwrap']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
+    $('logout').classList.toggle('hidden', s === 'login');
   }
 
   private wireStaticButtons() {
@@ -177,8 +100,13 @@ class Game {
     $('spd1').addEventListener('click', () => setSpeed(1, 'spd1'));
     $('spd4').addEventListener('click', () => setSpeed(4, 'spd4'));
     $('spd12').addEventListener('click', () => setSpeed(12, 'spd12'));
-    $('new-round').addEventListener('click', () => this.tryNewRound());
+    $('register-btn').addEventListener('click', () => this.doRegister());
+    $('handle-input').addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Enter') this.doRegister(); });
+    $('logout').addEventListener('click', () => { clearToken(); this.showScreen('login'); });
+    $('set-team').addEventListener('click', () => this.openLineup());
     $('autopick').addEventListener('click', () => { this.draftLineup = autoPickXI(this.club, this.draftTactics.formation); this.renderLineupEditor(); });
+    $('save-team').addEventListener('click', () => this.saveTeam());
+    $('lineup-back').addEventListener('click', () => this.showHub());
     $('toggle-squad').addEventListener('click', () => {
       const panel = $('squad-panel');
       const show = panel.classList.contains('hidden');
@@ -186,84 +114,61 @@ class Game {
       $('toggle-squad').textContent = show ? '▤ Hide squad stats' : '▤ View full squad stats';
       if (show) this.renderSquadPanel();
     });
-    $('toggle-opp').addEventListener('click', () => {
-      const panel = $('opp-panel');
-      const show = panel.classList.contains('hidden');
-      panel.classList.toggle('hidden', !show);
-      $('toggle-opp').textContent = show ? '👁 Hide opponent lineup' : '👁 View opponent lineup';
-      if (show) {
-        const f = this.round.fixtures[this.activeFixture];
-        $('opp-panel').innerHTML = statsTableHTML(buildXI(f.opp, f.oppLineup).players);
-      }
-    });
-    $('apply-counter').addEventListener('click', () => {
-      const f = this.round.fixtures[this.activeFixture];
-      if (!f) return;
-      this.draftTactics = counterTactics(f.oppTactics, this.draftTactics.formation);
-      this.renderLineupEditor();
-    });
-    $('lineup-back').addEventListener('click', () => this.showScreen('hub'));
-    $('kickoff').addEventListener('click', () => this.kickOff());
   }
 
-  // ---- HUB ----
-  private renderHub() {
-    const played = this.round.fixtures.filter((f) => f.result);
-    let w = 0, d = 0, l = 0, gf = 0, ga = 0;
-    for (const f of played) { const [a, b] = f.result!; gf += a; ga += b; if (a > b) w++; else if (a < b) l++; else d++; }
-    $('record').textContent = `Record: ${w}W ${d}D ${l}L`;
-    $('record2').innerHTML = played.length
-      ? `Points: <b>${w * 3 + d}</b> &nbsp; Goals: ${gf}-${ga} &nbsp; (${played.length}/5 played)`
-      : `Set a lineup and tactics for each opponent, then play. Results lock at full-time.`;
-
-    $('fixtures').innerHTML = this.round.fixtures.map((f, i) => {
-      let res = '<span class="res">— play ▶</span>';
-      if (f.result) { const [a, b] = f.result; const cls = a > b ? 'w' : a < b ? 'l' : 'd'; res = `<span class="res ${cls}">${a} - ${b}</span>`; }
-      const best = f.opp.players.reduce((x, y) => (overall(y) > overall(x) ? y : x));
-      return `<div class="fixture" data-i="${i}">
-        <span class="num">${i + 1}</span>
-        <span class="opp"><b>${f.opp.name}</b> <span class="meta">[${f.oppTactics.formation}] · star ${best.name} (${overall(best)})</span></span>
-        ${res}</div>`;
-    }).join('');
-    Array.from(document.querySelectorAll('.fixture')).forEach((el) => {
-      const i = Number((el as HTMLElement).dataset.i);
-      if (!this.round.fixtures[i].result) el.addEventListener('click', () => this.openLineup(i));
-    });
-    this.renderTimer();
-  }
-
-  private renderTimer() {
-    const age = Date.now() - this.round.createdAt;
-    const left = ROUND_INTERVAL_MS - age;
-    const btn = $('new-round') as HTMLButtonElement;
-    if (left <= 0) { $('timer').textContent = 'New round available'; btn.disabled = false; }
-    else {
-      const mm = Math.floor(left / 60000), ss = Math.floor((left % 60000) / 1000);
-      $('timer').textContent = `Next round in ${mm}:${String(ss).padStart(2, '0')}`;
-      btn.disabled = true;
+  // ---- login ----
+  private async doRegister() {
+    const handle = ($('handle-input') as HTMLInputElement).value.trim();
+    $('login-error').textContent = '';
+    try {
+      const r = await api.register(handle);
+      setToken(r.token);
+      this.setMe({ account: r.account, club: r.club, standingOrders: r.standingOrders });
+      await this.showHub();
+    } catch (e: any) {
+      $('login-error').textContent = e?.status === 409 ? 'Handle already taken — pick another.'
+        : e?.status === 400 ? 'Handle must be 2–20 characters.'
+        : 'Could not reach the server. Is it running?';
     }
   }
 
-  private tryNewRound() {
-    if (Date.now() - this.round.createdAt < ROUND_INTERVAL_MS) return;
-    this.round = newRound(Date.now());
-    this.save();
-    this.renderHub();
+  // ---- hub ----
+  private async showHub() {
+    this.showScreen('hub');
+    $('me-name').textContent = this.club.name;
+    $('me-rating').textContent = `RATING ${this.account.rating}`;
+    $('opponents').innerHTML = '<div class="muted">Loading…</div>';
+    try {
+      const [opps, lb, mine] = await Promise.all([api.opponents(), api.leaderboard(), api.myMatches()]);
+      $('opponents').innerHTML = opps.opponents.length
+        ? opps.opponents.map((o) => `<div class="fixture"><span class="opp"><b>${o.clubName}</b> <span class="meta">${o.handle} · rating ${o.rating}</span></span><button data-opp="${o.id}" data-h="${o.handle}">Play ▶</button></div>`).join('')
+        : '<div class="muted">No opponents yet — register another handle in a second browser/incognito window to play against.</div>';
+      Array.from($('opponents').querySelectorAll('button[data-opp]')).forEach((b) =>
+        b.addEventListener('click', () => this.play((b as HTMLElement).dataset.opp!, (b as HTMLElement).dataset.h!)));
+      $('leaderboard').innerHTML = lb.leaderboard.map((r, i) =>
+        `<div class="lb-row ${r.id === this.account.id ? 'me' : ''}"><span>${i + 1}. ${r.handle}</span><span class="r">${r.rating}</span></div>`).join('');
+      $('my-matches').innerHTML = mine.matches.length
+        ? mine.matches.map((m) => {
+            const iAmHome = m.home_id === this.account.id;
+            const my = iAmHome ? m.home_score : m.away_score, opp = iAmHome ? m.away_score : m.home_score;
+            const cls = my > opp ? 'w' : my < opp ? 'l' : 'd';
+            return `<div class="mm-row"><span class="${cls}">${cls.toUpperCase()}</span> ${my} - ${opp}</div>`;
+          }).join('')
+        : '<div class="muted">No matches yet.</div>';
+    } catch {
+      $('opponents').innerHTML = '<div class="muted">Could not load — is the server running?</div>';
+    }
   }
 
-  // ---- LINEUP EDITOR (shared by pre-match & half-time) ----
-  private openLineup(fixtureIdx: number) {
-    this.activeFixture = fixtureIdx;
-    const f = this.round.fixtures[fixtureIdx];
-    this.draftTactics = f.myTactics ? { ...f.myTactics } : { ...TACTIC_PRESETS.Balanced };
-    this.draftLineup = f.myLineup ? { ...f.myLineup, playerIds: [...f.myLineup.playerIds] } : autoPickXI(this.club, this.draftTactics.formation);
-    $('lineup-title').textContent = `SET YOUR LINEUP  vs ${f.opp.name}`;
+  // ---- lineup editor (my standing orders) ----
+  private openLineup() {
+    this.draftTactics = { ...this.standingOrders.tactics, formation: this.standingOrders.formation };
+    this.draftLineup = { formation: this.standingOrders.formation, playerIds: [...this.standingOrders.playerIds] };
     this.renderLineupEditor();
     this.showScreen('lineup');
   }
 
   private renderLineupEditor() {
-    // tactics row: formation + 5 sliders
     const tac: string[] = [`<label>Formation<select id="e-formation">${FORMATIONS.map((f) => `<option ${f === this.draftTactics.formation ? 'selected' : ''}>${f}</option>`).join('')}</select></label>`];
     (Object.keys(LEVELS) as Array<keyof typeof LEVELS>).forEach((k) => {
       tac.push(`<label>${k[0].toUpperCase() + k.slice(1)}<select id="e-${k}">${LEVELS[k].map((lab, i) => `<option value="${i - 2}" ${i - 2 === this.draftTactics[k] ? 'selected' : ''}>${lab}</option>`).join('')}</select></label>`);
@@ -278,11 +183,10 @@ class Game {
       ($(`e-${k}`) as HTMLSelectElement).addEventListener('change', (ev) => { this.draftTactics[k] = Number((ev.target as HTMLSelectElement).value); this.updateEditorInsight(); });
     });
 
-    // XI slots
     const slots = this.draftLineup.playerIds;
     const usedElsewhere = (slotIdx: number) => new Set(slots.filter((_, j) => j !== slotIdx));
     $('xi').innerHTML = slots.map((pid, i) => {
-      const roleForSlot = this.slotRole(i);
+      const roleForSlot = SLOT_ROLES[this.draftTactics.formation][i];
       const used = usedElsewhere(i);
       const opts = this.club.players
         .filter((p) => p.id === pid || !used.has(p.id))
@@ -299,73 +203,61 @@ class Game {
       });
     });
 
-    // bench
     const inXI = new Set(slots);
     const bench = this.club.players.filter((p) => !inXI.has(p.id)).sort((a, b) => overall(b) - overall(a));
     $('bench').innerHTML = `<b>Bench:</b> ${bench.map((p) => `${p.name} (${p.role} ${overall(p)})`).join(' · ')}`;
     if (!$('squad-panel').classList.contains('hidden')) this.renderSquadPanel();
-    this.renderScout();
     this.updateEditorInsight();
   }
 
   private renderSquadPanel() {
-    if (!this.draftLineup) return;
     $('squad-panel').innerHTML = statsTableHTML(this.club.players, new Set(this.draftLineup.playerIds));
   }
 
-  private renderScout() {
-    const f = this.round.fixtures[this.activeFixture];
-    if (!f) return;
-    const oppTeam = buildXI(f.opp, f.oppLineup);
-    $('scout-summary').innerHTML =
-      `<b>${f.opp.name}</b> set up in <b>${f.oppTactics.formation}</b>, playing ${tacticWords(f.oppTactics)}.<br>`
-      + `${insightFor(oppTeam, false)}<br>`
-      + `<span class="counter">🎯 To beat them: ${counterAdvice(f.oppTactics)}</span>`;
-    if (!$('opp-panel').classList.contains('hidden')) $('opp-panel').innerHTML = statsTableHTML(oppTeam.players);
-  }
-
-  private slotRole(i: number): string {
-    // derive the slot's role from the formation table via a built XI (roles carried from formation)
-    const roles: Record<Formation, string[]> = {
-      '4-4-2': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'FW', 'FW'],
-      '4-3-3': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'FW', 'FW', 'FW'],
-      '3-5-2': ['GK', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'MF', 'FW', 'FW'],
-      '4-2-3-1': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'MF', 'FW'],
-    };
-    return roles[this.draftTactics.formation][i];
-  }
-
   private updateEditorInsight() {
-    const team = buildXI(this.club, this.draftLineup);
-    $('lineup-insight').innerHTML = insightFor(team, true);
+    $('lineup-insight').innerHTML = squadInsight(buildXI(this.club, this.draftLineup));
   }
 
-  // ---- MATCH ----
-  private kickOff() {
-    const f = this.round.fixtures[this.activeFixture];
-    f.myLineup = { ...this.draftLineup, playerIds: [...this.draftLineup.playerIds] };
-    f.myTactics = { ...this.draftTactics };
-    const myTeam = buildXI(this.club, f.myLineup);
-    const oppTeam = buildXI(f.opp, f.oppLineup);
-    this.engine = new MatchEngine([myTeam, oppTeam], f.matchSeed, [{ ...f.myTactics }, { ...f.oppTactics }]);
+  private async saveTeam() {
+    const so: StandingOrders = {
+      formation: this.draftTactics.formation,
+      playerIds: this.draftLineup.playerIds,
+      tactics: { ...this.draftTactics },
+    };
+    try { const r = await api.setStandingOrders(so); this.standingOrders = r.standingOrders; await this.showHub(); }
+    catch { $('lineup-insight').innerHTML = '<span style="color:var(--home)">Could not save — check your XI.</span>'; }
+  }
+
+  // ---- match ----
+  private async play(opponentId: string, handle: string) {
+    $('opponents').innerHTML = '<div class="muted">Playing…</div>';
+    try { this.startMatch(await api.createMatch(opponentId), handle); }
+    catch { await this.showHub(); }
+  }
+
+  private startMatch(payload: MatchPayload, awayHandle: string) {
+    this.awayHandle = awayHandle;
+    // guarantee the two kits contrast on the pitch even if both clubs share a colour
+    if (payload.away.team.shirtColor === payload.home.team.shirtColor) {
+      payload.away.team.shirtColor = payload.home.team.shirtColor === 0x3b6bd2 ? 0xd23b3b : 0x3b6bd2;
+    }
+    this.engine = new MatchEngine([payload.home.team, payload.away.team], payload.seed, [payload.home.tactics, payload.away.tactics]);
     this.running = true; this.accum = 0; this.eventsShown = 0;
     $('home-name').textContent = this.club.name;
-    $('away-name').textContent = `${f.opp.name} [${f.oppTactics.formation}]`;
+    $('away-name').textContent = awayHandle;
     $('ticker').innerHTML = '';
     this.scene!.buildSprites(this.engine.teams);
     this.showScreen('match');
   }
 
-  private onFullTime() {
+  private async onFullTime() {
     this.running = false;
-    const f = this.round.fixtures[this.activeFixture];
-    f.result = [this.engine!.state.score[0], this.engine!.state.score[1]];
-    this.save();
-    setTimeout(() => this.showScreen('hub'), 1400); // brief pause on the final whistle
+    try { this.setMe(await api.me()); } catch { /* keep old rating */ }
+    setTimeout(() => this.showHub(), 1600);
   }
 
   onFrame(dMs: number) {
-    if (this.screen !== 'match' || !this.engine) return;
+    if (!this.engine || $('matchwrap').classList.contains('hidden')) return;
     if (this.running) {
       this.accum += (dMs / 1000) * 10 * this.speed;
       while (this.accum >= TICK_SEC && !this.engine.state.finished) {
@@ -394,13 +286,13 @@ class Game {
   }
 
   private pushTicker(e: MatchEvent) {
-    const team = this.engine!.teams[e.teamIdx].shortName;
+    const who = e.teamIdx === 0 ? this.club.shortName : this.awayHandle;
     const line: Record<MatchEvent['type'], string> = {
       kickoff: `${e.minute}' Kickoff!`,
-      goal: `${e.minute}' ⚽ GOAL! ${e.playerName} (${team})`,
-      chance: `${e.minute}' Big chance for ${e.playerName} (${team})...`,
-      shot_saved: `${e.minute}' Save! ${e.playerName} (${team}) denied`,
-      shot_missed: `${e.minute}' ${e.playerName} (${team}) shoots wide`,
+      goal: `${e.minute}' ⚽ GOAL! ${e.playerName} (${who})`,
+      chance: `${e.minute}' Big chance for ${e.playerName} (${who})...`,
+      shot_saved: `${e.minute}' Save! ${e.playerName} (${who}) denied`,
+      shot_missed: `${e.minute}' ${e.playerName} (${who}) shoots wide`,
       halftime: `${e.minute}' Half-time`,
       fulltime: `${e.minute}' Full-time`,
     };
@@ -417,13 +309,11 @@ class MatchScene extends Phaser.Scene {
   private ballSprite!: Phaser.GameObjects.Image;
 
   create() {
-    try {
-      makePitchTexture(this);
-      makeBallTexture(this);
-      this.add.image(0, 0, 'pitch').setOrigin(0);
-      GAME.scene = this;
-      GAME.boot();
-    } catch (e) { console.log('CREATEERR::', (e as Error).stack); }
+    makePitchTexture(this);
+    makeBallTexture(this);
+    this.add.image(0, 0, 'pitch').setOrigin(0);
+    GAME.scene = this;
+    GAME.boot();
   }
 
   buildSprites(teams: [Team, Team]) {
@@ -451,4 +341,4 @@ class MatchScene extends Phaser.Scene {
 }
 
 GAME = new Game();
-new Phaser.Game({ type: Phaser.CANVAS, parent: 'game', width: W, height: H, pixelArt: true, backgroundColor: '#10141c', scene: MatchScene });
+new Phaser.Game({ type: Phaser.CANVAS, parent: 'game', width: W, height: H, pixelArt: true, backgroundColor: '#0a0a16', scene: MatchScene });
