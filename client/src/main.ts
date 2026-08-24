@@ -369,16 +369,17 @@ class Game {
     const s = this.engine!.state;
     const tot = s.possession[0] + s.possession[1] || 1;
     const hp = Math.round((s.possession[0] / tot) * 100);
-    const shots: [number, number] = [0, 0];
-    for (const e of s.events) if (e.type === 'goal' || e.type.startsWith('shot_')) shots[e.teamIdx]++;
+    // Shots on target = goals + saved efforts (shot_missed is off target, so excluded).
+    const onTarget: [number, number] = [0, 0];
+    for (const e of s.events) if (e.type === 'goal' || e.type === 'shot_saved') onTarget[e.teamIdx]++;
 
     $('ft-home-name').textContent = this.club.shortName;
     $('ft-away-name').textContent = this.awayHandle;
     $('ft-score').textContent = `${s.score[0]} - ${s.score[1]}`;
     $('ft-home-poss').textContent = `${hp}%`;
     $('ft-away-poss').textContent = `${100 - hp}%`;
-    $('ft-home-shots').textContent = `${shots[0]}`;
-    $('ft-away-shots').textContent = `${shots[1]}`;
+    $('ft-home-shots').textContent = `${onTarget[0]}`;
+    $('ft-away-shots').textContent = `${onTarget[1]}`;
 
     const card = $('fulltime-card');
     card.classList.remove('hidden');
