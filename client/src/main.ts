@@ -25,6 +25,9 @@ const SLOT_ROLES: Record<Formation, string[]> = {
 
 const $ = (id: string) => document.getElementById(id)!;
 
+// Retro pixel spinner used while the hub fetches data (see .pixel-loader in index.html).
+const SPINNER = '<div class="pixel-loader"><div class="pixel-spinner"><i></i><i></i><i></i><i></i></div><span class="txt">Loading…</span></div>';
+
 function statColor(v: number): string {
   if (v >= 17) return '#3ad07a';
   if (v >= 14) return '#7bd88f';
@@ -139,7 +142,7 @@ class Game {
     this.showScreen('hub');
     $('me-name').textContent = this.club.name;
     $('me-rating').textContent = `RATING ${this.account.rating}`;
-    $('league-table').innerHTML = '<div class="muted">Loading…</div>';
+    $('league-table').innerHTML = SPINNER;
     try {
       const [opps, tbl, mine] = await Promise.all([api.opponents(), api.table(), api.myMatches()]);
       $('league-table').innerHTML = this.renderLeagueTable(tbl.table);
