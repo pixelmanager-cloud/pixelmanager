@@ -3,25 +3,50 @@ import { PITCH } from '@fm/shared';
 
 export const SCALE = 8; // pixels per metre => 840x544 pitch canvas
 
-/** Draw a pixel-art footballer (8x12) onto a texture: shirt color + skin + shorts. */
-export function makePlayerTexture(scene: Phaser.Scene, key: string, shirt: number, gk = false) {
-  if (scene.textures.exists(key)) return;
-  const g = scene.add.graphics();
+/**
+ * Draw a pixel-art footballer as TWO frames (baseKey+"0" rest, baseKey+"1" stride)
+ * so the client can flip between them for a running animation.
+ */
+export function makePlayerFrames(scene: Phaser.Scene, baseKey: string, shirt: number, gk = false) {
   const skin = 0xd9a066;
   const shorts = gk ? 0x222222 : 0xf0f0f0;
   const body = gk ? 0xd4a017 : shirt;
-  // head
-  g.fillStyle(skin).fillRect(2, 0, 4, 3);
-  // shirt
-  g.fillStyle(body).fillRect(1, 3, 6, 4);
-  g.fillRect(0, 3, 1, 2).fillRect(7, 3, 1, 2); // sleeves
-  // shorts
-  g.fillStyle(shorts).fillRect(2, 7, 4, 2);
-  // legs
-  g.fillStyle(skin).fillRect(2, 9, 1, 2).fillRect(5, 9, 1, 2);
-  // boots
-  g.fillStyle(0x111111).fillRect(2, 11, 2, 1).fillRect(5, 11, 2, 1);
-  g.generateTexture(key, 8, 12);
+  for (const frame of [0, 1]) {
+    const key = baseKey + frame;
+    if (scene.textures.exists(key)) continue;
+    const g = scene.add.graphics();
+    g.fillStyle(skin).fillRect(2, 0, 4, 3);                 // head
+    g.fillStyle(body).fillRect(1, 3, 6, 4);                 // shirt
+    g.fillRect(0, 3, 1, 2).fillRect(7, 3, 1, 2);            // sleeves
+    g.fillStyle(shorts).fillRect(2, 7, 4, 2);               // shorts
+    if (frame === 0) {                                      // legs together (contact)
+      g.fillStyle(skin).fillRect(2, 9, 1, 2).fillRect(5, 9, 1, 2);
+      g.fillStyle(0x111111).fillRect(2, 11, 2, 1).fillRect(5, 11, 2, 1);
+    } else {                                                // legs striding
+      g.fillStyle(skin).fillRect(1, 9, 1, 2).fillRect(6, 9, 1, 2);
+      g.fillStyle(0x111111).fillRect(0, 11, 2, 1).fillRect(6, 11, 2, 1);
+    }
+    g.generateTexture(key, 8, 12);
+    g.destroy();
+  }
+}
+
+/** Soft ground shadow (grounds the sprites, adds depth). */
+export function makeShadowTexture(scene: Phaser.Scene) {
+  if (scene.textures.exists('shadow')) return;
+  const g = scene.add.graphics();
+  g.fillStyle(0x000000, 0.32).fillEllipse(7, 3, 13, 5);
+  g.generateTexture('shadow', 14, 6);
+  g.destroy();
+}
+
+/** Glowing ring drawn under the ball carrier so the eye can follow the play. */
+export function makeCarrierTexture(scene: Phaser.Scene) {
+  if (scene.textures.exists('carrier')) return;
+  const g = scene.add.graphics();
+  g.lineStyle(2, 0xffe14d, 0.55).strokeEllipse(9, 9, 16, 8);
+  g.lineStyle(2, 0xffe14d, 0.9).strokeEllipse(9, 9, 11, 5);
+  g.generateTexture('carrier', 18, 18);
   g.destroy();
 }
 

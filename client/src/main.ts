@@ -3,7 +3,7 @@ import {
   MatchEngine, autoPickXI, buildXI, overall, PITCH, TICK_SEC,
   TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player,
 } from '@fm/shared';
-import { SCALE, makeBallTexture, makePitchTexture, makePlayerTexture } from './pixelart';
+import { SCALE, makeBallTexture, makePitchTexture, makePlayerFrames, makeShadowTexture, makeCarrierTexture } from './pixelart';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow } from './api';
 
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
@@ -261,9 +261,13 @@ class Game {
 
   private startMatch(payload: MatchPayload, awayHandle: string) {
     this.awayHandle = awayHandle;
-    // guarantee the two kits contrast on the pitch even if both clubs share a colour
-    if (payload.away.team.shirtColor === payload.home.team.shirtColor) {
-      payload.away.team.shirtColor = payload.home.team.shirtColor === 0x3b6bd2 ? 0xd23b3b : 0x3b6bd2;
+    // guarantee the two kits clearly contrast on the pitch even if the clubs' colours are similar
+    const dist = (a: number, b: number) => {
+      const dr = ((a >> 16) & 255) - ((b >> 16) & 255), dg = ((a >> 8) & 255) - ((b >> 8) & 255), db = (a & 255) - (b & 255);
+      return dr * dr + dg * dg + db * db;
+    };
+    if (dist(payload.home.team.shirtColor, payload.away.team.shirtColor) < 9000) {
+      payload.away.team.shirtColor = dist(payload.home.team.shirtColor, 0x3b6bd2) > 9000 ? 0x3b6bd2 : 0xd23b3b;
     }
     this.engine = new MatchEngine([payload.home.team, payload.away.team], payload.seed, [payload.home.tactics, payload.away.tactics]);
     this.running = true; this.accum = 0; this.eventsShown = 0;
@@ -322,32 +326,51 @@ class Game {
     };
     const div = document.createElement('div');
     div.textContent = line[e.type];
-    if (e.type === 'goal') div.style.color = '#ffd75e';
+    if (e.type === 'goal') { div.style.color = '#ffd75e'; this.celebrateGoal(e); }
     else if (e.type === 'chance') div.style.color = '#8ad';
     $('ticker').prepend(div);
+  }
+
+  private celebrateGoal(e: MatchEvent) {
+    const el = $('goal-flash');
+    el.textContent = `⚽ GOAL!  ${e.teamIdx === 0 ? this.club.name : this.awayHandle}`;
+    el.classList.remove('show');
+    void el.offsetWidth; // restart the CSS animation
+    el.classList.add('show');
   }
 }
 
 class MatchScene extends Phaser.Scene {
   private sprites: Phaser.GameObjects.Image[][] = [[], []];
+  private shadows: Phaser.GameObjects.Image[][] = [[], []];
   private ballSprite!: Phaser.GameObjects.Image;
+  private ballShadow!: Phaser.GameObjects.Image;
+  private carrierRing!: Phaser.GameObjects.Image;
+  private teams!: [Team, Team];
 
   create() {
     makePitchTexture(this);
     makeBallTexture(this);
+    makeShadowTexture(this);
+    makeCarrierTexture(this);
     this.add.image(0, 0, 'pitch').setOrigin(0);
     GAME.scene = this;
     GAME.boot();
   }
 
   buildSprites(teams: [Team, Team]) {
-    this.sprites.flat().forEach((s) => s.destroy());
-    this.ballSprite?.destroy();
+    this.teams = teams;
+    [...this.sprites.flat(), ...this.shadows.flat()].forEach((s) => s.destroy());
+    this.ballSprite?.destroy(); this.ballShadow?.destroy(); this.carrierRing?.destroy();
+    // draw order (Canvas = creation order): shadows -> ball shadow -> carrier ring -> players -> ball
+    this.shadows = [0, 1].map((t) => teams[t].players.map(() => this.add.image(0, 0, 'shadow').setScale(2.4).setDepth(0)));
+    this.ballShadow = this.add.image(0, 0, 'shadow').setScale(1.1);
+    this.carrierRing = this.add.image(0, 0, 'carrier').setScale(2.4).setVisible(false);
     this.sprites = [0, 1].map((t) =>
       teams[t].players.map((p) => {
         const key = `p-${t}-${p.role === 'GK' ? 'gk' : 'out'}`;
-        makePlayerTexture(this, key, teams[t].shirtColor, p.role === 'GK');
-        return this.add.image(0, 0, key).setScale(3).setOrigin(0.5, 0.85);
+        makePlayerFrames(this, key, teams[t].shirtColor, p.role === 'GK');
+        return this.add.image(-99, -99, key + '0').setScale(3).setOrigin(0.5, 0.85);
       }),
     );
     this.ballSprite = this.add.image(0, 0, 'ball').setScale(3);
@@ -355,10 +378,31 @@ class MatchScene extends Phaser.Scene {
 
   sync(state: MatchEngine['state']) {
     if (!this.ballSprite) return;
+    const frame = Math.floor(Date.now() / 110) % 2; // leg-swap cadence
+    const lerp = 0.28;
     for (const t of [0, 1] as const) {
-      state.players[t].forEach((ps, i) => this.sprites[t]?.[i]?.setPosition(ps.x * SCALE, ps.y * SCALE));
+      state.players[t].forEach((ps, i) => {
+        const s = this.sprites[t]?.[i]; if (!s) return;
+        const tx = ps.x * SCALE, ty = ps.y * SCALE;
+        const dx = tx - s.x, dy = ty - s.y;
+        const moving = Math.hypot(dx, dy) > 1.2; // chasing a target => running
+        s.x += dx * lerp; s.y += dy * lerp;
+        if (Math.abs(dx) > 0.4) s.flipX = dx < 0;                       // face the direction of travel
+        const key = `p-${t}-${this.teams[t].players[i].role === 'GK' ? 'gk' : 'out'}`;
+        s.setTexture(key + (moving ? frame : 0));
+        this.shadows[t][i].setPosition(s.x, s.y + 1);
+      });
     }
-    this.ballSprite.setPosition(state.ball.x * SCALE, state.ball.y * SCALE - 4);
+    // ball (sits a touch above its shadow for depth)
+    const bx = state.ball.x * SCALE, by = state.ball.y * SCALE;
+    this.ballShadow.setPosition(bx + (bx - this.ballSprite.x) * lerp, by);
+    this.ballSprite.x += (bx - this.ballSprite.x) * lerp;
+    this.ballSprite.y += (by - 4 - this.ballSprite.y) * lerp;
+    // highlight ring under whoever has the ball
+    if (state.carrier) {
+      const cs = this.sprites[state.carrier.teamIdx][state.carrier.playerIdx];
+      this.carrierRing.setVisible(true).setPosition(cs.x, cs.y + 1);
+    } else this.carrierRing.setVisible(false);
   }
 
   update(_t: number, deltaMs: number) { GAME.onFrame(deltaMs); }
