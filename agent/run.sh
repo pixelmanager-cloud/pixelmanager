@@ -32,21 +32,23 @@ git fetch origin --quiet
 git reset --hard origin/main --quiet
 npm ci --silent
 
-# --- choose the first open task that has no open PR yet ---
-TASK=""
+# --- choose the first open task that has no open PR yet (matched by branch slug) ---
+slugify() { printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' | sed -E 's/-+/-/g; s/^-//; s/-$//' | cut -c1-40; }
+OPEN_BRANCHES="$(gh pr list --state open --json headRefName -q '.[].headRefName' 2>/dev/null || true)"
+TASK=""; SLUG=""
 while IFS= read -r t; do
   [ -z "$t" ] && continue
-  if gh pr list --state open --search "in:title agent: $t" --json title -q '.[].title' 2>/dev/null | grep -Fxq "agent: $t"; then
-    continue   # already awaiting review
+  s="$(slugify "$t")"
+  if printf '%s\n' "$OPEN_BRANCHES" | grep -q "^agent/${s}-"; then
+    continue   # already has an open PR
   fi
-  TASK="$t"; break
+  TASK="$t"; SLUG="$s"; break
 done < <(grep -E '^- \[ \] ' agent/backlog.md | sed -E 's/^- \[ \] //')
 
 if [ -z "$TASK" ]; then echo "No open tasks without a PR — nothing to do."; exit 0; fi
 echo "Selected task: $TASK"
 
 # --- fresh branch ---
-SLUG="$(printf '%s' "$TASK" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' | sed -E 's/-+/-/g; s/^-//; s/-$//' | cut -c1-40)"
 BRANCH="agent/${SLUG}-$(date +%m%d%H%M)"
 git checkout -b "$BRANCH" --quiet
 
@@ -97,7 +99,9 @@ $(tail -c 2500 agent/last-report.txt)
 
 \`npm run verify\` (client build + engine regression tests) passed locally before this PR was opened. CI will re-verify. Please review before merging."
 
-gh pr create --title "agent: $TASK" --body "$BODY" --base main --head "$BRANCH" >/dev/null
+# GitHub caps PR titles at 256 chars, so truncate; the full task is in the body.
+TITLE="agent: $(printf '%s' "$TASK" | cut -c1-90)"
+gh pr create --title "$TITLE" --body "$BODY" --base main --head "$BRANCH" >/dev/null
 PR_URL="$(gh pr view "$BRANCH" --json url -q .url)"
 notify "✅ opened PR for: $TASK
 $PR_URL"
