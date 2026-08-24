@@ -102,6 +102,14 @@ app.get('/table', async () => {
   return { table: buildTable(accounts, results) };
 });
 
+// wipe all data — inert unless ADMIN_SECRET is set and the matching header is sent
+app.post('/admin/reset', async (req, reply) => {
+  const secret = process.env.ADMIN_SECRET;
+  if (!secret || (req.headers['x-admin-secret'] as string) !== secret) return reply.code(403).send({ error: 'forbidden' });
+  await db.reset();
+  return { ok: true, reset: true };
+});
+
 const port = Number(process.env.PORT ?? 8787);
 await db.init();
 app.listen({ port, host: '0.0.0.0' }).then(() => console.log(`fm-server on :${port}`));

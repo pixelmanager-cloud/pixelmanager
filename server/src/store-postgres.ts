@@ -95,5 +95,6 @@ export function makePostgresStore(connectionString: string): Store {
     },
     async allAccounts() { return (await q('SELECT id, handle, rating FROM accounts')).rows as LeaderRow[]; },
     async allResults() { return (await q('SELECT home_id, away_id, home_score, away_score FROM matches')).rows as any[]; },
+    async reset() { await q('TRUNCATE accounts, clubs, matches'); },
   };
 }
