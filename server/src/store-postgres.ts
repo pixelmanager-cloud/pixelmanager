@@ -5,7 +5,13 @@ import type { Club } from '@fm/shared';
 import type { Store, Account, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow } from './store.js';
 
 export function makePostgresStore(connectionString: string): Store {
-  const pool = new pg.Pool({ connectionString, ssl: { rejectUnauthorized: false } });
+  // Railway's internal DB (postgres.railway.internal) and localhost don't use SSL;
+  // managed providers (Neon/Supabase, public URLs) do. Auto-detect, override with PGSSL.
+  const ssl = process.env.PGSSL === 'require' ? { rejectUnauthorized: false }
+    : process.env.PGSSL === 'false' ? false
+    : /\.railway\.internal|localhost|127\.0\.0\.1/.test(connectionString) ? false
+    : { rejectUnauthorized: false };
+  const pool = new pg.Pool({ connectionString, ssl });
   const q = (text: string, params: any[] = []) => pool.query(text, params);
   return {
     async init() {
