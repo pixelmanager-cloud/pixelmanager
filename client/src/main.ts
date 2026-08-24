@@ -3,7 +3,7 @@ import {
   MatchEngine, autoPickXI, buildXI, overall, PITCH, TICK_SEC,
   TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player,
 } from '@fm/shared';
-import { SCALE, makeBallTexture, makePitchTexture, makePlayerFrames, makeShadowTexture, makeCarrierTexture } from './pixelart';
+import { SCALE, makeBallTexture, makeBallGhostTexture, makePitchTexture, makePlayerFrames, makeShadowTexture, makeCarrierTexture } from './pixelart';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow } from './api';
 
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
@@ -33,6 +33,9 @@ function toast(msg: string) {
   void el.offsetWidth; // restart the animation if a toast is already showing
   el.classList.add('show');
 }
+
+// Retro pixel spinner used while the hub fetches data (see .pixel-loader in index.html).
+const SPINNER = '<div class="pixel-loader"><div class="pixel-spinner"><i></i><i></i><i></i><i></i></div><span class="txt">Loading…</span></div>';
 
 function statColor(v: number): string {
   if (v >= 17) return '#3ad07a';
@@ -148,7 +151,7 @@ class Game {
     this.showScreen('hub');
     $('me-name').textContent = this.club.name;
     $('me-rating').textContent = `RATING ${this.account.rating}`;
-    $('league-table').innerHTML = '<div class="muted">Loading…</div>';
+    $('league-table').innerHTML = SPINNER;
     try {
       const [opps, tbl, mine] = await Promise.all([api.opponents(), api.table(), api.myMatches()]);
       $('league-table').innerHTML = this.renderLeagueTable(tbl.table);
@@ -162,7 +165,7 @@ class Game {
             const iAmHome = m.home_id === this.account.id;
             const my = iAmHome ? m.home_score : m.away_score, opp = iAmHome ? m.away_score : m.home_score;
             const cls = my > opp ? 'w' : my < opp ? 'l' : 'd';
-            return `<div class="mm-row"><span class="${cls}">${cls.toUpperCase()}</span> ${my} - ${opp}</div>`;
+            return `<div class="mm-row"><span class="pill ${cls}">${cls.toUpperCase()}</span> <span>${my} - ${opp}</span></div>`;
           }).join('')
         : '<div class="muted">No matches yet.</div>';
     } catch {
@@ -355,11 +358,14 @@ class MatchScene extends Phaser.Scene {
   private ballSprite!: Phaser.GameObjects.Image;
   private ballShadow!: Phaser.GameObjects.Image;
   private carrierRing!: Phaser.GameObjects.Image;
+  private ballTrail: Phaser.GameObjects.Image[] = []; // fading ghosts behind the ball (visual only)
+  private ballHist: { x: number; y: number }[] = [];  // recent rendered ball positions
   private teams!: [Team, Team];
 
   create() {
     makePitchTexture(this);
     makeBallTexture(this);
+    makeBallGhostTexture(this);
     makeShadowTexture(this);
     makeCarrierTexture(this);
     this.add.image(0, 0, 'pitch').setOrigin(0);
@@ -369,9 +375,9 @@ class MatchScene extends Phaser.Scene {
 
   buildSprites(teams: [Team, Team]) {
     this.teams = teams;
-    [...this.sprites.flat(), ...this.shadows.flat()].forEach((s) => s.destroy());
+    [...this.sprites.flat(), ...this.shadows.flat(), ...this.ballTrail].forEach((s) => s.destroy());
     this.ballSprite?.destroy(); this.ballShadow?.destroy(); this.carrierRing?.destroy();
-    // draw order (Canvas = creation order): shadows -> ball shadow -> carrier ring -> players -> ball
+    // draw order (Canvas = creation order): shadows -> ball shadow -> carrier ring -> players -> trail -> ball
     this.shadows = [0, 1].map((t) => teams[t].players.map(() => this.add.image(0, 0, 'shadow').setScale(2.4).setDepth(0)));
     this.ballShadow = this.add.image(0, 0, 'shadow').setScale(1.1);
     this.carrierRing = this.add.image(0, 0, 'carrier').setScale(2.4).setVisible(false);
@@ -382,6 +388,11 @@ class MatchScene extends Phaser.Scene {
         return this.add.image(-99, -99, key + '0').setScale(3).setOrigin(0.5, 0.85);
       }),
     );
+    // ghost balls (oldest -> newest) drawn just under the ball, at fading alpha
+    this.ballTrail = [0.08, 0.14, 0.22, 0.32].map((alpha) =>
+      this.add.image(0, 0, 'ball-ghost').setScale(3).setAlpha(alpha).setVisible(false),
+    );
+    this.ballHist = [];
     this.ballSprite = this.add.image(0, 0, 'ball').setScale(3);
   }
 
@@ -407,6 +418,15 @@ class MatchScene extends Phaser.Scene {
     this.ballShadow.setPosition(bx + (bx - this.ballSprite.x) * lerp, by);
     this.ballSprite.x += (bx - this.ballSprite.x) * lerp;
     this.ballSprite.y += (by - 4 - this.ballSprite.y) * lerp;
+    // subtle fading trail: ghost balls parked at recent rendered positions (visual only)
+    const n = this.ballTrail.length;
+    this.ballHist.unshift({ x: this.ballSprite.x, y: this.ballSprite.y });
+    if (this.ballHist.length > n * 2 + 1) this.ballHist.pop();
+    this.ballTrail.forEach((g, i) => {
+      const h = this.ballHist[(n - i) * 2]; // newest ghost trails closest, oldest sits furthest back
+      if (h) g.setVisible(true).setPosition(h.x, h.y);
+      else g.setVisible(false);
+    });
     // highlight ring under whoever has the ball
     if (state.carrier) {
       const cs = this.sprites[state.carrier.teamIdx][state.carrier.playerIdx];
