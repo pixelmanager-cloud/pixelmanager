@@ -1,18 +1,15 @@
 import Phaser from 'phaser';
 import {
-  MatchEngine, generateTeam, overall, PITCH, TICK_SEC,
-  DEFAULT_TACTICS, TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Player,
+  MatchEngine, generateClub, autoPickXI, buildXI, overall, PITCH, TICK_SEC,
+  TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup,
 } from '@fm/shared';
 import { SCALE, makeBallTexture, makePitchTexture, makePlayerTexture } from './pixelart';
 
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
+const HOME_SEED = 990201, HOME_QUALITY = 14;
+const ROUND_INTERVAL_MS = 60 * 60 * 1000; // one gauntlet of 5 matches per hour
+const HALFTIME_SEC = 45 * 60;
 
-// Fixed seed for the manager's own club, so Pixel United is a PERSISTENT squad
-// across matches (only the opponent and the match simulation vary).
-const HOME_SEED = 990201;
-const HOME_QUALITY = 14;
-
-// slider option labels, value -2..2
 const LEVELS: Record<keyof Omit<Tactics, 'formation'>, string[]> = {
   mentality: ['Very Defensive', 'Defensive', 'Balanced', 'Attacking', 'Very Attacking'],
   line: ['Very Deep', 'Deep', 'Normal', 'High', 'Very High'],
@@ -21,10 +18,16 @@ const LEVELS: Record<keyof Omit<Tactics, 'formation'>, string[]> = {
   width: ['Very Narrow', 'Narrow', 'Balanced', 'Wide', 'Very Wide'],
 };
 const FORMATIONS: Formation[] = ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1'];
+const CPU_CLUBS: Array<[string, string, number]> = [
+  ['Retro City', 'RET', 0x3b6bd2], ['Neon Rovers', 'NEO', 0x9b3bd2], ['Byte United', 'BYT', 0x2fae6a],
+  ['Sprite Athletic', 'SPR', 0xe08a2a], ['Vector Town', 'VEC', 0x2ab0c0], ['Glitch FC', 'GLI', 0xc0392b],
+  ['8-Bit Wanderers', 'WAN', 0x7f8c2a], ['Cyber Albion', 'CYB', 0x4a69bd], ['Pixel Rangers', 'RNG', 0xd23b7a],
+];
 
 const $ = (id: string) => document.getElementById(id)!;
+const rnd = () => Math.random();
+const pick = <T,>(a: T[]) => a[Math.floor(rnd() * a.length)];
 
-/** Colour a 1-20 stat cell: green (strong) -> red (weak). */
 function statColor(v: number): string {
   if (v >= 17) return '#3ad07a';
   if (v >= 14) return '#7bd88f';
@@ -33,198 +36,287 @@ function statColor(v: number): string {
   return '#d16a5a';
 }
 
-class MatchScene extends Phaser.Scene {
-  private engine!: MatchEngine;
-  private sprites: Phaser.GameObjects.Image[][] = [[], []];
-  private ballSprite!: Phaser.GameObjects.Image;
-  private accum = 0;
-  private speed = 1;
-  private eventsShown = 0;
-  private homeTactics: Tactics = { ...DEFAULT_TACTICS };
-  private awayTactics: Tactics = { ...TACTIC_PRESETS.Balanced };
-  private squadSide: 0 | 1 = 0;
+function insightFor(team: Team, isHome: boolean): string {
+  const byRole = (r: Team['players'][0]['role']) => team.players.filter((p) => p.role === r);
+  const avg = (ps: Team['players'], k: keyof Team['players'][0]['attrs']) => ps.length ? Math.round(ps.reduce((a, p) => a + p.attrs[k], 0) / ps.length) : 0;
+  const fw = byRole('FW'), df = byRole('DF');
+  const fwPace = avg(fw, 'pace'), fwStr = avg(fw, 'strength');
+  const dfPace = avg(df, 'pace');
+  const best = team.players.reduce((a, b) => (overall(b) > overall(a) ? b : a));
+  const who = isHome ? 'Your' : 'Their';
+  const tips: string[] = [`★ Key player: <b>${best.name}</b> (${best.role}, OVR ${overall(best)})`];
+  if (fwPace >= 15) tips.push(`⚡ ${who} forwards are quick (pace ${fwPace}) — ${isHome ? 'a high line + direct tempo suit you' : "don't push your line too high"}.`);
+  else if (fwStr >= 15) tips.push(`💪 ${who} forwards are strong (strength ${fwStr}) — ${isHome ? 'long balls / Route One pay off' : 'they win aerial duels'}.`);
+  if (dfPace <= 11) tips.push(`⚠️ ${who} defenders are slow (pace ${dfPace}) — ${isHome ? 'a high line is risky' : 'exploit with pace in behind'}.`);
+  return tips.join('<br>');
+}
 
-  create() {
-    makePitchTexture(this);
-    makeBallTexture(this);
-    this.add.image(0, 0, 'pitch').setOrigin(0);
-    this.buildTacticsUI();
-    this.newMatch();
+// ---- persisted round state ----
+interface Fixture {
+  opp: Club; oppLineup: Lineup; oppTactics: Tactics; matchSeed: number;
+  myLineup?: Lineup; myTactics?: Tactics; result?: [number, number];
+}
+interface Round { createdAt: number; fixtures: Fixture[]; }
 
-    const setSpeed = (s: number, id: string) => {
-      this.speed = s;
-      ['spd1', 'spd4', 'spd12'].forEach((b) => $(b).classList.remove('active'));
-      $(id).classList.add('active');
-    };
+function newRound(now: number): Round {
+  const clubs = [...CPU_CLUBS].sort(() => rnd() - 0.5).slice(0, 5);
+  const fixtures: Fixture[] = clubs.map(([name, short, color], i) => {
+    const quality = 12 + Math.floor(rnd() * 4);
+    const opp = generateClub(`cpu${i}`, name, short, color, quality, Math.floor(rnd() * 2 ** 31));
+    const oppTactics: Tactics = { ...pick(Object.values(TACTIC_PRESETS)) };
+    return { opp, oppLineup: autoPickXI(opp, oppTactics.formation), oppTactics, matchSeed: Math.floor(rnd() * 2 ** 31) };
+  });
+  return { createdAt: now, fixtures };
+}
+
+let GAME: Game;
+
+class Game {
+  club: Club = generateClub('pix', 'Pixel United', 'PIX', 0xd23b3b, HOME_QUALITY, HOME_SEED);
+  round: Round;
+  screen: 'hub' | 'lineup' | 'match' = 'hub';
+  scene?: MatchScene;
+
+  engine?: MatchEngine;
+  activeFixture = -1;
+  running = false; paused = false; halftimeDone = false;
+  speed = 1; accum = 0; eventsShown = 0;
+
+  editorMode: 'prematch' | 'halftime' = 'prematch';
+  draftLineup!: Lineup;
+  draftTactics!: Tactics;
+
+  constructor() {
+    const saved = localStorage.getItem('fm_round_v2');
+    this.round = saved ? JSON.parse(saved) : newRound(Date.now());
+    if (!saved) this.save();
+    this.wireStaticButtons();
+    setInterval(() => { if (this.screen === 'hub') this.renderTimer(); }, 1000);
+  }
+
+  private save() { localStorage.setItem('fm_round_v2', JSON.stringify(this.round)); }
+
+  boot() { this.showScreen('hub'); }
+
+  // ---- screen switching ----
+  private showScreen(s: 'hub' | 'lineup' | 'match') {
+    this.screen = s;
+    $('hub').classList.toggle('hidden', s !== 'hub');
+    $('lineup').classList.toggle('hidden', s !== 'lineup');
+    $('matchwrap').classList.toggle('hidden', s !== 'match');
+    if (s === 'hub') this.renderHub();
+  }
+
+  private wireStaticButtons() {
+    const setSpeed = (v: number, id: string) => { this.speed = v; ['spd1', 'spd4', 'spd12'].forEach((b) => $(b).classList.remove('active')); $(id).classList.add('active'); };
     $('spd1').addEventListener('click', () => setSpeed(1, 'spd1'));
     $('spd4').addEventListener('click', () => setSpeed(4, 'spd4'));
     $('spd12').addEventListener('click', () => setSpeed(12, 'spd12'));
-    $('newmatch').addEventListener('click', () => this.newMatch());
-
-    // view + squad-side toggles
-    $('view-match').addEventListener('click', () => this.showView('match'));
-    $('view-squad').addEventListener('click', () => this.showView('squad'));
-    $('sq-home').addEventListener('click', () => { this.squadSide = 0; $('sq-home').classList.add('active'); $('sq-away').classList.remove('active'); this.renderSquad(); });
-    $('sq-away').addEventListener('click', () => { this.squadSide = 1; $('sq-away').classList.add('active'); $('sq-home').classList.remove('active'); this.renderSquad(); });
+    $('new-round').addEventListener('click', () => this.tryNewRound());
+    $('autopick').addEventListener('click', () => { this.draftLineup = autoPickXI(this.club, this.draftTactics.formation); this.renderLineupEditor(); });
+    $('lineup-back').addEventListener('click', () => this.showScreen('hub'));
+    $('kickoff').addEventListener('click', () => (this.editorMode === 'prematch' ? this.kickOff() : this.resumeMatch(true)));
+    $('ht-adjust').addEventListener('click', () => this.openLineup(this.activeFixture, 'halftime'));
+    $('ht-resume').addEventListener('click', () => this.resumeMatch(false));
   }
 
-  private showView(v: 'match' | 'squad') {
-    const squad = v === 'squad';
-    $('squad').style.display = squad ? 'block' : 'none';
-    $('main').style.display = squad ? 'none' : 'flex';
-    $('view-squad').classList.toggle('active', squad);
-    $('view-match').classList.toggle('active', !squad);
-    if (squad) this.renderSquad();
-  }
+  // ---- HUB ----
+  private renderHub() {
+    const played = this.round.fixtures.filter((f) => f.result);
+    let w = 0, d = 0, l = 0, gf = 0, ga = 0;
+    for (const f of played) { const [a, b] = f.result!; gf += a; ga += b; if (a > b) w++; else if (a < b) l++; else d++; }
+    $('record').textContent = `Record: ${w}W ${d}D ${l}L`;
+    $('record2').innerHTML = played.length
+      ? `Points: <b>${w * 3 + d}</b> &nbsp; Goals: ${gf}-${ga} &nbsp; (${played.length}/5 played)`
+      : `Set a lineup and tactics for each opponent, then play. Results lock at full-time.`;
 
-  private buildTacticsUI() {
-    // formation dropdown
-    const fSel = $('t-formation') as HTMLSelectElement;
-    FORMATIONS.forEach((f) => fSel.add(new Option(f, f)));
-    fSel.value = this.homeTactics.formation;
-    fSel.addEventListener('change', () => { this.homeTactics.formation = fSel.value as Formation; this.newMatch(); });
-
-    // five slider selects
-    (Object.keys(LEVELS) as Array<keyof typeof LEVELS>).forEach((key) => {
-      const sel = $(`t-${key}`) as HTMLSelectElement;
-      LEVELS[key].forEach((label, i) => sel.add(new Option(label, String(i - 2))));
-      sel.value = String(this.homeTactics[key]);
-      sel.addEventListener('change', () => this.applyLiveTactics());
-    });
-
-    // preset buttons
-    const box = $('presets');
-    Object.keys(TACTIC_PRESETS).forEach((name) => {
-      const b = document.createElement('button');
-      b.textContent = name;
-      b.addEventListener('click', () => { this.homeTactics = { ...TACTIC_PRESETS[name] }; this.syncTacticsUI(); this.newMatch(); });
-      box.appendChild(b);
-    });
-  }
-
-  private syncTacticsUI() {
-    ($('t-formation') as HTMLSelectElement).value = this.homeTactics.formation;
-    (Object.keys(LEVELS) as Array<keyof typeof LEVELS>).forEach((key) => {
-      ($(`t-${key}`) as HTMLSelectElement).value = String(this.homeTactics[key]);
-    });
-  }
-
-  private applyLiveTactics() {
-    (Object.keys(LEVELS) as Array<keyof typeof LEVELS>).forEach((key) => {
-      this.homeTactics[key] = Number(($(`t-${key}`) as HTMLSelectElement).value);
-    });
-    this.engine?.setTactics(0, { ...this.homeTactics });
-  }
-
-  private newMatch() {
-    const seed = Math.floor(Math.random() * 2 ** 31);
-    // opponent gets a random tactical identity for variety
-    const presetNames = Object.keys(TACTIC_PRESETS);
-    this.awayTactics = { ...TACTIC_PRESETS[presetNames[Math.floor(Math.random() * presetNames.length)]] };
-
-    // persistent squad: fixed seed (varies only with the chosen formation shape)
-    const fIdx = FORMATIONS.indexOf(this.homeTactics.formation);
-    const home = generateTeam('hom', 'Pixel United', 'PIX', 0xd23b3b, HOME_QUALITY, HOME_SEED + fIdx * 1000, this.homeTactics.formation);
-    const away = generateTeam('awy', 'Retro City', 'RET', 0x3b6bd2, 13, seed ^ 0x5a5a, this.awayTactics.formation);
-    this.engine = new MatchEngine([home, away], seed, [{ ...this.homeTactics }, { ...this.awayTactics }]);
-    this.eventsShown = 0;
-    $('home-name').textContent = home.name;
-    $('away-name').textContent = `${away.name} [${this.awayTactics.formation}]`;
-    $('ticker').innerHTML = '';
-
-    this.sprites.flat().forEach((s) => s.destroy());
-    this.ballSprite?.destroy();
-    this.sprites = [0, 1].map((t) =>
-      this.engine.teams[t].players.map((p) => {
-        const key = `p-${t}-${p.role === 'GK' ? 'gk' : 'out'}`;
-        makePlayerTexture(this, key, this.engine.teams[t].shirtColor, p.role === 'GK');
-        return this.add.image(0, 0, key).setScale(3).setOrigin(0.5, 0.85);
-      }),
-    );
-    this.ballSprite = this.add.image(0, 0, 'ball').setScale(3);
-    this.syncSprites();
-    if ($('squad').style.display === 'block') this.renderSquad();
-  }
-
-  // ---- squad screen ----
-
-  private renderSquad() {
-    const team = this.engine.teams[this.squadSide];
-    const isHome = this.squadSide === 0;
-    $('sq-team').textContent = isHome ? `${team.name}  (${this.homeTactics.formation})` : `${team.name}  (${this.awayTactics.formation})`;
-    $('sq-insights').innerHTML = this.insights(team, isHome);
-
-    const cols: Array<[string, keyof Player['attrs']]> = [
-      ['PAC', 'pace'], ['STR', 'strength'], ['PAS', 'passing'], ['SHO', 'shooting'],
-      ['TAK', 'tackling'], ['POS', 'positioning'], ['WRK', 'workrate'], ['KEE', 'keeping'],
-    ];
-    const head = `<tr><th>#</th><th>Pos</th><th style="text-align:left">Name</th><th>OVR</th>${cols.map(([l]) => `<th>${l}</th>`).join('')}</tr>`;
-    const rows = team.players.map((p, i) => {
-      const cells = cols.map(([, k]) => `<td class="stat" style="background:${statColor(p.attrs[k])}">${p.attrs[k]}</td>`).join('');
-      return `<tr class="${p.role === 'GK' ? 'gk' : ''}"><td>${i + 1}</td><td class="pos">${p.role}</td><td class="name">${p.name}</td><td class="stat" style="background:${statColor(overall(p))}">${overall(p)}</td>${cells}</tr>`;
+    $('fixtures').innerHTML = this.round.fixtures.map((f, i) => {
+      let res = '<span class="res">— play ▶</span>';
+      if (f.result) { const [a, b] = f.result; const cls = a > b ? 'w' : a < b ? 'l' : 'd'; res = `<span class="res ${cls}">${a} - ${b}</span>`; }
+      const best = f.opp.players.reduce((x, y) => (overall(y) > overall(x) ? y : x));
+      return `<div class="fixture" data-i="${i}">
+        <span class="num">${i + 1}</span>
+        <span class="opp"><b>${f.opp.name}</b> <span class="meta">[${f.oppTactics.formation}] · star ${best.name} (${overall(best)})</span></span>
+        ${res}</div>`;
     }).join('');
-    $('sq-table').innerHTML = `<table class="squad">${head}${rows}</table>`;
+    Array.from(document.querySelectorAll('.fixture')).forEach((el) => {
+      const i = Number((el as HTMLElement).dataset.i);
+      if (!this.round.fixtures[i].result) el.addEventListener('click', () => this.openLineup(i, 'prematch'));
+    });
+    this.renderTimer();
   }
 
-  private insights(team: Team, isHome: boolean): string {
-    const byRole = (r: Player['role']) => team.players.filter((p) => p.role === r);
-    const avg = (ps: Player[], k: keyof Player['attrs']) => ps.length ? Math.round(ps.reduce((a, p) => a + p.attrs[k], 0) / ps.length) : 0;
-    const fw = byRole('FW'), df = byRole('DF');
-    const fwPace = avg(fw, 'pace'), fwStr = avg(fw, 'strength'), fwSho = avg(fw, 'shooting');
-    const dfPace = avg(df, 'pace'), dfTak = avg(df, 'tackling');
-    const best = team.players.reduce((a, b) => (overall(b) > overall(a) ? b : a));
-    const who = isHome ? 'Your' : 'Their';
-    const tips: string[] = [];
-    tips.push(`★ Key player: <b>${best.name}</b> (${best.role}, OVR ${overall(best)})`);
-    if (fwPace >= 15) tips.push(`⚡ ${who} forwards are quick (pace ${fwPace}) — ${isHome ? 'a high line + direct tempo suit you' : 'don\'t push your line too high'}.`);
-    else if (fwStr >= 15) tips.push(`💪 ${who} forwards are strong (strength ${fwStr}) — ${isHome ? 'Route One / long balls pay off' : 'they\'ll win aerial duels'}.`);
-    else tips.push(`${who} forwards: pace ${fwPace}, shooting ${fwSho}, strength ${fwStr}.`);
-    if (dfPace <= 11) tips.push(`⚠️ ${who} defenders are slow (pace ${dfPace}) — ${isHome ? 'a high line is risky; sit deeper' : 'exploit with pace in behind (high line + direct)'}.`);
-    else tips.push(`${who} defenders: tackling ${dfTak}, pace ${dfPace}.`);
-    return tips.join('<br>');
-  }
-
-  update(_t: number, deltaMs: number) {
-    const gameSecPerRealSec = 10 * this.speed;
-    this.accum += (deltaMs / 1000) * gameSecPerRealSec;
-    while (this.accum >= TICK_SEC && !this.engine.state.finished) {
-      this.engine.tick();
-      this.accum -= TICK_SEC;
+  private renderTimer() {
+    const age = Date.now() - this.round.createdAt;
+    const left = ROUND_INTERVAL_MS - age;
+    const btn = $('new-round') as HTMLButtonElement;
+    if (left <= 0) { $('timer').textContent = 'New round available'; btn.disabled = false; }
+    else {
+      const mm = Math.floor(left / 60000), ss = Math.floor((left % 60000) / 1000);
+      $('timer').textContent = `Next round in ${mm}:${String(ss).padStart(2, '0')}`;
+      btn.disabled = true;
     }
-    this.syncSprites();
-    this.syncHud();
   }
 
-  private syncSprites() {
-    const s = this.engine.state;
-    for (const t of [0, 1] as const) {
-      s.players[t].forEach((ps, i) => this.sprites[t][i].setPosition(ps.x * SCALE, ps.y * SCALE));
+  private tryNewRound() {
+    if (Date.now() - this.round.createdAt < ROUND_INTERVAL_MS) return;
+    this.round = newRound(Date.now());
+    this.save();
+    this.renderHub();
+  }
+
+  // ---- LINEUP EDITOR (shared by pre-match & half-time) ----
+  private openLineup(fixtureIdx: number, mode: 'prematch' | 'halftime') {
+    this.activeFixture = fixtureIdx;
+    this.editorMode = mode;
+    const f = this.round.fixtures[fixtureIdx];
+    if (mode === 'prematch') {
+      this.draftTactics = f.myTactics ? { ...f.myTactics } : { ...TACTIC_PRESETS.Balanced };
+      this.draftLineup = f.myLineup ? { ...f.myLineup, playerIds: [...f.myLineup.playerIds] } : autoPickXI(this.club, this.draftTactics.formation);
+    } // half-time keeps current draft* (already the in-match lineup/tactics)
+    $('lineup-title').textContent = mode === 'prematch' ? `SET YOUR LINEUP  vs ${f.opp.name}` : 'HALF-TIME — ADJUST';
+    ($('kickoff') as HTMLButtonElement).textContent = mode === 'prematch' ? 'Kick Off' : 'Resume Match';
+    $('lineup-back').classList.toggle('hidden', mode === 'halftime');
+    this.renderLineupEditor();
+    this.showScreen('lineup');
+  }
+
+  private renderLineupEditor() {
+    // tactics row: formation + 5 sliders
+    const tac: string[] = [`<label>Formation<select id="e-formation">${FORMATIONS.map((f) => `<option ${f === this.draftTactics.formation ? 'selected' : ''}>${f}</option>`).join('')}</select></label>`];
+    (Object.keys(LEVELS) as Array<keyof typeof LEVELS>).forEach((k) => {
+      tac.push(`<label>${k[0].toUpperCase() + k.slice(1)}<select id="e-${k}">${LEVELS[k].map((lab, i) => `<option value="${i - 2}" ${i - 2 === this.draftTactics[k] ? 'selected' : ''}>${lab}</option>`).join('')}</select></label>`);
+    });
+    $('tac-row').innerHTML = tac.join('');
+    ($('e-formation') as HTMLSelectElement).addEventListener('change', (ev) => {
+      this.draftTactics.formation = (ev.target as HTMLSelectElement).value as Formation;
+      this.draftLineup = autoPickXI(this.club, this.draftTactics.formation);
+      this.renderLineupEditor();
+    });
+    (Object.keys(LEVELS) as Array<keyof typeof LEVELS>).forEach((k) => {
+      ($(`e-${k}`) as HTMLSelectElement).addEventListener('change', (ev) => { this.draftTactics[k] = Number((ev.target as HTMLSelectElement).value); this.updateEditorInsight(); });
+    });
+
+    // XI slots
+    const slots = this.draftLineup.playerIds;
+    const usedElsewhere = (slotIdx: number) => new Set(slots.filter((_, j) => j !== slotIdx));
+    $('xi').innerHTML = slots.map((pid, i) => {
+      const roleForSlot = this.slotRole(i);
+      const used = usedElsewhere(i);
+      const opts = this.club.players
+        .filter((p) => p.id === pid || !used.has(p.id))
+        .sort((a, b) => overall(b) - overall(a))
+        .map((p) => `<option value="${p.id}" ${p.id === pid ? 'selected' : ''}>${p.name} (${p.role} ${overall(p)})</option>`).join('');
+      const cur = this.club.players.find((p) => p.id === pid)!;
+      return `<div class="slot"><span class="role">${roleForSlot}</span><select data-i="${i}">${opts}</select><span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span></div>`;
+    }).join('');
+    Array.from($('xi').querySelectorAll('select')).forEach((sel) => {
+      sel.addEventListener('change', (ev) => {
+        const t = ev.target as HTMLSelectElement;
+        this.draftLineup.playerIds[Number(t.dataset.i)] = t.value;
+        this.renderLineupEditor();
+      });
+    });
+
+    // bench
+    const inXI = new Set(slots);
+    const bench = this.club.players.filter((p) => !inXI.has(p.id)).sort((a, b) => overall(b) - overall(a));
+    $('bench').innerHTML = `<b>Bench:</b> ${bench.map((p) => `${p.name} (${p.role} ${overall(p)})`).join(' · ')}`;
+    this.updateEditorInsight();
+  }
+
+  private slotRole(i: number): string {
+    // derive the slot's role from the formation table via a built XI (roles carried from formation)
+    const roles: Record<Formation, string[]> = {
+      '4-4-2': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'FW', 'FW'],
+      '4-3-3': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'FW', 'FW', 'FW'],
+      '3-5-2': ['GK', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'MF', 'FW', 'FW'],
+      '4-2-3-1': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'MF', 'FW'],
+    };
+    return roles[this.draftTactics.formation][i];
+  }
+
+  private updateEditorInsight() {
+    const team = buildXI(this.club, this.draftLineup);
+    $('lineup-insight').innerHTML = insightFor(team, true);
+  }
+
+  // ---- MATCH ----
+  private kickOff() {
+    const f = this.round.fixtures[this.activeFixture];
+    f.myLineup = { ...this.draftLineup, playerIds: [...this.draftLineup.playerIds] };
+    f.myTactics = { ...this.draftTactics };
+    const myTeam = buildXI(this.club, f.myLineup);
+    const oppTeam = buildXI(f.opp, f.oppLineup);
+    this.engine = new MatchEngine([myTeam, oppTeam], f.matchSeed, [{ ...f.myTactics }, { ...f.oppTactics }]);
+    this.running = true; this.paused = false; this.halftimeDone = false; this.accum = 0; this.eventsShown = 0;
+    $('halftime').classList.add('hidden');
+    $('home-name').textContent = this.club.name;
+    $('away-name').textContent = `${f.opp.name} [${f.oppTactics.formation}]`;
+    $('ticker').innerHTML = '';
+    this.scene!.buildSprites(this.engine.teams);
+    this.showScreen('match');
+  }
+
+  private pauseHalfTime() {
+    this.paused = true;
+    $('halftime').classList.remove('hidden');
+  }
+
+  private resumeMatch(applyChanges: boolean) {
+    if (applyChanges && this.engine) {
+      const f = this.round.fixtures[this.activeFixture];
+      f.myLineup = { ...this.draftLineup, playerIds: [...this.draftLineup.playerIds] };
+      f.myTactics = { ...this.draftTactics };
+      const myTeam = buildXI(this.club, f.myLineup);
+      this.engine.applyHalfTimeChanges(0, myTeam, { ...f.myTactics });
+      this.scene!.buildSprites(this.engine.teams);
     }
-    this.ballSprite.setPosition(s.ball.x * SCALE, s.ball.y * SCALE - 4);
+    this.paused = false; this.halftimeDone = true;
+    $('halftime').classList.add('hidden');
+    this.showScreen('match');
   }
 
-  private syncHud() {
-    const s = this.engine.state;
+  private onFullTime() {
+    this.running = false;
+    const f = this.round.fixtures[this.activeFixture];
+    f.result = [this.engine!.state.score[0], this.engine!.state.score[1]];
+    this.save();
+    setTimeout(() => this.showScreen('hub'), 1400); // brief pause on the final whistle
+  }
+
+  onFrame(dMs: number) {
+    if (this.screen !== 'match' || !this.engine) return;
+    if (this.running && !this.paused) {
+      this.accum += (dMs / 1000) * 10 * this.speed;
+      while (this.accum >= TICK_SEC && !this.engine.state.finished) {
+        this.engine.tick();
+        this.accum -= TICK_SEC;
+        if (!this.halftimeDone && this.engine.state.clockSec >= HALFTIME_SEC) { this.pauseHalfTime(); break; }
+        if (this.engine.state.finished) { this.onFullTime(); break; }
+      }
+    }
+    this.scene!.sync(this.engine.state);
+    this.syncMatchHud();
+  }
+
+  private syncMatchHud() {
+    const s = this.engine!.state;
     $('score').textContent = `${s.score[0]} - ${s.score[1]}`;
     const m = Math.floor(s.clockSec / 60), sec = Math.floor(s.clockSec % 60);
     $('clock').textContent = `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
-
-    // possession bar
     const tot = s.possession[0] + s.possession[1] || 1;
     const hp = Math.round((s.possession[0] / tot) * 100);
     ($('poss-home') as HTMLElement).style.width = `${hp}%`;
     $('poss-home-l').textContent = `${hp}%`;
     $('poss-away-l').textContent = `${100 - hp}%`;
-
-    // home squad fitness (outfield average)
     const fitAvg = s.players[0].slice(1).reduce((a, p) => a + p.fitness, 0) / 10;
     $('fit-label').textContent = `Your squad fitness: ${Math.round(fitAvg * 100)}%`;
-
     while (this.eventsShown < s.events.length) this.pushTicker(s.events[this.eventsShown++]);
   }
 
   private pushTicker(e: MatchEvent) {
-    const team = this.engine.teams[e.teamIdx].shortName;
+    const team = this.engine!.teams[e.teamIdx].shortName;
     const line: Record<MatchEvent['type'], string> = {
       kickoff: `${e.minute}' Kickoff!`,
       goal: `${e.minute}' ⚽ GOAL! ${e.playerName} (${team})`,
@@ -242,12 +334,43 @@ class MatchScene extends Phaser.Scene {
   }
 }
 
-new Phaser.Game({
-  type: Phaser.AUTO,
-  parent: 'game',
-  width: W,
-  height: H,
-  pixelArt: true,
-  backgroundColor: '#10141c',
-  scene: MatchScene,
-});
+class MatchScene extends Phaser.Scene {
+  private sprites: Phaser.GameObjects.Image[][] = [[], []];
+  private ballSprite!: Phaser.GameObjects.Image;
+
+  create() {
+    try {
+      makePitchTexture(this);
+      makeBallTexture(this);
+      this.add.image(0, 0, 'pitch').setOrigin(0);
+      GAME.scene = this;
+      GAME.boot();
+    } catch (e) { console.log('CREATEERR::', (e as Error).stack); }
+  }
+
+  buildSprites(teams: [Team, Team]) {
+    this.sprites.flat().forEach((s) => s.destroy());
+    this.ballSprite?.destroy();
+    this.sprites = [0, 1].map((t) =>
+      teams[t].players.map((p) => {
+        const key = `p-${t}-${p.role === 'GK' ? 'gk' : 'out'}`;
+        makePlayerTexture(this, key, teams[t].shirtColor, p.role === 'GK');
+        return this.add.image(0, 0, key).setScale(3).setOrigin(0.5, 0.85);
+      }),
+    );
+    this.ballSprite = this.add.image(0, 0, 'ball').setScale(3);
+  }
+
+  sync(state: MatchEngine['state']) {
+    if (!this.ballSprite) return;
+    for (const t of [0, 1] as const) {
+      state.players[t].forEach((ps, i) => this.sprites[t]?.[i]?.setPosition(ps.x * SCALE, ps.y * SCALE));
+    }
+    this.ballSprite.setPosition(state.ball.x * SCALE, state.ball.y * SCALE - 4);
+  }
+
+  update(_t: number, deltaMs: number) { GAME.onFrame(deltaMs); }
+}
+
+GAME = new Game();
+new Phaser.Game({ type: Phaser.CANVAS, parent: 'game', width: W, height: H, pixelArt: true, backgroundColor: '#10141c', scene: MatchScene });

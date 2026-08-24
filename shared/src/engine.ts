@@ -48,6 +48,26 @@ export class MatchEngine {
     this.mods[teamIdx] = deriveMods(t);
   }
 
+  /**
+   * Apply half-time changes: swap in a new lineup/formation and tactics for a team.
+   * Players who remain on the pitch keep their fitness; subs come on fresh. Positions
+   * reset to formation anchors (a fresh restart of the half).
+   */
+  applyHalfTimeChanges(teamIdx: 0 | 1, newTeam: Team, t: Tactics) {
+    const prevFit = new Map(this.teams[teamIdx].players.map((p, i) => [p.id, this.state.players[teamIdx][i].fitness]));
+    this.teams[teamIdx] = newTeam;
+    this.setTactics(teamIdx, t);
+    this.state.players[teamIdx] = newTeam.players.map((p) => {
+      const a = teamIdx === 0 ? p.anchor : mirroredAnchor(p.anchor);
+      return { x: a.x, y: a.y, fitness: prevFit.get(p.id) ?? 1 };
+    });
+    // if the (now-replaced) carrier belonged to this team, hand possession back via a neutral reset
+    if (this.state.carrier?.teamIdx === teamIdx) {
+      this.state.carrier = { teamIdx, playerIdx: 6 };
+      this.state.ball = { ...this.state.players[teamIdx][6] };
+    }
+  }
+
   private initPositions(teamIdx: 0 | 1): PlayerState[] {
     return this.teams[teamIdx].players.map((p) => {
       const a = teamIdx === 0 ? p.anchor : mirroredAnchor(p.anchor);

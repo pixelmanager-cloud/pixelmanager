@@ -5,86 +5,113 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pixel Manager</title>
     <style>
-      :root { --bg:#10141c; --panel:#0b0e14; --line:#223047; --accent:#3d5a80; --text:#e8e8e8; --home:#d23b3b; --away:#3b6bd2; }
+      :root { --bg:#10141c; --panel:#0b0e14; --line:#223047; --accent:#3d5a80; --text:#e8e8e8; --home:#d23b3b; --away:#3b6bd2; --good:#3ad07a; --warn:#d9a860; }
+      * { box-sizing: border-box; }
       html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: 'Courier New', monospace; }
-      #app { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 12px; }
+      #app { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px; }
+      #topbar { display: flex; gap: 16px; align-items: center; font-size: 16px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 880px; }
+      #topbar .title { font-size: 20px; font-weight: bold; letter-spacing: 2px; color: var(--good); }
+      #topbar .spacer { margin-left: auto; }
+      button, select { background: #223047; color: var(--text); border: 2px solid var(--accent); font-family: inherit; font-size: 13px; padding: 5px 10px; cursor: pointer; }
+      button:disabled { opacity: 0.4; cursor: default; }
+      button.active { background: var(--accent); }
+      button.primary { background: #1f6b3a; border-color: var(--good); }
+      .panel { width: 880px; max-width: 96vw; background: var(--panel); border: 2px solid var(--line); padding: 14px 16px; }
+      h3 { margin: 0 0 10px; font-size: 16px; letter-spacing: 1px; }
+      /* Off-screen rather than display:none so the Phaser canvas (inside #matchwrap)
+         always keeps a live WebGL context even while its screen is hidden. */
+      .hidden { position: absolute !important; left: -99999px !important; top: 0; visibility: hidden; }
+
+      /* hub */
+      #record { font-size: 14px; margin-bottom: 10px; }
+      .fixture { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid var(--line); margin-bottom: 6px; font-size: 13px; }
+      .fixture .num { color: #8aa; width: 18px; }
+      .fixture .opp { flex: 1; }
+      .fixture .opp b { font-size: 14px; }
+      .fixture .meta { color: #9ab; font-size: 11px; }
+      .fixture .res { font-weight: bold; letter-spacing: 1px; width: 74px; text-align: center; }
+      .fixture .res.w { color: var(--good); } .fixture .res.l { color: var(--home); } .fixture .res.d { color: var(--warn); }
+
+      /* lineup editor */
+      #lineup .tacrow { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 10px; }
+      #lineup .tacrow label { font-size: 11px; color: #8aa; display: flex; flex-direction: column; gap: 2px; }
+      #lineup select { width: 118px; }
+      .xi { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 16px; }
+      .slot { display: flex; align-items: center; gap: 8px; font-size: 12px; padding: 2px 0; }
+      .slot .role { width: 26px; color: #8aa; font-weight: bold; }
+      .slot select { flex: 1; }
+      .slot .ovr { width: 30px; text-align: right; font-weight: bold; }
+      #bench { font-size: 11px; color: #9ab; margin-top: 10px; line-height: 1.5; }
+      #lineup .actions { display: flex; gap: 8px; margin-top: 12px; }
+      .insight { font-size: 11px; color: #9cf; margin: 8px 0; line-height: 1.5; }
+
+      /* match */
       #hud { display: flex; gap: 14px; align-items: center; font-size: 18px; flex-wrap: wrap; justify-content: center; }
       #hud .score { font-size: 26px; font-weight: bold; letter-spacing: 2px; }
-      button, select { background: #223047; color: var(--text); border: 2px solid var(--accent); font-family: inherit; font-size: 13px; padding: 4px 10px; cursor: pointer; }
-      button.active { background: var(--accent); }
-      #main { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
-      #tactics { width: 240px; background: var(--panel); border: 2px solid var(--line); padding: 10px 12px; box-sizing: border-box; }
-      #tactics h3 { margin: 0 0 8px; font-size: 15px; letter-spacing: 1px; }
-      #tactics .row { display: flex; justify-content: space-between; align-items: center; margin: 6px 0; font-size: 12px; }
-      #tactics select { width: 128px; }
-      #tactics .presets { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px; }
-      #tactics .presets button { padding: 3px 6px; font-size: 11px; }
-      #tactics .hint { font-size: 10px; color: #8aa; margin-top: 8px; line-height: 1.4; }
-      #right { display: flex; flex-direction: column; gap: 8px; }
-      #meters { display: flex; flex-direction: column; gap: 4px; font-size: 12px; width: 100%; }
-      #poss-bar { height: 14px; width: 100%; background: var(--away); border: 1px solid var(--line); position: relative; }
+      #matchwrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+      #meters { width: 840px; max-width: 96vw; font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
+      #poss-bar { height: 14px; width: 100%; background: var(--away); border: 1px solid var(--line); }
       #poss-home { height: 100%; background: var(--home); width: 50%; }
       #poss-label { display: flex; justify-content: space-between; }
-      #ticker { width: 100%; box-sizing: border-box; height: 84px; overflow-y: auto; background: var(--panel); border: 2px solid var(--line); padding: 6px 10px; font-size: 13px; line-height: 1.5; }
+      #ticker { width: 840px; max-width: 96vw; height: 76px; overflow-y: auto; background: var(--panel); border: 2px solid var(--line); padding: 6px 10px; font-size: 13px; line-height: 1.5; }
+      #halftime { width: 840px; max-width: 96vw; background: #201a0b; border: 2px solid var(--warn); padding: 8px 12px; display: flex; align-items: center; gap: 12px; font-size: 14px; }
       canvas { image-rendering: pixelated; }
-      /* squad screen */
-      #squad { width: 840px; max-width: 96vw; background: var(--panel); border: 2px solid var(--line); padding: 12px 14px; box-sizing: border-box; }
-      #squad-head { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
-      #sq-team { font-size: 16px; letter-spacing: 1px; margin-left: auto; }
-      #sq-insights { font-size: 12px; color: #9cf; line-height: 1.6; margin-bottom: 10px; min-height: 34px; }
-      table.squad { width: 100%; border-collapse: collapse; font-size: 12px; }
-      table.squad th, table.squad td { padding: 4px 5px; text-align: center; border-bottom: 1px solid var(--line); }
-      table.squad th { color: #8aa; font-weight: normal; letter-spacing: 1px; }
-      table.squad td.name { text-align: left; white-space: nowrap; }
-      table.squad td.pos { font-weight: bold; }
-      table.squad td.stat { color: #0b0e14; font-weight: bold; border-radius: 2px; }
-      table.squad tr.gk td.pos { color: #d4a017; }
     </style>
   </head>
   <body>
     <div id="app">
-      <div id="hud">
-        <span id="home-name"></span>
-        <span class="score" id="score">0 - 0</span>
-        <span id="away-name"></span>
-        <span id="clock">00:00</span>
-        <button id="spd1" class="active">1x</button>
-        <button id="spd4">4x</button>
-        <button id="spd12">12x</button>
-        <button id="newmatch">New Match</button>
-        <button id="view-match" class="active">Match</button>
-        <button id="view-squad">Squad</button>
+      <div id="topbar">
+        <span class="title">PIXEL MANAGER</span>
+        <span id="record"></span>
+        <span class="spacer"></span>
+        <span id="timer"></span>
       </div>
-      <div id="squad" style="display:none">
-        <div id="squad-head">
-          <button id="sq-home" class="active">Your Squad</button>
-          <button id="sq-away">Opponent</button>
-          <span id="sq-team"></span>
-        </div>
-        <div id="sq-insights"></div>
-        <div id="sq-table"></div>
+
+      <!-- ROUND HUB -->
+      <div id="hub" class="panel">
+        <h3>THIS HOUR'S GAUNTLET — 5 MATCHES</h3>
+        <div id="record2" class="insight"></div>
+        <div id="fixtures"></div>
+        <div style="margin-top:12px"><button id="new-round">New Round</button></div>
       </div>
-      <div id="main">
-        <div id="tactics">
-          <h3>YOUR TACTICS</h3>
-          <div class="row"><label>Formation</label><select id="t-formation"></select></div>
-          <div class="row"><label>Mentality</label><select id="t-mentality"></select></div>
-          <div class="row"><label>Def. line</label><select id="t-line"></select></div>
-          <div class="row"><label>Pressing</label><select id="t-press"></select></div>
-          <div class="row"><label>Tempo</label><select id="t-tempo"></select></div>
-          <div class="row"><label>Width</label><select id="t-width"></select></div>
-          <div class="presets" id="presets"></div>
-          <div class="hint">Sliders apply live. Changing formation or a preset starts a fresh match. Watch fitness fade if you press high.</div>
+
+      <!-- LINEUP EDITOR -->
+      <div id="lineup" class="panel hidden">
+        <h3 id="lineup-title">SET YOUR LINEUP</h3>
+        <div class="tacrow" id="tac-row"></div>
+        <div class="insight" id="lineup-insight"></div>
+        <div class="xi" id="xi"></div>
+        <div id="bench"></div>
+        <div class="actions">
+          <button id="autopick">Auto-pick best XI</button>
+          <button id="kickoff" class="primary">Kick Off</button>
+          <button id="lineup-back">Back</button>
         </div>
-        <div id="right">
-          <div id="game"></div>
-          <div id="meters">
-            <div id="poss-label"><span id="poss-home-l">50%</span><span>possession</span><span id="poss-away-l">50%</span></div>
-            <div id="poss-bar"><div id="poss-home"></div></div>
-            <div id="fit-label">Your squad fitness: 100%</div>
-          </div>
-          <div id="ticker"></div>
+      </div>
+
+      <!-- MATCH -->
+      <div id="matchwrap" class="hidden">
+        <div id="hud">
+          <span id="home-name"></span>
+          <span class="score" id="score">0 - 0</span>
+          <span id="away-name"></span>
+          <span id="clock">00:00</span>
+          <button id="spd1" class="active">1x</button>
+          <button id="spd4">4x</button>
+          <button id="spd12">12x</button>
         </div>
+        <div id="halftime" class="hidden">
+          <span>⏸ HALF-TIME — you may make one round of changes.</span>
+          <button id="ht-adjust">Adjust Lineup / Tactics</button>
+          <button id="ht-resume" class="primary">Resume Match</button>
+        </div>
+        <div id="game"></div>
+        <div id="meters">
+          <div id="poss-label"><span id="poss-home-l">50%</span><span>possession</span><span id="poss-away-l">50%</span></div>
+          <div id="poss-bar"><div id="poss-home"></div></div>
+          <div id="fit-label">Your squad fitness: 100%</div>
+        </div>
+        <div id="ticker"></div>
       </div>
     </div>
     <script type="module" src="/src/main.ts"></script>

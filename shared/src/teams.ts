@@ -54,3 +54,58 @@ export function overall(p: Player): number {
 export function mirroredAnchor(a: { x: number; y: number }): { x: number; y: number } {
   return { x: PITCH.w - a.x, y: PITCH.h - a.y };
 }
+
+// ---- clubs, rosters & lineups ----
+
+/** A club owns a full roster (~20 players); a Lineup selects 11 of them into a formation. */
+export type Club = Team;
+
+/** Roster shape: 2 GK, 7 DF, 7 MF, 4 FW = 20 players. */
+const ROSTER_ROLES: Role[] = [
+  'GK', 'GK',
+  'DF', 'DF', 'DF', 'DF', 'DF', 'DF', 'DF',
+  'MF', 'MF', 'MF', 'MF', 'MF', 'MF', 'MF',
+  'FW', 'FW', 'FW', 'FW',
+];
+
+/** Generate a full club roster (~20 players) deterministically from a seed. */
+export function generateClub(id: string, name: string, shortName: string, shirtColor: number, quality: number, seed: number): Club {
+  const rng = makeRng(seed);
+  const players: Player[] = ROSTER_ROLES.map((role, i) => ({
+    id: `${id}-${i}`,
+    name: `${FIRST[Math.floor(rng() * FIRST.length)]} ${LAST[Math.floor(rng() * LAST.length)]}`,
+    role,
+    attrs: rollAttrs(rng, role, quality),
+    anchor: { x: 0, y: 0 }, // assigned when placed into a lineup
+  }));
+  return { id, name, shortName, shirtColor, players };
+}
+
+/** A lineup: 11 roster player-ids ordered to match FORMATIONS[formation] slots (slot 0 = GK). */
+export interface Lineup {
+  formation: Formation;
+  playerIds: string[]; // length 11
+}
+
+/** Auto-select the best available XI for a formation, best player per slot by overall rating. */
+export function autoPickXI(club: Club, formation: Formation): Lineup {
+  const slots = FORMATIONS[formation];
+  const pool = [...club.players].sort((a, b) => overall(b) - overall(a));
+  const used = new Set<string>();
+  const playerIds = slots.map((slot) => {
+    const pick = pool.find((p) => !used.has(p.id) && p.role === slot.role) ?? pool.find((p) => !used.has(p.id))!;
+    used.add(pick.id);
+    return pick.id;
+  });
+  return { formation, playerIds };
+}
+
+/** Build a match-ready Team (11 players placed at formation anchors) from a club + lineup. */
+export function buildXI(club: Club, lineup: Lineup): Team {
+  const slots = FORMATIONS[lineup.formation];
+  const players: Player[] = lineup.playerIds.map((pid, i) => {
+    const p = club.players.find((x) => x.id === pid)!;
+    return { ...p, anchor: { x: slots[i].x, y: slots[i].y } };
+  });
+  return { id: club.id, name: club.name, shortName: club.shortName, shirtColor: club.shirtColor, players };
+}
