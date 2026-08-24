@@ -36,14 +36,37 @@ function statColor(v: number): string {
   return '#d16a5a';
 }
 
-function statsTableHTML(players: Player[], highlight?: Set<string>): string {
+// Sort state for the full-squad-stats table. `null` = default role grouping.
+type SquadSort = { key: string; dir: 'asc' | 'desc' };
+const ROLE_ORDER: Record<string, number> = { GK: 0, DF: 1, MF: 2, FW: 3 };
+
+function statsTableHTML(players: Player[], highlight?: Set<string>, sort?: SquadSort | null): string {
   const cols: Array<[string, keyof Player['attrs']]> = [
     ['PAC', 'pace'], ['STR', 'strength'], ['PAS', 'passing'], ['SHO', 'shooting'],
     ['TAK', 'tackling'], ['POS', 'positioning'], ['WRK', 'workrate'], ['KEE', 'keeping'],
   ];
-  const roleOrder: Record<string, number> = { GK: 0, DF: 1, MF: 2, FW: 3 };
-  const sorted = [...players].sort((a, b) => (roleOrder[a.role] - roleOrder[b.role]) || (overall(b) - overall(a)));
-  const head = `<tr><th></th><th>Pos</th><th style="text-align:left">Name</th><th>OVR</th>${cols.map(([l]) => `<th>${l}</th>`).join('')}</tr>`;
+  // Value a row contributes to a given sort key (number for stats, string for name).
+  const sortVal = (p: Player, key: string): number | string => {
+    if (key === 'pos') return ROLE_ORDER[p.role];
+    if (key === 'name') return p.name.toLowerCase();
+    if (key === 'ovr') return overall(p);
+    return p.attrs[key as keyof Player['attrs']];
+  };
+  let sorted: Player[];
+  if (sort) {
+    const d = sort.dir === 'asc' ? 1 : -1;
+    sorted = [...players].sort((a, b) => {
+      const va = sortVal(a, sort.key), vb = sortVal(b, sort.key);
+      const cmp = va < vb ? -1 : va > vb ? 1 : 0;
+      return cmp !== 0 ? cmp * d : (overall(b) - overall(a));
+    });
+  } else {
+    sorted = [...players].sort((a, b) => (ROLE_ORDER[a.role] - ROLE_ORDER[b.role]) || (overall(b) - overall(a)));
+  }
+  const arrow = (key: string) => (sort?.key === key ? (sort.dir === 'asc' ? ' ▲' : ' ▼') : '');
+  const th = (label: string, key: string, style = '') =>
+    `<th class="sortable" data-sort="${key}"${style ? ` style="${style}"` : ''}>${label}${arrow(key)}</th>`;
+  const head = `<tr><th></th>${th('Pos', 'pos')}${th('Name', 'name', 'text-align:left')}${th('OVR', 'ovr')}${cols.map(([l, k]) => th(l, k)).join('')}</tr>`;
   const rows = sorted.map((p) => {
     const on = !!highlight?.has(p.id);
     const cells = cols.map(([, k]) => `<td class="stat" style="background:${statColor(p.attrs[k])}">${p.attrs[k]}</td>`).join('');
@@ -79,6 +102,7 @@ class Game {
   draftLineup!: Lineup;
   draftTactics!: Tactics;
   editorMode: 'standing' | 'match' = 'standing';
+  squadSort: SquadSort | null = null;
   pendingOpp?: { id: string; handle: string };
   awayHandle = '';
 
@@ -230,7 +254,17 @@ class Game {
   }
 
   private renderSquadPanel() {
-    $('squad-panel').innerHTML = statsTableHTML(this.club.players, new Set(this.draftLineup.playerIds));
+    const panel = $('squad-panel');
+    panel.innerHTML = statsTableHTML(this.club.players, new Set(this.draftLineup.playerIds), this.squadSort);
+    panel.querySelectorAll<HTMLElement>('th.sortable').forEach((th) => {
+      th.addEventListener('click', () => {
+        const key = th.dataset.sort!;
+        // Same column: toggle asc/desc. New column: start descending.
+        if (this.squadSort?.key === key) this.squadSort.dir = this.squadSort.dir === 'desc' ? 'asc' : 'desc';
+        else this.squadSort = { key, dir: 'desc' };
+        this.renderSquadPanel();
+      });
+    });
   }
 
   private updateEditorInsight() {
