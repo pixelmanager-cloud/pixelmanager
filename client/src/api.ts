@@ -30,6 +30,7 @@ async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
 export interface Account { id: string; handle: string; rating: number }
 export interface TableRow { id: string; handle: string; rating: number; P: number; W: number; D: number; L: number; GF: number; GA: number; GD: number; Pts: number }
 export interface StandingOrders { formation: Lineup['formation']; playerIds: string[]; tactics: Tactics }
+export interface ResultRow { id: string; home_id: string; away_id: string; home_handle: string; away_handle: string; home_score: number; away_score: number; created_at: number }
 export interface MatchPayload {
   matchId: string; seed: number; result: [number, number];
   home: { id: string; handle: string; rating?: number; team: Team; tactics: Tactics };
@@ -48,4 +49,5 @@ export const api = {
   leaderboard: () => req<{ leaderboard: Array<{ id: string; handle: string; rating: number }> }>('/leaderboard'),
   table: () => req<{ table: TableRow[] }>('/table'),
   myMatches: () => req<{ matches: Array<{ id: string; home_id: string; away_id: string; home_score: number; away_score: number; created_at: number }> }>('/me/matches'),
+  results: () => req<{ results: ResultRow[] }>('/results'),
 };

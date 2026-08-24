@@ -7,6 +7,7 @@ export interface Account { id: string; handle: string; rating: number; createdAt
 export interface OpponentRow { id: string; handle: string; rating: number; clubName: string }
 export interface LeaderRow { id: string; handle: string; rating: number }
 export interface MatchRow { id: string; home_id: string; away_id: string; home_score: number; away_score: number; created_at: number }
+export interface ResultRow extends MatchRow { home_handle: string; away_handle: string }
 export interface StoredMatch {
   id: string; homeId: string; awayId: string;
   homeTeam: unknown; awayTeam: unknown; homeTactics: Tactics; awayTactics: Tactics;
@@ -28,6 +29,7 @@ export interface Store {
   saveMatch(m: StoredMatch): Promise<void>;
   getMatch(id: string): Promise<StoredMatch | undefined>;
   matchesFor(accountId: string, limit?: number): Promise<MatchRow[]>;
+  recentResults(limit?: number): Promise<ResultRow[]>;
   allAccounts(): Promise<LeaderRow[]>;
   allResults(): Promise<Array<{ home_id: string; away_id: string; home_score: number; away_score: number }>>;
   reset(): Promise<void>;

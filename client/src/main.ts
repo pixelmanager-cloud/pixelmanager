@@ -4,7 +4,7 @@ import {
   TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player,
 } from '@fm/shared';
 import { SCALE, makeBallTexture, makeBallGhostTexture, makePitchTexture, makePlayerFrames, makeShadowTexture, makeCarrierTexture } from './pixelart';
-import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow } from './api';
+import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow } from './api';
 
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
 
@@ -36,6 +36,15 @@ function toast(msg: string) {
 
 // Retro pixel spinner used while the hub fetches data (see .pixel-loader in index.html).
 const SPINNER = '<div class="pixel-loader"><div class="pixel-spinner"><i></i><i></i><i></i><i></i></div><span class="txt">Loading…</span></div>';
+
+// Compact "3m ago" style relative time for the results feed.
+function timeAgo(ts: number): string {
+  const s = Math.max(1, Math.floor((Date.now() - ts) / 1000));
+  if (s < 60) return `${s}s ago`;
+  const m = Math.floor(s / 60); if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60); if (h < 24) return `${h}h ago`;
+  return `${Math.floor(h / 24)}d ago`;
+}
 
 function statColor(v: number): string {
   if (v >= 17) return '#3ad07a';
@@ -103,6 +112,7 @@ class Game {
   scene?: MatchScene;
   engine?: MatchEngine;
   running = false;
+  silent = false; // when true, flushing events shows no goal flash/shake (used by "skip")
   speed = 1; accum = 0; eventsShown = 0;
 
   account!: Account;
@@ -128,8 +138,8 @@ class Game {
     this.account = me.account; this.club = me.club; this.standingOrders = me.standingOrders;
   }
 
-  private showScreen(s: 'login' | 'hub' | 'lineup' | 'match') {
-    for (const id of ['login', 'hub', 'lineup', 'matchwrap']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
+  private showScreen(s: 'login' | 'hub' | 'lineup' | 'match' | 'standings') {
+    for (const id of ['login', 'hub', 'lineup', 'matchwrap', 'standings']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
     $('logout').classList.toggle('hidden', s === 'login');
   }
 
@@ -141,6 +151,9 @@ class Game {
     $('register-btn').addEventListener('click', () => this.doRegister());
     $('handle-input').addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Enter') this.doRegister(); });
     $('logout').addEventListener('click', () => { clearToken(); this.showScreen('login'); });
+    $('view-standings').addEventListener('click', () => this.showStandings());
+    $('standings-back').addEventListener('click', () => this.showHub());
+    $('skip').addEventListener('click', () => this.skipToEnd());
     $('set-team').addEventListener('click', () => this.openLineup('standing'));
     $('autopick').addEventListener('click', () => { this.draftLineup = autoPickXI(this.club, this.draftTactics.formation); this.renderLineupEditor(); });
     $('save-team').addEventListener('click', () => (this.editorMode === 'standing' ? this.saveTeam() : this.kickOffMatch()));
@@ -175,26 +188,46 @@ class Game {
     this.showScreen('hub');
     $('me-name').textContent = this.club.name;
     $('me-rating').textContent = `RATING ${this.account.rating}`;
-    $('league-table').innerHTML = SPINNER;
+    $('opponents').innerHTML = SPINNER;
     try {
-      const [opps, tbl, mine] = await Promise.all([api.opponents(), api.table(), api.myMatches()]);
-      $('league-table').innerHTML = this.renderLeagueTable(tbl.table);
+      const opps = await api.opponents();
       $('opponents').innerHTML = opps.opponents.length
         ? opps.opponents.map((o) => `<div class="fixture"><span class="opp"><b>${o.clubName}</b> <span class="meta">${o.handle} · rating ${o.rating}</span></span><button data-opp="${o.id}" data-h="${o.handle}">Play ▶</button></div>`).join('')
         : '<div class="muted">No opponents yet — register another handle in a second browser/incognito window to play against.</div>';
       Array.from($('opponents').querySelectorAll('button[data-opp]')).forEach((b) =>
         b.addEventListener('click', () => this.play((b as HTMLElement).dataset.opp!, (b as HTMLElement).dataset.h!)));
-      $('my-matches').innerHTML = mine.matches.length
-        ? mine.matches.map((m) => {
-            const iAmHome = m.home_id === this.account.id;
-            const my = iAmHome ? m.home_score : m.away_score, opp = iAmHome ? m.away_score : m.home_score;
-            const cls = my > opp ? 'w' : my < opp ? 'l' : 'd';
-            return `<div class="mm-row"><span class="pill ${cls}">${cls.toUpperCase()}</span> <span>${my} - ${opp}</span></div>`;
-          }).join('')
-        : '<div class="muted">No matches yet.</div>';
     } catch {
       $('opponents').innerHTML = '<div class="muted">Could not load — is the server running?</div>';
     }
+  }
+
+  // ---- standings / results page ----
+  private async showStandings() {
+    this.showScreen('standings');
+    $('standings-table').innerHTML = SPINNER;
+    $('results-feed').innerHTML = '';
+    try {
+      const [tbl, res] = await Promise.all([api.table(), api.results()]);
+      $('standings-table').innerHTML = this.renderLeagueTable(tbl.table);
+      $('results-feed').innerHTML = this.renderResults(res.results);
+    } catch {
+      $('standings-table').innerHTML = '<div class="muted">Could not load — is the server running?</div>';
+      $('results-feed').innerHTML = '';
+    }
+  }
+
+  private renderResults(rows: ResultRow[]): string {
+    if (!rows.length) return '<div class="muted">No matches played yet.</div>';
+    const name = (handle: string, id: string, win: boolean) =>
+      `<span class="rr-team${win ? ' win' : ''}${id === this.account.id ? ' you' : ''}">${handle}</span>`;
+    return rows.map((r) => {
+      const mine = r.home_id === this.account.id || r.away_id === this.account.id;
+      return `<div class="result-row${mine ? ' me' : ''}">`
+        + `<span class="rr-teams">${name(r.home_handle, r.home_id, r.home_score > r.away_score)}`
+        + `<span class="rr-vs">vs</span>${name(r.away_handle, r.away_id, r.away_score > r.home_score)}</span>`
+        + `<span class="rr-score">${r.home_score} - ${r.away_score}</span>`
+        + `<span class="rr-when">${timeAgo(r.created_at)}</span></div>`;
+    }).join('');
   }
 
   private renderLeagueTable(rows: TableRow[]): string {
@@ -362,6 +395,19 @@ class Game {
     card.addEventListener('click', dismiss);
   }
 
+  // "Skip to full-time": run the deterministic engine straight to the end, flush the
+  // remaining commentary (without a flurry of goal flashes/shakes), then show the card.
+  private skipToEnd() {
+    if (!this.engine || this.engine.state.finished) return;
+    this.running = false; // stop the animated tick loop from also advancing
+    while (!this.engine.state.finished) this.engine.tick();
+    this.silent = true;
+    this.scene!.sync(this.engine.state);
+    this.syncMatchHud(); // final score/possession/fitness + flush ticker
+    this.silent = false;
+    this.onFullTime();
+  }
+
   onFrame(dMs: number) {
     if (!this.engine || $('matchwrap').classList.contains('hidden')) return;
     if (this.running) {
@@ -416,7 +462,7 @@ class Game {
     };
     const div = document.createElement('div');
     div.textContent = line[e.type];
-    if (e.type === 'goal') { div.style.color = '#ffd75e'; this.celebrateGoal(e); }
+    if (e.type === 'goal') { div.style.color = '#ffd75e'; if (!this.silent) this.celebrateGoal(e); }
     else if (e.type === 'chance') div.style.color = '#8ad';
     $('ticker').prepend(div);
   }

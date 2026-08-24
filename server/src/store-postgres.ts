@@ -2,7 +2,7 @@
 // (de)serialised in code, identical semantics to the SQLite backend.
 import pg from 'pg';
 import type { Club } from '@fm/shared';
-import type { Store, Account, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow } from './store.js';
+import type { Store, Account, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow } from './store.js';
 
 export function makePostgresStore(connectionString: string): Store {
   // Railway's internal DB (postgres.railway.internal) and localhost don't use SSL;
@@ -92,6 +92,15 @@ export function makePostgresStore(connectionString: string): Store {
         'SELECT id, home_id, away_id, home_score, away_score, created_at FROM matches WHERE home_id=$1 OR away_id=$1 ORDER BY created_at DESC LIMIT $2',
         [accountId, limit],
       )).rows.map((r) => ({ ...r, created_at: Number(r.created_at) })) as MatchRow[];
+    },
+    async recentResults(limit = 40) {
+      return (await q(
+        `SELECT m.id, m.home_id, m.away_id, m.home_score, m.away_score, m.created_at,
+                ha.handle AS home_handle, aa.handle AS away_handle
+         FROM matches m JOIN accounts ha ON ha.id=m.home_id JOIN accounts aa ON aa.id=m.away_id
+         ORDER BY m.created_at DESC LIMIT $1`,
+        [limit],
+      )).rows.map((r) => ({ ...r, created_at: Number(r.created_at) })) as ResultRow[];
     },
     async allAccounts() { return (await q('SELECT id, handle, rating FROM accounts')).rows as LeaderRow[]; },
     async allResults() { return (await q('SELECT home_id, away_id, home_score, away_score FROM matches')).rows as any[]; },

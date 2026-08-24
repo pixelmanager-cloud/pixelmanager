@@ -63,7 +63,24 @@
       #hub-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
       #me-name { font-family: var(--display); font-size: 14px; color: var(--good); }
       #me-rating { font-family: var(--display); font-size: 11px; color: var(--warn); }
-      #set-team { margin-left: auto; }
+      .hub-actions { margin-left: auto; display: flex; gap: 10px; flex-wrap: wrap; }
+      #skip { background: var(--pink); }
+      /* standings / results page */
+      #standings-head { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; }
+      #standings-head h3 { margin: 0; }
+      #standings-back { margin-left: auto; }
+      h3.sub { font-size: 11px; color: var(--warn); margin: 18px 0 10px; }
+      #results-feed { max-height: 340px; overflow-y: auto; }
+      .result-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-bottom: 1px solid var(--line); font-size: 18px; }
+      .result-row.me { background: rgba(57,255,158,0.06); }
+      .result-row .rr-teams { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
+      .result-row .rr-team { color: #b9b9e6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .result-row .rr-team.win { color: #fff; font-weight: bold; }
+      .result-row .rr-team.you { color: var(--good); }
+      .result-row .rr-vs { color: #6a6ab0; font-size: 14px; flex: none; }
+      .result-row .rr-score { font-family: var(--display); font-size: 11px; color: var(--good); flex: none;
+        background: #04140b; border: 2px solid var(--line); padding: 4px 9px; }
+      .result-row .rr-when { color: var(--cyan); font-size: 14px; flex: none; width: 62px; text-align: right; }
       #hub-cols { display: flex; gap: 24px; margin-top: 14px; flex-wrap: wrap; }
       #hub-cols > div { flex: 1; min-width: 240px; }
       .fixture { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 2px solid var(--line);
@@ -239,13 +256,23 @@
 
       <!-- HUB -->
       <div id="hub" class="panel hidden">
-        <div id="hub-head"><span id="me-name"></span><span id="me-rating"></span><button id="set-team">⚙ Set My Team</button></div>
-        <h3>LEAGUE TABLE</h3>
-        <div id="league-table"></div>
+        <div id="hub-head"><span id="me-name"></span><span id="me-rating"></span>
+          <div class="hub-actions">
+            <button id="view-standings">📊 League &amp; Results</button>
+            <button id="set-team">⚙ Set My Team</button>
+          </div>
+        </div>
         <h3>PLAY A MATCH</h3>
         <div id="opponents"></div>
-        <h3>YOUR RECENT MATCHES</h3>
-        <div id="my-matches"></div>
+      </div>
+
+      <!-- STANDINGS / RESULTS -->
+      <div id="standings" class="panel hidden">
+        <div id="standings-head"><h3>LEAGUE &amp; RESULTS</h3><button id="standings-back">← Back to hub</button></div>
+        <h3 class="sub">TABLE</h3>
+        <div id="standings-table"></div>
+        <h3 class="sub">RECENT RESULTS</h3>
+        <div id="results-feed"></div>
       </div>
 
       <!-- LINEUP EDITOR (my standing orders) -->
@@ -274,6 +301,7 @@
           <button id="spd1" class="active">1x</button>
           <button id="spd4">4x</button>
           <button id="spd12">12x</button>
+          <button id="skip" title="Skip to full-time">Skip ▶▶</button>
         </div>
         <div id="goal-flash"></div>
         <div id="game"></div>

@@ -97,6 +97,7 @@ app.get('/matches/:id', async (req, reply) => {
 
 app.get('/me/matches', { preHandler: requireAuth }, async (req) => ({ matches: await db.matchesFor(req.account!.id) }));
 app.get('/leaderboard', async () => ({ leaderboard: await db.leaderboard() }));
+app.get('/results', async () => ({ results: await db.recentResults() }));
 app.get('/table', async () => {
   const [accounts, results] = await Promise.all([db.allAccounts(), db.allResults()]);
   return { table: buildTable(accounts, results) };

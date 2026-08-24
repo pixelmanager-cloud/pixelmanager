@@ -1,7 +1,7 @@
 // Local-dev backend on Node's built-in SQLite (no native deps).
 import { DatabaseSync } from 'node:sqlite';
 import type { Club } from '@fm/shared';
-import type { Store, Account, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow } from './store.js';
+import type { Store, Account, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow } from './store.js';
 
 export function makeSqliteStore(file: string): Store {
   const db = new DatabaseSync(file);
@@ -80,6 +80,14 @@ export function makeSqliteStore(file: string): Store {
       return db.prepare(
         'SELECT id, home_id, away_id, home_score, away_score, created_at FROM matches WHERE home_id=? OR away_id=? ORDER BY created_at DESC LIMIT ?',
       ).all(accountId, accountId, limit) as MatchRow[];
+    },
+    async recentResults(limit = 40) {
+      return db.prepare(
+        `SELECT m.id, m.home_id, m.away_id, m.home_score, m.away_score, m.created_at,
+                ha.handle AS home_handle, aa.handle AS away_handle
+         FROM matches m JOIN accounts ha ON ha.id=m.home_id JOIN accounts aa ON aa.id=m.away_id
+         ORDER BY m.created_at DESC LIMIT ?`,
+      ).all(limit) as ResultRow[];
     },
     async allAccounts() { return db.prepare('SELECT id, handle, rating FROM accounts').all() as LeaderRow[]; },
     async allResults() { return db.prepare('SELECT home_id, away_id, home_score, away_score FROM matches').all() as any[]; },
