@@ -1,0 +1,16 @@
+# Netlify build config for the Pixel Manager monorepo.
+# Netlify runs `npm install` at the repo root first (installs the workspaces),
+# then the command below builds the client. Served from the domain root, so the
+# Vite BASE_PATH default of "/" is correct — nothing extra to set.
+[build]
+  command = "npm run build --workspace=client"
+  publish = "client/dist"
+
+[build.environment]
+  NODE_VERSION = "20"
+
+# Single-page app: serve index.html for any path (no 404s on refresh/deep links).
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
