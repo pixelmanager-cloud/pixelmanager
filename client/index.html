@@ -59,6 +59,14 @@
       table.squad td.inxi-mark { color: var(--good); font-weight: bold; }
       #lineup .actions { display: flex; gap: 8px; margin-top: 12px; }
       .insight { font-size: 11px; color: #9cf; margin: 8px 0; line-height: 1.5; }
+      /* scouting report */
+      #scout { border: 1px solid var(--warn); background: #1a160b; padding: 8px 12px; margin-bottom: 12px; }
+      #scout .scout-head { color: var(--warn); font-size: 13px; letter-spacing: 1px; margin-bottom: 6px; }
+      #scout-summary { font-size: 12px; line-height: 1.7; }
+      #scout-summary .counter { color: var(--good); }
+      #scout-summary b { color: #fff; }
+      #toggle-opp { margin-top: 8px; }
+      #opp-panel { margin-top: 8px; max-height: 260px; overflow-y: auto; }
 
       /* match */
       #hud { display: flex; gap: 14px; align-items: center; font-size: 18px; flex-wrap: wrap; justify-content: center; }
@@ -93,6 +101,12 @@
       <!-- LINEUP EDITOR -->
       <div id="lineup" class="panel hidden">
         <h3 id="lineup-title">SET YOUR LINEUP</h3>
+        <div id="scout">
+          <div class="scout-head">🔍 SCOUTING REPORT</div>
+          <div id="scout-summary"></div>
+          <button id="toggle-opp">👁 View opponent lineup</button>
+          <div id="opp-panel" class="hidden"></div>
+        </div>
         <div class="tacrow" id="tac-row"></div>
         <div class="insight" id="lineup-insight"></div>
         <div class="xi" id="xi"></div>

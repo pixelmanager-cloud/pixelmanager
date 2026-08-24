@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import {
   MatchEngine, generateClub, autoPickXI, buildXI, overall, PITCH, TICK_SEC,
-  TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup,
+  TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player,
 } from '@fm/shared';
 import { SCALE, makeBallTexture, makePitchTexture, makePlayerTexture } from './pixelart';
 
@@ -34,6 +34,52 @@ function statColor(v: number): string {
   if (v >= 11) return '#c9d17b';
   if (v >= 8) return '#d9a860';
   return '#d16a5a';
+}
+
+/** Colour-coded stats table for a set of players; players in `highlight` are marked. */
+function statsTableHTML(players: Player[], highlight?: Set<string>): string {
+  const cols: Array<[string, keyof Player['attrs']]> = [
+    ['PAC', 'pace'], ['STR', 'strength'], ['PAS', 'passing'], ['SHO', 'shooting'],
+    ['TAK', 'tackling'], ['POS', 'positioning'], ['WRK', 'workrate'], ['KEE', 'keeping'],
+  ];
+  const roleOrder: Record<string, number> = { GK: 0, DF: 1, MF: 2, FW: 3 };
+  const sorted = [...players].sort((a, b) => (roleOrder[a.role] - roleOrder[b.role]) || (overall(b) - overall(a)));
+  const head = `<tr><th></th><th>Pos</th><th style="text-align:left">Name</th><th>OVR</th>${cols.map(([l]) => `<th>${l}</th>`).join('')}</tr>`;
+  const rows = sorted.map((p) => {
+    const on = !!highlight?.has(p.id);
+    const cells = cols.map(([, k]) => `<td class="stat" style="background:${statColor(p.attrs[k])}">${p.attrs[k]}</td>`).join('');
+    const mark = on ? '<td class="inxi-mark">●</td>' : '<td></td>';
+    return `<tr class="${on ? 'inxi' : ''}">${mark}<td class="pos role-${p.role}">${p.role}</td><td class="name">${p.name}</td><td class="stat" style="background:${statColor(overall(p))}">${overall(p)}</td>${cells}</tr>`;
+  }).join('');
+  return `<table class="squad">${head}${rows}</table>`;
+}
+
+/** Human-readable description of a team's strategy (non-balanced traits only). */
+function tacticWords(t: Tactics): string {
+  const p: string[] = [];
+  const m: Record<number, string> = { [-2]: 'very defensive', [-1]: 'defensive', 1: 'attacking', 2: 'very attacking' };
+  const ln: Record<number, string> = { [-2]: 'a very deep line', [-1]: 'a deep line', 1: 'a high line', 2: 'a very high line' };
+  const pr: Record<number, string> = { [-2]: 'sitting off (contain)', [-1]: 'a low press', 1: 'a high press', 2: 'an intense gegenpress' };
+  const tp: Record<number, string> = { [-2]: 'very patient build-up', [-1]: 'patient build-up', 1: 'a direct tempo', 2: 'a very direct tempo' };
+  const wd: Record<number, string> = { [-2]: 'very narrow', [-1]: 'narrow', 1: 'wide', 2: 'very wide' };
+  if (t.mentality) p.push(m[t.mentality]);
+  if (t.line) p.push(ln[t.line]);
+  if (t.press) p.push(pr[t.press]);
+  if (t.tempo) p.push(tp[t.tempo]);
+  if (t.width) p.push(wd[t.width]);
+  return p.length ? p.join(', ') : 'a balanced approach';
+}
+
+/** Suggest how to counter the opponent's tactics. */
+function counterAdvice(o: Tactics): string {
+  const tips: string[] = [];
+  if (o.line >= 1) tips.push('they hold a high line — go <b>Direct</b> and use pace in behind');
+  if (o.line <= -1 || o.mentality <= -1) tips.push('they sit deep — be <b>Patient</b>, go <b>Wide</b> and keep probing');
+  if (o.press >= 1) tips.push('they press hard — play <b>Direct</b> to beat the press; they may tire late, so watch their fitness');
+  if (o.press <= -1) tips.push('they give you time — dominate with <b>Patient</b> build-up');
+  if (o.mentality >= 1 && o.line >= 0) tips.push('they commit forward — sit a touch <b>deeper</b> and counter');
+  if (!tips.length) tips.push('a balanced side — match them and let your better players decide it');
+  return tips.slice(0, 2).join('; ') + '.';
 }
 
 function insightFor(team: Team, isHome: boolean): string {
@@ -120,6 +166,16 @@ class Game {
       panel.classList.toggle('hidden', !show);
       $('toggle-squad').textContent = show ? '▤ Hide squad stats' : '▤ View full squad stats';
       if (show) this.renderSquadPanel();
+    });
+    $('toggle-opp').addEventListener('click', () => {
+      const panel = $('opp-panel');
+      const show = panel.classList.contains('hidden');
+      panel.classList.toggle('hidden', !show);
+      $('toggle-opp').textContent = show ? '👁 Hide opponent lineup' : '👁 View opponent lineup';
+      if (show) {
+        const f = this.round.fixtures[this.activeFixture];
+        $('opp-panel').innerHTML = statsTableHTML(buildXI(f.opp, f.oppLineup).players);
+      }
     });
     $('lineup-back').addEventListener('click', () => this.showScreen('hub'));
     $('kickoff').addEventListener('click', () => (this.editorMode === 'prematch' ? this.kickOff() : this.resumeMatch(true)));
@@ -230,25 +286,24 @@ class Game {
     const bench = this.club.players.filter((p) => !inXI.has(p.id)).sort((a, b) => overall(b) - overall(a));
     $('bench').innerHTML = `<b>Bench:</b> ${bench.map((p) => `${p.name} (${p.role} ${overall(p)})`).join(' · ')}`;
     if (!$('squad-panel').classList.contains('hidden')) this.renderSquadPanel();
+    this.renderScout();
     this.updateEditorInsight();
   }
 
   private renderSquadPanel() {
     if (!this.draftLineup) return;
-    const inXI = new Set(this.draftLineup.playerIds);
-    const roleOrder: Record<string, number> = { GK: 0, DF: 1, MF: 2, FW: 3 };
-    const players = [...this.club.players].sort((a, b) => (roleOrder[a.role] - roleOrder[b.role]) || (overall(b) - overall(a)));
-    const cols: Array<[string, keyof (typeof players)[0]['attrs']]> = [
-      ['PAC', 'pace'], ['STR', 'strength'], ['PAS', 'passing'], ['SHO', 'shooting'],
-      ['TAK', 'tackling'], ['POS', 'positioning'], ['WRK', 'workrate'], ['KEE', 'keeping'],
-    ];
-    const head = `<tr><th></th><th>Pos</th><th style="text-align:left">Name</th><th>OVR</th>${cols.map(([l]) => `<th>${l}</th>`).join('')}</tr>`;
-    const rows = players.map((p) => {
-      const cells = cols.map(([, k]) => `<td class="stat" style="background:${statColor(p.attrs[k])}">${p.attrs[k]}</td>`).join('');
-      const mark = inXI.has(p.id) ? '<td class="inxi-mark">●</td>' : '<td></td>';
-      return `<tr class="${inXI.has(p.id) ? 'inxi' : ''}">${mark}<td class="pos role-${p.role}">${p.role}</td><td class="name">${p.name}</td><td class="stat" style="background:${statColor(overall(p))}">${overall(p)}</td>${cells}</tr>`;
-    }).join('');
-    $('squad-panel').innerHTML = `<table class="squad">${head}${rows}</table>`;
+    $('squad-panel').innerHTML = statsTableHTML(this.club.players, new Set(this.draftLineup.playerIds));
+  }
+
+  private renderScout() {
+    const f = this.round.fixtures[this.activeFixture];
+    if (!f) return;
+    const oppTeam = buildXI(f.opp, f.oppLineup);
+    $('scout-summary').innerHTML =
+      `<b>${f.opp.name}</b> set up in <b>${f.oppTactics.formation}</b>, playing ${tacticWords(f.oppTactics)}.<br>`
+      + `${insightFor(oppTeam, false)}<br>`
+      + `<span class="counter">🎯 To beat them: ${counterAdvice(f.oppTactics)}</span>`;
+    if (!$('opp-panel').classList.contains('hidden')) $('opp-panel').innerHTML = statsTableHTML(oppTeam.players);
   }
 
   private slotRole(i: number): string {
