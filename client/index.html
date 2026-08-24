@@ -21,6 +21,9 @@
       /* CRT scanline overlay */
       body::after { content: ''; position: fixed; inset: 0; z-index: 9999; pointer-events: none;
         background: repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px, rgba(0,0,0,0.10) 3px, rgba(0,0,0,0) 4px); }
+      /* CRT vignette overlay — subtle corner darkening for a retro-monitor curve */
+      body::before { content: ''; position: fixed; inset: 0; z-index: 9998; pointer-events: none;
+        background: radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,0.28) 100%); }
       #app { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 16px; }
       #topbar { display: flex; gap: 16px; align-items: center; font-size: 20px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: 880px; }
       #topbar .title { font-family: var(--display); font-size: 20px; letter-spacing: 1px; color: var(--good);
