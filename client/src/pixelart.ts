@@ -34,26 +34,70 @@ export function makeBallTexture(scene: Phaser.Scene) {
   g.destroy();
 }
 
-/** Pitch: striped grass, touchlines, boxes, centre circle — drawn once at metre scale. */
+/** Pitch: mown checkerboard grass, full markings, goal nets — drawn once at metre scale. */
 export function makePitchTexture(scene: Phaser.Scene) {
   if (scene.textures.exists('pitch')) return;
   const w = PITCH.w * SCALE, h = PITCH.h * SCALE;
+  const cx = w / 2, cy = h / 2;
+  const m = (metres: number) => metres * SCALE;
   const g = scene.add.graphics();
-  for (let i = 0; i < 12; i++) {
-    g.fillStyle(i % 2 === 0 ? 0x2f7a32 : 0x2a6e2d);
-    g.fillRect((i * w) / 12, 0, w / 12 + 1, h);
+
+  // checkerboard mown grass
+  const cols = 12, rows = 8;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      g.fillStyle((r + c) % 2 === 0 ? 0x2f7a32 : 0x2a6e2d);
+      g.fillRect((c * w) / cols, (r * h) / rows, w / cols + 1, h / rows + 1);
+    }
   }
-  g.lineStyle(2, 0xcfe8cf, 0.9);
-  g.strokeRect(2, 2, w - 4, h - 4);
-  g.lineBetween(w / 2, 2, w / 2, h - 2);
-  g.strokeCircle(w / 2, h / 2, 9.15 * SCALE);
-  // penalty boxes (16.5m deep, 40.3m wide) and goals
-  const boxW = 16.5 * SCALE, boxH = 40.3 * SCALE, goalH = 7.32 * SCALE;
-  g.strokeRect(2, (h - boxH) / 2, boxW, boxH);
-  g.strokeRect(w - 2 - boxW, (h - boxH) / 2, boxW, boxH);
-  g.lineStyle(4, 0xffffff, 1);
-  g.lineBetween(2, (h - goalH) / 2, 2, (h + goalH) / 2);
-  g.lineBetween(w - 2, (h - goalH) / 2, w - 2, (h + goalH) / 2);
+  // darker perimeter band for depth (advertising-board surround)
+  g.fillStyle(0x14401a, 1);
+  g.fillRect(0, 0, w, 3); g.fillRect(0, h - 3, w, 3); g.fillRect(0, 0, 3, h); g.fillRect(w - 3, 0, 3, h);
+
+  const white = 0xffffff;
+  const line = 0xe6f2e6;
+  g.lineStyle(2, line, 0.9);
+  // touchlines + halfway + centre circle/spot
+  g.strokeRect(3, 3, w - 6, h - 6);
+  g.lineBetween(cx, 3, cx, h - 3);
+  g.strokeCircle(cx, cy, m(9.15));
+  g.fillStyle(line, 0.9).fillCircle(cx, cy, 2.5);
+
+  // boxes: penalty (16.5x40.3), six-yard (5.5x18.3); penalty spot at 11m
+  const penW = m(16.5), penH = m(40.3), sixW = m(5.5), sixH = m(18.3), goalH = m(7.32);
+  const penY = (h - penH) / 2, sixY = (h - sixH) / 2, goalY = (h - goalH) / 2;
+  g.strokeRect(3, penY, penW, penH);
+  g.strokeRect(w - 3 - penW, penY, penW, penH);
+  g.strokeRect(3, sixY, sixW, sixH);
+  g.strokeRect(w - 3 - sixW, sixY, sixW, sixH);
+  const spotL = 3 + m(11), spotR = w - 3 - m(11);
+  g.fillCircle(spotL, cy, 2.5); g.fillCircle(spotR, cy, 2.5);
+
+  // penalty arcs (the "D") — only the part outside each box
+  const arcR = m(9.15), a = Math.acos((penW - m(11)) / arcR);
+  g.beginPath(); g.arc(spotL, cy, arcR, -a, a); g.strokePath();
+  g.beginPath(); g.arc(spotR, cy, arcR, Math.PI - a, Math.PI + a); g.strokePath();
+
+  // corner arcs
+  const cr = m(1);
+  g.beginPath(); g.arc(3, 3, cr, 0, Math.PI / 2); g.strokePath();
+  g.beginPath(); g.arc(w - 3, 3, cr, Math.PI / 2, Math.PI); g.strokePath();
+  g.beginPath(); g.arc(3, h - 3, cr, -Math.PI / 2, 0); g.strokePath();
+  g.beginPath(); g.arc(w - 3, h - 3, cr, Math.PI, 1.5 * Math.PI); g.strokePath();
+
+  // goal nets (crosshatch behind each goal line) + solid posts
+  const netD = 9;
+  for (const side of [0, 1]) {
+    const nx = side === 0 ? 3 : w - 3 - netD;
+    g.fillStyle(0x1e5322, 0.55).fillRect(nx, goalY, netD, goalH);
+    g.lineStyle(1, white, 0.28);
+    for (let x = nx; x <= nx + netD; x += 3) g.lineBetween(x, goalY, x, goalY + goalH);
+    for (let y = goalY; y <= goalY + goalH; y += 3) g.lineBetween(nx, y, nx + netD, y);
+  }
+  g.lineStyle(3, white, 1);
+  g.lineBetween(3, goalY, 3, goalY + goalH);
+  g.lineBetween(w - 3, goalY, w - 3, goalY + goalH);
+
   g.generateTexture('pitch', w, h);
   g.destroy();
 }
