@@ -1,0 +1,11 @@
+{
+  "name": "@fm/server",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --experimental-strip-types src/index.ts"
+  },
+  "dependencies": {
+    "@fm/shared": "*"
+  }
+}

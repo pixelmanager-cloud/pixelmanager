@@ -1,0 +1,9 @@
+{
+  "name": "football-manager",
+  "private": true,
+  "workspaces": ["shared", "client", "server"],
+  "scripts": {
+    "dev": "npm run dev --workspace=client",
+    "server": "npm run dev --workspace=server"
+  }
+}
