@@ -48,7 +48,14 @@
       .hidden { position: absolute !important; left: -99999px !important; top: 0; visibility: hidden; }
 
       /* login */
-      #handle-input { font-family: var(--body); font-size: 20px; background: var(--panel-2); color: var(--text); border: 2px solid var(--line); padding: 6px 10px; }
+      #login-tagline { font-family: var(--display); font-size: 9px; line-height: 1.6; color: var(--pink);
+        letter-spacing: 1px; margin: -8px 0 14px; text-shadow: 1px 1px 0 rgba(0,0,0,0.6); }
+      #login-row { display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+      #handle-input { font-family: var(--body); font-size: 20px; background: var(--panel-2); color: var(--text);
+        border: 2px solid var(--line); box-shadow: 3px 3px 0 rgba(0,0,0,0.6); padding: 8px 12px; outline: none; }
+      #handle-input::placeholder { color: #7a7ab0; }
+      #handle-input:hover { border-color: var(--cyan); }
+      #handle-input:focus { border-color: var(--good); box-shadow: 3px 3px 0 rgba(0,0,0,0.6), 0 0 10px var(--good); }
       /* hub */
       #hub-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
       #me-name { font-family: var(--display); font-size: 14px; color: var(--good); }
@@ -195,8 +202,9 @@
       <!-- LOGIN -->
       <div id="login" class="panel hidden">
         <h3>ENTER THE LEAGUE</h3>
+        <div id="login-tagline">Draft a squad. Out-think the gaffer. Win the pixel cup.</div>
         <div class="insight">Pick a manager handle to create your club. (Prototype: your handle + a saved code are your login — keep this browser.)</div>
-        <div style="display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap">
+        <div id="login-row">
           <input id="handle-input" placeholder="your handle" maxlength="20" />
           <button id="register-btn" class="primary">Create Club</button>
         </div>
