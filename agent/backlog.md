@@ -15,7 +15,7 @@ implements it on a branch, and opens a PR for you to review.
 
 ## Tasks (top = next)
 
-- [ ] Add an "Apply suggested counter" button to the scouting report that sets the user's tactics sliders to a sensible counter to the opponent's tactics (reuse the counterAdvice logic), then re-renders the lineup editor.
+- [x] Add an "Apply suggested counter" button to the scouting report that sets the user's tactics sliders to a sensible counter to the opponent's tactics (reuse the counterAdvice logic), then re-renders the lineup editor.
 - [ ] Make the full-squad-stats table sortable: clicking a stat column header sorts the roster by that stat descending (click again to toggle ascending). Keep position colours and the XI highlight.
 - [ ] Add a "Reset round (dev)" button on the hub, only visible when running on localhost, that clears the saved round from localStorage and generates a fresh one immediately (bypassing the hourly timer) to make testing easier.
 

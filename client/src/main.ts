@@ -70,16 +70,37 @@ function tacticWords(t: Tactics): string {
   return p.length ? p.join(', ') : 'a balanced approach';
 }
 
+/**
+ * Ordered counter moves: each maps an opponent trait to advice text AND the
+ * slider changes that enact it, so the "Apply suggested counter" button and the
+ * scouting text always agree. Only outfield sliders are set; formation is kept.
+ */
+interface CounterMove { when: (o: Tactics) => boolean; text: string; apply: (t: Tactics) => void; }
+const COUNTER_MOVES: CounterMove[] = [
+  { when: (o) => o.line >= 1, text: 'they hold a high line — go <b>Direct</b> and use pace in behind', apply: (t) => { t.tempo = 2; } },
+  { when: (o) => o.line <= -1 || o.mentality <= -1, text: 'they sit deep — be <b>Patient</b>, go <b>Wide</b> and keep probing', apply: (t) => { t.tempo = -2; t.width = 2; } },
+  { when: (o) => o.press >= 1, text: 'they press hard — play <b>Direct</b> to beat the press; they may tire late, so watch their fitness', apply: (t) => { t.tempo = 2; } },
+  { when: (o) => o.press <= -1, text: 'they give you time — dominate with <b>Patient</b> build-up', apply: (t) => { t.tempo = -2; } },
+  { when: (o) => o.mentality >= 1 && o.line >= 0, text: 'they commit forward — sit a touch <b>deeper</b> and counter', apply: (t) => { t.mentality = -1; t.line = -1; t.tempo = 2; } },
+];
+const BALANCED_COUNTER: CounterMove = { when: () => true, text: 'a balanced side — match them and let your better players decide it', apply: () => {} };
+
+/** The (up to two) counter moves that apply to this opponent — shared by the text and the button. */
+function activeCounterMoves(o: Tactics): CounterMove[] {
+  const moves = COUNTER_MOVES.filter((m) => m.when(o));
+  return (moves.length ? moves : [BALANCED_COUNTER]).slice(0, 2);
+}
+
 /** Suggest how to counter the opponent's tactics. */
 function counterAdvice(o: Tactics): string {
-  const tips: string[] = [];
-  if (o.line >= 1) tips.push('they hold a high line — go <b>Direct</b> and use pace in behind');
-  if (o.line <= -1 || o.mentality <= -1) tips.push('they sit deep — be <b>Patient</b>, go <b>Wide</b> and keep probing');
-  if (o.press >= 1) tips.push('they press hard — play <b>Direct</b> to beat the press; they may tire late, so watch their fitness');
-  if (o.press <= -1) tips.push('they give you time — dominate with <b>Patient</b> build-up');
-  if (o.mentality >= 1 && o.line >= 0) tips.push('they commit forward — sit a touch <b>deeper</b> and counter');
-  if (!tips.length) tips.push('a balanced side — match them and let your better players decide it');
-  return tips.slice(0, 2).join('; ') + '.';
+  return activeCounterMoves(o).map((m) => m.text).join('; ') + '.';
+}
+
+/** Build the tactics sliders that enact the shown counter advice, keeping the chosen formation. */
+function counterTactics(o: Tactics, formation: Formation): Tactics {
+  const t: Tactics = { ...TACTIC_PRESETS.Balanced, formation };
+  for (const m of activeCounterMoves(o)) m.apply(t);
+  return t;
 }
 
 function insightFor(team: Team, isHome: boolean): string {
@@ -176,6 +197,12 @@ class Game {
         const f = this.round.fixtures[this.activeFixture];
         $('opp-panel').innerHTML = statsTableHTML(buildXI(f.opp, f.oppLineup).players);
       }
+    });
+    $('apply-counter').addEventListener('click', () => {
+      const f = this.round.fixtures[this.activeFixture];
+      if (!f) return;
+      this.draftTactics = counterTactics(f.oppTactics, this.draftTactics.formation);
+      this.renderLineupEditor();
     });
     $('lineup-back').addEventListener('click', () => this.showScreen('hub'));
     $('kickoff').addEventListener('click', () => (this.editorMode === 'prematch' ? this.kickOff() : this.resumeMatch(true)));
