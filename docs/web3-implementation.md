@@ -72,6 +72,12 @@ instead of a generator. This is clean *because* the engine is pure.
 - The star range gives **rarity tiers** for collectibility, pricing, and the secondary
   market; NFT appeal also comes from ownership, upgradeability, and winning matches →
   rank → rewards, not the stat gap alone.
+- **Validated** by `shared/ladder_sim.ts` (400 matches/matchup, identical tactics):
+  filler-vs-filler is ~50/50 and high-scoring (watchable); a **common star** squad beats
+  filler ~83% but filler still wins ~2% (rare upset — good for morale); rare/epic/
+  legendary beat filler ~90/96/99% (filler ≈ never, but matchmaking rarely pairs them);
+  adjacent star tiers stay competitive (legendary beats epic only ~46% vs 27%), so the
+  top tier isn't mandatory to compete. The ladder is effective.
 
 ## Acquisition (decided): capped genesis sale, priced in the token
 
