@@ -133,8 +133,15 @@
         100% { opacity: 0; transform: translateX(-50%) scale(1); }
       }
       #meters { width: 840px; max-width: 96vw; font-size: 16px; display: flex; flex-direction: column; gap: 4px; }
-      #poss-bar { height: 16px; width: 100%; background: var(--away); border: 2px solid #000; }
+      #poss-bar { position: relative; height: 16px; width: 100%; background: var(--away); border: 2px solid #000; }
       #poss-home { height: 100%; background: var(--home); width: 50%; }
+      /* Chunky retro segments: an overlay of vertical black gaps breaks the
+         home/away fills into discrete pixel blocks instead of a smooth bar. */
+      #poss-bar::after {
+        content: ""; position: absolute; inset: 0; pointer-events: none;
+        background: repeating-linear-gradient(to right,
+          transparent 0, transparent 12px, #000 12px, #000 16px);
+      }
       #poss-label { display: flex; justify-content: space-between; }
       #ticker { width: 840px; max-width: 96vw; height: 84px; overflow-y: auto; background: #0c0c22; border: 2px solid var(--line); padding: 6px 10px; font-size: 17px; line-height: 1.45; }
       canvas { image-rendering: pixelated; }
