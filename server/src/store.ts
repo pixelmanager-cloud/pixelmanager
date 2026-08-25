@@ -47,6 +47,8 @@ export interface Store {
   createSeason(id: string, number: number, startsAt: number, endsAt: number): Promise<Season>;
   closeSeason(id: string): Promise<void>;
   seasonResults(seasonId: string): Promise<Array<{ home_id: string; away_id: string; home_score: number; away_score: number }>>;
+  /** count of matches this account initiated (was home) in a season since a timestamp — for the daily cap */
+  matchesToday(accountId: string, seasonId: string, sinceMs: number): Promise<number>;
   addHonour(accountId: string, seasonId: string, seasonNumber: number, tier: string, finalPos: number, title: number, endedAt: number): Promise<void>;
   honoursFor(accountId: string, limit?: number): Promise<HonourRow[]>;
   // divisions & pods (Phase B)

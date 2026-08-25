@@ -5,7 +5,7 @@ import type { Lineup, Tactics } from '@fm/shared';
 import { db, type Account, type StandingOrders } from './db.js';
 import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMATIONS } from './game.js';
 import { hashPassword, verifyPassword } from './auth.js';
-import { ensureSeason, ensurePod, forceRollover, resultsAmong, PROMOTE, RELEGATE } from './seasons.js';
+import { ensureSeason, ensurePod, forceRollover, resultsAmong, startOfUtcDay, PROMOTE, RELEGATE, MATCHES_PER_DAY } from './seasons.js';
 
 const app = Fastify({ logger: false });
 await app.register(cors, { origin: true });
@@ -89,7 +89,8 @@ async function computeFixtures(accountId: string) {
     const res = played.get(m.id) ?? null;
     fixtures.push({ opponentId: m.id, handle: m.handle, clubName: c?.club.name ?? m.handle, rating: m.rating, status: res ? 'played' : 'pending', result: res });
   }
-  return { tier, pod, fixtures };
+  const playedToday = await db.matchesToday(accountId, s.id, startOfUtcDay(Date.now()));
+  return { tier, pod, fixtures, playedToday, dailyCap: MATCHES_PER_DAY };
 }
 
 // opponents = your PENDING fixtures (pod-mates you haven't played yet this season)
@@ -101,8 +102,8 @@ app.get('/opponents', { preHandler: requireAuth }, async (req) => {
 
 // your full season fixture list (played + pending) with results, for the schedule view
 app.get('/fixtures', { preHandler: requireAuth }, async (req) => {
-  const { fixtures } = await computeFixtures(req.account!.id);
-  return { fixtures, played: fixtures.filter((f) => f.status === 'played').length, total: fixtures.length };
+  const { fixtures, playedToday, dailyCap } = await computeFixtures(req.account!.id);
+  return { fixtures, played: fixtures.filter((f) => f.status === 'played').length, total: fixtures.length, playedToday, dailyCap };
 });
 
 app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
@@ -117,6 +118,9 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const seasonRes = await db.seasonResults(season.id);
   const already = seasonRes.some((r) => (r.home_id === req.account!.id && r.away_id === oppId) || (r.home_id === oppId && r.away_id === req.account!.id));
   if (already) return reply.code(409).send({ error: 'already played this fixture this season' });
+  // soft daily cap: at most MATCHES_PER_DAY actively-started matches per UTC day
+  const playedToday = await db.matchesToday(req.account!.id, season.id, startOfUtcDay(Date.now()));
+  if (playedToday >= MATCHES_PER_DAY) return reply.code(429).send({ error: `daily match limit reached (${MATCHES_PER_DAY}/day) — come back tomorrow` });
 
   const myLineup: Lineup = body.myLineup
     ? { formation: body.myLineup.formation, playerIds: body.myLineup.playerIds, duties: body.myLineup.duties }

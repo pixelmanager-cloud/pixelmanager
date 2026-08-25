@@ -59,8 +59,9 @@ never show anyone the whole population.
 
 | Knob | Default | Notes |
 |---|---|---|
-| `POD_SIZE` | 20 | target clubs per pod; last pod in a tier may be short |
+| `POD_SIZE` | 20 | target clubs per pod → 19 fixtures/season (single round-robin); last pod in a tier may be short |
 | `SEASON_DAYS` | 7 | weekly cadence; short enough to feel fresh, long enough to fill fixtures |
+| `MATCHES_PER_DAY` | 3 | soft cap on actively-started matches per UTC day (3×7 ≥ 19, so a diligent manager still finishes) |
 | `PROMOTE` | top 3 | promoted to the tier above at rollover |
 | `RELEGATE` | bottom 3 | relegated to the tier below (none from `SUNDAY LEAGUE`) |
 | `TIERS` | `['SUNDAY LEAGUE','COUNTY','REGIONAL','NATIONAL','LEAGUE TWO','LEAGUE ONE','CHAMPIONSHIP','PREMIER','CONTINENTAL','WORLD CLASS']` | index 0 = bottom; a pure config array, resize freely |
@@ -209,8 +210,12 @@ Each pod is a **single round-robin**: you play every pod-mate **once per season*
 `GET /fixtures` returns your schedule (each pod-mate marked played-with-result or
 pending); `/opponents` returns only the pending ones; `POST /matches` rejects a
 repeat pairing in the same season (409). The hub's "SEASON FIXTURES" list shows a
-`played / total` counter, a result pill on completed fixtures, and a Play button on
-pending ones. (A double round-robin — home + away — is a future tweak.)
+`played / total · playedToday/cap` counter, a result pill on completed fixtures, and
+a Play button on pending ones. **Cadence:** pod 20 → **19 fixtures/season**, soft cap
+**`MATCHES_PER_DAY` (3) per UTC day** (Play buttons disable at the cap, /matches → 429).
+**Fair completion:** at rollover, any fixtures never played **auto-resolve from both
+clubs' standing orders** — only among *active* pod members — so every table completes
+as a full round-robin regardless of who logged in. (Double round-robin = future tweak.)
 
 ## 11) Open questions (with a recommended default to start)
 

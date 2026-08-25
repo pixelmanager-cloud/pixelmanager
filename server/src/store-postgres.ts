@@ -134,6 +134,10 @@ export function makePostgresStore(connectionString: string): Store {
     async seasonResults(seasonId) {
       return (await q('SELECT home_id, away_id, home_score, away_score FROM matches WHERE season_id=$1', [seasonId])).rows as any[];
     },
+    async matchesToday(accountId, seasonId, sinceMs) {
+      const r = (await q('SELECT COUNT(*)::int AS c FROM matches WHERE home_id=$1 AND season_id=$2 AND created_at>=$3', [accountId, seasonId, sinceMs])).rows[0];
+      return r ? r.c : 0;
+    },
     async addHonour(accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt) {
       await q('INSERT INTO honours (account_id, season_id, season_number, tier, final_pos, title, ended_at) VALUES ($1,$2,$3,$4,$5,$6,$7)',
         [accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt]);

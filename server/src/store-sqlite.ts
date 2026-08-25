@@ -122,6 +122,10 @@ export function makeSqliteStore(file: string): Store {
     async seasonResults(seasonId) {
       return db.prepare('SELECT home_id, away_id, home_score, away_score FROM matches WHERE season_id=?').all(seasonId) as any[];
     },
+    async matchesToday(accountId, seasonId, sinceMs) {
+      const r = db.prepare('SELECT COUNT(*) AS c FROM matches WHERE home_id=? AND season_id=? AND created_at>=?').get(accountId, seasonId, sinceMs) as any;
+      return r ? r.c : 0;
+    },
     async addHonour(accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt) {
       db.prepare('INSERT INTO honours (account_id, season_id, season_number, tier, final_pos, title, ended_at) VALUES (?,?,?,?,?,?,?)')
         .run(accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt);

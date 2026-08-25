@@ -237,8 +237,9 @@ class Game {
     $('fixtures-progress').textContent = '';
     $('opponents').innerHTML = SPINNER;
     try {
-      const { fixtures, played, total } = await api.fixtures();
-      $('fixtures-progress').textContent = total ? `${played} / ${total} played` : '';
+      const { fixtures, played, total, playedToday, dailyCap } = await api.fixtures();
+      const capped = playedToday >= dailyCap;
+      $('fixtures-progress').textContent = total ? `${played} / ${total} played · ${playedToday}/${dailyCap} today` : '';
       if (!total) {
         $('opponents').innerHTML = '<div class="muted">No pod-mates yet — as players join your pod, fixtures appear here. (Register another handle in a second browser to test.)</div>';
       } else {
@@ -248,11 +249,15 @@ class Game {
             const cls = my > opp ? 'w' : my < opp ? 'l' : 'd';
             return `<div class="fixture done"><span class="opp"><b>${f.clubName}</b> <span class="meta">${f.handle}</span></span><span class="pill ${cls}">${cls.toUpperCase()} ${my}-${opp}</span></div>`;
           }
-          return `<div class="fixture"><span class="opp"><b>${f.clubName}</b> <span class="meta">${f.handle} · rating ${f.rating}</span></span><button data-opp="${f.opponentId}" data-h="${f.handle}">Play ▶</button></div>`;
+          const btn = capped
+            ? '<button disabled title="Daily limit reached — come back tomorrow">Play ▶</button>'
+            : `<button data-opp="${f.opponentId}" data-h="${f.handle}">Play ▶</button>`;
+          return `<div class="fixture"><span class="opp"><b>${f.clubName}</b> <span class="meta">${f.handle} · rating ${f.rating}</span></span>${btn}</div>`;
         }).join('');
         Array.from($('opponents').querySelectorAll('button[data-opp]')).forEach((b) =>
           b.addEventListener('click', () => this.play((b as HTMLElement).dataset.opp!, (b as HTMLElement).dataset.h!)));
         if (played === total) $('opponents').insertAdjacentHTML('beforeend', '<div class="muted" style="margin-top:8px">✓ All fixtures played — standings lock in at season\'s end.</div>');
+        else if (capped) $('opponents').insertAdjacentHTML('beforeend', `<div class="muted" style="margin-top:8px">⏳ Daily limit reached (${playedToday}/${dailyCap}) — more fixtures tomorrow.</div>`);
       }
     } catch {
       $('opponents').innerHTML = '<div class="muted">Could not load — is the server running?</div>';
@@ -434,7 +439,11 @@ class Game {
       const lineup: Lineup = { ...this.draftLineup, duties: [...this.draftDuties] };
       const payload = await api.createMatch(this.pendingOpp.id, lineup, this.draftTactics);
       this.startMatch(payload, this.pendingOpp.handle);
-    } catch { await this.showHub(); }
+    } catch (e: any) {
+      if (e?.status === 429) toast('Daily match limit reached — come back tomorrow');
+      else if (e?.status === 409) toast('You already played this fixture this season');
+      await this.showHub();
+    }
   }
 
   private startMatch(payload: MatchPayload, awayHandle: string) {

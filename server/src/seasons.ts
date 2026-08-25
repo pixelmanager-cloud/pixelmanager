@@ -4,12 +4,17 @@
 // See docs/seasons-and-divisions.md.
 import { randomUUID } from 'node:crypto';
 import type { Store, Season, PodRef } from './store.js';
-import { buildTable } from './game.js';
+import { buildTable, runMatch, elo } from './game.js';
 
 const SEASON_MS = Math.max(1, Number(process.env.SEASON_DAYS ?? 7)) * 24 * 60 * 60 * 1000;
 export const POD_SIZE = Math.max(2, Number(process.env.POD_SIZE ?? 20));
 export const PROMOTE = 3;
 export const RELEGATE = 3;
+/** soft daily cap: matches a manager can actively start per UTC day (rest auto-resolve at season end). */
+export const MATCHES_PER_DAY = Math.max(1, Number(process.env.MATCHES_PER_DAY ?? 3));
+
+/** Midnight UTC for the day containing `now` (ms since epoch). */
+export const startOfUtcDay = (now: number): number => now - (now % 86_400_000);
 
 /** Bottom → top. A pure config array; resize freely (see the design doc). */
 export const TIERS = [
@@ -65,6 +70,24 @@ export function resultsAmong(results: Array<{ home_id: string; away_id: string; 
   return results.filter((r) => ids.has(r.home_id) && ids.has(r.away_id));
 }
 
+/** Simulate one fixture from both clubs' standing orders and persist it (used to auto-resolve
+ *  fixtures a manager never got to at season end, so every table completes fairly). */
+async function simulateMatch(db: Store, homeId: string, awayId: string, seasonId: string, now: number): Promise<void> {
+  const [home, away, homeC, awayC] = await Promise.all([db.accountById(homeId), db.accountById(awayId), db.getClub(homeId), db.getClub(awayId)]);
+  if (!home || !away || !homeC || !awayC) return;
+  const hl = { formation: homeC.standingOrders.formation, playerIds: homeC.standingOrders.playerIds, duties: homeC.standingOrders.duties };
+  const al = { formation: awayC.standingOrders.formation, playerIds: awayC.standingOrders.playerIds, duties: awayC.standingOrders.duties };
+  const { seed, homeTeam, awayTeam, result } = runMatch(homeC.club, hl, homeC.standingOrders.tactics, awayC.club, al, awayC.standingOrders.tactics);
+  const sh = result[0] > result[1] ? 1 : result[0] < result[1] ? 0 : 0.5;
+  const [nh, na] = elo(home.rating, away.rating, sh);
+  await Promise.all([db.setRating(homeId, nh), db.setRating(awayId, na)]);
+  await db.saveMatch({
+    id: randomUUID(), homeId, awayId, homeTeam, awayTeam,
+    homeTactics: homeC.standingOrders.tactics, awayTactics: awayC.standingOrders.tactics,
+    seed, homeScore: result[0], awayScore: result[1], createdAt: now, seasonId,
+  });
+}
+
 /**
  * Archive a finished season pod-by-pod: rank each pod's participants, record
  * honours, and move the top PROMOTE up a tier / bottom RELEGATE down a tier
@@ -80,9 +103,22 @@ async function rollover(db: Store, s: Season, now: number): Promise<void> {
   for (const { tier, pod } of pods) {
     const members = fallback ? await db.allAccounts() : await db.podMembers(s.id, tier, pod);
     const ids = new Set(members.map((m) => m.id));
-    const results = resultsAmong(allResults, ids);
+    let results = resultsAmong(allResults, ids);
     const played = new Set<string>();
     for (const r of results) { played.add(r.home_id); played.add(r.away_id); }
+
+    // auto-resolve: complete the round-robin among ACTIVE members (played >=1) so their table
+    // is fair regardless of who logged in — unplayed fixtures play out from standing orders.
+    const active = members.filter((m) => played.has(m.id)).map((m) => m.id);
+    for (let a = 0; a < active.length; a++) {
+      for (let b = a + 1; b < active.length; b++) {
+        const x = active[a], y = active[b];
+        const done = results.some((r) => (r.home_id === x && r.away_id === y) || (r.home_id === y && r.away_id === x));
+        if (!done) await simulateMatch(db, x, y, s.id, now);
+      }
+    }
+    // re-read this pod's results now that the fixtures are complete
+    results = resultsAmong(await db.seasonResults(s.id), ids);
     const ranked = buildTable(members, results).filter((row) => played.has(row.id));
     const tierIdx = TIERS.indexOf(tier as typeof TIERS[number]);
     const bigEnough = ranked.length > PROMOTE + RELEGATE; // only relegate where there was a real race
