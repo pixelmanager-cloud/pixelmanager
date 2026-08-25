@@ -11,7 +11,7 @@ import { baseSepolia } from 'thirdweb/chains';
 const clientId = (import.meta as any).env?.VITE_THIRDWEB_CLIENT_ID ?? '';
 const TOKEN_ADDRESS = ((import.meta as any).env?.VITE_TOKEN_ADDRESS ?? '0x63EF99E736080519b2D8171FEa2bb3346a4Debd7') as `0x${string}`;
 const NFT_ADDRESS = ((import.meta as any).env?.VITE_NFT_ADDRESS ?? '0x6E66DDF087d79281f16Df49aA36E3DC0d4330D55') as string; // deployed PlayerNFT (Base Sepolia)
-const SCOUT_ADDRESS = ((import.meta as any).env?.VITE_SCOUT_ADDRESS ?? '') as string; // set after ScoutNFT deploy
+const SCOUT_ADDRESS = ((import.meta as any).env?.VITE_SCOUT_ADDRESS ?? '0x54c81B1904223549B942F3DB22018e6efD949Fc5') as string; // set after ScoutNFT deploy
 export const walletConfigured = () => !!clientId;
 export const nftConfigured = () => !!NFT_ADDRESS;
 export const scoutConfigured = () => !!SCOUT_ADDRESS;

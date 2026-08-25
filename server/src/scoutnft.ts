@@ -5,7 +5,7 @@
 import { createPublicClient, http, getContract } from 'viem';
 import { baseSepolia } from 'viem/chains';
 
-export const SCOUT_ADDRESS = (process.env.SCOUT_ADDRESS ?? '') as `0x${string}` | ''; // set after deploy; '' = off
+export const SCOUT_ADDRESS = (process.env.SCOUT_ADDRESS ?? '0x54c81B1904223549B942F3DB22018e6efD949Fc5') as `0x${string}` | ''; // set after deploy; '' = off
 
 const abi = [
   {
