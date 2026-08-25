@@ -55,13 +55,16 @@ export interface TacticMods {
 }
 
 export function deriveMods(t: Tactics): TacticMods {
+  // Tactical effects are deliberately BOUNDED: stats are the primary driver, and a
+  // tactical edge is worth ~1.5 overall rating points at most — enough to swing a close
+  // match, never a mismatch. (Magnitudes tuned against shared/strategy_test.ts.)
   return {
-    attackPush: 6 + t.mentality * 5,
-    lineShift: t.line * 6,
+    attackPush: 6 + t.mentality * 3.0,
+    lineShift: t.line * 4.5,
     pressCount: t.press >= 2 ? 3 : t.press >= 0 ? 2 : 1,
-    pressIntensity: 1 + t.press * 0.28,
-    directness: t.tempo * 0.5,
-    widthScale: 1 + t.width * 0.16,
+    pressIntensity: 1 + t.press * 0.24,
+    directness: t.tempo * 0.32,
+    widthScale: 1 + t.width * 0.10,
     staminaDrain: 1 + Math.max(0, t.press) * 0.18 + Math.max(0, t.tempo) * 0.1 + Math.max(0, t.mentality) * 0.06,
   };
 }

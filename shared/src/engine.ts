@@ -260,8 +260,12 @@ export class MatchEngine {
         const dist = Math.hypot(recS.x - cs.x, recS.y - cs.y);
         const pressure = this.pressureOn(defTeam, recS);
         const risk = pick.through ? 0.14 : 0;
+        // A patient, short-passing side that insists on playing out through a heavy press
+        // is punished (build-up disrupted) — so pressing is a real counter to possession,
+        // without the chaos of forced turnovers.
+        const patientUnderPress = Math.max(0, -this.mods[teamIdx].directness) * Math.max(0, defMods.pressIntensity - 1) * 0.42;
         const completion = clamp(
-          0.58 + 0.38 * norm(carrier.attrs.passing) * fit(cs.fitness) - dist * 0.008 - pressure * 0.18 - risk,
+          0.58 + 0.38 * norm(carrier.attrs.passing) * fit(cs.fitness) - dist * 0.008 - pressure * 0.18 - patientUnderPress - risk,
           0.1, 0.96,
         );
         if (this.rng() < completion) {

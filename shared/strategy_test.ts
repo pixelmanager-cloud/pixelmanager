@@ -116,6 +116,35 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
   assert(shotsPoacher > shotsTarget, `poacher forwards should shoot more than target-men (got ${shotsPoacher} vs ${shotsTarget})`);
 }
 
+// ---- 7. Anti-spam: no single tactic may dominate the field (equal stats) ----
+// Guards against a globally-dominant "spam" strategy (Tiki-Taka used to win ~69% of the
+// field with no counter). Every viable tactic must have at least one losing matchup, and
+// none may run away with the field — tactics are a bounded edge, stats are king.
+{
+  const field: Record<string, Tactics> = { Balanced: DEFAULT_TACTICS, ...TACTIC_PRESETS };
+  const fnames = Object.keys(field);
+  const winRate = (tA: Tactics, tB: Tactics, n: number) => {
+    let a = 0;
+    for (let i = 0; i < n; i++) {
+      const r = play(mk('a', 12, i * 7 + 1, tA.formation as any), mk('b', 12, i * 13 + 3, tB.formation as any), tA, tB, i * 31 + 5);
+      if (r.score[0] > r.score[1]) a++;
+    }
+    return a / n;
+  };
+  let worstOffender = '', maxAvg = 0;
+  const spam: string[] = [];
+  for (const n of fnames) {
+    let sum = 0, worst = 1;
+    for (const m of fnames) { if (m === n) continue; const w = winRate(field[n], field[m], 45); sum += w; worst = Math.min(worst, w); }
+    const avg = sum / (fnames.length - 1);
+    if (avg > maxAvg) { maxAvg = avg; worstOffender = n; }
+    if (worst >= 0.52) spam.push(`${n} (no losing matchup; worst ${(worst * 100).toFixed(0)}%)`); // a tactic that never loses = spammable
+  }
+  console.log(`[anti-spam] highest field-avg tactic: ${worstOffender} ${(maxAvg * 100).toFixed(0)}%  (gate <60%)`);
+  assert(maxAvg < 0.60, `a tactic dominates the field: ${worstOffender} avg ${(maxAvg * 100).toFixed(0)}% (>=60% = spammable)`);
+  assert(spam.length === 0, `spammable tactic(s) with no counter: ${spam.join(', ')}`);
+}
+
 // ---- verdict ----
 if (failures.length) {
   console.error('\nENGINE REGRESSION — assertions failed:');
