@@ -27,6 +27,10 @@ export class MatchEngine {
   private dm: [DutyMods[], DutyMods[]];
   private rng: () => number;
   private halftimeDone = false;
+  // counter-attack window: the team that just won the ball can spring a fast break while
+  // the opponent is out of shape — devastating against a side caught high/pressing.
+  private counterTeam: 0 | 1 | null = null;
+  private counterUntil = 0;
 
   constructor(public teams: [Team, Team], seed: number, tactics?: [Tactics, Tactics]) {
     this.rng = makeRng(seed);
@@ -111,10 +115,27 @@ export class MatchEngine {
       return;
     }
 
+    const prevTeam = s.carrier?.teamIdx;
     if (s.carrier) s.possession[s.carrier.teamIdx]++;
     this.movePlayers();
     if (s.carrier) this.actCarrier();
     else this.chaseLooseBall();
+    // possession just turned over in open play (not a keeper gathering a shot) → the
+    // winner is on the counter for a few seconds.
+    const now = s.carrier?.teamIdx;
+    if (now !== undefined && now !== prevTeam && s.carrier!.playerIdx !== 0) {
+      // only a real counter if the side that LOST the ball was committed high (attacking
+      // mentality or a high line) — that's when there's space in behind to break into.
+      const loser = (1 - now) as 0 | 1;
+      if (this.mods[loser].attackPush >= 9 || this.mods[loser].lineShift >= 3) {
+        this.counterTeam = now;
+        this.counterUntil = s.clockSec + 2.0;
+      }
+    }
+  }
+
+  private onCounter(teamIdx: 0 | 1): boolean {
+    return this.counterTeam === teamIdx && this.state.clockSec < this.counterUntil;
   }
 
   // ---- movement ----
@@ -169,7 +190,9 @@ export class MatchEngine {
         let tx = a.x;
         let ty = 34 + (a.y - 34) * mods.widthScale;
         if (p.role === 'DF') tx += dir * mods.lineShift;
-        if (attacking && p.role !== 'GK') tx += dir * mods.attackPush * PUSH_BY_ROLE[p.role] * dm.push;
+        // on a counter, the winning side's forwards burst upfield into the space
+        const counterPush = attacking && p.role === 'FW' && this.onCounter(teamIdx) ? 1.3 : 1;
+        if (attacking && p.role !== 'GK') tx += dir * mods.attackPush * PUSH_BY_ROLE[p.role] * dm.push * counterPush;
         const pullX = clamp((p.role === 'GK' ? 0.04 : attacking ? 0.22 : 0.34) + (attacking ? dm.come : 0), 0, 0.6);
         const pullY = p.role === 'GK' ? 0.25 : attacking ? 0.30 : 0.46;
         tx += (s.ball.x - tx) * pullX;
@@ -325,7 +348,10 @@ export class MatchEngine {
         - pressure * 3
         + this.dm[teamIdx][i].magnet
         + this.rng() * 6;
-      const through = gain > 16 && this.teams[teamIdx].players[i].role === 'FW' && this.rng() < 0.5;
+      // a direct side, and especially one on the counter, slips more through-balls in behind
+      const counter = this.onCounter(teamIdx);
+      const throughP = clamp(0.5 + 0.16 * mods.directness + (counter ? 0.14 : 0), 0.25, 0.9);
+      const through = gain > (counter ? 14 : 16) && this.teams[teamIdx].players[i].role === 'FW' && this.rng() < throughP;
       if (gain > -6 && score > bestScore) { bestScore = score; best = { idx: i, through }; }
     }
     return best;

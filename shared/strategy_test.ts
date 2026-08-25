@@ -94,7 +94,7 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
   for (const [a, b] of matchups) {
     let wa = 0, wb = 0, dr = 0;
     for (let i = 0; i < N; i++) {
-      const r = play(mk('a', 13, i * 7 + 1), mk('b', 13, i * 11 + 3), TACTIC_PRESETS[a], TACTIC_PRESETS[b], i * 31 + 5);
+      const r = play(mk('a', 13, i * 7 + 1, TACTIC_PRESETS[a].formation), mk('b', 13, i * 11 + 3, TACTIC_PRESETS[b].formation), TACTIC_PRESETS[a], TACTIC_PRESETS[b], i * 31 + 5);
       if (r.score[0] > r.score[1]) wa++; else if (r.score[1] > r.score[0]) wb++; else dr++;
     }
     console.log(`[preset]    ${a} vs ${b}: ${wa}W-${dr}D-${wb}L`);
