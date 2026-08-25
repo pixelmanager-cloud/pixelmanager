@@ -18,8 +18,12 @@ export function seedFrom(...parts: Array<string | number>): number {
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
 // ── style tags: the vocabulary linking card-play to stats ──
-export type Tag = 'composure' | 'aggression' | 'creativity' | 'teamwork' | 'leadership' | 'stamina' | 'flair';
-export const TAGS: Tag[] = ['composure', 'aggression', 'creativity', 'teamwork', 'leadership', 'stamina', 'flair'];
+export type Tag = 'composure' | 'aggression' | 'creativity' | 'teamwork' | 'leadership' | 'stamina' | 'flair' | 'keeping';
+export const TAGS: Tag[] = ['composure', 'aggression', 'creativity', 'teamwork', 'leadership', 'stamina', 'flair', 'keeping'];
+// outfield play never demands the keeping tag (that's the goalkeeper track's domain)
+const OUTFIELD_TAGS: Tag[] = ['composure', 'aggression', 'creativity', 'teamwork', 'leadership', 'stamina', 'flair'];
+
+export type Track = 'outfield' | 'goalkeeper';
 
 export interface Card { id: string; name: string; tags: Tag[] }
 // Differentiated deck: each tag has both PURE (single-tag) and BLEND (dual-tag) cards, so a
@@ -45,6 +49,22 @@ export const DECK: Card[] = [
   { id: 'mazy',        name: 'Mazy Dribble',     tags: ['flair', 'creativity'] },
 ];
 
+// The goalkeeper track's deck: keeping-focused with a few shared mental cards. A GK career draws
+// from this instead of the outfield DECK, so `keeping` (and the calm/commanding traits that suit a
+// keeper) is what grows.
+export const GK_DECK: Card[] = [
+  { id: 'shot-stop',   name: 'Shot-Stopper',      tags: ['keeping'] },
+  { id: 'point-blank', name: 'Point-Blank Save',  tags: ['keeping', 'composure'] },
+  { id: 'one-on-one',  name: 'Smother the 1-on-1', tags: ['keeping', 'aggression'] },
+  { id: 'command',     name: 'Command the Area',  tags: ['keeping', 'leadership'] },
+  { id: 'claim-cross', name: 'Claim the Cross',   tags: ['keeping', 'composure'] },
+  { id: 'sweeper',     name: 'Sweeper-Keeper',    tags: ['keeping', 'stamina'] },
+  { id: 'distribution', name: 'Quick Distribution', tags: ['keeping', 'creativity'] },
+  { id: 'goal-kick',   name: 'Pinged Goal-Kick',  tags: ['keeping', 'flair'] },
+  { id: 'organise',    name: 'Organise the Wall',  tags: ['leadership', 'composure'] },
+  { id: 'calm-back',   name: 'Calm it at the Back', tags: ['composure', 'teamwork'] },
+];
+
 // ── scenarios: each moment demands a weighted mix of tags; kind biases the demand ──
 export interface Scenario { id: string; kind: 'match' | 'social' | 'training'; demand: Partial<Record<Tag, number>>; label: string }
 const KIND_BIAS: Record<Scenario['kind'], Tag[]> = {
@@ -53,13 +73,15 @@ const KIND_BIAS: Record<Scenario['kind'], Tag[]> = {
   training: ['stamina', 'creativity', 'flair', 'aggression'],   // sharpen the tools
 };
 const KIND_POOL: Scenario['kind'][] = ['match', 'match', 'match', 'social', 'training'];
+// goalkeeper moments demand keeping heavily, plus the calm/commanding traits that suit a keeper
+const GK_BIAS: Tag[] = ['keeping', 'keeping', 'keeping', 'composure', 'leadership', 'creativity'];
 
-/** A seeded scenario: pick 1–3 demanded tags (biased by kind) with weights summing to 1. */
-export function makeScenario(rng: () => number, i: number): Scenario {
+/** A seeded scenario: pick 1–3 demanded tags (biased by kind + track) with weights summing to 1. */
+export function makeScenario(rng: () => number, i: number, track: Track = 'outfield'): Scenario {
   const kind = KIND_POOL[Math.floor(rng() * KIND_POOL.length)];
-  const bias = KIND_BIAS[kind];
+  const bias = track === 'goalkeeper' ? GK_BIAS : KIND_BIAS[kind].filter((t) => OUTFIELD_TAGS.includes(t));
   const n = 1 + Math.floor(rng() * Math.min(3, bias.length));
-  const pool = [...bias].sort(() => rng() - 0.5).slice(0, n);
+  const pool = [...new Set([...bias].sort(() => rng() - 0.5))].slice(0, n);
   const raw = pool.map(() => 0.3 + rng());
   const sum = raw.reduce((a, b) => a + b, 0);
   const demand: Partial<Record<Tag, number>> = {};
@@ -100,11 +122,11 @@ export class Career {
   finished = false;
   private copies = new Map<string, number>(); // flywheel: extra copies gained per card (capped)
 
-  constructor(readonly seed: number) {
+  constructor(readonly seed: number, readonly track: Track = 'outfield') {
     this.rng = mulberry32(seed);
-    this.drawPile = this.shuffle([...DECK]);
+    this.drawPile = this.shuffle([...(track === 'goalkeeper' ? GK_DECK : DECK)]);
     this.refillHand();
-    this.scenario = makeScenario(this.rng, this.turn);
+    this.scenario = makeScenario(this.rng, this.turn, track);
   }
 
   /** The current decision: which of these hand cards for this scenario. */
@@ -133,7 +155,7 @@ export class Career {
     if (this.turn >= SCENARIOS_PER_SEASON * SEASONS_TO_GRADUATE) { this.finished = true; return choice; }
     this.season = 1 + Math.floor(this.turn / SCENARIOS_PER_SEASON);
     this.refillHand();
-    this.scenario = makeScenario(this.rng, this.turn);
+    this.scenario = makeScenario(this.rng, this.turn, this.track);
     return choice;
   }
 
@@ -202,7 +224,7 @@ export function inheritGenes(parent: Genes, seed: number, keepPct = 0.6): Genes 
 const STAT_SOURCES: Record<keyof CareerPlayerAttrs, Tag[]> = {
   pace: ['stamina', 'flair'], strength: ['aggression', 'stamina'], stamina: ['stamina'],
   passing: ['creativity', 'teamwork'], shooting: ['flair', 'composure'], tackling: ['aggression'],
-  positioning: ['teamwork', 'composure'], workrate: ['stamina', 'teamwork'], keeping: [], setPiece: ['composure', 'creativity'],
+  positioning: ['teamwork', 'composure'], workrate: ['stamina', 'teamwork'], keeping: ['keeping'], setPiece: ['composure', 'creativity'],
   composure: ['composure'], aggression: ['aggression'], creativity: ['creativity'], teamwork: ['teamwork'], leadership: ['leadership'],
 };
 const BASELINE = 7, SPREAD = 12, PEAK = 1.5;
@@ -235,16 +257,28 @@ export function deriveStats(log: Choice[], seed: number, genes: Genes = rollGene
       out[stat] = clamp(Math.round((BASELINE + peaked * SPREAD) * magnitude + noise), 1, 20);
     }
   }
-  out.keeping = clamp(Math.round(4 + (rng() - 0.5) * 3), 1, 8); // outfield keeper skill: low by design
   return out;
 }
 
-/** Derive an outfield role from the finished stat sheet (GK is a future dedicated career path). */
+// Per-role baselines subtract the "easy" stats so roles come out ~balanced (attacking stats are
+// generally higher, which used to over-produce FW/MF and starve DF). A career is the role it's
+// most ABOVE its own baseline in. GK is decided first: a real keeping stat means a goalkeeper.
+const ROLE_CORE: Record<Role, (keyof CareerPlayerAttrs)[]> = {
+  GK: ['keeping', 'positioning', 'composure'],
+  DF: ['tackling', 'strength', 'aggression', 'positioning'],
+  MF: ['passing', 'creativity', 'teamwork', 'stamina'],
+  FW: ['shooting', 'pace', 'composure', 'creativity'],
+};
+// baselines = the population mean core-avg per role (measured), so a career is whichever role it's
+// most ABOVE its own typical in → DF/MF/FW come out ~balanced instead of attacking stats winning.
+const ROLE_BASELINE: Record<Role, number> = { GK: 8, DF: 11.77, MF: 12.56, FW: 12.86 };
+
+/** Derive the role: a goalkeeper if `keeping` is genuinely developed, else the outfield role the
+ *  player is most above-baseline in (baselines calibrated so DF/MF/FW come out roughly balanced). */
 export function deriveRole(a: CareerPlayerAttrs): Role {
-  const fw = a.shooting + a.pace + a.composure + a.creativity * 0.5;
-  const mf = a.passing + a.creativity + a.teamwork + a.stamina * 0.5;
-  const df = a.tackling + a.aggression + a.strength + a.positioning * 0.5;
-  return fw >= mf && fw >= df ? 'FW' : mf >= df ? 'MF' : 'DF';
+  if (a.keeping >= 12) return 'GK'; // only the GK track develops keeping this high
+  const score = (r: Role) => ROLE_CORE[r].reduce((s, k) => s + a[k], 0) / ROLE_CORE[r].length - ROLE_BASELINE[r];
+  return (['DF', 'MF', 'FW'] as Role[]).reduce((best, r) => (score(r) > score(best) ? r : best), 'DF');
 }
 
 /** Role-weighted overall (each role values the stats that matter to it). */
@@ -269,8 +303,8 @@ export function graduate(log: Choice[], seed: number, genes: Genes = rollGenes(s
 
 // ── balance helper: auto-play a career under a "style" policy (picks the best hand card) ──
 export interface Style { name: string; pref: Partial<Record<Tag, number>>; skill: number }
-export function simCareer(seed: number, style: Style, genes: Genes = rollGenes(seed)): CareerPlayer {
-  const career = new Career(seed);
+export function simCareer(seed: number, style: Style, genes: Genes = rollGenes(seed), track: Track = 'outfield'): CareerPlayer {
+  const career = new Career(seed, track);
   const rng = mulberry32(seed ^ 0x1234567);
   while (!career.finished) {
     const { hand, scenario } = career.current();

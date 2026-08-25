@@ -1,6 +1,6 @@
 // Career-sim harness. Validates: (1) different styles → distinct, specialised players + roles;
 // (2) skill → magnitude; (3) the turn-by-turn engine is deterministic. Run: `npx tsx career_sim.ts`.
-import { Career, simCareer, graduate, seedFrom, rollGenes, inheritGenes, DECK, type Style, type CareerPlayerAttrs, type Role, type Genes } from './src/career.js';
+import { Career, simCareer, graduate, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, type Style, type CareerPlayerAttrs, type Role, type Genes } from './src/career.js';
 
 const STYLES: Style[] = [
   { name: 'Poacher',   pref: { composure: 1, flair: 0.8 },        skill: 0.85 },
@@ -61,6 +61,40 @@ console.log('\n=== lineage — son inherits physical genes (biased, not copied) 
 const parentGenes = rollGenes(seedFrom('parent'));
 const son = inheritGenes(parentGenes, seedFrom('son'), 0.6);
 console.log(`  parent pace band [${parentGenes.pace.floor}-${parentGenes.pace.ceiling}]  →  son pace band [${son.pace.floor}-${son.pace.ceiling}]  (near, regressed, re-rolled)`);
+
+// GK track: a goalkeeper career produces a keeper
+console.log('\n=== goalkeeper track ===');
+const gk = simCareer(seedFrom('keeper1'), { name: 'GK', pref: { keeping: 1, composure: 0.7, leadership: 0.5 }, skill: 0.85 }, undefined, 'goalkeeper');
+console.log(`  role=${gk.role} ovr=${gk.overall} — keeping ${gk.attrs.keeping}, positioning ${gk.attrs.positioning}, composure ${gk.attrs.composure}, shooting ${gk.attrs.shooting}`);
+
+// design space + role balance (sampling random careers)
+console.log('\n=== design space + role balance (sampling random careers) ===');
+const OUT = TAGS.filter((t) => t !== 'keeping');
+const SIG: (keyof CareerPlayerAttrs)[] = ['shooting', 'passing', 'tackling', 'pace', 'creativity', 'composure', 'aggression', 'leadership', 'stamina', 'teamwork', 'keeping'];
+const N = 12000;
+const arche = new Set<string>();
+const fine = new Set<string>();
+const roles: Record<string, number> = {};
+const geneTier = (ceil: number) => (ceil <= 9 ? 'L' : ceil <= 14 ? 'M' : 'H');
+for (let i = 0; i < N; i++) {
+  const rng = mulberry32(seedFrom('space', i));
+  const goalkeeper = rng() < 0.12;                              // ~1 in 8 players choose the GK track
+  const pool = goalkeeper ? (['keeping'] as typeof OUT) : OUT;
+  const pref: Partial<Record<typeof TAGS[number], number>> = {};
+  if (goalkeeper) { pref.keeping = 1; pref.composure = rng() * 0.6; pref.leadership = rng() * 0.6; }
+  else for (const t of pool) if (rng() < 0.5) pref[t] = rng();
+  const p = simCareer(seedFrom('space', i), { name: 'x', pref, skill: 0.3 + rng() * 0.6 }, undefined, goalkeeper ? 'goalkeeper' : 'outfield');
+  const top2 = SIG.map((s) => [s, p.attrs[s]] as const).sort((a, b) => b[1] - a[1]).slice(0, 2).map((x) => x[0]).sort().join('+');
+  const a = `${p.role}:${top2}`;
+  arche.add(a);
+  fine.add(`${a}|${geneTier(p.genes.pace.ceiling)}${geneTier(p.genes.strength.ceiling)}${geneTier(p.genes.stamina.ceiling)}`);
+  roles[p.role] = (roles[p.role] ?? 0) + 1;
+}
+const pct = (r: string) => `${Math.round((roles[r] ?? 0) / N * 100)}%`;
+console.log(`  role spread: GK ${pct('GK')}  DF ${pct('DF')}  MF ${pct('MF')}  FW ${pct('FW')}  (outfield DF/MF/FW should be roughly balanced)`);
+console.log(`  playstyle archetypes (role + top-2 identity stats): ${arche.size}`);
+console.log(`  × physical gene tiers (L/M/H per innate): ${fine.size} meaningfully-distinct types`);
+console.log(`  (raw distinct players are effectively unbounded: fine gene bands + per-stat seeded noise → every mint is unique)`);
 
 // determinism: same seed + same choices → identical player
 console.log('\n=== determinism check ===');
