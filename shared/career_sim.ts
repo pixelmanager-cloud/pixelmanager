@@ -17,13 +17,13 @@ const pad = (s: string, n: number) => s.padEnd(n);
 const num = (n: number) => String(n).padStart(2);
 
 console.log('\n=== Career Sim — players produced by different play styles ===\n');
-console.log(pad('STYLE', 15), 'ROLE OVR  ' + KEYS.map((k) => pad(k.slice(0, 3), 4)).join(''));
+console.log(pad('STYLE', 15), 'ROLE OVR  ' + KEYS.map((k) => pad(k.slice(0, 3), 4)).join('') + ' TRAITS');
 const players: Array<{ name: string; role: Role; a: CareerPlayerAttrs; ovr: number }> = [];
 for (const style of STYLES) {
   const seed = seedFrom('career', style.name);
   const p = simCareer(seed, style);
   players.push({ name: style.name, role: p.role, a: p.attrs, ovr: p.overall });
-  console.log(pad(style.name, 15), pad(p.role, 4), num(p.overall) + '   ' + KEYS.map((k) => pad(num(p.attrs[k]), 4)).join(''));
+  console.log(pad(style.name, 15), pad(p.role, 4), num(p.overall) + '   ' + KEYS.map((k) => pad(num(p.attrs[k]), 4)).join('') + ' ' + (p.traits.join(', ') || '—'));
 }
 
 // role spread + top-stat diversity
@@ -92,6 +92,19 @@ for (let i = 0; i < N; i++) {
 }
 const pct = (r: string) => `${Math.round((roles[r] ?? 0) / N * 100)}%`;
 console.log(`  role spread: GK ${pct('GK')}  DF ${pct('DF')}  MF ${pct('MF')}  FW ${pct('FW')}  (outfield DF/MF/FW should be roughly balanced)`);
+// trait distribution
+const traitCount: Record<string, number> = {}; let withTrait = 0;
+for (let i = 0; i < N; i++) {
+  const rng = mulberry32(seedFrom('space', i));
+  const goalkeeper = rng() < 0.12;
+  const pref: any = {};
+  if (goalkeeper) { pref.keeping = 1; pref.composure = rng() * 0.6; pref.leadership = rng() * 0.6; }
+  else for (const t of OUT) if (rng() < 0.5) pref[t] = rng();
+  const p = simCareer(seedFrom('space', i), { name: 'x', pref, skill: 0.3 + rng() * 0.6 }, undefined, goalkeeper ? 'goalkeeper' : 'outfield');
+  if (p.traits.length) withTrait++;
+  for (const t of p.traits) traitCount[t] = (traitCount[t] ?? 0) + 1;
+}
+console.log(`  players with ≥1 trait: ${Math.round(withTrait / N * 100)}%  |  trait spread:`, Object.fromEntries(Object.entries(traitCount).map(([k, v]) => [k, `${Math.round(v / N * 100)}%`])));
 console.log(`  playstyle archetypes (role + top-2 identity stats): ${arche.size}`);
 console.log(`  × physical gene tiers (L/M/H per innate): ${fine.size} meaningfully-distinct types`);
 console.log(`  (raw distinct players are effectively unbounded: fine gene bands + per-stat seeded noise → every mint is unique)`);

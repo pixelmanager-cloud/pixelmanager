@@ -237,7 +237,7 @@ export interface CareerPlayerAttrs {
   composure: number; aggression: number; creativity: number; teamwork: number; leadership: number;
 }
 export type Role = 'GK' | 'DF' | 'MF' | 'FW';
-export interface CareerPlayer { attrs: CareerPlayerAttrs; role: Role; overall: number; genes: Genes }
+export interface CareerPlayer { attrs: CareerPlayerAttrs; role: Role; overall: number; genes: Genes; traits: string[] }
 
 // ── HYBRID model: raw physical stats are INNATE (a floor→ceiling band seeded at genesis and
 // inherited via lineage); the career only decides how much of that band you REALISE. Technical +
@@ -348,12 +348,40 @@ export function careerOverall(a: CareerPlayerAttrs, role: Role): number {
   return Math.round(keys.reduce((s, k) => s + a[k], 0) / keys.length);
 }
 
-/** Finish a career log into a complete Player (attrs + role + overall). Genes default to a fresh
- *  genesis roll; pass inherited genes (lineage) to constrain the innate physical stats. */
-export function graduate(log: Choice[], seed: number, genes: Genes = rollGenes(seed)): CareerPlayer {
+// ── TRAITS: earned identity perks that differentiate players beyond raw stats and give the Manager
+// engine hooks to read later ("Big-Game Player" → composure in finals, etc.). A career becomes
+// ELIGIBLE for a trait by how it developed; the player locks in up to MAX_TRAITS (the client lets a
+// human choose; the sim auto-picks). Some traits also nudge a stat.
+export const MAX_TRAITS = 2;
+export interface Trait { id: string; name: string; desc: string; eligible: (a: CareerPlayerAttrs, log: Choice[]) => boolean; apply?: (a: CareerPlayerAttrs) => void }
+export const TRAITS: Trait[] = [
+  { id: 'clinical',  name: 'Clinical Finisher',    desc: 'Ice-cold in front of goal',        eligible: (a) => a.shooting >= 15 && a.composure >= 14, apply: (a) => { a.shooting = clamp(a.shooting + 1, 1, 20); } },
+  { id: 'ballwinner', name: 'Ball-Winner',         desc: 'Wins it back relentlessly',        eligible: (a) => a.tackling >= 15 && a.aggression >= 13, apply: (a) => { a.tackling = clamp(a.tackling + 1, 1, 20); } },
+  { id: 'metronome', name: 'Metronome',            desc: 'Never misplaces a pass',           eligible: (a) => a.passing >= 15 && a.teamwork >= 13 },
+  { id: 'maestro',   name: 'Creative Maestro',     desc: 'Unlocks the tightest defences',    eligible: (a) => a.creativity >= 16 },
+  { id: 'leader',    name: 'Born Leader',          desc: 'Lifts the whole team',             eligible: (a) => a.leadership >= 15 },
+  { id: 'livewire',  name: 'Livewire',             desc: 'Blistering, frightening pace',     eligible: (a) => a.pace >= 16 },
+  { id: 'ironman',   name: 'Iron Man',             desc: 'Runs all day, every day',          eligible: (a) => a.stamina >= 15 && a.strength >= 13 },
+  { id: 'deadball',  name: 'Dead-Ball Specialist', desc: 'Lethal from set pieces',           eligible: (a) => a.setPiece >= 15, apply: (a) => { a.setPiece = clamp(a.setPiece + 1, 1, 20); } },
+  { id: 'wall',      name: 'The Wall',             desc: 'Unbeatable between the sticks',     eligible: (a) => a.keeping >= 16 },
+  { id: 'biggame',   name: 'Big-Game Player',      desc: 'Turns up when it matters most',    eligible: (_a, log) => log.filter((c) => c.fit >= 0.6 && c.success >= 0.8).length >= 18 },
+];
+
+/** Which traits a finished career qualifies for (before the player locks any in). */
+export function eligibleTraits(attrs: CareerPlayerAttrs, log: Choice[]): Trait[] {
+  return TRAITS.filter((t) => t.eligible(attrs, log));
+}
+
+/** Finish a career log into a complete Player (attrs + role + overall + traits). Genes default to a
+ *  fresh genesis roll; pass inherited genes (lineage). `pickTraits` chooses among the eligible traits
+ *  (the client lets a human pick; defaults to the first MAX_TRAITS for the sim). */
+export function graduate(log: Choice[], seed: number, genes: Genes = rollGenes(seed), pickTraits?: (eligible: Trait[]) => Trait[]): CareerPlayer {
   const attrs = deriveStats(log, seed, genes);
+  const eligible = eligibleTraits(attrs, log);
+  const chosen = (pickTraits ? pickTraits(eligible) : eligible.slice(0, MAX_TRAITS)).slice(0, MAX_TRAITS);
+  for (const t of chosen) t.apply?.(attrs); // trait bonuses apply before role/overall
   const role = deriveRole(attrs);
-  return { attrs, role, overall: careerOverall(attrs, role), genes };
+  return { attrs, role, overall: careerOverall(attrs, role), genes, traits: chosen.map((t) => t.id) };
 }
 
 // ── balance helper: auto-play a career under a "style" policy (picks the best hand card) ──
