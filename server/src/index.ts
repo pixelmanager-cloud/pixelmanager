@@ -453,6 +453,27 @@ app.post('/admin/rollover', async (req, reply) => {
   return { ok: true, season: { number: s.number, endsAt: s.endsAt } };
 });
 
+// Regenerate every club's BASE squad at the current (weak filler) quality — the one-time
+// migration to the base-fillers + NFT-stars model. Preserves coins/wallet/rating/NFTs and
+// any bought or loaned players (only the account's own base players `<id>-N` are re-rolled).
+app.post('/admin/regen-base', async (req, reply) => {
+  const secret = process.env.ADMIN_SECRET;
+  if (!secret || (req.headers['x-admin-secret'] as string) !== secret) return reply.code(403).send({ error: 'forbidden' });
+  const accounts = await db.allAccounts();
+  let n = 0;
+  for (const a of accounts) {
+    const [acc, c] = await Promise.all([db.accountById(a.id), db.getClub(a.id)]);
+    if (!acc || !c) continue;
+    const fresh = makeClub(a.id, acc.handle).club;                       // 20 weak base players (ids <id>-0..19)
+    const kept = c.club.players.filter((p) => !p.id.startsWith(`${a.id}-`)); // bought + loaned players stay
+    fresh.players = [...fresh.players, ...kept];
+    const so = { ...c.standingOrders, playerIds: autoPickXI(fresh, c.standingOrders.formation).playerIds, duties: undefined };
+    await db.saveClub(a.id, fresh, so);
+    n++;
+  }
+  return { ok: true, regenerated: n };
+});
+
 const port = Number(process.env.PORT ?? 8787);
 await db.init();
 await ensureSeason(db, Date.now()); // make sure season 1 exists (and roll over a stale one) on boot

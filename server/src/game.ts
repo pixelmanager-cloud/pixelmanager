@@ -5,7 +5,9 @@ import {
 } from '@fm/shared';
 import type { StandingOrders } from './db.js';
 
-const BASE_QUALITY = 12; // baseline squad strength; base/star (NFT) tiers come later
+// Base squads are weak FILLERS (validated filler tier from ladder_sim). Strength/star
+// players come only from owned PlayerNFTs, which merge in on top (see loadSquad/nft.ts).
+const BASE_QUALITY = 6;
 
 const short = (h: string) => (h.replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() || 'FC');
 // distinct kit colours so opponents are easy to tell apart on the pitch
