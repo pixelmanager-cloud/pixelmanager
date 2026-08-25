@@ -326,8 +326,8 @@
       #lineup .tacrow label { font-family: var(--display); font-size: 8px; color: var(--cyan); display: flex; flex-direction: column; gap: 5px; }
       #lineup select { width: 122px; }
       .xi { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; }
-      .slot { display: flex; align-items: center; gap: 8px; font-size: 17px; padding: 3px 8px 3px 6px; border-left: 6px solid var(--line);
-        border-radius: 0 6px 6px 0; }
+      .slot { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 17px; padding: 3px 8px 3px 6px; border-left: 6px solid var(--line);
+        border-radius: 0 6px 6px 0; } /* min-width:0 lets the slot shrink to its grid cell so a wide tier badge doesn't push the row out */
       .slot .role { font-family: var(--display); font-size: 9px; width: 36px; text-align: center; color: #0a0a16; padding: 4px 0; }
       .slot select.player-sel { flex: 1; min-width: 0; }
       .slot select.duty-sel { flex: none; width: 118px; font-size: 14px; padding: 3px 20px 3px 6px; color: var(--cyan); background-position: right 6px center; }
