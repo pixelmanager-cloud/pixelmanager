@@ -150,6 +150,18 @@
       #scouting-head { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
       #scouting-head h3 { margin: 0; } #scouting-back { margin-left: auto; }
       .scout-sub { font-size: 16px; color: #8aa; margin-bottom: 14px; } .scout-sub b { color: var(--good); }
+      #my-scouts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 6px; }
+      .scout-net { border: 2px solid var(--line); background: var(--panel-2); padding: 9px 11px; }
+      .scout-net .sn-top { display: flex; align-items: center; gap: 8px; }
+      .scout-net .sn-icon { font-size: 16px; }
+      .scout-net .sn-name { font-family: var(--display); font-size: 10px; color: #fff; }
+      .scout-net .sn-tier { margin-left: auto; font-family: var(--display); font-size: 8px; padding: 3px 6px; border-radius: 4px; border: 1px solid; }
+      .scout-net .sn-tier.tier-base { color: var(--cyan); border-color: var(--cyan); }
+      .scout-net .sn-desc { font-size: 14px; color: #9ab; margin-top: 6px; line-height: 1.4; }
+      .scout-net .sn-desc b { color: var(--good); }
+      #my-scouts .sn-hint { grid-column: 1 / -1; font-size: 13px; color: #778; font-style: italic; }
+      .scout-h4 { font-family: var(--display); font-size: 11px; color: var(--pink); margin: 14px 0 4px; letter-spacing: 0.5px; }
+      @media (max-width: 640px) { #my-scouts { grid-template-columns: 1fr; } }
       .trial { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border: 2px solid var(--line); background: var(--panel-2); margin-bottom: 8px; font-size: 18px; }
       .trial.signed { opacity: 0.55; }
       .trial.band-gem { border-color: var(--warn); }
@@ -176,7 +188,10 @@
       .slot .role { font-family: var(--display); font-size: 9px; width: 36px; text-align: center; color: #0a0a16; padding: 4px 0; }
       .slot select.player-sel { flex: 1; min-width: 0; }
       .slot select.duty-sel { flex: none; width: 118px; font-size: 14px; padding: 3px 4px; color: var(--cyan); }
-      .slot .ovr { width: 32px; text-align: right; font-weight: bold; font-size: 19px; }
+      .slot .ovr { flex: none; min-width: 30px; text-align: center; font-weight: bold; font-size: 18px;
+        background: #0a0a16; border: 1px solid rgba(255,255,255,0.18); border-radius: 5px; padding: 3px 6px; }
+      .slot .loan { flex: none; font-family: var(--display); font-size: 7px; letter-spacing: 0.5px; color: var(--warn);
+        border: 1px solid var(--warn); border-radius: 4px; padding: 3px 4px; background: rgba(255,206,58,0.12); }
       .slot.role-GK { border-left-color: var(--gk); } .slot.role-DF { border-left-color: var(--df); }
       .slot.role-MF { border-left-color: var(--mf); } .slot.role-FW { border-left-color: var(--fw); }
       /* scout card (pre-match opponent intel — limited: shape + ratings, no deep stats) */
@@ -346,7 +361,19 @@
 
       <!-- SCOUTING (trial/loan academy) -->
       <div id="scouting" class="panel hidden">
-        <div id="scouting-head"><h3>🔎 SCOUTING — TRIALISTS</h3><button id="scouting-back">← Back to hub</button></div>
+        <div id="scouting-head"><h3>🔎 SCOUTING</h3><button id="scouting-back">← Back to hub</button></div>
+        <div id="my-scouts">
+          <div class="scout-net">
+            <div class="sn-top"><span class="sn-icon">🕵️</span><span class="sn-name">Opposition Scout</span><span class="sn-tier tier-base">BASE</span></div>
+            <div class="sn-desc">Reveals an opponent's likely formation and their squad's overall ratings before you play them. Detailed stats stay hidden.</div>
+          </div>
+          <div class="scout-net">
+            <div class="sn-top"><span class="sn-icon">🔎</span><span class="sn-name">Player Scout</span><span class="sn-tier tier-base">BASE</span></div>
+            <div class="sn-desc">Turns up trialists each season. Base odds: <b>62%</b> raw · <b>30%</b> squad · <b>7%</b> quality · <b>1%</b> gem.</div>
+          </div>
+          <div class="sn-hint">⬆ Higher scout tiers (Bronze / Silver / Gold) — deeper opposition intel and rarer trialists — arrive with the token layer.</div>
+        </div>
+        <h4 class="scout-h4">TRIAL POOL</h4>
         <div class="scout-sub">Sign up to <b id="loan-cap">3</b> loanees this season (<span id="loan-signed">0</span> signed). They play this season only, then leave — better players turn up rarely.</div>
         <div id="trial-pool"></div>
       </div>

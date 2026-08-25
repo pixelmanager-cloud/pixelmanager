@@ -443,14 +443,16 @@ class Game {
     $('xi').innerHTML = slots.map((pid, i) => {
       const roleForSlot = SLOT_ROLES[this.draftTactics.formation][i];
       const used = usedElsewhere(i);
+      const isLoan = (id: string) => id.startsWith('loan-');
       const opts = this.club.players
         .filter((p) => p.id === pid || !used.has(p.id))
         .sort((a, b) => overall(b) - overall(a))
-        .map((p) => `<option value="${p.id}" ${p.id === pid ? 'selected' : ''}>${p.name} (${p.role} ${overall(p)})</option>`).join('');
+        .map((p) => `<option value="${p.id}" ${p.id === pid ? 'selected' : ''}>${p.name} (${p.role} ${overall(p)})${isLoan(p.id) ? ' · LOAN' : ''}</option>`).join('');
       const cur = this.club.players.find((p) => p.id === pid)!;
+      const loanTag = isLoan(cur.id) ? `<span class="loan" title="Loanee — plays this season only, then leaves">LOAN</span>` : '';
       const dutyOpts = DUTIES_BY_ROLE[cur.role]
         .map((d) => `<option value="${d}" ${d === this.draftDuties[i] ? 'selected' : ''}>${DUTY_LABEL[d]}</option>`).join('');
-      return `<div class="slot role-${roleForSlot}"><span class="role role-${roleForSlot}">${roleForSlot}</span><select class="player-sel" data-i="${i}">${opts}</select><select class="duty-sel" data-i="${i}" title="This player's duty — how they play">${dutyOpts}</select><span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span></div>`;
+      return `<div class="slot role-${roleForSlot}"><span class="role role-${roleForSlot}">${roleForSlot}</span><select class="player-sel" data-i="${i}">${opts}</select><select class="duty-sel" data-i="${i}" title="This player's duty — how they play">${dutyOpts}</select>${loanTag}<span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span></div>`;
     }).join('');
     Array.from($('xi').querySelectorAll('select.player-sel')).forEach((sel) => {
       sel.addEventListener('change', (ev) => {
