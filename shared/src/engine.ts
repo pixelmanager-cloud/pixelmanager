@@ -31,12 +31,17 @@ export class MatchEngine {
   // the opponent is out of shape — devastating against a side caught high/pressing.
   private counterTeam: 0 | 1 | null = null;
   private counterUntil = 0;
+  /** bounded chance-creation edge from a formation SHAPE overload vs the opponent: a team
+   *  wider than a narrow opponent finds the flanks; a team with more central midfielders
+   *  controls the middle. Precomputed (shape + width are fixed pre-kickoff). */
+  private zonal: [number, number];
 
   constructor(public teams: [Team, Team], seed: number, tactics?: [Tactics, Tactics]) {
     this.rng = makeRng(seed);
     this.tactics = tactics ?? [{ ...DEFAULT_TACTICS }, { ...DEFAULT_TACTICS }];
     this.mods = [deriveMods(this.tactics[0]), deriveMods(this.tactics[1])];
     this.dm = [teams[0].players.map((p) => dutyMods(effectiveDuty(p))), teams[1].players.map((p) => dutyMods(effectiveDuty(p)))];
+    this.zonal = this.computeZonal();
     this.state = {
       clockSec: 0,
       score: [0, 0],
@@ -54,6 +59,22 @@ export class MatchEngine {
   setTactics(teamIdx: 0 | 1, t: Tactics) {
     this.tactics[teamIdx] = t;
     this.mods[teamIdx] = deriveMods(t);
+    this.zonal = this.computeZonal();
+  }
+
+  /** Bounded chance edge from a formation-SHAPE overload vs the opponent (width + central mids). */
+  private computeZonal(): [number, number] {
+    const shape = (t: 0 | 1) => {
+      const outs = this.teams[t].players.slice(1); // outfielders (skip GK)
+      const width = outs.reduce((s, p) => s + Math.abs(p.anchor.y - 34), 0) / outs.length * this.mods[t].widthScale;
+      const central = this.teams[t].players.filter((p) => p.role === 'MF' && Math.abs(p.anchor.y - 34) < 13).length;
+      return { width, central };
+    };
+    const a = shape(0), b = shape(1);
+    // width outweighs central density (so a WIDE shape beats a NARROW one on the flanks),
+    // but a packed-central shape wins the middle; both bounded so shape is a nudge, not king.
+    const edge = (me: typeof a, opp: typeof a) => clamp(0.013 * (me.width - opp.width) + 0.05 * (me.central - opp.central), -0.18, 0.18);
+    return [edge(a, b), edge(b, a)];
   }
 
   private initPositions(teamIdx: 0 | 1): PlayerState[] {
@@ -267,7 +288,7 @@ export class MatchEngine {
     if (distGoal < SHOOT_RANGE) {
       const closeness = 1 - distGoal / SHOOT_RANGE; // 0 at the edge of range, 1 at the goal
       const central = 1 - Math.abs(cs.y - PITCH.h / 2) / (PITCH.h / 2); // 1 dead-central, 0 at the touchline
-      const shootP = (0.0022 + norm(carrier.attrs.shooting) * 0.004) * closeness * (0.35 + 0.65 * central) * this.dm[teamIdx][playerIdx].shoot * TICK_SEC;
+      const shootP = (0.0022 + norm(carrier.attrs.shooting) * 0.004) * closeness * (0.35 + 0.65 * central) * this.dm[teamIdx][playerIdx].shoot * (1 + this.zonal[teamIdx]) * TICK_SEC;
       if (this.rng() < shootP) {
         this.resolveShot(teamIdx, playerIdx, distGoal, false);
         return;

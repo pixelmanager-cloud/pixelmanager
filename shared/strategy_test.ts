@@ -145,6 +145,19 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
   assert(spam.length === 0, `spammable tactic(s) with no counter: ${spam.join(', ')}`);
 }
 
+// ---- 8. Zonal shape: a WIDE formation beats a NARROW one on the flanks ----
+{
+  const wide: Tactics = { ...DEFAULT_TACTICS, formation: '3-4-3' };
+  const narrow: Tactics = { ...DEFAULT_TACTICS, formation: '4-1-2-1-2' };
+  let w = 0, l = 0;
+  for (let i = 0; i < N; i++) {
+    const r = play(mk('w', 12, i * 7 + 1, '3-4-3'), mk('n', 12, i * 11 + 3, '4-1-2-1-2'), wide, narrow, i * 31 + 5);
+    if (r.score[0] > r.score[1]) w++; else if (r.score[1] > r.score[0]) l++;
+  }
+  console.log(`[shape]     wide 3-4-3 vs narrow diamond: wide ${w}W-${l}L (want wide > narrow)`);
+  assert(w > l, `a wide formation should beat a narrow one on the flanks (got ${w} vs ${l})`);
+}
+
 // ---- verdict ----
 if (failures.length) {
   console.error('\nENGINE REGRESSION — assertions failed:');
