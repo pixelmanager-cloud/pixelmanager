@@ -18,9 +18,12 @@ export const SCOUT_TIERS: Record<string, Record<Band, number>> = {
 // stat centre per band. NOTE: realized OVERALL runs ~2 higher than the centre
 // (role-biased stats + the overall formula), so centres are set low on purpose —
 // the displayed band is then derived from the real overall so the label matches.
-const BAND_Q: Record<Band, [number, number]> = { raw: [3, 6], squad: [7, 9], quality: [10, 12], gem: [13, 14] };
+// Loanees are temporary gap-fillers, NOT star replacements — even a Gold-scout gem tops
+// out around 11-12 OVR (above weak base fillers ~6, but clearly below owned NFT stars).
+const BAND_Q: Record<Band, [number, number]> = { raw: [1, 3], squad: [4, 6], quality: [6, 8], gem: [8, 10] };
+const LOANEE_MAX_STAT = 12; // hard cap on any single loanee stat
 /** classify a realized overall into a band, so the badge always matches the rating shown. */
-function bandOf(ovr: number): Band { return ovr >= 15 ? 'gem' : ovr >= 13 ? 'quality' : ovr >= 10 ? 'squad' : 'raw'; }
+function bandOf(ovr: number): Band { return ovr >= 11 ? 'gem' : ovr >= 9 ? 'quality' : ovr >= 7 ? 'squad' : 'raw'; }
 
 function seedFrom(s: string): number {
   let h = 2166136261;
@@ -38,7 +41,7 @@ function rollAt(accountId: string, seasonNumber: number, index: number, tier: st
   for (const b of ['gem', 'quality', 'squad', 'raw'] as Band[]) { acc += dist[b]; if (bandRng < acc) { rolled = b; break; } }
   const [lo, hi] = BAND_Q[rolled];
   const q = lo + ((s % 997) / 997) * (hi - lo);
-  const player = generateTrialist(`loan-s${seasonNumber}-${index}`, q, s);
+  const player = generateTrialist(`loan-s${seasonNumber}-${index}`, q, s, LOANEE_MAX_STAT);
   const ovr = overall(player);
   return { player, band: bandOf(ovr), overall: ovr }; // display band from the ACTUAL rating
 }
