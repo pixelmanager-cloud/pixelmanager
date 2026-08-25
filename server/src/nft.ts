@@ -5,8 +5,8 @@ import { createPublicClient, http, getContract } from 'viem';
 import { baseSepolia } from 'viem/chains';
 import type { Player, Role } from '@fm/shared';
 
-// Set once the PlayerNFT is deployed (see contracts/). Empty = NFT features off.
-export const NFT_ADDRESS = (process.env.NFT_ADDRESS ?? '') as `0x${string}` | '';
+// Deployed PlayerNFT on Base Sepolia. Override per-env with NFT_ADDRESS; '' = off.
+export const NFT_ADDRESS = (process.env.NFT_ADDRESS ?? '0xEE8Acd1B94051648d77d3f2e87377C4AC3eC4544') as `0x${string}` | '';
 
 const abi = [
   { type: 'function', name: 'balanceOf', stateMutability: 'view', inputs: [{ name: 'owner', type: 'address' }], outputs: [{ type: 'uint256' }] },
