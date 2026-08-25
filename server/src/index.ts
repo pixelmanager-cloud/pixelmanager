@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import type { Lineup, Tactics } from '@fm/shared';
 import { db, type Account, type StandingOrders } from './db.js';
 import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMATIONS } from './game.js';
+import { hashPassword, verifyPassword } from './auth.js';
 import { ensureSeason, ensurePod, forceRollover, resultsAmong, PROMOTE, RELEGATE } from './seasons.js';
 
 const app = Fastify({ logger: false });
@@ -25,13 +26,33 @@ app.get('/health', async () => ({ ok: true, service: 'fm-server', storage: proce
 
 app.post('/register', async (req, reply) => {
   const handle = String((req.body as any)?.handle ?? '').trim();
+  const password = String((req.body as any)?.password ?? '');
   if (handle.length < 2 || handle.length > 20) return reply.code(400).send({ error: 'handle must be 2-20 chars' });
+  if (password.length < 4 || password.length > 64) return reply.code(400).send({ error: 'password must be 4-64 chars' });
   if (await db.handleTaken(handle)) return reply.code(409).send({ error: 'handle taken' });
   const id = randomUUID(), token = randomUUID().replace(/-/g, '');
-  await db.createAccount(id, handle, token, Date.now());
+  await db.createAccount(id, handle, token, Date.now(), hashPassword(password));
   const { club, standingOrders } = makeClub(id, handle);
   await db.saveClub(id, club, standingOrders);
   return { token, account: { id, handle, rating: 1000 }, club, standingOrders };
+});
+
+// log back into an existing club with handle + password. Accounts created before
+// passwords existed have no hash yet — the first successful-shaped login claims one.
+app.post('/login', async (req, reply) => {
+  const handle = String((req.body as any)?.handle ?? '').trim();
+  const password = String((req.body as any)?.password ?? '');
+  if (!handle || password.length < 4) return reply.code(400).send({ error: 'handle and password required' });
+  const auth = await db.accountAuthByHandle(handle);
+  if (!auth) return reply.code(401).send({ error: 'wrong handle or password' });
+  if (auth.passwordHash === null) {
+    await db.setPassword(auth.id, hashPassword(password)); // legacy account claims this password
+  } else if (!verifyPassword(password, auth.passwordHash)) {
+    return reply.code(401).send({ error: 'wrong handle or password' });
+  }
+  const c = await db.getClub(auth.id);
+  if (!c) return reply.code(404).send({ error: 'club not found' });
+  return { token: auth.token, account: { id: auth.id, handle: auth.handle, rating: auth.rating }, club: c.club, standingOrders: c.standingOrders };
 });
 
 app.get('/me', { preHandler: requireAuth }, async (req) => {

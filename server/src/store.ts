@@ -19,11 +19,16 @@ export interface HonourRow { season_number: number; tier: string; final_pos: num
 /** A player's placement within the division pyramid for a season (Phase B). */
 export interface PodRef { tier: string; pod: number }
 
+/** Auth row used by /login: the account plus its bearer token and password hash. */
+export interface AuthRow { id: string; handle: string; rating: number; token: string; passwordHash: string | null }
+
 export interface Store {
   init(): Promise<void>;
-  createAccount(id: string, handle: string, token: string, createdAt: number): Promise<void>;
+  createAccount(id: string, handle: string, token: string, createdAt: number, passwordHash: string): Promise<void>;
   accountByToken(token: string): Promise<Account | undefined>;
   accountById(id: string): Promise<Account | undefined>;
+  accountAuthByHandle(handle: string): Promise<AuthRow | undefined>;
+  setPassword(accountId: string, passwordHash: string): Promise<void>;
   handleTaken(handle: string): Promise<boolean>;
   setRating(id: string, rating: number): Promise<void>;
   opponents(exceptId: string, myRating: number, limit?: number): Promise<OpponentRow[]>;

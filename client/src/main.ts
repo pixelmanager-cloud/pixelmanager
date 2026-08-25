@@ -164,7 +164,9 @@ class Game {
     $('spd4').addEventListener('click', () => setSpeed(4, 'spd4'));
     $('spd12').addEventListener('click', () => setSpeed(12, 'spd12'));
     $('register-btn').addEventListener('click', () => this.doRegister());
-    $('handle-input').addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Enter') this.doRegister(); });
+    $('login-btn').addEventListener('click', () => this.doLogin());
+    $('handle-input').addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Enter') $('password-input').focus(); });
+    $('password-input').addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Enter') this.doLogin(); });
     $('logout').addEventListener('click', () => { clearToken(); this.showScreen('login'); });
     $('view-standings').addEventListener('click', () => this.showStandings());
     $('standings-back').addEventListener('click', () => this.showHub());
@@ -191,17 +193,38 @@ class Game {
   }
 
   // ---- login ----
+  private creds(): { handle: string; password: string } {
+    return { handle: ($('handle-input') as HTMLInputElement).value.trim(), password: ($('password-input') as HTMLInputElement).value };
+  }
+
   private async doRegister() {
-    const handle = ($('handle-input') as HTMLInputElement).value.trim();
+    const { handle, password } = this.creds();
     $('login-error').textContent = '';
+    if (password.length < 4) { $('login-error').textContent = 'Pick a password of at least 4 characters.'; return; }
     try {
-      const r = await api.register(handle);
+      const r = await api.register(handle, password);
       setToken(r.token);
       this.setMe({ account: r.account, club: r.club, standingOrders: r.standingOrders });
       await this.showHub();
     } catch (e: any) {
-      $('login-error').textContent = e?.status === 409 ? 'Handle already taken — pick another.'
-        : e?.status === 400 ? 'Handle must be 2–20 characters.'
+      $('login-error').textContent = e?.status === 409 ? 'Handle already taken — log in instead, or pick another.'
+        : e?.status === 400 ? 'Handle must be 2–20 chars and password 4–64.'
+        : 'Could not reach the server. Is it running?';
+    }
+  }
+
+  private async doLogin() {
+    const { handle, password } = this.creds();
+    $('login-error').textContent = '';
+    if (!handle || password.length < 4) { $('login-error').textContent = 'Enter your handle and password.'; return; }
+    try {
+      const r = await api.login(handle, password);
+      setToken(r.token);
+      this.setMe({ account: r.account, club: r.club, standingOrders: r.standingOrders });
+      await this.showHub();
+    } catch (e: any) {
+      $('login-error').textContent = e?.status === 401 ? 'Wrong handle or password.'
+        : e?.status === 404 ? 'That account has no club — try creating one.'
         : 'Could not reach the server. Is it running?';
     }
   }

@@ -40,8 +40,10 @@ export interface MatchPayload {
 }
 
 export const api = {
-  register: (handle: string) => req<{ token: string; account: Account; club: Club; standingOrders: StandingOrders }>(
-    '/register', { method: 'POST', body: JSON.stringify({ handle }) }),
+  register: (handle: string, password: string) => req<{ token: string; account: Account; club: Club; standingOrders: StandingOrders }>(
+    '/register', { method: 'POST', body: JSON.stringify({ handle, password }) }),
+  login: (handle: string, password: string) => req<{ token: string; account: Account; club: Club; standingOrders: StandingOrders }>(
+    '/login', { method: 'POST', body: JSON.stringify({ handle, password }) }),
   me: () => req<{ account: Account; club: Club; standingOrders: StandingOrders }>('/me'),
   setStandingOrders: (so: StandingOrders) => req<{ ok: true; standingOrders: StandingOrders }>(
     '/standing-orders', { method: 'PUT', body: JSON.stringify(so) }),

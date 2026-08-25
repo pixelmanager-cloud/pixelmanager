@@ -1,7 +1,7 @@
 // Local-dev backend on Node's built-in SQLite (no native deps).
 import { DatabaseSync } from 'node:sqlite';
 import type { Club } from '@fm/shared';
-import type { Store, Account, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow, Season, HonourRow, PodRef } from './store.js';
+import type { Store, Account, AuthRow, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow, Season, HonourRow, PodRef } from './store.js';
 
 export function makeSqliteStore(file: string): Store {
   const db = new DatabaseSync(file);
@@ -10,7 +10,7 @@ export function makeSqliteStore(file: string): Store {
       db.exec(`
         CREATE TABLE IF NOT EXISTS accounts (
           id TEXT PRIMARY KEY, handle TEXT UNIQUE NOT NULL, token TEXT NOT NULL,
-          rating INTEGER NOT NULL DEFAULT 1000, created_at INTEGER NOT NULL);
+          rating INTEGER NOT NULL DEFAULT 1000, created_at INTEGER NOT NULL, password_hash TEXT);
         CREATE TABLE IF NOT EXISTS clubs (
           account_id TEXT PRIMARY KEY, club TEXT NOT NULL,
           so_formation TEXT NOT NULL, so_player_ids TEXT NOT NULL, so_tactics TEXT NOT NULL, so_duties TEXT);
@@ -34,14 +34,20 @@ export function makeSqliteStore(file: string): Store {
       try { db.exec('ALTER TABLE matches ADD COLUMN season_id TEXT'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE clubs ADD COLUMN so_duties TEXT'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE accounts ADD COLUMN tier TEXT'); } catch { /* already added */ }
+      try { db.exec('ALTER TABLE accounts ADD COLUMN password_hash TEXT'); } catch { /* already added */ }
     },
-    async createAccount(id, handle, token, createdAt) {
-      db.prepare('INSERT INTO accounts (id, handle, token, rating, created_at) VALUES (?,?,?,1000,?)').run(id, handle, token, createdAt);
+    async createAccount(id, handle, token, createdAt, passwordHash) {
+      db.prepare('INSERT INTO accounts (id, handle, token, rating, created_at, password_hash) VALUES (?,?,?,1000,?,?)').run(id, handle, token, createdAt, passwordHash);
     },
     async accountByToken(token) {
       const r = db.prepare('SELECT id, handle, rating, created_at FROM accounts WHERE token=?').get(token) as any;
       return r && { id: r.id, handle: r.handle, rating: r.rating, createdAt: r.created_at } as Account;
     },
+    async accountAuthByHandle(handle) {
+      const r = db.prepare('SELECT id, handle, rating, token, password_hash FROM accounts WHERE handle=?').get(handle) as any;
+      return r && { id: r.id, handle: r.handle, rating: r.rating, token: r.token, passwordHash: r.password_hash ?? null } as AuthRow;
+    },
+    async setPassword(accountId, passwordHash) { db.prepare('UPDATE accounts SET password_hash=? WHERE id=?').run(passwordHash, accountId); },
     async accountById(id) {
       const r = db.prepare('SELECT id, handle, rating, created_at FROM accounts WHERE id=?').get(id) as any;
       return r && { id: r.id, handle: r.handle, rating: r.rating, createdAt: r.created_at } as Account;

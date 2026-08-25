@@ -2,7 +2,7 @@
 // (de)serialised in code, identical semantics to the SQLite backend.
 import pg from 'pg';
 import type { Club } from '@fm/shared';
-import type { Store, Account, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow, Season, HonourRow, PodRef } from './store.js';
+import type { Store, Account, AuthRow, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow, Season, HonourRow, PodRef } from './store.js';
 
 export function makePostgresStore(connectionString: string): Store {
   // Railway's internal DB (postgres.railway.internal) and localhost don't use SSL;
@@ -18,7 +18,7 @@ export function makePostgresStore(connectionString: string): Store {
       await q(`
         CREATE TABLE IF NOT EXISTS accounts (
           id TEXT PRIMARY KEY, handle TEXT UNIQUE NOT NULL, token TEXT NOT NULL,
-          rating INTEGER NOT NULL DEFAULT 1000, created_at BIGINT NOT NULL);
+          rating INTEGER NOT NULL DEFAULT 1000, created_at BIGINT NOT NULL, password_hash TEXT);
         CREATE TABLE IF NOT EXISTS clubs (
           account_id TEXT PRIMARY KEY, club TEXT NOT NULL,
           so_formation TEXT NOT NULL, so_player_ids TEXT NOT NULL, so_tactics TEXT NOT NULL, so_duties TEXT);
@@ -40,15 +40,21 @@ export function makePostgresStore(connectionString: string): Store {
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS season_id TEXT;
         ALTER TABLE clubs ADD COLUMN IF NOT EXISTS so_duties TEXT;
         ALTER TABLE accounts ADD COLUMN IF NOT EXISTS tier TEXT;
+        ALTER TABLE accounts ADD COLUMN IF NOT EXISTS password_hash TEXT;
       `);
     },
-    async createAccount(id, handle, token, createdAt) {
-      await q('INSERT INTO accounts (id, handle, token, rating, created_at) VALUES ($1,$2,$3,1000,$4)', [id, handle, token, createdAt]);
+    async createAccount(id, handle, token, createdAt, passwordHash) {
+      await q('INSERT INTO accounts (id, handle, token, rating, created_at, password_hash) VALUES ($1,$2,$3,1000,$4,$5)', [id, handle, token, createdAt, passwordHash]);
     },
     async accountByToken(token) {
       const r = (await q('SELECT id, handle, rating, created_at FROM accounts WHERE token=$1', [token])).rows[0];
       return r && { id: r.id, handle: r.handle, rating: r.rating, createdAt: Number(r.created_at) } as Account;
     },
+    async accountAuthByHandle(handle) {
+      const r = (await q('SELECT id, handle, rating, token, password_hash FROM accounts WHERE handle=$1', [handle])).rows[0];
+      return r && { id: r.id, handle: r.handle, rating: r.rating, token: r.token, passwordHash: r.password_hash ?? null } as AuthRow;
+    },
+    async setPassword(accountId, passwordHash) { await q('UPDATE accounts SET password_hash=$1 WHERE id=$2', [passwordHash, accountId]); },
     async accountById(id) {
       const r = (await q('SELECT id, handle, rating, created_at FROM accounts WHERE id=$1', [id])).rows[0];
       return r && { id: r.id, handle: r.handle, rating: r.rating, createdAt: Number(r.created_at) } as Account;
