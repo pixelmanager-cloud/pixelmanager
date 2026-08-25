@@ -81,6 +81,21 @@ export function generateClub(id: string, name: string, shortName: string, shirtC
   return { id, name, shortName, shirtColor, players };
 }
 
+/**
+ * Generate one trial/loan player deterministically from a seed. `quality` is the
+ * 1-20 stat centre for the loanee's rarity band; every stat is hard-capped at
+ * `maxStat` (default 15) so a loanee never rivals a top NFT star.
+ */
+export function generateTrialist(id: string, quality: number, seed: number, maxStat = 15): Player {
+  const rng = makeRng(seed);
+  const roles: Role[] = ['DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'FW', 'FW', 'GK'];
+  const role = roles[Math.floor(rng() * roles.length)];
+  const name = `${FIRST[Math.floor(rng() * FIRST.length)]} ${LAST[Math.floor(rng() * LAST.length)]}`;
+  const attrs = rollAttrs(rng, role, quality);
+  (Object.keys(attrs) as Array<keyof PlayerAttrs>).forEach((k) => { attrs[k] = Math.min(maxStat, attrs[k]); });
+  return { id, name, role, attrs, anchor: { x: 0, y: 0 } };
+}
+
 /** A lineup: 11 roster player-ids ordered to match FORMATIONS[formation] slots (slot 0 = GK). */
 export interface Lineup {
   formation: Formation;

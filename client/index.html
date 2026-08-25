@@ -146,6 +146,24 @@
       table.league tr.releg td { background: rgba(255,77,94,0.07); }
       table.league tr.promo td.pos { border-left: 3px solid var(--good); }
       table.league tr.releg td.pos { border-left: 3px solid var(--home); }
+      /* scouting / trial academy */
+      #scouting-head { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+      #scouting-head h3 { margin: 0; } #scouting-back { margin-left: auto; }
+      .scout-sub { font-size: 16px; color: #8aa; margin-bottom: 14px; } .scout-sub b { color: var(--good); }
+      .trial { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border: 2px solid var(--line); background: var(--panel-2); margin-bottom: 8px; font-size: 18px; }
+      .trial.signed { opacity: 0.55; }
+      .trial.band-gem { border-color: var(--warn); }
+      .trial .tr-band { font-family: var(--display); font-size: 8px; padding: 4px 0; border: 1px solid; border-radius: 4px; width: 66px; text-align: center; flex: none; }
+      .trial .tr-band.band-raw { color: #8aa; border-color: #556; }
+      .trial .tr-band.band-squad { color: var(--df); border-color: var(--df); }
+      .trial .tr-band.band-quality { color: var(--good); border-color: var(--good); }
+      .trial .tr-band.band-gem { color: var(--warn); border-color: var(--warn); background: rgba(255,206,58,0.12); }
+      .trial .tr-role { font-family: var(--display); font-size: 9px; width: 30px; text-align: center; flex: none; }
+      .trial .tr-role.role-GK { color: var(--gk); } .trial .tr-role.role-DF { color: var(--df); }
+      .trial .tr-role.role-MF { color: var(--mf); } .trial .tr-role.role-FW { color: var(--fw); }
+      .trial .tr-name { flex: 1; color: #fff; }
+      .trial .tr-ovr { font-family: var(--display); font-size: 13px; color: var(--good); width: 30px; text-align: right; flex: none; }
+      .trial .tr-done { font-family: var(--display); font-size: 9px; color: var(--good); }
       .zone-legend { display: flex; gap: 16px; font-size: 14px; margin: 8px 2px 2px; color: #8aa; }
       .zone-legend .lg-promo { color: var(--good); } .zone-legend .lg-releg { color: var(--home); }
 
@@ -303,6 +321,7 @@
         <div id="hub-head"><span id="me-name"></span><span id="me-rating"></span>
           <div class="hub-actions">
             <button id="view-standings">📊 League &amp; Results</button>
+            <button id="view-scouting">🔎 Scouting</button>
             <button id="set-team">⚙ Set My Team</button>
           </div>
         </div>
@@ -323,6 +342,13 @@
         </div>
         <div id="results-feed"></div>
         <div id="honours-feed" class="hidden"></div>
+      </div>
+
+      <!-- SCOUTING (trial/loan academy) -->
+      <div id="scouting" class="panel hidden">
+        <div id="scouting-head"><h3>🔎 SCOUTING — TRIALISTS</h3><button id="scouting-back">← Back to hub</button></div>
+        <div class="scout-sub">Sign up to <b id="loan-cap">3</b> loanees this season (<span id="loan-signed">0</span> signed). They play this season only, then leave — better players turn up rarely.</div>
+        <div id="trial-pool"></div>
       </div>
 
       <!-- LINEUP EDITOR (my standing orders) -->

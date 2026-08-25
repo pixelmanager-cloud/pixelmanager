@@ -4,7 +4,7 @@ import {
   TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty,
 } from '@fm/shared';
 import { SCALE, makeBallTexture, makeBallGhostTexture, makePitchTexture, makePlayerFrames, makeShadowTexture, makeCarrierTexture } from './pixelart';
-import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout } from './api';
+import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist } from './api';
 
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
 
@@ -159,8 +159,8 @@ class Game {
     this.account = me.account; this.club = me.club; this.standingOrders = me.standingOrders;
   }
 
-  private showScreen(s: 'login' | 'hub' | 'lineup' | 'match' | 'standings') {
-    for (const id of ['login', 'hub', 'lineup', 'matchwrap', 'standings']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
+  private showScreen(s: 'login' | 'hub' | 'lineup' | 'match' | 'standings' | 'scouting') {
+    for (const id of ['login', 'hub', 'lineup', 'matchwrap', 'standings', 'scouting']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
     $('logout').classList.toggle('hidden', s === 'login');
   }
 
@@ -176,6 +176,8 @@ class Game {
     $('logout').addEventListener('click', () => { clearToken(); this.showScreen('login'); });
     $('view-standings').addEventListener('click', () => this.showStandings());
     $('standings-back').addEventListener('click', () => this.showHub());
+    $('view-scouting').addEventListener('click', () => this.showScouting());
+    $('scouting-back').addEventListener('click', () => this.showHub());
     const showTab = (tab: 'results' | 'honours') => {
       $('results-feed').classList.toggle('hidden', tab !== 'results');
       $('honours-feed').classList.toggle('hidden', tab !== 'honours');
@@ -298,6 +300,46 @@ class Game {
         + `<span class="hr-main"><b>Season ${h.season_number}</b> · ${h.tier}</span>`
         + `<span class="hr-fin">${champ ? 'CHAMPION' : `${ORDINAL(h.final_pos)} place`}</span></div>`;
     }).join('');
+  }
+
+  // ---- scouting (trial/loan academy) ----
+  private async showScouting() {
+    this.showScreen('scouting');
+    $('trial-pool').innerHTML = SPINNER;
+    try {
+      const d = await api.trials();
+      $('loan-cap').textContent = String(d.cap);
+      $('loan-signed').textContent = String(d.signedCount);
+      $('trial-pool').innerHTML = this.renderTrialPool(d.pool, d.signedCount >= d.cap);
+      Array.from($('trial-pool').querySelectorAll('button[data-idx]')).forEach((b) =>
+        b.addEventListener('click', () => this.signTrial(Number((b as HTMLElement).dataset.idx))));
+    } catch {
+      $('trial-pool').innerHTML = '<div class="muted">Could not load — is the server running?</div>';
+    }
+  }
+
+  private renderTrialPool(pool: Trialist[], capReached: boolean): string {
+    const label: Record<string, string> = { raw: 'Raw', squad: 'Squad', quality: 'Quality', gem: 'Gem' };
+    return pool.map((t) => {
+      const action = t.signed ? '<span class="tr-done">✓ Signed</span>'
+        : capReached ? '<span class="muted">cap reached</span>'
+        : `<button data-idx="${t.index}">Sign ▶</button>`;
+      return `<div class="trial ${t.signed ? 'signed' : ''} band-${t.band}">`
+        + `<span class="tr-band band-${t.band}">${label[t.band] ?? t.band}</span>`
+        + `<span class="tr-role role-${t.role}">${t.role}</span>`
+        + `<span class="tr-name">${t.name}</span><span class="tr-ovr">${t.overall}</span>${action}</div>`;
+    }).join('');
+  }
+
+  private async signTrial(index: number) {
+    try {
+      const r = await api.signTrial(index);
+      toast(`Signed ${r.player.name} on loan ✓`);
+      this.setMe(await api.me()); // refresh squad so the loanee is selectable in your XI
+      await this.showScouting();
+    } catch (e: any) {
+      toast(e?.status === 409 ? 'You\'ve hit your loanee limit this season' : 'Could not sign');
+    }
   }
 
   private renderResults(rows: ResultRow[]): string {

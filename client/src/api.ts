@@ -35,6 +35,7 @@ export interface SeasonMeta { number: number; startsAt: number; endsAt: number; 
 export interface Fixture { opponentId: string; handle: string; clubName: string; rating: number; venue: 'home' | 'away'; status: 'played' | 'pending'; result: { my: number; opp: number } | null }
 export interface ScoutPlayer { name: string; role: string; overall: number; likelyXI: boolean }
 export interface Scout { handle: string; clubName: string; rating: number; formation: Lineup['formation']; players: ScoutPlayer[] }
+export interface Trialist { index: number; id: string; name: string; role: string; overall: number; band: 'raw' | 'squad' | 'quality' | 'gem'; signed: boolean }
 export interface HonourRow { season_number: number; tier: string; final_pos: number; title: number; ended_at: number }
 export interface MatchPayload {
   matchId: string; seed: number; result: [number, number]; mySide: 0 | 1;
@@ -61,6 +62,8 @@ export const api = {
   fixtures: () => req<{ fixtures: Fixture[]; played: number; total: number; playedToday: number; dailyCap: number }>('/fixtures'),
   scout: (opponentId: string) => req<Scout>(`/scout/${opponentId}`),
   plan: (opponentId: string) => req<{ plan: StandingOrders | null }>(`/plan/${opponentId}`),
+  trials: () => req<{ season: number; cap: number; signedCount: number; pool: Trialist[] }>('/scout/trials'),
+  signTrial: (index: number) => req<{ ok: true; player: { name: string; role: string }; signedCount: number }>(`/scout/trials/${index}/sign`, { method: 'POST' }),
   standings: () => req<{ season: { number: number; endsAt: number }; tier: string; pod: number; promote: number; relegate: number; table: TableRow[] }>('/standings'),
   honours: () => req<{ honours: HonourRow[] }>('/honours'),
 };

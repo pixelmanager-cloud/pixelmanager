@@ -3,6 +3,7 @@
 // player's pod, so a table is a legible ~20-row race no matter the population.
 // See docs/seasons-and-divisions.md.
 import { randomUUID } from 'node:crypto';
+import { autoPickXI } from '@fm/shared';
 import type { Store, Season, PodRef } from './store.js';
 import { buildTable, runMatch, elo } from './game.js';
 
@@ -135,5 +136,26 @@ async function rollover(db: Store, s: Season, now: number): Promise<void> {
       if (newIdx !== tierIdx) await db.setTier(acct.id, TIERS[newIdx]);
     }
   }
+  await expireLoanees(db, s.id);
   await db.closeSeason(s.id);
+}
+
+/** Loanees are 1-season only: strip them from every squad and repair any standing
+ *  orders that fielded one, so next season starts from the permanent roster. */
+async function expireLoanees(db: Store, seasonId: string): Promise<void> {
+  const rows = await db.loaneesInSeason(seasonId);
+  if (!rows.length) return;
+  const byOwner = new Map<string, Set<string>>();
+  for (const r of rows) (byOwner.get(r.owner_id) ?? byOwner.set(r.owner_id, new Set()).get(r.owner_id)!).add(r.player_id);
+  for (const [owner, ids] of byOwner) {
+    const c = await db.getClub(owner);
+    if (!c) continue;
+    c.club.players = c.club.players.filter((p) => !ids.has(p.id));
+    let so = c.standingOrders;
+    if (!so.playerIds.every((id) => c.club.players.some((p) => p.id === id))) {
+      so = { ...so, playerIds: autoPickXI(c.club, so.formation).playerIds, duties: undefined }; // re-pick a valid XI
+    }
+    await db.saveClub(owner, c.club, so);
+  }
+  await db.deleteLoaneesInSeason(seasonId);
 }

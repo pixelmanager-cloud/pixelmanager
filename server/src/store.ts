@@ -41,6 +41,12 @@ export interface Store {
   // per-opponent saved plans (the strategy you last used vs a specific opponent)
   savePlan(ownerId: string, opponentId: string, plan: StandingOrders): Promise<void>;
   getPlan(ownerId: string, opponentId: string): Promise<StandingOrders | undefined>;
+  // trial/loan academy: signed loanees (expire at season rollover)
+  addLoanee(ownerId: string, seasonId: string, playerId: string): Promise<void>;
+  countLoanees(ownerId: string, seasonId: string): Promise<number>;
+  loaneeIds(ownerId: string, seasonId: string): Promise<string[]>;
+  loaneesInSeason(seasonId: string): Promise<Array<{ owner_id: string; player_id: string }>>;
+  deleteLoaneesInSeason(seasonId: string): Promise<void>;
   saveMatch(m: StoredMatch): Promise<void>;
   getMatch(id: string): Promise<StoredMatch | undefined>;
   matchesFor(accountId: string, limit?: number): Promise<MatchRow[]>;

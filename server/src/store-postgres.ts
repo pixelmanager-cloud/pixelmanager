@@ -41,6 +41,9 @@ export function makePostgresStore(connectionString: string): Store {
           owner_id TEXT NOT NULL, opponent_id TEXT NOT NULL,
           formation TEXT NOT NULL, player_ids TEXT NOT NULL, tactics TEXT NOT NULL, duties TEXT,
           PRIMARY KEY (owner_id, opponent_id));
+        CREATE TABLE IF NOT EXISTS loanees (
+          owner_id TEXT NOT NULL, season_id TEXT NOT NULL, player_id TEXT NOT NULL,
+          PRIMARY KEY (owner_id, player_id));
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS season_id TEXT;
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS initiator_id TEXT;
         ALTER TABLE clubs ADD COLUMN IF NOT EXISTS so_duties TEXT;
@@ -104,6 +107,20 @@ export function makePostgresStore(connectionString: string): Store {
       const r = (await q('SELECT formation, player_ids, tactics, duties FROM plans WHERE owner_id=$1 AND opponent_id=$2', [ownerId, opponentId])).rows[0];
       return r && { formation: r.formation, playerIds: JSON.parse(r.player_ids), tactics: JSON.parse(r.tactics), duties: r.duties ? JSON.parse(r.duties) : undefined };
     },
+    async addLoanee(ownerId, seasonId, playerId) {
+      await q('INSERT INTO loanees (owner_id, season_id, player_id) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING', [ownerId, seasonId, playerId]);
+    },
+    async countLoanees(ownerId, seasonId) {
+      const r = (await q('SELECT COUNT(*)::int AS c FROM loanees WHERE owner_id=$1 AND season_id=$2', [ownerId, seasonId])).rows[0];
+      return r ? r.c : 0;
+    },
+    async loaneeIds(ownerId, seasonId) {
+      return (await q('SELECT player_id FROM loanees WHERE owner_id=$1 AND season_id=$2', [ownerId, seasonId])).rows.map((r) => r.player_id);
+    },
+    async loaneesInSeason(seasonId) {
+      return (await q('SELECT owner_id, player_id FROM loanees WHERE season_id=$1', [seasonId])).rows as Array<{ owner_id: string; player_id: string }>;
+    },
+    async deleteLoaneesInSeason(seasonId) { await q('DELETE FROM loanees WHERE season_id=$1', [seasonId]); },
     async saveMatch(m: StoredMatch) {
       await q(
         `INSERT INTO matches (id, home_id, away_id, home_team, away_team, home_tactics, away_tactics, seed, home_score, away_score, created_at, season_id, initiator_id)
@@ -186,6 +203,6 @@ export function makePostgresStore(connectionString: string): Store {
     async seasonPods(seasonId) {
       return (await q('SELECT DISTINCT tier, pod FROM pod_members WHERE season_id=$1 ORDER BY tier, pod', [seasonId])).rows as PodRef[];
     },
-    async reset() { await q('TRUNCATE accounts, clubs, matches, seasons, honours, pod_members, plans'); },
+    async reset() { await q('TRUNCATE accounts, clubs, matches, seasons, honours, pod_members, plans, loanees'); },
   };
 }

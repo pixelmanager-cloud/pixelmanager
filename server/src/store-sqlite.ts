@@ -33,6 +33,9 @@ export function makeSqliteStore(file: string): Store {
           owner_id TEXT NOT NULL, opponent_id TEXT NOT NULL,
           formation TEXT NOT NULL, player_ids TEXT NOT NULL, tactics TEXT NOT NULL, duties TEXT,
           PRIMARY KEY (owner_id, opponent_id));
+        CREATE TABLE IF NOT EXISTS loanees (
+          owner_id TEXT NOT NULL, season_id TEXT NOT NULL, player_id TEXT NOT NULL,
+          PRIMARY KEY (owner_id, player_id));
       `);
       // migrate pre-existing tables (adds columns; throws-and-ignored if already present)
       try { db.exec('ALTER TABLE matches ADD COLUMN season_id TEXT'); } catch { /* already added */ }
@@ -94,6 +97,20 @@ export function makeSqliteStore(file: string): Store {
       const r = db.prepare('SELECT formation, player_ids, tactics, duties FROM plans WHERE owner_id=? AND opponent_id=?').get(ownerId, opponentId) as any;
       return r && { formation: r.formation, playerIds: JSON.parse(r.player_ids), tactics: JSON.parse(r.tactics), duties: r.duties ? JSON.parse(r.duties) : undefined };
     },
+    async addLoanee(ownerId, seasonId, playerId) {
+      db.prepare('INSERT OR IGNORE INTO loanees (owner_id, season_id, player_id) VALUES (?,?,?)').run(ownerId, seasonId, playerId);
+    },
+    async countLoanees(ownerId, seasonId) {
+      const r = db.prepare('SELECT COUNT(*) AS c FROM loanees WHERE owner_id=? AND season_id=?').get(ownerId, seasonId) as any;
+      return r ? r.c : 0;
+    },
+    async loaneeIds(ownerId, seasonId) {
+      return (db.prepare('SELECT player_id FROM loanees WHERE owner_id=? AND season_id=?').all(ownerId, seasonId) as any[]).map((r) => r.player_id);
+    },
+    async loaneesInSeason(seasonId) {
+      return db.prepare('SELECT owner_id, player_id FROM loanees WHERE season_id=?').all(seasonId) as Array<{ owner_id: string; player_id: string }>;
+    },
+    async deleteLoaneesInSeason(seasonId) { db.prepare('DELETE FROM loanees WHERE season_id=?').run(seasonId); },
     async saveMatch(m: StoredMatch) {
       db.prepare(
         `INSERT INTO matches (id, home_id, away_id, home_team, away_team, home_tactics, away_tactics, seed, home_score, away_score, created_at, season_id, initiator_id)
@@ -169,6 +186,6 @@ export function makeSqliteStore(file: string): Store {
     async seasonPods(seasonId) {
       return db.prepare('SELECT DISTINCT tier, pod FROM pod_members WHERE season_id=? ORDER BY tier, pod').all(seasonId) as PodRef[];
     },
-    async reset() { db.exec('DELETE FROM matches; DELETE FROM clubs; DELETE FROM accounts; DELETE FROM seasons; DELETE FROM honours; DELETE FROM pod_members; DELETE FROM plans;'); },
+    async reset() { db.exec('DELETE FROM matches; DELETE FROM clubs; DELETE FROM accounts; DELETE FROM seasons; DELETE FROM honours; DELETE FROM pod_members; DELETE FROM plans; DELETE FROM loanees;'); },
   };
 }

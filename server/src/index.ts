@@ -5,10 +5,16 @@ import { overall, type Lineup, type Tactics } from '@fm/shared';
 import { db, type Account, type StandingOrders } from './db.js';
 import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMATIONS } from './game.js';
 import { hashPassword, verifyPassword } from './auth.js';
+import { generatePool, trialistAt, LOANEE_CAP } from './scouting.js';
 import { ensureSeason, ensurePod, forceRollover, resultsAmong, startOfUtcDay, PROMOTE, RELEGATE, MATCHES_PER_DAY } from './seasons.js';
 
 const app = Fastify({ logger: false });
 await app.register(cors, { origin: true });
+// the client sends `content-type: application/json` on every request; treat an empty
+// body as {} so bodyless POSTs (e.g. signing a trialist) aren't rejected.
+app.addContentTypeParser('application/json', { parseAs: 'string' }, (_req, body, done) => {
+  try { done(null, body ? JSON.parse(body as string) : {}); } catch (e) { done(e as Error, undefined); }
+});
 
 declare module 'fastify' {
   interface FastifyRequest { account?: Account }
@@ -221,6 +227,31 @@ app.get('/scout/:id', { preHandler: requireAuth }, async (req, reply) => {
 // your saved plan (lineup + tactics + duties) for a specific opponent, or null
 app.get('/plan/:id', { preHandler: requireAuth }, async (req) =>
   ({ plan: (await db.getPlan(req.account!.id, String((req.params as any).id))) ?? null }));
+
+// this season's trial pool (free base scout) + how many loanees you've signed
+app.get('/scout/trials', { preHandler: requireAuth }, async (req) => {
+  const s = await ensureSeason(db, Date.now());
+  const [signed, count] = await Promise.all([db.loaneeIds(req.account!.id, s.id), db.countLoanees(req.account!.id, s.id)]);
+  const signedSet = new Set(signed);
+  const pool = generatePool(req.account!.id, s.number).map((t) => ({ ...t, signed: signedSet.has(t.id) }));
+  return { season: s.number, cap: LOANEE_CAP, signedCount: count, pool };
+});
+
+// sign a trialist (up to LOANEE_CAP per season); adds them to your squad for the season
+app.post('/scout/trials/:index/sign', { preHandler: requireAuth }, async (req, reply) => {
+  const meId = req.account!.id;
+  const s = await ensureSeason(db, Date.now());
+  if (await db.countLoanees(meId, s.id) >= LOANEE_CAP) return reply.code(409).send({ error: `you can sign at most ${LOANEE_CAP} loanees a season` });
+  const player = trialistAt(meId, s.number, Number((req.params as any).index));
+  if (!player) return reply.code(404).send({ error: 'no such trialist' });
+  const c = await db.getClub(meId);
+  if (!c) return reply.code(404).send({ error: 'club not found' });
+  if (c.club.players.some((p) => p.id === player.id)) return reply.code(409).send({ error: 'already signed' });
+  c.club.players.push(player);
+  await db.saveClub(meId, c.club, c.standingOrders);
+  await db.addLoanee(meId, s.id, player.id);
+  return { ok: true, player: { name: player.name, role: player.role }, signedCount: (await db.countLoanees(meId, s.id)) };
+});
 
 // all-time cumulative table (kept for an optional global leaderboard view)
 app.get('/table', async () => {
