@@ -9,7 +9,7 @@ import { generatePool, trialistAt, LOANEE_CAP, OPP_REVEAL, describeIntel, type O
 import { DESTINATIONS, destinationById, rollMission, travelMs, previewOdds, TRIPS_PER_SEASON } from './missions.js';
 import {
   FACILITY_KEYS, FACILITY_META, MAX_LEVEL, upgradeCost, effectAt, trainingConditioning, stadiumIncome,
-  youthPoolBonus, youthUpgradeChance, scoutHitMult, scoutCostDiscount, scoutExtraTrips, type FacilityKey,
+  youthPoolBonus, youthUpgradeChance, scoutHitMult, scoutCostDiscount, scoutExtraTrips, fanIncomeMult, type FacilityKey,
 } from './facilities.js';
 import type { Player } from '@fm/shared';
 import { viewerTiers, scoutNftInfo } from './scoutnft.js';
@@ -269,10 +269,10 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const coinsFor = (o: number) => o === 1 ? WIN_COINS : o === 0.5 ? DRAW_COINS : LOSS_COINS;
   const myCoins = coinsFor(myOutcome), oppCoins = coinsFor(1 - myOutcome);
   // stadium matchday income for the HOME side (the economy's coin faucet)
-  const homeAcctId = homeId, homeStadium = (iAmHome ? meFac : oppFac).stadium;
+  const homeAcctId = homeId, homeFacFull = iAmHome ? meFac : oppFac;
   const homeTierIdx = TIERS.indexOf((await db.accountTier(homeAcctId)) as typeof TIERS[number]);
   const homeMatchOutcome: 'win' | 'draw' | 'loss' = result[0] > result[1] ? 'win' : result[0] < result[1] ? 'loss' : 'draw';
-  const gate = stadiumIncome(homeStadium, Math.max(0, homeTierIdx), homeMatchOutcome);
+  const gate = Math.round(stadiumIncome(homeFacFull.stadium, Math.max(0, homeTierIdx), homeMatchOutcome) * fanIncomeMult(homeFacFull.fanzone));
   await Promise.all([db.setRating(meId, nMe), db.setRating(oppId, nOpp), db.addCoins(meId, myCoins), db.addCoins(oppId, oppCoins), db.addCoins(homeAcctId, gate)]);
   const myGate = iAmHome ? gate : 0; // only the host banks gate receipts
   const nHome = iAmHome ? nMe : nOpp, nAway = iAmHome ? nOpp : nMe;

@@ -8,7 +8,7 @@ import type { Store, Season, PodRef } from './store.js';
 import { buildTable, runMatch, elo, validateLineup } from './game.js';
 import { seasonPlacementReward, WIN_COINS, DRAW_COINS, LOSS_COINS } from './market.js';
 import { ownedPlayers } from './nft.js';
-import { trainingConditioning, stadiumIncome } from './facilities.js';
+import { trainingConditioning, stadiumIncome, fanIncomeMult, sponsorIncome } from './facilities.js';
 import { computeCup, type SquadMap } from './cup.js';
 
 /** Merge a club with the star NFTs its linked wallet owns (read-only). */
@@ -110,7 +110,7 @@ async function simulateMatch(db: Store, homeId: string, awayId: string, seasonId
   const [nh, na] = elo(home.rating, away.rating, sh);
   const coinsFor = (s: number) => (s === 1 ? WIN_COINS : s === 0.5 ? DRAW_COINS : LOSS_COINS);
   const homeTierIdx = Math.max(0, TIERS.indexOf((await db.accountTier(homeId)) as typeof TIERS[number]));
-  const gate = stadiumIncome(homeFac.stadium, homeTierIdx, sh === 1 ? 'win' : sh === 0 ? 'loss' : 'draw');
+  const gate = Math.round(stadiumIncome(homeFac.stadium, homeTierIdx, sh === 1 ? 'win' : sh === 0 ? 'loss' : 'draw') * fanIncomeMult(homeFac.fanzone));
   await Promise.all([
     db.setRating(homeId, nh), db.setRating(awayId, na),
     db.addCoins(homeId, coinsFor(sh) + gate), db.addCoins(awayId, coinsFor(1 - sh)),
@@ -164,7 +164,11 @@ async function rollover(db: Store, s: Season, now: number): Promise<void> {
       const promoted = i < PROMOTE && tierIdx < TIERS.length - 1;
       // season prize money by placement (the coin sink that becomes an ERC-20 payout later)
       const reward = seasonPlacementReward(tierIdx, i + 1, ranked.length, promoted);
-      await db.addCoins(acct.id, reward);
+      // Commercial Dept: sponsorship income, scaled by division + trophies already in the cabinet
+      const [fac, honours] = await Promise.all([db.getFacilities(acct.id), db.honoursFor(acct.id, 999)]);
+      const trophies = honours.filter((h) => h.title === 1).length;
+      const sponsor = sponsorIncome(fac.sponsor, tierIdx, trophies);
+      await db.addCoins(acct.id, reward + sponsor);
       await db.addHonour(acct.id, s.id, s.number, tier, i + 1, i === 0 ? 1 : 0, now, reward, 'league');
       let newIdx = tierIdx;
       if (promoted) newIdx = tierIdx + 1;

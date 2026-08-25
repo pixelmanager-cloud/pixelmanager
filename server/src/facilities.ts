@@ -5,11 +5,11 @@
 //   🎓 Youth Academy   — better Local Tryouts (bigger pool + quality upgrades)
 //   🔭 Scouting HQ     — better scouting-network odds, cheaper trips, +trips
 // All effects are deterministic numeric multipliers — no LLM, replay-safe.
-export type FacilityKey = 'stadium' | 'training' | 'youth' | 'scouting';
-export interface Facilities { stadium: number; training: number; youth: number; scouting: number }
-export const FACILITY_KEYS: FacilityKey[] = ['stadium', 'training', 'youth', 'scouting'];
+export type FacilityKey = 'stadium' | 'training' | 'youth' | 'scouting' | 'medical' | 'sponsor' | 'fanzone';
+export interface Facilities { stadium: number; training: number; youth: number; scouting: number; medical: number; sponsor: number; fanzone: number }
+export const FACILITY_KEYS: FacilityKey[] = ['stadium', 'training', 'youth', 'scouting', 'medical', 'sponsor', 'fanzone'];
 export const MAX_LEVEL = 5;
-export const DEFAULT_FACILITIES: Facilities = { stadium: 1, training: 1, youth: 1, scouting: 1 };
+export const DEFAULT_FACILITIES: Facilities = { stadium: 1, training: 1, youth: 1, scouting: 1, medical: 1, sponsor: 1, fanzone: 1 };
 
 /** Coins to REACH a given level (index by target level 2..5). */
 const COST_TO_REACH: Record<number, number> = { 2: 250, 3: 550, 4: 1100, 5: 2000 };
@@ -23,6 +23,9 @@ export const FACILITY_META: Record<FacilityKey, { icon: string; name: string; bl
   training: { icon: '🏋️', name: 'Training Ground', blurb: 'Fitter legs. Your squad drains less over 90 minutes, so you fade less in the closing stages.' },
   youth:    { icon: '🎓', name: 'Youth Academy',   blurb: 'Home-grown talent. A better academy widens your Local Tryouts pool and raises the odds a walk-up is worth signing.' },
   scouting: { icon: '🔭', name: 'Scouting HQ',      blurb: 'A sharper scouting operation lifts every network trip: better odds, cheaper travel, and — at the top levels — extra trips per season.' },
+  medical:  { icon: '🏥', name: 'Medical Centre',   blurb: 'Physios and sports science. Cuts how often your players pick up injuries and gets the injured back on the pitch sooner.' },
+  sponsor:  { icon: '📣', name: 'Commercial Dept',  blurb: 'Sponsors and merchandising. Pays a lump of income every season — more in a higher division and for every trophy in your cabinet.' },
+  fanzone:  { icon: '🎉', name: 'Fan Zone',         blurb: 'A roaring home crowd. Gives your side a real edge in home matches and swells the gate on matchday.' },
 };
 
 // ── Effects (pure functions of level; level 1 is always the neutral baseline) ──
@@ -44,6 +47,19 @@ export function scoutHitMult(level: number): number { return 1 + (level - 1) * 0
 export function scoutCostDiscount(level: number): number { return (level - 1) * 0.06; }
 /** Scouting HQ: extra scouting trips per season (0 at L1-2, 1 at L3-4, 2 at L5). */
 export function scoutExtraTrips(level: number): number { return Math.floor((level - 1) / 2); }
+/** Medical Centre: injury-chance multiplier (1.0 at L1 → 0.40 at L5). */
+export function injuryChanceMult(level: number): number { return 1 - (level - 1) * 0.15; }
+/** Medical Centre: matches shaved off a fresh injury's recovery (0 at L1 → 2 at L5). */
+export function recoveryCut(level: number): number { return Math.floor((level - 1) / 2); }
+/** Commercial Dept: per-season sponsorship income (division- and trophy-scaled). */
+export function sponsorIncome(level: number, tierIdx: number, trophies: number): number {
+  if (level <= 1) return 0;
+  return Math.round((60 * (level - 1)) * (1 + tierIdx * 0.12) + trophies * 25 * (level - 1));
+}
+/** Fan Zone: home-side attacking edge in the match engine (1.0 at L1 → 1.08 at L5). */
+export function fanHomeBoost(level: number): number { return 1 + (level - 1) * 0.02; }
+/** Fan Zone: matchday (gate) income multiplier (1.0 at L1 → 1.32 at L5). */
+export function fanIncomeMult(level: number): number { return 1 + (level - 1) * 0.08; }
 
 /** A short human description of a facility's effect AT a given level (for the UI). */
 export function effectAt(key: FacilityKey, level: number): string {
@@ -52,5 +68,8 @@ export function effectAt(key: FacilityKey, level: number): string {
     case 'training': return level === 1 ? 'No conditioning bonus yet' : `−${Math.round((1 - trainingConditioning(level)) * 100)}% fitness drain over a match`;
     case 'youth':    return level === 1 ? 'Standard walk-ups' : `+${youthPoolBonus(level)} tryout slot(s), ${Math.round(youthUpgradeChance(level) * 100)}% quality-upgrade chance`;
     case 'scouting': return level === 1 ? 'Standard trips' : `+${Math.round((scoutHitMult(level) - 1) * 100)}% odds, −${Math.round(scoutCostDiscount(level) * 100)}% cost${scoutExtraTrips(level) ? `, +${scoutExtraTrips(level)} trip(s)` : ''}`;
+    case 'medical':  return level === 1 ? 'Standard injury risk' : `−${Math.round((1 - injuryChanceMult(level)) * 100)}% injury chance${recoveryCut(level) ? `, −${recoveryCut(level)} match recovery` : ''}`;
+    case 'sponsor':  return level === 1 ? 'No sponsors yet' : `≈ ${60 * (level - 1)}+ coins/season (more per division & trophy)`;
+    case 'fanzone':  return level === 1 ? 'No home edge yet' : `+${Math.round((fanHomeBoost(level) - 1) * 100)}% home attack, +${Math.round((fanIncomeMult(level) - 1) * 100)}% gate`;
   }
 }

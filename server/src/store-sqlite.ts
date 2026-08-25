@@ -48,6 +48,9 @@ export function makeSqliteStore(file: string): Store {
           account_id TEXT PRIMARY KEY, stadium INTEGER NOT NULL DEFAULT 1, training INTEGER NOT NULL DEFAULT 1,
           youth INTEGER NOT NULL DEFAULT 1, scouting INTEGER NOT NULL DEFAULT 1);
       `);
+      for (const c of ['medical', 'sponsor', 'fanzone']) {
+        try { db.exec(`ALTER TABLE facilities ADD COLUMN ${c} INTEGER NOT NULL DEFAULT 1`); } catch { /* already added */ }
+      }
       // migrate pre-existing tables (adds columns; throws-and-ignored if already present)
       try { db.exec('ALTER TABLE matches ADD COLUMN season_id TEXT'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE matches ADD COLUMN initiator_id TEXT'); } catch { /* already added */ }
@@ -144,11 +147,11 @@ export function makeSqliteStore(file: string): Store {
       return r && { formation: r.formation, playerIds: JSON.parse(r.player_ids), tactics: JSON.parse(r.tactics), duties: r.duties ? JSON.parse(r.duties) : undefined };
     },
     async getFacilities(accountId) {
-      const r = db.prepare('SELECT stadium, training, youth, scouting FROM facilities WHERE account_id=?').get(accountId) as any;
-      return r ?? { stadium: 1, training: 1, youth: 1, scouting: 1 };
+      const r = db.prepare('SELECT stadium, training, youth, scouting, medical, sponsor, fanzone FROM facilities WHERE account_id=?').get(accountId) as any;
+      return r ?? { stadium: 1, training: 1, youth: 1, scouting: 1, medical: 1, sponsor: 1, fanzone: 1 };
     },
     async setFacilityLevel(accountId, key, level) {
-      const cols = { stadium: 1, training: 1, youth: 1, scouting: 1 } as Record<string, number>;
+      const cols = { stadium: 1, training: 1, youth: 1, scouting: 1, medical: 1, sponsor: 1, fanzone: 1 } as Record<string, number>;
       if (!(key in cols)) throw new Error('bad facility');
       db.prepare('INSERT INTO facilities (account_id) VALUES (?) ON CONFLICT(account_id) DO NOTHING').run(accountId);
       db.prepare(`UPDATE facilities SET ${key}=? WHERE account_id=?`).run(level, accountId); // key validated above

@@ -58,6 +58,9 @@ export function makePostgresStore(connectionString: string): Store {
         CREATE TABLE IF NOT EXISTS facilities (
           account_id TEXT PRIMARY KEY, stadium INTEGER NOT NULL DEFAULT 1, training INTEGER NOT NULL DEFAULT 1,
           youth INTEGER NOT NULL DEFAULT 1, scouting INTEGER NOT NULL DEFAULT 1);
+        ALTER TABLE facilities ADD COLUMN IF NOT EXISTS medical INTEGER NOT NULL DEFAULT 1;
+        ALTER TABLE facilities ADD COLUMN IF NOT EXISTS sponsor INTEGER NOT NULL DEFAULT 1;
+        ALTER TABLE facilities ADD COLUMN IF NOT EXISTS fanzone INTEGER NOT NULL DEFAULT 1;
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS season_id TEXT;
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS initiator_id TEXT;
         ALTER TABLE clubs ADD COLUMN IF NOT EXISTS so_duties TEXT;
@@ -157,11 +160,11 @@ export function makePostgresStore(connectionString: string): Store {
       return r && { formation: r.formation, playerIds: JSON.parse(r.player_ids), tactics: JSON.parse(r.tactics), duties: r.duties ? JSON.parse(r.duties) : undefined };
     },
     async getFacilities(accountId) {
-      const r = (await q('SELECT stadium, training, youth, scouting FROM facilities WHERE account_id=$1', [accountId])).rows[0];
-      return r ?? { stadium: 1, training: 1, youth: 1, scouting: 1 };
+      const r = (await q('SELECT stadium, training, youth, scouting, medical, sponsor, fanzone FROM facilities WHERE account_id=$1', [accountId])).rows[0];
+      return r ?? { stadium: 1, training: 1, youth: 1, scouting: 1, medical: 1, sponsor: 1, fanzone: 1 };
     },
     async setFacilityLevel(accountId, key, level) {
-      if (!['stadium', 'training', 'youth', 'scouting'].includes(key)) throw new Error('bad facility');
+      if (!['stadium', 'training', 'youth', 'scouting', 'medical', 'sponsor', 'fanzone'].includes(key)) throw new Error('bad facility');
       await q(`INSERT INTO facilities (account_id, ${key}) VALUES ($1,$2) ON CONFLICT (account_id) DO UPDATE SET ${key}=$2`, [accountId, level]); // key validated above
     },
     async createMission(m) {
