@@ -249,7 +249,10 @@ export class MatchEngine {
     // workrate raises effort (drains more); stamina is endurance (drains less). Both are
     // centred at the mid stat so average squads keep the tuned overall drain rate, while
     // a high-stamina star fades far less than a low-stamina filler late in the game.
-    const staminaFactor = 1.3 - 0.6 * norm(p.attrs.stamina);
+    // Default stamina to the mid stat (10) for legacy 8-stat squads made before the
+    // stamina stat existed — otherwise norm(undefined)=NaN corrupts fitness → NaN
+    // positions → invisible players.
+    const staminaFactor = 1.3 - 0.6 * norm(p.attrs.stamina ?? 10);
     ps.fitness = Math.max(0, ps.fitness - BASE_DRAIN * mods.staminaDrain * (0.7 + 0.6 * norm(p.attrs.workrate)) * staminaFactor * effort);
   }
 

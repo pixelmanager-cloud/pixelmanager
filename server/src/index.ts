@@ -16,7 +16,7 @@ import {
   revealPlayer, WIN_COINS, DRAW_COINS, LOSS_COINS,
   MIN_SQUAD, MAX_SQUAD, PRICE_MIN, PRICE_MAX,
 } from './market.js';
-import { autoPickXI } from '@fm/shared';
+import { autoPickXI, backfillAttrs } from '@fm/shared';
 import { isAddress } from 'viem';
 import { issueNonce, verifyAndConsume, shortAddr } from './wallet.js';
 import { tokenInfo, tokenMeta, tokenBalance } from './token.js';
@@ -571,6 +571,27 @@ app.post('/admin/regen-base', async (req, reply) => {
     n++;
   }
   return { ok: true, regenerated: n };
+});
+
+// non-destructive backfill: give legacy 8-stat players the missing setPiece/stamina
+// (keeps all core stats + ratings; fixes the NaN-fitness/invisible-player bug in the data)
+app.post('/admin/backfill-stats', async (req, reply) => {
+  const secret = process.env.ADMIN_SECRET;
+  if (!secret || (req.headers['x-admin-secret'] as string) !== secret) return reply.code(403).send({ error: 'forbidden' });
+  const accounts = await db.allAccounts();
+  let clubs = 0, players = 0;
+  for (const a of accounts) {
+    const c = await db.getClub(a.id);
+    if (!c) continue;
+    let touched = false;
+    for (const p of c.club.players) {
+      const before = { sp: (p.attrs as any).setPiece, st: (p.attrs as any).stamina };
+      backfillAttrs(p);
+      if (before.sp == null || before.st == null) { players++; touched = true; }
+    }
+    if (touched) { await db.saveClub(a.id, c.club, c.standingOrders); clubs++; }
+  }
+  return { ok: true, clubs, players };
 });
 
 const port = Number(process.env.PORT ?? 8787);

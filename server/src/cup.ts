@@ -56,7 +56,7 @@ function keeperOf(club: Club, lineup: Lineup): Player {
 function takersOf(club: Club, lineup: Lineup): Player[] {
   const xi = lineup.playerIds.map((id) => club.players.find((p) => p.id === id)).filter(Boolean) as Player[];
   const out = xi.filter((p) => p.role !== 'GK');
-  return out.sort((a, b) => b.attrs.setPiece - a.attrs.setPiece); // best set-piece takers first
+  return out.sort((a, b) => (b.attrs.setPiece ?? 10) - (a.attrs.setPiece ?? 10)); // best set-piece takers first
 }
 
 /** Penalty shootout: 5 each then sudden death. setPiece (taker) vs keeping (goalkeeper). */
@@ -64,7 +64,7 @@ function shootout(a: { club: Club }, b: { club: Club }, la: Lineup, lb: Lineup, 
   const rng = mulberry32(seed);
   const ta = takersOf(a.club, la), tb = takersOf(b.club, lb);
   const gkA = keeperOf(a.club, la), gkB = keeperOf(b.club, lb);
-  const scores = (taker: Player, gk: Player) => rng() < clamp(0.72 + norm(taker.attrs.setPiece) * 0.2 - norm(gk.attrs.keeping) * 0.22, 0.4, 0.94);
+  const scores = (taker: Player, gk: Player) => rng() < clamp(0.72 + norm(taker.attrs.setPiece ?? 10) * 0.2 - norm(gk.attrs.keeping) * 0.22, 0.4, 0.94);
   let ga = 0, gb = 0;
   for (let i = 0; i < 5; i++) { if (scores(ta[i % ta.length], gkB)) ga++; if (scores(tb[i % tb.length], gkA)) gb++; }
   for (let i = 5; ga === gb && i < 30; i++) { if (scores(ta[i % ta.length], gkB)) ga++; if (scores(tb[i % tb.length], gkA)) gb++; }

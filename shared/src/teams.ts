@@ -19,6 +19,26 @@ function rollAttrs(rng: () => number, role: Role, quality: number): PlayerAttrs 
 }
 
 /**
+ * Fill in setPiece/stamina for legacy 8-stat players (made before those stats existed),
+ * WITHOUT touching the 8 core stats (so overall() is unchanged). Deterministic from the
+ * player id + role + correlated stats, so it feels natural and replays identically.
+ * A no-op for players that already have both stats. Returns the same object mutated.
+ */
+export function backfillAttrs(p: Player): Player {
+  const a = p.attrs as PlayerAttrs & { setPiece?: number; stamina?: number };
+  if (a.setPiece != null && a.stamina != null) return p;
+  let h = 2166136261;
+  for (let i = 0; i < p.id.length; i++) { h ^= p.id.charCodeAt(i); h = Math.imul(h, 16777619); }
+  const jitter = (n: number) => (((h >>> (n * 5)) & 7) - 3); // deterministic -3..+3 per stat
+  const clamp = (v: number) => Math.max(1, Math.min(20, Math.round(v)));
+  const roleSet: Record<Role, number> = { GK: -6, DF: -2, MF: 2, FW: 2 };
+  const roleSta: Record<Role, number> = { GK: -3, DF: 1, MF: 3, FW: 1 };
+  if (a.setPiece == null) a.setPiece = clamp((a.passing + a.shooting) / 2 + roleSet[p.role] + jitter(0));
+  if (a.stamina == null) a.stamina = clamp(a.workrate + roleSta[p.role] + jitter(1));
+  return p;
+}
+
+/**
  * Generate a squad deterministically from a seed, laid out in a formation.
  * quality ~ team strength on the 1-20 stat scale (11-15 typical).
  */
