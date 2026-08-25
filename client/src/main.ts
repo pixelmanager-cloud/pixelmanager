@@ -313,14 +313,14 @@ class Game {
   }
 
   /** A little "new star" reveal showing the minted NFT's name, role, and on-chain stats. */
-  private showMintReveal(p: { name: string; role: string; attrs: Record<string, number> }) {
+  private showMintReveal(p: Player) {
     const lab: Record<string, string> = { pace: 'PAC', strength: 'STR', passing: 'PAS', shooting: 'SHO', tackling: 'TAC', positioning: 'POS', workrate: 'WOR', keeping: 'GK' };
-    const stats = Object.entries(p.attrs).map(([k, v]) => `<div class="ms-stat"><span>${lab[k] ?? k}</span><b style="color:${statColor(v)}">${v}</b></div>`).join('');
+    const stats = Object.entries(p.attrs).map(([k, v]) => `<div class="ms-stat"><span>${lab[k] ?? k}</span><b style="color:${statColor(v as number)}">${v}</b></div>`).join('');
     const el = document.createElement('div');
     el.id = 'mint-reveal';
     el.innerHTML = `<div class="ms-card"><div class="ms-head">★ NEW STAR MINTED</div>`
       + `<div class="ms-name">${p.name}</div>`
-      + `<div class="ms-sub">${p.role} · OVR <b>${overall(p as any)}</b> · owned on-chain as an NFT</div>`
+      + `<div class="ms-sub">${p.role} · OVR <b>${overall(p)}</b> · owned on-chain as an NFT</div>`
       + `<div class="ms-stats">${stats}</div>`
       + `<button class="ms-close">Nice ✓</button></div>`;
     el.addEventListener('click', (e) => { const t = e.target as HTMLElement; if (t === el || t.classList.contains('ms-close')) el.remove(); });
