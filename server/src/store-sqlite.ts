@@ -1,7 +1,7 @@
 // Local-dev backend on Node's built-in SQLite (no native deps).
 import { DatabaseSync } from 'node:sqlite';
 import type { Club } from '@fm/shared';
-import type { Store, Account, AuthRow, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow, Season, HonourRow, PodRef, Listing } from './store.js';
+import type { Store, Account, AuthRow, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow, Season, HonourRow, PodRef, Listing, MissionRow } from './store.js';
 
 export function makeSqliteStore(file: string): Store {
   const db = new DatabaseSync(file);
@@ -40,6 +40,10 @@ export function makeSqliteStore(file: string): Store {
           id TEXT PRIMARY KEY, seller_id TEXT NOT NULL, player_id TEXT NOT NULL,
           player_json TEXT NOT NULL, price INTEGER NOT NULL, status TEXT NOT NULL,
           created_at INTEGER NOT NULL, buyer_id TEXT, sold_at INTEGER);
+        CREATE TABLE IF NOT EXISTS scout_missions (
+          id TEXT PRIMARY KEY, account_id TEXT NOT NULL, season_id TEXT NOT NULL,
+          destination TEXT NOT NULL, dispatched_at INTEGER NOT NULL, ready_at INTEGER NOT NULL,
+          found INTEGER NOT NULL, player_json TEXT, band TEXT, status TEXT NOT NULL);
       `);
       // migrate pre-existing tables (adds columns; throws-and-ignored if already present)
       try { db.exec('ALTER TABLE matches ADD COLUMN season_id TEXT'); } catch { /* already added */ }
@@ -49,6 +53,7 @@ export function makeSqliteStore(file: string): Store {
       try { db.exec('ALTER TABLE accounts ADD COLUMN password_hash TEXT'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE accounts ADD COLUMN coins INTEGER NOT NULL DEFAULT 500'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE honours ADD COLUMN coin_reward INTEGER NOT NULL DEFAULT 0'); } catch { /* already added */ }
+      try { db.exec("ALTER TABLE honours ADD COLUMN kind TEXT NOT NULL DEFAULT 'league'"); } catch { /* already added */ }
       try { db.exec('ALTER TABLE accounts ADD COLUMN wallet_address TEXT'); } catch { /* already added */ }
       try { db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_wallet ON accounts(wallet_address) WHERE wallet_address IS NOT NULL'); } catch { /* already added */ }
     },
@@ -135,6 +140,21 @@ export function makeSqliteStore(file: string): Store {
       const r = db.prepare('SELECT formation, player_ids, tactics, duties FROM plans WHERE owner_id=? AND opponent_id=?').get(ownerId, opponentId) as any;
       return r && { formation: r.formation, playerIds: JSON.parse(r.player_ids), tactics: JSON.parse(r.tactics), duties: r.duties ? JSON.parse(r.duties) : undefined };
     },
+    async createMission(m) {
+      db.prepare('INSERT INTO scout_missions (id, account_id, season_id, destination, dispatched_at, ready_at, found, player_json, band, status) VALUES (?,?,?,?,?,?,?,?,?,?)')
+        .run(m.id, m.account_id, m.season_id, m.destination, m.dispatched_at, m.ready_at, m.found, m.player_json, m.band, m.status);
+    },
+    async missionsInSeason(accountId, seasonId) {
+      return db.prepare('SELECT * FROM scout_missions WHERE account_id=? AND season_id=? ORDER BY dispatched_at DESC').all(accountId, seasonId) as MissionRow[];
+    },
+    async missionById(id) {
+      return db.prepare('SELECT * FROM scout_missions WHERE id=?').get(id) as MissionRow | undefined;
+    },
+    async setMissionSigned(id) { db.prepare("UPDATE scout_missions SET status='signed' WHERE id=?").run(id); },
+    async countMissionsInSeason(accountId, seasonId) {
+      const r = db.prepare('SELECT COUNT(*) AS c FROM scout_missions WHERE account_id=? AND season_id=?').get(accountId, seasonId) as any;
+      return r ? r.c : 0;
+    },
     async addLoanee(ownerId, seasonId, playerId) {
       db.prepare('INSERT OR IGNORE INTO loanees (owner_id, season_id, player_id) VALUES (?,?,?)').run(ownerId, seasonId, playerId);
     },
@@ -196,12 +216,12 @@ export function makeSqliteStore(file: string): Store {
       const r = db.prepare('SELECT COUNT(*) AS c FROM matches WHERE initiator_id=? AND season_id=? AND created_at>=?').get(accountId, seasonId, sinceMs) as any;
       return r ? r.c : 0;
     },
-    async addHonour(accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt, coinReward) {
-      db.prepare('INSERT INTO honours (account_id, season_id, season_number, tier, final_pos, title, ended_at, coin_reward) VALUES (?,?,?,?,?,?,?,?)')
-        .run(accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt, coinReward);
+    async addHonour(accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt, coinReward, kind) {
+      db.prepare('INSERT INTO honours (account_id, season_id, season_number, tier, final_pos, title, ended_at, coin_reward, kind) VALUES (?,?,?,?,?,?,?,?,?)')
+        .run(accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt, coinReward, kind);
     },
     async honoursFor(accountId, limit = 30) {
-      return db.prepare('SELECT season_number, tier, final_pos, title, ended_at, coin_reward FROM honours WHERE account_id=? ORDER BY season_number DESC LIMIT ?').all(accountId, limit) as HonourRow[];
+      return db.prepare('SELECT season_number, tier, final_pos, title, ended_at, coin_reward, kind FROM honours WHERE account_id=? ORDER BY season_number DESC LIMIT ?').all(accountId, limit) as HonourRow[];
     },
     async accountTier(accountId) {
       const r = db.prepare('SELECT tier FROM accounts WHERE id=?').get(accountId) as any;
@@ -224,6 +244,6 @@ export function makeSqliteStore(file: string): Store {
     async seasonPods(seasonId) {
       return db.prepare('SELECT DISTINCT tier, pod FROM pod_members WHERE season_id=? ORDER BY tier, pod').all(seasonId) as PodRef[];
     },
-    async reset() { db.exec('DELETE FROM matches; DELETE FROM clubs; DELETE FROM accounts; DELETE FROM seasons; DELETE FROM honours; DELETE FROM pod_members; DELETE FROM plans; DELETE FROM loanees; DELETE FROM listings;'); },
+    async reset() { db.exec('DELETE FROM matches; DELETE FROM clubs; DELETE FROM accounts; DELETE FROM seasons; DELETE FROM honours; DELETE FROM pod_members; DELETE FROM plans; DELETE FROM loanees; DELETE FROM listings; DELETE FROM scout_missions;'); },
   };
 }

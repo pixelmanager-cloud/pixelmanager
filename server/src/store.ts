@@ -17,9 +17,16 @@ export interface StoredMatch {
 }
 export interface Season { id: string; number: number; startsAt: number; endsAt: number; status: 'active' | 'closed' }
 /** A player's archived finish in a past season (for the honours board). */
-export interface HonourRow { season_number: number; tier: string; final_pos: number; title: number; ended_at: number; coin_reward: number }
+export interface HonourRow { season_number: number; tier: string; final_pos: number; title: number; ended_at: number; coin_reward: number; kind: string }
 /** A player's placement within the division pyramid for a season (Phase B). */
 export interface PodRef { tier: string; pod: number }
+/** A dispatched scouting trip (Scouting Network). Outcome is sealed at dispatch; the
+ *  found player (if any) is stored as JSON and revealed once ready_at passes. */
+export interface MissionRow {
+  id: string; account_id: string; season_id: string; destination: string;
+  dispatched_at: number; ready_at: number; found: number; player_json: string | null;
+  band: string | null; status: string; // 'travelling' | 'signed'
+}
 /** A transfer-market listing (a squad player put up for coins). */
 export interface Listing {
   id: string; seller_id: string; seller_handle: string; player_id: string;
@@ -61,6 +68,12 @@ export interface Store {
   savePlan(ownerId: string, opponentId: string, plan: StandingOrders): Promise<void>;
   getPlan(ownerId: string, opponentId: string): Promise<StandingOrders | undefined>;
   // trial/loan academy: signed loanees (expire at season rollover)
+  // scouting network: dispatched trips (sealed at dispatch, revealed after travel)
+  createMission(m: MissionRow): Promise<void>;
+  missionsInSeason(accountId: string, seasonId: string): Promise<MissionRow[]>;
+  missionById(id: string): Promise<MissionRow | undefined>;
+  setMissionSigned(id: string): Promise<void>;
+  countMissionsInSeason(accountId: string, seasonId: string): Promise<number>;
   addLoanee(ownerId: string, seasonId: string, playerId: string): Promise<void>;
   countLoanees(ownerId: string, seasonId: string): Promise<number>;
   loaneeIds(ownerId: string, seasonId: string): Promise<string[]>;
@@ -79,7 +92,7 @@ export interface Store {
   seasonResults(seasonId: string): Promise<Array<{ home_id: string; away_id: string; home_score: number; away_score: number }>>;
   /** count of matches this account initiated (was home) in a season since a timestamp — for the daily cap */
   matchesToday(accountId: string, seasonId: string, sinceMs: number): Promise<number>;
-  addHonour(accountId: string, seasonId: string, seasonNumber: number, tier: string, finalPos: number, title: number, endedAt: number, coinReward: number): Promise<void>;
+  addHonour(accountId: string, seasonId: string, seasonNumber: number, tier: string, finalPos: number, title: number, endedAt: number, coinReward: number, kind: string): Promise<void>;
   honoursFor(accountId: string, limit?: number): Promise<HonourRow[]>;
   // divisions & pods (Phase B)
   accountTier(accountId: string): Promise<string>;

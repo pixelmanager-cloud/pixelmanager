@@ -2,7 +2,7 @@
 // (de)serialised in code, identical semantics to the SQLite backend.
 import pg from 'pg';
 import type { Club } from '@fm/shared';
-import type { Store, Account, AuthRow, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow, Season, HonourRow, PodRef, Listing } from './store.js';
+import type { Store, Account, AuthRow, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow, Season, HonourRow, PodRef, Listing, MissionRow } from './store.js';
 
 export function makePostgresStore(connectionString: string): Store {
   // Railway's internal DB (postgres.railway.internal) and localhost don't use SSL;
@@ -51,6 +51,10 @@ export function makePostgresStore(connectionString: string): Store {
           id TEXT PRIMARY KEY, seller_id TEXT NOT NULL, player_id TEXT NOT NULL,
           player_json TEXT NOT NULL, price INTEGER NOT NULL, status TEXT NOT NULL,
           created_at BIGINT NOT NULL, buyer_id TEXT, sold_at BIGINT);
+        CREATE TABLE IF NOT EXISTS scout_missions (
+          id TEXT PRIMARY KEY, account_id TEXT NOT NULL, season_id TEXT NOT NULL,
+          destination TEXT NOT NULL, dispatched_at BIGINT NOT NULL, ready_at BIGINT NOT NULL,
+          found INTEGER NOT NULL, player_json TEXT, band TEXT, status TEXT NOT NULL);
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS season_id TEXT;
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS initiator_id TEXT;
         ALTER TABLE clubs ADD COLUMN IF NOT EXISTS so_duties TEXT;
@@ -58,6 +62,7 @@ export function makePostgresStore(connectionString: string): Store {
         ALTER TABLE accounts ADD COLUMN IF NOT EXISTS password_hash TEXT;
         ALTER TABLE accounts ADD COLUMN IF NOT EXISTS coins INTEGER NOT NULL DEFAULT 500;
         ALTER TABLE honours ADD COLUMN IF NOT EXISTS coin_reward INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE honours ADD COLUMN IF NOT EXISTS kind TEXT NOT NULL DEFAULT 'league';
         ALTER TABLE accounts ADD COLUMN IF NOT EXISTS wallet_address TEXT;
         CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_wallet ON accounts(wallet_address) WHERE wallet_address IS NOT NULL;
       `);
@@ -148,6 +153,22 @@ export function makePostgresStore(connectionString: string): Store {
       const r = (await q('SELECT formation, player_ids, tactics, duties FROM plans WHERE owner_id=$1 AND opponent_id=$2', [ownerId, opponentId])).rows[0];
       return r && { formation: r.formation, playerIds: JSON.parse(r.player_ids), tactics: JSON.parse(r.tactics), duties: r.duties ? JSON.parse(r.duties) : undefined };
     },
+    async createMission(m) {
+      await q('INSERT INTO scout_missions (id, account_id, season_id, destination, dispatched_at, ready_at, found, player_json, band, status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
+        [m.id, m.account_id, m.season_id, m.destination, m.dispatched_at, m.ready_at, m.found, m.player_json, m.band, m.status]);
+    },
+    async missionsInSeason(accountId, seasonId) {
+      return (await q('SELECT * FROM scout_missions WHERE account_id=$1 AND season_id=$2 ORDER BY dispatched_at DESC', [accountId, seasonId]))
+        .rows.map((r) => ({ ...r, dispatched_at: Number(r.dispatched_at), ready_at: Number(r.ready_at) })) as MissionRow[];
+    },
+    async missionById(id) {
+      const r = (await q('SELECT * FROM scout_missions WHERE id=$1', [id])).rows[0];
+      return r ? { ...r, dispatched_at: Number(r.dispatched_at), ready_at: Number(r.ready_at) } as MissionRow : undefined;
+    },
+    async setMissionSigned(id) { await q("UPDATE scout_missions SET status='signed' WHERE id=$1", [id]); },
+    async countMissionsInSeason(accountId, seasonId) {
+      return (await q('SELECT COUNT(*)::int AS c FROM scout_missions WHERE account_id=$1 AND season_id=$2', [accountId, seasonId])).rows[0].c as number;
+    },
     async addLoanee(ownerId, seasonId, playerId) {
       await q('INSERT INTO loanees (owner_id, season_id, player_id) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING', [ownerId, seasonId, playerId]);
     },
@@ -212,12 +233,12 @@ export function makePostgresStore(connectionString: string): Store {
       const r = (await q('SELECT COUNT(*)::int AS c FROM matches WHERE initiator_id=$1 AND season_id=$2 AND created_at>=$3', [accountId, seasonId, sinceMs])).rows[0];
       return r ? r.c : 0;
     },
-    async addHonour(accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt, coinReward) {
-      await q('INSERT INTO honours (account_id, season_id, season_number, tier, final_pos, title, ended_at, coin_reward) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
-        [accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt, coinReward]);
+    async addHonour(accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt, coinReward, kind) {
+      await q('INSERT INTO honours (account_id, season_id, season_number, tier, final_pos, title, ended_at, coin_reward, kind) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+        [accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt, coinReward, kind]);
     },
     async honoursFor(accountId, limit = 30) {
-      return (await q('SELECT season_number, tier, final_pos, title, ended_at, coin_reward FROM honours WHERE account_id=$1 ORDER BY season_number DESC LIMIT $2', [accountId, limit]))
+      return (await q('SELECT season_number, tier, final_pos, title, ended_at, coin_reward, kind FROM honours WHERE account_id=$1 ORDER BY season_number DESC LIMIT $2', [accountId, limit]))
         .rows.map((r) => ({ ...r, ended_at: Number(r.ended_at) })) as HonourRow[];
     },
     async accountTier(accountId) {
@@ -244,6 +265,6 @@ export function makePostgresStore(connectionString: string): Store {
     async seasonPods(seasonId) {
       return (await q('SELECT DISTINCT tier, pod FROM pod_members WHERE season_id=$1 ORDER BY tier, pod', [seasonId])).rows as PodRef[];
     },
-    async reset() { await q('TRUNCATE accounts, clubs, matches, seasons, honours, pod_members, plans, loanees, listings'); },
+    async reset() { await q('TRUNCATE accounts, clubs, matches, seasons, honours, pod_members, plans, loanees, listings, scout_missions'); },
   };
 }

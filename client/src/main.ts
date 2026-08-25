@@ -4,7 +4,7 @@ import {
   TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty,
 } from '@fm/shared';
 import { SCALE, makeBallTexture, makeBallGhostTexture, makePitchTexture, makePlayerFrames, makeShadowTexture, makeCarrierTexture } from './pixelart';
-import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData } from './api';
+import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData, type MissionsData } from './api';
 import { walletConfigured, nftConfigured, sendEmailCode, connectEmail, connectInjected, autoConnectInApp, signMessage, claimTokens, mintPlayer, mintScout, type Account as WalletAccount } from './wallet';
 
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
@@ -64,6 +64,17 @@ const ORDINAL = (n: number): string => {
   const s = ['th', 'st', 'nd', 'rd'], v = n % 100;
   return n + (s[(v - 20) % 10] || s[v] || s[0]);
 };
+
+// League pyramid, bottom → top. Mirrors TIERS in server/seasons.ts; the INDEX (0-9)
+// drives how flashy a trophy looks — a Sunday-League cup is humble, a World-Class one gleams.
+const TIER_NAMES = [
+  'SUNDAY LEAGUE', 'COUNTY', 'REGIONAL', 'NATIONAL', 'LEAGUE TWO',
+  'LEAGUE ONE', 'CHAMPIONSHIP', 'PREMIER', 'CONTINENTAL', 'WORLD CLASS',
+];
+const tierIndexOf = (tier: string): number => Math.max(0, TIER_NAMES.indexOf(tier));
+// Five visual grades mapped across the 10 tiers (reuses the NFT tier feel).
+const TROPHY_GRADES = ['bronze', 'silver', 'gold', 'diamond', 'legend'] as const;
+const trophyGrade = (tierIdx: number): typeof TROPHY_GRADES[number] => TROPHY_GRADES[Math.min(4, Math.floor(tierIdx / 2))];
 
 function statColor(v: number): string {
   if (v >= 17) return '#3ad07a';
@@ -182,6 +193,7 @@ class Game {
   private showScreen(s: 'login' | 'hub' | 'lineup' | 'match' | 'standings' | 'scouting' | 'market') {
     for (const id of ['login', 'hub', 'lineup', 'matchwrap', 'standings', 'scouting', 'market']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
     $('logout').classList.toggle('hidden', s === 'login');
+    if (s !== 'scouting' && this.missionTimer) { clearInterval(this.missionTimer); this.missionTimer = null; } // stop the mission countdown when leaving
   }
 
   private wireStaticButtons() {
@@ -501,14 +513,53 @@ class Game {
 
   private renderHonours(rows: HonourRow[]): string {
     if (!rows.length) return '<div class="muted">No finished seasons yet — play on to make history.</div>';
-    return rows.map((h) => {
+    const trophies = rows.filter((h) => h.title === 1);
+    const cabinet = this.renderTrophyCabinet(trophies);
+    // Full placement history below the cabinet (every archived finish, trophy or not).
+    const history = rows.map((h) => {
       const champ = h.title === 1;
+      const isCup = h.kind === 'cup';
       const prize = h.coin_reward ? `<span class="hr-prize">💰 ${h.coin_reward}</span>` : '';
+      const label = champ ? (isCup ? 'CUP WINNERS' : 'CHAMPIONS') : `${ORDINAL(h.final_pos)} place`;
+      const medal = champ ? (isCup ? '🏆' : '🥇') : ORDINAL(h.final_pos);
       return `<div class="honour-row${champ ? ' champ' : ''}">`
-        + `<span class="hr-medal">${champ ? '🏆' : ORDINAL(h.final_pos)}</span>`
-        + `<span class="hr-main"><b>Season ${h.season_number}</b> · ${h.tier}</span>`
-        + `<span class="hr-fin">${champ ? 'CHAMPION' : `${ORDINAL(h.final_pos)} place`}</span>${prize}</div>`;
+        + `<span class="hr-medal">${medal}</span>`
+        + `<span class="hr-main"><b>Season ${h.season_number}</b> · ${h.tier}${isCup ? ' · Cup' : ''}</span>`
+        + `<span class="hr-fin">${label}</span>${prize}</div>`;
     }).join('');
+    return cabinet + `<div class="honour-history-title">Full record</div>` + history;
+  }
+
+  /** Trophy Cabinet — one gleaming trophy per championship (league title or cup win),
+   *  its shine escalating with the league tier it was won at. */
+  private renderTrophyCabinet(trophies: HonourRow[]): string {
+    if (!trophies.length) {
+      return '<div class="trophy-cabinet empty"><div class="tc-shelf"></div>'
+        + '<div class="muted tc-empty">Your cabinet is bare. Win your pod\'s league or lift the Pod Cup to fill these shelves — the higher the division, the more your silverware gleams.</div></div>';
+    }
+    // Grouped onto shelves of up to 4 trophies each (newest first).
+    const cards = trophies.map((h) => this.trophyCardHtml(h));
+    const shelves: string[] = [];
+    for (let i = 0; i < cards.length; i += 4) {
+      shelves.push(`<div class="tc-row">${cards.slice(i, i + 4).join('')}</div><div class="tc-shelf"></div>`);
+    }
+    const count = trophies.length;
+    return `<div class="trophy-cabinet"><div class="tc-header">🏆 Trophy Cabinet <span class="tc-count">${count} ${count === 1 ? 'trophy' : 'trophies'}</span></div>${shelves.join('')}</div>`;
+  }
+
+  private trophyCardHtml(h: HonourRow): string {
+    const idx = tierIndexOf(h.tier);
+    const grade = trophyGrade(idx);
+    const isCup = h.kind === 'cup';
+    const kindLabel = isCup ? 'Pod Cup' : 'League Title';
+    const sparkles = grade === 'legend' || grade === 'diamond'
+      ? '<span class="tc-spark s1">✦</span><span class="tc-spark s2">✧</span><span class="tc-spark s3">✦</span>' : '';
+    return `<div class="trophy-card grade-${grade} ${isCup ? 'cup' : 'league'}" title="${h.tier} ${kindLabel}, Season ${h.season_number}">`
+      + `<div class="tc-glow"></div>${sparkles}`
+      + `<div class="tc-cup">🏆</div>`
+      + `<div class="tc-kind">${kindLabel}</div>`
+      + `<div class="tc-tier">${h.tier}</div>`
+      + `<div class="tc-season">Season ${h.season_number}</div></div>`;
   }
 
   private async loadCup() {
@@ -549,8 +600,114 @@ class Game {
       Array.from($('trial-pool').querySelectorAll('button[data-idx]')).forEach((b) =>
         b.addEventListener('click', () => this.signTrial(Number((b as HTMLElement).dataset.idx))));
       this.renderScoutPanel(st.opp, st.player, st.nft.enabled);
+      await this.loadMissions();
     } catch {
       $('trial-pool').innerHTML = '<div class="muted">Could not load — is the server running?</div>';
+    }
+  }
+
+  // ── Scouting Network: destinations + dispatched trips (sealed → travel → reveal) ──
+  private missionTimer: number | null = null;
+  private async loadMissions() {
+    try {
+      const d = await api.missions();
+      $('trips-per').textContent = String(d.tripsPerSeason);
+      $('trips-used').textContent = String(d.tripsUsed);
+      const canDispatch = d.tripsLeft > 0;
+      $('scout-destinations').innerHTML = d.destinations.map((dest, i) => {
+        const risk = Math.min(4, i); // 0 (parks) … 4 (wonderkid) → escalating frame
+        const hit = Math.round(dest.hitRate * 100);
+        const up = Math.round(dest.upgradeChance * 100);
+        const w = dest.weights;
+        const seg = (k: string) => `<i class="b-${k}" style="width:${Math.round((w[k] ?? 0) * 100)}%"></i>`;
+        const upPill = up > 0 ? `<span class="pill up">↑ ${up}% upgrade</span>` : '';
+        return `<div class="dest risk-${risk}">`
+          + `<div class="dh"><span class="d-name">${dest.name}</span><span class="d-travel">🕓 ${this.travelLabel(dest.travelMins)}</span></div>`
+          + `<div class="d-blurb">${dest.blurb}</div>`
+          + `<div class="d-odds"><span class="pill hit">🎯 <b>${hit}%</b> sign a player</span>${upPill}</div>`
+          + `<div class="d-band" title="quality mix if a player is found">${seg('raw')}${seg('squad')}${seg('quality')}${seg('gem')}</div>`
+          + `<button class="dispatch" data-dest="${dest.id}" ${canDispatch ? '' : 'disabled'}>${canDispatch ? 'Send scout ▶' : 'No trips left'}</button>`
+          + `</div>`;
+      }).join('');
+      Array.from($('scout-destinations').querySelectorAll('button[data-dest]')).forEach((b) =>
+        b.addEventListener('click', () => this.dispatchScout((b as HTMLElement).dataset.dest!)));
+      this.renderMissions(d);
+    } catch { /* leave missions empty on error */ }
+  }
+
+  private travelLabel(mins: number): string {
+    if (mins < 60) return `${mins}m`;
+    const h = mins / 60;
+    return Number.isInteger(h) ? `${h}h` : `${h.toFixed(1)}h`;
+  }
+
+  private renderMissions(d: MissionsData) {
+    const capReached = d.loaneeCount >= d.loaneeCap;
+    const now = Date.now();
+    const rows = d.missions.map((m) => {
+      if (!m.revealed) {
+        return `<div class="mission travelling" data-ready="${m.readyAt}" data-id="${m.id}">`
+          + `<span class="m-dest">🌍 ${m.destName}</span>`
+          + `<span class="m-prospect m-status"><span class="m-spinner">⚙️</span> Scout travelling — returns in <b class="m-count">${humanizeMs(m.readyInMs)}</b></span></div>`;
+      }
+      if (!m.found || !m.player) {
+        return `<div class="mission miss" data-id="${m.id}">`
+          + `<span class="m-dest">🌍 ${m.destName}</span>`
+          + `<span class="m-prospect"><span class="muted">Came back empty-handed — no one worth signing.</span></span></div>`;
+      }
+      const p = m.player;
+      const signed = m.status === 'signed';
+      const action = signed ? '<span class="tr-done" style="font-family:var(--display);font-size:9px;color:var(--good)">✓ Signed</span>'
+        : capReached ? '<span class="muted">loanee cap</span>'
+        : `<button class="sign-m" data-mid="${m.id}">Sign ▶</button>`;
+      return `<div class="mission hit" data-id="${m.id}">`
+        + `<span class="m-dest">🌍 ${m.destName}</span>`
+        + `<span class="m-band band-${m.band}">${(m.band ?? '').toUpperCase()}</span>`
+        + `<span class="m-prospect"><span class="m-role role-${p.role}">${p.role}</span>`
+        + `<span class="m-name">${p.name}</span><span class="m-ovr">${p.overall}</span></span>${action}</div>`;
+    }).join('');
+    $('missions-active').innerHTML = rows;
+    Array.from($('missions-active').querySelectorAll('button[data-mid]')).forEach((b) =>
+      b.addEventListener('click', () => this.signMission((b as HTMLElement).dataset.mid!)));
+    this.startMissionTicker(now);
+  }
+
+  /** Live-count the travelling trips; when one lands, reload to reveal the prospect. */
+  private startMissionTicker(_now: number) {
+    if (this.missionTimer) { clearInterval(this.missionTimer); this.missionTimer = null; }
+    const travelling = Array.from(document.querySelectorAll('.mission.travelling')) as HTMLElement[];
+    if (!travelling.length) return;
+    this.missionTimer = window.setInterval(() => {
+      const t = Date.now();
+      let anyLanded = false;
+      for (const el of Array.from(document.querySelectorAll('.mission.travelling')) as HTMLElement[]) {
+        const ready = Number(el.dataset.ready);
+        const rem = ready - t;
+        if (rem <= 0) { anyLanded = true; continue; }
+        const c = el.querySelector('.m-count'); if (c) c.textContent = humanizeMs(rem);
+      }
+      if (anyLanded) { clearInterval(this.missionTimer!); this.missionTimer = null; this.loadMissions(); }
+    }, 1000);
+  }
+
+  private async dispatchScout(destination: string) {
+    try {
+      const r = await api.dispatchScout(destination);
+      toast(`Scout dispatched to ${r.mission.destName} 🌍`);
+      await this.loadMissions();
+    } catch (e: any) {
+      toast(e?.status === 409 ? 'No scouting trips left this season' : 'Could not dispatch scout');
+    }
+  }
+
+  private async signMission(id: string) {
+    try {
+      const r = await api.signMission(id);
+      toast(`Signed ${r.player.name} ✓`);
+      this.setMe(await api.me());
+      await this.showScouting();
+    } catch (e: any) {
+      toast(e?.status === 409 ? (String(e?.body?.error ?? '').includes('travel') ? 'Your scout is still travelling' : 'You\'ve hit your loanee limit') : 'Could not sign');
     }
   }
 

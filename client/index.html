@@ -197,6 +197,70 @@
       .honour-row .hr-fin { font-family: var(--display); font-size: 9px; color: var(--cyan); }
       .honour-row.champ .hr-fin { color: var(--warn); }
       .honour-row .hr-prize { font-family: var(--display); font-size: 9px; color: var(--warn); min-width: 66px; text-align: right; }
+      .honour-history-title { font-family: var(--display); font-size: 10px; color: var(--muted); margin: 18px 0 6px; letter-spacing: 1px; }
+      /* ===== Trophy Cabinet ===== */
+      .trophy-cabinet { margin-bottom: 8px; padding: 14px; border-radius: 10px;
+        background: linear-gradient(180deg, #12101c 0%, #0b0a13 100%); border: 1px solid var(--line);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.03); }
+      .trophy-cabinet .tc-header { font-family: var(--display); font-size: 12px; color: var(--warn);
+        letter-spacing: 1px; margin-bottom: 12px; display: flex; align-items: center; gap: 10px; }
+      .trophy-cabinet .tc-count { font-size: 8px; color: var(--muted); background: rgba(255,255,255,0.05);
+        padding: 3px 7px; border-radius: 10px; }
+      .trophy-cabinet.empty .tc-empty { font-size: 13px; padding: 10px 4px 2px; line-height: 1.5; }
+      .tc-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+      @media (max-width: 620px) { .tc-row { grid-template-columns: repeat(2, 1fr); } }
+      .tc-shelf { height: 10px; margin: 0 -4px 14px; border-radius: 3px;
+        background: linear-gradient(180deg, #3a2f1a, #241d10);
+        box-shadow: 0 6px 10px -4px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.06); }
+      .tc-shelf:last-child { margin-bottom: 0; }
+      .trophy-card { position: relative; overflow: hidden; text-align: center; padding: 14px 8px 12px;
+        border-radius: 9px; border: 1px solid var(--line); background: #0d0c16; isolation: isolate; }
+      .trophy-card .tc-cup { font-size: 40px; line-height: 1; filter: grayscale(0.1); position: relative; z-index: 2; }
+      .trophy-card .tc-kind { font-family: var(--display); font-size: 8px; margin-top: 6px; letter-spacing: 0.5px; position: relative; z-index: 2; }
+      .trophy-card .tc-tier { font-family: var(--display); font-size: 9px; margin-top: 4px; position: relative; z-index: 2; }
+      .trophy-card .tc-season { font-size: 10px; color: var(--muted); margin-top: 3px; position: relative; z-index: 2; }
+      .trophy-card .tc-glow { position: absolute; inset: 0; z-index: 0; opacity: 0.5; }
+      .trophy-card.cup .tc-cup { filter: none; }
+      /* grade escalation: bronze → silver → gold → diamond → legend */
+      .grade-bronze { border-color: #8a5a33; }
+      .grade-bronze .tc-cup { filter: sepia(1) saturate(1.5) hue-rotate(-18deg) brightness(0.9); }
+      .grade-bronze .tc-kind { color: #c88a55; }
+      .grade-bronze .tc-tier { color: #a9754a; }
+      .grade-bronze .tc-glow { background: radial-gradient(circle at 50% 30%, rgba(180,110,60,0.22), transparent 65%); }
+      .grade-silver { border-color: #9aa4b0; }
+      .grade-silver .tc-cup { filter: grayscale(0.6) brightness(1.25); }
+      .grade-silver .tc-kind { color: #cfd8e2; }
+      .grade-silver .tc-tier { color: #aeb8c4; }
+      .grade-silver .tc-glow { background: radial-gradient(circle at 50% 30%, rgba(200,210,225,0.22), transparent 65%); }
+      .grade-gold { border-color: #d8a72a; }
+      .grade-gold .tc-kind { color: #ffcf3a; }
+      .grade-gold .tc-tier { color: #e8bd52; }
+      .grade-gold .tc-glow { background: radial-gradient(circle at 50% 30%, rgba(255,206,58,0.28), transparent 65%); }
+      .grade-gold .tc-cup { filter: drop-shadow(0 0 6px rgba(255,206,58,0.6)); }
+      .grade-diamond { border-color: #45d6e0; box-shadow: 0 0 14px -4px rgba(69,214,224,0.5); }
+      .grade-diamond .tc-kind { color: #7ff0f8; }
+      .grade-diamond .tc-tier { color: #a6f4fa; }
+      .grade-diamond .tc-glow { background: radial-gradient(circle at 50% 30%, rgba(69,214,224,0.3), transparent 62%); animation: tcPulse 3s ease-in-out infinite; }
+      .grade-diamond .tc-cup { filter: drop-shadow(0 0 8px rgba(120,235,245,0.75)); }
+      .grade-legend { border-color: #c774ff;
+        box-shadow: 0 0 22px -3px rgba(199,116,255,0.6), inset 0 0 18px -8px rgba(255,206,58,0.4);
+        background: linear-gradient(155deg, #16101f, #0d0c16 60%); }
+      .grade-legend .tc-kind { color: #ffd76a; }
+      .grade-legend .tc-tier { color: #e6b3ff; }
+      .grade-legend .tc-glow { background:
+        radial-gradient(circle at 50% 28%, rgba(255,206,58,0.35), transparent 55%),
+        conic-gradient(from 0deg, rgba(199,116,255,0.25), rgba(69,214,224,0.25), rgba(255,206,58,0.25), rgba(199,116,255,0.25));
+        opacity: 0.75; animation: tcSpin 8s linear infinite; }
+      .grade-legend .tc-cup { filter: drop-shadow(0 0 10px rgba(255,215,106,0.9)); animation: tcFloat 3.5s ease-in-out infinite; }
+      .tc-spark { position: absolute; z-index: 3; font-size: 11px; color: #fff; opacity: 0; pointer-events: none;
+        text-shadow: 0 0 6px rgba(255,255,255,0.9); animation: tcSparkle 2.4s ease-in-out infinite; }
+      .tc-spark.s1 { top: 10px; left: 14px; animation-delay: 0s; }
+      .tc-spark.s2 { top: 22px; right: 12px; animation-delay: 0.8s; }
+      .tc-spark.s3 { bottom: 30px; left: 22px; animation-delay: 1.6s; }
+      @keyframes tcSparkle { 0%,100% { opacity: 0; transform: scale(0.6); } 50% { opacity: 1; transform: scale(1.1); } }
+      @keyframes tcPulse { 0%,100% { opacity: 0.28; } 50% { opacity: 0.42; } }
+      @keyframes tcSpin { to { transform: rotate(360deg); } }
+      @keyframes tcFloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
       /* cup bracket */
       .cup-champ { font-family: var(--display); font-size: 11px; color: var(--warn); text-align: center; padding: 8px;
         border: 2px solid var(--warn); border-radius: 6px; background: rgba(255,206,58,0.1); margin-bottom: 8px; }
@@ -341,6 +405,51 @@
       .trial .tr-done { font-family: var(--display); font-size: 9px; color: var(--good); }
       .zone-legend { display: flex; gap: 16px; font-size: 14px; margin: 8px 2px 2px; color: #8aa; }
       .zone-legend .lg-promo { color: var(--good); } .zone-legend .lg-releg { color: var(--home); }
+
+      /* ===== Scouting Network ===== */
+      #scout-destinations { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
+      @media (max-width: 640px) { #scout-destinations { grid-template-columns: 1fr; } }
+      .dest { border: 2px solid var(--line); border-radius: 8px; padding: 12px; background: var(--panel-2);
+        display: flex; flex-direction: column; gap: 8px; position: relative; }
+      .dest.risk-4 { border-color: #c774ff; box-shadow: inset 0 0 20px -12px rgba(199,116,255,0.7); }
+      .dest.risk-3 { border-color: #45d6e0; }
+      .dest.risk-2 { border-color: #d8a72a; }
+      .dest .dh { display: flex; align-items: center; gap: 8px; }
+      .dest .dh .d-name { font-family: var(--display); font-size: 11px; color: #fff; }
+      .dest .dh .d-travel { margin-left: auto; font-size: 11px; color: #778; }
+      .dest .d-blurb { font-size: 13px; color: #99a; line-height: 1.4; min-height: 34px; }
+      .dest .d-odds { display: flex; gap: 8px; flex-wrap: wrap; }
+      .dest .d-odds .pill { font-family: var(--display); font-size: 8px; padding: 4px 7px; border-radius: 10px; border: 1px solid var(--line); color: #ccd; }
+      .dest .d-odds .pill b { color: #fff; }
+      .dest .d-odds .pill.hit { border-color: var(--good); }
+      .dest .d-odds .pill.up { border-color: var(--warn); color: var(--warn); }
+      .dest .d-band { display: flex; height: 8px; border-radius: 4px; overflow: hidden; border: 1px solid var(--line); }
+      .dest .d-band i { display: block; }
+      .dest .d-band .b-raw { background: #556; } .dest .d-band .b-squad { background: var(--df); }
+      .dest .d-band .b-quality { background: var(--good); } .dest .d-band .b-gem { background: var(--warn); }
+      .dest button.dispatch { font-family: var(--display); font-size: 9px; padding: 8px; cursor: pointer;
+        background: var(--accent, #2b6); color: #fff; border: none; border-radius: 5px; }
+      .dest button.dispatch:disabled { opacity: 0.4; cursor: not-allowed; }
+      #missions-active { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+      .mission { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 2px solid var(--line);
+        border-radius: 7px; background: rgba(0,0,0,0.22); font-size: 15px; }
+      .mission .m-dest { font-family: var(--display); font-size: 9px; color: #aab; min-width: 120px; }
+      .mission.travelling { border-style: dashed; }
+      .mission.travelling .m-status { color: var(--cyan); font-size: 13px; }
+      .mission .m-spinner { animation: spin 1.4s linear infinite; display: inline-block; }
+      @keyframes spin { to { transform: rotate(360deg); } }
+      .mission.hit { border-color: var(--good); }
+      .mission.miss { opacity: 0.6; }
+      .mission .m-prospect { flex: 1; display: flex; align-items: center; gap: 10px; }
+      .mission .m-prospect .m-role { font-family: var(--display); font-size: 9px; width: 30px; text-align: center; }
+      .mission .m-prospect .m-role.role-GK { color: var(--gk); } .mission .m-prospect .m-role.role-DF { color: var(--df); }
+      .mission .m-prospect .m-role.role-MF { color: var(--mf); } .mission .m-prospect .m-role.role-FW { color: var(--fw); }
+      .mission .m-prospect .m-name { color: #fff; } .mission .m-prospect .m-ovr { font-family: var(--display); font-size: 12px; color: var(--good); }
+      .mission .m-band { font-family: var(--display); font-size: 8px; padding: 3px 7px; border: 1px solid; border-radius: 4px; }
+      .mission .m-band.band-raw { color: #8aa; border-color: #556; } .mission .m-band.band-squad { color: var(--df); border-color: var(--df); }
+      .mission .m-band.band-quality { color: var(--good); border-color: var(--good); } .mission .m-band.band-gem { color: var(--warn); border-color: var(--warn); }
+      .mission button.sign-m { font-family: var(--display); font-size: 9px; padding: 7px 12px; cursor: pointer; background: var(--good); color: #06210f; border: none; border-radius: 5px; }
+      .mission button.sign-m:disabled { opacity: 0.4; }
 
       /* lineup editor */
       #lineup .tacrow { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
@@ -580,6 +689,11 @@
         <h4 class="scout-h4">TRIAL POOL</h4>
         <div class="scout-sub">Sign up to <b id="loan-cap">3</b> loanees this season (<span id="loan-signed">0</span> signed). They play this season only, then leave — better players turn up rarely.</div>
         <div id="trial-pool"></div>
+
+        <h4 class="scout-h4" style="margin-top:22px;">🌍 SCOUTING NETWORK</h4>
+        <div class="scout-sub">Send your scout on a trip. Each place trades <b>how often</b> anyone signs against <b>how good</b> they might be — a far-flung academy rarely delivers, but when it does, it delivers. You get <b id="trips-per">3</b> trips a season (<span id="trips-used">0</span> used). Results are sealed the moment you dispatch and revealed once your scout travels back. A higher <b>Player Scout</b> tier lifts every trip's odds.</div>
+        <div id="missions-active"></div>
+        <div id="scout-destinations"></div>
       </div>
 
       <!-- TRANSFER MARKET -->

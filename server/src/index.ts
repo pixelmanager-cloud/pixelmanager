@@ -6,6 +6,8 @@ import { db, type Account, type StandingOrders, type Listing } from './db.js';
 import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMATIONS } from './game.js';
 import { hashPassword, verifyPassword } from './auth.js';
 import { generatePool, trialistAt, LOANEE_CAP, OPP_REVEAL, describeIntel, type OppTier } from './scouting.js';
+import { DESTINATIONS, destinationById, rollMission, travelMs, previewOdds, TRIPS_PER_SEASON } from './missions.js';
+import type { Player } from '@fm/shared';
 import { viewerTiers, scoutNftInfo } from './scoutnft.js';
 import { computeCup, type SquadMap } from './cup.js';
 import type { PlayerScoutTier } from './market.js';
@@ -381,6 +383,82 @@ app.post('/scout/trials/:index/sign', { preHandler: requireAuth }, async (req, r
   return { ok: true, player: { name: player.name, role: player.role }, signedCount: (await db.countLoanees(meId, s.id)) };
 });
 
+// ── Scouting Network: dispatch a player-scout to a destination (risk/reward), then
+// wait out the travel time before the sealed result reveals. Trips are capped per
+// season; your player-scout NFT tier lifts the odds. ────────────────────────────
+/** Serialise a stored trip for the client, hiding the outcome until travel completes. */
+function missionView(m: import('./store.js').MissionRow, now: number) {
+  const dest = destinationById(m.destination);
+  const revealed = now >= m.ready_at || m.status === 'signed';
+  const player = revealed && m.found && m.player_json ? JSON.parse(m.player_json) as Player : null;
+  return {
+    id: m.id, destination: m.destination, destName: dest?.name ?? m.destination,
+    dispatchedAt: m.dispatched_at, readyAt: m.ready_at, readyInMs: Math.max(0, m.ready_at - now),
+    revealed, status: m.status, found: revealed ? !!m.found : null, band: revealed ? m.band : null,
+    player: player ? { id: player.id, name: player.name, role: player.role, overall: overall(player), attrs: player.attrs } : null,
+  };
+}
+
+app.get('/scout/missions', { preHandler: requireAuth }, async (req) => {
+  const meId = req.account!.id;
+  const s = await ensureSeason(db, Date.now());
+  const [tiers, trips, count, loaneeCount] = await Promise.all([
+    viewerTiers(await db.walletOf(meId)), db.missionsInSeason(meId, s.id),
+    db.countMissionsInSeason(meId, s.id), db.countLoanees(meId, s.id),
+  ]);
+  const now = Date.now();
+  const destinations = DESTINATIONS.map((d) => ({
+    id: d.id, name: d.name, blurb: d.blurb, weights: d.weights, travelMins: d.travelMins,
+    ...previewOdds(d, tiers.player),
+  }));
+  return {
+    season: s.number, tier: tiers.player, tripsPerSeason: TRIPS_PER_SEASON, tripsUsed: count,
+    tripsLeft: Math.max(0, TRIPS_PER_SEASON - count), loaneeCap: LOANEE_CAP, loaneeCount,
+    destinations, missions: trips.map((m) => missionView(m, now)),
+  };
+});
+
+app.post('/scout/missions', { preHandler: requireAuth }, async (req, reply) => {
+  const meId = req.account!.id;
+  const s = await ensureSeason(db, Date.now());
+  const dest = destinationById(String((req.body as any)?.destination ?? ''));
+  if (!dest) return reply.code(400).send({ error: 'unknown destination' });
+  if (await db.countMissionsInSeason(meId, s.id) >= TRIPS_PER_SEASON) {
+    return reply.code(409).send({ error: `you can dispatch at most ${TRIPS_PER_SEASON} scouting trips a season` });
+  }
+  const tiers = await viewerTiers(await db.walletOf(meId));
+  const id = randomUUID();
+  const outcome = rollMission(id, dest, tiers.player); // sealed now, revealed after travel
+  const now = Date.now();
+  const row = {
+    id, account_id: meId, season_id: s.id, destination: dest.id,
+    dispatched_at: now, ready_at: now + travelMs(dest),
+    found: outcome.found ? 1 : 0, player_json: outcome.player ? JSON.stringify(outcome.player) : null,
+    band: outcome.band, status: 'travelling',
+  };
+  await db.createMission(row);
+  return { ok: true, mission: missionView(row, now) }; // travelling → outcome stays hidden
+});
+
+app.post('/scout/missions/:id/sign', { preHandler: requireAuth }, async (req, reply) => {
+  const meId = req.account!.id;
+  const s = await ensureSeason(db, Date.now());
+  const m = await db.missionById(String((req.params as any).id));
+  if (!m || m.account_id !== meId) return reply.code(404).send({ error: 'no such trip' });
+  if (m.status === 'signed') return reply.code(409).send({ error: 'already signed' });
+  if (Date.now() < m.ready_at) return reply.code(409).send({ error: 'the scout is still travelling' });
+  if (!m.found || !m.player_json) return reply.code(409).send({ error: 'that trip came back empty-handed' });
+  if (await db.countLoanees(meId, s.id) >= LOANEE_CAP) return reply.code(409).send({ error: `you can field at most ${LOANEE_CAP} loanees a season` });
+  const player = JSON.parse(m.player_json) as Player;
+  const c = await db.getClub(meId);
+  if (!c) return reply.code(404).send({ error: 'club not found' });
+  if (!c.club.players.some((p) => p.id === player.id)) c.club.players.push(player);
+  await db.saveClub(meId, c.club, c.standingOrders);
+  await db.addLoanee(meId, s.id, player.id);
+  await db.setMissionSigned(m.id);
+  return { ok: true, player: { name: player.name, role: player.role }, signedCount: (await db.countLoanees(meId, s.id)) };
+});
+
 // ── Transfer market (in-game coins) ──────────────────────────────────────────
 // Browse listings (stats shown through your player-scout tier), your own listings,
 // and your coin balance.
@@ -405,7 +483,7 @@ app.post('/market/list', { preHandler: requireAuth }, async (req, reply) => {
   if (!c) return reply.code(404).send({ error: 'club not found' });
   const player = c.club.players.find((p) => p.id === playerId);
   if (!player) return reply.code(404).send({ error: 'you do not own that player' });
-  if (player.id.startsWith('loan-')) return reply.code(409).send({ error: 'loanees cannot be sold' });
+  if (player.id.startsWith('loan-') || player.id.startsWith('scout-')) return reply.code(409).send({ error: 'loanees cannot be sold' });
   if (c.club.players.length <= MIN_SQUAD) return reply.code(409).send({ error: `you must keep at least ${MIN_SQUAD} players` });
   if (await db.activeListingForPlayer(playerId)) return reply.code(409).send({ error: 'that player is already listed' });
   const id = randomUUID();

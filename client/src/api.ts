@@ -42,7 +42,17 @@ export interface Scout {
   tier: 'base' | 'bronze' | 'silver' | 'gold'; reveal: ScoutReveal; intel: string | null; players: ScoutPlayer[];
 }
 export interface Trialist { index: number; id: string; name: string; role: string; overall: number; band: 'raw' | 'squad' | 'quality' | 'gem'; signed: boolean }
-export interface HonourRow { season_number: number; tier: string; final_pos: number; title: number; ended_at: number; coin_reward?: number }
+export interface ScoutDestination { id: string; name: string; blurb: string; hitRate: number; upgradeChance: number; weights: Record<string, number>; travelMins: number }
+export interface MissionProspect { id: string; name: string; role: string; overall: number; attrs: Record<string, number> }
+export interface Mission {
+  id: string; destination: string; destName: string; dispatchedAt: number; readyAt: number; readyInMs: number;
+  revealed: boolean; status: string; found: boolean | null; band: string | null; player: MissionProspect | null;
+}
+export interface MissionsData {
+  season: number; tier: string; tripsPerSeason: number; tripsUsed: number; tripsLeft: number;
+  loaneeCap: number; loaneeCount: number; destinations: ScoutDestination[]; missions: Mission[];
+}
+export interface HonourRow { season_number: number; tier: string; final_pos: number; title: number; ended_at: number; coin_reward?: number; kind?: string }
 export interface CupTie { homeId: string; awayId: string; homeHandle: string; awayHandle: string; homeScore: number; awayScore: number; pens: [number, number] | null; winnerId: string }
 export interface CupRound { name: string; ties: CupTie[]; byes: { id: string; handle: string }[] }
 export interface CupData { season: number; tier: string; pod: number; me: string; size: number; rounds: CupRound[]; championId: string | null; championHandle: string }
@@ -73,6 +83,9 @@ export const api = {
   plan: (opponentId: string) => req<{ plan: StandingOrders | null }>(`/plan/${opponentId}`),
   trials: () => req<{ season: number; cap: number; signedCount: number; pool: Trialist[] }>('/scout/trials'),
   signTrial: (index: number) => req<{ ok: true; player: { name: string; role: string }; signedCount: number }>(`/scout/trials/${index}/sign`, { method: 'POST' }),
+  missions: () => req<MissionsData>('/scout/missions'),
+  dispatchScout: (destination: string) => req<{ ok: true; mission: Mission }>('/scout/missions', { method: 'POST', body: JSON.stringify({ destination }) }),
+  signMission: (id: string) => req<{ ok: true; player: { name: string; role: string }; signedCount: number }>(`/scout/missions/${id}/sign`, { method: 'POST' }),
   standings: () => req<{ season: { number: number; endsAt: number }; tier: string; pod: number; promote: number; relegate: number; table: TableRow[] }>('/standings'),
   honours: () => req<{ honours: HonourRow[] }>('/honours'),
   cup: () => req<CupData>('/cup'),

@@ -8,6 +8,7 @@ import type { Store, Season, PodRef } from './store.js';
 import { buildTable, runMatch, elo, validateLineup } from './game.js';
 import { seasonPlacementReward } from './market.js';
 import { ownedPlayers } from './nft.js';
+import { computeCup, type SquadMap } from './cup.js';
 
 /** Merge a club with the star NFTs its linked wallet owns (read-only). */
 async function withNfts(db: Store, accountId: string, c: { club: any; standingOrders: any }): Promise<typeof c> {
@@ -23,6 +24,9 @@ const SEASON_MS = Math.max(1, Number(process.env.SEASON_DAYS ?? 7)) * 24 * 60 * 
 export const POD_SIZE = Math.max(2, Number(process.env.POD_SIZE ?? 20));
 export const PROMOTE = 3;
 export const RELEGATE = 3;
+/** Cup champion prize, scaled by tier (Sunday League → World Class). */
+export const CUP_PRIZE_BASE = 200;
+export const CUP_PRIZE_STEP = 120;
 /** soft daily cap: matches a manager can actively start per UTC day (rest auto-resolve at season end).
  *  Default 6 pairs with a 38-fixture double round-robin (6×7=42 ≥ 38, so a diligent manager finishes). */
 export const MATCHES_PER_DAY = Math.max(1, Number(process.env.MATCHES_PER_DAY ?? 6));
@@ -151,11 +155,27 @@ async function rollover(db: Store, s: Season, now: number): Promise<void> {
       // season prize money by placement (the coin sink that becomes an ERC-20 payout later)
       const reward = seasonPlacementReward(tierIdx, i + 1, ranked.length, promoted);
       await db.addCoins(acct.id, reward);
-      await db.addHonour(acct.id, s.id, s.number, tier, i + 1, i === 0 ? 1 : 0, now, reward);
+      await db.addHonour(acct.id, s.id, s.number, tier, i + 1, i === 0 ? 1 : 0, now, reward, 'league');
       let newIdx = tierIdx;
       if (promoted) newIdx = tierIdx + 1;
       else if (bigEnough && i >= ranked.length - RELEGATE && tierIdx > 0) newIdx = tierIdx - 1;
       if (newIdx !== tierIdx) await db.setTier(acct.id, TIERS[newIdx]);
+    }
+
+    // Cup: crown the pod's knockout champion and pay a tier-scaled prize (a real
+    // second trophy to chase alongside the league). Only where a real cup ran.
+    if (members.length >= 2) {
+      const clubs: SquadMap = new Map();
+      for (const m of members) {
+        const c = await db.getClub(m.id);
+        if (c) clubs.set(m.id, await withNfts(db, m.id, c));
+      }
+      const cup = computeCup(s.number, members, clubs);
+      if (cup.championId) {
+        const prize = CUP_PRIZE_BASE + tierIdx * CUP_PRIZE_STEP;
+        await db.addCoins(cup.championId, prize);
+        await db.addHonour(cup.championId, s.id, s.number, tier, 1, 1, now, prize, 'cup');
+      }
     }
   }
   await expireLoanees(db, s.id);
