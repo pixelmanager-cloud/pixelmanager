@@ -191,14 +191,30 @@ export class MatchEngine {
       const dir = this.attackDir(teamIdx);
       const pressSet = attacking ? new Set<number>() : this.pressers(teamIdx);
 
+      // emergency box defence: if an opponent is carrying near OUR goal, the closest
+      // outfielder collapses onto the ball regardless of the press setting — you never
+      // leave a striker camped unmarked in your own box (which used to let attackers
+      // loiter on the goal line). Fixes the loiter via pressure, not extra shots.
+      let emergency = -1;
+      if (!attacking && s.carrier) {
+        const ourGoal = this.goalOf((1 - teamIdx) as 0 | 1);
+        if (Math.hypot(s.ball.x - ourGoal.x, s.ball.y - ourGoal.y) < 20) {
+          let nd = Infinity;
+          for (let i = 1; i < 11; i++) {
+            const d = Math.hypot(s.players[teamIdx][i].x - s.ball.x, s.players[teamIdx][i].y - s.ball.y);
+            if (d < nd) { nd = d; emergency = i; }
+          }
+        }
+      }
+
       s.players[teamIdx].forEach((ps, i) => {
         if (s.carrier && s.carrier.teamIdx === teamIdx && s.carrier.playerIdx === i) return; // carrier handled separately
         const p = this.teams[teamIdx].players[i];
         const eff = fit(ps.fitness);
         const speed = (1.8 + norm(p.attrs.pace) * 3.6) * eff * TICK_SEC;
 
-        // pressers/loose-ball chasers run straight at the ball
-        if (pressSet.has(i)) {
+        // pressers/loose-ball chasers (and the emergency box defender) run at the ball
+        if (pressSet.has(i) || i === emergency) {
           this.stepToward(ps, s.ball.x, s.ball.y, speed * 1.1);
           this.drain(ps, p, mods, 1.5);
           return;
@@ -286,6 +302,10 @@ export class MatchEngine {
       }
     }
 
+    // point-blank finish — a carrier who has got in front of goal in space SHOOTS
+    // promptly rather than loitering on the goal line (they used to just dribble in
+    // little circles because the range-shot chance is tiny). Gated on a clear-ish
+    // central spot with room, so a crowded six-yard box still plays out.
     // shoot from range — likelier the closer/more central and the better the shooter,
     // so players rarely waste hopeful long shots (which keeps shot volume realistic)
     if (distGoal < SHOOT_RANGE) {
