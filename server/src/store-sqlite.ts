@@ -48,6 +48,7 @@ export function makeSqliteStore(file: string): Store {
       try { db.exec('ALTER TABLE accounts ADD COLUMN tier TEXT'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE accounts ADD COLUMN password_hash TEXT'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE accounts ADD COLUMN coins INTEGER NOT NULL DEFAULT 500'); } catch { /* already added */ }
+      try { db.exec('ALTER TABLE honours ADD COLUMN coin_reward INTEGER NOT NULL DEFAULT 0'); } catch { /* already added */ }
     },
     async createAccount(id, handle, token, createdAt, passwordHash) {
       db.prepare('INSERT INTO accounts (id, handle, token, rating, created_at, password_hash) VALUES (?,?,?,1000,?,?)').run(id, handle, token, createdAt, passwordHash);
@@ -187,12 +188,12 @@ export function makeSqliteStore(file: string): Store {
       const r = db.prepare('SELECT COUNT(*) AS c FROM matches WHERE initiator_id=? AND season_id=? AND created_at>=?').get(accountId, seasonId, sinceMs) as any;
       return r ? r.c : 0;
     },
-    async addHonour(accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt) {
-      db.prepare('INSERT INTO honours (account_id, season_id, season_number, tier, final_pos, title, ended_at) VALUES (?,?,?,?,?,?,?)')
-        .run(accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt);
+    async addHonour(accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt, coinReward) {
+      db.prepare('INSERT INTO honours (account_id, season_id, season_number, tier, final_pos, title, ended_at, coin_reward) VALUES (?,?,?,?,?,?,?,?)')
+        .run(accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt, coinReward);
     },
     async honoursFor(accountId, limit = 30) {
-      return db.prepare('SELECT season_number, tier, final_pos, title, ended_at FROM honours WHERE account_id=? ORDER BY season_number DESC LIMIT ?').all(accountId, limit) as HonourRow[];
+      return db.prepare('SELECT season_number, tier, final_pos, title, ended_at, coin_reward FROM honours WHERE account_id=? ORDER BY season_number DESC LIMIT ?').all(accountId, limit) as HonourRow[];
     },
     async accountTier(accountId) {
       const r = db.prepare('SELECT tier FROM accounts WHERE id=?').get(accountId) as any;

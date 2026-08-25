@@ -17,7 +17,7 @@ export interface StoredMatch {
 }
 export interface Season { id: string; number: number; startsAt: number; endsAt: number; status: 'active' | 'closed' }
 /** A player's archived finish in a past season (for the honours board). */
-export interface HonourRow { season_number: number; tier: string; final_pos: number; title: number; ended_at: number }
+export interface HonourRow { season_number: number; tier: string; final_pos: number; title: number; ended_at: number; coin_reward: number }
 /** A player's placement within the division pyramid for a season (Phase B). */
 export interface PodRef { tier: string; pod: number }
 /** A transfer-market listing (a squad player put up for coins). */
@@ -75,7 +75,7 @@ export interface Store {
   seasonResults(seasonId: string): Promise<Array<{ home_id: string; away_id: string; home_score: number; away_score: number }>>;
   /** count of matches this account initiated (was home) in a season since a timestamp — for the daily cap */
   matchesToday(accountId: string, seasonId: string, sinceMs: number): Promise<number>;
-  addHonour(accountId: string, seasonId: string, seasonNumber: number, tier: string, finalPos: number, title: number, endedAt: number): Promise<void>;
+  addHonour(accountId: string, seasonId: string, seasonNumber: number, tier: string, finalPos: number, title: number, endedAt: number, coinReward: number): Promise<void>;
   honoursFor(accountId: string, limit?: number): Promise<HonourRow[]>;
   // divisions & pods (Phase B)
   accountTier(accountId: string): Promise<string>;

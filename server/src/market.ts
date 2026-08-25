@@ -42,3 +42,16 @@ export function playerScoutTier(): PlayerScoutTier {
   const t = process.env.DEV_PLAYER_TIER as PlayerScoutTier | undefined;
   return t && t in REVEAL_COUNT ? t : 'base';
 }
+
+// ── season prize money ───────────────────────────────────────────────────────
+// Paid at rollover by final pod placement. Higher divisions pay more (a reason to
+// climb). This is the coin sink that later becomes an ERC-20 payout — swap the
+// db.addCoins() call at the rollover for a token mint and keep this schedule.
+export function seasonPlacementReward(tierIndex: number, pos: number, podSize: number, promoted: boolean): number {
+  const placePts = Math.max(0, podSize - pos + 1); // 1st in a 20-pod = 20 pts, last = 1
+  let coins = 30 + placePts * 20;                   // ~50 (last) … ~430 (1st of 20)
+  if (pos === 1) coins += 200;                      // champion bonus
+  if (promoted) coins += 150;                       // promotion bonus
+  const tierMult = 1 + tierIndex * 0.3;             // e.g. Sunday League ×1.0 … World Class ×3.7
+  return Math.round(coins * tierMult);
+}

@@ -299,10 +299,11 @@ class Game {
     if (!rows.length) return '<div class="muted">No finished seasons yet — play on to make history.</div>';
     return rows.map((h) => {
       const champ = h.title === 1;
+      const prize = h.coin_reward ? `<span class="hr-prize">💰 ${h.coin_reward}</span>` : '';
       return `<div class="honour-row${champ ? ' champ' : ''}">`
         + `<span class="hr-medal">${champ ? '🏆' : ORDINAL(h.final_pos)}</span>`
         + `<span class="hr-main"><b>Season ${h.season_number}</b> · ${h.tier}</span>`
-        + `<span class="hr-fin">${champ ? 'CHAMPION' : `${ORDINAL(h.final_pos)} place`}</span></div>`;
+        + `<span class="hr-fin">${champ ? 'CHAMPION' : `${ORDINAL(h.final_pos)} place`}</span>${prize}</div>`;
     }).join('');
   }
 

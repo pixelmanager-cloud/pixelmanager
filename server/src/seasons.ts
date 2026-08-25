@@ -6,6 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { autoPickXI } from '@fm/shared';
 import type { Store, Season, PodRef } from './store.js';
 import { buildTable, runMatch, elo } from './game.js';
+import { seasonPlacementReward } from './market.js';
 
 const SEASON_MS = Math.max(1, Number(process.env.SEASON_DAYS ?? 7)) * 24 * 60 * 60 * 1000;
 export const POD_SIZE = Math.max(2, Number(process.env.POD_SIZE ?? 20));
@@ -129,9 +130,13 @@ async function rollover(db: Store, s: Season, now: number): Promise<void> {
 
     for (let i = 0; i < ranked.length; i++) {
       const acct = ranked[i];
-      await db.addHonour(acct.id, s.id, s.number, tier, i + 1, i === 0 ? 1 : 0, now);
+      const promoted = i < PROMOTE && tierIdx < TIERS.length - 1;
+      // season prize money by placement (the coin sink that becomes an ERC-20 payout later)
+      const reward = seasonPlacementReward(tierIdx, i + 1, ranked.length, promoted);
+      await db.addCoins(acct.id, reward);
+      await db.addHonour(acct.id, s.id, s.number, tier, i + 1, i === 0 ? 1 : 0, now, reward);
       let newIdx = tierIdx;
-      if (i < PROMOTE && tierIdx < TIERS.length - 1) newIdx = tierIdx + 1;
+      if (promoted) newIdx = tierIdx + 1;
       else if (bigEnough && i >= ranked.length - RELEGATE && tierIdx > 0) newIdx = tierIdx - 1;
       if (newIdx !== tierIdx) await db.setTier(acct.id, TIERS[newIdx]);
     }

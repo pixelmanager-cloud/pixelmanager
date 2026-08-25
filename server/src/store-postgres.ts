@@ -57,6 +57,7 @@ export function makePostgresStore(connectionString: string): Store {
         ALTER TABLE accounts ADD COLUMN IF NOT EXISTS tier TEXT;
         ALTER TABLE accounts ADD COLUMN IF NOT EXISTS password_hash TEXT;
         ALTER TABLE accounts ADD COLUMN IF NOT EXISTS coins INTEGER NOT NULL DEFAULT 500;
+        ALTER TABLE honours ADD COLUMN IF NOT EXISTS coin_reward INTEGER NOT NULL DEFAULT 0;
       `);
     },
     async createAccount(id, handle, token, createdAt, passwordHash) {
@@ -203,12 +204,12 @@ export function makePostgresStore(connectionString: string): Store {
       const r = (await q('SELECT COUNT(*)::int AS c FROM matches WHERE initiator_id=$1 AND season_id=$2 AND created_at>=$3', [accountId, seasonId, sinceMs])).rows[0];
       return r ? r.c : 0;
     },
-    async addHonour(accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt) {
-      await q('INSERT INTO honours (account_id, season_id, season_number, tier, final_pos, title, ended_at) VALUES ($1,$2,$3,$4,$5,$6,$7)',
-        [accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt]);
+    async addHonour(accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt, coinReward) {
+      await q('INSERT INTO honours (account_id, season_id, season_number, tier, final_pos, title, ended_at, coin_reward) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+        [accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt, coinReward]);
     },
     async honoursFor(accountId, limit = 30) {
-      return (await q('SELECT season_number, tier, final_pos, title, ended_at FROM honours WHERE account_id=$1 ORDER BY season_number DESC LIMIT $2', [accountId, limit]))
+      return (await q('SELECT season_number, tier, final_pos, title, ended_at, coin_reward FROM honours WHERE account_id=$1 ORDER BY season_number DESC LIMIT $2', [accountId, limit]))
         .rows.map((r) => ({ ...r, ended_at: Number(r.ended_at) })) as HonourRow[];
     },
     async accountTier(accountId) {

@@ -42,7 +42,7 @@ export interface Scout {
   tier: 'base' | 'bronze' | 'silver' | 'gold'; reveal: ScoutReveal; intel: string | null; players: ScoutPlayer[];
 }
 export interface Trialist { index: number; id: string; name: string; role: string; overall: number; band: 'raw' | 'squad' | 'quality' | 'gem'; signed: boolean }
-export interface HonourRow { season_number: number; tier: string; final_pos: number; title: number; ended_at: number }
+export interface HonourRow { season_number: number; tier: string; final_pos: number; title: number; ended_at: number; coin_reward?: number }
 export interface MatchPayload {
   matchId: string; seed: number; result: [number, number]; mySide: 0 | 1;
   home: { id: string; handle: string; rating?: number; team: Team; tactics: Tactics };
