@@ -72,6 +72,21 @@
         border-radius: 4px; padding: 3px 6px; }
       #me-token { font-family: var(--display); font-size: 9px; color: var(--warn); border: 1px solid var(--warn);
         border-radius: 4px; padding: 3px 6px; background: rgba(255,206,58,0.1); }
+      /* NFT mint reveal */
+      #mint-reveal { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center;
+        background: rgba(4,4,12,0.82); cursor: pointer; animation: ftfade 0.25s ease-out; }
+      #mint-reveal .ms-card { width: 440px; max-width: 92vw; background: var(--panel); border: 3px solid var(--cyan);
+        box-shadow: 0 0 0 2px #000, 0 0 26px rgba(0,229,255,0.35), 8px 8px 0 rgba(0,0,0,0.5);
+        padding: 22px 24px 24px; text-align: center; animation: ftpop 0.35s ease-out; cursor: default; }
+      #mint-reveal .ms-head { font-family: var(--display); font-size: 12px; color: var(--cyan); letter-spacing: 1px;
+        text-shadow: 0 0 12px var(--cyan); margin-bottom: 12px; }
+      #mint-reveal .ms-name { font-size: 26px; color: #fff; margin-bottom: 4px; }
+      #mint-reveal .ms-sub { font-size: 15px; color: #9ab; margin-bottom: 16px; } #mint-reveal .ms-sub b { color: var(--good); }
+      #mint-reveal .ms-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 18px; }
+      #mint-reveal .ms-stat { border: 1px solid var(--line); border-radius: 5px; padding: 6px 4px; background: var(--panel-2); }
+      #mint-reveal .ms-stat span { display: block; font-family: var(--display); font-size: 7px; color: #778; margin-bottom: 3px; }
+      #mint-reveal .ms-stat b { font-size: 18px; }
+      #mint-reveal .ms-close { font-family: var(--display); font-size: 11px; }
       #wallet-hint { font-size: 13px; margin-top: 8px; }
       #handle-input:hover, #password-input:hover { border-color: var(--cyan); }
       #handle-input:focus, #password-input:focus { border-color: var(--good); box-shadow: 3px 3px 0 rgba(0,0,0,0.6), 0 0 10px var(--good); }

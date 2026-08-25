@@ -292,15 +292,39 @@ class Game {
       }
       if (!signer) { toast('Connect a wallet to mint'); return; }
       if (signer.address.toLowerCase() !== linked) { toast(`Connect the wallet linked to this club (${short})`); return; }
+      const before = new Set(this.club.players.filter((p) => p.id.startsWith('nft:')).map((p) => p.id));
       btn.textContent = 'Minting…';
       await mintPlayer(signer);
-      toast('Minted a star player ✓ — updating squad');
-      this.setMe(await api.me()); // re-read: the new NFT is now in your squad
+      // the tx is mined; give the RPC a couple tries to reflect the new token, then name it
+      btn.textContent = 'Revealing…';
+      let minted: typeof this.club.players[number] | undefined;
+      for (let attempt = 0; attempt < 5 && !minted; attempt++) {
+        this.setMe(await api.me());
+        minted = this.club.players.filter((p) => p.id.startsWith('nft:') && !before.has(p.id)).sort((a, b) => overall(b) - overall(a))[0];
+        if (!minted) await new Promise((r) => setTimeout(r, 1500));
+      }
       await this.showHub();
+      if (minted) this.showMintReveal(minted);
+      else toast('Minted ✓ — your ★ NFT star will appear in Set My Team shortly');
     } catch (e: any) {
       const m = String(e?.message ?? '');
       toast(/insufficient|funds|gas/i.test(m) ? `${short} needs Base Sepolia ETH for gas` : ((e?.shortMessage ?? m) || 'Mint failed'));
     } finally { btn.disabled = false; btn.textContent = prev; }
+  }
+
+  /** A little "new star" reveal showing the minted NFT's name, role, and on-chain stats. */
+  private showMintReveal(p: { name: string; role: string; attrs: Record<string, number> }) {
+    const lab: Record<string, string> = { pace: 'PAC', strength: 'STR', passing: 'PAS', shooting: 'SHO', tackling: 'TAC', positioning: 'POS', workrate: 'WOR', keeping: 'GK' };
+    const stats = Object.entries(p.attrs).map(([k, v]) => `<div class="ms-stat"><span>${lab[k] ?? k}</span><b style="color:${statColor(v)}">${v}</b></div>`).join('');
+    const el = document.createElement('div');
+    el.id = 'mint-reveal';
+    el.innerHTML = `<div class="ms-card"><div class="ms-head">★ NEW STAR MINTED</div>`
+      + `<div class="ms-name">${p.name}</div>`
+      + `<div class="ms-sub">${p.role} · OVR <b>${overall(p as any)}</b> · owned on-chain as an NFT</div>`
+      + `<div class="ms-stats">${stats}</div>`
+      + `<button class="ms-close">Nice ✓</button></div>`;
+    el.addEventListener('click', (e) => { const t = e.target as HTMLElement; if (t === el || t.classList.contains('ms-close')) el.remove(); });
+    document.body.appendChild(el);
   }
 
   private async refreshTokenBalance() {
