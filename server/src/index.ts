@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { randomUUID } from 'node:crypto';
-import type { Lineup, Tactics } from '@fm/shared';
+import { overall, type Lineup, type Tactics } from '@fm/shared';
 import { db, type Account, type StandingOrders } from './db.js';
 import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMATIONS } from './game.js';
 import { hashPassword, verifyPassword } from './auth.js';
@@ -202,6 +202,19 @@ app.get('/results', { preHandler: requireAuth }, async (req) => {
 
 // the caller's honours board (past-season finishes)
 app.get('/honours', { preHandler: requireAuth }, async (req) => ({ honours: await db.honoursFor(req.account!.id) }));
+
+// SCOUT an opponent: their expected formation (standing-orders shape) + roster with
+// OVERALL ratings only — deliberately limited (no individual stats; premium later).
+app.get('/scout/:id', { preHandler: requireAuth }, async (req, reply) => {
+  const id = String((req.params as any).id);
+  const [opp, c] = await Promise.all([db.accountById(id), db.getClub(id)]);
+  if (!opp || !c) return reply.code(404).send({ error: 'not found' });
+  const likely = new Set(c.standingOrders.playerIds);
+  const players = c.club.players
+    .map((p) => ({ name: p.name, role: p.role, overall: overall(p), likelyXI: likely.has(p.id) }))
+    .sort((a, b) => b.overall - a.overall);
+  return { handle: opp.handle, clubName: c.club.name, rating: opp.rating, formation: c.standingOrders.formation, players };
+});
 
 // all-time cumulative table (kept for an optional global leaderboard view)
 app.get('/table', async () => {

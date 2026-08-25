@@ -4,7 +4,7 @@ import {
   TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty,
 } from '@fm/shared';
 import { SCALE, makeBallTexture, makeBallGhostTexture, makePitchTexture, makePlayerFrames, makeShadowTexture, makeCarrierTexture } from './pixelart';
-import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow } from './api';
+import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout } from './api';
 
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
 
@@ -342,9 +342,27 @@ class Game {
       return saved && isDutyForRole(p.role, saved) ? saved : defaultDuty(p);
     });
     $('lineup-title').textContent = mode === 'standing' ? 'SET MY TEAM' : `SET LINEUP  ${opp!.venue === 'away' ? 'away at' : 'vs'} ${opp!.handle}`;
+    // scout the opponent (match mode only): show their expected shape + rated roster
+    const sc = $('scout-card');
+    if (mode === 'match' && opp) {
+      sc.classList.remove('hidden');
+      sc.innerHTML = '<div class="scout-head">🔍 Scouting…</div>';
+      api.scout(opp.id).then((s) => { if (this.pendingOpp?.id === opp.id) sc.innerHTML = this.renderScout(s); }).catch(() => sc.classList.add('hidden'));
+    } else {
+      sc.classList.add('hidden'); sc.innerHTML = '';
+    }
     ($('save-team') as HTMLButtonElement).textContent = mode === 'standing' ? 'Save Team' : '▶ Kick Off';
     this.renderLineupEditor();
     this.showScreen('lineup');
+  }
+
+  private renderScout(s: Scout): string {
+    const roster = s.players
+      .map((p) => `<span class="sp ${p.likelyXI ? 'xi' : ''}"><span class="rl role-${p.role}">${p.role}</span>${p.name} <b>${p.overall}</b></span>`)
+      .join('');
+    return `<div class="scout-head">🔍 SCOUTING <b>${s.clubName}</b> · likely <b>${s.formation}</b> · rating ${s.rating}</div>`
+      + '<div class="scout-note">Their squad, best-rated first (highlighted = likely XI). Set your shape &amp; duties to counter them.</div>'
+      + `<div class="scout-roster">${roster}</div>`;
   }
 
   private renderLineupEditor() {

@@ -33,6 +33,8 @@ export interface StandingOrders { formation: Lineup['formation']; playerIds: str
 export interface ResultRow { id: string; home_id: string; away_id: string; home_handle: string; away_handle: string; home_score: number; away_score: number; created_at: number }
 export interface SeasonMeta { number: number; startsAt: number; endsAt: number; status: string; endsInMs: number }
 export interface Fixture { opponentId: string; handle: string; clubName: string; rating: number; venue: 'home' | 'away'; status: 'played' | 'pending'; result: { my: number; opp: number } | null }
+export interface ScoutPlayer { name: string; role: string; overall: number; likelyXI: boolean }
+export interface Scout { handle: string; clubName: string; rating: number; formation: Lineup['formation']; players: ScoutPlayer[] }
 export interface HonourRow { season_number: number; tier: string; final_pos: number; title: number; ended_at: number }
 export interface MatchPayload {
   matchId: string; seed: number; result: [number, number]; mySide: 0 | 1;
@@ -57,6 +59,7 @@ export const api = {
   results: () => req<{ results: ResultRow[] }>('/results'),
   season: () => req<{ season: SeasonMeta }>('/season'),
   fixtures: () => req<{ fixtures: Fixture[]; played: number; total: number; playedToday: number; dailyCap: number }>('/fixtures'),
+  scout: (opponentId: string) => req<Scout>(`/scout/${opponentId}`),
   standings: () => req<{ season: { number: number; endsAt: number }; tier: string; pod: number; promote: number; relegate: number; table: TableRow[] }>('/standings'),
   honours: () => req<{ honours: HonourRow[] }>('/honours'),
 };
