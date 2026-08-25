@@ -15,6 +15,81 @@ implements it on a branch, and opens a PR for you to review.
 
 ## Tasks (top = next)
 
+> **UI/VISUAL FIX SWEEP** — the tasks below come from `docs/ui-visual-audit.md` (read it
+> first for full context). Priority is **readability**: the game must be easier to read and
+> look at while KEEPING the retro-arcade identity (Press Start 2P + VT323 + CRT palette).
+> These are all **client-only** (`client/index.html` CSS + `client/src/main.ts`/`pixelart.ts`),
+> deterministic, no `shared/` changes. Each is ONE small PR. Always run `npm run verify` (must
+> pass) and take a before/after look at the affected screen. Do them top-down, one at a time.
+
+- [ ] **[readability] Reserve the pixel font for headings; make small text legible.** Per audit R1:
+  Press Start 2P (`--display`) is currently used for buttons (10px), section `h3` (13px), the login
+  tagline (9px), `#record`/`#timer` (10px), table headers, pills and badges — pixel type is illegible
+  that small. In `client/index.html` CSS, switch **buttons, labels, table headers, blurbs, pills, and
+  badges to `--body` (VT323)** at comfortable sizes (buttons ~15–16px, pills/badges ~11–12px), and keep
+  Press Start 2P ONLY for large display headings (the `PIXEL MANAGER` title; screen `<h3>` may stay pixel
+  but at ≥16px with `line-height:1.5`). Do not change the palette or layout. Verify every screen still
+  reads correctly (login, hub, lineup, match HUD, league, club, scouting, market). `npm run verify` passes.
+
+- [ ] **[readability][color] Fix low-contrast muted text.** Per audit R3: ad-hoc greys (`#778`, `#8aa`,
+  `#99a`, `#889`) on the dark navy are ~3:1 — below readable. Add a `--muted` token (~`#b9b9d8`) to `:root`
+  that clears ~4.5:1 on `--panel`, and replace those hard-coded greys (facility/scouting blurbs, table
+  sub-text, "rating 1000", `.muted`, scout descriptions, empty-state copy) with it. Keep hints one step
+  lighter than body text, not three. Client-only CSS. `npm run verify` passes.
+
+- [ ] **[readability] Soften the CRT overlay.** Per audit R4: `body::before`/`body::after` (scanlines +
+  vignette, z-index 9998/9999) reduce text crispness over small type. Lower the scanline opacity and
+  vignette strength so it's a subtle hint, not a filter over the content — OR add a small "CRT" on/off
+  toggle in the top bar that persists in localStorage (default on, softer). Keep the retro vibe. Client-only.
+  `npm run verify` passes.
+
+- [ ] **[layout] Center the app and use the widescreen dead-space.** Per audit L1: panels are a fixed
+  `width:880px` and on a wide desktop the content reads cramped with large empty areas right + below (very
+  visible on Login and Market). Ensure the app column is horizontally centered, and on wide viewports let
+  the main panels use more of the width (raise the max-width, or add responsive breakpoints) so short
+  screens don't leave half the viewport black. Don't break the mobile layout (test at 375px — it's currently
+  good). Client-only CSS. `npm run verify` passes.
+
+- [ ] **[layout][polish] Tidy the fixture rows.** Per audit L2: each hub fixture row is tall and repeats the
+  club identity ("Rival1's Club **Rival1** · rating 1000"). Drop the duplicate handle, reduce row height so
+  more fixtures fit, make the H/A venue chip clearer (label HOME/AWAY or stronger colour), and right-size the
+  PLAY button. `client/src/main.ts` (the fixtures render) + CSS. `npm run verify` passes.
+
+- [ ] **[polish] Make the league promotion/relegation zones obvious.** Per audit C3: the green/red row tints
+  in the league table are almost invisible. Strengthen the promo (green) and releg (red) row backgrounds and
+  add a thin coloured left-edge marker on those rows so the zones read at a glance. Keep it within the palette.
+  `client/src/main.ts` (renderLeagueTable) + CSS. `npm run verify` passes.
+
+- [ ] **[polish] Consistent scouting tryout row chips.** Per audit C2: the small coloured square before each
+  Local-Tryout trialist name reads as noise. Replace it with the same role chip (GK/DF/MF/FW, role-coloured)
+  used in the lineup editor and scout card, for consistency. `client/src/main.ts` (renderTrialPool) + CSS.
+  `npm run verify` passes.
+
+- [ ] **[polish] Button interaction states.** Per audit C4: add a consistent hover / active / disabled
+  treatment to buttons (slight lift + brightness on hover, pressed offset on active, clearly dimmed +
+  not-allowed cursor on disabled) so controls feel responsive and disabled ones are obvious. Global CSS in
+  `client/index.html`. Don't change button colours/identity. `npm run verify` passes.
+
+- [ ] **[match] Slow down 1× match playback.** Per audit M5: at 1× the match plays back too fast to
+  follow comfortably. In `client/src/main.ts` ONLY, slow the 1× render pace (the tick→real-time
+  accumulator / speed multiplier in the match animation loop) so a full match is pleasant to watch at
+  1×, with 4× and 12× still proportionally faster. This changes ONLY how fast the deterministic replay
+  is shown — do NOT touch `shared/` or the engine, and the final result must be identical. Verify the
+  speed buttons still switch correctly. `npm run verify` passes.
+
+- [ ] **[match] Smoother, more natural player movement (client render only).** Per audit M6: motion
+  looks robotic because the engine updates positions every 0.5s and the client snaps to each tick. In
+  `client/src` ONLY, interpolate sprite positions smoothly between engine ticks (lerp each frame toward
+  the next tick's target) with slight easing so players glide instead of teleporting. RENDER ONLY — never
+  change engine positions, never add `Math.random()`/`Date.now()` to `shared/`; the match result stays
+  identical. Keep 60fps. `npm run verify` passes.
+
+- [ ] **[match][polish] Player sprite polish (client render only).** Per audit M4: in `client/src` only,
+  make each player sprite face its direction of movement, add a subtle run bob while moving, and give the
+  ball a clearer drop shadow. Positions come from the engine each tick — RENDER ONLY, no `shared/` changes,
+  no balance changes, keep it smooth. (If the separate "better players + ball" task already covered some of
+  this, do only what's missing.) `npm run verify` passes.
+
 - [x] **Match view: richer pitch markings** (ONE focused task — keep it small so it finishes fast). CLIENT-ONLY, DETERMINISTIC: only touch the pitch-drawing code in `client/src` (the Phaser match scene in `main.ts` and/or `pixelart.ts`); make NO changes to `shared/` and do not touch player/ball logic. First read how the pitch is currently drawn (grep for the pitch texture / background in `pixelart.ts` + `main.ts`). Add, in the existing retro palette: a centre circle + centre spot + halfway line, both penalty boxes + 6-yard boxes + penalty spots, the goal mouths, corner arcs, and subtle mown-grass stripes. Match the current pitch dimensions/scale exactly (positions come from engine coordinates — do not change the coordinate mapping). Keep it crisp at the current resolution. Open a PR; `npm run verify` must pass. This is JUST the pitch — do not also do players/ball/camera (those are separate queued tasks).
 
 - [x] **Match view: better players + ball** (CLIENT-ONLY, DETERMINISTIC; do this AFTER the pitch task). In `client/src` only: make each player sprite face the direction it's moving, add a subtle bob/run cadence while moving, and clearly highlight the ball-carrier (a glow or outline). Give the ball a drop shadow and a smoother short fading trail. Positions still come from the engine each tick — render polish only, no `shared/` changes, no balance changes. Keep it 60fps. Open a PR; `npm run verify` must pass.
