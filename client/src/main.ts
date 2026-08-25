@@ -118,9 +118,14 @@ function statsTableHTML(players: Player[], highlight?: Set<string>, sort?: Squad
   const head = `<tr><th></th>${th('Pos', 'pos')}${th('Name', 'name', 'text-align:left')}${th('OVR', 'ovr')}${cols.map(([l, k]) => th(l, k)).join('')}</tr>`;
   const rows = sorted.map((p) => {
     const on = !!highlight?.has(p.id);
+    const nft = isNftId(p.id);
+    const tier = nft ? nftTier(overall(p)) : null;
     const cells = cols.map(([, k]) => `<td class="stat" style="background:${statColor(p.attrs[k])}">${p.attrs[k]}</td>`).join('');
     const mark = on ? '<td class="inxi-mark">●</td>' : '<td></td>';
-    return `<tr class="${on ? 'inxi' : ''}">${mark}<td class="pos role-${p.role}">${p.role}</td><td class="name">${p.name}</td><td class="stat" style="background:${statColor(overall(p))}">${overall(p)}</td>${cells}</tr>`;
+    const nameCell = tier
+      ? `<td class="name nft-name tier-${tier.key}" data-card="${p.id}" title="Owned NFT · ${tier.name} — click to view card">${tier.icon} ${p.name}</td>`
+      : `<td class="name">${p.name}</td>`;
+    return `<tr class="${on ? 'inxi' : ''}${nft ? ' nft-row' : ''}">${mark}<td class="pos role-${p.role}">${p.role}</td>${nameCell}<td class="stat" style="background:${statColor(overall(p))}">${overall(p)}</td>${cells}</tr>`;
   }).join('');
   return `<table class="squad">${head}${rows}</table>`;
 }
@@ -316,7 +321,7 @@ class Game {
         if (!minted) await new Promise((r) => setTimeout(r, 1500));
       }
       await this.showHub();
-      if (minted) this.showMintReveal(minted);
+      if (minted) this.showPlayerCard(minted, true);
       else toast('Minted ✓ — your ★ NFT star will appear in Set My Team shortly');
     } catch (e: any) {
       const m = String(e?.message ?? '');
@@ -324,19 +329,32 @@ class Game {
     } finally { btn.disabled = false; btn.textContent = prev; }
   }
 
-  /** A little "new star" reveal showing the minted NFT's name, role, and on-chain stats. */
-  private showMintReveal(p: Player) {
-    const lab: Record<string, string> = { pace: 'PAC', strength: 'STR', passing: 'PAS', shooting: 'SHO', tackling: 'TAC', positioning: 'POS', workrate: 'WOR', keeping: 'GK' };
-    const stats = Object.entries(p.attrs).map(([k, v]) => `<div class="ms-stat"><span>${lab[k] ?? k}</span><b style="color:${statColor(v as number)}">${v}</b></div>`).join('');
+  /** A premium collectible card for an NFT star — tier-framed, holographic on the top
+   *  tiers. Used both for the mint reveal and for clicking a star to admire it. */
+  private showPlayerCard(p: Player, minted = false) {
     const tier = nftTier(overall(p));
+    const tokenId = p.id.startsWith('nft:') ? p.id.slice(4) : '';
+    const roleName: Record<string, string> = { GK: 'Keeper', DF: 'Defender', MF: 'Midfielder', FW: 'Forward' };
+    const order: Array<[keyof Player['attrs'], string]> = [
+      ['pace', 'PAC'], ['shooting', 'SHO'], ['passing', 'PAS'], ['positioning', 'POS'],
+      ['tackling', 'TAC'], ['strength', 'STR'], ['workrate', 'WRK'], ['keeping', 'KEE'],
+    ];
+    const stats = order.map(([k, l]) => `<div class="pc-stat"><span>${l}</span><b style="color:${statColor(p.attrs[k])}">${p.attrs[k]}</b></div>`).join('');
+    const holo = tier.key === 'diamond' || tier.key === 'legend' ? ' holo' : '';
     const el = document.createElement('div');
-    el.id = 'mint-reveal';
-    el.innerHTML = `<div class="ms-card tier-${tier.key}"><div class="ms-head">${tier.icon} ${tier.name} STAR MINTED</div>`
-      + `<div class="ms-name">${p.name}</div>`
-      + `<div class="ms-sub">${p.role} · OVR <b>${overall(p)}</b> · owned on-chain as an NFT</div>`
-      + `<div class="ms-stats">${stats}</div>`
-      + `<button class="ms-close">Nice ✓</button></div>`;
-    el.addEventListener('click', (e) => { const t = e.target as HTMLElement; if (t === el || t.classList.contains('ms-close')) el.remove(); });
+    el.id = 'player-card-ov';
+    el.innerHTML =
+      `<div class="pc-card tier-${tier.key}${holo}">`
+      + (minted ? `<div class="pc-flash">${tier.icon} ${tier.name} STAR MINTED</div>` : '')
+      + `<div class="pc-top"><div class="pc-ovr">${overall(p)}<span>OVR</span></div>`
+      + `<div class="pc-tier">${tier.icon}<span>${tier.name}</span></div></div>`
+      + `<div class="pc-crest role-${p.role}"><span class="pc-crest-role">${p.role}</span></div>`
+      + `<div class="pc-name">${p.name}</div>`
+      + `<div class="pc-role">${roleName[p.role] ?? p.role}</div>`
+      + `<div class="pc-stats">${stats}</div>`
+      + `<div class="pc-foot">★ NFT${tokenId ? ` · #${tokenId}` : ''} · Base Sepolia · on-chain</div>`
+      + `<button class="pc-close">${minted ? 'Nice ✓' : 'Close'}</button></div>`;
+    el.addEventListener('click', (e) => { const t = e.target as HTMLElement; if (t === el || t.classList.contains('pc-close')) el.remove(); });
     document.body.appendChild(el);
   }
 
@@ -717,7 +735,7 @@ class Game {
       const cur = this.club.players.find((p) => p.id === pid)!;
       const curTier = nftTier(overall(cur));
       const tag = isLoan(cur.id) ? `<span class="loan" title="Loanee — plays this season only, then leaves">LOAN</span>`
-        : isNftId(cur.id) ? `<span class="nft tier-${curTier.key}" title="NFT star · ${curTier.name} tier (on-chain)">${curTier.icon} ${curTier.name}</span>` : '';
+        : isNftId(cur.id) ? `<span class="nft tier-${curTier.key}" data-card="${cur.id}" title="NFT star · ${curTier.name} tier — click to view card">${curTier.icon} ${curTier.name}</span>` : '';
       const dutyOpts = DUTIES_BY_ROLE[cur.role]
         .map((d) => `<option value="${d}" ${d === this.draftDuties[i] ? 'selected' : ''}>${DUTY_LABEL[d]}</option>`).join('');
       return `<div class="slot role-${roleForSlot}"><span class="role role-${roleForSlot}">${roleForSlot}</span><select class="player-sel" data-i="${i}">${opts}</select><select class="duty-sel" data-i="${i}" title="This player's duty — how they play">${dutyOpts}</select>${tag}<span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span></div>`;
@@ -740,7 +758,16 @@ class Game {
 
     const inXI = new Set(slots);
     const bench = this.club.players.filter((p) => !inXI.has(p.id)).sort((a, b) => overall(b) - overall(a));
-    $('bench').innerHTML = `<b>Bench:</b> ${bench.map((p) => `${p.name} (${p.role} ${overall(p)})${isNftId(p.id) ? ' ' + nftTier(overall(p)).icon : ''}`).join(' · ')}`;
+    $('bench').innerHTML = `<b>Bench:</b> ` + bench.map((p) => {
+      const t = isNftId(p.id) ? nftTier(overall(p)) : null;
+      return t ? `<span class="bench-nft tier-${t.key}" data-card="${p.id}" title="Owned NFT · ${t.name} — click to view card">${t.icon} ${p.name} (${p.role} ${overall(p)})</span>`
+        : `${p.name} (${p.role} ${overall(p)})`;
+    }).join(' · ');
+    // NFT badges/names open the collectible card
+    Array.from(document.querySelectorAll<HTMLElement>('#xi [data-card], #bench [data-card]')).forEach((el) => {
+      el.style.cursor = 'pointer';
+      el.addEventListener('click', () => { const p = this.club.players.find((x) => x.id === el.dataset.card); if (p) this.showPlayerCard(p); });
+    });
     if (!$('squad-panel').classList.contains('hidden')) this.renderSquadPanel();
     this.updateEditorInsight();
   }
@@ -759,6 +786,12 @@ class Game {
         if (this.squadSort?.key === key) this.squadSort.dir = this.squadSort.dir === 'desc' ? 'asc' : 'desc';
         else this.squadSort = { key, dir: 'desc' };
         this.renderSquadPanel();
+      });
+    });
+    panel.querySelectorAll<HTMLElement>('[data-card]').forEach((td) => {
+      td.addEventListener('click', () => {
+        const p = this.club.players.find((x) => x.id === td.dataset.card);
+        if (p) this.showPlayerCard(p);
       });
     });
   }
