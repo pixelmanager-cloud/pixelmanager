@@ -22,6 +22,25 @@ implements it on a branch, and opens a PR for you to review.
 > deterministic, no `shared/` changes. Each is ONE small PR. Always run `npm run verify` (must
 > pass) and take a before/after look at the affected screen. Do them top-down, one at a time.
 
+> **MATCH PIVOT — 2D pitch → TEXT COMMENTARY.** The game is moving from the 2D pixel pitch to a
+> text-based match experience where the user follows the play through commentary (who passes to
+> whom, who tackles, who scores). The 2D pitch is being **PARKED, not deleted** — keep the code,
+> just make text the default. These two tasks come first; the readability sweep below still applies
+> to all the UI chrome. Do NOT delete the Phaser pitch scene.
+
+- [ ] **[pivot] Text-commentary match view (client-only).** Build a live, scrolling **commentary
+  feed** as the PRIMARY match view, replacing the 2D pitch as the default (keep the pitch reachable
+  behind an optional "2D view" toggle — do NOT delete it). As the deterministic engine ticks, render
+  each event from the EXISTING event stream (`goal`, `shot_saved`, `shot_missed`, `chance`, `corner`,
+  `free_kick`, `penalty`) as a line of natural commentary naming the player(s) involved — e.g.
+  "📣 CHANCE! Silva slips in behind…", "🧤 Vidal's effort is beaten away!", "⚽ GOAL! Silva makes no
+  mistake — Gaffer 1-0". Use DETERMINISTIC seeded template selection: keep a small pool of phrasings
+  per event type and pick one by a seed derived from the match seed + event index (NEVER `Math.random`;
+  keep it seed-derived so a replay reads identically). Keep the score/clock/possession HUD, the speed
+  controls (1×/4×/12× should pace how fast lines appear — 1× must be readable, not an instant wall of
+  text), skip-to-fulltime, and the full-time card. Client-only (`client/src/main.ts` + `client/index.html`
+  CSS); NO `shared/` changes in this task. Screenshot the feed. `npm run verify` passes.
+
 - [ ] **[readability] Reserve the pixel font for headings; make small text legible.** Per audit R1:
   Press Start 2P (`--display`) is currently used for buttons (10px), section `h3` (13px), the login
   tagline (9px), `#record`/`#timer` (10px), table headers, pills and badges — pixel type is illegible
@@ -70,31 +89,41 @@ implements it on a branch, and opens a PR for you to review.
   not-allowed cursor on disabled) so controls feel responsive and disabled ones are obvious. Global CSS in
   `client/index.html`. Don't change button colours/identity. `npm run verify` passes.
 
-- [ ] **[match] Slow down 1× match playback.** Per audit M5: at 1× the match plays back too fast to
-  follow comfortably. In `client/src/main.ts` ONLY, slow the 1× render pace (the tick→real-time
-  accumulator / speed multiplier in the match animation loop) so a full match is pleasant to watch at
-  1×, with 4× and 12× still proportionally faster. This changes ONLY how fast the deterministic replay
-  is shown — do NOT touch `shared/` or the engine, and the final result must be identical. Verify the
-  speed buttons still switch correctly. `npm run verify` passes.
+- [ ] **[pivot][engine] Emit richer per-player events for commentary.** To make the text commentary
+  vivid ("Silva finds Vidal", "crunching tackle by Okafor", "Mensah skins his man"), the engine needs
+  more granular events. In `shared/src` add new `MatchEventType`s (e.g. `pass`, `pass_intercepted`,
+  `tackle_won`, `tackle_lost`, `dribble`, `header`, `clearance`, `block`, `loose_ball`) emitted at the
+  EXISTING decision points, each carrying the player name(s) involved — for a pass, BOTH passer and
+  receiver — plus a cheap zone hint (defensive third / midfield / final third) so commentary can say
+  WHERE it happened. **Do NOT change match outcomes or balance** — only ADD events describing what
+  already happens (same goals, same result for a given seed).
+  Keep it deterministic (no `Math.random`/`Date.now` in `shared/`). Don't flood the feed — emit at a
+  sensible cadence, not every micro-tick. Update the fuzz test's event-type assertions to accept the new
+  types. `npm run verify` MUST stay green with calibration/anti-spam/counter-triangle/shape assertions
+  UNCHANGED (outcomes identical). Then extend the text-commentary view to render the new events. This is
+  the richer half of the text pivot — take extra care that balance does not move.
 
-- [ ] **[match] Smoother, more natural player movement (client render only).** Per audit M6: motion
-  looks robotic because the engine updates positions every 0.5s and the client snaps to each tick. In
-  `client/src` ONLY, interpolate sprite positions smoothly between engine ticks (lerp each frame toward
-  the next tick's target) with slight easing so players glide instead of teleporting. RENDER ONLY — never
-  change engine positions, never add `Math.random()`/`Date.now()` to `shared/`; the match result stays
-  identical. Keep 60fps. `npm run verify` passes.
-
-- [ ] **[match][polish] Player sprite polish (client render only).** Per audit M4: in `client/src` only,
-  make each player sprite face its direction of movement, add a subtle run bob while moving, and give the
-  ball a clearer drop shadow. Positions come from the engine each tick — RENDER ONLY, no `shared/` changes,
-  no balance changes, keep it smooth. (If the separate "better players + ball" task already covered some of
-  this, do only what's missing.) `npm run verify` passes.
+- [ ] **[pivot] Deep, detailed commentary layer.** Make the feed read like real radio commentary, not a
+  list of isolated events (the user specifically wants this VERY detailed). Building on the richer engine
+  events: (1) **Passages of play** — string consecutive same-team events into one flowing move with
+  connectives instead of one line per event ("Silva to Vidal… back inside to Mensah… and Vidal again —
+  lovely one-two, and he SHOOTS!"). (2) **Deep vocabulary variety** — many phrasings per event type so it
+  rarely repeats within a match, chosen deterministically by a seed (match seed + event index; NEVER
+  `Math.random`). (3) **Stat-flavoured player descriptors** — colour players by their standout stats,
+  deterministically from the player's own attrs: high composure → "ice-cool" / "unflappable", high
+  aggression → "combative" / "no-nonsense", high creativity → "inventive", high pace → "lightning-quick"
+  (works today off the physical stats; will get richer once the mental stats from the Career Sim exist).
+  (4) **Zone / build-up context** — use the events' zone hint ("works it out from the back", "in the final
+  third"). (5) **Match-phase & momentum lines** — occasional context ("a wave of pressure from the home
+  side", "against the run of play", "end-to-end now"), plus a half-time and a full-time summary line, and
+  bigger language for late/decisive moments (a 90th-minute winner reads huge). All DETERMINISTIC (seed-
+  derived selection so a replay reads identically; no `Math.random` in `shared/`, and keep client-side
+  selection seed-derived too). Rendering/templating is client-side; relies on the richer engine events.
+  Keep the feed readable at 1× (paced, not a wall of text). Screenshot a full match. `npm run verify` passes.
 
 - [x] **Match view: richer pitch markings** (ONE focused task — keep it small so it finishes fast). CLIENT-ONLY, DETERMINISTIC: only touch the pitch-drawing code in `client/src` (the Phaser match scene in `main.ts` and/or `pixelart.ts`); make NO changes to `shared/` and do not touch player/ball logic. First read how the pitch is currently drawn (grep for the pitch texture / background in `pixelart.ts` + `main.ts`). Add, in the existing retro palette: a centre circle + centre spot + halfway line, both penalty boxes + 6-yard boxes + penalty spots, the goal mouths, corner arcs, and subtle mown-grass stripes. Match the current pitch dimensions/scale exactly (positions come from engine coordinates — do not change the coordinate mapping). Keep it crisp at the current resolution. Open a PR; `npm run verify` must pass. This is JUST the pitch — do not also do players/ball/camera (those are separate queued tasks).
 
 - [x] **Match view: better players + ball** (CLIENT-ONLY, DETERMINISTIC; do this AFTER the pitch task). In `client/src` only: make each player sprite face the direction it's moving, add a subtle bob/run cadence while moving, and clearly highlight the ball-carrier (a glow or outline). Give the ball a drop shadow and a smoother short fading trail. Positions still come from the engine each tick — render polish only, no `shared/` changes, no balance changes. Keep it 60fps. Open a PR; `npm run verify` must pass.
-
-- [ ] **Match view: event flourishes + camera** (CLIENT-ONLY, DETERMINISTIC; after the two tasks above). Drive small flourishes off the EXISTING engine events (`goal`, `shot_saved`, `shot_missed`, `chance`, and the new `corner`/`free_kick`/`penalty`): a brief shot streak line toward goal, a keeper "save!" pop, a corner/penalty flag flourish, and a bigger "GOAL!" celebration that names the scorer. Add a subtle camera ease/zoom toward the action (never disorienting; keep the whole pitch legible). Client render jitter (`Math.random()`) is fine in the CLIENT but NEVER in `shared/`. Open a PR; `npm run verify` must pass.
 
 - [x] Write a design document `docs/immersion-ideas.md` brainstorming ways to make Pixel Manager feel far more **immersive** — so the player feels like the manager of a real football club, not just a lineup-picker. FIRST read `README.md`, `docs/async-pvp-phase1.md`, `docs/seasons-and-divisions.md`, `docs/economy-and-web3.md`, and `docs/game-upgrade-ideas.md` to ground yourself in the current game: a deterministic seeded match engine; async PvP with standing orders; seasons + a 10-tier division pyramid with ~20-club pods, promotion/relegation and an honours board; per-player duties; handle+password accounts; and **NO LLM — pure deterministic TypeScript**. Propose immersion features grouped into clear themes, for example: (1) **Club identity & world** — crest/kit/stadium, club history & lore, home city, persistent rivalries; (2) **The manager's world** — a board with season expectations + a confidence/job-security meter, pre/post-match press conferences and media as *deterministic template/seeded text*, per-season objectives; (3) **Squad as people** — player personalities, morale & form, dressing-room relationships, backroom staff, ageing/development across seasons, injuries/suspensions (respecting the no-in-match-consumable + pre-kickoff-only rules); (4) **Matchday atmosphere** — crowd, deeper commentary, narrative moments, rising tension; (5) **Narrative & continuity** — storylines, milestones, an inbox/news feed, rivalries that carry across seasons; (6) **Finances & club-building** — budget, wages, sponsors, facilities, framed to fit the future token economy WITHOUT pay-to-win. For EACH idea give: what it adds, **why it increases immersion** (the "real manager" feeling), a rough effort estimate (S/M/L), which files/systems it would touch, and how it respects the hard constraints (determinism — no `Date.now()`/`Math.random()` in `shared/`, matches stay a pure function of pre-kickoff inputs; NO LLM; any generated text must be deterministic template/seeded). Note which ideas fit the current architecture (async PvP, seasons/pods, duties) with little friction vs which need new subsystems. End with an opinionated "if you build three things first" shortlist. This is a DOCUMENTATION-ONLY task: create the markdown file, make NO code changes, and keep it a skimmable pick-list the human can choose from.
 
