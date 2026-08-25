@@ -319,7 +319,8 @@ export class MatchEngine {
     if (distGoal < SHOOT_RANGE) {
       const closeness = 1 - distGoal / SHOOT_RANGE; // 0 at the edge of range, 1 at the goal
       const central = 1 - Math.abs(cs.y - PITCH.h / 2) / (PITCH.h / 2); // 1 dead-central, 0 at the touchline
-      const shootP = (0.0022 + norm(carrier.attrs.shooting) * 0.004) * closeness * (0.35 + 0.65 * central) * this.dm[teamIdx][playerIdx].shoot * (1 + this.zonal[teamIdx]) * TICK_SEC;
+      const homeBoost = this.teams[teamIdx].homeBoost ?? 1; // Fan Zone home advantage (only teams[0] carries it)
+      const shootP = (0.0022 + norm(carrier.attrs.shooting) * 0.004) * closeness * (0.35 + 0.65 * central) * this.dm[teamIdx][playerIdx].shoot * (1 + this.zonal[teamIdx]) * homeBoost * TICK_SEC;
       if (this.rng() < shootP) {
         this.resolveShot(teamIdx, playerIdx, distGoal, false);
         return;

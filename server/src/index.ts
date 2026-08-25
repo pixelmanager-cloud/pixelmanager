@@ -9,7 +9,7 @@ import { generatePool, trialistAt, LOANEE_CAP, OPP_REVEAL, describeIntel, type O
 import { DESTINATIONS, destinationById, rollMission, travelMs, previewOdds, TRIPS_PER_SEASON } from './missions.js';
 import {
   FACILITY_KEYS, FACILITY_META, MAX_LEVEL, upgradeCost, effectAt, trainingConditioning, stadiumIncome,
-  youthPoolBonus, youthUpgradeChance, scoutHitMult, scoutCostDiscount, scoutExtraTrips, fanIncomeMult, type FacilityKey,
+  youthPoolBonus, youthUpgradeChance, scoutHitMult, scoutCostDiscount, scoutExtraTrips, fanIncomeMult, fanHomeBoost, type FacilityKey,
 } from './facilities.js';
 import type { Player } from '@fm/shared';
 import { viewerTiers, scoutNftInfo } from './scoutnft.js';
@@ -260,7 +260,8 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const hClub = iAmHome ? me!.club : oppClub.club, hLineup = iAmHome ? myLineup : oppLineup, hTactics = iAmHome ? myTactics : oppTactics;
   const aClub = iAmHome ? oppClub.club : me!.club, aLineup = iAmHome ? oppLineup : myLineup, aTactics = iAmHome ? oppTactics : myTactics;
   const conditioning = { home: iAmHome ? meCond : oppCond, away: iAmHome ? oppCond : meCond };
-  const { seed, homeTeam, awayTeam, result } = runMatch(hClub, hLineup, hTactics, aClub, aLineup, aTactics, conditioning);
+  const homeBoost = fanHomeBoost((iAmHome ? meFac : oppFac).fanzone); // Fan Zone edge for the host
+  const { seed, homeTeam, awayTeam, result } = runMatch(hClub, hLineup, hTactics, aClub, aLineup, aTactics, conditioning, homeBoost);
 
   // Elo from my perspective, regardless of which side I was on
   const myScore = iAmHome ? result[0] : result[1], oppScore = iAmHome ? result[1] : result[0];

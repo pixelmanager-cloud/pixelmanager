@@ -8,7 +8,7 @@ import type { Store, Season, PodRef } from './store.js';
 import { buildTable, runMatch, elo, validateLineup } from './game.js';
 import { seasonPlacementReward, WIN_COINS, DRAW_COINS, LOSS_COINS } from './market.js';
 import { ownedPlayers } from './nft.js';
-import { trainingConditioning, stadiumIncome, fanIncomeMult, sponsorIncome } from './facilities.js';
+import { trainingConditioning, stadiumIncome, fanIncomeMult, fanHomeBoost, sponsorIncome } from './facilities.js';
 import { computeCup, type SquadMap } from './cup.js';
 
 /** Merge a club with the star NFTs its linked wallet owns (read-only). */
@@ -105,7 +105,7 @@ async function simulateMatch(db: Store, homeId: string, awayId: string, seasonId
   // full parity with a live match: training-ground conditioning + result coins + home gate income
   const [homeFac, awayFac] = await Promise.all([db.getFacilities(homeId), db.getFacilities(awayId)]);
   const conditioning = { home: trainingConditioning(homeFac.training), away: trainingConditioning(awayFac.training) };
-  const { seed, homeTeam, awayTeam, result } = runMatch(homeC.club, hl, homeC.standingOrders.tactics, awayC.club, al, awayC.standingOrders.tactics, conditioning);
+  const { seed, homeTeam, awayTeam, result } = runMatch(homeC.club, hl, homeC.standingOrders.tactics, awayC.club, al, awayC.standingOrders.tactics, conditioning, fanHomeBoost(homeFac.fanzone));
   const sh = result[0] > result[1] ? 1 : result[0] < result[1] ? 0 : 0.5;
   const [nh, na] = elo(home.rating, away.rating, sh);
   const coinsFor = (s: number) => (s === 1 ? WIN_COINS : s === 0.5 ? DRAW_COINS : LOSS_COINS);

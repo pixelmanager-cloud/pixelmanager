@@ -57,6 +57,9 @@ export interface Team {
   /** Training-ground conditioning: a fitness-drain multiplier (1 = normal, <1 = fades less).
    *  Optional so default matches (tests, CPU) behave exactly as before. */
   conditioning?: number;
+  /** Fan Zone home advantage: an attacking-chance multiplier for the HOME side only
+   *  (1 = none, >1 = boosted). Set on teams[0] by runMatch; optional so tests are unchanged. */
+  homeBoost?: number;
 }
 
 export interface PlayerState {
