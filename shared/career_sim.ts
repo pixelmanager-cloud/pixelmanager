@@ -1,6 +1,6 @@
 // Career-sim harness. Validates: (1) different styles → distinct, specialised players + roles;
 // (2) skill → magnitude; (3) the turn-by-turn engine is deterministic. Run: `npx tsx career_sim.ts`.
-import { Career, simCareer, graduate, seedFrom, DECK, type Style, type CareerPlayerAttrs, type Role } from './src/career.js';
+import { Career, simCareer, graduate, seedFrom, rollGenes, inheritGenes, DECK, type Style, type CareerPlayerAttrs, type Role, type Genes } from './src/career.js';
 
 const STYLES: Style[] = [
   { name: 'Poacher',   pref: { composure: 1, flair: 0.8 },        skill: 0.85 },
@@ -45,6 +45,22 @@ const avgOvr = (skill: number) => {
 };
 console.log('\n=== magnitude — avg overall over 60 careers by skill (Enforcer style) ===');
 console.log(`  skill .90 → ${avgOvr(0.9)}   .60 → ${avgOvr(0.6)}   .30 → ${avgOvr(0.3)}   (should decrease with skill)`);
+
+// hybrid model: identical pacey career, fast vs slow PACE genes → different realised pace (capped)
+console.log('\n=== hybrid model — genes cap the innate physical stats ===');
+const pacey: Style = { name: 'Flyer', pref: { stamina: 1, flair: 1 }, skill: 0.85 };
+const fastGenes: Genes = { pace: { floor: 12, ceiling: 20 }, strength: { floor: 6, ceiling: 12 }, stamina: { floor: 10, ceiling: 18 } };
+const slowGenes: Genes = { pace: { floor: 3, ceiling: 9 }, strength: { floor: 6, ceiling: 12 }, stamina: { floor: 4, ceiling: 10 } };
+const fast = simCareer(seedFrom('flyer'), pacey, fastGenes);
+const slow = simCareer(seedFrom('flyer'), pacey, slowGenes);
+console.log(`  same pacey career — fast genes → pace ${fast.attrs.pace}, slow genes → pace ${slow.attrs.pace}  (a slow seed can't grind pace)`);
+console.log(`  meanwhile developed stats match (creativity ${fast.attrs.creativity} vs ${slow.attrs.creativity}) — technique isn't gene-capped`);
+
+// lineage: a "son" inherits physical genes as a biased roll (not a copy)
+console.log('\n=== lineage — son inherits physical genes (biased, not copied) ===');
+const parentGenes = rollGenes(seedFrom('parent'));
+const son = inheritGenes(parentGenes, seedFrom('son'), 0.6);
+console.log(`  parent pace band [${parentGenes.pace.floor}-${parentGenes.pace.ceiling}]  →  son pace band [${son.pace.floor}-${son.pace.ceiling}]  (near, regressed, re-rolled)`);
 
 // determinism: same seed + same choices → identical player
 console.log('\n=== determinism check ===');

@@ -160,7 +160,43 @@ export interface CareerPlayerAttrs {
   composure: number; aggression: number; creativity: number; teamwork: number; leadership: number;
 }
 export type Role = 'GK' | 'DF' | 'MF' | 'FW';
-export interface CareerPlayer { attrs: CareerPlayerAttrs; role: Role; overall: number }
+export interface CareerPlayer { attrs: CareerPlayerAttrs; role: Role; overall: number; genes: Genes }
+
+// ── HYBRID model: raw physical stats are INNATE (a floor→ceiling band seeded at genesis and
+// inherited via lineage); the career only decides how much of that band you REALISE. Technical +
+// mental stats are fully career-developed. This makes natural pace/strength scarce (can't be
+// grinded → market value) and gives bloodlines a real purpose (you inherit physical potential,
+// then earn everything else — so "optimal bloodlines" can't be solved).
+export interface Band { floor: number; ceiling: number }
+export interface Genes { pace: Band; strength: Band; stamina: Band }
+export const INNATE: ReadonlyArray<keyof CareerPlayerAttrs> = ['pace', 'strength', 'stamina'];
+
+/** Genesis genes: each innate stat gets a random floor and a ceiling above it. Some players are
+ *  naturally quick/strong (high band), others never will be (low band) no matter how they train. */
+export function rollGenes(seed: number): Genes {
+  const rng = mulberry32(seed ^ 0x6e6ee5);
+  const band = (): Band => {
+    const floor = Math.round(2 + rng() * 10);                                  // 2..12
+    const ceiling = clamp(Math.round(floor + 4 + rng() * 10), floor + 3, 20);  // floor+3 .. 20
+    return { floor, ceiling };
+  };
+  return { pace: band(), strength: band(), stamina: band() };
+}
+
+/** Child genes for lineage: inherited bands biased toward the parent's, regressed toward the
+ *  population mean and re-rolled with variance — inheritance is a BIAS ON A RANDOM ROLL, never a
+ *  deterministic copy, so bloodlines stay diverse and un-solvable. keepPct = how strongly the
+ *  parent shows through (~0.5–0.7). */
+export function inheritGenes(parent: Genes, seed: number, keepPct = 0.6): Genes {
+  const rng = mulberry32(seed ^ 0x50f);
+  const MEAN_FLOOR = 7, MEAN_CEIL = 13;
+  const inheritBand = (b: Band): Band => {
+    const floor = clamp(Math.round(b.floor * keepPct + MEAN_FLOOR * (1 - keepPct) + (rng() - 0.5) * 4), 1, 15);
+    const ceiling = clamp(Math.round(b.ceiling * keepPct + MEAN_CEIL * (1 - keepPct) + (rng() - 0.5) * 4), floor + 3, 20);
+    return { floor, ceiling };
+  };
+  return { pace: inheritBand(parent.pace), strength: inheritBand(parent.strength), stamina: inheritBand(parent.stamina) };
+}
 
 // each stat's source tags (≥1 each); keeping has none (GK is a future dedicated path)
 const STAT_SOURCES: Record<keyof CareerPlayerAttrs, Tag[]> = {
@@ -171,8 +207,9 @@ const STAT_SOURCES: Record<keyof CareerPlayerAttrs, Tag[]> = {
 };
 const BASELINE = 7, SPREAD = 12, PEAK = 1.5;
 
-export function deriveStats(log: Choice[], seed: number): CareerPlayerAttrs {
+export function deriveStats(log: Choice[], seed: number, genes: Genes = rollGenes(seed)): CareerPlayerAttrs {
   const rng = mulberry32(seed ^ 0x9e3779b9);
+  const innate = new Set<keyof CareerPlayerAttrs>(INNATE);
   const freq = Object.fromEntries(TAGS.map((t) => [t, 0])) as Record<Tag, number>;
   for (const c of log) for (const t of c.tags) freq[t] += 1;
   const maxFreq = Math.max(1, ...TAGS.map((t) => freq[t]));
@@ -188,8 +225,15 @@ export function deriveStats(log: Choice[], seed: number): CareerPlayerAttrs {
     const shape = src.length ? src.reduce((s, t) => s + norm[t], 0) / src.length : 0;
     const peaked = Math.pow(shape, PEAK);
     const noise = (rng() - 0.5) * 3;
-    const raw = (BASELINE + peaked * SPREAD) * magnitude + noise;
-    out[stat] = clamp(Math.round(raw), 1, 20);
+    if (innate.has(stat)) {
+      // INNATE: the career only decides how far up your genetic band [floor, ceiling] you realise.
+      const band = genes[stat as 'pace' | 'strength' | 'stamina'];
+      const realised = clamp(peaked * magnitude, 0, 1); // 0 = never trained it, 1 = maxed your potential
+      out[stat] = clamp(Math.round(band.floor + realised * (band.ceiling - band.floor) + noise * 0.4), 1, 20);
+    } else {
+      // DEVELOPED: technical/mental grow freely with play.
+      out[stat] = clamp(Math.round((BASELINE + peaked * SPREAD) * magnitude + noise), 1, 20);
+    }
   }
   out.keeping = clamp(Math.round(4 + (rng() - 0.5) * 3), 1, 8); // outfield keeper skill: low by design
   return out;
@@ -215,16 +259,17 @@ export function careerOverall(a: CareerPlayerAttrs, role: Role): number {
   return Math.round(keys.reduce((s, k) => s + a[k], 0) / keys.length);
 }
 
-/** Finish a career log into a complete Player (attrs + role + overall). */
-export function graduate(log: Choice[], seed: number): CareerPlayer {
-  const attrs = deriveStats(log, seed);
+/** Finish a career log into a complete Player (attrs + role + overall). Genes default to a fresh
+ *  genesis roll; pass inherited genes (lineage) to constrain the innate physical stats. */
+export function graduate(log: Choice[], seed: number, genes: Genes = rollGenes(seed)): CareerPlayer {
+  const attrs = deriveStats(log, seed, genes);
   const role = deriveRole(attrs);
-  return { attrs, role, overall: careerOverall(attrs, role) };
+  return { attrs, role, overall: careerOverall(attrs, role), genes };
 }
 
 // ── balance helper: auto-play a career under a "style" policy (picks the best hand card) ──
 export interface Style { name: string; pref: Partial<Record<Tag, number>>; skill: number }
-export function simCareer(seed: number, style: Style): CareerPlayer {
+export function simCareer(seed: number, style: Style, genes: Genes = rollGenes(seed)): CareerPlayer {
   const career = new Career(seed);
   const rng = mulberry32(seed ^ 0x1234567);
   while (!career.finished) {
@@ -241,5 +286,5 @@ export function simCareer(seed: number, style: Style): CareerPlayer {
     }
     career.play(best.id);
   }
-  return graduate(career.log, seed);
+  return graduate(career.log, seed, genes);
 }
