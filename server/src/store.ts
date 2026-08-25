@@ -1,8 +1,8 @@
 // Storage interface. Two backends implement it: node:sqlite (local dev) and
 // Postgres (production). Everything is async so both fit the same shape.
-import type { Club, Lineup, Tactics } from '@fm/shared';
+import type { Club, Duty, Lineup, Tactics } from '@fm/shared';
 
-export interface StandingOrders { formation: Lineup['formation']; playerIds: string[]; tactics: Tactics }
+export interface StandingOrders { formation: Lineup['formation']; playerIds: string[]; tactics: Tactics; duties?: Duty[] }
 export interface Account { id: string; handle: string; rating: number; createdAt: number }
 export interface OpponentRow { id: string; handle: string; rating: number; clubName: string }
 export interface LeaderRow { id: string; handle: string; rating: number }

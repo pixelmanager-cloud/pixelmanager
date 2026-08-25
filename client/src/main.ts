@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import {
-  MatchEngine, autoPickXI, buildXI, overall, PITCH, TICK_SEC, defaultDuty, DUTY_LABEL,
-  TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player,
+  MatchEngine, autoPickXI, buildXI, overall, PITCH, TICK_SEC, defaultDuty, DUTY_LABEL, DUTIES_BY_ROLE, isDutyForRole,
+  TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty,
 } from '@fm/shared';
 import { SCALE, makeBallTexture, makeBallGhostTexture, makePitchTexture, makePlayerFrames, makeShadowTexture, makeCarrierTexture } from './pixelart';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow } from './api';
@@ -134,6 +134,7 @@ class Game {
   standingOrders!: StandingOrders;
   draftLineup!: Lineup;
   draftTactics!: Tactics;
+  draftDuties: Duty[] = []; // per-slot manager duties, parallel to draftLineup.playerIds
   editorMode: 'standing' | 'match' = 'standing';
   squadSort: SquadSort | null = null;
   pendingOpp?: { id: string; handle: string };
@@ -177,7 +178,7 @@ class Game {
     $('tab-honours').addEventListener('click', () => showTab('honours'));
     $('skip').addEventListener('click', () => this.skipToEnd());
     $('set-team').addEventListener('click', () => this.openLineup('standing'));
-    $('autopick').addEventListener('click', () => { this.draftLineup = autoPickXI(this.club, this.draftTactics.formation); this.renderLineupEditor(); });
+    $('autopick').addEventListener('click', () => { this.draftLineup = autoPickXI(this.club, this.draftTactics.formation); this.rebuildDuties(); this.renderLineupEditor(); });
     $('save-team').addEventListener('click', () => (this.editorMode === 'standing' ? this.saveTeam() : this.kickOffMatch()));
     $('lineup-back').addEventListener('click', () => this.showHub());
     $('toggle-squad').addEventListener('click', () => {
@@ -283,6 +284,12 @@ class Game {
     this.pendingOpp = opp;
     this.draftTactics = { ...this.standingOrders.tactics, formation: this.standingOrders.formation };
     this.draftLineup = { formation: this.standingOrders.formation, playerIds: [...this.standingOrders.playerIds] };
+    // seed duties from saved standing orders where valid, else each player's auto default
+    this.draftDuties = this.draftLineup.playerIds.map((pid, i) => {
+      const p = this.club.players.find((x) => x.id === pid)!;
+      const saved = this.standingOrders.duties?.[i];
+      return saved && isDutyForRole(p.role, saved) ? saved : defaultDuty(p);
+    });
     $('lineup-title').textContent = mode === 'standing' ? 'SET MY TEAM' : `SET LINEUP  vs ${opp!.handle}`;
     ($('save-team') as HTMLButtonElement).textContent = mode === 'standing' ? 'Save Team' : '▶ Kick Off';
     this.renderLineupEditor();
@@ -298,6 +305,7 @@ class Game {
     ($('e-formation') as HTMLSelectElement).addEventListener('change', (ev) => {
       this.draftTactics.formation = (ev.target as HTMLSelectElement).value as Formation;
       this.draftLineup = autoPickXI(this.club, this.draftTactics.formation);
+      this.rebuildDuties();
       this.renderLineupEditor();
     });
     (Object.keys(LEVELS) as Array<keyof typeof LEVELS>).forEach((k) => {
@@ -314,14 +322,23 @@ class Game {
         .sort((a, b) => overall(b) - overall(a))
         .map((p) => `<option value="${p.id}" ${p.id === pid ? 'selected' : ''}>${p.name} (${p.role} ${overall(p)})</option>`).join('');
       const cur = this.club.players.find((p) => p.id === pid)!;
-      const duty = DUTY_LABEL[defaultDuty(cur)];
-      return `<div class="slot role-${roleForSlot}"><span class="role role-${roleForSlot}">${roleForSlot}</span><select data-i="${i}">${opts}</select><span class="duty" title="Auto duty from this player's strengths — how they'll play">${duty}</span><span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span></div>`;
+      const dutyOpts = DUTIES_BY_ROLE[cur.role]
+        .map((d) => `<option value="${d}" ${d === this.draftDuties[i] ? 'selected' : ''}>${DUTY_LABEL[d]}</option>`).join('');
+      return `<div class="slot role-${roleForSlot}"><span class="role role-${roleForSlot}">${roleForSlot}</span><select class="player-sel" data-i="${i}">${opts}</select><select class="duty-sel" data-i="${i}" title="This player's duty — how they play">${dutyOpts}</select><span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span></div>`;
     }).join('');
-    Array.from($('xi').querySelectorAll('select')).forEach((sel) => {
+    Array.from($('xi').querySelectorAll('select.player-sel')).forEach((sel) => {
       sel.addEventListener('change', (ev) => {
         const t = ev.target as HTMLSelectElement;
-        this.draftLineup.playerIds[Number(t.dataset.i)] = t.value;
+        const i = Number(t.dataset.i);
+        this.draftLineup.playerIds[i] = t.value;
+        this.draftDuties[i] = defaultDuty(this.playerAt(i)); // new player → its default duty
         this.renderLineupEditor();
+      });
+    });
+    Array.from($('xi').querySelectorAll('select.duty-sel')).forEach((sel) => {
+      sel.addEventListener('change', (ev) => {
+        const t = ev.target as HTMLSelectElement;
+        this.draftDuties[Number(t.dataset.i)] = t.value as Duty;
       });
     });
 
@@ -331,6 +348,10 @@ class Game {
     if (!$('squad-panel').classList.contains('hidden')) this.renderSquadPanel();
     this.updateEditorInsight();
   }
+
+  private playerAt(i: number): Player { return this.club.players.find((p) => p.id === this.draftLineup.playerIds[i])!; }
+  /** Reset every slot's duty to its player's auto default (after a formation change / auto-pick). */
+  private rebuildDuties() { this.draftDuties = this.draftLineup.playerIds.map((_, i) => defaultDuty(this.playerAt(i))); }
 
   private renderSquadPanel() {
     const panel = $('squad-panel');
@@ -355,6 +376,7 @@ class Game {
       formation: this.draftTactics.formation,
       playerIds: this.draftLineup.playerIds,
       tactics: { ...this.draftTactics },
+      duties: [...this.draftDuties],
     };
     try { const r = await api.setStandingOrders(so); this.standingOrders = r.standingOrders; toast('Team saved ✓'); await this.showHub(); }
     catch { $('lineup-insight').innerHTML = '<span style="color:var(--home)">Could not save — check your XI.</span>'; }
@@ -370,7 +392,8 @@ class Game {
     if (!this.pendingOpp) return;
     $('lineup-insight').innerHTML = '<span style="color:var(--cyan)">Playing…</span>';
     try {
-      const payload = await api.createMatch(this.pendingOpp.id, this.draftLineup, this.draftTactics);
+      const lineup: Lineup = { ...this.draftLineup, duties: [...this.draftDuties] };
+      const payload = await api.createMatch(this.pendingOpp.id, lineup, this.draftTactics);
       this.startMatch(payload, this.pendingOpp.handle);
     } catch { await this.showHub(); }
   }

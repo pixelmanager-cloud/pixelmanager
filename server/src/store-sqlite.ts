@@ -13,7 +13,7 @@ export function makeSqliteStore(file: string): Store {
           rating INTEGER NOT NULL DEFAULT 1000, created_at INTEGER NOT NULL);
         CREATE TABLE IF NOT EXISTS clubs (
           account_id TEXT PRIMARY KEY, club TEXT NOT NULL,
-          so_formation TEXT NOT NULL, so_player_ids TEXT NOT NULL, so_tactics TEXT NOT NULL);
+          so_formation TEXT NOT NULL, so_player_ids TEXT NOT NULL, so_tactics TEXT NOT NULL, so_duties TEXT);
         CREATE TABLE IF NOT EXISTS matches (
           id TEXT PRIMARY KEY, home_id TEXT NOT NULL, away_id TEXT NOT NULL,
           home_team TEXT NOT NULL, away_team TEXT NOT NULL,
@@ -27,8 +27,9 @@ export function makeSqliteStore(file: string): Store {
           account_id TEXT NOT NULL, season_id TEXT NOT NULL, season_number INTEGER NOT NULL,
           tier TEXT NOT NULL, final_pos INTEGER NOT NULL, title INTEGER NOT NULL, ended_at INTEGER NOT NULL);
       `);
-      // migrate a pre-seasons matches table (adds the column; throws-and-ignored if present)
+      // migrate pre-existing tables (adds columns; throws-and-ignored if already present)
       try { db.exec('ALTER TABLE matches ADD COLUMN season_id TEXT'); } catch { /* already added */ }
+      try { db.exec('ALTER TABLE clubs ADD COLUMN so_duties TEXT'); } catch { /* already added */ }
     },
     async createAccount(id, handle, token, createdAt) {
       db.prepare('INSERT INTO accounts (id, handle, token, rating, created_at) VALUES (?,?,?,1000,?)').run(id, handle, token, createdAt);
@@ -54,19 +55,19 @@ export function makeSqliteStore(file: string): Store {
     },
     async saveClub(accountId, club: Club, so: StandingOrders) {
       db.prepare(
-        `INSERT INTO clubs (account_id, club, so_formation, so_player_ids, so_tactics) VALUES (?,?,?,?,?)
+        `INSERT INTO clubs (account_id, club, so_formation, so_player_ids, so_tactics, so_duties) VALUES (?,?,?,?,?,?)
          ON CONFLICT(account_id) DO UPDATE SET club=excluded.club, so_formation=excluded.so_formation,
-           so_player_ids=excluded.so_player_ids, so_tactics=excluded.so_tactics`,
-      ).run(accountId, JSON.stringify(club), so.formation, JSON.stringify(so.playerIds), JSON.stringify(so.tactics));
+           so_player_ids=excluded.so_player_ids, so_tactics=excluded.so_tactics, so_duties=excluded.so_duties`,
+      ).run(accountId, JSON.stringify(club), so.formation, JSON.stringify(so.playerIds), JSON.stringify(so.tactics), so.duties ? JSON.stringify(so.duties) : null);
     },
     async saveStandingOrders(accountId, so: StandingOrders) {
-      db.prepare('UPDATE clubs SET so_formation=?, so_player_ids=?, so_tactics=? WHERE account_id=?')
-        .run(so.formation, JSON.stringify(so.playerIds), JSON.stringify(so.tactics), accountId);
+      db.prepare('UPDATE clubs SET so_formation=?, so_player_ids=?, so_tactics=?, so_duties=? WHERE account_id=?')
+        .run(so.formation, JSON.stringify(so.playerIds), JSON.stringify(so.tactics), so.duties ? JSON.stringify(so.duties) : null, accountId);
     },
     async getClub(accountId) {
-      const r = db.prepare('SELECT club, so_formation, so_player_ids, so_tactics FROM clubs WHERE account_id=?').get(accountId) as any;
+      const r = db.prepare('SELECT club, so_formation, so_player_ids, so_tactics, so_duties FROM clubs WHERE account_id=?').get(accountId) as any;
       if (!r) return undefined;
-      return { club: JSON.parse(r.club), standingOrders: { formation: r.so_formation, playerIds: JSON.parse(r.so_player_ids), tactics: JSON.parse(r.so_tactics) } };
+      return { club: JSON.parse(r.club), standingOrders: { formation: r.so_formation, playerIds: JSON.parse(r.so_player_ids), tactics: JSON.parse(r.so_tactics), duties: r.so_duties ? JSON.parse(r.so_duties) : undefined } };
     },
     async saveMatch(m: StoredMatch) {
       db.prepare(

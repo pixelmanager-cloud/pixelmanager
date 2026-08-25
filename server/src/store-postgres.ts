@@ -21,7 +21,7 @@ export function makePostgresStore(connectionString: string): Store {
           rating INTEGER NOT NULL DEFAULT 1000, created_at BIGINT NOT NULL);
         CREATE TABLE IF NOT EXISTS clubs (
           account_id TEXT PRIMARY KEY, club TEXT NOT NULL,
-          so_formation TEXT NOT NULL, so_player_ids TEXT NOT NULL, so_tactics TEXT NOT NULL);
+          so_formation TEXT NOT NULL, so_player_ids TEXT NOT NULL, so_tactics TEXT NOT NULL, so_duties TEXT);
         CREATE TABLE IF NOT EXISTS matches (
           id TEXT PRIMARY KEY, home_id TEXT NOT NULL, away_id TEXT NOT NULL,
           home_team TEXT NOT NULL, away_team TEXT NOT NULL,
@@ -35,6 +35,7 @@ export function makePostgresStore(connectionString: string): Store {
           account_id TEXT NOT NULL, season_id TEXT NOT NULL, season_number INTEGER NOT NULL,
           tier TEXT NOT NULL, final_pos INTEGER NOT NULL, title INTEGER NOT NULL, ended_at BIGINT NOT NULL);
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS season_id TEXT;
+        ALTER TABLE clubs ADD COLUMN IF NOT EXISTS so_duties TEXT;
       `);
     },
     async createAccount(id, handle, token, createdAt) {
@@ -62,20 +63,20 @@ export function makePostgresStore(connectionString: string): Store {
     },
     async saveClub(accountId, club: Club, so: StandingOrders) {
       await q(
-        `INSERT INTO clubs (account_id, club, so_formation, so_player_ids, so_tactics) VALUES ($1,$2,$3,$4,$5)
+        `INSERT INTO clubs (account_id, club, so_formation, so_player_ids, so_tactics, so_duties) VALUES ($1,$2,$3,$4,$5,$6)
          ON CONFLICT(account_id) DO UPDATE SET club=EXCLUDED.club, so_formation=EXCLUDED.so_formation,
-           so_player_ids=EXCLUDED.so_player_ids, so_tactics=EXCLUDED.so_tactics`,
-        [accountId, JSON.stringify(club), so.formation, JSON.stringify(so.playerIds), JSON.stringify(so.tactics)],
+           so_player_ids=EXCLUDED.so_player_ids, so_tactics=EXCLUDED.so_tactics, so_duties=EXCLUDED.so_duties`,
+        [accountId, JSON.stringify(club), so.formation, JSON.stringify(so.playerIds), JSON.stringify(so.tactics), so.duties ? JSON.stringify(so.duties) : null],
       );
     },
     async saveStandingOrders(accountId, so: StandingOrders) {
-      await q('UPDATE clubs SET so_formation=$1, so_player_ids=$2, so_tactics=$3 WHERE account_id=$4',
-        [so.formation, JSON.stringify(so.playerIds), JSON.stringify(so.tactics), accountId]);
+      await q('UPDATE clubs SET so_formation=$1, so_player_ids=$2, so_tactics=$3, so_duties=$4 WHERE account_id=$5',
+        [so.formation, JSON.stringify(so.playerIds), JSON.stringify(so.tactics), so.duties ? JSON.stringify(so.duties) : null, accountId]);
     },
     async getClub(accountId) {
-      const r = (await q('SELECT club, so_formation, so_player_ids, so_tactics FROM clubs WHERE account_id=$1', [accountId])).rows[0];
+      const r = (await q('SELECT club, so_formation, so_player_ids, so_tactics, so_duties FROM clubs WHERE account_id=$1', [accountId])).rows[0];
       if (!r) return undefined;
-      return { club: JSON.parse(r.club), standingOrders: { formation: r.so_formation, playerIds: JSON.parse(r.so_player_ids), tactics: JSON.parse(r.so_tactics) } };
+      return { club: JSON.parse(r.club), standingOrders: { formation: r.so_formation, playerIds: JSON.parse(r.so_player_ids), tactics: JSON.parse(r.so_tactics), duties: r.so_duties ? JSON.parse(r.so_duties) : undefined } };
     },
     async saveMatch(m: StoredMatch) {
       await q(

@@ -1,6 +1,6 @@
 // Thin client for the fm-server async-PvP API. Token (the "code") is kept in
 // localStorage; every request sends it as a Bearer header.
-import type { Club, Lineup, Tactics, Team } from '@fm/shared';
+import type { Club, Duty, Lineup, Tactics, Team } from '@fm/shared';
 
 const API_URL = (import.meta as any).env?.VITE_API_URL ?? 'http://localhost:8787';
 
@@ -29,7 +29,7 @@ async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
 
 export interface Account { id: string; handle: string; rating: number }
 export interface TableRow { id: string; handle: string; rating: number; P: number; W: number; D: number; L: number; GF: number; GA: number; GD: number; Pts: number }
-export interface StandingOrders { formation: Lineup['formation']; playerIds: string[]; tactics: Tactics }
+export interface StandingOrders { formation: Lineup['formation']; playerIds: string[]; tactics: Tactics; duties?: Duty[] }
 export interface ResultRow { id: string; home_id: string; away_id: string; home_handle: string; away_handle: string; home_score: number; away_score: number; created_at: number }
 export interface SeasonMeta { number: number; startsAt: number; endsAt: number; status: string; endsInMs: number }
 export interface HonourRow { season_number: number; tier: string; final_pos: number; title: number; ended_at: number }

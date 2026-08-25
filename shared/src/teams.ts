@@ -1,4 +1,4 @@
-import type { Player, PlayerAttrs, Role, Team } from './types.js';
+import type { Duty, Player, PlayerAttrs, Role, Team } from './types.js';
 import { PITCH } from './types.js';
 import { makeRng } from './rng.js';
 import { FORMATIONS, type Formation } from './formations.js';
@@ -85,6 +85,8 @@ export function generateClub(id: string, name: string, shortName: string, shirtC
 export interface Lineup {
   formation: Formation;
   playerIds: string[]; // length 11
+  /** optional per-slot manager duties (parallel to playerIds); absent slots auto-derive from stats */
+  duties?: Duty[];
 }
 
 /** Auto-select the best available XI for a formation, best player per slot by overall rating. */
@@ -105,7 +107,8 @@ export function buildXI(club: Club, lineup: Lineup): Team {
   const slots = FORMATIONS[lineup.formation];
   const players: Player[] = lineup.playerIds.map((pid, i) => {
     const p = club.players.find((x) => x.id === pid)!;
-    return { ...p, anchor: { x: slots[i].x, y: slots[i].y } };
+    // a manager-assigned duty for this slot overrides the player's stat-derived default
+    return { ...p, anchor: { x: slots[i].x, y: slots[i].y }, duty: lineup.duties?.[i] ?? p.duty };
   });
   return { id: club.id, name: club.name, shortName: club.shortName, shirtColor: club.shirtColor, players };
 }

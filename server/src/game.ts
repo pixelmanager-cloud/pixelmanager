@@ -1,7 +1,7 @@
 // Server-side game logic — reuses the SAME deterministic engine as the client.
 import {
-  generateClub, autoPickXI, buildXI, MatchEngine, TACTIC_PRESETS,
-  type Club, type Lineup, type Tactics, type Team, type Formation,
+  generateClub, autoPickXI, buildXI, MatchEngine, TACTIC_PRESETS, defaultDuty, isDutyForRole,
+  type Club, type Duty, type Lineup, type Tactics, type Team, type Formation,
 } from '@fm/shared';
 import type { StandingOrders } from './db.js';
 
@@ -26,6 +26,21 @@ export function validateLineup(club: Club, lineup: Lineup): boolean {
   if (!Array.isArray(lineup.playerIds) || lineup.playerIds.length !== 11) return false;
   if (new Set(lineup.playerIds).size !== 11) return false;
   return lineup.playerIds.every((id) => owned.has(id));
+}
+
+/**
+ * Sanitise manager-supplied duties against each slot's player: an illegal or missing
+ * duty falls back to that player's stat-derived default. Returns undefined if none
+ * were supplied (the engine then auto-derives — identical behaviour). Assumes the
+ * lineup already passed validateLineup, so every playerId is owned.
+ */
+export function cleanDuties(club: Club, lineup: Lineup): Duty[] | undefined {
+  if (!Array.isArray(lineup.duties)) return undefined;
+  return lineup.playerIds.map((pid, i) => {
+    const p = club.players.find((x) => x.id === pid)!;
+    const d = lineup.duties![i];
+    return isDutyForRole(p.role, d) ? d : defaultDuty(p);
+  });
 }
 
 /** Run a full match on the authoritative engine and return the deterministic result. */

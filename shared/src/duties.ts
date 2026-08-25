@@ -64,6 +64,11 @@ export function dutyMods(d: Duty | undefined): DutyMods {
   return d ? TABLE[d] : NEUTRAL;
 }
 
+/** True if a duty is legal for a given position (used to sanitise manager input). */
+export function isDutyForRole(role: Role, d: unknown): d is Duty {
+  return typeof d === 'string' && (DUTIES_BY_ROLE[role] as string[]).includes(d);
+}
+
 /**
  * Pick a sensible duty from a player's strengths — deterministic, no RNG.
  * Chooses the character the stats already point to (a poacher finishes, a

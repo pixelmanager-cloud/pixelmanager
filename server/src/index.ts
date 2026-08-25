@@ -3,7 +3,7 @@ import cors from '@fastify/cors';
 import { randomUUID } from 'node:crypto';
 import type { Lineup, Tactics } from '@fm/shared';
 import { db, type Account, type StandingOrders } from './db.js';
-import { makeClub, validateLineup, runMatch, elo, buildTable, FORMATIONS } from './game.js';
+import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMATIONS } from './game.js';
 import { ensureSeason, forceRollover } from './seasons.js';
 
 const app = Fastify({ logger: false });
@@ -43,9 +43,9 @@ app.put('/standing-orders', { preHandler: requireAuth }, async (req, reply) => {
   const body = req.body as any;
   if (!isFormation(body?.formation)) return reply.code(400).send({ error: 'bad formation' });
   const c = (await db.getClub(req.account!.id))!;
-  const lineup: Lineup = { formation: body.formation, playerIds: body.playerIds };
+  const lineup: Lineup = { formation: body.formation, playerIds: body.playerIds, duties: body.duties };
   if (!validateLineup(c.club, lineup)) return reply.code(400).send({ error: 'invalid lineup' });
-  const so: StandingOrders = { formation: body.formation, playerIds: body.playerIds, tactics: body.tactics as Tactics };
+  const so: StandingOrders = { formation: body.formation, playerIds: body.playerIds, tactics: body.tactics as Tactics, duties: cleanDuties(c.club, lineup) };
   await db.saveStandingOrders(req.account!.id, so);
   return { ok: true, standingOrders: so };
 });
@@ -60,12 +60,13 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   if (!opp || !oppClub) return reply.code(404).send({ error: 'opponent not found' });
 
   const myLineup: Lineup = body.myLineup
-    ? { formation: body.myLineup.formation, playerIds: body.myLineup.playerIds }
-    : { formation: me!.standingOrders.formation, playerIds: me!.standingOrders.playerIds };
+    ? { formation: body.myLineup.formation, playerIds: body.myLineup.playerIds, duties: body.myLineup.duties }
+    : { formation: me!.standingOrders.formation, playerIds: me!.standingOrders.playerIds, duties: me!.standingOrders.duties };
   const myTactics: Tactics = (body.myTactics as Tactics) ?? me!.standingOrders.tactics;
   if (!isFormation(myLineup.formation) || !validateLineup(me!.club, myLineup)) return reply.code(400).send({ error: 'invalid lineup' });
+  myLineup.duties = cleanDuties(me!.club, myLineup);
 
-  const oppLineup: Lineup = { formation: oppClub.standingOrders.formation, playerIds: oppClub.standingOrders.playerIds };
+  const oppLineup: Lineup = { formation: oppClub.standingOrders.formation, playerIds: oppClub.standingOrders.playerIds, duties: oppClub.standingOrders.duties };
   const { seed, homeTeam, awayTeam, result } = runMatch(me!.club, myLineup, myTactics, oppClub.club, oppLineup, oppClub.standingOrders.tactics);
 
   const scoreHome = result[0] > result[1] ? 1 : result[0] < result[1] ? 0 : 0.5;
