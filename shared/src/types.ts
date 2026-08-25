@@ -33,6 +33,8 @@ export interface PlayerAttrs {
   positioning: number;
   workrate: number;
   keeping: number;
+  setPiece: number; // corners / free kicks / penalties delivery + finishing
+  stamina: number;  // endurance — how slowly the live in-match fitness drains
 }
 
 export interface Player {

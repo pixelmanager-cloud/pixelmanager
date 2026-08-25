@@ -11,10 +11,10 @@ function rollAttrs(rng: () => number, role: Role, quality: number): PlayerAttrs 
   // quality is a 1-20 centre; jitter +-3, then per-stat role bias.
   const s = (bias: number) => Math.max(1, Math.min(20, Math.round(quality + bias + (rng() - 0.5) * 6)));
   switch (role) {
-    case 'GK': return { pace: s(-4), strength: s(-1), passing: s(-3), shooting: s(-8), tackling: s(-6), positioning: s(2), workrate: s(-2), keeping: s(6) };
-    case 'DF': return { pace: s(0), strength: s(2), passing: s(-1), shooting: s(-5), tackling: s(4), positioning: s(3), workrate: s(1), keeping: s(-10) };
-    case 'MF': return { pace: s(1), strength: s(0), passing: s(3), shooting: s(0), tackling: s(0), positioning: s(1), workrate: s(3), keeping: s(-10) };
-    case 'FW': return { pace: s(3), strength: s(1), passing: s(0), shooting: s(4), tackling: s(-4), positioning: s(2), workrate: s(0), keeping: s(-10) };
+    case 'GK': return { pace: s(-4), strength: s(-1), passing: s(-3), shooting: s(-8), tackling: s(-6), positioning: s(2), workrate: s(-2), keeping: s(6), setPiece: s(-6), stamina: s(-3) };
+    case 'DF': return { pace: s(0), strength: s(2), passing: s(-1), shooting: s(-5), tackling: s(4), positioning: s(3), workrate: s(1), keeping: s(-10), setPiece: s(-2), stamina: s(1) };
+    case 'MF': return { pace: s(1), strength: s(0), passing: s(3), shooting: s(0), tackling: s(0), positioning: s(1), workrate: s(3), keeping: s(-10), setPiece: s(2), stamina: s(3) };
+    case 'FW': return { pace: s(3), strength: s(1), passing: s(0), shooting: s(4), tackling: s(-4), positioning: s(2), workrate: s(0), keeping: s(-10), setPiece: s(2), stamina: s(1) };
   }
 }
 
