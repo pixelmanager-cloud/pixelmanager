@@ -22,7 +22,7 @@ implements it on a branch, and opens a PR for you to review.
 > deterministic, no `shared/` changes. Each is ONE small PR. Always run `npm run verify` (must
 > pass) and take a before/after look at the affected screen. Do them top-down, one at a time.
 
-- [ ] **[readability] Reserve the pixel font for headings; make small text legible.** Per audit R1:
+- [x] **[readability] Reserve the pixel font for headings; make small text legible.** Per audit R1:
   Press Start 2P (`--display`) is currently used for buttons (10px), section `h3` (13px), the login
   tagline (9px), `#record`/`#timer` (10px), table headers, pills and badges — pixel type is illegible
   that small. In `client/index.html` CSS, switch **buttons, labels, table headers, blurbs, pills, and
