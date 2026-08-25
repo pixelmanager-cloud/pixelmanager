@@ -164,6 +164,33 @@
       .scout-net .sn-desc b { color: var(--good); }
       #my-scouts .sn-hint { grid-column: 1 / -1; font-size: 13px; color: #778; font-style: italic; }
       .scout-h4 { font-family: var(--display); font-size: 11px; color: var(--pink); margin: 14px 0 4px; letter-spacing: 0.5px; }
+      /* transfer market */
+      #market-head { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+      #market-head h3 { margin: 0; } #market-back { margin-left: auto; }
+      #market-coins { font-family: var(--display); font-size: 12px; color: var(--warn); }
+      #market-scout { font-size: 13px; margin-bottom: 8px; }
+      .market-sell { border: 2px solid var(--line); background: var(--panel-2); padding: 10px 12px; margin-bottom: 8px; }
+      .sell-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+      .sell-row select { flex: 1; min-width: 180px; }
+      .sell-row input { width: 150px; font-family: var(--body); font-size: 17px; background: var(--panel-2); color: var(--text); border: 2px solid var(--line); padding: 4px 8px; }
+      #my-listings { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+      #market-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 8px; }
+      .mkt { border: 2px solid var(--line); background: var(--panel-2); border-radius: 6px; padding: 9px 11px; display: flex; flex-direction: column; gap: 7px; }
+      .mkt.gem { border-color: var(--warn); }
+      .mkt .mkt-top { display: flex; align-items: center; gap: 8px; }
+      .mkt-role { flex: none; width: 26px; text-align: center; font-family: var(--display); font-size: 8px; padding: 3px 0; border-radius: 3px; color: #0a0a16; }
+      .mkt .mkt-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #fff; font-size: 17px; }
+      .mkt .mkt-ovr { flex: none; font-family: var(--display); font-size: 14px; color: var(--good); }
+      .mkt .mkt-attrs { display: flex; flex-wrap: wrap; gap: 4px; }
+      .mkt .at { font-size: 12px; padding: 2px 6px; border: 1px solid var(--line); border-radius: 4px; color: #9ab; background: rgba(0,0,0,0.2); }
+      .mkt .at b { color: var(--good); }
+      .mkt .at.locked { color: #667; border-style: dashed; }
+      .mkt .mkt-bot { display: flex; align-items: center; gap: 8px; margin-top: 2px; }
+      .mkt .mkt-price { font-family: var(--display); font-size: 11px; color: var(--warn); }
+      .mkt .mkt-seller { font-size: 12px; color: #778; }
+      .mkt .mkt-bot button { margin-left: auto; }
+      .listing-mine { display: flex; align-items: center; gap: 10px; font-size: 15px; border: 1px solid var(--line); border-radius: 5px; padding: 6px 9px; background: rgba(0,0,0,0.2); }
+      .listing-mine .lm-name { flex: 1; color: #fff; } .listing-mine .lm-price { font-family: var(--display); font-size: 10px; color: var(--warn); }
       @media (max-width: 640px) { #my-scouts { grid-template-columns: 1fr; } }
       .trial { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border: 2px solid var(--line); background: var(--panel-2); margin-bottom: 8px; font-size: 18px; }
       .trial.signed { opacity: 0.55; }
@@ -345,10 +372,11 @@
 
       <!-- HUB -->
       <div id="hub" class="panel hidden">
-        <div id="hub-head"><span id="me-name"></span><span id="me-rating"></span>
+        <div id="hub-head"><span id="me-name"></span><span id="me-rating"></span><span id="me-coins" title="Transfer-market coins — earn them by playing"></span>
           <div class="hub-actions">
             <button id="view-standings">📊 League &amp; Results</button>
             <button id="view-scouting">🔎 Scouting</button>
+            <button id="view-market">💰 Transfer Market</button>
             <button id="set-team">⚙ Set My Team</button>
           </div>
         </div>
@@ -388,6 +416,23 @@
         <h4 class="scout-h4">TRIAL POOL</h4>
         <div class="scout-sub">Sign up to <b id="loan-cap">3</b> loanees this season (<span id="loan-signed">0</span> signed). They play this season only, then leave — better players turn up rarely.</div>
         <div id="trial-pool"></div>
+      </div>
+
+      <!-- TRANSFER MARKET -->
+      <div id="market" class="panel hidden">
+        <div id="market-head"><h3>💰 TRANSFER MARKET</h3><span id="market-coins"></span><button id="market-back">← Back to hub</button></div>
+        <div id="market-scout" class="muted"></div>
+        <div class="market-sell">
+          <h4 class="scout-h4">SELL A PLAYER</h4>
+          <div class="sell-row">
+            <select id="sell-player"></select>
+            <input id="sell-price" type="number" min="10" max="100000" placeholder="price (coins)" />
+            <button id="sell-btn" class="primary">List for sale</button>
+          </div>
+          <div id="my-listings"></div>
+        </div>
+        <h4 class="scout-h4">FOR SALE</h4>
+        <div id="market-list"></div>
       </div>
 
       <!-- LINEUP EDITOR (my standing orders) -->

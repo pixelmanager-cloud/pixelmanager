@@ -4,7 +4,7 @@ import {
   TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty,
 } from '@fm/shared';
 import { SCALE, makeBallTexture, makeBallGhostTexture, makePitchTexture, makePlayerFrames, makeShadowTexture, makeCarrierTexture } from './pixelart';
-import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist } from './api';
+import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing } from './api';
 
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
 
@@ -159,8 +159,8 @@ class Game {
     this.account = me.account; this.club = me.club; this.standingOrders = me.standingOrders;
   }
 
-  private showScreen(s: 'login' | 'hub' | 'lineup' | 'match' | 'standings' | 'scouting') {
-    for (const id of ['login', 'hub', 'lineup', 'matchwrap', 'standings', 'scouting']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
+  private showScreen(s: 'login' | 'hub' | 'lineup' | 'match' | 'standings' | 'scouting' | 'market') {
+    for (const id of ['login', 'hub', 'lineup', 'matchwrap', 'standings', 'scouting', 'market']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
     $('logout').classList.toggle('hidden', s === 'login');
   }
 
@@ -178,6 +178,9 @@ class Game {
     $('standings-back').addEventListener('click', () => this.showHub());
     $('view-scouting').addEventListener('click', () => this.showScouting());
     $('scouting-back').addEventListener('click', () => this.showHub());
+    $('view-market').addEventListener('click', () => this.showMarket());
+    $('market-back').addEventListener('click', () => this.showHub());
+    $('sell-btn').addEventListener('click', () => this.sellPlayer());
     const showTab = (tab: 'results' | 'honours') => {
       $('results-feed').classList.toggle('hidden', tab !== 'results');
       $('honours-feed').classList.toggle('hidden', tab !== 'honours');
@@ -242,6 +245,7 @@ class Game {
     this.showScreen('hub');
     $('me-name').textContent = this.club.name;
     $('me-rating').textContent = `RATING ${this.account.rating}`;
+    if (this.account.coins != null) $('me-coins').textContent = `💰 ${this.account.coins}`;
     $('fixtures-progress').textContent = '';
     $('opponents').innerHTML = SPINNER;
     try {
@@ -340,6 +344,83 @@ class Game {
     } catch (e: any) {
       toast(e?.status === 409 ? 'You\'ve hit your loanee limit this season' : 'Could not sign');
     }
+  }
+
+  // ── Transfer market ─────────────────────────────────────────────────────────
+  private async showMarket() {
+    this.showScreen('market');
+    $('market-list').innerHTML = SPINNER;
+    $('my-listings').innerHTML = '';
+    try {
+      const d = await api.market();
+      this.account.coins = d.coins;
+      $('market-coins').textContent = `💰 ${d.coins}`;
+      const reveal: Record<string, string> = {
+        base: 'ratings only', bronze: 'ratings + 2 key stats', silver: 'ratings + 5 stats', gold: 'the full stat sheet',
+      };
+      const tName: Record<string, string> = { base: 'Base', bronze: 'Bronze', silver: 'Silver', gold: 'Gold' };
+      $('market-scout').innerHTML = `🔎 Your <b>${tName[d.tier] ?? d.tier}</b> player scout reveals <b>${reveal[d.tier] ?? ''}</b> on each listing — 🔒 stats unlock with a higher scout.`;
+      // sell dropdown: squad players not already listed and not loanees
+      const listed = new Set(d.mine.map((l) => l.playerId));
+      const sellable = this.club.players.filter((p) => !p.id.startsWith('loan-') && !listed.has(p.id)).sort((a, b) => overall(b) - overall(a));
+      const sel = $('sell-player') as HTMLSelectElement;
+      sel.innerHTML = sellable.length
+        ? sellable.map((p) => `<option value="${p.id}">${p.name} (${p.role} ${overall(p)})</option>`).join('')
+        : '<option value="">No sellable players</option>';
+      // my active listings
+      $('my-listings').innerHTML = d.mine.length
+        ? d.mine.map((l) => `<div class="listing-mine"><span class="mkt-role role-${l.player.role}">${l.player.role}</span>`
+            + `<span class="lm-name">${l.player.name} (OVR ${l.player.overall})</span><span class="lm-price">💰 ${l.price}</span>`
+            + `<button data-cancel="${l.id}">Cancel</button></div>`).join('')
+        : '';
+      // the open market
+      $('market-list').innerHTML = d.listings.length
+        ? d.listings.map((l) => this.renderMarketCard(l, d.coins)).join('')
+        : '<div class="muted">Nothing for sale right now. List one of your players above, or check back later.</div>';
+      Array.from($('market-list').querySelectorAll('button[data-buy]')).forEach((b) =>
+        b.addEventListener('click', () => this.buyListing((b as HTMLElement).dataset.buy!)));
+      Array.from($('my-listings').querySelectorAll('button[data-cancel]')).forEach((b) =>
+        b.addEventListener('click', () => this.cancelListing((b as HTMLElement).dataset.cancel!)));
+    } catch {
+      $('market-list').innerHTML = '<div class="muted">Could not load — is the server running?</div>';
+    }
+  }
+
+  private renderMarketCard(l: MarketListing, coins: number): string {
+    const lab: Record<string, string> = { pace: 'PAC', strength: 'STR', passing: 'PAS', shooting: 'SHO', tackling: 'TAC', positioning: 'POS', workrate: 'WOR', keeping: 'GK' };
+    const attrs = Object.entries(l.player.attrs).map(([k, v]) => `<span class="at">${lab[k] ?? k} <b>${v}</b></span>`).join('');
+    const locks = l.player.hidden > 0 ? `<span class="at locked">🔒 ${l.player.hidden} hidden</span>` : '';
+    const afford = coins >= l.price;
+    const buy = `<button data-buy="${l.id}" ${afford ? '' : 'disabled title="Not enough coins"'}>Buy ▶</button>`;
+    return `<div class="mkt ${l.player.overall >= 15 ? 'gem' : ''}">`
+      + `<div class="mkt-top"><span class="mkt-role role-${l.player.role}">${l.player.role}</span>`
+      + `<span class="mkt-name">${l.player.name}</span><span class="mkt-ovr">OVR ${l.player.overall}</span></div>`
+      + `<div class="mkt-attrs">${attrs}${locks}</div>`
+      + `<div class="mkt-bot"><span class="mkt-price">💰 ${l.price}</span><span class="mkt-seller">${l.sellerHandle}</span>${buy}</div></div>`;
+  }
+
+  private async sellPlayer() {
+    const playerId = ($('sell-player') as HTMLSelectElement).value;
+    const priceInput = $('sell-price') as HTMLInputElement;
+    const price = Number(priceInput.value);
+    if (!playerId) { toast('Pick a player to sell'); return; }
+    if (!price || price < 10) { toast('Set a price (min 10 coins)'); return; }
+    try { await api.listPlayer(playerId, price); toast('Listed for sale ✓'); priceInput.value = ''; await this.showMarket(); }
+    catch (e: any) { toast(e?.body?.error ?? 'Could not list'); }
+  }
+
+  private async buyListing(id: string) {
+    try {
+      const r = await api.buyListing(id);
+      toast(`Signed ${r.player.name} ✓`);
+      this.setMe(await api.me()); // refresh coins + squad
+      await this.showMarket();
+    } catch (e: any) { toast(e?.body?.error ?? 'Could not buy'); }
+  }
+
+  private async cancelListing(id: string) {
+    try { await api.cancelListing(id); toast('Listing withdrawn'); await this.showMarket(); }
+    catch { toast('Could not cancel'); }
   }
 
   private renderResults(rows: ResultRow[]): string {

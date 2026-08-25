@@ -20,6 +20,12 @@ export interface Season { id: string; number: number; startsAt: number; endsAt: 
 export interface HonourRow { season_number: number; tier: string; final_pos: number; title: number; ended_at: number }
 /** A player's placement within the division pyramid for a season (Phase B). */
 export interface PodRef { tier: string; pod: number }
+/** A transfer-market listing (a squad player put up for coins). */
+export interface Listing {
+  id: string; seller_id: string; seller_handle: string; player_id: string;
+  player_json: string; price: number; status: 'active' | 'sold' | 'cancelled';
+  created_at: number; buyer_id: string | null; sold_at: number | null;
+}
 
 /** Auth row used by /login: the account plus its bearer token and password hash. */
 export interface AuthRow { id: string; handle: string; rating: number; token: string; passwordHash: string | null }
@@ -33,6 +39,15 @@ export interface Store {
   setPassword(accountId: string, passwordHash: string): Promise<void>;
   handleTaken(handle: string): Promise<boolean>;
   setRating(id: string, rating: number): Promise<void>;
+  // transfer-market economy (coins + listings)
+  getCoins(id: string): Promise<number>;
+  addCoins(id: string, delta: number): Promise<void>;
+  createListing(l: Listing): Promise<void>;
+  activeListings(limit?: number): Promise<Listing[]>;
+  listingsBySeller(sellerId: string): Promise<Listing[]>;
+  listingById(id: string): Promise<Listing | undefined>;
+  activeListingForPlayer(playerId: string): Promise<Listing | undefined>;
+  setListingStatus(id: string, status: 'sold' | 'cancelled', buyerId: string | null, soldAt: number | null): Promise<void>;
   opponents(exceptId: string, myRating: number, limit?: number): Promise<OpponentRow[]>;
   leaderboard(limit?: number): Promise<LeaderRow[]>;
   saveClub(accountId: string, club: Club, so: StandingOrders): Promise<void>;

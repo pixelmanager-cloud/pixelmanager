@@ -27,7 +27,9 @@ async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export interface Account { id: string; handle: string; rating: number }
+export interface Account { id: string; handle: string; rating: number; coins?: number }
+export interface MarketPlayer { name: string; role: string; overall: number; attrs: Record<string, number>; hidden: number }
+export interface MarketListing { id: string; playerId: string; price: number; sellerHandle: string; mine: boolean; player: MarketPlayer }
 export interface TableRow { id: string; handle: string; rating: number; P: number; W: number; D: number; L: number; GF: number; GA: number; GD: number; Pts: number }
 export interface StandingOrders { formation: Lineup['formation']; playerIds: string[]; tactics: Tactics; duties?: Duty[] }
 export interface ResultRow { id: string; home_id: string; away_id: string; home_handle: string; away_handle: string; home_score: number; away_score: number; created_at: number }
@@ -70,4 +72,8 @@ export const api = {
   signTrial: (index: number) => req<{ ok: true; player: { name: string; role: string }; signedCount: number }>(`/scout/trials/${index}/sign`, { method: 'POST' }),
   standings: () => req<{ season: { number: number; endsAt: number }; tier: string; pod: number; promote: number; relegate: number; table: TableRow[] }>('/standings'),
   honours: () => req<{ honours: HonourRow[] }>('/honours'),
+  market: () => req<{ coins: number; tier: string; listings: MarketListing[]; mine: MarketListing[] }>('/market'),
+  listPlayer: (playerId: string, price: number) => req<{ ok: true; id: string }>('/market/list', { method: 'POST', body: JSON.stringify({ playerId, price }) }),
+  buyListing: (id: string) => req<{ ok: true; player: { name: string; role: string }; coins: number }>(`/market/${id}/buy`, { method: 'POST' }),
+  cancelListing: (id: string) => req<{ ok: true }>(`/market/${id}/cancel`, { method: 'POST' }),
 };

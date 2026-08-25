@@ -2,7 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { randomUUID } from 'node:crypto';
 import { overall, type Lineup, type Tactics } from '@fm/shared';
-import { db, type Account, type StandingOrders } from './db.js';
+import { db, type Account, type StandingOrders, type Listing } from './db.js';
 import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMATIONS } from './game.js';
 import { hashPassword, verifyPassword } from './auth.js';
 import { generatePool, trialistAt, LOANEE_CAP, OPP_REVEAL, describeIntel, type OppTier } from './scouting.js';
@@ -14,6 +14,11 @@ function oppScoutTier(_acc: Account): OppTier {
   return t && t in OPP_REVEAL ? t : 'base';
 }
 import { ensureSeason, ensurePod, forceRollover, resultsAmong, startOfUtcDay, PROMOTE, RELEGATE, MATCHES_PER_DAY } from './seasons.js';
+import {
+  revealPlayer, playerScoutTier, WIN_COINS, DRAW_COINS, LOSS_COINS,
+  MIN_SQUAD, MAX_SQUAD, PRICE_MIN, PRICE_MAX,
+} from './market.js';
+import { autoPickXI } from '@fm/shared';
 
 const app = Fastify({ logger: false });
 await app.register(cors, { origin: true });
@@ -47,7 +52,7 @@ app.post('/register', async (req, reply) => {
   await db.createAccount(id, handle, token, Date.now(), hashPassword(password));
   const { club, standingOrders } = makeClub(id, handle);
   await db.saveClub(id, club, standingOrders);
-  return { token, account: { id, handle, rating: 1000 }, club, standingOrders };
+  return { token, account: { id, handle, rating: 1000, coins: await db.getCoins(id) }, club, standingOrders };
 });
 
 // log back into an existing club with handle + password. Accounts created before
@@ -65,12 +70,13 @@ app.post('/login', async (req, reply) => {
   }
   const c = await db.getClub(auth.id);
   if (!c) return reply.code(404).send({ error: 'club not found' });
-  return { token: auth.token, account: { id: auth.id, handle: auth.handle, rating: auth.rating }, club: c.club, standingOrders: c.standingOrders };
+  return { token: auth.token, account: { id: auth.id, handle: auth.handle, rating: auth.rating, coins: await db.getCoins(auth.id) }, club: c.club, standingOrders: c.standingOrders };
 });
 
 app.get('/me', { preHandler: requireAuth }, async (req) => {
   const c = (await db.getClub(req.account!.id))!;
-  return { account: req.account, club: c.club, standingOrders: c.standingOrders };
+  const coins = await db.getCoins(req.account!.id);
+  return { account: { ...req.account, coins }, club: c.club, standingOrders: c.standingOrders };
 });
 
 app.put('/standing-orders', { preHandler: requireAuth }, async (req, reply) => {
@@ -161,7 +167,9 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const myScore = iAmHome ? result[0] : result[1], oppScore = iAmHome ? result[1] : result[0];
   const myOutcome = myScore > oppScore ? 1 : myScore < oppScore ? 0 : 0.5;
   const [nMe, nOpp] = elo(req.account!.rating, opp.rating, myOutcome);
-  await Promise.all([db.setRating(meId, nMe), db.setRating(oppId, nOpp)]);
+  const coinsFor = (o: number) => o === 1 ? WIN_COINS : o === 0.5 ? DRAW_COINS : LOSS_COINS;
+  const myCoins = coinsFor(myOutcome), oppCoins = coinsFor(1 - myOutcome);
+  await Promise.all([db.setRating(meId, nMe), db.setRating(oppId, nOpp), db.addCoins(meId, myCoins), db.addCoins(oppId, oppCoins)]);
   const nHome = iAmHome ? nMe : nOpp, nAway = iAmHome ? nOpp : nMe;
 
   const matchId = randomUUID();
@@ -171,7 +179,7 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   });
 
   return {
-    matchId, seed, result, mySide: iAmHome ? 0 : 1,
+    matchId, seed, result, mySide: iAmHome ? 0 : 1, coinsEarned: myCoins,
     home: { id: homeId, handle: iAmHome ? req.account!.handle : opp.handle, rating: nHome, team: homeTeam, tactics: hTactics },
     away: { id: awayId, handle: iAmHome ? opp.handle : req.account!.handle, rating: nAway, team: awayTeam, tactics: aTactics },
   };
@@ -267,6 +275,74 @@ app.post('/scout/trials/:index/sign', { preHandler: requireAuth }, async (req, r
   await db.saveClub(meId, c.club, c.standingOrders);
   await db.addLoanee(meId, s.id, player.id);
   return { ok: true, player: { name: player.name, role: player.role }, signedCount: (await db.countLoanees(meId, s.id)) };
+});
+
+// ── Transfer market (in-game coins) ──────────────────────────────────────────
+// Browse listings (stats shown through your player-scout tier), your own listings,
+// and your coin balance.
+app.get('/market', { preHandler: requireAuth }, async (req) => {
+  const meId = req.account!.id;
+  const tier = playerScoutTier();
+  const [coins, listings, mine] = await Promise.all([db.getCoins(meId), db.activeListings(120), db.listingsBySeller(meId)]);
+  const render = (l: Listing) => ({
+    id: l.id, playerId: l.player_id, price: l.price, sellerHandle: l.seller_handle, mine: l.seller_id === meId,
+    player: revealPlayer(JSON.parse(l.player_json), tier),
+  });
+  return { coins, tier, listings: listings.filter((l) => l.seller_id !== meId).map(render), mine: mine.map(render) };
+});
+
+// list one of your squad players for sale
+app.post('/market/list', { preHandler: requireAuth }, async (req, reply) => {
+  const meId = req.account!.id;
+  const { playerId, price } = (req.body as any) ?? {};
+  const pr = Math.round(Number(price));
+  if (!playerId || !Number.isFinite(pr) || pr < PRICE_MIN || pr > PRICE_MAX) return reply.code(400).send({ error: `price must be ${PRICE_MIN}–${PRICE_MAX} coins` });
+  const c = await db.getClub(meId);
+  if (!c) return reply.code(404).send({ error: 'club not found' });
+  const player = c.club.players.find((p) => p.id === playerId);
+  if (!player) return reply.code(404).send({ error: 'you do not own that player' });
+  if (player.id.startsWith('loan-')) return reply.code(409).send({ error: 'loanees cannot be sold' });
+  if (c.club.players.length <= MIN_SQUAD) return reply.code(409).send({ error: `you must keep at least ${MIN_SQUAD} players` });
+  if (await db.activeListingForPlayer(playerId)) return reply.code(409).send({ error: 'that player is already listed' });
+  const id = randomUUID();
+  await db.createListing({ id, seller_id: meId, seller_handle: req.account!.handle, player_id: playerId, player_json: JSON.stringify(player), price: pr, status: 'active', created_at: Date.now(), buyer_id: null, sold_at: null });
+  return { ok: true, id };
+});
+
+// pull one of your own listings back off the market
+app.post('/market/:id/cancel', { preHandler: requireAuth }, async (req, reply) => {
+  const l = await db.listingById(String((req.params as any).id));
+  if (!l || l.status !== 'active') return reply.code(404).send({ error: 'no such listing' });
+  if (l.seller_id !== req.account!.id) return reply.code(403).send({ error: 'not your listing' });
+  await db.setListingStatus(l.id, 'cancelled', null, null);
+  return { ok: true };
+});
+
+// buy a listed player: coins move seller-ward, the player joins your squad
+app.post('/market/:id/buy', { preHandler: requireAuth }, async (req, reply) => {
+  const meId = req.account!.id;
+  const l = await db.listingById(String((req.params as any).id));
+  if (!l || l.status !== 'active') return reply.code(404).send({ error: 'no such listing' });
+  if (l.seller_id === meId) return reply.code(409).send({ error: 'that is your own listing' });
+  const [coins, buyerClub, sellerClub] = await Promise.all([db.getCoins(meId), db.getClub(meId), db.getClub(l.seller_id)]);
+  if (!buyerClub || !sellerClub) return reply.code(404).send({ error: 'club not found' });
+  if (coins < l.price) return reply.code(409).send({ error: 'not enough coins' });
+  if (buyerClub.club.players.length >= MAX_SQUAD) return reply.code(409).send({ error: `your squad is full (max ${MAX_SQUAD})` });
+  const idx = sellerClub.club.players.findIndex((p) => p.id === l.player_id);
+  if (idx < 0) { await db.setListingStatus(l.id, 'cancelled', null, null); return reply.code(409).send({ error: 'seller no longer owns that player' }); }
+  const [player] = sellerClub.club.players.splice(idx, 1);
+  buyerClub.club.players.push(player);
+  // repair the seller's standing XI if they'd just sold a starter
+  let sellerSo = sellerClub.standingOrders;
+  if (sellerSo.playerIds.includes(l.player_id)) sellerSo = { ...sellerSo, playerIds: autoPickXI(sellerClub.club, sellerSo.formation).playerIds, duties: undefined };
+  await Promise.all([
+    db.saveClub(l.seller_id, sellerClub.club, sellerSo),
+    db.saveClub(meId, buyerClub.club, buyerClub.standingOrders),
+    db.addCoins(meId, -l.price),
+    db.addCoins(l.seller_id, l.price),
+    db.setListingStatus(l.id, 'sold', meId, Date.now()),
+  ]);
+  return { ok: true, player: { name: player.name, role: player.role }, coins: coins - l.price };
 });
 
 // all-time cumulative table (kept for an optional global leaderboard view)

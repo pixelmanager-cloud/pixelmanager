@@ -1,7 +1,7 @@
 // Local-dev backend on Node's built-in SQLite (no native deps).
 import { DatabaseSync } from 'node:sqlite';
 import type { Club } from '@fm/shared';
-import type { Store, Account, AuthRow, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow, Season, HonourRow, PodRef } from './store.js';
+import type { Store, Account, AuthRow, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow, Season, HonourRow, PodRef, Listing } from './store.js';
 
 export function makeSqliteStore(file: string): Store {
   const db = new DatabaseSync(file);
@@ -36,6 +36,10 @@ export function makeSqliteStore(file: string): Store {
         CREATE TABLE IF NOT EXISTS loanees (
           owner_id TEXT NOT NULL, season_id TEXT NOT NULL, player_id TEXT NOT NULL,
           PRIMARY KEY (owner_id, player_id));
+        CREATE TABLE IF NOT EXISTS listings (
+          id TEXT PRIMARY KEY, seller_id TEXT NOT NULL, player_id TEXT NOT NULL,
+          player_json TEXT NOT NULL, price INTEGER NOT NULL, status TEXT NOT NULL,
+          created_at INTEGER NOT NULL, buyer_id TEXT, sold_at INTEGER);
       `);
       // migrate pre-existing tables (adds columns; throws-and-ignored if already present)
       try { db.exec('ALTER TABLE matches ADD COLUMN season_id TEXT'); } catch { /* already added */ }
@@ -43,6 +47,7 @@ export function makeSqliteStore(file: string): Store {
       try { db.exec('ALTER TABLE clubs ADD COLUMN so_duties TEXT'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE accounts ADD COLUMN tier TEXT'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE accounts ADD COLUMN password_hash TEXT'); } catch { /* already added */ }
+      try { db.exec('ALTER TABLE accounts ADD COLUMN coins INTEGER NOT NULL DEFAULT 500'); } catch { /* already added */ }
     },
     async createAccount(id, handle, token, createdAt, passwordHash) {
       db.prepare('INSERT INTO accounts (id, handle, token, rating, created_at, password_hash) VALUES (?,?,?,1000,?,?)').run(id, handle, token, createdAt, passwordHash);
@@ -62,6 +67,30 @@ export function makeSqliteStore(file: string): Store {
     },
     async handleTaken(handle) { return !!db.prepare('SELECT 1 FROM accounts WHERE handle=?').get(handle); },
     async setRating(id, rating) { db.prepare('UPDATE accounts SET rating=? WHERE id=?').run(rating, id); },
+    async getCoins(id) { const r = db.prepare('SELECT coins FROM accounts WHERE id=?').get(id) as any; return r ? r.coins : 0; },
+    async addCoins(id, delta) { db.prepare('UPDATE accounts SET coins = coins + ? WHERE id=?').run(delta, id); },
+    async createListing(l) {
+      db.prepare('INSERT INTO listings (id, seller_id, player_id, player_json, price, status, created_at, buyer_id, sold_at) VALUES (?,?,?,?,?,?,?,?,?)')
+        .run(l.id, l.seller_id, l.player_id, l.player_json, l.price, l.status, l.created_at, l.buyer_id, l.sold_at);
+    },
+    async activeListings(limit = 100) {
+      return db.prepare(`SELECT l.*, a.handle AS seller_handle FROM listings l JOIN accounts a ON a.id=l.seller_id
+        WHERE l.status='active' ORDER BY l.created_at DESC LIMIT ?`).all(limit) as any as Listing[];
+    },
+    async listingsBySeller(sellerId) {
+      return db.prepare(`SELECT l.*, a.handle AS seller_handle FROM listings l JOIN accounts a ON a.id=l.seller_id
+        WHERE l.seller_id=? AND l.status='active' ORDER BY l.created_at DESC`).all(sellerId) as any as Listing[];
+    },
+    async listingById(id) {
+      return db.prepare(`SELECT l.*, a.handle AS seller_handle FROM listings l JOIN accounts a ON a.id=l.seller_id WHERE l.id=?`).get(id) as any as Listing | undefined;
+    },
+    async activeListingForPlayer(playerId) {
+      return db.prepare(`SELECT l.*, a.handle AS seller_handle FROM listings l JOIN accounts a ON a.id=l.seller_id
+        WHERE l.player_id=? AND l.status='active'`).get(playerId) as any as Listing | undefined;
+    },
+    async setListingStatus(id, status, buyerId, soldAt) {
+      db.prepare('UPDATE listings SET status=?, buyer_id=?, sold_at=? WHERE id=?').run(status, buyerId, soldAt, id);
+    },
     async opponents(exceptId, myRating, limit = 20) {
       return (db.prepare(
         `SELECT a.id, a.handle, a.rating, c.club FROM accounts a JOIN clubs c ON c.account_id=a.id
@@ -186,6 +215,6 @@ export function makeSqliteStore(file: string): Store {
     async seasonPods(seasonId) {
       return db.prepare('SELECT DISTINCT tier, pod FROM pod_members WHERE season_id=? ORDER BY tier, pod').all(seasonId) as PodRef[];
     },
-    async reset() { db.exec('DELETE FROM matches; DELETE FROM clubs; DELETE FROM accounts; DELETE FROM seasons; DELETE FROM honours; DELETE FROM pod_members; DELETE FROM plans; DELETE FROM loanees;'); },
+    async reset() { db.exec('DELETE FROM matches; DELETE FROM clubs; DELETE FROM accounts; DELETE FROM seasons; DELETE FROM honours; DELETE FROM pod_members; DELETE FROM plans; DELETE FROM loanees; DELETE FROM listings;'); },
   };
 }

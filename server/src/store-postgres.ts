@@ -2,7 +2,7 @@
 // (de)serialised in code, identical semantics to the SQLite backend.
 import pg from 'pg';
 import type { Club } from '@fm/shared';
-import type { Store, Account, AuthRow, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow, Season, HonourRow, PodRef } from './store.js';
+import type { Store, Account, AuthRow, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow, Season, HonourRow, PodRef, Listing } from './store.js';
 
 export function makePostgresStore(connectionString: string): Store {
   // Railway's internal DB (postgres.railway.internal) and localhost don't use SSL;
@@ -47,8 +47,16 @@ export function makePostgresStore(connectionString: string): Store {
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS season_id TEXT;
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS initiator_id TEXT;
         ALTER TABLE clubs ADD COLUMN IF NOT EXISTS so_duties TEXT;
+        CREATE TABLE IF NOT EXISTS listings (
+          id TEXT PRIMARY KEY, seller_id TEXT NOT NULL, player_id TEXT NOT NULL,
+          player_json TEXT NOT NULL, price INTEGER NOT NULL, status TEXT NOT NULL,
+          created_at BIGINT NOT NULL, buyer_id TEXT, sold_at BIGINT);
+        ALTER TABLE matches ADD COLUMN IF NOT EXISTS season_id TEXT;
+        ALTER TABLE matches ADD COLUMN IF NOT EXISTS initiator_id TEXT;
+        ALTER TABLE clubs ADD COLUMN IF NOT EXISTS so_duties TEXT;
         ALTER TABLE accounts ADD COLUMN IF NOT EXISTS tier TEXT;
         ALTER TABLE accounts ADD COLUMN IF NOT EXISTS password_hash TEXT;
+        ALTER TABLE accounts ADD COLUMN IF NOT EXISTS coins INTEGER NOT NULL DEFAULT 500;
       `);
     },
     async createAccount(id, handle, token, createdAt, passwordHash) {
@@ -69,6 +77,30 @@ export function makePostgresStore(connectionString: string): Store {
     },
     async handleTaken(handle) { return (await q('SELECT 1 FROM accounts WHERE handle=$1', [handle])).rowCount! > 0; },
     async setRating(id, rating) { await q('UPDATE accounts SET rating=$1 WHERE id=$2', [rating, id]); },
+    async getCoins(id) { const r = (await q('SELECT coins FROM accounts WHERE id=$1', [id])).rows[0]; return r ? r.coins : 0; },
+    async addCoins(id, delta) { await q('UPDATE accounts SET coins = coins + $1 WHERE id=$2', [delta, id]); },
+    async createListing(l) {
+      await q('INSERT INTO listings (id, seller_id, player_id, player_json, price, status, created_at, buyer_id, sold_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+        [l.id, l.seller_id, l.player_id, l.player_json, l.price, l.status, l.created_at, l.buyer_id, l.sold_at]);
+    },
+    async activeListings(limit = 100) {
+      return (await q(`SELECT l.*, a.handle AS seller_handle FROM listings l JOIN accounts a ON a.id=l.seller_id
+        WHERE l.status='active' ORDER BY l.created_at DESC LIMIT $1`, [limit])).rows as Listing[];
+    },
+    async listingsBySeller(sellerId) {
+      return (await q(`SELECT l.*, a.handle AS seller_handle FROM listings l JOIN accounts a ON a.id=l.seller_id
+        WHERE l.seller_id=$1 AND l.status='active' ORDER BY l.created_at DESC`, [sellerId])).rows as Listing[];
+    },
+    async listingById(id) {
+      return (await q(`SELECT l.*, a.handle AS seller_handle FROM listings l JOIN accounts a ON a.id=l.seller_id WHERE l.id=$1`, [id])).rows[0] as Listing | undefined;
+    },
+    async activeListingForPlayer(playerId) {
+      return (await q(`SELECT l.*, a.handle AS seller_handle FROM listings l JOIN accounts a ON a.id=l.seller_id
+        WHERE l.player_id=$1 AND l.status='active'`, [playerId])).rows[0] as Listing | undefined;
+    },
+    async setListingStatus(id, status, buyerId, soldAt) {
+      await q('UPDATE listings SET status=$1, buyer_id=$2, sold_at=$3 WHERE id=$4', [status, buyerId, soldAt, id]);
+    },
     async opponents(exceptId, myRating, limit = 20) {
       const rows = (await q(
         `SELECT a.id, a.handle, a.rating, c.club FROM accounts a JOIN clubs c ON c.account_id=a.id
@@ -203,6 +235,6 @@ export function makePostgresStore(connectionString: string): Store {
     async seasonPods(seasonId) {
       return (await q('SELECT DISTINCT tier, pod FROM pod_members WHERE season_id=$1 ORDER BY tier, pod', [seasonId])).rows as PodRef[];
     },
-    async reset() { await q('TRUNCATE accounts, clubs, matches, seasons, honours, pod_members, plans, loanees'); },
+    async reset() { await q('TRUNCATE accounts, clubs, matches, seasons, honours, pod_members, plans, loanees, listings'); },
   };
 }
