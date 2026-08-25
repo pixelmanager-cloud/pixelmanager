@@ -40,10 +40,12 @@ export function makeShadowTexture(scene: Phaser.Scene) {
   g.destroy();
 }
 
-/** Glowing ring drawn under the ball carrier so the eye can follow the play. */
+/** Glowing ring drawn under the ball carrier so the eye can follow the play.
+ *  A soft filled halo plus two rings; the scene gently pulses its alpha/scale. */
 export function makeCarrierTexture(scene: Phaser.Scene) {
   if (scene.textures.exists('carrier')) return;
   const g = scene.add.graphics();
+  g.fillStyle(0xffe14d, 0.12).fillEllipse(9, 9, 17, 9);          // soft outer halo
   g.lineStyle(2, 0xffe14d, 0.55).strokeEllipse(9, 9, 16, 8);
   g.lineStyle(2, 0xffe14d, 0.9).strokeEllipse(9, 9, 11, 5);
   g.generateTexture('carrier', 18, 18);
