@@ -27,7 +27,7 @@ export function makePostgresStore(connectionString: string): Store {
           home_team TEXT NOT NULL, away_team TEXT NOT NULL,
           home_tactics TEXT NOT NULL, away_tactics TEXT NOT NULL,
           seed BIGINT NOT NULL, home_score INTEGER NOT NULL, away_score INTEGER NOT NULL,
-          created_at BIGINT NOT NULL, season_id TEXT);
+          created_at BIGINT NOT NULL, season_id TEXT, initiator_id TEXT);
         CREATE TABLE IF NOT EXISTS seasons (
           id TEXT PRIMARY KEY, number INTEGER NOT NULL, starts_at BIGINT NOT NULL,
           ends_at BIGINT NOT NULL, status TEXT NOT NULL);
@@ -38,6 +38,7 @@ export function makePostgresStore(connectionString: string): Store {
           season_id TEXT NOT NULL, account_id TEXT NOT NULL, tier TEXT NOT NULL, pod INTEGER NOT NULL,
           PRIMARY KEY (season_id, account_id));
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS season_id TEXT;
+        ALTER TABLE matches ADD COLUMN IF NOT EXISTS initiator_id TEXT;
         ALTER TABLE clubs ADD COLUMN IF NOT EXISTS so_duties TEXT;
         ALTER TABLE accounts ADD COLUMN IF NOT EXISTS tier TEXT;
         ALTER TABLE accounts ADD COLUMN IF NOT EXISTS password_hash TEXT;
@@ -90,10 +91,10 @@ export function makePostgresStore(connectionString: string): Store {
     },
     async saveMatch(m: StoredMatch) {
       await q(
-        `INSERT INTO matches (id, home_id, away_id, home_team, away_team, home_tactics, away_tactics, seed, home_score, away_score, created_at, season_id)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
+        `INSERT INTO matches (id, home_id, away_id, home_team, away_team, home_tactics, away_tactics, seed, home_score, away_score, created_at, season_id, initiator_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
         [m.id, m.homeId, m.awayId, JSON.stringify(m.homeTeam), JSON.stringify(m.awayTeam),
-          JSON.stringify(m.homeTactics), JSON.stringify(m.awayTactics), m.seed, m.homeScore, m.awayScore, m.createdAt, m.seasonId ?? null],
+          JSON.stringify(m.homeTactics), JSON.stringify(m.awayTactics), m.seed, m.homeScore, m.awayScore, m.createdAt, m.seasonId ?? null, m.initiatorId ?? null],
       );
     },
     async getMatch(id) {
@@ -135,7 +136,7 @@ export function makePostgresStore(connectionString: string): Store {
       return (await q('SELECT home_id, away_id, home_score, away_score FROM matches WHERE season_id=$1', [seasonId])).rows as any[];
     },
     async matchesToday(accountId, seasonId, sinceMs) {
-      const r = (await q('SELECT COUNT(*)::int AS c FROM matches WHERE home_id=$1 AND season_id=$2 AND created_at>=$3', [accountId, seasonId, sinceMs])).rows[0];
+      const r = (await q('SELECT COUNT(*)::int AS c FROM matches WHERE initiator_id=$1 AND season_id=$2 AND created_at>=$3', [accountId, seasonId, sinceMs])).rows[0];
       return r ? r.c : 0;
     },
     async addHonour(accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt) {

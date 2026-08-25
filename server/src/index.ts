@@ -78,16 +78,20 @@ async function computeFixtures(accountId: string) {
   const { tier, pod } = await ensurePod(db, s, accountId);
   const members = (await db.podMembers(s.id, tier, pod)).filter((m) => m.id !== accountId);
   const results = await db.seasonResults(s.id);
-  const played = new Map<string, { my: number; opp: number }>();
+  // double round-robin: a HOME leg (home=me) and an AWAY leg (home=them) vs each pod-mate
+  const homeLeg = new Map<string, { my: number; opp: number }>();
+  const awayLeg = new Map<string, { my: number; opp: number }>();
   for (const r of results) {
-    if (r.home_id === accountId) played.set(r.away_id, { my: r.home_score, opp: r.away_score });
-    else if (r.away_id === accountId) played.set(r.home_id, { my: r.away_score, opp: r.home_score });
+    if (r.home_id === accountId) homeLeg.set(r.away_id, { my: r.home_score, opp: r.away_score });
+    else if (r.away_id === accountId) awayLeg.set(r.home_id, { my: r.away_score, opp: r.home_score });
   }
   const fixtures = [];
   for (const m of members) {
     const c = await db.getClub(m.id);
-    const res = played.get(m.id) ?? null;
-    fixtures.push({ opponentId: m.id, handle: m.handle, clubName: c?.club.name ?? m.handle, rating: m.rating, status: res ? 'played' : 'pending', result: res });
+    const clubName = c?.club.name ?? m.handle;
+    const h = homeLeg.get(m.id) ?? null, a = awayLeg.get(m.id) ?? null;
+    fixtures.push({ opponentId: m.id, handle: m.handle, clubName, rating: m.rating, venue: 'home', status: h ? 'played' : 'pending', result: h });
+    fixtures.push({ opponentId: m.id, handle: m.handle, clubName, rating: m.rating, venue: 'away', status: a ? 'played' : 'pending', result: a });
   }
   const playedToday = await db.matchesToday(accountId, s.id, startOfUtcDay(Date.now()));
   return { tier, pod, fixtures, playedToday, dailyCap: MATCHES_PER_DAY };
@@ -109,17 +113,19 @@ app.get('/fixtures', { preHandler: requireAuth }, async (req) => {
 app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const body = req.body as any;
   const oppId = String(body?.opponentId ?? '');
+  const iAmHome = body?.venue !== 'away'; // double round-robin: you play each pod-mate home AND away
   const [opp, oppClub, me] = await Promise.all([db.accountById(oppId), db.getClub(oppId), db.getClub(req.account!.id)]);
   if (!opp || !oppClub) return reply.code(404).send({ error: 'opponent not found' });
 
-  // Phase C: fixtures are a single round-robin — you play each pod-mate once a season.
+  const meId = req.account!.id;
   const season = await ensureSeason(db, Date.now());
-  await ensurePod(db, season, req.account!.id); // place the player so the match counts for their pod
+  await ensurePod(db, season, meId); // place the player so the match counts for their pod
+  // this exact leg (a directed home→away pairing) may be played once per season
+  const homeId = iAmHome ? meId : oppId, awayId = iAmHome ? oppId : meId;
   const seasonRes = await db.seasonResults(season.id);
-  const already = seasonRes.some((r) => (r.home_id === req.account!.id && r.away_id === oppId) || (r.home_id === oppId && r.away_id === req.account!.id));
-  if (already) return reply.code(409).send({ error: 'already played this fixture this season' });
-  // soft daily cap: at most MATCHES_PER_DAY actively-started matches per UTC day
-  const playedToday = await db.matchesToday(req.account!.id, season.id, startOfUtcDay(Date.now()));
+  if (seasonRes.some((r) => r.home_id === homeId && r.away_id === awayId)) return reply.code(409).send({ error: 'already played this fixture this season' });
+  // soft daily cap: at most MATCHES_PER_DAY matches you actively start per UTC day
+  const playedToday = await db.matchesToday(meId, season.id, startOfUtcDay(Date.now()));
   if (playedToday >= MATCHES_PER_DAY) return reply.code(429).send({ error: `daily match limit reached (${MATCHES_PER_DAY}/day) — come back tomorrow` });
 
   const myLineup: Lineup = body.myLineup
@@ -128,25 +134,31 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const myTactics: Tactics = (body.myTactics as Tactics) ?? me!.standingOrders.tactics;
   if (!isFormation(myLineup.formation) || !validateLineup(me!.club, myLineup)) return reply.code(400).send({ error: 'invalid lineup' });
   myLineup.duties = cleanDuties(me!.club, myLineup);
-
   const oppLineup: Lineup = { formation: oppClub.standingOrders.formation, playerIds: oppClub.standingOrders.playerIds, duties: oppClub.standingOrders.duties };
-  const { seed, homeTeam, awayTeam, result } = runMatch(me!.club, myLineup, myTactics, oppClub.club, oppLineup, oppClub.standingOrders.tactics);
+  const oppTactics = oppClub.standingOrders.tactics;
 
-  const scoreHome = result[0] > result[1] ? 1 : result[0] < result[1] ? 0 : 0.5;
-  const [nHome, nAway] = elo(req.account!.rating, opp.rating, scoreHome);
-  await Promise.all([db.setRating(req.account!.id, nHome), db.setRating(oppId, nAway)]);
+  // run the match with the correct home/away team ordering (I may be the away side)
+  const hClub = iAmHome ? me!.club : oppClub.club, hLineup = iAmHome ? myLineup : oppLineup, hTactics = iAmHome ? myTactics : oppTactics;
+  const aClub = iAmHome ? oppClub.club : me!.club, aLineup = iAmHome ? oppLineup : myLineup, aTactics = iAmHome ? oppTactics : myTactics;
+  const { seed, homeTeam, awayTeam, result } = runMatch(hClub, hLineup, hTactics, aClub, aLineup, aTactics);
+
+  // Elo from my perspective, regardless of which side I was on
+  const myScore = iAmHome ? result[0] : result[1], oppScore = iAmHome ? result[1] : result[0];
+  const myOutcome = myScore > oppScore ? 1 : myScore < oppScore ? 0 : 0.5;
+  const [nMe, nOpp] = elo(req.account!.rating, opp.rating, myOutcome);
+  await Promise.all([db.setRating(meId, nMe), db.setRating(oppId, nOpp)]);
+  const nHome = iAmHome ? nMe : nOpp, nAway = iAmHome ? nOpp : nMe;
 
   const matchId = randomUUID();
   await db.saveMatch({
-    id: matchId, homeId: req.account!.id, awayId: oppId,
-    homeTeam, awayTeam, homeTactics: myTactics, awayTactics: oppClub.standingOrders.tactics,
-    seed, homeScore: result[0], awayScore: result[1], createdAt: Date.now(), seasonId: season.id,
+    id: matchId, homeId, awayId, homeTeam, awayTeam, homeTactics: hTactics, awayTactics: aTactics,
+    seed, homeScore: result[0], awayScore: result[1], createdAt: Date.now(), seasonId: season.id, initiatorId: meId,
   });
 
   return {
-    matchId, seed, result,
-    home: { id: req.account!.id, handle: req.account!.handle, rating: nHome, team: homeTeam, tactics: myTactics },
-    away: { id: oppId, handle: opp.handle, rating: nAway, team: awayTeam, tactics: oppClub.standingOrders.tactics },
+    matchId, seed, result, mySide: iAmHome ? 0 : 1,
+    home: { id: homeId, handle: iAmHome ? req.account!.handle : opp.handle, rating: nHome, team: homeTeam, tactics: hTactics },
+    away: { id: awayId, handle: iAmHome ? opp.handle : req.account!.handle, rating: nAway, team: awayTeam, tactics: aTactics },
   };
 });
 

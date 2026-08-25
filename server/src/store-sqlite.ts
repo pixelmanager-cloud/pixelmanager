@@ -19,7 +19,7 @@ export function makeSqliteStore(file: string): Store {
           home_team TEXT NOT NULL, away_team TEXT NOT NULL,
           home_tactics TEXT NOT NULL, away_tactics TEXT NOT NULL,
           seed INTEGER NOT NULL, home_score INTEGER NOT NULL, away_score INTEGER NOT NULL,
-          created_at INTEGER NOT NULL, season_id TEXT);
+          created_at INTEGER NOT NULL, season_id TEXT, initiator_id TEXT);
         CREATE TABLE IF NOT EXISTS seasons (
           id TEXT PRIMARY KEY, number INTEGER NOT NULL, starts_at INTEGER NOT NULL,
           ends_at INTEGER NOT NULL, status TEXT NOT NULL);
@@ -32,6 +32,7 @@ export function makeSqliteStore(file: string): Store {
       `);
       // migrate pre-existing tables (adds columns; throws-and-ignored if already present)
       try { db.exec('ALTER TABLE matches ADD COLUMN season_id TEXT'); } catch { /* already added */ }
+      try { db.exec('ALTER TABLE matches ADD COLUMN initiator_id TEXT'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE clubs ADD COLUMN so_duties TEXT'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE accounts ADD COLUMN tier TEXT'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE accounts ADD COLUMN password_hash TEXT'); } catch { /* already added */ }
@@ -81,10 +82,10 @@ export function makeSqliteStore(file: string): Store {
     },
     async saveMatch(m: StoredMatch) {
       db.prepare(
-        `INSERT INTO matches (id, home_id, away_id, home_team, away_team, home_tactics, away_tactics, seed, home_score, away_score, created_at, season_id)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+        `INSERT INTO matches (id, home_id, away_id, home_team, away_team, home_tactics, away_tactics, seed, home_score, away_score, created_at, season_id, initiator_id)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       ).run(m.id, m.homeId, m.awayId, JSON.stringify(m.homeTeam), JSON.stringify(m.awayTeam),
-        JSON.stringify(m.homeTactics), JSON.stringify(m.awayTactics), m.seed, m.homeScore, m.awayScore, m.createdAt, m.seasonId ?? null);
+        JSON.stringify(m.homeTactics), JSON.stringify(m.awayTactics), m.seed, m.homeScore, m.awayScore, m.createdAt, m.seasonId ?? null, m.initiatorId ?? null);
     },
     async getMatch(id) {
       const r = db.prepare('SELECT * FROM matches WHERE id=?').get(id) as any;
@@ -123,7 +124,7 @@ export function makeSqliteStore(file: string): Store {
       return db.prepare('SELECT home_id, away_id, home_score, away_score FROM matches WHERE season_id=?').all(seasonId) as any[];
     },
     async matchesToday(accountId, seasonId, sinceMs) {
-      const r = db.prepare('SELECT COUNT(*) AS c FROM matches WHERE home_id=? AND season_id=? AND created_at>=?').get(accountId, seasonId, sinceMs) as any;
+      const r = db.prepare('SELECT COUNT(*) AS c FROM matches WHERE initiator_id=? AND season_id=? AND created_at>=?').get(accountId, seasonId, sinceMs) as any;
       return r ? r.c : 0;
     },
     async addHonour(accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt) {

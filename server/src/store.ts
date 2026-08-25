@@ -12,6 +12,8 @@ export interface StoredMatch {
   id: string; homeId: string; awayId: string;
   homeTeam: unknown; awayTeam: unknown; homeTactics: Tactics; awayTactics: Tactics;
   seed: number; homeScore: number; awayScore: number; createdAt: number; seasonId?: string;
+  /** who triggered the match (may be the away side); drives the per-player daily cap */
+  initiatorId?: string;
 }
 export interface Season { id: string; number: number; startsAt: number; endsAt: number; status: 'active' | 'closed' }
 /** A player's archived finish in a past season (for the honours board). */

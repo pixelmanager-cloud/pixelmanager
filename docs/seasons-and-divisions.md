@@ -59,9 +59,9 @@ never show anyone the whole population.
 
 | Knob | Default | Notes |
 |---|---|---|
-| `POD_SIZE` | 20 | target clubs per pod → 19 fixtures/season (single round-robin); last pod in a tier may be short |
+| `POD_SIZE` | 20 | target clubs per pod → **38 fixtures/season** (double round-robin: home + away vs each of 19); last pod may be short |
 | `SEASON_DAYS` | 7 | weekly cadence; short enough to feel fresh, long enough to fill fixtures |
-| `MATCHES_PER_DAY` | 3 | soft cap on actively-started matches per UTC day (3×7 ≥ 19, so a diligent manager still finishes) |
+| `MATCHES_PER_DAY` | 6 | soft cap on actively-started matches per UTC day (6×7 = 42 ≥ 38, so a diligent manager still finishes) |
 | `PROMOTE` | top 3 | promoted to the tier above at rollover |
 | `RELEGATE` | bottom 3 | relegated to the tier below (none from `SUNDAY LEAGUE`) |
 | `TIERS` | `['SUNDAY LEAGUE','COUNTY','REGIONAL','NATIONAL','LEAGUE TWO','LEAGUE ONE','CHAMPIONSHIP','PREMIER','CONTINENTAL','WORLD CLASS']` | index 0 = bottom; a pure config array, resize freely |
@@ -206,16 +206,20 @@ one bottom-tier league. Verified end-to-end (placement, pod-scoped tables/oppone
 promotion to COUNTY, honours).
 
 **Phase C — Fixtures** ✅ **SHIPPED** *(retention hook)*
-Each pod is a **single round-robin**: you play every pod-mate **once per season**.
-`GET /fixtures` returns your schedule (each pod-mate marked played-with-result or
-pending); `/opponents` returns only the pending ones; `POST /matches` rejects a
-repeat pairing in the same season (409). The hub's "SEASON FIXTURES" list shows a
-`played / total · playedToday/cap` counter, a result pill on completed fixtures, and
-a Play button on pending ones. **Cadence:** pod 20 → **19 fixtures/season**, soft cap
-**`MATCHES_PER_DAY` (3) per UTC day** (Play buttons disable at the cap, /matches → 429).
-**Fair completion:** at rollover, any fixtures never played **auto-resolve from both
-clubs' standing orders** — only among *active* pod members — so every table completes
-as a full round-robin regardless of who logged in. (Double round-robin = future tweak.)
+Each pod is a **double round-robin**: you play every pod-mate **home and away** — a
+home leg (you host) and an away leg (they host). `POST /matches` takes a `venue`
+(`home`/`away`), runs the sim with the correct team ordering, records `initiator_id`
+(so the daily cap counts *your* triggers even when you're away), and rejects a repeat
+of that exact directed leg (409). The match view flips for away games (opponent is
+the home side; "your squad fitness" tracks whichever side you are). `GET /fixtures`
+returns two legs per pod-mate (H/A) marked played-with-result or pending; the hub's
+"SEASON FIXTURES" list badges each H/A and shows a `played/total · today/cap` counter.
+**Cadence:** pod 20 → **38 fixtures/season** (the real 38-game season), soft cap
+**`MATCHES_PER_DAY` (6) per UTC day** (Play buttons disable at the cap, /matches → 429).
+**Fair completion:** at rollover, any legs never played **auto-resolve from both
+clubs' standing orders** — every directed leg among *active* pod members — so every
+table completes as a full home-and-away double round-robin regardless of who logged
+in. (Optional home-advantage bonus in the engine is a future tweak.)
 
 ## 11) Open questions (with a recommended default to start)
 

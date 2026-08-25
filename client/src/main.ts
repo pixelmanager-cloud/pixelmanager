@@ -137,8 +137,10 @@ class Game {
   draftDuties: Duty[] = []; // per-slot manager duties, parallel to draftLineup.playerIds
   editorMode: 'standing' | 'match' = 'standing';
   squadSort: SquadSort | null = null;
-  pendingOpp?: { id: string; handle: string };
-  awayHandle = '';
+  pendingOpp?: { id: string; handle: string; venue: 'home' | 'away' };
+  mySide: 0 | 1 = 0;   // which team index (0 home / 1 away) is the player in the current match
+  homeName = '';
+  awayName = '';
 
   async boot() {
     this.wireStaticButtons();
@@ -244,18 +246,19 @@ class Game {
         $('opponents').innerHTML = '<div class="muted">No pod-mates yet — as players join your pod, fixtures appear here. (Register another handle in a second browser to test.)</div>';
       } else {
         $('opponents').innerHTML = fixtures.map((f) => {
+          const vb = `<span class="venue ${f.venue}" title="${f.venue === 'home' ? 'Home' : 'Away'}">${f.venue === 'home' ? 'H' : 'A'}</span>`;
           if (f.status === 'played' && f.result) {
             const { my, opp } = f.result;
             const cls = my > opp ? 'w' : my < opp ? 'l' : 'd';
-            return `<div class="fixture done"><span class="opp"><b>${f.clubName}</b> <span class="meta">${f.handle}</span></span><span class="pill ${cls}">${cls.toUpperCase()} ${my}-${opp}</span></div>`;
+            return `<div class="fixture done"><span class="opp">${vb} <b>${f.clubName}</b> <span class="meta">${f.handle}</span></span><span class="pill ${cls}">${cls.toUpperCase()} ${my}-${opp}</span></div>`;
           }
           const btn = capped
             ? '<button disabled title="Daily limit reached — come back tomorrow">Play ▶</button>'
-            : `<button data-opp="${f.opponentId}" data-h="${f.handle}">Play ▶</button>`;
-          return `<div class="fixture"><span class="opp"><b>${f.clubName}</b> <span class="meta">${f.handle} · rating ${f.rating}</span></span>${btn}</div>`;
+            : `<button data-opp="${f.opponentId}" data-h="${f.handle}" data-venue="${f.venue}">Play ▶</button>`;
+          return `<div class="fixture">${vb} <span class="opp"><b>${f.clubName}</b> <span class="meta">${f.handle} · rating ${f.rating}</span></span>${btn}</div>`;
         }).join('');
         Array.from($('opponents').querySelectorAll('button[data-opp]')).forEach((b) =>
-          b.addEventListener('click', () => this.play((b as HTMLElement).dataset.opp!, (b as HTMLElement).dataset.h!)));
+          b.addEventListener('click', () => this.play((b as HTMLElement).dataset.opp!, (b as HTMLElement).dataset.h!, (b as HTMLElement).dataset.venue as 'home' | 'away')));
         if (played === total) $('opponents').insertAdjacentHTML('beforeend', '<div class="muted" style="margin-top:8px">✓ All fixtures played — standings lock in at season\'s end.</div>');
         else if (capped) $('opponents').insertAdjacentHTML('beforeend', `<div class="muted" style="margin-top:8px">⏳ Daily limit reached (${playedToday}/${dailyCap}) — more fixtures tomorrow.</div>`);
       }
@@ -323,7 +326,7 @@ class Game {
   // ---- lineup editor (my standing orders) ----
   // Opens the pixel lineup editor either to save your standing orders, or to set a
   // one-off lineup + tactics for a specific match (prefilled from your standing orders).
-  private openLineup(mode: 'standing' | 'match', opp?: { id: string; handle: string }) {
+  private openLineup(mode: 'standing' | 'match', opp?: { id: string; handle: string; venue: 'home' | 'away' }) {
     this.editorMode = mode;
     this.pendingOpp = opp;
     this.draftTactics = { ...this.standingOrders.tactics, formation: this.standingOrders.formation };
@@ -334,7 +337,7 @@ class Game {
       const saved = this.standingOrders.duties?.[i];
       return saved && isDutyForRole(p.role, saved) ? saved : defaultDuty(p);
     });
-    $('lineup-title').textContent = mode === 'standing' ? 'SET MY TEAM' : `SET LINEUP  vs ${opp!.handle}`;
+    $('lineup-title').textContent = mode === 'standing' ? 'SET MY TEAM' : `SET LINEUP  ${opp!.venue === 'away' ? 'away at' : 'vs'} ${opp!.handle}`;
     ($('save-team') as HTMLButtonElement).textContent = mode === 'standing' ? 'Save Team' : '▶ Kick Off';
     this.renderLineupEditor();
     this.showScreen('lineup');
@@ -427,9 +430,9 @@ class Game {
   }
 
   // ---- match ----
-  // "Play" opens the lineup editor so you set a lineup + tactics for THIS match.
-  private play(opponentId: string, handle: string) {
-    this.openLineup('match', { id: opponentId, handle });
+  // "Play" opens the lineup editor so you set a lineup + tactics for THIS match (home or away leg).
+  private play(opponentId: string, handle: string, venue: 'home' | 'away' = 'home') {
+    this.openLineup('match', { id: opponentId, handle, venue });
   }
 
   private async kickOffMatch() {
@@ -437,8 +440,8 @@ class Game {
     $('lineup-insight').innerHTML = '<span style="color:var(--cyan)">Playing…</span>';
     try {
       const lineup: Lineup = { ...this.draftLineup, duties: [...this.draftDuties] };
-      const payload = await api.createMatch(this.pendingOpp.id, lineup, this.draftTactics);
-      this.startMatch(payload, this.pendingOpp.handle);
+      const payload = await api.createMatch(this.pendingOpp.id, lineup, this.draftTactics, this.pendingOpp.venue);
+      this.startMatch(payload);
     } catch (e: any) {
       if (e?.status === 429) toast('Daily match limit reached — come back tomorrow');
       else if (e?.status === 409) toast('You already played this fixture this season');
@@ -446,8 +449,10 @@ class Game {
     }
   }
 
-  private startMatch(payload: MatchPayload, awayHandle: string) {
-    this.awayHandle = awayHandle;
+  private startMatch(payload: MatchPayload) {
+    this.mySide = payload.mySide;
+    this.homeName = payload.home.handle;
+    this.awayName = payload.away.handle;
     // guarantee the two kits clearly contrast on the pitch even if the clubs' colours are similar
     const dist = (a: number, b: number) => {
       const dr = ((a >> 16) & 255) - ((b >> 16) & 255), dg = ((a >> 8) & 255) - ((b >> 8) & 255), db = (a & 255) - (b & 255);
@@ -458,11 +463,15 @@ class Game {
     }
     this.engine = new MatchEngine([payload.home.team, payload.away.team], payload.seed, [payload.home.tactics, payload.away.tactics]);
     this.running = true; this.accum = 0; this.eventsShown = 0;
-    $('home-name').textContent = this.club.name;
-    $('away-name').textContent = awayHandle;
+    this.setMatchNames();
     $('ticker').innerHTML = '';
     this.scene!.buildSprites(this.engine.teams);
     this.showScreen('match');
+  }
+
+  private setMatchNames() {
+    $('home-name').textContent = this.homeName;
+    $('away-name').textContent = this.awayName;
   }
 
   private async onFullTime() {
@@ -481,8 +490,8 @@ class Game {
     const onTarget: [number, number] = [0, 0];
     for (const e of s.events) if (e.type === 'goal' || e.type === 'shot_saved') onTarget[e.teamIdx]++;
 
-    $('ft-home-name').textContent = this.club.shortName;
-    $('ft-away-name').textContent = this.awayHandle;
+    $('ft-home-name').textContent = this.homeName;
+    $('ft-away-name').textContent = this.awayName;
     $('ft-score').textContent = `${s.score[0]} - ${s.score[1]}`;
     $('ft-home-poss').textContent = `${hp}%`;
     $('ft-away-poss').textContent = `${100 - hp}%`;
@@ -548,7 +557,7 @@ class Game {
     ($('poss-home') as HTMLElement).style.width = `${hp}%`;
     $('poss-home-l').textContent = `${hp}%`;
     $('poss-away-l').textContent = `${100 - hp}%`;
-    const fitAvg = s.players[0].slice(1).reduce((a, p) => a + p.fitness, 0) / 10;
+    const fitAvg = s.players[this.mySide].slice(1).reduce((a, p) => a + p.fitness, 0) / 10;
     const fitPct = Math.round(fitAvg * 100);
     const fill = $('fit-fill') as HTMLElement;
     fill.style.width = `${fitPct}%`;
@@ -559,7 +568,7 @@ class Game {
   }
 
   private pushTicker(e: MatchEvent) {
-    const who = e.teamIdx === 0 ? this.club.shortName : this.awayHandle;
+    const who = e.teamIdx === 0 ? this.homeName : this.awayName;
     const line: Record<MatchEvent['type'], string> = {
       kickoff: `${e.minute}' Kickoff!`,
       goal: `${e.minute}' ⚽ GOAL! ${e.playerName} (${who})`,
@@ -578,7 +587,7 @@ class Game {
 
   private celebrateGoal(e: MatchEvent) {
     const el = $('goal-flash');
-    el.textContent = `⚽ GOAL!  ${e.teamIdx === 0 ? this.club.name : this.awayHandle}`;
+    el.textContent = `⚽ GOAL!  ${e.teamIdx === 0 ? this.homeName : this.awayName}`;
     el.classList.remove('show');
     void el.offsetWidth; // restart the CSS animation
     el.classList.add('show');

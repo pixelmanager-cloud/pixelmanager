@@ -32,10 +32,10 @@ export interface TableRow { id: string; handle: string; rating: number; P: numbe
 export interface StandingOrders { formation: Lineup['formation']; playerIds: string[]; tactics: Tactics; duties?: Duty[] }
 export interface ResultRow { id: string; home_id: string; away_id: string; home_handle: string; away_handle: string; home_score: number; away_score: number; created_at: number }
 export interface SeasonMeta { number: number; startsAt: number; endsAt: number; status: string; endsInMs: number }
-export interface Fixture { opponentId: string; handle: string; clubName: string; rating: number; status: 'played' | 'pending'; result: { my: number; opp: number } | null }
+export interface Fixture { opponentId: string; handle: string; clubName: string; rating: number; venue: 'home' | 'away'; status: 'played' | 'pending'; result: { my: number; opp: number } | null }
 export interface HonourRow { season_number: number; tier: string; final_pos: number; title: number; ended_at: number }
 export interface MatchPayload {
-  matchId: string; seed: number; result: [number, number];
+  matchId: string; seed: number; result: [number, number]; mySide: 0 | 1;
   home: { id: string; handle: string; rating?: number; team: Team; tactics: Tactics };
   away: { id: string; handle: string; rating?: number; team: Team; tactics: Tactics };
 }
@@ -49,8 +49,8 @@ export const api = {
   setStandingOrders: (so: StandingOrders) => req<{ ok: true; standingOrders: StandingOrders }>(
     '/standing-orders', { method: 'PUT', body: JSON.stringify(so) }),
   opponents: () => req<{ opponents: Array<{ id: string; handle: string; rating: number; clubName: string }> }>('/opponents'),
-  createMatch: (opponentId: string, myLineup?: Lineup, myTactics?: Tactics) =>
-    req<MatchPayload>('/matches', { method: 'POST', body: JSON.stringify({ opponentId, myLineup, myTactics }) }),
+  createMatch: (opponentId: string, myLineup?: Lineup, myTactics?: Tactics, venue: 'home' | 'away' = 'home') =>
+    req<MatchPayload>('/matches', { method: 'POST', body: JSON.stringify({ opponentId, myLineup, myTactics, venue }) }),
   leaderboard: () => req<{ leaderboard: Array<{ id: string; handle: string; rating: number }> }>('/leaderboard'),
   table: () => req<{ table: TableRow[] }>('/table'),
   myMatches: () => req<{ matches: Array<{ id: string; home_id: string; away_id: string; home_score: number; away_score: number; created_at: number }> }>('/me/matches'),
