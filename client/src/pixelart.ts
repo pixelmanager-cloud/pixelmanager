@@ -76,13 +76,17 @@ export function makePitchTexture(scene: Phaser.Scene) {
   const m = (metres: number) => metres * SCALE;
   const g = scene.add.graphics();
 
-  // checkerboard mown grass
-  const cols = 12, rows = 8;
-  for (let r = 0; r < rows; r++) {
-    for (let c = 0; c < cols; c++) {
-      g.fillStyle((r + c) % 2 === 0 ? 0x2f7a32 : 0x2a6e2d);
-      g.fillRect((c * w) / cols, (r * h) / rows, w / cols + 1, h / rows + 1);
-    }
+  // mown-grass stripes: vertical bands alternating two subtle greens, with a
+  // faint lighter cross-mow every other row so the turf reads as groundskept
+  // rather than flat. Axis-aligned rects stay crisp at pixelArt resolution.
+  const stripes = 14, bands = 8;
+  for (let s = 0; s < stripes; s++) {
+    const x = (s * w) / stripes, bw = w / stripes + 1;
+    g.fillStyle(s % 2 === 0 ? 0x2f7a32 : 0x2a6e2d);
+    g.fillRect(x, 0, bw, h);
+    // subtle perpendicular mow: lift every other horizontal band a touch
+    g.fillStyle(s % 2 === 0 ? 0x338637 : 0x2e7731, 0.5);
+    for (let b = 0; b < bands; b += 2) g.fillRect(x, (b * h) / bands, bw, h / bands + 1);
   }
   // darker perimeter band for depth (advertising-board surround)
   g.fillStyle(0x14401a, 1);
