@@ -6,8 +6,9 @@ import { randomUUID } from 'node:crypto';
 import { autoPickXI } from '@fm/shared';
 import type { Store, Season, PodRef } from './store.js';
 import { buildTable, runMatch, elo, validateLineup } from './game.js';
-import { seasonPlacementReward } from './market.js';
+import { seasonPlacementReward, WIN_COINS, DRAW_COINS, LOSS_COINS } from './market.js';
 import { ownedPlayers } from './nft.js';
+import { trainingConditioning, stadiumIncome } from './facilities.js';
 import { computeCup, type SquadMap } from './cup.js';
 
 /** Merge a club with the star NFTs its linked wallet owns (read-only). */
@@ -101,10 +102,19 @@ async function simulateMatch(db: Store, homeId: string, awayId: string, seasonId
   };
   const hl = lineupFor(homeC);
   const al = lineupFor(awayC);
-  const { seed, homeTeam, awayTeam, result } = runMatch(homeC.club, hl, homeC.standingOrders.tactics, awayC.club, al, awayC.standingOrders.tactics);
+  // full parity with a live match: training-ground conditioning + result coins + home gate income
+  const [homeFac, awayFac] = await Promise.all([db.getFacilities(homeId), db.getFacilities(awayId)]);
+  const conditioning = { home: trainingConditioning(homeFac.training), away: trainingConditioning(awayFac.training) };
+  const { seed, homeTeam, awayTeam, result } = runMatch(homeC.club, hl, homeC.standingOrders.tactics, awayC.club, al, awayC.standingOrders.tactics, conditioning);
   const sh = result[0] > result[1] ? 1 : result[0] < result[1] ? 0 : 0.5;
   const [nh, na] = elo(home.rating, away.rating, sh);
-  await Promise.all([db.setRating(homeId, nh), db.setRating(awayId, na)]);
+  const coinsFor = (s: number) => (s === 1 ? WIN_COINS : s === 0.5 ? DRAW_COINS : LOSS_COINS);
+  const homeTierIdx = Math.max(0, TIERS.indexOf((await db.accountTier(homeId)) as typeof TIERS[number]));
+  const gate = stadiumIncome(homeFac.stadium, homeTierIdx, sh === 1 ? 'win' : sh === 0 ? 'loss' : 'draw');
+  await Promise.all([
+    db.setRating(homeId, nh), db.setRating(awayId, na),
+    db.addCoins(homeId, coinsFor(sh) + gate), db.addCoins(awayId, coinsFor(1 - sh)),
+  ]);
   await db.saveMatch({
     id: randomUUID(), homeId, awayId, homeTeam, awayTeam,
     homeTactics: homeC.standingOrders.tactics, awayTactics: awayC.standingOrders.tactics,
