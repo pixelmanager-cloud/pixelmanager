@@ -104,11 +104,12 @@ async function upgradeFacility() {
   const affordable = facs.filter((f) => f.canAfford && f.upgradeCost != null);
   if (!affordable.length) return;
   const f = pick(affordable);
-  const before = r.json.coins;
   const up = await api('POST', `/facilities/${f.key}/upgrade`, {});
   if (up.status === 200 && up.json) {
+    // level must increment by exactly 1 (concurrency-safe); coins deltas are NOT checked
+    // because other bots' matches against me legitimately change my coins meanwhile.
     if (up.json.level !== f.level + 1) await logBug('facility-invariant', { path: `/facilities/${f.key}/upgrade`, note: `level ${f.level}->${up.json.level}` });
-    if (isFiniteNum(before) && up.json.coins !== before - f.upgradeCost) await logBug('facility-invariant', { path: `/facilities/${f.key}/upgrade`, note: `coins ${before}-${f.upgradeCost}!=${up.json.coins}` });
+    await checkCoins(`/facilities/${f.key}/upgrade`, up.json.coins);
   }
 }
 
@@ -151,10 +152,8 @@ async function market() {
   } else {
     const buyable = (d.listings ?? []).filter((l) => !l.mine && d.coins >= l.price);
     if (buyable.length) {
-      const l = pick(buyable);
-      const before = d.coins;
-      const b = await api('POST', `/market/${l.id}/buy`, {});
-      if (b.status === 200 && isFiniteNum(b.json?.coins) && b.json.coins !== before - l.price) await logBug('market-invariant', { path: '/market/buy', note: `coins ${before}-${l.price}!=${b.json.coins}` });
+      const b = await api('POST', `/market/${pick(buyable).id}/buy`, {}); // exact coin delta not checked (concurrent matches move coins)
+      if (b.status === 200) await checkCoins('/market/buy', b.json?.coins);
     }
   }
 }
