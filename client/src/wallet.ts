@@ -9,7 +9,7 @@ import { claimTo } from 'thirdweb/extensions/erc20';
 import { baseSepolia } from 'thirdweb/chains';
 
 const clientId = (import.meta as any).env?.VITE_THIRDWEB_CLIENT_ID ?? '';
-const TOKEN_ADDRESS = ((import.meta as any).env?.VITE_TOKEN_ADDRESS ?? '0x312fA84262575D82f6AAbbe863E4b5Cd1390E687') as `0x${string}`;
+const TOKEN_ADDRESS = ((import.meta as any).env?.VITE_TOKEN_ADDRESS ?? '0x63EF99E736080519b2D8171FEa2bb3346a4Debd7') as `0x${string}`;
 export const walletConfigured = () => !!clientId;
 
 let _client: ThirdwebClient | null = null;

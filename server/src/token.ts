@@ -5,7 +5,7 @@ import { createPublicClient, http, getContract, formatUnits, erc20Abi, isAddress
 import { baseSepolia } from 'viem/chains';
 
 // Deployed PIXEL TEST (PTEST). Override per-env with TOKEN_ADDRESS.
-export const TOKEN_ADDRESS = (process.env.TOKEN_ADDRESS ?? '0x312fA84262575D82f6AAbbe863E4b5Cd1390E687') as `0x${string}`;
+export const TOKEN_ADDRESS = (process.env.TOKEN_ADDRESS ?? '0x63EF99E736080519b2D8171FEa2bb3346a4Debd7') as `0x${string}`;
 export const TOKEN_CHAIN = baseSepolia; // Base Sepolia (84532)
 
 const publicClient = createPublicClient({ chain: TOKEN_CHAIN, transport: http() });

@@ -347,7 +347,7 @@ class Game {
     $('me-wallet').classList.toggle('hidden', !w);
     if (w) $('me-wallet').textContent = `🔗 ${w.slice(0, 6)}…${w.slice(-4)}`;
     $('link-wallet').classList.toggle('hidden', !!w); // offer linking only when none is set
-    $('faucet-btn').classList.toggle('hidden', !w);   // faucet + token chip only once a wallet is linked
+    $('faucet-btn').classList.add('hidden'); // self-serve faucet deferred (plain token has no claim); distribute via airdrop/transfer on testnet
     $('me-token').classList.toggle('hidden', !w);
     if (w) void this.refreshTokenBalance();
     if (this.account.coins != null) $('me-coins').textContent = `💰 ${this.account.coins}`;
