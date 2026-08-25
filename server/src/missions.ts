@@ -40,9 +40,10 @@ export const destinationById = (id: string): Destination | undefined => DESTINAT
 const HIT_MULT: Record<string, number> = { base: 1.0, bronze: 1.12, silver: 1.25, gold: 1.4 };
 const UPGRADE: Record<string, number> = { base: 0.0, bronze: 0.15, silver: 0.28, gold: 0.45 };
 
-/** The tier-adjusted odds to show on a destination card (never mutates config). */
-export function previewOdds(dest: Destination, playerTier: string): { hitRate: number; upgradeChance: number } {
-  return { hitRate: Math.min(0.95, dest.hitRate * (HIT_MULT[playerTier] ?? 1)), upgradeChance: UPGRADE[playerTier] ?? 0 };
+/** The tier-adjusted odds to show on a destination card (never mutates config).
+ *  hqMult is the Scouting-HQ facility's extra hit-rate multiplier (1 = no bonus). */
+export function previewOdds(dest: Destination, playerTier: string, hqMult = 1): { hitRate: number; upgradeChance: number } {
+  return { hitRate: Math.min(0.95, dest.hitRate * (HIT_MULT[playerTier] ?? 1) * hqMult), upgradeChance: UPGRADE[playerTier] ?? 0 };
 }
 
 const BAND_Q: Record<Band, [number, number]> = { raw: [1, 3], squad: [4, 6], quality: [6, 8], gem: [8, 10] };
@@ -63,9 +64,9 @@ export interface MissionOutcome { found: boolean; player: Player | null; band: B
 
 /** Deterministically seal a trip's outcome at dispatch. Same (missionId, destination,
  *  playerTier) → same result forever; travel time only controls WHEN it's shown. */
-export function rollMission(missionId: string, dest: Destination, playerTier: string): MissionOutcome {
+export function rollMission(missionId: string, dest: Destination, playerTier: string, hqMult = 1): MissionOutcome {
   const rng = mulberry32(seedFrom(`${missionId}:${dest.id}:${playerTier}`));
-  const hit = rng() < Math.min(0.95, dest.hitRate * (HIT_MULT[playerTier] ?? 1));
+  const hit = rng() < Math.min(0.95, dest.hitRate * (HIT_MULT[playerTier] ?? 1) * hqMult);
   if (!hit) return { found: false, player: null, band: null, overall: null };
   // pick a band from the destination's distribution
   const r = rng();

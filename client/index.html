@@ -406,6 +406,31 @@
       .zone-legend { display: flex; gap: 16px; font-size: 14px; margin: 8px 2px 2px; color: #8aa; }
       .zone-legend .lg-promo { color: var(--good); } .zone-legend .lg-releg { color: var(--home); }
 
+      /* ===== Club Facilities ===== */
+      #club-head { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
+      #club-head h3 { margin: 0; } #club-coins { font-family: var(--display); font-size: 12px; color: var(--warn); }
+      #club-head #club-back { margin-left: auto; }
+      #facilities-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+      @media (max-width: 640px) { #facilities-grid { grid-template-columns: 1fr; } }
+      .facility { border: 2px solid var(--line); border-radius: 9px; padding: 14px; background: var(--panel-2);
+        display: flex; flex-direction: column; gap: 8px; }
+      .facility .fac-top { display: flex; align-items: center; gap: 10px; }
+      .facility .fac-icon { font-size: 26px; line-height: 1; }
+      .facility .fac-name { font-family: var(--display); font-size: 11px; color: #fff; }
+      .facility .fac-lvl { margin-left: auto; font-family: var(--display); font-size: 9px; color: var(--warn); }
+      .facility .fac-pips { display: flex; gap: 4px; }
+      .facility .fac-pips i { width: 100%; height: 7px; border-radius: 3px; background: #2a2940; border: 1px solid var(--line); }
+      .facility .fac-pips i.on { background: linear-gradient(90deg, #45d6e0, #3ad07a); border-color: transparent; }
+      .facility .fac-blurb { font-size: 12.5px; color: #99a; line-height: 1.4; }
+      .facility .fac-effect { font-size: 13px; color: var(--good); }
+      .facility .fac-next { font-size: 12px; color: #889; }
+      .facility .fac-next b { color: var(--cyan); }
+      .facility button.fac-up { font-family: var(--display); font-size: 9px; padding: 9px; cursor: pointer;
+        background: var(--accent, #2b6); color: #fff; border: none; border-radius: 6px; }
+      .facility button.fac-up:disabled { opacity: 0.4; cursor: not-allowed; }
+      .facility.maxed { border-color: #d8a72a; }
+      .facility .fac-maxed { font-family: var(--display); font-size: 9px; color: var(--warn); text-align: center; padding: 8px; }
+
       /* ===== Scouting Network ===== */
       #scout-destinations { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
       @media (max-width: 640px) { #scout-destinations { grid-template-columns: 1fr; } }
@@ -642,6 +667,7 @@
         <div id="hub-head"><span id="me-name"></span><span id="me-rating"></span><span id="me-coins" title="Transfer-market coins — earn them by playing"></span><span id="me-wallet" class="hidden" title="Linked wallet"></span><span id="me-token" class="hidden" title="On-chain token balance (Base Sepolia)"></span>
           <div class="hub-actions">
             <button id="view-standings">📊 League &amp; Results</button>
+            <button id="view-club">🏛️ Club</button>
             <button id="view-scouting">🔎 Scouting</button>
             <button id="view-market">💰 Transfer Market</button>
             <button id="link-wallet" class="hidden">🔗 Link Wallet</button>
@@ -695,6 +721,13 @@
         <div class="scout-sub">Send your scout on a trip for a small fee. Each place trades <b>how often</b> anyone signs against <b>how good</b> they might be — a far-flung academy rarely delivers, but when it does, it delivers. You get <b id="trips-per">3</b> trips a season (<span id="trips-used">0</span> used). Results are sealed the moment you dispatch and revealed once your scout travels back. A higher <b>Player Scout</b> tier lifts every trip's odds.</div>
         <div id="missions-active"></div>
         <div id="scout-destinations"></div>
+      </div>
+
+      <!-- CLUB FACILITIES -->
+      <div id="club" class="panel hidden">
+        <div id="club-head"><h3>🏛️ CLUB FACILITIES</h3><span id="club-coins"></span><button id="club-back">← Back to hub</button></div>
+        <div class="scout-sub">Invest coins to build your club up over the seasons. A bigger <b>Stadium</b> earns home-match gate receipts; the <b>Training Ground</b> keeps your legs fresh; the <b>Youth Academy</b> and <b>Scouting HQ</b> sharpen your recruitment. Levels are permanent.</div>
+        <div id="facilities-grid"></div>
       </div>
 
       <!-- TRANSFER MARKET -->
@@ -766,6 +799,7 @@
             <span class="v home" id="ft-home-poss">50%</span><span class="lbl">Possession</span><span class="v away" id="ft-away-poss">50%</span>
             <span class="v home" id="ft-home-shots">0</span><span class="lbl">On Target</span><span class="v away" id="ft-away-shots">0</span>
           </div>
+          <div id="ft-gate" class="hidden" style="font-family:var(--display);font-size:10px;color:var(--warn);margin-top:14px;">🏟️ Gate receipts: +<span id="ft-gate-amt">0</span> coins</div>
           <div class="ft-tap">▶ Tap to continue</div>
         </div>
       </div>

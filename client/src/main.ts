@@ -190,8 +190,8 @@ class Game {
     this.account = me.account; this.club = me.club; this.standingOrders = me.standingOrders;
   }
 
-  private showScreen(s: 'login' | 'hub' | 'lineup' | 'match' | 'standings' | 'scouting' | 'market') {
-    for (const id of ['login', 'hub', 'lineup', 'matchwrap', 'standings', 'scouting', 'market']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
+  private showScreen(s: 'login' | 'hub' | 'lineup' | 'match' | 'standings' | 'scouting' | 'market' | 'club') {
+    for (const id of ['login', 'hub', 'lineup', 'matchwrap', 'standings', 'scouting', 'market', 'club']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
     $('logout').classList.toggle('hidden', s === 'login');
     if (s !== 'scouting' && this.missionTimer) { clearInterval(this.missionTimer); this.missionTimer = null; } // stop the mission countdown when leaving
   }
@@ -212,6 +212,8 @@ class Game {
     $('scouting-back').addEventListener('click', () => this.showHub());
     $('view-market').addEventListener('click', () => this.showMarket());
     $('market-back').addEventListener('click', () => this.showHub());
+    $('view-club').addEventListener('click', () => this.showClub());
+    $('club-back').addEventListener('click', () => this.showHub());
     $('sell-btn').addEventListener('click', () => this.sellPlayer());
     const showTab = (tab: 'results' | 'cup' | 'honours') => {
       $('results-feed').classList.toggle('hidden', tab !== 'results');
@@ -586,6 +588,46 @@ class Game {
       return `<div class="cup-round"><div class="cup-round-name">${r.name}</div>${ties}${byes}</div>`;
     }).join('');
     return champ + note + `<div class="cup-bracket">${rounds}</div>`;
+  }
+
+  // ---- club facilities ----
+  private async showClub() {
+    this.showScreen('club');
+    $('facilities-grid').innerHTML = SPINNER;
+    try { this.renderFacilities(await api.facilities()); }
+    catch { $('facilities-grid').innerHTML = '<div class="muted">Could not load — is the server running?</div>'; }
+  }
+
+  private renderFacilities(d: { coins: number; facilities: import('./api').Facility[] }) {
+    this.account.coins = d.coins;
+    $('club-coins').textContent = `💰 ${d.coins}`;
+    $('facilities-grid').innerHTML = d.facilities.map((f) => {
+      const pips = Array.from({ length: f.maxLevel }, (_, i) => `<i class="${i < f.level ? 'on' : ''}"></i>`).join('');
+      const maxed = f.level >= f.maxLevel;
+      const action = maxed
+        ? '<div class="fac-maxed">★ MAX LEVEL</div>'
+        : `<div class="fac-next">Next: <b>${f.nextEffect ?? ''}</b></div>`
+          + `<button class="fac-up" data-key="${f.key}" ${f.canAfford ? '' : 'disabled'}>Upgrade · 💰 ${f.upgradeCost} ▶</button>`;
+      return `<div class="facility ${maxed ? 'maxed' : ''}">`
+        + `<div class="fac-top"><span class="fac-icon">${f.icon}</span><span class="fac-name">${f.name}</span><span class="fac-lvl">LVL ${f.level}/${f.maxLevel}</span></div>`
+        + `<div class="fac-pips">${pips}</div>`
+        + `<div class="fac-blurb">${f.blurb}</div>`
+        + `<div class="fac-effect">▸ ${f.effect}</div>`
+        + action + `</div>`;
+    }).join('');
+    Array.from($('facilities-grid').querySelectorAll('button[data-key]')).forEach((b) =>
+      b.addEventListener('click', () => this.upgradeFacility((b as HTMLElement).dataset.key!)));
+  }
+
+  private async upgradeFacility(key: string) {
+    try {
+      const r = await api.upgradeFacility(key);
+      this.account.coins = r.coins;
+      toast(`Upgraded to level ${r.level} ✓`);
+      this.renderFacilities(await api.facilities());
+    } catch (e: any) {
+      toast(e?.status === 409 ? (String(e?.body?.error ?? '').includes('max') ? 'Already at max level' : 'Not enough coins') : 'Could not upgrade');
+    }
   }
 
   // ---- scouting (trial/loan academy) ----
@@ -1109,8 +1151,10 @@ class Game {
     }
   }
 
+  private lastGate = 0;
   private startMatch(payload: MatchPayload) {
     this.mySide = payload.mySide;
+    this.lastGate = payload.gateIncome ?? 0;
     this.homeName = payload.home.handle;
     this.awayName = payload.away.handle;
     // guarantee the two kits clearly contrast on the pitch even if the clubs' colours are similar
@@ -1157,6 +1201,8 @@ class Game {
     $('ft-away-poss').textContent = `${100 - hp}%`;
     $('ft-home-shots').textContent = `${onTarget[0]}`;
     $('ft-away-shots').textContent = `${onTarget[1]}`;
+    $('ft-gate').classList.toggle('hidden', this.lastGate <= 0);
+    if (this.lastGate > 0) $('ft-gate-amt').textContent = String(this.lastGate);
 
     const card = $('fulltime-card');
     card.classList.remove('hidden');

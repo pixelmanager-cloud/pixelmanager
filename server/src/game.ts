@@ -45,13 +45,17 @@ export function cleanDuties(club: Club, lineup: Lineup): Duty[] | undefined {
   });
 }
 
-/** Run a full match on the authoritative engine and return the deterministic result. */
+/** Run a full match on the authoritative engine and return the deterministic result.
+ *  Optional per-side conditioning (training-ground fitness-drain multiplier, 1 = normal). */
 export function runMatch(
   homeClub: Club, homeLineup: Lineup, homeTactics: Tactics,
   awayClub: Club, awayLineup: Lineup, awayTactics: Tactics,
+  conditioning?: { home?: number; away?: number },
 ): { seed: number; homeTeam: Team; awayTeam: Team; result: [number, number] } {
   const homeTeam = buildXI(homeClub, homeLineup);
   const awayTeam = buildXI(awayClub, awayLineup);
+  if (conditioning?.home != null) homeTeam.conditioning = conditioning.home;
+  if (conditioning?.away != null) awayTeam.conditioning = conditioning.away;
   const seed = Math.floor(Math.random() * 2 ** 31);
   const m = new MatchEngine([homeTeam, awayTeam], seed, [homeTactics, awayTactics]);
   while (!m.state.finished) m.tick();

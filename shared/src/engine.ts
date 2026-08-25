@@ -207,6 +207,7 @@ export class MatchEngine {
         }
       }
 
+      const cond = this.teams[teamIdx].conditioning ?? 1; // training-ground fitness-drain multiplier
       s.players[teamIdx].forEach((ps, i) => {
         if (s.carrier && s.carrier.teamIdx === teamIdx && s.carrier.playerIdx === i) return; // carrier handled separately
         const p = this.teams[teamIdx].players[i];
@@ -216,7 +217,7 @@ export class MatchEngine {
         // pressers/loose-ball chasers (and the emergency box defender) run at the ball
         if (pressSet.has(i) || i === emergency) {
           this.stepToward(ps, s.ball.x, s.ball.y, speed * 1.1);
-          this.drain(ps, p, mods, 1.5);
+          this.drain(ps, p, mods, 1.5, cond);
           return;
         }
 
@@ -240,12 +241,12 @@ export class MatchEngine {
         if (p.role === 'GK') tx = clamp(tx, teamIdx === 0 ? 2 : 89 - dm.gkStep, teamIdx === 0 ? 16 + dm.gkStep : 103);
 
         const moved = this.stepToward(ps, tx, ty, speed);
-        if (moved > 0.3) this.drain(ps, p, mods, 1);
+        if (moved > 0.3) this.drain(ps, p, mods, 1, cond);
       });
     }
   }
 
-  private drain(ps: PlayerState, p: Player, mods: TacticMods, effort: number) {
+  private drain(ps: PlayerState, p: Player, mods: TacticMods, effort: number, conditioning = 1) {
     // workrate raises effort (drains more); stamina is endurance (drains less). Both are
     // centred at the mid stat so average squads keep the tuned overall drain rate, while
     // a high-stamina star fades far less than a low-stamina filler late in the game.
@@ -253,7 +254,7 @@ export class MatchEngine {
     // stamina stat existed — otherwise norm(undefined)=NaN corrupts fitness → NaN
     // positions → invisible players.
     const staminaFactor = 1.3 - 0.6 * norm(p.attrs.stamina ?? 10);
-    ps.fitness = Math.max(0, ps.fitness - BASE_DRAIN * mods.staminaDrain * (0.7 + 0.6 * norm(p.attrs.workrate)) * staminaFactor * effort);
+    ps.fitness = Math.max(0, ps.fitness - BASE_DRAIN * mods.staminaDrain * (0.7 + 0.6 * norm(p.attrs.workrate)) * staminaFactor * effort * conditioning);
   }
 
   private stepToward(ps: PlayerState, tx: number, ty: number, maxStep: number): number {

@@ -31,14 +31,19 @@ function seedFrom(s: string): number {
   return h >>> 0;
 }
 
-/** Deterministically roll the trialist at a given pool index (same inputs → same player). */
-function rollAt(accountId: string, seasonNumber: number, index: number, tier: string): { player: Player; band: Band; overall: number } {
+const bumpUp: Record<Band, Band> = { raw: 'squad', squad: 'quality', quality: 'gem', gem: 'gem' };
+
+/** Deterministically roll the trialist at a given pool index (same inputs → same player).
+ *  youthUpgrade (0..1, from the Youth Academy) can deterministically bump a walk-up's band. */
+function rollAt(accountId: string, seasonNumber: number, index: number, tier: string, youthUpgrade = 0): { player: Player; band: Band; overall: number } {
   const base = seedFrom(`${accountId}:${seasonNumber}:${tier}`);
   const s = (base ^ Math.imul(index + 1, 0x9e3779b1)) >>> 0;
   const bandRng = (Math.imul(s, 2654435761) >>> 0) / 2 ** 32;
   const dist = SCOUT_TIERS[tier] ?? SCOUT_TIERS.base;
   let acc = 0, rolled: Band = 'raw';
   for (const b of ['gem', 'quality', 'squad', 'raw'] as Band[]) { acc += dist[b]; if (bandRng < acc) { rolled = b; break; } }
+  const upRng = (Math.imul(s ^ 0x85ebca6b, 2246822519) >>> 0) / 2 ** 32; // independent sub-roll
+  if (upRng < youthUpgrade) rolled = bumpUp[rolled]; // academy graduate — a cut above
   const [lo, hi] = BAND_Q[rolled];
   const q = lo + ((s % 997) / 997) * (hi - lo);
   const player = generateTrialist(`loan-s${seasonNumber}-${index}`, q, s, LOANEE_MAX_STAT);
@@ -47,15 +52,15 @@ function rollAt(accountId: string, seasonNumber: number, index: number, tier: st
 }
 
 export interface TrialInfo { index: number; id: string; name: string; role: string; overall: number; band: Band }
-export function generatePool(accountId: string, seasonNumber: number, tier = 'base'): TrialInfo[] {
-  return Array.from({ length: POOL_SIZE }, (_, i) => {
-    const { player, band, overall: ovr } = rollAt(accountId, seasonNumber, i, tier);
+export function generatePool(accountId: string, seasonNumber: number, tier = 'base', extraSlots = 0, youthUpgrade = 0): TrialInfo[] {
+  return Array.from({ length: POOL_SIZE + extraSlots }, (_, i) => {
+    const { player, band, overall: ovr } = rollAt(accountId, seasonNumber, i, tier, youthUpgrade);
     return { index: i, id: player.id, name: player.name, role: player.role, overall: ovr, band };
   });
 }
-export function trialistAt(accountId: string, seasonNumber: number, index: number, tier = 'base'): Player | null {
-  if (index < 0 || index >= POOL_SIZE) return null;
-  return rollAt(accountId, seasonNumber, index, tier).player;
+export function trialistAt(accountId: string, seasonNumber: number, index: number, tier = 'base', extraSlots = 0, youthUpgrade = 0): Player | null {
+  if (index < 0 || index >= POOL_SIZE + extraSlots) return null;
+  return rollAt(accountId, seasonNumber, index, tier, youthUpgrade).player;
 }
 
 // ── Opposition scout: a tiered reveal ladder (info-not-power, capped) ─────────

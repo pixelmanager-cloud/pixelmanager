@@ -54,6 +54,9 @@ export interface Team {
   shortName: string;
   shirtColor: number;
   players: Player[]; // exactly 11, players[0] is GK
+  /** Training-ground conditioning: a fitness-drain multiplier (1 = normal, <1 = fades less).
+   *  Optional so default matches (tests, CPU) behave exactly as before. */
+  conditioning?: number;
 }
 
 export interface PlayerState {

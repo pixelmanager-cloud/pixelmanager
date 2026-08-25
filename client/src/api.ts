@@ -56,8 +56,13 @@ export interface HonourRow { season_number: number; tier: string; final_pos: num
 export interface CupTie { homeId: string; awayId: string; homeHandle: string; awayHandle: string; homeScore: number; awayScore: number; pens: [number, number] | null; winnerId: string }
 export interface CupRound { name: string; ties: CupTie[]; byes: { id: string; handle: string }[] }
 export interface CupData { season: number; tier: string; pod: number; me: string; size: number; rounds: CupRound[]; championId: string | null; championHandle: string }
+export interface Facility {
+  key: string; icon: string; name: string; blurb: string; level: number; maxLevel: number;
+  effect: string; nextEffect: string | null; upgradeCost: number | null; canAfford: boolean;
+}
+export interface FacilitiesData { coins: number; facilities: Facility[] }
 export interface MatchPayload {
-  matchId: string; seed: number; result: [number, number]; mySide: 0 | 1;
+  matchId: string; seed: number; result: [number, number]; mySide: 0 | 1; coinsEarned?: number; gateIncome?: number;
   home: { id: string; handle: string; rating?: number; team: Team; tactics: Tactics };
   away: { id: string; handle: string; rating?: number; team: Team; tactics: Tactics };
 }
@@ -83,6 +88,8 @@ export const api = {
   plan: (opponentId: string) => req<{ plan: StandingOrders | null }>(`/plan/${opponentId}`),
   trials: () => req<{ season: number; cap: number; signedCount: number; pool: Trialist[] }>('/scout/trials'),
   signTrial: (index: number) => req<{ ok: true; player: { name: string; role: string }; signedCount: number }>(`/scout/trials/${index}/sign`, { method: 'POST' }),
+  facilities: () => req<FacilitiesData>('/facilities'),
+  upgradeFacility: (key: string) => req<{ ok: true; key: string; level: number; coins: number }>(`/facilities/${key}/upgrade`, { method: 'POST' }),
   missions: () => req<MissionsData>('/scout/missions'),
   dispatchScout: (destination: string) => req<{ ok: true; mission: Mission; coins: number }>('/scout/missions', { method: 'POST', body: JSON.stringify({ destination }) }),
   signMission: (id: string) => req<{ ok: true; player: { name: string; role: string }; signedCount: number }>(`/scout/missions/${id}/sign`, { method: 'POST' }),

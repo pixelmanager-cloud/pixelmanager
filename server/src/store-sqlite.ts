@@ -44,6 +44,9 @@ export function makeSqliteStore(file: string): Store {
           id TEXT PRIMARY KEY, account_id TEXT NOT NULL, season_id TEXT NOT NULL,
           destination TEXT NOT NULL, dispatched_at INTEGER NOT NULL, ready_at INTEGER NOT NULL,
           found INTEGER NOT NULL, player_json TEXT, band TEXT, status TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS facilities (
+          account_id TEXT PRIMARY KEY, stadium INTEGER NOT NULL DEFAULT 1, training INTEGER NOT NULL DEFAULT 1,
+          youth INTEGER NOT NULL DEFAULT 1, scouting INTEGER NOT NULL DEFAULT 1);
       `);
       // migrate pre-existing tables (adds columns; throws-and-ignored if already present)
       try { db.exec('ALTER TABLE matches ADD COLUMN season_id TEXT'); } catch { /* already added */ }
@@ -139,6 +142,16 @@ export function makeSqliteStore(file: string): Store {
     async getPlan(ownerId, opponentId) {
       const r = db.prepare('SELECT formation, player_ids, tactics, duties FROM plans WHERE owner_id=? AND opponent_id=?').get(ownerId, opponentId) as any;
       return r && { formation: r.formation, playerIds: JSON.parse(r.player_ids), tactics: JSON.parse(r.tactics), duties: r.duties ? JSON.parse(r.duties) : undefined };
+    },
+    async getFacilities(accountId) {
+      const r = db.prepare('SELECT stadium, training, youth, scouting FROM facilities WHERE account_id=?').get(accountId) as any;
+      return r ?? { stadium: 1, training: 1, youth: 1, scouting: 1 };
+    },
+    async setFacilityLevel(accountId, key, level) {
+      const cols = { stadium: 1, training: 1, youth: 1, scouting: 1 } as Record<string, number>;
+      if (!(key in cols)) throw new Error('bad facility');
+      db.prepare('INSERT INTO facilities (account_id) VALUES (?) ON CONFLICT(account_id) DO NOTHING').run(accountId);
+      db.prepare(`UPDATE facilities SET ${key}=? WHERE account_id=?`).run(level, accountId); // key validated above
     },
     async createMission(m) {
       db.prepare('INSERT INTO scout_missions (id, account_id, season_id, destination, dispatched_at, ready_at, found, player_json, band, status) VALUES (?,?,?,?,?,?,?,?,?,?)')
@@ -244,6 +257,6 @@ export function makeSqliteStore(file: string): Store {
     async seasonPods(seasonId) {
       return db.prepare('SELECT DISTINCT tier, pod FROM pod_members WHERE season_id=? ORDER BY tier, pod').all(seasonId) as PodRef[];
     },
-    async reset() { db.exec('DELETE FROM matches; DELETE FROM clubs; DELETE FROM accounts; DELETE FROM seasons; DELETE FROM honours; DELETE FROM pod_members; DELETE FROM plans; DELETE FROM loanees; DELETE FROM listings; DELETE FROM scout_missions;'); },
+    async reset() { db.exec('DELETE FROM matches; DELETE FROM clubs; DELETE FROM accounts; DELETE FROM seasons; DELETE FROM honours; DELETE FROM pod_members; DELETE FROM plans; DELETE FROM loanees; DELETE FROM listings; DELETE FROM scout_missions; DELETE FROM facilities;'); },
   };
 }

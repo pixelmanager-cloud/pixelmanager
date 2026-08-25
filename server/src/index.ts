@@ -7,11 +7,15 @@ import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMA
 import { hashPassword, verifyPassword } from './auth.js';
 import { generatePool, trialistAt, LOANEE_CAP, OPP_REVEAL, describeIntel, type OppTier } from './scouting.js';
 import { DESTINATIONS, destinationById, rollMission, travelMs, previewOdds, TRIPS_PER_SEASON } from './missions.js';
+import {
+  FACILITY_KEYS, FACILITY_META, MAX_LEVEL, upgradeCost, effectAt, trainingConditioning, stadiumIncome,
+  youthPoolBonus, youthUpgradeChance, scoutHitMult, scoutCostDiscount, scoutExtraTrips, type FacilityKey,
+} from './facilities.js';
 import type { Player } from '@fm/shared';
 import { viewerTiers, scoutNftInfo } from './scoutnft.js';
 import { computeCup, type SquadMap } from './cup.js';
 import type { PlayerScoutTier } from './market.js';
-import { ensureSeason, ensurePod, forceRollover, resultsAmong, startOfUtcDay, PROMOTE, RELEGATE, MATCHES_PER_DAY } from './seasons.js';
+import { ensureSeason, ensurePod, forceRollover, resultsAmong, startOfUtcDay, PROMOTE, RELEGATE, MATCHES_PER_DAY, TIERS } from './seasons.js';
 import {
   revealPlayer, WIN_COINS, DRAW_COINS, LOSS_COINS,
   MIN_SQUAD, MAX_SQUAD, PRICE_MIN, PRICE_MAX,
@@ -249,10 +253,14 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   if (!validateLineup(oppClub.club, oppLineup)) oppLineup = autoPickXI(oppClub.club, oppClub.standingOrders.formation); // stale NFT in their XI → auto-pick
   const oppTactics = oppClub.standingOrders.tactics;
 
+  // training-ground conditioning: each side fades less by their own training level
+  const [meFac, oppFac] = await Promise.all([db.getFacilities(meId), db.getFacilities(oppId)]);
+  const meCond = trainingConditioning(meFac.training), oppCond = trainingConditioning(oppFac.training);
   // run the match with the correct home/away team ordering (I may be the away side)
   const hClub = iAmHome ? me!.club : oppClub.club, hLineup = iAmHome ? myLineup : oppLineup, hTactics = iAmHome ? myTactics : oppTactics;
   const aClub = iAmHome ? oppClub.club : me!.club, aLineup = iAmHome ? oppLineup : myLineup, aTactics = iAmHome ? oppTactics : myTactics;
-  const { seed, homeTeam, awayTeam, result } = runMatch(hClub, hLineup, hTactics, aClub, aLineup, aTactics);
+  const conditioning = { home: iAmHome ? meCond : oppCond, away: iAmHome ? oppCond : meCond };
+  const { seed, homeTeam, awayTeam, result } = runMatch(hClub, hLineup, hTactics, aClub, aLineup, aTactics, conditioning);
 
   // Elo from my perspective, regardless of which side I was on
   const myScore = iAmHome ? result[0] : result[1], oppScore = iAmHome ? result[1] : result[0];
@@ -260,7 +268,13 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const [nMe, nOpp] = elo(req.account!.rating, opp.rating, myOutcome);
   const coinsFor = (o: number) => o === 1 ? WIN_COINS : o === 0.5 ? DRAW_COINS : LOSS_COINS;
   const myCoins = coinsFor(myOutcome), oppCoins = coinsFor(1 - myOutcome);
-  await Promise.all([db.setRating(meId, nMe), db.setRating(oppId, nOpp), db.addCoins(meId, myCoins), db.addCoins(oppId, oppCoins)]);
+  // stadium matchday income for the HOME side (the economy's coin faucet)
+  const homeAcctId = homeId, homeStadium = (iAmHome ? meFac : oppFac).stadium;
+  const homeTierIdx = TIERS.indexOf((await db.accountTier(homeAcctId)) as typeof TIERS[number]);
+  const homeMatchOutcome: 'win' | 'draw' | 'loss' = result[0] > result[1] ? 'win' : result[0] < result[1] ? 'loss' : 'draw';
+  const gate = stadiumIncome(homeStadium, Math.max(0, homeTierIdx), homeMatchOutcome);
+  await Promise.all([db.setRating(meId, nMe), db.setRating(oppId, nOpp), db.addCoins(meId, myCoins), db.addCoins(oppId, oppCoins), db.addCoins(homeAcctId, gate)]);
+  const myGate = iAmHome ? gate : 0; // only the host banks gate receipts
   const nHome = iAmHome ? nMe : nOpp, nAway = iAmHome ? nOpp : nMe;
 
   const matchId = randomUUID();
@@ -270,7 +284,7 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   });
 
   return {
-    matchId, seed, result, mySide: iAmHome ? 0 : 1, coinsEarned: myCoins,
+    matchId, seed, result, mySide: iAmHome ? 0 : 1, coinsEarned: myCoins, gateIncome: myGate,
     home: { id: homeId, handle: iAmHome ? req.account!.handle : opp.handle, rating: nHome, team: homeTeam, tactics: hTactics },
     away: { id: awayId, handle: iAmHome ? opp.handle : req.account!.handle, rating: nAway, team: awayTeam, tactics: aTactics },
   };
@@ -358,12 +372,13 @@ app.get('/plan/:id', { preHandler: requireAuth }, async (req) =>
 // this season's trial pool (free base scout) + how many loanees you've signed
 app.get('/scout/trials', { preHandler: requireAuth }, async (req) => {
   const s = await ensureSeason(db, Date.now());
-  const [signed, count, tiers] = await Promise.all([
-    db.loaneeIds(req.account!.id, s.id), db.countLoanees(req.account!.id, s.id), viewerTiers(await db.walletOf(req.account!.id)),
+  const [signed, count, tiers, fac] = await Promise.all([
+    db.loaneeIds(req.account!.id, s.id), db.countLoanees(req.account!.id, s.id), viewerTiers(await db.walletOf(req.account!.id)), db.getFacilities(req.account!.id),
   ]);
   const signedSet = new Set(signed);
-  const pool = generatePool(req.account!.id, s.number, tiers.player).map((t) => ({ ...t, signed: signedSet.has(t.id) }));
-  return { season: s.number, cap: LOANEE_CAP, signedCount: count, tier: tiers.player, pool };
+  const extra = youthPoolBonus(fac.youth), youthUp = youthUpgradeChance(fac.youth);
+  const pool = generatePool(req.account!.id, s.number, tiers.player, extra, youthUp).map((t) => ({ ...t, signed: signedSet.has(t.id) }));
+  return { season: s.number, cap: LOANEE_CAP, signedCount: count, tier: tiers.player, youthLevel: fac.youth, pool };
 });
 
 // sign a trialist (up to LOANEE_CAP per season); adds them to your squad for the season
@@ -371,8 +386,8 @@ app.post('/scout/trials/:index/sign', { preHandler: requireAuth }, async (req, r
   const meId = req.account!.id;
   const s = await ensureSeason(db, Date.now());
   if (await db.countLoanees(meId, s.id) >= LOANEE_CAP) return reply.code(409).send({ error: `you can sign at most ${LOANEE_CAP} loanees a season` });
-  const tiers = await viewerTiers(await db.walletOf(meId)); // same tier the pool was generated with, so ids match
-  const player = trialistAt(meId, s.number, Number((req.params as any).index), tiers.player);
+  const [tiers, fac] = await Promise.all([viewerTiers(await db.walletOf(meId)), db.getFacilities(meId)]); // same inputs the pool used, so ids match
+  const player = trialistAt(meId, s.number, Number((req.params as any).index), tiers.player, youthPoolBonus(fac.youth), youthUpgradeChance(fac.youth));
   if (!player) return reply.code(404).send({ error: 'no such trialist' });
   const c = await db.getClub(meId);
   if (!c) return reply.code(404).send({ error: 'club not found' });
@@ -381,6 +396,37 @@ app.post('/scout/trials/:index/sign', { preHandler: requireAuth }, async (req, r
   await db.saveClub(meId, c.club, c.standingOrders);
   await db.addLoanee(meId, s.id, player.id);
   return { ok: true, player: { name: player.name, role: player.role }, signedCount: (await db.countLoanees(meId, s.id)) };
+});
+
+// ── Club facilities: leveled upgrades (Stadium/Training/Youth/Scouting HQ) ────────
+app.get('/facilities', { preHandler: requireAuth }, async (req) => {
+  const meId = req.account!.id;
+  const [fac, coins] = await Promise.all([db.getFacilities(meId), db.getCoins(meId)]);
+  const facilities = FACILITY_KEYS.map((key) => {
+    const level = (fac as any)[key] as number;
+    const cost = upgradeCost(level);
+    return {
+      key, ...FACILITY_META[key], level, maxLevel: MAX_LEVEL,
+      effect: effectAt(key, level), nextEffect: level < MAX_LEVEL ? effectAt(key, level + 1) : null,
+      upgradeCost: cost, canAfford: cost != null && coins >= cost,
+    };
+  });
+  return { coins, facilities };
+});
+
+app.post('/facilities/:key/upgrade', { preHandler: requireAuth }, async (req, reply) => {
+  const meId = req.account!.id;
+  const key = String((req.params as any).key) as FacilityKey;
+  if (!FACILITY_KEYS.includes(key)) return reply.code(400).send({ error: 'unknown facility' });
+  const fac = await db.getFacilities(meId);
+  const level = (fac as any)[key] as number;
+  const cost = upgradeCost(level);
+  if (cost == null) return reply.code(409).send({ error: 'already at max level' });
+  const coins = await db.getCoins(meId);
+  if (coins < cost) return reply.code(409).send({ error: `not enough coins — upgrade costs ${cost}` });
+  await db.addCoins(meId, -cost); // coin sink
+  await db.setFacilityLevel(meId, key, level + 1);
+  return { ok: true, key, level: level + 1, coins: await db.getCoins(meId) };
 });
 
 // ── Scouting Network: dispatch a player-scout to a destination (risk/reward), then
@@ -402,18 +448,21 @@ function missionView(m: import('./store.js').MissionRow, now: number) {
 app.get('/scout/missions', { preHandler: requireAuth }, async (req) => {
   const meId = req.account!.id;
   const s = await ensureSeason(db, Date.now());
-  const [tiers, trips, count, loaneeCount, coins] = await Promise.all([
+  const [tiers, trips, count, loaneeCount, coins, fac] = await Promise.all([
     viewerTiers(await db.walletOf(meId)), db.missionsInSeason(meId, s.id),
-    db.countMissionsInSeason(meId, s.id), db.countLoanees(meId, s.id), db.getCoins(meId),
+    db.countMissionsInSeason(meId, s.id), db.countLoanees(meId, s.id), db.getCoins(meId), db.getFacilities(meId),
   ]);
   const now = Date.now();
+  const hqMult = scoutHitMult(fac.scouting), discount = scoutCostDiscount(fac.scouting);
+  const tripsPerSeason = TRIPS_PER_SEASON + scoutExtraTrips(fac.scouting);
   const destinations = DESTINATIONS.map((d) => ({
-    id: d.id, name: d.name, blurb: d.blurb, weights: d.weights, travelMins: d.travelMins, cost: d.cost,
-    ...previewOdds(d, tiers.player),
+    id: d.id, name: d.name, blurb: d.blurb, weights: d.weights, travelMins: d.travelMins,
+    cost: Math.round(d.cost * (1 - discount)),
+    ...previewOdds(d, tiers.player, hqMult),
   }));
   return {
-    season: s.number, tier: tiers.player, tripsPerSeason: TRIPS_PER_SEASON, tripsUsed: count,
-    tripsLeft: Math.max(0, TRIPS_PER_SEASON - count), loaneeCap: LOANEE_CAP, loaneeCount, coins,
+    season: s.number, tier: tiers.player, scoutingLevel: fac.scouting, tripsPerSeason, tripsUsed: count,
+    tripsLeft: Math.max(0, tripsPerSeason - count), loaneeCap: LOANEE_CAP, loaneeCount, coins,
     destinations, missions: trips.map((m) => missionView(m, now)),
   };
 });
@@ -423,15 +472,18 @@ app.post('/scout/missions', { preHandler: requireAuth }, async (req, reply) => {
   const s = await ensureSeason(db, Date.now());
   const dest = destinationById(String((req.body as any)?.destination ?? ''));
   if (!dest) return reply.code(400).send({ error: 'unknown destination' });
-  if (await db.countMissionsInSeason(meId, s.id) >= TRIPS_PER_SEASON) {
-    return reply.code(409).send({ error: `you can dispatch at most ${TRIPS_PER_SEASON} scouting trips a season` });
+  const fac = await db.getFacilities(meId);
+  const tripsPerSeason = TRIPS_PER_SEASON + scoutExtraTrips(fac.scouting);
+  if (await db.countMissionsInSeason(meId, s.id) >= tripsPerSeason) {
+    return reply.code(409).send({ error: `you can dispatch at most ${tripsPerSeason} scouting trips a season` });
   }
+  const cost = Math.round(dest.cost * (1 - scoutCostDiscount(fac.scouting)));
   const coins = await db.getCoins(meId);
-  if (coins < dest.cost) return reply.code(409).send({ error: `not enough coins — ${dest.name} costs ${dest.cost}` });
-  await db.addCoins(meId, -dest.cost); // coin sink (this is the seam that swaps to a PTEST spend later)
+  if (coins < cost) return reply.code(409).send({ error: `not enough coins — ${dest.name} costs ${cost}` });
+  await db.addCoins(meId, -cost); // coin sink (this is the seam that swaps to a PTEST spend later)
   const tiers = await viewerTiers(await db.walletOf(meId));
   const id = randomUUID();
-  const outcome = rollMission(id, dest, tiers.player); // sealed now, revealed after travel
+  const outcome = rollMission(id, dest, tiers.player, scoutHitMult(fac.scouting)); // sealed now, revealed after travel
   const now = Date.now();
   const row = {
     id, account_id: meId, season_id: s.id, destination: dest.id,
