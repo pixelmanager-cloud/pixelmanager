@@ -658,11 +658,16 @@ class Game {
     this.editorMode = mode;
     this.pendingOpp = opp;
     this.draftTactics = { ...this.standingOrders.tactics, formation: this.standingOrders.formation };
-    this.draftLineup = { formation: this.standingOrders.formation, playerIds: [...this.standingOrders.playerIds] };
-    // seed duties from saved standing orders where valid, else each player's auto default
+    // the saved XI can reference players no longer in the squad (e.g. an NFT star that's
+    // been transferred/de-listed) — fall back to a valid auto-pick so the editor still opens
+    const owned = new Set(this.club.players.map((x) => x.id));
+    const soValid = this.standingOrders.playerIds.length === 11 && this.standingOrders.playerIds.every((id) => owned.has(id));
+    this.draftLineup = soValid
+      ? { formation: this.standingOrders.formation, playerIds: [...this.standingOrders.playerIds] }
+      : autoPickXI(this.club, this.standingOrders.formation);
     this.draftDuties = this.draftLineup.playerIds.map((pid, i) => {
       const p = this.club.players.find((x) => x.id === pid)!;
-      const saved = this.standingOrders.duties?.[i];
+      const saved = soValid ? this.standingOrders.duties?.[i] : undefined;
       return saved && isDutyForRole(p.role, saved) ? saved : defaultDuty(p);
     });
     $('lineup-title').textContent = mode === 'standing' ? 'SET MY TEAM' : `SET LINEUP  ${opp!.venue === 'away' ? 'away at' : 'vs'} ${opp!.handle}`;
