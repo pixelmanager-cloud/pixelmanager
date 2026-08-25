@@ -340,11 +340,19 @@ class Game {
       ['tackling', 'TAC'], ['strength', 'STR'], ['workrate', 'WRK'], ['keeping', 'KEE'],
     ];
     const stats = order.map(([k, l]) => `<div class="pc-stat"><span>${l}</span><b style="color:${statColor(p.attrs[k])}">${p.attrs[k]}</b></div>`).join('');
-    const holo = tier.key === 'diamond' || tier.key === 'legend' ? ' holo' : '';
+    // FX escalate with tier: sheen from Silver, rotating glow ring + sparkles from Gold up.
+    const sparkCount = { bronze: 0, silver: 3, gold: 6, diamond: 10, legend: 16 }[tier.key] ?? 0;
+    const sparks = Array.from({ length: sparkCount }, () => {
+      const x = Math.round(Math.random() * 90) + 5, y = Math.round(Math.random() * 86) + 7;
+      const delay = (Math.random() * 2).toFixed(2), dur = (0.8 + Math.random() * 0.9).toFixed(2);
+      return `<i class="pc-spark" style="left:${x}%;top:${y}%;animation-delay:${delay}s;animation-duration:${dur}s">✦</i>`;
+    }).join('');
+    const ring = tier.key === 'gold' || tier.key === 'diamond' || tier.key === 'legend' ? '<div class="pc-ring"></div>' : '';
     const el = document.createElement('div');
     el.id = 'player-card-ov';
     el.innerHTML =
-      `<div class="pc-card tier-${tier.key}${holo}">`
+      `<div class="pc-card tier-${tier.key}">`
+      + ring + '<div class="pc-burst"></div>' + sparks
       + (minted ? `<div class="pc-flash">${tier.icon} ${tier.name} STAR MINTED</div>` : '')
       + `<div class="pc-top"><div class="pc-ovr">${overall(p)}<span>OVR</span></div>`
       + `<div class="pc-tier">${tier.icon}<span>${tier.name}</span></div></div>`
