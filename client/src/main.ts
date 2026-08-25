@@ -415,11 +415,22 @@ class Game {
 
   private renderScout(s: Scout): string {
     const roster = s.players
-      .map((p) => `<span class="sp ${p.likelyXI ? 'xi' : ''}"><span class="rl role-${p.role}">${p.role}</span><span class="nm">${p.name}</span><b>${p.overall}</b></span>`)
-      .join('');
-    return `<div class="scout-head">🔍 SCOUTING <b>${s.clubName}</b> · likely <b>${s.formation}</b> · rating ${s.rating}</div>`
-      + '<div class="scout-note">Their squad, best-rated first (highlighted = likely XI). Set your shape &amp; duties to counter them.</div>'
-      + `<div class="scout-roster">${roster}</div>`;
+      .map((p) => {
+        const rating = p.overall != null ? `<b>${p.overall}</b>` : `<b class="lk" title="Upgrade your opposition scout to reveal ratings">🔒</b>`;
+        return `<span class="sp ${p.likelyXI ? 'xi' : ''}"><span class="rl role-${p.role}">${p.role}</span><span class="nm">${p.name}</span>${rating}</span>`;
+      }).join('');
+    const tierBadge = `<span class="opp-tier tier-${s.tier}">SCOUT: ${s.tier.toUpperCase()}</span>`;
+    // note adapts to what this tier reveals, and teases what the next tier unlocks
+    const note = s.reveal.likelyXI
+      ? 'Their squad, best-rated first (highlighted = likely XI). Set your shape &amp; duties to counter them.'
+      : s.reveal.overalls
+        ? 'Their squad with ratings, best-rated first. 🔒 Likely XI is revealed at Silver scout.'
+        : '🔒 Base scout: roster &amp; shape only. Player ratings unlock at Bronze, likely XI at Silver, tactical intel at Gold.';
+    const intel = s.intel ? `<div class="scout-intel">🎯 ${s.intel}</div>` : '';
+    return `<div class="scout-head">🔍 SCOUTING <b>${s.clubName}</b> · likely <b>${s.formation}</b> · rating ${s.rating} ${tierBadge}</div>`
+      + `<div class="scout-note">${note}</div>`
+      + `<div class="scout-roster">${roster}</div>`
+      + intel;
   }
 
   private renderLineupEditor() {

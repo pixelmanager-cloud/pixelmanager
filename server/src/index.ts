@@ -5,7 +5,14 @@ import { overall, type Lineup, type Tactics } from '@fm/shared';
 import { db, type Account, type StandingOrders } from './db.js';
 import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMATIONS } from './game.js';
 import { hashPassword, verifyPassword } from './auth.js';
-import { generatePool, trialistAt, LOANEE_CAP } from './scouting.js';
+import { generatePool, trialistAt, LOANEE_CAP, OPP_REVEAL, describeIntel, type OppTier } from './scouting.js';
+
+// A viewer's opposition-scout tier. Everyone is free 'base' until the token layer
+// assigns paid Scout NFTs; DEV_OPP_TIER lets us preview higher tiers end-to-end.
+function oppScoutTier(_acc: Account): OppTier {
+  const t = process.env.DEV_OPP_TIER as OppTier | undefined;
+  return t && t in OPP_REVEAL ? t : 'base';
+}
 import { ensureSeason, ensurePod, forceRollover, resultsAmong, startOfUtcDay, PROMOTE, RELEGATE, MATCHES_PER_DAY } from './seasons.js';
 
 const app = Fastify({ logger: false });
@@ -217,11 +224,20 @@ app.get('/scout/:id', { preHandler: requireAuth }, async (req, reply) => {
   const id = String((req.params as any).id);
   const [opp, c] = await Promise.all([db.accountById(id), db.getClub(id)]);
   if (!opp || !c) return reply.code(404).send({ error: 'not found' });
+  const tier = oppScoutTier(req.account!);
+  const rv = OPP_REVEAL[tier];
   const likely = new Set(c.standingOrders.playerIds);
+  const roleOrder: Record<string, number> = { GK: 0, DF: 1, MF: 2, FW: 3 };
   const players = c.club.players
-    .map((p) => ({ name: p.name, role: p.role, overall: overall(p), likelyXI: likely.has(p.id) }))
-    .sort((a, b) => b.overall - a.overall);
-  return { handle: opp.handle, clubName: c.club.name, rating: opp.rating, formation: c.standingOrders.formation, players };
+    .map((p) => ({
+      name: p.name, role: p.role,
+      overall: rv.overalls ? overall(p) : null,
+      likelyXI: rv.likelyXI ? likely.has(p.id) : null,
+    }))
+    // sort by rating only when it's revealed; otherwise by position so we don't leak strength
+    .sort((a, b) => rv.overalls ? (b.overall! - a.overall!) : ((roleOrder[a.role] - roleOrder[b.role]) || a.name.localeCompare(b.name)));
+  const intel = rv.intel ? describeIntel(c.club, c.standingOrders.tactics, likely) : null;
+  return { handle: opp.handle, clubName: c.club.name, rating: opp.rating, formation: c.standingOrders.formation, tier, reveal: rv, intel, players };
 });
 
 // your saved plan (lineup + tactics + duties) for a specific opponent, or null

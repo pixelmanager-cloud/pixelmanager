@@ -2,7 +2,7 @@
 // of trialists appears; you sign up to LOANEE_CAP of them for the season (they expire
 // at rollover). Rarity is gated by scout tier (only 'base' is free/active now; the
 // rest are the future paid Scout-NFT tiers). See docs / the design chat.
-import { generateTrialist, overall, type Player } from '@fm/shared';
+import { generateTrialist, overall, type Club, type Player, type Tactics } from '@fm/shared';
 
 export const LOANEE_CAP = 3;   // max loanees a club can sign per season
 export const POOL_SIZE = 6;    // trialists shown per season
@@ -53,4 +53,37 @@ export function generatePool(accountId: string, seasonNumber: number, tier = 'ba
 export function trialistAt(accountId: string, seasonNumber: number, index: number, tier = 'base'): Player | null {
   if (index < 0 || index >= POOL_SIZE) return null;
   return rollAt(accountId, seasonNumber, index, tier).player;
+}
+
+// ── Opposition scout: a tiered reveal ladder (info-not-power, capped) ─────────
+// Base is free and shows only who + how they line up. Higher tiers progressively
+// unlock ratings, the likely XI, and a capped tactical read — never raw stats.
+export type OppTier = 'base' | 'bronze' | 'silver' | 'gold';
+export interface OppReveal { overalls: boolean; likelyXI: boolean; intel: boolean }
+export const OPP_REVEAL: Record<OppTier, OppReveal> = {
+  base:   { overalls: false, likelyXI: false, intel: false }, // names + roles + formation
+  bronze: { overalls: true,  likelyXI: false, intel: false }, // + player overalls
+  silver: { overalls: true,  likelyXI: true,  intel: false }, // + likely XI
+  gold:   { overalls: true,  likelyXI: true,  intel: true },  // + capped tactical intel
+};
+
+/** A short, deliberately vague tactical read — a lean, never exact numbers. */
+export function describeIntel(club: Club, tactics: Tactics, likelyIds: Set<string>): string {
+  const bits: string[] = [];
+  const m = tactics.mentality, l = tactics.line, pr = tactics.press, te = tactics.tempo, w = tactics.width;
+  bits.push(m >= 1 ? 'attack-minded' : m <= -1 ? 'defensive-minded' : 'balanced');
+  if (l >= 1) bits.push('high defensive line'); else if (l <= -1) bits.push('deep line');
+  if (pr >= 2) bits.push('gegenpress'); else if (pr >= 1) bits.push('presses high'); else if (pr <= -1) bits.push('sits off');
+  if (te >= 1) bits.push('direct tempo'); else if (te <= -1) bits.push('patient build-up');
+  if (w >= 1) bits.push('plays wide'); else if (w <= -1) bits.push('plays narrow');
+  // one capped squad trait from the likely XI (a lean, not a stat dump)
+  const xi = club.players.filter((p) => likelyIds.has(p.id));
+  const avg = (rs: string[]) => { const ps = xi.filter((p) => rs.includes(p.role)); return ps.length ? ps.reduce((s, p) => s + p.attrs.pace, 0) / ps.length : 0; };
+  const fwPace = avg(['FW']), dfPace = avg(['DF']);
+  let trait = '';
+  if (fwPace >= 15) trait = 'rapid forwards — wary of balls in behind';
+  else if (fwPace && fwPace <= 11) trait = 'slow forwards — hold a high line';
+  else if (dfPace && dfPace <= 11) trait = 'slow defenders — pace can hurt them';
+  else if (dfPace >= 15) trait = 'quick defenders — hard to run past';
+  return `Lean: ${bits.join(', ')}.` + (trait ? ` Read: ${trait}.` : '');
 }

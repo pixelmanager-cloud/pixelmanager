@@ -33,8 +33,12 @@ export interface StandingOrders { formation: Lineup['formation']; playerIds: str
 export interface ResultRow { id: string; home_id: string; away_id: string; home_handle: string; away_handle: string; home_score: number; away_score: number; created_at: number }
 export interface SeasonMeta { number: number; startsAt: number; endsAt: number; status: string; endsInMs: number }
 export interface Fixture { opponentId: string; handle: string; clubName: string; rating: number; venue: 'home' | 'away'; status: 'played' | 'pending'; result: { my: number; opp: number } | null }
-export interface ScoutPlayer { name: string; role: string; overall: number; likelyXI: boolean }
-export interface Scout { handle: string; clubName: string; rating: number; formation: Lineup['formation']; players: ScoutPlayer[] }
+export interface ScoutPlayer { name: string; role: string; overall: number | null; likelyXI: boolean | null }
+export interface ScoutReveal { overalls: boolean; likelyXI: boolean; intel: boolean }
+export interface Scout {
+  handle: string; clubName: string; rating: number; formation: Lineup['formation'];
+  tier: 'base' | 'bronze' | 'silver' | 'gold'; reveal: ScoutReveal; intel: string | null; players: ScoutPlayer[];
+}
 export interface Trialist { index: number; id: string; name: string; role: string; overall: number; band: 'raw' | 'squad' | 'quality' | 'gem'; signed: boolean }
 export interface HonourRow { season_number: number; tier: string; final_pos: number; title: number; ended_at: number }
 export interface MatchPayload {
