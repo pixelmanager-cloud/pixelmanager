@@ -21,6 +21,7 @@ import {
 import { autoPickXI } from '@fm/shared';
 import { isAddress } from 'viem';
 import { issueNonce, verifyAndConsume, shortAddr } from './wallet.js';
+import { tokenInfo, tokenMeta, tokenBalance } from './token.js';
 
 /** A unique handle derived from a base (wallet accounts derive theirs from the address). */
 async function uniqueHandle(base: string): Promise<string> {
@@ -112,6 +113,16 @@ app.post('/auth/wallet/verify', async (req, reply) => {
     account: { id: acct.id, handle: acct.handle, rating: acct.rating, coins: await db.getCoins(acct.id), wallet: address.toLowerCase() },
     club: c.club, standingOrders: c.standingOrders,
   };
+});
+
+// ── On-chain token (web3 Step 2) — read-only balance for the linked wallet.
+app.get('/token', async () => ({ ...tokenInfo(), ...(await tokenMeta()) }));
+app.get('/token/balance', { preHandler: requireAuth }, async (req) => {
+  const wallet = await db.walletOf(req.account!.id);
+  const { symbol } = await tokenMeta();
+  if (!wallet) return { wallet: null, balance: null, symbol };
+  try { return { wallet, balance: await tokenBalance(wallet), symbol }; }
+  catch { return { wallet, balance: null, symbol, error: 'rpc unavailable' }; }
 });
 
 app.post('/auth/wallet/link', { preHandler: requireAuth }, async (req, reply) => {

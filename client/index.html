@@ -70,6 +70,8 @@
         border: 2px solid var(--line); padding: 7px 10px; outline: none; }
       #me-wallet { font-family: var(--display); font-size: 9px; color: var(--cyan); border: 1px solid var(--cyan);
         border-radius: 4px; padding: 3px 6px; }
+      #me-token { font-family: var(--display); font-size: 9px; color: var(--warn); border: 1px solid var(--warn);
+        border-radius: 4px; padding: 3px 6px; background: rgba(255,206,58,0.1); }
       #wallet-hint { font-size: 13px; margin-top: 8px; }
       #handle-input:hover, #password-input:hover { border-color: var(--cyan); }
       #handle-input:focus, #password-input:focus { border-color: var(--good); box-shadow: 3px 3px 0 rgba(0,0,0,0.6), 0 0 10px var(--good); }
@@ -397,12 +399,13 @@
 
       <!-- HUB -->
       <div id="hub" class="panel hidden">
-        <div id="hub-head"><span id="me-name"></span><span id="me-rating"></span><span id="me-coins" title="Transfer-market coins — earn them by playing"></span><span id="me-wallet" class="hidden" title="Linked wallet"></span>
+        <div id="hub-head"><span id="me-name"></span><span id="me-rating"></span><span id="me-coins" title="Transfer-market coins — earn them by playing"></span><span id="me-wallet" class="hidden" title="Linked wallet"></span><span id="me-token" class="hidden" title="On-chain token balance (Base Sepolia)"></span>
           <div class="hub-actions">
             <button id="view-standings">📊 League &amp; Results</button>
             <button id="view-scouting">🔎 Scouting</button>
             <button id="view-market">💰 Transfer Market</button>
             <button id="link-wallet" class="hidden">🔗 Link Wallet</button>
+            <button id="faucet-btn" class="hidden">💠 Get test tokens</button>
             <button id="set-team">⚙ Set My Team</button>
           </div>
         </div>

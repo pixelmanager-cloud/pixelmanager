@@ -5,7 +5,7 @@ import {
 } from '@fm/shared';
 import { SCALE, makeBallTexture, makeBallGhostTexture, makePitchTexture, makePlayerFrames, makeShadowTexture, makeCarrierTexture } from './pixelart';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing } from './api';
-import { walletConfigured, sendEmailCode, connectEmail, connectInjected, type ConnectedAccount } from './wallet';
+import { walletConfigured, sendEmailCode, connectEmail, connectInjected, autoConnectInApp, signMessage, claimTokens, type Account as WalletAccount } from './wallet';
 
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
 
@@ -271,15 +271,45 @@ class Game {
       }
     });
     $('link-wallet').addEventListener('click', () => this.walletFlow(() => connectInjected(), true));
+    $('faucet-btn').addEventListener('click', () => this.claimFaucet());
+  }
+
+  private async refreshTokenBalance() {
+    try {
+      const t = await api.tokenBalance();
+      $('me-token').textContent = t.balance != null ? `💠 ${Number(t.balance).toLocaleString()} ${t.symbol}` : `💠 — ${t.symbol}`;
+    } catch { $('me-token').textContent = '💠 —'; }
+  }
+
+  /** Faucet: reconnect the linked wallet (resume email session, else injected) and claim test tokens. */
+  private async claimFaucet() {
+    const btn = $('faucet-btn') as HTMLButtonElement;
+    const prev = btn.textContent;
+    btn.disabled = true;
+    try {
+      btn.textContent = 'Connecting…';
+      const account = (await autoConnectInApp()) ?? (await connectInjected().catch(() => null));
+      if (!account) { toast('Connect your wallet to claim'); return; }
+      if (this.account.wallet && account.address.toLowerCase() !== this.account.wallet) {
+        toast('Connected a different wallet than the one linked to this club');
+      }
+      btn.textContent = 'Claiming…';
+      await claimTokens(account, '1000');
+      toast('Claimed 1000 test tokens ✓');
+      await this.refreshTokenBalance();
+    } catch (e: any) {
+      const m = String(e?.message ?? '');
+      toast(/insufficient|funds|gas/i.test(m) ? 'Wallet needs a little Base Sepolia ETH for gas' : ((e?.shortMessage ?? m) || 'Claim failed'));
+    } finally { btn.disabled = false; btn.textContent = prev; }
   }
 
   /** Connect → sign the server nonce → verify (sign in) or link to the current account. */
-  private async walletFlow(connect: () => Promise<ConnectedAccount>, link = false) {
+  private async walletFlow(connect: () => Promise<WalletAccount>, link = false) {
     try {
       $('wallet-hint').textContent = 'Opening wallet…';
       const account = await connect();
       const { message } = await api.walletNonce(account.address);
-      const signature = await account.signMessage(message);
+      const signature = await signMessage(account, message);
       if (link) {
         const r = await api.walletLink(account.address, signature);
         toast(`Wallet linked ✓`);
@@ -308,6 +338,9 @@ class Game {
     $('me-wallet').classList.toggle('hidden', !w);
     if (w) $('me-wallet').textContent = `🔗 ${w.slice(0, 6)}…${w.slice(-4)}`;
     $('link-wallet').classList.toggle('hidden', !!w); // offer linking only when none is set
+    $('faucet-btn').classList.toggle('hidden', !w);   // faucet + token chip only once a wallet is linked
+    $('me-token').classList.toggle('hidden', !w);
+    if (w) void this.refreshTokenBalance();
     if (this.account.coins != null) $('me-coins').textContent = `💰 ${this.account.coins}`;
     $('fixtures-progress').textContent = '';
     $('opponents').innerHTML = SPINNER;

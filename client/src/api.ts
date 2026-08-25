@@ -81,4 +81,6 @@ export const api = {
     '/auth/wallet/verify', { method: 'POST', body: JSON.stringify({ address, signature }) }),
   walletLink: (address: string, signature: string) => req<{ ok: true; wallet: string }>(
     '/auth/wallet/link', { method: 'POST', body: JSON.stringify({ address, signature }) }),
+  token: () => req<{ address: string; chainId: number; chainName: string; symbol: string; decimals: number }>('/token'),
+  tokenBalance: () => req<{ wallet: string | null; balance: string | null; symbol: string }>('/token/balance'),
 };

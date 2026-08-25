@@ -1,15 +1,15 @@
-// Client wallet layer (web3 Step 1) — thirdweb v5, vanilla (no React).
-// Two ways to get an account: an email in-app wallet (no extension, great
-// onboarding) or an injected browser wallet (MetaMask/Coinbase/Rabby). Either way
-// we end up with an `account` that can `signMessage`, which is all Step 1 needs —
-// no chain, no gas. The target chain (Base) only matters once we send txs (Step 2+).
-import { createThirdwebClient, type ThirdwebClient } from 'thirdweb';
-import { inAppWallet, createWallet } from 'thirdweb/wallets';
+// Client wallet layer (web3 Steps 1–2) — thirdweb v5, vanilla (no React).
+// Connect an account (email in-app wallet or injected browser wallet), sign the
+// server's sign-in nonce, and claim faucet tokens. The account we return is the
+// raw thirdweb Account so it can both sign messages (Step 1) and send txs (Step 2).
+import { createThirdwebClient, getContract, sendTransaction, type ThirdwebClient } from 'thirdweb';
+import { inAppWallet, createWallet, type Account } from 'thirdweb/wallets';
 import { preAuthenticate } from 'thirdweb/wallets/in-app';
-
-export interface ConnectedAccount { address: string; signMessage: (msg: string) => Promise<string> }
+import { claimTo } from 'thirdweb/extensions/erc20';
+import { baseSepolia } from 'thirdweb/chains';
 
 const clientId = (import.meta as any).env?.VITE_THIRDWEB_CLIENT_ID ?? '';
+const TOKEN_ADDRESS = ((import.meta as any).env?.VITE_TOKEN_ADDRESS ?? '0x312fA84262575D82f6AAbbe863E4b5Cd1390E687') as `0x${string}`;
 export const walletConfigured = () => !!clientId;
 
 let _client: ThirdwebClient | null = null;
@@ -18,24 +18,36 @@ function client(): ThirdwebClient {
   return (_client ??= createThirdwebClient({ clientId }));
 }
 
-const wrap = (account: { address: string; signMessage: (a: { message: string }) => Promise<string> }): ConnectedAccount =>
-  ({ address: account.address, signMessage: (message) => account.signMessage({ message }) });
-
 /** Step 1 of email sign-in: send a one-time code to the address. */
 export async function sendEmailCode(email: string): Promise<void> {
   await preAuthenticate({ client: client(), strategy: 'email', email });
 }
 
 /** Step 2 of email sign-in: connect with the emailed code → a signing account. */
-export async function connectEmail(email: string, verificationCode: string): Promise<ConnectedAccount> {
+export async function connectEmail(email: string, verificationCode: string): Promise<Account> {
   const wallet = inAppWallet();
-  const account = await wallet.connect({ client: client(), strategy: 'email', email, verificationCode });
-  return wrap(account);
+  return wallet.connect({ client: client(), strategy: 'email', email, verificationCode });
 }
 
 /** Connect an injected browser wallet (MetaMask by default) → a signing account. */
-export async function connectInjected(): Promise<ConnectedAccount> {
+export async function connectInjected(): Promise<Account> {
   const wallet = createWallet('io.metamask');
-  const account = await wallet.connect({ client: client() });
-  return wrap(account);
+  return wallet.connect({ client: client() });
 }
+
+export const signMessage = (account: Account, message: string) => account.signMessage({ message });
+
+/** Resume a previously-connected email/in-app wallet in this browser (no code re-entry). */
+export async function autoConnectInApp(): Promise<Account | null> {
+  try { return await inAppWallet().autoConnect({ client: client() }); } catch { return null; }
+}
+
+/** Faucet claim: pull `quantity` whole tokens from the Token Drop to the account. */
+export async function claimTokens(account: Account, quantity = '1000'): Promise<string> {
+  const contract = getContract({ client: client(), chain: baseSepolia, address: TOKEN_ADDRESS });
+  const tx = claimTo({ contract, to: account.address, quantity });
+  const res = await sendTransaction({ transaction: tx, account });
+  return res.transactionHash;
+}
+
+export type { Account };
