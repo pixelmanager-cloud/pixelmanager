@@ -348,6 +348,21 @@ class Game {
       sc.classList.remove('hidden');
       sc.innerHTML = '<div class="scout-head">🔍 Scouting…</div>';
       api.scout(opp.id).then((s) => { if (this.pendingOpp?.id === opp.id) sc.innerHTML = this.renderScout(s); }).catch(() => sc.classList.add('hidden'));
+      // load the plan we last used vs this opponent (overrides the standing-orders default)
+      api.plan(opp.id).then((r) => {
+        if (!r.plan || this.pendingOpp?.id !== opp.id || this.editorMode !== 'match') return;
+        const owned = new Set(this.club.players.map((x) => x.id));
+        if (r.plan.playerIds.length !== 11 || !r.plan.playerIds.every((id) => owned.has(id))) return;
+        this.draftTactics = { ...r.plan.tactics, formation: r.plan.formation };
+        this.draftLineup = { formation: r.plan.formation, playerIds: [...r.plan.playerIds] };
+        this.draftDuties = this.draftLineup.playerIds.map((pid, i) => {
+          const pl = this.club.players.find((x) => x.id === pid)!;
+          const d = r.plan!.duties?.[i];
+          return d && isDutyForRole(pl.role, d) ? d : defaultDuty(pl);
+        });
+        this.renderLineupEditor();
+        toast(`Loaded your plan vs ${opp.handle}`);
+      }).catch(() => {});
     } else {
       sc.classList.add('hidden'); sc.innerHTML = '';
     }

@@ -29,6 +29,10 @@ export function makeSqliteStore(file: string): Store {
         CREATE TABLE IF NOT EXISTS pod_members (
           season_id TEXT NOT NULL, account_id TEXT NOT NULL, tier TEXT NOT NULL, pod INTEGER NOT NULL,
           PRIMARY KEY (season_id, account_id));
+        CREATE TABLE IF NOT EXISTS plans (
+          owner_id TEXT NOT NULL, opponent_id TEXT NOT NULL,
+          formation TEXT NOT NULL, player_ids TEXT NOT NULL, tactics TEXT NOT NULL, duties TEXT,
+          PRIMARY KEY (owner_id, opponent_id));
       `);
       // migrate pre-existing tables (adds columns; throws-and-ignored if already present)
       try { db.exec('ALTER TABLE matches ADD COLUMN season_id TEXT'); } catch { /* already added */ }
@@ -79,6 +83,16 @@ export function makeSqliteStore(file: string): Store {
       const r = db.prepare('SELECT club, so_formation, so_player_ids, so_tactics, so_duties FROM clubs WHERE account_id=?').get(accountId) as any;
       if (!r) return undefined;
       return { club: JSON.parse(r.club), standingOrders: { formation: r.so_formation, playerIds: JSON.parse(r.so_player_ids), tactics: JSON.parse(r.so_tactics), duties: r.so_duties ? JSON.parse(r.so_duties) : undefined } };
+    },
+    async savePlan(ownerId, opponentId, plan) {
+      db.prepare(
+        `INSERT INTO plans (owner_id, opponent_id, formation, player_ids, tactics, duties) VALUES (?,?,?,?,?,?)
+         ON CONFLICT(owner_id, opponent_id) DO UPDATE SET formation=excluded.formation, player_ids=excluded.player_ids, tactics=excluded.tactics, duties=excluded.duties`,
+      ).run(ownerId, opponentId, plan.formation, JSON.stringify(plan.playerIds), JSON.stringify(plan.tactics), plan.duties ? JSON.stringify(plan.duties) : null);
+    },
+    async getPlan(ownerId, opponentId) {
+      const r = db.prepare('SELECT formation, player_ids, tactics, duties FROM plans WHERE owner_id=? AND opponent_id=?').get(ownerId, opponentId) as any;
+      return r && { formation: r.formation, playerIds: JSON.parse(r.player_ids), tactics: JSON.parse(r.tactics), duties: r.duties ? JSON.parse(r.duties) : undefined };
     },
     async saveMatch(m: StoredMatch) {
       db.prepare(
@@ -155,6 +169,6 @@ export function makeSqliteStore(file: string): Store {
     async seasonPods(seasonId) {
       return db.prepare('SELECT DISTINCT tier, pod FROM pod_members WHERE season_id=? ORDER BY tier, pod').all(seasonId) as PodRef[];
     },
-    async reset() { db.exec('DELETE FROM matches; DELETE FROM clubs; DELETE FROM accounts; DELETE FROM seasons; DELETE FROM honours; DELETE FROM pod_members;'); },
+    async reset() { db.exec('DELETE FROM matches; DELETE FROM clubs; DELETE FROM accounts; DELETE FROM seasons; DELETE FROM honours; DELETE FROM pod_members; DELETE FROM plans;'); },
   };
 }

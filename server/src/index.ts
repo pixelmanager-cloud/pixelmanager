@@ -134,6 +134,8 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const myTactics: Tactics = (body.myTactics as Tactics) ?? me!.standingOrders.tactics;
   if (!isFormation(myLineup.formation) || !validateLineup(me!.club, myLineup)) return reply.code(400).send({ error: 'invalid lineup' });
   myLineup.duties = cleanDuties(me!.club, myLineup);
+  // remember this plan for next time we face this opponent
+  await db.savePlan(meId, oppId, { formation: myLineup.formation, playerIds: myLineup.playerIds, tactics: myTactics, duties: myLineup.duties });
   const oppLineup: Lineup = { formation: oppClub.standingOrders.formation, playerIds: oppClub.standingOrders.playerIds, duties: oppClub.standingOrders.duties };
   const oppTactics = oppClub.standingOrders.tactics;
 
@@ -215,6 +217,10 @@ app.get('/scout/:id', { preHandler: requireAuth }, async (req, reply) => {
     .sort((a, b) => b.overall - a.overall);
   return { handle: opp.handle, clubName: c.club.name, rating: opp.rating, formation: c.standingOrders.formation, players };
 });
+
+// your saved plan (lineup + tactics + duties) for a specific opponent, or null
+app.get('/plan/:id', { preHandler: requireAuth }, async (req) =>
+  ({ plan: (await db.getPlan(req.account!.id, String((req.params as any).id))) ?? null }));
 
 // all-time cumulative table (kept for an optional global leaderboard view)
 app.get('/table', async () => {

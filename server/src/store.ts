@@ -38,6 +38,9 @@ export interface Store {
   saveClub(accountId: string, club: Club, so: StandingOrders): Promise<void>;
   saveStandingOrders(accountId: string, so: StandingOrders): Promise<void>;
   getClub(accountId: string): Promise<{ club: Club; standingOrders: StandingOrders } | undefined>;
+  // per-opponent saved plans (the strategy you last used vs a specific opponent)
+  savePlan(ownerId: string, opponentId: string, plan: StandingOrders): Promise<void>;
+  getPlan(ownerId: string, opponentId: string): Promise<StandingOrders | undefined>;
   saveMatch(m: StoredMatch): Promise<void>;
   getMatch(id: string): Promise<StoredMatch | undefined>;
   matchesFor(accountId: string, limit?: number): Promise<MatchRow[]>;
