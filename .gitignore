@@ -13,3 +13,9 @@ agent/STOP
 # server dev database
 server/*.db
 server/*.db-*
+
+# overnight bot harness run artifacts
+bots/bot-run.db
+bots/bot-run.db-*
+bots/*.log
+bots/bugs.jsonl
