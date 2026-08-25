@@ -1,6 +1,6 @@
 // Career-sim harness. Validates: (1) different styles → distinct, specialised players + roles;
 // (2) skill → magnitude; (3) the turn-by-turn engine is deterministic. Run: `npx tsx career_sim.ts`.
-import { Career, simCareer, graduate, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, type Style, type CareerPlayerAttrs, type Role, type Genes } from './src/career.js';
+import { Career, simCareer, graduate, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, STARTER_DECK, cardPower, type Style, type CareerPlayerAttrs, type Role, type Genes } from './src/career.js';
 
 const STYLES: Style[] = [
   { name: 'Poacher',   pref: { composure: 1, flair: 0.8 },        skill: 0.85 },
@@ -96,17 +96,27 @@ console.log(`  playstyle archetypes (role + top-2 identity stats): ${arche.size}
 console.log(`  × physical gene tiers (L/M/H per innate): ${fine.size} meaningfully-distinct types`);
 console.log(`  (raw distinct players are effectively unbounded: fine gene bands + per-stat seeded noise → every mint is unique)`);
 
-// determinism: same seed + same choices → identical player
-console.log('\n=== determinism check ===');
-const replay = (seed: number) => { const c = new Career(seed); const ids: string[] = []; while (!c.finished) { const id = c.current().hand[0].id; ids.push(id); c.play(id); } return { player: graduate(c.log, seed), ids }; };
-const r1 = replay(999), r2 = replay(999);
-const same = JSON.stringify(r1.player) === JSON.stringify(r2.player) && r1.ids.join() === r2.ids.join();
-console.log('  same seed + same choices → identical player:', same);
+// deck-building: a career drafts its identity between seasons
+console.log('\n=== deck-building — drafts grow your deck (pick first offer for the demo) ===');
+{
+  const dc = new Career(seedFrom('drafter'));
+  const offers: string[][] = [];
+  while (!dc.finished) {
+    const st = dc.current();
+    if (st.phase === 'draft') { offers.push(st.options.map((o) => `${o.name}${o.rarity && o.rarity !== 'common' ? ` (${o.rarity})` : ''}`)); dc.draft(st.options[0].id); }
+    else dc.play(st.hand[0].id);
+  }
+  console.log(`  starting deck (${STARTER_DECK.length}):`, STARTER_DECK.map((c) => c.name).join(', '));
+  offers.forEach((o, i) => console.log(`  draft ${i + 1} offered:`, o.join('  |  ')));
+  console.log(`  final deck (${dc.deck.length}):`, dc.deck.map((c) => c.name + (cardPower(c) > 1 ? `*${cardPower(c)}` : '')).join(', '));
+}
 
-// a peek at one real turn (what the client will render)
-console.log('\n=== sample opening turn (seed 999) ===');
-const c = new Career(999);
-const { season, turn, scenario, hand } = c.current();
-console.log(`  Season ${season}, turn ${turn + 1} — ${scenario.label}`);
-console.log('  hand:', hand.map((h) => `${h.name} [${h.tags.join('/')}]`).join('  |  '));
-console.log(`  deck size: ${DECK.length} cards, hand ${hand.length}\n`);
+// determinism: same seed + same choices (play + draft) → identical player
+console.log('\n=== determinism check ===');
+const replay = (seed: number) => {
+  const c = new Career(seed); const ids: string[] = [];
+  while (!c.finished) { const st = c.current(); if (st.phase === 'draft') { ids.push('D:' + st.options[0].id); c.draft(st.options[0].id); } else { ids.push(st.hand[0].id); c.play(st.hand[0].id); } }
+  return { player: graduate(c.log, seed), ids };
+};
+const r1 = replay(999), r2 = replay(999);
+console.log('  same seed + same choices → identical player:', JSON.stringify(r1.player) === JSON.stringify(r2.player) && r1.ids.join() === r2.ids.join());

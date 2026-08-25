@@ -25,7 +25,10 @@ const OUTFIELD_TAGS: Tag[] = ['composure', 'aggression', 'creativity', 'teamwork
 
 export type Track = 'outfield' | 'goalkeeper';
 
-export interface Card { id: string; name: string; tags: Tag[] }
+export type Rarity = 'common' | 'rare' | 'epic';
+export interface Card { id: string; name: string; tags: Tag[]; rarity?: Rarity }
+export const RARITY_POWER: Record<Rarity, number> = { common: 1, rare: 2, epic: 3 };
+export const cardPower = (c: Card) => RARITY_POWER[c.rarity ?? 'common'];
 // Differentiated deck: each tag has both PURE (single-tag) and BLEND (dual-tag) cards, so a
 // player can specialise cleanly or mix. No tag routes exclusively through another.
 export const DECK: Card[] = [
@@ -46,8 +49,20 @@ export const DECK: Card[] = [
   { id: 'box-to-box',  name: 'Box-to-Box',       tags: ['stamina', 'creativity'] },
   { id: 'overlap',     name: 'Overlapping Run',  tags: ['stamina', 'flair'] },
   { id: 'stepover',    name: 'Stepover',         tags: ['flair'] },
-  { id: 'mazy',        name: 'Mazy Dribble',     tags: ['flair', 'creativity'] },
+  { id: 'mazy',        name: 'Mazy Dribble',     tags: ['flair', 'creativity'], rarity: 'rare' },
+  // RARE / EPIC signature cards — drafting one is a big identity commitment (higher power → bigger stat pull)
+  { id: 'wand',        name: 'A Wand of a Left Foot', tags: ['creativity', 'flair'], rarity: 'epic' },
+  { id: 'poacher',     name: "Poacher's Instinct",    tags: ['composure', 'flair'], rarity: 'epic' },
+  { id: 'general',     name: 'Defensive General',     tags: ['aggression', 'composure'], rarity: 'epic' },
+  { id: 'engine-epic', name: 'Relentless Engine',     tags: ['stamina', 'teamwork'], rarity: 'epic' },
+  { id: 'talisman',    name: 'Talisman',              tags: ['leadership', 'creativity'], rarity: 'epic' },
+  { id: 'enforcer',    name: 'The Enforcer',          tags: ['aggression', 'leadership'], rarity: 'rare' },
 ];
+
+// The small deck EVERY outfield career starts with; the rest is drafted between seasons.
+const STARTER_IDS = ['ice-veins', 'crunch', 'splitter', 'anchor', 'lung-buster', 'stepover', 'hold-up'];
+export const STARTER_DECK: Card[] = DECK.filter((c) => STARTER_IDS.includes(c.id));
+export const DRAFT_POOL: Card[] = DECK.filter((c) => !STARTER_IDS.includes(c.id));
 
 // The goalkeeper track's deck: keeping-focused with a few shared mental cards. A GK career draws
 // from this instead of the outfield DECK, so `keeping` (and the calm/commanding traits that suit a
@@ -63,7 +78,16 @@ export const GK_DECK: Card[] = [
   { id: 'goal-kick',   name: 'Pinged Goal-Kick',  tags: ['keeping', 'flair'] },
   { id: 'organise',    name: 'Organise the Wall',  tags: ['leadership', 'composure'] },
   { id: 'calm-back',   name: 'Calm it at the Back', tags: ['composure', 'teamwork'] },
+  { id: 'penalty-hero', name: 'Penalty Hero',      tags: ['keeping', 'composure'], rarity: 'epic' },
+  { id: 'sweeper-elite', name: 'Modern Sweeper',   tags: ['keeping', 'creativity'], rarity: 'rare' },
 ];
+const GK_STARTER_IDS = ['shot-stop', 'claim-cross', 'organise', 'calm-back'];
+const GK_STARTER: Card[] = GK_DECK.filter((c) => GK_STARTER_IDS.includes(c.id));
+const GK_DRAFT_POOL: Card[] = GK_DECK.filter((c) => !GK_STARTER_IDS.includes(c.id));
+
+// deck-building config
+export const OFFER_SIZE = 4;   // cards shown at a between-season draft
+export const DRAFT_PICKS = 2;  // how many you add each draft
 
 // ── scenarios: each moment demands a weighted mix of tags; kind biases the demand ──
 export interface Scenario { id: string; kind: 'match' | 'social' | 'training'; demand: Partial<Record<Tag, number>>; label: string }
@@ -97,13 +121,12 @@ export function fit(card: Card, sc: Scenario): number {
   return clamp(f, 0, 1);
 }
 
-export interface Choice { cardId: string; tags: Tag[]; fit: number; bestFit: number; success: number; scenario: string }
+export interface Choice { cardId: string; tags: Tag[]; power: number; fit: number; bestFit: number; success: number; scenario: string }
 
 // ── career config ──
 export const HAND_SIZE = 4;
 export const SCENARIOS_PER_SEASON = 20;
 export const SEASONS_TO_GRADUATE = 3; // → 60 turns to a finished player
-export const FLYWHEEL_CAP = 2;        // max extra copies of a card the flywheel can grant (bounds runaway)
 
 /**
  * A stateful career the client drives one turn at a time. Deterministic given (seed, choices):
@@ -114,49 +137,81 @@ export class Career {
   private rng: () => number;
   private drawPile: Card[] = [];
   private discard: Card[] = [];
+  private pool: Card[];              // the cards this career can DRAFT between seasons
   hand: Card[] = [];
+  deck: Card[];                      // the player's growing deck (identity)
   scenario!: Scenario;
   turn = 0;
   season = 1;
   log: Choice[] = [];
   finished = false;
-  private copies = new Map<string, number>(); // flywheel: extra copies gained per card (capped)
+  /** When set, the career is paused for a between-season DRAFT: pick DRAFT_PICKS of these to add. */
+  pendingDraft: { options: Card[]; picksLeft: number } | null = null;
 
   constructor(readonly seed: number, readonly track: Track = 'outfield') {
     this.rng = mulberry32(seed);
-    this.drawPile = this.shuffle([...(track === 'goalkeeper' ? GK_DECK : DECK)]);
+    this.deck = [...(track === 'goalkeeper' ? GK_STARTER : STARTER_DECK)];
+    this.pool = track === 'goalkeeper' ? GK_DRAFT_POOL : DRAFT_POOL;
+    this.drawPile = this.shuffle([...this.deck]);
     this.refillHand();
     this.scenario = makeScenario(this.rng, this.turn, track);
   }
 
-  /** The current decision: which of these hand cards for this scenario. */
-  current() { return { turn: this.turn, season: this.season, scenario: this.scenario, hand: this.hand, finished: this.finished }; }
+  /** Current state: a 'play' phase (pick a hand card) or a 'draft' phase (pick a card to add). */
+  current() {
+    if (this.pendingDraft) return { phase: 'draft' as const, season: this.season, options: this.pendingDraft.options, picksLeft: this.pendingDraft.picksLeft, deck: this.deck, finished: this.finished };
+    return { phase: 'play' as const, turn: this.turn, season: this.season, scenario: this.scenario, hand: this.hand, deck: this.deck, finished: this.finished };
+  }
 
-  /** Play a card from the current hand; resolves, logs, deals the next turn. Returns the outcome. */
+  /** DRAFT: add one of the offered cards to your deck (identity-building). */
+  draft(cardId: string) {
+    if (!this.pendingDraft) throw new Error('no draft pending');
+    const i = this.pendingDraft.options.findIndex((c) => c.id === cardId);
+    if (i < 0) throw new Error('card not on offer');
+    const card = this.pendingDraft.options.splice(i, 1)[0];
+    this.deck.push(card);
+    this.discard.push(card);        // it enters the draw rotation right away
+    if (--this.pendingDraft.picksLeft <= 0) { this.pendingDraft = null; this.startNextSeason(); }
+  }
+
+  /** Play a card from the current hand; resolves, logs, advances (into a draft at a season break). */
   play(cardId: string): Choice {
     if (this.finished) throw new Error('career finished');
+    if (this.pendingDraft) throw new Error('resolve the draft first');
     const idx = this.hand.findIndex((c) => c.id === cardId);
     if (idx < 0) throw new Error('card not in hand');
     const bestFit = Math.max(...this.hand.map((c) => fit(c, this.scenario))); // best you COULD have played this turn
     const card = this.hand.splice(idx, 1)[0];
     const f = fit(card, this.scenario);
     const success = clamp(f + (this.rng() - 0.5) * 0.3, 0, 1); // good fit usually succeeds, with variance
-    const choice: Choice = { cardId: card.id, tags: card.tags, fit: f, bestFit, success, scenario: this.scenario.label };
+    const choice: Choice = { cardId: card.id, tags: card.tags, power: cardPower(card), fit: f, bestFit, success, scenario: this.scenario.label };
     this.log.push(choice);
     this.discard.push(card);
-    // FLYWHEEL: play a card WELL and you get better at that style — a copy joins your deck, so
-    // your hand skews toward your identity over the career. This is what creates specialisation
-    // (a fixed shared deck averages everyone out); your deck-shape IS your developing playstyle.
-    // FLYWHEEL (capped): a good play compounds — a copy joins your deck so your hand skews to your
-    // identity — but only up to FLYWHEEL_CAP copies per card, so decks skew without running away.
-    const got = this.copies.get(card.id) ?? 0;
-    if (success >= 0.6 && got < FLYWHEEL_CAP) { this.discard.push({ ...card }); this.copies.set(card.id, got + 1); }
     this.turn++;
     if (this.turn >= SCENARIOS_PER_SEASON * SEASONS_TO_GRADUATE) { this.finished = true; return choice; }
+    // at a season boundary, open a DRAFT before dealing next season (your deck grows by your choices)
+    if (this.turn % SCENARIOS_PER_SEASON === 0) this.openDraft(); else { this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track); }
+    return choice;
+  }
+
+  /** Offer OFFER_SIZE cards from the pool, weighted so epics are rare. */
+  private openDraft() {
+    const weight = (c: Card) => (c.rarity === 'epic' ? 1 : c.rarity === 'rare' ? 3 : 6);
+    const bag = this.pool.flatMap((c) => Array(weight(c)).fill(c) as Card[]);
+    const options: Card[] = [];
+    const picked = new Set<string>();
+    let guard = 0;
+    while (options.length < Math.min(OFFER_SIZE, this.pool.length) && guard++ < 200) {
+      const c = bag[Math.floor(this.rng() * bag.length)];
+      if (!picked.has(c.id)) { picked.add(c.id); options.push(c); }
+    }
+    this.pendingDraft = { options, picksLeft: Math.min(DRAFT_PICKS, options.length) };
+  }
+
+  private startNextSeason() {
     this.season = 1 + Math.floor(this.turn / SCENARIOS_PER_SEASON);
     this.refillHand();
     this.scenario = makeScenario(this.rng, this.turn, this.track);
-    return choice;
   }
 
   private refillHand() { while (this.hand.length < HAND_SIZE) this.hand.push(this.drawOne()); }
@@ -233,7 +288,7 @@ export function deriveStats(log: Choice[], seed: number, genes: Genes = rollGene
   const rng = mulberry32(seed ^ 0x9e3779b9);
   const innate = new Set<keyof CareerPlayerAttrs>(INNATE);
   const freq = Object.fromEntries(TAGS.map((t) => [t, 0])) as Record<Tag, number>;
-  for (const c of log) for (const t of c.tags) freq[t] += 1;
+  for (const c of log) for (const t of c.tags) freq[t] += c.power; // higher-power (drafted rare/epic) cards pull harder
   const maxFreq = Math.max(1, ...TAGS.map((t) => freq[t]));
   const norm = Object.fromEntries(TAGS.map((t) => [t, freq[t] / maxFreq])) as Record<Tag, number>;
   // MAGNITUDE = how well you actually played (avg success across the career). With a capped flywheel
@@ -306,16 +361,20 @@ export interface Style { name: string; pref: Partial<Record<Tag, number>>; skill
 export function simCareer(seed: number, style: Style, genes: Genes = rollGenes(seed), track: Track = 'outfield'): CareerPlayer {
   const career = new Career(seed, track);
   const rng = mulberry32(seed ^ 0x1234567);
+  const prefScore = (c: Card) => c.tags.reduce((s, t) => s + (style.pref[t] ?? 0), 0);
   while (!career.finished) {
-    const { hand, scenario } = career.current();
-    // STYLE drives card choice (→ shape); SKILL only sharpens how much you also weigh fit (→ magnitude).
-    // pref dominates so a style always specialises; a skilled player picks the best-fitting of their
-    // style's cards → higher success → higher magnitude. Small noise breaks ties deterministically.
-    let best = hand[0], bestScore = -Infinity;
-    for (const c of hand) {
-      const pref = c.tags.reduce((s, t) => s + (style.pref[t] ?? 0), 0);
-      // style (pref) keeps shape; skill scales how strongly you also TIME for fit → magnitude
-      const score = pref * 2 + style.skill * 3 * fit(c, scenario) + rng() * 0.05;
+    const st = career.current();
+    if (st.phase === 'draft') {
+      // DRAFT: take the offered card that best advances your identity (pref × power).
+      let best = st.options[0], bestScore = -Infinity;
+      for (const c of st.options) { const score = prefScore(c) * cardPower(c) + rng() * 0.05; if (score > bestScore) { bestScore = score; best = c; } }
+      career.draft(best.id);
+      continue;
+    }
+    // PLAY: style drives choice (shape); skill sharpens how much you also weigh fit (magnitude).
+    let best = st.hand[0], bestScore = -Infinity;
+    for (const c of st.hand) {
+      const score = prefScore(c) * 2 + style.skill * 3 * fit(c, st.scenario) + rng() * 0.05;
       if (score > bestScore) { bestScore = score; best = c; }
     }
     career.play(best.id);
