@@ -194,8 +194,11 @@ export class MatchEngine {
     const d = Math.hypot(dx, dy);
     if (d < 0.01) return 0;
     const step = Math.min(maxStep, d);
-    ps.x += (dx / d) * step;
-    ps.y += (dy / d) * step;
+    // Keep every player on the field. Tactical targets are already inside the
+    // pitch, but chasing the ball or dribbling at the goal aims straight at the
+    // boundary (x = 0/105), where float rounding can land a hair outside it.
+    ps.x = clamp(ps.x + (dx / d) * step, 0, PITCH.w);
+    ps.y = clamp(ps.y + (dy / d) * step, 0, PITCH.h);
     return step;
   }
 
@@ -277,8 +280,13 @@ export class MatchEngine {
             this.resolveShot(teamIdx, pick.idx, Math.hypot(goal.x - recS.x, goal.y - recS.y), true);
           }
         } else {
+          // Intercepted/loose ball scatters near the midpoint of the attempted pass;
+          // clamp so a scatter next to a touchline/goal line can't leave the pitch.
           const dx = s.players[teamIdx][pick.idx].x;
-          s.ball = { x: (cs.x + dx) / 2 + (this.rng() - 0.5) * 6, y: (cs.y + recS.y) / 2 + (this.rng() - 0.5) * 6 };
+          s.ball = {
+            x: clamp((cs.x + dx) / 2 + (this.rng() - 0.5) * 6, 0, PITCH.w),
+            y: clamp((cs.y + recS.y) / 2 + (this.rng() - 0.5) * 6, 0, PITCH.h),
+          };
           s.carrier = null;
         }
         return;
