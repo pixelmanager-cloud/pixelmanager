@@ -234,14 +234,26 @@ class Game {
     this.showScreen('hub');
     $('me-name').textContent = this.club.name;
     $('me-rating').textContent = `RATING ${this.account.rating}`;
+    $('fixtures-progress').textContent = '';
     $('opponents').innerHTML = SPINNER;
     try {
-      const opps = await api.opponents();
-      $('opponents').innerHTML = opps.opponents.length
-        ? opps.opponents.map((o) => `<div class="fixture"><span class="opp"><b>${o.clubName}</b> <span class="meta">${o.handle} · rating ${o.rating}</span></span><button data-opp="${o.id}" data-h="${o.handle}">Play ▶</button></div>`).join('')
-        : '<div class="muted">No opponents yet — register another handle in a second browser/incognito window to play against.</div>';
-      Array.from($('opponents').querySelectorAll('button[data-opp]')).forEach((b) =>
-        b.addEventListener('click', () => this.play((b as HTMLElement).dataset.opp!, (b as HTMLElement).dataset.h!)));
+      const { fixtures, played, total } = await api.fixtures();
+      $('fixtures-progress').textContent = total ? `${played} / ${total} played` : '';
+      if (!total) {
+        $('opponents').innerHTML = '<div class="muted">No pod-mates yet — as players join your pod, fixtures appear here. (Register another handle in a second browser to test.)</div>';
+      } else {
+        $('opponents').innerHTML = fixtures.map((f) => {
+          if (f.status === 'played' && f.result) {
+            const { my, opp } = f.result;
+            const cls = my > opp ? 'w' : my < opp ? 'l' : 'd';
+            return `<div class="fixture done"><span class="opp"><b>${f.clubName}</b> <span class="meta">${f.handle}</span></span><span class="pill ${cls}">${cls.toUpperCase()} ${my}-${opp}</span></div>`;
+          }
+          return `<div class="fixture"><span class="opp"><b>${f.clubName}</b> <span class="meta">${f.handle} · rating ${f.rating}</span></span><button data-opp="${f.opponentId}" data-h="${f.handle}">Play ▶</button></div>`;
+        }).join('');
+        Array.from($('opponents').querySelectorAll('button[data-opp]')).forEach((b) =>
+          b.addEventListener('click', () => this.play((b as HTMLElement).dataset.opp!, (b as HTMLElement).dataset.h!)));
+        if (played === total) $('opponents').insertAdjacentHTML('beforeend', '<div class="muted" style="margin-top:8px">✓ All fixtures played — standings lock in at season\'s end.</div>');
+      }
     } catch {
       $('opponents').innerHTML = '<div class="muted">Could not load — is the server running?</div>';
     }

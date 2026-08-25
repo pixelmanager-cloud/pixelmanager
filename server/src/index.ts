@@ -71,17 +71,38 @@ app.put('/standing-orders', { preHandler: requireAuth }, async (req, reply) => {
   return { ok: true, standingOrders: so };
 });
 
-// opponents = your pod-mates this season (so matches feed your pod's table)
-app.get('/opponents', { preHandler: requireAuth }, async (req) => {
+// Your season fixtures: one match vs each pod-mate, marked played (with the result)
+// or pending. This is the round-robin schedule that drives the hub's "play" list.
+async function computeFixtures(accountId: string) {
   const s = await ensureSeason(db, Date.now());
-  const { tier, pod } = await ensurePod(db, s, req.account!.id);
-  const members = (await db.podMembers(s.id, tier, pod)).filter((m) => m.id !== req.account!.id);
-  const opponents = [];
+  const { tier, pod } = await ensurePod(db, s, accountId);
+  const members = (await db.podMembers(s.id, tier, pod)).filter((m) => m.id !== accountId);
+  const results = await db.seasonResults(s.id);
+  const played = new Map<string, { my: number; opp: number }>();
+  for (const r of results) {
+    if (r.home_id === accountId) played.set(r.away_id, { my: r.home_score, opp: r.away_score });
+    else if (r.away_id === accountId) played.set(r.home_id, { my: r.away_score, opp: r.home_score });
+  }
+  const fixtures = [];
   for (const m of members) {
     const c = await db.getClub(m.id);
-    if (c) opponents.push({ id: m.id, handle: m.handle, rating: m.rating, clubName: c.club.name });
+    const res = played.get(m.id) ?? null;
+    fixtures.push({ opponentId: m.id, handle: m.handle, clubName: c?.club.name ?? m.handle, rating: m.rating, status: res ? 'played' : 'pending', result: res });
   }
+  return { tier, pod, fixtures };
+}
+
+// opponents = your PENDING fixtures (pod-mates you haven't played yet this season)
+app.get('/opponents', { preHandler: requireAuth }, async (req) => {
+  const { fixtures } = await computeFixtures(req.account!.id);
+  const opponents = fixtures.filter((f) => f.status === 'pending').map((f) => ({ id: f.opponentId, handle: f.handle, rating: f.rating, clubName: f.clubName }));
   return { opponents };
+});
+
+// your full season fixture list (played + pending) with results, for the schedule view
+app.get('/fixtures', { preHandler: requireAuth }, async (req) => {
+  const { fixtures } = await computeFixtures(req.account!.id);
+  return { fixtures, played: fixtures.filter((f) => f.status === 'played').length, total: fixtures.length };
 });
 
 app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
@@ -89,6 +110,13 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const oppId = String(body?.opponentId ?? '');
   const [opp, oppClub, me] = await Promise.all([db.accountById(oppId), db.getClub(oppId), db.getClub(req.account!.id)]);
   if (!opp || !oppClub) return reply.code(404).send({ error: 'opponent not found' });
+
+  // Phase C: fixtures are a single round-robin — you play each pod-mate once a season.
+  const season = await ensureSeason(db, Date.now());
+  await ensurePod(db, season, req.account!.id); // place the player so the match counts for their pod
+  const seasonRes = await db.seasonResults(season.id);
+  const already = seasonRes.some((r) => (r.home_id === req.account!.id && r.away_id === oppId) || (r.home_id === oppId && r.away_id === req.account!.id));
+  if (already) return reply.code(409).send({ error: 'already played this fixture this season' });
 
   const myLineup: Lineup = body.myLineup
     ? { formation: body.myLineup.formation, playerIds: body.myLineup.playerIds, duties: body.myLineup.duties }
@@ -104,8 +132,6 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const [nHome, nAway] = elo(req.account!.rating, opp.rating, scoreHome);
   await Promise.all([db.setRating(req.account!.id, nHome), db.setRating(oppId, nAway)]);
 
-  const season = await ensureSeason(db, Date.now());
-  await ensurePod(db, season, req.account!.id); // make sure the player is in a pod (so the match counts)
   const matchId = randomUUID();
   await db.saveMatch({
     id: matchId, homeId: req.account!.id, awayId: oppId,

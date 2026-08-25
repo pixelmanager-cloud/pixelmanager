@@ -204,9 +204,13 @@ Re-podding is lazy the next season. A pre-Phase-B season with no pods falls back
 one bottom-tier league. Verified end-to-end (placement, pod-scoped tables/opponents,
 promotion to COUNTY, honours).
 
-**Phase C — Fixtures** *(S–M, retention polish)*
-Per-season fixture list vs your pod; "today's fixtures" on the hub.
-✅ *Done when:* each player has a schedule that gives a daily reason to return.
+**Phase C — Fixtures** ✅ **SHIPPED** *(retention hook)*
+Each pod is a **single round-robin**: you play every pod-mate **once per season**.
+`GET /fixtures` returns your schedule (each pod-mate marked played-with-result or
+pending); `/opponents` returns only the pending ones; `POST /matches` rejects a
+repeat pairing in the same season (409). The hub's "SEASON FIXTURES" list shows a
+`played / total` counter, a result pill on completed fixtures, and a Play button on
+pending ones. (A double round-robin — home + away — is a future tweak.)
 
 ## 11) Open questions (with a recommended default to start)
 

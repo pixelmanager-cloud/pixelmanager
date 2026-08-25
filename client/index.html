@@ -101,6 +101,13 @@
       .fixture .opp { flex: 1; }
       .fixture .opp b { font-size: 21px; color: #fff; }
       .fixture .meta { color: var(--cyan); font-size: 16px; }
+      .fixture.done { opacity: 0.72; }
+      .fixture .pill { font-family: var(--display); font-size: 9px; line-height: 1; padding: 5px 7px; border: 2px solid; border-radius: 6px;
+        background: rgba(0,0,0,0.35); text-shadow: 1px 1px 0 rgba(0,0,0,0.6); }
+      .fixture .pill.w { color: var(--good); border-color: var(--good); }
+      .fixture .pill.l { color: var(--home); border-color: var(--home); }
+      .fixture .pill.d { color: var(--warn); border-color: var(--warn); }
+      .fx-progress { font-family: var(--display); font-size: 9px; color: var(--warn); margin-left: 8px; }
       .lb-row { display: flex; justify-content: space-between; padding: 5px 8px; border-bottom: 1px solid var(--line); font-size: 17px; }
       .lb-row .r { font-family: var(--display); font-size: 11px; color: var(--warn); }
       .lb-row.me { color: var(--good); }
@@ -283,7 +290,7 @@
             <button id="set-team">⚙ Set My Team</button>
           </div>
         </div>
-        <h3>PLAY A MATCH</h3>
+        <h3>SEASON FIXTURES <span id="fixtures-progress" class="fx-progress"></span></h3>
         <div id="opponents"></div>
       </div>
 
