@@ -50,7 +50,7 @@ implements it on a branch, and opens a PR for you to review.
   screens don't leave half the viewport black. Don't break the mobile layout (test at 375px — it's currently
   good). Client-only CSS. `npm run verify` passes.
 
-- [ ] **[layout][polish] Tidy the fixture rows.** Per audit L2: each hub fixture row is tall and repeats the
+- [x] **[layout][polish] Tidy the fixture rows.** Per audit L2: each hub fixture row is tall and repeats the
   club identity ("Rival1's Club **Rival1** · rating 1000"). Drop the duplicate handle, reduce row height so
   more fixtures fit, make the H/A venue chip clearer (label HOME/AWAY or stronger colour), and right-size the
   PLAY button. `client/src/main.ts` (the fixtures render) + CSS. `npm run verify` passes.
