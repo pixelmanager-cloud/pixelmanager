@@ -6,16 +6,11 @@ import { db, type Account, type StandingOrders, type Listing } from './db.js';
 import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMATIONS } from './game.js';
 import { hashPassword, verifyPassword } from './auth.js';
 import { generatePool, trialistAt, LOANEE_CAP, OPP_REVEAL, describeIntel, type OppTier } from './scouting.js';
-
-// A viewer's opposition-scout tier. Everyone is free 'base' until the token layer
-// assigns paid Scout NFTs; DEV_OPP_TIER lets us preview higher tiers end-to-end.
-function oppScoutTier(_acc: Account): OppTier {
-  const t = process.env.DEV_OPP_TIER as OppTier | undefined;
-  return t && t in OPP_REVEAL ? t : 'base';
-}
+import { viewerTiers, scoutNftInfo } from './scoutnft.js';
+import type { PlayerScoutTier } from './market.js';
 import { ensureSeason, ensurePod, forceRollover, resultsAmong, startOfUtcDay, PROMOTE, RELEGATE, MATCHES_PER_DAY } from './seasons.js';
 import {
-  revealPlayer, playerScoutTier, WIN_COINS, DRAW_COINS, LOSS_COINS,
+  revealPlayer, WIN_COINS, DRAW_COINS, LOSS_COINS,
   MIN_SQUAD, MAX_SQUAD, PRICE_MIN, PRICE_MAX,
 } from './market.js';
 import { autoPickXI } from '@fm/shared';
@@ -134,6 +129,13 @@ app.post('/auth/wallet/verify', async (req, reply) => {
 
 // ── PlayerNFT (web3 Step 3) — is the NFT layer live, and at what address/chain.
 app.get('/nft', async () => nftInfo());
+
+// ── Scout tiers — the caller's live opposition/player scout tiers (from owned Scout NFTs)
+// plus the ScoutNFT contract info for minting.
+app.get('/scout/tiers', { preHandler: requireAuth }, async (req) => {
+  const tiers = await viewerTiers(await db.walletOf(req.account!.id));
+  return { ...tiers, nft: scoutNftInfo() };
+});
 
 // ── On-chain token (web3 Step 2) — read-only balance for the linked wallet.
 app.get('/token', async () => ({ ...tokenInfo(), ...(await tokenMeta()) }));
@@ -316,9 +318,9 @@ app.get('/honours', { preHandler: requireAuth }, async (req) => ({ honours: awai
 // OVERALL ratings only — deliberately limited (no individual stats; premium later).
 app.get('/scout/:id', { preHandler: requireAuth }, async (req, reply) => {
   const id = String((req.params as any).id);
-  const [opp, c] = await Promise.all([db.accountById(id), loadSquad(id)]); // show their NFT stars in the scout too
+  const [opp, c, vw] = await Promise.all([db.accountById(id), loadSquad(id), db.walletOf(req.account!.id)]);
   if (!opp || !c) return reply.code(404).send({ error: 'not found' });
-  const tier = oppScoutTier(req.account!);
+  const tier = (await viewerTiers(vw)).opp as OppTier; // your opposition-scout tier (from owned Scout NFTs)
   const rv = OPP_REVEAL[tier];
   const likely = new Set(c.standingOrders.playerIds);
   const roleOrder: Record<string, number> = { GK: 0, DF: 1, MF: 2, FW: 3 };
@@ -341,10 +343,12 @@ app.get('/plan/:id', { preHandler: requireAuth }, async (req) =>
 // this season's trial pool (free base scout) + how many loanees you've signed
 app.get('/scout/trials', { preHandler: requireAuth }, async (req) => {
   const s = await ensureSeason(db, Date.now());
-  const [signed, count] = await Promise.all([db.loaneeIds(req.account!.id, s.id), db.countLoanees(req.account!.id, s.id)]);
+  const [signed, count, tiers] = await Promise.all([
+    db.loaneeIds(req.account!.id, s.id), db.countLoanees(req.account!.id, s.id), viewerTiers(await db.walletOf(req.account!.id)),
+  ]);
   const signedSet = new Set(signed);
-  const pool = generatePool(req.account!.id, s.number).map((t) => ({ ...t, signed: signedSet.has(t.id) }));
-  return { season: s.number, cap: LOANEE_CAP, signedCount: count, pool };
+  const pool = generatePool(req.account!.id, s.number, tiers.player).map((t) => ({ ...t, signed: signedSet.has(t.id) }));
+  return { season: s.number, cap: LOANEE_CAP, signedCount: count, tier: tiers.player, pool };
 });
 
 // sign a trialist (up to LOANEE_CAP per season); adds them to your squad for the season
@@ -352,7 +356,8 @@ app.post('/scout/trials/:index/sign', { preHandler: requireAuth }, async (req, r
   const meId = req.account!.id;
   const s = await ensureSeason(db, Date.now());
   if (await db.countLoanees(meId, s.id) >= LOANEE_CAP) return reply.code(409).send({ error: `you can sign at most ${LOANEE_CAP} loanees a season` });
-  const player = trialistAt(meId, s.number, Number((req.params as any).index));
+  const tiers = await viewerTiers(await db.walletOf(meId)); // same tier the pool was generated with, so ids match
+  const player = trialistAt(meId, s.number, Number((req.params as any).index), tiers.player);
   if (!player) return reply.code(404).send({ error: 'no such trialist' });
   const c = await db.getClub(meId);
   if (!c) return reply.code(404).send({ error: 'club not found' });
@@ -368,7 +373,7 @@ app.post('/scout/trials/:index/sign', { preHandler: requireAuth }, async (req, r
 // and your coin balance.
 app.get('/market', { preHandler: requireAuth }, async (req) => {
   const meId = req.account!.id;
-  const tier = playerScoutTier();
+  const tier: PlayerScoutTier = (await viewerTiers(await db.walletOf(meId))).player; // your player-scout tier reveals more stats
   const [coins, listings, mine] = await Promise.all([db.getCoins(meId), db.activeListings(120), db.listingsBySeller(meId)]);
   const render = (l: Listing) => ({
     id: l.id, playerId: l.player_id, price: l.price, sellerHandle: l.seller_handle, mine: l.seller_id === meId,

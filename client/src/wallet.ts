@@ -11,8 +11,10 @@ import { baseSepolia } from 'thirdweb/chains';
 const clientId = (import.meta as any).env?.VITE_THIRDWEB_CLIENT_ID ?? '';
 const TOKEN_ADDRESS = ((import.meta as any).env?.VITE_TOKEN_ADDRESS ?? '0x63EF99E736080519b2D8171FEa2bb3346a4Debd7') as `0x${string}`;
 const NFT_ADDRESS = ((import.meta as any).env?.VITE_NFT_ADDRESS ?? '0x6E66DDF087d79281f16Df49aA36E3DC0d4330D55') as string; // deployed PlayerNFT (Base Sepolia)
+const SCOUT_ADDRESS = ((import.meta as any).env?.VITE_SCOUT_ADDRESS ?? '') as string; // set after ScoutNFT deploy
 export const walletConfigured = () => !!clientId;
 export const nftConfigured = () => !!NFT_ADDRESS;
+export const scoutConfigured = () => !!SCOUT_ADDRESS;
 
 let _client: ThirdwebClient | null = null;
 function client(): ThirdwebClient {
@@ -49,6 +51,15 @@ export async function mintPlayer(account: Account): Promise<string> {
   if (!NFT_ADDRESS) throw new Error('PlayerNFT is not configured (set VITE_NFT_ADDRESS).');
   const contract = getContract({ client: client(), chain: baseSepolia, address: NFT_ADDRESS as `0x${string}` });
   const tx = prepareContractCall({ contract, method: 'function mint() returns (uint256)' });
+  const res = await sendTransaction({ transaction: tx, account });
+  return res.transactionHash;
+}
+
+/** Mint a Scout NFT (ERC-1155 id 1–6) to the account — raises a scout tier. Costs gas. */
+export async function mintScout(account: Account, id: number): Promise<string> {
+  if (!SCOUT_ADDRESS) throw new Error('ScoutNFT is not configured (set VITE_SCOUT_ADDRESS).');
+  const contract = getContract({ client: client(), chain: baseSepolia, address: SCOUT_ADDRESS as `0x${string}` });
+  const tx = prepareContractCall({ contract, method: 'function mint(uint256 id)', params: [BigInt(id)] });
   const res = await sendTransaction({ transaction: tx, account });
   return res.transactionHash;
 }

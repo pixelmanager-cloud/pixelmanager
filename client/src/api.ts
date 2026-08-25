@@ -82,6 +82,7 @@ export const api = {
   walletLink: (address: string, signature: string) => req<{ ok: true; wallet: string }>(
     '/auth/wallet/link', { method: 'POST', body: JSON.stringify({ address, signature }) }),
   nft: () => req<{ address: string; chainId: number; enabled: boolean }>('/nft'),
+  scoutTiers: () => req<{ opp: string; player: string; nft: { address: string; chainId: number; enabled: boolean } }>('/scout/tiers'),
   token: () => req<{ address: string; chainId: number; chainName: string; symbol: string; decimals: number }>('/token'),
   tokenBalance: () => req<{ wallet: string | null; balance: string | null; symbol: string }>('/token/balance'),
 };

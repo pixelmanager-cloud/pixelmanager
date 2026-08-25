@@ -5,7 +5,7 @@ import {
 } from '@fm/shared';
 import { SCALE, makeBallTexture, makeBallGhostTexture, makePitchTexture, makePlayerFrames, makeShadowTexture, makeCarrierTexture } from './pixelart';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing } from './api';
-import { walletConfigured, nftConfigured, sendEmailCode, connectEmail, connectInjected, autoConnectInApp, signMessage, claimTokens, mintPlayer, type Account as WalletAccount } from './wallet';
+import { walletConfigured, nftConfigured, sendEmailCode, connectEmail, connectInjected, autoConnectInApp, signMessage, claimTokens, mintPlayer, mintScout, type Account as WalletAccount } from './wallet';
 
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
 
@@ -512,15 +512,84 @@ class Game {
     this.showScreen('scouting');
     $('trial-pool').innerHTML = SPINNER;
     try {
-      const d = await api.trials();
+      const [d, st] = await Promise.all([api.trials(), api.scoutTiers()]);
       $('loan-cap').textContent = String(d.cap);
       $('loan-signed').textContent = String(d.signedCount);
       $('trial-pool').innerHTML = this.renderTrialPool(d.pool, d.signedCount >= d.cap);
       Array.from($('trial-pool').querySelectorAll('button[data-idx]')).forEach((b) =>
         b.addEventListener('click', () => this.signTrial(Number((b as HTMLElement).dataset.idx))));
+      this.renderScoutPanel(st.opp, st.player, st.nft.enabled);
     } catch {
       $('trial-pool').innerHTML = '<div class="muted">Could not load — is the server running?</div>';
     }
+  }
+
+  /** Fill the "Your Scouts" cards with live tiers + wire the free scout-mint upgrade buttons. */
+  private renderScoutPanel(opp: string, player: string, nftEnabled: boolean) {
+    const ORDER = ['base', 'bronze', 'silver', 'gold'];
+    const oppDesc: Record<string, string> = {
+      base: "Reveals an opponent's likely formation + roster — ratings hidden.",
+      bronze: 'Now reveals their squad <b>ratings</b>. Likely XI at Silver.',
+      silver: 'Reveals ratings + the <b>likely XI</b>. Tactical intel at Gold.',
+      gold: 'Full intel: ratings, likely XI, and a <b>tactical read</b>.',
+    };
+    const playerDesc: Record<string, string> = {
+      base: 'Trialists: <b>62</b>/30/7/<b>1%</b> raw/squad/quality/gem. Market shows ratings only.',
+      bronze: 'Better trialists (45/38/14/3) + <b>2 key stats</b> shown on listings.',
+      silver: 'Better trialists (28/44/22/6) + <b>5 stats</b> shown on listings.',
+      gold: 'Best trialists (12/43/33/12) + the <b>full stat sheet</b> on listings.',
+    };
+    const chip = (id: string, tier: string) => { const el = $(id); el.textContent = tier.toUpperCase(); el.className = `sn-tier tier-${tier}`; };
+    chip('opp-tier', opp); chip('player-tier', player);
+    $('opp-desc').innerHTML = oppDesc[opp] ?? '';
+    $('player-desc').innerHTML = playerDesc[player] ?? '';
+    const wireMint = (btnId: string, track: 'opp' | 'player', tier: string) => {
+      const btn = $(btnId) as HTMLButtonElement;
+      const i = ORDER.indexOf(tier);
+      const next = i >= 0 && i < 3 ? ORDER[i + 1] : null;
+      if (!nftEnabled || !this.account.wallet || !next) { btn.classList.add('hidden'); return; }
+      const id = (track === 'opp' ? 1 : 4) + i; // opp:1/2/3  player:4/5/6
+      btn.classList.remove('hidden');
+      btn.textContent = `★ Mint ${next.toUpperCase()} scout — free`;
+      btn.onclick = () => this.mintScoutTier(btnId, id);
+    };
+    wireMint('mint-opp', 'opp', opp);
+    wireMint('mint-player-scout', 'player', player);
+    $('scout-hint').textContent = nftEnabled
+      ? 'Mint scout NFTs (free on testnet) to unlock deeper opposition intel + rarer trialists.'
+      : 'Higher scout tiers unlock once the Scout NFT contract is live.';
+  }
+
+  private async mintScoutTier(btnId: string, id: number) {
+    const btn = $(btnId) as HTMLButtonElement;
+    const prev = btn.textContent;
+    btn.disabled = true;
+    try {
+      btn.textContent = 'Connecting…';
+      const signer = await this.connectLinkedWallet();
+      if (!signer) return;
+      btn.textContent = 'Minting…';
+      await mintScout(signer, id);
+      toast('Scout upgraded ✓');
+      await this.showScouting(); // re-reads tiers (higher now) + re-rolls the trial pool at the new tier
+    } catch (e: any) {
+      const m = String(e?.message ?? '');
+      toast(/insufficient|funds|gas/i.test(m) ? 'Wallet needs Base Sepolia ETH for gas' : ((e?.shortMessage ?? m) || 'Mint failed'));
+    } finally { btn.disabled = false; btn.textContent = prev; }
+  }
+
+  /** Connect the wallet that's linked to this club (resume email session, else injected). */
+  private async connectLinkedWallet(): Promise<WalletAccount | null> {
+    const linked = this.account.wallet;
+    if (!linked) { toast('Link a wallet first'); return null; }
+    let signer = await autoConnectInApp();
+    if (!signer || signer.address.toLowerCase() !== linked) {
+      const injected = await connectInjected().catch(() => null);
+      if (injected) signer = injected;
+    }
+    if (!signer) { toast('Connect a wallet'); return null; }
+    if (signer.address.toLowerCase() !== linked) { toast(`Connect the wallet linked to this club (${linked.slice(0, 6)}…${linked.slice(-4)})`); return null; }
+    return signer;
   }
 
   private renderTrialPool(pool: Trialist[], capReached: boolean): string {
