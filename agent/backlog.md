@@ -43,7 +43,7 @@ implements it on a branch, and opens a PR for you to review.
   toggle in the top bar that persists in localStorage (default on, softer). Keep the retro vibe. Client-only.
   `npm run verify` passes.
 
-- [ ] **[layout] Center the app and use the widescreen dead-space.** Per audit L1: panels are a fixed
+- [x] **[layout] Center the app and use the widescreen dead-space.** Per audit L1: panels are a fixed
   `width:880px` and on a wide desktop the content reads cramped with large empty areas right + below (very
   visible on Login and Market). Ensure the app column is horizontally centered, and on wide viewports let
   the main panels use more of the width (raise the max-width, or add responsive breakpoints) so short
