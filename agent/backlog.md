@@ -31,7 +31,7 @@ implements it on a branch, and opens a PR for you to review.
   but at ≥16px with `line-height:1.5`). Do not change the palette or layout. Verify every screen still
   reads correctly (login, hub, lineup, match HUD, league, club, scouting, market). `npm run verify` passes.
 
-- [ ] **[readability][color] Fix low-contrast muted text.** Per audit R3: ad-hoc greys (`#778`, `#8aa`,
+- [x] **[readability][color] Fix low-contrast muted text.** Per audit R3: ad-hoc greys (`#778`, `#8aa`,
   `#99a`, `#889`) on the dark navy are ~3:1 — below readable. Add a `--muted` token (~`#b9b9d8`) to `:root`
   that clears ~4.5:1 on `--panel`, and replace those hard-coded greys (facility/scouting blurbs, table
   sub-text, "rating 1000", `.muted`, scout descriptions, empty-state copy) with it. Keep hints one step
