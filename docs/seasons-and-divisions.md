@@ -29,16 +29,27 @@ never show anyone the whole population.
 ## 2) The model: seasons → divisions → pods
 
 ```
-        ELITE      [pod] [pod]                 ← few pods, the best players
-        GOLD     [pod] [pod] [pod]
-        SILVER  [pod][pod][pod][pod][pod]
-        BRONZE  [pod][pod][pod][pod][pod] …    ← many pods, everyone starts here
+   WORLD CLASS    [pod]                              ← 1 pod, the very best
+   CONTINENTAL    [pod] [pod]
+   PREMIER        [pod] [pod]
+   CHAMPIONSHIP   [pod] [pod] [pod]
+   LEAGUE ONE     [pod] [pod] [pod]
+   LEAGUE TWO     [pod] [pod] [pod] [pod]
+   NATIONAL       [pod] [pod] [pod] [pod]
+   REGIONAL       [pod][pod][pod][pod][pod]
+   COUNTY         [pod][pod][pod][pod][pod][pod]
+   SUNDAY LEAGUE  [pod][pod][pod][pod][pod][pod] …   ← everyone starts here
 ```
 
 - **Season** — a fixed-length cycle (default **7 days**). Standings, points and
   fixtures all belong to a season; at the end it rolls over (§7).
-- **Division (tier)** — a named rung: `BRONZE → SILVER → GOLD → ELITE`. Tiers are
-  ordered; you climb by winning, you drop by losing.
+- **Division (tier)** — a named rung on a **10-tier football pyramid**:
+  `SUNDAY LEAGUE → COUNTY → REGIONAL → NATIONAL → LEAGUE TWO → LEAGUE ONE →
+  CHAMPIONSHIP → PREMIER → CONTINENTAL → WORLD CLASS`. Tiers are ordered; you climb
+  by winning, you drop by losing. A long ladder is deliberate — it's a multi-month
+  prestige journey ("promoted to the Championship!" beats "reached Gold") and it
+  keeps matchmaking bands tight at scale. Upper tiers simply sit empty until players
+  climb into them, so a long ladder costs nothing at low population.
 - **Pod** — a **~20-club** group *within* a tier and season. **A player only ever
   sees and competes in their own pod's table.** This is the whole trick: the table
   is always a legible 20-row title-race-plus-relegation-scrap regardless of whether
@@ -51,8 +62,8 @@ never show anyone the whole population.
 | `POD_SIZE` | 20 | target clubs per pod; last pod in a tier may be short |
 | `SEASON_DAYS` | 7 | weekly cadence; short enough to feel fresh, long enough to fill fixtures |
 | `PROMOTE` | top 3 | promoted to the tier above at rollover |
-| `RELEGATE` | bottom 3 | relegated to the tier below (no relegation from BRONZE) |
-| `TIERS` | `['BRONZE','SILVER','GOLD','ELITE']` | add more as population grows |
+| `RELEGATE` | bottom 3 | relegated to the tier below (none from `SUNDAY LEAGUE`) |
+| `TIERS` | `['SUNDAY LEAGUE','COUNTY','REGIONAL','NATIONAL','LEAGUE TWO','LEAGUE ONE','CHAMPIONSHIP','PREMIER','CONTINENTAL','WORLD CLASS']` | index 0 = bottom; a pure config array, resize freely |
 | `INACTIVE_DAYS` | 14 | no matches → parked/relegated, frees pod slots |
 
 ## 3) Data model
@@ -98,7 +109,7 @@ honoursFor(accountId): Promise<HonourRow[]>;
 
 On register (or first login of a season) with no pod for the active season:
 
-1. Enter the **lowest tier** (`BRONZE`).
+1. Enter the **lowest tier** (`SUNDAY LEAGUE`).
 2. Drop into the **first pod with < POD_SIZE members**; if all full, **open a new
    pod** in that tier. (Fill-then-open keeps pods dense.)
 3. Seed `accounts.rating` at 1000 as today; a few **placement matches** can nudge
@@ -116,7 +127,7 @@ the first request after expiry — same guard pattern as the agent's daily cap):
 2. For each pod, compute the final `buildTable`; **record honours** (champion =
    `final_pos 1, title=1`; everyone gets their `final_pos`).
 3. **Promotion/relegation**: top `PROMOTE` move up a tier, bottom `RELEGATE` move
-   down (clamped at BRONZE/ELITE). Everyone else stays in their tier.
+   down (clamped at `SUNDAY LEAGUE` / `WORLD CLASS`). Everyone else stays put.
 4. **Re-pod**: within each tier, sort members by rating and **re-shuffle into fresh
    pods of ~POD_SIZE** so pods stay balanced and you meet new rivals.
 5. **Park inactives** (no match in `INACTIVE_DAYS`) — skip re-podding them until
@@ -151,7 +162,7 @@ return hook — and async means an absent opponent still plays via standing orde
 
 The **League & Results** page we already built is the natural home:
 
-- Header: **`SILVER · Pod 3 · Season 4 — ends in 2d`**.
+- Header: **`CHAMPIONSHIP · Pod 3 · Season 4 — ends in 2d`**.
 - **Your pod table** (reuse `renderLeagueTable`) with a green **promotion zone**
   (top 3) and red **relegation zone** (bottom 3) tint.
 - **Results feed** scoped to your pod (reuse `renderResults`).
@@ -193,7 +204,7 @@ Per-season fixture list vs your pod; "today's fixtures" on the hub.
 | Question | Recommendation | Why |
 |---|---|---|
 | Season length? | **7 days** | weekly rhythm; revisit to 3–5d if engagement wants faster climbs |
-| Promote / relegate count? | **3 up / 3 down of 20** | meaningful movement without churn whiplash |
+| Promote / relegate count? | **3 up / 3 down of 20** | meaningful movement without churn whiplash. With a 10-tier ladder, ~1 tier/season means a dominant player tops out in ~10 seasons — a real long-term goal; raise to 4–5 if the climb feels too slow in playtest |
 | Pod size? | **20** | classic league feel; big enough for a real table, small enough to matter |
 | Placement? | bottom tier + rating-seed | simple, fair; placement matches can refine |
 | Tie-breakers? | Pts → GD → GF → head-to-head | `buildTable` already does the first three |
