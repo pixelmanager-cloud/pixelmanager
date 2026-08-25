@@ -335,14 +335,15 @@
         background: #0a0a16; border: 1px solid rgba(255,255,255,0.18); border-radius: 5px; padding: 3px 7px; }
       .slot .loan { flex: none; font-family: var(--display); font-size: 7px; letter-spacing: 0.5px; color: var(--warn);
         border: 1px solid var(--warn); border-radius: 4px; padding: 3px 4px; background: rgba(255,206,58,0.12); }
-      .slot .nft { flex: none; font-family: var(--display); font-size: 7px; letter-spacing: 0.5px;
-        border: 1px solid; border-radius: 4px; padding: 3px 5px; white-space: nowrap; }
-      .slot .nft.tier-bronze  { color: #cd7f32; border-color: #cd7f32; background: rgba(205,127,50,0.12); }
-      .slot .nft.tier-silver  { color: #cdd6e6; border-color: #cdd6e6; background: rgba(205,214,230,0.12); }
-      .slot .nft.tier-gold    { color: var(--warn); border-color: var(--warn); background: rgba(255,206,58,0.14); }
-      .slot .nft.tier-diamond { color: #57e6ff; border-color: #57e6ff; background: rgba(87,230,255,0.15); box-shadow: 0 0 7px rgba(87,230,255,0.55); }
-      .slot .nft.tier-legend  { color: #ffd76a; border-color: #ffd76a; background: rgba(255,140,220,0.14);
-        box-shadow: 0 0 9px rgba(255,140,220,0.7); text-shadow: 0 0 5px rgba(255,215,106,0.9); animation: legendPulse 1.6s ease-in-out infinite; }
+      /* solid dark chip so the tier label reads clearly on any role-tinted row */
+      .slot .nft { flex: none; font-family: var(--display); font-size: 8.5px; letter-spacing: 0.5px;
+        border: 1px solid; border-radius: 4px; padding: 4px 6px; white-space: nowrap; background: #06060f; }
+      .slot .nft.tier-bronze  { color: #f0a868; border-color: #cd7f32; }
+      .slot .nft.tier-silver  { color: #eaf1ff; border-color: #cdd6e6; }
+      .slot .nft.tier-gold    { color: #ffd84a; border-color: var(--warn); text-shadow: 0 0 5px rgba(255,206,58,0.6); }
+      .slot .nft.tier-diamond { color: #7cecff; border-color: #57e6ff; text-shadow: 0 0 5px rgba(87,230,255,0.7); box-shadow: 0 0 7px rgba(87,230,255,0.5); }
+      .slot .nft.tier-legend  { color: #ffe08a; border-color: #ffd76a; text-shadow: 0 0 6px rgba(255,215,106,0.9);
+        box-shadow: 0 0 9px rgba(255,140,220,0.7); animation: legendPulse 1.6s ease-in-out infinite; }
       @keyframes legendPulse { 0%,100% { box-shadow: 0 0 8px rgba(255,140,220,0.6); } 50% { box-shadow: 0 0 14px rgba(255,140,220,0.95); } }
       .slot.role-GK { border-left-color: var(--gk); } .slot.role-DF { border-left-color: var(--df); }
       .slot.role-MF { border-left-color: var(--mf); } .slot.role-FW { border-left-color: var(--fw); }
