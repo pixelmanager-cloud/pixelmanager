@@ -4,7 +4,7 @@ import { randomUUID } from 'node:crypto';
 import type { Lineup, Tactics } from '@fm/shared';
 import { db, type Account, type StandingOrders } from './db.js';
 import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMATIONS } from './game.js';
-import { ensureSeason, forceRollover } from './seasons.js';
+import { ensureSeason, ensurePod, forceRollover, resultsAmong, PROMOTE, RELEGATE } from './seasons.js';
 
 const app = Fastify({ logger: false });
 await app.register(cors, { origin: true });
@@ -50,8 +50,18 @@ app.put('/standing-orders', { preHandler: requireAuth }, async (req, reply) => {
   return { ok: true, standingOrders: so };
 });
 
-app.get('/opponents', { preHandler: requireAuth }, async (req) =>
-  ({ opponents: await db.opponents(req.account!.id, req.account!.rating) }));
+// opponents = your pod-mates this season (so matches feed your pod's table)
+app.get('/opponents', { preHandler: requireAuth }, async (req) => {
+  const s = await ensureSeason(db, Date.now());
+  const { tier, pod } = await ensurePod(db, s, req.account!.id);
+  const members = (await db.podMembers(s.id, tier, pod)).filter((m) => m.id !== req.account!.id);
+  const opponents = [];
+  for (const m of members) {
+    const c = await db.getClub(m.id);
+    if (c) opponents.push({ id: m.id, handle: m.handle, rating: m.rating, clubName: c.club.name });
+  }
+  return { opponents };
+});
 
 app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const body = req.body as any;
@@ -74,6 +84,7 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   await Promise.all([db.setRating(req.account!.id, nHome), db.setRating(oppId, nAway)]);
 
   const season = await ensureSeason(db, Date.now());
+  await ensurePod(db, season, req.account!.id); // make sure the player is in a pod (so the match counts)
   const matchId = randomUUID();
   await db.saveMatch({
     id: matchId, homeId: req.account!.id, awayId: oppId,
@@ -107,17 +118,23 @@ app.get('/season', async () => {
   return { season: { number: s.number, startsAt: s.startsAt, endsAt: s.endsAt, status: s.status, endsInMs: Math.max(0, s.endsAt - Date.now()) } };
 });
 
-// THIS season's standings (Phase A: everyone in one league)
-app.get('/standings', async () => {
+// your pod's standings this season (Phase B: a legible ~20-row table)
+app.get('/standings', { preHandler: requireAuth }, async (req) => {
   const s = await ensureSeason(db, Date.now());
-  const [accounts, results] = await Promise.all([db.allAccounts(), db.seasonResults(s.id)]);
-  return { season: { number: s.number, endsAt: s.endsAt }, table: buildTable(accounts, results) };
+  const { tier, pod } = await ensurePod(db, s, req.account!.id);
+  const members = await db.podMembers(s.id, tier, pod);
+  const ids = new Set(members.map((m) => m.id));
+  const results = resultsAmong(await db.seasonResults(s.id), ids);
+  return { season: { number: s.number, endsAt: s.endsAt }, tier, pod, promote: PROMOTE, relegate: RELEGATE, table: buildTable(members, results) };
 });
 
-// this season's recent results feed
-app.get('/results', async () => {
+// your pod's recent results feed this season
+app.get('/results', { preHandler: requireAuth }, async (req) => {
   const s = await ensureSeason(db, Date.now());
-  return { results: await db.recentResults(40, s.id) };
+  const { tier, pod } = await ensurePod(db, s, req.account!.id);
+  const ids = new Set((await db.podMembers(s.id, tier, pod)).map((m) => m.id));
+  const results = (await db.recentResults(200, s.id)).filter((r) => ids.has(r.home_id) && ids.has(r.away_id)).slice(0, 40);
+  return { results };
 });
 
 // the caller's honours board (past-season finishes)

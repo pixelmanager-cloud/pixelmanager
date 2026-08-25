@@ -232,8 +232,8 @@ class Game {
     $('honours-feed').innerHTML = '';
     try {
       const [st, res, hon] = await Promise.all([api.standings(), api.results(), api.honours()]);
-      $('season-banner').innerHTML = `<b>Season ${st.season.number}</b> · ends in ${humanizeMs(st.season.endsAt - Date.now())}`;
-      $('standings-table').innerHTML = this.renderLeagueTable(st.table);
+      $('season-banner').innerHTML = `<b>${st.tier}</b> · Pod ${st.pod + 1} · Season ${st.season.number} · ends in ${humanizeMs(st.season.endsAt - Date.now())}`;
+      $('standings-table').innerHTML = this.renderLeagueTable(st.table, { promote: st.promote, relegate: st.relegate });
       $('results-feed').innerHTML = this.renderResults(res.results);
       $('honours-feed').innerHTML = this.renderHonours(hon.honours);
     } catch {
@@ -267,11 +267,15 @@ class Game {
     }).join('');
   }
 
-  private renderLeagueTable(rows: TableRow[]): string {
+  private renderLeagueTable(rows: TableRow[], zones?: { promote?: number; relegate?: number }): string {
     const head = '<tr><th>#</th><th style="text-align:left">Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th>Rtg</th></tr>';
+    const promote = zones?.promote ?? 0, relegate = zones?.relegate ?? 0;
+    // only mark a relegation zone when the pod is big enough to actually have one
+    const relegFrom = rows.length > promote + relegate ? rows.length - relegate : rows.length;
     const body = rows.map((r, i) => {
       const gd = r.GD > 0 ? `+${r.GD}` : `${r.GD}`;
-      return `<tr class="${r.id === this.account.id ? 'me' : ''}"><td class="pos">${i + 1}</td><td class="club">${r.handle}</td><td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GF}</td><td>${r.GA}</td><td>${gd}</td><td class="pts">${r.Pts}</td><td>${r.rating}</td></tr>`;
+      const zone = i < promote ? ' promo' : i >= relegFrom ? ' releg' : '';
+      return `<tr class="${r.id === this.account.id ? 'me' : ''}${zone}"><td class="pos">${i + 1}</td><td class="club">${r.handle}</td><td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GF}</td><td>${r.GA}</td><td>${gd}</td><td class="pts">${r.Pts}</td><td>${r.rating}</td></tr>`;
     }).join('');
     return `<table class="league">${head}${body}</table>`;
   }

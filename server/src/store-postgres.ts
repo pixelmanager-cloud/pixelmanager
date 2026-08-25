@@ -2,7 +2,7 @@
 // (de)serialised in code, identical semantics to the SQLite backend.
 import pg from 'pg';
 import type { Club } from '@fm/shared';
-import type { Store, Account, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow, Season, HonourRow } from './store.js';
+import type { Store, Account, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow, Season, HonourRow, PodRef } from './store.js';
 
 export function makePostgresStore(connectionString: string): Store {
   // Railway's internal DB (postgres.railway.internal) and localhost don't use SSL;
@@ -34,8 +34,12 @@ export function makePostgresStore(connectionString: string): Store {
         CREATE TABLE IF NOT EXISTS honours (
           account_id TEXT NOT NULL, season_id TEXT NOT NULL, season_number INTEGER NOT NULL,
           tier TEXT NOT NULL, final_pos INTEGER NOT NULL, title INTEGER NOT NULL, ended_at BIGINT NOT NULL);
+        CREATE TABLE IF NOT EXISTS pod_members (
+          season_id TEXT NOT NULL, account_id TEXT NOT NULL, tier TEXT NOT NULL, pod INTEGER NOT NULL,
+          PRIMARY KEY (season_id, account_id));
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS season_id TEXT;
         ALTER TABLE clubs ADD COLUMN IF NOT EXISTS so_duties TEXT;
+        ALTER TABLE accounts ADD COLUMN IF NOT EXISTS tier TEXT;
       `);
     },
     async createAccount(id, handle, token, createdAt) {
@@ -132,6 +136,30 @@ export function makePostgresStore(connectionString: string): Store {
       return (await q('SELECT season_number, tier, final_pos, title, ended_at FROM honours WHERE account_id=$1 ORDER BY season_number DESC LIMIT $2', [accountId, limit]))
         .rows.map((r) => ({ ...r, ended_at: Number(r.ended_at) })) as HonourRow[];
     },
-    async reset() { await q('TRUNCATE accounts, clubs, matches, seasons, honours'); },
+    async accountTier(accountId) {
+      const r = (await q('SELECT tier FROM accounts WHERE id=$1', [accountId])).rows[0];
+      return (r && r.tier) || 'SUNDAY LEAGUE';
+    },
+    async setTier(accountId, tier) { await q('UPDATE accounts SET tier=$1 WHERE id=$2', [tier, accountId]); },
+    async podOf(seasonId, accountId) {
+      const r = (await q('SELECT tier, pod FROM pod_members WHERE season_id=$1 AND account_id=$2', [seasonId, accountId])).rows[0];
+      return r && { tier: r.tier, pod: r.pod } as PodRef;
+    },
+    async assignPod(seasonId, accountId, tier, pod) {
+      await q(`INSERT INTO pod_members (season_id, account_id, tier, pod) VALUES ($1,$2,$3,$4)
+               ON CONFLICT (season_id, account_id) DO UPDATE SET tier=EXCLUDED.tier, pod=EXCLUDED.pod`, [seasonId, accountId, tier, pod]);
+    },
+    async tierPodCounts(seasonId, tier) {
+      return (await q('SELECT pod, COUNT(*)::int AS count FROM pod_members WHERE season_id=$1 AND tier=$2 GROUP BY pod ORDER BY pod', [seasonId, tier]))
+        .rows as Array<{ pod: number; count: number }>;
+    },
+    async podMembers(seasonId, tier, pod) {
+      return (await q('SELECT a.id, a.handle, a.rating FROM pod_members pm JOIN accounts a ON a.id=pm.account_id WHERE pm.season_id=$1 AND pm.tier=$2 AND pm.pod=$3', [seasonId, tier, pod]))
+        .rows as LeaderRow[];
+    },
+    async seasonPods(seasonId) {
+      return (await q('SELECT DISTINCT tier, pod FROM pod_members WHERE season_id=$1 ORDER BY tier, pod', [seasonId])).rows as PodRef[];
+    },
+    async reset() { await q('TRUNCATE accounts, clubs, matches, seasons, honours, pod_members'); },
   };
 }

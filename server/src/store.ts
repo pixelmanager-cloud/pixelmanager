@@ -16,6 +16,8 @@ export interface StoredMatch {
 export interface Season { id: string; number: number; startsAt: number; endsAt: number; status: 'active' | 'closed' }
 /** A player's archived finish in a past season (for the honours board). */
 export interface HonourRow { season_number: number; tier: string; final_pos: number; title: number; ended_at: number }
+/** A player's placement within the division pyramid for a season (Phase B). */
+export interface PodRef { tier: string; pod: number }
 
 export interface Store {
   init(): Promise<void>;
@@ -42,5 +44,13 @@ export interface Store {
   seasonResults(seasonId: string): Promise<Array<{ home_id: string; away_id: string; home_score: number; away_score: number }>>;
   addHonour(accountId: string, seasonId: string, seasonNumber: number, tier: string, finalPos: number, title: number, endedAt: number): Promise<void>;
   honoursFor(accountId: string, limit?: number): Promise<HonourRow[]>;
+  // divisions & pods (Phase B)
+  accountTier(accountId: string): Promise<string>;
+  setTier(accountId: string, tier: string): Promise<void>;
+  podOf(seasonId: string, accountId: string): Promise<PodRef | undefined>;
+  assignPod(seasonId: string, accountId: string, tier: string, pod: number): Promise<void>;
+  tierPodCounts(seasonId: string, tier: string): Promise<Array<{ pod: number; count: number }>>;
+  podMembers(seasonId: string, tier: string, pod: number): Promise<LeaderRow[]>;
+  seasonPods(seasonId: string): Promise<PodRef[]>;
   reset(): Promise<void>;
 }

@@ -1,7 +1,7 @@
 // Local-dev backend on Node's built-in SQLite (no native deps).
 import { DatabaseSync } from 'node:sqlite';
 import type { Club } from '@fm/shared';
-import type { Store, Account, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow, Season, HonourRow } from './store.js';
+import type { Store, Account, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow, Season, HonourRow, PodRef } from './store.js';
 
 export function makeSqliteStore(file: string): Store {
   const db = new DatabaseSync(file);
@@ -26,10 +26,14 @@ export function makeSqliteStore(file: string): Store {
         CREATE TABLE IF NOT EXISTS honours (
           account_id TEXT NOT NULL, season_id TEXT NOT NULL, season_number INTEGER NOT NULL,
           tier TEXT NOT NULL, final_pos INTEGER NOT NULL, title INTEGER NOT NULL, ended_at INTEGER NOT NULL);
+        CREATE TABLE IF NOT EXISTS pod_members (
+          season_id TEXT NOT NULL, account_id TEXT NOT NULL, tier TEXT NOT NULL, pod INTEGER NOT NULL,
+          PRIMARY KEY (season_id, account_id));
       `);
       // migrate pre-existing tables (adds columns; throws-and-ignored if already present)
       try { db.exec('ALTER TABLE matches ADD COLUMN season_id TEXT'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE clubs ADD COLUMN so_duties TEXT'); } catch { /* already added */ }
+      try { db.exec('ALTER TABLE accounts ADD COLUMN tier TEXT'); } catch { /* already added */ }
     },
     async createAccount(id, handle, token, createdAt) {
       db.prepare('INSERT INTO accounts (id, handle, token, rating, created_at) VALUES (?,?,?,1000,?)').run(id, handle, token, createdAt);
@@ -119,6 +123,27 @@ export function makeSqliteStore(file: string): Store {
     async honoursFor(accountId, limit = 30) {
       return db.prepare('SELECT season_number, tier, final_pos, title, ended_at FROM honours WHERE account_id=? ORDER BY season_number DESC LIMIT ?').all(accountId, limit) as HonourRow[];
     },
-    async reset() { db.exec('DELETE FROM matches; DELETE FROM clubs; DELETE FROM accounts; DELETE FROM seasons; DELETE FROM honours;'); },
+    async accountTier(accountId) {
+      const r = db.prepare('SELECT tier FROM accounts WHERE id=?').get(accountId) as any;
+      return (r && r.tier) || 'SUNDAY LEAGUE';
+    },
+    async setTier(accountId, tier) { db.prepare('UPDATE accounts SET tier=? WHERE id=?').run(tier, accountId); },
+    async podOf(seasonId, accountId) {
+      const r = db.prepare('SELECT tier, pod FROM pod_members WHERE season_id=? AND account_id=?').get(seasonId, accountId) as any;
+      return r && { tier: r.tier, pod: r.pod } as PodRef;
+    },
+    async assignPod(seasonId, accountId, tier, pod) {
+      db.prepare('INSERT OR REPLACE INTO pod_members (season_id, account_id, tier, pod) VALUES (?,?,?,?)').run(seasonId, accountId, tier, pod);
+    },
+    async tierPodCounts(seasonId, tier) {
+      return db.prepare('SELECT pod, COUNT(*) AS count FROM pod_members WHERE season_id=? AND tier=? GROUP BY pod ORDER BY pod').all(seasonId, tier) as Array<{ pod: number; count: number }>;
+    },
+    async podMembers(seasonId, tier, pod) {
+      return db.prepare('SELECT a.id, a.handle, a.rating FROM pod_members pm JOIN accounts a ON a.id=pm.account_id WHERE pm.season_id=? AND pm.tier=? AND pm.pod=?').all(seasonId, tier, pod) as LeaderRow[];
+    },
+    async seasonPods(seasonId) {
+      return db.prepare('SELECT DISTINCT tier, pod FROM pod_members WHERE season_id=? ORDER BY tier, pod').all(seasonId) as PodRef[];
+    },
+    async reset() { db.exec('DELETE FROM matches; DELETE FROM clubs; DELETE FROM accounts; DELETE FROM seasons; DELETE FROM honours; DELETE FROM pod_members;'); },
   };
 }

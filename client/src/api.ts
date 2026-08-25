@@ -53,6 +53,6 @@ export const api = {
   myMatches: () => req<{ matches: Array<{ id: string; home_id: string; away_id: string; home_score: number; away_score: number; created_at: number }> }>('/me/matches'),
   results: () => req<{ results: ResultRow[] }>('/results'),
   season: () => req<{ season: SeasonMeta }>('/season'),
-  standings: () => req<{ season: { number: number; endsAt: number }; table: TableRow[] }>('/standings'),
+  standings: () => req<{ season: { number: number; endsAt: number }; tier: string; pod: number; promote: number; relegate: number; table: TableRow[] }>('/standings'),
   honours: () => req<{ honours: HonourRow[] }>('/honours'),
 };

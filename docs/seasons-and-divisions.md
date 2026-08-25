@@ -192,11 +192,17 @@ Results/Honours tab. Config: `SEASON_DAYS` (default 7); ops trigger
 until Phase B. Routes: `/season`, `/standings`, `/results` (season-scoped),
 `/honours`.
 
-**Phase B — Divisions/pods** *(M, switch on past ~40 players)*
-Add tiers + pods + placement + promotion/relegation in the rollover; standings page
-shows *your* pod with promotion/relegation zones.
-✅ *Done when:* players are bucketed into ≤20-club pods, climb/drop tiers across
-seasons, and never see a table bigger than their pod.
+**Phase B — Divisions/pods** ✅ **SHIPPED** *(most visible past ~40 players)*
+Persistent per-account `tier` (promotion/relegation progress) + per-season
+`pod_members`; lazy placement (`ensurePod`) drops each player into their tier's
+first pod with room (`POD_SIZE`, default 20), else opens a new one. `/standings`,
+`/results`, and `/opponents` are all **pod-scoped**; the standings page shows
+`TIER · Pod N · Season M` with green promotion / red relegation zones. The rollover
+ranks each pod, records honours with the real tier, and moves top `PROMOTE` up /
+bottom `RELEGATE` down (relegation only in pods larger than `PROMOTE+RELEGATE`).
+Re-podding is lazy the next season. A pre-Phase-B season with no pods falls back to
+one bottom-tier league. Verified end-to-end (placement, pod-scoped tables/opponents,
+promotion to COUNTY, honours).
 
 **Phase C — Fixtures** *(S–M, retention polish)*
 Per-season fixture list vs your pod; "today's fixtures" on the hub.

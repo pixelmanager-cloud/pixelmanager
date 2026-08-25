@@ -132,6 +132,12 @@
       table.league td.pts { font-family: var(--display); font-size: 11px; color: var(--good); }
       table.league tr.me td { color: var(--good); }
       table.league tr.me td.club { font-weight: bold; }
+      table.league tr.promo td { background: rgba(57,255,158,0.07); }
+      table.league tr.releg td { background: rgba(255,77,94,0.07); }
+      table.league tr.promo td.pos { border-left: 3px solid var(--good); }
+      table.league tr.releg td.pos { border-left: 3px solid var(--home); }
+      .zone-legend { display: flex; gap: 16px; font-size: 14px; margin: 8px 2px 2px; color: #8aa; }
+      .zone-legend .lg-promo { color: var(--good); } .zone-legend .lg-releg { color: var(--home); }
 
       /* lineup editor */
       #lineup .tacrow { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
@@ -285,6 +291,7 @@
         <div id="season-banner" class="season-banner"></div>
         <h3 class="sub">TABLE</h3>
         <div id="standings-table"></div>
+        <div class="zone-legend"><span class="lg-promo">▲ Promotion</span><span class="lg-releg">▼ Relegation</span></div>
         <div class="tabrow">
           <button id="tab-results" class="tab active">Recent Results</button>
           <button id="tab-honours" class="tab">Honours</button>
