@@ -24,6 +24,8 @@ contract PlayerNFT is ERC721Enumerable {
         uint8 positioning;
         uint8 workrate;
         uint8 keeping;
+        uint8 setPiece; // corners / free kicks / penalties
+        uint8 stamina;  // endurance
     }
 
     uint256 public nextId = 1;
@@ -62,6 +64,8 @@ contract PlayerNFT is ERC721Enumerable {
         s.workrate = _stat(seed, 6, role == Role.MF ? 2 : 0);
         // keepers are elite in goal; outfielders are near-useless there
         s.keeping = role == Role.GK ? _stat(seed, 7, 5) : uint8(1 + (uint256(keccak256(abi.encodePacked(seed, uint256(99)))) % 5));
+        s.setPiece = _stat(seed, 8, (role == Role.FW || role == Role.MF) ? 3 : 0);
+        s.stamina = _stat(seed, 9, 2);
     }
 
     function _stat(uint256 seed, uint256 i, uint8 bias) internal pure returns (uint8) {
@@ -97,6 +101,10 @@ contract PlayerNFT is ERC721Enumerable {
                 _numAttr("Workrate", s.workrate),
                 ",",
                 _numAttr("Keeping", s.keeping),
+                ",",
+                _numAttr("Set Piece", s.setPiece),
+                ",",
+                _numAttr("Stamina", s.stamina),
                 "]}"
             )
         );

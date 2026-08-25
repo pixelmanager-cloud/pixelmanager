@@ -14,8 +14,8 @@ contract PlayerNFTTest is Test {
     }
 
     function _assertStarRange(PlayerNFT.Stats memory s, PlayerNFT.Role role) internal pure {
-        uint8[8] memory vals = [s.pace, s.strength, s.passing, s.shooting, s.tackling, s.positioning, s.workrate, s.keeping];
-        for (uint256 i = 0; i < 8; i++) {
+        uint8[10] memory vals = [s.pace, s.strength, s.passing, s.shooting, s.tackling, s.positioning, s.workrate, s.keeping, s.setPiece, s.stamina];
+        for (uint256 i = 0; i < 10; i++) {
             assertGe(vals[i], 1);
             assertLe(vals[i], 20);
         }

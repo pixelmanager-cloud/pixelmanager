@@ -93,6 +93,7 @@ function statsTableHTML(players: Player[], highlight?: Set<string>, sort?: Squad
   const cols: Array<[string, keyof Player['attrs']]> = [
     ['PAC', 'pace'], ['STR', 'strength'], ['PAS', 'passing'], ['SHO', 'shooting'],
     ['TAK', 'tackling'], ['POS', 'positioning'], ['WRK', 'workrate'], ['KEE', 'keeping'],
+    ['SET', 'setPiece'], ['STA', 'stamina'],
   ];
   // Value a row contributes to a given sort key (number for stats, string for name).
   const sortVal = (p: Player, key: string): number | string => {
@@ -338,6 +339,7 @@ class Game {
     const order: Array<[keyof Player['attrs'], string]> = [
       ['pace', 'PAC'], ['shooting', 'SHO'], ['passing', 'PAS'], ['positioning', 'POS'],
       ['tackling', 'TAC'], ['strength', 'STR'], ['workrate', 'WRK'], ['keeping', 'KEE'],
+      ['setPiece', 'SET'], ['stamina', 'STA'],
     ];
     const stats = order.map(([k, l]) => `<div class="pc-stat"><span>${l}</span><b style="color:${statColor(p.attrs[k])}">${p.attrs[k]}</b></div>`).join('');
     // FX escalate with tier: sheen from Silver, rotating glow ring + sparkles from Gold up.
@@ -586,7 +588,7 @@ class Game {
   }
 
   private renderMarketCard(l: MarketListing, coins: number): string {
-    const lab: Record<string, string> = { pace: 'PAC', strength: 'STR', passing: 'PAS', shooting: 'SHO', tackling: 'TAC', positioning: 'POS', workrate: 'WOR', keeping: 'GK' };
+    const lab: Record<string, string> = { pace: 'PAC', strength: 'STR', passing: 'PAS', shooting: 'SHO', tackling: 'TAC', positioning: 'POS', workrate: 'WOR', keeping: 'GK', setPiece: 'SET', stamina: 'STA' };
     const attrs = Object.entries(l.player.attrs).map(([k, v]) => `<span class="at">${lab[k] ?? k} <b>${v}</b></span>`).join('');
     const locks = l.player.hidden > 0 ? `<span class="at locked">🔒 ${l.player.hidden} hidden</span>` : '';
     const afford = coins >= l.price;

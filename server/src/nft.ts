@@ -19,6 +19,7 @@ const abi = [
         { name: 'pace', type: 'uint8' }, { name: 'strength', type: 'uint8' }, { name: 'passing', type: 'uint8' },
         { name: 'shooting', type: 'uint8' }, { name: 'tackling', type: 'uint8' }, { name: 'positioning', type: 'uint8' },
         { name: 'workrate', type: 'uint8' }, { name: 'keeping', type: 'uint8' },
+        { name: 'setPiece', type: 'uint8' }, { name: 'stamina', type: 'uint8' },
       ],
     }],
   },
@@ -53,6 +54,7 @@ export async function ownedPlayers(wallet: string | null): Promise<Player[]> {
         attrs: {
           pace: st.pace, strength: st.strength, passing: st.passing, shooting: st.shooting,
           tackling: st.tackling, positioning: st.positioning, workrate: st.workrate, keeping: st.keeping,
+          setPiece: st.setPiece, stamina: st.stamina,
         },
         anchor: { x: 0, y: 0 },
       });

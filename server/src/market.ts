@@ -14,13 +14,13 @@ export const PRICE_MIN = 10, PRICE_MAX = 100000;
 // ── scout-gated stat reveal ──────────────────────────────────────────────────
 export type PlayerScoutTier = 'base' | 'bronze' | 'silver' | 'gold';
 // how many of the 8 attrs a listing shows at each tier (overall is always shown)
-const REVEAL_COUNT: Record<PlayerScoutTier, number> = { base: 0, bronze: 2, silver: 5, gold: 8 };
-// which attrs matter most per role — revealed first as the tier climbs
+const REVEAL_COUNT: Record<PlayerScoutTier, number> = { base: 0, bronze: 3, silver: 6, gold: 10 };
+// which attrs matter most per role — revealed first as the tier climbs (10 total)
 const ATTR_PRIORITY: Record<Role, Array<keyof PlayerAttrs>> = {
-  GK: ['keeping', 'positioning', 'strength', 'passing', 'workrate', 'pace', 'tackling', 'shooting'],
-  DF: ['tackling', 'positioning', 'strength', 'pace', 'workrate', 'passing', 'keeping', 'shooting'],
-  MF: ['passing', 'workrate', 'positioning', 'tackling', 'pace', 'shooting', 'strength', 'keeping'],
-  FW: ['shooting', 'pace', 'positioning', 'strength', 'workrate', 'passing', 'tackling', 'keeping'],
+  GK: ['keeping', 'positioning', 'strength', 'passing', 'workrate', 'pace', 'stamina', 'tackling', 'setPiece', 'shooting'],
+  DF: ['tackling', 'positioning', 'strength', 'pace', 'stamina', 'workrate', 'passing', 'setPiece', 'keeping', 'shooting'],
+  MF: ['passing', 'workrate', 'positioning', 'stamina', 'tackling', 'pace', 'setPiece', 'shooting', 'strength', 'keeping'],
+  FW: ['shooting', 'pace', 'positioning', 'setPiece', 'strength', 'stamina', 'workrate', 'passing', 'tackling', 'keeping'],
 };
 
 export interface RevealedPlayer {
@@ -35,7 +35,7 @@ export function revealPlayer(p: Player, tier: PlayerScoutTier): RevealedPlayer {
   const order = ATTR_PRIORITY[p.role];
   const attrs: Partial<Record<keyof PlayerAttrs, number>> = {};
   for (let i = 0; i < n && i < order.length; i++) attrs[order[i]] = p.attrs[order[i]];
-  return { name: p.name, role: p.role, overall: overall(p), attrs, hidden: Math.max(0, 8 - n) };
+  return { name: p.name, role: p.role, overall: overall(p), attrs, hidden: Math.max(0, 10 - n) };
 }
 
 export function playerScoutTier(): PlayerScoutTier {
