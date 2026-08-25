@@ -972,6 +972,9 @@ class Game {
       chance: `${e.minute}' Big chance for ${e.playerName} (${who})...`,
       shot_saved: `${e.minute}' Save! ${e.playerName} (${who}) denied`,
       shot_missed: `${e.minute}' ${e.playerName} (${who}) shoots wide`,
+      corner: `${e.minute}' 🚩 Corner to ${who}`,
+      free_kick: `${e.minute}' Free kick, ${who} — ${e.playerName} over it`,
+      penalty: `${e.minute}' 🎯 PENALTY to ${who}! ${e.playerName} steps up`,
       halftime: `${e.minute}' Half-time`,
       fulltime: `${e.minute}' Full-time`,
     };
@@ -979,6 +982,8 @@ class Game {
     div.textContent = line[e.type];
     if (e.type === 'goal') { div.style.color = '#ffd75e'; if (!this.silent) this.celebrateGoal(e); }
     else if (e.type === 'chance') div.style.color = '#8ad';
+    else if (e.type === 'penalty') div.style.color = '#ff6a8a';
+    else if (e.type === 'corner' || e.type === 'free_kick') div.style.color = '#9ab';
     $('ticker').prepend(div);
   }
 

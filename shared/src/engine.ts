@@ -31,6 +31,10 @@ export class MatchEngine {
   // the opponent is out of shape — devastating against a side caught high/pressing.
   private counterTeam: 0 | 1 | null = null;
   private counterUntil = 0;
+  // dangerous set pieces awarded per team this match — capped so a pathological press-fest
+  // can't run up a freak scoreline (keeps the fuzz robustness guard green).
+  private sp: [number, number] = [0, 0];
+  private static readonly SP_CAP = 12;
   /** bounded chance-creation edge from a formation SHAPE overload vs the opponent: a team
    *  wider than a narrow opponent finds the flanks; a team with more central midfielders
    *  controls the middle. Precomputed (shape + width are fixed pre-kickoff). */
@@ -95,6 +99,12 @@ export class MatchEngine {
 
   private goalOf(attackingTeam: 0 | 1): Goal {
     return { x: attackingTeam === 0 ? PITCH.w : 0, y: PITCH.h / 2 };
+  }
+
+  /** Is (x,y) inside the penalty box that `attackingTeam` is attacking? (~16.5m deep, ~40m wide) */
+  private inAttackingBox(attackingTeam: 0 | 1, x: number, y: number): boolean {
+    const g = this.goalOf(attackingTeam);
+    return Math.abs(x - g.x) < 16.5 && Math.abs(y - PITCH.h / 2) < 20.16;
   }
 
   private minute(): number {
@@ -299,6 +309,17 @@ export class MatchEngine {
         const pTackle = clamp(0.12 + 0.5 * (defEff / (defEff + retain)), 0.05, 0.8) * defMods.pressIntensity
           * (1 + Math.max(0, this.dm[defTeam][i].press) * 0.25) * TICK_SEC;
         if (this.rng() < pTackle) {
+          // a mistimed challenge can be a FOUL — rare, and commoner from a heavy press / poor
+          // tacklers. Only a DANGEROUS foul (in the box → penalty, or the final third → free
+          // kick) becomes a chance; a midfield foul just stops the tackle (attacker restarts).
+          const foulP = clamp(0.01 + 0.015 * (1 - norm(def.attrs.tackling)) + 0.006 * Math.min(1, Math.max(0, defMods.pressIntensity - 1)), 0.008, 0.026);
+          if (this.rng() < foulP) {
+            const distG = Math.hypot(goal.x - cs.x, goal.y - cs.y);
+            const capped = this.sp[teamIdx] >= MatchEngine.SP_CAP;
+            if (!capped && this.inAttackingBox(teamIdx, cs.x, cs.y)) { this.resolveSetPiece(teamIdx, 'penalty', distG, cs.y); return; }
+            if (!capped && distG < 30) { this.resolveSetPiece(teamIdx, 'free_kick', distG, cs.y); return; }
+            return; // midfield/capped free kick — attacker keeps possession, no chance created
+          }
           s.carrier = { teamIdx: defTeam, playerIdx: i };
           s.ball = { ...ds };
           return;
@@ -452,6 +473,54 @@ export class MatchEngine {
       }
       s.events.push({ minute, type: 'shot_saved', teamIdx, playerName: shooter.name });
     }
+    // a save or a blocked/deflected effort can go out for a corner
+    if (this.sp[teamIdx] < MatchEngine.SP_CAP && this.rng() < (onTarget ? 0.06 : 0.03)) { this.resolveSetPiece(teamIdx, 'corner', 8, PITCH.h / 2); return; }
+    s.carrier = { teamIdx: defTeam, playerIdx: 0 };
+    s.ball = { ...s.players[defTeam][0] };
+  }
+
+  /** Resolve a set piece for `teamIdx`: penalty (direct), a direct free kick if close+central,
+   *  otherwise a delivery into the box contested in the air. `setPiece` drives the taker's
+   *  delivery/finish; strength+positioning drive the aerial duel. */
+  private resolveSetPiece(teamIdx: 0 | 1, type: 'corner' | 'free_kick' | 'penalty', dist: number, y: number) {
+    const s = this.state;
+    const defTeam = (1 - teamIdx) as 0 | 1;
+    const gk = this.teams[defTeam].players[0];
+    const gks = s.players[defTeam][0];
+    const minute = this.minute();
+    this.sp[teamIdx]++;
+    const outfield = this.teams[teamIdx].players.slice(1);
+    const best = (ps: Player[], f: (p: Player) => number) => ps.reduce((a, b) => (f(b) > f(a) ? b : a));
+    const taker = best(outfield, (p) => norm(p.attrs.setPiece));
+    const central = 1 - Math.abs(y - PITCH.h / 2) / (PITCH.h / 2);
+    s.events.push({ minute, type, teamIdx, playerName: taker.name });
+
+    let scorer = taker;
+    let goalProb: number;
+    const direct = type === 'penalty' || (type === 'free_kick' && dist < 25 && central > 0.55);
+    if (type === 'penalty') {
+      goalProb = clamp(0.5 + norm(taker.attrs.setPiece) * 0.22 - norm(gk.attrs.keeping) * fit(gks.fitness) * 0.2, 0.28, 0.82);
+    } else if (direct) {
+      // a curled direct free kick — rarely beats the wall + keeper, but a specialist can
+      goalProb = clamp(0.01 + norm(taker.attrs.setPiece) * 0.07 - (dist - 8) * 0.005 - norm(gk.attrs.keeping) * fit(gks.fitness) * 0.08, 0.003, 0.09);
+    } else {
+      // delivery into the box → the best aerial target attacks it, contested by the best defender
+      const aerial = (p: Player) => norm(p.attrs.strength) * 0.6 + norm(p.attrs.positioning) * 0.4;
+      const target = best(outfield, aerial);
+      scorer = target;
+      const stopper = best(this.teams[defTeam].players.slice(1), aerial);
+      const win = aerial(target) / (aerial(target) + aerial(stopper) + 0.01);
+      const delivery = 0.4 + norm(taker.attrs.setPiece) * 0.6;
+      goalProb = clamp(0.005 + delivery * win * 0.05 - norm(gk.attrs.keeping) * fit(gks.fitness) * 0.09, 0.002, 0.05);
+    }
+    if (this.rng() < goalProb) {
+      s.score[teamIdx]++;
+      s.events.push({ minute, type: 'goal', teamIdx, playerName: scorer.name });
+      this.giveKickoff(defTeam);
+      return;
+    }
+    // a direct effort that misses is a shot; a cleared delivery just turns over
+    if (direct) s.events.push({ minute, type: 'shot_saved', teamIdx, playerName: scorer.name });
     s.carrier = { teamIdx: defTeam, playerIdx: 0 };
     s.ball = { ...s.players[defTeam][0] };
   }

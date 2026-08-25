@@ -63,7 +63,7 @@ export interface PlayerState {
   fitness: number;
 }
 
-export type MatchEventType = 'kickoff' | 'goal' | 'shot_saved' | 'shot_missed' | 'chance' | 'halftime' | 'fulltime';
+export type MatchEventType = 'kickoff' | 'goal' | 'shot_saved' | 'shot_missed' | 'chance' | 'corner' | 'free_kick' | 'penalty' | 'halftime' | 'fulltime';
 
 export interface MatchEvent {
   minute: number;
