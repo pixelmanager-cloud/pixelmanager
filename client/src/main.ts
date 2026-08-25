@@ -611,22 +611,27 @@ class Game {
   private async loadMissions() {
     try {
       const d = await api.missions();
+      this.account.coins = d.coins;
       $('trips-per').textContent = String(d.tripsPerSeason);
       $('trips-used').textContent = String(d.tripsUsed);
-      const canDispatch = d.tripsLeft > 0;
+      $('scout-coins').textContent = `💰 ${d.coins}`;
+      const haveTrips = d.tripsLeft > 0;
       $('scout-destinations').innerHTML = d.destinations.map((dest, i) => {
-        const risk = Math.min(4, i); // 0 (parks) … 4 (wonderkid) → escalating frame
+        const risk = Math.min(4, i); // 0 (parks) … 5 (wonderkid) → escalating frame (capped at 4)
         const hit = Math.round(dest.hitRate * 100);
         const up = Math.round(dest.upgradeChance * 100);
         const w = dest.weights;
         const seg = (k: string) => `<i class="b-${k}" style="width:${Math.round((w[k] ?? 0) * 100)}%"></i>`;
         const upPill = up > 0 ? `<span class="pill up">↑ ${up}% upgrade</span>` : '';
+        const afford = d.coins >= dest.cost;
+        const canSend = haveTrips && afford;
+        const label = !haveTrips ? 'No trips left' : !afford ? `Need 💰 ${dest.cost}` : `Send scout · 💰 ${dest.cost} ▶`;
         return `<div class="dest risk-${risk}">`
           + `<div class="dh"><span class="d-name">${dest.name}</span><span class="d-travel">🕓 ${this.travelLabel(dest.travelMins)}</span></div>`
           + `<div class="d-blurb">${dest.blurb}</div>`
-          + `<div class="d-odds"><span class="pill hit">🎯 <b>${hit}%</b> sign a player</span>${upPill}</div>`
+          + `<div class="d-odds"><span class="pill hit">🎯 <b>${hit}%</b> sign a player</span>${upPill}<span class="pill cost">💰 ${dest.cost}</span></div>`
           + `<div class="d-band" title="quality mix if a player is found">${seg('raw')}${seg('squad')}${seg('quality')}${seg('gem')}</div>`
-          + `<button class="dispatch" data-dest="${dest.id}" ${canDispatch ? '' : 'disabled'}>${canDispatch ? 'Send scout ▶' : 'No trips left'}</button>`
+          + `<button class="dispatch" data-dest="${dest.id}" ${canSend ? '' : 'disabled'}>${label}</button>`
           + `</div>`;
       }).join('');
       Array.from($('scout-destinations').querySelectorAll('button[data-dest]')).forEach((b) =>
@@ -693,10 +698,12 @@ class Game {
   private async dispatchScout(destination: string) {
     try {
       const r = await api.dispatchScout(destination);
+      this.account.coins = r.coins;
       toast(`Scout dispatched to ${r.mission.destName} 🌍`);
       await this.loadMissions();
     } catch (e: any) {
-      toast(e?.status === 409 ? 'No scouting trips left this season' : 'Could not dispatch scout');
+      const msg = String(e?.body?.error ?? '');
+      toast(e?.status === 409 ? (msg.includes('coins') ? 'Not enough coins for that trip' : 'No scouting trips left this season') : 'Could not dispatch scout');
     }
   }
 

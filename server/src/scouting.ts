@@ -4,8 +4,8 @@
 // rest are the future paid Scout-NFT tiers). See docs / the design chat.
 import { generateTrialist, overall, type Club, type Player, type Tactics } from '@fm/shared';
 
-export const LOANEE_CAP = 3;   // max loanees a club can sign per season
-export const POOL_SIZE = 6;    // trialists shown per season
+export const LOANEE_CAP = 3;   // max loanees a club can field per season (shared with the scouting network)
+export const POOL_SIZE = 3;    // local-tryout walk-ups shown per season (kept small now the scouting network is the main path)
 
 export type Band = 'raw' | 'squad' | 'quality' | 'gem';
 // probability of each band per scout tier (rows sum to 1)

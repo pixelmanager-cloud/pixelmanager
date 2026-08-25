@@ -402,18 +402,18 @@ function missionView(m: import('./store.js').MissionRow, now: number) {
 app.get('/scout/missions', { preHandler: requireAuth }, async (req) => {
   const meId = req.account!.id;
   const s = await ensureSeason(db, Date.now());
-  const [tiers, trips, count, loaneeCount] = await Promise.all([
+  const [tiers, trips, count, loaneeCount, coins] = await Promise.all([
     viewerTiers(await db.walletOf(meId)), db.missionsInSeason(meId, s.id),
-    db.countMissionsInSeason(meId, s.id), db.countLoanees(meId, s.id),
+    db.countMissionsInSeason(meId, s.id), db.countLoanees(meId, s.id), db.getCoins(meId),
   ]);
   const now = Date.now();
   const destinations = DESTINATIONS.map((d) => ({
-    id: d.id, name: d.name, blurb: d.blurb, weights: d.weights, travelMins: d.travelMins,
+    id: d.id, name: d.name, blurb: d.blurb, weights: d.weights, travelMins: d.travelMins, cost: d.cost,
     ...previewOdds(d, tiers.player),
   }));
   return {
     season: s.number, tier: tiers.player, tripsPerSeason: TRIPS_PER_SEASON, tripsUsed: count,
-    tripsLeft: Math.max(0, TRIPS_PER_SEASON - count), loaneeCap: LOANEE_CAP, loaneeCount,
+    tripsLeft: Math.max(0, TRIPS_PER_SEASON - count), loaneeCap: LOANEE_CAP, loaneeCount, coins,
     destinations, missions: trips.map((m) => missionView(m, now)),
   };
 });
@@ -426,6 +426,9 @@ app.post('/scout/missions', { preHandler: requireAuth }, async (req, reply) => {
   if (await db.countMissionsInSeason(meId, s.id) >= TRIPS_PER_SEASON) {
     return reply.code(409).send({ error: `you can dispatch at most ${TRIPS_PER_SEASON} scouting trips a season` });
   }
+  const coins = await db.getCoins(meId);
+  if (coins < dest.cost) return reply.code(409).send({ error: `not enough coins — ${dest.name} costs ${dest.cost}` });
+  await db.addCoins(meId, -dest.cost); // coin sink (this is the seam that swaps to a PTEST spend later)
   const tiers = await viewerTiers(await db.walletOf(meId));
   const id = randomUUID();
   const outcome = rollMission(id, dest, tiers.player); // sealed now, revealed after travel
@@ -437,7 +440,7 @@ app.post('/scout/missions', { preHandler: requireAuth }, async (req, reply) => {
     band: outcome.band, status: 'travelling',
   };
   await db.createMission(row);
-  return { ok: true, mission: missionView(row, now) }; // travelling → outcome stays hidden
+  return { ok: true, mission: missionView(row, now), coins: await db.getCoins(meId) }; // travelling → outcome stays hidden
 });
 
 app.post('/scout/missions/:id/sign', { preHandler: requireAuth }, async (req, reply) => {

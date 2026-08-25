@@ -423,6 +423,7 @@
       .dest .d-odds .pill b { color: #fff; }
       .dest .d-odds .pill.hit { border-color: var(--good); }
       .dest .d-odds .pill.up { border-color: var(--warn); color: var(--warn); }
+      .dest .d-odds .pill.cost { border-color: #d8a72a; color: var(--warn); margin-left: auto; }
       .dest .d-band { display: flex; height: 8px; border-radius: 4px; overflow: hidden; border: 1px solid var(--line); }
       .dest .d-band i { display: block; }
       .dest .d-band .b-raw { background: #556; } .dest .d-band .b-squad { background: var(--df); }
@@ -686,12 +687,12 @@
           </div>
           <div id="scout-hint" class="sn-hint"></div>
         </div>
-        <h4 class="scout-h4">TRIAL POOL</h4>
-        <div class="scout-sub">Sign up to <b id="loan-cap">3</b> loanees this season (<span id="loan-signed">0</span> signed). They play this season only, then leave — better players turn up rarely.</div>
+        <h4 class="scout-h4">🥅 LOCAL TRYOUTS</h4>
+        <div class="scout-sub">Walk-ups who turn up at your gate — free, but slim pickings. Sign from here or the network up to <b id="loan-cap">3</b> loanees this season (<span id="loan-signed">0</span> signed). They play this season only, then leave.</div>
         <div id="trial-pool"></div>
 
-        <h4 class="scout-h4" style="margin-top:22px;">🌍 SCOUTING NETWORK</h4>
-        <div class="scout-sub">Send your scout on a trip. Each place trades <b>how often</b> anyone signs against <b>how good</b> they might be — a far-flung academy rarely delivers, but when it does, it delivers. You get <b id="trips-per">3</b> trips a season (<span id="trips-used">0</span> used). Results are sealed the moment you dispatch and revealed once your scout travels back. A higher <b>Player Scout</b> tier lifts every trip's odds.</div>
+        <h4 class="scout-h4" style="margin-top:22px; display:flex; align-items:center; gap:12px;">🌍 SCOUTING NETWORK <span id="scout-coins" style="margin-left:auto; font-size:11px; color:var(--warn);"></span></h4>
+        <div class="scout-sub">Send your scout on a trip for a small fee. Each place trades <b>how often</b> anyone signs against <b>how good</b> they might be — a far-flung academy rarely delivers, but when it does, it delivers. You get <b id="trips-per">3</b> trips a season (<span id="trips-used">0</span> used). Results are sealed the moment you dispatch and revealed once your scout travels back. A higher <b>Player Scout</b> tier lifts every trip's odds.</div>
         <div id="missions-active"></div>
         <div id="scout-destinations"></div>
       </div>

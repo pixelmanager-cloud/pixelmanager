@@ -19,16 +19,19 @@ export interface Destination {
   hitRate: number;                 // base chance of returning ANY player
   weights: Record<Band, number>;   // band distribution WHEN a player is found (sums ~1)
   travelMins: number;              // real-time travel before the result reveals
+  cost: number;                    // coins to dispatch (elite places cost more)
 }
 
 // Bottom → top of the risk/reward ladder. Closer, cheaper places are reliable but
-// shallow; distant, elite places are long-shots that can strike gold.
+// shallow; distant, elite places are long-shots that can strike gold — and cost more
+// to send a scout to. Costs are small vs a win (100 coins) but the elite trips add up.
 export const DESTINATIONS: Destination[] = [
-  { id: 'parks',     name: 'Local Parks',        blurb: 'Sunday-league pitches down the road. Someone almost always turns up — rarely anyone special.', hitRate: 0.90, weights: { raw: 0.70, squad: 0.26, quality: 0.04, gem: 0.00 }, travelMins: 60 },
-  { id: 'county',    name: 'County Trials',      blurb: 'Regional open trials. A fair shot at a useful body, the odd standout.',                         hitRate: 0.72, weights: { raw: 0.45, squad: 0.42, quality: 0.11, gem: 0.02 }, travelMins: 120 },
-  { id: 'national',  name: 'National Camp',      blurb: 'Invitational youth camp. Fewer players come back, but the level steps up.',                    hitRate: 0.52, weights: { raw: 0.28, squad: 0.44, quality: 0.23, gem: 0.05 }, travelMins: 240 },
-  { id: 'foreign',   name: 'Foreign Academies',  blurb: 'Scouting trips abroad. Long odds of anyone signing — but real quality when they do.',           hitRate: 0.34, weights: { raw: 0.14, squad: 0.40, quality: 0.34, gem: 0.12 }, travelMins: 480 },
-  { id: 'wonderkid', name: 'Wonderkid Circuit',  blurb: 'Chasing whispers of a generational talent. Most trips come back empty. Some change everything.', hitRate: 0.18, weights: { raw: 0.05, squad: 0.25, quality: 0.40, gem: 0.30 }, travelMins: 720 },
+  { id: 'parks',     name: 'Local Parks',        blurb: 'Sunday-league pitches down the road. Someone almost always turns up — rarely anyone special.', hitRate: 0.90, weights: { raw: 0.70, squad: 0.26, quality: 0.04, gem: 0.00 }, travelMins: 60,  cost: 15 },
+  { id: 'county',    name: 'County Trials',      blurb: 'Regional open trials. A fair shot at a useful body, the odd standout.',                         hitRate: 0.72, weights: { raw: 0.45, squad: 0.42, quality: 0.11, gem: 0.02 }, travelMins: 120, cost: 30 },
+  { id: 'national',  name: 'National Camp',      blurb: 'Invitational youth camp. Fewer players come back, but the level steps up.',                    hitRate: 0.52, weights: { raw: 0.28, squad: 0.44, quality: 0.23, gem: 0.05 }, travelMins: 240, cost: 55 },
+  { id: 'continental', name: 'Continental Showcase', blurb: 'A high-profile international youth tournament. Scouts jostle for the standouts — quality is on show, but few sign.', hitRate: 0.42, weights: { raw: 0.20, squad: 0.42, quality: 0.30, gem: 0.08 }, travelMins: 360, cost: 72 },
+  { id: 'foreign',   name: 'Foreign Academies',  blurb: 'Scouting trips abroad. Long odds of anyone signing — but real quality when they do.',           hitRate: 0.34, weights: { raw: 0.14, squad: 0.40, quality: 0.34, gem: 0.12 }, travelMins: 480, cost: 90 },
+  { id: 'wonderkid', name: 'Wonderkid Circuit',  blurb: 'Chasing whispers of a generational talent. Most trips come back empty. Some change everything.', hitRate: 0.18, weights: { raw: 0.05, squad: 0.25, quality: 0.40, gem: 0.30 }, travelMins: 720, cost: 140 },
 ];
 export const destinationById = (id: string): Destination | undefined => DESTINATIONS.find((d) => d.id === id);
 
