@@ -281,25 +281,34 @@ class Game {
     } catch { $('me-token').textContent = '💠 —'; }
   }
 
-  /** Faucet: reconnect the linked wallet (resume email session, else injected) and claim test tokens. */
+  /** Faucet: claim test tokens with the wallet that's actually LINKED to this club. */
   private async claimFaucet() {
+    const linked = this.account.wallet;
+    if (!linked) { toast('Link a wallet first'); return; }
+    const short = `${linked.slice(0, 6)}…${linked.slice(-4)}`;
     const btn = $('faucet-btn') as HTMLButtonElement;
     const prev = btn.textContent;
     btn.disabled = true;
     try {
       btn.textContent = 'Connecting…';
-      const account = (await autoConnectInApp()) ?? (await connectInjected().catch(() => null));
-      if (!account) { toast('Connect your wallet to claim'); return; }
-      if (this.account.wallet && account.address.toLowerCase() !== this.account.wallet) {
-        toast('Connected a different wallet than the one linked to this club');
+      // find the connected wallet that matches the linked address (so tokens + gas + limit all line up)
+      let signer = await autoConnectInApp();
+      if (!signer || signer.address.toLowerCase() !== linked) {
+        const injected = await connectInjected().catch(() => null);
+        if (injected) signer = injected;
+      }
+      if (!signer) { toast('Connect a wallet to claim'); return; }
+      if (signer.address.toLowerCase() !== linked) {
+        toast(`Connect the wallet linked to this club (${short}) to claim`);
+        return;
       }
       btn.textContent = 'Claiming…';
-      await claimTokens(account, '1000');
+      await claimTokens(signer, '1000'); // recipient = signer = the linked wallet
       toast('Claimed 1000 test tokens ✓');
       await this.refreshTokenBalance();
     } catch (e: any) {
       const m = String(e?.message ?? '');
-      toast(/insufficient|funds|gas/i.test(m) ? 'Wallet needs a little Base Sepolia ETH for gas' : ((e?.shortMessage ?? m) || 'Claim failed'));
+      toast(/insufficient|funds|gas/i.test(m) ? `${short} needs a little Base Sepolia ETH for gas` : ((e?.shortMessage ?? m) || 'Claim failed'));
     } finally { btn.disabled = false; btn.textContent = prev; }
   }
 
