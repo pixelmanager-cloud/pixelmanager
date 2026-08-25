@@ -195,18 +195,19 @@
       .slot.role-GK { border-left-color: var(--gk); } .slot.role-DF { border-left-color: var(--df); }
       .slot.role-MF { border-left-color: var(--mf); } .slot.role-FW { border-left-color: var(--fw); }
       /* scout card (pre-match opponent intel — limited: shape + ratings, no deep stats) */
-      #scout-card { border: 2px solid var(--pink); background: rgba(255,60,138,0.06); padding: 10px 12px; margin-bottom: 12px; }
+      #scout-card { border: 2px solid var(--pink); border-radius: 7px; background: rgba(255,60,138,0.06);
+        padding: 12px 14px; margin-bottom: 26px; box-shadow: 0 6px 18px rgba(0,0,0,0.35); }
       #scout-card .scout-head { font-family: var(--display); font-size: 10px; color: var(--pink); letter-spacing: 0.5px; }
       #scout-card .scout-head b { color: #fff; }
-      #scout-card .scout-note { font-size: 14px; color: #8aa; margin: 6px 0 8px; }
-      #scout-card .scout-roster { display: flex; flex-wrap: wrap; gap: 6px; }
-      #scout-card .sp { font-size: 15px; padding: 3px 7px; border: 1px solid var(--line); border-radius: 5px;
-        background: rgba(0,0,0,0.25); color: #9a9ac8; white-space: nowrap; }
-      #scout-card .sp.xi { border-color: var(--cyan); color: var(--text); }
-      #scout-card .sp b { color: var(--good); }
-      #scout-card .sp .rl { font-family: var(--display); font-size: 7px; margin-right: 5px; }
-      #scout-card .sp .rl.role-GK { color: var(--gk); } #scout-card .sp .rl.role-DF { color: var(--df); }
-      #scout-card .sp .rl.role-MF { color: var(--mf); } #scout-card .sp .rl.role-FW { color: var(--fw); }
+      #scout-card .scout-note { font-size: 14px; color: #8aa; margin: 6px 0 10px; }
+      #scout-card .scout-roster { display: grid; grid-template-columns: repeat(auto-fill, minmax(178px, 1fr)); gap: 6px; }
+      #scout-card .sp { display: flex; align-items: center; gap: 8px; font-size: 15px; padding: 5px 9px;
+        border: 1px solid var(--line); border-radius: 5px; background: rgba(0,0,0,0.22); color: #7f7fa6; }
+      #scout-card .sp.xi { border-color: var(--cyan); background: rgba(0,229,255,0.07); color: var(--text); }
+      #scout-card .sp .nm { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      #scout-card .sp b { flex: none; margin-left: auto; color: var(--good); font-size: 16px; }
+      #scout-card .sp .rl { flex: none; width: 26px; text-align: center; font-family: var(--display); font-size: 8px;
+        padding: 3px 0; border-radius: 3px; color: #0a0a16; }  /* dark text on the role-coloured badge */
       .role-GK { background: var(--gk); } .role-DF { background: var(--df); } .role-MF { background: var(--mf); } .role-FW { background: var(--fw); }
       #bench { font-size: 16px; color: #aab; margin-top: 10px; line-height: 1.5; }
       /* full squad stats table */

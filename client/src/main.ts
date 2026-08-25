@@ -415,7 +415,7 @@ class Game {
 
   private renderScout(s: Scout): string {
     const roster = s.players
-      .map((p) => `<span class="sp ${p.likelyXI ? 'xi' : ''}"><span class="rl role-${p.role}">${p.role}</span>${p.name} <b>${p.overall}</b></span>`)
+      .map((p) => `<span class="sp ${p.likelyXI ? 'xi' : ''}"><span class="rl role-${p.role}">${p.role}</span><span class="nm">${p.name}</span><b>${p.overall}</b></span>`)
       .join('');
     return `<div class="scout-head">🔍 SCOUTING <b>${s.clubName}</b> · likely <b>${s.formation}</b> · rating ${s.rating}</div>`
       + '<div class="scout-note">Their squad, best-rated first (highlighted = likely XI). Set your shape &amp; duties to counter them.</div>'
