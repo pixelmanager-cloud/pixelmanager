@@ -22,6 +22,23 @@ import { autoPickXI } from '@fm/shared';
 import { isAddress } from 'viem';
 import { issueNonce, verifyAndConsume, shortAddr } from './wallet.js';
 import { tokenInfo, tokenMeta, tokenBalance } from './token.js';
+import { ownedPlayers, nftInfo, nftEnabled } from './nft.js';
+
+/** Load a club and MERGE in the star players its linked wallet owns on-chain.
+ * Read/gameplay only — never feed this into saveClub (NFT players live on-chain,
+ * not in our DB). Returns undefined if the club doesn't exist. */
+async function loadSquad(accountId: string): Promise<{ club: import('@fm/shared').Club; standingOrders: StandingOrders } | undefined> {
+  const c = await db.getClub(accountId);
+  if (!c) return undefined;
+  if (!nftEnabled()) return c;
+  const wallet = await db.walletOf(accountId);
+  const nfts = await ownedPlayers(wallet);
+  if (nfts.length) {
+    const have = new Set(c.club.players.map((p) => p.id));
+    c.club = { ...c.club, players: [...c.club.players, ...nfts.filter((p) => !have.has(p.id))] };
+  }
+  return c;
+}
 
 /** A unique handle derived from a base (wallet accounts derive theirs from the address). */
 async function uniqueHandle(base: string): Promise<string> {
@@ -115,6 +132,9 @@ app.post('/auth/wallet/verify', async (req, reply) => {
   };
 });
 
+// ── PlayerNFT (web3 Step 3) — is the NFT layer live, and at what address/chain.
+app.get('/nft', async () => nftInfo());
+
 // ── On-chain token (web3 Step 2) — read-only balance for the linked wallet.
 app.get('/token', async () => ({ ...tokenInfo(), ...(await tokenMeta()) }));
 app.get('/token/balance', { preHandler: requireAuth }, async (req) => {
@@ -139,7 +159,7 @@ app.post('/auth/wallet/link', { preHandler: requireAuth }, async (req, reply) =>
 });
 
 app.get('/me', { preHandler: requireAuth }, async (req) => {
-  const c = (await db.getClub(req.account!.id))!;
+  const c = (await loadSquad(req.account!.id))!; // includes any star NFTs the linked wallet owns
   const [coins, wallet] = await Promise.all([db.getCoins(req.account!.id), db.walletOf(req.account!.id)]);
   return { account: { ...req.account, coins, wallet }, club: c.club, standingOrders: c.standingOrders };
 });
@@ -147,7 +167,7 @@ app.get('/me', { preHandler: requireAuth }, async (req) => {
 app.put('/standing-orders', { preHandler: requireAuth }, async (req, reply) => {
   const body = req.body as any;
   if (!isFormation(body?.formation)) return reply.code(400).send({ error: 'bad formation' });
-  const c = (await db.getClub(req.account!.id))!;
+  const c = (await loadSquad(req.account!.id))!; // NFT stars are valid XI picks too
   const lineup: Lineup = { formation: body.formation, playerIds: body.playerIds, duties: body.duties };
   if (!validateLineup(c.club, lineup)) return reply.code(400).send({ error: 'invalid lineup' });
   const so: StandingOrders = { formation: body.formation, playerIds: body.playerIds, tactics: body.tactics as Tactics, duties: cleanDuties(c.club, lineup) };
@@ -198,7 +218,7 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const body = req.body as any;
   const oppId = String(body?.opponentId ?? '');
   const iAmHome = body?.venue !== 'away'; // double round-robin: you play each pod-mate home AND away
-  const [opp, oppClub, me] = await Promise.all([db.accountById(oppId), db.getClub(oppId), db.getClub(req.account!.id)]);
+  const [opp, oppClub, me] = await Promise.all([db.accountById(oppId), loadSquad(oppId), loadSquad(req.account!.id)]); // both squads include their on-chain stars
   if (!opp || !oppClub) return reply.code(404).send({ error: 'opponent not found' });
 
   const meId = req.account!.id;
@@ -220,7 +240,8 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   myLineup.duties = cleanDuties(me!.club, myLineup);
   // remember this plan for next time we face this opponent
   await db.savePlan(meId, oppId, { formation: myLineup.formation, playerIds: myLineup.playerIds, tactics: myTactics, duties: myLineup.duties });
-  const oppLineup: Lineup = { formation: oppClub.standingOrders.formation, playerIds: oppClub.standingOrders.playerIds, duties: oppClub.standingOrders.duties };
+  let oppLineup: Lineup = { formation: oppClub.standingOrders.formation, playerIds: oppClub.standingOrders.playerIds, duties: oppClub.standingOrders.duties };
+  if (!validateLineup(oppClub.club, oppLineup)) oppLineup = autoPickXI(oppClub.club, oppClub.standingOrders.formation); // stale NFT in their XI → auto-pick
   const oppTactics = oppClub.standingOrders.tactics;
 
   // run the match with the correct home/away team ordering (I may be the away side)
@@ -295,7 +316,7 @@ app.get('/honours', { preHandler: requireAuth }, async (req) => ({ honours: awai
 // OVERALL ratings only — deliberately limited (no individual stats; premium later).
 app.get('/scout/:id', { preHandler: requireAuth }, async (req, reply) => {
   const id = String((req.params as any).id);
-  const [opp, c] = await Promise.all([db.accountById(id), db.getClub(id)]);
+  const [opp, c] = await Promise.all([db.accountById(id), loadSquad(id)]); // show their NFT stars in the scout too
   if (!opp || !c) return reply.code(404).send({ error: 'not found' });
   const tier = oppScoutTier(req.account!);
   const rv = OPP_REVEAL[tier];

@@ -5,7 +5,7 @@ import {
 } from '@fm/shared';
 import { SCALE, makeBallTexture, makeBallGhostTexture, makePitchTexture, makePlayerFrames, makeShadowTexture, makeCarrierTexture } from './pixelart';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing } from './api';
-import { walletConfigured, sendEmailCode, connectEmail, connectInjected, autoConnectInApp, signMessage, claimTokens, type Account as WalletAccount } from './wallet';
+import { walletConfigured, nftConfigured, sendEmailCode, connectEmail, connectInjected, autoConnectInApp, signMessage, claimTokens, mintPlayer, type Account as WalletAccount } from './wallet';
 
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
 
@@ -272,6 +272,35 @@ class Game {
     });
     $('link-wallet').addEventListener('click', () => this.walletFlow(() => connectInjected(), true));
     $('faucet-btn').addEventListener('click', () => this.claimFaucet());
+    $('mint-player').addEventListener('click', () => this.mintStarPlayer());
+  }
+
+  /** Mint a star PlayerNFT with the linked wallet; it then shows up in the squad. */
+  private async mintStarPlayer() {
+    const linked = this.account.wallet;
+    if (!linked) { toast('Link a wallet first'); return; }
+    const short = `${linked.slice(0, 6)}…${linked.slice(-4)}`;
+    const btn = $('mint-player') as HTMLButtonElement;
+    const prev = btn.textContent;
+    btn.disabled = true;
+    try {
+      btn.textContent = 'Connecting…';
+      let signer = await autoConnectInApp();
+      if (!signer || signer.address.toLowerCase() !== linked) {
+        const injected = await connectInjected().catch(() => null);
+        if (injected) signer = injected;
+      }
+      if (!signer) { toast('Connect a wallet to mint'); return; }
+      if (signer.address.toLowerCase() !== linked) { toast(`Connect the wallet linked to this club (${short})`); return; }
+      btn.textContent = 'Minting…';
+      await mintPlayer(signer);
+      toast('Minted a star player ✓ — updating squad');
+      this.setMe(await api.me()); // re-read: the new NFT is now in your squad
+      await this.showHub();
+    } catch (e: any) {
+      const m = String(e?.message ?? '');
+      toast(/insufficient|funds|gas/i.test(m) ? `${short} needs Base Sepolia ETH for gas` : ((e?.shortMessage ?? m) || 'Mint failed'));
+    } finally { btn.disabled = false; btn.textContent = prev; }
   }
 
   private async refreshTokenBalance() {
@@ -348,6 +377,7 @@ class Game {
     if (w) $('me-wallet').textContent = `🔗 ${w.slice(0, 6)}…${w.slice(-4)}`;
     $('link-wallet').classList.toggle('hidden', !!w); // offer linking only when none is set
     $('faucet-btn').classList.add('hidden'); // self-serve faucet deferred (plain token has no claim); distribute via airdrop/transfer on testnet
+    $('mint-player').classList.toggle('hidden', !(w && nftConfigured())); // mint a star once a wallet is linked + NFT deployed
     $('me-token').classList.toggle('hidden', !w);
     if (w) void this.refreshTokenBalance();
     if (this.account.coins != null) $('me-coins').textContent = `💰 ${this.account.coins}`;
@@ -642,15 +672,18 @@ class Game {
       const roleForSlot = SLOT_ROLES[this.draftTactics.formation][i];
       const used = usedElsewhere(i);
       const isLoan = (id: string) => id.startsWith('loan-');
+      const isNft = (id: string) => id.startsWith('nft:');
+      const tagText = (id: string) => isLoan(id) ? ' · LOAN' : isNft(id) ? ' ★ NFT' : '';
       const opts = this.club.players
         .filter((p) => p.id === pid || !used.has(p.id))
         .sort((a, b) => overall(b) - overall(a))
-        .map((p) => `<option value="${p.id}" ${p.id === pid ? 'selected' : ''}>${p.name} (${p.role} ${overall(p)})${isLoan(p.id) ? ' · LOAN' : ''}</option>`).join('');
+        .map((p) => `<option value="${p.id}" ${p.id === pid ? 'selected' : ''}>${p.name} (${p.role} ${overall(p)})${tagText(p.id)}</option>`).join('');
       const cur = this.club.players.find((p) => p.id === pid)!;
-      const loanTag = isLoan(cur.id) ? `<span class="loan" title="Loanee — plays this season only, then leaves">LOAN</span>` : '';
+      const tag = isLoan(cur.id) ? `<span class="loan" title="Loanee — plays this season only, then leaves">LOAN</span>`
+        : isNft(cur.id) ? `<span class="nft" title="Star player you own as an NFT (on-chain)">★ NFT</span>` : '';
       const dutyOpts = DUTIES_BY_ROLE[cur.role]
         .map((d) => `<option value="${d}" ${d === this.draftDuties[i] ? 'selected' : ''}>${DUTY_LABEL[d]}</option>`).join('');
-      return `<div class="slot role-${roleForSlot}"><span class="role role-${roleForSlot}">${roleForSlot}</span><select class="player-sel" data-i="${i}">${opts}</select><select class="duty-sel" data-i="${i}" title="This player's duty — how they play">${dutyOpts}</select>${loanTag}<span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span></div>`;
+      return `<div class="slot role-${roleForSlot}"><span class="role role-${roleForSlot}">${roleForSlot}</span><select class="player-sel" data-i="${i}">${opts}</select><select class="duty-sel" data-i="${i}" title="This player's duty — how they play">${dutyOpts}</select>${tag}<span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span></div>`;
     }).join('');
     Array.from($('xi').querySelectorAll('select.player-sel')).forEach((sel) => {
       sel.addEventListener('change', (ev) => {

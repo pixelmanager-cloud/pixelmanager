@@ -5,8 +5,19 @@
 import { randomUUID } from 'node:crypto';
 import { autoPickXI } from '@fm/shared';
 import type { Store, Season, PodRef } from './store.js';
-import { buildTable, runMatch, elo } from './game.js';
+import { buildTable, runMatch, elo, validateLineup } from './game.js';
 import { seasonPlacementReward } from './market.js';
+import { ownedPlayers } from './nft.js';
+
+/** Merge a club with the star NFTs its linked wallet owns (read-only). */
+async function withNfts(db: Store, accountId: string, c: { club: any; standingOrders: any }): Promise<typeof c> {
+  const nfts = await ownedPlayers(await db.walletOf(accountId));
+  if (nfts.length) {
+    const have = new Set(c.club.players.map((p: any) => p.id));
+    c.club = { ...c.club, players: [...c.club.players, ...nfts.filter((p) => !have.has(p.id))] };
+  }
+  return c;
+}
 
 const SEASON_MS = Math.max(1, Number(process.env.SEASON_DAYS ?? 7)) * 24 * 60 * 60 * 1000;
 export const POD_SIZE = Math.max(2, Number(process.env.POD_SIZE ?? 20));
@@ -76,10 +87,16 @@ export function resultsAmong(results: Array<{ home_id: string; away_id: string; 
 /** Simulate one fixture from both clubs' standing orders and persist it (used to auto-resolve
  *  fixtures a manager never got to at season end, so every table completes fairly). */
 async function simulateMatch(db: Store, homeId: string, awayId: string, seasonId: string, now: number): Promise<void> {
-  const [home, away, homeC, awayC] = await Promise.all([db.accountById(homeId), db.accountById(awayId), db.getClub(homeId), db.getClub(awayId)]);
-  if (!home || !away || !homeC || !awayC) return;
-  const hl = { formation: homeC.standingOrders.formation, playerIds: homeC.standingOrders.playerIds, duties: homeC.standingOrders.duties };
-  const al = { formation: awayC.standingOrders.formation, playerIds: awayC.standingOrders.playerIds, duties: awayC.standingOrders.duties };
+  const [home, away, homeC0, awayC0] = await Promise.all([db.accountById(homeId), db.accountById(awayId), db.getClub(homeId), db.getClub(awayId)]);
+  if (!home || !away || !homeC0 || !awayC0) return;
+  const [homeC, awayC] = await Promise.all([withNfts(db, homeId, homeC0), withNfts(db, awayId, awayC0)]);
+  // fall back to a valid auto-pick if a standing XI references players no longer in the squad (e.g. a transferred NFT)
+  const lineupFor = (c: typeof homeC) => {
+    const l = { formation: c.standingOrders.formation, playerIds: c.standingOrders.playerIds, duties: c.standingOrders.duties };
+    return validateLineup(c.club, l) ? l : autoPickXI(c.club, c.standingOrders.formation);
+  };
+  const hl = lineupFor(homeC);
+  const al = lineupFor(awayC);
   const { seed, homeTeam, awayTeam, result } = runMatch(homeC.club, hl, homeC.standingOrders.tactics, awayC.club, al, awayC.standingOrders.tactics);
   const sh = result[0] > result[1] ? 1 : result[0] < result[1] ? 0 : 0.5;
   const [nh, na] = elo(home.rating, away.rating, sh);

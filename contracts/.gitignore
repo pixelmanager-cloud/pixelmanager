@@ -1,0 +1,5 @@
+# Foundry build output + deps (rebuild deps with: forge install OpenZeppelin/openzeppelin-contracts)
+out/
+cache/
+broadcast/
+lib/
