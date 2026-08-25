@@ -1,8 +1,31 @@
 # Web3 implementation plan — decision record
 
-Status: **draft**. The technical layer for putting ownership + value on-chain.
+Status: **in progress**. The technical layer for putting ownership + value on-chain.
 Builds on `docs/economy-and-web3.md` (the economic design). **Not legal advice.**
-Everything targets **XLayer testnet with valueless tokens first.**
+
+## Stack + network (decided 2026-08-25)
+- **Network: Base** (Base Sepolia testnet first, valueless tokens). Chosen over the
+  original XLayer plan for ecosystem/liquidity/onboarding + tooling. Chain is config
+  (chain id + RPC); contracts + bridge are identical EVM, so this isn't code lock-in.
+- **Stack: thirdweb SDK** (wallet-connect, email/social in-app wallets, gas sponsorship,
+  prebuilt ERC-20/721/1155) **+ viem** (server-side reads + custom-contract calls).
+  Custom game contracts (capped upgrades, RewardPool, commit-reveal) are still hand-written
+  Solidity via Foundry/OpenZeppelin.
+- **Auth model: parallel + linkable** — handle+password stays; wallet sign-in creates a
+  wallet-keyed account for new users and existing clubs can link a wallet.
+
+## Progress
+- ✅ **Step 1 — Wallet sign-in (SHIPPED).** Server: `/auth/wallet/nonce|verify|link`
+  (nonce → sign → recover signer with viem `recoverMessageAddress`, single-use nonce,
+  wallet-keyed accounts with an unguessable sentinel password hash so the handle can't be
+  password-claimed). Client: thirdweb v5 vanilla — email in-app wallet + injected browser
+  wallet, "Connect Wallet" on login + "Link Wallet" on the hub, gated on
+  `VITE_THIRDWEB_CLIENT_ID`. Server verification tested with a real viem keypair
+  (new/returning/bad-sig/replay/link/taken). *Real wallet handshake needs a thirdweb
+  clientId + a wallet/email — a manual test.*
+
+The rest of this doc targets the original plan; steps below are unchanged except the
+network is **Base**, and standard contracts come from **thirdweb** rather than hand-rolled.
 
 ## Trust model (decided): minimal on-chain
 

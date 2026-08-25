@@ -5,6 +5,7 @@ import {
 } from '@fm/shared';
 import { SCALE, makeBallTexture, makeBallGhostTexture, makePitchTexture, makePlayerFrames, makeShadowTexture, makeCarrierTexture } from './pixelart';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing } from './api';
+import { walletConfigured, sendEmailCode, connectEmail, connectInjected, type ConnectedAccount } from './wallet';
 
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
 
@@ -148,6 +149,7 @@ class Game {
 
   async boot() {
     this.wireStaticButtons();
+    this.wireWallet();
     if (hasToken()) {
       try { this.setMe(await api.me()); await this.showHub(); return; }
       catch { clearToken(); }
@@ -240,11 +242,72 @@ class Game {
     }
   }
 
+  // ---- wallet sign-in (web3 Step 1) ----
+  private wireWallet() {
+    const hint = $('wallet-hint');
+    if (!walletConfigured()) {
+      // still show the buttons, but explain they need a thirdweb clientId
+      hint.innerHTML = 'Wallet sign-in needs <code>VITE_THIRDWEB_CLIENT_ID</code> — set it to enable email/browser-wallet login.';
+    }
+    $('wallet-injected-btn').addEventListener('click', () => this.walletFlow(() => connectInjected()));
+    $('wallet-email-btn').addEventListener('click', () => {
+      $('wallet-email-flow').classList.toggle('hidden');
+    });
+    // email is two steps: "Send code" → "Verify & sign in"
+    let codeSent = false;
+    $('wallet-email-go').addEventListener('click', async () => {
+      const email = ($('wallet-email') as HTMLInputElement).value.trim();
+      if (!email) { toast('Enter your email'); return; }
+      const btn = $('wallet-email-go') as HTMLButtonElement;
+      if (!codeSent) {
+        btn.disabled = true; $('wallet-hint').textContent = 'Sending code…';
+        try { await sendEmailCode(email); codeSent = true; $('wallet-code').classList.remove('hidden'); btn.textContent = 'Verify & sign in'; $('wallet-hint').textContent = 'Enter the code we emailed you.'; }
+        catch (e: any) { $('wallet-hint').textContent = e?.message ?? 'Could not send code.'; }
+        finally { btn.disabled = false; }
+      } else {
+        const code = ($('wallet-code') as HTMLInputElement).value.trim();
+        if (!code) { toast('Enter the code'); return; }
+        await this.walletFlow(() => connectEmail(email, code));
+      }
+    });
+    $('link-wallet').addEventListener('click', () => this.walletFlow(() => connectInjected(), true));
+  }
+
+  /** Connect → sign the server nonce → verify (sign in) or link to the current account. */
+  private async walletFlow(connect: () => Promise<ConnectedAccount>, link = false) {
+    try {
+      $('wallet-hint').textContent = 'Opening wallet…';
+      const account = await connect();
+      const { message } = await api.walletNonce(account.address);
+      const signature = await account.signMessage(message);
+      if (link) {
+        const r = await api.walletLink(account.address, signature);
+        toast(`Wallet linked ✓`);
+        this.setMe(await api.me());
+        await this.showHub();
+        void r;
+      } else {
+        const r = await api.walletVerify(account.address, signature);
+        setToken(r.token);
+        this.setMe({ account: r.account, club: r.club, standingOrders: r.standingOrders });
+        await this.showHub();
+      }
+    } catch (e: any) {
+      const msg = e?.body?.error ?? e?.message ?? 'Wallet sign-in failed.';
+      $('wallet-hint').textContent = msg;
+      if (link) toast(msg);
+    }
+  }
+
   // ---- hub ----
   private async showHub() {
     this.showScreen('hub');
     $('me-name').textContent = this.club.name;
     $('me-rating').textContent = `RATING ${this.account.rating}`;
+    const w = this.account.wallet;
+    $('me-wallet').classList.toggle('hidden', !w);
+    if (w) $('me-wallet').textContent = `🔗 ${w.slice(0, 6)}…${w.slice(-4)}`;
+    $('link-wallet').classList.toggle('hidden', !!w); // offer linking only when none is set
     if (this.account.coins != null) $('me-coins').textContent = `💰 ${this.account.coins}`;
     $('fixtures-progress').textContent = '';
     $('opponents').innerHTML = SPINNER;

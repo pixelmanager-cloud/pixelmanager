@@ -19,6 +19,15 @@ import {
   MIN_SQUAD, MAX_SQUAD, PRICE_MIN, PRICE_MAX,
 } from './market.js';
 import { autoPickXI } from '@fm/shared';
+import { isAddress } from 'viem';
+import { issueNonce, verifyAndConsume, shortAddr } from './wallet.js';
+
+/** A unique handle derived from a base (wallet accounts derive theirs from the address). */
+async function uniqueHandle(base: string): Promise<string> {
+  let h = base;
+  for (let i = 2; await db.handleTaken(h); i++) h = `${base}#${i}`;
+  return h;
+}
 
 const app = Fastify({ logger: false });
 await app.register(cors, { origin: true });
@@ -52,7 +61,7 @@ app.post('/register', async (req, reply) => {
   await db.createAccount(id, handle, token, Date.now(), hashPassword(password));
   const { club, standingOrders } = makeClub(id, handle);
   await db.saveClub(id, club, standingOrders);
-  return { token, account: { id, handle, rating: 1000, coins: await db.getCoins(id) }, club, standingOrders };
+  return { token, account: { id, handle, rating: 1000, coins: await db.getCoins(id), wallet: null }, club, standingOrders };
 });
 
 // log back into an existing club with handle + password. Accounts created before
@@ -70,13 +79,58 @@ app.post('/login', async (req, reply) => {
   }
   const c = await db.getClub(auth.id);
   if (!c) return reply.code(404).send({ error: 'club not found' });
-  return { token: auth.token, account: { id: auth.id, handle: auth.handle, rating: auth.rating, coins: await db.getCoins(auth.id) }, club: c.club, standingOrders: c.standingOrders };
+  return { token: auth.token, account: { id: auth.id, handle: auth.handle, rating: auth.rating, coins: await db.getCoins(auth.id), wallet: await db.walletOf(auth.id) }, club: c.club, standingOrders: c.standingOrders };
+});
+
+// ── Wallet sign-in (web3 Step 1) — connect a wallet as identity, or link one to
+// the current account. No chain/gas: the wallet just signs a nonce to prove ownership.
+app.post('/auth/wallet/nonce', async (req, reply) => {
+  const address = String((req.body as any)?.address ?? '');
+  if (!isAddress(address)) return reply.code(400).send({ error: 'bad address' });
+  return { message: issueNonce(address) };
+});
+
+app.post('/auth/wallet/verify', async (req, reply) => {
+  const address = String((req.body as any)?.address ?? '');
+  const signature = String((req.body as any)?.signature ?? '');
+  if (!isAddress(address)) return reply.code(400).send({ error: 'bad address' });
+  if (!(await verifyAndConsume(address, signature))) return reply.code(401).send({ error: 'signature did not verify' });
+  let acct = await db.walletAccount(address);
+  if (!acct) {
+    // first time this wallet signs in → make it a club (wallet is the credential, no password)
+    const id = randomUUID(), token = randomUUID().replace(/-/g, '');
+    const handle = await uniqueHandle(shortAddr(address));
+    await db.createAccount(id, handle, token, Date.now(), hashPassword(randomUUID())); // unguessable sentinel hash blocks password login
+    const { club, standingOrders } = makeClub(id, handle);
+    await db.saveClub(id, club, standingOrders);
+    await db.linkWallet(id, address);
+    acct = { id, handle, rating: 1000, token };
+  }
+  const c = (await db.getClub(acct.id))!;
+  return {
+    token: acct.token,
+    account: { id: acct.id, handle: acct.handle, rating: acct.rating, coins: await db.getCoins(acct.id), wallet: address.toLowerCase() },
+    club: c.club, standingOrders: c.standingOrders,
+  };
+});
+
+app.post('/auth/wallet/link', { preHandler: requireAuth }, async (req, reply) => {
+  const address = String((req.body as any)?.address ?? '');
+  const signature = String((req.body as any)?.signature ?? '');
+  if (!isAddress(address)) return reply.code(400).send({ error: 'bad address' });
+  const already = await db.walletOf(req.account!.id);
+  if (already && already !== address.toLowerCase()) return reply.code(409).send({ error: 'this account already has a linked wallet' });
+  const owner = await db.walletAccount(address);
+  if (owner && owner.id !== req.account!.id) return reply.code(409).send({ error: 'wallet is already linked to another account' });
+  if (!(await verifyAndConsume(address, signature))) return reply.code(401).send({ error: 'signature did not verify' });
+  await db.linkWallet(req.account!.id, address);
+  return { ok: true, wallet: address.toLowerCase() };
 });
 
 app.get('/me', { preHandler: requireAuth }, async (req) => {
   const c = (await db.getClub(req.account!.id))!;
-  const coins = await db.getCoins(req.account!.id);
-  return { account: { ...req.account, coins }, club: c.club, standingOrders: c.standingOrders };
+  const [coins, wallet] = await Promise.all([db.getCoins(req.account!.id), db.walletOf(req.account!.id)]);
+  return { account: { ...req.account, coins, wallet }, club: c.club, standingOrders: c.standingOrders };
 });
 
 app.put('/standing-orders', { preHandler: requireAuth }, async (req, reply) => {

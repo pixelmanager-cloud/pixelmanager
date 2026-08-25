@@ -27,7 +27,7 @@ async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export interface Account { id: string; handle: string; rating: number; coins?: number }
+export interface Account { id: string; handle: string; rating: number; coins?: number; wallet?: string | null }
 export interface MarketPlayer { name: string; role: string; overall: number; attrs: Record<string, number>; hidden: number }
 export interface MarketListing { id: string; playerId: string; price: number; sellerHandle: string; mine: boolean; player: MarketPlayer }
 export interface TableRow { id: string; handle: string; rating: number; P: number; W: number; D: number; L: number; GF: number; GA: number; GD: number; Pts: number }
@@ -76,4 +76,9 @@ export const api = {
   listPlayer: (playerId: string, price: number) => req<{ ok: true; id: string }>('/market/list', { method: 'POST', body: JSON.stringify({ playerId, price }) }),
   buyListing: (id: string) => req<{ ok: true; player: { name: string; role: string }; coins: number }>(`/market/${id}/buy`, { method: 'POST' }),
   cancelListing: (id: string) => req<{ ok: true }>(`/market/${id}/cancel`, { method: 'POST' }),
+  walletNonce: (address: string) => req<{ message: string }>('/auth/wallet/nonce', { method: 'POST', body: JSON.stringify({ address }) }),
+  walletVerify: (address: string, signature: string) => req<{ token: string; account: Account; club: Club; standingOrders: StandingOrders }>(
+    '/auth/wallet/verify', { method: 'POST', body: JSON.stringify({ address, signature }) }),
+  walletLink: (address: string, signature: string) => req<{ ok: true; wallet: string }>(
+    '/auth/wallet/link', { method: 'POST', body: JSON.stringify({ address, signature }) }),
 };

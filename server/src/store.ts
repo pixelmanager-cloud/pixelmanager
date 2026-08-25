@@ -37,6 +37,10 @@ export interface Store {
   accountById(id: string): Promise<Account | undefined>;
   accountAuthByHandle(handle: string): Promise<AuthRow | undefined>;
   setPassword(accountId: string, passwordHash: string): Promise<void>;
+  // wallet sign-in (web3 Step 1): address ⇄ account
+  walletAccount(address: string): Promise<{ id: string; handle: string; rating: number; token: string } | undefined>;
+  linkWallet(accountId: string, address: string): Promise<void>;
+  walletOf(accountId: string): Promise<string | null>;
   handleTaken(handle: string): Promise<boolean>;
   setRating(id: string, rating: number): Promise<void>;
   // transfer-market economy (coins + listings)

@@ -49,6 +49,8 @@ export function makeSqliteStore(file: string): Store {
       try { db.exec('ALTER TABLE accounts ADD COLUMN password_hash TEXT'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE accounts ADD COLUMN coins INTEGER NOT NULL DEFAULT 500'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE honours ADD COLUMN coin_reward INTEGER NOT NULL DEFAULT 0'); } catch { /* already added */ }
+      try { db.exec('ALTER TABLE accounts ADD COLUMN wallet_address TEXT'); } catch { /* already added */ }
+      try { db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_wallet ON accounts(wallet_address) WHERE wallet_address IS NOT NULL'); } catch { /* already added */ }
     },
     async createAccount(id, handle, token, createdAt, passwordHash) {
       db.prepare('INSERT INTO accounts (id, handle, token, rating, created_at, password_hash) VALUES (?,?,?,1000,?,?)').run(id, handle, token, createdAt, passwordHash);
@@ -62,6 +64,12 @@ export function makeSqliteStore(file: string): Store {
       return r && { id: r.id, handle: r.handle, rating: r.rating, token: r.token, passwordHash: r.password_hash ?? null } as AuthRow;
     },
     async setPassword(accountId, passwordHash) { db.prepare('UPDATE accounts SET password_hash=? WHERE id=?').run(passwordHash, accountId); },
+    async walletAccount(address) {
+      const r = db.prepare('SELECT id, handle, rating, token FROM accounts WHERE wallet_address=?').get(address.toLowerCase()) as any;
+      return r && { id: r.id, handle: r.handle, rating: r.rating, token: r.token };
+    },
+    async linkWallet(accountId, address) { db.prepare('UPDATE accounts SET wallet_address=? WHERE id=?').run(address.toLowerCase(), accountId); },
+    async walletOf(accountId) { const r = db.prepare('SELECT wallet_address FROM accounts WHERE id=?').get(accountId) as any; return r ? (r.wallet_address ?? null) : null; },
     async accountById(id) {
       const r = db.prepare('SELECT id, handle, rating, created_at FROM accounts WHERE id=?').get(id) as any;
       return r && { id: r.id, handle: r.handle, rating: r.rating, createdAt: r.created_at } as Account;

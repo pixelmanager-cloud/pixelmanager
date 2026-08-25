@@ -60,6 +60,17 @@
       #handle-input, #password-input { font-family: var(--body); font-size: 20px; background: var(--panel-2); color: var(--text);
         border: 2px solid var(--line); box-shadow: 3px 3px 0 rgba(0,0,0,0.6); padding: 8px 12px; outline: none; }
       #handle-input::placeholder, #password-input::placeholder { color: #7a7ab0; }
+      /* wallet sign-in */
+      #wallet-box { margin-top: 16px; }
+      .wallet-or { display: flex; align-items: center; gap: 10px; color: #778; font-size: 13px; margin: 4px 0 10px; }
+      .wallet-or::before, .wallet-or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
+      .wallet-btns { display: flex; gap: 10px; flex-wrap: wrap; }
+      #wallet-email-flow { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+      #wallet-email, #wallet-code { font-family: var(--body); font-size: 17px; background: var(--panel-2); color: var(--text);
+        border: 2px solid var(--line); padding: 7px 10px; outline: none; }
+      #me-wallet { font-family: var(--display); font-size: 9px; color: var(--cyan); border: 1px solid var(--cyan);
+        border-radius: 4px; padding: 3px 6px; }
+      #wallet-hint { font-size: 13px; margin-top: 8px; }
       #handle-input:hover, #password-input:hover { border-color: var(--cyan); }
       #handle-input:focus, #password-input:focus { border-color: var(--good); box-shadow: 3px 3px 0 rgba(0,0,0,0.6), 0 0 10px var(--good); }
       /* hub */
@@ -369,15 +380,29 @@
           <button id="register-btn" class="primary">Create Club</button>
         </div>
         <div id="login-error" style="color:var(--home); font-size:15px; margin-top:8px"></div>
+        <div id="wallet-box">
+          <div class="wallet-or"><span>or connect a wallet</span></div>
+          <div class="wallet-btns">
+            <button id="wallet-email-btn">✉ Email sign-in</button>
+            <button id="wallet-injected-btn">🦊 Browser wallet</button>
+          </div>
+          <div id="wallet-email-flow" class="hidden">
+            <input id="wallet-email" type="email" placeholder="you@email.com" maxlength="120" />
+            <input id="wallet-code" class="hidden" placeholder="6-digit code" maxlength="12" />
+            <button id="wallet-email-go">Send code</button>
+          </div>
+          <div id="wallet-hint" class="muted"></div>
+        </div>
       </div>
 
       <!-- HUB -->
       <div id="hub" class="panel hidden">
-        <div id="hub-head"><span id="me-name"></span><span id="me-rating"></span><span id="me-coins" title="Transfer-market coins — earn them by playing"></span>
+        <div id="hub-head"><span id="me-name"></span><span id="me-rating"></span><span id="me-coins" title="Transfer-market coins — earn them by playing"></span><span id="me-wallet" class="hidden" title="Linked wallet"></span>
           <div class="hub-actions">
             <button id="view-standings">📊 League &amp; Results</button>
             <button id="view-scouting">🔎 Scouting</button>
             <button id="view-market">💰 Transfer Market</button>
+            <button id="link-wallet" class="hidden">🔗 Link Wallet</button>
             <button id="set-team">⚙ Set My Team</button>
           </div>
         </div>

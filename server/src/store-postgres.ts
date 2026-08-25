@@ -58,6 +58,8 @@ export function makePostgresStore(connectionString: string): Store {
         ALTER TABLE accounts ADD COLUMN IF NOT EXISTS password_hash TEXT;
         ALTER TABLE accounts ADD COLUMN IF NOT EXISTS coins INTEGER NOT NULL DEFAULT 500;
         ALTER TABLE honours ADD COLUMN IF NOT EXISTS coin_reward INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE accounts ADD COLUMN IF NOT EXISTS wallet_address TEXT;
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_accounts_wallet ON accounts(wallet_address) WHERE wallet_address IS NOT NULL;
       `);
     },
     async createAccount(id, handle, token, createdAt, passwordHash) {
@@ -72,6 +74,12 @@ export function makePostgresStore(connectionString: string): Store {
       return r && { id: r.id, handle: r.handle, rating: r.rating, token: r.token, passwordHash: r.password_hash ?? null } as AuthRow;
     },
     async setPassword(accountId, passwordHash) { await q('UPDATE accounts SET password_hash=$1 WHERE id=$2', [passwordHash, accountId]); },
+    async walletAccount(address) {
+      const r = (await q('SELECT id, handle, rating, token FROM accounts WHERE wallet_address=$1', [address.toLowerCase()])).rows[0];
+      return r && { id: r.id, handle: r.handle, rating: r.rating, token: r.token };
+    },
+    async linkWallet(accountId, address) { await q('UPDATE accounts SET wallet_address=$1 WHERE id=$2', [address.toLowerCase(), accountId]); },
+    async walletOf(accountId) { const r = (await q('SELECT wallet_address FROM accounts WHERE id=$1', [accountId])).rows[0]; return r ? (r.wallet_address ?? null) : null; },
     async accountById(id) {
       const r = (await q('SELECT id, handle, rating, created_at FROM accounts WHERE id=$1', [id])).rows[0];
       return r && { id: r.id, handle: r.handle, rating: r.rating, createdAt: Number(r.created_at) } as Account;
