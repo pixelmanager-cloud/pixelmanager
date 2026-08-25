@@ -37,7 +37,7 @@ implements it on a branch, and opens a PR for you to review.
   sub-text, "rating 1000", `.muted`, scout descriptions, empty-state copy) with it. Keep hints one step
   lighter than body text, not three. Client-only CSS. `npm run verify` passes.
 
-- [ ] **[readability] Soften the CRT overlay.** Per audit R4: `body::before`/`body::after` (scanlines +
+- [x] **[readability] Soften the CRT overlay.** Per audit R4: `body::before`/`body::after` (scanlines +
   vignette, z-index 9998/9999) reduce text crispness over small type. Lower the scanline opacity and
   vignette strength so it's a subtle hint, not a filter over the content — OR add a small "CRT" on/off
   toggle in the top bar that persists in localStorage (default on, softer). Keep the retro vibe. Client-only.
