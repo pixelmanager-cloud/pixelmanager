@@ -73,6 +73,18 @@ function statColor(v: number): string {
   return '#d16a5a';
 }
 
+// NFT rank tiers (LoL-style, escalating icons). Only NFT players get a tier — so the
+// presence of a badge differentiates paid stars from free filler players.
+const isNftId = (id: string) => id.startsWith('nft:');
+interface Tier { key: string; name: string; icon: string }
+function nftTier(ov: number): Tier {
+  if (ov >= 18) return { key: 'legend', name: 'LEGEND', icon: '👑' };
+  if (ov >= 16) return { key: 'diamond', name: 'DIAMOND', icon: '💎' };
+  if (ov >= 14) return { key: 'gold', name: 'GOLD', icon: '🥇' };
+  if (ov >= 12) return { key: 'silver', name: 'SILVER', icon: '🥈' };
+  return { key: 'bronze', name: 'BRONZE', icon: '🥉' };
+}
+
 // Sort state for the full-squad-stats table. `null` = default role grouping.
 type SquadSort = { key: string; dir: 'asc' | 'desc' };
 const ROLE_ORDER: Record<string, number> = { GK: 0, DF: 1, MF: 2, FW: 3 };
@@ -316,9 +328,10 @@ class Game {
   private showMintReveal(p: Player) {
     const lab: Record<string, string> = { pace: 'PAC', strength: 'STR', passing: 'PAS', shooting: 'SHO', tackling: 'TAC', positioning: 'POS', workrate: 'WOR', keeping: 'GK' };
     const stats = Object.entries(p.attrs).map(([k, v]) => `<div class="ms-stat"><span>${lab[k] ?? k}</span><b style="color:${statColor(v as number)}">${v}</b></div>`).join('');
+    const tier = nftTier(overall(p));
     const el = document.createElement('div');
     el.id = 'mint-reveal';
-    el.innerHTML = `<div class="ms-card"><div class="ms-head">★ NEW STAR MINTED</div>`
+    el.innerHTML = `<div class="ms-card tier-${tier.key}"><div class="ms-head">${tier.icon} ${tier.name} STAR MINTED</div>`
       + `<div class="ms-name">${p.name}</div>`
       + `<div class="ms-sub">${p.role} · OVR <b>${overall(p)}</b> · owned on-chain as an NFT</div>`
       + `<div class="ms-stats">${stats}</div>`
@@ -696,15 +709,15 @@ class Game {
       const roleForSlot = SLOT_ROLES[this.draftTactics.formation][i];
       const used = usedElsewhere(i);
       const isLoan = (id: string) => id.startsWith('loan-');
-      const isNft = (id: string) => id.startsWith('nft:');
-      const tagText = (id: string) => isLoan(id) ? ' · LOAN' : isNft(id) ? ' ★ NFT' : '';
+      const tagText = (p: Player) => isLoan(p.id) ? ' · LOAN' : isNftId(p.id) ? ` ${nftTier(overall(p)).icon}` : '';
       const opts = this.club.players
         .filter((p) => p.id === pid || !used.has(p.id))
         .sort((a, b) => overall(b) - overall(a))
-        .map((p) => `<option value="${p.id}" ${p.id === pid ? 'selected' : ''}>${p.name} (${p.role} ${overall(p)})${tagText(p.id)}</option>`).join('');
+        .map((p) => `<option value="${p.id}" ${p.id === pid ? 'selected' : ''}>${p.name} (${p.role} ${overall(p)})${tagText(p)}</option>`).join('');
       const cur = this.club.players.find((p) => p.id === pid)!;
+      const curTier = nftTier(overall(cur));
       const tag = isLoan(cur.id) ? `<span class="loan" title="Loanee — plays this season only, then leaves">LOAN</span>`
-        : isNft(cur.id) ? `<span class="nft" title="Star player you own as an NFT (on-chain)">★ NFT</span>` : '';
+        : isNftId(cur.id) ? `<span class="nft tier-${curTier.key}" title="NFT star · ${curTier.name} tier (on-chain)">${curTier.icon} ${curTier.name}</span>` : '';
       const dutyOpts = DUTIES_BY_ROLE[cur.role]
         .map((d) => `<option value="${d}" ${d === this.draftDuties[i] ? 'selected' : ''}>${DUTY_LABEL[d]}</option>`).join('');
       return `<div class="slot role-${roleForSlot}"><span class="role role-${roleForSlot}">${roleForSlot}</span><select class="player-sel" data-i="${i}">${opts}</select><select class="duty-sel" data-i="${i}" title="This player's duty — how they play">${dutyOpts}</select>${tag}<span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span></div>`;
@@ -727,7 +740,7 @@ class Game {
 
     const inXI = new Set(slots);
     const bench = this.club.players.filter((p) => !inXI.has(p.id)).sort((a, b) => overall(b) - overall(a));
-    $('bench').innerHTML = `<b>Bench:</b> ${bench.map((p) => `${p.name} (${p.role} ${overall(p)})`).join(' · ')}`;
+    $('bench').innerHTML = `<b>Bench:</b> ${bench.map((p) => `${p.name} (${p.role} ${overall(p)})${isNftId(p.id) ? ' ' + nftTier(overall(p)).icon : ''}`).join(' · ')}`;
     if (!$('squad-panel').classList.contains('hidden')) this.renderSquadPanel();
     this.updateEditorInsight();
   }
