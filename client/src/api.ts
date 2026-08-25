@@ -43,6 +43,9 @@ export interface Scout {
 }
 export interface Trialist { index: number; id: string; name: string; role: string; overall: number; band: 'raw' | 'squad' | 'quality' | 'gem'; signed: boolean }
 export interface HonourRow { season_number: number; tier: string; final_pos: number; title: number; ended_at: number; coin_reward?: number }
+export interface CupTie { homeId: string; awayId: string; homeHandle: string; awayHandle: string; homeScore: number; awayScore: number; pens: [number, number] | null; winnerId: string }
+export interface CupRound { name: string; ties: CupTie[]; byes: { id: string; handle: string }[] }
+export interface CupData { season: number; tier: string; pod: number; me: string; size: number; rounds: CupRound[]; championId: string | null; championHandle: string }
 export interface MatchPayload {
   matchId: string; seed: number; result: [number, number]; mySide: 0 | 1;
   home: { id: string; handle: string; rating?: number; team: Team; tactics: Tactics };
@@ -72,6 +75,7 @@ export const api = {
   signTrial: (index: number) => req<{ ok: true; player: { name: string; role: string }; signedCount: number }>(`/scout/trials/${index}/sign`, { method: 'POST' }),
   standings: () => req<{ season: { number: number; endsAt: number }; tier: string; pod: number; promote: number; relegate: number; table: TableRow[] }>('/standings'),
   honours: () => req<{ honours: HonourRow[] }>('/honours'),
+  cup: () => req<CupData>('/cup'),
   market: () => req<{ coins: number; tier: string; listings: MarketListing[]; mine: MarketListing[] }>('/market'),
   listPlayer: (playerId: string, price: number) => req<{ ok: true; id: string }>('/market/list', { method: 'POST', body: JSON.stringify({ playerId, price }) }),
   buyListing: (id: string) => req<{ ok: true; player: { name: string; role: string }; coins: number }>(`/market/${id}/buy`, { method: 'POST' }),

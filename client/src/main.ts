@@ -4,7 +4,7 @@ import {
   TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty,
 } from '@fm/shared';
 import { SCALE, makeBallTexture, makeBallGhostTexture, makePitchTexture, makePlayerFrames, makeShadowTexture, makeCarrierTexture } from './pixelart';
-import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing } from './api';
+import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData } from './api';
 import { walletConfigured, nftConfigured, sendEmailCode, connectEmail, connectInjected, autoConnectInApp, signMessage, claimTokens, mintPlayer, mintScout, type Account as WalletAccount } from './wallet';
 
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
@@ -201,13 +201,17 @@ class Game {
     $('view-market').addEventListener('click', () => this.showMarket());
     $('market-back').addEventListener('click', () => this.showHub());
     $('sell-btn').addEventListener('click', () => this.sellPlayer());
-    const showTab = (tab: 'results' | 'honours') => {
+    const showTab = (tab: 'results' | 'cup' | 'honours') => {
       $('results-feed').classList.toggle('hidden', tab !== 'results');
+      $('cup-feed').classList.toggle('hidden', tab !== 'cup');
       $('honours-feed').classList.toggle('hidden', tab !== 'honours');
       $('tab-results').classList.toggle('active', tab === 'results');
+      $('tab-cup').classList.toggle('active', tab === 'cup');
       $('tab-honours').classList.toggle('active', tab === 'honours');
+      if (tab === 'cup') void this.loadCup();
     };
     $('tab-results').addEventListener('click', () => showTab('results'));
+    $('tab-cup').addEventListener('click', () => showTab('cup'));
     $('tab-honours').addEventListener('click', () => showTab('honours'));
     $('skip').addEventListener('click', () => this.skipToEnd());
     $('set-team').addEventListener('click', () => this.openLineup('standing'));
@@ -505,6 +509,32 @@ class Game {
         + `<span class="hr-main"><b>Season ${h.season_number}</b> · ${h.tier}</span>`
         + `<span class="hr-fin">${champ ? 'CHAMPION' : `${ORDINAL(h.final_pos)} place`}</span>${prize}</div>`;
     }).join('');
+  }
+
+  private async loadCup() {
+    $('cup-feed').innerHTML = SPINNER;
+    try { $('cup-feed').innerHTML = this.renderCup(await api.cup()); }
+    catch { $('cup-feed').innerHTML = '<div class="muted">Could not load the cup.</div>'; }
+  }
+
+  private renderCup(c: CupData): string {
+    if (!c.rounds.length) return '<div class="muted">The Pod Cup needs at least two clubs in your pod — as managers join, the bracket fills in.</div>';
+    const note = '<div class="cup-note">A knockout among your pod. Draws are settled by a penalty shootout — your best <b>set-piece</b> takers vs their keeper. The bracket firms up as managers set their teams; the champion is crowned at season\'s end.</div>';
+    const champ = c.championHandle ? `<div class="cup-champ">🏆 <span>Projected champion</span> <b>${c.championHandle}</b></div>` : '';
+    const rounds = c.rounds.map((r) => {
+      const ties = r.ties.map((t) => {
+        const homeWin = t.winnerId === t.homeId;
+        const score = t.pens ? `${t.homeScore}-${t.awayScore} <span class="ct-pens">(${t.pens[0]}-${t.pens[1]}p)</span>` : `${t.homeScore}-${t.awayScore}`;
+        const mine = t.homeId === c.me || t.awayId === c.me ? ' mine' : '';
+        return `<div class="cup-tie${mine}">`
+          + `<span class="ct-team home ${homeWin ? 'win' : ''}">${t.homeHandle}</span>`
+          + `<span class="ct-score">${score}</span>`
+          + `<span class="ct-team away ${!homeWin ? 'win' : ''}">${t.awayHandle}</span></div>`;
+      }).join('');
+      const byes = r.byes.length ? `<div class="cup-byes">Byes: ${r.byes.map((b) => b.handle).join(' · ')}</div>` : '';
+      return `<div class="cup-round"><div class="cup-round-name">${r.name}</div>${ties}${byes}</div>`;
+    }).join('');
+    return champ + note + `<div class="cup-bracket">${rounds}</div>`;
   }
 
   // ---- scouting (trial/loan academy) ----

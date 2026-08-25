@@ -197,6 +197,23 @@
       .honour-row .hr-fin { font-family: var(--display); font-size: 9px; color: var(--cyan); }
       .honour-row.champ .hr-fin { color: var(--warn); }
       .honour-row .hr-prize { font-family: var(--display); font-size: 9px; color: var(--warn); min-width: 66px; text-align: right; }
+      /* cup bracket */
+      .cup-champ { font-family: var(--display); font-size: 11px; color: var(--warn); text-align: center; padding: 8px;
+        border: 2px solid var(--warn); border-radius: 6px; background: rgba(255,206,58,0.1); margin-bottom: 8px; }
+      .cup-champ span { color: #9ab; font-size: 9px; } .cup-champ b { color: #fff; margin-left: 4px; }
+      .cup-note { font-size: 13px; color: #9ab; margin-bottom: 10px; line-height: 1.4; } .cup-note b { color: var(--good); }
+      .cup-bracket { display: flex; gap: 14px; overflow-x: auto; padding-bottom: 6px; }
+      .cup-round { flex: none; min-width: 210px; }
+      .cup-round-name { font-family: var(--display); font-size: 9px; color: var(--pink); margin-bottom: 6px; letter-spacing: 0.5px; }
+      .cup-tie { display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 5px;
+        background: var(--panel-2); padding: 5px 7px; margin-bottom: 6px; font-size: 14px; }
+      .cup-tie.mine { border-color: var(--cyan); box-shadow: 0 0 6px rgba(0,229,255,0.3); }
+      .cup-tie .ct-team { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #8899b5; }
+      .cup-tie .ct-team.away { text-align: right; }
+      .cup-tie .ct-team.win { color: #fff; font-weight: bold; }
+      .cup-tie .ct-score { font-family: var(--display); font-size: 10px; color: var(--good); flex: none; white-space: nowrap; }
+      .cup-tie .ct-pens { color: var(--warn); font-size: 8px; }
+      .cup-byes { font-size: 12px; color: #667; font-style: italic; margin-top: 2px; }
       #results-feed { max-height: 340px; overflow-y: auto; }
       .result-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-bottom: 1px solid var(--line); font-size: 18px; }
       .result-row.me { background: rgba(57,255,158,0.06); }
@@ -536,9 +553,11 @@
         <div class="zone-legend"><span class="lg-promo">▲ Promotion</span><span class="lg-releg">▼ Relegation</span></div>
         <div class="tabrow">
           <button id="tab-results" class="tab active">Recent Results</button>
+          <button id="tab-cup" class="tab">🏆 Cup</button>
           <button id="tab-honours" class="tab">Honours</button>
         </div>
         <div id="results-feed"></div>
+        <div id="cup-feed" class="hidden"></div>
         <div id="honours-feed" class="hidden"></div>
       </div>
 

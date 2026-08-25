@@ -7,6 +7,7 @@ import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMA
 import { hashPassword, verifyPassword } from './auth.js';
 import { generatePool, trialistAt, LOANEE_CAP, OPP_REVEAL, describeIntel, type OppTier } from './scouting.js';
 import { viewerTiers, scoutNftInfo } from './scoutnft.js';
+import { computeCup, type SquadMap } from './cup.js';
 import type { PlayerScoutTier } from './market.js';
 import { ensureSeason, ensurePod, forceRollover, resultsAmong, startOfUtcDay, PROMOTE, RELEGATE, MATCHES_PER_DAY } from './seasons.js';
 import {
@@ -290,6 +291,18 @@ app.get('/leaderboard', async () => ({ leaderboard: await db.leaderboard() }));
 app.get('/season', async () => {
   const s = await ensureSeason(db, Date.now());
   return { season: { number: s.number, startsAt: s.startsAt, endsAt: s.endsAt, status: s.status, endsInMs: Math.max(0, s.endsAt - Date.now()) } };
+});
+
+// your pod's KNOCKOUT CUP this season — a deterministic bracket projection (firms up as
+// managers set their teams), draws settled by a setPiece-driven penalty shootout.
+app.get('/cup', { preHandler: requireAuth }, async (req) => {
+  const s = await ensureSeason(db, Date.now());
+  const { tier, pod } = await ensurePod(db, s, req.account!.id);
+  const members = await db.podMembers(s.id, tier, pod);
+  const clubs: SquadMap = new Map();
+  await Promise.all(members.map(async (m) => { const c = await loadSquad(m.id); if (c) clubs.set(m.id, c); }));
+  const cup = computeCup(s.number, members, clubs);
+  return { season: s.number, tier, pod, me: req.account!.id, ...cup };
 });
 
 // your pod's standings this season (Phase B: a legible ~20-row table)
