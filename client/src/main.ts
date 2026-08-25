@@ -186,8 +186,17 @@ class Game {
     this.showScreen('login');
   }
 
-  private setMe(me: { account: Account; club: Club; standingOrders: StandingOrders }) {
+  private injured = new Map<string, number>(); // playerId → matches remaining out
+  private setMe(me: { account: Account; club: Club; standingOrders: StandingOrders; injuries?: Array<{ player_id: string; matches_remaining: number }> }) {
     this.account = me.account; this.club = me.club; this.standingOrders = me.standingOrders;
+    this.injured = new Map((me.injuries ?? []).map((i) => [i.player_id, i.matches_remaining]));
+  }
+  /** The squad minus injured players (who can't be fielded) — falls back to the full squad
+   *  if benching the injured would leave fewer than 11, mirroring the server. */
+  private availableClub(): Club {
+    if (!this.injured.size) return this.club;
+    const healthy = this.club.players.filter((p) => !this.injured.has(p.id));
+    return healthy.length >= 11 ? { ...this.club, players: healthy } : this.club;
   }
 
   private showScreen(s: 'login' | 'hub' | 'lineup' | 'match' | 'standings' | 'scouting' | 'market' | 'club') {
@@ -229,7 +238,7 @@ class Game {
     $('tab-honours').addEventListener('click', () => showTab('honours'));
     $('skip').addEventListener('click', () => this.skipToEnd());
     $('set-team').addEventListener('click', () => this.openLineup('standing'));
-    $('autopick').addEventListener('click', () => { this.draftLineup = autoPickXI(this.club, this.draftTactics.formation); this.rebuildDuties(); this.renderLineupEditor(); });
+    $('autopick').addEventListener('click', () => { this.draftLineup = autoPickXI(this.availableClub(), this.draftTactics.formation); this.rebuildDuties(); this.renderLineupEditor(); });
     $('save-team').addEventListener('click', () => (this.editorMode === 'standing' ? this.saveTeam() : this.kickOffMatch()));
     $('lineup-back').addEventListener('click', () => this.showHub());
     $('toggle-squad').addEventListener('click', () => {
@@ -965,11 +974,12 @@ class Game {
     this.draftTactics = { ...this.standingOrders.tactics, formation: this.standingOrders.formation };
     // the saved XI can reference players no longer in the squad (e.g. an NFT star that's
     // been transferred/de-listed) — fall back to a valid auto-pick so the editor still opens
-    const owned = new Set(this.club.players.map((x) => x.id));
+    const avail = this.availableClub();
+    const owned = new Set(avail.players.map((x) => x.id)); // injured players are unavailable
     const soValid = this.standingOrders.playerIds.length === 11 && this.standingOrders.playerIds.every((id) => owned.has(id));
     this.draftLineup = soValid
       ? { formation: this.standingOrders.formation, playerIds: [...this.standingOrders.playerIds] }
-      : autoPickXI(this.club, this.standingOrders.formation);
+      : autoPickXI(avail, this.standingOrders.formation);
     this.draftDuties = this.draftLineup.playerIds.map((pid, i) => {
       const p = this.club.players.find((x) => x.id === pid)!;
       const saved = soValid ? this.standingOrders.duties?.[i] : undefined;
@@ -1049,7 +1059,7 @@ class Game {
       const isLoan = (id: string) => id.startsWith('loan-');
       const tagText = (p: Player) => isLoan(p.id) ? ' · LOAN' : isNftId(p.id) ? ` ${nftTier(overall(p)).icon}` : '';
       const opts = this.club.players
-        .filter((p) => p.id === pid || !used.has(p.id))
+        .filter((p) => p.id === pid || (!used.has(p.id) && !this.injured.has(p.id))) // hide injured from the picker
         .sort((a, b) => overall(b) - overall(a))
         .map((p) => `<option value="${p.id}" ${p.id === pid ? 'selected' : ''}>${p.name} (${p.role} ${overall(p)})${tagText(p)}</option>`).join('');
       const cur = this.club.players.find((p) => p.id === pid)!;
@@ -1077,12 +1087,14 @@ class Game {
     });
 
     const inXI = new Set(slots);
-    const bench = this.club.players.filter((p) => !inXI.has(p.id)).sort((a, b) => overall(b) - overall(a));
+    const bench = this.club.players.filter((p) => !inXI.has(p.id) && !this.injured.has(p.id)).sort((a, b) => overall(b) - overall(a));
+    const hurt = this.club.players.filter((p) => this.injured.has(p.id)).sort((a, b) => overall(b) - overall(a));
+    const injuredHtml = hurt.length ? `<div class="bench-injured"><b>🤕 Injured:</b> ` + hurt.map((p) => `<span class="inj">${p.name} (${p.role} ${overall(p)}) · ${this.injured.get(p.id)}m</span>`).join(' · ') + '</div>' : '';
     $('bench').innerHTML = `<b>Bench:</b> ` + bench.map((p) => {
       const t = isNftId(p.id) ? nftTier(overall(p)) : null;
       return t ? `<span class="bench-nft tier-${t.key}" data-card="${p.id}" title="Owned NFT · ${t.name} — click to view card">${t.icon} ${p.name} (${p.role} ${overall(p)})</span>`
         : `${p.name} (${p.role} ${overall(p)})`;
-    }).join(' · ');
+    }).join(' · ') + injuredHtml;
     // NFT badges/names open the collectible card
     Array.from(document.querySelectorAll<HTMLElement>('#xi [data-card], #bench [data-card]')).forEach((el) => {
       el.style.cursor = 'pointer';
@@ -1098,7 +1110,9 @@ class Game {
 
   private renderSquadPanel() {
     const panel = $('squad-panel');
-    panel.innerHTML = statsTableHTML(this.club.players, new Set(this.draftLineup.playerIds), this.squadSort);
+    const hurt = this.club.players.filter((p) => this.injured.has(p.id)).sort((a, b) => (this.injured.get(a.id)! - this.injured.get(b.id)!));
+    const injHtml = hurt.length ? `<div class="squad-injured">🤕 <b>Injured:</b> ${hurt.map((p) => `${p.name} <span class="m">${this.injured.get(p.id)}m</span>`).join(' · ')}</div>` : '';
+    panel.innerHTML = injHtml + statsTableHTML(this.club.players, new Set(this.draftLineup.playerIds), this.squadSort);
     panel.querySelectorAll<HTMLElement>('th.sortable').forEach((th) => {
       th.addEventListener('click', () => {
         const key = th.dataset.sort!;
@@ -1152,9 +1166,11 @@ class Game {
   }
 
   private lastGate = 0;
+  private lastInjuries: Array<{ name: string; matches: number }> = [];
   private startMatch(payload: MatchPayload) {
     this.mySide = payload.mySide;
     this.lastGate = payload.gateIncome ?? 0;
+    this.lastInjuries = payload.injuries ?? [];
     this.homeName = payload.home.handle;
     this.awayName = payload.away.handle;
     // guarantee the two kits clearly contrast on the pitch even if the clubs' colours are similar
@@ -1181,6 +1197,8 @@ class Game {
   private async onFullTime() {
     this.running = false;
     try { this.setMe(await api.me()); } catch { /* keep old rating */ }
+    // surface any injuries picked up this match (staggered so they don't overlap the result toast)
+    this.lastInjuries.forEach((inj, i) => setTimeout(() => toast(`🤕 ${inj.name} injured — out ${inj.matches} match${inj.matches > 1 ? 'es' : ''}`), 800 * (i + 1)));
     this.showFullTimeCard();
   }
 

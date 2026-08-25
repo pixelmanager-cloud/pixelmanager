@@ -69,8 +69,12 @@ export interface Store {
   getPlan(ownerId: string, opponentId: string): Promise<StandingOrders | undefined>;
   // trial/loan academy: signed loanees (expire at season rollover)
   // club facilities (persistent per-club upgrade levels)
-  getFacilities(accountId: string): Promise<{ stadium: number; training: number; youth: number; scouting: number }>;
+  getFacilities(accountId: string): Promise<{ stadium: number; training: number; youth: number; scouting: number; medical: number; sponsor: number; fanzone: number }>;
   setFacilityLevel(accountId: string, key: string, level: number): Promise<void>;
+  // injuries (per-club player unavailability, counts down as the club plays matches)
+  getInjuries(accountId: string): Promise<Array<{ player_id: string; matches_remaining: number }>>;
+  addInjury(accountId: string, playerId: string, matches: number): Promise<void>;
+  decrementInjuries(accountId: string): Promise<void>;
   // scouting network: dispatched trips (sealed at dispatch, revealed after travel)
   createMission(m: MissionRow): Promise<void>;
   missionsInSeason(accountId: string, seasonId: string): Promise<MissionRow[]>;

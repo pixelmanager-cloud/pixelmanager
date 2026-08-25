@@ -62,7 +62,7 @@ export interface Facility {
 }
 export interface FacilitiesData { coins: number; facilities: Facility[] }
 export interface MatchPayload {
-  matchId: string; seed: number; result: [number, number]; mySide: 0 | 1; coinsEarned?: number; gateIncome?: number;
+  matchId: string; seed: number; result: [number, number]; mySide: 0 | 1; coinsEarned?: number; gateIncome?: number; injuries?: Array<{ name: string; matches: number }>;
   home: { id: string; handle: string; rating?: number; team: Team; tactics: Tactics };
   away: { id: string; handle: string; rating?: number; team: Team; tactics: Tactics };
 }
@@ -72,7 +72,7 @@ export const api = {
     '/register', { method: 'POST', body: JSON.stringify({ handle, password }) }),
   login: (handle: string, password: string) => req<{ token: string; account: Account; club: Club; standingOrders: StandingOrders }>(
     '/login', { method: 'POST', body: JSON.stringify({ handle, password }) }),
-  me: () => req<{ account: Account; club: Club; standingOrders: StandingOrders }>('/me'),
+  me: () => req<{ account: Account; club: Club; standingOrders: StandingOrders; injuries: Array<{ player_id: string; matches_remaining: number }> }>('/me'),
   setStandingOrders: (so: StandingOrders) => req<{ ok: true; standingOrders: StandingOrders }>(
     '/standing-orders', { method: 'PUT', body: JSON.stringify(so) }),
   opponents: () => req<{ opponents: Array<{ id: string; handle: string; rating: number; clubName: string }> }>('/opponents'),

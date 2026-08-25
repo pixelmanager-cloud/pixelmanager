@@ -9,6 +9,7 @@ import { buildTable, runMatch, elo, validateLineup } from './game.js';
 import { seasonPlacementReward, WIN_COINS, DRAW_COINS, LOSS_COINS } from './market.js';
 import { ownedPlayers } from './nft.js';
 import { trainingConditioning, stadiumIncome, fanIncomeMult, fanHomeBoost, sponsorIncome } from './facilities.js';
+import { rollMatchInjuries } from './injuries.js';
 import { computeCup, type SquadMap } from './cup.js';
 
 /** Merge a club with the star NFTs its linked wallet owns (read-only). */
@@ -95,17 +96,24 @@ async function simulateMatch(db: Store, homeId: string, awayId: string, seasonId
   const [home, away, homeC0, awayC0] = await Promise.all([db.accountById(homeId), db.accountById(awayId), db.getClub(homeId), db.getClub(awayId)]);
   if (!home || !away || !homeC0 || !awayC0) return;
   const [homeC, awayC] = await Promise.all([withNfts(db, homeId, homeC0), withNfts(db, awayId, awayC0)]);
-  // fall back to a valid auto-pick if a standing XI references players no longer in the squad (e.g. a transferred NFT)
+  // full parity with a live match: bench injured, then conditioning + coins + gate + fresh injury rolls
+  const [homeFac, awayFac, homeInj, awayInj] = await Promise.all([db.getFacilities(homeId), db.getFacilities(awayId), db.getInjuries(homeId), db.getInjuries(awayId)]);
+  const benchInjured = (club: typeof homeC.club, inj: Array<{ player_id: string }>) => {
+    const out = new Set(inj.map((x) => x.player_id));
+    const healthy = club.players.filter((p) => !out.has(p.id));
+    return healthy.length >= 11 ? { ...club, players: healthy } : club;
+  };
+  homeC.club = benchInjured(homeC.club, homeInj);
+  awayC.club = benchInjured(awayC.club, awayInj);
+  // fall back to a valid auto-pick if a standing XI references unavailable players (injured / transferred NFT)
   const lineupFor = (c: typeof homeC) => {
     const l = { formation: c.standingOrders.formation, playerIds: c.standingOrders.playerIds, duties: c.standingOrders.duties };
     return validateLineup(c.club, l) ? l : autoPickXI(c.club, c.standingOrders.formation);
   };
   const hl = lineupFor(homeC);
   const al = lineupFor(awayC);
-  // full parity with a live match: training-ground conditioning + result coins + home gate income
-  const [homeFac, awayFac] = await Promise.all([db.getFacilities(homeId), db.getFacilities(awayId)]);
   const conditioning = { home: trainingConditioning(homeFac.training), away: trainingConditioning(awayFac.training) };
-  const { seed, homeTeam, awayTeam, result } = runMatch(homeC.club, hl, homeC.standingOrders.tactics, awayC.club, al, awayC.standingOrders.tactics, conditioning, fanHomeBoost(homeFac.fanzone));
+  const { seed, homeTeam, awayTeam, result, homeFitness, awayFitness } = runMatch(homeC.club, hl, homeC.standingOrders.tactics, awayC.club, al, awayC.standingOrders.tactics, conditioning, fanHomeBoost(homeFac.fanzone));
   const sh = result[0] > result[1] ? 1 : result[0] < result[1] ? 0 : 0.5;
   const [nh, na] = elo(home.rating, away.rating, sh);
   const coinsFor = (s: number) => (s === 1 ? WIN_COINS : s === 0.5 ? DRAW_COINS : LOSS_COINS);
@@ -114,6 +122,13 @@ async function simulateMatch(db: Store, homeId: string, awayId: string, seasonId
   await Promise.all([
     db.setRating(homeId, nh), db.setRating(awayId, na),
     db.addCoins(homeId, coinsFor(sh) + gate), db.addCoins(awayId, coinsFor(1 - sh)),
+    db.decrementInjuries(homeId), db.decrementInjuries(awayId),
+  ]);
+  const homeNew = rollMatchInjuries(homeTeam, homeFitness, homeFac.medical, seed);
+  const awayNew = rollMatchInjuries(awayTeam, awayFitness, awayFac.medical, seed ^ 0x5f3759df);
+  await Promise.all([
+    ...homeNew.map((n) => db.addInjury(homeId, n.playerId, n.matches)),
+    ...awayNew.map((n) => db.addInjury(awayId, n.playerId, n.matches)),
   ]);
   await db.saveMatch({
     id: randomUUID(), homeId, awayId, homeTeam, awayTeam,

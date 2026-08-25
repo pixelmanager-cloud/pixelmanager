@@ -51,6 +51,9 @@ export function makeSqliteStore(file: string): Store {
       for (const c of ['medical', 'sponsor', 'fanzone']) {
         try { db.exec(`ALTER TABLE facilities ADD COLUMN ${c} INTEGER NOT NULL DEFAULT 1`); } catch { /* already added */ }
       }
+      db.exec(`CREATE TABLE IF NOT EXISTS injuries (
+        account_id TEXT NOT NULL, player_id TEXT NOT NULL, matches_remaining INTEGER NOT NULL,
+        PRIMARY KEY (account_id, player_id));`);
       // migrate pre-existing tables (adds columns; throws-and-ignored if already present)
       try { db.exec('ALTER TABLE matches ADD COLUMN season_id TEXT'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE matches ADD COLUMN initiator_id TEXT'); } catch { /* already added */ }
@@ -156,6 +159,16 @@ export function makeSqliteStore(file: string): Store {
       db.prepare('INSERT INTO facilities (account_id) VALUES (?) ON CONFLICT(account_id) DO NOTHING').run(accountId);
       db.prepare(`UPDATE facilities SET ${key}=? WHERE account_id=?`).run(level, accountId); // key validated above
     },
+    async getInjuries(accountId) {
+      return db.prepare('SELECT player_id, matches_remaining FROM injuries WHERE account_id=?').all(accountId) as Array<{ player_id: string; matches_remaining: number }>;
+    },
+    async addInjury(accountId, playerId, matches) {
+      db.prepare('INSERT OR REPLACE INTO injuries (account_id, player_id, matches_remaining) VALUES (?,?,?)').run(accountId, playerId, matches);
+    },
+    async decrementInjuries(accountId) {
+      db.prepare('UPDATE injuries SET matches_remaining = matches_remaining - 1 WHERE account_id=?').run(accountId);
+      db.prepare('DELETE FROM injuries WHERE account_id=? AND matches_remaining <= 0').run(accountId);
+    },
     async createMission(m) {
       db.prepare('INSERT INTO scout_missions (id, account_id, season_id, destination, dispatched_at, ready_at, found, player_json, band, status) VALUES (?,?,?,?,?,?,?,?,?,?)')
         .run(m.id, m.account_id, m.season_id, m.destination, m.dispatched_at, m.ready_at, m.found, m.player_json, m.band, m.status);
@@ -260,6 +273,6 @@ export function makeSqliteStore(file: string): Store {
     async seasonPods(seasonId) {
       return db.prepare('SELECT DISTINCT tier, pod FROM pod_members WHERE season_id=? ORDER BY tier, pod').all(seasonId) as PodRef[];
     },
-    async reset() { db.exec('DELETE FROM matches; DELETE FROM clubs; DELETE FROM accounts; DELETE FROM seasons; DELETE FROM honours; DELETE FROM pod_members; DELETE FROM plans; DELETE FROM loanees; DELETE FROM listings; DELETE FROM scout_missions; DELETE FROM facilities;'); },
+    async reset() { db.exec('DELETE FROM matches; DELETE FROM clubs; DELETE FROM accounts; DELETE FROM seasons; DELETE FROM honours; DELETE FROM pod_members; DELETE FROM plans; DELETE FROM loanees; DELETE FROM listings; DELETE FROM scout_missions; DELETE FROM facilities; DELETE FROM injuries;'); },
   };
 }

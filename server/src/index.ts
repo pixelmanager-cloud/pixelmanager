@@ -12,6 +12,7 @@ import {
   youthPoolBonus, youthUpgradeChance, scoutHitMult, scoutCostDiscount, scoutExtraTrips, fanIncomeMult, fanHomeBoost, type FacilityKey,
 } from './facilities.js';
 import type { Player } from '@fm/shared';
+import { rollMatchInjuries } from './injuries.js';
 import { viewerTiers, scoutNftInfo } from './scoutnft.js';
 import { computeCup, type SquadMap } from './cup.js';
 import type { PlayerScoutTier } from './market.js';
@@ -169,8 +170,8 @@ app.post('/auth/wallet/link', { preHandler: requireAuth }, async (req, reply) =>
 
 app.get('/me', { preHandler: requireAuth }, async (req) => {
   const c = (await loadSquad(req.account!.id))!; // includes any star NFTs the linked wallet owns
-  const [coins, wallet] = await Promise.all([db.getCoins(req.account!.id), db.walletOf(req.account!.id)]);
-  return { account: { ...req.account, coins, wallet }, club: c.club, standingOrders: c.standingOrders };
+  const [coins, wallet, injuries] = await Promise.all([db.getCoins(req.account!.id), db.walletOf(req.account!.id), db.getInjuries(req.account!.id)]);
+  return { account: { ...req.account, coins, wallet }, club: c.club, standingOrders: c.standingOrders, injuries };
 });
 
 app.put('/standing-orders', { preHandler: requireAuth }, async (req, reply) => {
@@ -241,27 +242,51 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const playedToday = await db.matchesToday(meId, season.id, startOfUtcDay(Date.now()));
   if (playedToday >= MATCHES_PER_DAY) return reply.code(429).send({ error: `daily match limit reached (${MATCHES_PER_DAY}/day) — come back tomorrow` });
 
-  const myLineup: Lineup = body.myLineup
+  // facilities + injuries: injured players are unavailable this match, so filter them out
+  // before either side picks its XI (keep everyone if fewer than 11 would remain — emergency).
+  const [meFac, oppFac, myInj, oppInj] = await Promise.all([
+    db.getFacilities(meId), db.getFacilities(oppId), db.getInjuries(meId), db.getInjuries(oppId),
+  ]);
+  const benchInjured = (club: typeof me.club, inj: Array<{ player_id: string }>) => {
+    const out = new Set(inj.map((x) => x.player_id));
+    const healthy = club.players.filter((p) => !out.has(p.id));
+    return healthy.length >= 11 ? { ...club, players: healthy } : club;
+  };
+  me!.club = benchInjured(me!.club, myInj);
+  oppClub.club = benchInjured(oppClub.club, oppInj);
+
+  let myLineup: Lineup = body.myLineup
     ? { formation: body.myLineup.formation, playerIds: body.myLineup.playerIds, duties: body.myLineup.duties }
     : { formation: me!.standingOrders.formation, playerIds: me!.standingOrders.playerIds, duties: me!.standingOrders.duties };
   const myTactics: Tactics = (body.myTactics as Tactics) ?? me!.standingOrders.tactics;
-  if (!isFormation(myLineup.formation) || !validateLineup(me!.club, myLineup)) return reply.code(400).send({ error: 'invalid lineup' });
+  if (!isFormation(myLineup.formation)) return reply.code(400).send({ error: 'invalid formation' });
+  // an injured or stale player in the chosen XI → auto-pick a valid one from who's available
+  if (!validateLineup(me!.club, myLineup)) myLineup = autoPickXI(me!.club, myLineup.formation);
   myLineup.duties = cleanDuties(me!.club, myLineup);
   // remember this plan for next time we face this opponent
   await db.savePlan(meId, oppId, { formation: myLineup.formation, playerIds: myLineup.playerIds, tactics: myTactics, duties: myLineup.duties });
   let oppLineup: Lineup = { formation: oppClub.standingOrders.formation, playerIds: oppClub.standingOrders.playerIds, duties: oppClub.standingOrders.duties };
-  if (!validateLineup(oppClub.club, oppLineup)) oppLineup = autoPickXI(oppClub.club, oppClub.standingOrders.formation); // stale NFT in their XI → auto-pick
+  if (!validateLineup(oppClub.club, oppLineup)) oppLineup = autoPickXI(oppClub.club, oppClub.standingOrders.formation); // stale/injured in their XI → auto-pick
   const oppTactics = oppClub.standingOrders.tactics;
 
   // training-ground conditioning: each side fades less by their own training level
-  const [meFac, oppFac] = await Promise.all([db.getFacilities(meId), db.getFacilities(oppId)]);
   const meCond = trainingConditioning(meFac.training), oppCond = trainingConditioning(oppFac.training);
   // run the match with the correct home/away team ordering (I may be the away side)
   const hClub = iAmHome ? me!.club : oppClub.club, hLineup = iAmHome ? myLineup : oppLineup, hTactics = iAmHome ? myTactics : oppTactics;
   const aClub = iAmHome ? oppClub.club : me!.club, aLineup = iAmHome ? oppLineup : myLineup, aTactics = iAmHome ? oppTactics : myTactics;
   const conditioning = { home: iAmHome ? meCond : oppCond, away: iAmHome ? oppCond : meCond };
   const homeBoost = fanHomeBoost((iAmHome ? meFac : oppFac).fanzone); // Fan Zone edge for the host
-  const { seed, homeTeam, awayTeam, result } = runMatch(hClub, hLineup, hTactics, aClub, aLineup, aTactics, conditioning, homeBoost);
+  const { seed, homeTeam, awayTeam, result, homeFitness, awayFitness } = runMatch(hClub, hLineup, hTactics, aClub, aLineup, aTactics, conditioning, homeBoost);
+
+  // injuries: everyone recovers a match, then the XIs that played are rolled for fresh knocks
+  const homeNew = rollMatchInjuries(homeTeam, homeFitness, (iAmHome ? meFac : oppFac).medical, seed);
+  const awayNew = rollMatchInjuries(awayTeam, awayFitness, (iAmHome ? oppFac : meFac).medical, seed ^ 0x5f3759df);
+  const myNew = iAmHome ? homeNew : awayNew, oppNew = iAmHome ? awayNew : homeNew;
+  await Promise.all([db.decrementInjuries(meId), db.decrementInjuries(oppId)]);
+  await Promise.all([
+    ...myNew.map((n) => db.addInjury(meId, n.playerId, n.matches)),
+    ...oppNew.map((n) => db.addInjury(oppId, n.playerId, n.matches)),
+  ]);
 
   // Elo from my perspective, regardless of which side I was on
   const myScore = iAmHome ? result[0] : result[1], oppScore = iAmHome ? result[1] : result[0];
@@ -286,6 +311,7 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
 
   return {
     matchId, seed, result, mySide: iAmHome ? 0 : 1, coinsEarned: myCoins, gateIncome: myGate,
+    injuries: myNew.map((n) => ({ name: n.playerName, matches: n.matches })),
     home: { id: homeId, handle: iAmHome ? req.account!.handle : opp.handle, rating: nHome, team: homeTeam, tactics: hTactics },
     away: { id: awayId, handle: iAmHome ? opp.handle : req.account!.handle, rating: nAway, team: awayTeam, tactics: aTactics },
   };

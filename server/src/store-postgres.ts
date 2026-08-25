@@ -61,6 +61,9 @@ export function makePostgresStore(connectionString: string): Store {
         ALTER TABLE facilities ADD COLUMN IF NOT EXISTS medical INTEGER NOT NULL DEFAULT 1;
         ALTER TABLE facilities ADD COLUMN IF NOT EXISTS sponsor INTEGER NOT NULL DEFAULT 1;
         ALTER TABLE facilities ADD COLUMN IF NOT EXISTS fanzone INTEGER NOT NULL DEFAULT 1;
+        CREATE TABLE IF NOT EXISTS injuries (
+          account_id TEXT NOT NULL, player_id TEXT NOT NULL, matches_remaining INTEGER NOT NULL,
+          PRIMARY KEY (account_id, player_id));
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS season_id TEXT;
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS initiator_id TEXT;
         ALTER TABLE clubs ADD COLUMN IF NOT EXISTS so_duties TEXT;
@@ -166,6 +169,16 @@ export function makePostgresStore(connectionString: string): Store {
     async setFacilityLevel(accountId, key, level) {
       if (!['stadium', 'training', 'youth', 'scouting', 'medical', 'sponsor', 'fanzone'].includes(key)) throw new Error('bad facility');
       await q(`INSERT INTO facilities (account_id, ${key}) VALUES ($1,$2) ON CONFLICT (account_id) DO UPDATE SET ${key}=$2`, [accountId, level]); // key validated above
+    },
+    async getInjuries(accountId) {
+      return (await q('SELECT player_id, matches_remaining FROM injuries WHERE account_id=$1', [accountId])).rows as Array<{ player_id: string; matches_remaining: number }>;
+    },
+    async addInjury(accountId, playerId, matches) {
+      await q('INSERT INTO injuries (account_id, player_id, matches_remaining) VALUES ($1,$2,$3) ON CONFLICT (account_id, player_id) DO UPDATE SET matches_remaining=$3', [accountId, playerId, matches]);
+    },
+    async decrementInjuries(accountId) {
+      await q('UPDATE injuries SET matches_remaining = matches_remaining - 1 WHERE account_id=$1', [accountId]);
+      await q('DELETE FROM injuries WHERE account_id=$1 AND matches_remaining <= 0', [accountId]);
     },
     async createMission(m) {
       await q('INSERT INTO scout_missions (id, account_id, season_id, destination, dispatched_at, ready_at, found, player_json, band, status) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)',
@@ -279,6 +292,6 @@ export function makePostgresStore(connectionString: string): Store {
     async seasonPods(seasonId) {
       return (await q('SELECT DISTINCT tier, pod FROM pod_members WHERE season_id=$1 ORDER BY tier, pod', [seasonId])).rows as PodRef[];
     },
-    async reset() { await q('TRUNCATE accounts, clubs, matches, seasons, honours, pod_members, plans, loanees, listings, scout_missions, facilities'); },
+    async reset() { await q('TRUNCATE accounts, clubs, matches, seasons, honours, pod_members, plans, loanees, listings, scout_missions, facilities, injuries'); },
   };
 }

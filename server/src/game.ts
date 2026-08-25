@@ -52,7 +52,7 @@ export function runMatch(
   awayClub: Club, awayLineup: Lineup, awayTactics: Tactics,
   conditioning?: { home?: number; away?: number },
   homeBoost?: number,
-): { seed: number; homeTeam: Team; awayTeam: Team; result: [number, number] } {
+): { seed: number; homeTeam: Team; awayTeam: Team; result: [number, number]; homeFitness: number[]; awayFitness: number[] } {
   const homeTeam = buildXI(homeClub, homeLineup);
   const awayTeam = buildXI(awayClub, awayLineup);
   if (conditioning?.home != null) homeTeam.conditioning = conditioning.home;
@@ -61,7 +61,10 @@ export function runMatch(
   const seed = Math.floor(Math.random() * 2 ** 31);
   const m = new MatchEngine([homeTeam, awayTeam], seed, [homeTactics, awayTactics]);
   while (!m.state.finished) m.tick();
-  return { seed, homeTeam, awayTeam, result: [m.state.score[0], m.state.score[1]] };
+  // end-of-match fitness per XI slot (drives injury rolls — gassed players break down more)
+  const homeFitness = m.state.players[0].map((p) => p.fitness);
+  const awayFitness = m.state.players[1].map((p) => p.fitness);
+  return { seed, homeTeam, awayTeam, result: [m.state.score[0], m.state.score[1]], homeFitness, awayFitness };
 }
 
 /** Standard Elo update. scoreHome: 1 win / 0.5 draw / 0 loss. */
