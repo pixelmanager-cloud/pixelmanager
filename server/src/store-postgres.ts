@@ -2,7 +2,7 @@
 // (de)serialised in code, identical semantics to the SQLite backend.
 import pg from 'pg';
 import type { Club } from '@fm/shared';
-import type { Store, Account, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow } from './store.js';
+import type { Store, Account, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow, Season, HonourRow } from './store.js';
 
 export function makePostgresStore(connectionString: string): Store {
   // Railway's internal DB (postgres.railway.internal) and localhost don't use SSL;
@@ -27,7 +27,14 @@ export function makePostgresStore(connectionString: string): Store {
           home_team TEXT NOT NULL, away_team TEXT NOT NULL,
           home_tactics TEXT NOT NULL, away_tactics TEXT NOT NULL,
           seed BIGINT NOT NULL, home_score INTEGER NOT NULL, away_score INTEGER NOT NULL,
-          created_at BIGINT NOT NULL);
+          created_at BIGINT NOT NULL, season_id TEXT);
+        CREATE TABLE IF NOT EXISTS seasons (
+          id TEXT PRIMARY KEY, number INTEGER NOT NULL, starts_at BIGINT NOT NULL,
+          ends_at BIGINT NOT NULL, status TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS honours (
+          account_id TEXT NOT NULL, season_id TEXT NOT NULL, season_number INTEGER NOT NULL,
+          tier TEXT NOT NULL, final_pos INTEGER NOT NULL, title INTEGER NOT NULL, ended_at BIGINT NOT NULL);
+        ALTER TABLE matches ADD COLUMN IF NOT EXISTS season_id TEXT;
       `);
     },
     async createAccount(id, handle, token, createdAt) {
@@ -72,10 +79,10 @@ export function makePostgresStore(connectionString: string): Store {
     },
     async saveMatch(m: StoredMatch) {
       await q(
-        `INSERT INTO matches (id, home_id, away_id, home_team, away_team, home_tactics, away_tactics, seed, home_score, away_score, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)`,
+        `INSERT INTO matches (id, home_id, away_id, home_team, away_team, home_tactics, away_tactics, seed, home_score, away_score, created_at, season_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`,
         [m.id, m.homeId, m.awayId, JSON.stringify(m.homeTeam), JSON.stringify(m.awayTeam),
-          JSON.stringify(m.homeTactics), JSON.stringify(m.awayTactics), m.seed, m.homeScore, m.awayScore, m.createdAt],
+          JSON.stringify(m.homeTactics), JSON.stringify(m.awayTactics), m.seed, m.homeScore, m.awayScore, m.createdAt, m.seasonId ?? null],
       );
     },
     async getMatch(id) {
@@ -93,17 +100,37 @@ export function makePostgresStore(connectionString: string): Store {
         [accountId, limit],
       )).rows.map((r) => ({ ...r, created_at: Number(r.created_at) })) as MatchRow[];
     },
-    async recentResults(limit = 40) {
-      return (await q(
-        `SELECT m.id, m.home_id, m.away_id, m.home_score, m.away_score, m.created_at,
+    async recentResults(limit = 40, seasonId) {
+      const base = `SELECT m.id, m.home_id, m.away_id, m.home_score, m.away_score, m.created_at,
                 ha.handle AS home_handle, aa.handle AS away_handle
-         FROM matches m JOIN accounts ha ON ha.id=m.home_id JOIN accounts aa ON aa.id=m.away_id
-         ORDER BY m.created_at DESC LIMIT $1`,
-        [limit],
-      )).rows.map((r) => ({ ...r, created_at: Number(r.created_at) })) as ResultRow[];
+         FROM matches m JOIN accounts ha ON ha.id=m.home_id JOIN accounts aa ON aa.id=m.away_id`;
+      const rows = seasonId
+        ? (await q(base + ' WHERE m.season_id=$1 ORDER BY m.created_at DESC LIMIT $2', [seasonId, limit])).rows
+        : (await q(base + ' ORDER BY m.created_at DESC LIMIT $1', [limit])).rows;
+      return rows.map((r) => ({ ...r, created_at: Number(r.created_at) })) as ResultRow[];
     },
     async allAccounts() { return (await q('SELECT id, handle, rating FROM accounts')).rows as LeaderRow[]; },
     async allResults() { return (await q('SELECT home_id, away_id, home_score, away_score FROM matches')).rows as any[]; },
-    async reset() { await q('TRUNCATE accounts, clubs, matches'); },
+    async currentSeason() {
+      const r = (await q("SELECT id, number, starts_at, ends_at, status FROM seasons WHERE status='active' ORDER BY number DESC LIMIT 1")).rows[0];
+      return r && { id: r.id, number: r.number, startsAt: Number(r.starts_at), endsAt: Number(r.ends_at), status: r.status } as Season;
+    },
+    async createSeason(id, number, startsAt, endsAt) {
+      await q("INSERT INTO seasons (id, number, starts_at, ends_at, status) VALUES ($1,$2,$3,$4,'active')", [id, number, startsAt, endsAt]);
+      return { id, number, startsAt, endsAt, status: 'active' } as Season;
+    },
+    async closeSeason(id) { await q("UPDATE seasons SET status='closed' WHERE id=$1", [id]); },
+    async seasonResults(seasonId) {
+      return (await q('SELECT home_id, away_id, home_score, away_score FROM matches WHERE season_id=$1', [seasonId])).rows as any[];
+    },
+    async addHonour(accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt) {
+      await q('INSERT INTO honours (account_id, season_id, season_number, tier, final_pos, title, ended_at) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+        [accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt]);
+    },
+    async honoursFor(accountId, limit = 30) {
+      return (await q('SELECT season_number, tier, final_pos, title, ended_at FROM honours WHERE account_id=$1 ORDER BY season_number DESC LIMIT $2', [accountId, limit]))
+        .rows.map((r) => ({ ...r, ended_at: Number(r.ended_at) })) as HonourRow[];
+    },
+    async reset() { await q('TRUNCATE accounts, clubs, matches, seasons, honours'); },
   };
 }

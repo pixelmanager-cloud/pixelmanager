@@ -1,7 +1,7 @@
 // Local-dev backend on Node's built-in SQLite (no native deps).
 import { DatabaseSync } from 'node:sqlite';
 import type { Club } from '@fm/shared';
-import type { Store, Account, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow } from './store.js';
+import type { Store, Account, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow, Season, HonourRow } from './store.js';
 
 export function makeSqliteStore(file: string): Store {
   const db = new DatabaseSync(file);
@@ -19,8 +19,16 @@ export function makeSqliteStore(file: string): Store {
           home_team TEXT NOT NULL, away_team TEXT NOT NULL,
           home_tactics TEXT NOT NULL, away_tactics TEXT NOT NULL,
           seed INTEGER NOT NULL, home_score INTEGER NOT NULL, away_score INTEGER NOT NULL,
-          created_at INTEGER NOT NULL);
+          created_at INTEGER NOT NULL, season_id TEXT);
+        CREATE TABLE IF NOT EXISTS seasons (
+          id TEXT PRIMARY KEY, number INTEGER NOT NULL, starts_at INTEGER NOT NULL,
+          ends_at INTEGER NOT NULL, status TEXT NOT NULL);
+        CREATE TABLE IF NOT EXISTS honours (
+          account_id TEXT NOT NULL, season_id TEXT NOT NULL, season_number INTEGER NOT NULL,
+          tier TEXT NOT NULL, final_pos INTEGER NOT NULL, title INTEGER NOT NULL, ended_at INTEGER NOT NULL);
       `);
+      // migrate a pre-seasons matches table (adds the column; throws-and-ignored if present)
+      try { db.exec('ALTER TABLE matches ADD COLUMN season_id TEXT'); } catch { /* already added */ }
     },
     async createAccount(id, handle, token, createdAt) {
       db.prepare('INSERT INTO accounts (id, handle, token, rating, created_at) VALUES (?,?,?,1000,?)').run(id, handle, token, createdAt);
@@ -62,10 +70,10 @@ export function makeSqliteStore(file: string): Store {
     },
     async saveMatch(m: StoredMatch) {
       db.prepare(
-        `INSERT INTO matches (id, home_id, away_id, home_team, away_team, home_tactics, away_tactics, seed, home_score, away_score, created_at)
-         VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
+        `INSERT INTO matches (id, home_id, away_id, home_team, away_team, home_tactics, away_tactics, seed, home_score, away_score, created_at, season_id)
+         VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
       ).run(m.id, m.homeId, m.awayId, JSON.stringify(m.homeTeam), JSON.stringify(m.awayTeam),
-        JSON.stringify(m.homeTactics), JSON.stringify(m.awayTactics), m.seed, m.homeScore, m.awayScore, m.createdAt);
+        JSON.stringify(m.homeTactics), JSON.stringify(m.awayTactics), m.seed, m.homeScore, m.awayScore, m.createdAt, m.seasonId ?? null);
     },
     async getMatch(id) {
       const r = db.prepare('SELECT * FROM matches WHERE id=?').get(id) as any;
@@ -81,16 +89,35 @@ export function makeSqliteStore(file: string): Store {
         'SELECT id, home_id, away_id, home_score, away_score, created_at FROM matches WHERE home_id=? OR away_id=? ORDER BY created_at DESC LIMIT ?',
       ).all(accountId, accountId, limit) as MatchRow[];
     },
-    async recentResults(limit = 40) {
-      return db.prepare(
-        `SELECT m.id, m.home_id, m.away_id, m.home_score, m.away_score, m.created_at,
+    async recentResults(limit = 40, seasonId) {
+      const base = `SELECT m.id, m.home_id, m.away_id, m.home_score, m.away_score, m.created_at,
                 ha.handle AS home_handle, aa.handle AS away_handle
-         FROM matches m JOIN accounts ha ON ha.id=m.home_id JOIN accounts aa ON aa.id=m.away_id
-         ORDER BY m.created_at DESC LIMIT ?`,
-      ).all(limit) as ResultRow[];
+         FROM matches m JOIN accounts ha ON ha.id=m.home_id JOIN accounts aa ON aa.id=m.away_id`;
+      return seasonId
+        ? db.prepare(base + ' WHERE m.season_id=? ORDER BY m.created_at DESC LIMIT ?').all(seasonId, limit) as ResultRow[]
+        : db.prepare(base + ' ORDER BY m.created_at DESC LIMIT ?').all(limit) as ResultRow[];
     },
     async allAccounts() { return db.prepare('SELECT id, handle, rating FROM accounts').all() as LeaderRow[]; },
     async allResults() { return db.prepare('SELECT home_id, away_id, home_score, away_score FROM matches').all() as any[]; },
-    async reset() { db.exec('DELETE FROM matches; DELETE FROM clubs; DELETE FROM accounts;'); },
+    async currentSeason() {
+      const r = db.prepare("SELECT id, number, starts_at, ends_at, status FROM seasons WHERE status='active' ORDER BY number DESC LIMIT 1").get() as any;
+      return r && { id: r.id, number: r.number, startsAt: r.starts_at, endsAt: r.ends_at, status: r.status } as Season;
+    },
+    async createSeason(id, number, startsAt, endsAt) {
+      db.prepare("INSERT INTO seasons (id, number, starts_at, ends_at, status) VALUES (?,?,?,?,'active')").run(id, number, startsAt, endsAt);
+      return { id, number, startsAt, endsAt, status: 'active' } as Season;
+    },
+    async closeSeason(id) { db.prepare("UPDATE seasons SET status='closed' WHERE id=?").run(id); },
+    async seasonResults(seasonId) {
+      return db.prepare('SELECT home_id, away_id, home_score, away_score FROM matches WHERE season_id=?').all(seasonId) as any[];
+    },
+    async addHonour(accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt) {
+      db.prepare('INSERT INTO honours (account_id, season_id, season_number, tier, final_pos, title, ended_at) VALUES (?,?,?,?,?,?,?)')
+        .run(accountId, seasonId, seasonNumber, tier, finalPos, title, endedAt);
+    },
+    async honoursFor(accountId, limit = 30) {
+      return db.prepare('SELECT season_number, tier, final_pos, title, ended_at FROM honours WHERE account_id=? ORDER BY season_number DESC LIMIT ?').all(accountId, limit) as HonourRow[];
+    },
+    async reset() { db.exec('DELETE FROM matches; DELETE FROM clubs; DELETE FROM accounts; DELETE FROM seasons; DELETE FROM honours;'); },
   };
 }

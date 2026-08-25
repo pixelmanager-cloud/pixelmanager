@@ -4,7 +4,7 @@ import {
   TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player,
 } from '@fm/shared';
 import { SCALE, makeBallTexture, makeBallGhostTexture, makePitchTexture, makePlayerFrames, makeShadowTexture, makeCarrierTexture } from './pixelart';
-import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow } from './api';
+import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow } from './api';
 
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
 
@@ -45,6 +45,20 @@ function timeAgo(ts: number): string {
   const h = Math.floor(m / 60); if (h < 24) return `${h}h ago`;
   return `${Math.floor(h / 24)}d ago`;
 }
+
+// "2d 4h" / "5h 12m" style countdown for the season banner.
+function humanizeMs(ms: number): string {
+  if (ms <= 0) return 'now';
+  const m = Math.floor(ms / 60000), h = Math.floor(m / 60), d = Math.floor(h / 24);
+  if (d > 0) return `${d}d ${h % 24}h`;
+  if (h > 0) return `${h}h ${m % 60}m`;
+  return `${m}m`;
+}
+
+const ORDINAL = (n: number): string => {
+  const s = ['th', 'st', 'nd', 'rd'], v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+};
 
 function statColor(v: number): string {
   if (v >= 17) return '#3ad07a';
@@ -153,6 +167,14 @@ class Game {
     $('logout').addEventListener('click', () => { clearToken(); this.showScreen('login'); });
     $('view-standings').addEventListener('click', () => this.showStandings());
     $('standings-back').addEventListener('click', () => this.showHub());
+    const showTab = (tab: 'results' | 'honours') => {
+      $('results-feed').classList.toggle('hidden', tab !== 'results');
+      $('honours-feed').classList.toggle('hidden', tab !== 'honours');
+      $('tab-results').classList.toggle('active', tab === 'results');
+      $('tab-honours').classList.toggle('active', tab === 'honours');
+    };
+    $('tab-results').addEventListener('click', () => showTab('results'));
+    $('tab-honours').addEventListener('click', () => showTab('honours'));
     $('skip').addEventListener('click', () => this.skipToEnd());
     $('set-team').addEventListener('click', () => this.openLineup('standing'));
     $('autopick').addEventListener('click', () => { this.draftLineup = autoPickXI(this.club, this.draftTactics.formation); this.renderLineupEditor(); });
@@ -206,14 +228,28 @@ class Game {
     this.showScreen('standings');
     $('standings-table').innerHTML = SPINNER;
     $('results-feed').innerHTML = '';
+    $('honours-feed').innerHTML = '';
     try {
-      const [tbl, res] = await Promise.all([api.table(), api.results()]);
-      $('standings-table').innerHTML = this.renderLeagueTable(tbl.table);
+      const [st, res, hon] = await Promise.all([api.standings(), api.results(), api.honours()]);
+      $('season-banner').innerHTML = `<b>Season ${st.season.number}</b> · ends in ${humanizeMs(st.season.endsAt - Date.now())}`;
+      $('standings-table').innerHTML = this.renderLeagueTable(st.table);
       $('results-feed').innerHTML = this.renderResults(res.results);
+      $('honours-feed').innerHTML = this.renderHonours(hon.honours);
     } catch {
+      $('season-banner').textContent = '';
       $('standings-table').innerHTML = '<div class="muted">Could not load — is the server running?</div>';
-      $('results-feed').innerHTML = '';
     }
+  }
+
+  private renderHonours(rows: HonourRow[]): string {
+    if (!rows.length) return '<div class="muted">No finished seasons yet — play on to make history.</div>';
+    return rows.map((h) => {
+      const champ = h.title === 1;
+      return `<div class="honour-row${champ ? ' champ' : ''}">`
+        + `<span class="hr-medal">${champ ? '🏆' : ORDINAL(h.final_pos)}</span>`
+        + `<span class="hr-main"><b>Season ${h.season_number}</b> · ${h.tier}</span>`
+        + `<span class="hr-fin">${champ ? 'CHAMPION' : `${ORDINAL(h.final_pos)} place`}</span></div>`;
+    }).join('');
   }
 
   private renderResults(rows: ResultRow[]): string {

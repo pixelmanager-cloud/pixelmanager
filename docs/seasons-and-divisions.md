@@ -182,12 +182,15 @@ The **League & Results** page we already built is the natural home:
 
 ## 10) Phased rollout
 
-**Phase A — Seasons** *(M, ship first, works at any size)*
+**Phase A — Seasons** ✅ **SHIPPED** *(works at any size)*
 `seasons` + `matches.season_id`; season-scoped standings over the *whole*
-population (one pod = everyone) so it's live immediately; end-of-season champion +
-honours archive + reset; standings page gains the season header + Honours tab.
-✅ *Done when:* a season starts, runs, closes, crowns a champion, archives it, and
-opens the next automatically.
+population (one pod = everyone); lazy rollover on request (no cron) closes an
+expired season, crowns the champion, archives every participant's finish to
+`honours`, and opens the next; standings page shows the season banner + a
+Results/Honours tab. Config: `SEASON_DAYS` (default 7); ops trigger
+`POST /admin/rollover` (ADMIN_SECRET-gated). Tier label is fixed at `SUNDAY LEAGUE`
+until Phase B. Routes: `/season`, `/standings`, `/results` (season-scoped),
+`/honours`.
 
 **Phase B — Divisions/pods** *(M, switch on past ~40 players)*
 Add tiers + pods + placement + promotion/relegation in the rollover; standings page

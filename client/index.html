@@ -69,7 +69,19 @@
       #standings-head { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; }
       #standings-head h3 { margin: 0; }
       #standings-back { margin-left: auto; }
+      .season-banner { font-family: var(--display); font-size: 10px; color: var(--warn); letter-spacing: 0.5px;
+        border: 2px solid var(--line); background: var(--panel-2); padding: 9px 12px; margin-bottom: 4px; }
+      .season-banner b { color: var(--good); }
       h3.sub { font-size: 11px; color: var(--warn); margin: 18px 0 10px; }
+      .tabrow { display: flex; gap: 8px; margin: 18px 0 10px; }
+      .tab { background: var(--panel-2); color: var(--cyan); }
+      .tab.active { background: var(--cyan); color: #061018; }
+      .honour-row { display: flex; align-items: center; gap: 12px; padding: 8px; border-bottom: 1px solid var(--line); font-size: 18px; }
+      .honour-row.champ { background: rgba(255,206,58,0.08); }
+      .honour-row .hr-medal { font-family: var(--display); font-size: 11px; color: var(--warn); width: 34px; text-align: center; }
+      .honour-row .hr-main { flex: 1; }
+      .honour-row .hr-fin { font-family: var(--display); font-size: 9px; color: var(--cyan); }
+      .honour-row.champ .hr-fin { color: var(--warn); }
       #results-feed { max-height: 340px; overflow-y: auto; }
       .result-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-bottom: 1px solid var(--line); font-size: 18px; }
       .result-row.me { background: rgba(57,255,158,0.06); }
@@ -271,10 +283,15 @@
       <!-- STANDINGS / RESULTS -->
       <div id="standings" class="panel hidden">
         <div id="standings-head"><h3>LEAGUE &amp; RESULTS</h3><button id="standings-back">← Back to hub</button></div>
+        <div id="season-banner" class="season-banner"></div>
         <h3 class="sub">TABLE</h3>
         <div id="standings-table"></div>
-        <h3 class="sub">RECENT RESULTS</h3>
+        <div class="tabrow">
+          <button id="tab-results" class="tab active">Recent Results</button>
+          <button id="tab-honours" class="tab">Honours</button>
+        </div>
         <div id="results-feed"></div>
+        <div id="honours-feed" class="hidden"></div>
       </div>
 
       <!-- LINEUP EDITOR (my standing orders) -->

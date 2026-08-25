@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import type { Lineup, Tactics } from '@fm/shared';
 import { db, type Account, type StandingOrders } from './db.js';
 import { makeClub, validateLineup, runMatch, elo, buildTable, FORMATIONS } from './game.js';
+import { ensureSeason, forceRollover } from './seasons.js';
 
 const app = Fastify({ logger: false });
 await app.register(cors, { origin: true });
@@ -71,11 +72,12 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const [nHome, nAway] = elo(req.account!.rating, opp.rating, scoreHome);
   await Promise.all([db.setRating(req.account!.id, nHome), db.setRating(oppId, nAway)]);
 
+  const season = await ensureSeason(db, Date.now());
   const matchId = randomUUID();
   await db.saveMatch({
     id: matchId, homeId: req.account!.id, awayId: oppId,
     homeTeam, awayTeam, homeTactics: myTactics, awayTactics: oppClub.standingOrders.tactics,
-    seed, homeScore: result[0], awayScore: result[1], createdAt: Date.now(),
+    seed, homeScore: result[0], awayScore: result[1], createdAt: Date.now(), seasonId: season.id,
   });
 
   return {
@@ -97,7 +99,30 @@ app.get('/matches/:id', async (req, reply) => {
 
 app.get('/me/matches', { preHandler: requireAuth }, async (req) => ({ matches: await db.matchesFor(req.account!.id) }));
 app.get('/leaderboard', async () => ({ leaderboard: await db.leaderboard() }));
-app.get('/results', async () => ({ results: await db.recentResults() }));
+
+// current season meta (creates season 1 / rolls an expired season over on demand)
+app.get('/season', async () => {
+  const s = await ensureSeason(db, Date.now());
+  return { season: { number: s.number, startsAt: s.startsAt, endsAt: s.endsAt, status: s.status, endsInMs: Math.max(0, s.endsAt - Date.now()) } };
+});
+
+// THIS season's standings (Phase A: everyone in one league)
+app.get('/standings', async () => {
+  const s = await ensureSeason(db, Date.now());
+  const [accounts, results] = await Promise.all([db.allAccounts(), db.seasonResults(s.id)]);
+  return { season: { number: s.number, endsAt: s.endsAt }, table: buildTable(accounts, results) };
+});
+
+// this season's recent results feed
+app.get('/results', async () => {
+  const s = await ensureSeason(db, Date.now());
+  return { results: await db.recentResults(40, s.id) };
+});
+
+// the caller's honours board (past-season finishes)
+app.get('/honours', { preHandler: requireAuth }, async (req) => ({ honours: await db.honoursFor(req.account!.id) }));
+
+// all-time cumulative table (kept for an optional global leaderboard view)
 app.get('/table', async () => {
   const [accounts, results] = await Promise.all([db.allAccounts(), db.allResults()]);
   return { table: buildTable(accounts, results) };
@@ -111,6 +136,15 @@ app.post('/admin/reset', async (req, reply) => {
   return { ok: true, reset: true };
 });
 
+// force the current season to close + a new one to open — same gate as reset (ops/testing)
+app.post('/admin/rollover', async (req, reply) => {
+  const secret = process.env.ADMIN_SECRET;
+  if (!secret || (req.headers['x-admin-secret'] as string) !== secret) return reply.code(403).send({ error: 'forbidden' });
+  const s = await forceRollover(db, Date.now());
+  return { ok: true, season: { number: s.number, endsAt: s.endsAt } };
+});
+
 const port = Number(process.env.PORT ?? 8787);
 await db.init();
+await ensureSeason(db, Date.now()); // make sure season 1 exists (and roll over a stale one) on boot
 app.listen({ port, host: '0.0.0.0' }).then(() => console.log(`fm-server on :${port}`));

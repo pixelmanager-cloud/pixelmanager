@@ -11,8 +11,11 @@ export interface ResultRow extends MatchRow { home_handle: string; away_handle: 
 export interface StoredMatch {
   id: string; homeId: string; awayId: string;
   homeTeam: unknown; awayTeam: unknown; homeTactics: Tactics; awayTactics: Tactics;
-  seed: number; homeScore: number; awayScore: number; createdAt: number;
+  seed: number; homeScore: number; awayScore: number; createdAt: number; seasonId?: string;
 }
+export interface Season { id: string; number: number; startsAt: number; endsAt: number; status: 'active' | 'closed' }
+/** A player's archived finish in a past season (for the honours board). */
+export interface HonourRow { season_number: number; tier: string; final_pos: number; title: number; ended_at: number }
 
 export interface Store {
   init(): Promise<void>;
@@ -29,8 +32,15 @@ export interface Store {
   saveMatch(m: StoredMatch): Promise<void>;
   getMatch(id: string): Promise<StoredMatch | undefined>;
   matchesFor(accountId: string, limit?: number): Promise<MatchRow[]>;
-  recentResults(limit?: number): Promise<ResultRow[]>;
+  recentResults(limit?: number, seasonId?: string): Promise<ResultRow[]>;
   allAccounts(): Promise<LeaderRow[]>;
   allResults(): Promise<Array<{ home_id: string; away_id: string; home_score: number; away_score: number }>>;
+  // seasons (Phase A)
+  currentSeason(): Promise<Season | undefined>;
+  createSeason(id: string, number: number, startsAt: number, endsAt: number): Promise<Season>;
+  closeSeason(id: string): Promise<void>;
+  seasonResults(seasonId: string): Promise<Array<{ home_id: string; away_id: string; home_score: number; away_score: number }>>;
+  addHonour(accountId: string, seasonId: string, seasonNumber: number, tier: string, finalPos: number, title: number, endedAt: number): Promise<void>;
+  honoursFor(accountId: string, limit?: number): Promise<HonourRow[]>;
   reset(): Promise<void>;
 }
