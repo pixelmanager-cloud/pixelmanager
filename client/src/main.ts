@@ -1303,6 +1303,7 @@ class Game {
 
 class MatchScene extends Phaser.Scene {
   private sprites: Phaser.GameObjects.Image[][] = [[], []];
+  private ppos: { x: number; y: number }[][] = [[], []]; // lerped ground positions (the running bob lifts only the drawn sprite, not the shadow)
   private shadows: Phaser.GameObjects.Image[][] = [[], []];
   private ballSprite!: Phaser.GameObjects.Image;
   private ballShadow!: Phaser.GameObjects.Image;
@@ -1337,9 +1338,11 @@ class MatchScene extends Phaser.Scene {
         return this.add.image(-99, -99, key + '0').setScale(3).setOrigin(0.5, 0.85);
       }),
     );
-    // ghost balls (oldest -> newest) drawn just under the ball, at fading alpha
-    this.ballTrail = [0.08, 0.14, 0.22, 0.32].map((alpha) =>
-      this.add.image(0, 0, 'ball-ghost').setScale(3).setAlpha(alpha).setVisible(false),
+    this.ppos = [0, 1].map((t) => teams[t].players.map(() => ({ x: -99, y: -99 })));
+    // ghost balls (oldest -> newest) drawn just under the ball; a smooth alpha+scale
+    // ramp sampled from consecutive frames gives a short, tapering motion trail.
+    this.ballTrail = [0.06, 0.10, 0.16, 0.24, 0.34, 0.46].map((alpha) =>
+      this.add.image(0, 0, 'ball-ghost').setScale(1.8 + alpha * 3).setAlpha(alpha).setVisible(false),
     );
     this.ballHist = [];
     this.ballSprite = this.add.image(0, 0, 'ball').setScale(3);
@@ -1347,19 +1350,24 @@ class MatchScene extends Phaser.Scene {
 
   sync(state: MatchEngine['state']) {
     if (!this.ballSprite) return;
-    const frame = Math.floor(Date.now() / 110) % 2; // leg-swap cadence
+    const now = Date.now();
+    const frame = Math.floor(now / 110) % 2; // leg-swap cadence
     const lerp = 0.28;
     for (const t of [0, 1] as const) {
       state.players[t].forEach((ps, i) => {
         const s = this.sprites[t]?.[i]; if (!s) return;
+        const pos = this.ppos[t][i];
         const tx = ps.x * SCALE, ty = ps.y * SCALE;
-        const dx = tx - s.x, dy = ty - s.y;
+        const dx = tx - pos.x, dy = ty - pos.y;
         const moving = Math.hypot(dx, dy) > 1.2; // chasing a target => running
-        s.x += dx * lerp; s.y += dy * lerp;
+        pos.x += dx * lerp; pos.y += dy * lerp;  // logical ground position (shadow tracks this)
         if (Math.abs(dx) > 0.4) s.flipX = dx < 0;                       // face the direction of travel
+        // subtle run bob: the sprite lifts on each stride; per-player phase so the team doesn't bounce in unison.
+        const bob = moving ? Math.abs(Math.sin(now / 90 + i)) * 1.5 : 0;
+        s.setPosition(pos.x, pos.y - bob);
         const key = `p-${t}-${this.teams[t].players[i].role === 'GK' ? 'gk' : 'out'}`;
         s.setTexture(key + (moving ? frame : 0));
-        this.shadows[t][i].setPosition(s.x, s.y + 1);
+        this.shadows[t][i].setPosition(pos.x, pos.y + 1);
       });
     }
     // ball (sits a touch above its shadow for depth)
@@ -1367,19 +1375,22 @@ class MatchScene extends Phaser.Scene {
     this.ballShadow.setPosition(bx + (bx - this.ballSprite.x) * lerp, by);
     this.ballSprite.x += (bx - this.ballSprite.x) * lerp;
     this.ballSprite.y += (by - 4 - this.ballSprite.y) * lerp;
-    // subtle fading trail: ghost balls parked at recent rendered positions (visual only)
+    // subtle fading trail: ghost balls parked at recent rendered positions (visual only).
+    // Sampling consecutive frames (newest -> oldest) keeps the trail short and smooth.
     const n = this.ballTrail.length;
     this.ballHist.unshift({ x: this.ballSprite.x, y: this.ballSprite.y });
-    if (this.ballHist.length > n * 2 + 1) this.ballHist.pop();
+    if (this.ballHist.length > n + 1) this.ballHist.pop();
     this.ballTrail.forEach((g, i) => {
-      const h = this.ballHist[(n - i) * 2]; // newest ghost trails closest, oldest sits furthest back
+      const h = this.ballHist[n - i]; // ghost i (fainter as i drops) sits at an older frame
       if (h) g.setVisible(true).setPosition(h.x, h.y);
       else g.setVisible(false);
     });
-    // highlight ring under whoever has the ball
+    // highlight the ball carrier with a gently pulsing glow so the eye can follow the play
     if (state.carrier) {
-      const cs = this.sprites[state.carrier.teamIdx][state.carrier.playerIdx];
-      this.carrierRing.setVisible(true).setPosition(cs.x, cs.y + 1);
+      const gp = this.ppos[state.carrier.teamIdx][state.carrier.playerIdx];
+      const pulse = 0.5 + 0.5 * Math.sin(now / 170);
+      this.carrierRing.setVisible(true).setPosition(gp.x, gp.y + 1)
+        .setAlpha(0.7 + 0.3 * pulse).setScale(2.4 + 0.22 * pulse);
     } else this.carrierRing.setVisible(false);
   }
 
