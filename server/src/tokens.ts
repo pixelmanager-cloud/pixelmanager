@@ -8,7 +8,7 @@ import {
   type Player, type Track, type PlayerAchievements, type Genes, type CareerPlayerAttrs,
 } from '@fm/shared';
 import type { Token, Store } from './store.js';
-import { clubSeason, squadRole } from './clubseason.js';
+import { clubSeason, squadRole, firstTeamReady } from './clubseason.js';
 
 export const SUPPLY_CAP = Number(process.env.SUPPLY_CAP ?? 10000); // fixed total NFTs in the economy
 // Lifecycle SINKS (coins now — the seam that becomes a PTEST spend later; see docs/economy-and-web3.md).
@@ -160,7 +160,7 @@ function matchContext(seed: number, turn: number, stakes: number, big: string | 
   return { opponent, home, score, minute, comp, club: clubName ?? null };
 }
 
-export function careerState(t: Token, c: Career, clubName?: string | null) {
+export function careerState(t: Token, c: Career, clubName?: string | null, clubLevel = 0) {
   const st = c.current() as any;
   // STORY MODE: describe the situation + what each card would do
   if (st.phase === 'play' && st.scenario) {
@@ -200,7 +200,9 @@ export function careerState(t: Token, c: Career, clubName?: string | null) {
   // club up the table. Deterministic (seeded from the career + stage); youth stages have no senior league.
   let clubSeasonData: (ReturnType<typeof clubSeason> & { apps: number; status: string }) | null = null;
   const bandIdx = bandAt(Math.min(c.turn, TOTAL_TURNS - 1)).index;
-  if (clubName && bandIdx >= 4) { // senior stages only (Breakthrough+, ~age 19) — youth has no senior league
+  // NOT a fixed age: he gets a senior club season once he's broken into the first team — a prodigy early,
+  // a late developer later, and a higher-level club is harder to break into (see firstTeamReady).
+  if (clubName && firstTeamReady(bandIdx, prof.currentOverall, clubLevel)) {
     const recent = c.log.slice(-6);
     const form = recent.length ? recent.reduce((s, e) => s + e.success, 0) / recent.length : 0.5;
     const strength = prof.currentOverall + (form - 0.5) * 6;      // his ability + current form

@@ -11,7 +11,18 @@ const SQUAD_BASE = 11; // a mid-table squad's baseline strength (before the bloo
 
 // How much of the season the player actually FEATURES in, by career stage — realism: a kid breaking into
 // the first team gets a handful of games; a regular starts most; an established star plays nearly all.
-const STAGE_SHARE: Record<number, number> = { 4: 0.42, 5: 0.72, 6: 0.9 }; // Breakthrough / First Team / Establishing
+const STAGE_SHARE: Record<number, number> = { 3: 0.22, 4: 0.42, 5: 0.72, 6: 0.9 }; // Youth Team / Breakthrough / First Team / Establishing
+
+const FIRST_TEAM_MIN_BAND = 3; // Youth Team (~age 17) — the earliest a prodigy can debut for the senior side
+
+/** Whether the player has broken into the senior first team yet — NOT a fixed age. A prodigy whose overall
+ *  clears the bar debuts early; an average player takes longer; and a HIGHER-LEVEL club is harder to break
+ *  into (a bigger threshold). By First Team age (band 5) everyone still going is at least a fringe senior. */
+export function firstTeamReady(bandIdx: number, overall: number, clubLevel = 0): boolean {
+  if (bandIdx >= 5) return true;
+  const threshold = 9 + clubLevel * 1.2; // higher division/level ⇒ harder to break in
+  return bandIdx >= FIRST_TEAM_MIN_BAND && overall >= threshold;
+}
 
 /** His squad standing this season: how many of the club's fixtures he features in, + a status label.
  *  A standout (higher overall) breaks in faster and plays more; a fringe player rotates. */
