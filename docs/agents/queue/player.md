@@ -123,9 +123,16 @@ or newly imagined beyond the brief. Ranked safe/small/high-value first.
   `s.focus.map(...)` renderer) and `career_sim.ts` (always picks `st.focus[0].id`, unaffected since
   the risk option is appended last) needed no changes. `npm run verify` and `career_sim` both green
   (diversity closest-pair distance 9, determinism identical: true).
-- [ ] 13. **More lifestyle items for the late-career gap.** (S) `LIFESTYLE` thins out after chapter 5
+- [x] 13. **More lifestyle items for the late-career gap.** (S) `LIFESTYLE` thins out after chapter 5
   (First Team/Establishing has only watch/invest/mansion). Add 2-3 more star-era purchases (a
   supercar, a boutique restaurant investment, a testimonial-fund pledge) with distinct meter perks.
+  **Done:** added `supercar` (chapter 5+, fans perk), `testim` — Pledge a Testimonial Fund (chapter
+  5+, peers+fans perk, gives the dressing-room meter a late-career purchase option it lacked), and
+  `restaurant` — Boutique Restaurant Investment (chapter 6 only, sponsors perk + greed, mirrors the
+  smart-money framing of `invest`) to `LIFESTYLE` in career.ts. Lifestyle items render generically
+  from the array (icon/name/blurb inline, confirmed no other file keys them by id), so no map updates
+  needed. `npm run verify` (client build + engine + fuzz) and `career_sim` both green (determinism
+  identical: true).
 - [ ] 14. **Rare "double life event" chapter texture.** (S, careful) At most one life-event reskin
   currently fires per chapter (up to 22% chance per eligible turn). Consider no change to frequency,
   but add narrative continuity: if a contract/loan/setback fires, let the *next* eligible life-event

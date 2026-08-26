@@ -283,6 +283,9 @@ export const LIFESTYLE: LifestyleItem[] = [
   // First Team / Establishing — a star: statement pieces, smart money, the mansion
   { id: 'watch',    icon: '⌚', name: 'A Statement Watch',         blurb: 'The one everyone clocks as you step off the coach.',        cost: 1500, minChapterIdx: 5, market: 1, greed: 1, perks: { sponsors: 6 } },
   { id: 'invest',   icon: '📈', name: 'A Property Portfolio',      blurb: 'Money makes money — a smart nest egg for after football.',  cost: 3200, minChapterIdx: 5, market: 3 },
+  { id: 'supercar', icon: '🏎️', name: 'A Supercar',               blurb: 'Turn heads pulling into the car park — the boyhood dream, made real.', cost: 2400, minChapterIdx: 5, market: 1, perks: { fans: 8 } },
+  { id: 'testim',   icon: '🎟️', name: 'Pledge a Testimonial Fund', blurb: 'Set some earnings aside for a benefit match — the dressing room notices.', cost: 2600, minChapterIdx: 5, perks: { peers: 14, fans: 6 } },
+  { id: 'restaurant', icon: '🍷', name: 'Boutique Restaurant Investment', blurb: 'Put your name over the door of a place the whole city is talking about.', cost: 4200, minChapterIdx: 6, market: 2, greed: 1, perks: { sponsors: 8 } },
   { id: 'mansion',  icon: '🏰', name: 'The Dream Mansion',         blurb: 'Gates, a pool, the lot — you have truly arrived.',          cost: 6000, minChapterIdx: 6, market: 2, greed: 1, recovery: 6, perks: { partner: 8, fans: 6 } },
 ];
 
