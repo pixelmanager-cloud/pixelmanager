@@ -8,7 +8,7 @@ import type { Store, Season, PodRef } from './store.js';
 import { buildTable, runMatch, elo, validateLineup } from './game.js';
 import { seasonPlacementReward, WIN_COINS, DRAW_COINS, LOSS_COINS } from './market.js';
 import { ownedPlayers } from './nft.js';
-import { trainingConditioning, stadiumIncome, fanIncomeMult, fanHomeBoost, sponsorIncome } from './facilities.js';
+import { trainingConditioning, stadiumIncome, fanIncomeMult, fanHomeBoost, sponsorIncome, squadMarketability } from './facilities.js';
 import { rollMatchInjuries } from './injuries.js';
 import { computeCup, type SquadMap } from './cup.js';
 
@@ -180,9 +180,11 @@ async function rollover(db: Store, s: Season, now: number): Promise<void> {
       // season prize money by placement (the coin sink that becomes an ERC-20 payout later)
       const reward = seasonPlacementReward(tierIdx, i + 1, ranked.length, promoted);
       // Commercial Dept: sponsorship income, scaled by division + trophies already in the cabinet
-      const [fac, honours] = await Promise.all([db.getFacilities(acct.id), db.honoursFor(acct.id, 999)]);
+      const [fac, honours, clubc] = await Promise.all([db.getFacilities(acct.id), db.honoursFor(acct.id, 999), db.getClub(acct.id)]);
       const trophies = honours.filter((h) => h.title === 1).length;
-      const sponsor = sponsorIncome(fac.sponsor, tierIdx, trophies);
+      // marketable (career-built) players pull bigger sponsors — fame paying off in the manager economy
+      const marketAvg = squadMarketability(clubc?.club?.players ?? []);
+      const sponsor = sponsorIncome(fac.sponsor, tierIdx, trophies, marketAvg);
       await db.addCoins(acct.id, reward + sponsor);
       await db.addHonour(acct.id, s.id, s.number, tier, i + 1, i === 0 ? 1 : 0, now, reward, 'league');
       let newIdx = tierIdx;

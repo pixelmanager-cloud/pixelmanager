@@ -65,6 +65,9 @@ export interface Player {
   /** financial temperament 1-20 (career-built players): what it costs to EXTEND this player's contract
    *  in the manager game — high = mercenary/expensive, low = loyal/cheap. See contractCost(). Optional. */
   greed?: number;
+  /** brand/fame 1-20 (career-built players): boosts the club's Commercial income in the manager game,
+   *  so a marketable star helps pay his own wages. Optional. */
+  marketability?: number;
 }
 
 export interface Team {

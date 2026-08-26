@@ -26,7 +26,7 @@ const OUTFIELD_TAGS: Tag[] = ['composure', 'aggression', 'creativity', 'teamwork
 export type Track = 'outfield' | 'goalkeeper';
 export interface SeasonEvent { id: string; name: string; desc: string }
 /** One recorded development decision. A career is fully reconstructable from (seed, track, actions). */
-export interface Action { type: 'play' | 'draft' | 'coach'; cardId: string }
+export interface Action { type: 'play' | 'draft' | 'coach' | 'offer'; cardId: string }
 /** Everything needed to persist/trade an in-progress prospect (stored off-chain, keyed by tokenId).
  *  Deterministic → the current stats can be re-derived + verified by replaying it. */
 export interface CareerSnapshot { seed: number; track: Track; agentId?: string; actions: Action[] }
@@ -136,6 +136,21 @@ export function contractCost(overall: number, age: number, greed: number): numbe
   return Math.round(overall * overall * 1.2 * ageFactor * greedFactor);
 }
 
+// ── FINANCIAL DECISIONS: at most age-chapter breaks (from the Academy on) an OFFER lands on the table.
+// This is the money layer of a player's life — and it MUST trade against the pitch. Chase the money and
+// your earnings, fame and greed climb but you lose a step of development that chapter (a distracted,
+// unsettled season); stay grounded and you develop keenly, stay cheap, but never cash in. `earn` is a
+// coin figure (a signing/deal), `form` a one-chapter success nudge, the rest permanent temperament.
+export interface Offer { id: string; name: string; desc: string; earn: number; greed: number; market: number; form: number }
+export const OFFERS: Offer[] = [
+  { id: 'money',   name: 'Big-Money Move',   desc: 'A rich club abroad triples your wages — but it means uprooting and settling in all over again', earn: 900, greed: 2,  market: 2, form: -0.08 },
+  { id: 'brand',   name: 'Boot & Kit Deal',  desc: 'A lucrative sponsorship and a rising profile — and the distractions that come with fame',       earn: 500, greed: 1,  market: 3, form: -0.05 },
+  { id: 'develop', name: 'Stay & Develop',   desc: 'Turn the money down, knuckle down at your club — you develop keenly and the fans adore you',    earn: 120, greed: -2, market: 0, form:  0.06 },
+];
+export const OFFER_CHOICES = 3;
+/** Deterministic financial offer set for a chapter (all three archetypes; the player picks their path). */
+export function rollOffer(_rng: () => number, _turn: number): Offer[] { return OFFERS; }
+
 /** Seeded coach choices for a track: outfield sees no GK-only coach, GK sees the GK coach + mental ones. */
 export function rollCoaches(rng: () => number, track: Track, n = COACH_OFFER): Coach[] {
   const pool = COACHES.filter((c) => (track === 'goalkeeper' ? true : !c.specialty.includes('keeping')));
@@ -239,6 +254,11 @@ export class Career {
   /** When set, the career is paused to APPOINT a mentor/coach for the coming chapter. */
   pendingCoaches: Coach[] | null = null;
   coach: Coach | null = null;              // the staff member active this chapter (boosts their specialty)
+  /** When set, a FINANCIAL OFFER is on the table (choose your path) before appointing a coach. */
+  pendingOffer: Offer[] | null = null;
+  earnings = 0;                            // running career earnings (coins) — wages + deals taken
+  marketBonus = 0;                         // fame accrued from financial/brand decisions (→ marketability)
+  greedBonus = 0;                          // greed accrued from chasing money in-career (→ final greed)
   seriousInjuries = 0;                     // major injuries suffered in development → lasting fragility
   /** The narrative event coloring the current age chapter (a new gaffer, a hot streak, a knock…). */
   seasonEvent: SeasonEvent | null = null;
@@ -267,19 +287,39 @@ export class Career {
   /** Persist/trade this in-progress prospect: everything needed to resume it later or elsewhere. */
   snapshot(): CareerSnapshot { return { seed: this.seed, track: this.track, agentId: this.agent?.id, actions: [...this.actions] }; }
 
+  /** The financial/agent context graduate() needs (greed, fame, earnings, injuries, exposure). */
+  finContext(): GraduateCtx {
+    return { seriousInjuries: this.seriousInjuries, agentGreed: this.agent?.greed ?? 0, agentExposure: this.agent?.exposure ?? 1, greedBonus: this.greedBonus, marketBonus: this.marketBonus, earnings: this.earnings };
+  }
+
   /** Reconstruct a career from a snapshot by replaying its actions (deterministic → exact state). A
    *  buyer resumes development from precisely where the seller left off. */
   static resume(snap: CareerSnapshot): Career {
     const c = new Career(snap.seed, snap.track, snap.agentId);
-    for (const a of snap.actions) { if (a.type === 'draft') c.draft(a.cardId); else if (a.type === 'coach') c.appointCoach(a.cardId); else c.play(a.cardId); }
+    for (const a of snap.actions) { if (a.type === 'draft') c.draft(a.cardId); else if (a.type === 'coach') c.appointCoach(a.cardId); else if (a.type === 'offer') c.resolveOffer(a.cardId); else c.play(a.cardId); }
     return c;
   }
 
   /** Current state: a 'coach' phase (appoint staff), a 'draft' phase (add a card), or a 'play' phase. */
   current() {
+    if (this.pendingOffer) return { phase: 'offer' as const, age: this.age, chapter: this.chapter, offers: this.pendingOffer, earnings: this.earnings, deck: this.deck, finished: this.finished };
     if (this.pendingCoaches) return { phase: 'coach' as const, age: this.age, chapter: this.chapter, coaches: this.pendingCoaches, deck: this.deck, finished: this.finished };
     if (this.pendingDraft) return { phase: 'draft' as const, age: this.age, chapter: this.chapter, options: this.pendingDraft.options, picksLeft: this.pendingDraft.picksLeft, deck: this.deck, finished: this.finished };
     return { phase: 'play' as const, turn: this.turn, age: this.age, chapter: this.chapter, scenario: this.scenario, coach: this.coach, hand: this.hand, deck: this.deck, finished: this.finished };
+  }
+
+  /** RESOLVE the financial offer on the table: apply its money/fame/greed/form, then move to the coach. */
+  resolveOffer(offerId: string) {
+    if (!this.pendingOffer) throw new Error('no offer pending');
+    const offer = this.pendingOffer.find((o) => o.id === offerId);
+    if (!offer) throw new Error('offer not on table');
+    this.earnings += offer.earn;
+    this.greedBonus += offer.greed;
+    this.marketBonus += offer.market;
+    this.formBonus += offer.form;                 // added on top of the chapter's season-event form
+    this.actions.push({ type: 'offer', cardId: offerId });
+    this.pendingOffer = null;
+    this.pendingCoaches = rollCoaches(this.rng, this.track);
   }
 
   /** APPOINT a mentor/coach for the coming chapter; then proceed to the card draft. */
@@ -308,6 +348,7 @@ export class Career {
   /** Play a card from the current hand; resolves, logs, advances (into a draft at a season break). */
   play(cardId: string): Choice {
     if (this.finished) throw new Error('career finished');
+    if (this.pendingOffer) throw new Error('resolve the financial offer first');
     if (this.pendingCoaches) throw new Error('appoint a coach first');
     if (this.pendingDraft) throw new Error('resolve the draft first');
     const idx = this.hand.findIndex((c) => c.id === cardId);
@@ -330,7 +371,7 @@ export class Career {
     this.turn++;
     if (this.turn >= TOTAL_TURNS) { this.finished = true; return choice; }
     // at an age-chapter boundary: a narrative EVENT fires, then you APPOINT a coach, then a DRAFT
-    if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.pendingCoaches = rollCoaches(this.rng, this.track); }
+    if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.earnings += 40 + this.turn * 12; this.pendingOffer = rollOffer(this.rng, this.turn); }
     else { this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure); }
     return choice;
   }
@@ -400,7 +441,9 @@ export interface CareerPlayerAttrs {
   durability: number;
 }
 export type Role = 'GK' | 'DF' | 'MF' | 'FW';
-export interface CareerPlayer { attrs: CareerPlayerAttrs; role: Role; overall: number; genes: Genes; traits: string[]; personality: string; greed: number }
+export interface CareerPlayer { attrs: CareerPlayerAttrs; role: Role; overall: number; genes: Genes; traits: string[]; personality: string; greed: number; marketability: number; earnings: number }
+/** Financial/agent context carried out of a career into graduation (all optional → neutral defaults). */
+export interface GraduateCtx { seriousInjuries?: number; agentGreed?: number; agentExposure?: number; greedBonus?: number; marketBonus?: number; earnings?: number }
 
 // ── PERSONALITY: an innate temperament (nature), seeded at genesis like genes. It shapes HOW a player
 // handles their career — steadiness vs volatility, and whether they rise or wilt under pressure — and
@@ -561,24 +604,32 @@ export function eligibleTraits(attrs: CareerPlayerAttrs, log: Choice[]): Trait[]
 /** Finish a career log into a complete Player (attrs + role + overall + traits). Genes default to a
  *  fresh genesis roll; pass inherited genes (lineage). `pickTraits` chooses among the eligible traits
  *  (the client lets a human pick; defaults to the first MAX_TRAITS for the sim). */
-export function graduate(log: Choice[], seed: number, genes: Genes = rollGenes(seed), pickTraits?: (eligible: Trait[]) => Trait[], seriousInjuries = 0, agentGreed = 0): CareerPlayer {
+export function graduate(log: Choice[], seed: number, genes: Genes = rollGenes(seed), pickTraits?: (eligible: Trait[]) => Trait[], ctx: GraduateCtx = {}): CareerPlayer {
+  const { seriousInjuries = 0, agentGreed = 0, agentExposure = 1, greedBonus = 0, marketBonus = 0, earnings = 0 } = ctx;
   const attrs = deriveStats(log, seed, genes);
   const personality = rollPersonality(seed);                          // same temperament the career developed under
   if (personality.signature) attrs[personality.signature] = clamp(attrs[personality.signature] + 1, 1, 20);
   // serious injuries in development leave a lasting fragility (injury-proneness the Manager game reads)
   attrs.durability = clamp(attrs.durability - Math.round(seriousInjuries * 2.5), 1, 20);
   // GREED (financial temperament): what it'll cost a manager to keep this player. Set by the AGENT he
-  // signed with + his nature. High → mercenary (expensive extensions); low → a loyal one-club man.
+  // signed with, his nature, and the money he chased in-career. High → mercenary; low → a loyal one-club man.
   const gRng = mulberry32(seed ^ 0x9e3779b9);
-  const greed = clamp(Math.round(9 + agentGreed + (PERSONALITY_GREED[personality.id] ?? 0) + (gRng() - 0.5) * 4), 1, 20);
+  const greed = clamp(Math.round(9 + agentGreed + greedBonus + (PERSONALITY_GREED[personality.id] ?? 0) + (gRng() - 0.5) * 4), 1, 20);
+  // MARKETABILITY (brand/fame): star turns on the big stage, a flashy temperament, agent exposure and
+  // brand deals build it. The Manager game turns it into COMMERCIAL income — so a fan-favourite helps
+  // pay his own wages, giving greed a genuine upside instead of being a pure tax.
+  const starTurns = log.filter((c) => c.stakes >= 2 && c.success >= 0.7).length;
+  const flair = personality.id === 'maverick' || personality.id === 'mercurial' ? 3 : personality.id === 'biggame' ? 2 : 0;
+  const marketability = clamp(Math.round(5 + starTurns * 0.6 + flair + (agentExposure - 1) * 8 + marketBonus + (gRng() - 0.5) * 2), 1, 20);
   const eligible = eligibleTraits(attrs, log);
   const chosen = (pickTraits ? pickTraits(eligible) : eligible.slice(0, MAX_TRAITS)).slice(0, MAX_TRAITS);
   for (const t of chosen) t.apply?.(attrs); // trait bonuses apply before role/overall
   const flaws = attrs.durability <= 6 ? ['injury_prone'] : []; // a flaw flag, separate from earned perks
   if (greed >= 15) flaws.push('mercenary');                    // financially greedy — costs a fortune to extend
   else if (greed <= 5) flaws.push('loyal');                    // a bargain to keep — a one-club man
+  if (marketability >= 15) flaws.push('marketable');           // a brand — boosts commercial income for his club
   const role = deriveRole(attrs);
-  return { attrs, role, overall: careerOverall(attrs, role), genes, traits: [...chosen.map((t) => t.id), ...flaws], personality: personality.id, greed };
+  return { attrs, role, overall: careerOverall(attrs, role), genes, traits: [...chosen.map((t) => t.id), ...flaws], personality: personality.id, greed, marketability, earnings };
 }
 
 // ── AGE CURVE (playing phase, age 25 → 40) ──
@@ -622,6 +673,13 @@ export function simCareer(seed: number, style: Style, genes: Genes = rollGenes(s
   const prefScore = (c: Card) => c.tags.reduce((s, t) => s + (style.pref[t] ?? 0), 0);
   while (!career.finished) {
     const st = career.current();
+    if (st.phase === 'offer') {
+      // financial path: ambitious/mercenary careers chase the money; grounded ones stay & develop.
+      const wantsMoney = (career.agent?.greed ?? 0) + (PERSONALITY_GREED[career.personality.id] ?? 0) + (rng() - 0.5) * 4;
+      const pick = wantsMoney > 1 ? (rng() < 0.5 ? 'money' : 'brand') : wantsMoney < -1 ? 'develop' : (rng() < 0.5 ? 'brand' : 'develop');
+      career.resolveOffer(pick);
+      continue;
+    }
     if (st.phase === 'coach') {
       // appoint the coach whose specialty best matches your identity (amplify your strengths).
       let best = st.coaches[0], bs = -Infinity;
@@ -644,5 +702,5 @@ export function simCareer(seed: number, style: Style, genes: Genes = rollGenes(s
     }
     career.play(best.id);
   }
-  return graduate(career.log, seed, genes, undefined, career.seriousInjuries, career.agent?.greed ?? 0);
+  return graduate(career.log, seed, genes, undefined, career.finContext());
 }

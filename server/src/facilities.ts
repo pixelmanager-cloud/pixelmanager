@@ -51,10 +51,20 @@ export function scoutExtraTrips(level: number): number { return Math.floor((leve
 export function injuryChanceMult(level: number): number { return 1 - (level - 1) * 0.15; }
 /** Medical Centre: matches shaved off a fresh injury's recovery (0 at L1 → 2 at L5). */
 export function recoveryCut(level: number): number { return Math.floor((level - 1) / 2); }
-/** Commercial Dept: per-season sponsorship income (division- and trophy-scaled). */
-export function sponsorIncome(level: number, tierIdx: number, trophies: number): number {
+/** Commercial Dept: per-season sponsorship income (division- and trophy-scaled), lifted by the squad's
+ *  MARKETABILITY — a fan-favourite/brand-name squad pulls bigger sponsors, so a marketable star helps pay
+ *  his own wages. marketabilityAvg is centred at 10 (neutral), so an all-ordinary squad earns as before. */
+export function sponsorIncome(level: number, tierIdx: number, trophies: number, marketabilityAvg = 10): number {
   if (level <= 1) return 0;
-  return Math.round((60 * (level - 1)) * (1 + tierIdx * 0.12) + trophies * 25 * (level - 1));
+  const base = (60 * (level - 1)) * (1 + tierIdx * 0.12) + trophies * 25 * (level - 1);
+  const brandMult = clampNum(1 + 0.03 * (marketabilityAvg - 10), 0.7, 1.5); // avg 20 → +30%, avg 5 → −15%
+  return Math.round(base * brandMult);
+}
+const clampNum = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+/** Average marketability of a squad (career-built players carry it; ordinary players read neutral). */
+export function squadMarketability(players: Array<{ marketability?: number }>): number {
+  if (!players.length) return 10;
+  return players.reduce((s, p) => s + (p.marketability ?? 10), 0) / players.length;
 }
 /** Fan Zone: home-side attacking edge in the match engine (1.0 at L1 → 1.08 at L5). */
 export function fanHomeBoost(level: number): number { return 1 + (level - 1) * 0.02; }
