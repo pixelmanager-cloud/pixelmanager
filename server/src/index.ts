@@ -467,7 +467,7 @@ app.post('/players/:id/reborn', { preHandler: requireAuth }, async (req, reply) 
 // PROSPECTS: the owner's prospect-state tokens — 10-year-olds to DEVELOP in the Career game.
 app.get('/prospects', { preHandler: requireAuth }, async (req) => {
   const tokens = (await db.tokensOwnedBy(req.account!.id)).filter((t) => t.state === 'prospect');
-  return { prospects: tokens.map((t) => { const pot = rebornPotential(t); return { id: t.id, name: t.name, roleHint: t.role ?? 'MF', generation: t.generation, pedigree: t.pedigree, careerStarted: t.career_seed != null, potentialStars: pot.stars, genes: JSON.parse(t.genes_json) }; }) };
+  return { supply: await db.countTokens(), cap: SUPPLY_CAP, prospects: tokens.map((t) => { const pot = rebornPotential(t); return { id: t.id, name: t.name, roleHint: t.role ?? 'MF', generation: t.generation, pedigree: t.pedigree, careerStarted: t.career_seed != null, potentialStars: pot.stars, genes: JSON.parse(t.genes_json) }; }) };
 });
 
 // GENESIS: mint a brand-new 10-year-old prospect (fresh genes, generation 0) — the ONLY way a token

@@ -452,13 +452,14 @@ class Game {
   /** A prospect card — a 10-year-old awaiting development in the Career game (Layer 1). */
   private showProspectCard(p: import('./api').Prospect, born = false) {
     const stars = '★'.repeat(p.potentialStars) + '☆'.repeat(5 - p.potentialStars);
+    const isGenesis = (p.generation ?? 0) === 0;
     const el = document.createElement('div');
     el.id = 'player-card-ov';
     el.innerHTML = `<div class="pc-card tier-bronze">`
       + `<div class="pc-top"><div class="pc-ovr">10<span>YRS</span></div><div class="pc-tier">🌱<span>PROSPECT</span></div></div>`
       + `<div class="pc-crest role-${p.roleHint}"><span class="pc-crest-role">${p.roleHint}</span></div>`
-      + `<div class="pc-name">${p.name}</div><div class="pc-role">Youth Prospect</div>`
-      + (born ? `<div class="pc-flash">🌱 NEXT GENERATION BORN</div>` : '')
+      + `<div class="pc-name">${p.name}</div><div class="pc-role">Youth Prospect${p.generation ? ` · gen ${p.generation}` : ''}</div>`
+      + (born ? `<div class="pc-flash">${isGenesis ? '🌱 GENESIS PROSPECT MINTED' : '🌱 NEXT GENERATION BORN'}</div>` : '')
       + `<div class="pc-contract retired"><div class="pc-legend">Potential ${stars} · pedigree ${(p.pedigree * 100 | 0)}%</div>`
       + (p.note ? `<div class="pc-stake">${p.note}</div>` : '')
       + `<div class="pc-stake">Develops 10→25 in the Career game (coming soon)</div></div>`
@@ -809,8 +810,8 @@ class Game {
     this.showScreen('academy');
     $('academy-body').innerHTML = SPINNER;
     try {
-      const { prospects } = await api.prospects();
-      const intro = `<div class="scout-sub">Your youth prospects — 10-year-olds to <b>develop</b> through a career (age 10→25): play to each chapter's demands, appoint coaches, and make the big calls. At 25 the SAME NFT graduates into a pro you can field. Mint a fresh genesis prospect, or breed one by retiring a player and choosing <b>Reborn</b>.</div>`
+      const { prospects, supply, cap } = await api.prospects();
+      const intro = `<div class="scout-sub">Your youth prospects — 10-year-olds to <b>develop</b> through a career (age 10→25): play to each chapter's demands, appoint coaches, and make the big calls. At 25 the SAME NFT graduates into a pro you can field. Mint a fresh genesis prospect, or breed one by retiring a player and choosing <b>Reborn</b>. <span style="color:var(--muted);">· fixed supply: <b>${supply.toLocaleString()}</b> / ${cap.toLocaleString()} minted</span></div>`
         + `<div style="margin:10px 0 14px;"><button id="mint-genesis" class="primary">🌱 Mint a genesis prospect · 300c</button></div>`;
       const rows = prospects.length ? prospects.map((p) => {
         const stars = '★'.repeat(p.potentialStars) + '☆'.repeat(5 - p.potentialStars);
