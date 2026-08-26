@@ -25,6 +25,11 @@ const OUTFIELD_TAGS: Tag[] = ['composure', 'aggression', 'creativity', 'teamwork
 
 export type Track = 'outfield' | 'goalkeeper';
 export interface SeasonEvent { id: string; name: string; desc: string }
+/** One recorded development decision. A career is fully reconstructable from (seed, track, actions). */
+export interface Action { type: 'play' | 'draft'; cardId: string }
+/** Everything needed to persist/trade an in-progress prospect (stored off-chain, keyed by tokenId).
+ *  Deterministic → the current stats can be re-derived + verified by replaying it. */
+export interface CareerSnapshot { seed: number; track: Track; actions: Action[] }
 
 export type Rarity = 'common' | 'rare' | 'epic';
 export interface Card { id: string; name: string; tags: Tag[]; rarity?: Rarity }
@@ -179,6 +184,7 @@ export class Career {
   scenario!: Scenario;
   turn = 0;
   log: Choice[] = [];
+  actions: Action[] = [];           // every play/draft decision — the trade-able, resumable record
   finished = false;
   /** When set, the career is paused for a between-chapter DRAFT: pick DRAFT_PICKS of these to add. */
   pendingDraft: { options: Card[]; picksLeft: number } | null = null;
@@ -201,6 +207,17 @@ export class Career {
   get age() { return bandAt(Math.min(this.turn, TOTAL_TURNS - 1)).age; }
   get chapter() { return bandAt(Math.min(this.turn, TOTAL_TURNS - 1)).band.name; }
 
+  /** Persist/trade this in-progress prospect: everything needed to resume it later or elsewhere. */
+  snapshot(): CareerSnapshot { return { seed: this.seed, track: this.track, actions: [...this.actions] }; }
+
+  /** Reconstruct a career from a snapshot by replaying its actions (deterministic → exact state). A
+   *  buyer resumes development from precisely where the seller left off. */
+  static resume(snap: CareerSnapshot): Career {
+    const c = new Career(snap.seed, snap.track);
+    for (const a of snap.actions) { if (a.type === 'draft') c.draft(a.cardId); else c.play(a.cardId); }
+    return c;
+  }
+
   /** Current state: a 'play' phase (pick a hand card) or a 'draft' phase (pick a card to add). */
   current() {
     if (this.pendingDraft) return { phase: 'draft' as const, age: this.age, chapter: this.chapter, options: this.pendingDraft.options, picksLeft: this.pendingDraft.picksLeft, deck: this.deck, finished: this.finished };
@@ -213,6 +230,7 @@ export class Career {
     const i = this.pendingDraft.options.findIndex((c) => c.id === cardId);
     if (i < 0) throw new Error('card not on offer');
     const card = this.pendingDraft.options.splice(i, 1)[0];
+    this.actions.push({ type: 'draft', cardId });
     this.deck.push(card);
     this.discard.push(card);        // it enters the draw rotation right away
     if (--this.pendingDraft.picksLeft <= 0) { this.pendingDraft = null; this.startNextChapter(); }
@@ -224,6 +242,7 @@ export class Career {
     if (this.pendingDraft) throw new Error('resolve the draft first');
     const idx = this.hand.findIndex((c) => c.id === cardId);
     if (idx < 0) throw new Error('card not in hand');
+    this.actions.push({ type: 'play', cardId });
     const bestFit = Math.max(...this.hand.map((c) => fit(c, this.scenario))); // best you COULD have played this turn
     const card = this.hand.splice(idx, 1)[0];
     const f = fit(card, this.scenario);
@@ -463,6 +482,23 @@ export function ageCurve(prime: CareerPlayerAttrs, age: number): CareerPlayerAtt
   for (const k of PHYSICAL) out[k] = clamp(Math.round(prime[k] * phys), 1, 20);
   for (const k of WISDOM) out[k] = clamp(Math.round(prime[k] * wis), 1, 20);
   return out;
+}
+
+// ── PROSPECT VALUATION (the market for in-development players) ──
+// A half-developed prospect is priced on: current ability, how much upside remains (age → turns left),
+// and its physical gene ceiling (the scarce, un-grindable part). Deterministic + verifiable.
+export interface ProspectValue { age: number; chapter: string; role: Role; currentOverall: number; potential: number; physicalCeiling: number; stars: number }
+export function prospectValuation(c: Career, genes: Genes): ProspectValue {
+  const partial = deriveStats(c.log, c.seed, genes);           // stats so far (deterministic)
+  const role = deriveRole(partial);
+  const current = careerOverall(partial, role);
+  const remaining = Math.max(0, 1 - c.turn / TOTAL_TURNS);     // fraction of the career still to develop
+  const geneCeil = (genes.pace.ceiling + genes.strength.ceiling + genes.stamina.ceiling) / 3;
+  // a rough prime-overall ceiling: physical bounded by genes, technique/mental by a well-played nominal ~17
+  const ceiling = clamp(Math.round(0.45 * geneCeil + 0.55 * 17), current, 20);
+  const potential = Math.round(current + remaining * (ceiling - current)); // projected prime if developed well
+  const stars = clamp(Math.round((potential + remaining * 3) / 4.2), 1, 5); // young high-upside prospects sparkle
+  return { age: c.age, chapter: c.chapter, role, currentOverall: current, potential, physicalCeiling: Math.round(geneCeil), stars };
 }
 
 // ── balance helper: auto-play a career under a "style" policy (picks the best hand card) ──

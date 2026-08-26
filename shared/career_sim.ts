@@ -1,6 +1,6 @@
 // Career-sim harness. Validates: (1) different styles → distinct, specialised players + roles;
 // (2) skill → magnitude; (3) the turn-by-turn engine is deterministic. Run: `npx tsx career_sim.ts`.
-import { Career, simCareer, graduate, ageCurve, careerOverall, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, STARTER_DECK, cardPower, type Style, type CareerPlayerAttrs, type Role, type Genes } from './src/career.js';
+import { Career, simCareer, graduate, ageCurve, careerOverall, prospectValuation, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, STARTER_DECK, cardPower, type Style, type CareerPlayerAttrs, type Role, type Genes } from './src/career.js';
 
 const STYLES: Style[] = [
   { name: 'Poacher',   pref: { composure: 1, flair: 0.8 },        skill: 0.85 },
@@ -148,6 +148,27 @@ console.log('\n=== a development life (age 10→25, seed arc) ===');
     const aged = ageCurve(p.attrs, age); return `${age}:${careerOverall(aged, p.role)}`;
   }).join('  '));
   console.log(`  pace 25→40: ${p.attrs.pace} → ${ageCurve(p.attrs, 40).pace}   leadership 25→40: ${p.attrs.leadership} → ${ageCurve(p.attrs, 40).leadership}`);
+}
+
+// prospect market: snapshot a half-developed player, resume it elsewhere, value it
+console.log('\n=== prospect market — trade an in-development player ===');
+{
+  const genes = rollGenes(seedFrom('prospect'));
+  // develop a player halfway (a promising teenager), then a buyer resumes from the snapshot
+  const seller = new Career(seedFrom('prospect'));
+  while (seller.age < 19 && !seller.finished) { const st = seller.current(); st.phase === 'draft' ? seller.draft(st.options[0].id) : seller.play(st.hand[0].id); }
+  const snap = seller.snapshot();
+  const val = prospectValuation(seller, genes);
+  console.log(`  FOR SALE — age ${val.age} (${val.chapter}), ${val.role}: current ovr ${val.currentOverall}, potential ${val.potential}, physical ceiling ${val.physicalCeiling}, ${'★'.repeat(val.stars)}${'☆'.repeat(5 - val.stars)}`);
+  console.log(`  snapshot: ${snap.actions.length} actions (seed+track+actions — tiny, verifiable off-chain)`);
+  // buyer resumes and finishes the career from exactly where the seller stopped
+  const buyer = Career.resume(snap);
+  while (!buyer.finished) { const st = buyer.current(); st.phase === 'draft' ? buyer.draft(st.options[0].id) : buyer.play(st.hand[0].id); }
+  // verify: resume+continue is identical to developing straight through the same choices
+  const straight = new Career(seedFrom('prospect'));
+  while (!straight.finished) { const st = straight.current(); st.phase === 'draft' ? straight.draft(st.options[0].id) : straight.play(st.hand[0].id); }
+  const same = JSON.stringify(graduate(buyer.log, seedFrom('prospect'), genes)) === JSON.stringify(graduate(straight.log, seedFrom('prospect'), genes));
+  console.log(`  buyer resumes → graduates the SAME player as continuous development: ${same}`);
 }
 
 // determinism: same seed + same choices (play + draft) → identical player
