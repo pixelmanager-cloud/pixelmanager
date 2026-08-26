@@ -288,8 +288,8 @@ class Game {
     return healthy.length >= 11 ? { ...this.club, players: healthy } : this.club;
   }
 
-  private showScreen(s: 'login' | 'select' | 'hub' | 'lineup' | 'match' | 'standings' | 'scouting' | 'market' | 'club' | 'academy') {
-    for (const id of ['login', 'select', 'hub', 'lineup', 'matchwrap', 'standings', 'scouting', 'market', 'club', 'academy']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
+  private showScreen(s: 'login' | 'select' | 'hub' | 'lineup' | 'match' | 'standings' | 'scouting' | 'market' | 'club' | 'academy' | 'trophies') {
+    for (const id of ['login', 'select', 'hub', 'lineup', 'matchwrap', 'standings', 'scouting', 'market', 'club', 'academy', 'trophies']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
     $('logout').classList.toggle('hidden', s === 'login');
     $('app-title').classList.toggle('clickable', s !== 'login'); // title is a "home → modes" once you're in
     if (s !== 'scouting' && this.missionTimer) { clearInterval(this.missionTimer); this.missionTimer = null; } // stop the mission countdown when leaving
@@ -340,6 +340,8 @@ class Game {
     $('view-scouting').addEventListener('click', () => this.showScouting());
     $('scouting-back').addEventListener('click', () => this.showHub());
     $('view-market').addEventListener('click', () => this.showMarket());
+    $('view-trophies').addEventListener('click', () => this.showTrophyRoom());
+    $('trophies-back').addEventListener('click', () => this.showSelect());
     // mode select ⇄ the two games
     $('enter-career').addEventListener('click', () => this.showAcademy());
     $('enter-manager').addEventListener('click', () => this.showHub());
@@ -848,6 +850,31 @@ class Game {
       $('mint-genesis').addEventListener('click', () => this.mintGenesis());
       $('academy-body').querySelectorAll('[data-dev]').forEach((b) => b.addEventListener('click', () => this.openCareer((b as HTMLElement).dataset.dev!)));
     } catch { $('academy-body').innerHTML = '<div class="muted">Could not load — is the server running?</div>'; }
+  }
+
+  /** Trophy Room: the club's honours + the bloodlines (legend chains) you've built — the dynasty legacy. */
+  private async showTrophyRoom() {
+    this.showScreen('trophies');
+    $('trophies-body').innerHTML = SPINNER;
+    try {
+      const [{ honours }, { legends }] = await Promise.all([api.honours(), api.legends()]);
+      const titles = honours.filter((h) => h.title === 1);
+      const cabinet = titles.length
+        ? `<div class="tr-cabinet">` + titles.sort((a, b) => a.season_number - b.season_number).map((h) => `<div class="tr-trophy"><div class="tr-trophy-ico">🏆</div><div class="tr-trophy-name">${h.tier}</div><div class="tr-trophy-sub">Season ${h.season_number}${h.kind && h.kind !== 'league' ? ` · ${h.kind}` : ''}</div></div>`).join('') + `</div>`
+        : `<div class="muted">No trophies yet — win your pod to lift your first title.</div>`;
+      // bloodlines: group legend cards by their base player id → a generational chain
+      const byLine = new Map<string, typeof legends>();
+      for (const l of legends) { const arr = byLine.get(l.playerId) ?? []; arr.push(l); byLine.set(l.playerId, arr); }
+      const lines = [...byLine.values()].map((chain) => chain.slice().sort((a, b) => a.retiredSeason - b.retiredSeason));
+      const bloodlines = lines.length
+        ? lines.map((chain) => `<div class="tr-line">` + chain.map((l, i) => `<div class="tr-gen"><div class="tr-gen-badge">${l.card.icon} ${l.card.tier}</div><div class="tr-gen-name">${l.name}</div><div class="tr-gen-meta">${l.card.role} · rating ${l.card.legendRating} · ${l.card.leagueTitles}🏅 ${l.card.cupTitles}🏆 · ${l.card.apps} apps</div></div>${i < chain.length - 1 ? '<div class="tr-arrow">↓ next generation</div>' : ''}`).join('') + `</div>`).join('')
+        : `<div class="muted">No bloodlines yet — develop a player, field him for a career, and retire him to found a dynasty. Every generation after adds a link to the tree.</div>`;
+      const seasons = honours.length ? Math.max(...honours.map((h) => h.season_number)) : 0;
+      const summary = `<div class="tr-summary">🏆 ${titles.length} title${titles.length === 1 ? '' : 's'} · 🌳 ${lines.length} bloodline${lines.length === 1 ? '' : 's'} · ⭐ ${legends.length} legend${legends.length === 1 ? '' : 's'} · ${seasons} season${seasons === 1 ? '' : 's'} managed</div>`;
+      $('trophies-body').innerHTML = summary
+        + `<h4 class="scout-h4">🏆 TROPHY CABINET</h4>` + cabinet
+        + `<h4 class="scout-h4" style="margin-top:24px;">🌳 BLOODLINES</h4><div class="scout-sub">The dynasties you've built — each line is a bloodline across the generations, newest at the bottom.</div>` + bloodlines;
+    } catch { $('trophies-body').innerHTML = '<div class="muted">Could not load — is the game running?</div>'; }
   }
 
   private async mintGenesis() {
