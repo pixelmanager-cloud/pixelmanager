@@ -157,3 +157,46 @@ pressure, a voice, and decisions that matter" — reusing systems that already e
   (team talk, match plan, training focus, manager/club traits, backroom staff).
 - **🔴 bigger subsystems** — none strictly required; the highest-impact wins are 🟢/🟡. A full
   club-level youth-intake pipeline would be 🔴 but the career game already covers "develop players".
+
+---
+
+## Research-informed depth roadmap (2026-08, from the well-known manager games)
+Curated from FM (training/roles/scouting/staff/morale/media) + the genre's most-loved loop (dynasty +
+youth development), filtered to our frame: **owner-manager dynasty, offline, coin economy, text-driven
+matches.** (Web3 is removed — "players", not NFTs — but the owner-manager frame above still holds: no board /
+sack / budgets.) This is the **manager agent's roadmap** — judge each by the growth-and-content-strategy
+content bar (a new interacting/trade-off decision, not a reskin).
+
+### 🥇 The core four (highest leverage — extend the dynasty/development loop into the manager half)
+1. **Per-player training focus** — target specific stats to develop a 25+ pro (the coaching-focus idea).
+   Turns manager "care" into concrete choices; deterministic + calibration-safe.
+2. **Named player roles** — expand duties into FM-style roles (inverted full-back, pressing forward,
+   deep-lying playmaker, ball-playing defender, false 9) that change match behaviour. Re-verify bands.
+3. **Backroom staff hired with coins** — assistant (auto-suggestions), fitness coach (fewer injuries),
+   scouts (better prospects), analysts (opponent intel), physio (recovery). A new management layer + coin sink.
+4. **Mentoring** — pair a veteran with a youngster → transfers a little stat/personality/trait. Deepens the
+   squad and the bloodline story.
+
+### ⚙️ Tactics & match depth
+5. Team talks (pre-match / half-time) → morale → performance (text-friendly).
+6. Set-piece routines (designed corners/free-kicks, beyond just takers).
+7. Richer pre-match hub — opponent strengths/weaknesses/form (build on scouting cards).
+
+### 👥 People & morale
+8. Player morale/happiness with playing time, form, role — unhappy stars underperform (never demand to leave).
+9. Player conversations (praise / challenge) → morale + a development nudge.
+10. Leadership core / captaincy effects — surface the impact of captains.
+
+### 📰 Club story & immersion (the "story development" thread)
+11. Press conferences / media moments — FM-style choices that sway morale & reputation, mirroring the player
+    career's life events. The **Gaffer's Diary** is the seed.
+12. Rivalries & milestones — derbies, records, streaks (flavour, no sack risk — fits owner-manager).
+
+### 🏆 Structure & finances
+13. Club reputation/prestige growth (`managerPrestige`) → unlocks better prospects/staff.
+14. Club finances — gate/sponsor income (facilities already have this) → reinvest coins into facilities/staff/youth.
+15. More competitions — super cup, continental, friendlies (fitness).
+
+**Guardrails (unchanged):** deterministic (no wall-clock/Math.random in shared/), `npm run verify` green with
+every engine-touching change (paste before/after calibration in the commit), one item per commit, fair not
+grindy, legible cause→effect. Sources: FM24 (Goal.com, Most Wanted Gamers), Goomba Stomp, gmgames.org.
