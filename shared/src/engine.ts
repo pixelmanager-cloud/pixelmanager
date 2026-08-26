@@ -481,14 +481,20 @@ export class MatchEngine {
 
   private chaseLooseBall() {
     const s = this.state;
-    let best: { teamIdx: 0 | 1; playerIdx: number; d: number } | null = null;
+    // a 50/50 is a PHYSICAL DUEL: strength + pace let a player win it from a little further out,
+    // so those stats matter in every scramble. Centred at the neutral stat → average players ≈ pure
+    // proximity (calibration-safe); the winner is picked by effective reach but must still be near it.
+    let best: { teamIdx: 0 | 1; playerIdx: number; eff: number; d: number } | null = null;
     for (const teamIdx of [0, 1] as const) {
       s.players[teamIdx].forEach((ps, i) => {
+        const p = this.teams[teamIdx].players[i];
         const d = Math.hypot(ps.x - s.ball.x, ps.y - s.ball.y);
-        if (!best || d < best.d) best = { teamIdx, playerIdx: i, d };
+        const physical = 0.5 * (norm(p.attrs.strength) + norm(p.attrs.pace) - 1); // >0 above the neutral stat
+        const eff = d - physical;
+        if (!best || eff < best.eff) best = { teamIdx, playerIdx: i, eff, d };
       });
     }
-    if (best && (best as { d: number }).d < 1.2) {
+    if (best && (best as { d: number }).d < 1.4) {
       const b = best as { teamIdx: 0 | 1; playerIdx: number };
       s.carrier = { teamIdx: b.teamIdx, playerIdx: b.playerIdx };
     }
