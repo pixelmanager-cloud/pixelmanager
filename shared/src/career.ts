@@ -25,6 +25,8 @@ const OUTFIELD_TAGS: Tag[] = ['composure', 'aggression', 'creativity', 'teamwork
 
 export type Track = 'outfield' | 'goalkeeper';
 export interface SeasonEvent { id: string; name: string; desc: string }
+/** A factual look-back at a completed age chapter (for chapter-transition narration). */
+export interface ChapterSummary { chapter: string; age: number; avgSuccess: number; bigMoments: number; seasonEvent: SeasonEvent | null }
 /** One recorded development decision. A career is fully reconstructable from (seed, track, actions). */
 export interface Action { type: 'play' | 'draft' | 'coach' | 'offer'; cardId: string }
 /** Everything needed to persist/trade an in-progress prospect (stored off-chain, keyed by tokenId).
@@ -320,6 +322,20 @@ export class Career {
 
   /** Persist/trade this in-progress prospect: everything needed to resume it later or elsewhere. */
   snapshot(): CareerSnapshot { return { seed: this.seed, track: this.track, agentId: this.agent?.id, actions: [...this.actions] }; }
+
+  /** At a between-chapter pause (offer/coach/draft), a factual summary of the chapter that just ended —
+   *  which chapter, his age at the boundary, how he fared, big moments he rose to, and the season event
+   *  colouring it. Null during normal play. Deterministic (derived from the career log) → for narration. */
+  chapterSummary(): ChapterSummary | null {
+    if (!this.pendingOffer && !this.pendingCoaches && !this.pendingDraft) return null;
+    const doneIdx = BAND_ENDS.indexOf(this.turn);   // the band whose final turn was just played
+    if (doneIdx < 0) return null;
+    const band = AGE_BANDS[doneIdx];
+    const slice = this.log.slice(Math.max(0, this.log.length - band.turns)); // just this chapter's plays
+    const avgSuccess = slice.reduce((s, c) => s + c.success, 0) / Math.max(1, slice.length);
+    const bigMoments = slice.filter((c) => c.stakes >= 2 && c.success >= 0.6).length;
+    return { chapter: band.name, age: band.to, avgSuccess, bigMoments, seasonEvent: this.seasonEvent };
+  }
 
   /** The financial/agent context graduate() needs (greed, fame, earnings, injuries, exposure). */
   finContext(): GraduateCtx {

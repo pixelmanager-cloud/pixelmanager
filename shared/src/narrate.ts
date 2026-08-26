@@ -71,6 +71,55 @@ const EVENT_PREFIX: Record<string, string> = {
   breakthrough: 'Riding the wave of a breakout season, ',
 };
 
+// ── CHAPTER TRANSITION: a "life so far" beat when a career crosses an age-chapter boundary. A short
+// paragraph looking back on the chapter that just ended — how he fared and the season event that
+// coloured it. Seeded (from career + turn) so a replay reads identically.
+export interface ChapterCtx {
+  chapter: string; age: number; avgSuccess: number; bigMoments: number;
+  seasonEventId?: string | null; personalityId: string; seed: number;
+}
+// looking back on each chapter as it closes
+const CHAPTER_CLOSE: Record<string, string[]> = {
+  Grassroots: ['The park-pitch years are behind him now.', 'Those muddy Sunday-league mornings are done.', 'And so the grassroots days come to a close.'],
+  Academy: ['His academy days draw to a close.', 'The academy chapter is written now.', 'That closes the book on his academy years.'],
+  'Youth Team': ['The reserve-team grind is behind him.', 'His youth-team years are done.', 'And so the youth-team chapter closes.'],
+  Breakthrough: ['His first taste of the big time is behind him.', 'The breakthrough is complete — he belongs here now.', 'That chapter, breaking into the side, is written.'],
+  Establishing: ['He has established himself now, for better or worse.', 'The making of the player is all but done.', 'His formative years are behind him.'],
+};
+// how the chapter went, banded by average success
+const FARED: Record<string, string[]> = {
+  excellent: ['By any measure it was a triumph — he was a level above.', 'He was outstanding throughout, and everyone noticed.', 'He rose to nearly everything asked of him.'],
+  good: ['He came through it well, more right than wrong.', 'A solid, encouraging spell — real progress made.', 'He did himself justice more often than not.'],
+  mixed: ['It was a mixed bag — flashes of quality between the rough edges.', 'For every step forward there was one back.', 'He blew hot and cold, and he knows it.'],
+  poor: ['He struggled, if he’s honest with himself.', 'It was a chastening spell — more lessons than highlights.', 'Little came off, and the doubts crept in.'],
+};
+// the season event that coloured the chapter, carried into the beat as a closing note
+const CHAPTER_EVENT: Record<string, string[]> = {
+  'serious-injury': ['A bad injury cast a long shadow, one he carries into the next chapter.', 'Months lost to injury will linger a while yet.'],
+  breakthrough: ['A breakout campaign has the whole club talking.', 'People are whispering his name now — bigger things beckon.'],
+  'new-gaffer': ['A new gaffer has walked in with fresh demands.', 'There’s a new man in charge to convince now.'],
+  'hot-streak': ['He rides on into the next chapter in the form of his life.', 'Everything is coming off for him right now.'],
+  slump: ['A loss of form nags at him as the next chapter opens.', 'Confidence is low, and he has work to do to find it.'],
+  knock: ['A niggling injury needs managing — nothing serious.', 'He’s carrying a knock, but soldiering on.'],
+  steady: ['Nothing dramatic — just the steady graft of getting better.', 'A quiet, unshowy season of progress.'],
+};
+/** A short "life so far" paragraph for the chapter that just ended (surfaced at a between-chapter pause). */
+export function narrateChapter(ctx: ChapterCtx): string {
+  const rng = mulberry32(ctx.seed >>> 0);
+  const pick = <T,>(arr: T[]): T => arr[Math.floor(rng() * arr.length)];
+  const faredBand = ctx.avgSuccess >= 0.7 ? 'excellent' : ctx.avgSuccess >= 0.55 ? 'good' : ctx.avgSuccess >= 0.4 ? 'mixed' : 'poor';
+  const closeRaw = pick(CHAPTER_CLOSE[ctx.chapter] ?? CHAPTER_CLOSE.Academy);
+  const lead = rng() < 0.5 ? `At ${ctx.age}, ` : '';                     // half the time, frame the beat by his age
+  const close = lead ? lead + closeRaw.charAt(0).toLowerCase() + closeRaw.slice(1) : closeRaw;
+  const fared = pick(FARED[faredBand]);
+  const big = ctx.bigMoments > 0 && rng() < 0.85
+    ? ' ' + pick([`He stood tall on the big occasion${ctx.bigMoments > 1 ? 's' : ''} when it came.`, 'And he saved his best for the biggest stages.', 'The bigger the moment, the more he seemed to grow.'])
+    : '';
+  const event = ctx.seasonEventId && CHAPTER_EVENT[ctx.seasonEventId] ? ' ' + pick(CHAPTER_EVENT[ctx.seasonEventId]) : '';
+  const flavor = (faredBand === 'excellent' || faredBand === 'poor') && rng() < 0.6 && PERSONALITY[ctx.personalityId] ? ' ' + PERSONALITY[ctx.personalityId] : '';
+  return `${close} ${fared}${big}${event}${flavor}`;
+}
+
 // ── SCENARIO STORY: describe the SITUATION the player faces this turn (before he chooses) ──
 const KIND_SETUP: Record<string, string[]> = {
   match: ['The game is finely poised.', 'The match hangs in the balance.', 'This is where games are won and lost.', 'The tempo is rising and the tackles are flying in.'],

@@ -4,7 +4,7 @@
 // home for every transition, replacing the old prospects/contracts/lifecycle/achievements split.
 import {
   overall, contractView, signContract, contractLength, legacyCard, legacyBoost, inheritGenes, rollGenes, graduate,
-  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, moraleEffects, narratePlay, scenarioStory, cardName, CARD_DESC,
+  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, moraleEffects, narratePlay, scenarioStory, narrateChapter, cardName, CARD_DESC,
   type Player, type Track, type PlayerAchievements, type Genes, type CareerPlayerAttrs,
 } from '@fm/shared';
 import type { Token, Store } from './store.js';
@@ -109,6 +109,13 @@ export function careerState(t: Token, c: Career) {
     st.hand = withDesc(st.hand);
   }
   if (st.options) st.options = withDesc(st.options); // draft cards get their "what he does" too
+  // CHAPTER TRANSITION: at a between-chapter pause, a "life so far" beat on the chapter just ended
+  const recap = c.chapterSummary();
+  if (recap) st.chapterRecap = narrateChapter({
+    chapter: recap.chapter, age: recap.age, avgSuccess: recap.avgSuccess, bigMoments: recap.bigMoments,
+    seasonEventId: recap.seasonEvent?.id ?? null, personalityId: c.personality.id,
+    seed: (((c as any).seed >>> 0) + c.turn * 2246822519) >>> 0,
+  });
   return {
     prospectId: t.id, name: t.name, generation: t.generation, pedigree: t.pedigree, agentId: t.agent_id, track: t.track,
     turn: c.turn, totalTurns: TOTAL_TURNS, seasonEvent: c.seasonEvent, earnings: c.earnings, profile: careerProfile(t, c), ...st,
