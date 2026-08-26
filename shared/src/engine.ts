@@ -41,6 +41,8 @@ export class MatchEngine {
   /** commentary-only throttle: last game-second we emitted a "flow" event (pass/tackle/loose-ball),
    *  so the feed gets texture without a line every micro-tick. Purely cosmetic — never read by the sim. */
   private lastFlowSec = -99;
+  private fatigueFlagged = new Set<number>(); // key = team*100+idx already narrated as gassed (cosmetic)
+  private lastFatigueMin = -1;
 
   /** rough pitch third from the acting team's perspective — for commentary context ("in the final third"). */
   private zoneOf(teamIdx: 0 | 1, x: number): 'def' | 'mid' | 'att' {
@@ -179,10 +181,32 @@ export class MatchEngine {
         this.counterUntil = s.clockSec + 2.0;
       }
     }
+    this.checkFatigue();
   }
 
   private onCounter(teamIdx: 0 | 1): boolean {
     return this.counterTeam === teamIdx && this.state.clockSec < this.counterUntil;
+  }
+
+  /** Cosmetic: once per minute in the closing stages, surface the first badly-gassed grafter per
+   *  side. Reads live fitness only — no rng, no outcome change — so stamina finally shows on-screen. */
+  private checkFatigue() {
+    const s = this.state;
+    const min = this.minute();
+    if (min < 60 || min === this.lastFatigueMin) return;
+    this.lastFatigueMin = min;
+    for (const t of [0, 1] as const) {
+      for (let i = 1; i < 11; i++) {
+        const key = t * 100 + i;
+        if (this.fatigueFlagged.has(key)) continue;
+        const p = this.teams[t].players[i];
+        if (s.players[t][i].fitness < 0.56 && norm(p.attrs.workrate) > 0.5) {
+          this.fatigueFlagged.add(key);
+          s.events.push({ minute: min, type: 'fatigue', teamIdx: t, playerName: p.name });
+          break; // at most one per side per minute
+        }
+      }
+    }
   }
 
   // ---- movement ----
@@ -385,7 +409,7 @@ export class MatchEngine {
           s.ball = { ...recS };
           // through-ball that springs a fast forward behind a high line => clear chance
           if (pick.through && this.beatsLastDefender(teamIdx, pick.idx)) {
-            s.events.push({ minute: this.minute(), type: 'chance', teamIdx, playerName: rec.name });
+            s.events.push({ minute: this.minute(), type: 'chance', teamIdx, playerName: rec.name, counter: this.onCounter(teamIdx) });
             this.resolveShot(teamIdx, pick.idx, Math.hypot(goal.x - recS.x, goal.y - recS.y), true);
           }
         } else {

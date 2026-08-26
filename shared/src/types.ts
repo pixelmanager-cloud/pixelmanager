@@ -96,7 +96,12 @@ export interface PlayerState {
 
 export type MatchEventType = 'kickoff' | 'goal' | 'shot_saved' | 'shot_missed' | 'chance' | 'halftime' | 'fulltime'
   // richer per-player events for commentary (ADD-ONLY: they describe what already happens, never change outcomes)
-  | 'pass' | 'tackle_won' | 'loose_ball';
+  | 'pass' | 'tackle_won' | 'loose_ball'
+  // cosmetic depth (read existing sim state, consume no rng, never change outcomes)
+  | 'fatigue' | 'woodwork'
+  // real set-piece / discipline / squad mechanics (these DO resolve with rng and affect outcomes)
+  | 'foul' | 'yellow_card' | 'red_card' | 'corner' | 'free_kick' | 'penalty' | 'penalty_missed'
+  | 'sub' | 'injury';
 
 export interface MatchEvent {
   minute: number;
@@ -107,6 +112,8 @@ export interface MatchEvent {
   playerName2?: string;
   /** rough pitch zone the action happened in, from the acting team's perspective */
   zone?: 'def' | 'mid' | 'att';
+  /** the acting move sprang from a fast counter-attack (commentary colour only) */
+  counter?: boolean;
 }
 
 export interface MatchState {

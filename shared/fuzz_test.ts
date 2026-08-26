@@ -23,6 +23,8 @@ const FORMATION_NAMES = Object.keys(FORMATIONS) as Formation[];
 const VALID_EVENT_TYPES = new Set<MatchEventType>([
   'kickoff', 'goal', 'shot_saved', 'shot_missed', 'chance', 'halftime', 'fulltime',
   'pass', 'tackle_won', 'loose_ball', // commentary-only add-on events
+  'fatigue', 'woodwork', // cosmetic depth
+  'foul', 'yellow_card', 'red_card', 'corner', 'free_kick', 'penalty', 'penalty_missed', 'sub', 'injury', // real mechanics
 ]);
 
 const EXPECTED_TICKS = (90 * 60) / TICK_SEC; // 10800 ticks for a full 90'

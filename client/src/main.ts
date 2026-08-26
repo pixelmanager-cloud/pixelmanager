@@ -1494,6 +1494,7 @@ class Game {
     for (const t of [payload.home.team, payload.away.team]) for (const p of t.players) this.playerAttrs.set(p.name, p.attrs);
     this.move = null;
     this.liveScore = [0, 0]; this.scorerTally = new Map(); this.lastGoalIdx = -1;
+    this.attackBeats = []; this.lastMomentumMin = -99; this.lastAttackMin = 0;
     this.running = true; this.accum = 0; this.eventsShown = 0;
     this.setMatchNames();
     $('ticker').innerHTML = '';
@@ -1615,6 +1616,20 @@ class Game {
   private liveScore: [number, number] = [0, 0];
   private scorerTally = new Map<string, number>();
   private lastGoalIdx = -1;
+  private attackBeats: Array<{ t: 0 | 1; min: number }> = []; // rolling attacking moments for momentum
+  private lastMomentumMin = -99;
+  private lastAttackMin = 0;
+  /** Emit a "sustained pressure" note when one side dominates the attacking beats of the last ~10'. */
+  private checkMomentum(min: number) {
+    const recent = this.attackBeats.filter((b) => min - b.min <= 10);
+    const c0 = recent.filter((b) => b.t === 0).length, c1 = recent.filter((b) => b.t === 1).length;
+    const top = Math.max(c0, c1), lead: 0 | 1 = c0 >= c1 ? 0 : 1;
+    if (top >= 4 && Math.abs(c0 - c1) >= 3 && min - this.lastMomentumMin >= 8) {
+      this.lastMomentumMin = min;
+      const team = lead === 0 ? this.homeName : this.awayName;
+      this.appendLine(`<span class="cm-min">${min}'</span> <span class="cm-momentum">${this.cpick([`Wave after wave of pressure from ${team} now.`, `${team} are laying siege to this goal.`, `It's all ${team} — the other side can't get out.`, `${team} have really turned the screw here.`], min, 21)}</span>`, 'cm-momentum');
+    }
+  }
   /** Compose a goal line with running score, scorer tally (brace/hat-trick) and game-state framing. */
   private goalLine(e: MatchEvent, team: string, idx: number): string {
     this.liveScore[e.teamIdx]++;
@@ -1684,6 +1699,15 @@ class Game {
       return;
     }
     this.flushMove(); // any other event ends the passage
+    // a long quiet spell before this attacking beat gets a "gone flat" lull line
+    const ATTACK_TYPES = ['chance', 'shot_saved', 'shot_missed', 'goal', 'woodwork', 'corner', 'penalty'];
+    if (ATTACK_TYPES.includes(e.type)) {
+      if (e.minute - this.lastAttackMin >= 10 && e.minute > 12) {
+        this.appendLine(`<span class="cm-min">${e.minute}'</span> <span class="cm-lull">${this.cpick(['It had gone a bit flat — but here’s something.', 'The game needed a spark, and this might be it.', 'After a quiet spell, the tempo lifts again.'], e.minute, 22)}</span>`, 'cm-lull');
+      }
+      this.lastAttackMin = e.minute;
+      this.attackBeats.push({ t: e.teamIdx, min: e.minute });
+    }
     const idx = this.eventsShown;
     const team = e.teamIdx === 0 ? this.homeName : this.awayName;
     const opp = e.teamIdx === 0 ? this.awayName : this.homeName;
@@ -1695,10 +1719,26 @@ class Game {
     switch (e.type) {
       case 'kickoff': text = this.cpick(['We’re underway!', 'And the match kicks off!', 'Here we go — game on!', 'The referee gets us started!'], idx, 5); break;
       case 'goal': cls = 'cm-goal'; text = this.goalLine(e, team, idx); break;
-      case 'chance': cls = 'cm-chance'; text = this.cpick([`${p} works a yard and shapes to shoot…`, `Here come ${team} — ${p} bursts in behind!`, `Big chance! ${p} is in for ${team}…`, `${team} carve it open — ${p} with a sight of goal!`, `${p} shifts it onto his stronger foot…`, `A gap opens up and ${p} goes for it…`], idx, 2); break;
+      case 'chance':
+        cls = 'cm-chance';
+        text = e.counter
+          ? this.cpick([`They break at pace! ${p} is away for ${team}…`, `Counter-attack, ${team}! ${p} storms clear…`, `Caught square — ${p} springs the trap for ${team}…`, `On the turnover! ${p} races through…`], idx, 2)
+          : this.cpick([`${p} works a yard and shapes to shoot…`, `Here come ${team} — ${p} bursts in behind!`, `Big chance! ${p} is in for ${team}…`, `${team} carve it open — ${p} with a sight of goal!`, `${p} shifts it onto his stronger foot…`, `A gap opens up and ${p} goes for it…`], idx, 2);
+        if (e.counter) cls = 'cm-chance cm-counter';
+        break;
       case 'shot_saved': cls = 'cm-save'; text = this.cpick([`🧤 SAVED! ${opp}’s keeper turns ${p} away!`, `🧤 Denied! A fine stop to keep ${p} out!`, `🧤 What a save — ${p} was sure he’d scored!`, `🧤 Beaten away! ${p} is foiled!`, `🧤 Big hands! ${opp} keep ${p} out!`], idx, 3); break;
       case 'shot_missed': cls = 'cm-miss'; text = this.cpick([`${p} drags it wide!`, `Off target — ${p} will want that one back.`, `${p} blazes over the bar!`, `Just past the post from ${p}!`, `Wild from ${p} — miles over!`], idx, 4); break;
-      case 'tackle_won': cls = 'cm-tackle'; text = this.cpick([`🦵 ${p} wins it back for ${team} ${zone}.`, `🦵 Strong challenge — ${p} nicks it for ${team} ${zone}.`, `🦵 ${p} steps in and dispossesses the man ${zone}.`, `🦵 Turnover! ${p} robs him ${zone}.`], idx, 6); break;
+      case 'tackle_won':
+        if (e.zone === 'att') { // a turnover won high up the pitch — a pressing trap
+          cls = 'cm-press';
+          text = this.cpick([`⚡ Won high up! ${p} presses and steals it for ${team} — dangerous!`, `⚡ ${team} spring the press — ${p} robs him in the final third!`, `⚡ High turnover! ${p} nicks it right on the edge of the box!`], idx, 6);
+        } else {
+          cls = 'cm-tackle';
+          text = this.cpick([`🦵 ${p} wins it back for ${team} ${zone}.`, `🦵 Strong challenge — ${p} nicks it for ${team} ${zone}.`, `🦵 ${p} steps in and dispossesses the man ${zone}.`, `🦵 Turnover! ${p} robs him ${zone}.`], idx, 6);
+        }
+        break;
+      case 'fatigue': cls = 'cm-injury'; text = this.cpick([`${p} is blowing hard — the legs are going.`, `${p} looks spent, hands on hips ${zone}.`, `Tiring badly now, ${p} — running on empty.`, `${p} can barely get back — gassed.`], idx, 12); break;
+      case 'woodwork': cls = 'cm-post'; text = this.cpick([`🪵 OFF THE POST! ${p} rattles the woodwork — so close!`, `🪵 OFF THE BAR! ${p} is inches away!`, `🪵 It cannons back off the upright — ${p} can't believe it!`], idx, 13); break;
       case 'loose_ball': cls = 'cm-loose'; text = this.cpick([`The ball breaks loose ${zone}.`, `Cut out! ${p}'s pass is intercepted ${zone}.`, `Scrappy — it pinballs around ${zone}.`, `${p}'s ball is cut out ${zone}.`], idx, 8); break;
       case 'halftime': cls = 'cm-break'; text = `⏸ Half-time. ${this.homeName} ${sc[0]}–${sc[1]} ${this.awayName}.`; break;
       case 'fulltime': cls = 'cm-break'; text = `🏁 Full-time! ${this.homeName} ${sc[0]}–${sc[1]} ${this.awayName}.`; break;
@@ -1706,6 +1746,7 @@ class Game {
     if (e.type === 'goal' && !this.silent) this.celebrateGoal(e);
     this.appendLine(`${min} ${text}`, cls);
     if (e.type === 'goal') ($('ticker').lastElementChild as HTMLElement)?.classList.add('flash');
+    if (ATTACK_TYPES.includes(e.type)) this.checkMomentum(e.minute);
   }
 
   private celebrateGoal(e: MatchEvent) {
