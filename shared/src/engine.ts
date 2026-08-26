@@ -547,9 +547,42 @@ export class MatchEngine {
         return;
       }
       s.events.push({ minute, type: 'shot_saved', teamIdx, playerName: shooter.name });
+      // a save is often pushed behind for a corner
+      if (this.rng() < 0.20) { this.takeCorner(teamIdx, defTeam, minute); return; }
     }
     s.carrier = { teamIdx: defTeam, playerIdx: 0 };
     s.ball = { ...s.players[defTeam][0] };
+  }
+
+  /** Resolve a corner: a delivery (setPiece) met by the best aerial attacker vs the keeper.
+   *  Draws rng (real mechanic; conversion kept low so goals stay in band). */
+  private takeCorner(atkTeam: 0 | 1, defTeam: 0 | 1, minute: number) {
+    const s = this.state;
+    const taker = this.bestSetPiece(atkTeam);
+    s.events.push({ minute, type: 'corner', teamIdx: atkTeam, playerName: taker.p.name });
+    // aerial target = best strength+positioning outfielder on the pitch
+    let hi = 1, best = -Infinity;
+    for (let i = 1; i < 11; i++) {
+      if (this.sentOff.has(atkTeam * 100 + i)) continue;
+      const a = this.teams[atkTeam].players[i].attrs;
+      const v = a.strength + a.positioning;
+      if (v > best) { best = v; hi = i; }
+    }
+    const header = this.teams[atkTeam].players[hi];
+    const gk = this.teams[defTeam].players[0], gks = s.players[defTeam][0];
+    const delivery = norm(taker.p.attrs.setPiece ?? 8);
+    const aerial = norm(header.attrs.strength) * 0.6 + norm(header.attrs.positioning) * 0.4;
+    const goalP = clamp(0.012 + delivery * 0.018 + aerial * 0.02 - norm(gk.attrs.keeping) * fit(gks.fitness) * 0.025, 0.008, 0.05);
+    const r = this.rng();
+    if (r < goalP) {
+      s.score[atkTeam]++;
+      s.events.push({ minute, type: 'goal', teamIdx: atkTeam, playerName: header.name });
+      this.giveKickoff(defTeam);
+      return;
+    }
+    if (r < goalP + 0.10) s.events.push({ minute, type: 'shot_saved', teamIdx: atkTeam, playerName: header.name }); // header on target, kept out
+    s.carrier = { teamIdx: defTeam, playerIdx: 0 };
+    s.ball = { ...gks };
   }
 
   /** Is point `at` inside defTeam's own penalty area? (box ≈ 16.5m deep, 40.3m wide, centred). */
