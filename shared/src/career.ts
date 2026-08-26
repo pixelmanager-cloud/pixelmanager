@@ -24,6 +24,7 @@ export const TAGS: Tag[] = ['composure', 'aggression', 'creativity', 'teamwork',
 const OUTFIELD_TAGS: Tag[] = ['composure', 'aggression', 'creativity', 'teamwork', 'leadership', 'stamina', 'flair'];
 
 export type Track = 'outfield' | 'goalkeeper';
+export interface SeasonEvent { id: string; name: string; desc: string }
 
 export type Rarity = 'common' | 'rare' | 'epic';
 export interface Card { id: string; name: string; tags: Tag[]; rarity?: Rarity }
@@ -90,7 +91,9 @@ export const OFFER_SIZE = 4;   // cards shown at a between-season draft
 export const DRAFT_PICKS = 2;  // how many you add each draft
 
 // ── scenarios: each moment demands a weighted mix of tags; kind biases the demand ──
-export interface Scenario { id: string; kind: 'match' | 'social' | 'training'; demand: Partial<Record<Tag, number>>; label: string }
+// stakes 1 (normal) / 2 (big) / 3 (huge). Big moments are worth MORE (shape you harder) and are
+// riskier (more variance) — this is where reputations are made and the Big-Game Player trait is earned.
+export interface Scenario { id: string; kind: 'match' | 'social' | 'training'; demand: Partial<Record<Tag, number>>; label: string; stakes: 1 | 2 | 3 }
 const KIND_BIAS: Record<Scenario['kind'], Tag[]> = {
   match: TAGS,                                                   // anything can come up in a match
   social: ['leadership', 'composure', 'teamwork'],              // dressing room / media
@@ -99,19 +102,28 @@ const KIND_BIAS: Record<Scenario['kind'], Tag[]> = {
 const KIND_POOL: Scenario['kind'][] = ['match', 'match', 'match', 'social', 'training'];
 // goalkeeper moments demand keeping heavily, plus the calm/commanding traits that suit a keeper
 const GK_BIAS: Tag[] = ['keeping', 'keeping', 'keeping', 'composure', 'leadership', 'creativity'];
+const BIG_MOMENTS = ['Derby Day', 'Cup Quarter-Final', 'Relegation Six-Pointer', 'Live on TV'];
+const HUGE_MOMENTS = ['CUP FINAL', 'Title Decider', 'Promotion Play-Off Final'];
 
-/** A seeded scenario: pick 1–3 demanded tags (biased by kind + track) with weights summing to 1. */
-export function makeScenario(rng: () => number, i: number, track: Track = 'outfield'): Scenario {
+/** A seeded scenario: pick 1–3 demanded tags (biased by kind + track), assign stakes. `demandBias`
+ *  (a gaffer's-demand season event) leans the demand toward one tag. */
+export function makeScenario(rng: () => number, i: number, track: Track = 'outfield', demandBias?: Tag | null): Scenario {
   const kind = KIND_POOL[Math.floor(rng() * KIND_POOL.length)];
   const bias = track === 'goalkeeper' ? GK_BIAS : KIND_BIAS[kind].filter((t) => OUTFIELD_TAGS.includes(t));
   const n = 1 + Math.floor(rng() * Math.min(3, bias.length));
   const pool = [...new Set([...bias].sort(() => rng() - 0.5))].slice(0, n);
   const raw = pool.map(() => 0.3 + rng());
-  const sum = raw.reduce((a, b) => a + b, 0);
   const demand: Partial<Record<Tag, number>> = {};
-  pool.forEach((t, k) => { demand[t] = raw[k] / sum; });
-  const label = `${kind}: ${pool.join(' / ')}`;
-  return { id: `sc${i}`, kind, demand, label };
+  pool.forEach((t, k) => { demand[t] = raw[k]; });
+  if (demandBias) demand[demandBias] = (demand[demandBias] ?? 0) + 0.6;  // the gaffer wants more of this
+  const sum = Object.values(demand).reduce((a, b) => a + (b ?? 0), 0) || 1;
+  for (const t of Object.keys(demand) as Tag[]) demand[t] = (demand[t] ?? 0) / sum;
+  const r = rng();
+  const stakes: 1 | 2 | 3 = r < 0.05 ? 3 : r < 0.22 ? 2 : 1;             // ~5% huge, ~17% big
+  const moment = stakes === 3 ? HUGE_MOMENTS[Math.floor(rng() * HUGE_MOMENTS.length)]
+    : stakes === 2 ? BIG_MOMENTS[Math.floor(rng() * BIG_MOMENTS.length)] : null;
+  const label = moment ? `★ ${moment}` : `${kind}: ${Object.keys(demand).join(' / ')}`;
+  return { id: `sc${i}`, kind, demand, label, stakes };
 }
 
 /** How well a card's tags satisfy a scenario's demand, 0..1. */
@@ -121,7 +133,7 @@ export function fit(card: Card, sc: Scenario): number {
   return clamp(f, 0, 1);
 }
 
-export interface Choice { cardId: string; tags: Tag[]; power: number; fit: number; bestFit: number; success: number; scenario: string }
+export interface Choice { cardId: string; tags: Tag[]; power: number; fit: number; bestFit: number; success: number; scenario: string; stakes: number }
 
 // ── career config ──
 export const HAND_SIZE = 4;
@@ -147,6 +159,11 @@ export class Career {
   finished = false;
   /** When set, the career is paused for a between-season DRAFT: pick DRAFT_PICKS of these to add. */
   pendingDraft: { options: Card[]; picksLeft: number } | null = null;
+  /** The narrative event coloring the current season (a new gaffer, a hot streak, a knock…). */
+  seasonEvent: SeasonEvent | null = null;
+  private demandBias: Tag | null = null;   // the gaffer's demand this season → scenarios lean this tag
+  private formBonus = 0;                    // hot streak / slump → success nudge this season
+  private extraPicks = 0;                   // a breakthrough season → +draft picks at the next draft
 
   constructor(readonly seed: number, readonly track: Track = 'outfield') {
     this.rng = mulberry32(seed);
@@ -183,15 +200,33 @@ export class Career {
     const bestFit = Math.max(...this.hand.map((c) => fit(c, this.scenario))); // best you COULD have played this turn
     const card = this.hand.splice(idx, 1)[0];
     const f = fit(card, this.scenario);
-    const success = clamp(f + (this.rng() - 0.5) * 0.3, 0, 1); // good fit usually succeeds, with variance
-    const choice: Choice = { cardId: card.id, tags: card.tags, power: cardPower(card), fit: f, bestFit, success, scenario: this.scenario.label };
+    // bigger stakes = more variance (nerves); current form (season event) nudges success.
+    const variance = 0.3 + 0.15 * (this.scenario.stakes - 1);
+    const success = clamp(f + (this.rng() - 0.5) * variance + this.formBonus, 0, 1);
+    const choice: Choice = { cardId: card.id, tags: card.tags, power: cardPower(card), fit: f, bestFit, success, scenario: this.scenario.label, stakes: this.scenario.stakes };
     this.log.push(choice);
     this.discard.push(card);
     this.turn++;
     if (this.turn >= SCENARIOS_PER_SEASON * SEASONS_TO_GRADUATE) { this.finished = true; return choice; }
-    // at a season boundary, open a DRAFT before dealing next season (your deck grows by your choices)
-    if (this.turn % SCENARIOS_PER_SEASON === 0) this.openDraft(); else { this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track); }
+    // at a season boundary: a narrative SEASON EVENT fires, then a DRAFT (your deck grows by choice)
+    if (this.turn % SCENARIOS_PER_SEASON === 0) { this.advanceSeasonEvent(); this.openDraft(); }
+    else { this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias); }
     return choice;
+  }
+
+  /** Roll the narrative event for the upcoming season and apply its mechanical effect. */
+  private advanceSeasonEvent() {
+    this.demandBias = null; this.formBonus = 0;                  // last season's effect clears
+    const from = Math.max(0, this.log.length - SCENARIOS_PER_SEASON);
+    const lastAvg = this.log.slice(from).reduce((s, c) => s + c.success, 0) / Math.max(1, this.log.length - from);
+    const playedWell = lastAvg >= 0.55;
+    const r = this.rng();
+    if (playedWell && r < 0.25) { this.extraPicks += 1; this.seasonEvent = { id: 'breakthrough', name: 'Breakthrough Season', desc: 'A breakout campaign earns you extra coaching time — an extra draft pick.' }; }
+    else if (r < 0.45) { const pool = this.track === 'goalkeeper' ? (['keeping', 'composure', 'leadership'] as Tag[]) : OUTFIELD_TAGS; this.demandBias = pool[Math.floor(this.rng() * pool.length)]; this.seasonEvent = { id: 'new-gaffer', name: 'New Manager', desc: `The new gaffer wants more ${this.demandBias} out of you.` }; }
+    else if (r < 0.62) { this.formBonus = 0.12; this.seasonEvent = { id: 'hot-streak', name: 'Purple Patch', desc: "You're in the form of your life — everything comes off." }; }
+    else if (r < 0.79) { this.formBonus = -0.12; this.seasonEvent = { id: 'slump', name: 'Loss of Form', desc: 'A dip in confidence to battle through.' }; }
+    else if (r < 0.9) { this.formBonus = -0.06; this.seasonEvent = { id: 'knock', name: 'Niggling Injury', desc: 'A knock to manage — not quite at your sharpest.' }; }
+    else { this.seasonEvent = { id: 'steady', name: 'Steady Progress', desc: 'A solid, unremarkable season of graft.' }; }
   }
 
   /** Offer OFFER_SIZE cards from the pool, weighted so epics are rare. */
@@ -205,13 +240,14 @@ export class Career {
       const c = bag[Math.floor(this.rng() * bag.length)];
       if (!picked.has(c.id)) { picked.add(c.id); options.push(c); }
     }
-    this.pendingDraft = { options, picksLeft: Math.min(DRAFT_PICKS, options.length) };
+    this.pendingDraft = { options, picksLeft: Math.min(DRAFT_PICKS + this.extraPicks, options.length) };
+    this.extraPicks = 0;
   }
 
   private startNextSeason() {
     this.season = 1 + Math.floor(this.turn / SCENARIOS_PER_SEASON);
     this.refillHand();
-    this.scenario = makeScenario(this.rng, this.turn, this.track);
+    this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias);
   }
 
   private refillHand() { while (this.hand.length < HAND_SIZE) this.hand.push(this.drawOne()); }
@@ -288,7 +324,8 @@ export function deriveStats(log: Choice[], seed: number, genes: Genes = rollGene
   const rng = mulberry32(seed ^ 0x9e3779b9);
   const innate = new Set<keyof CareerPlayerAttrs>(INNATE);
   const freq = Object.fromEntries(TAGS.map((t) => [t, 0])) as Record<Tag, number>;
-  for (const c of log) for (const t of c.tags) freq[t] += c.power; // higher-power (drafted rare/epic) cards pull harder
+  // weight by card power AND stakes: a great play in a cup final shapes you more than a training drill
+  for (const c of log) for (const t of c.tags) freq[t] += c.power * c.stakes;
   const maxFreq = Math.max(1, ...TAGS.map((t) => freq[t]));
   const norm = Object.fromEntries(TAGS.map((t) => [t, freq[t] / maxFreq])) as Record<Tag, number>;
   // MAGNITUDE = how well you actually played (avg success across the career). With a capped flywheel
@@ -364,7 +401,7 @@ export const TRAITS: Trait[] = [
   { id: 'ironman',   name: 'Iron Man',             desc: 'Runs all day, every day',          eligible: (a) => a.stamina >= 15 && a.strength >= 13 },
   { id: 'deadball',  name: 'Dead-Ball Specialist', desc: 'Lethal from set pieces',           eligible: (a) => a.setPiece >= 15, apply: (a) => { a.setPiece = clamp(a.setPiece + 1, 1, 20); } },
   { id: 'wall',      name: 'The Wall',             desc: 'Unbeatable between the sticks',     eligible: (a) => a.keeping >= 16 },
-  { id: 'biggame',   name: 'Big-Game Player',      desc: 'Turns up when it matters most',    eligible: (_a, log) => log.filter((c) => c.fit >= 0.6 && c.success >= 0.8).length >= 18 },
+  { id: 'biggame',   name: 'Big-Game Player',      desc: 'Turns up when it matters most',    eligible: (_a, log) => log.filter((c) => c.stakes >= 2 && c.success >= 0.75).length >= 5 },
 ];
 
 /** Which traits a finished career qualifies for (before the player locks any in). */

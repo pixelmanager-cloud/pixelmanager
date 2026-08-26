@@ -124,6 +124,26 @@ console.log('\n=== deck-building — drafts grow your deck (pick first offer for
   console.log(`  final deck (${dc.deck.length}):`, dc.deck.map((c) => c.name + (cardPower(c) > 1 ? `*${cardPower(c)}` : '')).join(', '));
 }
 
+// career arc: season events + high-stakes moments over one career
+console.log('\n=== career arc — season events + big moments (seed 4242) ===');
+{
+  const c = new Career(seedFrom('arc'));
+  const events: string[] = [];
+  let big = 0, huge = 0, bigWins = 0; let lastSeason = 1;
+  while (!c.finished) {
+    const st = c.current();
+    if (st.phase === 'draft') { if (c.seasonEvent) { /* logged on season change below */ } c.draft(st.options[0].id); continue; }
+    if (st.season !== lastSeason) { lastSeason = st.season; if (c.seasonEvent) events.push(`S${st.season}: ${c.seasonEvent.name} — ${c.seasonEvent.desc}`); }
+    if (st.scenario.stakes === 3) huge++; else if (st.scenario.stakes === 2) big++;
+    const ch = c.play(st.hand[0].id);
+    if (ch.stakes >= 2 && ch.success >= 0.75) bigWins++;
+  }
+  const p = graduate(c.log, seedFrom('arc'));
+  events.forEach((e) => console.log('  ' + e));
+  console.log(`  big moments faced: ${big} big + ${huge} huge  |  delivered in ${bigWins} of them`);
+  console.log(`  graduated: ${p.role} ovr ${p.overall}, traits: ${p.traits.join(', ') || '—'}`);
+}
+
 // determinism: same seed + same choices (play + draft) → identical player
 console.log('\n=== determinism check ===');
 const replay = (seed: number) => {
