@@ -12,6 +12,16 @@ const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
 // icons for the stage-aware life meters (keyed by underlying relationship) — used in focus effect labels
 const METER_ICON: Record<string, string> = { authority: '🧑‍🏫', peers: '👥', family: '🏠', school: '🎒', agent: '🤝', fans: '📣', sponsors: '📸', partner: '❤️' };
 
+// each life stage re-themes the whole career view — its own accent, backdrop mood + scene banner, so the
+// career FEELS like turning a page from a muddy park to a floodlit stadium (the "chapter-like UI").
+const CHAPTER_THEME: Record<string, { slug: string; scene: string; accent: string; bg: string; tagline: string }> = {
+  Grassroots:   { slug: 'grassroots',   scene: '🌱⚽🥅', accent: '#5bd06a', bg: 'radial-gradient(120% 90% at 50% 0%, rgba(70,150,70,0.20), rgba(20,30,20,0.0) 60%)', tagline: 'Jumpers for goalposts — muddy knees and big dreams.' },
+  Academy:      { slug: 'academy',      scene: '🎒📋⚽', accent: '#5aa9ff', bg: 'radial-gradient(120% 90% at 50% 0%, rgba(60,110,200,0.20), rgba(15,20,35,0.0) 60%)', tagline: 'Cones, drills and van journeys — the real schooling begins.' },
+  'Youth Team': { slug: 'youth',        scene: '👕🔥⚽', accent: '#ffa53b', bg: 'radial-gradient(120% 90% at 50% 0%, rgba(210,130,40,0.20), rgba(35,25,15,0.0) 60%)', tagline: 'Knocking on the first-team door — the agents start circling.' },
+  Breakthrough: { slug: 'breakthrough', scene: '🏟️📣✨', accent: '#b57bff', bg: 'radial-gradient(120% 90% at 50% 0%, rgba(150,90,230,0.22), rgba(25,15,40,0.0) 60%)', tagline: 'Floodlights and headlines — this is the big time.' },
+  Establishing: { slug: 'establishing', scene: '🏆⭐💫', accent: '#ffd75e', bg: 'radial-gradient(120% 90% at 50% 0%, rgba(210,170,60,0.22), rgba(35,30,10,0.0) 60%)', tagline: 'A name in lights — cement your place among the greats.' },
+};
+
 const LEVELS: Record<keyof Omit<Tactics, 'formation'>, string[]> = {
   mentality: ['Very Defensive', 'Defensive', 'Balanced', 'Attacking', 'Very Attacking'],
   line: ['Very Deep', 'Deep', 'Normal', 'High', 'Very High'],
@@ -1017,14 +1027,20 @@ class Game {
       `<div class="cg-meter" title="${m.label}: ${m.value}/100"><span class="cg-m-icon">${m.icon}</span>`
       + `<span class="cg-m-lbl">${m.label}</span>`
       + `<span class="cg-m-bar"><b style="width:${m.value}%;background:${meterColor(m.value)}"></b></span></div>`).join('');
+    const low = s.energy != null && s.energy < 35;
     const energy = s.energy != null
-      ? `<div class="cg-energy" title="Energy ${s.energy}/100"><span>⚡ ENERGY</span><span class="cg-e-bar"><b style="width:${s.energy}%"></b></span></div>`
+      ? `<div class="cg-energy${low ? ' low' : ''}" title="Energy ${s.energy}/100${low ? ' — tired: moments suffer until you rest' : ''}"><span>⚡ ENERGY${low ? ' · TIRED' : ''}</span><span class="cg-e-bar"><b style="width:${s.energy}%"></b></span></div>`
       : '';
     const money = s.earnings != null ? `<div class="cg-money">💷 ${s.earnings.toLocaleString()}</div>` : '';
     return `<div class="cg-dash">${energy}${money}<div class="cg-meters">${meters}</div></div>`;
   }
   private renderCareer(s: import('./api').CareerState) {
     const pct = Math.round((s.turn / s.totalTurns) * 100);
+    // re-theme the whole view for this life stage (accent + backdrop + scene banner)
+    const th = CHAPTER_THEME[s.chapter] ?? CHAPTER_THEME.Grassroots;
+    const acad = $('academy'); acad.dataset.chapter = th.slug;
+    acad.style.setProperty('--cg-accent', th.accent); acad.style.setProperty('--cg-bg', th.bg);
+    const scene = `<div class="cg-scene"><span class="cg-scene-emoji">${th.scene}</span><span class="cg-scene-tag"><b>${s.chapter}</b> · ${th.tagline}</span></div>`;
     const head = `<div class="cg-head"><button id="cg-back">←</button><span class="cg-age">${s.name} · age ${s.age}</span>`
       + `<span class="cg-chapter">${s.chapter}</span><div class="cg-bar"><i style="width:${pct}%"></i></div><span class="pr-meta">${s.turn}/${s.totalTurns}</span></div>`;
     const evt = s.seasonEvent ? `<div class="cg-event"><b>${s.seasonEvent.name}</b> — ${s.seasonEvent.desc}</div>` : '';
@@ -1058,7 +1074,7 @@ class Game {
         + `<div class="cg-focus">` + s.focus.map((f) => `<div class="cg-foc" data-act="focus" data-id="${f.id}"><div class="cg-cname">${f.icon} ${f.name}</div><div class="cg-cdescr">${f.desc}</div>`
           + `<div class="cg-effs">${f.energy ? `⚡${f.energy > 0 ? '+' : ''}${f.energy} ` : ''}${effLabel(f.effects)}</div></div>`).join('') + `</div>`;
     }
-    $('academy-body').innerHTML = head + this.lifeDashHtml(s) + prof + narr + recap + conseq + evt + body;
+    $('academy-body').innerHTML = head + scene + this.lifeDashHtml(s) + prof + narr + recap + conseq + evt + body;
     $('cg-back').addEventListener('click', () => this.showAcademy());
     $('academy-body').querySelectorAll('[data-act]').forEach((el) => el.addEventListener('click', () => this.doCareerAct(s.prospectId, { type: (el as HTMLElement).dataset.act!, cardId: (el as HTMLElement).dataset.id! })));
   }
