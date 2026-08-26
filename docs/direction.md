@@ -34,15 +34,28 @@ The web3 layer was never where the fun lived. All of this is untouched:
   scouting UI; it is NOT a paid-per-player cash purchase — see Monetization below).
 - Kept in git history, just removed from the build.
 
-## Monetization (reframed for Steam)
-On Steam you don't sell individual gameplay-advantage players for cash (that reads pay-to-win / loot-box and
-the audience hates it). So:
-- **Base game = a premium purchase** (Steam), or F2P — to decide.
-- **Ongoing revenue = cosmetics + content expansions** (kits, celebrations, stadiums, new scenarios/leagues).
-- **Prospects are acquired in-game** (scout/develop), free or via *earned* coins — never as a paid power buy.
-- If any real-money currency: **use Steam's microtransactions** (Steamworks), not Stripe. Simplest launch is
-  **premium-priced, cosmetic DLC only, no IAP.** (`coin-purchases.md`'s Stripe plan is now optional/off —
-  re-target to Steamworks only if we go F2P-with-coins.)
+## Monetization — DECIDED: premium base + cosmetic/content-DLC IAP (never pay-to-win)
+The model is **premium base game + optional cosmetic/content IAP** — the native, well-liked model of the
+management/sim genre (Football Manager, Paradox, Cities: Skylines all do premium + DLC). It monetizes the
+*content flywheel* (see `growth-and-content-strategy.md`) instead of friction.
+
+**The hard rule: IAP is COSMETIC and/or genuine CONTENT DLC only — NEVER gameplay power.** The Steam audience
+tolerates "buy the game + buy cosmetics/expansions"; it revolts at "pay twice" the instant IAP touches
+competitive power. So:
+- ✅ **Cosmetics** — kits, celebrations, stadium/pitch skins, badges, portraits. Pure expression, zero power.
+- ✅ **Content expansions (DLC)** — new leagues/eras, scenario packs, new competitions, cosmetic sets.
+- ❌ **Never:** selling prospects/players for money, currency that buys gameplay advantage (growth speed,
+  facilities, stat edges), loot boxes/gacha, or energy/timer removal.
+
+**Currency split (keeps it clean, avoids pay-to-win):**
+- **Earned coins** (in-game only, not buyable) buy *gameplay* things — prospects, facilities, reborn.
+- **Real money buys COSMETICS/DLC directly** (or a separate cosmetic-only currency). Real money never buys
+  the gameplay-power currency.
+- Prospects are acquired **in-game** (scout/develop), free or via *earned* coins — never a paid power buy.
+
+**Sequencing:** ship **premium-only at launch** (own the whole core, no paywalls), then add cosmetic packs +
+content DLC *after* goodwill is built — lowest-risk. Real-money purchases on Steam go through **Steamworks**,
+not Stripe (`coin-purchases.md`'s rails still apply, re-targeted to Steamworks and cosmetic-only).
 
 ---
 
@@ -102,7 +115,8 @@ the audience hates it). So:
   and remains the #1 priority — a mainstream launch lives or dies on how good and deep the game is.
 
 ## Open decisions
-- [ ] Premium price vs. F2P (and therefore: any IAP at all?).
+- [x] ~~Premium vs F2P~~ → **DECIDED: premium base + cosmetic/content-DLC IAP, never pay-to-win** (above).
+- [ ] Final premium price point (and cosmetic/DLC pricing).
 - [ ] Tauri vs. Electron for the desktop wrapper.
 - [ ] Keep server-backed online leagues as core, or add a self-contained offline career as the entry point.
 - [ ] Timeline: how much content depth before starting the Steam track.
