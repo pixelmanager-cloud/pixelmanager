@@ -302,10 +302,14 @@ export class MatchEngine {
       const ds = s.players[defTeam][i];
       if (Math.hypot(ds.x - cs.x, ds.y - cs.y) < tackleRange) {
         const def = this.teams[defTeam].players[i];
-        // aggression sharpens tackling; the Ball-Winner trait sharpens it further (centred → neutral players unchanged)
-        const defEff = norm(def.attrs.tackling) * fit(ds.fitness) * (0.6 + 0.4 * norm(def.attrs.workrate))
+        // 1v1 DUEL: defending blends tackling with POSITIONING (reading the challenge); aggression +
+        // the Ball-Winner trait sharpen it. Attacker retains via strength/pace/passing, and CREATIVITY
+        // (dribbling) lets a skilful carrier wriggle away. positioning blend is ~calibration-neutral
+        // (a defender's tackling≈positioning); creativity is centred so base players are unchanged.
+        const defEff = (norm(def.attrs.tackling) * 0.7 + norm(def.attrs.positioning) * 0.3) * fit(ds.fitness) * (0.6 + 0.4 * norm(def.attrs.workrate))
           * mMul(def.attrs.aggression, 0.18) * (hasTrait(def, 'ballwinner') ? 1.08 : 1);
-        const retain = (norm(carrier.attrs.strength) * 0.5 + norm(carrier.attrs.pace) * 0.3 + norm(carrier.attrs.passing) * 0.2) * fit(cs.fitness);
+        const retain = (norm(carrier.attrs.strength) * 0.5 + norm(carrier.attrs.pace) * 0.3 + norm(carrier.attrs.passing) * 0.2) * fit(cs.fitness)
+          * mMul(carrier.attrs.creativity, 0.2) * (hasTrait(carrier, 'maestro') ? 1.06 : 1);
         const pTackle = clamp(0.12 + 0.5 * (defEff / (defEff + retain)), 0.05, 0.8) * defMods.pressIntensity
           * (1 + Math.max(0, this.dm[defTeam][i].press) * 0.25) * TICK_SEC;
         if (this.rng() < pTackle) {
