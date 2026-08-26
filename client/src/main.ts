@@ -188,6 +188,7 @@ class Game {
 
   private injured = new Map<string, number>(); // playerId → matches remaining out
   private contracts: Record<string, ContractInfo> = {}; // NFT playerId → contract situation
+  private lifecycleOn = false; // on-chain lifecycle NFT enabled (web3 loop)
   private season = 0;
   private setMe(me: { account: Account; club: Club; standingOrders: StandingOrders; injuries?: Array<{ player_id: string; matches_remaining: number }>; contracts?: Record<string, ContractInfo>; season?: number }) {
     this.account = me.account; this.club = me.club; this.standingOrders = me.standingOrders;
@@ -900,9 +901,12 @@ class Game {
     this.showScreen('academy');
     $('academy-body').innerHTML = SPINNER;
     try {
-      const { prospects, supply, cap } = await api.prospects();
-      const intro = `<div class="scout-sub">Your youth prospects — 10-year-olds to <b>develop</b> through a career (age 10→25): play to each chapter's demands, appoint coaches, and make the big calls. At 25 the SAME NFT graduates into a pro you can field. Mint a fresh genesis prospect, or breed one by retiring a player and choosing <b>Reborn</b>. <span style="color:var(--muted);">· fixed supply: <b>${supply.toLocaleString()}</b> / ${cap.toLocaleString()} minted</span></div>`
-        + `<div style="margin:10px 0 14px;"><button id="mint-genesis" class="primary">🌱 Mint a genesis prospect · 300c</button></div>`;
+      const [{ prospects, supply, cap }, life] = await Promise.all([api.prospects(), api.lifecycle().catch(() => ({ enabled: false, chainId: 0 } as any))]);
+      this.lifecycleOn = !!life.enabled;
+      const mintLabel = life.enabled ? `🌱 Mint a genesis prospect · on-chain${life.chainId ? ` (chain ${life.chainId})` : ''}` : '🌱 Mint a genesis prospect · 300c';
+      const chainNote = life.enabled ? ' Each player is an <b>on-chain NFT</b> — you own it in your wallet, and its whole career lives with the token.' : '';
+      const intro = `<div class="scout-sub">Your youth prospects — 10-year-olds to <b>develop</b> through a career (age 10→25): play to each chapter's demands, appoint coaches, and make the big calls. At 25 the SAME NFT graduates into a pro you can field.${chainNote} Mint a fresh genesis prospect, or breed one by retiring a player and choosing <b>Reborn</b>. <span style="color:var(--muted);">· fixed supply: <b>${supply.toLocaleString()}</b> / ${cap.toLocaleString()} minted</span></div>`
+        + `<div style="margin:10px 0 14px;"><button id="mint-genesis" class="primary">${mintLabel}</button></div>`;
       const rows = prospects.length ? prospects.map((p) => {
         const stars = '★'.repeat(p.potentialStars) + '☆'.repeat(5 - p.potentialStars);
         const gen = p.generation ? ` · gen ${p.generation}` : '';
@@ -927,7 +931,9 @@ class Game {
     try {
       const r = await api.genesis();
       if (r.coins != null) this.account.coins = r.coins;
-      toast(`🌱 ${r.prospect.name} minted (−${r.cost}c) — ${r.supply}/${r.cap} in the economy`);
+      toast(r.onchain
+        ? `🌱 ${r.prospect.name} minted on-chain${r.tokenId ? ` · NFT #${r.tokenId}` : ''} — ${r.supply}/${r.cap} minted`
+        : `🌱 ${r.prospect.name} minted (−${r.cost}c) — ${r.supply}/${r.cap} in the economy`);
       this.showProspectCard(r.prospect, true);
       await this.showAcademy();
     } catch (e: any) { toast(e?.body?.error === 'supply cap reached' ? 'Supply cap reached — no new tokens' : e?.body?.error === 'not enough coins' ? `Not enough coins (need ${e.body.need})` : (e?.body?.error ?? 'Mint failed')); }
