@@ -26,9 +26,12 @@ Work top to bottom, one item per commit. Tick `[x]` when done; add a one-line no
    the standings screen (`/records` route + `computeClubRecords` in shared, pure derivation, no
    persisted state). The in-match-report "a record falls" callout was left out to keep this
    commit reviewable — tracked as new item 21 below.
-3. [ ] **Post-match headline + reaction line.** One seeded headline sentence at full-time keyed off
+3. [x] **Post-match headline + reaction line.** One seeded headline sentence at full-time keyed off
    the scoreline/table context (thumping win, late equaliser, giant-killing, relegation six-pointer)
-   — pure text composition over already-known result data, shown on the match report screen. (S)
+   — pure text composition over already-known result data, shown on the match report screen. (S) —
+   shipped as `matchHeadline()` in shared, fed pre-match pod rank + rating context computed in the
+   `/matches` POST handler, returned as `headline` and shown as the match-report lead line (falls
+   back to the old plain scoreline phrasing if absent).
 4. [ ] **Form guide + run-in tracker.** A WDWLW strip per club (derive from `results`), an
    "X games unbeaten/winless" counter, and — in the closing fixtures of a season — a callout line
    ("2 wins from the title", "in the drop zone with 3 to go") on the standings screen. (S/M)

@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { randomUUID } from 'node:crypto';
-import { overall, managerPrestige, signContract, contractCost, contractLength, graduationEpilogue, gaffersDiaryEntry, computeClubRecords, type Lineup, type Tactics } from '@fm/shared';
+import { overall, managerPrestige, signContract, contractCost, contractLength, graduationEpilogue, gaffersDiaryEntry, computeClubRecords, matchHeadline, type Lineup, type Tactics } from '@fm/shared';
 import { mintGenesis, tokenToPlayer, tokenContract, tokenAch, legendCardOf, unavailableTokenIds, loadCareer, actWithNarration, careerState, graduatedFields, rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, ageOf, syncOnchainTokens, SUPPLY_CAP, GENESIS_COST, REBORN_COST, MARKET_FEE_PCT, type CareerAction } from './tokens.js';
 import { lifecycleEnabled, lifecycleInfo, serverSignerEnabled, serverMintTo, serverReborn, ownedTokens, ownerOf, lineageOf } from './lifecyclenft.js';
 import { bumpApps, bumpMorale, advanceTokensAtRollover } from './lifecycle.js';
@@ -270,7 +270,7 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
 
   const meId = req.account!.id;
   const season = await ensureSeason(db, Date.now());
-  await ensurePod(db, season, meId); // place the player so the match counts for their pod
+  const { tier: myTier, pod: myPod } = await ensurePod(db, season, meId); // place the player so the match counts for their pod
   // this exact leg (a directed home→away pairing) may be played once per season
   const homeId = iAmHome ? meId : oppId, awayId = iAmHome ? oppId : meId;
   const seasonRes = await db.seasonResults(season.id);
@@ -349,18 +349,34 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   await recordMatchStats(db, season.id, homeId, awayId, homeTeam, awayTeam, events, result);
   const myGate = iAmHome ? gate : 0; // only the host banks gate receipts
   const nHome = iAmHome ? nMe : nOpp, nAway = iAmHome ? nOpp : nMe;
-
   const matchId = randomUUID();
+
+  // Post-match headline: a seeded reaction line keyed off the scoreline plus whatever table/rating
+  // context is known (giant-killing, relegation six-pointer, late drama) — pure text composition,
+  // computed against PRE-match pod standings (this match isn't recorded yet). See matchHeadline in shared.
+  const podMembers = await db.podMembers(season.id, myTier, myPod);
+  const podIds = new Set(podMembers.map((m) => m.id));
+  const preTable = buildTable(podMembers, resultsAmong(await db.seasonResults(season.id), podIds));
+  const rankOf = (id: string) => { const i = preTable.findIndex((r) => r.id === id); return i >= 0 ? i + 1 : null; };
+  const homeHandle = iAmHome ? req.account!.handle : opp.handle, awayHandle = iAmHome ? opp.handle : req.account!.handle;
+  const homeRatingPre = iAmHome ? req.account!.rating : opp.rating, awayRatingPre = iAmHome ? opp.rating : req.account!.rating;
+  const headline = matchHeadline({
+    matchId, homeName: homeHandle, awayName: awayHandle, homeScore: result[0], awayScore: result[1],
+    goals: events.filter((e) => e.type === 'goal').map((e) => ({ minute: e.minute, teamIdx: e.teamIdx })),
+    homeRating: homeRatingPre, awayRating: awayRatingPre,
+    homeRank: rankOf(homeId), awayRank: rankOf(awayId), totalInPod: podMembers.length, relegateCount: RELEGATE,
+  });
+
   await db.saveMatch({
     id: matchId, homeId, awayId, homeTeam, awayTeam, homeTactics: hTactics, awayTactics: aTactics,
     seed, homeScore: result[0], awayScore: result[1], createdAt: Date.now(), seasonId: season.id, initiatorId: meId,
   });
 
   return {
-    matchId, seed, result, mySide: iAmHome ? 0 : 1, coinsEarned: myCoins, gateIncome: myGate,
+    matchId, seed, result, mySide: iAmHome ? 0 : 1, coinsEarned: myCoins, gateIncome: myGate, headline,
     injuries: myNew.map((n) => ({ name: n.playerName, matches: n.matches })),
-    home: { id: homeId, handle: iAmHome ? req.account!.handle : opp.handle, rating: nHome, team: homeTeam, tactics: hTactics },
-    away: { id: awayId, handle: iAmHome ? opp.handle : req.account!.handle, rating: nAway, team: awayTeam, tactics: aTactics },
+    home: { id: homeId, handle: homeHandle, rating: nHome, team: homeTeam, tactics: hTactics },
+    away: { id: awayId, handle: awayHandle, rating: nAway, team: awayTeam, tactics: aTactics },
   };
 });
 

@@ -101,6 +101,7 @@ export interface Facility {
 export interface FacilitiesData { coins: number; facilities: Facility[] }
 export interface MatchPayload {
   matchId: string; seed: number; result: [number, number]; mySide: 0 | 1; coinsEarned?: number; gateIncome?: number; injuries?: Array<{ name: string; matches: number }>;
+  headline?: string;
   home: { id: string; handle: string; rating?: number; team: Team; tactics: Tactics };
   away: { id: string; handle: string; rating?: number; team: Team; tactics: Tactics };
 }

@@ -1797,10 +1797,12 @@ class Game {
 
   private lastGate = 0;
   private lastInjuries: Array<{ name: string; matches: number }> = [];
+  private lastHeadline: string | null = null;
   private startMatch(payload: MatchPayload) {
     this.mySide = payload.mySide;
     this.lastGate = payload.gateIncome ?? 0;
     this.lastInjuries = payload.injuries ?? [];
+    this.lastHeadline = payload.headline ?? null;
     this.homeName = payload.home.handle;
     this.awayName = payload.away.handle;
     // guarantee the two kits clearly contrast on the pitch even if the clubs' colours are similar
@@ -1853,8 +1855,11 @@ class Game {
     const winner = h > a ? home : a > h ? away : null;
     const loser = h > a ? away : a > h ? home : null;
     const margin = Math.abs(h - a), hi = Math.max(h, a), lo = Math.min(h, a);
+    // the server composes a richer seeded headline (giant-killing, six-pointer, late drama) from
+    // table/rating context it alone knows; fall back to a plain scoreline line if it's unavailable.
     let lead: string;
-    if (!winner) lead = this.cpick([`${home} and ${away} shared the points in a ${h}–${a} draw.`, `Honours even at ${h}–${a}.`, `Nothing to separate them — ${h}–${a}.`], h + a, 30);
+    if (this.lastHeadline) lead = this.lastHeadline;
+    else if (!winner) lead = this.cpick([`${home} and ${away} shared the points in a ${h}–${a} draw.`, `Honours even at ${h}–${a}.`, `Nothing to separate them — ${h}–${a}.`], h + a, 30);
     else {
       const verb = margin >= 3 ? this.cpick(['ran riot against', 'romped past', 'were rampant against'], margin, 31)
         : margin === 2 ? this.cpick(['saw off', 'got the better of', 'had too much for'], margin, 31)
