@@ -291,6 +291,7 @@ class Game {
   private showScreen(s: 'login' | 'hub' | 'lineup' | 'match' | 'standings' | 'scouting' | 'market' | 'club' | 'academy' | 'trophies') {
     for (const id of ['login', 'hub', 'lineup', 'matchwrap', 'standings', 'scouting', 'market', 'club', 'academy', 'trophies']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
     $('logout').classList.toggle('hidden', s === 'login');
+    $('app-title').classList.toggle('hidden', s === 'login'); // menu shows the big title already — no duplicate brand
     $('app-title').classList.toggle('clickable', s !== 'login'); // title is "home" once you're in
     if (s !== 'scouting' && this.missionTimer) { clearInterval(this.missionTimer); this.missionTimer = null; } // stop the mission countdown when leaving
   }
