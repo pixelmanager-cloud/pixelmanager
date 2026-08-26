@@ -242,7 +242,7 @@ class Game {
   private async loadSave(id: string) {
     const saves = this.loadSaves(); const save = saves.find((s) => s.id === id); if (!save) return;
     setToken(save.token);
-    try { this.setMe(await api.me()); save.lastPlayed = Date.now(); this.saveSaves(saves); this.showSelect(); }
+    try { this.setMe(await api.me()); save.lastPlayed = Date.now(); this.saveSaves(saves); await this.showHub(); }
     catch { $('login-error').textContent = 'Could not load that save (is the game server running?).'; clearToken(); }
   }
 
@@ -288,31 +288,11 @@ class Game {
     return healthy.length >= 11 ? { ...this.club, players: healthy } : this.club;
   }
 
-  private showScreen(s: 'login' | 'select' | 'hub' | 'lineup' | 'match' | 'standings' | 'scouting' | 'market' | 'club' | 'academy' | 'trophies') {
-    for (const id of ['login', 'select', 'hub', 'lineup', 'matchwrap', 'standings', 'scouting', 'market', 'club', 'academy', 'trophies']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
+  private showScreen(s: 'login' | 'hub' | 'lineup' | 'match' | 'standings' | 'scouting' | 'market' | 'club' | 'academy' | 'trophies') {
+    for (const id of ['login', 'hub', 'lineup', 'matchwrap', 'standings', 'scouting', 'market', 'club', 'academy', 'trophies']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
     $('logout').classList.toggle('hidden', s === 'login');
-    $('app-title').classList.toggle('clickable', s !== 'login'); // title is a "home → modes" once you're in
+    $('app-title').classList.toggle('clickable', s !== 'login'); // title is "home" once you're in
     if (s !== 'scouting' && this.missionTimer) { clearInterval(this.missionTimer); this.missionTimer = null; } // stop the mission countdown when leaving
-  }
-
-  /** Mode-select landing: two big panels — enter the Career game or the Manager game. */
-  private showSelect() {
-    this.showScreen('select');
-    const saveName = this.loadSaves().find((s) => s.id === this.account?.handle)?.name;
-    $('select-hello').textContent = saveName ? `Welcome, ${saveName}` : 'Welcome';
-    // light stats on each card
-    $('manager-stat').textContent = this.account ? `Rating ${this.account.rating}${this.account.coins != null ? ` · 💰 ${this.account.coins}` : ''}` : '';
-    $('career-stat').textContent = '';
-    api.prospects().then((p) => { $('career-stat').textContent = `${p.prospects.length} prospect${p.prospects.length === 1 ? '' : 's'} in development · ${p.supply}/${p.cap} minted`; }).catch(() => {});
-    // cross-mode legacy summary on the home screen
-    $('select-legacy-sub').textContent = 'Your bloodlines, silverware and retired numbers across both games.';
-    Promise.all([api.honours().catch(() => ({ honours: [] })), api.legends().catch(() => ({ legends: [] }))]).then(([h, l]) => {
-      const titles = h.honours.filter((x) => x.title === 1).length;
-      const lines = new Set(l.legends.map((x) => x.playerId)).size;
-      if (titles || lines || l.legends.length) {
-        $('select-legacy-sub').textContent = `🏆 ${titles} title${titles === 1 ? '' : 's'} · 🌳 ${lines} bloodline${lines === 1 ? '' : 's'} · ⭐ ${l.legends.length} legend${l.legends.length === 1 ? '' : 's'}`;
-      }
-    }).catch(() => {});
   }
 
   private wireStaticButtons() {
@@ -344,24 +324,17 @@ class Game {
       else if (k === 's' || k === 'S') this.skipToEnd();
       else if (k === 'c' || k === 'C') $('toggle-density').click();
     });
-    $('view-standings').addEventListener('click', () => this.showStandings());
+    // manager screens (standings/scouting/market/club) keep their own back→home handlers, but the
+    // forward entries are NOT wired from the home: the game is one linear life, not parallel menus.
     $('standings-back').addEventListener('click', () => this.showHub());
-    $('view-scouting').addEventListener('click', () => this.showScouting());
     $('scouting-back').addEventListener('click', () => this.showHub());
-    $('view-market').addEventListener('click', () => this.showMarket());
     $('view-trophies').addEventListener('click', () => this.showTrophyRoom());
-    $('trophies-back').addEventListener('click', () => this.showSelect());
-    // mode select ⇄ the two games
-    $('enter-career').addEventListener('click', () => this.showAcademy());
-    $('enter-manager').addEventListener('click', () => this.showHub());
-    $('view-modes').addEventListener('click', () => this.showSelect());
-    // home-screen legacy shortcuts (cross-mode)
-    $('select-trophies').addEventListener('click', () => this.showTrophyRoom());
-    $('select-menu').addEventListener('click', () => { $('mm-saves').classList.remove('hidden'); this.showScreen('login'); this.renderMainMenu(); });
-    $('app-title').addEventListener('click', () => { if (hasToken()) this.showSelect(); });
-    $('academy-back').addEventListener('click', () => this.showSelect()); // Academy is a top-level mode now
+    $('trophies-back').addEventListener('click', () => this.showHub());
+    // unified home: one Club & Dynasty hub, no mode wall
+    $('hub-academy').addEventListener('click', () => this.showAcademy());
+    $('app-title').addEventListener('click', () => { if (hasToken()) void this.showHub(); });
+    $('academy-back').addEventListener('click', () => this.showHub());
     $('market-back').addEventListener('click', () => this.showHub());
-    $('view-club').addEventListener('click', () => this.showClub());
     $('club-back').addEventListener('click', () => this.showHub());
     $('sell-btn').addEventListener('click', () => this.sellPlayer());
     const showTab = (tab: 'results' | 'leaders' | 'cup' | 'honours') => {
@@ -381,7 +354,7 @@ class Game {
     $('tab-cup').addEventListener('click', () => showTab('cup'));
     $('tab-honours').addEventListener('click', () => showTab('honours'));
     $('skip').addEventListener('click', () => this.skipToEnd());
-    $('set-team').addEventListener('click', () => this.openLineup('standing'));
+    // ('set-team' lives in the manager layer, unlinked from the home for now — see linear-life note in showHub)
     $('autopick').addEventListener('click', () => { this.draftLineup = autoPickXI(this.availableClub(), this.draftTactics.formation); this.rebuildDuties(); this.renderLineupEditor(); });
     $('save-team').addEventListener('click', () => (this.editorMode === 'standing' ? this.saveTeam() : this.kickOffMatch()));
     $('lineup-back').addEventListener('click', () => this.showHub());
@@ -615,35 +588,52 @@ class Game {
     if (this.account.coins != null) $('me-coins').textContent = `💰 ${this.account.coins}`;
     void this.refreshPrestige();
     void this.refreshDiary();
-    $('fixtures-progress').textContent = '';
-    $('opponents').innerHTML = SPINNER;
+    void this.refreshHubPlayer();
+    void this.refreshHubLegacy();
+  }
+
+  // NOTE: the manager season/fixtures loop (api.fixtures/this.play) is intentionally NOT surfaced on the
+  // home. The game is one LINEAR life — you live the bloodline player's career; running the club is a
+  // later stage of that same timeline, not a parallel menu. Phase 2 fuses club matches into the player's
+  // own season. The manager screens (standings/club/market/scouting) remain in code, unlinked, until then.
+
+  /** The "Your Player" block on the home hub — the bloodline you're living, inline with a develop/continue CTA. */
+  private async refreshHubPlayer() {
+    const el = $('hub-player');
+    el.innerHTML = SPINNER;
     try {
-      const { fixtures, played, total, playedToday, dailyCap } = await api.fixtures();
-      const capped = playedToday >= dailyCap;
-      $('fixtures-progress').textContent = total ? `${played} / ${total} played · ${playedToday}/${dailyCap} today` : '';
-      if (!total) {
-        $('opponents').innerHTML = '<div class="muted">No pod-mates yet — as players join your pod, fixtures appear here. (Register another handle in a second browser to test.)</div>';
-      } else {
-        $('opponents').innerHTML = fixtures.map((f) => {
-          const vb = `<span class="venue ${f.venue}" title="${f.venue === 'home' ? 'Home' : 'Away'} fixture">${f.venue === 'home' ? 'HOME' : 'AWAY'}</span>`;
-          if (f.status === 'played' && f.result) {
-            const { my, opp } = f.result;
-            const cls = my > opp ? 'w' : my < opp ? 'l' : 'd';
-            return `<div class="fixture done">${vb} <span class="opp"><b>${f.clubName}</b></span><span class="pill ${cls}">${cls.toUpperCase()} ${my}-${opp}</span></div>`;
-          }
-          const btn = capped
-            ? '<button class="fx-play" disabled title="Daily limit reached — come back tomorrow">Play ▶</button>'
-            : `<button class="fx-play" data-opp="${f.opponentId}" data-h="${f.handle}" data-venue="${f.venue}">Play ▶</button>`;
-          return `<div class="fixture">${vb} <span class="opp"><b>${f.clubName}</b> <span class="meta">rating ${f.rating}</span></span>${btn}</div>`;
-        }).join('');
-        Array.from($('opponents').querySelectorAll('button[data-opp]')).forEach((b) =>
-          b.addEventListener('click', () => this.play((b as HTMLElement).dataset.opp!, (b as HTMLElement).dataset.h!, (b as HTMLElement).dataset.venue as 'home' | 'away')));
-        if (played === total) $('opponents').insertAdjacentHTML('beforeend', '<div class="muted" style="margin-top:8px">✓ All fixtures played — standings lock in at season\'s end.</div>');
-        else if (capped) $('opponents').insertAdjacentHTML('beforeend', `<div class="muted" style="margin-top:8px">⏳ Daily limit reached (${playedToday}/${dailyCap}) — more fixtures tomorrow.</div>`);
+      const { prospects, supply, cap } = await api.prospects();
+      if (!prospects.length) {
+        el.innerHTML = `<div class="hub-prow scout"><div class="hp-main"><div class="hp-name">🌱 No prospect yet</div>`
+          + `<div class="hp-meta">Scout a 10-year-old and live his whole career — the heart of your dynasty.</div></div>`
+          + `<button id="hub-scout" class="primary hp-go">🔎 Scout a prospect →</button></div>`;
+        $('hub-scout').addEventListener('click', () => this.showAcademy());
+        return;
       }
-    } catch {
-      $('opponents').innerHTML = '<div class="muted">Could not load — is the server running?</div>';
-    }
+      // active bloodline = the one already in development, else the newest prospect
+      const active = prospects.find((p) => p.careerStarted) ?? prospects[prospects.length - 1];
+      const stars = '★'.repeat(active.potentialStars) + '☆'.repeat(5 - active.potentialStars);
+      const gen = active.generation ? ` · gen ${active.generation}` : '';
+      const more = prospects.length > 1 ? `<div class="hp-meta" style="margin-top:6px;">+${prospects.length - 1} more in the academy · ${supply}/${cap} minted</div>` : '';
+      el.innerHTML = `<div class="hub-prow"><div class="hp-main"><div class="hp-name">🌱 ${active.name} <span class="hp-stars">${stars}</span></div>`
+        + `<div class="hp-meta">${active.roleHint}${gen} · pedigree ${(active.pedigree * 100) | 0}% ${active.careerStarted ? '· in development' : '· age 10, ready to develop'}</div>${more}</div>`
+        + `<button class="primary hp-go" data-dev="${active.id}">${active.careerStarted ? 'Continue his story' : 'Develop'} →</button></div>`;
+      el.querySelector('[data-dev]')!.addEventListener('click', () => this.openCareer(active.id));
+    } catch { el.innerHTML = '<div class="muted">Could not load your player — is the server running?</div>'; }
+  }
+
+  /** The Dynasty & Trophy Room summary line on the home hub. */
+  private async refreshHubLegacy() {
+    try {
+      const [h, l] = await Promise.all([api.honours().catch(() => ({ honours: [] })), api.legends().catch(() => ({ legends: [] }))]);
+      const titles = h.honours.filter((x) => x.title === 1).length;
+      const lines = new Set(l.legends.map((x) => x.playerId)).size;
+      if (titles || lines || l.legends.length) {
+        $('hub-legacy-sub').textContent = `🏆 ${titles} title${titles === 1 ? '' : 's'} · 🌳 ${lines} bloodline${lines === 1 ? '' : 's'} · ⭐ ${l.legends.length} legend${l.legends.length === 1 ? '' : 's'}`;
+      } else {
+        $('hub-legacy-sub').textContent = 'Your bloodlines, silverware and retired numbers.';
+      }
+    } catch { /* leave default text */ }
   }
 
   // ---- standings / results page ----
@@ -924,6 +914,7 @@ class Game {
 
   private async openCareer(prospectId: string) {
     this.lastNarration = '';
+    this.showScreen('academy'); // career plays inside the academy panel — make it visible (may be entered straight from the hub)
     $('academy-body').innerHTML = SPINNER;
     try {
       const cur = await api.getCareer(prospectId).catch(() => null); // 400 if not started yet

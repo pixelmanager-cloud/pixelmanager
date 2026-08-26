@@ -66,6 +66,21 @@
       .legacy-menu { font-family: var(--display); font-size: 13px; letter-spacing: 0.5px; padding: 0 20px; cursor: pointer;
         background: transparent; color: var(--muted); border: 1px solid var(--line); border-radius: 12px; }
       .legacy-menu:hover { color: #fff; border-color: var(--muted); }
+      #hub-legacy { margin-top: 18px; }
+      #hub-legacy .legacy-btn { width: 100%; }
+      .hub-sub { font-family: var(--body); font-size: 13px; color: var(--muted); font-weight: normal; }
+      .hub-link { float: right; font-family: var(--display); font-size: 12px; letter-spacing: 0.5px; cursor: pointer;
+        background: color-mix(in srgb, var(--cyan) 12%, transparent); color: var(--cyan); border: 1px solid color-mix(in srgb, var(--cyan) 40%, transparent); border-radius: 8px; padding: 5px 12px; }
+      .hub-link:hover { background: color-mix(in srgb, var(--cyan) 22%, transparent); }
+      #hub-player { margin-bottom: 18px; }
+      .hub-prow { display: flex; align-items: center; gap: 12px; padding: 12px 14px; margin-bottom: 8px;
+        background: var(--panel-2, rgba(255,255,255,0.03)); border: 1px solid var(--line); border-radius: 10px; }
+      .hub-prow .hp-main { display: flex; flex-direction: column; gap: 3px; }
+      .hub-prow .hp-name { font-family: var(--display); font-size: 15px; letter-spacing: 0.5px; }
+      .hub-prow .hp-meta { font-family: var(--body); font-size: 13px; color: var(--muted); }
+      .hub-prow .hp-stars { color: var(--warn); letter-spacing: 1px; }
+      .hub-prow .hp-go { margin-left: auto; }
+      .hub-prow.scout { border-style: dashed; border-color: color-mix(in srgb, var(--good) 45%, transparent); }
       #topbar #record { font-family: var(--body); font-size: 18px; color: var(--warn); }
       #topbar #timer { font-family: var(--body); font-size: 18px; color: var(--pink); }
       #topbar .spacer { margin-left: auto; }
@@ -972,52 +987,24 @@
         </div>
       </div>
 
-      <!-- MODE SELECT -->
-      <div id="select" class="panel hidden">
-        <div id="select-head"><span id="select-hello"></span></div>
-        <div id="select-tagline">Choose how you want to play — two games, one persistent world of players.</div>
-        <div id="mode-grid">
-          <button class="mode-card mode-career" id="enter-career">
-            <div class="mode-icon">⚽</div>
-            <div class="mode-title">CAREER</div>
-            <div class="mode-desc">Take a 10-year-old prospect and live his whole story — a turn-by-turn card game from the park pitch to the pros. Shape his identity, appoint coaches, make the big calls. Graduate him at 25.</div>
-            <div class="mode-stat" id="career-stat"></div>
-            <div class="mode-go">Enter the Academy →</div>
-          </button>
-          <button class="mode-card mode-manager" id="enter-manager">
-            <div class="mode-icon">🧢</div>
-            <div class="mode-title">MANAGER</div>
-            <div class="mode-desc">Run a club. Pick your XI, out-think the gaffer with tactics and duties, sign stars, build facilities, and chase the league title and the cup — season after season.</div>
-            <div class="mode-stat" id="manager-stat"></div>
-            <div class="mode-go">Enter the dugout →</div>
-          </button>
-        </div>
-        <div id="select-legacy">
-          <button id="select-trophies" class="legacy-btn">
-            <span class="legacy-ico">🏆</span>
-            <span class="legacy-body"><span class="legacy-title">DYNASTY &amp; TROPHY ROOM</span><span class="legacy-sub" id="select-legacy-sub">Your bloodlines, silverware and retired numbers across both games.</span></span>
-            <span class="legacy-go">→</span>
-          </button>
-          <button id="select-menu" class="legacy-menu">≡ Menu</button>
-        </div>
-      </div>
-
-      <!-- HUB -->
+      <!-- HUB — the unified Club & Dynasty home (one save, one story) -->
       <div id="hub" class="panel hidden">
         <div id="hub-head"><span id="me-name"></span><span id="me-rating"></span><span id="me-prestige" class="hidden" title="Your manager legacy — earned from titles, wins, and how high you climb"></span><span id="me-coins" title="Transfer-market coins — earn them by playing"></span>
-          <div class="hub-actions">
-            <button id="view-standings">📊 League &amp; Results</button>
-            <button id="view-club">🏛️ Club</button>
-            <button id="view-scouting">🔎 Scouting</button>
-            <button id="view-market">💰 Transfer Market</button>
-            <button id="view-trophies">🏆 Trophy Room</button>
-            <button id="view-modes">⇄ Modes</button>
-            <button id="set-team">⚙ Set My Team</button>
-          </div>
         </div>
         <div id="gaffers-diary" class="hidden"><span class="gd-icon">📔</span><span id="gaffers-diary-text"></span></div>
-        <h3>SEASON FIXTURES <span id="fixtures-progress" class="fx-progress"></span></h3>
-        <div id="opponents"></div>
+        <!-- YOUR PLAYER — the bloodline you're living (the one linear thread) -->
+        <div id="hub-player-wrap">
+          <h3>YOUR PLAYER <span class="hub-sub">— the bloodline you're living</span> <button id="hub-academy" class="hub-link">🎒 Academy →</button></h3>
+          <div id="hub-player"></div>
+        </div>
+        <!-- DYNASTY -->
+        <div id="hub-legacy">
+          <button id="view-trophies" class="legacy-btn">
+            <span class="legacy-ico">🏆</span>
+            <span class="legacy-body"><span class="legacy-title">DYNASTY &amp; TROPHY ROOM</span><span class="legacy-sub" id="hub-legacy-sub">Your bloodlines, silverware and retired numbers.</span></span>
+            <span class="legacy-go">→</span>
+          </button>
+        </div>
       </div>
 
       <!-- STANDINGS / RESULTS -->
