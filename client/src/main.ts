@@ -414,7 +414,7 @@ class Game {
     el.innerHTML =
       `<div class="pc-card tier-${tier.key}">`
       + ring + '<div class="pc-burst"></div>' + sparks
-      + (minted ? `<div class="pc-flash">${tier.icon} ${tier.name} STAR MINTED</div>` : '')
+      + (minted ? `<div class="pc-flash">${tier.icon} TURNED PRO · ${tier.name}</div>` : '')
       + `<div class="pc-top"><div class="pc-ovr">${overall(p)}<span>OVR</span></div>`
       + `<div class="pc-tier">${tier.icon}<span>${tier.name}</span></div></div>`
       + `<div class="pc-crest role-${p.role}"><span class="pc-crest-role">${p.role}</span></div>`
@@ -424,7 +424,7 @@ class Game {
       + this.careerRecordHtml(p)
       + this.characterHtml(p)
       + contractHtml
-      + `<div class="pc-foot">★ NFT${tokenId ? ` · #${tokenId}` : ''}</div>`
+      + `<div class="pc-foot">★ ${tier.name}${tokenId ? ` · #${tokenId}` : ''}</div>`
       + `<button class="pc-close">${minted ? 'Nice ✓' : 'Close'}</button></div>`;
     el.addEventListener('click', async (e) => {
       const t = e.target as HTMLElement;
@@ -449,23 +449,31 @@ class Game {
     }
   }
 
-  /** A prospect card — a 10-year-old awaiting development in the Career game (Layer 1). */
+  /** A prospect card — a 10-year-old about to live his career. For an heir (gen > 0) this is the payoff
+   *  beat of the whole dynasty loop: the family name carries on, and you can develop him on the spot. */
   private showProspectCard(p: import('./api').Prospect, born = false) {
     const stars = '★'.repeat(p.potentialStars) + '☆'.repeat(5 - p.potentialStars);
-    const isGenesis = (p.generation ?? 0) === 0;
+    const gen = p.generation ?? 0;
+    const isGenesis = gen === 0;
+    const surname = p.name.trim().split(/\s+/).slice(1).join(' ') || p.name;
     const el = document.createElement('div');
     el.id = 'player-card-ov';
     el.innerHTML = `<div class="pc-card tier-bronze">`
       + `<div class="pc-top"><div class="pc-ovr">10<span>YRS</span></div><div class="pc-tier">🌱<span>PROSPECT</span></div></div>`
       + `<div class="pc-crest role-${p.roleHint}"><span class="pc-crest-role">${p.roleHint}</span></div>`
-      + `<div class="pc-name">${p.name}</div><div class="pc-role">Youth Prospect${p.generation ? ` · gen ${p.generation}` : ''}</div>`
-      + (born ? `<div class="pc-flash">${isGenesis ? '🌱 GENESIS PROSPECT MINTED' : '🌱 NEXT GENERATION BORN'}</div>` : '')
+      + `<div class="pc-name">${p.name}</div><div class="pc-role">Youth Prospect${gen ? ` · gen ${gen}` : ''}</div>`
+      + (born ? `<div class="pc-flash">${isGenesis ? '🌱 A NEW BLOODLINE BEGINS' : `🌳 THE ${surname.toUpperCase()} NAME LIVES ON`}</div>` : '')
       + `<div class="pc-contract retired"><div class="pc-legend">Potential ${stars} · pedigree ${(p.pedigree * 100 | 0)}%</div>`
+      + (gen ? `<div class="pc-stake">Generation ${gen} of the bloodline — a fresh 10-year-old carrying the family name into a whole new career.</div>` : '')
       + (p.note ? `<div class="pc-stake">${p.note}</div>` : '')
-      + `<div class="pc-stake">Develops 10→25 in the Career game (coming soon)</div></div>`
-      + `<div class="pc-foot">★ Prospect NFT · to be developed</div>`
-      + `<button class="pc-close">${born ? 'Nice ✓' : 'Close'}</button></div>`;
-    el.addEventListener('click', (e) => { const t = e.target as HTMLElement; if (t === el || t.classList.contains('pc-close')) el.remove(); });
+      + `</div>`
+      + `<div class="pc-foot">🌱 Youth prospect · his story starts at age 10</div>`
+      + `<div class="pc-cta"><button class="pc-dev primary" data-dev="${p.id}">Develop him →</button><button class="pc-close">${born ? 'Later' : 'Close'}</button></div></div>`;
+    el.addEventListener('click', (e) => {
+      const t = e.target as HTMLElement;
+      if (t.dataset.dev) { el.remove(); void this.openCareer(t.dataset.dev); return; }
+      if (t === el || t.classList.contains('pc-close')) el.remove();
+    });
     document.body.appendChild(el);
   }
 
@@ -602,7 +610,7 @@ class Game {
     const el = $('hub-player');
     el.innerHTML = SPINNER;
     try {
-      const { prospects, supply, cap } = await api.prospects();
+      const { prospects } = await api.prospects();
       if (!prospects.length) {
         el.innerHTML = `<div class="hub-prow scout"><div class="hp-main"><div class="hp-name">🌱 No prospect yet</div>`
           + `<div class="hp-meta">Scout a 10-year-old and live his whole career — the heart of your dynasty.</div></div>`
@@ -614,7 +622,7 @@ class Game {
       const active = prospects.find((p) => p.careerStarted) ?? prospects[prospects.length - 1];
       const stars = '★'.repeat(active.potentialStars) + '☆'.repeat(5 - active.potentialStars);
       const gen = active.generation ? ` · gen ${active.generation}` : '';
-      const more = prospects.length > 1 ? `<div class="hp-meta" style="margin-top:6px;">+${prospects.length - 1} more in the academy · ${supply}/${cap} minted</div>` : '';
+      const more = prospects.length > 1 ? `<div class="hp-meta" style="margin-top:6px;">+${prospects.length - 1} more in the academy</div>` : '';
       el.innerHTML = `<div class="hub-prow"><div class="hp-main"><div class="hp-name">🌱 ${active.name} <span class="hp-stars">${stars}</span></div>`
         + `<div class="hp-meta">${active.roleHint}${gen} · pedigree ${(active.pedigree * 100) | 0}% ${active.careerStarted ? '· in development' : '· age 10, ready to develop'}</div>${more}</div>`
         + `<button class="primary hp-go" data-dev="${active.id}">${active.careerStarted ? 'Continue his story' : 'Develop'} →</button></div>`;
@@ -906,7 +914,7 @@ class Game {
     try {
       const r = await api.genesis();
       if (r.coins != null) this.account.coins = r.coins;
-      toast(`🌱 ${r.prospect.name} minted (−${r.cost}c) — ${r.supply}/${r.cap} in the economy`);
+      toast(`🌱 Scouted ${r.prospect.name} (−${r.cost}c)`);
       this.showProspectCard(r.prospect, true);
       await this.showAcademy();
     } catch (e: any) { toast(e?.body?.error === 'supply cap reached' ? 'Supply cap reached — no new tokens' : e?.body?.error === 'not enough coins' ? `Not enough coins (need ${e.body.need})` : (e?.body?.error ?? 'Mint failed')); }
