@@ -104,6 +104,11 @@ export const GK_DECK: Card[] = [
   { id: 'calm-back',   name: 'Calm it at the Back', tags: ['composure', 'teamwork'] },
   { id: 'penalty-hero', name: 'Penalty Hero',      tags: ['keeping', 'composure'], rarity: 'epic' },
   { id: 'sweeper-elite', name: 'Modern Sweeper',   tags: ['keeping', 'creativity'], rarity: 'rare' },
+  // expansion batch — more keeping moments
+  { id: 'fingertip',   name: 'Fingertip Save',    tags: ['keeping'] },
+  { id: 'parry',       name: 'Parry the Danger',  tags: ['keeping', 'aggression'] },
+  { id: 'safe-hands',  name: 'Safe Hands',        tags: ['keeping', 'teamwork'] },
+  { id: 'wonder-save', name: 'Wonder Save',       tags: ['keeping', 'flair'], rarity: 'rare' },
 ];
 const GK_STARTER_IDS = ['shot-stop', 'claim-cross', 'organise', 'calm-back'];
 const GK_STARTER: Card[] = GK_DECK.filter((c) => GK_STARTER_IDS.includes(c.id));
@@ -139,6 +144,8 @@ export const CARD_DESC: Record<string, string> = {
   distribution: 'Launch a swift counter with sharp distribution.', 'goal-kick': 'Ping a pinpoint goal-kick to start the attack.',
   organise: 'Organise the wall and bark out the orders.', 'calm-back': 'Calm it down at the back — no panic.',
   'penalty-hero': 'Guess right and become the hero from the spot.', 'sweeper-elite': 'Play as a modern sweeper-keeper, starting moves from the back.',
+  fingertip: 'Get a vital fingertip to it and turn it round the post.', parry: 'Attack the ball and parry the danger to safety.',
+  'safe-hands': 'Gather it cleanly with safe hands to settle everyone.', 'wonder-save': 'Somehow pull off a wonder save that defies belief.',
 };
 
 // deck-building config
