@@ -550,7 +550,10 @@ export class Career {
     const form = this.formBonus < 0 ? this.formBonus * this.personality.resilience : this.formBonus;
     // your coach lifts success when you play to their specialty (good coaching → that development compounds)
     const coaching = this.coach && card.tags.some((t) => this.coach!.specialty.includes(t)) ? this.coach.bonus : 0;
-    const success = clamp(f + (this.rng() - 0.5) * variance + form + bigGame + coaching, 0, 1);
+    // FATIGUE: running on empty saps a moment (below 35 energy it bites, up to −0.12 at flat 0). Makes
+    // Rest and the energy-giving focus choices a real trade-off against a busy, big-moment-heavy chapter.
+    const fatigue = this.energy < 35 ? ((35 - this.energy) / 35) * 0.12 : 0;
+    const success = clamp(f + (this.rng() - 0.5) * variance + form + bigGame + coaching - fatigue, 0, 1);
     const choice: Choice = { cardId: card.id, tags: card.tags, power: cardPower(card), fit: f, bestFit, success, scenario: this.scenario.label, stakes: this.scenario.stakes };
     this.log.push(choice);
     this.updateLife(choice); // NSS meters + energy react to how the moment went (deterministic, no rng)
@@ -581,7 +584,7 @@ export class Career {
     this.life('fans',      Math.round(perf * (kind === 'match' ? 1.1 : 0.6) + rev('fans')));
     this.life('sponsors',  Math.round(Math.max(0, perf) * 0.5 + rev('sponsors') * 0.5));
     if (social) this.life('partner', Math.round(perf * 1.3 + rev('partner')));                // personal life tended in social moments
-    this.energy = clamp(this.energy - (big ? 4 : 3), 0, 100); // living the moment costs energy
+    this.energy = clamp(this.energy - (choice.stakes >= 3 ? 8 : big ? 6 : 4), 0, 100); // bigger moments drain more — energy is a running resource across the chapter
   }
 
   /** How the chapter's relationships PAY OFF or BITE (deterministic — reads the end-of-chapter meters,
@@ -623,7 +626,7 @@ export class Career {
   private advanceSeasonEvent() {
     const conseq = this.computeConsequences(bandAt(this.turn - 1).band.name); // read the chapter that just ended
     this.chapterConsequences = conseq.notes;
-    this.energy = clamp(this.energy + 50 + conseq.energy, 0, 100);  // a break restores energy (± how life is going)
+    this.energy = clamp(this.energy + 34 + conseq.energy, 0, 100);  // a summer restores some energy (± how life is going) — but not a full reset, so it stays a resource
     this.earnings += conseq.earn; this.marketBonus += conseq.market;
     this.life('partner', -6); this.life('family', -4); this.life('school', -3); // relationships drift over a summer if untended
     this.demandBias = null;
