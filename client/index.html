@@ -250,6 +250,10 @@
       #me-prestige { font-family: var(--body); font-size: 15px; color: #d8c078; border: 1px solid #6a5a2a; border-radius: 5px; padding: 2px 8px; cursor: pointer; }
       .hub-actions { margin-left: auto; display: flex; gap: 10px; flex-wrap: wrap; }
       #skip { background: var(--pink); }
+      #gaffers-diary { display: flex; align-items: flex-start; gap: 10px; font-family: var(--body); font-size: 14px;
+        color: var(--cyan); border: 1px solid var(--line); background: var(--panel-2); border-radius: 5px;
+        padding: 9px 12px; margin-bottom: 14px; line-height: 1.5; }
+      #gaffers-diary .gd-icon { flex: none; font-size: 17px; }
       /* standings / results page */
       #standings-head { display: flex; align-items: center; gap: 14px; margin-bottom: 4px; }
       #standings-head h3 { margin: 0; }
@@ -962,6 +966,7 @@
             <button id="set-team">⚙ Set My Team</button>
           </div>
         </div>
+        <div id="gaffers-diary" class="hidden"><span class="gd-icon">📔</span><span id="gaffers-diary-text"></span></div>
         <h3>SEASON FIXTURES <span id="fixtures-progress" class="fx-progress"></span></h3>
         <div id="opponents"></div>
       </div>
