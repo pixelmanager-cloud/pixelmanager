@@ -72,6 +72,50 @@ deflationary, but no player stakes money against another player.
 pays out (the burn is a net drain). This is entertainment + skill competition, **not
 passive income** — market it that way. Never imply guaranteed earnings.
 
+## Token demand from the two-layer lifecycle (added 2026-08-26)
+
+The Career Sim + player lifecycle we built is, by design, a **token-demand engine**: it
+constantly needs *new* players created, which is where the ERC-20 gets its recurring,
+utility-driven demand. Recommended shape:
+
+**Two currencies, cleanly separated (keeps the competitive game free + non-p2w):**
+- **COINS** — soft, in-game, freely *emitted by play* (match + season rewards). Run the
+  everyday competitive loop with coins: facilities, transfers, **contract extensions**,
+  scouting, wages. Because you earn coins by playing, retention/convenience never require
+  real spend → matches the user's "retention + convenience, not pay-to-win" decision.
+- **PTEST (ERC-20)** — scarce **hard** token, gated to **asset CREATION & permanence,
+  never to competitive power.** Token buys *the right to create/keep lasting on-chain
+  assets*, not a stat edge.
+
+**Token SINKS (the demand) — all creation/permanence, none pay-to-win:**
+1. **Genesis mint** — minting a new player/prospect NFT costs PTEST (+ supply cap). The
+   breeder economy needs a steady *supply* of new players → steady, gameplay-driven demand.
+2. **Reborn / lineage mint** — breeding the next generation at retirement (the lifecycle's
+   reborn step) costs PTEST → recurring demand tied to every player that ages out.
+3. **Legacy / prestige mint** — minting a manager's soulbound Legacy card or a player's
+   retirement "legend card" costs PTEST (vanity permanence — pure flex, zero power).
+4. **Marketplace fee** — a small % of every NFT trade, taken in PTEST → routed to
+   buyback-burn + reward pool. Money flow scales with trade volume (the breeder↔manager
+   market), not with new-buyer inflows.
+5. **Premium convenience** (the convenience lane): deep-scout unlocks, extra scouting
+   expeditions, cosmetic club identity — optional PTEST sinks that don't touch balance.
+
+**Money FLOW TO the token (value accrual, per the rules above):** mint fees + a cut of
+market fees are **burned** (deflation as the game grows); the remainder funds the
+**protocol reward pool** (prizes are pool-funded, *never* loser→winner transfers). Value
+accrues from must-have creation utility + burn scarcity + fee-funded prizes — demand rises
+with the player/breeder base, not with speculation.
+
+**The elegant fit:** every *new* and every *reborn* player already requires a mint, and the
+breeder needs to keep producing supply → the lifecycle itself generates recurring token
+demand. earnings/greed/contracts stay in **coins** (soft, competitive, free-to-earn); PTEST
+sits on **creation + permanence + fees**.
+
+**Guardrails (unchanged stance):** competitive advantage stays earnable with free coins (no
+p2w); no wagering-shaped flows; **PTEST stays testnet/valueless until the flows are modelled
+(sinks ≥ emissions proven) and legally reviewed.** Axie-style growth-dependence is the
+structural risk → model sustainability before any real value.
+
 ## NFTs
 
 - **Base + upgrades split.** An NFT stores **immutable base stats**; upgrades from
