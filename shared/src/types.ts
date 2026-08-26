@@ -68,6 +68,9 @@ export interface Player {
   /** brand/fame 1-20 (career-built players): boosts the club's Commercial income in the manager game,
    *  so a marketable star helps pay his own wages. Optional. */
   marketability?: number;
+  /** coins banked across the player's career (career-built players): the breeder's payout when the NFT
+   *  first sells, and an "established wage" that raises his contract-extension cost. Optional. */
+  earnings?: number;
 }
 
 export interface Team {

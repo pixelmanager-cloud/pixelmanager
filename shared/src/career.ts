@@ -131,7 +131,7 @@ const PERSONALITY_GREED: Record<string, number> = { maverick: 3, mercurial: 2, b
 // Manager-side contract economics (contractCost / contractLength / releaseClause / Contract …) live in
 // contracts.ts so the Manager game gets them via the barrel without the Layer-1 sim. Re-exported here
 // for the career harness's convenience.
-export { contractCost, contractLength, releaseClause, contractExpirySeason, contractActive, contractView, signContract, type Contract, type PlayerContractView } from './contracts.js';
+export { contractCost, contractLength, releaseClause, breederRevenue, contractExpirySeason, contractActive, contractView, signContract, type Contract, type PlayerContractView } from './contracts.js';
 
 // ── FINANCIAL DECISIONS: at most age-chapter breaks (from the Academy on) an OFFER lands on the table.
 // This is the money layer of a player's life — and it MUST trade against the pitch. Chase the money and

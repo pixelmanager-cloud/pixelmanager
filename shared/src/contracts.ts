@@ -6,12 +6,18 @@
 // Manager game without dragging the Layer-1 breeder sim along.
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
-/** Wage (coins) to EXTEND a contract: better + greedier players cost more; veterans get cheaper. */
-export function contractCost(overall: number, age: number, greed: number): number {
+/** Wage (coins) to EXTEND a contract: better + greedier players cost more; veterans get cheaper; and a
+ *  proven high-EARNER commands an established wage (a retention COST, not power — a bounded +0..40%). */
+export function contractCost(overall: number, age: number, greed: number, earnings = 0): number {
   const ageFactor = age <= 30 ? 1 : clamp(1 - (age - 30) * 0.06, 0.4, 1);
   const greedFactor = 0.6 + 0.08 * greed;                          // greed 10 → 1.4x, 20 → 2.2x, 1 → 0.68x
-  return Math.round(overall * overall * 1.2 * ageFactor * greedFactor);
+  const wageMult = 1 + clamp(earnings / 12000, 0, 0.4);            // established name → dearer to keep (cap +40%)
+  return Math.round(overall * overall * 1.2 * ageFactor * greedFactor * wageMult);
 }
+
+/** The breeder's PAYOUT (coins) when a career-built NFT first sells: the earnings it banked in
+ *  development — so developing a player well is itself rewarded (the breeder side of the economy). */
+export const breederRevenue = (earnings: number) => Math.max(0, Math.round(earnings));
 
 /** Deal LENGTH (seasons) a player commits to: a loyal one-club man signs long (5), a mercenary short
  *  (2) — so greed drives how often you face the expensive re-sign decision. */
@@ -48,13 +54,13 @@ export interface PlayerContractView {
  *  (benched until you sign him). greed/marketability default to neutral for non-career-built players. */
 export function contractView(
   overall: number, age: number, greed = 10, marketability = 10, personality: string | undefined,
-  contract: Contract | null, currentSeason: number,
+  contract: Contract | null, currentSeason: number, earnings = 0,
 ): PlayerContractView {
   return {
     available: contract ? contractActive(contract, currentSeason) : false,
     seasonsLeft: contract ? Math.max(0, contractExpirySeason(contract) - currentSeason) : 0,
     lengthSeasons: contractLength(greed, personality),
-    extendCost: contractCost(overall, age, greed),
+    extendCost: contractCost(overall, age, greed, earnings),
     sellValue: releaseClause(overall, marketability, greed),
   };
 }

@@ -1,6 +1,6 @@
 // Career-sim harness. Validates: (1) different styles → distinct, specialised players + roles;
 // (2) skill → magnitude; (3) the turn-by-turn engine is deterministic. Run: `npx tsx career_sim.ts`.
-import { Career, simCareer, graduate, ageCurve, careerOverall, prospectValuation, contractCost, contractLength, releaseClause, legacyBoost, AGENTS, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, STARTER_DECK, cardPower, type Style, type CareerPlayerAttrs, type Role, type Genes, type PlayerAchievements } from './src/career.js';
+import { Career, simCareer, graduate, ageCurve, careerOverall, prospectValuation, contractCost, contractLength, releaseClause, breederRevenue, legacyBoost, AGENTS, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, STARTER_DECK, cardPower, type Style, type CareerPlayerAttrs, type Role, type Genes, type PlayerAchievements } from './src/career.js';
 
 const STYLES: Style[] = [
   { name: 'Poacher',   pref: { composure: 1, flair: 0.8 },        skill: 0.85 },
@@ -265,6 +265,9 @@ console.log('\n=== contract cost-of-ownership — extend or sell (NFT stays owne
     console.log(`  ${label.padEnd(18)} greed ${String(greed).padStart(2)} · ${o.len}-season deals · ${o.renewals} renewals over 15y · total wages ${String(o.total).padStart(5)} coins · sell for ${releaseClause(ovr, greed >= 15 ? 16 : 8, greed)} coins`);
   }
   console.log('  → a mercenary re-signs often at a premium (drains coins) but resells high; a loyal star is cheap to keep for years');
+  // established wage: a proven high-EARNER costs more to keep (a retention cost, not power); and the
+  // breeder banks those earnings when the NFT first sells (rewards developing a player well).
+  for (const earn of [0, 3000, 6000]) console.log(`  established-wage @ovr16 greed10 age27 — earnings ${String(earn).padStart(4)}c → extend ${contractCost(16, 27, 10, earn)}c · breeder sale payout ${breederRevenue(earn)}c`);
 }
 
 // prospect market: snapshot a half-developed player, resume it elsewhere, value it
