@@ -82,6 +82,11 @@ export function makePostgresStore(connectionString: string): Store {
           id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, name TEXT NOT NULL, parent_id TEXT, role_hint TEXT NOT NULL,
           genes_json TEXT NOT NULL, pedigree REAL NOT NULL, dev_bonus_json TEXT NOT NULL, born_season INTEGER NOT NULL,
           developed INTEGER NOT NULL DEFAULT 0);
+        ALTER TABLE prospects ADD COLUMN IF NOT EXISTS career_seed BIGINT;
+        ALTER TABLE prospects ADD COLUMN IF NOT EXISTS agent_id TEXT;
+        ALTER TABLE prospects ADD COLUMN IF NOT EXISTS track TEXT;
+        ALTER TABLE prospects ADD COLUMN IF NOT EXISTS career_actions TEXT;
+        ALTER TABLE prospects ADD COLUMN IF NOT EXISTS developed_player_id TEXT;
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS season_id TEXT;
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS initiator_id TEXT;
         ALTER TABLE clubs ADD COLUMN IF NOT EXISTS so_duties TEXT;
@@ -256,10 +261,19 @@ export function makePostgresStore(connectionString: string): Store {
         [p.id, p.owner_id, p.name, p.parent_id, p.role_hint, p.genes_json, p.pedigree, p.dev_bonus_json, p.born_season]);
     },
     async prospectsFor(ownerId) {
-      return (await q('SELECT id, name, parent_id, role_hint, genes_json, pedigree, dev_bonus_json, born_season, developed FROM prospects WHERE owner_id=$1 ORDER BY born_season DESC', [ownerId])).rows as any[];
+      return (await q('SELECT id, name, parent_id, role_hint, genes_json, pedigree, dev_bonus_json, born_season, developed, career_seed, agent_id, track, career_actions, developed_player_id FROM prospects WHERE owner_id=$1 ORDER BY born_season DESC', [ownerId])).rows as any[];
     },
     async getProspect(id) {
-      return (await q('SELECT id, owner_id, name, parent_id, role_hint, genes_json, pedigree, dev_bonus_json, born_season, developed FROM prospects WHERE id=$1', [id])).rows[0] as any;
+      return (await q('SELECT id, owner_id, name, parent_id, role_hint, genes_json, pedigree, dev_bonus_json, born_season, developed, career_seed, agent_id, track, career_actions, developed_player_id FROM prospects WHERE id=$1', [id])).rows[0] as any;
+    },
+    async startProspectCareer(id, seed, agentId, track) {
+      await q("UPDATE prospects SET career_seed=$2, agent_id=$3, track=$4, career_actions='[]' WHERE id=$1", [id, seed, agentId, track]);
+    },
+    async saveProspectActions(id, actionsJson) {
+      await q('UPDATE prospects SET career_actions=$2 WHERE id=$1', [id, actionsJson]);
+    },
+    async setProspectDeveloped(id, playerId) {
+      await q('UPDATE prospects SET developed=1, developed_player_id=$2 WHERE id=$1', [id, playerId]);
     },
     async decrementInjuries(accountId) {
       await q('UPDATE injuries SET matches_remaining = matches_remaining - 1 WHERE account_id=$1', [accountId]);

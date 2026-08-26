@@ -9,6 +9,8 @@ import type { Role } from './types.js';
 export { legacyBoost, type LegacyBoost, rollGenes, inheritGenes, type Genes, type Band } from './career.js';
 export type { PlayerAchievements } from './career.js';
 import type { PlayerAchievements } from './career.js';
+// Career sim (Layer 1) — the breeder card-game engine, for the server to run authoritatively.
+export { Career, graduate, AGENTS, TOTAL_TURNS, type Agent, type CareerSnapshot, type CareerPlayer, type Track } from './career.js';
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 

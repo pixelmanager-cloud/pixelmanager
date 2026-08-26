@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { overall, managerPrestige, signContract, contractCost, contractLength, type Lineup, type Tactics } from '@fm/shared';
 import { squadContracts, isNftPlayer, ageOf } from './contracts.js';
 import { advanceAccountLifecycle, rebornProspect, toAchievements } from './lifecycle.js';
+import { loadCareer, applyAction, careerState, graduateProspect, careerSeedFor, trackFor, agentsList, type CareerAction } from './breeder.js';
 import { db, type Account, type StandingOrders, type Listing } from './db.js';
 import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMATIONS } from './game.js';
 import { hashPassword, verifyPassword } from './auth.js';
@@ -445,7 +446,61 @@ app.post('/players/:id/reborn', { preHandler: requireAuth }, async (req, reply) 
 // PROSPECTS: the reborn 10-year-olds awaiting development in the Career sim (Layer 1).
 app.get('/prospects', { preHandler: requireAuth }, async (req) => {
   const rows = await db.prospectsFor(req.account!.id);
-  return { prospects: rows.map((r) => { const genes = JSON.parse(r.genes_json); const geneCeil = (genes.pace.ceiling + genes.strength.ceiling + genes.stamina.ceiling) / 3; return { id: r.id, name: r.name, roleHint: r.role_hint, pedigree: r.pedigree, bornSeason: r.born_season, developed: !!r.developed, potentialStars: Math.max(1, Math.min(5, Math.round(geneCeil / 4 + r.pedigree * 1.5))), genes }; }) };
+  return { prospects: rows.map((r) => { const genes = JSON.parse(r.genes_json); const geneCeil = (genes.pace.ceiling + genes.strength.ceiling + genes.stamina.ceiling) / 3; return { id: r.id, name: r.name, roleHint: r.role_hint, pedigree: r.pedigree, bornSeason: r.born_season, developed: !!r.developed, developedPlayerId: r.developed_player_id, careerStarted: r.career_seed != null, potentialStars: Math.max(1, Math.min(5, Math.round(geneCeil / 4 + r.pedigree * 1.5))), genes }; }) };
+});
+
+// ── CAREER GAME (Layer 1): develop a 10yo prospect 10→25 via the deterministic card game, then
+// graduate it into a manager Player NFT. Server-authoritative: the play LOG lives on the prospect.
+app.get('/career/agents', { preHandler: requireAuth }, async () => ({ agents: agentsList() }));
+
+// Start (or resume) a prospect's career. First call sets the agent + seeds the run.
+app.post('/career/:id/start', { preHandler: requireAuth }, async (req, reply) => {
+  const p = await db.getProspect((req.params as any).id);
+  if (!p || p.owner_id !== req.account!.id) return reply.code(404).send({ error: 'no such prospect' });
+  if (p.developed) return reply.code(409).send({ error: 'already graduated', playerId: p.developed_player_id });
+  if (p.career_seed == null) {
+    const agentId = (req.body as any)?.agentId ?? null;
+    await db.startProspectCareer(p.id, careerSeedFor(p.id), agentId, trackFor(p.role_hint));
+  }
+  const fresh = (await db.getProspect(p.id))!;
+  return { ok: true, state: careerState(fresh, loadCareer(fresh)) };
+});
+
+// Current playable state of an in-progress career.
+app.get('/career/:id', { preHandler: requireAuth }, async (req, reply) => {
+  const p = await db.getProspect((req.params as any).id);
+  if (!p || p.owner_id !== req.account!.id) return reply.code(404).send({ error: 'no such prospect' });
+  if (p.developed) return reply.code(409).send({ error: 'already graduated', playerId: p.developed_player_id });
+  if (p.career_seed == null) return reply.code(400).send({ error: 'career not started' });
+  return { ok: true, state: careerState(p, loadCareer(p)) };
+});
+
+// Submit one action (play a card / draft / appoint coach / resolve financial offer). At age 25 the
+// career finishes → graduate → mint the manager Player NFT into the owner's squad.
+app.post('/career/:id/act', { preHandler: requireAuth }, async (req, reply) => {
+  const ownerId = req.account!.id;
+  const p = await db.getProspect((req.params as any).id);
+  if (!p || p.owner_id !== ownerId) return reply.code(404).send({ error: 'no such prospect' });
+  if (p.developed) return reply.code(409).send({ error: 'already graduated', playerId: p.developed_player_id });
+  if (p.career_seed == null) return reply.code(400).send({ error: 'career not started' });
+  const action = req.body as CareerAction;
+  const c = loadCareer(p);
+  try { applyAction(c, action); } catch (e: any) { return reply.code(400).send({ error: e?.message ?? 'illegal move' }); }
+  const actions: CareerAction[] = [...JSON.parse(p.career_actions ?? '[]'), action];
+  await db.saveProspectActions(p.id, JSON.stringify(actions));
+  if (c.finished) { // GRADUATE → mint the manager NFT
+    const fresh = (await db.getProspect(p.id))!;
+    const { player } = graduateProspect(fresh, c);
+    const sq = (await loadSquad(ownerId))!;
+    sq.club.players.push(player);
+    const s = await ensureSeason(db, Date.now());
+    await db.saveClub(ownerId, sq.club, sq.standingOrders);
+    await db.ensurePrimeSeason(player.id, s.number); // graduates at his prime (age 25)
+    await db.setProspectDeveloped(p.id, player.id);
+    return { ok: true, graduated: true, player };
+  }
+  const fresh = (await db.getProspect(p.id))!;
+  return { ok: true, state: careerState(fresh, c) };
 });
 
 // LEGENDS: the manager's collection of retirement legacy cards (a hall of players they saw out).

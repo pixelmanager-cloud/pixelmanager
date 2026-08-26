@@ -11,7 +11,18 @@ export function clearToken() { token = ''; localStorage.removeItem('fm_token'); 
 
 export interface ApiError extends Error { status: number; body: any }
 export interface LegacyCard { role: string; primeOverall: number; peakOverall: number; seasons: number; apps: number; leagueTitles: number; cupTitles: number; legendRating: number; tier: string; icon: string; testimonial: number; mintable: boolean; note: string }
-export interface Prospect { id: string; name: string; roleHint: string; pedigree: number; potentialStars: number; bornSeason?: number; developed?: boolean; note?: string; genes?: any }
+export interface Prospect { id: string; name: string; roleHint: string; pedigree: number; potentialStars: number; bornSeason?: number; developed?: boolean; note?: string; genes?: any; careerStarted?: boolean; developedPlayerId?: string | null }
+export interface CareerCard { id: string; name: string; tags: string[]; rarity?: string }
+export interface CareerState {
+  prospectId: string; name: string; pedigree: number; agentId?: string | null; phase: 'play' | 'coach' | 'draft' | 'offer';
+  age: number; chapter: string; turn: number; totalTurns: number; finished: boolean;
+  seasonEvent?: { id: string; name: string; desc: string } | null; earnings?: number; deck?: CareerCard[];
+  scenario?: { id: string; kind: string; demand: Record<string, number>; label: string; stakes: number };
+  hand?: CareerCard[]; coach?: { id: string; name: string } | null;
+  coaches?: Array<{ id: string; name: string; kind: string; desc: string; specialty: string[]; bonus: number }>;
+  options?: CareerCard[]; picksLeft?: number;
+  offers?: Array<{ id: string; name: string; desc: string; earn: number; greed: number; market: number; form: number }>;
+}
 export interface ContractInfo { playerId: string; age: number; available: boolean; seasonsLeft: number; lengthSeasons: number; extendCost: number; sellValue: number; stakedSeasons: number; retired?: boolean; legend?: LegacyCard | null; rebornId?: string | null }
 
 async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
@@ -79,6 +90,10 @@ export const api = {
   extendContract: (playerId: string) => req<{ ok: true; coins: number; contract: ContractInfo }>(`/players/${encodeURIComponent(playerId)}/extend`, { method: 'POST' }),
   reborn: (playerId: string) => req<{ ok: true; prospect: Prospect }>(`/players/${encodeURIComponent(playerId)}/reborn`, { method: 'POST' }),
   prospects: () => req<{ prospects: Prospect[] }>('/prospects'),
+  careerAgents: () => req<{ agents: Array<{ id: string; name: string; desc: string }> }>('/career/agents'),
+  startCareer: (pid: string, agentId: string | null) => req<{ ok: true; state: CareerState }>(`/career/${encodeURIComponent(pid)}/start`, { method: 'POST', body: JSON.stringify({ agentId }) }),
+  getCareer: (pid: string) => req<{ ok: true; state: CareerState }>(`/career/${encodeURIComponent(pid)}`),
+  careerAct: (pid: string, action: { type: string; cardId: string }) => req<{ ok: true; graduated?: boolean; player?: Player; state?: CareerState }>(`/career/${encodeURIComponent(pid)}/act`, { method: 'POST', body: JSON.stringify(action) }),
   legends: () => req<{ legends: Array<{ playerId: string; name: string; card: LegacyCard; retiredSeason: number; rebornId: string | null }> }>('/legends'),
   setStandingOrders: (so: StandingOrders) => req<{ ok: true; standingOrders: StandingOrders }>(
     '/standing-orders', { method: 'PUT', body: JSON.stringify(so) }),

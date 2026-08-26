@@ -369,6 +369,38 @@
       /* scouting / trial academy */
       #scouting-head { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
       #scouting-head h3 { margin: 0; } #scouting-back { margin-left: auto; }
+      /* ── Academy / Career game ── */
+      #academy-head { display: flex; align-items: center; gap: 12px; } #academy-head h3 { margin: 0; } #academy-back { margin-left: auto; }
+      .prospect-row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; margin: 8px 0; border-radius: 9px; background: var(--panel2, #1a1a2e); border: 1px solid #2a2a44; }
+      .prospect-row .pr-name { font-family: var(--display); font-size: 13px; }
+      .prospect-row .pr-meta { font-size: 11px; color: var(--muted); }
+      .prospect-row .pr-stars { color: #e6c76a; letter-spacing: 1px; }
+      .prospect-row button { margin-left: auto; }
+      .cg-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 10px; }
+      .cg-age { font-family: var(--display); font-size: 14px; }
+      .cg-chapter { font-size: 12px; color: var(--accent, #7cf); }
+      .cg-bar { flex: 1 1 160px; height: 8px; background: #222238; border-radius: 5px; overflow: hidden; min-width: 120px; }
+      .cg-bar > i { display: block; height: 100%; background: linear-gradient(90deg,#6ad06a,#e6c76a); }
+      .cg-event { padding: 8px 12px; border-radius: 8px; background: rgba(120,150,220,0.12); border: 1px solid rgba(120,150,220,0.3); font-size: 12px; margin-bottom: 12px; }
+      .cg-event b { color: #bcd; }
+      .cg-prompt { font-size: 12px; color: var(--muted); margin: 6px 0 10px; }
+      .cg-scenario { text-align: center; padding: 12px; border-radius: 10px; margin-bottom: 14px; background: #16162a; border: 1px solid #33335a; }
+      .cg-scenario .cg-label { font-family: var(--display); font-size: 14px; margin-bottom: 6px; }
+      .cg-scenario.stakes-2 { border-color: #c9a24a; } .cg-scenario.stakes-3 { border-color: #e06a9a; box-shadow: 0 0 16px rgba(224,106,154,0.3); }
+      .cg-demand { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+      .cg-tag { font-size: 10px; padding: 2px 7px; border-radius: 10px; background: #2a2a48; color: #bcd; }
+      .cg-cards { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+      .cg-card { width: 128px; padding: 11px; border-radius: 10px; background: linear-gradient(160deg,#20203a,#181830); border: 1px solid #34345c; cursor: pointer; transition: transform .08s, border-color .1s; }
+      .cg-card:hover { transform: translateY(-3px); border-color: #6ad06a; }
+      .cg-card.rare { border-color: #5aa9e6; } .cg-card.epic { border-color: #c77dff; box-shadow: 0 0 12px rgba(199,125,255,0.3); }
+      .cg-card .cg-cname { font-family: var(--display); font-size: 11px; margin-bottom: 7px; line-height: 1.3; }
+      .cg-card .cg-ctags { display: flex; gap: 4px; flex-wrap: wrap; }
+      .cg-card .cg-rarity { float: right; font-size: 9px; color: #99a; text-transform: uppercase; }
+      .cg-coach, .cg-offer { text-align: left; padding: 11px 13px; border-radius: 9px; background: #1b1b30; border: 1px solid #34345c; cursor: pointer; margin: 8px 0; }
+      .cg-coach:hover, .cg-offer:hover { border-color: #6ad06a; }
+      .cg-coach .cg-cname, .cg-offer .cg-cname { font-family: var(--display); font-size: 12px; }
+      .cg-coach .cg-cdesc, .cg-offer .cg-cdesc { font-size: 11px; color: var(--muted); margin-top: 4px; }
+      .cg-offer .cg-effs { font-size: 10px; color: #9c9; margin-top: 5px; }
       .scout-sub { font-size: 16px; color: var(--muted); margin-bottom: 14px; } .scout-sub b { color: var(--good); }
       #my-scouts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 6px; }
       .scout-net { border: 2px solid var(--line); background: var(--panel-2); padding: 9px 11px; }
@@ -700,6 +732,7 @@
             <button id="view-club">🏛️ Club</button>
             <button id="view-scouting">🔎 Scouting</button>
             <button id="view-market">💰 Transfer Market</button>
+            <button id="view-academy">🎓 Academy</button>
             <button id="link-wallet" class="hidden">🔗 Link Wallet</button>
             <button id="faucet-btn" class="hidden">💠 Get test tokens</button>
             <button id="mint-player" class="hidden">★ Mint Player</button>
@@ -751,6 +784,12 @@
         <div class="scout-sub">Send your scout on a trip for a small fee. Each place trades <b>how often</b> anyone signs against <b>how good</b> they might be — a far-flung academy rarely delivers, but when it does, it delivers. You get <b id="trips-per">3</b> trips a season (<span id="trips-used">0</span> used). Results are sealed the moment you dispatch and revealed once your scout travels back. A higher <b>Player Scout</b> tier lifts every trip's odds.</div>
         <div id="missions-active"></div>
         <div id="scout-destinations"></div>
+      </div>
+
+      <!-- ACADEMY: the Career game (Layer 1) — develop 10yo prospects into pro players -->
+      <div id="academy" class="panel hidden">
+        <div id="academy-head"><h3>🎓 ACADEMY</h3><button id="academy-back">← Back to hub</button></div>
+        <div id="academy-body"></div>
       </div>
 
       <!-- CLUB FACILITIES -->

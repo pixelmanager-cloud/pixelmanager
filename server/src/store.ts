@@ -37,6 +37,8 @@ export interface Listing {
 /** Auth row used by /login: the account plus its bearer token and password hash. */
 export interface AuthRow { id: string; handle: string; rating: number; token: string; passwordHash: string | null }
 
+export interface ProspectRow { id: string; name: string; parent_id: string | null; role_hint: string; genes_json: string; pedigree: number; dev_bonus_json: string; born_season: number; developed: number; career_seed: number | null; agent_id: string | null; track: string | null; career_actions: string | null; developed_player_id: string | null }
+
 export interface Store {
   init(): Promise<void>;
   createAccount(id: string, handle: string, token: string, createdAt: number, passwordHash: string): Promise<void>;
@@ -95,8 +97,11 @@ export interface Store {
   setReborn(playerId: string, rebornId: string): Promise<void>;
   // prospects — reborn 10-year-olds awaiting development in the Career sim (Layer 1)
   createProspect(p: { id: string; owner_id: string; name: string; parent_id: string | null; role_hint: string; genes_json: string; pedigree: number; dev_bonus_json: string; born_season: number }): Promise<void>;
-  prospectsFor(ownerId: string): Promise<Array<{ id: string; name: string; parent_id: string | null; role_hint: string; genes_json: string; pedigree: number; dev_bonus_json: string; born_season: number; developed: number }>>;
-  getProspect(id: string): Promise<{ id: string; owner_id: string; name: string; parent_id: string | null; role_hint: string; genes_json: string; pedigree: number; dev_bonus_json: string; born_season: number; developed: number } | undefined>;
+  prospectsFor(ownerId: string): Promise<ProspectRow[]>;
+  getProspect(id: string): Promise<(ProspectRow & { owner_id: string }) | undefined>;
+  startProspectCareer(id: string, seed: number, agentId: string | null, track: string): Promise<void>;
+  saveProspectActions(id: string, actionsJson: string): Promise<void>;
+  setProspectDeveloped(id: string, playerId: string): Promise<void>;
   // scouting network: dispatched trips (sealed at dispatch, revealed after travel)
   createMission(m: MissionRow): Promise<void>;
   missionsInSeason(accountId: string, seasonId: string): Promise<MissionRow[]>;

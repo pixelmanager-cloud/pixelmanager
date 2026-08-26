@@ -209,8 +209,8 @@ class Game {
     return healthy.length >= 11 ? { ...this.club, players: healthy } : this.club;
   }
 
-  private showScreen(s: 'login' | 'hub' | 'lineup' | 'match' | 'standings' | 'scouting' | 'market' | 'club') {
-    for (const id of ['login', 'hub', 'lineup', 'matchwrap', 'standings', 'scouting', 'market', 'club']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
+  private showScreen(s: 'login' | 'hub' | 'lineup' | 'match' | 'standings' | 'scouting' | 'market' | 'club' | 'academy') {
+    for (const id of ['login', 'hub', 'lineup', 'matchwrap', 'standings', 'scouting', 'market', 'club', 'academy']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
     $('logout').classList.toggle('hidden', s === 'login');
     if (s !== 'scouting' && this.missionTimer) { clearInterval(this.missionTimer); this.missionTimer = null; } // stop the mission countdown when leaving
   }
@@ -230,6 +230,8 @@ class Game {
     $('view-scouting').addEventListener('click', () => this.showScouting());
     $('scouting-back').addEventListener('click', () => this.showHub());
     $('view-market').addEventListener('click', () => this.showMarket());
+    $('view-academy').addEventListener('click', () => this.showAcademy());
+    $('academy-back').addEventListener('click', () => this.showHub());
     $('market-back').addEventListener('click', () => this.showHub());
     $('view-club').addEventListener('click', () => this.showClub());
     $('club-back').addEventListener('click', () => this.showHub());
@@ -734,6 +736,95 @@ class Game {
     } catch {
       $('trial-pool').innerHTML = '<div class="muted">Could not load — is the server running?</div>';
     }
+  }
+
+  // ── ACADEMY: the Career game (Layer 1) — develop 10yo prospects into pro players ──
+  private async showAcademy() {
+    this.showScreen('academy');
+    $('academy-body').innerHTML = SPINNER;
+    try {
+      const { prospects } = await api.prospects();
+      const intro = `<div class="scout-sub">Your youth prospects — 10-year-olds bred from retired legends. <b>Develop</b> one through its career (age 10→25): play to the demands of each chapter, appoint coaches, and make the big calls. At 25 it graduates into a pro you can field.</div>`;
+      if (!prospects.length) { $('academy-body').innerHTML = intro + '<div class="muted" style="margin-top:14px;">No prospects yet — retire a player at 40 and choose <b>Reborn</b> to breed the next generation.</div>'; return; }
+      const rows = prospects.map((p) => {
+        const stars = '★'.repeat(p.potentialStars) + '☆'.repeat(5 - p.potentialStars);
+        const btn = p.developed ? `<button data-view="${p.developedPlayerId}">View pro ✓</button>`
+          : p.careerStarted ? `<button class="primary" data-dev="${p.id}">Continue →</button>`
+          : `<button class="primary" data-dev="${p.id}">Develop →</button>`;
+        return `<div class="prospect-row"><div><div class="pr-name">🌱 ${p.name} <span class="pr-stars">${stars}</span></div>`
+          + `<div class="pr-meta">${p.roleHint} · pedigree ${(p.pedigree * 100) | 0}% ${p.developed ? '· graduated' : p.careerStarted ? '· in development' : '· age 10, ready to develop'}</div></div>${btn}</div>`;
+      }).join('');
+      $('academy-body').innerHTML = intro + rows;
+      $('academy-body').querySelectorAll('[data-dev]').forEach((b) => b.addEventListener('click', () => this.openCareer((b as HTMLElement).dataset.dev!)));
+      $('academy-body').querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => { const p = this.club.players.find((x) => x.id === (b as HTMLElement).dataset.view); if (p) this.showPlayerCard(p); }));
+    } catch { $('academy-body').innerHTML = '<div class="muted">Could not load — is the server running?</div>'; }
+  }
+
+  private async openCareer(prospectId: string) {
+    $('academy-body').innerHTML = SPINNER;
+    try {
+      const cur = await api.getCareer(prospectId).catch(() => null); // 400 if not started yet
+      if (cur) { this.renderCareer(cur.state); return; }
+      // not started → choose an agent first
+      const { agents } = await api.careerAgents();
+      const opts = agents.map((a) => `<div class="cg-coach" data-agent="${a.id}"><div class="cg-cname">🤝 ${a.name}</div><div class="cg-cdesc">${a.desc}</div></div>`).join('');
+      $('academy-body').innerHTML = `<button id="acad-back2" style="margin-bottom:10px;">← Prospects</button>`
+        + `<div class="cg-prompt">Sign an <b>agent</b> to represent this prospect — it shapes his whole career (exposure, opportunities, and how much he'll want to be paid).</div>` + opts;
+      $('acad-back2').addEventListener('click', () => this.showAcademy());
+      $('academy-body').querySelectorAll('[data-agent]').forEach((b) => b.addEventListener('click', async () => {
+        $('academy-body').innerHTML = SPINNER;
+        const r = await api.startCareer(prospectId, (b as HTMLElement).dataset.agent!);
+        this.renderCareer(r.state);
+      }));
+    } catch (e: any) { toast(e?.body?.error ?? 'Could not open career'); this.showAcademy(); }
+  }
+
+  /** Render the card-game state and wire the choice for the current phase. */
+  private renderCareer(s: import('./api').CareerState) {
+    const pct = Math.round((s.turn / s.totalTurns) * 100);
+    const head = `<div class="cg-head"><button id="cg-back">←</button><span class="cg-age">${s.name} · age ${s.age}</span>`
+      + `<span class="cg-chapter">${s.chapter}</span><div class="cg-bar"><i style="width:${pct}%"></i></div><span class="pr-meta">${s.turn}/${s.totalTurns}</span></div>`;
+    const evt = s.seasonEvent ? `<div class="cg-event"><b>${s.seasonEvent.name}</b> — ${s.seasonEvent.desc}</div>` : '';
+    let body = '';
+    if (s.phase === 'play' && s.scenario) {
+      const tags = Object.entries(s.scenario.demand).sort((a, b) => b[1] - a[1]).map(([t]) => `<span class="cg-tag">${t}</span>`).join('');
+      body = `<div class="cg-scenario stakes-${s.scenario.stakes}"><div class="cg-label">${s.scenario.label}</div><div class="cg-demand">${tags}</div></div>`
+        + `<div class="cg-prompt">Play the card that best rises to the moment${s.coach ? ` · <b>${s.coach.name}</b> is coaching you` : ''}:</div>`
+        + `<div class="cg-cards">` + (s.hand ?? []).map((c) => this.cardHtml(c, 'play')).join('') + `</div>`;
+    } else if (s.phase === 'coach' && s.coaches) {
+      body = `<div class="cg-prompt">Appoint a mentor or coach for the coming chapter — they sharpen the work you do in their specialty:</div>`
+        + s.coaches.map((c) => `<div class="cg-coach" data-act="coach" data-id="${c.id}"><div class="cg-cname">${c.kind === 'mentor' ? '🧭' : '📋'} ${c.name}</div><div class="cg-cdesc">${c.desc} · <i>${c.specialty.join(', ')}</i></div></div>`).join('');
+    } else if (s.phase === 'draft' && s.options) {
+      body = `<div class="cg-prompt">Draft <b>${s.picksLeft}</b> card${s.picksLeft === 1 ? '' : 's'} to add to your deck — this is how you build your identity:</div>`
+        + `<div class="cg-cards">` + s.options.map((c) => this.cardHtml(c, 'draft')).join('') + `</div>`;
+    } else if (s.phase === 'offer' && s.offers) {
+      body = `<div class="cg-prompt">A decision off the pitch — money now, or development?</div>`
+        + s.offers.map((o) => `<div class="cg-offer" data-act="offer" data-id="${o.id}"><div class="cg-cname">💷 ${o.name}</div><div class="cg-cdesc">${o.desc}</div>`
+          + `<div class="cg-effs">${o.earn > 0 ? `+${o.earn}c ` : ''}${o.greed > 0 ? '· greedier ' : o.greed < 0 ? '· more loyal ' : ''}${o.market > 0 ? '· more famous ' : ''}${o.form > 0 ? '· sharper' : o.form < 0 ? '· distracted' : ''}</div></div>`).join('');
+    }
+    $('academy-body').innerHTML = head + evt + body;
+    $('cg-back').addEventListener('click', () => this.showAcademy());
+    $('academy-body').querySelectorAll('[data-act]').forEach((el) => el.addEventListener('click', () => this.doCareerAct(s.prospectId, { type: (el as HTMLElement).dataset.act!, cardId: (el as HTMLElement).dataset.id! })));
+  }
+
+  private cardHtml(c: import('./api').CareerCard, act: string): string {
+    const rar = c.rarity && c.rarity !== 'common' ? c.rarity : '';
+    const tags = c.tags.map((t) => `<span class="cg-tag">${t}</span>`).join('');
+    return `<div class="cg-card ${rar}" data-act="${act}" data-id="${c.id}">${rar ? `<span class="cg-rarity">${rar}</span>` : ''}<div class="cg-cname">${c.name}</div><div class="cg-ctags">${tags}</div></div>`;
+  }
+
+  private async doCareerAct(prospectId: string, action: { type: string; cardId: string }) {
+    try {
+      const r = await api.careerAct(prospectId, action);
+      if (r.graduated && r.player) {
+        this.setMe(await api.me());
+        toast(`🎓 ${r.player.name} graduates as a pro!`);
+        this.showPlayerCard(r.player, true);
+        this.showAcademy();
+      } else if (r.state) {
+        this.renderCareer(r.state);
+      }
+    } catch (e: any) { toast(e?.body?.error ?? 'Move failed'); }
   }
 
   // ── Scouting Network: destinations + dispatched trips (sealed → travel → reveal) ──

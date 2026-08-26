@@ -79,7 +79,9 @@ export function makeSqliteStore(file: string): Store {
       db.exec(`CREATE TABLE IF NOT EXISTS prospects (
         id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, name TEXT NOT NULL, parent_id TEXT, role_hint TEXT NOT NULL,
         genes_json TEXT NOT NULL, pedigree REAL NOT NULL, dev_bonus_json TEXT NOT NULL, born_season INTEGER NOT NULL,
-        developed INTEGER NOT NULL DEFAULT 0);`);
+        developed INTEGER NOT NULL DEFAULT 0, career_seed INTEGER, agent_id TEXT, track TEXT, career_actions TEXT, developed_player_id TEXT);`);
+      for (const c of ['career_seed INTEGER', 'agent_id TEXT', 'track TEXT', 'career_actions TEXT', 'developed_player_id TEXT'])
+        try { db.exec(`ALTER TABLE prospects ADD COLUMN ${c}`); } catch { /* already added */ }
       // migrate pre-existing tables (adds columns; throws-and-ignored if already present)
       try { db.exec('ALTER TABLE matches ADD COLUMN season_id TEXT'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE matches ADD COLUMN initiator_id TEXT'); } catch { /* already added */ }
@@ -256,10 +258,19 @@ export function makeSqliteStore(file: string): Store {
         .run(p.id, p.owner_id, p.name, p.parent_id, p.role_hint, p.genes_json, p.pedigree, p.dev_bonus_json, p.born_season);
     },
     async prospectsFor(ownerId) {
-      return db.prepare('SELECT id, name, parent_id, role_hint, genes_json, pedigree, dev_bonus_json, born_season, developed FROM prospects WHERE owner_id=? ORDER BY born_season DESC').all(ownerId) as any[];
+      return db.prepare('SELECT id, name, parent_id, role_hint, genes_json, pedigree, dev_bonus_json, born_season, developed, career_seed, agent_id, track, career_actions, developed_player_id FROM prospects WHERE owner_id=? ORDER BY born_season DESC').all(ownerId) as any[];
     },
     async getProspect(id) {
-      return db.prepare('SELECT id, owner_id, name, parent_id, role_hint, genes_json, pedigree, dev_bonus_json, born_season, developed FROM prospects WHERE id=?').get(id) as any;
+      return db.prepare('SELECT id, owner_id, name, parent_id, role_hint, genes_json, pedigree, dev_bonus_json, born_season, developed, career_seed, agent_id, track, career_actions, developed_player_id FROM prospects WHERE id=?').get(id) as any;
+    },
+    async startProspectCareer(id, seed, agentId, track) {
+      db.prepare("UPDATE prospects SET career_seed=?, agent_id=?, track=?, career_actions='[]' WHERE id=?").run(seed, agentId, track, id);
+    },
+    async saveProspectActions(id, actionsJson) {
+      db.prepare('UPDATE prospects SET career_actions=? WHERE id=?').run(actionsJson, id);
+    },
+    async setProspectDeveloped(id, playerId) {
+      db.prepare('UPDATE prospects SET developed=1, developed_player_id=? WHERE id=?').run(playerId, id);
     },
     async createMission(m) {
       db.prepare('INSERT INTO scout_missions (id, account_id, season_id, destination, dispatched_at, ready_at, found, player_json, band, status) VALUES (?,?,?,?,?,?,?,?,?,?)')
