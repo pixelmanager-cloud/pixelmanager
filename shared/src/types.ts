@@ -94,13 +94,19 @@ export interface PlayerState {
   fitness: number;
 }
 
-export type MatchEventType = 'kickoff' | 'goal' | 'shot_saved' | 'shot_missed' | 'chance' | 'halftime' | 'fulltime';
+export type MatchEventType = 'kickoff' | 'goal' | 'shot_saved' | 'shot_missed' | 'chance' | 'halftime' | 'fulltime'
+  // richer per-player events for commentary (ADD-ONLY: they describe what already happens, never change outcomes)
+  | 'pass' | 'tackle_won' | 'loose_ball';
 
 export interface MatchEvent {
   minute: number;
   type: MatchEventType;
   teamIdx: 0 | 1;
   playerName?: string;
+  /** second player involved (e.g. the receiver of a pass) */
+  playerName2?: string;
+  /** rough pitch zone the action happened in, from the acting team's perspective */
+  zone?: 'def' | 'mid' | 'att';
 }
 
 export interface MatchState {

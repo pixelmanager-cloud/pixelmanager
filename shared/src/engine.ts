@@ -38,6 +38,22 @@ export class MatchEngine {
   private zonal: [number, number];
   /** small team-wide finishing steadiness from each side's best leader (0 for a leaderless side) */
   private leadershipBonus: [number, number];
+  /** commentary-only throttle: last game-second we emitted a "flow" event (pass/tackle/loose-ball),
+   *  so the feed gets texture without a line every micro-tick. Purely cosmetic — never read by the sim. */
+  private lastFlowSec = -99;
+
+  /** rough pitch third from the acting team's perspective — for commentary context ("in the final third"). */
+  private zoneOf(teamIdx: 0 | 1, x: number): 'def' | 'mid' | 'att' {
+    const frac = teamIdx === 0 ? x / PITCH.w : 1 - x / PITCH.w; // 0 = own goal, 1 = opponent goal
+    return frac > 0.66 ? 'att' : frac < 0.34 ? 'def' : 'mid';
+  }
+  /** Emit a throttled commentary "flow" event (add-only; reads decided state, consumes no rng). */
+  private flow(type: 'pass' | 'tackle_won' | 'loose_ball', teamIdx: 0 | 1, x: number, playerName?: string, playerName2?: string) {
+    const sec = Math.floor(this.state.clockSec);
+    if (sec - this.lastFlowSec < 3) return; // at most one flow line every ~3 game-seconds
+    this.lastFlowSec = sec;
+    this.state.events.push({ minute: this.minute(), type, teamIdx, playerName, playerName2, zone: this.zoneOf(teamIdx, x) });
+  }
 
   constructor(public teams: [Team, Team], seed: number, tactics?: [Tactics, Tactics]) {
     this.rng = makeRng(seed);
@@ -313,6 +329,7 @@ export class MatchEngine {
         const pTackle = clamp(0.12 + 0.5 * (defEff / (defEff + retain)), 0.05, 0.8) * defMods.pressIntensity
           * (1 + Math.max(0, this.dm[defTeam][i].press) * 0.25) * TICK_SEC;
         if (this.rng() < pTackle) {
+          this.flow('tackle_won', defTeam, ds.x, def.name); // commentary: a turnover won
           s.carrier = { teamIdx: defTeam, playerIdx: i };
           s.ball = { ...ds };
           return;
@@ -356,6 +373,8 @@ export class MatchEngine {
           0.1, 0.96,
         );
         if (this.rng() < completion) {
+          // commentary: a completed pass in the mid/final third (skip defensive knock-abouts to reduce noise)
+          if (this.zoneOf(teamIdx, recS.x) !== 'def') this.flow('pass', teamIdx, recS.x, carrier.name, rec.name);
           s.carrier = { teamIdx, playerIdx: pick.idx };
           s.ball = { ...recS };
           // through-ball that springs a fast forward behind a high line => clear chance
@@ -371,6 +390,7 @@ export class MatchEngine {
             x: clamp((cs.x + dx) / 2 + (this.rng() - 0.5) * 6, 0, PITCH.w),
             y: clamp((cs.y + recS.y) / 2 + (this.rng() - 0.5) * 6, 0, PITCH.h),
           };
+          this.flow('loose_ball', teamIdx, s.ball.x, carrier.name); // commentary: pass cut out / loose ball
           s.carrier = null;
         }
         return;

@@ -22,6 +22,7 @@ import type { Tactics } from './src/tactics.js';
 const FORMATION_NAMES = Object.keys(FORMATIONS) as Formation[];
 const VALID_EVENT_TYPES = new Set<MatchEventType>([
   'kickoff', 'goal', 'shot_saved', 'shot_missed', 'chance', 'halftime', 'fulltime',
+  'pass', 'tackle_won', 'loose_ball', // commentary-only add-on events
 ]);
 
 const EXPECTED_TICKS = (90 * 60) / TICK_SEC; // 10800 ticks for a full 90'
