@@ -880,7 +880,7 @@ class Game {
       const titles = honours.filter((h) => h.title === 1);
       const cabinet = titles.length
         ? `<div class="tr-cabinet">` + titles.sort((a, b) => a.season_number - b.season_number).map((h) => `<div class="tr-trophy"><div class="tr-trophy-ico">${sprite('trophy')}</div><div class="tr-trophy-name">${h.tier}</div><div class="tr-trophy-sub">Season ${h.season_number}${h.kind && h.kind !== 'league' ? ` · ${h.kind}` : ''}</div></div>`).join('') + `</div>`
-        : `<div class="muted">No trophies yet — win your pod to lift your first title.</div>`;
+        : `<div class="tr-empty"><div class="tr-empty-art">${sprite('trophy')}</div><div class="muted">No trophies yet — win your league to lift your first title.</div></div>`;
       // retired numbers (per-save honour for a top-tier 'Immortal' legend)
       const TOP_TIER = 'Immortal', rKey = 'fm_retired_' + (this.account?.handle ?? '');
       let retired: Array<{ n: number; name: string }>; try { retired = JSON.parse(localStorage.getItem(rKey) || '[]'); } catch { retired = []; }
@@ -897,7 +897,7 @@ class Game {
       };
       const bloodlines = lines.length
         ? lines.map((chain) => `<div class="tr-line">` + chain.map((l, i) => genCard(l, i, chain.length)).join('') + `</div>`).join('')
-        : `<div class="muted">No bloodlines yet — develop a player, field him for a career, and retire him to found a dynasty. Every generation after adds a link to the tree.</div>`;
+        : `<div class="tr-empty"><div class="tr-empty-art">${sprite('youth')}</div><div class="muted">No bloodlines yet — develop a player, field him for a career, and retire him to found a dynasty. Every generation after adds a link to the tree.</div></div>`;
       const retiredSection = retired.length
         ? `<h4 class="scout-h4" style="margin-top:24px;">🎽 RETIRED NUMBERS</h4><div class="scout-sub">Shirts hung up forever for the club's immortals — no future player wears these.</div>`
           + `<div class="tr-cabinet">` + retired.map((r) => `<div class="tr-trophy"><div class="tr-trophy-ico">#${r.n}</div><div class="tr-trophy-name">${r.name}</div><div class="tr-trophy-sub">retired</div></div>`).join('') + `</div>`
