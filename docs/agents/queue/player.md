@@ -70,11 +70,22 @@ or newly imagined beyond the brief. Ranked safe/small/high-value first.
   `.cg-md-side-lbl`, `.cg-md-meta`, `.cg-comp-badge`) uses flex + `max-width`/ellipsis on the side label
   so long opponent names stay contained at ~360px. `npm run verify` (client build + engine + fuzz) and
   `career_sim` both green (determinism identical: true) — UI-only, no engine/tokens.ts change.
-- [ ] 9. **A career "milestone" trophy shelf.** (M) `MILESTONE` in narrate.ts has 5 entries (debut,
+- [x] 9. **A career "milestone" trophy shelf.** (M) `MILESTONE` in narrate.ts has 5 entries (debut,
   first_goal, first_big_win, cup_final, first_start) but nothing surfaces them again after the beat
   scrolls past. Add a small persistent "milestones" strip to the career profile/dashboard that lists
   milestones hit so far this career (read from existing log data — no new state needed beyond
-  detecting the same conditions tokens.ts already computes for `milestone`).
+  detecting the same conditions tokens.ts already computes for `milestone`). **Done:** added a `kind`
+  field to the logged `Choice` (the scenario kind at play-time — purely additive, zero rng/draw-order
+  change) and a new pure, read-only `milestoneShelf(log)` in career.ts that retrospectively scans
+  `c.log` for the first `match`, first `match` triumph (first_goal), first stakes≥2 triumph
+  (first_big_win) and first stakes=3 moment (cup_final), alongside debut at turn 0. Refactored
+  narrate.ts's `MILESTONE` flourish map into a single-source-of-truth `MILESTONE_META` (icon + shelf
+  title + in-story line) so the play-by-play flourish and the shelf badge never drift apart; both
+  re-exported through legacy.ts. `careerProfile()` in tokens.ts now includes `milestones`, rendered as
+  a small badge strip under the traits line in `careerProfileHtml` (new `.cgp-milestones`/`.cgp-ms`
+  CSS). `npm run verify` and `career_sim` both green (diversity closest-pair distance 9, magnitude
+  decreases with skill, determinism identical: true) — no engine/rng behaviour change, just a new
+  field on an already-logged struct and a read-only scan of it.
 - [ ] 10. **2-3 new backroom staff.** (S/M) `COACHES` has 14 entries but no dedicated flair or
   goalkeeper-distribution specialist beyond the generic gk-coach. Add e.g. a "Set-Piece Coach"
   (composure/creativity), a "Sports Psychologist" (composure/leadership, higher bonus but narrower),

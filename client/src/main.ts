@@ -1164,6 +1164,9 @@ class Game {
     const key: Array<[string, string]> = [['pace', 'PAC'], ['shooting', 'SHO'], ['passing', 'PAS'], ['tackling', 'TAC'], ['strength', 'STR'], ['composure', 'CMP'], ['creativity', 'CRE'], ['leadership', 'LDR']];
     const stat = (k: string) => `<span class="cgp-stat"><b>${key.find((x) => x[0] === k)?.[1]}</b> ${p.attrs[k] ?? 0}</span>`;
     const traits = p.traitsForming.length ? `<div class="cgp-traits">forming: ${p.traitsForming.map((t) => `<span class="cg-tag">${t}</span>`).join(' ')}</div>` : '';
+    const shelf = p.milestones?.length
+      ? `<div class="cgp-milestones">${p.milestones.map((m) => `<span class="cgp-ms" title="${m.title} — age ${m.age}, ${m.chapter}">${m.icon} ${m.title}</span>`).join('')}</div>`
+      : '';
     return `<div class="cg-profile"><div class="cgp-top">`
       + `<span class="cgp-role role-${p.role}">${p.role}</span>`
       + `<span class="cgp-ovr">OVR ${p.currentOverall} <i>→ ${p.potential} pot ${stars}</i></span>`
@@ -1171,7 +1174,7 @@ class Game {
       + (p.agent ? `<span class="cgp-meta">🤝 ${p.agent}</span>` : '')
       + (p.coach ? `<span class="cgp-meta">📋 ${p.coach}</span>` : '')
       + `<span class="cgp-meta">💷 ${p.earnings}c earned</span></div>`
-      + `<div class="cgp-stats">${key.map(([k]) => stat(k)).join('')}</div>${traits}</div>`;
+      + `<div class="cgp-stats">${key.map(([k]) => stat(k)).join('')}</div>${traits}${shelf}</div>`;
   }
 
   private cardHtml(c: import('./api').CareerCard, act: string): string {

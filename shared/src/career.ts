@@ -464,7 +464,7 @@ export function fit(card: Card, sc: Scenario): number {
   return clamp(f, 0, 1);
 }
 
-export interface Choice { cardId: string; tags: Tag[]; power: number; fit: number; bestFit: number; success: number; scenario: string; stakes: number }
+export interface Choice { cardId: string; tags: Tag[]; power: number; fit: number; bestFit: number; success: number; scenario: string; stakes: number; kind: Scenario['kind'] }
 
 // ── career config ──
 export const HAND_SIZE = 4;
@@ -754,7 +754,7 @@ export class Career {
     // Rest and the energy-giving focus choices a real trade-off against a busy, big-moment-heavy chapter.
     const fatigue = this.energy < 35 ? ((35 - this.energy) / 35) * 0.12 : 0;
     const success = clamp(f + (this.rng() - 0.5) * variance + form + bigGame + coaching - fatigue, 0, 1);
-    const choice: Choice = { cardId: card.id, tags: card.tags, power: cardPower(card), fit: f, bestFit, success, scenario: this.scenario.label, stakes: this.scenario.stakes };
+    const choice: Choice = { cardId: card.id, tags: card.tags, power: cardPower(card), fit: f, bestFit, success, scenario: this.scenario.label, stakes: this.scenario.stakes, kind: this.scenario.kind };
     this.log.push(choice);
     this.updateLife(choice); // NSS meters + energy react to how the moment went (deterministic, no rng)
     this.discard.push(card);
@@ -1012,6 +1012,26 @@ const STAT_SOURCES: Record<Exclude<keyof CareerPlayerAttrs, 'durability'>, Tag[]
   composure: ['composure'], aggression: ['aggression'], creativity: ['creativity'], teamwork: ['teamwork'], leadership: ['leadership'],
 };
 const BASELINE = 7, SPREAD = 12, PEAK = 1.5;
+
+/** A milestone hit for the career's trophy shelf — the turn it was first achieved, read-only off the log. */
+export interface MilestoneHit { id: string; turn: number; age: number; chapter: string }
+/** Retrospective scan of the log for career-first beats (debut, first start, first goal, first big win,
+ *  a cup final). Pure read of already-logged Choices — no rng, no new persisted state — so it's safe to
+ *  compute at any point (mid-career or at graduation) and replays identically. */
+export function milestoneShelf(log: Choice[]): MilestoneHit[] {
+  const hit = (id: string, turn: number): MilestoneHit => { const b = bandAt(turn); return { id, turn, age: b.age, chapter: b.band.name }; };
+  const hits: MilestoneHit[] = [];
+  if (log.length) hits.push(hit('debut', 0));
+  const firstStart = log.findIndex((l) => l.kind === 'match');
+  if (firstStart >= 0) hits.push(hit('first_start', firstStart));
+  const firstGoal = log.findIndex((l) => l.kind === 'match' && l.success >= 0.8);
+  if (firstGoal >= 0) hits.push(hit('first_goal', firstGoal));
+  const firstBigWin = log.findIndex((l) => l.stakes >= 2 && l.success >= 0.8);
+  if (firstBigWin >= 0) hits.push(hit('first_big_win', firstBigWin));
+  const firstCupFinal = log.findIndex((l) => l.stakes === 3);
+  if (firstCupFinal >= 0) hits.push(hit('cup_final', firstCupFinal));
+  return hits.sort((a, b) => a.turn - b.turn);
+}
 
 export function deriveStats(log: Choice[], seed: number, genes: Genes = rollGenes(seed)): CareerPlayerAttrs {
   const rng = mulberry32(seed ^ 0x9e3779b9);
