@@ -11,6 +11,7 @@ import { ownedPlayers } from './nft.js';
 import { trainingConditioning, stadiumIncome, fanIncomeMult, fanHomeBoost, sponsorIncome, squadMarketability } from './facilities.js';
 import { rollMatchInjuries } from './injuries.js';
 import { unavailableNftIds } from './contracts.js';
+import { advanceAccountLifecycle } from './lifecycle.js';
 import { computeCup, type SquadMap } from './cup.js';
 
 /** Merge a club with the star NFTs its linked wallet owns (read-only). */
@@ -177,10 +178,12 @@ async function rollover(db: Store, s: Season, now: number): Promise<void> {
     const ranked = buildTable(members, results).filter((row) => played.has(row.id));
     const tierIdx = TIERS.indexOf(tier as typeof TIERS[number]);
     const bigEnough = ranked.length > PROMOTE + RELEGATE; // only relegate where there was a real race
+    const outcomes = new Map<string, { league: number; cup: number; promotion: number; tierIdx: number }>();
 
     for (let i = 0; i < ranked.length; i++) {
       const acct = ranked[i];
       const promoted = i < PROMOTE && tierIdx < TIERS.length - 1;
+      outcomes.set(acct.id, { league: i === 0 ? 1 : 0, cup: 0, promotion: promoted ? 1 : 0, tierIdx });
       // season prize money by placement (the coin sink that becomes an ERC-20 payout later)
       const reward = seasonPlacementReward(tierIdx, i + 1, ranked.length, promoted);
       // Commercial Dept: sponsorship income, scaled by division + trophies already in the cabinet
@@ -210,7 +213,17 @@ async function rollover(db: Store, s: Season, now: number): Promise<void> {
         const prize = CUP_PRIZE_BASE + tierIdx * CUP_PRIZE_STEP;
         await db.addCoins(cup.championId, prize);
         await db.addHonour(cup.championId, s.id, s.number, tier, 1, 1, now, prize, 'cup');
+        const o = outcomes.get(cup.championId); if (o) o.cup = 1;
       }
+    }
+
+    // PLAYER LIFECYCLE: each owned NFT banks a season of team achievements + peak ability, and anyone
+    // who has aged past 40 RETIRES (legacy card + testimonial). Runs after league + cup are settled.
+    for (const [ownerId, outcome] of outcomes) {
+      const c = await db.getClub(ownerId);
+      if (!c) continue;
+      const withStars = await withNfts(db, ownerId, c);
+      await advanceAccountLifecycle(db, ownerId, withStars.club.players, s.number, outcome);
     }
   }
   await expireLoanees(db, s.id);

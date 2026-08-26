@@ -390,11 +390,21 @@ class Game {
     // contract situation (NFT players only): age, deal status, extend/sell — the NFT stays owned either way
     const ci = this.contracts[p.id];
     const stakeHtml = ci && ci.stakedSeasons > 0 ? `<div class="pc-stake">🔒 staked ${ci.stakedSeasons} season${ci.stakedSeasons === 1 ? '' : 's'} — loyalty discount applied</div>` : '';
-    const contractHtml = ci ? `<div class="pc-contract${ci.available ? '' : ' lapsed'}">`
-      + `<div class="pc-crow"><span>Age ${ci.age}${ci.age >= 40 ? ' · retiring' : ''}</span>`
-      + `<span>${ci.available ? `📜 ${ci.seasonsLeft} season${ci.seasonsLeft === 1 ? '' : 's'} left` : '⛔ contract lapsed — benched'}</span></div>`
-      + `<div class="pc-cactions"><button class="pc-extend" data-extend="${p.id}">${ci.available ? 'Re-sign' : 'Extend'} · ${ci.extendCost}c · ${ci.lengthSeasons}y</button>`
-      + `<span class="pc-sell">or sell ~${ci.sellValue}c</span></div>` + stakeHtml + `</div>` : '';
+    let contractHtml = '';
+    if (ci && ci.retired) { // retired → a legacy keepsake + the chance to breed the next generation
+      const lg = ci.legend;
+      contractHtml = `<div class="pc-contract retired">`
+        + `<div class="pc-crow"><span>Age ${ci.age} · Retired</span><span>${lg?.icon ?? '🏅'} ${lg?.tier ?? 'Legend'}</span></div>`
+        + (lg ? `<div class="pc-legend">Legend rating ${lg.legendRating} · ${lg.leagueTitles}🏅 ${lg.cupTitles}🏆 · ${lg.apps} apps · ${lg.seasons} seasons</div>` : '')
+        + `<div class="pc-cactions">${ci.rebornId ? '<span class="pc-sell">bloodline continued ✓</span>' : `<button class="pc-reborn" data-reborn="${p.id}">✦ Reborn — breed the next generation</button>`}</div>`
+        + (lg?.note ? `<div class="pc-stake">${lg.note}</div>` : '') + `</div>`;
+    } else if (ci) {
+      contractHtml = `<div class="pc-contract${ci.available ? '' : ' lapsed'}">`
+        + `<div class="pc-crow"><span>Age ${ci.age}${ci.age >= 39 ? ' · nearing retirement' : ''}</span>`
+        + `<span>${ci.available ? `📜 ${ci.seasonsLeft} season${ci.seasonsLeft === 1 ? '' : 's'} left` : '⛔ contract lapsed — benched'}</span></div>`
+        + `<div class="pc-cactions"><button class="pc-extend" data-extend="${p.id}">${ci.available ? 'Re-sign' : 'Extend'} · ${ci.extendCost}c · ${ci.lengthSeasons}y</button>`
+        + `<span class="pc-sell">or sell ~${ci.sellValue}c</span></div>` + stakeHtml + `</div>`;
+    }
     const el = document.createElement('div');
     el.id = 'player-card-ov';
     el.innerHTML =
@@ -413,8 +423,40 @@ class Game {
     el.addEventListener('click', async (e) => {
       const t = e.target as HTMLElement;
       if (t.dataset.extend) { await this.extendPlayer(t.dataset.extend); el.remove(); return; }
+      if (t.dataset.reborn) { el.remove(); await this.rebornPlayer(t.dataset.reborn); return; }
       if (t === el || t.classList.contains('pc-close')) el.remove();
     });
+    document.body.appendChild(el);
+  }
+
+  /** Breed a retired legend's next generation — a 10-year-old PROSPECT that re-enters the Career game. */
+  private async rebornPlayer(playerId: string) {
+    try {
+      const r = await api.reborn(playerId);
+      this.setMe(await api.me());
+      await this.showHub();
+      this.showProspectCard(r.prospect, true);
+    } catch (err: any) {
+      toast(err?.body?.error === 'already reborn' ? 'Bloodline already continued' : (err?.body?.error ?? 'Reborn failed'));
+    }
+  }
+
+  /** A prospect card — a 10-year-old awaiting development in the Career game (Layer 1). */
+  private showProspectCard(p: import('./api').Prospect, born = false) {
+    const stars = '★'.repeat(p.potentialStars) + '☆'.repeat(5 - p.potentialStars);
+    const el = document.createElement('div');
+    el.id = 'player-card-ov';
+    el.innerHTML = `<div class="pc-card tier-bronze">`
+      + `<div class="pc-top"><div class="pc-ovr">10<span>YRS</span></div><div class="pc-tier">🌱<span>PROSPECT</span></div></div>`
+      + `<div class="pc-crest role-${p.roleHint}"><span class="pc-crest-role">${p.roleHint}</span></div>`
+      + `<div class="pc-name">${p.name}</div><div class="pc-role">Youth Prospect</div>`
+      + (born ? `<div class="pc-flash">🌱 NEXT GENERATION BORN</div>` : '')
+      + `<div class="pc-contract retired"><div class="pc-legend">Potential ${stars} · pedigree ${(p.pedigree * 100 | 0)}%</div>`
+      + (p.note ? `<div class="pc-stake">${p.note}</div>` : '')
+      + `<div class="pc-stake">Develops 10→25 in the Career game (coming soon)</div></div>`
+      + `<div class="pc-foot">★ Prospect NFT · to be developed · on-chain</div>`
+      + `<button class="pc-close">${born ? 'Nice ✓' : 'Close'}</button></div>`;
+    el.addEventListener('click', (e) => { const t = e.target as HTMLElement; if (t === el || t.classList.contains('pc-close')) el.remove(); });
     document.body.appendChild(el);
   }
 
@@ -1080,7 +1122,7 @@ class Game {
     $('tac-row').innerHTML = tac.join('');
     ($('e-formation') as HTMLSelectElement).addEventListener('change', (ev) => {
       this.draftTactics.formation = (ev.target as HTMLSelectElement).value as Formation;
-      this.draftLineup = autoPickXI(this.club, this.draftTactics.formation);
+      this.draftLineup = autoPickXI(this.availableClub(), this.draftTactics.formation);
       this.rebuildDuties();
       this.renderLineupEditor();
     });
@@ -1089,6 +1131,7 @@ class Game {
     });
 
     const slots = this.draftLineup.playerIds;
+    const benched = this.lapsed(); // NFTs unavailable via a lapsed contract or retirement — not selectable
     const usedElsewhere = (slotIdx: number) => new Set(slots.filter((_, j) => j !== slotIdx));
     $('xi').innerHTML = slots.map((pid, i) => {
       const roleForSlot = SLOT_ROLES[this.draftTactics.formation][i];
@@ -1096,7 +1139,7 @@ class Game {
       const isLoan = (id: string) => id.startsWith('loan-');
       const tagText = (p: Player) => isLoan(p.id) ? ' · LOAN' : isNftId(p.id) ? ` ${nftTier(overall(p)).icon}` : '';
       const opts = this.club.players
-        .filter((p) => p.id === pid || (!used.has(p.id) && !this.injured.has(p.id))) // hide injured from the picker
+        .filter((p) => p.id === pid || (!used.has(p.id) && !this.injured.has(p.id) && !benched.has(p.id))) // hide injured + contract-lapsed/retired
         .sort((a, b) => overall(b) - overall(a))
         .map((p) => `<option value="${p.id}" ${p.id === pid ? 'selected' : ''}>${p.name} (${p.role} ${overall(p)})${tagText(p)}</option>`).join('');
       const cur = this.club.players.find((p) => p.id === pid)!;

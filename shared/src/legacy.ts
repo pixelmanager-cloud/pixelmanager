@@ -6,7 +6,7 @@
 // This module also SURFACES the lineage API (achievements → next-gen pedigree) to the manager game via
 // the package barrel — the reborn/breeding logic itself lives in career.ts (Layer 1).
 import type { Role } from './types.js';
-export { legacyBoost, type LegacyBoost } from './career.js';
+export { legacyBoost, type LegacyBoost, rollGenes, inheritGenes, type Genes, type Band } from './career.js';
 export type { PlayerAchievements } from './career.js';
 import type { PlayerAchievements } from './career.js';
 
@@ -45,7 +45,7 @@ export function legacyCard(role: Role, primeOverall: number, peakOverall: number
   const tierMult = 1 + ach.highestTierIdx * 0.3;                         // winning higher up counts for more
   const trophyPts = (ach.leagueTitles + ach.cupTitles * 0.7 + ach.promotions * 0.3) * tierMult;
   const longevity = clamp(ach.seasons / 15, 0, 1);
-  const legendRating = clamp(Math.round(peakOverall * 2.5 + trophyPts * 4 + longevity * 15), 0, 100);
+  const legendRating = clamp(Math.round(peakOverall * 2 + trophyPts * 3 + longevity * 12), 0, 100);
   let ti = 0;
   for (let i = 0; i < LEGEND_TIERS.length; i++) if (legendRating >= LEGEND_TIERS[i].at) ti = i;
   const tier = LEGEND_TIERS[ti];

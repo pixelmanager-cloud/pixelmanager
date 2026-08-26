@@ -81,6 +81,22 @@ export interface Store {
   deleteContract(ownerId: string, playerId: string): Promise<void>;
   getPrimeSeason(playerId: string): Promise<number | undefined>;
   ensurePrimeSeason(playerId: string, season: number): Promise<number>;
+  // lifecycle (age/retirement/peak) + team achievements + retirement legacy cards — all owner-independent
+  getLifecycle(playerId: string): Promise<{ prime_season: number; retired: number; peak_overall: number } | undefined>;
+  setPeakOverall(playerId: string, overall: number): Promise<void>;
+  retirePlayer(playerId: string): Promise<void>;
+  getAchievements(playerId: string): Promise<{ seasons: number; apps: number; league_titles: number; cup_titles: number; promotions: number; highest_tier_idx: number }>;
+  addApps(playerId: string, n: number): Promise<void>;
+  recordPlayerSeason(playerId: string, a: { league: number; cup: number; promotion: number; tierIdx: number }): Promise<void>;
+  setAchievements(playerId: string, a: { seasons: number; apps: number; league_titles: number; cup_titles: number; promotions: number; highest_tier_idx: number }): Promise<void>;
+  saveLegacy(playerId: string, ownerId: string, name: string, cardJson: string, retiredSeason: number): Promise<void>;
+  getLegacy(playerId: string): Promise<{ player_id: string; owner_id: string; name: string; card_json: string; retired_season: number; reborn_id: string | null } | undefined>;
+  legaciesFor(ownerId: string): Promise<Array<{ player_id: string; name: string; card_json: string; retired_season: number; reborn_id: string | null }>>;
+  setReborn(playerId: string, rebornId: string): Promise<void>;
+  // prospects — reborn 10-year-olds awaiting development in the Career sim (Layer 1)
+  createProspect(p: { id: string; owner_id: string; name: string; parent_id: string | null; role_hint: string; genes_json: string; pedigree: number; dev_bonus_json: string; born_season: number }): Promise<void>;
+  prospectsFor(ownerId: string): Promise<Array<{ id: string; name: string; parent_id: string | null; role_hint: string; genes_json: string; pedigree: number; dev_bonus_json: string; born_season: number; developed: number }>>;
+  getProspect(id: string): Promise<{ id: string; owner_id: string; name: string; parent_id: string | null; role_hint: string; genes_json: string; pedigree: number; dev_bonus_json: string; born_season: number; developed: number } | undefined>;
   // scouting network: dispatched trips (sealed at dispatch, revealed after travel)
   createMission(m: MissionRow): Promise<void>;
   missionsInSeason(accountId: string, seasonId: string): Promise<MissionRow[]>;

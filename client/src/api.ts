@@ -1,6 +1,6 @@
 // Thin client for the fm-server async-PvP API. Token (the "code") is kept in
 // localStorage; every request sends it as a Bearer header.
-import type { Club, Duty, Lineup, Tactics, Team } from '@fm/shared';
+import type { Club, Duty, Lineup, Tactics, Team, Player } from '@fm/shared';
 
 const API_URL = (import.meta as any).env?.VITE_API_URL ?? 'http://localhost:8787';
 
@@ -10,7 +10,9 @@ export function setToken(t: string) { token = t; localStorage.setItem('fm_token'
 export function clearToken() { token = ''; localStorage.removeItem('fm_token'); }
 
 export interface ApiError extends Error { status: number; body: any }
-export interface ContractInfo { playerId: string; age: number; available: boolean; seasonsLeft: number; lengthSeasons: number; extendCost: number; sellValue: number; stakedSeasons: number }
+export interface LegacyCard { role: string; primeOverall: number; peakOverall: number; seasons: number; apps: number; leagueTitles: number; cupTitles: number; legendRating: number; tier: string; icon: string; testimonial: number; mintable: boolean; note: string }
+export interface Prospect { id: string; name: string; roleHint: string; pedigree: number; potentialStars: number; bornSeason?: number; developed?: boolean; note?: string; genes?: any }
+export interface ContractInfo { playerId: string; age: number; available: boolean; seasonsLeft: number; lengthSeasons: number; extendCost: number; sellValue: number; stakedSeasons: number; retired?: boolean; legend?: LegacyCard | null; rebornId?: string | null }
 
 async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const res = await fetch(API_URL + path, {
@@ -75,6 +77,9 @@ export const api = {
     '/login', { method: 'POST', body: JSON.stringify({ handle, password }) }),
   me: () => req<{ account: Account; club: Club; standingOrders: StandingOrders; injuries: Array<{ player_id: string; matches_remaining: number }>; contracts: Record<string, ContractInfo>; season: number }>('/me'),
   extendContract: (playerId: string) => req<{ ok: true; coins: number; contract: ContractInfo }>(`/players/${encodeURIComponent(playerId)}/extend`, { method: 'POST' }),
+  reborn: (playerId: string) => req<{ ok: true; prospect: Prospect }>(`/players/${encodeURIComponent(playerId)}/reborn`, { method: 'POST' }),
+  prospects: () => req<{ prospects: Prospect[] }>('/prospects'),
+  legends: () => req<{ legends: Array<{ playerId: string; name: string; card: LegacyCard; retiredSeason: number; rebornId: string | null }> }>('/legends'),
   setStandingOrders: (so: StandingOrders) => req<{ ok: true; standingOrders: StandingOrders }>(
     '/standing-orders', { method: 'PUT', body: JSON.stringify(so) }),
   opponents: () => req<{ opponents: Array<{ id: string; handle: string; rating: number; clubName: string }> }>('/opponents'),

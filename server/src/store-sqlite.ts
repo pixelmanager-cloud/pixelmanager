@@ -62,7 +62,24 @@ export function makeSqliteStore(file: string): Store {
       // PLAYER LIFECYCLE: owner-independent, so age can't be reset by selling+rebuying. prime_season =
       // the global season the player turned 25 (age = 25 + currentSeason - prime_season, capped at 40).
       db.exec(`CREATE TABLE IF NOT EXISTS player_lifecycle (
-        player_id TEXT PRIMARY KEY, prime_season INTEGER NOT NULL, retired INTEGER NOT NULL DEFAULT 0);`);
+        player_id TEXT PRIMARY KEY, prime_season INTEGER NOT NULL, retired INTEGER NOT NULL DEFAULT 0, peak_overall INTEGER NOT NULL DEFAULT 0);`);
+      try { db.exec('ALTER TABLE player_lifecycle ADD COLUMN peak_overall INTEGER NOT NULL DEFAULT 0'); } catch { /* already added */ }
+      // ACHIEVEMENTS: owner-independent TEAM record that follows the NFT (position-neutral) — feeds the
+      // retirement legacy card + the reborn pedigree.
+      db.exec(`CREATE TABLE IF NOT EXISTS player_achievements (
+        player_id TEXT PRIMARY KEY, seasons INTEGER NOT NULL DEFAULT 0, apps INTEGER NOT NULL DEFAULT 0,
+        league_titles INTEGER NOT NULL DEFAULT 0, cup_titles INTEGER NOT NULL DEFAULT 0,
+        promotions INTEGER NOT NULL DEFAULT 0, highest_tier_idx INTEGER NOT NULL DEFAULT 0);`);
+      // LEGACIES: the keepsake card generated when a player retires (kept by the owner at that time).
+      db.exec(`CREATE TABLE IF NOT EXISTS legacies (
+        player_id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, name TEXT NOT NULL, card_json TEXT NOT NULL,
+        retired_season INTEGER NOT NULL, reborn_id TEXT);`);
+      // PROSPECTS: a reborn is a 10-year-old to DEVELOP in the Career sim (Layer 1), inheriting the
+      // parent's genes + pedigree — not a ready-made prime player. Held here until the breeder graduates it.
+      db.exec(`CREATE TABLE IF NOT EXISTS prospects (
+        id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, name TEXT NOT NULL, parent_id TEXT, role_hint TEXT NOT NULL,
+        genes_json TEXT NOT NULL, pedigree REAL NOT NULL, dev_bonus_json TEXT NOT NULL, born_season INTEGER NOT NULL,
+        developed INTEGER NOT NULL DEFAULT 0);`);
       // migrate pre-existing tables (adds columns; throws-and-ignored if already present)
       try { db.exec('ALTER TABLE matches ADD COLUMN season_id TEXT'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE matches ADD COLUMN initiator_id TEXT'); } catch { /* already added */ }
@@ -195,6 +212,55 @@ export function makeSqliteStore(file: string): Store {
       db.prepare('INSERT OR IGNORE INTO player_lifecycle (player_id, prime_season) VALUES (?,?)').run(playerId, season);
       return (db.prepare('SELECT prime_season FROM player_lifecycle WHERE player_id=?').get(playerId) as any).prime_season as number;
     },
+    async getLifecycle(playerId) {
+      return db.prepare('SELECT prime_season, retired, peak_overall FROM player_lifecycle WHERE player_id=?').get(playerId) as any;
+    },
+    async setPeakOverall(playerId, overall) {
+      db.prepare('UPDATE player_lifecycle SET peak_overall=? WHERE player_id=? AND peak_overall < ?').run(overall, playerId, overall);
+    },
+    async retirePlayer(playerId) {
+      db.prepare('UPDATE player_lifecycle SET retired=1 WHERE player_id=?').run(playerId);
+    },
+    async getAchievements(playerId) {
+      const r = db.prepare('SELECT seasons, apps, league_titles, cup_titles, promotions, highest_tier_idx FROM player_achievements WHERE player_id=?').get(playerId) as any;
+      return r ?? { seasons: 0, apps: 0, league_titles: 0, cup_titles: 0, promotions: 0, highest_tier_idx: 0 };
+    },
+    async addApps(playerId, n) {
+      db.prepare('INSERT INTO player_achievements (player_id, apps) VALUES (?,?) ON CONFLICT(player_id) DO UPDATE SET apps = apps + ?').run(playerId, n, n);
+    },
+    async recordPlayerSeason(playerId, a) {
+      db.prepare(`INSERT INTO player_achievements (player_id, seasons, league_titles, cup_titles, promotions, highest_tier_idx)
+        VALUES (?,1,?,?,?,?) ON CONFLICT(player_id) DO UPDATE SET seasons = seasons + 1,
+        league_titles = league_titles + ?, cup_titles = cup_titles + ?, promotions = promotions + ?,
+        highest_tier_idx = MAX(highest_tier_idx, ?)`).run(playerId, a.league, a.cup, a.promotion, a.tierIdx, a.league, a.cup, a.promotion, a.tierIdx);
+    },
+    async setAchievements(playerId, a) {
+      db.prepare(`INSERT INTO player_achievements (player_id, seasons, apps, league_titles, cup_titles, promotions, highest_tier_idx)
+        VALUES (?,?,?,?,?,?,?) ON CONFLICT(player_id) DO UPDATE SET seasons=?, apps=?, league_titles=?, cup_titles=?, promotions=?, highest_tier_idx=?`)
+        .run(playerId, a.seasons, a.apps, a.league_titles, a.cup_titles, a.promotions, a.highest_tier_idx, a.seasons, a.apps, a.league_titles, a.cup_titles, a.promotions, a.highest_tier_idx);
+    },
+    async saveLegacy(playerId, ownerId, name, cardJson, retiredSeason) {
+      db.prepare('INSERT OR REPLACE INTO legacies (player_id, owner_id, name, card_json, retired_season, reborn_id) VALUES (?,?,?,?,?, (SELECT reborn_id FROM legacies WHERE player_id=?))').run(playerId, ownerId, name, cardJson, retiredSeason, playerId);
+    },
+    async getLegacy(playerId) {
+      return db.prepare('SELECT player_id, owner_id, name, card_json, retired_season, reborn_id FROM legacies WHERE player_id=?').get(playerId) as any;
+    },
+    async legaciesFor(ownerId) {
+      return db.prepare('SELECT player_id, name, card_json, retired_season, reborn_id FROM legacies WHERE owner_id=? ORDER BY retired_season DESC').all(ownerId) as any[];
+    },
+    async setReborn(playerId, rebornId) {
+      db.prepare('UPDATE legacies SET reborn_id=? WHERE player_id=?').run(rebornId, playerId);
+    },
+    async createProspect(p) {
+      db.prepare('INSERT INTO prospects (id, owner_id, name, parent_id, role_hint, genes_json, pedigree, dev_bonus_json, born_season) VALUES (?,?,?,?,?,?,?,?,?)')
+        .run(p.id, p.owner_id, p.name, p.parent_id, p.role_hint, p.genes_json, p.pedigree, p.dev_bonus_json, p.born_season);
+    },
+    async prospectsFor(ownerId) {
+      return db.prepare('SELECT id, name, parent_id, role_hint, genes_json, pedigree, dev_bonus_json, born_season, developed FROM prospects WHERE owner_id=? ORDER BY born_season DESC').all(ownerId) as any[];
+    },
+    async getProspect(id) {
+      return db.prepare('SELECT id, owner_id, name, parent_id, role_hint, genes_json, pedigree, dev_bonus_json, born_season, developed FROM prospects WHERE id=?').get(id) as any;
+    },
     async createMission(m) {
       db.prepare('INSERT INTO scout_missions (id, account_id, season_id, destination, dispatched_at, ready_at, found, player_json, band, status) VALUES (?,?,?,?,?,?,?,?,?,?)')
         .run(m.id, m.account_id, m.season_id, m.destination, m.dispatched_at, m.ready_at, m.found, m.player_json, m.band, m.status);
@@ -299,6 +365,6 @@ export function makeSqliteStore(file: string): Store {
     async seasonPods(seasonId) {
       return db.prepare('SELECT DISTINCT tier, pod FROM pod_members WHERE season_id=? ORDER BY tier, pod').all(seasonId) as PodRef[];
     },
-    async reset() { db.exec('DELETE FROM matches; DELETE FROM clubs; DELETE FROM accounts; DELETE FROM seasons; DELETE FROM honours; DELETE FROM pod_members; DELETE FROM plans; DELETE FROM loanees; DELETE FROM listings; DELETE FROM scout_missions; DELETE FROM facilities; DELETE FROM injuries; DELETE FROM contracts; DELETE FROM player_lifecycle;'); },
+    async reset() { db.exec('DELETE FROM matches; DELETE FROM clubs; DELETE FROM accounts; DELETE FROM seasons; DELETE FROM honours; DELETE FROM pod_members; DELETE FROM plans; DELETE FROM loanees; DELETE FROM listings; DELETE FROM scout_missions; DELETE FROM facilities; DELETE FROM injuries; DELETE FROM contracts; DELETE FROM player_lifecycle; DELETE FROM player_achievements; DELETE FROM legacies; DELETE FROM prospects;'); },
   };
 }

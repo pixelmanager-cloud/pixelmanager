@@ -10,6 +10,7 @@ export const isNftPlayer = (id: string) => id.startsWith('nft:');
 export interface ContractInfo {
   playerId: string; age: number; available: boolean; seasonsLeft: number;
   lengthSeasons: number; extendCost: number; sellValue: number; stakedSeasons: number;
+  retired?: boolean; legend?: any; rebornId?: string | null;
 }
 
 /** Age of an NFT player this season: 25 at his prime_season, +1 per season, capped at 40 (retirement). */
@@ -33,8 +34,14 @@ export async function squadContracts(db: Store, ownerId: string, players: Player
   const existing = new Map((await db.getContracts(ownerId)).map((c) => [c.player_id, c]));
   const out = new Map<string, ContractInfo>();
   for (const p of nfts) {
-    const prime = await db.ensurePrimeSeason(p.id, currentSeason);
+    const life = await db.getLifecycle(p.id);
+    const prime = life?.prime_season ?? await db.ensurePrimeSeason(p.id, currentSeason);
     const age = ageOf(prime, currentSeason);
+    if (life?.retired) { // retired → benched for good, no contract (the NFT stays owned, can be reborn)
+      const lg = await db.getLegacy(p.id);
+      out.set(p.id, { playerId: p.id, age, available: false, seasonsLeft: 0, lengthSeasons: 0, extendCost: 0, sellValue: 0, stakedSeasons: 0, retired: true, legend: lg ? JSON.parse(lg.card_json) : null, rebornId: lg?.reborn_id ?? null });
+      continue;
+    }
     let c = existing.get(p.id);
     if (!c) { // first sight → sign an initial deal, start the staking clock
       const fresh = signContract(currentSeason, p.greed ?? 10, p.personality);

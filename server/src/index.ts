@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import { randomUUID } from 'node:crypto';
 import { overall, managerPrestige, signContract, contractCost, contractLength, type Lineup, type Tactics } from '@fm/shared';
 import { squadContracts, isNftPlayer, ageOf } from './contracts.js';
+import { advanceAccountLifecycle, rebornProspect, toAchievements } from './lifecycle.js';
 import { db, type Account, type StandingOrders, type Listing } from './db.js';
 import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMATIONS } from './game.js';
 import { hashPassword, verifyPassword } from './auth.js';
@@ -308,6 +309,8 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const homeMatchOutcome: 'win' | 'draw' | 'loss' = result[0] > result[1] ? 'win' : result[0] < result[1] ? 'loss' : 'draw';
   const gate = Math.round(stadiumIncome(homeFacFull.stadium, Math.max(0, homeTierIdx), homeMatchOutcome) * fanIncomeMult(homeFacFull.fanzone));
   await Promise.all([db.setRating(meId, nMe), db.setRating(oppId, nOpp), db.addCoins(meId, myCoins), db.addCoins(oppId, oppCoins), db.addCoins(homeAcctId, gate)]);
+  // appearances: every NFT that featured banks a cap (feeds longevity in the retirement legacy)
+  for (const pl of [...homeTeam.players, ...awayTeam.players]) if (isNftPlayer(pl.id)) await db.addApps(pl.id, 1);
   const myGate = iAmHome ? gate : 0; // only the host banks gate receipts
   const nHome = iAmHome ? nMe : nOpp, nAway = iAmHome ? nOpp : nMe;
 
@@ -416,6 +419,51 @@ app.post('/players/:id/extend', { preHandler: requireAuth }, async (req, reply) 
   await db.setContract(ownerId, playerId, fresh.signedSeason, fresh.lengthSeasons, s.number);
   const updated = (await squadContracts(db, ownerId, c.club.players, s.number)).get(playerId);
   return { ok: true, coins: await db.getCoins(ownerId), contract: updated };
+});
+
+// REBORN: breed a retired player's next generation as a 10-YEAR-OLD PROSPECT (not a prime player). The
+// parent stays as a legacy keepsake; the prospect re-enters the Career sim to be DEVELOPED 10→25,
+// inheriting the bloodline's genes + the parent's TEAM-achievement pedigree. One reborn per legacy.
+app.post('/players/:id/reborn', { preHandler: requireAuth }, async (req, reply) => {
+  const ownerId = req.account!.id;
+  const playerId = (req.params as any).id as string;
+  const legacy = await db.getLegacy(playerId);
+  if (!legacy || legacy.owner_id !== ownerId) return reply.code(404).send({ error: 'no legacy for that player' });
+  if (legacy.reborn_id) return reply.code(409).send({ error: 'already reborn', rebornId: legacy.reborn_id });
+  const c = (await loadSquad(ownerId))!;
+  const parent = c.club.players.find((p) => p.id === playerId);
+  if (!parent) return reply.code(404).send({ error: 'parent not in your squad' });
+  const bred = rebornProspect(parent, toAchievements(await db.getAchievements(playerId)));
+  const s = await ensureSeason(db, Date.now());
+  const first = parent.name.split(' ')[0];
+  const prospectId = `prospect:${Date.now() % 1000000}`;
+  await db.createProspect({ id: prospectId, owner_id: ownerId, name: `${first} Jr`, parent_id: playerId, role_hint: bred.roleHint, genes_json: JSON.stringify(bred.genes), pedigree: bred.pedigree, dev_bonus_json: JSON.stringify(bred.devBonus), born_season: s.number });
+  await db.setReborn(playerId, prospectId);
+  return { ok: true, prospect: { id: prospectId, name: `${first} Jr`, roleHint: bred.roleHint, pedigree: bred.pedigree, potentialStars: bred.potentialStars, genes: bred.genes, note: bred.note } };
+});
+
+// PROSPECTS: the reborn 10-year-olds awaiting development in the Career sim (Layer 1).
+app.get('/prospects', { preHandler: requireAuth }, async (req) => {
+  const rows = await db.prospectsFor(req.account!.id);
+  return { prospects: rows.map((r) => { const genes = JSON.parse(r.genes_json); const geneCeil = (genes.pace.ceiling + genes.strength.ceiling + genes.stamina.ceiling) / 3; return { id: r.id, name: r.name, roleHint: r.role_hint, pedigree: r.pedigree, bornSeason: r.born_season, developed: !!r.developed, potentialStars: Math.max(1, Math.min(5, Math.round(geneCeil / 4 + r.pedigree * 1.5))), genes }; }) };
+});
+
+// LEGENDS: the manager's collection of retirement legacy cards (a hall of players they saw out).
+app.get('/legends', { preHandler: requireAuth }, async (req) => {
+  const rows = await db.legaciesFor(req.account!.id);
+  return { legends: rows.map((r) => ({ playerId: r.player_id, name: r.name, card: JSON.parse(r.card_json), retiredSeason: r.retired_season, rebornId: r.reborn_id })) };
+});
+
+// DEV ONLY (local sqlite): run the lifecycle for your squad with a title-winning outcome, to force
+// retirements for testing without grinding 15 seasons.
+app.post('/dev/run-lifecycle', { preHandler: requireAuth }, async (req, reply) => {
+  if (process.env.DATABASE_URL) return reply.code(403).send({ error: 'dev only' });
+  const c = (await loadSquad(req.account!.id))!;
+  const s = await ensureSeason(db, Date.now());
+  const body = (req.body as any) ?? {};
+  const outcome = { league: body.league ?? 1, cup: body.cup ?? 0, promotion: body.promotion ?? 1, tierIdx: body.tierIdx ?? 5 };
+  const retired = await advanceAccountLifecycle(db, req.account!.id, c.club.players, s.number, outcome);
+  return { ok: true, retired, season: s.number };
 });
 
 // SCOUT an opponent: their expected formation (standing-orders shape) + roster with
@@ -707,6 +755,7 @@ app.post('/dev/inject-nft', { preHandler: requireAuth }, async (req, reply) => {
     const len = contractLength(p.greed, p.personality);
     await db.setContract(id, player.id, s.number - aged, len, s.number - aged);
   }
+  if (body.achievements) await db.setAchievements(player.id, { seasons: 0, apps: 0, league_titles: 0, cup_titles: 0, promotions: 0, highest_tier_idx: 0, ...body.achievements });
   return { ok: true, player, season: s.number };
 });
 

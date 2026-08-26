@@ -69,7 +69,19 @@ export function makePostgresStore(connectionString: string): Store {
           length_seasons INTEGER NOT NULL, staked_since INTEGER NOT NULL DEFAULT 0,
           PRIMARY KEY (owner_id, player_id));
         CREATE TABLE IF NOT EXISTS player_lifecycle (
-          player_id TEXT PRIMARY KEY, prime_season INTEGER NOT NULL, retired INTEGER NOT NULL DEFAULT 0);
+          player_id TEXT PRIMARY KEY, prime_season INTEGER NOT NULL, retired INTEGER NOT NULL DEFAULT 0, peak_overall INTEGER NOT NULL DEFAULT 0);
+        ALTER TABLE player_lifecycle ADD COLUMN IF NOT EXISTS peak_overall INTEGER NOT NULL DEFAULT 0;
+        CREATE TABLE IF NOT EXISTS player_achievements (
+          player_id TEXT PRIMARY KEY, seasons INTEGER NOT NULL DEFAULT 0, apps INTEGER NOT NULL DEFAULT 0,
+          league_titles INTEGER NOT NULL DEFAULT 0, cup_titles INTEGER NOT NULL DEFAULT 0,
+          promotions INTEGER NOT NULL DEFAULT 0, highest_tier_idx INTEGER NOT NULL DEFAULT 0);
+        CREATE TABLE IF NOT EXISTS legacies (
+          player_id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, name TEXT NOT NULL, card_json TEXT NOT NULL,
+          retired_season INTEGER NOT NULL, reborn_id TEXT);
+        CREATE TABLE IF NOT EXISTS prospects (
+          id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, name TEXT NOT NULL, parent_id TEXT, role_hint TEXT NOT NULL,
+          genes_json TEXT NOT NULL, pedigree REAL NOT NULL, dev_bonus_json TEXT NOT NULL, born_season INTEGER NOT NULL,
+          developed INTEGER NOT NULL DEFAULT 0);
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS season_id TEXT;
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS initiator_id TEXT;
         ALTER TABLE clubs ADD COLUMN IF NOT EXISTS so_duties TEXT;
@@ -199,6 +211,56 @@ export function makePostgresStore(connectionString: string): Store {
       await q('INSERT INTO player_lifecycle (player_id, prime_season) VALUES ($1,$2) ON CONFLICT (player_id) DO NOTHING', [playerId, season]);
       return ((await q('SELECT prime_season FROM player_lifecycle WHERE player_id=$1', [playerId])).rows[0] as any).prime_season as number;
     },
+    async getLifecycle(playerId) {
+      return (await q('SELECT prime_season, retired, peak_overall FROM player_lifecycle WHERE player_id=$1', [playerId])).rows[0] as any;
+    },
+    async setPeakOverall(playerId, overall) {
+      await q('UPDATE player_lifecycle SET peak_overall=$2 WHERE player_id=$1 AND peak_overall < $2', [playerId, overall]);
+    },
+    async retirePlayer(playerId) {
+      await q('UPDATE player_lifecycle SET retired=1 WHERE player_id=$1', [playerId]);
+    },
+    async getAchievements(playerId) {
+      const r = (await q('SELECT seasons, apps, league_titles, cup_titles, promotions, highest_tier_idx FROM player_achievements WHERE player_id=$1', [playerId])).rows[0] as any;
+      return r ?? { seasons: 0, apps: 0, league_titles: 0, cup_titles: 0, promotions: 0, highest_tier_idx: 0 };
+    },
+    async addApps(playerId, n) {
+      await q('INSERT INTO player_achievements (player_id, apps) VALUES ($1,$2) ON CONFLICT(player_id) DO UPDATE SET apps = player_achievements.apps + $2', [playerId, n]);
+    },
+    async recordPlayerSeason(playerId, a) {
+      await q(`INSERT INTO player_achievements (player_id, seasons, league_titles, cup_titles, promotions, highest_tier_idx)
+        VALUES ($1,1,$2,$3,$4,$5) ON CONFLICT(player_id) DO UPDATE SET seasons = player_achievements.seasons + 1,
+        league_titles = player_achievements.league_titles + $2, cup_titles = player_achievements.cup_titles + $3,
+        promotions = player_achievements.promotions + $4, highest_tier_idx = GREATEST(player_achievements.highest_tier_idx, $5)`,
+        [playerId, a.league, a.cup, a.promotion, a.tierIdx]);
+    },
+    async setAchievements(playerId, a) {
+      await q(`INSERT INTO player_achievements (player_id, seasons, apps, league_titles, cup_titles, promotions, highest_tier_idx)
+        VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT(player_id) DO UPDATE SET seasons=$2, apps=$3, league_titles=$4, cup_titles=$5, promotions=$6, highest_tier_idx=$7`,
+        [playerId, a.seasons, a.apps, a.league_titles, a.cup_titles, a.promotions, a.highest_tier_idx]);
+    },
+    async saveLegacy(playerId, ownerId, name, cardJson, retiredSeason) {
+      await q('INSERT INTO legacies (player_id, owner_id, name, card_json, retired_season) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (player_id) DO UPDATE SET owner_id=$2, name=$3, card_json=$4, retired_season=$5', [playerId, ownerId, name, cardJson, retiredSeason]);
+    },
+    async getLegacy(playerId) {
+      return (await q('SELECT player_id, owner_id, name, card_json, retired_season, reborn_id FROM legacies WHERE player_id=$1', [playerId])).rows[0] as any;
+    },
+    async legaciesFor(ownerId) {
+      return (await q('SELECT player_id, name, card_json, retired_season, reborn_id FROM legacies WHERE owner_id=$1 ORDER BY retired_season DESC', [ownerId])).rows as any[];
+    },
+    async setReborn(playerId, rebornId) {
+      await q('UPDATE legacies SET reborn_id=$2 WHERE player_id=$1', [playerId, rebornId]);
+    },
+    async createProspect(p) {
+      await q('INSERT INTO prospects (id, owner_id, name, parent_id, role_hint, genes_json, pedigree, dev_bonus_json, born_season) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+        [p.id, p.owner_id, p.name, p.parent_id, p.role_hint, p.genes_json, p.pedigree, p.dev_bonus_json, p.born_season]);
+    },
+    async prospectsFor(ownerId) {
+      return (await q('SELECT id, name, parent_id, role_hint, genes_json, pedigree, dev_bonus_json, born_season, developed FROM prospects WHERE owner_id=$1 ORDER BY born_season DESC', [ownerId])).rows as any[];
+    },
+    async getProspect(id) {
+      return (await q('SELECT id, owner_id, name, parent_id, role_hint, genes_json, pedigree, dev_bonus_json, born_season, developed FROM prospects WHERE id=$1', [id])).rows[0] as any;
+    },
     async decrementInjuries(accountId) {
       await q('UPDATE injuries SET matches_remaining = matches_remaining - 1 WHERE account_id=$1', [accountId]);
       await q('DELETE FROM injuries WHERE account_id=$1 AND matches_remaining <= 0', [accountId]);
@@ -315,6 +377,6 @@ export function makePostgresStore(connectionString: string): Store {
     async seasonPods(seasonId) {
       return (await q('SELECT DISTINCT tier, pod FROM pod_members WHERE season_id=$1 ORDER BY tier, pod', [seasonId])).rows as PodRef[];
     },
-    async reset() { await q('TRUNCATE accounts, clubs, matches, seasons, honours, pod_members, plans, loanees, listings, scout_missions, facilities, injuries, contracts, player_lifecycle'); },
+    async reset() { await q('TRUNCATE accounts, clubs, matches, seasons, honours, pod_members, plans, loanees, listings, scout_missions, facilities, injuries, contracts, player_lifecycle, player_achievements, legacies, prospects'); },
   };
 }
