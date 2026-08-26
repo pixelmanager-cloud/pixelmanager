@@ -30,7 +30,7 @@ export interface CareerState {
   consequences?: string[];
   momentKind?: 'match' | 'training' | 'life';
   matchCtx?: { opponent: string; home: boolean; score: string; minute: number; comp: string; club?: string | null };
-  clubSeason?: { pos: number; size: number; me: LeagueRow; table: LeagueRow[] } | null;
+  clubSeason?: { pos: number; size: number; me: LeagueRow; table: LeagueRow[]; apps: number; fixtures: number; status: string } | null;
   kit?: Kit | null;
   hand?: CareerCard[]; coach?: { id: string; name: string } | null;
   coaches?: Array<{ id: string; name: string; kind: string; desc: string; specialty: string[]; bonus: number }>;

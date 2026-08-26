@@ -1118,8 +1118,9 @@ class Game {
       + `<td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td>`
       + `<td>${r.GF}</td><td>${r.GA}</td><td>${r.GD > 0 ? '+' : ''}${r.GD}</td><td class="lt-pts">${r.Pts}</td></tr>`).join('');
     return `<div class="cg-league">`
+      + `<div class="lt-status"><span class="lt-role">${cs.status}</span><span class="lt-apps">${cs.apps}/${cs.fixtures} apps this season</span></div>`
       + `<div class="lt-head"><b>${cs.me.name}</b> sit <b>${ord(cs.pos)}</b> of ${cs.size} — ${cs.me.W}W ${cs.me.D}D ${cs.me.L}L · ${cs.me.Pts} pts</div>`
-      + `<div class="scout-sub">Your club's league season. Play well and his form carries the club up the table.</div>`
+      + `<div class="scout-sub">The more he features and the better he plays, the higher his club climbs.</div>`
       + `<table class="lt-table"><thead><tr><th></th><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr></thead><tbody>${rows}</tbody></table></div>`;
   }
   private lastCareerState?: import('./api').CareerState;

@@ -8,7 +8,7 @@ import {
   type Player, type Track, type PlayerAchievements, type Genes, type CareerPlayerAttrs,
 } from '@fm/shared';
 import type { Token, Store } from './store.js';
-import { clubSeason } from './clubseason.js';
+import { clubSeason, squadRole } from './clubseason.js';
 
 export const SUPPLY_CAP = Number(process.env.SUPPLY_CAP ?? 10000); // fixed total NFTs in the economy
 // Lifecycle SINKS (coins now — the seam that becomes a PTEST spend later; see docs/economy-and-web3.md).
@@ -198,14 +198,15 @@ export function careerState(t: Token, c: Career, clubName?: string | null) {
   // CLUB SEASON: from the senior stages on (Breakthrough+, ~age 19), the player's club competes in a small
   // simulated league. His league strength = his overall + recent form, so a strong career season lifts the
   // club up the table. Deterministic (seeded from the career + stage); youth stages have no senior league.
-  let clubSeasonData: ReturnType<typeof clubSeason> | null = null;
+  let clubSeasonData: (ReturnType<typeof clubSeason> & { apps: number; status: string }) | null = null;
   const bandIdx = bandAt(Math.min(c.turn, TOTAL_TURNS - 1)).index;
   if (clubName && bandIdx >= 4) { // senior stages only (Breakthrough+, ~age 19) — youth has no senior league
     const recent = c.log.slice(-6);
     const form = recent.length ? recent.reduce((s, e) => s + e.success, 0) / recent.length : 0.5;
-    const strength = Math.round(prof.currentOverall + (form - 0.5) * 6);
+    const strength = prof.currentOverall + (form - 0.5) * 6;      // his ability + current form
+    const { share, apps, status } = squadRole(bandIdx, prof.currentOverall); // how much he features this season
     const seasonSeed = (((c as any).seed >>> 0) ^ Math.imul(bandIdx + 1, 2654435761)) >>> 0;
-    clubSeasonData = clubSeason(clubName, strength, seasonSeed);
+    clubSeasonData = { ...clubSeason(clubName, strength, share, seasonSeed), apps, status };
   }
   return {
     prospectId: t.id, name: t.name, generation: t.generation, pedigree: t.pedigree, agentId: t.agent_id, track: t.track,

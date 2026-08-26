@@ -6,6 +6,22 @@
 // (overall + recent form), so playing well literally lifts the club up the table.
 
 const LEAGUE_SIZE = 10; // Marlow + 9 opponents → an 18-fixture double round-robin (about half a 38-game season)
+export const FIXTURES_PER_SEASON = 2 * (LEAGUE_SIZE - 1); // 18
+const SQUAD_BASE = 11; // a mid-table squad's baseline strength (before the bloodline player's influence)
+
+// How much of the season the player actually FEATURES in, by career stage — realism: a kid breaking into
+// the first team gets a handful of games; a regular starts most; an established star plays nearly all.
+const STAGE_SHARE: Record<number, number> = { 4: 0.42, 5: 0.72, 6: 0.9 }; // Breakthrough / First Team / Establishing
+
+/** His squad standing this season: how many of the club's fixtures he features in, + a status label.
+ *  A standout (higher overall) breaks in faster and plays more; a fringe player rotates. */
+export function squadRole(bandIdx: number, overall: number) {
+  let share = (STAGE_SHARE[bandIdx] ?? 0.5) + (overall - 12) * 0.03;
+  share = Math.max(0.12, Math.min(1, share));
+  const apps = Math.round(share * FIXTURES_PER_SEASON);
+  const status = apps >= 16 ? 'Key player' : apps >= 11 ? 'Regular starter' : apps >= 6 ? 'Squad rotation' : 'Breaking in';
+  return { share, apps, status };
+}
 
 // The pool of fictional clubs the league is drawn from (same flavour as the matchday opponents).
 const LEAGUE_POOL = [
@@ -66,12 +82,15 @@ export function seasonTable(clubs: LeagueClub[], seed: number): TableRow[] {
   return rows;
 }
 
-/** The club's league standing for a season: table + Marlow's row/position. `myStrength` folds in the
- *  player's overall AND his recent form so a strong career season lifts the club up the table. */
-export function clubSeason(myClub: string, myStrength: number, seed: number) {
-  const clubs = seededLeague(myClub, myStrength, seed);
+/** The club's league standing for a season: table + Marlow's row/position + his apps/status.
+ *  The club's strength BLENDS a mid-table squad baseline with the player's quality, weighted by how much
+ *  he plays (`share`): a fringe kid barely moves the club; a star regular drags it up the table. So both
+ *  his ability AND his game-time drive the finish — exactly how a real season would feel. */
+export function clubSeason(myClub: string, marlowStrength: number, share: number, seed: number) {
+  const clubStrength = SQUAD_BASE + (marlowStrength - SQUAD_BASE) * share;
+  const clubs = seededLeague(myClub, clubStrength, seed);
   const table = seasonTable(clubs, seed);
   const pos = table.findIndex((r) => r.mine) + 1;
   const me = table.find((r) => r.mine)!;
-  return { table, pos, me, size: table.length };
+  return { table, pos, me, size: table.length, fixtures: FIXTURES_PER_SEASON };
 }
