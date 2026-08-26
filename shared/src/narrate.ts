@@ -22,7 +22,7 @@ export interface ScenarioCtx {
 const GAFFER_NAMES = ['Hargreaves', 'Doyle', 'Ferreira', 'Brandt', 'Okonkwo', 'Salgado', 'Whelan', 'Redmond', 'Ashcroft', 'Vasquez', 'Kowalski', 'Mbeki'];
 const RIVAL_NAMES = ['Turner', 'Bianchi', 'Novak', 'Halvorsen', 'De Groot', 'Adeyemi', 'Rossi', 'Lindqvist', 'Marchetti', 'Bauer'];
 const MENTOR_NAMES = ['old Franny', 'the veteran Delgado', 'club legend Pearce', 'wily old Ivanov', 'the skipper-emeritus Blake', 'grizzled Marcus Reid'];
-const CAPTAIN_NAMES = ['the skipper, Voss', 'captain Ellery', 'the armband-wearer Sokol', 'skipper Da Silva', 'club captain Hendricks'];
+const CAPTAIN_NAMES = ['skipper Voss', 'captain Ellery', 'the armband-wearer Sokol', 'skipper Da Silva', 'club captain Hendricks'];
 export interface CareerCast { gaffer: string; rival: string; mentor: string; captain: string }
 export function careerCast(careerSeed: number): CareerCast {
   const rng = mulberry32((careerSeed >>> 0) ^ 0x9e3779b9);
