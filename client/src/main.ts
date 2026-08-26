@@ -304,6 +304,15 @@ class Game {
     $('manager-stat').textContent = this.account ? `Rating ${this.account.rating}${this.account.coins != null ? ` · 💰 ${this.account.coins}` : ''}` : '';
     $('career-stat').textContent = '';
     api.prospects().then((p) => { $('career-stat').textContent = `${p.prospects.length} prospect${p.prospects.length === 1 ? '' : 's'} in development · ${p.supply}/${p.cap} minted`; }).catch(() => {});
+    // cross-mode legacy summary on the home screen
+    $('select-legacy-sub').textContent = 'Your bloodlines, silverware and retired numbers across both games.';
+    Promise.all([api.honours().catch(() => ({ honours: [] })), api.legends().catch(() => ({ legends: [] }))]).then(([h, l]) => {
+      const titles = h.honours.filter((x) => x.title === 1).length;
+      const lines = new Set(l.legends.map((x) => x.playerId)).size;
+      if (titles || lines || l.legends.length) {
+        $('select-legacy-sub').textContent = `🏆 ${titles} title${titles === 1 ? '' : 's'} · 🌳 ${lines} bloodline${lines === 1 ? '' : 's'} · ⭐ ${l.legends.length} legend${l.legends.length === 1 ? '' : 's'}`;
+      }
+    }).catch(() => {});
   }
 
   private wireStaticButtons() {
@@ -346,6 +355,9 @@ class Game {
     $('enter-career').addEventListener('click', () => this.showAcademy());
     $('enter-manager').addEventListener('click', () => this.showHub());
     $('view-modes').addEventListener('click', () => this.showSelect());
+    // home-screen legacy shortcuts (cross-mode)
+    $('select-trophies').addEventListener('click', () => this.showTrophyRoom());
+    $('select-menu').addEventListener('click', () => { $('mm-saves').classList.remove('hidden'); this.showScreen('login'); this.renderMainMenu(); });
     $('app-title').addEventListener('click', () => { if (hasToken()) this.showSelect(); });
     $('academy-back').addEventListener('click', () => this.showSelect()); // Academy is a top-level mode now
     $('market-back').addEventListener('click', () => this.showHub());
