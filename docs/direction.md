@@ -84,6 +84,18 @@ not Stripe (`coin-purchases.md`'s rails still apply, re-targeted to Steamworks a
 - [ ] Fold the surviving "scouting board / known-frame, earned-greatness" concept into an **in-game**
       acquisition UI (not a cash mint).
 
+### Presentation — DECIDED: text-driven matches, drop the live 2D engine
+Matches are presented via the **rich text commentary** (already built, a core strength) — the **live 2D
+Phaser match engine + `pixelart.ts` sprite sim + the match sprite view are removed** to speed up dev and cut
+the biggest client dependency. This is *not* "text-only game": the rest stays graphical.
+- ✅ Keep: dramatic text commentary as the match experience; a **beautiful management UI**; player/kit cards;
+  the scouting board; the trophy room; and especially the **bloodline tree** (the Steam capsule art).
+- ✅ Keep the **pixel-art aesthetic** via cheap *static* assets (portraits, kits, badges, UI) so the
+  "Pixel Manager" identity survives without a live engine.
+- ❌ Remove: Phaser, the 2D match renderer, the pixel sprite/animation sim, the 2D↔commentary sync.
+- Net for Steam: "text-driven matches + gorgeous management UI + a stunning dynasty tree." Faster to build
+  and still visually sellable. (Follow-up code task, like the web3 removal — clean subtraction.)
+
 ### Hosting note
 - **Server (Railway/Postgres) stays** — the online leagues run through it regardless of platform.
 - **Netlify (web client host) is now optional** — not needed for the Steam build (the desktop wrapper bundles
