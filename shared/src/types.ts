@@ -62,6 +62,12 @@ export interface Player {
   traits?: string[];
   /** innate temperament id (career-built players); read for cup-final composure later; optional */
   personality?: string;
+  /** manager designations (pre-kickoff, deterministic): the armband + set-piece takers. Absent =
+   *  the engine auto-picks (captain → best leader; takers → best setPiece+composure). */
+  captain?: boolean;
+  takesPen?: boolean;
+  takesFk?: boolean;
+  takesCorner?: boolean;
   /** financial temperament 1-20 (career-built players): what it costs to EXTEND this player's contract
    *  in the manager game — high = mercenary/expensive, low = loyal/cheap. See contractCost(). Optional. */
   greed?: number;

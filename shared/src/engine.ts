@@ -635,7 +635,7 @@ export class MatchEngine {
    *  Draws rng (real mechanic; conversion kept low so goals stay in band). */
   private takeCorner(atkTeam: 0 | 1, defTeam: 0 | 1, minute: number) {
     const s = this.state;
-    const taker = this.bestSetPiece(atkTeam);
+    const taker = this.bestSetPiece(atkTeam, 'corner');
     s.events.push({ minute, type: 'corner', teamIdx: atkTeam, playerName: taker.p.name });
     // aerial target = best strength+positioning outfielder on the pitch
     let hi = 1, best = -Infinity;
@@ -671,7 +671,15 @@ export class MatchEngine {
   }
 
   /** Best on-pitch set-piece taker (skips GK and any sent-off man): setPiece + composure. */
-  private bestSetPiece(teamIdx: 0 | 1): { p: Player; i: number } {
+  private bestSetPiece(teamIdx: 0 | 1, type?: 'pen' | 'fk' | 'corner'): { p: Player; i: number } {
+    // a MANAGER-DESIGNATED taker for this set-piece type takes it (if on the pitch); else auto-pick
+    if (type) {
+      for (let i = 1; i < 11; i++) {
+        if (this.sentOff.has(teamIdx * 100 + i)) continue;
+        const pl = this.teams[teamIdx].players[i];
+        if (type === 'pen' ? pl.takesPen : type === 'fk' ? pl.takesFk : pl.takesCorner) return { p: pl, i };
+      }
+    }
     let bi = 1, best = -Infinity;
     for (let i = 1; i < 11; i++) {
       if (this.sentOff.has(teamIdx * 100 + i)) continue;
@@ -733,7 +741,7 @@ export class MatchEngine {
 
   private takePenalty(atkTeam: 0 | 1, defTeam: 0 | 1, minute: number) {
     const s = this.state;
-    const { p: taker } = this.bestSetPiece(atkTeam);
+    const { p: taker } = this.bestSetPiece(atkTeam, 'pen');
     const gk = this.teams[defTeam].players[0], gks = s.players[defTeam][0];
     s.events.push({ minute, type: 'penalty', teamIdx: atkTeam, playerName: taker.name });
     const convP = clamp(0.70 + norm(taker.attrs.setPiece ?? 8) * 0.14 + mAdd(taker.attrs.composure, 0.08) - norm(gk.attrs.keeping) * fit(gks.fitness) * 0.14, 0.5, 0.93);
@@ -750,7 +758,7 @@ export class MatchEngine {
 
   private takeFreeKick(atkTeam: 0 | 1, defTeam: 0 | 1, at: { x: number; y: number }, minute: number) {
     const s = this.state;
-    const { p: taker } = this.bestSetPiece(atkTeam);
+    const { p: taker } = this.bestSetPiece(atkTeam, 'fk');
     const gk = this.teams[defTeam].players[0], gks = s.players[defTeam][0];
     s.events.push({ minute, type: 'free_kick', teamIdx: atkTeam, playerName: taker.name, zone: 'att' });
     const goal = this.goalOf(atkTeam);

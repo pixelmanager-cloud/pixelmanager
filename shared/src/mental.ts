@@ -15,6 +15,10 @@ export const mAdd = (stat: number | undefined, k: number) => k * (norm(stat) - N
 export const hasTrait = (p: Player, id: string) => !!p.traits?.includes(id);
 /** A team-wide leadership steadiness bonus from the side's best leader (centred, small). */
 export function teamLeadership(players: Player[]): number {
+  // a NAMED captain leads the side (his leadership drives it, slightly amplified for the armband);
+  // with no captain set, the best natural leader carries it. Naming your best leader = strictly best.
+  const cap = players.find((p) => p.captain);
   const best = players.reduce((m, p) => Math.max(m, p.attrs.leadership ?? 10), 0);
-  return mAdd(best, 0.045); // ±0.04 to teammates' finishing composure
+  const lead = cap ? (cap.attrs.leadership ?? 10) : best;
+  return mAdd(lead, cap ? 0.05 : 0.045); // ±small to teammates' finishing composure
 }

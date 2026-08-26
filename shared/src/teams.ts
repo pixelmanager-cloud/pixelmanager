@@ -122,6 +122,9 @@ export interface Lineup {
   playerIds: string[]; // length 11
   /** optional per-slot manager duties (parallel to playerIds); absent slots auto-derive from stats */
   duties?: Duty[];
+  /** manager squad roles (slot indices into playerIds): the captain, and the set-piece takers. */
+  captainIdx?: number;
+  takers?: { pen?: number; fk?: number; corner?: number };
 }
 
 /** Auto-select the best available XI for a formation, best player per slot by overall rating. */
@@ -143,7 +146,14 @@ export function buildXI(club: Club, lineup: Lineup): Team {
   const players: Player[] = lineup.playerIds.map((pid, i) => {
     const p = club.players.find((x) => x.id === pid)!;
     // a manager-assigned duty for this slot overrides the player's stat-derived default
-    return { ...p, anchor: { x: slots[i].x, y: slots[i].y }, duty: lineup.duties?.[i] ?? p.duty };
+    return {
+      ...p, anchor: { x: slots[i].x, y: slots[i].y }, duty: lineup.duties?.[i] ?? p.duty,
+      // squad roles (manager designations): captain armband + set-piece takers
+      captain: lineup.captainIdx === i || undefined,
+      takesPen: lineup.takers?.pen === i || undefined,
+      takesFk: lineup.takers?.fk === i || undefined,
+      takesCorner: lineup.takers?.corner === i || undefined,
+    };
   });
   // bench: the best squad players outside the XI (up to 7), for the engine's late-game subs
   const used = new Set(lineup.playerIds);
