@@ -863,6 +863,7 @@ class Game {
   }
 
   private async openCareer(prospectId: string) {
+    this.lastNarration = '';
     $('academy-body').innerHTML = SPINNER;
     try {
       const cur = await api.getCareer(prospectId).catch(() => null); // 400 if not started yet
@@ -888,6 +889,7 @@ class Game {
       + `<span class="cg-chapter">${s.chapter}</span><div class="cg-bar"><i style="width:${pct}%"></i></div><span class="pr-meta">${s.turn}/${s.totalTurns}</span></div>`;
     const evt = s.seasonEvent ? `<div class="cg-event"><b>${s.seasonEvent.name}</b> — ${s.seasonEvent.desc}</div>` : '';
     const prof = s.profile ? this.careerProfileHtml(s.profile) : '';
+    const narr = this.lastNarration && s.phase === 'play' ? `<div class="cg-narrate">“${this.lastNarration}”</div>` : '';
     let body = '';
     if (s.phase === 'play' && s.scenario) {
       const tags = Object.entries(s.scenario.demand).sort((a, b) => b[1] - a[1]).map(([t]) => `<span class="cg-tag">${t}</span>`).join('');
@@ -905,7 +907,7 @@ class Game {
         + s.offers.map((o) => `<div class="cg-offer" data-act="offer" data-id="${o.id}"><div class="cg-cname">💷 ${o.name}</div><div class="cg-cdesc">${o.desc}</div>`
           + `<div class="cg-effs">${o.earn > 0 ? `+${o.earn}c ` : ''}${o.greed > 0 ? '· greedier ' : o.greed < 0 ? '· more loyal ' : ''}${o.market > 0 ? '· more famous ' : ''}${o.form > 0 ? '· sharper' : o.form < 0 ? '· distracted' : ''}</div></div>`).join('');
     }
-    $('academy-body').innerHTML = head + prof + evt + body;
+    $('academy-body').innerHTML = head + prof + narr + evt + body;
     $('cg-back').addEventListener('click', () => this.showAcademy());
     $('academy-body').querySelectorAll('[data-act]').forEach((el) => el.addEventListener('click', () => this.doCareerAct(s.prospectId, { type: (el as HTMLElement).dataset.act!, cardId: (el as HTMLElement).dataset.id! })));
   }
@@ -932,11 +934,14 @@ class Game {
     return `<div class="cg-card ${rar}" data-act="${act}" data-id="${c.id}">${rar ? `<span class="cg-rarity">${rar}</span>` : ''}<div class="cg-cname">${c.name}</div><div class="cg-ctags">${tags}</div></div>`;
   }
 
+  private lastNarration = '';
   private async doCareerAct(prospectId: string, action: { type: string; cardId: string }) {
     try {
       const r = await api.careerAct(prospectId, action);
+      this.lastNarration = r.narration ?? '';
       if (r.graduated && r.player) {
         this.setMe(await api.me());
+        if (this.lastNarration) toast(this.lastNarration);
         toast(`🎓 ${r.player.name} graduates as a pro!`);
         this.showPlayerCard(r.player, true);
         this.showAcademy();

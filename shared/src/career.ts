@@ -90,6 +90,8 @@ export const GK_DECK: Card[] = [
 const GK_STARTER_IDS = ['shot-stop', 'claim-cross', 'organise', 'calm-back'];
 const GK_STARTER: Card[] = GK_DECK.filter((c) => GK_STARTER_IDS.includes(c.id));
 const GK_DRAFT_POOL: Card[] = GK_DECK.filter((c) => !GK_STARTER_IDS.includes(c.id));
+/** A card's display name by id (across both decks) — for narration/UI. */
+export const cardName = (id: string): string => [...DECK, ...GK_DECK].find((c) => c.id === id)?.name ?? id;
 
 // deck-building config
 export const OFFER_SIZE = 4;   // cards shown at a between-season draft

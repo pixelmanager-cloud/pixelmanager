@@ -4,7 +4,7 @@
 // home for every transition, replacing the old prospects/contracts/lifecycle/achievements split.
 import {
   overall, contractView, signContract, contractLength, legacyCard, legacyBoost, inheritGenes, rollGenes, graduate,
-  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, moraleEffects,
+  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, moraleEffects, narratePlay, cardName,
   type Player, type Track, type PlayerAchievements, type Genes, type CareerPlayerAttrs,
 } from '@fm/shared';
 import type { Token, Store } from './store.js';
@@ -77,6 +77,14 @@ export function loadCareer(t: Token): Career {
   const c = new Career(t.career_seed!, (t.track as Track) ?? 'outfield', t.agent_id ?? undefined);
   for (const a of JSON.parse(t.career_actions ?? '[]') as CareerAction[]) applyAction(c, a);
   return c;
+}
+/** Apply an action and, for a PLAY, return an immersive narration of the moment (null otherwise). */
+export function actWithNarration(c: Career, a: CareerAction): string | null {
+  if (a.type !== 'play') { applyAction(c, a); return null; }
+  const ctx = { age: c.age, chapter: c.chapter, stakes: c.scenario.stakes, personalityId: c.personality.id, seasonEventId: c.seasonEvent?.id ?? null, seed: (((c as any).seed >>> 0) + c.turn * 2654435761) >>> 0 };
+  applyAction(c, a);
+  const choice = c.log[c.log.length - 1];
+  return narratePlay(cardName(a.cardId), choice.tags, choice.success, ctx);
 }
 export function careerProfile(t: Token, c: Career) {
   const genes = JSON.parse(t.genes_json);
