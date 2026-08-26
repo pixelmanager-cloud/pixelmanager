@@ -440,7 +440,7 @@ export interface CareerPlayerAttrs {
 export type Role = 'GK' | 'DF' | 'MF' | 'FW';
 export interface CareerPlayer { attrs: CareerPlayerAttrs; role: Role; overall: number; genes: Genes; traits: string[]; personality: string; greed: number; marketability: number; earnings: number }
 /** Financial/agent context carried out of a career into graduation (all optional → neutral defaults). */
-export interface GraduateCtx { seriousInjuries?: number; agentGreed?: number; agentExposure?: number; greedBonus?: number; marketBonus?: number; earnings?: number }
+export interface GraduateCtx { seriousInjuries?: number; agentGreed?: number; agentExposure?: number; greedBonus?: number; marketBonus?: number; earnings?: number; legacyBonus?: Partial<Record<keyof CareerPlayerAttrs, number>> }
 
 // ── PERSONALITY: an innate temperament (nature), seeded at genesis like genes. It shapes HOW a player
 // handles their career — steadiness vs volatility, and whether they rise or wilt under pressure — and
@@ -488,15 +488,52 @@ export function rollGenes(seed: number): Genes {
  *  population mean and re-rolled with variance — inheritance is a BIAS ON A RANDOM ROLL, never a
  *  deterministic copy, so bloodlines stay diverse and un-solvable. keepPct = how strongly the
  *  parent shows through (~0.5–0.7). */
-export function inheritGenes(parent: Genes, seed: number, keepPct = 0.6): Genes {
+export function inheritGenes(parent: Genes, seed: number, keepPct = 0.6, ceilingLift = 0): Genes {
   const rng = mulberry32(seed ^ 0x50f);
   const MEAN_FLOOR = 7, MEAN_CEIL = 13;
   const inheritBand = (b: Band): Band => {
     const floor = clamp(Math.round(b.floor * keepPct + MEAN_FLOOR * (1 - keepPct) + (rng() - 0.5) * 4), 1, 15);
-    const ceiling = clamp(Math.round(b.ceiling * keepPct + MEAN_CEIL * (1 - keepPct) + (rng() - 0.5) * 4), floor + 3, 20);
+    // a decorated, durable bloodline lifts the son's physical CEILING (better potential — earned, bounded)
+    const ceiling = clamp(Math.round(b.ceiling * keepPct + MEAN_CEIL * (1 - keepPct) + (rng() - 0.5) * 4 + ceilingLift), floor + 3, 20);
     return { floor, ceiling };
   };
   return { pace: inheritBand(parent.pace), strength: inheritBand(parent.strength), stamina: inheritBand(parent.stamina) };
+}
+
+// ── ACHIEVEMENT LEGACY: a player's on-pitch career follows the NFT into the next generation. A father
+// who won things and lasted at the top breeds a son with a head-start — but from TEAM achievements only
+// (trophies, promotions, the level he competed at, longevity), NEVER personal tallies like goals/assists
+// which would unfairly favour attackers. So a decorated centre-back or keeper passes on exactly as much
+// pedigree as a decorated striker. The boosts are position-neutral (a winner's mentality + physical
+// pedigree) and bounded — an earned edge, not pay-to-win.
+export interface PlayerAchievements {
+  seasons: number;         // seasons played (longevity)
+  apps: number;            // appearances
+  leagueTitles: number;    // league championships won with the squad
+  cupTitles: number;       // cups won with the squad
+  promotions: number;      // times the club climbed a division while he was in it
+  highestTierIdx: number;  // the highest division he competed in (0 Sunday … 9 World Class)
+}
+export interface LegacyBoost {
+  ceilingLift: number;                                  // +0..3 to the son's inherited physical ceilings
+  devBonus: Partial<Record<keyof CareerPlayerAttrs, number>>; // small post-development nudges (mentality)
+  pedigree: number;                                     // 0..1 summary (fame of the bloodline; UI/market)
+  note: string;
+}
+/** Turn a player's TEAM achievements into the (bounded, position-neutral) pedigree his son is born with. */
+export function legacyBoost(a: PlayerAchievements): LegacyBoost {
+  const tierMult = 1 + a.highestTierIdx * 0.4;                       // winning higher up is worth more
+  const trophyPts = (a.leagueTitles + a.cupTitles * 0.7 + a.promotions * 0.4) * tierMult;
+  const winner = clamp(trophyPts / 12, 0, 1);                        // 0..1 how decorated the father was
+  const longevity = clamp((a.seasons + a.apps * 0.05) / 16, 0, 1);   // 0..1 durability of the career
+  const ceilingLift = clamp(Math.round(longevity * 2 + winner), 0, 3); // athletic + winning bloodline
+  const devBonus: Partial<Record<keyof CareerPlayerAttrs, number>> = {
+    leadership: Math.round(winner * 2),                              // winners breed a winning mentality…
+    composure: Math.round(winner * 1.5),                            // …calm on the big stage (position-neutral)
+  };
+  const pedigree = clamp(0.6 * winner + 0.4 * longevity, 0, 1);
+  const note = winner > 0.66 ? 'elite pedigree — a dynasty bloodline' : winner > 0.33 ? 'proven pedigree' : longevity > 0.5 ? 'a long, dependable career' : 'a modest playing record';
+  return { ceilingLift, devBonus, pedigree, note };
 }
 
 // each stat's source tags (≥1 each); keeping has none (GK is a future dedicated path)
@@ -602,10 +639,12 @@ export function eligibleTraits(attrs: CareerPlayerAttrs, log: Choice[]): Trait[]
  *  fresh genesis roll; pass inherited genes (lineage). `pickTraits` chooses among the eligible traits
  *  (the client lets a human pick; defaults to the first MAX_TRAITS for the sim). */
 export function graduate(log: Choice[], seed: number, genes: Genes = rollGenes(seed), pickTraits?: (eligible: Trait[]) => Trait[], ctx: GraduateCtx = {}): CareerPlayer {
-  const { seriousInjuries = 0, agentGreed = 0, agentExposure = 1, greedBonus = 0, marketBonus = 0, earnings = 0 } = ctx;
+  const { seriousInjuries = 0, agentGreed = 0, agentExposure = 1, greedBonus = 0, marketBonus = 0, earnings = 0, legacyBonus } = ctx;
   const attrs = deriveStats(log, seed, genes);
   const personality = rollPersonality(seed);                          // same temperament the career developed under
   if (personality.signature) attrs[personality.signature] = clamp(attrs[personality.signature] + 1, 1, 20);
+  // inherited pedigree from a decorated father (team achievements) — a bounded, position-neutral head-start
+  if (legacyBonus) for (const k of Object.keys(legacyBonus) as (keyof CareerPlayerAttrs)[]) attrs[k] = clamp(attrs[k] + (legacyBonus[k] ?? 0), 1, 20);
   // serious injuries in development leave a lasting fragility (injury-proneness the Manager game reads)
   attrs.durability = clamp(attrs.durability - Math.round(seriousInjuries * 2.5), 1, 20);
   // GREED (financial temperament): what it'll cost a manager to keep this player. Set by the AGENT he

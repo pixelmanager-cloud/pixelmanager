@@ -1,6 +1,6 @@
 // Career-sim harness. Validates: (1) different styles → distinct, specialised players + roles;
 // (2) skill → magnitude; (3) the turn-by-turn engine is deterministic. Run: `npx tsx career_sim.ts`.
-import { Career, simCareer, graduate, ageCurve, careerOverall, prospectValuation, contractCost, contractLength, releaseClause, AGENTS, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, STARTER_DECK, cardPower, type Style, type CareerPlayerAttrs, type Role, type Genes } from './src/career.js';
+import { Career, simCareer, graduate, ageCurve, careerOverall, prospectValuation, contractCost, contractLength, releaseClause, legacyBoost, AGENTS, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, STARTER_DECK, cardPower, type Style, type CareerPlayerAttrs, type Role, type Genes, type PlayerAchievements } from './src/career.js';
 
 const STYLES: Style[] = [
   { name: 'Poacher',   pref: { composure: 1, flair: 0.8 },        skill: 0.85 },
@@ -61,6 +61,28 @@ console.log('\n=== lineage — son inherits physical genes (biased, not copied) 
 const parentGenes = rollGenes(seedFrom('parent'));
 const son = inheritGenes(parentGenes, seedFrom('son'), 0.6);
 console.log(`  parent pace band [${parentGenes.pace.floor}-${parentGenes.pace.ceiling}]  →  son pace band [${son.pace.floor}-${son.pace.ceiling}]  (near, regressed, re-rolled)`);
+
+// reborn: a decorated father's TEAM achievements (not personal tallies) pass pedigree to the son
+console.log('\n=== reborn — team-achievement pedigree carries into the next generation ===');
+{
+  const dad = rollGenes(seedFrom('dynasty'));
+  const legend: PlayerAchievements = { seasons: 14, apps: 380, leagueTitles: 6, cupTitles: 3, promotions: 2, highestTierIdx: 8 };
+  const journey: PlayerAchievements = { seasons: 9, apps: 150, leagueTitles: 0, cupTitles: 0, promotions: 1, highestTierIdx: 2 };
+  const breed = (ach: PlayerAchievements) => {
+    const b = legacyBoost(ach);
+    const sonGenes = inheritGenes(dad, seedFrom('heir'), 0.6, b.ceilingLift);   // pedigree lifts physical ceilings
+    // identical development (same seed + policy) so the ONLY difference is the inherited pedigree
+    const c = new Career(seedFrom('heir-career'), 'outfield', 'loyal');
+    while (!c.finished) { const st = c.current(); st.phase === 'offer' ? c.resolveOffer(st.offers[0].id) : st.phase === 'coach' ? c.appointCoach(st.coaches[0].id) : st.phase === 'draft' ? c.draft(st.options[0].id) : c.play(st.hand[0].id); }
+    const p = graduate(c.log, seedFrom('heir-career'), sonGenes, undefined, { ...c.finContext(), legacyBonus: b.devBonus });
+    return { b, p };
+  };
+  for (const [label, ach] of [['legend father', legend], ['journeyman father', journey]] as const) {
+    const { b, p } = breed(ach);
+    console.log(`  ${label.padEnd(18)} pedigree ${b.pedigree.toFixed(2)} · ceiling+${b.ceilingLift} → son pace-ceiling ${p.genes.pace.ceiling} · leadership ${p.attrs.leadership} composure ${p.attrs.composure} · ovr ${p.overall}  (${b.note})`);
+  }
+  console.log('  → position-neutral: a decorated centre-back or keeper breeds the same pedigree as a striker (team trophies, not goals)');
+}
 
 // GK track: a goalkeeper career produces a keeper
 console.log('\n=== goalkeeper track ===');
