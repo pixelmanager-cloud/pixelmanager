@@ -197,8 +197,11 @@ export function careerState(t: Token, c: Career) {
     // a loan decision, or bouncing back from a public setback — resolved by the same card play.
     let kind = String(st.scenario.kind);
     const lifeHash = ((((c as any).seed >>> 0) ^ Math.imul(c.turn + 1, 2654435761)) >>> 0) % 100;
-    const LIFE_KINDS = ['contract', 'loan', 'setback'];
-    const LIFE_LABEL: Record<string, string> = { contract: 'a contract standoff', loan: 'a loan-move decision', setback: 'bouncing back from a public mistake' };
+    const LIFE_KINDS = ['contract', 'loan', 'setback', 'media', 'loyalty', 'role', 'fallout'];
+    const LIFE_LABEL: Record<string, string> = {
+      contract: 'a contract standoff', loan: 'a loan-move decision', setback: 'bouncing back from a public mistake',
+      media: 'a media storm', loyalty: 'a boyhood-club approach', role: 'a squad-role ultimatum', fallout: 'a public falling-out with a teammate',
+    };
     if (kind === 'social' && st.scenario.stakes === 1 && c.age >= 16 && lifeHash < 22) {
       kind = LIFE_KINDS[lifeHash % LIFE_KINDS.length];
       st.scenario = { ...st.scenario, kind, label: LIFE_LABEL[kind] };

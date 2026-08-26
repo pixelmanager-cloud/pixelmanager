@@ -8,11 +8,13 @@ Brainstormed by studying `career.ts` (1198 lines), `narrate.ts` (297 lines), `ca
 brief's items 1/3/5/6/7 are already substantially built. This queue focuses on what's thin, missing,
 or newly imagined beyond the brief. Ranked safe/small/high-value first.
 
-- [ ] 1. **More life-event variety.** (S) `tokens.ts` only re-skins 3 kinds (contract/loan/setback) at
+- [x] 1. **More life-event variety.** (S) `tokens.ts` only re-skins 3 kinds (contract/loan/setback) at
   22% of low-stakes social moments age 16+. Add 3-4 more presentational kinds — a media storm, a
   loyalty test (boyhood-club approach), a squad-role ultimatum, a public falling-out with a teammate —
   each with its own `LIFE_LABEL` and a matching `KIND_SETUP` entry in narrate.ts. Zero rng/mechanic
-  change (same reskin pattern), so fully safe.
+  change (same reskin pattern), so fully safe. **Done:** added `media`/`loyalty`/`role`/`fallout` to
+  `LIFE_KINDS`/`LIFE_LABEL` in tokens.ts and matching `KIND_SETUP` entries in narrate.ts (7 kinds now,
+  same 22% low-stakes-social-at-16+ gate, still fully presentational).
 - [ ] 2. **More DEMAND lines per tag in narrate.ts.** (S) Currently exactly 3 lines per tag (8 tags =
   24 lines). Double to 6 each so the "what the moment asks" line repeats far less over a 112-turn
   career. Pure content addition, no determinism risk.
