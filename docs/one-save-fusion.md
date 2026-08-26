@@ -62,17 +62,25 @@ matchday moments with a scoreboard (opponent, score, minute) invented per-turn b
 has a *real* league season (`server/src/seasons.ts`, fixtures, standings). Fusion = make those the **same
 matches**, and make managing a **stage the linear life grows into**, not a parallel menu.
 
-### The unlock model (the one design decision)
-The life is linear, so managing must enter *in sequence*. Proposed trigger, in order of how much it changes:
-- **A — Player-manager at the peak (recommended).** While the bloodline player is a senior pro (roughly the
-  `First Team` / `Establishing` stages, ~age 18+), his club matches become manageable: before his matchday
-  you set the XI/tactics, then play his moment inside that fixture. Managing and playing are the same event.
-- **B — Gaffer after retirement.** You only take the dugout once the player retires; the career stage is
-  "playing", the manager stage is "management", strictly sequential. Simpler, but the two never overlap.
-- **C — Hybrid.** B by default, with A available in the final playing stage as a "learning the trade" taster.
+### The model — ONE CLUB, controlled throughout (DECIDED 2026-08-27)
+The user's model, confirmed: you own **one club, forever** — it is your constant across the whole dynasty.
+Your bloodline player is the **star you also live** inside that club. There is no "player mode vs manager
+mode": there is one club you steer and a bloodline you live through it.
 
-This choice sets *when* `showHub` re-links the club surface and how the two engines share a clock. **Pending
-the user's pick** — do not build the timeline until it's chosen.
+What keeps it *linear, not parallel* is that the **depth of control ramps with the linear life**, it is not a
+second menu:
+- **Youth stages (player is a kid, ~age 10–17):** "your club" is your home/identity/dynasty; the live
+  gameplay is his youth career. You are not picking a senior XI yet.
+- **Senior stages (~age 18+, First Team / Establishing):** the club's matches go live — a matchday is
+  *set the XI/tactics → play his moment inside that same fixture*. Managing and playing are one event.
+- **After he retires:** you keep managing the **same club**; his heir comes through its youth ranks and the
+  loop continues. One club, generations deep.
+
+**Club as the currency sink (user, 2026-08-27):** because the club is a single persistent entity you hold
+throughout, **club upgrades** (facilities, youth setup, stadium, medical/coaching) are the natural home for
+in-game currency — a progression sink, not pay-to-win. This is the intended coin/IAP-currency spend and a key
+reason the one-club model matters. (See `docs/coin-purchases.md` / monetization; keep it cosmetic/progression,
+never a fairness-breaking edge — trivial in offline single-player, but hold the line for any future online.)
 
 ### Data/engine plan (keeps determinism + `career_sim`/`verify` green)
 1. **One club identity, already shared.** A save = one account with a club and the bloodline token; no schema
@@ -91,11 +99,13 @@ the user's pick** — do not build the timeline until it's chosen.
    model is reached; before that it stays player-only (today's state).
 
 ### Build order (each a green, shippable step)
-1. Pick the unlock model (A/B/C) — **user decision, blocks the rest.**
-2. Map career match-turns → the season's fixture list (context only; no engine change). Verify replay + sim.
-3. Re-link the club/season surface at the unlock stage; gate it behind the linear progression.
+1. ~~Pick the unlock model~~ **DECIDED: one club throughout (above).**
+2. Map career match-turns → the club's season fixture list (context only; no engine change). Verify replay + sim.
+3. Re-link the club/season surface at the senior stage; gate it behind the linear progression (kept player-only
+   during the youth stages).
 4. Feed `success` into the fixture result as a nudge; show his line in the club result.
-5. (Phase 3) collapse the two matches into one simulation.
+5. **Club upgrades** — facilities/youth/stadium as the coin sink (the reason for one persistent club).
+6. (Phase 3) collapse the two matches into one simulation.
 
 Guardrails unchanged: no `Date.now`/`Math.random` in `shared/`; `npm run verify` **and**
 `npx tsx shared/career_sim.ts` green after every step; one shippable step per commit.
