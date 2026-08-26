@@ -72,6 +72,15 @@ export const DECK: Card[] = [
   { id: 'trigger',     name: 'Trigger the Press',     tags: ['aggression', 'teamwork'] },
   { id: 'switch',      name: 'Switch the Play',       tags: ['creativity', 'leadership'] },
   { id: 'clutch',      name: 'Clutch Moment',         tags: ['composure', 'leadership'], rarity: 'epic' },
+  // expansion batch — shore up the under-served teamwork / stamina / leadership moments
+  { id: 'backs-wall',  name: 'Backs to the Wall',     tags: ['teamwork', 'leadership'] },
+  { id: 'second-wind', name: 'Second Wind',           tags: ['stamina'] },
+  { id: 'shuttle',     name: 'Shuttle Runs',          tags: ['stamina', 'teamwork'] },
+  { id: 'one-two',     name: 'One-Two',               tags: ['teamwork', 'creativity'] },
+  { id: 'drag-back',   name: 'Drag-back Turn',        tags: ['flair', 'composure'] },
+  { id: 'vocal',       name: 'Vocal Leader',          tags: ['leadership'] },
+  { id: 'roar',        name: 'Roar of Defiance',      tags: ['leadership', 'teamwork'], rarity: 'rare' },
+  { id: 'iron-lung',   name: 'Iron Lung',             tags: ['stamina', 'leadership'], rarity: 'epic' },
 ];
 
 // The small deck EVERY outfield career starts with; the rest is drafted between seasons.
@@ -120,6 +129,10 @@ export const CARD_DESC: Record<string, string> = {
   recovery: 'Turn and sprint back to snuff out the danger.', 'thru-lines': 'Carry it calmly through the lines, breaking the press.',
   streetwise: 'Do the streetwise thing — buy the foul, kill the tempo.', trigger: 'Trigger the press and hunt the ball down as a unit.',
   switch: 'Switch the play with one sweep of the boot to the free man.', clutch: 'Stand up in the clutch and deliver when it counts.',
+  'backs-wall': 'Marshal a backs-to-the-wall rearguard and see the storm out together.', 'second-wind': 'Find a second wind and keep going when the tank looks empty.',
+  shuttle: 'Put in the hard yards, shuttling across to cover for a teammate.', 'one-two': 'Play a slick one-two and spin off the back of your marker.',
+  'drag-back': 'Drag it back on a sixpence and leave your man for dead.', vocal: 'Never stop talking — organise, cajole and demand more from those around you.',
+  roar: 'Let out a roar of defiance and rally everyone for one more stand.', 'iron-lung': 'Run the legs off everyone and lead by sheer relentless example.',
   'shot-stop': 'Spring across your goal to make a vital save.', 'point-blank': 'Somehow keep out a point-blank effort.',
   'one-on-one': 'Rush out and smother the one-on-one.', command: 'Come and claim it, commanding your box.',
   'claim-cross': 'Rise to pluck the cross out of the air.', sweeper: 'Sweep up behind the defence like an extra outfielder.',

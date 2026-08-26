@@ -25,7 +25,7 @@ implements it on a branch, and opens a PR for you to review.
 > personalities/scenarios in `shared/src/career.ts`; narration vocab in `shared/src/narrate.ts`. When you
 > finish one, LEAVE the others unchecked for the next run.
 
-- [ ] **[career] +8 outfield cards.** Add 8 new cards to `DECK` in `shared/src/career.ts` — a mix of
+- [x] **[career] +8 outfield cards.** Add 8 new cards to `DECK` in `shared/src/career.ts` — a mix of
   single-tag and dual-tag, with 1–2 rare/epic signature cards. Cover under-served tags; give each an
   evocative name (e.g. "Trivela", "Recovery Sprint", "Backs-to-the-Wall", "Nutmeg"). Do NOT add them to
   the STARTER lists (they enter via the draft pool automatically). Verify green + career_sim checks hold.
