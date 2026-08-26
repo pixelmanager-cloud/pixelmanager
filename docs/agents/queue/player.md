@@ -30,9 +30,12 @@ or newly imagined beyond the brief. Ranked safe/small/high-value first.
   across replays/careers. **Done:** added 2 more openers to each of the 7 chapters in narrate.ts
   (4 each now, 28 total, up from 14), same tone per stage; `npm run verify` and `career_sim` both
   green (diversity closest-pair distance 9, determinism identical: true).
-- [ ] 5. **More BIG_MOMENTS / HUGE_MOMENTS labels.** (S) Currently 8 big + 6 huge. Add ~6 more of each
+- [x] 5. **More BIG_MOMENTS / HUGE_MOMENTS labels.** (S) Currently 8 big + 6 huge. Add ~6 more of each
   (a Boxing Day six-pointer, a Youth Cup Final, a Testimonial, a Community Shield curtain-raiser, a
   European night, a Merseyside/Manchester-style derby) for a less repetitive stakes-2/3 moment pool.
+  **Done:** added 7 more entries to `BIG_SETTINGS` (7→14) and 6 more to `HUGE_SETTINGS` (7→13) in
+  narrate.ts, same setting-neutral `pick(rng)` usage so no rng draw-order change; `npm run verify` and
+  `career_sim` both green (diversity closest-pair distance 9, determinism identical: true).
 - [ ] 6. **Kit tab: hairstyle + accessory cosmetic axes.** (M) Extend the Kit tab beyond boots +
   celebration — add a hairstyle option and a headband/wristband accessory, persisted in the same
   `kit_json` blob (no schema change). Needs new consts in main.ts (mirroring `BOOT_COLOURS`/
