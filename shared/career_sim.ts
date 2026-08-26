@@ -114,12 +114,15 @@ console.log('\n=== deck-building — drafts grow your deck (pick first offer for
 {
   const dc = new Career(seedFrom('drafter'));
   const offers: string[][] = [];
+  const coaches: string[] = [];
   while (!dc.finished) {
     const st = dc.current();
-    if (st.phase === 'draft') { offers.push(st.options.map((o) => `${o.name}${o.rarity && o.rarity !== 'common' ? ` (${o.rarity})` : ''}`)); dc.draft(st.options[0].id); }
+    if (st.phase === 'coach') { coaches.push(st.coaches[0].name); dc.appointCoach(st.coaches[0].id); }
+    else if (st.phase === 'draft') { offers.push(st.options.map((o) => `${o.name}${o.rarity && o.rarity !== 'common' ? ` (${o.rarity})` : ''}`)); dc.draft(st.options[0].id); }
     else dc.play(st.hand[0].id);
   }
   console.log(`  starting deck (${STARTER_DECK.length}):`, STARTER_DECK.map((c) => c.name).join(', '));
+  console.log('  coaches appointed:', coaches.join(', '));
   offers.forEach((o, i) => console.log(`  draft ${i + 1} offered:`, o.join('  |  ')));
   console.log(`  final deck (${dc.deck.length}):`, dc.deck.map((c) => c.name + (cardPower(c) > 1 ? `*${cardPower(c)}` : '')).join(', '));
 }
@@ -132,8 +135,9 @@ console.log('\n=== a development life (age 10→25, seed arc) ===');
   let big = 0, huge = 0, bigWins = 0, lastChapter = '';
   while (!c.finished) {
     const st = c.current();
+    if (st.phase === 'coach') { c.appointCoach(st.coaches[0].id); continue; }
     if (st.phase === 'draft') { c.draft(st.options[0].id); continue; }
-    if (st.chapter !== lastChapter) { lastChapter = st.chapter; chapters.push(`age ${st.age} — ${st.chapter}${c.seasonEvent ? `  ·  ${c.seasonEvent.name}: ${c.seasonEvent.desc}` : ''}`); }
+    if (st.chapter !== lastChapter) { lastChapter = st.chapter; chapters.push(`age ${st.age} — ${st.chapter}${c.coach ? ` · coach: ${c.coach.name}` : ''}${c.seasonEvent ? `  ·  ${c.seasonEvent.name}` : ''}`); }
     if (st.scenario.stakes === 3) huge++; else if (st.scenario.stakes === 2) big++;
     const ch = c.play(st.hand[0].id);
     if (ch.stakes >= 2 && ch.success >= 0.75) bigWins++;
@@ -159,7 +163,7 @@ console.log('\n=== personality — same big moments, different temperament ===')
     for (let i = 0; found < 40 && i < 20000; i++) {
       const c = new Career(seedFrom('pers', i));
       if (c.personality.id !== persId) continue; found++;
-      while (!c.finished) { const st = c.current(); if (st.phase === 'draft') { c.draft(st.options[0].id); continue; } c.play(st.hand[0].id); }
+      while (!c.finished) { const st = c.current(); if (st.phase === 'coach') { c.appointCoach(st.coaches[0].id); continue; } if (st.phase === 'draft') { c.draft(st.options[0].id); continue; } c.play(st.hand[0].id); }
       for (const ch of c.log) if (ch.stakes >= 2) { sum += ch.success; n++; }
     }
     return n ? (sum / n).toFixed(2) : 'n/a';
@@ -176,17 +180,17 @@ console.log('\n=== prospect market — trade an in-development player ===');
   const genes = rollGenes(seedFrom('prospect'));
   // develop a player halfway (a promising teenager), then a buyer resumes from the snapshot
   const seller = new Career(seedFrom('prospect'));
-  while (seller.age < 19 && !seller.finished) { const st = seller.current(); st.phase === 'draft' ? seller.draft(st.options[0].id) : seller.play(st.hand[0].id); }
+  while (seller.age < 19 && !seller.finished) { const st = seller.current(); st.phase === 'coach' ? seller.appointCoach(st.coaches[0].id) : st.phase === 'draft' ? seller.draft(st.options[0].id) : seller.play(st.hand[0].id); }
   const snap = seller.snapshot();
   const val = prospectValuation(seller, genes);
   console.log(`  FOR SALE — age ${val.age} (${val.chapter}), ${val.role}: current ovr ${val.currentOverall}, potential ${val.potential}, physical ceiling ${val.physicalCeiling}, ${'★'.repeat(val.stars)}${'☆'.repeat(5 - val.stars)}`);
   console.log(`  snapshot: ${snap.actions.length} actions (seed+track+actions — tiny, verifiable off-chain)`);
   // buyer resumes and finishes the career from exactly where the seller stopped
   const buyer = Career.resume(snap);
-  while (!buyer.finished) { const st = buyer.current(); st.phase === 'draft' ? buyer.draft(st.options[0].id) : buyer.play(st.hand[0].id); }
+  while (!buyer.finished) { const st = buyer.current(); st.phase === 'coach' ? buyer.appointCoach(st.coaches[0].id) : st.phase === 'draft' ? buyer.draft(st.options[0].id) : buyer.play(st.hand[0].id); }
   // verify: resume+continue is identical to developing straight through the same choices
   const straight = new Career(seedFrom('prospect'));
-  while (!straight.finished) { const st = straight.current(); st.phase === 'draft' ? straight.draft(st.options[0].id) : straight.play(st.hand[0].id); }
+  while (!straight.finished) { const st = straight.current(); st.phase === 'coach' ? straight.appointCoach(st.coaches[0].id) : st.phase === 'draft' ? straight.draft(st.options[0].id) : straight.play(st.hand[0].id); }
   const same = JSON.stringify(graduate(buyer.log, seedFrom('prospect'), genes)) === JSON.stringify(graduate(straight.log, seedFrom('prospect'), genes));
   console.log(`  buyer resumes → graduates the SAME player as continuous development: ${same}`);
 }
@@ -195,7 +199,7 @@ console.log('\n=== prospect market — trade an in-development player ===');
 console.log('\n=== determinism check ===');
 const replay = (seed: number) => {
   const c = new Career(seed); const ids: string[] = [];
-  while (!c.finished) { const st = c.current(); if (st.phase === 'draft') { ids.push('D:' + st.options[0].id); c.draft(st.options[0].id); } else { ids.push(st.hand[0].id); c.play(st.hand[0].id); } }
+  while (!c.finished) { const st = c.current(); if (st.phase === 'coach') { ids.push('C:' + st.coaches[0].id); c.appointCoach(st.coaches[0].id); } else if (st.phase === 'draft') { ids.push('D:' + st.options[0].id); c.draft(st.options[0].id); } else { ids.push(st.hand[0].id); c.play(st.hand[0].id); } }
   return { player: graduate(c.log, seed), ids };
 };
 const r1 = replay(999), r2 = replay(999);

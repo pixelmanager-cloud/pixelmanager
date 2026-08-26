@@ -26,7 +26,7 @@ const OUTFIELD_TAGS: Tag[] = ['composure', 'aggression', 'creativity', 'teamwork
 export type Track = 'outfield' | 'goalkeeper';
 export interface SeasonEvent { id: string; name: string; desc: string }
 /** One recorded development decision. A career is fully reconstructable from (seed, track, actions). */
-export interface Action { type: 'play' | 'draft'; cardId: string }
+export interface Action { type: 'play' | 'draft' | 'coach'; cardId: string }
 /** Everything needed to persist/trade an in-progress prospect (stored off-chain, keyed by tokenId).
  *  Deterministic → the current stats can be re-derived + verified by replaying it. */
 export interface CareerSnapshot { seed: number; track: Track; actions: Action[] }
@@ -94,6 +94,31 @@ const GK_DRAFT_POOL: Card[] = GK_DECK.filter((c) => !GK_STARTER_IDS.includes(c.i
 // deck-building config
 export const OFFER_SIZE = 4;   // cards shown at a between-season draft
 export const DRAFT_PICKS = 2;  // how many you add each draft
+
+// ── BACKROOM STAFF: at each age-chapter break you appoint a mentor/coach for the coming chapter.
+// A coach amplifies your work in their SPECIALTY — you get better SUCCESS playing cards in those tags,
+// so that development compounds. Appoint one that matches your identity to sharpen it, or one that
+// shores up a weakness. A strategic layer on top of deck-building.
+export interface Coach { id: string; name: string; kind: 'coach' | 'mentor'; desc: string; specialty: Tag[]; bonus: number }
+export const COACHES: Coach[] = [
+  { id: 'finishing',  name: 'Finishing Coach',   kind: 'coach',  desc: 'Hours drilling the work in front of goal',   specialty: ['composure', 'flair'], bonus: 0.12 },
+  { id: 'technical',  name: 'Technical Coach',    kind: 'coach',  desc: 'Endless reps on close control & vision',      specialty: ['creativity', 'flair'], bonus: 0.12 },
+  { id: 'defensive',  name: 'Defensive Coach',    kind: 'coach',  desc: 'Drills the dark arts of defending',           specialty: ['aggression', 'teamwork'], bonus: 0.12 },
+  { id: 'fitness',    name: 'Fitness Coach',      kind: 'coach',  desc: 'Runs you into the ground — and back',         specialty: ['stamina'], bonus: 0.14 },
+  { id: 'mentality',  name: 'Mentality Coach',    kind: 'coach',  desc: 'Builds the mind as much as the body',         specialty: ['composure', 'leadership'], bonus: 0.12 },
+  { id: 'veteran',    name: 'Veteran Mentor',     kind: 'mentor', desc: 'A wise old pro takes you under his wing',     specialty: ['composure', 'leadership', 'teamwork'], bonus: 0.1 },
+  { id: 'playmaker',  name: 'Playmaker Mentor',   kind: 'mentor', desc: 'A legendary no.10 shows you how to see it',   specialty: ['creativity', 'teamwork'], bonus: 0.12 },
+  { id: 'warrior',    name: 'Warrior Mentor',     kind: 'mentor', desc: 'An old-school hard man teaches you to bite',  specialty: ['aggression', 'stamina'], bonus: 0.12 },
+  { id: 'gk-coach',   name: 'Goalkeeping Coach',  kind: 'coach',  desc: 'Shot-stopping, handling, commanding the box', specialty: ['keeping'], bonus: 0.14 },
+];
+export const COACH_OFFER = 3; // choices shown at each appointment
+
+/** Seeded coach choices for a track: outfield sees no GK-only coach, GK sees the GK coach + mental ones. */
+export function rollCoaches(rng: () => number, track: Track, n = COACH_OFFER): Coach[] {
+  const pool = COACHES.filter((c) => (track === 'goalkeeper' ? true : !c.specialty.includes('keeping')));
+  const shuffled = [...pool].sort(() => rng() - 0.5);
+  return shuffled.slice(0, Math.min(n, pool.length));
+}
 
 // ── scenarios: each moment demands a weighted mix of tags; kind biases the demand ──
 // stakes 1 (normal) / 2 (big) / 3 (huge). Big moments are worth MORE (shape you harder) and are
@@ -188,6 +213,9 @@ export class Career {
   finished = false;
   /** When set, the career is paused for a between-chapter DRAFT: pick DRAFT_PICKS of these to add. */
   pendingDraft: { options: Card[]; picksLeft: number } | null = null;
+  /** When set, the career is paused to APPOINT a mentor/coach for the coming chapter. */
+  pendingCoaches: Coach[] | null = null;
+  coach: Coach | null = null;              // the staff member active this chapter (boosts their specialty)
   /** The narrative event coloring the current age chapter (a new gaffer, a hot streak, a knock…). */
   seasonEvent: SeasonEvent | null = null;
   private demandBias: Tag | null = null;   // the gaffer's demand this chapter → scenarios lean this tag
@@ -216,14 +244,26 @@ export class Career {
    *  buyer resumes development from precisely where the seller left off. */
   static resume(snap: CareerSnapshot): Career {
     const c = new Career(snap.seed, snap.track);
-    for (const a of snap.actions) { if (a.type === 'draft') c.draft(a.cardId); else c.play(a.cardId); }
+    for (const a of snap.actions) { if (a.type === 'draft') c.draft(a.cardId); else if (a.type === 'coach') c.appointCoach(a.cardId); else c.play(a.cardId); }
     return c;
   }
 
-  /** Current state: a 'play' phase (pick a hand card) or a 'draft' phase (pick a card to add). */
+  /** Current state: a 'coach' phase (appoint staff), a 'draft' phase (add a card), or a 'play' phase. */
   current() {
+    if (this.pendingCoaches) return { phase: 'coach' as const, age: this.age, chapter: this.chapter, coaches: this.pendingCoaches, deck: this.deck, finished: this.finished };
     if (this.pendingDraft) return { phase: 'draft' as const, age: this.age, chapter: this.chapter, options: this.pendingDraft.options, picksLeft: this.pendingDraft.picksLeft, deck: this.deck, finished: this.finished };
-    return { phase: 'play' as const, turn: this.turn, age: this.age, chapter: this.chapter, scenario: this.scenario, hand: this.hand, deck: this.deck, finished: this.finished };
+    return { phase: 'play' as const, turn: this.turn, age: this.age, chapter: this.chapter, scenario: this.scenario, coach: this.coach, hand: this.hand, deck: this.deck, finished: this.finished };
+  }
+
+  /** APPOINT a mentor/coach for the coming chapter; then proceed to the card draft. */
+  appointCoach(coachId: string) {
+    if (!this.pendingCoaches) throw new Error('no coach appointment pending');
+    const coach = this.pendingCoaches.find((c) => c.id === coachId);
+    if (!coach) throw new Error('coach not on offer');
+    this.coach = coach;
+    this.actions.push({ type: 'coach', cardId: coachId });
+    this.pendingCoaches = null;
+    this.openDraft();
   }
 
   /** DRAFT: add one of the offered cards to your deck (identity-building). */
@@ -241,6 +281,7 @@ export class Career {
   /** Play a card from the current hand; resolves, logs, advances (into a draft at a season break). */
   play(cardId: string): Choice {
     if (this.finished) throw new Error('career finished');
+    if (this.pendingCoaches) throw new Error('appoint a coach first');
     if (this.pendingDraft) throw new Error('resolve the draft first');
     const idx = this.hand.findIndex((c) => c.id === cardId);
     if (idx < 0) throw new Error('card not in hand');
@@ -253,14 +294,16 @@ export class Career {
     const variance = (0.3 + 0.15 * (this.scenario.stakes - 1)) * this.personality.variance;
     const bigGame = this.scenario.stakes >= 2 ? this.personality.bigGame : 0;
     const form = this.formBonus < 0 ? this.formBonus * this.personality.resilience : this.formBonus;
-    const success = clamp(f + (this.rng() - 0.5) * variance + form + bigGame, 0, 1);
+    // your coach lifts success when you play to their specialty (good coaching → that development compounds)
+    const coaching = this.coach && card.tags.some((t) => this.coach!.specialty.includes(t)) ? this.coach.bonus : 0;
+    const success = clamp(f + (this.rng() - 0.5) * variance + form + bigGame + coaching, 0, 1);
     const choice: Choice = { cardId: card.id, tags: card.tags, power: cardPower(card), fit: f, bestFit, success, scenario: this.scenario.label, stakes: this.scenario.stakes };
     this.log.push(choice);
     this.discard.push(card);
     this.turn++;
     if (this.turn >= TOTAL_TURNS) { this.finished = true; return choice; }
-    // at an age-chapter boundary: a narrative EVENT fires, then a DRAFT (your deck grows by choice)
-    if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.openDraft(); }
+    // at an age-chapter boundary: a narrative EVENT fires, then you APPOINT a coach, then a DRAFT
+    if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.pendingCoaches = rollCoaches(this.rng, this.track); }
     else { this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band); }
     return choice;
   }
@@ -537,6 +580,13 @@ export function simCareer(seed: number, style: Style, genes: Genes = rollGenes(s
   const prefScore = (c: Card) => c.tags.reduce((s, t) => s + (style.pref[t] ?? 0), 0);
   while (!career.finished) {
     const st = career.current();
+    if (st.phase === 'coach') {
+      // appoint the coach whose specialty best matches your identity (amplify your strengths).
+      let best = st.coaches[0], bs = -Infinity;
+      for (const c of st.coaches) { const score = c.specialty.reduce((s, t) => s + (style.pref[t] ?? 0), 0) + rng() * 0.05; if (score > bs) { bs = score; best = c; } }
+      career.appointCoach(best.id);
+      continue;
+    }
     if (st.phase === 'draft') {
       // DRAFT: take the offered card that best advances your identity (pref × power).
       let best = st.options[0], bestScore = -Infinity;
