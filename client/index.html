@@ -387,6 +387,19 @@
       /* scouting / trial academy */
       #scouting-head { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
       #scouting-head h3 { margin: 0; } #scouting-back { margin-left: auto; }
+      /* NFT lifecycle status panel */
+      .nft-status { margin-bottom: 12px; padding: 10px 12px; border-radius: 9px; background: rgba(90,110,160,0.1); border: 1px solid #2c2c50; }
+      .nft-status .ns-head { font-family: var(--display); font-size: 10px; color: #bcd; margin-bottom: 8px; }
+      .ns-row { display: flex; align-items: center; gap: 10px; padding: 5px 6px; border-radius: 6px; cursor: pointer; }
+      .ns-row:hover { background: rgba(255,255,255,0.04); }
+      .ns-name { flex: 1; font-size: 12px; display: flex; align-items: center; gap: 7px; }
+      .ns-mood { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+      .ns-age { font-size: 11px; color: var(--muted); width: 34px; }
+      .ns-tag { font-size: 9px; padding: 2px 7px; border-radius: 9px; }
+      .ns-tag.ok { background: rgba(90,200,120,0.16); color: #a8e6b8; } .ns-tag.warn { background: rgba(220,180,80,0.18); color: #e6cf9a; }
+      .ns-tag.lapsed { background: rgba(210,90,90,0.18); color: #e6a8a8; } .ns-tag.idle { background: rgba(150,150,170,0.16); color: #bcd; }
+      .ns-tag.retired { background: rgba(200,170,80,0.16); color: #e6cf9a; }
+      .ns-act { font-size: 9px; padding: 4px 8px; }
       /* ── Academy / Career game ── */
       #academy-head { display: flex; align-items: center; gap: 12px; } #academy-head h3 { margin: 0; } #academy-back { margin-left: auto; }
       .prospect-row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; margin: 8px 0; border-radius: 9px; background: var(--panel2, #1a1a2e); border: 1px solid #2a2a44; }

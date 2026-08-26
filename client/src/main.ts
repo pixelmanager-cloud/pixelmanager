@@ -469,6 +469,25 @@ class Game {
     document.body.appendChild(el);
   }
 
+  /** A lifecycle-at-a-glance panel for the manager's NFT stars — age, contract, morale, staking + quick actions. */
+  private nftStatusHtml(): string {
+    const nfts = Object.values(this.contracts);
+    if (!nfts.length) return '';
+    const rows = nfts.map((ci) => {
+      const name = this.club.players.find((x) => x.id === ci.playerId)?.name ?? ci.playerId;
+      const status = ci.retired ? `<span class="ns-tag retired">retired</span>`
+        : ci.staked === false ? `<span class="ns-tag idle">idle</span>`
+        : ci.available ? `<span class="ns-tag ${ci.seasonsLeft <= 1 ? 'warn' : 'ok'}">${ci.seasonsLeft}y left</span>`
+        : `<span class="ns-tag lapsed">lapsed</span>`;
+      const dot = ci.morale != null ? `<span class="ns-mood" title="morale: ${ci.moraleLabel}" style="background:${ci.morale >= 75 ? '#6ad06a' : ci.morale >= 45 ? '#e0c14a' : '#d06a6a'}"></span>` : '';
+      const act = ci.retired ? `<button class="ns-act" data-nreborn="${ci.playerId}">Reborn 150c</button>`
+        : ci.staked === false ? `<button class="ns-act" data-nstake="${ci.playerId}">Stake</button>`
+        : `<button class="ns-act" data-nextend="${ci.playerId}">${ci.available ? 'Re-sign' : 'Extend'} ${ci.extendCost}c</button>`;
+      return `<div class="ns-row" data-open="${ci.playerId}"><span class="ns-name">${dot}${name}</span><span class="ns-age">${ci.age}y</span>${status}${act}</div>`;
+    }).join('');
+    return `<div class="nft-status"><div class="ns-head">⭐ YOUR STARS — lifecycle at a glance</div>${rows}</div>`;
+  }
+
   /** Stake / unstake a pro token (staked = eligible to play + earns loyalty tenure). */
   private async stakePlayer(playerId: string, on: boolean) {
     try {
@@ -1383,7 +1402,14 @@ class Game {
     const panel = $('squad-panel');
     const hurt = this.club.players.filter((p) => this.injured.has(p.id)).sort((a, b) => (this.injured.get(a.id)! - this.injured.get(b.id)!));
     const injHtml = hurt.length ? `<div class="squad-injured">🤕 <b>Injured:</b> ${hurt.map((p) => `${p.name} <span class="m">${this.injured.get(p.id)}m</span>`).join(' · ')}</div>` : '';
-    panel.innerHTML = injHtml + statsTableHTML(this.club.players, new Set(this.draftLineup.playerIds), this.squadSort);
+    panel.innerHTML = this.nftStatusHtml() + injHtml + statsTableHTML(this.club.players, new Set(this.draftLineup.playerIds), this.squadSort);
+    panel.querySelectorAll<HTMLElement>('.ns-act').forEach((b) => b.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      if (b.dataset.nextend) await this.extendPlayer(b.dataset.nextend);
+      else if (b.dataset.nreborn) await this.rebornPlayer(b.dataset.nreborn);
+      else if (b.dataset.nstake) await this.stakePlayer(b.dataset.nstake, true);
+    }));
+    panel.querySelectorAll<HTMLElement>('.ns-row').forEach((r) => r.addEventListener('click', () => { const p = this.club.players.find((x) => x.id === r.dataset.open); if (p) this.showPlayerCard(p); }));
     panel.querySelectorAll<HTMLElement>('th.sortable').forEach((th) => {
       th.addEventListener('click', () => {
         const key = th.dataset.sort!;
