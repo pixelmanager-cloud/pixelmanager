@@ -8,3 +8,4 @@ export * from './engine.js';
 export * from './contracts.js';
 export * from './prestige.js';
 export * from './morale.js';
+export * from './legacy.js';
