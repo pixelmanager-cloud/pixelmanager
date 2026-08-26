@@ -396,6 +396,20 @@ export function makeSqliteStore(file: string): Store {
         ? db.prepare(base + ' WHERE m.season_id=? ORDER BY m.created_at DESC LIMIT ?').all(seasonId, limit) as ResultRow[]
         : db.prepare(base + ' ORDER BY m.created_at DESC LIMIT ?').all(limit) as ResultRow[];
     },
+    async resultsFor(accountId, limit = 1000) {
+      return db.prepare(
+        `SELECT m.id, m.home_id, m.away_id, m.home_score, m.away_score, m.created_at,
+                ha.handle AS home_handle, aa.handle AS away_handle
+         FROM matches m JOIN accounts ha ON ha.id=m.home_id JOIN accounts aa ON aa.id=m.away_id
+         WHERE m.home_id=? OR m.away_id=? ORDER BY m.created_at DESC LIMIT ?`,
+      ).all(accountId, accountId, limit) as ResultRow[];
+    },
+    async allTimePlayerStats(accountId) {
+      return db.prepare(
+        `SELECT player_id, MAX(player_name) AS player_name, SUM(goals) AS goals, SUM(apps) AS apps
+         FROM player_stats WHERE account_id=? GROUP BY player_id`,
+      ).all(accountId) as Array<{ player_id: string; player_name: string; goals: number; apps: number }>;
+    },
     async allAccounts() { return db.prepare('SELECT id, handle, rating FROM accounts').all() as LeaderRow[]; },
     async allResults() { return db.prepare('SELECT home_id, away_id, home_score, away_score FROM matches').all() as any[]; },
     async currentSeason() {

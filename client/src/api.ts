@@ -84,6 +84,13 @@ export interface MissionsData {
 export interface HonourRow { season_number: number; tier: string; final_pos: number; title: number; ended_at: number; coin_reward?: number; kind?: string }
 export interface LeaderStat { name: string; club: string; goals: number; assists: number; apps: number; potm: number }
 export interface AwardRow { season_number: number; tier: string; pod: number; kind: string; player_name: string; value: number; awarded_at: number }
+export interface ClubRecords {
+  biggestWin: { margin: number; myScore: number; oppScore: number; oppHandle: string; createdAt: number } | null;
+  longestUnbeaten: { length: number; startedAt: number; endedAt: number } | null;
+  topScorer: { name: string; value: number } | null;
+  topAppearances: { name: string; value: number } | null;
+  firstTrophy: { seasonNumber: number; tier: string; kind: 'league' | 'cup' } | null;
+}
 export interface CupTie { homeId: string; awayId: string; homeHandle: string; awayHandle: string; homeScore: number; awayScore: number; pens: [number, number] | null; winnerId: string }
 export interface CupRound { name: string; ties: CupTie[]; byes: { id: string; handle: string }[] }
 export interface CupData { season: number; tier: string; pod: number; me: string; size: number; rounds: CupRound[]; championId: string | null; championHandle: string }
@@ -141,6 +148,7 @@ export const api = {
   standings: () => req<{ season: { number: number; endsAt: number }; tier: string; pod: number; promote: number; relegate: number; table: TableRow[] }>('/standings'),
   diary: () => req<{ entry: string }>('/diary'),
   honours: () => req<{ honours: HonourRow[] }>('/honours'),
+  records: () => req<{ records: ClubRecords }>('/records'),
   awards: () => req<{ awards: AwardRow[] }>('/awards'),
   cup: () => req<CupData>('/cup'),
   leaders: () => req<{ season: { number: number; endsAt: number }; tier: string; pod: number; scorers: LeaderStat[]; assisters: LeaderStat[]; potm: LeaderStat[] }>('/leaders'),

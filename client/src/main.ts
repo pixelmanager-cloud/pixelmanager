@@ -4,7 +4,7 @@ import {
   TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty,
 } from '@fm/shared';
 import { SCALE, makeBallTexture, makeBallGhostTexture, makePitchTexture, makePlayerFrames, makeShadowTexture, makeCarrierTexture } from './pixelart';
-import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData, type MissionsData, type ContractInfo, type LeaderStat, type AwardRow } from './api';
+import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData, type MissionsData, type ContractInfo, type LeaderStat, type AwardRow, type ClubRecords } from './api';
 import { walletConfigured, nftConfigured, sendEmailCode, connectEmail, connectInjected, autoConnectInApp, signMessage, claimTokens, mintPlayer, mintScout, type Account as WalletAccount } from './wallet';
 
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
@@ -305,22 +305,26 @@ class Game {
     $('view-club').addEventListener('click', () => this.showClub());
     $('club-back').addEventListener('click', () => this.showHub());
     $('sell-btn').addEventListener('click', () => this.sellPlayer());
-    const showTab = (tab: 'results' | 'leaders' | 'cup' | 'honours') => {
+    const showTab = (tab: 'results' | 'leaders' | 'cup' | 'honours' | 'records') => {
       $('results-feed').classList.toggle('hidden', tab !== 'results');
       $('leaders-feed').classList.toggle('hidden', tab !== 'leaders');
       $('cup-feed').classList.toggle('hidden', tab !== 'cup');
       $('honours-feed').classList.toggle('hidden', tab !== 'honours');
+      $('records-feed').classList.toggle('hidden', tab !== 'records');
       $('tab-results').classList.toggle('active', tab === 'results');
       $('tab-leaders').classList.toggle('active', tab === 'leaders');
       $('tab-cup').classList.toggle('active', tab === 'cup');
       $('tab-honours').classList.toggle('active', tab === 'honours');
+      $('tab-records').classList.toggle('active', tab === 'records');
       if (tab === 'cup') void this.loadCup();
       if (tab === 'leaders') void this.loadLeaders();
+      if (tab === 'records') void this.loadRecords();
     };
     $('tab-results').addEventListener('click', () => showTab('results'));
     $('tab-leaders').addEventListener('click', () => showTab('leaders'));
     $('tab-cup').addEventListener('click', () => showTab('cup'));
     $('tab-honours').addEventListener('click', () => showTab('honours'));
+    $('tab-records').addEventListener('click', () => showTab('records'));
     $('skip').addEventListener('click', () => this.skipToEnd());
     $('set-team').addEventListener('click', () => this.openLineup('standing'));
     $('autopick').addEventListener('click', () => { this.draftLineup = autoPickXI(this.availableClub(), this.draftTactics.formation); this.rebuildDuties(); this.renderLineupEditor(); });
@@ -872,6 +876,28 @@ class Game {
       + `<div class="tc-kind">${kindLabel}</div>`
       + `<div class="tc-tier">${h.tier}</div>`
       + `<div class="tc-season">Season ${h.season_number}</div></div>`;
+  }
+
+  private async loadRecords() {
+    $('records-feed').innerHTML = SPINNER;
+    try { $('records-feed').innerHTML = this.renderRecords((await api.records()).records); }
+    catch { $('records-feed').innerHTML = '<div class="muted">Could not load the club records.</div>'; }
+  }
+
+  private renderRecords(r: ClubRecords): string {
+    const card = (icon: string, label: string, value: string | null, sub?: string | null) => value
+      ? `<div class="rec-card"><span class="rec-icon">${icon}</span><div class="rec-label">${label}</div><div class="rec-value">${value}</div>${sub ? `<div class="rec-sub">${sub}</div>` : ''}</div>`
+      : `<div class="rec-card empty"><span class="rec-icon">${icon}</span><div class="rec-label">${label}</div><div class="rec-value">Not set yet</div></div>`;
+    const bw = r.biggestWin;
+    const un = r.longestUnbeaten;
+    const ft = r.firstTrophy;
+    return `<div class="records-grid">`
+      + card('💥', 'Biggest Win', bw && `${bw.myScore} – ${bw.oppScore}`, bw && `vs ${bw.oppHandle} · ${timeAgo(bw.createdAt)}`)
+      + card('🔥', 'Longest Unbeaten Run', un && `${un.length} match${un.length === 1 ? '' : 'es'}`, un && `ended ${timeAgo(un.endedAt)}`)
+      + card('⚽', 'All-Time Top Scorer', r.topScorer && `${r.topScorer.name}`, r.topScorer && `${r.topScorer.value} goals`)
+      + card('🎽', 'Most Appearances', r.topAppearances && `${r.topAppearances.name}`, r.topAppearances && `${r.topAppearances.value} apps`)
+      + card('🏆', 'First Trophy', ft && `Season ${ft.seasonNumber}`, ft && `${ft.tier} · ${ft.kind === 'cup' ? 'Pod Cup' : 'League Title'}`)
+      + `</div>`;
   }
 
   private async loadCup() {

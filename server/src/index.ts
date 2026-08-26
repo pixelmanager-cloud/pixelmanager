@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { randomUUID } from 'node:crypto';
-import { overall, managerPrestige, signContract, contractCost, contractLength, graduationEpilogue, gaffersDiaryEntry, type Lineup, type Tactics } from '@fm/shared';
+import { overall, managerPrestige, signContract, contractCost, contractLength, graduationEpilogue, gaffersDiaryEntry, computeClubRecords, type Lineup, type Tactics } from '@fm/shared';
 import { mintGenesis, tokenToPlayer, tokenContract, tokenAch, legendCardOf, unavailableTokenIds, loadCareer, actWithNarration, careerState, graduatedFields, rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, ageOf, syncOnchainTokens, SUPPLY_CAP, GENESIS_COST, REBORN_COST, MARKET_FEE_PCT, type CareerAction } from './tokens.js';
 import { lifecycleEnabled, lifecycleInfo, serverSignerEnabled, serverMintTo, serverReborn, ownedTokens, ownerOf, lineageOf } from './lifecyclenft.js';
 import { bumpApps, bumpMorale, advanceTokensAtRollover } from './lifecycle.js';
@@ -457,6 +457,29 @@ app.get('/results', { preHandler: requireAuth }, async (req) => {
 
 // the caller's honours board (past-season finishes)
 app.get('/honours', { preHandler: requireAuth }, async (req) => ({ honours: await db.honoursFor(req.account!.id) }));
+
+// Club records & hall of fame: biggest win, longest unbeaten run, all-time top scorer/appearances,
+// first trophy — pure derivation over the club's whole history (see computeClubRecords in shared).
+app.get('/records', { preHandler: requireAuth }, async (req) => {
+  const meId = req.account!.id;
+  const [results, honours, playerStats] = await Promise.all([
+    db.resultsFor(meId, 1000), db.honoursFor(meId, 500), db.allTimePlayerStats(meId),
+  ]);
+  const matches = results.map((r) => {
+    const iAmHome = r.home_id === meId;
+    return {
+      id: r.id, createdAt: r.created_at,
+      myScore: iAmHome ? r.home_score : r.away_score, oppScore: iAmHome ? r.away_score : r.home_score,
+      oppHandle: iAmHome ? r.away_handle : r.home_handle,
+    };
+  });
+  const records = computeClubRecords({
+    matches,
+    honours: honours.map((h) => ({ seasonNumber: h.season_number, tier: h.tier, kind: h.kind, title: h.title })),
+    playerStats: playerStats.map((p) => ({ name: p.player_name, goals: p.goals, apps: p.apps })),
+  });
+  return { records };
+});
 app.get('/awards', { preHandler: requireAuth }, async (req) => ({ awards: await db.awardsFor(req.account!.id) }));
 
 // PRESTIGE: the manager's career legacy — level + title from titles won (tier-weighted), win record,

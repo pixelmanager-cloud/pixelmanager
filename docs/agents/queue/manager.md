@@ -19,10 +19,13 @@ Work top to bottom, one item per commit. Tick `[x]` when done; add a one-line no
    `narrate.ts` pattern) that turns match results + streaks + table position into a running season
    story: an unbeaten run, a rocky patch, "closing in on promotion", a first-ever win over a pod
    rival. Presentational only, pure function of existing match/standings data. New hub panel. (M)
-2. [ ] **Club records & hall of fame page.** Biggest win, longest unbeaten run, top all-time
+2. [x] **Club records & hall of fame page.** Biggest win, longest unbeaten run, top all-time
    scorer/appearances, first trophy — derived from `matchstats`/`honours`/`awards` history, stored
    incrementally or computed on read. A small new screen or hub section, "a record falls" callout
-   in the match report when one is broken this match. (M)
+   in the match report when one is broken this match. (M) — shipped as a new "📜 Records" tab on
+   the standings screen (`/records` route + `computeClubRecords` in shared, pure derivation, no
+   persisted state). The in-match-report "a record falls" callout was left out to keep this
+   commit reviewable — tracked as new item 21 below.
 3. [ ] **Post-match headline + reaction line.** One seeded headline sentence at full-time keyed off
    the scoreline/table context (thumping win, late equaliser, giant-killing, relegation six-pointer)
    — pure text composition over already-known result data, shown on the match report screen. (S)
@@ -88,6 +91,12 @@ Work top to bottom, one item per commit. Tick `[x]` when done; add a one-line no
 20. [ ] **Generational dynasty record.** A bloodline view: for a reborn lineage, show the chain of
     generations with each one's peak rating and honours — a keepsake page for a long-running
     dynasty, aggregated from `legacies`. (M/L)
+
+21. [ ] **"A record falls" match-report callout.** Now that `/records` (item 2) exists, compare a
+    just-played match's result against the club's records fetched just before it, and show a small
+    banner on the match report ("New club record: Biggest Win!") when the match itself set one —
+    biggest win is the easy first case (compare margins), unbeaten run needs the pre-match record
+    fetched and diffed. (S)
 
 ## Notes / blocked
 (none yet)

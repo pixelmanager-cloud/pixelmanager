@@ -401,6 +401,23 @@ export function makePostgresStore(connectionString: string): Store {
         : (await q(base + ' ORDER BY m.created_at DESC LIMIT $1', [limit])).rows;
       return rows.map((r) => ({ ...r, created_at: Number(r.created_at) })) as ResultRow[];
     },
+    async resultsFor(accountId, limit = 1000) {
+      const rows = (await q(
+        `SELECT m.id, m.home_id, m.away_id, m.home_score, m.away_score, m.created_at,
+                ha.handle AS home_handle, aa.handle AS away_handle
+         FROM matches m JOIN accounts ha ON ha.id=m.home_id JOIN accounts aa ON aa.id=m.away_id
+         WHERE m.home_id=$1 OR m.away_id=$1 ORDER BY m.created_at DESC LIMIT $2`,
+        [accountId, limit],
+      )).rows;
+      return rows.map((r) => ({ ...r, created_at: Number(r.created_at) })) as ResultRow[];
+    },
+    async allTimePlayerStats(accountId) {
+      return (await q(
+        `SELECT player_id, MAX(player_name) AS player_name, SUM(goals)::int AS goals, SUM(apps)::int AS apps
+         FROM player_stats WHERE account_id=$1 GROUP BY player_id`,
+        [accountId],
+      )).rows as Array<{ player_id: string; player_name: string; goals: number; apps: number }>;
+    },
     async allAccounts() { return (await q('SELECT id, handle, rating FROM accounts')).rows as LeaderRow[]; },
     async allResults() { return (await q('SELECT home_id, away_id, home_score, away_score FROM matches')).rows as any[]; },
     async currentSeason() {

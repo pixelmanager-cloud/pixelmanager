@@ -165,6 +165,10 @@ export interface Store {
   getMatch(id: string): Promise<StoredMatch | undefined>;
   matchesFor(accountId: string, limit?: number): Promise<MatchRow[]>;
   recentResults(limit?: number, seasonId?: string): Promise<ResultRow[]>;
+  /** every match an account has ever played (any season), newest first, with opponent handles — for club records */
+  resultsFor(accountId: string, limit?: number): Promise<ResultRow[]>;
+  /** an account's players' goals/apps summed across ALL seasons (not just the current one) — for club records */
+  allTimePlayerStats(accountId: string): Promise<Array<{ player_id: string; player_name: string; goals: number; apps: number }>>;
   allAccounts(): Promise<LeaderRow[]>;
   allResults(): Promise<Array<{ home_id: string; away_id: string; home_score: number; away_score: number }>>;
   // seasons (Phase A)

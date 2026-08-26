@@ -273,6 +273,13 @@
       .honour-row .hr-fin { font-family: var(--body); font-size: 14px; color: var(--cyan); }
       .honour-row.champ .hr-fin { color: var(--warn); }
       .honour-row .hr-prize { font-family: var(--body); font-size: 14px; color: var(--warn); min-width: 66px; text-align: right; }
+      .records-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 10px; margin-top: 6px; }
+      .rec-card { border: 1px solid var(--line); background: var(--panel-2); border-radius: 6px; padding: 10px 12px; }
+      .rec-card .rec-icon { font-size: 18px; }
+      .rec-card .rec-label { font-family: var(--body); font-size: 12px; color: var(--muted); margin: 4px 0 3px; letter-spacing: 0.5px; text-transform: uppercase; }
+      .rec-card .rec-value { font-family: var(--display); font-size: 15px; color: var(--good); }
+      .rec-card .rec-sub { font-family: var(--body); font-size: 13px; color: var(--cyan); margin-top: 2px; }
+      .rec-card.empty .rec-value { color: var(--muted); font-family: var(--body); font-size: 13px; }
       .honour-history-title { font-family: var(--body); font-size: 15px; color: var(--muted); margin: 18px 0 6px; letter-spacing: 1px; }
       /* ===== Trophy Cabinet ===== */
       .trophy-cabinet { margin-bottom: 8px; padding: 14px; border-radius: 10px;
@@ -998,11 +1005,13 @@
           <button id="tab-leaders" class="tab">⚽ Leaders</button>
           <button id="tab-cup" class="tab">🏆 Cup</button>
           <button id="tab-honours" class="tab">Honours</button>
+          <button id="tab-records" class="tab">📜 Records</button>
         </div>
         <div id="results-feed"></div>
         <div id="leaders-feed" class="hidden"></div>
         <div id="cup-feed" class="hidden"></div>
         <div id="honours-feed" class="hidden"></div>
+        <div id="records-feed" class="hidden"></div>
       </div>
 
       <!-- SCOUTING (trial/loan academy) -->
