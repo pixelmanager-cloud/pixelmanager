@@ -29,7 +29,7 @@ export interface CareerProfile {
   attrs: Record<string, number>; personality: { id: string; name: string; desc: string };
   agent: string | null; coach: string | null; earnings: number; traitsForming: string[];
 }
-export interface ContractInfo { playerId: string; age: number; available: boolean; seasonsLeft: number; lengthSeasons: number; extendCost: number; sellValue: number; stakedSeasons: number; morale?: number; moraleLabel?: string; retired?: boolean; legend?: LegacyCard | null; rebornId?: string | null }
+export interface ContractInfo { playerId: string; age: number; available: boolean; seasonsLeft: number; lengthSeasons: number; extendCost: number; sellValue: number; stakedSeasons: number; staked?: boolean; morale?: number; moraleLabel?: string; retired?: boolean; legend?: LegacyCard | null; rebornId?: string | null }
 
 async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const res = await fetch(API_URL + path, {
@@ -94,6 +94,7 @@ export const api = {
     '/login', { method: 'POST', body: JSON.stringify({ handle, password }) }),
   me: () => req<{ account: Account; club: Club; standingOrders: StandingOrders; injuries: Array<{ player_id: string; matches_remaining: number }>; contracts: Record<string, ContractInfo>; season: number }>('/me'),
   extendContract: (playerId: string) => req<{ ok: true; coins: number; contract: ContractInfo }>(`/players/${encodeURIComponent(playerId)}/extend`, { method: 'POST' }),
+  stake: (playerId: string, on: boolean) => req<{ ok: true; contract: ContractInfo }>(`/players/${encodeURIComponent(playerId)}/${on ? 'stake' : 'unstake'}`, { method: 'POST' }),
   reborn: (playerId: string) => req<{ ok: true; cost: number; coins: number; prospect: Prospect }>(`/players/${encodeURIComponent(playerId)}/reborn`, { method: 'POST' }),
   prospects: () => req<{ prospects: Prospect[] }>('/prospects'),
   genesis: () => req<{ ok: true; supply: number; cap: number; cost: number; coins: number; prospect: Prospect }>('/genesis', { method: 'POST' }),

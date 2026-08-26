@@ -428,6 +428,24 @@ app.post('/players/:id/extend', { preHandler: requireAuth }, async (req, reply) 
   return { ok: true, coins: await db.getCoins(ownerId), contract: { playerId: id, ...tokenContract((await db.getToken(id))!, s.number) } };
 });
 
+// STAKE / UNSTAKE a pro token. It must be STAKED to be selectable; continuous staking tenure earns the
+// loyalty re-sign discount. Unstake to hold it idle (still owned) — e.g. to list it or free a slot.
+app.post('/players/:id/stake', { preHandler: requireAuth }, async (req, reply) => {
+  const t = await db.getToken((req.params as any).id);
+  if (!t || t.owner_id !== req.account!.id) return reply.code(404).send({ error: 'no such token' });
+  if (t.state !== 'pro') return reply.code(400).send({ error: 'only pros can be staked' });
+  const s = await ensureSeason(db, Date.now());
+  if (t.staked_since == null) await db.updateToken(t.id, { staked_since: s.number }); // start the tenure clock
+  return { ok: true, contract: { playerId: t.id, ...tokenContract((await db.getToken(t.id))!, s.number) } };
+});
+app.post('/players/:id/unstake', { preHandler: requireAuth }, async (req, reply) => {
+  const t = await db.getToken((req.params as any).id);
+  if (!t || t.owner_id !== req.account!.id) return reply.code(404).send({ error: 'no such token' });
+  const s = await ensureSeason(db, Date.now());
+  await db.updateToken(t.id, { staked_since: null }); // idle — not selectable, loyalty tenure resets
+  return { ok: true, contract: { playerId: t.id, ...tokenContract((await db.getToken(t.id))!, s.number) } };
+});
+
 // REBORN: a retired token becomes the NEXT GENERATION — the SAME token flips back to a 10-year-old
 // PROSPECT (generation++), inheriting the bloodline's genes + the retiree's team-achievement pedigree.
 // Fixed supply: no new token is minted; the asset regenerates.

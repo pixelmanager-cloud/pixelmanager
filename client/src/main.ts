@@ -391,7 +391,9 @@ class Game {
     const ring = tier.key === 'gold' || tier.key === 'diamond' || tier.key === 'legend' ? '<div class="pc-ring"></div>' : '';
     // contract situation (NFT players only): age, deal status, extend/sell — the NFT stays owned either way
     const ci = this.contracts[p.id];
-    const stakeHtml = ci && ci.stakedSeasons > 0 ? `<div class="pc-stake">🔒 staked ${ci.stakedSeasons} season${ci.stakedSeasons === 1 ? '' : 's'} — loyalty discount applied</div>` : '';
+    const stakeHtml = ci && !ci.retired ? (ci.staked
+      ? `<div class="pc-stake">🔒 staked ${ci.stakedSeasons} season${ci.stakedSeasons === 1 ? '' : 's'} — loyalty discount · <a class="pc-link" data-stake="off" data-pid="${p.id}">unstake</a></div>`
+      : `<div class="pc-stake">⭘ not staked — <a class="pc-link" data-stake="on" data-pid="${p.id}">stake to make eligible</a></div>`) : '';
     let contractHtml = '';
     if (ci && ci.retired) { // retired → a legacy keepsake + the chance to breed the next generation
       const lg = ci.legend;
@@ -403,7 +405,7 @@ class Game {
     } else if (ci) {
       contractHtml = `<div class="pc-contract${ci.available ? '' : ' lapsed'}">`
         + `<div class="pc-crow"><span>Age ${ci.age}${ci.age >= 39 ? ' · nearing retirement' : ''}</span>`
-        + `<span>${ci.available ? `📜 ${ci.seasonsLeft} season${ci.seasonsLeft === 1 ? '' : 's'} left` : '⛔ contract lapsed — benched'}</span></div>`
+        + `<span>${ci.available ? `📜 ${ci.seasonsLeft} season${ci.seasonsLeft === 1 ? '' : 's'} left` : ci.staked === false ? '⭘ idle — not staked' : '⛔ contract lapsed — benched'}</span></div>`
         + (ci.morale != null ? `<div class="pc-morale"><i>morale</i><span class="pc-mbg"><b style="width:${ci.morale}%"></b></span><span>${ci.moraleLabel}</span></div>` : '')
         + `<div class="pc-cactions"><button class="pc-extend" data-extend="${p.id}">${ci.available ? 'Re-sign' : 'Extend'} · ${ci.extendCost}c · ${ci.lengthSeasons}y</button>`
         + `<span class="pc-sell">or sell ~${ci.sellValue}c</span></div>` + stakeHtml + `</div>`;
@@ -428,6 +430,7 @@ class Game {
       const t = e.target as HTMLElement;
       if (t.dataset.extend) { await this.extendPlayer(t.dataset.extend); el.remove(); return; }
       if (t.dataset.reborn) { el.remove(); await this.rebornPlayer(t.dataset.reborn); return; }
+      if (t.dataset.stake) { el.remove(); await this.stakePlayer(t.dataset.pid!, t.dataset.stake === 'on'); return; }
       if (t === el || t.classList.contains('pc-close')) el.remove();
     });
     document.body.appendChild(el);
@@ -463,6 +466,18 @@ class Game {
       + `<button class="pc-close">${born ? 'Nice ✓' : 'Close'}</button></div>`;
     el.addEventListener('click', (e) => { const t = e.target as HTMLElement; if (t === el || t.classList.contains('pc-close')) el.remove(); });
     document.body.appendChild(el);
+  }
+
+  /** Stake / unstake a pro token (staked = eligible to play + earns loyalty tenure). */
+  private async stakePlayer(playerId: string, on: boolean) {
+    try {
+      await api.stake(playerId, on);
+      toast(on ? 'Staked — eligible to play' : 'Unstaked — now idle');
+      this.setMe(await api.me());
+      await this.showHub();
+      const p = this.club.players.find((x) => x.id === playerId);
+      if (p) this.showPlayerCard(p);
+    } catch (e: any) { toast(e?.body?.error ?? 'Failed'); }
   }
 
   /** The NFT's character: temperament, earned traits, and financial nature — the soul of the player. */
