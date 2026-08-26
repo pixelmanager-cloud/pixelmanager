@@ -259,13 +259,13 @@ export function chapterRecap(ctx: RecapCtx): string {
   const rng = mulberry32(((ctx.careerSeed >>> 0) ^ Math.imul(ctx.age, 2654435761)) >>> 0);
   const cast = careerCast(ctx.careerSeed);
   const openers: Record<string, string[]> = {
-    Grassroots: ['The park-pitch years are behind him now.', 'It began, as these things do, on a cold Sunday morning.'],
-    Academy: ['The academy has shaped him.', 'Two seasons of drills, van journeys and hard lessons.'],
-    Scholar: ['The scholarship years tested more than his football.', 'A scholar now — the game got serious, and so did he.'],
-    'Youth Team': ['The youth team taught him the game has teeth.', 'Reserve football is unglamorous — and it has toughened him.'],
-    Breakthrough: ['The breakthrough came, as it had to.', 'The first-team door has creaked open.'],
-    'First Team': ['He is a first-team regular now — the shirt his to keep.', 'Week after week, he answered the bell.'],
-    Establishing: ['He belongs here now.', 'No longer the kid — a fixture, a name.'],
+    Grassroots: ['The park-pitch years are behind him now.', 'It began, as these things do, on a cold Sunday morning.', 'Muddy knees and orange segments at half-time — that was the start of it.', 'Nobody scouted him then. Nobody needed to.'],
+    Academy: ['The academy has shaped him.', 'Two seasons of drills, van journeys and hard lessons.', 'Cones, ladders, video sessions — the academy grind, day after day.', 'He learned the game properly here, whether he liked it or not.'],
+    Scholar: ['The scholarship years tested more than his football.', 'A scholar now — the game got serious, and so did he.', 'Digs, homework, double sessions — the sacrifices started to add up.', 'The letters after his name changed. So did the expectations.'],
+    'Youth Team': ['The youth team taught him the game has teeth.', 'Reserve football is unglamorous — and it has toughened him.', 'Empty stands, cold Tuesday nights, and men twice his age kicking lumps out of him.', 'The kid gloves came off in the youth ranks.'],
+    Breakthrough: ['The breakthrough came, as it had to.', 'The first-team door has creaked open.', 'A phone call, a training-ground nod, and suddenly he belonged with the big boys.', 'The gap between reserve and first team closed faster than anyone expected.'],
+    'First Team': ['He is a first-team regular now — the shirt his to keep.', 'Week after week, he answered the bell.', 'The name on the team sheet stopped being a surprise.', 'He stopped looking over his shoulder and started setting the standard.'],
+    Establishing: ['He belongs here now.', 'No longer the kid — a fixture, a name.', 'The dressing room defers to him a little more with each passing month.', 'Younger lads watch how he trains now. That tells you everything.'],
   };
   const open = pickFrom(rng, openers[ctx.chapter] ?? openers.Academy);
   const middle = pickFrom(rng, [`${cast.gaffer} has pushed him hard.`, `${cap0(cast.mentor)} has taken him under his wing.`, `He’s measured himself against ${cast.rival} at every step.`, `${cast.captain} says the makings are there.`]);

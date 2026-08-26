@@ -25,9 +25,11 @@ or newly imagined beyond the brief. Ranked safe/small/high-value first.
   `match`/`training`/`social` in narrate.ts (11/10/10 lines now, up from 7/6/6), same setting-neutral
   tone; `npm run verify` and `career_sim` both green (diversity closest-pair distance 9, determinism
   identical: true).
-- [ ] 4. **More chapter-recap openers.** (S) `chapterRecap` only has 2 openers per chapter (14 total).
+- [x] 4. **More chapter-recap openers.** (S) `chapterRecap` only has 2 openers per chapter (14 total).
   Add 2-3 more per chapter so the "story so far" beat at each of the 6 chapter boundaries varies more
-  across replays/careers.
+  across replays/careers. **Done:** added 2 more openers to each of the 7 chapters in narrate.ts
+  (4 each now, 28 total, up from 14), same tone per stage; `npm run verify` and `career_sim` both
+  green (diversity closest-pair distance 9, determinism identical: true).
 - [ ] 5. **More BIG_MOMENTS / HUGE_MOMENTS labels.** (S) Currently 8 big + 6 huge. Add ~6 more of each
   (a Boxing Day six-pointer, a Youth Cup Final, a Testimonial, a Community Shield curtain-raiser, a
   European night, a Merseyside/Manchester-style derby) for a less repetitive stakes-2/3 moment pool.
