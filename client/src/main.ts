@@ -333,6 +333,7 @@ class Game {
     $('trophies-back').addEventListener('click', () => this.showHub());
     // unified home: one Club & Dynasty hub, no mode wall
     $('hub-academy').addEventListener('click', () => this.showAcademy());
+    $('view-club').addEventListener('click', () => this.showClub()); // the club-facilities coin sink (dynasty-building, not the gated match loop)
     $('app-title').addEventListener('click', () => { if (hasToken()) void this.showHub(); });
     $('academy-back').addEventListener('click', () => this.showHub());
     $('market-back').addEventListener('click', () => this.showHub());
@@ -594,7 +595,10 @@ class Game {
     this.showScreen('hub');
     $('me-name').textContent = this.club.name;
     $('me-rating').textContent = `RATING ${this.account.rating}`;
-    if (this.account.coins != null) $('me-coins').textContent = `💰 ${this.account.coins}`;
+    if (this.account.coins != null) {
+      $('me-coins').textContent = `💰 ${this.account.coins}`;
+      $('hub-club-sub').textContent = `💰 ${this.account.coins.toLocaleString()} to invest — facilities, youth & scouting. Levels are permanent.`;
+    }
     void this.refreshPrestige();
     void this.refreshDiary();
     void this.refreshHubPlayer();

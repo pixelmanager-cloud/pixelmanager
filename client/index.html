@@ -66,8 +66,10 @@
       .legacy-menu { font-family: var(--display); font-size: 13px; letter-spacing: 0.5px; padding: 0 20px; cursor: pointer;
         background: transparent; color: var(--muted); border: 1px solid var(--line); border-radius: 12px; }
       .legacy-menu:hover { color: #fff; border-color: var(--muted); }
-      #hub-legacy { margin-top: 18px; }
-      #hub-legacy .legacy-btn { width: 100%; }
+      #hub-legacy, #hub-club { margin-top: 18px; }
+      #hub-legacy .legacy-btn, #hub-club .legacy-btn { width: 100%; }
+      #hub-club .legacy-ico { color: var(--cyan); }
+      #hub-club .legacy-title { color: var(--cyan); }
       .hub-sub { font-family: var(--body); font-size: 13px; color: var(--muted); font-weight: normal; }
       .hub-link { float: right; font-family: var(--display); font-size: 12px; letter-spacing: 0.5px; cursor: pointer;
         background: color-mix(in srgb, var(--cyan) 12%, transparent); color: var(--cyan); border: 1px solid color-mix(in srgb, var(--cyan) 40%, transparent); border-radius: 8px; padding: 5px 12px; }
@@ -1007,6 +1009,14 @@
         <div id="hub-player-wrap">
           <h3>YOUR PLAYER <span class="hub-sub">— the bloodline you're living</span> <button id="hub-academy" class="hub-link">🎒 Academy →</button></h3>
           <div id="hub-player"></div>
+        </div>
+        <!-- YOUR CLUB — the one club you build up across the whole dynasty (the coin sink) -->
+        <div id="hub-club">
+          <button id="view-club" class="legacy-btn">
+            <span class="legacy-ico">🏛️</span>
+            <span class="legacy-body"><span class="legacy-title">YOUR CLUB</span><span class="legacy-sub" id="hub-club-sub">Invest coins in facilities, youth &amp; scouting — build the house your dynasty plays for.</span></span>
+            <span class="legacy-go">→</span>
+          </button>
         </div>
         <!-- DYNASTY -->
         <div id="hub-legacy">
