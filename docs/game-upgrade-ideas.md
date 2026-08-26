@@ -1,4 +1,4 @@
-# Game upgrade ideas — making Pixel Manager more fun (+ token sinks)
+# Game upgrade ideas — making Football Royalty more fun (+ token sinks)
 
 Status: **proposal / pick-list**. A menu of ideas to make the game more fun, plus
 where token-purchasable consumables could slot into the future web3 layer. Nothing

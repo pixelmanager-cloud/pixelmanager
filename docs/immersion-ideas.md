@@ -1,4 +1,4 @@
-# Immersion ideas — making Pixel Manager feel like a *real club*
+# Immersion ideas — making Football Royalty feel like a *real club*
 
 Status: **proposal / pick-list**. A menu of ways to close the gap between "I pick a
 lineup and watch a sim" and "I *manage a football club*." Nothing here is a

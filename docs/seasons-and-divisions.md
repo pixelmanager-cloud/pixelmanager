@@ -1,6 +1,6 @@
 # Seasons & divisions — design spec
 
-Status: **draft / design**. How Pixel Manager's league scales from a handful of
+Status: **draft / design**. How Football Royalty's league scales from a handful of
 players to thousands while staying engaging: time-boxed **seasons**, a **division
 pyramid**, and small **pods** so every player always sees a ~20-row table they can
 actually win. Nothing here is built yet — this is the plan the build follows.

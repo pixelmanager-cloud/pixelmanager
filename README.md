@@ -1,4 +1,4 @@
-# Pixel Manager — 2D Football Manager (web)
+# Football Royalty — 2D Football Manager (web)
 
 A browser-based 2D pixel-art football manager game with a deterministic match
 engine, designed from day one for future online multiplayer and optional web3

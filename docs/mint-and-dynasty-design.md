@@ -184,7 +184,7 @@ regulatory surface).
   no barrier — `tokenURI` points at our metadata endpoint.
 - **Solve dynamic-metadata staleness by keeping the on-chain-referenced metadata to STABLE facts only**
   (edition #, generation, portrait, maybe position) and keeping all live/changing stats **in-app**. Avoids
-  marketplace cache fighting and reinforces "the real player lives in Pixel Manager."
+  marketplace cache fighting and reinforces "the real player lives in Football Royalty."
 
 ## 7. To decide before building
 - [ ] Baseline band width + ceiling curve (Knob 1 + §5 balance).

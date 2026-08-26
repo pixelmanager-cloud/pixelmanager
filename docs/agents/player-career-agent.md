@@ -1,7 +1,7 @@
 # Player-Career Agent — overnight brief
 
 You are an autonomous Claude Code agent working **overnight, unattended**, on the **player career mode** of
-Pixel Manager. You run on a dedicated git branch; a human reviews your PR in the morning and merges what
+Football Royalty. You run on a dedicated git branch; a human reviews your PR in the morning and merges what
 they like. Work carefully and conservatively — a green, well-scoped, reviewable diff beats an ambitious
 broken one.
 

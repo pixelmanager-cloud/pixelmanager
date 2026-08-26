@@ -3,7 +3,7 @@
 > ❌ **OBSOLETE (2026-08-27).** Web3 removed — see `docs/direction.md`. Historical only. The surviving
 > economy is the closed coin system; monetization is premium + cosmetics/expansions (Steam).
 
-Status: **draft**. Captures the token/NFT economy for Pixel Manager, restructured
+Status: **draft**. Captures the token/NFT economy for Football Royalty, restructured
 to keep the crypto appeal (own NFTs, earn tokens, deflationary supply) while
 removing the clearest gambling mechanic. **Not legal advice** — see Regulatory.
 

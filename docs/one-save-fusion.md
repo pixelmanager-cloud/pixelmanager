@@ -3,7 +3,7 @@
 **Status:** DECIDED. Supersedes the "two games, one world / pick-a-mode" framing.
 
 ## The decision
-Pixel Manager is **one continuous dynasty save**, not two games you switch between. You are a manager
+Football Royalty is **one continuous dynasty save**, not two games you switch between. You are a manager
 who is *also living a bloodline player's career*, at the club you run. Scout a kid → live his career →
 he plays for your club → he retires → his heir (same family name) joins the youth ranks → repeat, with
 silverware and bloodlines accreting in one trophy room. The old **mode-select wall is removed.**

@@ -3,7 +3,7 @@
 **Status:** DECIDED (2026-08-27). This supersedes all prior web3/on-chain plans.
 
 ## The decision
-Pixel Manager is a **mainstream premium PC game targeting a Steam launch.** **Web3 is fully removed** — no
+Football Royalty is a **mainstream premium PC game targeting a Steam launch.** **Web3 is fully removed** — no
 NFTs, no wallets, no smart contracts, no on-chain anything. Players are ordinary account-owned save data.
 
 ## Why
@@ -91,7 +91,7 @@ the biggest client dependency. This is *not* "text-only game": the rest stays gr
 - ✅ Keep: dramatic text commentary as the match experience; a **beautiful management UI**; player/kit cards;
   the scouting board; the trophy room; and especially the **bloodline tree** (the Steam capsule art).
 - ✅ Keep the **pixel-art aesthetic** via cheap *static* assets (portraits, kits, badges, UI) so the
-  "Pixel Manager" identity survives without a live engine.
+  "Football Royalty" identity survives without a live engine.
 - ❌ Remove: Phaser, the 2D match renderer, the pixel sprite/animation sim, the 2D↔commentary sync.
 - Net for Steam: "text-driven matches + gorgeous management UI + a stunning dynasty tree." Faster to build
   and still visually sellable. (Follow-up code task, like the web3 removal — clean subtraction.)

@@ -1,4 +1,4 @@
-# Pixel Manager — UI / Visual Audit & Fix List
+# Football Royalty — UI / Visual Audit & Fix List
 
 A walkthrough of every screen (login, hub, lineup editor, match view, league/cup/honours,
 club facilities, scouting, market) plus the match engine, on desktop + mobile. Goal:
@@ -18,7 +18,7 @@ fonts `--display:'Press Start 2P'` and `--body:'VT323'`, body `font-size:19px`.
 Press Start 2P is a chunky pixel face that's illegible below ~14px, yet it's currently the
 font for **every button (10px)**, section headers (`h3` 13px), the login tagline (9px),
 `#record`/`#timer` (10px), facility/scout labels, table headers, badges, etc.
-**Fix:** reserve Press Start 2P for large display headings only (the `PIXEL MANAGER` title,
+**Fix:** reserve Press Start 2P for large display headings only (the `FOOTBALL ROYALTY` title,
 maybe screen `<h3>` at ≥16px). Switch buttons, labels, table headers, blurbs, pills, and
 badges to **VT323** (very legible, still retro) at a comfortable size. This single change is
 the biggest readability win. Keep the arcade feel via color + the CRT overlay, not tiny pixel type.
