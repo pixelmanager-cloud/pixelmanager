@@ -83,6 +83,27 @@
       #login-tagline { font-family: var(--body); font-size: 20px; line-height: 1.4; color: var(--pink);
         letter-spacing: 1px; margin: -8px 0 14px; text-shadow: 1px 1px 0 rgba(0,0,0,0.6); }
       #login-row { display: flex; gap: 10px; align-items: center; margin-top: 12px; flex-wrap: wrap; }
+      /* ── main menu (offline single-player: no login) ── */
+      #mainmenu { text-align: center; padding: 24px 8px 8px; }
+      #mm-title { font-family: var(--display); font-size: 40px; letter-spacing: 2px; margin: 0 0 8px; }
+      #mm-tagline { font-family: var(--body); font-size: 19px; color: var(--pink); letter-spacing: 1px; margin-bottom: 26px; text-shadow: 1px 1px 0 rgba(0,0,0,0.6); }
+      #mm-buttons, #mm-newgame { display: flex; flex-direction: column; gap: 12px; align-items: center; max-width: 320px; margin: 0 auto; }
+      #mm-buttons button, #mm-newgame button { font-family: var(--display); font-size: 18px; padding: 14px 22px; width: 100%; cursor: pointer;
+        background: var(--panel-2); color: var(--text); border: 2px solid var(--line); box-shadow: 3px 3px 0 rgba(0,0,0,0.6); }
+      #mm-buttons button.primary, #mm-newgame button.primary { background: var(--accent); color: #10121a; border-color: var(--accent); }
+      #mm-buttons button:hover, #mm-newgame button:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 rgba(0,0,0,0.6); }
+      #mm-name { font-family: var(--body); font-size: 22px; text-align: center; background: var(--panel-2); color: var(--text);
+        border: 2px solid var(--line); box-shadow: 3px 3px 0 rgba(0,0,0,0.6); padding: 10px 14px; outline: none; width: 100%; }
+      #mm-name:focus { border-color: var(--accent); }
+      #mm-saves { max-width: 360px; margin: 22px auto 0; }
+      .mm-saves-lbl { font-family: var(--display); font-size: 11px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; }
+      .mm-save { display: flex; align-items: center; gap: 10px; padding: 9px 12px; margin-bottom: 6px; cursor: pointer; text-align: left;
+        background: var(--panel-2); border: 1px solid var(--line); border-radius: 7px; transition: border-color .12s; }
+      .mm-save:hover { border-color: var(--accent); }
+      .mm-save-name { font-family: var(--display); font-size: 14px; flex: 1; }
+      .mm-save-meta { font-size: 12px; color: var(--muted); }
+      .mm-save-del { background: none; border: none; color: var(--muted); font-size: 15px; cursor: pointer; padding: 2px 6px; }
+      .mm-save-del:hover { color: var(--home); }
       #handle-input, #password-input { font-family: var(--body); font-size: 24px; background: var(--panel-2); color: var(--text);
         border: 2px solid var(--line); box-shadow: 3px 3px 0 rgba(0,0,0,0.6); padding: 8px 12px; outline: none; }
       #handle-input::placeholder, #password-input::placeholder { color: #7a7ab0; }
@@ -885,21 +906,26 @@
       <div id="topbar">
         <span class="title" id="app-title" title="Home — choose a mode">PIXEL MANAGER</span>
         <span class="spacer"></span>
-        <button id="logout" class="hidden">Log out</button>
+        <button id="logout" class="hidden">≡ Menu</button>
       </div>
 
       <!-- LOGIN -->
       <div id="login" class="panel hidden">
-        <h3>ENTER THE LEAGUE</h3>
-        <div id="login-tagline">Draft a squad. Out-think the gaffer. Win the pixel cup.</div>
-        <div class="insight">New here? Pick a handle + password to create your club. Coming back? Log in with the same handle + password.</div>
-        <div id="login-row">
-          <input id="handle-input" placeholder="your handle" maxlength="20" />
-          <input id="password-input" type="password" placeholder="password" maxlength="64" />
-          <button id="login-btn">Log In</button>
-          <button id="register-btn" class="primary">Create Club</button>
+        <div id="mainmenu">
+          <h3 id="mm-title">PIXEL MANAGER</h3>
+          <div id="mm-tagline">Scout a kid. Build a legend. Forge a dynasty.</div>
+          <div id="mm-buttons">
+            <button id="mm-continue" class="primary hidden">▶ Continue</button>
+            <button id="mm-new">＋ New Game</button>
+          </div>
+          <div id="mm-newgame" class="hidden">
+            <input id="mm-name" placeholder="name your club" maxlength="24" />
+            <button id="mm-start" class="primary">Start ⚽</button>
+            <button id="mm-cancel">Back</button>
+          </div>
+          <div id="mm-saves"></div>
+          <div id="login-error" style="color:var(--home); font-size: 16px; margin-top:8px"></div>
         </div>
-        <div id="login-error" style="color:var(--home); font-size: 18px; margin-top:8px"></div>
       </div>
 
       <!-- MODE SELECT -->

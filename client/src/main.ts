@@ -203,11 +203,53 @@ class Game {
 
   async boot() {
     this.wireStaticButtons();
-    if (hasToken()) {
-      try { this.setMe(await api.me()); this.showSelect(); return; }
-      catch { clearToken(); }
-    }
     this.showScreen('login');
+    this.renderMainMenu();
+  }
+
+  // ── single-player saves (offline: no login — a "save" is a local profile) ──
+  private loadSaves(): Array<{ id: string; token: string; name: string; lastPlayed: number }> {
+    try { return JSON.parse(localStorage.getItem('fm_saves') || '[]'); } catch { return []; }
+  }
+  private saveSaves(s: Array<{ id: string; token: string; name: string; lastPlayed: number }>) { localStorage.setItem('fm_saves', JSON.stringify(s)); }
+
+  private renderMainMenu() {
+    const saves = this.loadSaves().sort((a, b) => b.lastPlayed - a.lastPlayed);
+    $('mm-buttons').classList.remove('hidden');
+    $('mm-newgame').classList.add('hidden');
+    $('mm-continue').classList.toggle('hidden', saves.length === 0);
+    $('login-error').textContent = '';
+    $('mm-saves').innerHTML = saves.length
+      ? `<div class="mm-saves-lbl">Your saves</div>` + saves.map((s) => `<div class="mm-save" data-id="${s.id}"><span class="mm-save-name">${s.name}</span><span class="mm-save-meta">${new Date(s.lastPlayed).toLocaleDateString()}</span><button class="mm-save-del" data-del="${s.id}" title="Delete save">✕</button></div>`).join('')
+      : '';
+    $('mm-saves').querySelectorAll('.mm-save').forEach((el) => el.addEventListener('click', (e) => { if ((e.target as HTMLElement).dataset.del) return; this.loadSave((el as HTMLElement).dataset.id!); }));
+    $('mm-saves').querySelectorAll('.mm-save-del').forEach((el) => el.addEventListener('click', (e) => { e.stopPropagation(); this.deleteSave((el as HTMLElement).dataset.del!); }));
+  }
+
+  private continueGame() { const s = this.loadSaves().sort((a, b) => b.lastPlayed - a.lastPlayed)[0]; if (s) this.loadSave(s.id); }
+
+  private async loadSave(id: string) {
+    const saves = this.loadSaves(); const save = saves.find((s) => s.id === id); if (!save) return;
+    setToken(save.token);
+    try { this.setMe(await api.me()); save.lastPlayed = Date.now(); this.saveSaves(saves); this.showSelect(); }
+    catch { $('login-error').textContent = 'Could not load that save (is the game server running?).'; clearToken(); }
+  }
+
+  private deleteSave(id: string) { this.saveSaves(this.loadSaves().filter((s) => s.id !== id)); this.renderMainMenu(); }
+
+  /** New Game: silently create a local profile (no handle/password shown) and drop the player in. */
+  private async startNewGame(rawName: string) {
+    const name = rawName.trim() || 'My Club';
+    const handle = ((name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12) || 'club') + '-' + Math.random().toString(36).slice(2, 6)).toLowerCase();
+    const password = Math.random().toString(36).slice(2) + 'Aa1'; // random; the player never sees or types it
+    $('login-error').textContent = 'Creating your club…';
+    try {
+      const r = await api.register(handle, password);
+      setToken(r.token);
+      this.setMe({ account: r.account, club: r.club, standingOrders: r.standingOrders });
+      const saves = this.loadSaves(); saves.push({ id: handle, token: r.token, name, lastPlayed: Date.now() }); this.saveSaves(saves);
+      this.showSelect();
+    } catch { $('login-error').textContent = 'Could not create your club. Is the game server running?'; }
   }
 
   private injured = new Map<string, number>(); // playerId → matches remaining out
@@ -243,7 +285,8 @@ class Game {
   /** Mode-select landing: two big panels — enter the Career game or the Manager game. */
   private showSelect() {
     this.showScreen('select');
-    $('select-hello').textContent = this.account?.handle ? `Welcome, ${this.account.handle}` : 'Welcome';
+    const saveName = this.loadSaves().find((s) => s.id === this.account?.handle)?.name;
+    $('select-hello').textContent = saveName ? `Welcome, ${saveName}` : 'Welcome';
     // light stats on each card
     $('manager-stat').textContent = this.account ? `Rating ${this.account.rating}${this.account.coins != null ? ` · 💰 ${this.account.coins}` : ''}` : '';
     $('career-stat').textContent = '';
@@ -260,11 +303,12 @@ class Game {
       $('toggle-density').textContent = this.commentaryMode === 'full' ? '🎙️ Full' : '🎙️ Key';
       $('toggle-density').classList.toggle('on', this.commentaryMode === 'key');
     });
-    $('register-btn').addEventListener('click', () => this.doRegister());
-    $('login-btn').addEventListener('click', () => this.doLogin());
-    $('handle-input').addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Enter') $('password-input').focus(); });
-    $('password-input').addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Enter') this.doLogin(); });
-    $('logout').addEventListener('click', () => { clearToken(); this.showScreen('login'); });
+    $('mm-new').addEventListener('click', () => { $('mm-buttons').classList.add('hidden'); $('mm-saves').classList.add('hidden'); $('mm-newgame').classList.remove('hidden'); ($('mm-name') as HTMLInputElement).focus(); });
+    $('mm-cancel').addEventListener('click', () => { $('mm-saves').classList.remove('hidden'); this.renderMainMenu(); });
+    $('mm-start').addEventListener('click', () => this.startNewGame(($('mm-name') as HTMLInputElement).value));
+    $('mm-name').addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Enter') this.startNewGame(($('mm-name') as HTMLInputElement).value); });
+    $('mm-continue').addEventListener('click', () => this.continueGame());
+    $('logout').addEventListener('click', () => { $('mm-saves').classList.remove('hidden'); this.showScreen('login'); this.renderMainMenu(); }); // single-player: "quit to menu" keeps the save
     // match keyboard shortcuts: 1/2/3 speed, space pause/resume, s skip, c cycle commentary detail
     document.addEventListener('keydown', (ev) => {
       const k = (ev as KeyboardEvent).key;
@@ -323,42 +367,6 @@ class Game {
     });
   }
 
-  // ---- login ----
-  private creds(): { handle: string; password: string } {
-    return { handle: ($('handle-input') as HTMLInputElement).value.trim(), password: ($('password-input') as HTMLInputElement).value };
-  }
-
-  private async doRegister() {
-    const { handle, password } = this.creds();
-    $('login-error').textContent = '';
-    if (password.length < 4) { $('login-error').textContent = 'Pick a password of at least 4 characters.'; return; }
-    try {
-      const r = await api.register(handle, password);
-      setToken(r.token);
-      this.setMe({ account: r.account, club: r.club, standingOrders: r.standingOrders });
-      this.showSelect();
-    } catch (e: any) {
-      $('login-error').textContent = e?.status === 409 ? 'Handle already taken — log in instead, or pick another.'
-        : e?.status === 400 ? 'Handle must be 2–20 chars and password 4–64.'
-        : 'Could not reach the server. Is it running?';
-    }
-  }
-
-  private async doLogin() {
-    const { handle, password } = this.creds();
-    $('login-error').textContent = '';
-    if (!handle || password.length < 4) { $('login-error').textContent = 'Enter your handle and password.'; return; }
-    try {
-      const r = await api.login(handle, password);
-      setToken(r.token);
-      this.setMe({ account: r.account, club: r.club, standingOrders: r.standingOrders });
-      this.showSelect();
-    } catch (e: any) {
-      $('login-error').textContent = e?.status === 401 ? 'Wrong handle or password.'
-        : e?.status === 404 ? 'That account has no club — try creating one.'
-        : 'Could not reach the server. Is it running?';
-    }
-  }
 
   /** A premium collectible card for an NFT star — tier-framed, holographic on the top
    *  tiers. Used both for the mint reveal and for clicking a star to admire it. */
