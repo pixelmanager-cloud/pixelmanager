@@ -60,6 +60,7 @@ export interface Account { id: string; handle: string; rating: number; coins?: n
 export interface MarketPlayer { name: string; role: string; overall: number; attrs: Record<string, number>; hidden: number }
 export interface MarketListing { id: string; playerId: string; price: number; sellerHandle: string; mine: boolean; player: MarketPlayer }
 export interface TableRow { id: string; handle: string; rating: number; P: number; W: number; D: number; L: number; GF: number; GA: number; GD: number; Pts: number }
+export interface FormEntry { strip: Array<'W' | 'D' | 'L'>; streak: { kind: 'unbeaten' | 'winless'; length: number } | null }
 export interface StandingOrders { formation: Lineup['formation']; playerIds: string[]; tactics: Tactics; duties?: Duty[]; captainIdx?: number; takers?: { pen?: number; fk?: number; corner?: number } }
 export interface ResultRow { id: string; home_id: string; away_id: string; home_handle: string; away_handle: string; home_score: number; away_score: number; created_at: number }
 export interface SeasonMeta { number: number; startsAt: number; endsAt: number; status: string; endsInMs: number }
@@ -146,7 +147,7 @@ export const api = {
   missions: () => req<MissionsData>('/scout/missions'),
   dispatchScout: (destination: string) => req<{ ok: true; mission: Mission; coins: number }>('/scout/missions', { method: 'POST', body: JSON.stringify({ destination }) }),
   signMission: (id: string) => req<{ ok: true; player: { name: string; role: string }; signedCount: number }>(`/scout/missions/${id}/sign`, { method: 'POST' }),
-  standings: () => req<{ season: { number: number; endsAt: number }; tier: string; pod: number; promote: number; relegate: number; table: TableRow[] }>('/standings'),
+  standings: () => req<{ season: { number: number; endsAt: number }; tier: string; pod: number; promote: number; relegate: number; table: TableRow[]; form: Record<string, FormEntry>; runIn: string | null }>('/standings'),
   diary: () => req<{ entry: string }>('/diary'),
   honours: () => req<{ honours: HonourRow[] }>('/honours'),
   records: () => req<{ records: ClubRecords }>('/records'),

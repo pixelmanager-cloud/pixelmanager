@@ -32,9 +32,12 @@ Work top to bottom, one item per commit. Tick `[x]` when done; add a one-line no
    shipped as `matchHeadline()` in shared, fed pre-match pod rank + rating context computed in the
    `/matches` POST handler, returned as `headline` and shown as the match-report lead line (falls
    back to the old plain scoreline phrasing if absent).
-4. [ ] **Form guide + run-in tracker.** A WDWLW strip per club (derive from `results`), an
+4. [x] **Form guide + run-in tracker.** A WDWLW strip per club (derive from `results`), an
    "X games unbeaten/winless" counter, and — in the closing fixtures of a season — a callout line
-   ("2 wins from the title", "in the drop zone with 3 to go") on the standings screen. (S/M)
+   ("2 wins from the title", "in the drop zone with 3 to go") on the standings screen. (S/M) —
+   shipped as `computeFormGuide`/`runInCallout` in shared (`shared/src/formGuide.ts`), wired into
+   `/standings` (`form` map + `runIn` string), rendered as a Form column on the league table plus
+   a callout banner above it on the standings screen.
 4. [ ] **Manager profile & reputation badge.** A derived reputation number from career trophies /
    win% / promotions (aggregate over `honours`), shown on the hub — extends the existing prestige
    badge into a persistent manager-identity stat, no new mechanic underneath. (S)

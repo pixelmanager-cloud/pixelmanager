@@ -262,6 +262,9 @@
       .season-banner { font-family: var(--body); font-size: 15px; color: var(--warn); letter-spacing: 0.5px;
         border: 2px solid var(--line); background: var(--panel-2); padding: 9px 12px; margin-bottom: 4px; }
       .season-banner b { color: var(--good); }
+      .run-in-callout { font-family: var(--body); font-size: 14px; color: var(--pink); letter-spacing: 0.3px;
+        border: 1px solid var(--line); border-left: 4px solid var(--pink); background: var(--panel-2);
+        padding: 8px 12px; margin-bottom: 4px; }
       h3.sub { font-size: 13px; color: var(--warn); margin: 18px 0 10px; }
       .tabrow { display: flex; gap: 8px; margin: 18px 0 10px; }
       .tab { background: var(--panel-2); color: var(--cyan); }
@@ -445,6 +448,13 @@
       table.league tr.releg td { background: rgba(255,77,94,0.30); }
       table.league tr.promo td.pos { border-left: 6px solid var(--good); box-shadow: inset 4px 0 0 var(--good); font-weight: bold; }
       table.league tr.releg td.pos { border-left: 6px solid var(--home); box-shadow: inset 4px 0 0 var(--home); font-weight: bold; }
+      table.league td.form { text-align: left; }
+      .form-strip { display: inline-flex; gap: 2px; }
+      .form-strip span { display: inline-block; width: 15px; height: 15px; line-height: 15px; font-family: var(--body);
+        font-size: 10px; text-align: center; border-radius: 2px; color: #061018; }
+      .form-strip .fW { background: var(--good); }
+      .form-strip .fD { background: var(--muted); }
+      .form-strip .fL { background: var(--home); }
       /* scouting / trial academy */
       #scouting-head { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
       #scouting-head h3 { margin: 0; } #scouting-back { margin-left: auto; }
@@ -997,6 +1007,7 @@
       <div id="standings" class="panel hidden">
         <div id="standings-head"><h3>LEAGUE &amp; RESULTS</h3><button id="standings-back">← Back to hub</button></div>
         <div id="season-banner" class="season-banner"></div>
+        <div id="run-in-callout" class="run-in-callout hidden"></div>
         <h3 class="sub">TABLE</h3>
         <div id="standings-table"></div>
         <div class="zone-legend"><span class="lg-promo">▲ Promotion</span><span class="lg-releg">▼ Relegation</span></div>

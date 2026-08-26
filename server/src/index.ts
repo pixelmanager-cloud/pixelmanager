@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { randomUUID } from 'node:crypto';
-import { overall, managerPrestige, signContract, contractCost, contractLength, graduationEpilogue, gaffersDiaryEntry, computeClubRecords, matchHeadline, type Lineup, type Tactics } from '@fm/shared';
+import { overall, managerPrestige, signContract, contractCost, contractLength, graduationEpilogue, gaffersDiaryEntry, computeClubRecords, matchHeadline, computeFormGuide, runInCallout, type Lineup, type Tactics } from '@fm/shared';
 import { mintGenesis, tokenToPlayer, tokenContract, tokenAch, legendCardOf, unavailableTokenIds, loadCareer, actWithNarration, careerState, graduatedFields, rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, ageOf, syncOnchainTokens, SUPPLY_CAP, GENESIS_COST, REBORN_COST, MARKET_FEE_PCT, type CareerAction } from './tokens.js';
 import { lifecycleEnabled, lifecycleInfo, serverSignerEnabled, serverMintTo, serverReborn, ownedTokens, ownerOf, lineageOf } from './lifecyclenft.js';
 import { bumpApps, bumpMorale, advanceTokensAtRollover } from './lifecycle.js';
@@ -411,14 +411,26 @@ app.get('/cup', { preHandler: requireAuth }, async (req) => {
   return { season: s.number, tier, pod, me: req.account!.id, ...cup };
 });
 
-// your pod's standings this season (Phase B: a legible ~20-row table)
+// your pod's standings this season (Phase B: a legible ~20-row table), plus a WDWLW form strip
+// per club and — in the closing fixtures — a seeded run-in callout for the caller (see
+// computeFormGuide/runInCallout in shared: pure derivation over results/table, no persisted state).
 app.get('/standings', { preHandler: requireAuth }, async (req) => {
+  const meId = req.account!.id;
   const s = await ensureSeason(db, Date.now());
-  const { tier, pod } = await ensurePod(db, s, req.account!.id);
+  const { tier, pod } = await ensurePod(db, s, meId);
   const members = await db.podMembers(s.id, tier, pod);
   const ids = new Set(members.map((m) => m.id));
   const results = resultsAmong(await db.seasonResults(s.id), ids);
-  return { season: { number: s.number, endsAt: s.endsAt }, tier, pod, promote: PROMOTE, relegate: RELEGATE, table: buildTable(members, results) };
+  const table = buildTable(members, results);
+  const form = Object.fromEntries(computeFormGuide(members.map((m) => m.id), results));
+  const myRow = table.find((r) => r.id === meId);
+  const runIn = myRow
+    ? runInCallout({
+        seed: `${s.number}:${meId}:${myRow.P}`, table, meId, promote: PROMOTE, relegate: RELEGATE,
+        totalFixtures: 2 * (members.length - 1),
+      })
+    : null;
+  return { season: { number: s.number, endsAt: s.endsAt }, tier, pod, promote: PROMOTE, relegate: RELEGATE, table, form, runIn };
 });
 
 // Gaffer's Diary: a seeded, deterministic running season-story line for the hub — a pure text

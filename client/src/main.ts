@@ -4,7 +4,7 @@ import {
   TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty,
 } from '@fm/shared';
 import { SCALE, makeBallTexture, makeBallGhostTexture, makePitchTexture, makePlayerFrames, makeShadowTexture, makeCarrierTexture } from './pixelart';
-import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData, type MissionsData, type ContractInfo, type LeaderStat, type AwardRow, type ClubRecords } from './api';
+import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData, type MissionsData, type ContractInfo, type LeaderStat, type AwardRow, type ClubRecords, type FormEntry } from './api';
 import { walletConfigured, nftConfigured, sendEmailCode, connectEmail, connectInjected, autoConnectInApp, signMessage, claimTokens, mintPlayer, mintScout, type Account as WalletAccount } from './wallet';
 
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
@@ -802,7 +802,9 @@ class Game {
     try {
       const [st, res, hon, aw] = await Promise.all([api.standings(), api.results(), api.honours(), api.awards()]);
       $('season-banner').innerHTML = `<b>${st.tier}</b> · Pod ${st.pod + 1} · Season ${st.season.number} · ends in ${humanizeMs(st.season.endsAt - Date.now())}`;
-      $('standings-table').innerHTML = this.renderLeagueTable(st.table, { promote: st.promote, relegate: st.relegate });
+      $('run-in-callout').classList.toggle('hidden', !st.runIn);
+      $('run-in-callout').textContent = st.runIn ?? '';
+      $('standings-table').innerHTML = this.renderLeagueTable(st.table, { promote: st.promote, relegate: st.relegate }, st.form);
       $('results-feed').innerHTML = this.renderResults(res.results);
       $('honours-feed').innerHTML = this.renderAwards(aw.awards) + this.renderHonours(hon.honours);
     } catch {
@@ -1549,15 +1551,17 @@ class Game {
     }).join('');
   }
 
-  private renderLeagueTable(rows: TableRow[], zones?: { promote?: number; relegate?: number }): string {
-    const head = '<tr><th>#</th><th style="text-align:left">Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th>Rtg</th></tr>';
+  private renderLeagueTable(rows: TableRow[], zones?: { promote?: number; relegate?: number }, form?: Record<string, FormEntry>): string {
+    const head = `<tr><th>#</th><th style="text-align:left">Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th>Rtg</th>${form ? '<th style="text-align:left">Form</th>' : ''}</tr>`;
     const promote = zones?.promote ?? 0, relegate = zones?.relegate ?? 0;
     // only mark a relegation zone when the pod is big enough to actually have one
     const relegFrom = rows.length > promote + relegate ? rows.length - relegate : rows.length;
     const body = rows.map((r, i) => {
       const gd = r.GD > 0 ? `+${r.GD}` : `${r.GD}`;
       const zone = i < promote ? ' promo' : i >= relegFrom ? ' releg' : '';
-      return `<tr class="${r.id === this.account.id ? 'me' : ''}${zone}"><td class="pos">${i + 1}</td><td class="club">${r.handle}</td><td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GF}</td><td>${r.GA}</td><td>${gd}</td><td class="pts">${r.Pts}</td><td>${r.rating}</td></tr>`;
+      const strip = form?.[r.id]?.strip ?? [];
+      const formCell = form ? `<td class="form"><span class="form-strip">${strip.map((c) => `<span class="f${c}">${c}</span>`).join('')}</span></td>` : '';
+      return `<tr class="${r.id === this.account.id ? 'me' : ''}${zone}"><td class="pos">${i + 1}</td><td class="club">${r.handle}</td><td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GF}</td><td>${r.GA}</td><td>${gd}</td><td class="pts">${r.Pts}</td><td>${r.rating}</td>${formCell}</tr>`;
     }).join('');
     return `<table class="league">${head}${body}</table>`;
   }
