@@ -1,6 +1,6 @@
 // Career-sim harness. Validates: (1) different styles → distinct, specialised players + roles;
 // (2) skill → magnitude; (3) the turn-by-turn engine is deterministic. Run: `npx tsx career_sim.ts`.
-import { Career, simCareer, graduate, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, STARTER_DECK, cardPower, type Style, type CareerPlayerAttrs, type Role, type Genes } from './src/career.js';
+import { Career, simCareer, graduate, ageCurve, careerOverall, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, STARTER_DECK, cardPower, type Style, type CareerPlayerAttrs, type Role, type Genes } from './src/career.js';
 
 const STYLES: Style[] = [
   { name: 'Poacher',   pref: { composure: 1, flair: 0.8 },        skill: 0.85 },
@@ -124,24 +124,30 @@ console.log('\n=== deck-building — drafts grow your deck (pick first offer for
   console.log(`  final deck (${dc.deck.length}):`, dc.deck.map((c) => c.name + (cardPower(c) > 1 ? `*${cardPower(c)}` : '')).join(', '));
 }
 
-// career arc: season events + high-stakes moments over one career
-console.log('\n=== career arc — season events + big moments (seed 4242) ===');
+// a life: age chapters, events, big moments over one development (age 10→25)
+console.log('\n=== a development life (age 10→25, seed arc) ===');
 {
   const c = new Career(seedFrom('arc'));
-  const events: string[] = [];
-  let big = 0, huge = 0, bigWins = 0; let lastSeason = 1;
+  const chapters: string[] = [];
+  let big = 0, huge = 0, bigWins = 0, lastChapter = '';
   while (!c.finished) {
     const st = c.current();
-    if (st.phase === 'draft') { if (c.seasonEvent) { /* logged on season change below */ } c.draft(st.options[0].id); continue; }
-    if (st.season !== lastSeason) { lastSeason = st.season; if (c.seasonEvent) events.push(`S${st.season}: ${c.seasonEvent.name} — ${c.seasonEvent.desc}`); }
+    if (st.phase === 'draft') { c.draft(st.options[0].id); continue; }
+    if (st.chapter !== lastChapter) { lastChapter = st.chapter; chapters.push(`age ${st.age} — ${st.chapter}${c.seasonEvent ? `  ·  ${c.seasonEvent.name}: ${c.seasonEvent.desc}` : ''}`); }
     if (st.scenario.stakes === 3) huge++; else if (st.scenario.stakes === 2) big++;
     const ch = c.play(st.hand[0].id);
     if (ch.stakes >= 2 && ch.success >= 0.75) bigWins++;
   }
   const p = graduate(c.log, seedFrom('arc'));
-  events.forEach((e) => console.log('  ' + e));
-  console.log(`  big moments faced: ${big} big + ${huge} huge  |  delivered in ${bigWins} of them`);
-  console.log(`  graduated: ${p.role} ovr ${p.overall}, traits: ${p.traits.join(', ') || '—'}`);
+  chapters.forEach((e) => console.log('  ' + e));
+  console.log(`  big moments faced: ${big} big + ${huge} huge  |  delivered in ${bigWins}`);
+  console.log(`  graduates at 25 (PRIME): ${p.role} ovr ${p.overall}, traits: ${p.traits.join(', ') || '—'}`);
+
+  // playing phase: the prime player's ability across ages 25→40 (read-time age curve)
+  console.log('  pro career (age → ovr):', [25, 28, 30, 33, 36, 40].map((age) => {
+    const aged = ageCurve(p.attrs, age); return `${age}:${careerOverall(aged, p.role)}`;
+  }).join('  '));
+  console.log(`  pace 25→40: ${p.attrs.pace} → ${ageCurve(p.attrs, 40).pace}   leadership 25→40: ${p.attrs.leadership} → ${ageCurve(p.attrs, 40).leadership}`);
 }
 
 // determinism: same seed + same choices (play + draft) → identical player

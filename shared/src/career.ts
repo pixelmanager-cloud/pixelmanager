@@ -105,11 +105,11 @@ const GK_BIAS: Tag[] = ['keeping', 'keeping', 'keeping', 'composure', 'leadershi
 const BIG_MOMENTS = ['Derby Day', 'Cup Quarter-Final', 'Relegation Six-Pointer', 'Live on TV'];
 const HUGE_MOMENTS = ['CUP FINAL', 'Title Decider', 'Promotion Play-Off Final'];
 
-/** A seeded scenario: pick 1–3 demanded tags (biased by kind + track), assign stakes. `demandBias`
- *  (a gaffer's-demand season event) leans the demand toward one tag. */
-export function makeScenario(rng: () => number, i: number, track: Track = 'outfield', demandBias?: Tag | null): Scenario {
+/** A seeded scenario. Tag demand comes from the current AGE BAND (age-appropriate); stakes are gated
+ *  by the band (no cup finals at grassroots). `demandBias` (a gaffer's demand) leans the demand. */
+export function makeScenario(rng: () => number, i: number, track: Track = 'outfield', demandBias?: Tag | null, band?: AgeBand): Scenario {
   const kind = KIND_POOL[Math.floor(rng() * KIND_POOL.length)];
-  const bias = track === 'goalkeeper' ? GK_BIAS : KIND_BIAS[kind].filter((t) => OUTFIELD_TAGS.includes(t));
+  const bias = track === 'goalkeeper' ? GK_BIAS : (band ? band.demand : OUTFIELD_TAGS);
   const n = 1 + Math.floor(rng() * Math.min(3, bias.length));
   const pool = [...new Set([...bias].sort(() => rng() - 0.5))].slice(0, n);
   const raw = pool.map(() => 0.3 + rng());
@@ -118,8 +118,9 @@ export function makeScenario(rng: () => number, i: number, track: Track = 'outfi
   if (demandBias) demand[demandBias] = (demand[demandBias] ?? 0) + 0.6;  // the gaffer wants more of this
   const sum = Object.values(demand).reduce((a, b) => a + (b ?? 0), 0) || 1;
   for (const t of Object.keys(demand) as Tag[]) demand[t] = (demand[t] ?? 0) / sum;
+  const maxStakes = band ? band.maxStakes : 3;
   const r = rng();
-  const stakes: 1 | 2 | 3 = r < 0.05 ? 3 : r < 0.22 ? 2 : 1;             // ~5% huge, ~17% big
+  const stakes: 1 | 2 | 3 = maxStakes >= 3 && r < 0.05 ? 3 : maxStakes >= 2 && r < 0.22 ? 2 : 1;
   const moment = stakes === 3 ? HUGE_MOMENTS[Math.floor(rng() * HUGE_MOMENTS.length)]
     : stakes === 2 ? BIG_MOMENTS[Math.floor(rng() * BIG_MOMENTS.length)] : null;
   const label = moment ? `★ ${moment}` : `${kind}: ${Object.keys(demand).join(' / ')}`;
@@ -137,8 +138,31 @@ export interface Choice { cardId: string; tags: Tag[]; power: number; fit: numbe
 
 // ── career config ──
 export const HAND_SIZE = 4;
-export const SCENARIOS_PER_SEASON = 20;
-export const SEASONS_TO_GRADUATE = 3; // → 60 turns to a finished player
+
+// A player's DEVELOPMENT is a human life from age 10 → 25, rendered as ~5 age chapters (not a 300-turn
+// grind). Scenarios + stakes are age-gated: a 12-year-old plays park football; cup finals only come once
+// you're breaking into the first team. A draft + an age-milestone event fires at each chapter boundary.
+export const START_AGE = 10, PRO_AGE = 25, RETIRE_AGE = 40;
+export interface AgeBand { name: string; from: number; to: number; turns: number; maxStakes: 1 | 2 | 3; demand: Tag[] }
+export const AGE_BANDS: AgeBand[] = [
+  { name: 'Grassroots',   from: 10, to: 13, turns: 8,  maxStakes: 1, demand: ['flair', 'stamina', 'creativity', 'teamwork'] },
+  { name: 'Academy',      from: 14, to: 16, turns: 10, maxStakes: 1, demand: ['flair', 'stamina', 'creativity', 'teamwork', 'composure', 'aggression'] },
+  { name: 'Youth Team',   from: 17, to: 19, turns: 12, maxStakes: 2, demand: OUTFIELD_TAGS },
+  { name: 'Breakthrough', from: 20, to: 22, turns: 12, maxStakes: 3, demand: OUTFIELD_TAGS },
+  { name: 'Establishing', from: 23, to: 25, turns: 12, maxStakes: 3, demand: OUTFIELD_TAGS },
+];
+export const TOTAL_TURNS = AGE_BANDS.reduce((s, b) => s + b.turns, 0);
+// cumulative turn index at which each band ENDS (last band end = TOTAL_TURNS)
+const BAND_ENDS = AGE_BANDS.reduce<number[]>((acc, b) => [...acc, (acc[acc.length - 1] ?? 0) + b.turns], []);
+/** The band a given development turn falls in, plus the player's age at that turn. */
+export function bandAt(turn: number): { index: number; band: AgeBand; age: number } {
+  let index = BAND_ENDS.findIndex((end) => turn < end);
+  if (index < 0) index = AGE_BANDS.length - 1;
+  const band = AGE_BANDS[index];
+  const start = index === 0 ? 0 : BAND_ENDS[index - 1];
+  const frac = band.turns > 1 ? (turn - start) / (band.turns - 1) : 0;
+  return { index, band, age: Math.round(band.from + frac * (band.to - band.from)) };
+}
 
 /**
  * A stateful career the client drives one turn at a time. Deterministic given (seed, choices):
@@ -154,16 +178,15 @@ export class Career {
   deck: Card[];                      // the player's growing deck (identity)
   scenario!: Scenario;
   turn = 0;
-  season = 1;
   log: Choice[] = [];
   finished = false;
-  /** When set, the career is paused for a between-season DRAFT: pick DRAFT_PICKS of these to add. */
+  /** When set, the career is paused for a between-chapter DRAFT: pick DRAFT_PICKS of these to add. */
   pendingDraft: { options: Card[]; picksLeft: number } | null = null;
-  /** The narrative event coloring the current season (a new gaffer, a hot streak, a knock…). */
+  /** The narrative event coloring the current age chapter (a new gaffer, a hot streak, a knock…). */
   seasonEvent: SeasonEvent | null = null;
-  private demandBias: Tag | null = null;   // the gaffer's demand this season → scenarios lean this tag
-  private formBonus = 0;                    // hot streak / slump → success nudge this season
-  private extraPicks = 0;                   // a breakthrough season → +draft picks at the next draft
+  private demandBias: Tag | null = null;   // the gaffer's demand this chapter → scenarios lean this tag
+  private formBonus = 0;                    // hot streak / slump → success nudge this chapter
+  private extraPicks = 0;                   // a breakthrough chapter → +draft picks at the next draft
 
   constructor(readonly seed: number, readonly track: Track = 'outfield') {
     this.rng = mulberry32(seed);
@@ -171,13 +194,17 @@ export class Career {
     this.pool = track === 'goalkeeper' ? GK_DRAFT_POOL : DRAFT_POOL;
     this.drawPile = this.shuffle([...this.deck]);
     this.refillHand();
-    this.scenario = makeScenario(this.rng, this.turn, track);
+    this.scenario = makeScenario(this.rng, this.turn, track, null, bandAt(0).band);
   }
+
+  /** The player's current age + life chapter (Grassroots … Establishing). */
+  get age() { return bandAt(Math.min(this.turn, TOTAL_TURNS - 1)).age; }
+  get chapter() { return bandAt(Math.min(this.turn, TOTAL_TURNS - 1)).band.name; }
 
   /** Current state: a 'play' phase (pick a hand card) or a 'draft' phase (pick a card to add). */
   current() {
-    if (this.pendingDraft) return { phase: 'draft' as const, season: this.season, options: this.pendingDraft.options, picksLeft: this.pendingDraft.picksLeft, deck: this.deck, finished: this.finished };
-    return { phase: 'play' as const, turn: this.turn, season: this.season, scenario: this.scenario, hand: this.hand, deck: this.deck, finished: this.finished };
+    if (this.pendingDraft) return { phase: 'draft' as const, age: this.age, chapter: this.chapter, options: this.pendingDraft.options, picksLeft: this.pendingDraft.picksLeft, deck: this.deck, finished: this.finished };
+    return { phase: 'play' as const, turn: this.turn, age: this.age, chapter: this.chapter, scenario: this.scenario, hand: this.hand, deck: this.deck, finished: this.finished };
   }
 
   /** DRAFT: add one of the offered cards to your deck (identity-building). */
@@ -188,7 +215,7 @@ export class Career {
     const card = this.pendingDraft.options.splice(i, 1)[0];
     this.deck.push(card);
     this.discard.push(card);        // it enters the draw rotation right away
-    if (--this.pendingDraft.picksLeft <= 0) { this.pendingDraft = null; this.startNextSeason(); }
+    if (--this.pendingDraft.picksLeft <= 0) { this.pendingDraft = null; this.startNextChapter(); }
   }
 
   /** Play a card from the current hand; resolves, logs, advances (into a draft at a season break). */
@@ -207,17 +234,19 @@ export class Career {
     this.log.push(choice);
     this.discard.push(card);
     this.turn++;
-    if (this.turn >= SCENARIOS_PER_SEASON * SEASONS_TO_GRADUATE) { this.finished = true; return choice; }
-    // at a season boundary: a narrative SEASON EVENT fires, then a DRAFT (your deck grows by choice)
-    if (this.turn % SCENARIOS_PER_SEASON === 0) { this.advanceSeasonEvent(); this.openDraft(); }
-    else { this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias); }
+    if (this.turn >= TOTAL_TURNS) { this.finished = true; return choice; }
+    // at an age-chapter boundary: a narrative EVENT fires, then a DRAFT (your deck grows by choice)
+    if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.openDraft(); }
+    else { this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band); }
     return choice;
   }
 
-  /** Roll the narrative event for the upcoming season and apply its mechanical effect. */
+  /** Roll the narrative event for the upcoming age chapter and apply its mechanical effect. */
   private advanceSeasonEvent() {
-    this.demandBias = null; this.formBonus = 0;                  // last season's effect clears
-    const from = Math.max(0, this.log.length - SCENARIOS_PER_SEASON);
+    this.demandBias = null; this.formBonus = 0;                  // last chapter's effect clears
+    const doneIdx = BAND_ENDS.indexOf(this.turn);               // the chapter that just ended
+    const window = doneIdx >= 0 ? AGE_BANDS[doneIdx].turns : HAND_SIZE;
+    const from = Math.max(0, this.log.length - window);
     const lastAvg = this.log.slice(from).reduce((s, c) => s + c.success, 0) / Math.max(1, this.log.length - from);
     const playedWell = lastAvg >= 0.55;
     const r = this.rng();
@@ -244,10 +273,9 @@ export class Career {
     this.extraPicks = 0;
   }
 
-  private startNextSeason() {
-    this.season = 1 + Math.floor(this.turn / SCENARIOS_PER_SEASON);
+  private startNextChapter() {
     this.refillHand();
-    this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias);
+    this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band);
   }
 
   private refillHand() { while (this.hand.length < HAND_SIZE) this.hand.push(this.drawOne()); }
@@ -419,6 +447,22 @@ export function graduate(log: Choice[], seed: number, genes: Genes = rollGenes(s
   for (const t of chosen) t.apply?.(attrs); // trait bonuses apply before role/overall
   const role = deriveRole(attrs);
   return { attrs, role, overall: careerOverall(attrs, role), genes, traits: chosen.map((t) => t.id) };
+}
+
+// ── AGE CURVE (playing phase, age 25 → 40) ──
+// The minted Player NFT's stats are the PRIME (age 25, graduation). The Manager game applies this
+// read-time curve so a player's ability ARCS over their 15 pro seasons: raw physical (pace/strength/
+// stamina — the gene-capped stats) fades from ~29, while experience (composure/leadership/positioning)
+// rises into the 30s. Immutable on-chain base + deterministic curve = value that changes with age.
+const PHYSICAL: (keyof CareerPlayerAttrs)[] = ['pace', 'strength', 'stamina'];
+const WISDOM: (keyof CareerPlayerAttrs)[] = ['composure', 'leadership', 'positioning'];
+export function ageCurve(prime: CareerPlayerAttrs, age: number): CareerPlayerAttrs {
+  const phys = age <= 29 ? 1 : clamp(1 - (age - 29) * 0.035, 0.55, 1); // −3.5%/yr after 29
+  const wis = age <= 30 ? 1 : clamp(1 + (age - 30) * 0.012, 1, 1.12);  // +1.2%/yr after 30 (cap +12%)
+  const out = { ...prime };
+  for (const k of PHYSICAL) out[k] = clamp(Math.round(prime[k] * phys), 1, 20);
+  for (const k of WISDOM) out[k] = clamp(Math.round(prime[k] * wis), 1, 20);
+  return out;
 }
 
 // ── balance helper: auto-play a career under a "style" policy (picks the best hand card) ──
