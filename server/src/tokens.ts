@@ -143,10 +143,12 @@ const withDesc = (cards: any[]) => cards?.map((c) => ({ ...c, desc: CARD_DESC[c.
 // competition) so it reads like a game, not a generic prompt. Presentational + deterministic (hashed
 // from seed+turn, no rng) — the engine, graduation and replay are untouched.
 const OPPONENTS = ['Riverside Rovers', 'Ashcombe Town', 'Kingsford United', 'Dockside FC', 'Marlow Athletic', 'Hallby City', 'Fenwick Rangers', 'Stonebridge', 'Portland Vale', 'Oakfield United', 'Brightmoor', 'Cranleigh Town', 'Whitlow Wanderers', 'Eastgate FC', 'Redhaven', 'Millbrook County'];
-function matchContext(seed: number, turn: number, stakes: number, big: string | null) {
+function matchContext(seed: number, turn: number, stakes: number, big: string | null, clubName?: string | null) {
   const h0 = ((seed >>> 0) ^ Math.imul(turn + 7, 2246822519)) >>> 0;
   const pick = (n: number, mod: number) => ((h0 >>> (n & 15)) ^ (h0 >>> ((n + 5) & 15))) % mod;
-  const opponent = OPPONENTS[h0 % OPPONENTS.length];
+  // the bloodline player plays FOR your club — so the opponent is any club in the league but yours.
+  const pool = clubName ? OPPONENTS.filter((o) => o !== clubName) : OPPONENTS;
+  const opponent = pool[h0 % pool.length];
   const home = (pick(1, 2) === 0);
   // close scorelines carry the most drama — weight toward level / a goal in it
   const SCORES = ['0-0', '1-1', '0-1', '1-0', '2-2', '1-2', '2-1', '2-2'];
@@ -154,10 +156,10 @@ function matchContext(seed: number, turn: number, stakes: number, big: string | 
   const minute = Math.min(90, (stakes >= 3 ? 68 : stakes >= 2 ? 52 : 26) + pick(7, 22));
   // competition line: the occasion for big games, otherwise a league round
   const comp = big ?? (stakes >= 2 ? 'a cup tie' : `Matchday ${1 + (turn % 38)}`);
-  return { opponent, home, score, minute, comp };
+  return { opponent, home, score, minute, comp, club: clubName ?? null };
 }
 
-export function careerState(t: Token, c: Career) {
+export function careerState(t: Token, c: Career, clubName?: string | null) {
   const st = c.current() as any;
   // STORY MODE: describe the situation + what each card would do
   if (st.phase === 'play' && st.scenario) {
@@ -182,7 +184,7 @@ export function careerState(t: Token, c: Career) {
     }
     st.story = scenarioStory(kind, topTag, moment, { seed: (((c as any).seed >>> 0) + c.turn * 40503) >>> 0, age: c.age, chapter: c.chapter, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0 });
     st.momentKind = kind === 'match' ? 'match' : (st.lifeEvent || kind === 'social') ? 'life' : 'training';
-    if (kind === 'match') st.matchCtx = matchContext((c as any).seed >>> 0, c.turn, st.scenario.stakes, moment);
+    if (kind === 'match') st.matchCtx = matchContext((c as any).seed >>> 0, c.turn, st.scenario.stakes, moment, clubName);
     st.hand = withDesc(st.hand);
   }
   if (st.options) st.options = withDesc(st.options); // draft cards get their "what he does" too

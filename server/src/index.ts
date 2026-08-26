@@ -483,7 +483,8 @@ app.post('/career/:id/start', { preHandler: requireAuth }, async (req, reply) =>
   if (t.state !== 'prospect') return reply.code(409).send({ error: 'not a prospect' });
   if (t.career_seed == null) await db.updateToken(t.id, { career_seed: careerSeedFor(t.id, t.generation), agent_id: (req.body as any)?.agentId ?? null, track: trackFor(t.role ?? 'MF'), career_actions: '[]' });
   const fresh = (await db.getToken(t.id))!;
-  return { ok: true, state: careerState(fresh, loadCareer(fresh)) };
+  const clubName = (await db.getClub(req.account!.id))?.club?.name ?? null;
+  return { ok: true, state: careerState(fresh, loadCareer(fresh), clubName) };
 });
 
 app.get('/career/:id', { preHandler: requireAuth }, async (req, reply) => {
@@ -491,7 +492,8 @@ app.get('/career/:id', { preHandler: requireAuth }, async (req, reply) => {
   if (!t || t.owner_id !== req.account!.id) return reply.code(404).send({ error: 'no such token' });
   if (t.state !== 'prospect') return reply.code(409).send({ error: 'not a prospect' });
   if (t.career_seed == null) return reply.code(400).send({ error: 'career not started' });
-  return { ok: true, state: careerState(t, loadCareer(t)) };
+  const clubName = (await db.getClub(req.account!.id))?.club?.name ?? null;
+  return { ok: true, state: careerState(t, loadCareer(t), clubName) };
 });
 
 // KIT & IDENTITY: cosmetic customization (squad number, boot colour, celebration, nickname). Carries to
@@ -557,7 +559,8 @@ app.post('/career/:id/act', { preHandler: requireAuth }, async (req, reply) => {
     return { ok: true, graduated: true, narration, outcome, clubGain, windfall, epilogue, player: tokenToPlayer((await db.getToken(t.id))!) };
   }
   if (clubGain > 0) await db.addCoins(ownerId, clubGain);
-  return { ok: true, narration, outcome, clubGain, state: careerState((await db.getToken(t.id))!, c) };
+  const clubName = (await db.getClub(ownerId))?.club?.name ?? null;
+  return { ok: true, narration, outcome, clubGain, state: careerState((await db.getToken(t.id))!, c, clubName) };
 });
 
 // LEGENDS: the manager's hall of retirement legacy cards (one per generation a token retired under them).

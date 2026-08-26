@@ -1012,11 +1012,13 @@ class Game {
       if (mk === 'match' && s.matchCtx) {
         const mc = s.matchCtx; const [us, them] = mc.score.split('-');
         const big = s.scenario.stakes >= 3 ? ' · ★ THE BIG ONE' : s.scenario.stakes >= 2 ? ' · BIG GAME' : '';
+        const club = mc.club || this.club?.name || 'Your Club';
         header = `<div class="cg-matchday stakes-${s.scenario.stakes}">`
           + `<div class="cg-md-top"><span class="cg-md-badge">⚽ MATCHDAY${big}</span><span class="cg-md-min">${mc.minute}'</span></div>`
-          + `<div class="cg-md-score">${us} <span class="cg-md-ball">${sprite('ball')}</span> ${them}</div>`
-          + `<div class="cg-md-vs">vs <b>${mc.opponent}</b> · ${mc.home ? '🏟️ Home' : '✈️ Away'}</div>`
-          + `<div class="cg-md-comp">${mc.comp}</div></div>`;
+          + `<div class="cg-md-fixture"><span class="cg-md-team mine">${club}</span>`
+          + `<span class="cg-md-score">${us} <span class="cg-md-ball">${sprite('ball')}</span> ${them}</span>`
+          + `<span class="cg-md-team">${mc.opponent}</span></div>`
+          + `<div class="cg-md-vs">${mc.home ? '🏟️ Home' : '✈️ Away'} · ${mc.comp}</div></div>`;
         prompt = 'The moment falls to him — what does he do?';
       } else if (mk === 'life') {
         header = `<div class="cg-mtype life">⚡ LIFE EVENT${s.lifeEvent ? ` · ${s.lifeEvent}` : ' · off the pitch'}</div>`;

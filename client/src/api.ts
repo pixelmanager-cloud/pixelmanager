@@ -28,7 +28,7 @@ export interface CareerState {
   lifestyle?: Array<{ id: string; icon: string; name: string; blurb: string; cost: number; recovery?: number; market?: number; greed?: number; perks?: Record<string, number>; clubInvest?: number }>;
   consequences?: string[];
   momentKind?: 'match' | 'training' | 'life';
-  matchCtx?: { opponent: string; home: boolean; score: string; minute: number; comp: string };
+  matchCtx?: { opponent: string; home: boolean; score: string; minute: number; comp: string; club?: string | null };
   kit?: Kit | null;
   hand?: CareerCard[]; coach?: { id: string; name: string } | null;
   coaches?: Array<{ id: string; name: string; kind: string; desc: string; specialty: string[]; bonus: number }>;
