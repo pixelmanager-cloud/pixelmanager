@@ -90,10 +90,16 @@ export function loadCareer(t: Token): Career {
   for (const a of JSON.parse(t.career_actions ?? '[]') as CareerAction[]) applyAction(c, a);
   return c;
 }
+/** Milestone this beat represents, detected from career state BEFORE the play is applied. */
+function careerMilestone(c: Career): string | null {
+  if (c.turn === 0) return 'debut';
+  if (c.scenario.stakes === 3 && !c.log.some((l) => l.stakes >= 3)) return 'cup_final';
+  return null;
+}
 /** Apply an action and, for a PLAY, return an immersive narration of the moment (null otherwise). */
 export function actWithNarration(c: Career, a: CareerAction): string | null {
   if (a.type !== 'play') { applyAction(c, a); return null; }
-  const ctx = { age: c.age, chapter: c.chapter, stakes: c.scenario.stakes, personalityId: c.personality.id, seasonEventId: c.seasonEvent?.id ?? null, seed: (((c as any).seed >>> 0) + c.turn * 2654435761) >>> 0 };
+  const ctx = { age: c.age, chapter: c.chapter, stakes: c.scenario.stakes, personalityId: c.personality.id, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0, milestone: careerMilestone(c), seed: (((c as any).seed >>> 0) + c.turn * 2654435761) >>> 0 };
   applyAction(c, a);
   const choice = c.log[c.log.length - 1];
   return narratePlay(cardName(a.cardId), choice.tags, choice.success, ctx);
@@ -117,7 +123,7 @@ export function careerState(t: Token, c: Career) {
     const demand = st.scenario.demand as Record<string, number>;
     const topTag = Object.keys(demand).sort((a, b) => (demand[b] ?? 0) - (demand[a] ?? 0))[0] ?? 'teamwork';
     const moment = st.scenario.stakes >= 2 ? String(st.scenario.label).replace(/^★\s*/, '') : null;
-    st.story = scenarioStory(st.scenario.kind, topTag, moment, ((c as any).seed >>> 0) + c.turn * 40503);
+    st.story = scenarioStory(st.scenario.kind, topTag, moment, { seed: (((c as any).seed >>> 0) + c.turn * 40503) >>> 0, age: c.age, chapter: c.chapter, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0 });
     st.hand = withDesc(st.hand);
   }
   if (st.options) st.options = withDesc(st.options); // draft cards get their "what he does" too
