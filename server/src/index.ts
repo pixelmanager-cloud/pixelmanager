@@ -7,6 +7,15 @@ import { lifecycleEnabled, lifecycleInfo, serverSignerEnabled, serverMintTo, ser
 import { bumpApps, bumpMorale, advanceTokensAtRollover } from './lifecycle.js';
 import { recordMatchStats } from './matchstats.js';
 const isNftPlayer = (id: string) => id.startsWith('nft:');
+const validSlot = (n: any): number | undefined => (Number.isInteger(n) && n >= 0 && n < 11 ? n : undefined);
+/** Sanitize manager squad-role designations (captain + set-piece takers) from a request body. */
+function cleanRoles(body: any): { captainIdx?: number; takers?: { pen?: number; fk?: number; corner?: number } } {
+  const captainIdx = validSlot(body?.captainIdx);
+  const t = body?.takers ?? {};
+  const takers = { pen: validSlot(t.pen), fk: validSlot(t.fk), corner: validSlot(t.corner) };
+  const hasTakers = takers.pen != null || takers.fk != null || takers.corner != null;
+  return { ...(captainIdx != null ? { captainIdx } : {}), ...(hasTakers ? { takers } : {}) };
+}
 import { db, type Account, type StandingOrders, type Listing } from './db.js';
 import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMATIONS } from './game.js';
 import { hashPassword, verifyPassword } from './auth.js';
@@ -205,9 +214,10 @@ app.put('/standing-orders', { preHandler: requireAuth }, async (req, reply) => {
   const body = req.body as any;
   if (!isFormation(body?.formation)) return reply.code(400).send({ error: 'bad formation' });
   const c = (await loadSquad(req.account!.id))!; // NFT stars are valid XI picks too
-  const lineup: Lineup = { formation: body.formation, playerIds: body.playerIds, duties: body.duties };
+  const roles = cleanRoles(body);
+  const lineup: Lineup = { formation: body.formation, playerIds: body.playerIds, duties: body.duties, ...roles };
   if (!validateLineup(c.club, lineup)) return reply.code(400).send({ error: 'invalid lineup' });
-  const so: StandingOrders = { formation: body.formation, playerIds: body.playerIds, tactics: body.tactics as Tactics, duties: cleanDuties(c.club, lineup) };
+  const so: StandingOrders = { formation: body.formation, playerIds: body.playerIds, tactics: body.tactics as Tactics, duties: cleanDuties(c.club, lineup), ...roles };
   await db.saveStandingOrders(req.account!.id, so);
   return { ok: true, standingOrders: so };
 });
@@ -286,8 +296,8 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   oppClub.club = benchOut(oppClub.club, oppInj, oppUnavail);
 
   let myLineup: Lineup = body.myLineup
-    ? { formation: body.myLineup.formation, playerIds: body.myLineup.playerIds, duties: body.myLineup.duties }
-    : { formation: me!.standingOrders.formation, playerIds: me!.standingOrders.playerIds, duties: me!.standingOrders.duties };
+    ? { formation: body.myLineup.formation, playerIds: body.myLineup.playerIds, duties: body.myLineup.duties, ...cleanRoles(body.myLineup) }
+    : { formation: me!.standingOrders.formation, playerIds: me!.standingOrders.playerIds, duties: me!.standingOrders.duties, captainIdx: me!.standingOrders.captainIdx, takers: me!.standingOrders.takers };
   const myTactics: Tactics = (body.myTactics as Tactics) ?? me!.standingOrders.tactics;
   if (!isFormation(myLineup.formation)) return reply.code(400).send({ error: 'invalid formation' });
   // an injured or stale player in the chosen XI → auto-pick a valid one from who's available

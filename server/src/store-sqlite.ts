@@ -1,7 +1,7 @@
 // Local-dev backend on Node's built-in SQLite (no native deps).
 import { DatabaseSync } from 'node:sqlite';
 import type { Club } from '@fm/shared';
-import { TOKEN_COLS, type Store, type Account, type AuthRow, type StandingOrders, type StoredMatch, type OpponentRow, type LeaderRow, type MatchRow, type ResultRow, type Season, type HonourRow, type PodRef, type Listing, type MissionRow } from './store.js';
+import { TOKEN_COLS, rolesJson, parseRoles, type Store, type Account, type AuthRow, type StandingOrders, type StoredMatch, type OpponentRow, type LeaderRow, type MatchRow, type ResultRow, type Season, type HonourRow, type PodRef, type Listing, type MissionRow } from './store.js';
 
 export function makeSqliteStore(file: string): Store {
   const db = new DatabaseSync(file);
@@ -13,7 +13,7 @@ export function makeSqliteStore(file: string): Store {
           rating INTEGER NOT NULL DEFAULT 1000, created_at INTEGER NOT NULL, password_hash TEXT);
         CREATE TABLE IF NOT EXISTS clubs (
           account_id TEXT PRIMARY KEY, club TEXT NOT NULL,
-          so_formation TEXT NOT NULL, so_player_ids TEXT NOT NULL, so_tactics TEXT NOT NULL, so_duties TEXT);
+          so_formation TEXT NOT NULL, so_player_ids TEXT NOT NULL, so_tactics TEXT NOT NULL, so_duties TEXT, so_roles TEXT);
         CREATE TABLE IF NOT EXISTS matches (
           id TEXT PRIMARY KEY, home_id TEXT NOT NULL, away_id TEXT NOT NULL,
           home_team TEXT NOT NULL, away_team TEXT NOT NULL,
@@ -116,6 +116,7 @@ export function makeSqliteStore(file: string): Store {
       try { db.exec('ALTER TABLE matches ADD COLUMN season_id TEXT'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE matches ADD COLUMN initiator_id TEXT'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE clubs ADD COLUMN so_duties TEXT'); } catch { /* already added */ }
+      try { db.exec('ALTER TABLE clubs ADD COLUMN so_roles TEXT'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE accounts ADD COLUMN tier TEXT'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE accounts ADD COLUMN password_hash TEXT'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE accounts ADD COLUMN coins INTEGER NOT NULL DEFAULT 500'); } catch { /* already added */ }
@@ -184,19 +185,19 @@ export function makeSqliteStore(file: string): Store {
     async saveClub(accountId, club: Club, so: StandingOrders) {
       const persisted = { ...club, players: club.players.filter((p) => !p.id.startsWith('nft:')) }; // tokens live in the tokens table, never in club JSON
       db.prepare(
-        `INSERT INTO clubs (account_id, club, so_formation, so_player_ids, so_tactics, so_duties) VALUES (?,?,?,?,?,?)
+        `INSERT INTO clubs (account_id, club, so_formation, so_player_ids, so_tactics, so_duties, so_roles) VALUES (?,?,?,?,?,?,?)
          ON CONFLICT(account_id) DO UPDATE SET club=excluded.club, so_formation=excluded.so_formation,
-           so_player_ids=excluded.so_player_ids, so_tactics=excluded.so_tactics, so_duties=excluded.so_duties`,
-      ).run(accountId, JSON.stringify(persisted), so.formation, JSON.stringify(so.playerIds), JSON.stringify(so.tactics), so.duties ? JSON.stringify(so.duties) : null);
+           so_player_ids=excluded.so_player_ids, so_tactics=excluded.so_tactics, so_duties=excluded.so_duties, so_roles=excluded.so_roles`,
+      ).run(accountId, JSON.stringify(persisted), so.formation, JSON.stringify(so.playerIds), JSON.stringify(so.tactics), so.duties ? JSON.stringify(so.duties) : null, rolesJson(so));
     },
     async saveStandingOrders(accountId, so: StandingOrders) {
-      db.prepare('UPDATE clubs SET so_formation=?, so_player_ids=?, so_tactics=?, so_duties=? WHERE account_id=?')
-        .run(so.formation, JSON.stringify(so.playerIds), JSON.stringify(so.tactics), so.duties ? JSON.stringify(so.duties) : null, accountId);
+      db.prepare('UPDATE clubs SET so_formation=?, so_player_ids=?, so_tactics=?, so_duties=?, so_roles=? WHERE account_id=?')
+        .run(so.formation, JSON.stringify(so.playerIds), JSON.stringify(so.tactics), so.duties ? JSON.stringify(so.duties) : null, rolesJson(so), accountId);
     },
     async getClub(accountId) {
-      const r = db.prepare('SELECT club, so_formation, so_player_ids, so_tactics, so_duties FROM clubs WHERE account_id=?').get(accountId) as any;
+      const r = db.prepare('SELECT club, so_formation, so_player_ids, so_tactics, so_duties, so_roles FROM clubs WHERE account_id=?').get(accountId) as any;
       if (!r) return undefined;
-      return { club: JSON.parse(r.club), standingOrders: { formation: r.so_formation, playerIds: JSON.parse(r.so_player_ids), tactics: JSON.parse(r.so_tactics), duties: r.so_duties ? JSON.parse(r.so_duties) : undefined } };
+      return { club: JSON.parse(r.club), standingOrders: { formation: r.so_formation, playerIds: JSON.parse(r.so_player_ids), tactics: JSON.parse(r.so_tactics), duties: r.so_duties ? JSON.parse(r.so_duties) : undefined, ...parseRoles(r.so_roles) } };
     },
     async savePlan(ownerId, opponentId, plan) {
       db.prepare(

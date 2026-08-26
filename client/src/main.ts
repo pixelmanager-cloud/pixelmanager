@@ -169,6 +169,8 @@ class Game {
   draftLineup!: Lineup;
   draftTactics!: Tactics;
   draftDuties: Duty[] = []; // per-slot manager duties, parallel to draftLineup.playerIds
+  draftCaptain?: number;    // slot index wearing the armband
+  draftTakers: { pen?: number; fk?: number; corner?: number } = {}; // set-piece taker slot indices
   editorMode: 'standing' | 'match' = 'standing';
   squadSort: SquadSort | null = null;
   pendingOpp?: { id: string; handle: string; venue: 'home' | 'away' };
@@ -1405,6 +1407,9 @@ class Game {
       const saved = soValid ? this.standingOrders.duties?.[i] : undefined;
       return saved && isDutyForRole(p.role, saved) ? saved : defaultDuty(p);
     });
+    // squad roles (captain + set-piece takers) from the standing orders when the saved XI is intact
+    this.draftCaptain = soValid ? (this.standingOrders as any).captainIdx : undefined;
+    this.draftTakers = soValid ? { ...((this.standingOrders as any).takers ?? {}) } : {};
     $('lineup-title').textContent = mode === 'standing' ? 'SET MY TEAM' : `SET LINEUP  ${opp!.venue === 'away' ? 'away at' : 'vs'} ${opp!.handle}`;
     // scout the opponent (match mode only): show their expected shape + rated roster
     const sc = $('scout-card');
@@ -1489,8 +1494,23 @@ class Game {
         : isNftId(cur.id) ? `<span class="nft tier-${curTier.key}" data-card="${cur.id}" title="NFT star · ${curTier.name} tier — click to view card">${curTier.icon} ${curTier.name}</span>` : '';
       const dutyOpts = DUTIES_BY_ROLE[cur.role]
         .map((d) => `<option value="${d}" ${d === this.draftDuties[i] ? 'selected' : ''}>${DUTY_LABEL[d]}</option>`).join('');
-      return `<div class="slot role-${roleForSlot}"><span class="role role-${roleForSlot}">${roleForSlot}</span><select class="player-sel" data-i="${i}">${opts}</select><select class="duty-sel" data-i="${i}" title="This player's duty — how they play">${dutyOpts}</select>${tag}<span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span></div>`;
+      const rb = (role: string, on: boolean, glyph: string, title: string) => `<button class="rb ${role}${on ? ' on' : ''}" data-role="${role}" data-i="${i}" title="${title}">${glyph}</button>`;
+      const badges = `<span class="role-badges">`
+        + rb('cap', this.draftCaptain === i, '©', 'Captain')
+        + rb('pen', this.draftTakers.pen === i, 'P', 'Penalty taker')
+        + rb('fk', this.draftTakers.fk === i, 'F', 'Free-kick taker')
+        + rb('corner', this.draftTakers.corner === i, 'C', 'Corner taker')
+        + `</span>`;
+      return `<div class="slot role-${roleForSlot}"><span class="role role-${roleForSlot}">${roleForSlot}</span><select class="player-sel" data-i="${i}">${opts}</select><select class="duty-sel" data-i="${i}" title="This player's duty — how they play">${dutyOpts}</select>${tag}<span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span>${badges}</div>`;
     }).join('');
+    Array.from($('xi').querySelectorAll('button.rb')).forEach((b) => {
+      b.addEventListener('click', () => {
+        const el = b as HTMLElement; const i = Number(el.dataset.i); const role = el.dataset.role!;
+        if (role === 'cap') this.draftCaptain = this.draftCaptain === i ? undefined : i;       // one captain, toggle
+        else { const k = role as 'pen' | 'fk' | 'corner'; this.draftTakers[k] = this.draftTakers[k] === i ? undefined : i; } // one taker per type, toggle
+        this.renderLineupEditor();
+      });
+    });
     Array.from($('xi').querySelectorAll('select.player-sel')).forEach((sel) => {
       sel.addEventListener('change', (ev) => {
         const t = ev.target as HTMLSelectElement;
@@ -1568,6 +1588,7 @@ class Game {
       playerIds: this.draftLineup.playerIds,
       tactics: { ...this.draftTactics },
       duties: [...this.draftDuties],
+      ...this.draftRoles(),
     };
     try { const r = await api.setStandingOrders(so); this.standingOrders = r.standingOrders; toast('Team saved ✓'); await this.showHub(); }
     catch { $('lineup-insight').innerHTML = '<span style="color:var(--home)">Could not save — check your XI.</span>'; }
@@ -1579,11 +1600,17 @@ class Game {
     this.openLineup('match', { id: opponentId, handle, venue });
   }
 
+  /** The current captain + set-piece-taker designations, ready to attach to a lineup / standing orders. */
+  private draftRoles(): { captainIdx?: number; takers?: { pen?: number; fk?: number; corner?: number } } {
+    const t = this.draftTakers;
+    const hasTakers = t.pen != null || t.fk != null || t.corner != null;
+    return { ...(this.draftCaptain != null ? { captainIdx: this.draftCaptain } : {}), ...(hasTakers ? { takers: { ...t } } : {}) };
+  }
   private async kickOffMatch() {
     if (!this.pendingOpp) return;
     $('lineup-insight').innerHTML = '<span style="color:var(--cyan)">Playing…</span>';
     try {
-      const lineup: Lineup = { ...this.draftLineup, duties: [...this.draftDuties] };
+      const lineup: Lineup = { ...this.draftLineup, duties: [...this.draftDuties], ...this.draftRoles() };
       const payload = await api.createMatch(this.pendingOpp.id, lineup, this.draftTactics, this.pendingOpp.venue);
       this.startMatch(payload);
     } catch (e: any) {

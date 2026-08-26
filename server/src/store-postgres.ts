@@ -2,7 +2,7 @@
 // (de)serialised in code, identical semantics to the SQLite backend.
 import pg from 'pg';
 import type { Club } from '@fm/shared';
-import { TOKEN_COLS, type Store, type Account, type AuthRow, type StandingOrders, type StoredMatch, type OpponentRow, type LeaderRow, type MatchRow, type ResultRow, type Season, type HonourRow, type PodRef, type Listing, type MissionRow } from './store.js';
+import { TOKEN_COLS, rolesJson, parseRoles, type Store, type Account, type AuthRow, type StandingOrders, type StoredMatch, type OpponentRow, type LeaderRow, type MatchRow, type ResultRow, type Season, type HonourRow, type PodRef, type Listing, type MissionRow } from './store.js';
 
 export function makePostgresStore(connectionString: string): Store {
   // Railway's internal DB (postgres.railway.internal) and localhost don't use SSL;
@@ -21,7 +21,7 @@ export function makePostgresStore(connectionString: string): Store {
           rating INTEGER NOT NULL DEFAULT 1000, created_at BIGINT NOT NULL, password_hash TEXT);
         CREATE TABLE IF NOT EXISTS clubs (
           account_id TEXT PRIMARY KEY, club TEXT NOT NULL,
-          so_formation TEXT NOT NULL, so_player_ids TEXT NOT NULL, so_tactics TEXT NOT NULL, so_duties TEXT);
+          so_formation TEXT NOT NULL, so_player_ids TEXT NOT NULL, so_tactics TEXT NOT NULL, so_duties TEXT, so_roles TEXT);
         CREATE TABLE IF NOT EXISTS matches (
           id TEXT PRIMARY KEY, home_id TEXT NOT NULL, away_id TEXT NOT NULL,
           home_team TEXT NOT NULL, away_team TEXT NOT NULL,
@@ -47,6 +47,7 @@ export function makePostgresStore(connectionString: string): Store {
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS season_id TEXT;
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS initiator_id TEXT;
         ALTER TABLE clubs ADD COLUMN IF NOT EXISTS so_duties TEXT;
+        ALTER TABLE clubs ADD COLUMN IF NOT EXISTS so_roles TEXT;
         CREATE TABLE IF NOT EXISTS listings (
           id TEXT PRIMARY KEY, seller_id TEXT NOT NULL, player_id TEXT NOT NULL,
           player_json TEXT NOT NULL, price INTEGER NOT NULL, status TEXT NOT NULL,
@@ -114,6 +115,7 @@ export function makePostgresStore(connectionString: string): Store {
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS season_id TEXT;
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS initiator_id TEXT;
         ALTER TABLE clubs ADD COLUMN IF NOT EXISTS so_duties TEXT;
+        ALTER TABLE clubs ADD COLUMN IF NOT EXISTS so_roles TEXT;
         ALTER TABLE accounts ADD COLUMN IF NOT EXISTS tier TEXT;
         ALTER TABLE accounts ADD COLUMN IF NOT EXISTS password_hash TEXT;
         ALTER TABLE accounts ADD COLUMN IF NOT EXISTS coins INTEGER NOT NULL DEFAULT 500;
@@ -184,20 +186,20 @@ export function makePostgresStore(connectionString: string): Store {
     async saveClub(accountId, club: Club, so: StandingOrders) {
       const persisted = { ...club, players: club.players.filter((p) => !p.id.startsWith('nft:')) }; // tokens live in the tokens table, never in club JSON
       await q(
-        `INSERT INTO clubs (account_id, club, so_formation, so_player_ids, so_tactics, so_duties) VALUES ($1,$2,$3,$4,$5,$6)
+        `INSERT INTO clubs (account_id, club, so_formation, so_player_ids, so_tactics, so_duties, so_roles) VALUES ($1,$2,$3,$4,$5,$6,$7)
          ON CONFLICT(account_id) DO UPDATE SET club=EXCLUDED.club, so_formation=EXCLUDED.so_formation,
-           so_player_ids=EXCLUDED.so_player_ids, so_tactics=EXCLUDED.so_tactics, so_duties=EXCLUDED.so_duties`,
-        [accountId, JSON.stringify(persisted), so.formation, JSON.stringify(so.playerIds), JSON.stringify(so.tactics), so.duties ? JSON.stringify(so.duties) : null],
+           so_player_ids=EXCLUDED.so_player_ids, so_tactics=EXCLUDED.so_tactics, so_duties=EXCLUDED.so_duties, so_roles=EXCLUDED.so_roles`,
+        [accountId, JSON.stringify(persisted), so.formation, JSON.stringify(so.playerIds), JSON.stringify(so.tactics), so.duties ? JSON.stringify(so.duties) : null, rolesJson(so)],
       );
     },
     async saveStandingOrders(accountId, so: StandingOrders) {
-      await q('UPDATE clubs SET so_formation=$1, so_player_ids=$2, so_tactics=$3, so_duties=$4 WHERE account_id=$5',
-        [so.formation, JSON.stringify(so.playerIds), JSON.stringify(so.tactics), so.duties ? JSON.stringify(so.duties) : null, accountId]);
+      await q('UPDATE clubs SET so_formation=$1, so_player_ids=$2, so_tactics=$3, so_duties=$4, so_roles=$5 WHERE account_id=$6',
+        [so.formation, JSON.stringify(so.playerIds), JSON.stringify(so.tactics), so.duties ? JSON.stringify(so.duties) : null, rolesJson(so), accountId]);
     },
     async getClub(accountId) {
-      const r = (await q('SELECT club, so_formation, so_player_ids, so_tactics, so_duties FROM clubs WHERE account_id=$1', [accountId])).rows[0];
+      const r = (await q('SELECT club, so_formation, so_player_ids, so_tactics, so_duties, so_roles FROM clubs WHERE account_id=$1', [accountId])).rows[0];
       if (!r) return undefined;
-      return { club: JSON.parse(r.club), standingOrders: { formation: r.so_formation, playerIds: JSON.parse(r.so_player_ids), tactics: JSON.parse(r.so_tactics), duties: r.so_duties ? JSON.parse(r.so_duties) : undefined } };
+      return { club: JSON.parse(r.club), standingOrders: { formation: r.so_formation, playerIds: JSON.parse(r.so_player_ids), tactics: JSON.parse(r.so_tactics), duties: r.so_duties ? JSON.parse(r.so_duties) : undefined, ...parseRoles(r.so_roles) } };
     },
     async savePlan(ownerId, opponentId, plan) {
       await q(

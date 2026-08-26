@@ -658,6 +658,12 @@
       .slot .role { font-family: var(--body); font-size: 14px; width: 36px; text-align: center; color: #0a0a16; padding: 4px 0; }
       .slot select.player-sel { flex: 1; min-width: 0; }
       .slot select.duty-sel { flex: none; width: 118px; font-size: 17px; padding: 3px 20px 3px 6px; color: var(--cyan); background-position: right 6px center; }
+      .slot .role-badges { flex: none; display: inline-flex; gap: 3px; margin-left: 2px; }
+      .slot .role-badges .rb { font-family: var(--body); font-size: 13px; width: 24px; height: 24px; padding: 0; border-radius: 5px; cursor: pointer;
+        background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); text-transform: none; letter-spacing: 0; line-height: 1; }
+      .slot .role-badges .rb:hover { color: var(--text); border-color: var(--muted); }
+      .slot .role-badges .rb.cap.on { background: #ffd75e; color: #1a1400; border-color: #ffd75e; }
+      .slot .role-badges .rb.pen.on, .slot .role-badges .rb.fk.on, .slot .role-badges .rb.corner.on { background: var(--cyan); color: #05121a; border-color: var(--cyan); }
       .slot .ovr { flex: none; box-sizing: border-box; min-width: 42px; text-align: center; font-weight: bold; font-size: 20px;
         background: #0a0a16; border: 1px solid rgba(255,255,255,0.18); border-radius: 5px; padding: 3px 7px; }
       .slot .loan { flex: none; font-family: var(--display); font-size: 8px; letter-spacing: 0.5px; color: var(--warn);
