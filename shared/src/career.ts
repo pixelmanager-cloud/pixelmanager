@@ -394,6 +394,25 @@ export function rollFocus(chapter: string): FocusOption[] {
   return [...(FOCUS_BY_CHAPTER[chapter] ?? FOCUS_BY_CHAPTER.Establishing), FOCUS_REST];
 }
 
+// ── SIDE FOCUS: from Breakthrough onward, a smaller SECOND summer pick alongside the main one — a
+// public-facing extra with a tiny nudge, on top of (not instead of) the main focus. Same deterministic,
+// development-neutral contract as the main focus (energy + relationships only, no rng).
+const FOCUS_SIDE_SKIP: FocusOption = { id: 'side_skip', icon: '➖', name: 'Nothing Else', desc: 'Keep it simple this summer — no extra commitments.', energy: 0, effects: {} };
+const SIDE_FOCUS_BY_CHAPTER: Record<string, FocusOption[]> = {
+  Breakthrough: [
+    { id: 'charity',  icon: '🤝', name: 'Charity Five-a-Side', desc: 'A low-key kickabout for a good cause — the fans notice the little things.', energy: -3, effects: { fans: +6 } },
+    { id: 'mediaday', icon: '📷', name: 'A Media Day',         desc: 'An hour of interviews and photos squeezed in between the main plans.',        energy: -3, effects: { agent: +6 } },
+  ],
+  'First Team': [
+    { id: 'charity', icon: '🤝', name: 'Charity Five-a-Side', desc: 'A low-key kickabout for a good cause — the fans notice the little things.', energy: -3, effects: { fans: +6 } },
+    { id: 'signing', icon: '✍️', name: 'A Signing Session',   desc: 'An afternoon at the club shop, meeting the people who pay to watch you.',    energy: -3, effects: { sponsors: +6 } },
+  ],
+  Establishing: [
+    { id: 'charity',   icon: '🤝', name: 'Charity Five-a-Side',   desc: 'A low-key kickabout for a good cause — even a superstar remembers where he came from.', energy: -3, effects: { fans: +6 } },
+    { id: 'boardroom', icon: '🥂', name: 'A Boardroom Appearance', desc: 'Handshakes and small talk with the people who run the club.',                           energy: -3, effects: { sponsors: +6 } },
+  ],
+};
+
 /** Seeded coach choices for a track: outfield sees no GK-only coach, GK sees the GK coach + mental ones. */
 export function rollCoaches(rng: () => number, track: Track, n = COACH_OFFER): Coach[] {
   const pool = COACHES.filter((c) => (track === 'goalkeeper' ? true : !c.specialty.includes('keeping')));
@@ -539,6 +558,8 @@ export class Career {
   pendingOffer: Offer[] | null = null;
   /** When set, the career pauses at a chapter break for a FOCUS choice: how to spend the summer. */
   pendingFocus: FocusOption[] | null = null;
+  /** The chapter whose smaller SIDE focus round is currently on offer (Breakthrough onward, once per chapter). */
+  private sideFocusFor: string | null = null;
   /** lifestyle upgrades bought with career earnings (permanent perks). */
   ownedLifestyle: string[] = [];
   private energyRecoveryBonus = 0;   // better living → more energy restored each summer
@@ -605,7 +626,7 @@ export class Career {
 
   /** Current state: a 'coach' phase (appoint staff), a 'draft' phase (add a card), or a 'play' phase. */
   current() {
-    if (this.pendingFocus) return { phase: 'focus' as const, age: this.age, chapter: this.chapter, focus: this.pendingFocus, lifestyle: this.lifestyleOffer, earnings: this.earnings, seasonEvent: this.seasonEvent, consequences: this.chapterConsequences, energy: this.energy, deck: this.deck, finished: this.finished };
+    if (this.pendingFocus) return { phase: 'focus' as const, age: this.age, chapter: this.chapter, focus: this.pendingFocus, side: this.sideFocusFor === this.chapter, lifestyle: this.lifestyleOffer, earnings: this.earnings, seasonEvent: this.seasonEvent, consequences: this.chapterConsequences, energy: this.energy, deck: this.deck, finished: this.finished };
     if (this.pendingOffer) return { phase: 'offer' as const, age: this.age, chapter: this.chapter, offers: this.pendingOffer, earnings: this.earnings, deck: this.deck, finished: this.finished };
     if (this.pendingCoaches) return { phase: 'coach' as const, age: this.age, chapter: this.chapter, coaches: this.pendingCoaches, deck: this.deck, finished: this.finished };
     if (this.pendingDraft) return { phase: 'draft' as const, age: this.age, chapter: this.chapter, options: this.pendingDraft.options, picksLeft: this.pendingDraft.picksLeft, deck: this.deck, finished: this.finished };
@@ -624,7 +645,15 @@ export class Career {
     for (const [k, d] of Object.entries(opt.effects)) this.standing[k as MeterKey] = clamp(this.standing[k as MeterKey] + (d ?? 0), 0, 100);
     this.actions.push({ type: 'focus', cardId: focusId });
     this.pendingFocus = null;
-    this.pendingOffer = rollOffer(this.rng, this.turn);
+    // Breakthrough onward: a second, smaller SIDE focus round follows the main pick (once per chapter).
+    const sideOpts = SIDE_FOCUS_BY_CHAPTER[this.chapter];
+    if (sideOpts && this.sideFocusFor !== this.chapter) {
+      this.sideFocusFor = this.chapter;
+      this.pendingFocus = [...sideOpts, FOCUS_SIDE_SKIP];
+    } else {
+      this.sideFocusFor = null;
+      this.pendingOffer = rollOffer(this.rng, this.turn);
+    }
   }
   /** Lifestyle upgrades affordable + unlocked RIGHT NOW (offered at the between-chapter focus screen). */
   get lifestyleOffer(): LifestyleItem[] {

@@ -46,10 +46,19 @@ or newly imagined beyond the brief. Ranked safe/small/high-value first.
   `/career/:id/kit` route now cleans + defaults both into the persisted `kit_json` blob. Purely
   cosmetic, no career.ts/rng touch; `npm run verify` and `career_sim` both green (diversity
   closest-pair distance 9, determinism identical: true).
-- [ ] 7. **A second summer-focus slot for later chapters.** (M) Seed idea #9: from Breakthrough
+- [x] 7. **A second summer-focus slot for later chapters.** (M) Seed idea #9: from Breakthrough
   onward, offer a second, smaller "side activity" pick alongside the main focus (e.g. a charity
   five-a-side, a media day) with its own tiny meter nudge. Must stay deterministic (energy + meters
-  only, no rng, no dev effect) and replay-tolerant like `chooseFocus`.
+  only, no rng, no dev effect) and replay-tolerant like `chooseFocus`. **Done:** added
+  `SIDE_FOCUS_BY_CHAPTER` (Breakthrough/First Team/Establishing, 2 options + a "Nothing Else" skip)
+  in career.ts. `chooseFocus` now chains a second, smaller round for those chapters by re-populating
+  `pendingFocus` (same 'focus' phase, tracked via a private `sideFocusFor` guard so it fires once per
+  chapter) before proceeding to the financial offer — no new phase/action type, so `career_sim.ts`,
+  `tokens.ts` and the replay/resume contract needed zero changes; the existing `autoResolveFocus`
+  drift-safety net already absorbs an old snapshot mid-way through a side round. `current()` exposes
+  a `side: boolean` flag (api.ts `CareerState.side`) so `main.ts` swaps the summer-break prompt copy
+  and hides the lifestyle shop on the side round. `npm run verify` and `career_sim` both green
+  (diversity closest-pair distance 9, determinism identical: true).
 - [ ] 8. **Matchday scoreboard visual polish.** (M) Seed idea #8: the `.cg-scenario`/`matchCtx` area
   is functional but plain — add a proper scoreboard treatment (opponent crest-style monogram, a
   scoreline strip, a competition badge) reading from the existing `matchContext` data. No layout
