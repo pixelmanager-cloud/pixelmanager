@@ -259,10 +259,12 @@ class Game {
       setToken(r.token);
       this.setMe({ account: r.account, club: r.club, standingOrders: r.standingOrders });
       const saves = this.loadSaves(); saves.push({ id: handle, token: r.token, name, lastPlayed: Date.now() }); this.saveSaves(saves);
-      this.showSelect();
+      this.onboarding = true; // lead a new player straight to their first prospect (the unique hook)
+      this.showAcademy();
     } catch { $('login-error').textContent = 'Could not create your club. Is the game server running?'; }
   }
 
+  private onboarding = false; // true right after New Game → academy shows a first-time welcome
   private injured = new Map<string, number>(); // playerId → matches remaining out
   private contracts: Record<string, ContractInfo> = {}; // NFT playerId → contract situation
   private season = 0;
@@ -821,17 +823,20 @@ class Game {
     this.showScreen('academy');
     $('academy-body').innerHTML = SPINNER;
     try {
-      const { prospects, supply, cap } = await api.prospects();
-      const mintLabel = '🌱 Mint a genesis prospect · 300c';
-      const intro = `<div class="scout-sub">Your youth prospects — 10-year-olds to <b>develop</b> through a career (age 10→25): play to each chapter's demands, appoint coaches, and make the big calls. At 25 the SAME NFT graduates into a pro you can field. Mint a fresh genesis prospect, or breed one by retiring a player and choosing <b>Reborn</b>. <span style="color:var(--muted);">· fixed supply: <b>${supply.toLocaleString()}</b> / ${cap.toLocaleString()} minted</span></div>`
-        + `<div style="margin:10px 0 14px;"><button id="mint-genesis" class="primary">${mintLabel}</button></div>`;
+      const { prospects } = await api.prospects();
+      const welcome = this.onboarding
+        ? `<div class="onboard-welcome"><b>Welcome to ${this.club.name}.</b> Every legend starts as a kid. Here's your first prospect — <b>develop him</b> through his career (age 10→25), graduate him into your squad, and one day his bloodline carries on. Hit <b>Develop →</b> to begin.</div>`
+        : '';
+      this.onboarding = false;
+      const intro = `<div class="scout-sub">Your <b>academy</b> — young players to <b>develop</b> through a full career (age 10→25): play to each chapter's demands, appoint coaches, make the big calls. At 25 they graduate into a pro for your squad — and when they retire, their <b>bloodline</b> lives on through the next generation.</div>`
+        + `<div style="margin:10px 0 14px;"><button id="mint-genesis" class="primary">🔎 Scout a new prospect · 300c</button></div>`;
       const rows = prospects.length ? prospects.map((p) => {
         const stars = '★'.repeat(p.potentialStars) + '☆'.repeat(5 - p.potentialStars);
         const gen = p.generation ? ` · gen ${p.generation}` : '';
         const btn = `<button class="primary" data-dev="${p.id}">${p.careerStarted ? 'Continue' : 'Develop'} →</button>`;
         return `<div class="prospect-row"><div><div class="pr-name">🌱 ${p.name} <span class="pr-stars">${stars}</span></div>`
           + `<div class="pr-meta">${p.roleHint}${gen} · pedigree ${(p.pedigree * 100) | 0}% ${p.careerStarted ? '· in development' : '· age 10, ready to develop'}</div></div>${btn}</div>`;
-      }).join('') : '<div class="muted">No prospects yet — mint a genesis prospect above to begin.</div>';
+      }).join('') : '<div class="muted">No prospects yet — scout one above to begin.</div>';
       const { legends } = await api.legends().catch(() => ({ legends: [] as any[] }));
       const hall = legends.length ? `<h4 class="scout-h4" style="margin-top:22px;">🏅 HALL OF LEGENDS</h4>`
         + `<div class="scout-sub">The great careers your bloodlines have had — one card per retirement.</div>`
@@ -839,7 +844,7 @@ class Game {
           + `<div class="lc-name">${l.name}</div><div class="lc-meta">${l.card.role} · rating ${l.card.legendRating}</div>`
           + `<div class="lc-honours">${l.card.leagueTitles}🏅 ${l.card.cupTitles}🏆 · ${l.card.apps} apps · ${l.card.seasons} seasons</div>`
           + `<div class="lc-note">${l.card.note}</div></div>`).join('') + `</div>` : '';
-      $('academy-body').innerHTML = intro + rows + hall;
+      $('academy-body').innerHTML = welcome + intro + rows + hall;
       $('mint-genesis').addEventListener('click', () => this.mintGenesis());
       $('academy-body').querySelectorAll('[data-dev]').forEach((b) => b.addEventListener('click', () => this.openCareer((b as HTMLElement).dataset.dev!)));
     } catch { $('academy-body').innerHTML = '<div class="muted">Could not load — is the server running?</div>'; }
