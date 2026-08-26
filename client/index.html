@@ -86,18 +86,6 @@
       #handle-input, #password-input { font-family: var(--body); font-size: 24px; background: var(--panel-2); color: var(--text);
         border: 2px solid var(--line); box-shadow: 3px 3px 0 rgba(0,0,0,0.6); padding: 8px 12px; outline: none; }
       #handle-input::placeholder, #password-input::placeholder { color: #7a7ab0; }
-      /* wallet sign-in */
-      #wallet-box { margin-top: 16px; }
-      .wallet-or { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 15px; margin: 4px 0 10px; }
-      .wallet-or::before, .wallet-or::after { content: ''; flex: 1; height: 1px; background: var(--line); }
-      .wallet-btns { display: flex; gap: 10px; flex-wrap: wrap; }
-      #wallet-email-flow { display: flex; gap: 8px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
-      #wallet-email, #wallet-code { font-family: var(--body); font-size: 20px; background: var(--panel-2); color: var(--text);
-        border: 2px solid var(--line); padding: 7px 10px; outline: none; }
-      #me-wallet { font-family: var(--body); font-size: 14px; color: var(--cyan); border: 1px solid var(--cyan);
-        border-radius: 4px; padding: 3px 6px; }
-      #me-token { font-family: var(--body); font-size: 14px; color: var(--warn); border: 1px solid var(--warn);
-        border-radius: 4px; padding: 3px 6px; background: rgba(255,206,58,0.1); }
       /* NFT collectible player card — effects escalate hard with tier */
       #player-card-ov { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center;
         background: rgba(4,4,12,0.85); cursor: pointer; animation: ftfade 0.25s ease-out; }
@@ -126,15 +114,6 @@
       .pc-card .pc-stat span { font-family: var(--body); font-size: 14px; color: var(--muted); }
       .pc-card .pc-stat b { font-size: 20px; }
       .pc-card .pc-foot { font-size: 13px; color: #667; margin-bottom: 14px; letter-spacing: 0.3px; }
-      .pc-card .oc-panel { text-align: left; margin: 6px 0 12px; padding: 9px 11px; border-radius: 7px; background: rgba(120,150,220,0.10); border: 1px solid rgba(120,150,220,0.30); }
-      .pc-card .oc-panel .oc-lbl { font-family: var(--display); font-size: 9px; letter-spacing: 1px; color: #9ab6ff; }
-      .pc-card .oc-panel .oc-grid { display: grid; grid-template-columns: auto 1fr; gap: 3px 10px; margin: 7px 0 6px; font-size: 13px; }
-      .pc-card .oc-panel .oc-k { color: var(--muted); }
-      .pc-card .oc-panel .oc-v { color: #dfe6f5; text-align: right; font-family: var(--body); }
-      .pc-card .oc-panel .oc-link { font-size: 13px; color: var(--cyan); }
-      .pc-card .oc-panel .oc-note { font-size: 12px; color: var(--muted); font-style: italic; }
-      #chain-status { font-family: var(--body); font-size: 13px; color: #9ab6ff; background: rgba(120,150,220,0.10); border: 1px solid rgba(120,150,220,0.28); border-radius: 6px; padding: 6px 10px; margin: 4px 0 10px; display: inline-flex; gap: 12px; flex-wrap: wrap; }
-      #chain-status b { color: #dfe6f5; }
       /* contract block */
       .pc-card .pc-contract { position: relative; z-index: 2; width: 84%; margin: 4px auto 12px; padding: 9px 11px; border-radius: 8px;
         background: rgba(90,120,90,0.14); border: 1px solid rgba(120,200,120,0.28); }
@@ -241,7 +220,6 @@
       .bench-nft { cursor: pointer; text-decoration: underline dotted rgba(255,255,255,0.25); }
       .bench-nft.tier-bronze { color: #e0995a; } .bench-nft.tier-silver { color: #e6edf7; }
       .bench-nft.tier-gold { color: var(--warn); } .bench-nft.tier-diamond { color: #57e6ff; } .bench-nft.tier-legend { color: #ffd76a; }
-      #wallet-hint { font-size: 15px; margin-top: 8px; }
       #handle-input:hover, #password-input:hover { border-color: var(--cyan); }
       #handle-input:focus, #password-input:focus { border-color: var(--good); box-shadow: 3px 3px 0 rgba(0,0,0,0.6), 0 0 10px var(--good); }
       /* hub */
@@ -595,10 +573,8 @@
       .scout-net .sn-tier.tier-bronze { color: #f0a868; border-color: #cd7f32; }
       .scout-net .sn-tier.tier-silver { color: #eaf1ff; border-color: #cdd6e6; }
       .scout-net .sn-tier.tier-gold { color: var(--warn); border-color: var(--warn); background: rgba(255,206,58,0.12); }
-      .scout-upgrade { margin-top: 9px; font-size: 9px; width: 100%; }
       .scout-net .sn-desc { font-size: 17px; color: #9ab; margin-top: 6px; line-height: 1.4; }
       .scout-net .sn-desc b { color: var(--good); }
-      #my-scouts .sn-hint { grid-column: 1 / -1; font-size: 15px; color: var(--muted); font-style: italic; }
       .scout-h4 { font-family: var(--body); font-size: 17px; color: var(--pink); margin: 14px 0 4px; letter-spacing: 0.5px; }
       /* transfer market */
       #market-head { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
@@ -925,19 +901,6 @@
           <button id="register-btn" class="primary">Create Club</button>
         </div>
         <div id="login-error" style="color:var(--home); font-size: 18px; margin-top:8px"></div>
-        <div id="wallet-box">
-          <div class="wallet-or"><span>or connect a wallet</span></div>
-          <div class="wallet-btns">
-            <button id="wallet-email-btn">✉ Email sign-in</button>
-            <button id="wallet-injected-btn">🦊 Browser wallet</button>
-          </div>
-          <div id="wallet-email-flow" class="hidden">
-            <input id="wallet-email" type="email" placeholder="you@email.com" maxlength="120" />
-            <input id="wallet-code" class="hidden" placeholder="6-digit code" maxlength="12" />
-            <button id="wallet-email-go">Send code</button>
-          </div>
-          <div id="wallet-hint" class="muted"></div>
-        </div>
       </div>
 
       <!-- MODE SELECT -->
@@ -964,16 +927,13 @@
 
       <!-- HUB -->
       <div id="hub" class="panel hidden">
-        <div id="hub-head"><span id="me-name"></span><span id="me-rating"></span><span id="me-prestige" class="hidden" title="Your manager legacy — earned from titles, wins, and how high you climb"></span><span id="me-coins" title="Transfer-market coins — earn them by playing"></span><span id="me-wallet" class="hidden" title="Linked wallet"></span><span id="me-token" class="hidden" title="On-chain token balance (Base Sepolia)"></span>
+        <div id="hub-head"><span id="me-name"></span><span id="me-rating"></span><span id="me-prestige" class="hidden" title="Your manager legacy — earned from titles, wins, and how high you climb"></span><span id="me-coins" title="Transfer-market coins — earn them by playing"></span>
           <div class="hub-actions">
             <button id="view-standings">📊 League &amp; Results</button>
             <button id="view-club">🏛️ Club</button>
             <button id="view-scouting">🔎 Scouting</button>
             <button id="view-market">💰 Transfer Market</button>
             <button id="view-modes">⇄ Modes</button>
-            <button id="link-wallet" class="hidden">🔗 Link Wallet</button>
-            <button id="faucet-btn" class="hidden">💠 Get test tokens</button>
-            <button id="mint-player" class="hidden">★ Mint Player</button>
             <button id="set-team">⚙ Set My Team</button>
           </div>
         </div>
@@ -1007,14 +967,11 @@
           <div class="scout-net">
             <div class="sn-top"><span class="sn-icon">🕵️</span><span class="sn-name">Opposition Scout</span><span id="opp-tier" class="sn-tier tier-base">BASE</span></div>
             <div id="opp-desc" class="sn-desc"></div>
-            <button id="mint-opp" class="scout-upgrade hidden"></button>
           </div>
           <div class="scout-net">
             <div class="sn-top"><span class="sn-icon">🔎</span><span class="sn-name">Player Scout</span><span id="player-tier" class="sn-tier tier-base">BASE</span></div>
             <div id="player-desc" class="sn-desc"></div>
-            <button id="mint-player-scout" class="scout-upgrade hidden"></button>
           </div>
-          <div id="scout-hint" class="sn-hint"></div>
         </div>
         <h4 class="scout-h4">🥅 LOCAL TRYOUTS</h4>
         <div class="scout-sub">Walk-ups who turn up at your gate — free, but slim pickings. Sign from here or the network up to <b id="loan-cap">3</b> loanees this season (<span id="loan-signed">0</span> signed). They play this season only, then leave.</div>

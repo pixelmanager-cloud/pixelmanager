@@ -56,7 +56,7 @@ async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-export interface Account { id: string; handle: string; rating: number; coins?: number; wallet?: string | null }
+export interface Account { id: string; handle: string; rating: number; coins?: number }
 export interface MarketPlayer { name: string; role: string; overall: number; attrs: Record<string, number>; hidden: number }
 export interface MarketListing { id: string; playerId: string; price: number; sellerHandle: string; mine: boolean; player: MarketPlayer }
 export interface TableRow { id: string; handle: string; rating: number; P: number; W: number; D: number; L: number; GF: number; GA: number; GD: number; Pts: number }
@@ -108,9 +108,7 @@ export const api = {
   stake: (playerId: string, on: boolean) => req<{ ok: true; contract: ContractInfo }>(`/players/${encodeURIComponent(playerId)}/${on ? 'stake' : 'unstake'}`, { method: 'POST' }),
   reborn: (playerId: string) => req<{ ok: true; cost: number; coins: number; prospect: Prospect }>(`/players/${encodeURIComponent(playerId)}/reborn`, { method: 'POST' }),
   prospects: () => req<{ prospects: Prospect[]; supply: number; cap: number }>('/prospects'),
-  genesis: () => req<{ ok: true; supply: number; cap: number; cost?: number; coins?: number; onchain?: boolean; tokenId?: string; prospect: Prospect }>('/genesis', { method: 'POST' }),
-  lifecycle: () => req<{ address: string; chainId: number; enabled: boolean; serverSigner: boolean; signerAddress: string | null }>('/lifecycle'),
-  onchain: (id: string) => req<{ enabled: boolean; tokenId?: string; chainId?: number; contract?: string; owner?: string | null; generation?: number | null; genesSeed?: string | null; explorer?: string | null }>(`/onchain/${encodeURIComponent(id)}`),
+  genesis: () => req<{ ok: true; supply: number; cap: number; cost?: number; coins?: number; prospect: Prospect }>('/genesis', { method: 'POST' }),
   careerAgents: () => req<{ agents: Array<{ id: string; name: string; desc: string }> }>('/career/agents'),
   startCareer: (pid: string, agentId: string | null) => req<{ ok: true; state: CareerState }>(`/career/${encodeURIComponent(pid)}/start`, { method: 'POST', body: JSON.stringify({ agentId }) }),
   getCareer: (pid: string) => req<{ ok: true; state: CareerState }>(`/career/${encodeURIComponent(pid)}`),
@@ -147,13 +145,5 @@ export const api = {
   listPlayer: (playerId: string, price: number) => req<{ ok: true; id: string }>('/market/list', { method: 'POST', body: JSON.stringify({ playerId, price }) }),
   buyListing: (id: string) => req<{ ok: true; player: { name: string; role: string }; coins: number }>(`/market/${id}/buy`, { method: 'POST' }),
   cancelListing: (id: string) => req<{ ok: true }>(`/market/${id}/cancel`, { method: 'POST' }),
-  walletNonce: (address: string) => req<{ message: string }>('/auth/wallet/nonce', { method: 'POST', body: JSON.stringify({ address }) }),
-  walletVerify: (address: string, signature: string) => req<{ token: string; account: Account; club: Club; standingOrders: StandingOrders }>(
-    '/auth/wallet/verify', { method: 'POST', body: JSON.stringify({ address, signature }) }),
-  walletLink: (address: string, signature: string) => req<{ ok: true; wallet: string }>(
-    '/auth/wallet/link', { method: 'POST', body: JSON.stringify({ address, signature }) }),
-  nft: () => req<{ address: string; chainId: number; enabled: boolean }>('/nft'),
   scoutTiers: () => req<{ opp: string; player: string; nft: { address: string; chainId: number; enabled: boolean } }>('/scout/tiers'),
-  token: () => req<{ address: string; chainId: number; chainName: string; symbol: string; decimals: number }>('/token'),
-  tokenBalance: () => req<{ wallet: string | null; balance: string | null; symbol: string }>('/token/balance'),
 };

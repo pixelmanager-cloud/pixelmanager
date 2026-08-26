@@ -8,7 +8,6 @@ import {
   type Player, type Track, type PlayerAchievements, type Genes, type CareerPlayerAttrs,
 } from '@fm/shared';
 import type { Token, Store } from './store.js';
-import { lifecycleEnabled, ownedTokens } from './lifecyclenft.js';
 
 export const SUPPLY_CAP = Number(process.env.SUPPLY_CAP ?? 10000); // fixed total NFTs in the economy
 // Lifecycle SINKS (coins now — the seam that becomes a PTEST spend later; see docs/economy-and-web3.md).
@@ -61,33 +60,6 @@ export async function mintGenesis(db: Store, ownerId: string): Promise<Token> {
   await db.createToken({ id, owner_id: ownerId, generation: 0, state: 'prospect', name: nameFor(seed), genes_json: JSON.stringify(genes), pedigree: 0, dev_bonus_json: '{}' });
   await db.updateToken(id, { role: seedFrom(id + ':gk') % 100 < 12 ? 'GK' : 'MF' }); // track hint (~12% keepers)
   return (await db.getToken(id))!;
-}
-
-/** Materialize a fresh off-chain genesis PROSPECT for an on-chain token (id `nft:<tokenId>`), with
- *  genes derived from the on-chain genesSeed. Used by the wallet-owned (web3) path. */
-async function materializeOnchain(db: Store, ownerId: string, tokenId: string, genesSeed: string, generation: number): Promise<void> {
-  const id = `nft:${tokenId}`;
-  const seed = seedFrom(`${id}:${genesSeed}`);
-  const genes = rollGenes(seed);
-  await db.createToken({ id, owner_id: ownerId, generation, state: 'prospect', name: nameFor(seed), genes_json: JSON.stringify(genes), pedigree: 0, dev_bonus_json: '{}' });
-  await db.updateToken(id, { role: seedFrom(id + ':gk') % 100 < 12 ? 'GK' : 'MF' });
-}
-
-/** Reconcile off-chain lifecycle state with on-chain OWNERSHIP for an account's wallet: materialize
- *  any owned-but-unmaterialized tokens (genesis), and sync owner_id (on-chain transfer) + generation
- *  (on-chain reborn). The chain is the source of truth for ownership; game state stays off-chain. */
-export async function syncOnchainTokens(db: Store, accountId: string, wallet: string | null): Promise<void> {
-  if (!lifecycleEnabled() || !wallet) return;
-  const owned = await ownedTokens(wallet);
-  for (const oc of owned) {
-    const id = `nft:${oc.tokenId}`;
-    const existing = await db.getToken(id);
-    if (!existing) { await materializeOnchain(db, accountId, oc.tokenId, oc.genesSeed, oc.generation); continue; }
-    const patch: Partial<Token> = {};
-    if (existing.owner_id !== accountId) patch.owner_id = accountId;      // on-chain transfer → new owner
-    if (existing.generation !== oc.generation) patch.generation = oc.generation; // on-chain reborn
-    if (Object.keys(patch).length) await db.updateToken(id, patch);
-  }
 }
 
 // ── contract / selection info for a PRO token ──

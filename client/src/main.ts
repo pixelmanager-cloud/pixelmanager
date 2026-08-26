@@ -5,7 +5,6 @@ import {
 } from '@fm/shared';
 import { SCALE, makeBallTexture, makeBallGhostTexture, makePitchTexture, makePlayerFrames, makeShadowTexture, makeCarrierTexture } from './pixelart';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData, type MissionsData, type ContractInfo, type LeaderStat, type AwardRow } from './api';
-import { walletConfigured, nftConfigured, sendEmailCode, connectEmail, connectInjected, autoConnectInApp, signMessage, claimTokens, mintPlayer, mintScout, type Account as WalletAccount } from './wallet';
 
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
 
@@ -209,7 +208,6 @@ class Game {
 
   async boot() {
     this.wireStaticButtons();
-    this.wireWallet();
     if (hasToken()) {
       try { this.setMe(await api.me()); this.showSelect(); return; }
       catch { clearToken(); }
@@ -219,7 +217,6 @@ class Game {
 
   private injured = new Map<string, number>(); // playerId → matches remaining out
   private contracts: Record<string, ContractInfo> = {}; // NFT playerId → contract situation
-  private lifecycleOn = false; // on-chain lifecycle NFT enabled (web3 loop)
   private season = 0;
   private setMe(me: { account: Account; club: Club; standingOrders: StandingOrders; injuries?: Array<{ player_id: string; matches_remaining: number }>; contracts?: Record<string, ContractInfo>; season?: number }) {
     this.account = me.account; this.club = me.club; this.standingOrders = me.standingOrders;
@@ -372,76 +369,6 @@ class Game {
     }
   }
 
-  // ---- wallet sign-in (web3 Step 1) ----
-  private wireWallet() {
-    const hint = $('wallet-hint');
-    if (!walletConfigured()) {
-      // still show the buttons, but explain they need a thirdweb clientId
-      hint.innerHTML = 'Wallet sign-in needs <code>VITE_THIRDWEB_CLIENT_ID</code> — set it to enable email/browser-wallet login.';
-    }
-    $('wallet-injected-btn').addEventListener('click', () => this.walletFlow(() => connectInjected()));
-    $('wallet-email-btn').addEventListener('click', () => {
-      $('wallet-email-flow').classList.toggle('hidden');
-    });
-    // email is two steps: "Send code" → "Verify & sign in"
-    let codeSent = false;
-    $('wallet-email-go').addEventListener('click', async () => {
-      const email = ($('wallet-email') as HTMLInputElement).value.trim();
-      if (!email) { toast('Enter your email'); return; }
-      const btn = $('wallet-email-go') as HTMLButtonElement;
-      if (!codeSent) {
-        btn.disabled = true; $('wallet-hint').textContent = 'Sending code…';
-        try { await sendEmailCode(email); codeSent = true; $('wallet-code').classList.remove('hidden'); btn.textContent = 'Verify & sign in'; $('wallet-hint').textContent = 'Enter the code we emailed you.'; }
-        catch (e: any) { $('wallet-hint').textContent = e?.message ?? 'Could not send code.'; }
-        finally { btn.disabled = false; }
-      } else {
-        const code = ($('wallet-code') as HTMLInputElement).value.trim();
-        if (!code) { toast('Enter the code'); return; }
-        await this.walletFlow(() => connectEmail(email, code));
-      }
-    });
-    $('link-wallet').addEventListener('click', () => this.walletFlow(() => connectInjected(), true));
-    $('faucet-btn').addEventListener('click', () => this.claimFaucet());
-    $('mint-player').addEventListener('click', () => this.mintStarPlayer());
-  }
-
-  /** Mint a star PlayerNFT with the linked wallet; it then shows up in the squad. */
-  private async mintStarPlayer() {
-    const linked = this.account.wallet;
-    if (!linked) { toast('Link a wallet first'); return; }
-    const short = `${linked.slice(0, 6)}…${linked.slice(-4)}`;
-    const btn = $('mint-player') as HTMLButtonElement;
-    const prev = btn.textContent;
-    btn.disabled = true;
-    try {
-      btn.textContent = 'Connecting…';
-      let signer = await autoConnectInApp();
-      if (!signer || signer.address.toLowerCase() !== linked) {
-        const injected = await connectInjected().catch(() => null);
-        if (injected) signer = injected;
-      }
-      if (!signer) { toast('Connect a wallet to mint'); return; }
-      if (signer.address.toLowerCase() !== linked) { toast(`Connect the wallet linked to this club (${short})`); return; }
-      const before = new Set(this.club.players.filter((p) => p.id.startsWith('nft:')).map((p) => p.id));
-      btn.textContent = 'Minting…';
-      await mintPlayer(signer);
-      // the tx is mined; give the RPC a couple tries to reflect the new token, then name it
-      btn.textContent = 'Revealing…';
-      let minted: typeof this.club.players[number] | undefined;
-      for (let attempt = 0; attempt < 5 && !minted; attempt++) {
-        this.setMe(await api.me());
-        minted = this.club.players.filter((p) => p.id.startsWith('nft:') && !before.has(p.id)).sort((a, b) => overall(b) - overall(a))[0];
-        if (!minted) await new Promise((r) => setTimeout(r, 1500));
-      }
-      await this.showHub();
-      if (minted) this.showPlayerCard(minted, true);
-      else toast('Minted ✓ — your ★ NFT star will appear in Set My Team shortly');
-    } catch (e: any) {
-      const m = String(e?.message ?? '');
-      toast(/insufficient|funds|gas/i.test(m) ? `${short} needs Base Sepolia ETH for gas` : ((e?.shortMessage ?? m) || 'Mint failed'));
-    } finally { btn.disabled = false; btn.textContent = prev; }
-  }
-
   /** A premium collectible card for an NFT star — tier-framed, holographic on the top
    *  tiers. Used both for the mint reveal and for clicking a star to admire it. */
   private showPlayerCard(p: Player, minted = false) {
@@ -498,7 +425,7 @@ class Game {
       + this.careerRecordHtml(p)
       + this.characterHtml(p)
       + contractHtml
-      + `<div class="pc-foot">★ NFT${tokenId ? ` · #${tokenId}` : ''} · Base Sepolia · on-chain</div>`
+      + `<div class="pc-foot">★ NFT${tokenId ? ` · #${tokenId}` : ''}</div>`
       + `<button class="pc-close">${minted ? 'Nice ✓' : 'Close'}</button></div>`;
     el.addEventListener('click', async (e) => {
       const t = e.target as HTMLElement;
@@ -508,29 +435,6 @@ class Game {
       if (t === el || t.classList.contains('pc-close')) el.remove();
     });
     document.body.appendChild(el);
-    void this.loadOnchainPanel(p.id, el);
-  }
-
-  /** Fetch a lifecycle token's LIVE on-chain state and inject an ⛓ panel into an open card. */
-  private async loadOnchainPanel(id: string, card: HTMLElement) {
-    if (!this.lifecycleOn || !id.startsWith('nft:')) return;
-    try {
-      const o = await api.onchain(id);
-      if (!o.enabled || !card.isConnected) return;
-      const short = (a?: string | null) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : '—');
-      const row = (k: string, v: string, title = '') => `<span class="oc-k">${k}</span><b class="oc-v"${title ? ` title="${title}"` : ''}>${v}</b>`;
-      const panel = `<div class="oc-panel"><span class="oc-lbl">⛓ ON-CHAIN</span><div class="oc-grid">`
-        + row('NFT', `#${o.tokenId}`)
-        + row('Generation', `${o.generation ?? '—'}`)
-        + row('Owner', short(o.owner), o.owner ?? '')
-        + row('Chain', `${o.chainId}`)
-        + row('Contract', short(o.contract), o.contract ?? '')
-        + `</div>`
-        + (o.explorer ? `<a class="oc-link" href="${o.explorer}" target="_blank" rel="noopener">view on explorer ↗</a>` : `<span class="oc-note">local chain — no block explorer</span>`)
-        + `</div>`;
-      const foot = card.querySelector('.pc-foot');
-      if (foot) foot.insertAdjacentHTML('beforebegin', panel);
-    } catch { /* chain unreachable → just skip the panel */ }
   }
 
   /** Breed a retired legend's next generation — a 10-year-old PROSPECT that re-enters the Career game. */
@@ -560,11 +464,10 @@ class Game {
       + `<div class="pc-contract retired"><div class="pc-legend">Potential ${stars} · pedigree ${(p.pedigree * 100 | 0)}%</div>`
       + (p.note ? `<div class="pc-stake">${p.note}</div>` : '')
       + `<div class="pc-stake">Develops 10→25 in the Career game (coming soon)</div></div>`
-      + `<div class="pc-foot">★ Prospect NFT · to be developed · on-chain</div>`
+      + `<div class="pc-foot">★ Prospect NFT · to be developed</div>`
       + `<button class="pc-close">${born ? 'Nice ✓' : 'Close'}</button></div>`;
     el.addEventListener('click', (e) => { const t = e.target as HTMLElement; if (t === el || t.classList.contains('pc-close')) el.remove(); });
     document.body.appendChild(el);
-    void this.loadOnchainPanel(p.id, el);
   }
 
   /** A lifecycle-at-a-glance panel for the manager's NFT stars — age, contract, morale, staking + quick actions. */
@@ -670,83 +573,11 @@ class Game {
     document.body.appendChild(el);
   }
 
-  private async refreshTokenBalance() {
-    try {
-      const t = await api.tokenBalance();
-      $('me-token').textContent = t.balance != null ? `💠 ${Number(t.balance).toLocaleString()} ${t.symbol}` : `💠 — ${t.symbol}`;
-    } catch { $('me-token').textContent = '💠 —'; }
-  }
-
-  /** Faucet: claim test tokens with the wallet that's actually LINKED to this club. */
-  private async claimFaucet() {
-    const linked = this.account.wallet;
-    if (!linked) { toast('Link a wallet first'); return; }
-    const short = `${linked.slice(0, 6)}…${linked.slice(-4)}`;
-    const btn = $('faucet-btn') as HTMLButtonElement;
-    const prev = btn.textContent;
-    btn.disabled = true;
-    try {
-      btn.textContent = 'Connecting…';
-      // find the connected wallet that matches the linked address (so tokens + gas + limit all line up)
-      let signer = await autoConnectInApp();
-      if (!signer || signer.address.toLowerCase() !== linked) {
-        const injected = await connectInjected().catch(() => null);
-        if (injected) signer = injected;
-      }
-      if (!signer) { toast('Connect a wallet to claim'); return; }
-      if (signer.address.toLowerCase() !== linked) {
-        toast(`Connect the wallet linked to this club (${short}) to claim`);
-        return;
-      }
-      btn.textContent = 'Claiming…';
-      await claimTokens(signer, '1000'); // recipient = signer = the linked wallet
-      toast('Claimed 1000 test tokens ✓');
-      await this.refreshTokenBalance();
-    } catch (e: any) {
-      const m = String(e?.message ?? '');
-      toast(/insufficient|funds|gas/i.test(m) ? `${short} needs a little Base Sepolia ETH for gas` : ((e?.shortMessage ?? m) || 'Claim failed'));
-    } finally { btn.disabled = false; btn.textContent = prev; }
-  }
-
-  /** Connect → sign the server nonce → verify (sign in) or link to the current account. */
-  private async walletFlow(connect: () => Promise<WalletAccount>, link = false) {
-    try {
-      $('wallet-hint').textContent = 'Opening wallet…';
-      const account = await connect();
-      const { message } = await api.walletNonce(account.address);
-      const signature = await signMessage(account, message);
-      if (link) {
-        const r = await api.walletLink(account.address, signature);
-        toast(`Wallet linked ✓`);
-        this.setMe(await api.me());
-        await this.showHub();
-        void r;
-      } else {
-        const r = await api.walletVerify(account.address, signature);
-        setToken(r.token);
-        this.setMe({ account: r.account, club: r.club, standingOrders: r.standingOrders });
-        this.showSelect();
-      }
-    } catch (e: any) {
-      const msg = e?.body?.error ?? e?.message ?? 'Wallet sign-in failed.';
-      $('wallet-hint').textContent = msg;
-      if (link) toast(msg);
-    }
-  }
-
   // ---- hub ----
   private async showHub() {
     this.showScreen('hub');
     $('me-name').textContent = this.club.name;
     $('me-rating').textContent = `RATING ${this.account.rating}`;
-    const w = this.account.wallet;
-    $('me-wallet').classList.toggle('hidden', !w);
-    if (w) $('me-wallet').textContent = `🔗 ${w.slice(0, 6)}…${w.slice(-4)}`;
-    $('link-wallet').classList.toggle('hidden', !!w); // offer linking only when none is set
-    $('faucet-btn').classList.add('hidden'); // self-serve faucet deferred (plain token has no claim); distribute via airdrop/transfer on testnet
-    $('mint-player').classList.toggle('hidden', !(w && nftConfigured())); // mint a star once a wallet is linked + NFT deployed
-    $('me-token').classList.toggle('hidden', !w);
-    if (w) void this.refreshTokenBalance();
     if (this.account.coins != null) $('me-coins').textContent = `💰 ${this.account.coins}`;
     void this.refreshPrestige();
     $('fixtures-progress').textContent = '';
@@ -959,7 +790,7 @@ class Game {
       $('trial-pool').innerHTML = this.renderTrialPool(d.pool, d.signedCount >= d.cap);
       Array.from($('trial-pool').querySelectorAll('button[data-idx]')).forEach((b) =>
         b.addEventListener('click', () => this.signTrial(Number((b as HTMLElement).dataset.idx))));
-      this.renderScoutPanel(st.opp, st.player, st.nft.enabled);
+      this.renderScoutPanel(st.opp, st.player);
       await this.loadMissions();
     } catch {
       $('trial-pool').innerHTML = '<div class="muted">Could not load — is the server running?</div>';
@@ -971,15 +802,9 @@ class Game {
     this.showScreen('academy');
     $('academy-body').innerHTML = SPINNER;
     try {
-      const [{ prospects, supply, cap }, life] = await Promise.all([api.prospects(), api.lifecycle().catch(() => ({ enabled: false, chainId: 0 } as any))]);
-      this.lifecycleOn = !!life.enabled;
-      const mintLabel = life.enabled ? `🌱 Mint a genesis prospect · on-chain${life.chainId ? ` (chain ${life.chainId})` : ''}` : '🌱 Mint a genesis prospect · 300c';
-      const chainNote = life.enabled ? ' Each player is an <b>on-chain NFT</b> — you own it in your wallet, and its whole career lives with the token.' : '';
-      const short = (a?: string | null) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : '—');
-      const chainStatus = life.enabled
-        ? `<div id="chain-status">⛓ <span>chain <b>${life.chainId}</b></span><span>contract <b title="${(life as any).address ?? ''}">${short((life as any).address)}</b></span><span>your wallet <b title="${this.account?.wallet ?? ''}">${short(this.account?.wallet)}</b></span></div>`
-        : '';
-      const intro = `<div class="scout-sub">Your youth prospects — 10-year-olds to <b>develop</b> through a career (age 10→25): play to each chapter's demands, appoint coaches, and make the big calls. At 25 the SAME NFT graduates into a pro you can field.${chainNote} Mint a fresh genesis prospect, or breed one by retiring a player and choosing <b>Reborn</b>. <span style="color:var(--muted);">· fixed supply: <b>${supply.toLocaleString()}</b> / ${cap.toLocaleString()} minted</span></div>`
+      const { prospects, supply, cap } = await api.prospects();
+      const mintLabel = '🌱 Mint a genesis prospect · 300c';
+      const intro = `<div class="scout-sub">Your youth prospects — 10-year-olds to <b>develop</b> through a career (age 10→25): play to each chapter's demands, appoint coaches, and make the big calls. At 25 the SAME NFT graduates into a pro you can field. Mint a fresh genesis prospect, or breed one by retiring a player and choosing <b>Reborn</b>. <span style="color:var(--muted);">· fixed supply: <b>${supply.toLocaleString()}</b> / ${cap.toLocaleString()} minted</span></div>`
         + `<div style="margin:10px 0 14px;"><button id="mint-genesis" class="primary">${mintLabel}</button></div>`;
       const rows = prospects.length ? prospects.map((p) => {
         const stars = '★'.repeat(p.potentialStars) + '☆'.repeat(5 - p.potentialStars);
@@ -995,7 +820,7 @@ class Game {
           + `<div class="lc-name">${l.name}</div><div class="lc-meta">${l.card.role} · rating ${l.card.legendRating}</div>`
           + `<div class="lc-honours">${l.card.leagueTitles}🏅 ${l.card.cupTitles}🏆 · ${l.card.apps} apps · ${l.card.seasons} seasons</div>`
           + `<div class="lc-note">${l.card.note}</div></div>`).join('') + `</div>` : '';
-      $('academy-body').innerHTML = chainStatus + intro + rows + hall;
+      $('academy-body').innerHTML = intro + rows + hall;
       $('mint-genesis').addEventListener('click', () => this.mintGenesis());
       $('academy-body').querySelectorAll('[data-dev]').forEach((b) => b.addEventListener('click', () => this.openCareer((b as HTMLElement).dataset.dev!)));
     } catch { $('academy-body').innerHTML = '<div class="muted">Could not load — is the server running?</div>'; }
@@ -1005,9 +830,7 @@ class Game {
     try {
       const r = await api.genesis();
       if (r.coins != null) this.account.coins = r.coins;
-      toast(r.onchain
-        ? `🌱 ${r.prospect.name} minted on-chain${r.tokenId ? ` · NFT #${r.tokenId}` : ''} — ${r.supply}/${r.cap} minted`
-        : `🌱 ${r.prospect.name} minted (−${r.cost}c) — ${r.supply}/${r.cap} in the economy`);
+      toast(`🌱 ${r.prospect.name} minted (−${r.cost}c) — ${r.supply}/${r.cap} in the economy`);
       this.showProspectCard(r.prospect, true);
       await this.showAcademy();
     } catch (e: any) { toast(e?.body?.error === 'supply cap reached' ? 'Supply cap reached — no new tokens' : e?.body?.error === 'not enough coins' ? `Not enough coins (need ${e.body.need})` : (e?.body?.error ?? 'Mint failed')); }
@@ -1331,9 +1154,8 @@ class Game {
     }
   }
 
-  /** Fill the "Your Scouts" cards with live tiers + wire the free scout-mint upgrade buttons. */
-  private renderScoutPanel(opp: string, player: string, nftEnabled: boolean) {
-    const ORDER = ['base', 'bronze', 'silver', 'gold'];
+  /** Fill the "Your Scouts" cards with the current opposition/player scout tiers. */
+  private renderScoutPanel(opp: string, player: string) {
     const oppDesc: Record<string, string> = {
       base: "Reveals an opponent's likely formation + roster — ratings hidden.",
       bronze: 'Now reveals their squad <b>ratings</b>. Likely XI at Silver.',
@@ -1350,53 +1172,6 @@ class Game {
     chip('opp-tier', opp); chip('player-tier', player);
     $('opp-desc').innerHTML = oppDesc[opp] ?? '';
     $('player-desc').innerHTML = playerDesc[player] ?? '';
-    const wireMint = (btnId: string, track: 'opp' | 'player', tier: string) => {
-      const btn = $(btnId) as HTMLButtonElement;
-      const i = ORDER.indexOf(tier);
-      const next = i >= 0 && i < 3 ? ORDER[i + 1] : null;
-      if (!nftEnabled || !this.account.wallet || !next) { btn.classList.add('hidden'); return; }
-      const id = (track === 'opp' ? 1 : 4) + i; // opp:1/2/3  player:4/5/6
-      btn.classList.remove('hidden');
-      btn.textContent = `★ Mint ${next.toUpperCase()} scout — free`;
-      btn.onclick = () => this.mintScoutTier(btnId, id);
-    };
-    wireMint('mint-opp', 'opp', opp);
-    wireMint('mint-player-scout', 'player', player);
-    $('scout-hint').textContent = nftEnabled
-      ? 'Mint scout NFTs (free on testnet) to unlock deeper opposition intel + rarer trialists.'
-      : 'Higher scout tiers unlock once the Scout NFT contract is live.';
-  }
-
-  private async mintScoutTier(btnId: string, id: number) {
-    const btn = $(btnId) as HTMLButtonElement;
-    const prev = btn.textContent;
-    btn.disabled = true;
-    try {
-      btn.textContent = 'Connecting…';
-      const signer = await this.connectLinkedWallet();
-      if (!signer) return;
-      btn.textContent = 'Minting…';
-      await mintScout(signer, id);
-      toast('Scout upgraded ✓');
-      await this.showScouting(); // re-reads tiers (higher now) + re-rolls the trial pool at the new tier
-    } catch (e: any) {
-      const m = String(e?.message ?? '');
-      toast(/insufficient|funds|gas/i.test(m) ? 'Wallet needs Base Sepolia ETH for gas' : ((e?.shortMessage ?? m) || 'Mint failed'));
-    } finally { btn.disabled = false; btn.textContent = prev; }
-  }
-
-  /** Connect the wallet that's linked to this club (resume email session, else injected). */
-  private async connectLinkedWallet(): Promise<WalletAccount | null> {
-    const linked = this.account.wallet;
-    if (!linked) { toast('Link a wallet first'); return null; }
-    let signer = await autoConnectInApp();
-    if (!signer || signer.address.toLowerCase() !== linked) {
-      const injected = await connectInjected().catch(() => null);
-      if (injected) signer = injected;
-    }
-    if (!signer) { toast('Connect a wallet'); return null; }
-    if (signer.address.toLowerCase() !== linked) { toast(`Connect the wallet linked to this club (${linked.slice(0, 6)}…${linked.slice(-4)})`); return null; }
-    return signer;
   }
 
   private renderTrialPool(pool: Trialist[], capReached: boolean): string {

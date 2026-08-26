@@ -7,7 +7,6 @@ import { autoPickXI } from '@fm/shared';
 import type { Store, Season, PodRef } from './store.js';
 import { buildTable, runMatch, elo, validateLineup } from './game.js';
 import { seasonPlacementReward, WIN_COINS, DRAW_COINS, LOSS_COINS } from './market.js';
-import { ownedPlayers } from './nft.js';
 import { trainingConditioning, stadiumIncome, fanIncomeMult, fanHomeBoost, sponsorIncome, squadMarketability } from './facilities.js';
 import { rollMatchInjuries } from './injuries.js';
 import { unavailableTokenIds, tokenToPlayer } from './tokens.js';
@@ -16,13 +15,8 @@ import { recordMatchStats } from './matchstats.js';
 
 import { computeCup, type SquadMap } from './cup.js';
 
-/** Merge a club with the star NFTs its linked wallet owns (read-only). */
-async function withNfts(db: Store, accountId: string, c: { club: any; standingOrders: any }): Promise<typeof c> {
-  const nfts = await ownedPlayers(await db.walletOf(accountId));
-  if (nfts.length) {
-    const have = new Set(c.club.players.map((p: any) => p.id));
-    c.club = { ...c.club, players: [...c.club.players, ...nfts.filter((p) => !have.has(p.id))] };
-  }
+/** Off-chain: no wallet-owned NFTs to merge — return the club unchanged. */
+async function withNfts(_db: Store, _accountId: string, c: { club: any; standingOrders: any }): Promise<typeof c> {
   return c;
 }
 
