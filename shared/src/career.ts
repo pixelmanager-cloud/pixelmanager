@@ -324,6 +324,7 @@ export const AGENTS: Agent[] = [
   { id: 'family',    name: 'Family Advisor',   desc: 'A trusted relative — in it for you, not money', exposure: 0.95, draftLuck: 1.0,  greed: -5, valueMod: 0.95 },
   { id: 'showman',   name: 'The Showman',      desc: 'Markets you relentlessly — fame over fees',     exposure: 1.5,  draftLuck: 1.1,  greed: 2,  valueMod: 1.2 },
   { id: 'grafter',   name: 'The Grafter’s Agent', desc: 'Old-school; picks clubs where you’ll play', exposure: 1.05, draftLuck: 1.15, greed: -2, valueMod: 1.0 },
+  { id: 'fixer',     name: 'The Local Fixer',    desc: 'Knows every scout in the county — low fuss, right doors', exposure: 0.85, draftLuck: 1.45, greed: -4, valueMod: 0.9 },
 ];
 export const agentById = (id?: string) => AGENTS.find((a) => a.id === id) ?? null;
 /** how each temperament tilts greed (nature) — layered on the agent's influence */

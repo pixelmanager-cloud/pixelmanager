@@ -95,10 +95,18 @@ or newly imagined beyond the brief. Ranked safe/small/high-value first.
   main.ts/tokens.ts/narrate.ts/career_sim.ts — coach lists render generically from the array), so no
   map updates needed. `npm run verify` and `career_sim` both green (diversity closest-pair distance
   10, determinism identical: true).
-- [ ] 11. **A 4th sports agent archetype.** (S) `AGENTS` has 6; add one more distinct archetype (e.g.
+- [x] 11. **A 4th sports agent archetype.** (S) `AGENTS` had 6; add one more distinct archetype (e.g.
   a "Local Fixer" — very low exposure/greed, very high draftLuck, for a grounded, opportunity-rich
   path) to widen the agent-choice spread. Check `career_sim` determinism + magnitude after.
-  isn't disturbed by an extra agent option (agent choice doesn't feed rng draw order).
+  isn't disturbed by an extra agent option (agent choice doesn't feed rng draw order). **Done:**
+  added `The Local Fixer` (`id: 'fixer'`) to `AGENTS` in career.ts — exposure 0.85 (below loyal),
+  greed -4, valueMod 0.9, and draftLuck 1.45 (highest in the table — a grounded, opportunity-rich
+  archetype that trades fame for better draft options). No other file keys agents by id besides
+  generic iteration (`agentsList()` in tokens.ts, the `for (const ag of AGENTS)` sim loop, and
+  `agentById` lookup by the id chosen at career start), so no map updates needed. `npm run verify`
+  and `career_sim` both green (diversity closest-pair distance 10, determinism identical: true) —
+  sim output confirms: greed 5, loyal flag, extend@26 173 coins, sitting between Family Advisor and
+  Loyal Agent on cost while beating every agent on draftLuck.
 - [ ] 12. **Risk/reward summer focus option.** (S/M) Seed idea #9's "risk" focus: add one high-variance
   option per later chapter that trades a small guaranteed meter loss for a larger potential gain,
   computed deterministically from existing state (e.g. from current meter value) rather than rng —
