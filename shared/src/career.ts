@@ -26,7 +26,7 @@ const OUTFIELD_TAGS: Tag[] = ['composure', 'aggression', 'creativity', 'teamwork
 export type Track = 'outfield' | 'goalkeeper';
 export interface SeasonEvent { id: string; name: string; desc: string }
 /** One recorded development decision. A career is fully reconstructable from (seed, track, actions). */
-export interface Action { type: 'play' | 'draft' | 'coach' | 'offer' | 'focus'; cardId: string }
+export interface Action { type: 'play' | 'draft' | 'coach' | 'offer' | 'focus' | 'lifestyle'; cardId: string }
 /** Everything needed to persist/trade an in-progress prospect (stored off-chain, keyed by tokenId).
  *  Deterministic → the current stats can be re-derived + verified by replaying it. */
 export interface CareerSnapshot { seed: number; track: Track; agentId?: string; actions: Action[] }
@@ -255,6 +255,36 @@ export const CARD_DESC: Record<string, string> = {
 // deck-building config
 export const OFFER_SIZE = 5;   // cards shown at a between-season draft (a wider choice from the big pool)
 export const DRAFT_PICKS = 3;  // how many you add each draft → a deck that grows to ~25 over the 7 chapters
+
+// ── LIFESTYLE: the money you earn is meant to be SPENT. Between chapters you can buy one-off lifestyle
+// upgrades with your career earnings — each a permanent perk (a meter boost, better energy recovery, or
+// marketability/fame that carries into the pro). It's the flip side of banking your earnings for a higher
+// valuation: spend now for a better career, or hoard for a richer graduate. Deterministic (no rng).
+// chapter index reference: 0 Grassroots · 1 Academy · 2 Scholar · 3 Youth Team · 4 Breakthrough · 5 First Team · 6 Establishing
+export interface LifestyleItem { id: string; icon: string; name: string; blurb: string; cost: number; minChapterIdx: number; maxChapterIdx?: number; recovery?: number; market?: number; greed?: number; perks?: Partial<Record<MeterKey, number>> }
+export const LIFESTYLE: LifestyleItem[] = [
+  // Grassroots / Academy — a kid: boots, a bike, a console, gifts for the folks (cheap; kid items retire by Youth Team)
+  { id: 'boots',    icon: '👟', name: 'Your First Proper Boots', blurb: 'No more borrowed pairs — the boots the other kids have.',    cost: 80,   minChapterIdx: 0, maxChapterIdx: 2, perks: { authority: 5, peers: 3 } },
+  { id: 'bike',     icon: '🚲', name: 'A New Bike',              blurb: 'Ride to training with your mates like a proper crew.',      cost: 130,  minChapterIdx: 0, maxChapterIdx: 2, perks: { peers: 6, family: 3 } },
+  { id: 'console',  icon: '🎮', name: 'A Games Console',         blurb: 'Unwind with the lads online after a hard session.',         cost: 240,  minChapterIdx: 1, maxChapterIdx: 3, recovery: 3, perks: { peers: 8, school: -3 } },
+  { id: 'gift-fam', icon: '🎁', name: 'Treat Your Parents',      blurb: 'Say thanks for the early mornings and endless lifts.',      cost: 300,  minChapterIdx: 1, maxChapterIdx: 4, perks: { family: 14 } },
+  // Scholar — a teenager finding independence: driving lessons, better digs, courting the agent
+  { id: 'driving',  icon: '🚦', name: 'Driving Lessons',         blurb: 'Freedom on the open road is finally within reach.',         cost: 420,  minChapterIdx: 2, maxChapterIdx: 4, perks: { peers: 5, partner: 4 } },
+  { id: 'digs',     icon: '🛏️', name: 'Nicer Digs',             blurb: 'Better lodgings near the training ground — rest properly.', cost: 650,  minChapterIdx: 2, maxChapterIdx: 4, recovery: 4, perks: { partner: 4 } },
+  { id: 'agent-din', icon: '🍽️', name: 'Wine & Dine Your Agent', blurb: 'Keep your agent hungry and fighting your corner.',          cost: 550,  minChapterIdx: 2, maxChapterIdx: 5, greed: 1, perks: { agent: 14 } },
+  // Youth Team — a young pro: first car, designer clobber, your own place
+  { id: 'wheels',   icon: '🚗', name: 'Your First Car',           blurb: 'Freedom on four wheels — and a few admiring glances.',      cost: 1000, minChapterIdx: 3, market: 1, perks: { fans: 6, partner: 4 } },
+  { id: 'wardrobe', icon: '🕶️', name: 'A Designer Wardrobe',      blurb: 'Turn up looking the part — the brands start to notice.',    cost: 900,  minChapterIdx: 3, market: 1, greed: 1, perks: { sponsors: 8 } },
+  { id: 'moveout',  icon: '🏡', name: 'Your Own Place',           blurb: 'Independence at last — your own space to recharge.',        cost: 1300, minChapterIdx: 3, recovery: 5, perks: { partner: 6 } },
+  // Breakthrough — earning real money: marginal-gains, giving back, looking after family
+  { id: 'chef',     icon: '🥗', name: 'Personal Chef & Trainer',  blurb: 'Marginal gains — you recover better and live right.',       cost: 1600, minChapterIdx: 4, recovery: 8 },
+  { id: 'charity',  icon: '🎗️', name: 'Start a Foundation',       blurb: 'Give back to where you came from — the people love him.',   cost: 2200, minChapterIdx: 4, market: 2, perks: { fans: 12 } },
+  { id: 'family',   icon: '💝', name: 'Buy Your Family a Home',    blurb: 'The dream — set the people who raised you up for life.',    cost: 2800, minChapterIdx: 4, market: 1, perks: { family: 22, partner: 4 } },
+  // First Team / Establishing — a star: statement pieces, smart money, the mansion
+  { id: 'watch',    icon: '⌚', name: 'A Statement Watch',         blurb: 'The one everyone clocks as you step off the coach.',        cost: 1500, minChapterIdx: 5, market: 1, greed: 1, perks: { sponsors: 6 } },
+  { id: 'invest',   icon: '📈', name: 'A Property Portfolio',      blurb: 'Money makes money — a smart nest egg for after football.',  cost: 3200, minChapterIdx: 5, market: 3 },
+  { id: 'mansion',  icon: '🏰', name: 'The Dream Mansion',         blurb: 'Gates, a pool, the lot — you have truly arrived.',          cost: 6000, minChapterIdx: 6, market: 2, greed: 1, recovery: 6, perks: { partner: 8, fans: 6 } },
+];
 
 // ── BACKROOM STAFF: at each age-chapter break you appoint a mentor/coach for the coming chapter.
 // A coach amplifies your work in their SPECIALTY — you get better SUCCESS playing cards in those tags,
@@ -509,6 +539,9 @@ export class Career {
   pendingOffer: Offer[] | null = null;
   /** When set, the career pauses at a chapter break for a FOCUS choice: how to spend the summer. */
   pendingFocus: FocusOption[] | null = null;
+  /** lifestyle upgrades bought with career earnings (permanent perks). */
+  ownedLifestyle: string[] = [];
+  private energyRecoveryBonus = 0;   // better living → more energy restored each summer
   /** How your relationships PAID OFF (or bit back) over the chapter that just ended — surfaced at the break. */
   chapterConsequences: string[] = [];
   earnings = 0;                            // running career earnings (coins) — wages + deals taken
@@ -566,13 +599,13 @@ export class Career {
    *  buyer resumes development from precisely where the seller left off. */
   static resume(snap: CareerSnapshot): Career {
     const c = new Career(snap.seed, snap.track, snap.agentId);
-    for (const a of snap.actions) { if (a.type === 'draft') c.draft(a.cardId, true); else if (a.type === 'coach') c.appointCoach(a.cardId, true); else if (a.type === 'offer') c.resolveOffer(a.cardId); else if (a.type === 'focus') c.chooseFocus(a.cardId, true); else c.play(a.cardId, true); }
+    for (const a of snap.actions) { if (a.type === 'draft') c.draft(a.cardId, true); else if (a.type === 'coach') c.appointCoach(a.cardId, true); else if (a.type === 'offer') c.resolveOffer(a.cardId); else if (a.type === 'focus') c.chooseFocus(a.cardId, true); else if (a.type === 'lifestyle') c.buyLifestyle(a.cardId, true); else c.play(a.cardId, true); }
     return c;
   }
 
   /** Current state: a 'coach' phase (appoint staff), a 'draft' phase (add a card), or a 'play' phase. */
   current() {
-    if (this.pendingFocus) return { phase: 'focus' as const, age: this.age, chapter: this.chapter, focus: this.pendingFocus, seasonEvent: this.seasonEvent, consequences: this.chapterConsequences, energy: this.energy, deck: this.deck, finished: this.finished };
+    if (this.pendingFocus) return { phase: 'focus' as const, age: this.age, chapter: this.chapter, focus: this.pendingFocus, lifestyle: this.lifestyleOffer, earnings: this.earnings, seasonEvent: this.seasonEvent, consequences: this.chapterConsequences, energy: this.energy, deck: this.deck, finished: this.finished };
     if (this.pendingOffer) return { phase: 'offer' as const, age: this.age, chapter: this.chapter, offers: this.pendingOffer, earnings: this.earnings, deck: this.deck, finished: this.finished };
     if (this.pendingCoaches) return { phase: 'coach' as const, age: this.age, chapter: this.chapter, coaches: this.pendingCoaches, deck: this.deck, finished: this.finished };
     if (this.pendingDraft) return { phase: 'draft' as const, age: this.age, chapter: this.chapter, options: this.pendingDraft.options, picksLeft: this.pendingDraft.picksLeft, deck: this.deck, finished: this.finished };
@@ -593,6 +626,25 @@ export class Career {
     this.pendingFocus = null;
     this.pendingOffer = rollOffer(this.rng, this.turn);
   }
+  /** Lifestyle upgrades affordable + unlocked RIGHT NOW (offered at the between-chapter focus screen). */
+  get lifestyleOffer(): LifestyleItem[] {
+    const chapterIdx = bandAt(Math.min(this.turn, TOTAL_TURNS - 1)).index;
+    return LIFESTYLE.filter((it) => !this.ownedLifestyle.includes(it.id) && chapterIdx >= it.minChapterIdx && (it.maxChapterIdx == null || chapterIdx <= it.maxChapterIdx) && this.earnings >= it.cost);
+  }
+  /** BUY a lifestyle upgrade with career earnings — a permanent perk. Does NOT advance the phase (you can
+   *  buy several at a break, then choose your summer focus). Deterministic, no rng. */
+  buyLifestyle(itemId: string, tolerant = false) {
+    const it = LIFESTYLE.find((i) => i.id === itemId);
+    if (!it || this.ownedLifestyle.includes(itemId) || this.earnings < it.cost) { if (tolerant) return; throw new Error('cannot buy that'); }
+    this.earnings -= it.cost;
+    this.ownedLifestyle.push(itemId);
+    this.energyRecoveryBonus += it.recovery ?? 0;
+    this.marketBonus += it.market ?? 0;
+    this.greedBonus += it.greed ?? 0;
+    for (const [k, d] of Object.entries(it.perks ?? {})) this.standing[k as MeterKey] = clamp(this.standing[k as MeterKey] + (d ?? 0), 0, 100);
+    this.actions.push({ type: 'lifestyle', cardId: itemId });
+  }
+
   /** Replay/robustness: an old snapshot (pre-focus) resolving an offer skips the summer neutrally. */
   private autoResolveFocus() {
     if (!this.pendingFocus) return;
@@ -745,7 +797,7 @@ export class Career {
   private advanceSeasonEvent() {
     const conseq = this.computeConsequences(bandAt(this.turn - 1).band.name); // read the chapter that just ended
     this.chapterConsequences = conseq.notes;
-    this.energy = clamp(this.energy + 34 + conseq.energy, 0, 100);  // a summer restores some energy (± how life is going) — but not a full reset, so it stays a resource
+    this.energy = clamp(this.energy + 34 + this.energyRecoveryBonus + conseq.energy, 0, 100);  // a summer restores some energy (+ good living), but not a full reset — it stays a resource
     this.earnings += conseq.earn; this.marketBonus += conseq.market;
     this.life('partner', -6); this.life('family', -4); this.life('school', -3); // relationships drift over a summer if untended
     this.demandBias = null;

@@ -1090,9 +1090,15 @@ class Game {
           + `<div class="cg-effs">${o.earn > 0 ? `+${o.earn}c ` : ''}${o.greed > 0 ? '· greedier ' : o.greed < 0 ? '· more loyal ' : ''}${o.market > 0 ? '· more famous ' : ''}${o.form > 0 ? '· sharper' : o.form < 0 ? '· distracted' : ''}</div></div>`).join('');
     } else if (s.phase === 'focus' && s.focus) {
       const effLabel = (e: Record<string, number>) => Object.entries(e).map(([k, v]) => `${METER_ICON[k] ?? ''}${v > 0 ? '+' : ''}${v}`).join(' · ');
+      const perkLabel = (p?: Record<string, number>) => p ? Object.entries(p).map(([k, v]) => `${METER_ICON[k] ?? ''}${v > 0 ? '+' : ''}${v}`).join(' ') : '';
+      const shop = (s.lifestyle && s.lifestyle.length)
+        ? `<div class="cg-prompt cg-shop-h">💷 <b>Treat yourself</b> — spend earnings (you have <b>${(s.earnings ?? 0).toLocaleString()}c</b>) on your life off the pitch. Age-appropriate to where you are now:</div>`
+          + `<div class="cg-focus">` + s.lifestyle.map((li) => `<div class="cg-foc buy" data-act="lifestyle" data-id="${li.id}"><div class="cg-cname">${li.icon} ${li.name}</div><div class="cg-cdescr">${li.blurb}</div>`
+            + `<div class="cg-effs"><span class="cg-cost">💷 ${li.cost.toLocaleString()}c</span> ${li.recovery ? `· ⚡rec+${li.recovery} ` : ''}${li.market ? `· ⭐fame+${li.market} ` : ''}${perkLabel(li.perks)}</div></div>`).join('') + `</div>`
+        : '';
       body = `<div class="cg-prompt">🌅 <b>Between seasons</b> — how do you spend the summer? Steer your relationships before the next chapter.</div>`
         + `<div class="cg-focus">` + s.focus.map((f) => `<div class="cg-foc" data-act="focus" data-id="${f.id}"><div class="cg-cname">${f.icon} ${f.name}</div><div class="cg-cdescr">${f.desc}</div>`
-          + `<div class="cg-effs">${f.energy ? `⚡${f.energy > 0 ? '+' : ''}${f.energy} ` : ''}${effLabel(f.effects)}</div></div>`).join('') + `</div>`;
+          + `<div class="cg-effs">${f.energy ? `⚡${f.energy > 0 ? '+' : ''}${f.energy} ` : ''}${effLabel(f.effects)}</div></div>`).join('') + `</div>` + shop;
     }
     $('academy-body').innerHTML = head + scene + this.lifeDashHtml(s) + prof + narr + recap + conseq + evt + body;
     $('cg-back').addEventListener('click', () => this.showAcademy());

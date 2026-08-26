@@ -106,12 +106,13 @@ export function tokenContract(t: Token, season: number): TokenContract {
 }
 
 // ── career (prospect state) — the breeder card game ──
-export type CareerAction = { type: 'play' | 'draft' | 'coach' | 'offer' | 'focus'; cardId: string };
+export type CareerAction = { type: 'play' | 'draft' | 'coach' | 'offer' | 'focus' | 'lifestyle'; cardId: string };
 export function applyAction(c: Career, a: CareerAction, tolerant = false) {
   if (a.type === 'draft') c.draft(a.cardId, tolerant);
   else if (a.type === 'coach') c.appointCoach(a.cardId, tolerant);
   else if (a.type === 'offer') c.resolveOffer(a.cardId);
   else if (a.type === 'focus') c.chooseFocus(a.cardId, tolerant);
+  else if (a.type === 'lifestyle') c.buyLifestyle(a.cardId, tolerant);
   else c.play(a.cardId, tolerant);
 }
 export function loadCareer(t: Token): Career {
@@ -149,6 +150,7 @@ export function actWithNarration(c: Career, a: CareerAction): string | null {
   else if (a.type === 'draft') { const cd = (st.options ?? []).find((x: any) => x.id === a.cardId); if (cd) narr = narrateDraft(cd.name, cd.tags ?? [], baseCtx); }
   else if (a.type === 'offer') { const of = (st.offers ?? []).find((x: any) => x.id === a.cardId); if (of) narr = narrateOffer(of.name, of, baseCtx); }
   else if (a.type === 'focus') { const fo = (st.focus ?? []).find((x: any) => x.id === a.cardId); if (fo) narr = `${fo.icon} ${fo.desc}`; }
+  else if (a.type === 'lifestyle') { const li = (st.lifestyle ?? []).find((x: any) => x.id === a.cardId); if (li) narr = `${li.icon} ${li.blurb}`; }
   applyAction(c, a);
   return narr;
 }

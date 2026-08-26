@@ -21,6 +21,7 @@ export interface CareerState {
   story?: string; recap?: string; lifeEvent?: string;
   energy?: number; meters?: Array<{ key: string; icon: string; label: string; value: number }>;
   focus?: Array<{ id: string; icon: string; name: string; desc: string; energy: number; effects: Record<string, number> }>;
+  lifestyle?: Array<{ id: string; icon: string; name: string; blurb: string; cost: number; recovery?: number; market?: number; greed?: number; perks?: Record<string, number> }>;
   consequences?: string[];
   momentKind?: 'match' | 'training' | 'life';
   matchCtx?: { opponent: string; home: boolean; score: string; minute: number; comp: string };
