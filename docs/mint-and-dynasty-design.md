@@ -104,6 +104,26 @@ a single career-best spike. Career-best over-rewards a one-season wonder and is 
 
 ---
 
+## 4b. Positions & the keeping stat across generations (DECIDED)
+
+**Keeping is a pure *nurture* stat, not a heritable gene.** Only physical attributes
+(pace/strength/stamina) inherit as genes; keeping — like passing/shooting/composure — is developed by
+playing the GK track that career. A keeper's high keeping is a *graduation outcome*, not a birthright (a
+genesis keeper doesn't start with high keeping at age 10 — they develop it).
+
+Consequences (this is the intended, clean behaviour):
+- **A keeper's descendant can pivot to outfield with zero friction.** They inherit the physical *frame*
+  (position-agnostic — a tall/strong keeper's frame makes a great commanding centre-back), start keeping at
+  baseline (they don't train it), and develop outfield skills instead. There's no "keeper gene" to waste.
+- **Optional flavour — a soft "keeper bloodline" nudge:** if we want goalkeeping dynasties, a keeper parent
+  can give a *small* keeping-potential bias (a nudge, never a lock). And if the lineage then keeps
+  developing outfield, **that bias regresses toward baseline over the generations** — an untended trait
+  fades (regression-to-mean applied to an unreinforced skill). Use it and it compounds into a keeper
+  dynasty; ignore it and the bloodline "becomes" an outfield family.
+
+Recommendation kept: keeping = nurture (no keeper gene). Add the soft bloodline nudge only if we want
+dynasty flavour; its regress-when-unused behaviour is the correct, self-correcting design.
+
 ## 5. Competitive-balance note (newcomers)
 Good management concentrating elite bloodlines among veterans is meritocratic, but a **fresh baseline genesis
 must be strong enough to compete**, and divisions / matchmaking should account for bloodline strength — or
