@@ -1740,6 +1740,15 @@ class Game {
       case 'fatigue': cls = 'cm-injury'; text = this.cpick([`${p} is blowing hard — the legs are going.`, `${p} looks spent, hands on hips ${zone}.`, `Tiring badly now, ${p} — running on empty.`, `${p} can barely get back — gassed.`], idx, 12); break;
       case 'woodwork': cls = 'cm-post'; text = this.cpick([`🪵 OFF THE POST! ${p} rattles the woodwork — so close!`, `🪵 OFF THE BAR! ${p} is inches away!`, `🪵 It cannons back off the upright — ${p} can't believe it!`], idx, 13); break;
       case 'loose_ball': cls = 'cm-loose'; text = this.cpick([`The ball breaks loose ${zone}.`, `Cut out! ${p}'s pass is intercepted ${zone}.`, `Scrappy — it pinballs around ${zone}.`, `${p}'s ball is cut out ${zone}.`], idx, 8); break;
+      case 'foul': cls = 'cm-foul'; text = this.cpick([`Foul by ${p} ${zone}. Free kick ${team === this.homeName ? this.awayName : this.homeName}.`, `${p} catches his man — referee blows for the foul ${zone}.`, `Cynical from ${p} — that’s a free kick ${zone}.`, `${p} gives it away with a clumsy challenge ${zone}.`], idx, 14); break;
+      case 'yellow_card': cls = 'cm-card yellow'; text = this.cpick([`🟨 Booked! ${p} goes into the book for that one.`, `🟨 Yellow card for ${p} — the ref had no choice.`, `🟨 ${p} is cautioned. He’ll have to be careful now.`], idx, 15); break;
+      case 'red_card': cls = 'cm-card red'; text = e.zone === 'mid'
+        ? this.cpick([`🟥 SECOND YELLOW — ${p} is OFF! ${team} down to ten!`, `🟥 Two yellows and gone! ${p} takes the long walk — ${team} a man light!`], idx, 16)
+        : this.cpick([`🟥 RED CARD! ${p} is sent off — ${team} down to ten men!`, `🟥 Straight red for ${p}! A moment of madness — ${team} are down to ten!`, `🟥 He’s off! ${p} sees red and ${team} must dig in with ten!`], idx, 16); break;
+      case 'free_kick': cls = 'cm-freekick'; text = this.cpick([`Dangerous free kick for ${team} — ${p} stands over it…`, `${p} lines up the free kick in a promising spot…`, `Chance from the set piece — ${p} to deliver for ${team}…`], idx, 17); break;
+      case 'penalty': cls = 'cm-pen'; text = this.cpick([`⚠️ PENALTY to ${team}! ${p} will take it…`, `⚠️ The ref points to the spot — penalty ${team}! ${p} steps up…`, `⚠️ Spot kick for ${team}! It’s down to ${p}…`], idx, 18); break;
+      case 'penalty_missed': cls = 'cm-miss'; text = this.cpick([`❌ MISSED! ${p} sends the penalty wide — what a let-off!`, `❌ Saved! The keeper guesses right and denies ${p} from the spot!`, `❌ ${p} blazes the penalty over! He’ll never forget that.`], idx, 19); break;
+      case 'corner': cls = 'cm-corner'; text = this.cpick([`Corner to ${team} — ${p} to swing it in…`, `${p} jogs over to take the corner for ${team}…`], idx, 20); break;
       case 'halftime': cls = 'cm-break'; text = `⏸ Half-time. ${this.homeName} ${sc[0]}–${sc[1]} ${this.awayName}.`; break;
       case 'fulltime': cls = 'cm-break'; text = `🏁 Full-time! ${this.homeName} ${sc[0]}–${sc[1]} ${this.awayName}.`; break;
     }
