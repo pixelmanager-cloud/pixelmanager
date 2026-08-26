@@ -22,6 +22,8 @@ export interface CareerState {
   energy?: number; meters?: Array<{ key: string; icon: string; label: string; value: number }>;
   focus?: Array<{ id: string; icon: string; name: string; desc: string; energy: number; effects: Record<string, number> }>;
   consequences?: string[];
+  momentKind?: 'match' | 'training' | 'life';
+  matchCtx?: { opponent: string; home: boolean; score: string; minute: number; comp: string };
   hand?: CareerCard[]; coach?: { id: string; name: string } | null;
   coaches?: Array<{ id: string; name: string; kind: string; desc: string; specialty: string[]; bonus: number }>;
   options?: CareerCard[]; picksLeft?: number;

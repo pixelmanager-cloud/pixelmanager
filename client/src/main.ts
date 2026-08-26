@@ -1056,9 +1056,27 @@ class Game {
     let body = '';
     if (s.phase === 'play' && s.scenario) {
       const tags = Object.entries(s.scenario.demand).sort((a, b) => b[1] - a[1]).map(([t]) => `<span class="cg-tag">${t}</span>`).join('');
-      const lifeBadge = s.lifeEvent ? `<div class="cg-life">⚡ LIFE EVENT · ${s.lifeEvent}</div>` : '';
-      body = `<div class="cg-scenario stakes-${s.scenario.stakes}${s.lifeEvent ? ' life' : ''}">${lifeBadge}<div class="cg-story">${s.story ?? s.scenario.label}</div><div class="cg-demand">${tags}</div></div>`
-        + `<div class="cg-prompt">How does he respond?${s.coach ? ` · <b>${s.coach.name}</b> is coaching him` : ''}</div>`
+      // distinct presentation per moment type — a matchday scoreboard, the training ground, or life off the pitch
+      const mk = s.momentKind ?? (s.lifeEvent ? 'life' : 'training');
+      let header: string; let prompt: string;
+      if (mk === 'match' && s.matchCtx) {
+        const mc = s.matchCtx; const [us, them] = mc.score.split('-');
+        const big = s.scenario.stakes >= 3 ? ' · ★ THE BIG ONE' : s.scenario.stakes >= 2 ? ' · BIG GAME' : '';
+        header = `<div class="cg-matchday stakes-${s.scenario.stakes}">`
+          + `<div class="cg-md-top"><span class="cg-md-badge">⚽ MATCHDAY${big}</span><span class="cg-md-min">${mc.minute}'</span></div>`
+          + `<div class="cg-md-score">${us} <b>–</b> ${them}</div>`
+          + `<div class="cg-md-vs">vs <b>${mc.opponent}</b> · ${mc.home ? '🏟️ Home' : '✈️ Away'}</div>`
+          + `<div class="cg-md-comp">${mc.comp}</div></div>`;
+        prompt = 'The moment falls to him — what does he do?';
+      } else if (mk === 'life') {
+        header = `<div class="cg-mtype life">⚡ LIFE EVENT${s.lifeEvent ? ` · ${s.lifeEvent}` : ' · off the pitch'}</div>`;
+        prompt = 'How does he handle it?';
+      } else {
+        header = `<div class="cg-mtype training">🏋️ TRAINING GROUND</div>`;
+        prompt = 'How does he approach the session?';
+      }
+      body = `<div class="cg-scenario stakes-${s.scenario.stakes} ${mk}">${header}<div class="cg-story">${s.story ?? s.scenario.label}</div><div class="cg-demand">${tags}</div></div>`
+        + `<div class="cg-prompt">${prompt}${s.coach ? ` · <b>${s.coach.name}</b> is coaching him` : ''}</div>`
         + `<div class="cg-cards">` + (s.hand ?? []).map((c) => this.cardHtml(c, 'play')).join('') + `</div>`;
     } else if (s.phase === 'coach' && s.coaches) {
       body = `<div class="cg-prompt">Appoint a mentor or coach for the coming chapter — they sharpen the work you do in their specialty:</div>`

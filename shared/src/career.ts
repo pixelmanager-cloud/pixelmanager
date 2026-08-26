@@ -581,7 +581,7 @@ export class Career {
 
   /** CHOOSE how to spend the summer between chapters (energy + relationships; no development effect). */
   chooseFocus(focusId: string, tolerant = false) {
-    if (!this.pendingFocus) throw new Error('no focus pending');
+    if (!this.pendingFocus) { if (tolerant) return; throw new Error('no focus pending'); } // replay across structural drift: skip a focus that no longer lands here
     let opt = this.pendingFocus.find((o) => o.id === focusId);
     if (!opt) {
       if (!tolerant) throw new Error('focus not on offer');
