@@ -226,6 +226,7 @@ class Game {
   private saveSaves(s: Array<{ id: string; token: string; name: string; lastPlayed: number }>) { localStorage.setItem('fm_saves', JSON.stringify(s)); }
 
   private renderMainMenu() {
+    $('mm-emblem').innerHTML = sprite('ball');
     const saves = this.loadSaves().sort((a, b) => b.lastPlayed - a.lastPlayed);
     $('mm-buttons').classList.remove('hidden');
     $('mm-newgame').classList.add('hidden');
@@ -594,6 +595,8 @@ class Game {
   // ---- hub ----
   private async showHub() {
     this.showScreen('hub');
+    ($('hub-club').querySelector('.legacy-ico') as HTMLElement).innerHTML = sprite('stadium');
+    ($('hub-legacy').querySelector('.legacy-ico') as HTMLElement).innerHTML = sprite('trophy');
     $('me-name').textContent = this.club.name;
     $('me-rating').textContent = `RATING ${this.account.rating}`;
     if (this.account.coins != null) {

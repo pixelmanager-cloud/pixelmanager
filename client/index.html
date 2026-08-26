@@ -735,6 +735,9 @@
       /* pixel-art sprites: crisp blocky scaling, no smoothing */
       .px { image-rendering: pixelated; display: block; }
       .facility .fac-icon .px { width: 40px; height: 40px; }
+      .mm-emblem { display: flex; justify-content: center; margin-bottom: 6px; }
+      .mm-emblem .px { width: 64px; height: 64px; filter: drop-shadow(0 3px 0 rgba(0,0,0,0.5)); }
+      .legacy-btn .legacy-ico .px { width: 34px; height: 34px; }
       .facility .fac-name { font-family: var(--body); font-size: 17px; color: #fff; }
       .facility .fac-lvl { margin-left: auto; font-family: var(--body); font-size: 14px; color: var(--warn); }
       .facility .fac-pips { display: flex; gap: 4px; }
@@ -990,6 +993,7 @@
       <!-- LOGIN -->
       <div id="login" class="panel hidden">
         <div id="mainmenu">
+          <div id="mm-emblem" class="mm-emblem"></div>
           <h3 id="mm-title">FOOTBALL ROYALTY</h3>
           <div id="mm-tagline">Scout a kid. Build a legend. Found a dynasty.</div>
           <div id="mm-buttons">
