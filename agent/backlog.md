@@ -103,7 +103,7 @@ implements it on a branch, and opens a PR for you to review.
 > just make text the default. These two tasks come first; the readability sweep below still applies
 > to all the UI chrome. Do NOT delete the Phaser pitch scene.
 
-- [ ] **[pivot] Text-commentary match view (client-only).** Build a live, scrolling **commentary
+- [x] **[pivot] Text-commentary match view (client-only).** DONE by human (commit). Build a live, scrolling **commentary
   feed** as the PRIMARY match view, replacing the 2D pitch as the default (keep the pitch reachable
   behind an optional "2D view" toggle — do NOT delete it). As the deterministic engine ticks, render
   each event from the EXISTING event stream (`goal`, `shot_saved`, `shot_missed`, `chance`, `corner`,

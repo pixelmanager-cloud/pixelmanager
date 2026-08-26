@@ -217,6 +217,10 @@ class Game {
 
   private wireStaticButtons() {
     const setSpeed = (v: number, id: string) => { this.speed = v; ['spd1', 'spd4', 'spd12'].forEach((b) => $(b).classList.remove('active')); $(id).classList.add('active'); };
+    $('toggle-2d').addEventListener('click', () => {
+      const game = $('game'); const on = game.classList.toggle('hidden') === false;
+      $('toggle-2d').classList.toggle('on', on);
+    });
     $('spd1').addEventListener('click', () => setSpeed(1, 'spd1'));
     $('spd4').addEventListener('click', () => setSpeed(4, 'spd4'));
     $('spd12').addEventListener('click', () => setSpeed(12, 'spd12'));
@@ -1485,6 +1489,7 @@ class Game {
       payload.away.team.shirtColor = dist(payload.home.team.shirtColor, 0x3b6bd2) > 9000 ? 0x3b6bd2 : 0xd23b3b;
     }
     this.engine = new MatchEngine([payload.home.team, payload.away.team], payload.seed, [payload.home.tactics, payload.away.tactics]);
+    this.matchSeed = payload.seed >>> 0;
     this.running = true; this.accum = 0; this.eventsShown = 0;
     this.setMatchNames();
     $('ticker').innerHTML = '';
@@ -1594,22 +1599,37 @@ class Game {
     while (this.eventsShown < s.events.length) this.pushTicker(s.events[this.eventsShown++]);
   }
 
+  private matchSeed = 0;
+  /** Deterministic pick from the match seed + event index + a salt — so a replay commentates identically. */
+  private cpick<T>(arr: T[], idx: number, salt: number): T {
+    let h = (this.matchSeed ^ Math.imul(idx + 1, 374761393) ^ Math.imul(salt, 2246822519)) >>> 0;
+    h = Math.imul(h ^ (h >>> 15), 2246822519); h = Math.imul(h ^ (h >>> 13), 3266489917); h ^= h >>> 16;
+    return arr[(h >>> 0) % arr.length];
+  }
   private pushTicker(e: MatchEvent) {
-    const who = e.teamIdx === 0 ? this.homeName : this.awayName;
-    const line: Record<MatchEvent['type'], string> = {
-      kickoff: `${e.minute}' Kickoff!`,
-      goal: `${e.minute}' ⚽ GOAL! ${e.playerName} (${who})`,
-      chance: `${e.minute}' Big chance for ${e.playerName} (${who})...`,
-      shot_saved: `${e.minute}' Save! ${e.playerName} (${who}) denied`,
-      shot_missed: `${e.minute}' ${e.playerName} (${who}) shoots wide`,
-      halftime: `${e.minute}' Half-time`,
-      fulltime: `${e.minute}' Full-time`,
-    };
+    const idx = this.eventsShown; // stable per event
+    const team = e.teamIdx === 0 ? this.homeName : this.awayName;
+    const opp = e.teamIdx === 0 ? this.awayName : this.homeName;
+    const p = e.playerName ?? 'someone';
+    const min = `<span class="cm-min">${e.minute}'</span>`;
+    const sc = this.engine?.state.score ?? [0, 0];
+    let text = '', cls = '';
+    switch (e.type) {
+      case 'kickoff': text = this.cpick(['We’re underway!', 'And the match kicks off!', 'Here we go — game on!', 'The referee gets us started!'], idx, 5); break;
+      case 'goal': cls = 'cm-goal'; text = this.cpick([`⚽ GOAL! ${p} buries it for ${team}!`, `⚽ IT’S IN! ${p} finishes it off — ${team}!`, `⚽ GOAL! What a strike from ${p}! ${team} score!`, `⚽ ${p} makes no mistake — ${team}!`, `⚽ GET IN! ${p} lashes it home for ${team}!`, `⚽ Clinical from ${p} — ${team} find the net!`], idx, 1) + ` <span class="cm-score">${sc[0]}–${sc[1]}</span>`; break;
+      case 'chance': cls = 'cm-chance'; text = this.cpick([`${p} works a yard and shapes to shoot…`, `Here come ${team} — ${p} bursts in behind!`, `Big chance! ${p} is in for ${team}…`, `${team} carve it open — ${p} with a sight of goal!`, `${p} shifts it onto his stronger foot…`, `A gap opens up and ${p} goes for it…`], idx, 2); break;
+      case 'shot_saved': cls = 'cm-save'; text = this.cpick([`🧤 SAVED! ${opp}’s keeper turns ${p} away!`, `🧤 Denied! A fine stop to keep ${p} out!`, `🧤 What a save — ${p} was sure he’d scored!`, `🧤 Beaten away! ${p} is foiled!`, `🧤 Big hands! ${opp} keep ${p} out!`], idx, 3); break;
+      case 'shot_missed': cls = 'cm-miss'; text = this.cpick([`${p} drags it wide!`, `Off target — ${p} will want that one back.`, `${p} blazes over the bar!`, `Just past the post from ${p}!`, `Wild from ${p} — miles over!`], idx, 4); break;
+      case 'halftime': cls = 'cm-break'; text = `⏸ Half-time. ${this.homeName} ${sc[0]}–${sc[1]} ${this.awayName}.`; break;
+      case 'fulltime': cls = 'cm-break'; text = `🏁 Full-time! ${this.homeName} ${sc[0]}–${sc[1]} ${this.awayName}.`; break;
+    }
     const div = document.createElement('div');
-    div.textContent = line[e.type];
-    if (e.type === 'goal') { div.style.color = '#ffd75e'; if (!this.silent) this.celebrateGoal(e); }
-    else if (e.type === 'chance') div.style.color = '#8ad';
-    $('ticker').prepend(div);
+    div.className = `cm-line ${cls}`;
+    div.innerHTML = `${min} ${text}`;
+    if (e.type === 'goal' && !this.silent) this.celebrateGoal(e);
+    const feed = $('ticker');
+    feed.appendChild(div);
+    feed.scrollTop = feed.scrollHeight; // auto-scroll to the newest line
   }
 
   private celebrateGoal(e: MatchEvent) {
