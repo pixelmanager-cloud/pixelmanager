@@ -914,6 +914,7 @@ class Game {
 
   private async openCareer(prospectId: string) {
     this.lastNarration = '';
+    this.lastOutcome = null;
     this.showScreen('academy'); // career plays inside the academy panel — make it visible (may be entered straight from the hub)
     $('academy-body').innerHTML = SPINNER;
     try {
@@ -979,7 +980,7 @@ class Game {
       + `<span class="cg-chapter">${s.chapter}</span><div class="cg-bar"><i style="width:${pct}%"></i></div><span class="pr-meta">${s.turn}/${s.totalTurns}</span></div>`;
     const evt = s.seasonEvent ? `<div class="cg-event"><b>${s.seasonEvent.name}</b> — ${s.seasonEvent.desc}</div>` : '';
     const prof = s.profile ? this.careerProfileHtml(s.profile) : '';
-    const narr = this.lastNarration ? `<div class="cg-narrate">“${this.lastNarration}”</div>` : '';
+    const narr = this.lastNarration ? this.outcomeChipHtml() + `<div class="cg-narrate">“${this.lastNarration}”</div>` : '';
     const recap = s.recap ? `<div class="cg-recap"><span class="cg-recap-lbl">📖 The story so far</span>${s.recap}</div>` : '';
     const conseq = s.consequences?.length
       ? `<div class="cg-conseq"><span class="cg-conseq-lbl">📋 How the season paid off</span>`
@@ -1077,8 +1078,31 @@ class Game {
   }
 
   private lastNarration = '';
+  private lastOutcome?: import('./api').CareerOutcome | null;
   private careerTab: 'now' | 'player' | 'kit' = 'now';
   private lastCareerState?: import('./api').CareerState;
+
+  /** The immediate, legible verdict on the moment just played — a fit read + a performance grade + the
+   *  attributes it developed. Colour-coded so a good choice visibly pops (the core NSS feedback loop). */
+  private outcomeChipHtml(): string {
+    const o = this.lastOutcome;
+    if (!o) return '';
+    // FIT READ — did you pick the card the moment was asking for?
+    const read = o.answeredAsk
+      ? { cls: 'great', label: '🎯 Perfect read' }
+      : o.fit >= o.bestFit - 0.18
+        ? { cls: 'good', label: '◑ Good read' }
+        : { cls: 'poor', label: '✗ Against his game' };
+    // PERFORMANCE — how the moment actually went (fit + nerve + coaching − fatigue).
+    const perf = o.success >= 0.78 ? { cls: 'great', label: '⭐ Brilliant' }
+      : o.success >= 0.58 ? { cls: 'good', label: '✓ Solid' }
+        : o.success >= 0.38 ? { cls: 'mid', label: '◦ Scrappy' }
+          : { cls: 'poor', label: '✗ Poor' };
+    const grew = o.tags.length
+      ? `<span class="cg-oc-grew">developed ${o.tags.map((t) => `<span class="cg-tag">${t}</span>`).join(' ')}</span>` : '';
+    return `<div class="cg-outcome"><span class="cg-oc-pill ${read.cls}">${read.label}</span>`
+      + `<span class="cg-oc-pill ${perf.cls}">${perf.label}</span>${grew}</div>`;
+  }
 
   /** PLAYER tab: the full deck (identity cards) grouped visually. */
   private deckHtml(s: import('./api').CareerState): string {
@@ -1133,6 +1157,7 @@ class Game {
     try {
       const r = await api.careerAct(prospectId, action);
       this.lastNarration = r.narration ?? '';
+      this.lastOutcome = r.outcome ?? null;
       if (r.graduated && r.player) {
         this.setMe(await api.me());
         const player = r.player;

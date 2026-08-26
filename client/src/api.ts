@@ -14,6 +14,8 @@ export interface LegacyCard { role: string; primeOverall: number; peakOverall: n
 export interface Prospect { id: string; name: string; roleHint: string; pedigree: number; potentialStars: number; generation?: number; bornSeason?: number; developed?: boolean; note?: string; genes?: any; careerStarted?: boolean; developedPlayerId?: string | null }
 export interface CareerCard { id: string; name: string; tags: string[]; rarity?: string; desc?: string }
 export interface Kit { number: number; boots: string; celebration: string; nickname: string; hairstyle?: string; accessory?: string }
+/** Immediate feedback on a moment just played: how well the card fit the demand, and how it went. */
+export interface CareerOutcome { fit: number; bestFit: number; success: number; tags: string[]; answeredAsk: boolean }
 export interface CareerState {
   prospectId: string; name: string; pedigree: number; agentId?: string | null; phase: 'play' | 'coach' | 'draft' | 'offer' | 'focus';
   age: number; chapter: string; turn: number; totalTurns: number; finished: boolean;
@@ -113,7 +115,7 @@ export const api = {
   careerAgents: () => req<{ agents: Array<{ id: string; name: string; desc: string }> }>('/career/agents'),
   startCareer: (pid: string, agentId: string | null) => req<{ ok: true; state: CareerState }>(`/career/${encodeURIComponent(pid)}/start`, { method: 'POST', body: JSON.stringify({ agentId }) }),
   getCareer: (pid: string) => req<{ ok: true; state: CareerState }>(`/career/${encodeURIComponent(pid)}`),
-  careerAct: (pid: string, action: { type: string; cardId: string }) => req<{ ok: true; graduated?: boolean; narration?: string | null; epilogue?: string; player?: Player; state?: CareerState }>(`/career/${encodeURIComponent(pid)}/act`, { method: 'POST', body: JSON.stringify(action) }),
+  careerAct: (pid: string, action: { type: string; cardId: string }) => req<{ ok: true; graduated?: boolean; narration?: string | null; outcome?: CareerOutcome | null; epilogue?: string; player?: Player; state?: CareerState }>(`/career/${encodeURIComponent(pid)}/act`, { method: 'POST', body: JSON.stringify(action) }),
   saveKit: (pid: string, kit: Kit) => req<{ ok: true; kit: Kit }>(`/career/${encodeURIComponent(pid)}/kit`, { method: 'PUT', body: JSON.stringify(kit) }),
   legends: () => req<{ legends: Array<{ playerId: string; name: string; card: LegacyCard; retiredSeason: number }> }>('/legends'),
   prestige: () => req<{ prestige: { score: number; levelIdx: number; title: string; icon: string; nextTitle: string | null; nextAt: number | null; progress: number; leagueTitles: number; cupTitles: number }; record: { wins: number; draws: number; losses: number; seasons: number } }>('/prestige'),

@@ -528,6 +528,13 @@
         color: #d8e0ea; background: linear-gradient(160deg, rgba(80,90,130,0.16), rgba(40,45,70,0.12)); border-left: 3px solid #6a7ab0;
         animation: narrfade 0.5s ease; }
       @keyframes narrfade { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+      .cg-outcome { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; animation: narrfade 0.4s ease; }
+      .cg-oc-pill { font-family: var(--display); font-size: 11px; letter-spacing: 0.5px; padding: 5px 10px; border-radius: 999px; border: 1px solid transparent; }
+      .cg-oc-pill.great { color: #7ff0a8; background: color-mix(in srgb, #4fd07a 18%, transparent); border-color: color-mix(in srgb, #4fd07a 45%, transparent); }
+      .cg-oc-pill.good { color: #9fe0ff; background: color-mix(in srgb, #5abeff 16%, transparent); border-color: color-mix(in srgb, #5abeff 42%, transparent); }
+      .cg-oc-pill.mid { color: #f0d98a; background: color-mix(in srgb, #e6c76a 16%, transparent); border-color: color-mix(in srgb, #e6c76a 40%, transparent); }
+      .cg-oc-pill.poor { color: #ff9a9a; background: color-mix(in srgb, #ff6a6a 15%, transparent); border-color: color-mix(in srgb, #ff6a6a 42%, transparent); }
+      .cg-oc-grew { font-family: var(--body); font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 5px; }
       .cg-prompt { font-size: 14px; color: var(--muted); margin: 6px 0 10px; }
       .cg-scenario { text-align: center; padding: 12px; border-radius: 10px; margin-bottom: 14px; background: #16162a; border: 1px solid #33335a; }
       .cg-scenario .cg-label { font-family: var(--display); font-size: 17px; margin-bottom: 6px; }

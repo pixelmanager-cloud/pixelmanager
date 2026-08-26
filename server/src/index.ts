@@ -520,6 +520,13 @@ app.post('/career/:id/act', { preHandler: requireAuth }, async (req, reply) => {
   const c = loadCareer(t);
   let narration: string | null = null;
   try { narration = actWithNarration(c, action); } catch (e: any) { return reply.code(400).send({ error: e?.message ?? 'illegal move' }); }
+  // OUTCOME: for a match/training/life moment, expose how well the read + the play went so the UI can
+  // give immediate, legible feedback (a fit verdict + a performance grade + the attributes developed).
+  let outcome: { fit: number; bestFit: number; success: number; tags: string[]; answeredAsk: boolean } | null = null;
+  if (action.type === 'play' && c.log.length) {
+    const ch = c.log[c.log.length - 1];
+    outcome = { fit: ch.fit, bestFit: ch.bestFit, success: ch.success, tags: ch.tags, answeredAsk: ch.fit >= ch.bestFit - 0.05 };
+  }
   await db.updateToken(t.id, { career_actions: JSON.stringify([...JSON.parse(t.career_actions ?? '[]'), action]) });
   if (c.finished) { // GRADUATE IN PLACE → the same token becomes a pro at age 25, signed to a first deal
     const fresh = (await db.getToken(t.id))!;
@@ -529,9 +536,9 @@ app.post('/career/:id/act', { preHandler: requireAuth }, async (req, reply) => {
     await db.updateToken(t.id, { ...grad, prime_season: s.number, signed_season: deal.signedSeason, length_seasons: deal.lengthSeasons, staked_since: s.number });
     // an evocative epilogue of the whole 10→25 journey, shown before the pro reveal
     const epilogue = graduationEpilogue({ name: fresh.name, careerSeed: fresh.career_seed!, personalityId: grad.personality ?? c.personality.id, overall: grad.peak_overall ?? 10, role: grad.role ?? undefined, topTraits: JSON.parse(grad.traits_json ?? '[]') });
-    return { ok: true, graduated: true, narration, epilogue, player: tokenToPlayer((await db.getToken(t.id))!) };
+    return { ok: true, graduated: true, narration, outcome, epilogue, player: tokenToPlayer((await db.getToken(t.id))!) };
   }
-  return { ok: true, narration, state: careerState((await db.getToken(t.id))!, c) };
+  return { ok: true, narration, outcome, state: careerState((await db.getToken(t.id))!, c) };
 });
 
 // LEGENDS: the manager's hall of retirement legacy cards (one per generation a token retired under them).
