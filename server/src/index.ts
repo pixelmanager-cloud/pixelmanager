@@ -3,7 +3,7 @@ import cors from '@fastify/cors';
 import { randomUUID } from 'node:crypto';
 import { overall, managerPrestige, signContract, contractCost, contractLength, type Lineup, type Tactics } from '@fm/shared';
 import { mintGenesis, tokenToPlayer, tokenContract, tokenAch, legendCardOf, unavailableTokenIds, loadCareer, applyAction, careerState, graduatedFields, rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, ageOf, SUPPLY_CAP, type CareerAction } from './tokens.js';
-import { bumpApps, advanceTokensAtRollover } from './lifecycle.js';
+import { bumpApps, bumpMorale, advanceTokensAtRollover } from './lifecycle.js';
 const isNftPlayer = (id: string) => id.startsWith('nft:');
 import { db, type Account, type StandingOrders, type Listing } from './db.js';
 import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMATIONS } from './game.js';
@@ -316,7 +316,10 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const gate = Math.round(stadiumIncome(homeFacFull.stadium, Math.max(0, homeTierIdx), homeMatchOutcome) * fanIncomeMult(homeFacFull.fanzone));
   await Promise.all([db.setRating(meId, nMe), db.setRating(oppId, nOpp), db.addCoins(meId, myCoins), db.addCoins(oppId, oppCoins), db.addCoins(homeAcctId, gate)]);
   // appearances: every NFT that featured banks a cap (feeds longevity in the retirement legacy)
-  for (const pl of [...homeTeam.players, ...awayTeam.players]) if (isNftPlayer(pl.id)) await bumpApps(db, pl.id);
+  const homeEv = result[0] > result[1] ? 'played_win' : result[0] < result[1] ? 'played_loss' : 'played_draw';
+  const awayEv = result[1] > result[0] ? 'played_win' : result[1] < result[0] ? 'played_loss' : 'played_draw';
+  for (const pl of homeTeam.players) if (isNftPlayer(pl.id)) { await bumpApps(db, pl.id); await bumpMorale(db, pl.id, homeEv); }
+  for (const pl of awayTeam.players) if (isNftPlayer(pl.id)) { await bumpApps(db, pl.id); await bumpMorale(db, pl.id, awayEv); }
   const myGate = iAmHome ? gate : 0; // only the host banks gate receipts
   const nHome = iAmHome ? nMe : nOpp, nAway = iAmHome ? nOpp : nMe;
 
@@ -421,6 +424,7 @@ app.post('/players/:id/extend', { preHandler: requireAuth }, async (req, reply) 
   await db.addCoins(ownerId, -ci.extendCost);
   const fresh = signContract(s.number, t.greed ?? 10, t.personality ?? undefined); // staked_since preserved
   await db.updateToken(id, { signed_season: fresh.signedSeason, length_seasons: fresh.lengthSeasons });
+  await bumpMorale(db, id, 'extended'); // a new deal is a vote of confidence
   return { ok: true, coins: await db.getCoins(ownerId), contract: { playerId: id, ...tokenContract((await db.getToken(id))!, s.number) } };
 });
 

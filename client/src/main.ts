@@ -404,6 +404,7 @@ class Game {
       contractHtml = `<div class="pc-contract${ci.available ? '' : ' lapsed'}">`
         + `<div class="pc-crow"><span>Age ${ci.age}${ci.age >= 39 ? ' · nearing retirement' : ''}</span>`
         + `<span>${ci.available ? `📜 ${ci.seasonsLeft} season${ci.seasonsLeft === 1 ? '' : 's'} left` : '⛔ contract lapsed — benched'}</span></div>`
+        + (ci.morale != null ? `<div class="pc-morale"><i>morale</i><span class="pc-mbg"><b style="width:${ci.morale}%"></b></span><span>${ci.moraleLabel}</span></div>` : '')
         + `<div class="pc-cactions"><button class="pc-extend" data-extend="${p.id}">${ci.available ? 'Re-sign' : 'Extend'} · ${ci.extendCost}c · ${ci.lengthSeasons}y</button>`
         + `<span class="pc-sell">or sell ~${ci.sellValue}c</span></div>` + stakeHtml + `</div>`;
     }
@@ -802,7 +803,14 @@ class Game {
         return `<div class="prospect-row"><div><div class="pr-name">🌱 ${p.name} <span class="pr-stars">${stars}</span></div>`
           + `<div class="pr-meta">${p.roleHint}${gen} · pedigree ${(p.pedigree * 100) | 0}% ${p.careerStarted ? '· in development' : '· age 10, ready to develop'}</div></div>${btn}</div>`;
       }).join('') : '<div class="muted">No prospects yet — mint a genesis prospect above to begin.</div>';
-      $('academy-body').innerHTML = intro + rows;
+      const { legends } = await api.legends().catch(() => ({ legends: [] as any[] }));
+      const hall = legends.length ? `<h4 class="scout-h4" style="margin-top:22px;">🏅 HALL OF LEGENDS</h4>`
+        + `<div class="scout-sub">The great careers your bloodlines have had — one card per retirement.</div>`
+        + `<div class="legends-grid">` + legends.map((l: any) => `<div class="legend-card"><div class="lc-top">${l.card.icon} <b>${l.card.tier}</b></div>`
+          + `<div class="lc-name">${l.name}</div><div class="lc-meta">${l.card.role} · rating ${l.card.legendRating}</div>`
+          + `<div class="lc-honours">${l.card.leagueTitles}🏅 ${l.card.cupTitles}🏆 · ${l.card.apps} apps · ${l.card.seasons} seasons</div>`
+          + `<div class="lc-note">${l.card.note}</div></div>`).join('') + `</div>` : '';
+      $('academy-body').innerHTML = intro + rows + hall;
       $('mint-genesis').addEventListener('click', () => this.mintGenesis());
       $('academy-body').querySelectorAll('[data-dev]').forEach((b) => b.addEventListener('click', () => this.openCareer((b as HTMLElement).dataset.dev!)));
     } catch { $('academy-body').innerHTML = '<div class="muted">Could not load — is the server running?</div>'; }

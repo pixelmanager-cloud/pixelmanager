@@ -117,6 +117,10 @@
       .pc-card .pc-extend:hover { background: #7ee07e; }
       .pc-card .pc-sell { font-size: 10px; color: #9aa; }
       .pc-card .pc-stake { margin-top: 7px; font-size: 10px; color: #8cd0c8; text-align: center; }
+      .pc-card .pc-morale { display: flex; align-items: center; gap: 7px; justify-content: center; font-size: 10px; color: var(--muted); margin-bottom: 8px; }
+      .pc-card .pc-morale i { font-style: normal; }
+      .pc-card .pc-mbg { width: 70px; height: 5px; border-radius: 3px; background: #2a2a44; overflow: hidden; }
+      .pc-card .pc-mbg b { display: block; height: 100%; background: linear-gradient(90deg, #d06a6a, #e0c14a, #6ad06a); }
       .pc-card .pc-contract.retired { background: rgba(150,120,40,0.16); border-color: rgba(220,190,90,0.4); }
       .pc-card .pc-legend { font-size: 10px; color: #e8d9a0; text-align: center; margin-bottom: 7px; letter-spacing: 0.2px; }
       .pc-card .pc-reborn { font-family: var(--display); font-size: 10px; padding: 7px 12px; cursor: pointer; border-radius: 6px;
@@ -414,6 +418,13 @@
       .cg-coach .cg-cname, .cg-offer .cg-cname { font-family: var(--display); font-size: 12px; }
       .cg-coach .cg-cdesc, .cg-offer .cg-cdesc { font-size: 11px; color: var(--muted); margin-top: 4px; }
       .cg-offer .cg-effs { font-size: 10px; color: #9c9; margin-top: 5px; }
+      .legends-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin-top: 8px; }
+      .legend-card { padding: 11px 13px; border-radius: 10px; background: linear-gradient(160deg, rgba(150,120,40,0.14), rgba(90,70,20,0.1)); border: 1px solid rgba(220,190,90,0.34); }
+      .legend-card .lc-top { font-size: 11px; color: #e8d9a0; margin-bottom: 5px; }
+      .legend-card .lc-name { font-family: var(--display); font-size: 12px; }
+      .legend-card .lc-meta { font-size: 10px; color: var(--muted); margin: 3px 0; }
+      .legend-card .lc-honours { font-size: 10px; color: #cbd; margin-bottom: 4px; }
+      .legend-card .lc-note { font-size: 10px; color: #9c9; font-style: italic; }
       .cg-profile { padding: 10px 13px; border-radius: 9px; background: #14142a; border: 1px solid #2c2c50; margin-bottom: 12px; }
       .cgp-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 11px; color: #bcd; }
       .cgp-role { font-family: var(--display); font-size: 11px; padding: 2px 8px; border-radius: 5px; background: #2a2a48; }

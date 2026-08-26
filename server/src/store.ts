@@ -48,13 +48,13 @@ export interface Token {
   attrs_json: string | null; role: string | null; traits_json: string | null; personality: string | null;
   greed: number | null; marketability: number | null; earnings: number | null; prime_season: number | null; peak_overall: number;
   signed_season: number | null; length_seasons: number | null; staked_since: number | null;
-  ach_seasons: number; ach_apps: number; ach_league: number; ach_cup: number; ach_promotions: number; ach_tier: number;
+  ach_seasons: number; ach_apps: number; ach_league: number; ach_cup: number; ach_promotions: number; ach_tier: number; morale: number;
 }
 /** Columns updateToken() may set (whitelist — guards the dynamic UPDATE). */
 export const TOKEN_COLS = new Set<string>(['owner_id', 'generation', 'state', 'name', 'genes_json', 'pedigree', 'dev_bonus_json',
   'career_seed', 'agent_id', 'track', 'career_actions', 'attrs_json', 'role', 'traits_json', 'personality',
   'greed', 'marketability', 'earnings', 'prime_season', 'peak_overall', 'signed_season', 'length_seasons', 'staked_since',
-  'ach_seasons', 'ach_apps', 'ach_league', 'ach_cup', 'ach_promotions', 'ach_tier']);
+  'ach_seasons', 'ach_apps', 'ach_league', 'ach_cup', 'ach_promotions', 'ach_tier', 'morale']);
 
 export interface Store {
   init(): Promise<void>;

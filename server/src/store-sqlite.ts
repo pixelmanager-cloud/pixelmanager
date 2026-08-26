@@ -87,8 +87,9 @@ export function makeSqliteStore(file: string): Store {
         greed INTEGER, marketability INTEGER, earnings INTEGER, prime_season INTEGER, peak_overall INTEGER NOT NULL DEFAULT 0,
         signed_season INTEGER, length_seasons INTEGER, staked_since INTEGER,
         ach_seasons INTEGER NOT NULL DEFAULT 0, ach_apps INTEGER NOT NULL DEFAULT 0, ach_league INTEGER NOT NULL DEFAULT 0,
-        ach_cup INTEGER NOT NULL DEFAULT 0, ach_promotions INTEGER NOT NULL DEFAULT 0, ach_tier INTEGER NOT NULL DEFAULT 0);`);
+        ach_cup INTEGER NOT NULL DEFAULT 0, ach_promotions INTEGER NOT NULL DEFAULT 0, ach_tier INTEGER NOT NULL DEFAULT 0, morale INTEGER NOT NULL DEFAULT 65);`);
       db.exec('CREATE INDEX IF NOT EXISTS idx_tokens_owner ON tokens(owner_id)');
+      try { db.exec('ALTER TABLE tokens ADD COLUMN morale INTEGER NOT NULL DEFAULT 65'); } catch {}
 
       // PROSPECTS: a reborn is a 10-year-old to DEVELOP in the Career sim (Layer 1), inheriting the
       // parent's genes + pedigree — not a ready-made prime player. Held here until the breeder graduates it.

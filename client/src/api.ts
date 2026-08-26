@@ -29,7 +29,7 @@ export interface CareerProfile {
   attrs: Record<string, number>; personality: { id: string; name: string; desc: string };
   agent: string | null; coach: string | null; earnings: number; traitsForming: string[];
 }
-export interface ContractInfo { playerId: string; age: number; available: boolean; seasonsLeft: number; lengthSeasons: number; extendCost: number; sellValue: number; stakedSeasons: number; retired?: boolean; legend?: LegacyCard | null; rebornId?: string | null }
+export interface ContractInfo { playerId: string; age: number; available: boolean; seasonsLeft: number; lengthSeasons: number; extendCost: number; sellValue: number; stakedSeasons: number; morale?: number; moraleLabel?: string; retired?: boolean; legend?: LegacyCard | null; rebornId?: string | null }
 
 async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const res = await fetch(API_URL + path, {

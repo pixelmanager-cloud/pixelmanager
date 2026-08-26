@@ -4,7 +4,7 @@
 // home for every transition, replacing the old prospects/contracts/lifecycle/achievements split.
 import {
   overall, contractView, signContract, contractLength, legacyCard, legacyBoost, inheritGenes, rollGenes, graduate,
-  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS,
+  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, moraleEffects,
   type Player, type Track, type PlayerAchievements, type Genes, type CareerPlayerAttrs,
 } from '@fm/shared';
 import type { Token, Store } from './store.js';
@@ -47,14 +47,16 @@ export async function mintGenesis(db: Store, ownerId: string): Promise<Token> {
 }
 
 // ── contract / selection info for a PRO token ──
-export interface TokenContract { id: string; age: number; available: boolean; seasonsLeft: number; lengthSeasons: number; extendCost: number; sellValue: number; stakedSeasons: number; retired?: boolean }
+export interface TokenContract { id: string; age: number; available: boolean; seasonsLeft: number; lengthSeasons: number; extendCost: number; sellValue: number; stakedSeasons: number; morale: number; moraleLabel: string; retired?: boolean }
 export function tokenContract(t: Token, season: number): TokenContract {
   const age = ageOf(t.prime_season ?? season, season);
-  if (t.state === 'retired') return { id: t.id, age, available: false, seasonsLeft: 0, lengthSeasons: 0, extendCost: 0, sellValue: 0, stakedSeasons: 0, retired: true };
+  const me = moraleEffects(t.morale ?? 65);
+  if (t.state === 'retired') return { id: t.id, age, available: false, seasonsLeft: 0, lengthSeasons: 0, extendCost: 0, sellValue: 0, stakedSeasons: 0, morale: t.morale ?? 65, moraleLabel: me.label, retired: true };
   const contract = t.signed_season != null ? { signedSeason: t.signed_season, lengthSeasons: t.length_seasons ?? 3 } : null;
   const staked = Math.max(0, season - (t.staked_since ?? season));
   const v = contractView(overall(tokenToPlayer(t)), age, t.greed ?? 10, t.marketability ?? 10, t.personality ?? undefined, contract, season, t.earnings ?? 0, staked);
-  return { id: t.id, age, available: v.available, seasonsLeft: v.seasonsLeft, lengthSeasons: v.lengthSeasons, extendCost: v.extendCost, sellValue: v.sellValue, stakedSeasons: staked };
+  // morale bends the numbers: an unhappy player holds out for more to re-sign and sells for less
+  return { id: t.id, age, available: v.available, seasonsLeft: v.seasonsLeft, lengthSeasons: v.lengthSeasons, extendCost: Math.round(v.extendCost * me.extendMult), sellValue: Math.round(v.sellValue * me.sellMult), stakedSeasons: staked, morale: t.morale ?? 65, moraleLabel: me.label };
 }
 
 // ── career (prospect state) — the breeder card game ──

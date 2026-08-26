@@ -96,8 +96,9 @@ export function makePostgresStore(connectionString: string): Store {
           greed INTEGER, marketability INTEGER, earnings INTEGER, prime_season INTEGER, peak_overall INTEGER NOT NULL DEFAULT 0,
           signed_season INTEGER, length_seasons INTEGER, staked_since INTEGER,
           ach_seasons INTEGER NOT NULL DEFAULT 0, ach_apps INTEGER NOT NULL DEFAULT 0, ach_league INTEGER NOT NULL DEFAULT 0,
-          ach_cup INTEGER NOT NULL DEFAULT 0, ach_promotions INTEGER NOT NULL DEFAULT 0, ach_tier INTEGER NOT NULL DEFAULT 0);
+          ach_cup INTEGER NOT NULL DEFAULT 0, ach_promotions INTEGER NOT NULL DEFAULT 0, ach_tier INTEGER NOT NULL DEFAULT 0, morale INTEGER NOT NULL DEFAULT 65);
         CREATE INDEX IF NOT EXISTS idx_tokens_owner ON tokens(owner_id);
+        ALTER TABLE tokens ADD COLUMN IF NOT EXISTS morale INTEGER NOT NULL DEFAULT 65;
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS season_id TEXT;
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS initiator_id TEXT;
         ALTER TABLE clubs ADD COLUMN IF NOT EXISTS so_duties TEXT;
