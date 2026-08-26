@@ -76,10 +76,10 @@ implements it on a branch, and opens a PR for you to review.
   Expand `VERBS` (≥6 per tag) + add per-tag result colour. Verify.
 - [x] **[story] milestone beats.** Add special narration for milestone moments — first goal, first big
   win, a debut, delivering in a cup final — detected from the log/stakes. Seeded. Verify.
-- [ ] **[story] chapter-recap screen.** At each age-chapter boundary, show a short "the story so far"
+- [x] **[story] chapter-recap screen.** At each age-chapter boundary, show a short "the story so far"
   recap (2–3 sentences on how the chapter went + what's next) before the next chapter's first scenario.
   Build the text in `narrate.ts`, surface via `careerState`, render in the Academy. Verify.
-- [ ] **[story] graduation epilogue.** At 25, before the pro reveal, show an evocative epilogue passage
+- [x] **[story] graduation epilogue.** At 25, before the pro reveal, show an evocative epilogue passage
   summarising the whole journey (where he started, standout traits, the kind of player he became). Seeded
   from the career. Verify.
 - [x] **[story] personality voice.** Let the player's temperament colour the narration voice throughout
