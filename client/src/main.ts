@@ -879,7 +879,7 @@ class Game {
       const [{ honours }, { legends }] = await Promise.all([api.honours(), api.legends()]);
       const titles = honours.filter((h) => h.title === 1);
       const cabinet = titles.length
-        ? `<div class="tr-cabinet">` + titles.sort((a, b) => a.season_number - b.season_number).map((h) => `<div class="tr-trophy"><div class="tr-trophy-ico">🏆</div><div class="tr-trophy-name">${h.tier}</div><div class="tr-trophy-sub">Season ${h.season_number}${h.kind && h.kind !== 'league' ? ` · ${h.kind}` : ''}</div></div>`).join('') + `</div>`
+        ? `<div class="tr-cabinet">` + titles.sort((a, b) => a.season_number - b.season_number).map((h) => `<div class="tr-trophy"><div class="tr-trophy-ico">${sprite('trophy')}</div><div class="tr-trophy-name">${h.tier}</div><div class="tr-trophy-sub">Season ${h.season_number}${h.kind && h.kind !== 'league' ? ` · ${h.kind}` : ''}</div></div>`).join('') + `</div>`
         : `<div class="muted">No trophies yet — win your pod to lift your first title.</div>`;
       // retired numbers (per-save honour for a top-tier 'Immortal' legend)
       const TOP_TIER = 'Immortal', rKey = 'fm_retired_' + (this.account?.handle ?? '');
@@ -1014,7 +1014,7 @@ class Game {
         const big = s.scenario.stakes >= 3 ? ' · ★ THE BIG ONE' : s.scenario.stakes >= 2 ? ' · BIG GAME' : '';
         header = `<div class="cg-matchday stakes-${s.scenario.stakes}">`
           + `<div class="cg-md-top"><span class="cg-md-badge">⚽ MATCHDAY${big}</span><span class="cg-md-min">${mc.minute}'</span></div>`
-          + `<div class="cg-md-score">${us} <b>–</b> ${them}</div>`
+          + `<div class="cg-md-score">${us} <span class="cg-md-ball">${sprite('ball')}</span> ${them}</div>`
           + `<div class="cg-md-vs">vs <b>${mc.opponent}</b> · ${mc.home ? '🏟️ Home' : '✈️ Away'}</div>`
           + `<div class="cg-md-comp">${mc.comp}</div></div>`;
         prompt = 'The moment falls to him — what does he do?';
