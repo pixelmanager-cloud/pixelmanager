@@ -10,7 +10,7 @@ export function setToken(t: string) { token = t; localStorage.setItem('fm_token'
 export function clearToken() { token = ''; localStorage.removeItem('fm_token'); }
 
 export interface ApiError extends Error { status: number; body: any }
-export interface LegacyCard { role: string; primeOverall: number; peakOverall: number; seasons: number; apps: number; leagueTitles: number; cupTitles: number; legendRating: number; tier: string; icon: string; testimonial: number; mintable: boolean; note: string }
+export interface LegacyCard { role: string; primeOverall: number; peakOverall: number; seasons: number; apps: number; leagueTitles: number; cupTitles: number; legendRating: number; tier: string; icon: string; testimonial: number; mintable: boolean; note: string; number?: number | null }
 export interface Prospect { id: string; name: string; roleHint: string; pedigree: number; potentialStars: number; generation?: number; bornSeason?: number; developed?: boolean; note?: string; genes?: any; careerStarted?: boolean; developedPlayerId?: string | null }
 export interface CareerCard { id: string; name: string; tags: string[]; rarity?: string; desc?: string }
 export interface Kit { number: number; boots: string; celebration: string; nickname: string; hairstyle?: string; accessory?: string }

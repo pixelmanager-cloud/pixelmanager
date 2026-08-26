@@ -239,7 +239,9 @@ export async function unavailableTokenIds(db: Store, ownerId: string, season: nu
 /** The retirement legacy card for a retired (or retiring) token. */
 export function legendCardOf(t: Token) {
   const ovr = overall(tokenToPlayer(t));
-  return legacyCard((t.role as any) ?? 'MF', ovr, Math.max(t.peak_overall, ovr), tokenAch(t));
+  const card = legacyCard((t.role as any) ?? 'MF', ovr, Math.max(t.peak_overall, ovr), tokenAch(t));
+  const number = t.kit_json ? (JSON.parse(t.kit_json).number ?? null) : null; // squad number, if the manager set one — for number retirement
+  return { ...card, number };
 }
 
 /** A prospect token's upside — from its (stored) inherited pedigree + physical gene ceilings. */

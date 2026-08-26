@@ -862,18 +862,41 @@ class Game {
       const cabinet = titles.length
         ? `<div class="tr-cabinet">` + titles.sort((a, b) => a.season_number - b.season_number).map((h) => `<div class="tr-trophy"><div class="tr-trophy-ico">🏆</div><div class="tr-trophy-name">${h.tier}</div><div class="tr-trophy-sub">Season ${h.season_number}${h.kind && h.kind !== 'league' ? ` · ${h.kind}` : ''}</div></div>`).join('') + `</div>`
         : `<div class="muted">No trophies yet — win your pod to lift your first title.</div>`;
+      // retired numbers (per-save honour for a top-tier 'Immortal' legend)
+      const TOP_TIER = 'Immortal', rKey = 'fm_retired_' + (this.account?.handle ?? '');
+      let retired: Array<{ n: number; name: string }>; try { retired = JSON.parse(localStorage.getItem(rKey) || '[]'); } catch { retired = []; }
+      const retiredNums = new Set(retired.map((r) => r.n));
       // bloodlines: group legend cards by their base player id → a generational chain
       const byLine = new Map<string, typeof legends>();
       for (const l of legends) { const arr = byLine.get(l.playerId) ?? []; arr.push(l); byLine.set(l.playerId, arr); }
       const lines = [...byLine.values()].map((chain) => chain.slice().sort((a, b) => a.retiredSeason - b.retiredSeason));
+      const genCard = (l: typeof legends[number], i: number, len: number) => {
+        const num = l.card.number, numTag = num ? ` <span class="tr-gen-num">#${num}</span>` : '';
+        const eligible = l.card.tier === TOP_TIER && num && !retiredNums.has(num);
+        const retireBtn = eligible ? `<button class="tr-retire" data-num="${num}" data-name="${l.name.replace(/"/g, '&quot;')}">🎽 Retire #${num}</button>` : '';
+        return `<div class="tr-gen"><div class="tr-gen-badge">${l.card.icon} ${l.card.tier}${numTag}</div><div class="tr-gen-name">${l.name}</div><div class="tr-gen-meta">${l.card.role} · rating ${l.card.legendRating} · ${l.card.leagueTitles}🏅 ${l.card.cupTitles}🏆 · ${l.card.apps} apps</div>${retireBtn}</div>${i < len - 1 ? '<div class="tr-arrow">↓ next generation</div>' : ''}`;
+      };
       const bloodlines = lines.length
-        ? lines.map((chain) => `<div class="tr-line">` + chain.map((l, i) => `<div class="tr-gen"><div class="tr-gen-badge">${l.card.icon} ${l.card.tier}</div><div class="tr-gen-name">${l.name}</div><div class="tr-gen-meta">${l.card.role} · rating ${l.card.legendRating} · ${l.card.leagueTitles}🏅 ${l.card.cupTitles}🏆 · ${l.card.apps} apps</div></div>${i < chain.length - 1 ? '<div class="tr-arrow">↓ next generation</div>' : ''}`).join('') + `</div>`).join('')
+        ? lines.map((chain) => `<div class="tr-line">` + chain.map((l, i) => genCard(l, i, chain.length)).join('') + `</div>`).join('')
         : `<div class="muted">No bloodlines yet — develop a player, field him for a career, and retire him to found a dynasty. Every generation after adds a link to the tree.</div>`;
+      const retiredSection = retired.length
+        ? `<h4 class="scout-h4" style="margin-top:24px;">🎽 RETIRED NUMBERS</h4><div class="scout-sub">Shirts hung up forever for the club's immortals — no future player wears these.</div>`
+          + `<div class="tr-cabinet">` + retired.map((r) => `<div class="tr-trophy"><div class="tr-trophy-ico">#${r.n}</div><div class="tr-trophy-name">${r.name}</div><div class="tr-trophy-sub">retired</div></div>`).join('') + `</div>`
+        : '';
       const seasons = honours.length ? Math.max(...honours.map((h) => h.season_number)) : 0;
-      const summary = `<div class="tr-summary">🏆 ${titles.length} title${titles.length === 1 ? '' : 's'} · 🌳 ${lines.length} bloodline${lines.length === 1 ? '' : 's'} · ⭐ ${legends.length} legend${legends.length === 1 ? '' : 's'} · ${seasons} season${seasons === 1 ? '' : 's'} managed</div>`;
+      const summary = `<div class="tr-summary">🏆 ${titles.length} title${titles.length === 1 ? '' : 's'} · 🌳 ${lines.length} bloodline${lines.length === 1 ? '' : 's'} · ⭐ ${legends.length} legend${legends.length === 1 ? '' : 's'}${retired.length ? ` · 🎽 ${retired.length} retired` : ''} · ${seasons} season${seasons === 1 ? '' : 's'} managed</div>`;
       $('trophies-body').innerHTML = summary
         + `<h4 class="scout-h4">🏆 TROPHY CABINET</h4>` + cabinet
-        + `<h4 class="scout-h4" style="margin-top:24px;">🌳 BLOODLINES</h4><div class="scout-sub">The dynasties you've built — each line is a bloodline across the generations, newest at the bottom.</div>` + bloodlines;
+        + `<h4 class="scout-h4" style="margin-top:24px;">🌳 BLOODLINES</h4><div class="scout-sub">The dynasties you've built — each line is a bloodline across the generations, newest at the bottom.</div>` + bloodlines
+        + retiredSection;
+      $('trophies-body').querySelectorAll('.tr-retire').forEach((el) => el.addEventListener('click', () => {
+        const n = Number((el as HTMLElement).dataset.num); const name = (el as HTMLElement).dataset.name!;
+        let cur: Array<{ n: number; name: string }>; try { cur = JSON.parse(localStorage.getItem(rKey) || '[]'); } catch { cur = []; }
+        if (!cur.some((r) => r.n === n)) cur.push({ n, name });
+        localStorage.setItem(rKey, JSON.stringify(cur));
+        toast(`🎽 #${n} retired forever in ${name}'s honour`);
+        this.showTrophyRoom();
+      }));
     } catch { $('trophies-body').innerHTML = '<div class="muted">Could not load — is the game running?</div>'; }
   }
 
