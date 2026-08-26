@@ -255,7 +255,7 @@ class Game {
     const password = Math.random().toString(36).slice(2) + 'Aa1'; // random; the player never sees or types it
     $('login-error').textContent = 'Creating your club…';
     try {
-      const r = await api.register(handle, password);
+      const r = await api.register(handle, password, name);
       setToken(r.token);
       this.setMe({ account: r.account, club: r.club, standingOrders: r.standingOrders });
       const saves = this.loadSaves(); saves.push({ id: handle, token: r.token, name, lastPlayed: Date.now() }); this.saveSaves(saves);

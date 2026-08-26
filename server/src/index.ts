@@ -79,9 +79,10 @@ app.post('/register', async (req, reply) => {
   if (handle.length < 2 || handle.length > 20) return reply.code(400).send({ error: 'handle must be 2-20 chars' });
   if (password.length < 4 || password.length > 64) return reply.code(400).send({ error: 'password must be 4-64 chars' });
   if (await db.handleTaken(handle)) return reply.code(409).send({ error: 'handle taken' });
+  const clubName = String((req.body as any)?.clubName ?? '').trim().slice(0, 24);
   const id = randomUUID(), token = randomUUID().replace(/-/g, '');
   await db.createAccount(id, handle, token, Date.now(), hashPassword(password));
-  const { club, standingOrders } = makeClub(id, handle);
+  const { club, standingOrders } = makeClub(id, handle, clubName);
   await db.saveClub(id, club, standingOrders);
   try { await mintGenesis(db, id); } catch { /* supply cap reached — no welcome prospect */ } // a free 10yo to develop in the Academy
   return { token, account: { id, handle, rating: 1000, coins: await db.getCoins(id), wallet: null }, club, standingOrders };
