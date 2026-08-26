@@ -18,7 +18,7 @@ export interface CareerState {
   age: number; chapter: string; turn: number; totalTurns: number; finished: boolean;
   seasonEvent?: { id: string; name: string; desc: string } | null; earnings?: number; deck?: CareerCard[];
   scenario?: { id: string; kind: string; demand: Record<string, number>; label: string; stakes: number };
-  story?: string; recap?: string;
+  story?: string; recap?: string; lifeEvent?: string;
   hand?: CareerCard[]; coach?: { id: string; name: string } | null;
   coaches?: Array<{ id: string; name: string; kind: string; desc: string; specialty: string[]; bonus: number }>;
   options?: CareerCard[]; picksLeft?: number;

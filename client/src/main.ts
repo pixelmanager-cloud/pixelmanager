@@ -960,12 +960,13 @@ class Game {
       + `<span class="cg-chapter">${s.chapter}</span><div class="cg-bar"><i style="width:${pct}%"></i></div><span class="pr-meta">${s.turn}/${s.totalTurns}</span></div>`;
     const evt = s.seasonEvent ? `<div class="cg-event"><b>${s.seasonEvent.name}</b> — ${s.seasonEvent.desc}</div>` : '';
     const prof = s.profile ? this.careerProfileHtml(s.profile) : '';
-    const narr = this.lastNarration && s.phase === 'play' ? `<div class="cg-narrate">“${this.lastNarration}”</div>` : '';
+    const narr = this.lastNarration ? `<div class="cg-narrate">“${this.lastNarration}”</div>` : '';
     const recap = s.recap ? `<div class="cg-recap"><span class="cg-recap-lbl">📖 The story so far</span>${s.recap}</div>` : '';
     let body = '';
     if (s.phase === 'play' && s.scenario) {
       const tags = Object.entries(s.scenario.demand).sort((a, b) => b[1] - a[1]).map(([t]) => `<span class="cg-tag">${t}</span>`).join('');
-      body = `<div class="cg-scenario stakes-${s.scenario.stakes}"><div class="cg-story">${s.story ?? s.scenario.label}</div><div class="cg-demand">${tags}</div></div>`
+      const lifeBadge = s.lifeEvent ? `<div class="cg-life">⚡ LIFE EVENT · ${s.lifeEvent}</div>` : '';
+      body = `<div class="cg-scenario stakes-${s.scenario.stakes}${s.lifeEvent ? ' life' : ''}">${lifeBadge}<div class="cg-story">${s.story ?? s.scenario.label}</div><div class="cg-demand">${tags}</div></div>`
         + `<div class="cg-prompt">How does he respond?${s.coach ? ` · <b>${s.coach.name}</b> is coaching him` : ''}</div>`
         + `<div class="cg-cards">` + (s.hand ?? []).map((c) => this.cardHtml(c, 'play')).join('') + `</div>`;
     } else if (s.phase === 'coach' && s.coaches) {

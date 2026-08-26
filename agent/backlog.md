@@ -30,16 +30,16 @@ implements it on a branch, and opens a PR for you to review.
   evocative name (e.g. "Trivela", "Recovery Sprint", "Backs-to-the-Wall", "Nutmeg"). Do NOT add them to
   the STARTER lists (they enter via the draft pool automatically). Verify green + career_sim checks hold.
 - [ ] **[career] +4 goalkeeper cards.** Add 4 new cards to `GK_DECK` (keeping-flavoured, 1 rare). Verify.
-- [ ] **[career] richer PLAY narration.** In `shared/src/narrate.ts`, add ≥6 fresh phrasings to EACH of
+- [x] **[career] richer PLAY narration.** In `shared/src/narrate.ts`, add ≥6 fresh phrasings to EACH of
   `RESULTS.triumph/good/mixed/poor/dismal` and `REACTIONS.*`, and ≥3 new `SETTINGS` per chapter + more
   `BIG_SETTINGS`/`HUGE_SETTINGS`. Keep the seeded-pick structure; no repetition of existing lines. Verify.
-- [ ] **[career] narrate coach/draft/offer choices.** Extend the narrator so appointing a coach, drafting
+- [x] **[career] narrate coach/draft/offer choices.** Extend the narrator so appointing a coach, drafting
   a card, and resolving a financial offer ALSO produce a short immersive beat (new functions in
   `narrate.ts`; wire them in `server/src/tokens.ts` `actWithNarration` for those action types). Verify.
-- [ ] **[career] chapter-transition narration.** When a career crosses an age-chapter boundary, produce a
+- [x] **[career] chapter-transition narration.** When a career crosses an age-chapter boundary, produce a
   short paragraph summarising the chapter (how he fared, the season event) — a "life so far" beat. Seeded,
   in `narrate.ts`; surfaced in the career state. Verify.
-- [ ] **[career] graduation narration.** At age 25 graduation, produce an evocative career-summary passage
+- [x] **[career] graduation narration.** At age 25 graduation, produce an evocative career-summary passage
   (his journey, standout traits, what kind of pro he became). Seeded from the career. Verify.
 - [ ] **[career] +3 coaches / +2 mentors.** Add new staff to `COACHES` with fresh specialties/flavour. Verify.
 - [ ] **[career] +2 sports agents.** Add 2 new agents to `AGENTS` (distinct exposure/greed/valueMod
@@ -85,7 +85,7 @@ implements it on a branch, and opens a PR for you to review.
 - [x] **[story] personality voice.** Let the player's temperament colour the narration voice throughout
   (a Maverick's beats read cocky, a Fragile one's anxious). Expand the `PERSONALITY` flavour usage in
   `narratePlay` beyond the current single clause. Verify.
-- [ ] **[story] rare life-event scenarios.** Add a few rare, high-flavour non-match scenarios (a contract
+- [x] **[story] rare life-event scenarios.** Add a few rare, high-flavour non-match scenarios (a contract
   standoff, a loan-move decision, a public mistake to bounce back from) with their own stories + demands.
   Keep them deterministic + rare; verify.
 

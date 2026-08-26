@@ -4,7 +4,7 @@
 // home for every transition, replacing the old prospects/contracts/lifecycle/achievements split.
 import {
   overall, contractView, signContract, contractLength, legacyCard, legacyBoost, inheritGenes, rollGenes, graduate,
-  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, moraleEffects, narratePlay, scenarioStory, chapterRecap, bandAt, cardName, CARD_DESC,
+  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, moraleEffects, narratePlay, scenarioStory, chapterRecap, narrateCoach, narrateDraft, narrateOffer, bandAt, cardName, CARD_DESC,
   type Player, type Track, type PlayerAchievements, type Genes, type CareerPlayerAttrs,
 } from '@fm/shared';
 import type { Token, Store } from './store.js';
@@ -96,13 +96,23 @@ function careerMilestone(c: Career): string | null {
   if (c.scenario.stakes === 3 && !c.log.some((l) => l.stakes >= 3)) return 'cup_final';
   return null;
 }
-/** Apply an action and, for a PLAY, return an immersive narration of the moment (null otherwise). */
+/** Apply an action and return an immersive narration of the moment (play, or a coach/draft/offer choice). */
 export function actWithNarration(c: Career, a: CareerAction): string | null {
-  if (a.type !== 'play') { applyAction(c, a); return null; }
-  const ctx = { age: c.age, chapter: c.chapter, stakes: c.scenario.stakes, personalityId: c.personality.id, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0, milestone: careerMilestone(c), seed: (((c as any).seed >>> 0) + c.turn * 2654435761) >>> 0 };
+  const baseCtx = { age: c.age, chapter: c.chapter, stakes: 1 as 1 | 2 | 3, personalityId: c.personality.id, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0, milestone: null as string | null, seed: (((c as any).seed >>> 0) + c.turn * 2654435761) >>> 0 };
+  if (a.type === 'play') {
+    const ctx = { ...baseCtx, stakes: c.scenario.stakes, milestone: careerMilestone(c) };
+    applyAction(c, a);
+    const choice = c.log[c.log.length - 1];
+    return narratePlay(cardName(a.cardId), choice.tags, choice.success, ctx);
+  }
+  // coach / draft / offer — read the chosen item from the current phase BEFORE applying
+  const st = c.current() as any;
+  let narr: string | null = null;
+  if (a.type === 'coach') { const ch = (st.coaches ?? []).find((x: any) => x.id === a.cardId); if (ch) narr = narrateCoach(ch.name, ch.kind, ch.specialty ?? [], baseCtx); }
+  else if (a.type === 'draft') { const cd = (st.options ?? []).find((x: any) => x.id === a.cardId); if (cd) narr = narrateDraft(cd.name, cd.tags ?? [], baseCtx); }
+  else if (a.type === 'offer') { const of = (st.offers ?? []).find((x: any) => x.id === a.cardId); if (of) narr = narrateOffer(of.name, of, baseCtx); }
   applyAction(c, a);
-  const choice = c.log[c.log.length - 1];
-  return narratePlay(cardName(a.cardId), choice.tags, choice.success, ctx);
+  return narr;
 }
 export function careerProfile(t: Token, c: Career) {
   const genes = JSON.parse(t.genes_json);
@@ -122,8 +132,21 @@ export function careerState(t: Token, c: Career) {
   if (st.phase === 'play' && st.scenario) {
     const demand = st.scenario.demand as Record<string, number>;
     const topTag = Object.keys(demand).sort((a, b) => (demand[b] ?? 0) - (demand[a] ?? 0))[0] ?? 'teamwork';
-    const moment = st.scenario.stakes >= 2 ? String(st.scenario.label).replace(/^★\s*/, '') : null;
-    st.story = scenarioStory(st.scenario.kind, topTag, moment, { seed: (((c as any).seed >>> 0) + c.turn * 40503) >>> 0, age: c.age, chapter: c.chapter, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0 });
+    let moment = st.scenario.stakes >= 2 ? String(st.scenario.label).replace(/^★\s*/, '') : null;
+    // RARE LIFE EVENTS (presentational re-skin only — no rng/mechanic change, so in-progress careers
+    // and the sim stay identical): a fraction of low-stakes SOCIAL moments become a contract standoff,
+    // a loan decision, or bouncing back from a public setback — resolved by the same card play.
+    let kind = String(st.scenario.kind);
+    const lifeHash = ((((c as any).seed >>> 0) ^ Math.imul(c.turn + 1, 2654435761)) >>> 0) % 100;
+    const LIFE_KINDS = ['contract', 'loan', 'setback'];
+    const LIFE_LABEL: Record<string, string> = { contract: 'a contract standoff', loan: 'a loan-move decision', setback: 'bouncing back from a public mistake' };
+    if (kind === 'social' && st.scenario.stakes === 1 && c.age >= 16 && lifeHash < 22) {
+      kind = LIFE_KINDS[lifeHash % LIFE_KINDS.length];
+      st.scenario = { ...st.scenario, kind, label: LIFE_LABEL[kind] };
+      st.lifeEvent = kind;
+      moment = null;
+    }
+    st.story = scenarioStory(kind, topTag, moment, { seed: (((c as any).seed >>> 0) + c.turn * 40503) >>> 0, age: c.age, chapter: c.chapter, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0 });
     st.hand = withDesc(st.hand);
   }
   if (st.options) st.options = withDesc(st.options); // draft cards get their "what he does" too

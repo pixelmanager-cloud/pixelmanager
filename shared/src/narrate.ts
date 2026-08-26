@@ -204,6 +204,38 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
   return `${milestone}${cap(lead)}, ${action} ${cardName} ${result}. ${reaction}${flavor}${castReact}`;
 }
 
+// ── NON-PLAY CHOICES: a flavour beat when he appoints a coach, drafts a card, or takes an offer ──
+export function narrateCoach(name: string, kind: string, specialty: string[], ctx: NarrateCtx): string {
+  const rng = mulberry32(ctx.seed >>> 0);
+  const role = kind === 'mentor' ? 'mentor' : 'coach';
+  const spec = specialty.slice(0, 2).join(' and ') || 'his all-round game';
+  const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed) : null;
+  const nod = cast && rng() < 0.35 ? ` ${cast.gaffer} approves of the appointment.` : '';
+  return pickFrom(rng, [
+    `He’s put himself under ${name}, a ${role} who’ll sharpen his ${spec}.`,
+    `${name} takes him on — the kind of ${role} who lives and breathes ${spec}.`,
+    `A new voice in his ear: ${name}, brought in to hone his ${spec}.`,
+    `Under ${name} now — every session bent towards ${spec}.`,
+  ]) + nod;
+}
+export function narrateDraft(cardName: string, _tags: string[], ctx: NarrateCtx): string {
+  const rng = mulberry32(ctx.seed >>> 0);
+  return pickFrom(rng, [
+    `He’s added ${cardName} to his game — another string to his bow.`,
+    `${cardName}, drilled and drilled until it’s second nature.`,
+    `A new weapon in the locker: ${cardName} is part of who he is now.`,
+    `Hours on the training ground pay off — ${cardName} is his to call on.`,
+  ]);
+}
+export function narrateOffer(name: string, effs: { earn: number; greed: number; market: number; form: number }, ctx: NarrateCtx): string {
+  const rng = mulberry32(ctx.seed >>> 0);
+  const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed) : null;
+  const money = effs.earn > 0, dev = effs.form > 0;
+  if (money && !dev) return pickFrom(rng, [`He took the money — ${name}. The bank balance swells; the purists wince.`, `${name}: he cashed in. Who could blame a young man from where he started?`, `The chequebook won out. ${name}, signed.`]);
+  if (dev && !money) return pickFrom(rng, [`He turned down the payday to keep growing — ${name}. The long game.`, `${name}: development over dollars. ${cast ? cast.gaffer + ' nodded.' : 'The staff nodded.'}`, `Patience over pounds — ${name}. A mature head on young shoulders.`]);
+  return pickFrom(rng, [`A big call off the pitch: ${name}.`, `${name} — a decision that will shape more than his bank balance.`, `Off the field, ${name} — the kind of choice that defines a career.`]);
+}
+
 // ── CHAPTER RECAP + GRADUATION EPILOGUE (the story-so-far beats) ──
 export interface RecapCtx { chapter: string; nextChapter?: string | null; age: number; careerSeed: number; personalityId?: string; overall?: number; seasonEventId?: string | null }
 /** A short "the story so far" passage shown at an age-chapter boundary. */
