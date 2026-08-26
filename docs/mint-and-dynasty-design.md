@@ -152,6 +152,33 @@ This is web3/contract + mint-flow territory — **out of the overnight agents' l
 
 ---
 
+## 6b. What the token is (and isn't) + minting & marketplace
+
+**The token is a numbered title deed, not the data.** On-chain lives only ownership of `tokenId`. The actual
+player — stats, career, dynasty — is a server-side record keyed by that id. A trade moves the *number*; the
+server re-associates the player with the new owner (`syncOnchainTokens` already reconciles off-chain state
+from on-chain ownership). So people are trading **numbered receipts**, and the server resolves what each
+number *means*.
+
+Accept the tradeoff clearly: the token is only as valuable as our continued operation of the service (data
+is off-chain). It is a **portable, ownable, resellable title**, not the value itself — the game is the value.
+This does NOT reduce securities risk (it leans into the "value from the operator's efforts" prong); the
+mint-shape + no-earn-framing + no-resale-cut mitigations do that. The NFT layer is a *deliberate choice* for
+three benefits — true wallet ownership, permissionless peer-to-peer resale (no marketplace for us to run),
+and future portability — not a technical necessity (the whole game could run fully off-chain with less
+regulatory surface).
+
+**Minting & marketplace decision:**
+- **Primary mint (selling new prospects) → our own site.** The reveal-before-pay scouting board is a custom
+  flow marketplaces can't do; we control pricing/reveal/framing (also the safer shape) and dodge mint bots.
+  Tooling: thirdweb (mint/claim + embedded fiat-or-crypto checkout) or roll our own with viem + Stripe.
+- **Secondary resale → passive, on OpenSea/Blur/etc.** Standard ERC-721 auto-lists there; we don't build or
+  run a marketplace (lower securities/MSB exposure, and royalties are unreliable anyway). Off-chain stats are
+  no barrier — `tokenURI` points at our metadata endpoint.
+- **Solve dynamic-metadata staleness by keeping the on-chain-referenced metadata to STABLE facts only**
+  (edition #, generation, portrait, maybe position) and keeping all live/changing stats **in-app**. Avoids
+  marketplace cache fighting and reinforces "the real player lives in Pixel Manager."
+
 ## 7. To decide before building
 - [ ] Baseline band width + ceiling curve (Knob 1 + §5 balance).
 - [ ] Exact physical-vs-technical inheritance weights (Knob 2).
