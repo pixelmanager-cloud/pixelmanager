@@ -12,6 +12,7 @@ import { trainingConditioning, stadiumIncome, fanIncomeMult, fanHomeBoost, spons
 import { rollMatchInjuries } from './injuries.js';
 import { unavailableTokenIds, tokenToPlayer } from './tokens.js';
 import { advanceTokensAtRollover } from './lifecycle.js';
+import { recordMatchStats } from './matchstats.js';
 
 import { computeCup, type SquadMap } from './cup.js';
 
@@ -119,7 +120,8 @@ async function simulateMatch(db: Store, homeId: string, awayId: string, seasonId
   const hl = lineupFor(homeC);
   const al = lineupFor(awayC);
   const conditioning = { home: trainingConditioning(homeFac.training), away: trainingConditioning(awayFac.training) };
-  const { seed, homeTeam, awayTeam, result, homeFitness, awayFitness } = runMatch(homeC.club, hl, homeC.standingOrders.tactics, awayC.club, al, awayC.standingOrders.tactics, conditioning, fanHomeBoost(homeFac.fanzone));
+  const { seed, homeTeam, awayTeam, result, homeFitness, awayFitness, events } = runMatch(homeC.club, hl, homeC.standingOrders.tactics, awayC.club, al, awayC.standingOrders.tactics, conditioning, fanHomeBoost(homeFac.fanzone));
+  await recordMatchStats(db, seasonId, homeId, awayId, homeTeam, awayTeam, events, result); // auto-resolved matches count too
   const sh = result[0] > result[1] ? 1 : result[0] < result[1] ? 0 : 0.5;
   const [nh, na] = elo(home.rating, away.rating, sh);
   const coinsFor = (s: number) => (s === 1 ? WIN_COINS : s === 0.5 ? DRAW_COINS : LOSS_COINS);
@@ -216,6 +218,25 @@ async function rollover(db: Store, s: Season, now: number): Promise<void> {
         await db.addHonour(cup.championId, s.id, s.number, tier, 1, 1, now, prize, 'cup');
         const o = outcomes.get(cup.championId); if (o) o.cup = 1;
       }
+    }
+
+    // INDIVIDUAL SEASON AWARDS: Golden Boot (goals), Playmaker (assists), League Best (POTM, then
+    // goals+assists). Each is a permanent player award (foundation for a future cross-pod World XI /
+    // Ballon d'Or), with a tier-scaled coin prize to the owner.
+    const pstats = await db.seasonPlayerStats(s.id, [...ids]);
+    if (pstats.length) {
+      const awardPrize = 40 + Math.max(0, tierIdx) * 20;
+      const give = async (kind: string, r: typeof pstats[number] | undefined, value: number) => {
+        if (!r || value <= 0) return;
+        await db.addAward({ season_id: s.id, season_number: s.number, tier, pod, kind, account_id: r.account_id, player_id: r.player_id, player_name: r.player_name, value, awarded_at: now });
+        await db.addCoins(r.account_id, awardPrize);
+      };
+      const byGoals = [...pstats].sort((a, b) => b.goals - a.goals || (b.assists) - (a.assists))[0];
+      const byAssists = [...pstats].sort((a, b) => b.assists - a.assists || (b.goals) - (a.goals))[0];
+      const byBest = [...pstats].sort((a, b) => b.potm - a.potm || (b.goals + b.assists) - (a.goals + a.assists))[0];
+      await give('golden_boot', byGoals, byGoals?.goals ?? 0);
+      await give('playmaker', byAssists, byAssists?.assists ?? 0);
+      await give('league_best', byBest, (byBest?.potm ?? 0) || (byBest ? byBest.goals + byBest.assists : 0));
     }
 
     // PLAYER LIFECYCLE: each owned NFT banks a season of team achievements + peak ability, and anyone

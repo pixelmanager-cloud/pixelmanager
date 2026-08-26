@@ -408,6 +408,7 @@ app.get('/results', { preHandler: requireAuth }, async (req) => {
 
 // the caller's honours board (past-season finishes)
 app.get('/honours', { preHandler: requireAuth }, async (req) => ({ honours: await db.honoursFor(req.account!.id) }));
+app.get('/awards', { preHandler: requireAuth }, async (req) => ({ awards: await db.awardsFor(req.account!.id) }));
 
 // PRESTIGE: the manager's career legacy — level + title from titles won (tier-weighted), win record,
 // highest division reached, and seasons managed. Read-only aggregate over honours + match history.

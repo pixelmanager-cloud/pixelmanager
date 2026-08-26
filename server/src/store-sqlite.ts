@@ -98,6 +98,11 @@ export function makeSqliteStore(file: string): Store {
         season_id TEXT NOT NULL, account_id TEXT NOT NULL, player_id TEXT NOT NULL, player_name TEXT NOT NULL,
         goals INTEGER NOT NULL DEFAULT 0, assists INTEGER NOT NULL DEFAULT 0, apps INTEGER NOT NULL DEFAULT 0, potm INTEGER NOT NULL DEFAULT 0,
         PRIMARY KEY (season_id, account_id, player_id));`);
+      db.exec(`CREATE TABLE IF NOT EXISTS awards (
+        season_id TEXT NOT NULL, season_number INTEGER NOT NULL, tier TEXT NOT NULL, pod INTEGER NOT NULL,
+        kind TEXT NOT NULL, account_id TEXT NOT NULL, player_id TEXT NOT NULL, player_name TEXT NOT NULL,
+        value INTEGER NOT NULL, awarded_at INTEGER NOT NULL);`);
+      db.exec('CREATE INDEX IF NOT EXISTS idx_awards_account ON awards(account_id)');
 
       // PROSPECTS: a reborn is a 10-year-old to DEVELOP in the Career sim (Layer 1), inheriting the
       // parent's genes + pedigree — not a ready-made prime player. Held here until the breeder graduates it.
@@ -323,6 +328,13 @@ export function makeSqliteStore(file: string): Store {
       if (!accountIds.length) return [];
       const ph = accountIds.map(() => '?').join(',');
       return db.prepare(`SELECT * FROM player_stats WHERE season_id=? AND account_id IN (${ph})`).all(seasonId, ...accountIds) as any[];
+    },
+    async addAward(a) {
+      db.prepare(`INSERT INTO awards (season_id, season_number, tier, pod, kind, account_id, player_id, player_name, value, awarded_at)
+        VALUES (?,?,?,?,?,?,?,?,?,?)`).run(a.season_id, a.season_number, a.tier, a.pod, a.kind, a.account_id, a.player_id, a.player_name, a.value, a.awarded_at);
+    },
+    async awardsFor(accountId, limit = 50) {
+      return db.prepare('SELECT * FROM awards WHERE account_id=? ORDER BY awarded_at DESC LIMIT ?').all(accountId, limit) as any[];
     },
     async createMission(m) {
       db.prepare('INSERT INTO scout_missions (id, account_id, season_id, destination, dispatched_at, ready_at, found, player_json, band, status) VALUES (?,?,?,?,?,?,?,?,?,?)')

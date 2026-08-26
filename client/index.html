@@ -139,6 +139,9 @@
       .pc-card .pc-cbg { width: 52px; height: 5px; border-radius: 3px; background: #2a2a44; overflow: hidden; }
       .pc-card .pc-cbg b { display: block; height: 100%; } .pc-cbg b.g { background: #e0864a; } .pc-cbg b.m { background: #4ab0e0; }
       .pc-card .pc-earn { font-size: 12px; color: #9c9; text-align: center; }
+      .pc-card .pc-career { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 10px; justify-content: center; margin: 6px 0 10px; font-size: 12px; color: #bcd; }
+      .pc-card .pc-career .pc-career-lbl { font-family: var(--display); font-size: 9px; color: var(--warn); letter-spacing: 1px; }
+      .pc-card .pc-career .pc-cstat b { color: #fff; font-size: 14px; }
       .pc-card .pc-close { font-family: var(--body); font-size: 17px; }
       /* fx layers */
       .pc-card .pc-ring { position: absolute; inset: -60%; z-index: 0; pointer-events: none; opacity: 0; filter: blur(5px);
@@ -319,6 +322,24 @@
       .cup-tie .ct-pens { color: var(--warn); font-size: 9px; }
       .cup-byes { font-size: 14px; color: #667; font-style: italic; margin-top: 2px; }
       #results-feed { max-height: 340px; overflow-y: auto; }
+      #leaders-feed { max-height: 360px; overflow-y: auto; }
+      #leaders-feed .lb-note { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
+      #leaders-feed .lb-block { margin-bottom: 16px; }
+      #leaders-feed .lb-title { font-family: var(--display); font-size: 12px; color: var(--cyan); margin-bottom: 8px; letter-spacing: 0.5px; }
+      #leaders-feed .lb-empty { padding: 2px 0 4px; font-size: 14px; }
+      #leaders-feed .lb-row { display: grid; grid-template-columns: 28px 1fr auto 44px; align-items: center; gap: 10px; padding: 5px 8px; border-bottom: 1px solid var(--line); font-size: 16px; }
+      #leaders-feed .lb-row:nth-child(2) { background: rgba(255,215,94,0.08); }
+      #leaders-feed .lb-rank { color: var(--warn); text-align: center; font-size: 14px; }
+      #leaders-feed .lb-name { color: var(--text); }
+      #leaders-feed .lb-club { color: var(--muted); font-size: 13px; }
+      #leaders-feed .lb-val { color: var(--good); text-align: right; font-weight: bold; }
+      #honours-feed .aw-title { font-family: var(--display); font-size: 12px; color: var(--warn); letter-spacing: 0.5px; margin-bottom: 10px; }
+      #honours-feed .aw-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-bottom: 20px; }
+      #honours-feed .aw-card { display: flex; align-items: center; gap: 10px; background: var(--panel-2); border: 1px solid var(--line); border-left: 3px solid var(--warn); border-radius: 6px; padding: 8px 10px; }
+      #honours-feed .aw-icon { font-size: 26px; }
+      #honours-feed .aw-name { font-family: var(--body); font-size: 12px; color: var(--warn); }
+      #honours-feed .aw-player { font-size: 16px; color: #fff; }
+      #honours-feed .aw-meta { font-size: 12px; color: var(--muted); }
       .result-row { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-bottom: 1px solid var(--line); font-size: 21px; }
       .result-row.me { background: rgba(57,255,158,0.06); }
       .result-row .rr-teams { flex: 1; display: flex; align-items: center; gap: 8px; min-width: 0; }
@@ -831,10 +852,12 @@
         <div class="zone-legend"><span class="lg-promo">▲ Promotion</span><span class="lg-releg">▼ Relegation</span></div>
         <div class="tabrow">
           <button id="tab-results" class="tab active">Recent Results</button>
+          <button id="tab-leaders" class="tab">⚽ Leaders</button>
           <button id="tab-cup" class="tab">🏆 Cup</button>
           <button id="tab-honours" class="tab">Honours</button>
         </div>
         <div id="results-feed"></div>
+        <div id="leaders-feed" class="hidden"></div>
         <div id="cup-feed" class="hidden"></div>
         <div id="honours-feed" class="hidden"></div>
       </div>

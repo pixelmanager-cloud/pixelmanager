@@ -4,7 +4,7 @@ import {
   TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty,
 } from '@fm/shared';
 import { SCALE, makeBallTexture, makeBallGhostTexture, makePitchTexture, makePlayerFrames, makeShadowTexture, makeCarrierTexture } from './pixelart';
-import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData, type MissionsData, type ContractInfo } from './api';
+import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData, type MissionsData, type ContractInfo, type LeaderStat, type AwardRow } from './api';
 import { walletConfigured, nftConfigured, sendEmailCode, connectEmail, connectInjected, autoConnectInApp, signMessage, claimTokens, mintPlayer, mintScout, type Account as WalletAccount } from './wallet';
 
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
@@ -258,16 +258,20 @@ class Game {
     $('view-club').addEventListener('click', () => this.showClub());
     $('club-back').addEventListener('click', () => this.showHub());
     $('sell-btn').addEventListener('click', () => this.sellPlayer());
-    const showTab = (tab: 'results' | 'cup' | 'honours') => {
+    const showTab = (tab: 'results' | 'leaders' | 'cup' | 'honours') => {
       $('results-feed').classList.toggle('hidden', tab !== 'results');
+      $('leaders-feed').classList.toggle('hidden', tab !== 'leaders');
       $('cup-feed').classList.toggle('hidden', tab !== 'cup');
       $('honours-feed').classList.toggle('hidden', tab !== 'honours');
       $('tab-results').classList.toggle('active', tab === 'results');
+      $('tab-leaders').classList.toggle('active', tab === 'leaders');
       $('tab-cup').classList.toggle('active', tab === 'cup');
       $('tab-honours').classList.toggle('active', tab === 'honours');
       if (tab === 'cup') void this.loadCup();
+      if (tab === 'leaders') void this.loadLeaders();
     };
     $('tab-results').addEventListener('click', () => showTab('results'));
+    $('tab-leaders').addEventListener('click', () => showTab('leaders'));
     $('tab-cup').addEventListener('click', () => showTab('cup'));
     $('tab-honours').addEventListener('click', () => showTab('honours'));
     $('skip').addEventListener('click', () => this.skipToEnd());
@@ -444,6 +448,7 @@ class Game {
       + `<div class="pc-name">${p.name}</div>`
       + `<div class="pc-role">${roleName[p.role] ?? p.role}</div>`
       + `<div class="pc-stats">${stats}</div>`
+      + this.careerRecordHtml(p)
       + this.characterHtml(p)
       + contractHtml
       + `<div class="pc-foot">★ NFT${tokenId ? ` · #${tokenId}` : ''} · Base Sepolia · on-chain</div>`
@@ -523,6 +528,17 @@ class Game {
   }
 
   /** The NFT's character: temperament, earned traits, and financial nature — the soul of the player. */
+  /** Permanent career record for an NFT player (goals/assists/POTM/apps banked across matches). */
+  private careerRecordHtml(p: Player): string {
+    const ci = this.contracts[p.id];
+    if (!ci || (ci.careerApps ?? 0) === 0) return '';
+    const g = ci.careerGoals ?? 0, a = ci.careerAssists ?? 0, m = ci.careerPotm ?? 0, ap = ci.careerApps ?? 0;
+    return `<div class="pc-career"><span class="pc-career-lbl">CAREER</span>`
+      + `<span class="pc-cstat"><b>${g}</b> goals</span>`
+      + `<span class="pc-cstat"><b>${a}</b> assists</span>`
+      + `<span class="pc-cstat"><b>${m}</b> ★</span>`
+      + `<span class="pc-cstat"><b>${ap}</b> apps</span></div>`;
+  }
   private characterHtml(p: Player): string {
     const pers = (p as any).personality as string | undefined;
     const traits = ((p as any).traits as string[] | undefined) ?? [];
@@ -700,17 +716,33 @@ class Game {
     $('results-feed').innerHTML = '';
     $('honours-feed').innerHTML = '';
     try {
-      const [st, res, hon] = await Promise.all([api.standings(), api.results(), api.honours()]);
+      const [st, res, hon, aw] = await Promise.all([api.standings(), api.results(), api.honours(), api.awards()]);
       $('season-banner').innerHTML = `<b>${st.tier}</b> · Pod ${st.pod + 1} · Season ${st.season.number} · ends in ${humanizeMs(st.season.endsAt - Date.now())}`;
       $('standings-table').innerHTML = this.renderLeagueTable(st.table, { promote: st.promote, relegate: st.relegate });
       $('results-feed').innerHTML = this.renderResults(res.results);
-      $('honours-feed').innerHTML = this.renderHonours(hon.honours);
+      $('honours-feed').innerHTML = this.renderAwards(aw.awards) + this.renderHonours(hon.honours);
     } catch {
       $('season-banner').textContent = '';
       $('standings-table').innerHTML = '<div class="muted">Could not load — is the server running?</div>';
     }
   }
 
+  private renderAwards(rows: AwardRow[]): string {
+    if (!rows.length) return '';
+    const META: Record<string, { icon: string; name: string; unit: string }> = {
+      golden_boot: { icon: '🥇', name: 'Golden Boot', unit: 'goals' },
+      playmaker: { icon: '🅰', name: 'Playmaker', unit: 'assists' },
+      league_best: { icon: '🏅', name: 'League Best Player', unit: '★ POTM' },
+    };
+    const cards = rows.map((a) => {
+      const m = META[a.kind] ?? { icon: '🏆', name: a.kind, unit: '' };
+      return `<div class="aw-card"><span class="aw-icon">${m.icon}</span><div class="aw-body">`
+        + `<div class="aw-name">${m.name}</div>`
+        + `<div class="aw-player">${a.player_name}</div>`
+        + `<div class="aw-meta">S${a.season_number} · ${a.tier} · ${a.value} ${m.unit}</div></div></div>`;
+    }).join('');
+    return `<div class="aw-title">★ Individual Awards</div><div class="aw-grid">${cards}</div>`;
+  }
   private renderHonours(rows: HonourRow[]): string {
     if (!rows.length) return '<div class="muted">No finished seasons yet — play on to make history.</div>';
     const trophies = rows.filter((h) => h.title === 1);
@@ -766,6 +798,23 @@ class Game {
     $('cup-feed').innerHTML = SPINNER;
     try { $('cup-feed').innerHTML = this.renderCup(await api.cup()); }
     catch { $('cup-feed').innerHTML = '<div class="muted">Could not load the cup.</div>'; }
+  }
+
+  private async loadLeaders() {
+    $('leaders-feed').innerHTML = SPINNER;
+    try {
+      const l = await api.leaders();
+      const table = (title: string, rows: LeaderStat[], val: (r: LeaderStat) => string, unit: string) => {
+        if (!rows.length) return `<div class="lb-block"><div class="lb-title">${title}</div><div class="muted lb-empty">No ${unit} yet this season.</div></div>`;
+        const items = rows.map((r, i) => `<div class="lb-row"><span class="lb-rank">${i + 1}</span><span class="lb-name">${r.name}</span><span class="lb-club">${r.club}</span><span class="lb-val">${val(r)}</span></div>`).join('');
+        return `<div class="lb-block"><div class="lb-title">${title}</div>${items}</div>`;
+      };
+      $('leaders-feed').innerHTML =
+        `<div class="lb-note">This season, your pod (${l.tier} · Pod ${l.pod + 1}). Goals & assists build each player's permanent record — for NFT players it's banked on-chain-style into their career tally.</div>` +
+        table('🥇 Golden Boot — top scorers', l.scorers, (r) => `${r.goals}`, 'goals') +
+        table('🅰 Playmaker — top assists', l.assisters, (r) => `${r.assists}`, 'assists') +
+        table('★ Player-of-the-Match awards', l.potm, (r) => `${r.potm}`, 'awards');
+    } catch { $('leaders-feed').innerHTML = '<div class="muted">Could not load the leaderboards.</div>'; }
   }
 
   private renderCup(c: CupData): string {

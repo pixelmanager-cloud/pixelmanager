@@ -63,6 +63,11 @@ export interface PlayerSeasonStat {
   season_id: string; account_id: string; player_id: string; player_name: string;
   goals: number; assists: number; apps: number; potm: number;
 }
+/** An individual end-of-season award won by a player (Golden Boot / Playmaker / League Best / …). */
+export interface Award {
+  season_id: string; season_number: number; tier: string; pod: number;
+  kind: string; account_id: string; player_id: string; player_name: string; value: number; awarded_at: number;
+}
 
 export interface Store {
   init(): Promise<void>;
@@ -136,6 +141,9 @@ export interface Store {
   // per-season player stats (goals/assists/apps/potm for ALL players, for leaderboards + awards)
   bumpPlayerStats(seasonId: string, accountId: string, playerId: string, playerName: string, d: { goals?: number; assists?: number; apps?: number; potm?: number }): Promise<void>;
   seasonPlayerStats(seasonId: string, accountIds: string[]): Promise<PlayerSeasonStat[]>;
+  // individual season awards (Golden Boot / Playmaker / League Best)
+  addAward(a: Award): Promise<void>;
+  awardsFor(accountId: string, limit?: number): Promise<Award[]>;
   // scouting network: dispatched trips (sealed at dispatch, revealed after travel)
   createMission(m: MissionRow): Promise<void>;
   missionsInSeason(accountId: string, seasonId: string): Promise<MissionRow[]>;

@@ -106,6 +106,11 @@ export function makePostgresStore(connectionString: string): Store {
           season_id TEXT NOT NULL, account_id TEXT NOT NULL, player_id TEXT NOT NULL, player_name TEXT NOT NULL,
           goals INTEGER NOT NULL DEFAULT 0, assists INTEGER NOT NULL DEFAULT 0, apps INTEGER NOT NULL DEFAULT 0, potm INTEGER NOT NULL DEFAULT 0,
           PRIMARY KEY (season_id, account_id, player_id));
+        CREATE TABLE IF NOT EXISTS awards (
+          season_id TEXT NOT NULL, season_number INTEGER NOT NULL, tier TEXT NOT NULL, pod INTEGER NOT NULL,
+          kind TEXT NOT NULL, account_id TEXT NOT NULL, player_id TEXT NOT NULL, player_name TEXT NOT NULL,
+          value INTEGER NOT NULL, awarded_at BIGINT NOT NULL);
+        CREATE INDEX IF NOT EXISTS idx_awards_account ON awards(account_id);
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS season_id TEXT;
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS initiator_id TEXT;
         ALTER TABLE clubs ADD COLUMN IF NOT EXISTS so_duties TEXT;
@@ -319,6 +324,13 @@ export function makePostgresStore(connectionString: string): Store {
       if (!accountIds.length) return [];
       const ph = accountIds.map((_, i) => `$${i + 2}`).join(',');
       return (await q(`SELECT * FROM player_stats WHERE season_id=$1 AND account_id IN (${ph})`, [seasonId, ...accountIds])).rows as any[];
+    },
+    async addAward(a) {
+      await q(`INSERT INTO awards (season_id, season_number, tier, pod, kind, account_id, player_id, player_name, value, awarded_at)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)`, [a.season_id, a.season_number, a.tier, a.pod, a.kind, a.account_id, a.player_id, a.player_name, a.value, a.awarded_at]);
+    },
+    async awardsFor(accountId, limit = 50) {
+      return (await q('SELECT * FROM awards WHERE account_id=$1 ORDER BY awarded_at DESC LIMIT $2', [accountId, limit])).rows as any[];
     },
     async decrementInjuries(accountId) {
       await q('UPDATE injuries SET matches_remaining = matches_remaining - 1 WHERE account_id=$1', [accountId]);

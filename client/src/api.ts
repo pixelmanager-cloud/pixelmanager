@@ -30,7 +30,7 @@ export interface CareerProfile {
   attrs: Record<string, number>; personality: { id: string; name: string; desc: string };
   agent: string | null; coach: string | null; earnings: number; traitsForming: string[];
 }
-export interface ContractInfo { playerId: string; age: number; available: boolean; seasonsLeft: number; lengthSeasons: number; extendCost: number; sellValue: number; stakedSeasons: number; staked?: boolean; morale?: number; moraleLabel?: string; retired?: boolean; legend?: LegacyCard | null; rebornId?: string | null }
+export interface ContractInfo { playerId: string; age: number; available: boolean; seasonsLeft: number; lengthSeasons: number; extendCost: number; sellValue: number; stakedSeasons: number; staked?: boolean; morale?: number; moraleLabel?: string; retired?: boolean; legend?: LegacyCard | null; rebornId?: string | null; careerGoals?: number; careerAssists?: number; careerPotm?: number; careerApps?: number }
 
 async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const res = await fetch(API_URL + path, {
@@ -74,6 +74,8 @@ export interface MissionsData {
   loaneeCap: number; loaneeCount: number; coins: number; destinations: ScoutDestination[]; missions: Mission[];
 }
 export interface HonourRow { season_number: number; tier: string; final_pos: number; title: number; ended_at: number; coin_reward?: number; kind?: string }
+export interface LeaderStat { name: string; club: string; goals: number; assists: number; apps: number; potm: number }
+export interface AwardRow { season_number: number; tier: string; pod: number; kind: string; player_name: string; value: number; awarded_at: number }
 export interface CupTie { homeId: string; awayId: string; homeHandle: string; awayHandle: string; homeScore: number; awayScore: number; pens: [number, number] | null; winnerId: string }
 export interface CupRound { name: string; ties: CupTie[]; byes: { id: string; handle: string }[] }
 export interface CupData { season: number; tier: string; pod: number; me: string; size: number; rounds: CupRound[]; championId: string | null; championHandle: string }
@@ -127,7 +129,9 @@ export const api = {
   signMission: (id: string) => req<{ ok: true; player: { name: string; role: string }; signedCount: number }>(`/scout/missions/${id}/sign`, { method: 'POST' }),
   standings: () => req<{ season: { number: number; endsAt: number }; tier: string; pod: number; promote: number; relegate: number; table: TableRow[] }>('/standings'),
   honours: () => req<{ honours: HonourRow[] }>('/honours'),
+  awards: () => req<{ awards: AwardRow[] }>('/awards'),
   cup: () => req<CupData>('/cup'),
+  leaders: () => req<{ season: { number: number; endsAt: number }; tier: string; pod: number; scorers: LeaderStat[]; assisters: LeaderStat[]; potm: LeaderStat[] }>('/leaders'),
   market: () => req<{ coins: number; tier: string; listings: MarketListing[]; mine: MarketListing[] }>('/market'),
   listPlayer: (playerId: string, price: number) => req<{ ok: true; id: string }>('/market/list', { method: 'POST', body: JSON.stringify({ playerId, price }) }),
   buyListing: (id: string) => req<{ ok: true; player: { name: string; role: string }; coins: number }>(`/market/${id}/buy`, { method: 'POST' }),
