@@ -87,6 +87,16 @@ the audience hates it). So:
 - [ ] **Store setup:** Steam page, capsule art, trailer, wishlist campaign, pricing, age rating.
 - [ ] **QA/build pipeline:** signed desktop builds for Win/Mac(/Linux) uploaded via Steamworks.
 
+### Developing on a Mac (single MacBook is fine)
+- Development is 100% Mac-friendly (web stack). The only Mac limit is *building/testing the Windows build*.
+- **Build Windows/Linux binaries via CI (GitHub Actions)** — free Windows+Mac+Linux cloud runners; no PC
+  needed. (Electron also cross-builds Windows from macOS directly; Tauri leans on CI for Windows.)
+- **Test the Windows build pre-launch** via a free **Windows VM** (UTM/Parallels; Windows-on-ARM on Apple
+  Silicon is fine for testing) or a cheap Windows mini-PC (~$150–300). Only needed near launch.
+- **Steamworks tooling + upload run on Mac**; store setup is web-based. ($100 Steam Direct fee per app.)
+- **Wrapper lean for Mac-solo:** **Electron** (smoother Windows cross-build from macOS + best Steamworks
+  examples) unless bundle size becomes a priority (then Tauri).
+
 ## Ongoing — the game itself
 - Content depth continues (the overnight agents + us), steered by `growth-and-content-strategy.md`. This is
   and remains the #1 priority — a mainstream launch lives or dies on how good and deep the game is.
