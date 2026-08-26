@@ -44,6 +44,15 @@ const CHAPTER_THEME: Record<string, { slug: string; scene: string; accent: strin
   Establishing: { slug: 'establishing', scene: '🏆⭐💫', accent: '#ffd75e', bg: 'radial-gradient(120% 90% at 50% 0%, rgba(210,170,60,0.22), rgba(35,30,10,0.0) 60%)', tagline: 'A name in lights — cement your place among the greats.' },
 };
 
+// deterministic "crest" for the matchday scoreboard — a coloured monogram derived purely from a
+// name string (opponent name or the player's own name), so no rng/state is involved, just presentation
+const CREST_PALETTE = ['#e0483a', '#3a7ce0', '#5bd06a', '#e6c14a', '#e653a0', '#ff8a3b', '#7dd3fc', '#c77dff', '#3fd4c8', '#ffa53b'];
+function crestFor(name: string) {
+  let h = 0; for (let i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+  const initials = name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]).join('').toUpperCase() || '?';
+  return { initials, color: CREST_PALETTE[h % CREST_PALETTE.length] };
+}
+
 const LEVELS: Record<keyof Omit<Tactics, 'formation'>, string[]> = {
   mentality: ['Very Defensive', 'Defensive', 'Balanced', 'Attacking', 'Very Attacking'],
   line: ['Very Deep', 'Deep', 'Normal', 'High', 'Very High'],
@@ -968,11 +977,16 @@ class Game {
       if (mk === 'match' && s.matchCtx) {
         const mc = s.matchCtx; const [us, them] = mc.score.split('-');
         const big = s.scenario.stakes >= 3 ? ' · ★ THE BIG ONE' : s.scenario.stakes >= 2 ? ' · BIG GAME' : '';
+        const you = crestFor(s.name || 'You'); const opp = crestFor(mc.opponent);
         header = `<div class="cg-matchday stakes-${s.scenario.stakes}">`
           + `<div class="cg-md-top"><span class="cg-md-badge">⚽ MATCHDAY${big}</span><span class="cg-md-min">${mc.minute}'</span></div>`
-          + `<div class="cg-md-score">${us} <b>–</b> ${them}</div>`
-          + `<div class="cg-md-vs">vs <b>${mc.opponent}</b> · ${mc.home ? '🏟️ Home' : '✈️ Away'}</div>`
-          + `<div class="cg-md-comp">${mc.comp}</div></div>`;
+          + `<div class="cg-md-scoreline">`
+            + `<div class="cg-md-side"><span class="cg-crest" style="background:${you.color}">${you.initials}</span><span class="cg-md-side-lbl">You</span></div>`
+            + `<div class="cg-md-score">${us} <b>–</b> ${them}</div>`
+            + `<div class="cg-md-side"><span class="cg-crest" style="background:${opp.color}">${opp.initials}</span><span class="cg-md-side-lbl">${mc.opponent}</span></div>`
+          + `</div>`
+          + `<div class="cg-md-meta"><span class="cg-md-venue">${mc.home ? '🏟️ Home' : '✈️ Away'}</span><span class="cg-comp-badge">${mc.comp}</span></div>`
+        + `</div>`;
         prompt = 'The moment falls to him — what does he do?';
       } else if (mk === 'life') {
         header = `<div class="cg-mtype life">⚡ LIFE EVENT${s.lifeEvent ? ` · ${s.lifeEvent}` : ' · off the pitch'}</div>`;
@@ -1033,6 +1047,9 @@ class Game {
     const key: Array<[string, string]> = [['pace', 'PAC'], ['shooting', 'SHO'], ['passing', 'PAS'], ['tackling', 'TAC'], ['strength', 'STR'], ['composure', 'CMP'], ['creativity', 'CRE'], ['leadership', 'LDR']];
     const stat = (k: string) => `<span class="cgp-stat"><b>${key.find((x) => x[0] === k)?.[1]}</b> ${p.attrs[k] ?? 0}</span>`;
     const traits = p.traitsForming.length ? `<div class="cgp-traits">forming: ${p.traitsForming.map((t) => `<span class="cg-tag">${t}</span>`).join(' ')}</div>` : '';
+    const shelf = p.milestones?.length
+      ? `<div class="cgp-milestones">${p.milestones.map((m) => `<span class="cgp-ms" title="${m.title} — age ${m.age}, ${m.chapter}">${m.icon} ${m.title}</span>`).join('')}</div>`
+      : '';
     return `<div class="cg-profile"><div class="cgp-top">`
       + `<span class="cgp-role role-${p.role}">${p.role}</span>`
       + `<span class="cgp-ovr">OVR ${p.currentOverall} <i>→ ${p.potential} pot ${stars}</i></span>`
@@ -1040,7 +1057,7 @@ class Game {
       + (p.agent ? `<span class="cgp-meta">🤝 ${p.agent}</span>` : '')
       + (p.coach ? `<span class="cgp-meta">📋 ${p.coach}</span>` : '')
       + `<span class="cgp-meta">💷 ${p.earnings}c earned</span></div>`
-      + `<div class="cgp-stats">${key.map(([k]) => stat(k)).join('')}</div>${traits}</div>`;
+      + `<div class="cgp-stats">${key.map(([k]) => stat(k)).join('')}</div>${traits}${shelf}</div>`;
   }
 
   private cardHtml(c: import('./api').CareerCard, act: string): string {

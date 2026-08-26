@@ -518,10 +518,18 @@
       .cg-md-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
       .cg-md-badge { font-family: var(--display); font-size: 10px; letter-spacing: 1px; color: #bcd; }
       .cg-md-min { font-family: var(--display); font-size: 15px; color: #ff6d6d; }
-      .cg-md-score { font-family: var(--display); font-size: 30px; line-height: 1.1; color: #fff; letter-spacing: 2px; }
+      /* scoreline strip: a crest monogram either side of the score, like a real matchday graphic */
+      .cg-md-scoreline { display: flex; align-items: center; justify-content: center; gap: 10px; margin: 6px 0 2px; }
+      .cg-md-side { display: flex; flex-direction: column; align-items: center; gap: 4px; min-width: 0; flex: 1 1 0; max-width: 34%; }
+      .cg-crest { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+        font-family: var(--display); font-size: 12px; color: #10121a; flex: none; box-shadow: 0 0 0 2px rgba(255,255,255,0.15) inset; }
+      .cg-md-side-lbl { font-size: 11px; color: #aab4c8; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .cg-md-score { font-family: var(--display); font-size: 30px; line-height: 1.1; color: #fff; letter-spacing: 2px; flex: none; }
       .cg-md-score b { color: #8899b8; font-weight: normal; }
-      .cg-md-vs { font-size: 14px; color: #dde3ee; margin-top: 3px; } .cg-md-vs b { color: #fff; }
-      .cg-md-comp { font-size: 12px; color: #9aa4b8; margin-top: 2px; font-style: italic; }
+      .cg-md-meta { display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 6px; flex-wrap: wrap; }
+      .cg-md-venue { font-size: 12px; color: #dde3ee; }
+      .cg-comp-badge { font-size: 11px; color: #cdd6e8; background: rgba(140,160,220,0.14); border: 1px solid rgba(140,160,220,0.3);
+        border-radius: 20px; padding: 2px 10px; font-style: normal; }
       /* career tabs — declutter into Now / Player / Kit */
       .cg-tabs { display: flex; gap: 6px; margin-bottom: 14px; border-bottom: 1px solid var(--line); padding-bottom: 0; }
       .cg-tab { font-family: var(--display); font-size: 12px; padding: 8px 14px; background: transparent; color: var(--muted);
@@ -587,6 +595,8 @@
       .cgp-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; color: #cbd; }
       .cgp-stat b { font-family: var(--body); font-size: 14px; color: var(--muted); margin-right: 3px; }
       .cgp-traits { margin-top: 7px; font-size: 12px; color: #9aa; }
+      .cgp-milestones { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+      .cgp-ms { font-size: 11px; padding: 3px 8px; border-radius: 20px; background: #201a3a; border: 1px solid #3a3068; color: #e6c76a; }
       .scout-sub { font-size: 19px; color: var(--muted); margin-bottom: 14px; } .scout-sub b { color: var(--good); }
       .onboard-welcome { font-size: 18px; line-height: 1.55; color: #e2e8f0; padding: 14px 16px; margin-bottom: 16px; border-radius: 10px;
         background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 42%, transparent); }

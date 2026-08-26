@@ -184,14 +184,18 @@ export function scenarioStory(kind: string, topTag: string, moment: string | nul
 const band = (success: number) => (success >= 0.8 ? 'triumph' : success >= 0.62 ? 'good' : success >= 0.42 ? 'mixed' : success >= 0.24 ? 'poor' : 'dismal');
 const domTag = (tags: string[]) => tags.find((t) => VERBS[t]) ?? 'teamwork';
 
-// milestone flourishes — prepended when a beat marks a career-first
-const MILESTONE: Record<string, string> = {
-  debut: '🎬 His debut. ',
-  first_goal: '⚽ His first-ever goal. ',
-  first_big_win: '🏆 The biggest win of his young career. ',
-  cup_final: '🏟️ A cup final, no less. ',
-  first_start: '📋 His first start. ',
+// milestone flourishes — prepended when a beat marks a career-first. MILESTONE_META is the single source
+// of truth (icon + short shelf title + the in-story line); MILESTONE derives the narration flourish from it.
+export const MILESTONE_META: Record<string, { icon: string; title: string; line: string }> = {
+  debut: { icon: '🎬', title: 'Debut', line: 'His debut.' },
+  first_start: { icon: '📋', title: 'First Start', line: 'His first start.' },
+  first_goal: { icon: '⚽', title: 'First Goal', line: 'His first-ever goal.' },
+  first_big_win: { icon: '🏆', title: 'Big Win', line: 'The biggest win of his young career.' },
+  cup_final: { icon: '🏟️', title: 'Cup Final', line: 'A cup final, no less.' },
 };
+const MILESTONE: Record<string, string> = Object.fromEntries(
+  Object.entries(MILESTONE_META).map(([id, m]) => [id, `${m.icon} ${m.line} `]),
+);
 
 /** One immersive sentence (or two) for a card played this turn. */
 export function narratePlay(cardName: string, cardTags: string[], success: number, ctx: NarrateCtx): string {

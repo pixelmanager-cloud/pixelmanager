@@ -38,6 +38,7 @@ export interface CareerProfile {
   role: string; currentOverall: number; potential: number; stars: number; physicalCeiling: number;
   attrs: Record<string, number>; personality: { id: string; name: string; desc: string };
   agent: string | null; coach: string | null; earnings: number; traitsForming: string[];
+  milestones: Array<{ id: string; icon: string; title: string; age: number; chapter: string }>;
 }
 export interface ContractInfo { playerId: string; age: number; available: boolean; seasonsLeft: number; lengthSeasons: number; extendCost: number; sellValue: number; stakedSeasons: number; staked?: boolean; morale?: number; moraleLabel?: string; retired?: boolean; legend?: LegacyCard | null; rebornId?: string | null; careerGoals?: number; careerAssists?: number; careerPotm?: number; careerApps?: number }
 

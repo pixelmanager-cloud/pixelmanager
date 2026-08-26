@@ -306,6 +306,9 @@ export const COACHES: Coach[] = [
   { id: 'creative',   name: 'Creativity Coach',   kind: 'coach',  desc: 'Frees the imagination in tight spaces',       specialty: ['creativity', 'composure'], bonus: 0.12 },
   { id: 'talisman-m', name: 'Talisman Mentor',    kind: 'mentor', desc: 'A born matchwinner teaches you to seize it',  specialty: ['flair', 'leadership'], bonus: 0.12 },
   { id: 'general-m',  name: 'The General',        kind: 'mentor', desc: 'A commanding centre-half drills your reading of the game', specialty: ['aggression', 'composure', 'teamwork'], bonus: 0.11 },
+  { id: 'setpiece',   name: 'Set-Piece Coach',    kind: 'coach',  desc: 'Free-kicks, corners, every rehearsed dead ball',           specialty: ['composure', 'creativity', 'flair'], bonus: 0.1 },
+  { id: 'psych',      name: 'Sports Psychologist', kind: 'coach', desc: 'Gets inside your head — and settles it',                   specialty: ['composure'], bonus: 0.15 },
+  { id: 'scout-m',    name: 'Scout Mentor',       kind: 'mentor', desc: 'An old scout teaches you what the eye in the stand looks for', specialty: ['flair', 'creativity'], bonus: 0.12 },
 ];
 export const COACH_OFFER = 3; // choices shown at each appointment
 
@@ -321,6 +324,7 @@ export const AGENTS: Agent[] = [
   { id: 'family',    name: 'Family Advisor',   desc: 'A trusted relative — in it for you, not money', exposure: 0.95, draftLuck: 1.0,  greed: -5, valueMod: 0.95 },
   { id: 'showman',   name: 'The Showman',      desc: 'Markets you relentlessly — fame over fees',     exposure: 1.5,  draftLuck: 1.1,  greed: 2,  valueMod: 1.2 },
   { id: 'grafter',   name: 'The Grafter’s Agent', desc: 'Old-school; picks clubs where you’ll play', exposure: 1.05, draftLuck: 1.15, greed: -2, valueMod: 1.0 },
+  { id: 'fixer',     name: 'The Local Fixer',    desc: 'Knows every scout in the county — low fuss, right doors', exposure: 0.85, draftLuck: 1.45, greed: -4, valueMod: 0.9 },
 ];
 export const agentById = (id?: string) => AGENTS.find((a) => a.id === id) ?? null;
 /** how each temperament tilts greed (nature) — layered on the agent's influence */
@@ -464,7 +468,7 @@ export function fit(card: Card, sc: Scenario): number {
   return clamp(f, 0, 1);
 }
 
-export interface Choice { cardId: string; tags: Tag[]; power: number; fit: number; bestFit: number; success: number; scenario: string; stakes: number }
+export interface Choice { cardId: string; tags: Tag[]; power: number; fit: number; bestFit: number; success: number; scenario: string; stakes: number; kind: Scenario['kind'] }
 
 // ── career config ──
 export const HAND_SIZE = 4;
@@ -754,7 +758,7 @@ export class Career {
     // Rest and the energy-giving focus choices a real trade-off against a busy, big-moment-heavy chapter.
     const fatigue = this.energy < 35 ? ((35 - this.energy) / 35) * 0.12 : 0;
     const success = clamp(f + (this.rng() - 0.5) * variance + form + bigGame + coaching - fatigue, 0, 1);
-    const choice: Choice = { cardId: card.id, tags: card.tags, power: cardPower(card), fit: f, bestFit, success, scenario: this.scenario.label, stakes: this.scenario.stakes };
+    const choice: Choice = { cardId: card.id, tags: card.tags, power: cardPower(card), fit: f, bestFit, success, scenario: this.scenario.label, stakes: this.scenario.stakes, kind: this.scenario.kind };
     this.log.push(choice);
     this.updateLife(choice); // NSS meters + energy react to how the moment went (deterministic, no rng)
     this.discard.push(card);
@@ -1012,6 +1016,26 @@ const STAT_SOURCES: Record<Exclude<keyof CareerPlayerAttrs, 'durability'>, Tag[]
   composure: ['composure'], aggression: ['aggression'], creativity: ['creativity'], teamwork: ['teamwork'], leadership: ['leadership'],
 };
 const BASELINE = 7, SPREAD = 12, PEAK = 1.5;
+
+/** A milestone hit for the career's trophy shelf — the turn it was first achieved, read-only off the log. */
+export interface MilestoneHit { id: string; turn: number; age: number; chapter: string }
+/** Retrospective scan of the log for career-first beats (debut, first start, first goal, first big win,
+ *  a cup final). Pure read of already-logged Choices — no rng, no new persisted state — so it's safe to
+ *  compute at any point (mid-career or at graduation) and replays identically. */
+export function milestoneShelf(log: Choice[]): MilestoneHit[] {
+  const hit = (id: string, turn: number): MilestoneHit => { const b = bandAt(turn); return { id, turn, age: b.age, chapter: b.band.name }; };
+  const hits: MilestoneHit[] = [];
+  if (log.length) hits.push(hit('debut', 0));
+  const firstStart = log.findIndex((l) => l.kind === 'match');
+  if (firstStart >= 0) hits.push(hit('first_start', firstStart));
+  const firstGoal = log.findIndex((l) => l.kind === 'match' && l.success >= 0.8);
+  if (firstGoal >= 0) hits.push(hit('first_goal', firstGoal));
+  const firstBigWin = log.findIndex((l) => l.stakes >= 2 && l.success >= 0.8);
+  if (firstBigWin >= 0) hits.push(hit('first_big_win', firstBigWin));
+  const firstCupFinal = log.findIndex((l) => l.stakes === 3);
+  if (firstCupFinal >= 0) hits.push(hit('cup_final', firstCupFinal));
+  return hits.sort((a, b) => a.turn - b.turn);
+}
 
 export function deriveStats(log: Choice[], seed: number, genes: Genes = rollGenes(seed)): CareerPlayerAttrs {
   const rng = mulberry32(seed ^ 0x9e3779b9);

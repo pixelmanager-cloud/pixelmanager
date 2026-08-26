@@ -5,6 +5,7 @@
 import {
   overall, contractView, signContract, contractLength, legacyCard, legacyBoost, inheritGenes, rollGenes, graduate,
   Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, moraleEffects, narratePlay, scenarioStory, chapterRecap, narrateCoach, narrateDraft, narrateOffer, bandAt, cardName, CARD_DESC,
+  milestoneShelf, MILESTONE_META,
   type Player, type Track, type PlayerAchievements, type Genes, type CareerPlayerAttrs,
 } from '@fm/shared';
 import type { Token, Store } from './store.js';
@@ -135,6 +136,7 @@ export function careerProfile(t: Token, c: Career) {
     personality: { id: c.personality.id, name: c.personality.name, desc: c.personality.desc },
     agent: c.agent ? c.agent.name : null, coach: c.coach ? c.coach.name : null, earnings: c.earnings,
     traitsForming: eligibleTraits(attrs, c.log).map((tt) => tt.name),
+    milestones: milestoneShelf(c.log).map((h) => ({ id: h.id, age: h.age, chapter: h.chapter, ...MILESTONE_META[h.id] })),
   };
 }
 const withDesc = (cards: any[]) => cards?.map((c) => ({ ...c, desc: CARD_DESC[c.id] ?? '' }));
