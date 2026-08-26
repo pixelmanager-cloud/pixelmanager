@@ -893,8 +893,8 @@ class Game {
     let body = '';
     if (s.phase === 'play' && s.scenario) {
       const tags = Object.entries(s.scenario.demand).sort((a, b) => b[1] - a[1]).map(([t]) => `<span class="cg-tag">${t}</span>`).join('');
-      body = `<div class="cg-scenario stakes-${s.scenario.stakes}"><div class="cg-label">${s.scenario.label}</div><div class="cg-demand">${tags}</div></div>`
-        + `<div class="cg-prompt">Play the card that best rises to the moment${s.coach ? ` · <b>${s.coach.name}</b> is coaching you` : ''}:</div>`
+      body = `<div class="cg-scenario stakes-${s.scenario.stakes}"><div class="cg-story">${s.story ?? s.scenario.label}</div><div class="cg-demand">${tags}</div></div>`
+        + `<div class="cg-prompt">How does he respond?${s.coach ? ` · <b>${s.coach.name}</b> is coaching him` : ''}</div>`
         + `<div class="cg-cards">` + (s.hand ?? []).map((c) => this.cardHtml(c, 'play')).join('') + `</div>`;
     } else if (s.phase === 'coach' && s.coaches) {
       body = `<div class="cg-prompt">Appoint a mentor or coach for the coming chapter — they sharpen the work you do in their specialty:</div>`
@@ -931,7 +931,8 @@ class Game {
   private cardHtml(c: import('./api').CareerCard, act: string): string {
     const rar = c.rarity && c.rarity !== 'common' ? c.rarity : '';
     const tags = c.tags.map((t) => `<span class="cg-tag">${t}</span>`).join('');
-    return `<div class="cg-card ${rar}" data-act="${act}" data-id="${c.id}">${rar ? `<span class="cg-rarity">${rar}</span>` : ''}<div class="cg-cname">${c.name}</div><div class="cg-ctags">${tags}</div></div>`;
+    return `<div class="cg-card ${rar}" data-act="${act}" data-id="${c.id}">${rar ? `<span class="cg-rarity">${rar}</span>` : ''}<div class="cg-cname">${c.name}</div>`
+      + (c.desc ? `<div class="cg-cdescr">${c.desc}</div>` : '') + `<div class="cg-ctags">${tags}</div></div>`;
   }
 
   private lastNarration = '';

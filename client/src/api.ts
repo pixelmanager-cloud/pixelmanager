@@ -12,12 +12,13 @@ export function clearToken() { token = ''; localStorage.removeItem('fm_token'); 
 export interface ApiError extends Error { status: number; body: any }
 export interface LegacyCard { role: string; primeOverall: number; peakOverall: number; seasons: number; apps: number; leagueTitles: number; cupTitles: number; legendRating: number; tier: string; icon: string; testimonial: number; mintable: boolean; note: string }
 export interface Prospect { id: string; name: string; roleHint: string; pedigree: number; potentialStars: number; generation?: number; bornSeason?: number; developed?: boolean; note?: string; genes?: any; careerStarted?: boolean; developedPlayerId?: string | null }
-export interface CareerCard { id: string; name: string; tags: string[]; rarity?: string }
+export interface CareerCard { id: string; name: string; tags: string[]; rarity?: string; desc?: string }
 export interface CareerState {
   prospectId: string; name: string; pedigree: number; agentId?: string | null; phase: 'play' | 'coach' | 'draft' | 'offer';
   age: number; chapter: string; turn: number; totalTurns: number; finished: boolean;
   seasonEvent?: { id: string; name: string; desc: string } | null; earnings?: number; deck?: CareerCard[];
   scenario?: { id: string; kind: string; demand: Record<string, number>; label: string; stakes: number };
+  story?: string;
   hand?: CareerCard[]; coach?: { id: string; name: string } | null;
   coaches?: Array<{ id: string; name: string; kind: string; desc: string; specialty: string[]; bonus: number }>;
   options?: CareerCard[]; picksLeft?: number;

@@ -4,7 +4,7 @@
 // home for every transition, replacing the old prospects/contracts/lifecycle/achievements split.
 import {
   overall, contractView, signContract, contractLength, legacyCard, legacyBoost, inheritGenes, rollGenes, graduate,
-  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, moraleEffects, narratePlay, cardName,
+  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, moraleEffects, narratePlay, scenarioStory, cardName, CARD_DESC,
   type Player, type Track, type PlayerAchievements, type Genes, type CareerPlayerAttrs,
 } from '@fm/shared';
 import type { Token, Store } from './store.js';
@@ -97,8 +97,18 @@ export function careerProfile(t: Token, c: Career) {
     traitsForming: eligibleTraits(attrs, c.log).map((tt) => tt.name),
   };
 }
+const withDesc = (cards: any[]) => cards?.map((c) => ({ ...c, desc: CARD_DESC[c.id] ?? '' }));
 export function careerState(t: Token, c: Career) {
   const st = c.current() as any;
+  // STORY MODE: describe the situation + what each card would do
+  if (st.phase === 'play' && st.scenario) {
+    const demand = st.scenario.demand as Record<string, number>;
+    const topTag = Object.keys(demand).sort((a, b) => (demand[b] ?? 0) - (demand[a] ?? 0))[0] ?? 'teamwork';
+    const moment = st.scenario.stakes >= 2 ? String(st.scenario.label).replace(/^★\s*/, '') : null;
+    st.story = scenarioStory(st.scenario.kind, topTag, moment, ((c as any).seed >>> 0) + c.turn * 40503);
+    st.hand = withDesc(st.hand);
+  }
+  if (st.options) st.options = withDesc(st.options); // draft cards get their "what he does" too
   return {
     prospectId: t.id, name: t.name, generation: t.generation, pedigree: t.pedigree, agentId: t.agent_id, track: t.track,
     turn: c.turn, totalTurns: TOTAL_TURNS, seasonEvent: c.seasonEvent, earnings: c.earnings, profile: careerProfile(t, c), ...st,

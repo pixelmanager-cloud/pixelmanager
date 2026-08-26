@@ -63,6 +63,15 @@ export const DECK: Card[] = [
   { id: 'engine-epic', name: 'Relentless Engine',     tags: ['stamina', 'teamwork'], rarity: 'epic' },
   { id: 'talisman',    name: 'Talisman',              tags: ['leadership', 'creativity'], rarity: 'epic' },
   { id: 'enforcer',    name: 'The Enforcer',          tags: ['aggression', 'leadership'], rarity: 'rare' },
+  // expansion batch — more variety of moments
+  { id: 'trivela',     name: 'Trivela',               tags: ['flair', 'creativity'], rarity: 'rare' },
+  { id: 'nutmeg',      name: 'Nutmeg',                tags: ['flair'] },
+  { id: 'recovery',    name: 'Recovery Sprint',       tags: ['stamina', 'aggression'] },
+  { id: 'thru-lines',  name: 'Through the Lines',     tags: ['creativity', 'composure'] },
+  { id: 'streetwise',  name: 'Streetwise',            tags: ['aggression', 'composure'] },
+  { id: 'trigger',     name: 'Trigger the Press',     tags: ['aggression', 'teamwork'] },
+  { id: 'switch',      name: 'Switch the Play',       tags: ['creativity', 'leadership'] },
+  { id: 'clutch',      name: 'Clutch Moment',         tags: ['composure', 'leadership'], rarity: 'epic' },
 ];
 
 // The small deck EVERY outfield career starts with; the rest is drafted between seasons.
@@ -92,6 +101,32 @@ const GK_STARTER: Card[] = GK_DECK.filter((c) => GK_STARTER_IDS.includes(c.id));
 const GK_DRAFT_POOL: Card[] = GK_DECK.filter((c) => !GK_STARTER_IDS.includes(c.id));
 /** A card's display name by id (across both decks) — for narration/UI. */
 export const cardName = (id: string): string => [...DECK, ...GK_DECK].find((c) => c.id === id)?.name ?? id;
+
+/** What the player actually DOES when a card is played — the story-mode "meaning" of each choice. */
+export const CARD_DESC: Record<string, string> = {
+  'ice-veins': 'Keep a cool head when it matters most.', 'cool-finish': 'Pick your spot and finish with ice-cold composure.',
+  'read-game': 'Read the danger early and step in before it develops.', crunch: 'Fly into a hard, committed tackle to win it back.',
+  'last-ditch': 'Throw your body in the way with a desperate block.', 'dark-arts': 'Use the dark arts — a clever foul, a word in the ear — to break up play.',
+  splitter: 'Slide a defence-splitting pass through the eye of a needle.', 'killer-ball': 'Pick out the killer ball to release a runner.',
+  'no-look': 'Disguise it with a no-look pass to wrong-foot everyone.', anchor: 'Sit in and anchor the midfield, keeping it all ticking.',
+  'hold-up': 'Hold the ball up, back to goal, and bring others into play.', captain: "Rally the team with a rousing captain's speech.",
+  rally: 'Dig in and drive the team on when legs are tiring.', 'lung-buster': 'Make a lung-busting run from deep to support the attack.',
+  'box-to-box': 'Cover every blade of grass, box to box.', overlap: 'Bomb forward on the overlap to stretch the play.',
+  stepover: 'Take your man on with a stepover and a burst of pace.', mazy: 'Set off on a mazy dribble, gliding past challenges.',
+  wand: 'Produce a moment of pure magic with that wand of a left foot.', poacher: "Ghost in with a poacher's instinct to pounce.",
+  general: 'Marshal the defence like a general, organising everything.', 'engine-epic': 'Run and run — a relentless engine that never stops.',
+  talisman: 'Drag the team forward on your own, the talisman.', enforcer: "Impose yourself — no one's getting past.",
+  trivela: 'Wrap your foot round it with an outrageous trivela.', nutmeg: "Slip it through your marker's legs — nutmeg!",
+  recovery: 'Turn and sprint back to snuff out the danger.', 'thru-lines': 'Carry it calmly through the lines, breaking the press.',
+  streetwise: 'Do the streetwise thing — buy the foul, kill the tempo.', trigger: 'Trigger the press and hunt the ball down as a unit.',
+  switch: 'Switch the play with one sweep of the boot to the free man.', clutch: 'Stand up in the clutch and deliver when it counts.',
+  'shot-stop': 'Spring across your goal to make a vital save.', 'point-blank': 'Somehow keep out a point-blank effort.',
+  'one-on-one': 'Rush out and smother the one-on-one.', command: 'Come and claim it, commanding your box.',
+  'claim-cross': 'Rise to pluck the cross out of the air.', sweeper: 'Sweep up behind the defence like an extra outfielder.',
+  distribution: 'Launch a swift counter with sharp distribution.', 'goal-kick': 'Ping a pinpoint goal-kick to start the attack.',
+  organise: 'Organise the wall and bark out the orders.', 'calm-back': 'Calm it down at the back — no panic.',
+  'penalty-hero': 'Guess right and become the hero from the spot.', 'sweeper-elite': 'Play as a modern sweeper-keeper, starting moves from the back.',
+};
 
 // deck-building config
 export const OFFER_SIZE = 4;   // cards shown at a between-season draft

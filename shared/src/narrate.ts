@@ -22,8 +22,8 @@ const SETTINGS: Record<string, string[]> = {
   Establishing: ['before a full, expectant stand', 'with cameras tracking his every touch', 'in the thick of a proper contest', 'with a lot of eyes on him'],
 };
 // big-moment settings override the chapter setting when the stakes are high
-const BIG_SETTINGS = ['in a white-hot derby', 'with the tie hanging in the balance', 'as tempers frayed and the stakes climbed'];
-const HUGE_SETTINGS = ['in the cup final, the whole ground holding its breath', 'with the title on the line', 'on the grandest stage of his young life', 'as sixty thousand roared'];
+const BIG_SETTINGS = ['in a white-hot derby', 'with the tie hanging in the balance', 'as tempers frayed and the stakes climbed', 'in a bruising six-pointer', 'with promotion on the line', 'under the lights, everything to play for'];
+const HUGE_SETTINGS = ['in the cup final, the whole ground holding its breath', 'with the title on the line', 'on the grandest stage of his young life', 'as sixty thousand roared', 'in the last minute of the biggest game of the season', 'with silverware within touching distance'];
 
 // action verbs by the card's dominant tag
 const VERBS: Record<string, string[]> = {
@@ -38,18 +38,18 @@ const VERBS: Record<string, string[]> = {
 };
 // results + reactions by outcome band
 const RESULTS: Record<string, string[]> = {
-  triumph: ['and it was sublime', 'and it came off brilliantly', '— pure, unarguable quality', 'and it was worth the admission alone'],
-  good: ['and it came off', 'and it did the job well', '— a good, clean piece of play', 'and it worked a treat'],
-  mixed: ['with mixed results', '— not quite clean, but it held up', 'and just about got away with it', 'in fits and starts'],
-  poor: ["but it didn't come off", 'and it fell flat', 'only for it to unravel', 'and the moment slipped away'],
-  dismal: ['and it went badly wrong', '— a moment to forget', 'and it fell apart completely', 'and he was left red-faced'],
+  triumph: ['and it was sublime', 'and it came off brilliantly', '— pure, unarguable quality', 'and it was worth the admission alone', 'and the whole thing was a joy to watch', 'and he made it look absurdly easy', 'and jaws hit the floor', 'and it was the moment of the match'],
+  good: ['and it came off', 'and it did the job well', '— a good, clean piece of play', 'and it worked a treat', 'and it was tidy, assured stuff', 'and he executed it without fuss', 'and it drew a ripple of approval'],
+  mixed: ['with mixed results', '— not quite clean, but it held up', 'and just about got away with it', 'in fits and starts', '— the right idea, roughly done', 'and it half-worked'],
+  poor: ["but it didn't come off", 'and it fell flat', 'only for it to unravel', 'and the moment slipped away', 'but the execution let him down', 'and it came to nothing'],
+  dismal: ['and it went badly wrong', '— a moment to forget', 'and it fell apart completely', 'and he was left red-faced', 'and it was a total mess', 'and the crowd groaned'],
 };
 const REACTIONS: Record<string, string[]> = {
-  triumph: ['The coaches exchanged a look.', 'You could feel the buzz ripple round the ground.', 'A statement.', 'Scouts scribbled.'],
-  good: ['A nod from the gaffer.', 'Good habits.', 'Quietly impressive.', 'The staff liked that.'],
-  mixed: ['Something to work on.', 'Raw, but there.', 'Room to grow.', 'A shrug from the bench.'],
-  poor: ['The gaffer frowned.', 'A lesson, that.', 'Back to the training ground.', 'He knew it, too.'],
-  dismal: ['Heads dropped.', 'One to bury and move on from.', 'The bench winced.', 'A long walk back to the halfway line.'],
+  triumph: ['The coaches exchanged a look.', 'You could feel the buzz ripple round the ground.', 'A statement.', 'Scouts scribbled.', 'The bench was on its feet.', 'One for the highlight reel.', 'Even the opposition applauded.'],
+  good: ['A nod from the gaffer.', 'Good habits.', 'Quietly impressive.', 'The staff liked that.', 'Ticked a box.', 'Exactly what was asked.'],
+  mixed: ['Something to work on.', 'Raw, but there.', 'Room to grow.', 'A shrug from the bench.', 'Half a mark.', "There's a player in there."],
+  poor: ['The gaffer frowned.', 'A lesson, that.', 'Back to the training ground.', 'He knew it, too.', 'Words at half-time, surely.', 'File under learning.'],
+  dismal: ['Heads dropped.', 'One to bury and move on from.', 'The bench winced.', 'A long walk back to the halfway line.', 'The gaffer looked away.', 'Best forgotten.'],
 };
 // occasional temperament flavor
 const PERSONALITY: Record<string, string> = {
@@ -70,6 +70,31 @@ const EVENT_PREFIX: Record<string, string> = {
   knock: 'Carrying a knock he wouldn’t admit to, ',
   breakthrough: 'Riding the wave of a breakout season, ',
 };
+
+// ── SCENARIO STORY: describe the SITUATION the player faces this turn (before he chooses) ──
+const KIND_SETUP: Record<string, string[]> = {
+  match: ['The game is finely poised.', 'The match hangs in the balance.', 'This is where games are won and lost.', 'The tempo is rising and the tackles are flying in.'],
+  training: ['On the training ground, the coaches are watching closely.', 'The gaffer has set up a pointed drill.', 'It’s a sharp session, and the staff want to see something specific.'],
+  social: ['Away from the pitch, his character is being tested.', 'In the dressing room, the mood needs handling.', 'Off the field, who he is matters as much as how he plays.'],
+};
+const DEMAND: Record<string, string> = {
+  aggression: 'It needs someone to win the dirty battles and stop the opposition playing.',
+  creativity: 'It needs a spark of invention to unlock a stubborn defence.',
+  composure: 'It needs a cool head to keep things calm under pressure.',
+  teamwork: 'It needs him to knit the play together and bring others in.',
+  leadership: 'It needs someone to grab this by the scruff of the neck.',
+  stamina: 'It needs legs — someone to cover the ground and outrun them.',
+  flair: 'It needs a bit of magic to lift the crowd.',
+  keeping: 'It falls to the keeper to stand tall and keep them out.',
+};
+/** A narrative description of the moment the player is living through, from the scenario. */
+export function scenarioStory(kind: string, topTag: string, moment: string | null, seed: number): string {
+  const rng = mulberry32(seed >>> 0);
+  const demand = DEMAND[topTag] ?? DEMAND.teamwork;
+  if (moment) return `It’s ${moment}. ${demand}`;
+  const setup = (KIND_SETUP[kind] ?? KIND_SETUP.match)[Math.floor(rng() * (KIND_SETUP[kind] ?? KIND_SETUP.match).length)];
+  return `${setup} ${demand}`;
+}
 
 const band = (success: number) => (success >= 0.8 ? 'triumph' : success >= 0.62 ? 'good' : success >= 0.42 ? 'mixed' : success >= 0.24 ? 'poor' : 'dismal');
 const domTag = (tags: string[]) => tags.find((t) => VERBS[t]) ?? 'teamwork';
