@@ -107,10 +107,22 @@ or newly imagined beyond the brief. Ranked safe/small/high-value first.
   and `career_sim` both green (diversity closest-pair distance 10, determinism identical: true) —
   sim output confirms: greed 5, loyal flag, extend@26 173 coins, sitting between Family Advisor and
   Loyal Agent on cost while beating every agent on draftLuck.
-- [ ] 12. **Risk/reward summer focus option.** (S/M) Seed idea #9's "risk" focus: add one high-variance
+- [x] 12. **Risk/reward summer focus option.** (S/M) Seed idea #9's "risk" focus: add one high-variance
   option per later chapter that trades a small guaranteed meter loss for a larger potential gain,
   computed deterministically from existing state (e.g. from current meter value) rather than rng —
   e.g. "Speak to the Press" — big fan/agent swing sized off current fan standing, still no rng.
+  **Done:** added a `riskFocusFor(chapter, standing)` helper in career.ts that, for Breakthrough/
+  First Team/Establishing, appends a "Speak to the Press" option to the normal focus list — a fixed
+  small `peers` cost (-8) for a `fans` gain computed from current fan standing at pick-time
+  (`8 + (100 - fans) * 0.28`, rounded): more headroom to swing when fans are low, a smaller gain once
+  you're already adored. `rollFocus(chapter, standing?)` now takes the live `standing` record and
+  folds the risk option in when present; the sole call site (the `BAND_ENDS` chapter-boundary branch)
+  now passes `this.standing`. Because it's derived purely from already-deterministic state (no new
+  rng draw), replay/resume regenerates the identical option at the identical point automatically — no
+  special-casing needed in `chooseFocus` or the replay/tolerant paths. UI (`main.ts`'s generic
+  `s.focus.map(...)` renderer) and `career_sim.ts` (always picks `st.focus[0].id`, unaffected since
+  the risk option is appended last) needed no changes. `npm run verify` and `career_sim` both green
+  (diversity closest-pair distance 9, determinism identical: true).
 - [ ] 13. **More lifestyle items for the late-career gap.** (S) `LIFESTYLE` thins out after chapter 5
   (First Team/Establishing has only watch/invest/mansion). Add 2-3 more star-era purchases (a
   supercar, a boutique restaurant investment, a testimonial-fund pledge) with distinct meter perks.

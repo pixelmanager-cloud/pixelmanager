@@ -393,9 +393,26 @@ const FOCUS_BY_CHAPTER: Record<string, FocusOption[]> = {
     { id: 'partner',  icon: '❤️', name: 'Settle Down',       desc: 'A stable home life behind the superstar.', energy: +10, effects: { partner: +16, sponsors: -4 } },
   ],
 };
-/** The between-chapter focus choices for a life stage (Rest is always available). */
-export function rollFocus(chapter: string): FocusOption[] {
-  return [...(FOCUS_BY_CHAPTER[chapter] ?? FOCUS_BY_CHAPTER.Establishing), FOCUS_REST];
+/** The between-chapter focus choices for a life stage (Rest is always available). `standing`, if given,
+ *  adds a high-variance RISK pick for later chapters — sized off current state, not rng (see below). */
+export function rollFocus(chapter: string, standing?: Record<MeterKey, number>): FocusOption[] {
+  const base = [...(FOCUS_BY_CHAPTER[chapter] ?? FOCUS_BY_CHAPTER.Establishing), FOCUS_REST];
+  const risk = standing ? riskFocusFor(chapter, standing) : null;
+  return risk ? [...base, risk] : base;
+}
+
+// ── RISK FOCUS: from Breakthrough onward, a bold high-variance pick alongside the safe ones — a small
+// guaranteed cost for a fan swing sized off your CURRENT fan standing (more headroom when you're not yet
+// adored, less once you are). Deterministic from state, not rng — same replay-safe contract as the rest.
+const RISK_FOCUS_CHAPTERS = new Set(['Breakthrough', 'First Team', 'Establishing']);
+function riskFocusFor(chapter: string, standing: Record<MeterKey, number>): FocusOption | null {
+  if (!RISK_FOCUS_CHAPTERS.has(chapter)) return null;
+  const gain = Math.round(8 + (100 - (standing.fans ?? 50)) * 0.28); // low standing = more room to swing
+  return {
+    id: 'risk_press', icon: '🎤', name: 'Speak to the Press',
+    desc: `A bold, headline-grabbing interview — could win the terraces over big (+${gain} fans), but the dressing room won't love the grandstanding.`,
+    energy: -10, effects: { fans: +gain, peers: -8 },
+  };
 }
 
 // ── SIDE FOCUS: from Breakthrough onward, a smaller SECOND summer pick alongside the main one — a
@@ -766,7 +783,7 @@ export class Career {
     if (this.turn >= TOTAL_TURNS) { this.finished = true; return choice; }
     // at an age-chapter boundary: relationships pay off (or bite), a narrative EVENT fires, then you
     // choose a summer FOCUS, take a financial offer, appoint a coach and draft.
-    if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.earnings += 40 + this.turn * 12; this.pendingFocus = rollFocus(this.chapter); }
+    if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.earnings += 40 + this.turn * 12; this.pendingFocus = rollFocus(this.chapter, this.standing); }
     else { this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure); }
     return choice;
   }
