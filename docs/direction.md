@@ -118,5 +118,22 @@ not Stripe (`coin-purchases.md`'s rails still apply, re-targeted to Steamworks a
 - [x] ~~Premium vs F2P~~ → **DECIDED: premium base + cosmetic/content-DLC IAP, never pay-to-win** (above).
 - [ ] Final premium price point (and cosmetic/DLC pricing).
 - [ ] Tauri vs. Electron for the desktop wrapper.
-- [ ] Keep server-backed online leagues as core, or add a self-contained offline career as the entry point.
+- [x] ~~Online-leagues-core vs offline-career-entry~~ → **DECIDED: OFFLINE-FIRST** (see Architecture below).
 - [ ] Timeline: how much content depth before starting the Steam track.
+
+## Architecture — DECIDED: offline-first (single-player dynasty is the core)
+The core game is **fully offline single-player** — develop players, build dynasties, play seasons/cups vs AI
+clubs, all locally. Chosen for far lower maintenance (no always-on server/DB, no live-ops, no matchmaking,
+no anti-cheat), instant/plane-friendly play, and because it puts the unique dynasty loop front and centre.
+
+**Pragmatic implementation (near-zero game-code rewrite):** the game logic is already deterministic and
+portable (`@fm/shared` runs anywhere; the seasons/pods/cup already play vs AI). So **embed the existing
+server + SQLite *inside* the desktop app** (Electron bundles Node): the "server" becomes a local process,
+SQLite is the local save file, and **Steam Cloud syncs the save.** We relocate the runtime, not rewrite it.
+
+**Online/PvP becomes an OPTIONAL later layer** — the same client can connect to a hosted server for
+real-player leagues when/if we want it; it is NOT required to play or to launch. The async-PvP work already
+built is not wasted — it's the seed of that optional online layer. Ship single-player dynasty first.
+
+Trade-offs (mostly upside): no global leaderboards by default (that's the online layer); saves are local +
+Steam Cloud; but no server cost, no anti-cheat, no cold-start loneliness.
