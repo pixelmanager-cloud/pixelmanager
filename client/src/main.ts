@@ -924,6 +924,24 @@ class Game {
     const money = s.earnings != null ? `<div class="cg-money">💷 ${s.earnings.toLocaleString()}</div>` : '';
     return `<div class="cg-dash">${energy}${money}<div class="cg-meters">${meters}</div></div>`;
   }
+  /** First-career coach-marks: contextual, dismissible hints during chapter 1 of a gen-0 career. */
+  private tutorialHint(s: import('./api').CareerState): string {
+    if (localStorage.getItem('fm_tut_done')) return '';
+    if ((s as any).generation > 0) { localStorage.setItem('fm_tut_done', '1'); return ''; } // tutorial only on the very first (gen-0) career
+    const turn = s.turn ?? 0;
+    let hint = '';
+    if (s.phase === 'play' && turn < 12) {
+      if (turn === 0) hint = '👋 This is a <b>moment</b> in his young career. Read what it <b>needs</b> (the tags), then play the card that <b>fits best</b> — good fits develop him faster.';
+      else if (turn <= 2) hint = '📊 Your choices shape his <b>stats</b> and his <b>relationships</b> (the meters above). Grow him with care and he flourishes; neglect it and he regresses.';
+      else if (s.energy != null && s.energy < 40) hint = '⚡ His <b>energy</b> is dropping — tired moments go worse. It recovers between chapters, and you can <b>Rest</b>.';
+      else hint = '🎯 Keep answering what each moment asks. The more you play to his strengths, the closer he gets to his potential.';
+    } else if (s.phase === 'focus') hint = '🌅 <b>Between seasons</b> — choose how he spends the summer to steer his relationships before the next chapter.';
+    else if (s.phase === 'draft') hint = '🃏 <b>Draft cards</b> to build his identity — these are the moves he’ll bring to future moments.';
+    else if (s.phase === 'coach') hint = '🧑‍🏫 <b>Appoint a coach</b> — they sharpen the work you do in their specialty, compounding his growth.';
+    if (turn >= 11) localStorage.setItem('fm_tut_done', '1'); // graduate the tutorial after chapter 1
+    return hint ? `<div class="cg-tut" id="cg-tut">${hint} <button class="cg-tut-x" id="cg-tut-x">Got it ✕</button></div>` : '';
+  }
+
   private renderCareer(s: import('./api').CareerState) {
     const pct = Math.round((s.turn / s.totalTurns) * 100);
     // re-theme the whole view for this life stage (accent + backdrop + scene banner)
@@ -1000,7 +1018,9 @@ class Game {
     if (this.careerTab === 'player') content = prof + this.deckHtml(s);
     else if (this.careerTab === 'kit') content = this.kitTabHtml(s);
     else content = this.lifeDashHtml(s) + narr + recap + conseq + evt + body;
-    $('academy-body').innerHTML = head + scene + tabBar + content;
+    const tut = this.careerTab === 'now' ? this.tutorialHint(s) : '';
+    $('academy-body').innerHTML = head + scene + tut + tabBar + content;
+    ($('cg-tut-x') as any)?.addEventListener('click', () => { localStorage.setItem('fm_tut_done', '1'); ($('cg-tut') as any)?.remove(); });
     $('cg-back').addEventListener('click', () => this.showAcademy());
     $('academy-body').querySelectorAll('.cg-tab').forEach((el) => el.addEventListener('click', () => { this.careerTab = (el as HTMLElement).dataset.tab as any; this.renderCareer(s); }));
     $('academy-body').querySelectorAll('[data-act]').forEach((el) => el.addEventListener('click', () => this.doCareerAct(s.prospectId, { type: (el as HTMLElement).dataset.act!, cardId: (el as HTMLElement).dataset.id! })));
