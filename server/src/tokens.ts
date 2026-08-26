@@ -187,7 +187,7 @@ export function careerState(t: Token, c: Career) {
   }
   return {
     prospectId: t.id, name: t.name, generation: t.generation, pedigree: t.pedigree, agentId: t.agent_id, track: t.track,
-    turn: c.turn, totalTurns: TOTAL_TURNS, seasonEvent: c.seasonEvent, earnings: c.earnings, energy: c.energy, standing: c.standing, profile: careerProfile(t, c), ...st,
+    turn: c.turn, totalTurns: TOTAL_TURNS, seasonEvent: c.seasonEvent, earnings: c.earnings, energy: c.energy, meters: c.meters, profile: careerProfile(t, c), ...st,
   };
 }
 /** Graduate the finished career → the pro attrs to write onto the SAME token (state → pro). */

@@ -127,15 +127,18 @@ const KIND_SETUP: Record<string, string[]> = {
   loan: ['A loan move is on the table — a fork in the road.', 'Stay and fight for minutes, or leave to find them elsewhere?', 'The club want him to go and toughen up somewhere real.'],
   setback: ['A very public mistake to bounce back from.', 'The headlines weren’t kind. Now he has to answer them.', 'Confidence dented, reputation on the line — this is about response.'],
 };
+// What the moment ASKS of him. Kept setting-neutral so it reads sensibly whether the
+// situation is a training drill, a dressing-room moment or a cup tie (a drill is not
+// "the kind of moment careers are remembered for" — that mismatch kills the immersion).
 const DEMAND: Record<string, string[]> = {
-  aggression: ['It needs someone to win the dirty battles and stop the opposition playing.', 'It needs an edge — someone to bite into tackles and set the tone.', 'Somebody has to stop being bullied and start doing the bullying.'],
-  creativity: ['It needs a spark of invention to unlock a stubborn defence.', 'Someone has to see the pass no one else can.', 'This calls for imagination — a moment from nothing.'],
-  composure: ['It needs a cool head to keep things calm under pressure.', 'Panic loses this; someone has to slow it all down.', 'The moment demands ice, not fire.'],
-  teamwork: ['It needs him to knit the play together and bring others in.', 'This is about the collective — link it, share it, trust it.', 'Someone has to be the glue and make the whole thing tick.'],
-  leadership: ['It needs someone to grab this by the scruff of the neck.', 'The team is looking for a leader to step up — right now.', 'Somebody has to drag the rest of them with him.'],
-  stamina: ['It needs legs — someone to cover the ground and outrun them.', 'This is a test of engine as much as ability.', 'Whoever wants it most, and can run longest, wins it.'],
-  flair: ['It needs a bit of magic to lift the crowd.', 'This is a stage for the outrageous — dare something.', 'The kind of moment careers are remembered for.'],
-  keeping: ['It falls to the keeper to stand tall and keep them out.', 'Everything now rests on the last line — no mistakes.', 'The goal is under siege; someone has to be a wall.'],
+  aggression: ['They want to see some steel from him.', 'It’s about winning the physical battle.', 'He needs to show he won’t be pushed around.'],
+  creativity: ['They’re looking for a spark of invention.', 'It wants imagination — something unexpected.', 'He needs a solution no one else can see.'],
+  composure: ['It asks for a cool head under pressure.', 'The test is whether he can keep calm.', 'He needs to slow it down and stay in control.'],
+  teamwork: ['It’s about bringing others into the play.', 'They want to see him link it and share it.', 'It’s a test of how he lifts the players around him.'],
+  leadership: ['They want him to take charge of this.', 'It’s a chance to show he can lead.', 'He needs to grab it and drag the rest with him.'],
+  stamina: ['It’s a test of his engine.', 'It comes down to who keeps going longest.', 'They want to see him cover every blade of grass.'],
+  flair: ['It’s a chance to show his imagination.', 'It’s the moment to try something bold.', 'They want to see a bit of magic from him.'],
+  keeping: ['It’s down to him to keep them out.', 'It’s a test of his hands and his nerve.', 'They need him to be the wall behind them.'],
 };
 const pickFrom = <T,>(rng: () => number, arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
 

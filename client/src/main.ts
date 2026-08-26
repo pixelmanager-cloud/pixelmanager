@@ -1007,16 +1007,13 @@ class Game {
   /** Render the card-game state and wire the choice for the current phase. */
   /** The New Star Soccer-style life dashboard: energy + the six relationships you juggle. */
   private lifeDashHtml(s: import('./api').CareerState): string {
-    if (!s.standing && s.energy == null) return '';
-    const st = s.standing;
+    if (!s.meters?.length && s.energy == null) return '';
     const meterColor = (v: number) => v >= 66 ? '#5bd06a' : v >= 33 ? '#ffd75e' : '#ff6d6d';
-    const meter = (icon: string, label: string, v: number) =>
-      `<div class="cg-meter" title="${label}: ${v}/100"><span class="cg-m-icon">${icon}</span>`
-      + `<span class="cg-m-bar"><b style="width:${v}%;background:${meterColor(v)}"></b></span></div>`;
-    const meters = st
-      ? meter('👔', 'Boss', st.boss) + meter('👥', 'Team', st.team) + meter('📣', 'Fans', st.fans)
-        + meter('📸', 'Sponsors', st.sponsors) + meter('❤️', 'Partner', st.partner) + meter('🍻', 'Friends', st.friends)
-      : '';
+    // stage-aware: the meters you juggle change with age (coach/parents/mates → gaffer/fans/sponsors/partner)
+    const meters = (s.meters ?? []).map((m) =>
+      `<div class="cg-meter" title="${m.label}: ${m.value}/100"><span class="cg-m-icon">${m.icon}</span>`
+      + `<span class="cg-m-lbl">${m.label}</span>`
+      + `<span class="cg-m-bar"><b style="width:${m.value}%;background:${meterColor(m.value)}"></b></span></div>`).join('');
     const energy = s.energy != null
       ? `<div class="cg-energy" title="Energy ${s.energy}/100"><span>⚡ ENERGY</span><span class="cg-e-bar"><b style="width:${s.energy}%"></b></span></div>`
       : '';

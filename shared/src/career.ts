@@ -281,6 +281,39 @@ export const AGE_BANDS: AgeBand[] = [
   { name: 'Establishing', from: 23, to: 25, turns: 12, maxStakes: 3, demand: OUTFIELD_TAGS },
 ];
 export const TOTAL_TURNS = AGE_BANDS.reduce((s, b) => s + b.turns, 0);
+
+// ── STAGE-AWARE LIFE METERS ────────────────────────────────────────────────
+// The relationships you juggle change as you grow up: a 10-year-old has a coach, his
+// parents and his mates — no fans, sponsors or partner. They fade in at the right age
+// (an agent + first partner as a youth; fans as you break through; sponsors as a star),
+// and the same underlying relationship is RE-LABELLED by stage (coach → gaffer, mates
+// → dressing room). Eight underlying keys; only 3–5 are active in any chapter.
+export type MeterKey = 'authority' | 'peers' | 'family' | 'school' | 'agent' | 'fans' | 'sponsors' | 'partner';
+export interface MeterDesc { key: MeterKey; icon: string; label: string; }
+const METER: Record<string, MeterDesc> = {
+  coach:     { key: 'authority', icon: '🧑‍🏫', label: 'Coach' },
+  gaffer:    { key: 'authority', icon: '👔', label: 'Gaffer' },
+  parents:   { key: 'family',    icon: '🏠', label: 'Parents' },
+  mates:     { key: 'peers',     icon: '🧒', label: 'Mates' },
+  teammates: { key: 'peers',     icon: '👥', label: 'Teammates' },
+  team:      { key: 'peers',     icon: '👥', label: 'Dressing Room' },
+  school:    { key: 'school',    icon: '🎒', label: 'School' },
+  agent:     { key: 'agent',     icon: '🤝', label: 'Agent' },
+  fans:      { key: 'fans',      icon: '📣', label: 'Fans' },
+  sponsors:  { key: 'sponsors',  icon: '📸', label: 'Sponsors' },
+  partner:   { key: 'partner',   icon: '❤️', label: 'Partner' },
+};
+const CHAPTER_METERS: Record<string, string[]> = {
+  Grassroots:   ['coach', 'parents', 'mates'],
+  Academy:      ['coach', 'parents', 'teammates', 'school'],
+  'Youth Team': ['coach', 'teammates', 'agent', 'partner'],
+  Breakthrough: ['gaffer', 'team', 'fans', 'agent', 'partner'],
+  Establishing: ['gaffer', 'team', 'fans', 'sponsors', 'partner'],
+};
+/** The age-appropriate meters (key + icon + stage label) for a given life chapter. */
+export function activeMeters(chapter: string): MeterDesc[] {
+  return (CHAPTER_METERS[chapter] ?? CHAPTER_METERS.Establishing).map((n) => METER[n]);
+}
 // cumulative turn index at which each band ENDS (last band end = TOTAL_TURNS)
 const BAND_ENDS = AGE_BANDS.reduce<number[]>((acc, b) => [...acc, (acc[acc.length - 1] ?? 0) + b.turns], []);
 /** The band a given development turn falls in, plus the player's age at that turn. */
@@ -330,10 +363,17 @@ export class Career {
   // ── New Star Soccer-style life sim (deterministic — evolves from seeded outcomes, no extra rng) ──
   /** stamina spent living the career; recovers between chapters. Purely surfaced for now. */
   energy = 100;
-  /** the six relationships you juggle (0–100). Move with performances + choices; consequences layered next. */
-  standing: Record<'boss' | 'team' | 'fans' | 'sponsors' | 'partner' | 'friends', number> =
-    { boss: 50, team: 50, fans: 42, sponsors: 38, partner: 55, friends: 55 };
-  private life(k: keyof Career['standing'], d: number) { this.standing[k] = clamp(this.standing[k] + d, 0, 100); }
+  /** underlying relationships (0–100). Which are ACTIVE + how they're LABELLED depends on the life
+   *  stage (a 10yo has a coach + parents + mates; a star has a gaffer + fans + sponsors + partner). */
+  standing: Record<MeterKey, number> =
+    { authority: 50, peers: 50, family: 62, school: 55, agent: 45, fans: 38, sponsors: 32, partner: 48 };
+  private life(k: MeterKey, d: number) { if (this.chapterMeterKeys.has(k)) this.standing[k] = clamp(this.standing[k] + d, 0, 100); }
+  /** the meter keys that are ACTIVE this life stage (age-appropriate) — only these move + display. */
+  private get chapterMeterKeys(): Set<MeterKey> { return new Set(activeMeters(this.chapter).map((m) => m.key)); }
+  /** the age-appropriate meters (key + icon + stage label + value) for the current chapter's dashboard. */
+  get meters(): Array<{ key: MeterKey; icon: string; label: string; value: number }> {
+    return activeMeters(this.chapter).map((m) => ({ ...m, value: this.standing[m.key] }));
+  }
 
   readonly personality: Personality;
   readonly agent: Agent | null;            // the sports agent signed at career start — shapes exposure, opportunities, greed, value
@@ -462,19 +502,25 @@ export class Career {
     const s = choice.success, big = choice.stakes >= 2, kind = this.scenario.kind;
     const perf = (s - 0.5) * (big ? 6 : 4); // roughly -3..+3, bigger on big stages
     const answeredAsk = choice.fit >= choice.bestFit - 0.05; // did you do what the moment demanded?
-    const rev = (v: number) => (50 - v) * 0.04; // gentle mean-reversion → meters live in a band, don't spiral
-    this.life('boss', Math.round(perf * (answeredAsk ? 1.2 : 0.7) + rev(this.standing.boss)));
-    this.life('fans', Math.round(perf * (kind === 'match' ? 1.1 : 0.6) + rev(this.standing.fans)));
-    this.life('team', Math.round((s - 0.45) * 3 * (choice.tags.includes('teamwork') || choice.tags.includes('leadership') ? 1.5 : 1) + rev(this.standing.team)));
-    this.life('sponsors', Math.round(Math.max(0, perf) * 0.5 + rev(this.standing.sponsors) * 0.5));
-    if (kind === 'social') { this.life('partner', Math.round(perf * 1.3)); this.life('friends', Math.round(perf)); } // social moments tend the personal life
+    const rev = (k: MeterKey) => (50 - this.standing[k]) * 0.04; // gentle mean-reversion → meters live in a band, don't spiral
+    const social = kind === 'social', teamy = choice.tags.includes('teamwork') || choice.tags.includes('leadership');
+    // life() only moves meters ACTIVE this chapter, so we can nudge the whole set and the
+    // age-appropriate ones respond (a kid's coach/parents/mates; a star's gaffer/fans/sponsors).
+    this.life('authority', Math.round(perf * (answeredAsk ? 1.2 : 0.7) + rev('authority'))); // coach → gaffer
+    this.life('peers',     Math.round((s - 0.45) * 3 * (teamy ? 1.5 : 1) + rev('peers')));    // mates → dressing room
+    this.life('family',    Math.round((social ? perf * 0.9 : perf * 0.3) + rev('family')));   // parents: leaning on them helps
+    this.life('school',    Math.round((social ? 1.2 : -1.0) + rev('school')));                // study time vs football-obsessed
+    this.life('agent',     Math.round(Math.max(0, perf) * 0.6 + rev('agent')));               // an agent loves a rising asset
+    this.life('fans',      Math.round(perf * (kind === 'match' ? 1.1 : 0.6) + rev('fans')));
+    this.life('sponsors',  Math.round(Math.max(0, perf) * 0.5 + rev('sponsors') * 0.5));
+    if (social) this.life('partner', Math.round(perf * 1.3 + rev('partner')));                // personal life tended in social moments
     this.energy = clamp(this.energy - (big ? 4 : 3), 0, 100); // living the moment costs energy
   }
 
   /** Roll the narrative event for the upcoming age chapter and apply its mechanical effect. */
   private advanceSeasonEvent() {
     this.energy = clamp(this.energy + 50, 0, 100);          // a break between chapters restores energy
-    this.life('partner', -6); this.life('friends', -6);     // personal life drifts between chapters (tend it next slice)
+    this.life('partner', -6); this.life('family', -4); this.life('school', -3); // personal life drifts between chapters (tend it next slice)
     this.demandBias = null; this.formBonus = 0;                  // last chapter's effect clears
     const doneIdx = BAND_ENDS.indexOf(this.turn);               // the chapter that just ended
     const window = doneIdx >= 0 ? AGE_BANDS[doneIdx].turns : HAND_SIZE;
