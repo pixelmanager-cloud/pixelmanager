@@ -59,10 +59,17 @@ or newly imagined beyond the brief. Ranked safe/small/high-value first.
   a `side: boolean` flag (api.ts `CareerState.side`) so `main.ts` swaps the summer-break prompt copy
   and hides the lifestyle shop on the side round. `npm run verify` and `career_sim` both green
   (diversity closest-pair distance 9, determinism identical: true).
-- [ ] 8. **Matchday scoreboard visual polish.** (M) Seed idea #8: the `.cg-scenario`/`matchCtx` area
+- [x] 8. **Matchday scoreboard visual polish.** (M) Seed idea #8: the `.cg-scenario`/`matchCtx` area
   is functional but plain — add a proper scoreboard treatment (opponent crest-style monogram, a
   scoreline strip, a competition badge) reading from the existing `matchContext` data. No layout
-  regressions at mobile widths (check at ~360px).
+  regressions at mobile widths (check at ~360px). **Done:** added a `crestFor(name)` helper in
+  main.ts (deterministic string-hash → 2-letter monogram + palette colour, pure presentation, no rng)
+  and rebuilt the matchday header's markup into a `.cg-md-scoreline` — a "You" crest and the opponent's
+  crest either side of the score — plus a `.cg-comp-badge` pill for the competition line, replacing the
+  old plain `cg-md-vs`/`cg-md-comp` text rows. New CSS (`.cg-md-scoreline`, `.cg-md-side`, `.cg-crest`,
+  `.cg-md-side-lbl`, `.cg-md-meta`, `.cg-comp-badge`) uses flex + `max-width`/ellipsis on the side label
+  so long opponent names stay contained at ~360px. `npm run verify` (client build + engine + fuzz) and
+  `career_sim` both green (determinism identical: true) — UI-only, no engine/tokens.ts change.
 - [ ] 9. **A career "milestone" trophy shelf.** (M) `MILESTONE` in narrate.ts has 5 entries (debut,
   first_goal, first_big_win, cup_final, first_start) but nothing surfaces them again after the beat
   scrolls past. Add a small persistent "milestones" strip to the career profile/dashboard that lists
