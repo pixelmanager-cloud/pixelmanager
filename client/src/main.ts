@@ -132,7 +132,7 @@ function statsTableHTML(players: Player[], highlight?: Set<string>, sort?: Squad
     const on = !!highlight?.has(p.id);
     const nft = isNftId(p.id);
     const tier = nft ? nftTier(overall(p)) : null;
-    const cells = cols.map(([, k]) => `<td class="stat" style="background:${statColor(p.attrs[k] ?? 0)}">${p.attrs[k] ?? 0}</td>`).join('');
+    const cells = cols.map(([, k]) => `<td class="stat" style="background:${statColor(p.attrs[k] ?? 0)}">${Math.round(p.attrs[k] ?? 0)}</td>`).join('');
     const mark = on ? '<td class="inxi-mark">●</td>' : '<td></td>';
     const nameCell = tier
       ? `<td class="name nft-name tier-${tier.key}" data-card="${p.id}" title="Owned NFT · ${tier.name} — click to view card">${tier.icon} ${p.name}</td>`
@@ -424,7 +424,7 @@ class Game {
       ['tackling', 'TAC'], ['strength', 'STR'], ['workrate', 'WRK'], ['keeping', 'KEE'],
       ['setPiece', 'SET'], ['stamina', 'STA'],
     ];
-    const stats = order.map(([k, l]) => `<div class="pc-stat"><span>${l}</span><b style="color:${statColor(p.attrs[k] ?? 0)}">${p.attrs[k] ?? 0}</b></div>`).join('');
+    const stats = order.map(([k, l]) => `<div class="pc-stat"><span>${l}</span><b style="color:${statColor(p.attrs[k] ?? 0)}">${Math.round(p.attrs[k] ?? 0)}</b></div>`).join('');
     // FX escalate with tier: sheen from Silver, rotating glow ring + sparkles from Gold up.
     const sparkCount = { bronze: 0, silver: 3, gold: 6, diamond: 10, legend: 16 }[tier.key] ?? 0;
     const sparks = Array.from({ length: sparkCount }, () => {

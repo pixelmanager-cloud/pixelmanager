@@ -15,13 +15,49 @@ export async function bumpMorale(db: Store, tokenId: string, event: MoraleEvent)
 export interface Retirement { playerId: string; name: string; testimonial: number; tier: string; legendRating: number }
 
 /** Advance one owner's PRO tokens by a season: record achievements + peak, retire anyone past 40. */
+// Stats the manager can develop post-graduation (physical/technical). Mentals + durability are
+// career-forged identity and stay fixed. Physical stats are capped by the player's genes ceiling;
+// other developable stats cap at 18 so elite 19-20 remains something only the Career game produces.
+const DEVELOPABLE = ['pace', 'strength', 'stamina', 'passing', 'shooting', 'tackling', 'positioning', 'workrate', 'keeping', 'setPiece'] as const;
+const PHYSICAL = new Set(['pace', 'strength', 'stamina']);
+const clampStat = (v: number) => Math.max(1, Math.min(20, Math.round(v * 10) / 10));
+
+/** Deterministic post-graduation development (the "Finisher" model): a young pro grows toward his
+ *  ceiling, an old one declines — driven by the Training facility. Late curve tuned for the 25→40
+ *  pro window: 25–31 growth, 32–34 prime plateau, 35+ decline (physical fades fastest). */
+export function developAttrs(attrs: any, genes: any, age: number, trainingLvl: number): any {
+  const tf = 0.55 + 0.12 * (Math.max(1, trainingLvl) - 1); // training 1 → 0.55 … 5 → 1.03
+  const out = { ...attrs };
+  for (const s of DEVELOPABLE) {
+    const v = out[s];
+    if (typeof v !== 'number') continue;
+    const ceil = PHYSICAL.has(s) ? (genes?.[s]?.ceiling ?? 18) : 18;
+    if (age <= 31) { // GROWTH — a real ~7-season runway toward the ceiling
+      const room = ceil - v;
+      if (room > 0.05) out[s] = clampStat(v + Math.min(room, 0.45 * tf * (0.4 + 0.6 * Math.min(1, room / 5))));
+    } else if (age >= 35) { // DECLINE — physical fades faster; good training slows it
+      const rate = (PHYSICAL.has(s) ? 0.6 : 0.3) * (age - 34) * (1.15 - 0.06 * Math.max(1, trainingLvl));
+      out[s] = clampStat(v - rate);
+    } // 32–34: prime plateau
+  }
+  return out;
+}
+
 export async function advanceTokensAtRollover(
   db: Store, ownerId: string, season: number,
   outcome: { league: number; cup: number; promotion: number; tierIdx: number },
 ): Promise<Retirement[]> {
   const retirements: Retirement[] = [];
+  const trainingLvl = (await db.getFacilities(ownerId)).training; // the club's development driver
   for (const t of await db.tokensOwnedBy(ownerId)) {
     if (t.state !== 'pro') continue;
+    // DEVELOPMENT: grow/decline the pro's stats for the season just played (before ageing to retire)
+    const age0 = ageOf(t.prime_season ?? season, season);
+    if (t.attrs_json && age0 < 40) {
+      const dev = developAttrs(JSON.parse(t.attrs_json), JSON.parse(t.genes_json ?? '{}'), age0, trainingLvl);
+      await db.updateToken(t.id, { attrs_json: JSON.stringify(dev) });
+      t.attrs_json = JSON.stringify(dev); // reflect in the peak calc below
+    }
     const peak = Math.max(t.peak_overall, overall(tokenToPlayer(t)));
     let morale = driftMorale(t.morale ?? 65);                 // grudges fade / complacency creeps each season
     if (outcome.league || outcome.cup) morale = updateMorale(morale, 'won_trophy'); // a title lifts the mood
