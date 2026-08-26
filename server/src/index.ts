@@ -2,8 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { randomUUID } from 'node:crypto';
 import { overall, managerPrestige, signContract, contractCost, contractLength, graduationEpilogue, type Lineup, type Tactics } from '@fm/shared';
-import { mintGenesis, tokenToPlayer, tokenContract, tokenAch, legendCardOf, unavailableTokenIds, loadCareer, actWithNarration, careerState, graduatedFields, rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, ageOf, syncOnchainTokens, SUPPLY_CAP, GENESIS_COST, REBORN_COST, MARKET_FEE_PCT, type CareerAction } from './tokens.js';
-import { lifecycleEnabled, lifecycleInfo, serverSignerEnabled, serverMintTo, serverReborn, ownedTokens, ownerOf, lineageOf } from './lifecyclenft.js';
+import { mintGenesis, tokenToPlayer, tokenContract, tokenAch, legendCardOf, unavailableTokenIds, loadCareer, actWithNarration, careerState, graduatedFields, rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, ageOf, SUPPLY_CAP, GENESIS_COST, REBORN_COST, MARKET_FEE_PCT, type CareerAction } from './tokens.js';
 import { bumpApps, bumpMorale, advanceTokensAtRollover } from './lifecycle.js';
 import { recordMatchStats } from './matchstats.js';
 const isNftPlayer = (id: string) => id.startsWith('nft:');
@@ -36,34 +35,20 @@ import {
   MIN_SQUAD, MAX_SQUAD, PRICE_MIN, PRICE_MAX,
 } from './market.js';
 import { autoPickXI, backfillAttrs } from '@fm/shared';
-import { isAddress } from 'viem';
-import { issueNonce, verifyAndConsume, shortAddr } from './wallet.js';
-import { tokenInfo, tokenMeta, tokenBalance } from './token.js';
-import { ownedPlayers, nftInfo, nftEnabled } from './nft.js';
 
-/** Load a club and MERGE in the star players its linked wallet owns on-chain.
- * Read/gameplay only — never feed this into saveClub (NFT players live on-chain,
- * not in our DB). Returns undefined if the club doesn't exist. */
+/** Load a club and MERGE in the owner's pro-state tokens as fieldable players.
+ * Read/gameplay only — never feed this into saveClub. Returns undefined if the
+ * club doesn't exist. */
 async function loadSquad(accountId: string): Promise<{ club: import('@fm/shared').Club; standingOrders: StandingOrders } | undefined> {
   const c = await db.getClub(accountId);
   if (!c) return undefined;
-  await syncOnchainTokens(db, accountId, await db.walletOf(accountId)); // reconcile on-chain ownership → off-chain state
   // merge the owner's PRO-state unified tokens as fieldable players (read-only; saveClub strips nft ids)
   const tokens = await db.tokensOwnedBy(accountId);
   const have = new Set(c.club.players.map((p) => p.id));
   const merged = [...c.club.players];
   for (const t of tokens) if ((t.state === 'pro' || t.state === 'retired') && !have.has(t.id)) { merged.push(tokenToPlayer(t)); have.add(t.id); } // retired shown (benched) so the owner can Reborn
-  // on-chain wallet NFTs (deferred path) merge on top when enabled
-  if (nftEnabled()) { for (const p of await ownedPlayers(await db.walletOf(accountId))) if (!have.has(p.id)) { merged.push(p); have.add(p.id); } }
   c.club = { ...c.club, players: merged };
   return c;
-}
-
-/** A unique handle derived from a base (wallet accounts derive theirs from the address). */
-async function uniqueHandle(base: string): Promise<string> {
-  let h = base;
-  for (let i = 2; await db.handleTaken(h); i++) h = `${base}#${i}`;
-  return h;
 }
 
 const app = Fastify({ logger: false });
@@ -120,80 +105,10 @@ app.post('/login', async (req, reply) => {
   return { token: auth.token, account: { id: auth.id, handle: auth.handle, rating: auth.rating, coins: await db.getCoins(auth.id), wallet: await db.walletOf(auth.id) }, club: c.club, standingOrders: c.standingOrders };
 });
 
-// ── Wallet sign-in (web3 Step 1) — connect a wallet as identity, or link one to
-// the current account. No chain/gas: the wallet just signs a nonce to prove ownership.
-app.post('/auth/wallet/nonce', async (req, reply) => {
-  const address = String((req.body as any)?.address ?? '');
-  if (!isAddress(address)) return reply.code(400).send({ error: 'bad address' });
-  return { message: issueNonce(address) };
-});
-
-app.post('/auth/wallet/verify', async (req, reply) => {
-  const address = String((req.body as any)?.address ?? '');
-  const signature = String((req.body as any)?.signature ?? '');
-  if (!isAddress(address)) return reply.code(400).send({ error: 'bad address' });
-  if (!(await verifyAndConsume(address, signature))) return reply.code(401).send({ error: 'signature did not verify' });
-  let acct = await db.walletAccount(address);
-  if (!acct) {
-    // first time this wallet signs in → make it a club (wallet is the credential, no password)
-    const id = randomUUID(), token = randomUUID().replace(/-/g, '');
-    const handle = await uniqueHandle(shortAddr(address));
-    await db.createAccount(id, handle, token, Date.now(), hashPassword(randomUUID())); // unguessable sentinel hash blocks password login
-    const { club, standingOrders } = makeClub(id, handle);
-    await db.saveClub(id, club, standingOrders);
-    await db.linkWallet(id, address);
-    acct = { id, handle, rating: 1000, token };
-  }
-  const c = (await db.getClub(acct.id))!;
-  return {
-    token: acct.token,
-    account: { id: acct.id, handle: acct.handle, rating: acct.rating, coins: await db.getCoins(acct.id), wallet: address.toLowerCase() },
-    club: c.club, standingOrders: c.standingOrders,
-  };
-});
-
-// ── PlayerNFT (web3 Step 3) — is the NFT layer live, and at what address/chain.
-app.get('/nft', async () => nftInfo());
-app.get('/lifecycle', async () => lifecycleInfo());
-// Live on-chain state for one lifecycle token (owner / generation / genesSeed + chain metadata).
-app.get('/onchain/:id', { preHandler: requireAuth }, async (req) => {
-  const raw = String((req.params as any).id);
-  const tokenId = raw.startsWith('nft:') ? raw.slice(4) : raw;
-  const info = lifecycleInfo();
-  if (!info.enabled) return { enabled: false };
-  const [owner, lineage] = await Promise.all([ownerOf(tokenId), lineageOf(tokenId)]);
-  const explorer = info.chainId === 84532 && owner ? `https://sepolia.basescan.org/nft/${info.address}/${tokenId}` : null;
-  return { enabled: true, tokenId, chainId: info.chainId, contract: info.address, owner, generation: lineage?.generation ?? null, genesSeed: lineage?.genesSeed ?? null, explorer };
-});
-
-// ── Scout tiers — the caller's live opposition/player scout tiers (from owned Scout NFTs)
-// plus the ScoutNFT contract info for minting.
+// ── Scout tiers — the caller's live opposition/player scout tiers.
 app.get('/scout/tiers', { preHandler: requireAuth }, async (req) => {
   const tiers = await viewerTiers(await db.walletOf(req.account!.id));
   return { ...tiers, nft: scoutNftInfo() };
-});
-
-// ── On-chain token (web3 Step 2) — read-only balance for the linked wallet.
-app.get('/token', async () => ({ ...tokenInfo(), ...(await tokenMeta()) }));
-app.get('/token/balance', { preHandler: requireAuth }, async (req) => {
-  const wallet = await db.walletOf(req.account!.id);
-  const { symbol } = await tokenMeta();
-  if (!wallet) return { wallet: null, balance: null, symbol };
-  try { return { wallet, balance: await tokenBalance(wallet), symbol }; }
-  catch { return { wallet, balance: null, symbol, error: 'rpc unavailable' }; }
-});
-
-app.post('/auth/wallet/link', { preHandler: requireAuth }, async (req, reply) => {
-  const address = String((req.body as any)?.address ?? '');
-  const signature = String((req.body as any)?.signature ?? '');
-  if (!isAddress(address)) return reply.code(400).send({ error: 'bad address' });
-  const already = await db.walletOf(req.account!.id);
-  if (already && already !== address.toLowerCase()) return reply.code(409).send({ error: 'this account already has a linked wallet' });
-  const owner = await db.walletAccount(address);
-  if (owner && owner.id !== req.account!.id) return reply.code(409).send({ error: 'wallet is already linked to another account' });
-  if (!(await verifyAndConsume(address, signature))) return reply.code(401).send({ error: 'signature did not verify' });
-  await db.linkWallet(req.account!.id, address);
-  return { ok: true, wallet: address.toLowerCase() };
 });
 
 app.get('/me', { preHandler: requireAuth }, async (req) => {
@@ -498,16 +413,10 @@ app.post('/players/:id/reborn', { preHandler: requireAuth }, async (req, reply) 
   const t = await db.getToken(id);
   if (!t || t.owner_id !== ownerId) return reply.code(404).send({ error: 'no such token' });
   if (t.state !== 'retired') return reply.code(409).send({ error: 'not retired' });
-  // WEB3 PATH: bump the generation ON-CHAIN first (dev signer), then evolve the off-chain state in place
-  if (lifecycleEnabled() && serverSignerEnabled() && id.startsWith('nft:')) {
-    try { await serverReborn(id.slice(4)); } catch (e: any) { return reply.code(500).send({ error: e?.message ?? 'on-chain reborn failed' }); }
-    await db.updateToken(id, rebornFields(t)); // retired → next-gen prospect (generation matches on-chain)
-  } else {
-    const coins = await db.getCoins(ownerId);
-    if (coins < REBORN_COST) return reply.code(400).send({ error: 'not enough coins', need: REBORN_COST, have: coins });
-    await db.addCoins(ownerId, -REBORN_COST); // breeding fee — PTEST seam (off-chain fallback)
-    await db.updateToken(id, rebornFields(t));
-  }
+  const coins = await db.getCoins(ownerId);
+  if (coins < REBORN_COST) return reply.code(400).send({ error: 'not enough coins', need: REBORN_COST, have: coins });
+  await db.addCoins(ownerId, -REBORN_COST); // breeding fee (off-chain)
+  await db.updateToken(id, rebornFields(t)); // retired → next-gen prospect
   const fresh = (await db.getToken(id))!;
   const pot = rebornPotential(fresh);
   return { ok: true, cost: REBORN_COST, coins: await db.getCoins(ownerId), prospect: { id, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: pot.pedigree, potentialStars: pot.stars, genes: JSON.parse(fresh.genes_json) } };
@@ -515,7 +424,6 @@ app.post('/players/:id/reborn', { preHandler: requireAuth }, async (req, reply) 
 
 // PROSPECTS: the owner's prospect-state tokens — 10-year-olds to DEVELOP in the Career game.
 app.get('/prospects', { preHandler: requireAuth }, async (req) => {
-  await syncOnchainTokens(db, req.account!.id, await db.walletOf(req.account!.id)); // reconcile on-chain first
   const tokens = (await db.tokensOwnedBy(req.account!.id)).filter((t) => t.state === 'prospect');
   return { supply: await db.countTokens(), cap: SUPPLY_CAP, prospects: tokens.map((t) => { const pot = rebornPotential(t); return { id: t.id, name: t.name, roleHint: t.role ?? 'MF', generation: t.generation, pedigree: t.pedigree, careerStarted: t.career_seed != null, potentialStars: pot.stars, genes: JSON.parse(t.genes_json) }; }) };
 });
@@ -524,27 +432,7 @@ app.get('/prospects', { preHandler: requireAuth }, async (req) => {
 // enters the economy. Enforces the fixed SUPPLY_CAP; after that, the fixed set just cycles forever.
 app.post('/genesis', { preHandler: requireAuth }, async (req, reply) => {
   const accountId = req.account!.id;
-  // ── WEB3 PATH: the genesis prospect is an on-chain NFT; game state materializes off-chain by tokenId ──
-  if (lifecycleEnabled()) {
-    let wallet = await db.walletOf(accountId);
-    try {
-      if (serverSignerEnabled()) {
-        // DEV: the server signer mints on-chain. Auto-link the signer's wallet if the account has none.
-        if (!wallet) { const info = lifecycleInfo(); if (info.signerAddress) { await db.linkWallet(accountId, info.signerAddress); wallet = info.signerAddress; } }
-        if (!wallet) return reply.code(400).send({ error: 'link a wallet first' });
-        const minted = await serverMintTo(wallet);
-        await syncOnchainTokens(db, accountId, wallet); // materialize the off-chain prospect
-        const t = (await db.getToken(`nft:${minted.tokenId}`))!;
-        const pot = rebornPotential(t);
-        return { ok: true, onchain: true, tokenId: minted.tokenId, supply: await db.countTokens(), cap: SUPPLY_CAP, prospect: { id: t.id, name: t.name, roleHint: t.role ?? 'MF', generation: t.generation, pedigree: 0, potentialStars: pot.stars, genes: JSON.parse(t.genes_json) } };
-      }
-      // PROD: the client mints with the user's wallet, then calls this to reconcile.
-      if (!wallet) return reply.code(400).send({ error: 'connect a wallet to mint on-chain' });
-      await syncOnchainTokens(db, accountId, wallet);
-      return { ok: true, onchain: true, supply: await db.countTokens(), cap: SUPPLY_CAP, note: 'synced on-chain tokens' };
-    } catch (e: any) { return reply.code(500).send({ error: e?.message ?? 'on-chain mint failed' }); }
-  }
-  // ── OFF-CHAIN FALLBACK (no chain configured): coin-priced off-chain mint ──
+  // ── OFF-CHAIN: coin-priced off-chain mint ──
   const coins = await db.getCoins(accountId);
   if (coins < GENESIS_COST) return reply.code(400).send({ error: 'not enough coins', need: GENESIS_COST, have: coins });
   try {

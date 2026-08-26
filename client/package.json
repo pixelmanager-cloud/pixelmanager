@@ -8,8 +8,7 @@
   },
   "dependencies": {
     "@fm/shared": "*",
-    "phaser": "^3.80.0",
-    "thirdweb": "^5.121.1"
+    "phaser": "^3.80.0"
   },
   "devDependencies": {
     "typescript": "^5.5.0",
