@@ -393,7 +393,7 @@ class Game {
 
   /** A premium collectible card for an NFT star — tier-framed, holographic on the top
    *  tiers. Used both for the mint reveal and for clicking a star to admire it. */
-  private showPlayerCard(p: Player, minted = false) {
+  private showPlayerCard(p: Player, minted = false, graduation?: string) {
     const tier = nftTier(overall(p));
     const tokenId = p.id.startsWith('nft:') ? p.id.slice(4) : '';
     const roleName: Record<string, string> = { GK: 'Keeper', DF: 'Defender', MF: 'Midfielder', FW: 'Forward' };
@@ -443,6 +443,7 @@ class Game {
       + `<div class="pc-crest role-${p.role}"><span class="pc-crest-role">${p.role}</span></div>`
       + `<div class="pc-name">${p.name}</div>`
       + `<div class="pc-role">${roleName[p.role] ?? p.role}</div>`
+      + (graduation ? `<div class="pc-epilogue">🎓 ${graduation}</div>` : '')
       + `<div class="pc-stats">${stats}</div>`
       + this.characterHtml(p)
       + contractHtml
@@ -966,7 +967,7 @@ class Game {
         this.setMe(await api.me());
         if (this.lastNarration) toast(this.lastNarration);
         toast(`🎓 ${r.player.name} graduates as a pro!`);
-        this.showPlayerCard(r.player, true);
+        this.showPlayerCard(r.player, true, r.graduation);
         this.showAcademy();
       } else if (r.state) {
         this.renderCareer(r.state);

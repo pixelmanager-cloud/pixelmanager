@@ -39,7 +39,7 @@ implements it on a branch, and opens a PR for you to review.
 - [ ] **[career] chapter-transition narration.** When a career crosses an age-chapter boundary, produce a
   short paragraph summarising the chapter (how he fared, the season event) — a "life so far" beat. Seeded,
   in `narrate.ts`; surfaced in the career state. Verify.
-- [ ] **[career] graduation narration.** At age 25 graduation, produce an evocative career-summary passage
+- [x] **[career] graduation narration.** At age 25 graduation, produce an evocative career-summary passage
   (his journey, standout traits, what kind of pro he became). Seeded from the career. Verify.
 - [ ] **[career] +3 coaches / +2 mentors.** Add new staff to `COACHES` with fresh specialties/flavour. Verify.
 - [ ] **[career] +2 sports agents.** Add 2 new agents to `AGENTS` (distinct exposure/greed/valueMod

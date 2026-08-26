@@ -4,7 +4,7 @@
 // home for every transition, replacing the old prospects/contracts/lifecycle/achievements split.
 import {
   overall, contractView, signContract, contractLength, legacyCard, legacyBoost, inheritGenes, rollGenes, graduate,
-  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, moraleEffects, narratePlay, scenarioStory, cardName, CARD_DESC,
+  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, moraleEffects, narratePlay, scenarioStory, narrateGraduation, cardName, CARD_DESC, TRAITS,
   type Player, type Track, type PlayerAchievements, type Genes, type CareerPlayerAttrs,
 } from '@fm/shared';
 import type { Token, Store } from './store.js';
@@ -123,6 +123,21 @@ export function graduatedFields(t: Token, c: Career): Partial<Token> {
     state: 'pro', attrs_json: JSON.stringify(grad.attrs), role: grad.role, traits_json: JSON.stringify(grad.traits),
     personality: grad.personality, greed: grad.greed, marketability: grad.marketability, earnings: grad.earnings, peak_overall: grad.overall,
   };
+}
+
+/** An evocative, seeded career-summary passage for the moment a prospect graduates to the pro game at 25. */
+export function graduationNarration(t: Token, c: Career): string {
+  const genes = JSON.parse(t.genes_json);
+  const devBonus = JSON.parse(t.dev_bonus_json ?? '{}');
+  const grad = graduate(c.log, t.career_seed!, genes, undefined, { ...c.finContext(), legacyBonus: devBonus });
+  // earned traits (not the flaw flags) → display names; big-stage moments he actually delivered in
+  const traitNames = grad.traits.map((id) => TRAITS.find((tr) => tr.id === id)?.name).filter(Boolean) as string[];
+  const bigMoments = c.log.filter((ch) => ch.stakes >= 2 && ch.success >= 0.7).length;
+  return narrateGraduation({
+    name: t.name, role: grad.role, overall: grad.overall, attrs: grad.attrs as unknown as Record<string, number>,
+    traitNames, personalityId: grad.personality, bigMoments, seriousInjuries: c.seriousInjuries,
+    seed: ((t.career_seed! >>> 0) ^ 0x6b8b4567) >>> 0, // fixed offset → distinct from per-turn play seeds
+  });
 }
 
 // ── reborn: retired token → a fresh prospect of the NEXT generation (same id), inheriting genes + pedigree ──

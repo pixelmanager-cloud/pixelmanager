@@ -96,6 +96,94 @@ export function scenarioStory(kind: string, topTag: string, moment: string | nul
   return `${setup} ${demand}`;
 }
 
+// ── GRADUATION: an evocative career-summary passage at age 25, when a prospect finishes developing and
+// becomes a pro. Seeded from the finished career so it reads identically on every replay. It covers the
+// JOURNEY (park pitch → professional), the KIND of player he became (role, tier, standout stats), his
+// TEMPERAMENT + earned TRAITS, and a closing note on how he handled the big stage. ──
+export interface GraduationCtx {
+  name: string; role: 'GK' | 'DF' | 'MF' | 'FW'; overall: number;
+  attrs: Record<string, number>; traitNames: string[];
+  personalityId: string; bigMoments: number; seriousInjuries: number; seed: number;
+}
+// the humble beginnings every career shares, then the arrival at the pro game
+const GRAD_ORIGINS = [
+  'It began on the muddy park pitches, a ten-year-old chasing a ball through the puddles.',
+  'Fifteen years ago he was just another kid on the local rec, dreaming out loud.',
+  'From frostbitten Sunday mornings and a scatter of parents on the touchline, the road began.',
+  'Nobody was watching when he started — a boy, a ball, and the long climb ahead of him.',
+  'Once he was the smallest lad in the youth-team huddle, all knees and nerves.',
+];
+const GRAD_ARRIVAL = [
+  'Now, at twenty-five, he steps up a fully-fledged professional.',
+  'And here he is at last — the academy behind him, the first team calling.',
+  'Fifteen seasons on, he graduates a pro, the boyhood dream made real.',
+  'The long apprenticeship is over; the professional game is his to take.',
+  'The kid is gone; a man in his prime walks out to meet the senior game.',
+];
+const GRAD_ROLE: Record<string, string[]> = {
+  GK: ['a goalkeeper', 'the last line of defence', 'a keeper', 'the man between the sticks'],
+  DF: ['a defender', 'a defensive rock', 'a centre-half', 'a stopper who relishes the ugly side'],
+  MF: ['a midfielder', 'an engine-room man', 'a midfield operator', 'a schemer in the middle of it all'],
+  FW: ['a forward', 'a striker', 'an attacker', 'a threat in the final third'],
+};
+const gradTier = (ovr: number): string[] =>
+  ovr >= 17 ? ['a genuine star', 'a top-class talent', 'the real deal']
+  : ovr >= 14 ? ['an accomplished pro', 'a polished operator', 'a proper player']
+  : ovr >= 11 ? ['a dependable pro', 'a solid professional', 'a useful squad man']
+  : ['a rough-and-ready prospect', 'a raw work in progress', 'one still with plenty to prove'];
+// each attribute's headline descriptor — the top two developed stats colour the summary
+const GRAD_STAT: Record<string, string> = {
+  pace: 'genuine pace to burn', strength: 'the strength to bully a back line', stamina: 'lungs that never quit',
+  passing: 'a passing range that picks locks', shooting: 'a finish you can trust', tackling: 'a tackle like a slamming gate',
+  positioning: 'a sharp reading of the game', workrate: 'a tireless engine', keeping: 'safe, certain hands',
+  setPiece: 'a lethal dead ball', composure: 'ice in the veins', aggression: 'a hard competitive edge',
+  creativity: 'the vision to unlock a defence', teamwork: 'a selfless streak', leadership: 'a natural authority',
+};
+const GRAD_TEMPERAMENT: Record<string, string[]> = {
+  pro: ['A model professional to the core', 'Metronomic, dependable, no drama'],
+  biggame: ['Born for the big occasion', 'The bigger the game, the bigger he plays'],
+  fragile: ['Still learning to handle the heat', 'Gifted — but fragile when it boils over'],
+  leader: ['A leader others follow', 'The armband seems to find him'],
+  workhorse: ['A relentless worker', 'First to every loose ball, last to stop running'],
+  mercurial: ['Maddening and magnificent by turns', 'Genius one week, anonymous the next'],
+  maverick: ['Brilliant, stubborn, entirely his own man', 'He was never going to do it the easy way'],
+};
+// join a short list with commas and a trailing "and"
+const listWords = (xs: string[]): string =>
+  xs.length <= 1 ? (xs[0] ?? '') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`;
+
+/** An evocative, seeded career-summary passage for a player graduating to the pro game at 25. */
+export function narrateGraduation(ctx: GraduationCtx): string {
+  const rng = mulberry32(ctx.seed >>> 0);
+  const pick = <T,>(arr: T[]): T => arr[Math.floor(rng() * arr.length)];
+  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
+  const origin = pick(GRAD_ORIGINS);
+  const arrival = pick(GRAD_ARRIVAL);
+  const tier = pick(gradTier(ctx.overall));
+  const role = pick(GRAD_ROLE[ctx.role] ?? GRAD_ROLE.MF);
+  // standout: the two highest developed attributes, if genuinely notable
+  const standout = Object.keys(GRAD_STAT)
+    .map((k) => [k, ctx.attrs[k] ?? 0] as const)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 2)
+    .filter(([, v]) => v >= 12)
+    .map(([k]) => GRAD_STAT[k]);
+  const strengths = standout.length ? ` — ${listWords(standout)}` : '';
+  const kind = `${cap(ctx.name)} leaves the academy ${tier}, ${role}${strengths}.`;
+
+  const temperament = pick(GRAD_TEMPERAMENT[ctx.personalityId] ?? GRAD_TEMPERAMENT.pro) + '.';
+  const traits = ctx.traitNames.length
+    ? ` ${pick(['They will remember him for', 'What sets him apart:', 'His calling card:'])} ${listWords(ctx.traitNames)}.`
+    : '';
+  const closing = ctx.bigMoments >= 6 ? ' He answered on the biggest stages, time and again.'
+    : ctx.bigMoments >= 3 ? ' He showed, more than once, that he could deliver when it mattered.'
+    : ctx.seriousInjuries > 0 ? ' He got here the hard way, battling back from injury to make it at all.'
+    : ' The real proving ground starts now, in the professional game itself.';
+
+  return `${origin} ${arrival} ${kind} ${temperament}${traits}${closing}`;
+}
+
 const band = (success: number) => (success >= 0.8 ? 'triumph' : success >= 0.62 ? 'good' : success >= 0.42 ? 'mixed' : success >= 0.24 ? 'poor' : 'dismal');
 const domTag = (tags: string[]) => tags.find((t) => VERBS[t]) ?? 'teamwork';
 

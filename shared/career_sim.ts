@@ -1,6 +1,7 @@
 // Career-sim harness. Validates: (1) different styles → distinct, specialised players + roles;
 // (2) skill → magnitude; (3) the turn-by-turn engine is deterministic. Run: `npx tsx career_sim.ts`.
-import { Career, simCareer, graduate, ageCurve, careerOverall, prospectValuation, contractCost, contractLength, releaseClause, breederRevenue, legacyBoost, AGENTS, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, STARTER_DECK, cardPower, type Style, type CareerPlayerAttrs, type Role, type Genes, type PlayerAchievements } from './src/career.js';
+import { Career, simCareer, graduate, ageCurve, careerOverall, prospectValuation, contractCost, contractLength, releaseClause, breederRevenue, legacyBoost, AGENTS, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, STARTER_DECK, TRAITS, cardPower, type Style, type CareerPlayerAttrs, type Role, type Genes, type PlayerAchievements } from './src/career.js';
+import { narrateGraduation } from './src/narrate.js';
 
 const STYLES: Style[] = [
   { name: 'Poacher',   pref: { composure: 1, flair: 0.8 },        skill: 0.85 },
@@ -175,6 +176,28 @@ console.log('\n=== a development life (age 10→25, seed arc) ===');
     const aged = ageCurve(p.attrs, age); return `${age}:${careerOverall(aged, p.role)}`;
   }).join('  '));
   console.log(`  pace 25→40: ${p.attrs.pace} → ${ageCurve(p.attrs, 40).pace}   leadership 25→40: ${p.attrs.leadership} → ${ageCurve(p.attrs, 40).leadership}`);
+}
+
+// graduation narration: an evocative, seeded career-summary passage at age 25 (his journey, standout
+// traits, the kind of pro he became). Deterministic from the career.
+console.log('\n=== graduation narration — the age-25 career-summary passage (seeded) ===');
+const gradPassage = (seed: number, style: Style, name: string): string => {
+  const p = simCareer(seed, style);
+  const traitNames = p.traits.map((id) => TRAITS.find((t) => t.id === id)?.name).filter(Boolean) as string[];
+  return narrateGraduation({
+    name, role: p.role, overall: p.overall, attrs: p.attrs as unknown as Record<string, number>,
+    traitNames, personalityId: p.personality, bigMoments: 4, seriousInjuries: 0,
+    seed: (seed ^ 0x6b8b4567) >>> 0,
+  });
+};
+for (const style of STYLES.filter((s) => !s.name.includes('raw')).slice(0, 3)) {
+  console.log(`  • ${style.name}:\n    ${gradPassage(seedFrom('career', style.name), style, style.name + ' Jr')}`);
+}
+{
+  // determinism: the same career → the exact same passage every time
+  const a = gradPassage(seedFrom('grad-det'), STYLES[0], 'Test');
+  const b = gradPassage(seedFrom('grad-det'), STYLES[0], 'Test');
+  console.log('  same career → identical passage:', a === b);
 }
 
 // personality: temperament changes how the SAME big moments play out
