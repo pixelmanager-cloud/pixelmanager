@@ -60,21 +60,21 @@ implements it on a branch, and opens a PR for you to review.
 > The scenario story + card descs are surfaced via `server/src/tokens.ts` `careerState` — if you add
 > new fields, thread them there and render in `client/src/main.ts` `renderCareer`/`cardHtml`.
 
-- [ ] **[story] richer scenario situations.** In `narrate.ts`, expand `KIND_SETUP` (≥6 phrasings per
+- [x] **[story] richer scenario situations.** In `narrate.ts`, expand `KIND_SETUP` (≥6 phrasings per
   kind) and `DEMAND` (rewrite each to be more vivid + add 1–2 alt phrasings per tag, seed-picked). Verify.
-- [ ] **[story] age-aware scenario framing.** Make `scenarioStory` take the age/chapter and weave it in
+- [x] **[story] age-aware scenario framing.** Make `scenarioStory` take the age/chapter and weave it in
   (a 12-year-old on a park pitch reads differently from a 23-year-old in a title run-in). Thread `chapter`
   through `careerState` → `scenarioStory`. Keep seeded + deterministic. Verify.
-- [ ] **[story] season-event colouring in scenarios.** When a `seasonEvent` is active (slump, hot streak,
+- [x] **[story] season-event colouring in scenarios.** When a `seasonEvent` is active (slump, hot streak,
   new gaffer, injury), tint the scenario story to reflect it ("Fighting to win back the new gaffer's
   trust, …"). Pass the event id into `scenarioStory`. Verify.
-- [ ] **[story] named characters.** Introduce a small seeded pool of recurring names (a coach, a rival, a
+- [x] **[story] named characters.** Introduce a small seeded pool of recurring names (a coach, a rival, a
   mentor, a captain) and reference them in scenario stories + narration ("The gaffer, Hargreaves, wanted
   more…"). Deterministic from the career seed so they're consistent across a career. Verify.
-- [ ] **[story] richer play narration by tag.** In `narrate.ts`, give each card TAG its own flavour so the
+- [x] **[story] richer play narration by tag.** In `narrate.ts`, give each card TAG its own flavour so the
   action reads specifically (a `flair` card narrates differently from a `keeping` card beyond the verb).
   Expand `VERBS` (≥6 per tag) + add per-tag result colour. Verify.
-- [ ] **[story] milestone beats.** Add special narration for milestone moments — first goal, first big
+- [x] **[story] milestone beats.** Add special narration for milestone moments — first goal, first big
   win, a debut, delivering in a cup final — detected from the log/stakes. Seeded. Verify.
 - [ ] **[story] chapter-recap screen.** At each age-chapter boundary, show a short "the story so far"
   recap (2–3 sentences on how the chapter went + what's next) before the next chapter's first scenario.
@@ -82,7 +82,7 @@ implements it on a branch, and opens a PR for you to review.
 - [ ] **[story] graduation epilogue.** At 25, before the pro reveal, show an evocative epilogue passage
   summarising the whole journey (where he started, standout traits, the kind of player he became). Seeded
   from the career. Verify.
-- [ ] **[story] personality voice.** Let the player's temperament colour the narration voice throughout
+- [x] **[story] personality voice.** Let the player's temperament colour the narration voice throughout
   (a Maverick's beats read cocky, a Fragile one's anxious). Expand the `PERSONALITY` flavour usage in
   `narratePlay` beyond the current single clause. Verify.
 - [ ] **[story] rare life-event scenarios.** Add a few rare, high-flavour non-match scenarios (a contract
