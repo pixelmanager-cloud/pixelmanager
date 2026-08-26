@@ -15,9 +15,11 @@ or newly imagined beyond the brief. Ranked safe/small/high-value first.
   change (same reskin pattern), so fully safe. **Done:** added `media`/`loyalty`/`role`/`fallout` to
   `LIFE_KINDS`/`LIFE_LABEL` in tokens.ts and matching `KIND_SETUP` entries in narrate.ts (7 kinds now,
   same 22% low-stakes-social-at-16+ gate, still fully presentational).
-- [ ] 2. **More DEMAND lines per tag in narrate.ts.** (S) Currently exactly 3 lines per tag (8 tags =
+- [x] 2. **More DEMAND lines per tag in narrate.ts.** (S) Currently exactly 3 lines per tag (8 tags =
   24 lines). Double to 6 each so the "what the moment asks" line repeats far less over a 112-turn
-  career. Pure content addition, no determinism risk.
+  career. Pure content addition, no determinism risk. **Done:** doubled every tag's `DEMAND` array
+  from 3 to 6 lines (48 total), same setting-neutral tone; `npm run verify` and `career_sim` both
+  green (diversity closest-pair distance 9, determinism identical: true).
 - [ ] 3. **More KIND_SETUP situations.** (S) `match`/`training`/`social` currently have 6-7 each. Add
   3-4 more per kind for less repetition across a long career.
 - [ ] 4. **More chapter-recap openers.** (S) `chapterRecap` only has 2 openers per chapter (14 total).

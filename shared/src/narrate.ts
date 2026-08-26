@@ -137,14 +137,14 @@ const KIND_SETUP: Record<string, string[]> = {
 // situation is a training drill, a dressing-room moment or a cup tie (a drill is not
 // "the kind of moment careers are remembered for" — that mismatch kills the immersion).
 const DEMAND: Record<string, string[]> = {
-  aggression: ['They want to see some steel from him.', 'It’s about winning the physical battle.', 'He needs to show he won’t be pushed around.'],
-  creativity: ['They’re looking for a spark of invention.', 'It wants imagination — something unexpected.', 'He needs a solution no one else can see.'],
-  composure: ['It asks for a cool head under pressure.', 'The test is whether he can keep calm.', 'He needs to slow it down and stay in control.'],
-  teamwork: ['It’s about bringing others into the play.', 'They want to see him link it and share it.', 'It’s a test of how he lifts the players around him.'],
-  leadership: ['They want him to take charge of this.', 'It’s a chance to show he can lead.', 'He needs to grab it and drag the rest with him.'],
-  stamina: ['It’s a test of his engine.', 'It comes down to who keeps going longest.', 'They want to see him cover every blade of grass.'],
-  flair: ['It’s a chance to show his imagination.', 'It’s the moment to try something bold.', 'They want to see a bit of magic from him.'],
-  keeping: ['It’s down to him to keep them out.', 'It’s a test of his hands and his nerve.', 'They need him to be the wall behind them.'],
+  aggression: ['They want to see some steel from him.', 'It’s about winning the physical battle.', 'He needs to show he won’t be pushed around.', 'It calls for a bit of nastiness, in the right way.', 'This is a moment to plant a flag and not budge.', 'They need to see he can dish it out as well as take it.'],
+  creativity: ['They’re looking for a spark of invention.', 'It wants imagination — something unexpected.', 'He needs a solution no one else can see.', 'It calls for a moment nobody saw coming.', 'The situation is crying out for a flash of ingenuity.', 'They want proof he can think a half-step ahead of everyone else.'],
+  composure: ['It asks for a cool head under pressure.', 'The test is whether he can keep calm.', 'He needs to slow it down and stay in control.', 'It’s about not letting the moment get too big for him.', 'They want to see the pulse stay steady when it matters.', 'The test is simple: can he trust himself under the heat?'],
+  teamwork: ['It’s about bringing others into the play.', 'They want to see him link it and share it.', 'It’s a test of how he lifts the players around him.', 'It calls for the unselfish option, not the flashy one.', 'They want to see him make someone else look good.', 'The moment rewards trust — giving it up and getting it back.'],
+  leadership: ['They want him to take charge of this.', 'It’s a chance to show he can lead.', 'He needs to grab it and drag the rest with him.', 'It calls for someone to stand up and be counted.', 'They need a voice, and it might as well be his.', 'This is the kind of moment that either makes a captain or exposes one.'],
+  stamina: ['It’s a test of his engine.', 'It comes down to who keeps going longest.', 'They want to see him cover every blade of grass.', 'It’s about the effort nobody notices until it’s missing.', 'The legs are tired — the question is whether his are, too.', 'They want to see if there’s anything left in the tank.'],
+  flair: ['It’s a chance to show his imagination.', 'It’s the moment to try something bold.', 'They want to see a bit of magic from him.', 'It calls for something the coaching manual doesn’t cover.', 'This is the moment to back himself and go for broke.', 'They want to see him make it look easy when it isn’t.'],
+  keeping: ['It’s down to him to keep them out.', 'It’s a test of his hands and his nerve.', 'They need him to be the wall behind them.', 'It calls for a shot-stopper’s stubbornness.', 'The moment needs a clean take and no fuss.', 'They want to see him command the space that’s his.'],
 };
 const pickFrom = <T,>(rng: () => number, arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
 
