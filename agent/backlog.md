@@ -29,7 +29,7 @@ implements it on a branch, and opens a PR for you to review.
   single-tag and dual-tag, with 1–2 rare/epic signature cards. Cover under-served tags; give each an
   evocative name (e.g. "Trivela", "Recovery Sprint", "Backs-to-the-Wall", "Nutmeg"). Do NOT add them to
   the STARTER lists (they enter via the draft pool automatically). Verify green + career_sim checks hold.
-- [ ] **[career] +4 goalkeeper cards.** Add 4 new cards to `GK_DECK` (keeping-flavoured, 1 rare). Verify.
+- [x] **[career] +4 goalkeeper cards.** Add 4 new cards to `GK_DECK` (keeping-flavoured, 1 rare). Verify.
 - [x] **[career] richer PLAY narration.** In `shared/src/narrate.ts`, add ≥6 fresh phrasings to EACH of
   `RESULTS.triumph/good/mixed/poor/dismal` and `REACTIONS.*`, and ≥3 new `SETTINGS` per chapter + more
   `BIG_SETTINGS`/`HUGE_SETTINGS`. Keep the seeded-pick structure; no repetition of existing lines. Verify.
@@ -41,16 +41,16 @@ implements it on a branch, and opens a PR for you to review.
   in `narrate.ts`; surfaced in the career state. Verify.
 - [x] **[career] graduation narration.** At age 25 graduation, produce an evocative career-summary passage
   (his journey, standout traits, what kind of pro he became). Seeded from the career. Verify.
-- [ ] **[career] +3 coaches / +2 mentors.** Add new staff to `COACHES` with fresh specialties/flavour. Verify.
-- [ ] **[career] +2 sports agents.** Add 2 new agents to `AGENTS` (distinct exposure/greed/valueMod
+- [x] **[career] +3 coaches / +2 mentors.** Add new staff to `COACHES` with fresh specialties/flavour. Verify.
+- [x] **[career] +2 sports agents.** Add 2 new agents to `AGENTS` (distinct exposure/greed/valueMod
   trade-offs — e.g. a "Streetwise Fixer", a "Boutique Agency"). Verify.
-- [ ] **[career] +3 earned traits.** Add 3 new traits to `TRAITS` (clear eligibility from stats/log; small
+- [x] **[career] +3 earned traits.** Add 3 new traits to `TRAITS` (clear eligibility from stats/log; small
   or no stat nudge). Verify + confirm trait distribution stays sane in career_sim.
-- [ ] **[career] +2 personalities.** Add 2 new temperaments to `PERSONALITIES` (e.g. "Late Bloomer",
+- [x] **[career] +2 personalities.** Add 2 new temperaments to `PERSONALITIES` (e.g. "Late Bloomer",
   "Hot-Head") with variance/bigGame/resilience + optional signature stat. Verify + personality-spread check.
-- [ ] **[career] more big/huge moments.** Add more entries to `BIG_MOMENTS`/`HUGE_MOMENTS` scenario labels
+- [x] **[career] more big/huge moments.** Add more entries to `BIG_MOMENTS`/`HUGE_MOMENTS` scenario labels
   (evocative one-liners like "Relegation Six-Pointer", "Trophy on the Line"). Verify.
-- [ ] **[career] more season events.** Add 2–3 new between-chapter `seasonEvent`s in `advanceSeasonEvent`
+- [x] **[career] more season events.** Add 2–3 new between-chapter `seasonEvent`s in `advanceSeasonEvent`
   (each with a bounded, deterministic mechanical effect + flavour text). Keep effects small; verify.
 
 > **CAREER STORY-MODE DEPTH.** Story mode (shared/src/narrate.ts `scenarioStory` + play narration, and

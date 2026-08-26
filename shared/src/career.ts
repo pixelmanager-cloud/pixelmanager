@@ -167,6 +167,11 @@ export const COACHES: Coach[] = [
   { id: 'playmaker',  name: 'Playmaker Mentor',   kind: 'mentor', desc: 'A legendary no.10 shows you how to see it',   specialty: ['creativity', 'teamwork'], bonus: 0.12 },
   { id: 'warrior',    name: 'Warrior Mentor',     kind: 'mentor', desc: 'An old-school hard man teaches you to bite',  specialty: ['aggression', 'stamina'], bonus: 0.12 },
   { id: 'gk-coach',   name: 'Goalkeeping Coach',  kind: 'coach',  desc: 'Shot-stopping, handling, commanding the box', specialty: ['keeping'], bonus: 0.14 },
+  { id: 'leadership', name: 'Leadership Coach',   kind: 'coach',  desc: 'Turns quiet lads into captains',              specialty: ['leadership'], bonus: 0.14 },
+  { id: 'pressing',   name: 'Pressing Coach',     kind: 'coach',  desc: 'Choreographs the collective press',           specialty: ['stamina', 'aggression'], bonus: 0.12 },
+  { id: 'creative',   name: 'Creativity Coach',   kind: 'coach',  desc: 'Frees the imagination in tight spaces',       specialty: ['creativity', 'composure'], bonus: 0.12 },
+  { id: 'talisman-m', name: 'Talisman Mentor',    kind: 'mentor', desc: 'A born matchwinner teaches you to seize it',  specialty: ['flair', 'leadership'], bonus: 0.12 },
+  { id: 'general-m',  name: 'The General',        kind: 'mentor', desc: 'A commanding centre-half drills your reading of the game', specialty: ['aggression', 'composure', 'teamwork'], bonus: 0.11 },
 ];
 export const COACH_OFFER = 3; // choices shown at each appointment
 
@@ -180,10 +185,12 @@ export const AGENTS: Agent[] = [
   { id: 'loyal',     name: 'Loyal Agent',      desc: 'Keeps you grounded, settled and well-liked',   exposure: 1.0,  draftLuck: 1.0,  greed: -3, valueMod: 1.0 },
   { id: 'super',     name: 'Super-Agent',      desc: 'Elite connections and elite fees — for a cut', exposure: 1.6,  draftLuck: 1.35, greed: 6,  valueMod: 1.25 },
   { id: 'family',    name: 'Family Advisor',   desc: 'A trusted relative — in it for you, not money', exposure: 0.95, draftLuck: 1.0,  greed: -5, valueMod: 0.95 },
+  { id: 'showman',   name: 'The Showman',      desc: 'Markets you relentlessly — fame over fees',     exposure: 1.5,  draftLuck: 1.1,  greed: 2,  valueMod: 1.2 },
+  { id: 'grafter',   name: 'The Grafter’s Agent', desc: 'Old-school; picks clubs where you’ll play', exposure: 1.05, draftLuck: 1.15, greed: -2, valueMod: 1.0 },
 ];
 export const agentById = (id?: string) => AGENTS.find((a) => a.id === id) ?? null;
 /** how each temperament tilts greed (nature) — layered on the agent's influence */
-const PERSONALITY_GREED: Record<string, number> = { maverick: 3, mercurial: 2, biggame: 1, fragile: 0, workhorse: -1, pro: -2, leader: -2 };
+const PERSONALITY_GREED: Record<string, number> = { maverick: 3, mercurial: 2, biggame: 1, fragile: 0, workhorse: -1, pro: -2, leader: -2, latebloom: -1, showman: 3 };
 
 // Manager-side contract economics (contractCost / contractLength / releaseClause / Contract …) live in
 // contracts.ts so the Manager game gets them via the barrel without the Layer-1 sim. Re-exported here
@@ -224,8 +231,8 @@ const KIND_BIAS: Record<Scenario['kind'], Tag[]> = {
 const KIND_POOL: Scenario['kind'][] = ['match', 'match', 'match', 'social', 'training'];
 // goalkeeper moments demand keeping heavily, plus the calm/commanding traits that suit a keeper
 const GK_BIAS: Tag[] = ['keeping', 'keeping', 'keeping', 'composure', 'leadership', 'creativity'];
-const BIG_MOMENTS = ['Derby Day', 'Cup Quarter-Final', 'Relegation Six-Pointer', 'Live on TV'];
-const HUGE_MOMENTS = ['CUP FINAL', 'Title Decider', 'Promotion Play-Off Final'];
+const BIG_MOMENTS = ['Derby Day', 'Cup Quarter-Final', 'Relegation Six-Pointer', 'Live on TV', 'Top-of-the-Table Clash', 'The Return to a Former Club', 'A Scout-Packed Showcase', 'Local Bragging Rights'];
+const HUGE_MOMENTS = ['CUP FINAL', 'Title Decider', 'Promotion Play-Off Final', 'The Last Day of the Season', 'A Cup Semi Under the Lights', 'The Biggest Game in the Club’s History'];
 
 /** A seeded scenario. Tag demand comes from the current AGE BAND (age-appropriate); stakes are gated
  *  by the band (no cup finals at grassroots). `demandBias` (a gaffer's demand) leans the demand. */
@@ -350,7 +357,7 @@ export class Career {
    *  buyer resumes development from precisely where the seller left off. */
   static resume(snap: CareerSnapshot): Career {
     const c = new Career(snap.seed, snap.track, snap.agentId);
-    for (const a of snap.actions) { if (a.type === 'draft') c.draft(a.cardId); else if (a.type === 'coach') c.appointCoach(a.cardId); else if (a.type === 'offer') c.resolveOffer(a.cardId); else c.play(a.cardId); }
+    for (const a of snap.actions) { if (a.type === 'draft') c.draft(a.cardId, true); else if (a.type === 'coach') c.appointCoach(a.cardId, true); else if (a.type === 'offer') c.resolveOffer(a.cardId); else c.play(a.cardId, true); }
     return c;
   }
 
@@ -377,10 +384,13 @@ export class Career {
   }
 
   /** APPOINT a mentor/coach for the coming chapter; then proceed to the card draft. */
-  appointCoach(coachId: string) {
+  appointCoach(coachId: string, tolerant = false) {
     if (!this.pendingCoaches) throw new Error('no coach appointment pending');
-    const coach = this.pendingCoaches.find((c) => c.id === coachId);
-    if (!coach) throw new Error('coach not on offer');
+    let coach = this.pendingCoaches.find((c) => c.id === coachId);
+    if (!coach) {
+      if (!tolerant) throw new Error('coach not on offer');
+      coach = COACHES.find((c) => c.id === coachId) ?? this.pendingCoaches[0]; // replay: honour intent, else take the first
+    }
     this.coach = coach;
     this.actions.push({ type: 'coach', cardId: coachId });
     this.pendingCoaches = null;
@@ -388,10 +398,13 @@ export class Career {
   }
 
   /** DRAFT: add one of the offered cards to your deck (identity-building). */
-  draft(cardId: string) {
+  draft(cardId: string, tolerant = false) {
     if (!this.pendingDraft) throw new Error('no draft pending');
-    const i = this.pendingDraft.options.findIndex((c) => c.id === cardId);
-    if (i < 0) throw new Error('card not on offer');
+    let i = this.pendingDraft.options.findIndex((c) => c.id === cardId);
+    if (i < 0) {
+      if (!tolerant || this.pendingDraft.options.length === 0) throw new Error('card not on offer');
+      i = 0; // replay: the intended card isn't on this (drifted) offer — take the first available
+    }
     const card = this.pendingDraft.options.splice(i, 1)[0];
     this.actions.push({ type: 'draft', cardId });
     this.deck.push(card);
@@ -399,14 +412,19 @@ export class Career {
     if (--this.pendingDraft.picksLeft <= 0) { this.pendingDraft = null; this.startNextChapter(); }
   }
 
-  /** Play a card from the current hand; resolves, logs, advances (into a draft at a season break). */
-  play(cardId: string): Choice {
+  /** Play a card from the current hand; resolves, logs, advances (into a draft at a season break).
+   *  `tolerant` (replay only): if content drift moved the stored card out of the hand, fall back to the
+   *  best-fit card so an old career never bricks — live play keeps validating. */
+  play(cardId: string, tolerant = false): Choice {
     if (this.finished) throw new Error('career finished');
     if (this.pendingOffer) throw new Error('resolve the financial offer first');
     if (this.pendingCoaches) throw new Error('appoint a coach first');
     if (this.pendingDraft) throw new Error('resolve the draft first');
-    const idx = this.hand.findIndex((c) => c.id === cardId);
-    if (idx < 0) throw new Error('card not in hand');
+    let idx = this.hand.findIndex((c) => c.id === cardId);
+    if (idx < 0) {
+      if (!tolerant || this.hand.length === 0) throw new Error('card not in hand');
+      idx = this.hand.reduce((best, c, i, arr) => (fit(c, this.scenario) > fit(arr[best], this.scenario) ? i : best), 0);
+    }
     this.actions.push({ type: 'play', cardId });
     const bestFit = Math.max(...this.hand.map((c) => fit(c, this.scenario))); // best you COULD have played this turn
     const card = this.hand.splice(idx, 1)[0];
@@ -442,10 +460,13 @@ export class Career {
     if (this.rng() < 0.06) { this.formBonus = -0.2; this.seriousInjuries++; this.seasonEvent = { id: 'serious-injury', name: 'Serious Injury', desc: 'Months on the sidelines — a setback that will linger.' }; return; }
     const r = this.rng();
     if (playedWell && r < 0.25) { this.extraPicks += 1; this.seasonEvent = { id: 'breakthrough', name: 'Breakthrough Season', desc: 'A breakout campaign earns you extra coaching time — an extra draft pick.' }; }
-    else if (r < 0.45) { const pool = this.track === 'goalkeeper' ? (['keeping', 'composure', 'leadership'] as Tag[]) : OUTFIELD_TAGS; this.demandBias = pool[Math.floor(this.rng() * pool.length)]; this.seasonEvent = { id: 'new-gaffer', name: 'New Manager', desc: `The new gaffer wants more ${this.demandBias} out of you.` }; }
-    else if (r < 0.62) { this.formBonus = 0.12; this.seasonEvent = { id: 'hot-streak', name: 'Purple Patch', desc: "You're in the form of your life — everything comes off." }; }
-    else if (r < 0.79) { this.formBonus = -0.12; this.seasonEvent = { id: 'slump', name: 'Loss of Form', desc: 'A dip in confidence to battle through.' }; }
-    else if (r < 0.9) { this.formBonus = -0.06; this.seasonEvent = { id: 'knock', name: 'Niggling Injury', desc: 'A knock to manage — not quite at your sharpest.' }; }
+    else if (r < 0.40) { const pool = this.track === 'goalkeeper' ? (['keeping', 'composure', 'leadership'] as Tag[]) : OUTFIELD_TAGS; this.demandBias = pool[Math.floor(this.rng() * pool.length)]; this.seasonEvent = { id: 'new-gaffer', name: 'New Manager', desc: `The new gaffer wants more ${this.demandBias} out of you.` }; }
+    else if (r < 0.52) { this.formBonus = 0.12; this.seasonEvent = { id: 'hot-streak', name: 'Purple Patch', desc: "You're in the form of your life — everything comes off." }; }
+    else if (r < 0.60) { this.formBonus = 0.08; this.seasonEvent = { id: 'cup-run', name: 'Cup Run', desc: 'A thrilling cup run has the whole club buzzing — he’s riding the wave.' }; }
+    else if (r < 0.72) { this.formBonus = -0.12; this.seasonEvent = { id: 'slump', name: 'Loss of Form', desc: 'A dip in confidence to battle through.' }; }
+    else if (r < 0.80) { this.formBonus = -0.05; this.seasonEvent = { id: 'transfer-links', name: 'Transfer Speculation', desc: 'His name is in the papers — a distraction he could do without.' }; }
+    else if (r < 0.88) { this.formBonus = -0.06; this.seasonEvent = { id: 'knock', name: 'Niggling Injury', desc: 'A knock to manage — not quite at your sharpest.' }; }
+    else if (r < 0.94) { this.formBonus = 0.06; this.seasonEvent = { id: 'fan-favourite', name: 'Fan Favourite', desc: 'The supporters have taken to him — he feeds off their energy.' }; }
     else { this.seasonEvent = { id: 'steady', name: 'Steady Progress', desc: 'A solid, unremarkable season of graft.' }; }
   }
 
@@ -512,8 +533,10 @@ export const PERSONALITIES: Personality[] = [
   { id: 'workhorse', name: 'Workhorse',          desc: 'Never stops, never hides',               variance: 0.85, bigGame: 0.02, resilience: 0.4, signature: 'stamina' },
   { id: 'mercurial', name: 'Mercurial',          desc: 'Genius one week, anonymous the next',    variance: 1.45, bigGame: 0.05, resilience: 1.1 },
   { id: 'maverick',  name: 'Maverick',           desc: 'Brilliant, infuriating, his own man',    variance: 1.5,  bigGame: 0.08, resilience: 1.1, signature: 'creativity' },
+  { id: 'latebloom', name: 'Late Bloomer',       desc: 'Slow to start, but never stops improving', variance: 1.0, bigGame: 0.03, resilience: 0.9, signature: 'stamina' },
+  { id: 'showman',   name: 'Showman',            desc: 'Plays for the crowd — thrilling, maddening', variance: 1.35, bigGame: 0.10, resilience: 1.0, signature: 'creativity' },
 ];
-const PERSONALITY_WEIGHTS = [5, 2, 2, 2, 3, 2, 1]; // Model Pro most common; Maverick rarest
+const PERSONALITY_WEIGHTS = [5, 2, 2, 2, 3, 2, 1, 2, 1]; // Model Pro most common; Maverick/Showman rarest
 export function rollPersonality(seed: number): Personality {
   const rng = mulberry32(seed ^ 0x9e37b1);
   const bag = PERSONALITIES.flatMap((p, i) => Array(PERSONALITY_WEIGHTS[i]).fill(p) as Personality[]);
@@ -685,6 +708,9 @@ export const TRAITS: Trait[] = [
   { id: 'deadball',  name: 'Dead-Ball Specialist', desc: 'Lethal from set pieces',           eligible: (a) => a.setPiece >= 15, apply: (a) => { a.setPiece = clamp(a.setPiece + 1, 1, 20); } },
   { id: 'wall',      name: 'The Wall',             desc: 'Unbeatable between the sticks',     eligible: (a) => a.keeping >= 16 },
   { id: 'biggame',   name: 'Big-Game Player',      desc: 'Turns up when it matters most',    eligible: (_a, log) => log.filter((c) => c.stakes >= 2 && c.success >= 0.75).length >= 5 },
+  { id: 'engine',    name: 'Box-to-Box Engine',    desc: 'Covers every blade of grass',      eligible: (a) => a.stamina >= 14 && a.teamwork >= 14, apply: (a) => { a.stamina = clamp(a.stamina + 1, 1, 20); } },
+  { id: 'rock',      name: 'Defensive Rock',       desc: 'Immovable at the back',            eligible: (a) => a.tackling >= 14 && a.strength >= 14, apply: (a) => { a.strength = clamp(a.strength + 1, 1, 20); } },
+  { id: 'spark',     name: 'The Spark',            desc: 'Makes something from nothing',     eligible: (a) => a.creativity >= 14 && a.pace >= 14 },
 ];
 
 /** Which traits a finished career qualifies for (before the player locks any in). */

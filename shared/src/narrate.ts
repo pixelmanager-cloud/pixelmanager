@@ -89,6 +89,8 @@ const PERSONALITY: Record<string, string> = {
   workhorse: 'No one on that pitch worked harder.',
   mercurial: "You never quite know which version you'll get.",
   pro: 'Consummate, as ever.',
+  latebloom: 'Better every single week, this lad.',
+  showman: 'He plays with a grin and one eye on the crowd.',
 };
 // personality-flavoured verbs woven in occasionally so the temperament is felt, not just stated
 const PERSONALITY_ADV: Record<string, string[]> = {
@@ -99,6 +101,8 @@ const PERSONALITY_ADV: Record<string, string[]> = {
   workhorse: ['lungs burning,', 'without a word,', 'for the fifth time that half,'],
   mercurial: ['on a whim,', 'inscrutable as ever,', 'in one of his moods,'],
   pro: ['methodically,', 'as drilled,', 'ice in his veins,'],
+  latebloom: ['growing into it,', 'sharper than last month,', 'still learning,'],
+  showman: ['playing to the gallery,', 'with a flourish,', 'grinning,'],
 };
 // season-event prefixes (weave the chapter's story into the beat)
 const EVENT_PREFIX: Record<string, string> = {
@@ -108,6 +112,9 @@ const EVENT_PREFIX: Record<string, string> = {
   'new-gaffer': 'Desperate to catch the new gaffer’s eye, ',
   knock: 'Carrying a knock he wouldn’t admit to, ',
   breakthrough: 'Riding the wave of a breakout season, ',
+  'cup-run': 'Buzzing off a thrilling cup run, ',
+  'transfer-links': 'Trying to tune out the transfer talk, ',
+  'fan-favourite': 'Roared on by supporters who adore him, ',
 };
 
 // ── SCENARIO STORY: describe the SITUATION the player faces this turn (before he chooses) ──
@@ -272,6 +279,8 @@ export function graduationEpilogue(ctx: EpilogueCtx): string {
     workhorse: 'Nobody outworked him. Nobody ever will.',
     mercurial: 'Brilliant one week, baffling the next — but never boring.',
     pro: 'Professional to his boots, from the very first session.',
+    latebloom: 'He was never the best kid in the room — until, quietly, he was.',
+    showman: 'He always played with a grin, and the crowd always grinned back.',
   };
   const pers = ctx.personalityId && persLine[ctx.personalityId] ? ' ' + persLine[ctx.personalityId] : '';
   const start = pickFrom(rng, ['It started on a park pitch with jumpers for goalposts.', 'Fifteen years ago he was the smallest kid on a muddy rec.', 'From a scatter of parents on a touchline to this.']);

@@ -79,15 +79,17 @@ export function tokenContract(t: Token, season: number): TokenContract {
 
 // ── career (prospect state) — the breeder card game ──
 export type CareerAction = { type: 'play' | 'draft' | 'coach' | 'offer'; cardId: string };
-export function applyAction(c: Career, a: CareerAction) {
-  if (a.type === 'draft') c.draft(a.cardId);
-  else if (a.type === 'coach') c.appointCoach(a.cardId);
+export function applyAction(c: Career, a: CareerAction, tolerant = false) {
+  if (a.type === 'draft') c.draft(a.cardId, tolerant);
+  else if (a.type === 'coach') c.appointCoach(a.cardId, tolerant);
   else if (a.type === 'offer') c.resolveOffer(a.cardId);
-  else c.play(a.cardId);
+  else c.play(a.cardId, tolerant);
 }
 export function loadCareer(t: Token): Career {
   const c = new Career(t.career_seed!, (t.track as Track) ?? 'outfield', t.agent_id ?? undefined);
-  for (const a of JSON.parse(t.career_actions ?? '[]') as CareerAction[]) applyAction(c, a);
+  // REPLAY is tolerant: content added since a career started can't brick it (a drifted card/coach
+  // degrades to a best-fit fallback instead of throwing).
+  for (const a of JSON.parse(t.career_actions ?? '[]') as CareerAction[]) applyAction(c, a, true);
   return c;
 }
 /** Milestone this beat represents, detected from career state BEFORE the play is applied. */
