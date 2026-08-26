@@ -128,34 +128,10 @@ export const agentById = (id?: string) => AGENTS.find((a) => a.id === id) ?? nul
 /** how each temperament tilts greed (nature) — layered on the agent's influence */
 const PERSONALITY_GREED: Record<string, number> = { maverick: 3, mercurial: 2, biggame: 1, fragile: 0, workhorse: -1, pro: -2, leader: -2 };
 
-/** Wage (in coins) to EXTEND a player's contract in the Manager game: better + greedier players cost
- *  more; veterans get cheaper as they decline. This is the sink that makes greed matter. */
-export function contractCost(overall: number, age: number, greed: number): number {
-  const ageFactor = age <= 30 ? 1 : clamp(1 - (age - 30) * 0.06, 0.4, 1); // veterans are cheaper to keep
-  const greedFactor = 0.6 + 0.08 * greed;                                 // greed 10 → 1.4x, 20 → 2.2x, 1 → 0.68x
-  return Math.round(overall * overall * 1.2 * ageFactor * greedFactor);
-}
-
-/** How many SEASONS a player will commit to per signing: a loyal one-club man signs long deals, a
- *  mercenary wants short ones (renew often, expensive each time) — so greed drives renewal cadence. */
-export function contractLength(greed: number, personality?: string): number {
-  const nudge = personality === 'leader' || personality === 'workhorse' ? 0.7
-    : personality === 'maverick' || personality === 'mercurial' ? -0.7 : 0;
-  return clamp(Math.round(5 - greed * 0.18 + nudge), 2, 5); // greed 3 → ~5 seasons, greed 19 → 2 (min 2, so renewals never every season)
-}
-
-/** Buy-out / asking price (coins) to SELL the NFT instead of extending: ability drives it, with fame
- *  and greed inflating it. The other side of the "extend or sell" decision the owner faces. */
-export function releaseClause(overall: number, marketability = 10, greed = 10): number {
-  return Math.round(overall * overall * 3 * (1 + (marketability - 10) * 0.03) * (1 + (greed - 10) * 0.02));
-}
-
-/** Contract state in the Manager game. The NFT is ALWAYS owned; this only gates SELECTION. When a
- *  contract lapses the player stays in the wallet as an asset but can't be picked until re-signed. */
-export interface Contract { signedSeason: number; lengthSeasons: number }
-export const contractExpirySeason = (c: Contract) => c.signedSeason + c.lengthSeasons;
-/** Is the player selectable this season? (false once the contract has lapsed → extend or sell.) */
-export const contractActive = (c: Contract, currentSeason: number) => currentSeason < contractExpirySeason(c);
+// Manager-side contract economics (contractCost / contractLength / releaseClause / Contract …) live in
+// contracts.ts so the Manager game gets them via the barrel without the Layer-1 sim. Re-exported here
+// for the career harness's convenience.
+export { contractCost, contractLength, releaseClause, contractExpirySeason, contractActive, contractView, signContract, type Contract, type PlayerContractView } from './contracts.js';
 
 // ── FINANCIAL DECISIONS: at most age-chapter breaks (from the Academy on) an OFFER lands on the table.
 // This is the money layer of a player's life — and it MUST trade against the pitch. Chase the money and

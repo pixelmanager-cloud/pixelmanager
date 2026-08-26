@@ -5,3 +5,4 @@ export * from './tactics.js';
 export * from './duties.js';
 export * from './teams.js';
 export * from './engine.js';
+export * from './contracts.js';
