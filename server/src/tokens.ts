@@ -39,6 +39,17 @@ export function tokenAch(t: Token): PlayerAchievements {
   return { seasons: t.ach_seasons, apps: t.ach_apps, leagueTitles: t.ach_league, cupTitles: t.ach_cup, promotions: t.ach_promotions, highestTierIdx: t.ach_tier };
 }
 
+/** Bank a match's individual output onto an NFT token (career goals/assists/POTM — permanent, tradable). */
+export async function bumpTokenStats(db: Store, tokenId: string, d: { goals?: number; assists?: number; potm?: number }): Promise<void> {
+  const t = await db.getToken(tokenId);
+  if (!t) return;
+  await db.updateToken(tokenId, {
+    ach_goals: t.ach_goals + (d.goals ?? 0),
+    ach_assists: t.ach_assists + (d.assists ?? 0),
+    ach_potm: t.ach_potm + (d.potm ?? 0),
+  });
+}
+
 // ── genesis: mint a fresh 10yo prospect (fresh genes, no pedigree). Enforces the fixed supply cap. ──
 export async function mintGenesis(db: Store, ownerId: string): Promise<Token> {
   if ((await db.countTokens()) >= SUPPLY_CAP) throw new Error('supply cap reached');
@@ -141,6 +152,7 @@ export function rebornFields(t: Token): Partial<Token> {
     attrs_json: null, traits_json: null, personality: null, greed: null, marketability: null, earnings: null,
     prime_season: null, peak_overall: 0, signed_season: null, length_seasons: null, staked_since: null,
     ach_seasons: 0, ach_apps: 0, ach_league: 0, ach_cup: 0, ach_promotions: 0, ach_tier: 0,
+    ach_goals: 0, ach_assists: 0, ach_potm: 0,
   };
 }
 /** Token ids that CANNOT be selected this season (lapsed contract or retired) — benched like injuries. */

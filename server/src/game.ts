@@ -1,7 +1,7 @@
 // Server-side game logic — reuses the SAME deterministic engine as the client.
 import {
   generateClub, autoPickXI, buildXI, MatchEngine, TACTIC_PRESETS, defaultDuty, isDutyForRole,
-  type Club, type Duty, type Lineup, type Tactics, type Team, type Formation,
+  type Club, type Duty, type Lineup, type Tactics, type Team, type Formation, type MatchEvent,
 } from '@fm/shared';
 import type { StandingOrders } from './db.js';
 
@@ -52,7 +52,7 @@ export function runMatch(
   awayClub: Club, awayLineup: Lineup, awayTactics: Tactics,
   conditioning?: { home?: number; away?: number },
   homeBoost?: number,
-): { seed: number; homeTeam: Team; awayTeam: Team; result: [number, number]; homeFitness: number[]; awayFitness: number[] } {
+): { seed: number; homeTeam: Team; awayTeam: Team; result: [number, number]; homeFitness: number[]; awayFitness: number[]; events: MatchEvent[] } {
   const homeTeam = buildXI(homeClub, homeLineup);
   const awayTeam = buildXI(awayClub, awayLineup);
   if (conditioning?.home != null) homeTeam.conditioning = conditioning.home;
@@ -64,7 +64,7 @@ export function runMatch(
   // end-of-match fitness per XI slot (drives injury rolls — gassed players break down more)
   const homeFitness = m.state.players[0].map((p) => p.fitness);
   const awayFitness = m.state.players[1].map((p) => p.fitness);
-  return { seed, homeTeam, awayTeam, result: [m.state.score[0], m.state.score[1]], homeFitness, awayFitness };
+  return { seed, homeTeam, awayTeam, result: [m.state.score[0], m.state.score[1]], homeFitness, awayFitness, events: m.state.events };
 }
 
 /** Standard Elo update. scoreHome: 1 win / 0.5 draw / 0 loss. */

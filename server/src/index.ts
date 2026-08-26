@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { overall, managerPrestige, signContract, contractCost, contractLength, type Lineup, type Tactics } from '@fm/shared';
 import { mintGenesis, tokenToPlayer, tokenContract, tokenAch, legendCardOf, unavailableTokenIds, loadCareer, actWithNarration, careerState, graduatedFields, rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, ageOf, SUPPLY_CAP, GENESIS_COST, REBORN_COST, MARKET_FEE_PCT, type CareerAction } from './tokens.js';
 import { bumpApps, bumpMorale, advanceTokensAtRollover } from './lifecycle.js';
+import { recordMatchStats } from './matchstats.js';
 const isNftPlayer = (id: string) => id.startsWith('nft:');
 import { db, type Account, type StandingOrders, type Listing } from './db.js';
 import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMATIONS } from './game.js';
@@ -292,7 +293,7 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const aClub = iAmHome ? oppClub.club : me!.club, aLineup = iAmHome ? oppLineup : myLineup, aTactics = iAmHome ? oppTactics : myTactics;
   const conditioning = { home: iAmHome ? meCond : oppCond, away: iAmHome ? oppCond : meCond };
   const homeBoost = fanHomeBoost((iAmHome ? meFac : oppFac).fanzone); // Fan Zone edge for the host
-  const { seed, homeTeam, awayTeam, result, homeFitness, awayFitness } = runMatch(hClub, hLineup, hTactics, aClub, aLineup, aTactics, conditioning, homeBoost);
+  const { seed, homeTeam, awayTeam, result, homeFitness, awayFitness, events } = runMatch(hClub, hLineup, hTactics, aClub, aLineup, aTactics, conditioning, homeBoost);
 
   // injuries: everyone recovers a match, then the XIs that played are rolled for fresh knocks
   const homeNew = rollMatchInjuries(homeTeam, homeFitness, (iAmHome ? meFac : oppFac).medical, seed);
@@ -321,6 +322,8 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const awayEv = result[1] > result[0] ? 'played_win' : result[1] < result[0] ? 'played_loss' : 'played_draw';
   for (const pl of homeTeam.players) if (isNftPlayer(pl.id)) { await bumpApps(db, pl.id); await bumpMorale(db, pl.id, homeEv); }
   for (const pl of awayTeam.players) if (isNftPlayer(pl.id)) { await bumpApps(db, pl.id); await bumpMorale(db, pl.id, awayEv); }
+  // individual stats: goals/assists/apps/POTM → season leaderboards + permanent NFT career tallies
+  await recordMatchStats(db, season.id, homeId, awayId, homeTeam, awayTeam, events, result);
   const myGate = iAmHome ? gate : 0; // only the host banks gate receipts
   const nHome = iAmHome ? nMe : nOpp, nAway = iAmHome ? nOpp : nMe;
 
@@ -377,6 +380,21 @@ app.get('/standings', { preHandler: requireAuth }, async (req) => {
   const ids = new Set(members.map((m) => m.id));
   const results = resultsAmong(await db.seasonResults(s.id), ids);
   return { season: { number: s.number, endsAt: s.endsAt }, tier, pod, promote: PROMOTE, relegate: RELEGATE, table: buildTable(members, results) };
+});
+
+// Individual leaderboards for the caller's pod this season: top scorers, assisters, POTM winners.
+app.get('/leaders', { preHandler: requireAuth }, async (req) => {
+  const s = await ensureSeason(db, Date.now());
+  const { tier, pod } = await ensurePod(db, s, req.account!.id);
+  const members = await db.podMembers(s.id, tier, pod);
+  const handle = new Map(members.map((m) => [m.id, m.handle]));
+  const rows = (await db.seasonPlayerStats(s.id, members.map((m) => m.id)))
+    .map((r) => ({ name: r.player_name, club: handle.get(r.account_id) ?? '—', goals: r.goals, assists: r.assists, apps: r.apps, potm: r.potm }));
+  const top = (key: 'goals' | 'assists' | 'potm', n: number) =>
+    rows.filter((r) => (r as any)[key] > 0)
+      .sort((a, b) => (b as any)[key] - (a as any)[key] || b.goals - a.goals || b.assists - a.assists)
+      .slice(0, n);
+  return { season: { number: s.number, endsAt: s.endsAt }, tier, pod, scorers: top('goals', 15), assisters: top('assists', 15), potm: top('potm', 10) };
 });
 
 // your pod's recent results feed this season

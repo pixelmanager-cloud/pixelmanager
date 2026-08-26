@@ -90,6 +90,14 @@ export function makeSqliteStore(file: string): Store {
         ach_cup INTEGER NOT NULL DEFAULT 0, ach_promotions INTEGER NOT NULL DEFAULT 0, ach_tier INTEGER NOT NULL DEFAULT 0, morale INTEGER NOT NULL DEFAULT 65);`);
       db.exec('CREATE INDEX IF NOT EXISTS idx_tokens_owner ON tokens(owner_id)');
       try { db.exec('ALTER TABLE tokens ADD COLUMN morale INTEGER NOT NULL DEFAULT 65'); } catch {}
+      for (const c of ['ach_goals', 'ach_assists', 'ach_potm']) {
+        try { db.exec(`ALTER TABLE tokens ADD COLUMN ${c} INTEGER NOT NULL DEFAULT 0`); } catch {}
+      }
+      // per-season player stats (all players — base + NFT — for leaderboards + awards)
+      db.exec(`CREATE TABLE IF NOT EXISTS player_stats (
+        season_id TEXT NOT NULL, account_id TEXT NOT NULL, player_id TEXT NOT NULL, player_name TEXT NOT NULL,
+        goals INTEGER NOT NULL DEFAULT 0, assists INTEGER NOT NULL DEFAULT 0, apps INTEGER NOT NULL DEFAULT 0, potm INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (season_id, account_id, player_id));`);
 
       // PROSPECTS: a reborn is a 10-year-old to DEVELOP in the Career sim (Layer 1), inheriting the
       // parent's genes + pedigree — not a ready-made prime player. Held here until the breeder graduates it.
@@ -302,6 +310,19 @@ export function makeSqliteStore(file: string): Store {
       const cols = Object.keys(fields).filter((k) => TOKEN_COLS.has(k));
       if (!cols.length) return;
       db.prepare(`UPDATE tokens SET ${cols.map((c) => `${c}=?`).join(', ')} WHERE id=?`).run(...cols.map((c) => (fields as any)[c]), id);
+    },
+    async bumpPlayerStats(seasonId, accountId, playerId, playerName, d) {
+      db.prepare(`INSERT INTO player_stats (season_id, account_id, player_id, player_name, goals, assists, apps, potm)
+        VALUES (?,?,?,?,?,?,?,?)
+        ON CONFLICT(season_id, account_id, player_id) DO UPDATE SET
+          player_name=excluded.player_name, goals=goals+excluded.goals, assists=assists+excluded.assists,
+          apps=apps+excluded.apps, potm=potm+excluded.potm`)
+        .run(seasonId, accountId, playerId, playerName, d.goals ?? 0, d.assists ?? 0, d.apps ?? 0, d.potm ?? 0);
+    },
+    async seasonPlayerStats(seasonId, accountIds) {
+      if (!accountIds.length) return [];
+      const ph = accountIds.map(() => '?').join(',');
+      return db.prepare(`SELECT * FROM player_stats WHERE season_id=? AND account_id IN (${ph})`).all(seasonId, ...accountIds) as any[];
     },
     async createMission(m) {
       db.prepare('INSERT INTO scout_missions (id, account_id, season_id, destination, dispatched_at, ready_at, found, player_json, band, status) VALUES (?,?,?,?,?,?,?,?,?,?)')

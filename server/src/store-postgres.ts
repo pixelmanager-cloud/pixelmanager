@@ -99,6 +99,13 @@ export function makePostgresStore(connectionString: string): Store {
           ach_cup INTEGER NOT NULL DEFAULT 0, ach_promotions INTEGER NOT NULL DEFAULT 0, ach_tier INTEGER NOT NULL DEFAULT 0, morale INTEGER NOT NULL DEFAULT 65);
         CREATE INDEX IF NOT EXISTS idx_tokens_owner ON tokens(owner_id);
         ALTER TABLE tokens ADD COLUMN IF NOT EXISTS morale INTEGER NOT NULL DEFAULT 65;
+        ALTER TABLE tokens ADD COLUMN IF NOT EXISTS ach_goals INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE tokens ADD COLUMN IF NOT EXISTS ach_assists INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE tokens ADD COLUMN IF NOT EXISTS ach_potm INTEGER NOT NULL DEFAULT 0;
+        CREATE TABLE IF NOT EXISTS player_stats (
+          season_id TEXT NOT NULL, account_id TEXT NOT NULL, player_id TEXT NOT NULL, player_name TEXT NOT NULL,
+          goals INTEGER NOT NULL DEFAULT 0, assists INTEGER NOT NULL DEFAULT 0, apps INTEGER NOT NULL DEFAULT 0, potm INTEGER NOT NULL DEFAULT 0,
+          PRIMARY KEY (season_id, account_id, player_id));
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS season_id TEXT;
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS initiator_id TEXT;
         ALTER TABLE clubs ADD COLUMN IF NOT EXISTS so_duties TEXT;
@@ -299,6 +306,19 @@ export function makePostgresStore(connectionString: string): Store {
       const cols = Object.keys(fields).filter((k) => TOKEN_COLS.has(k));
       if (!cols.length) return;
       await q(`UPDATE tokens SET ${cols.map((c, i) => `${c}=$${i + 2}`).join(', ')} WHERE id=$1`, [id, ...cols.map((c) => (fields as any)[c])]);
+    },
+    async bumpPlayerStats(seasonId, accountId, playerId, playerName, d) {
+      await q(`INSERT INTO player_stats (season_id, account_id, player_id, player_name, goals, assists, apps, potm)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+        ON CONFLICT (season_id, account_id, player_id) DO UPDATE SET
+          player_name=EXCLUDED.player_name, goals=player_stats.goals+EXCLUDED.goals, assists=player_stats.assists+EXCLUDED.assists,
+          apps=player_stats.apps+EXCLUDED.apps, potm=player_stats.potm+EXCLUDED.potm`,
+        [seasonId, accountId, playerId, playerName, d.goals ?? 0, d.assists ?? 0, d.apps ?? 0, d.potm ?? 0]);
+    },
+    async seasonPlayerStats(seasonId, accountIds) {
+      if (!accountIds.length) return [];
+      const ph = accountIds.map((_, i) => `$${i + 2}`).join(',');
+      return (await q(`SELECT * FROM player_stats WHERE season_id=$1 AND account_id IN (${ph})`, [seasonId, ...accountIds])).rows as any[];
     },
     async decrementInjuries(accountId) {
       await q('UPDATE injuries SET matches_remaining = matches_remaining - 1 WHERE account_id=$1', [accountId]);

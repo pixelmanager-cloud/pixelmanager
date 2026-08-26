@@ -49,12 +49,20 @@ export interface Token {
   greed: number | null; marketability: number | null; earnings: number | null; prime_season: number | null; peak_overall: number;
   signed_season: number | null; length_seasons: number | null; staked_since: number | null;
   ach_seasons: number; ach_apps: number; ach_league: number; ach_cup: number; ach_promotions: number; ach_tier: number; morale: number;
+  ach_goals: number; ach_assists: number; ach_potm: number;
 }
 /** Columns updateToken() may set (whitelist — guards the dynamic UPDATE). */
 export const TOKEN_COLS = new Set<string>(['owner_id', 'generation', 'state', 'name', 'genes_json', 'pedigree', 'dev_bonus_json',
   'career_seed', 'agent_id', 'track', 'career_actions', 'attrs_json', 'role', 'traits_json', 'personality',
   'greed', 'marketability', 'earnings', 'prime_season', 'peak_overall', 'signed_season', 'length_seasons', 'staked_since',
-  'ach_seasons', 'ach_apps', 'ach_league', 'ach_cup', 'ach_promotions', 'ach_tier', 'morale']);
+  'ach_seasons', 'ach_apps', 'ach_league', 'ach_cup', 'ach_promotions', 'ach_tier', 'morale',
+  'ach_goals', 'ach_assists', 'ach_potm']);
+
+/** A player's per-season tallies (all players — base + NFT — for leaderboards). */
+export interface PlayerSeasonStat {
+  season_id: string; account_id: string; player_id: string; player_name: string;
+  goals: number; assists: number; apps: number; potm: number;
+}
 
 export interface Store {
   init(): Promise<void>;
@@ -125,6 +133,9 @@ export interface Store {
   tokensOwnedBy(ownerId: string): Promise<Token[]>;
   countTokens(): Promise<number>;
   updateToken(id: string, fields: Partial<Token>): Promise<void>;
+  // per-season player stats (goals/assists/apps/potm for ALL players, for leaderboards + awards)
+  bumpPlayerStats(seasonId: string, accountId: string, playerId: string, playerName: string, d: { goals?: number; assists?: number; apps?: number; potm?: number }): Promise<void>;
+  seasonPlayerStats(seasonId: string, accountIds: string[]): Promise<PlayerSeasonStat[]>;
   // scouting network: dispatched trips (sealed at dispatch, revealed after travel)
   createMission(m: MissionRow): Promise<void>;
   missionsInSeason(accountId: string, seasonId: string): Promise<MissionRow[]>;
