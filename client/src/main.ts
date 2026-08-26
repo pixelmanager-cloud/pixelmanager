@@ -1560,7 +1560,10 @@ class Game {
     const redLine = reds.length ? ` ${reds.join(' and ')} saw red.` : '';
     const names = [...goalsBy.entries()];
     const scLine = names.length ? 'Scorers: ' + names.map(([n, g]) => `${n} (${g.mins.map((m) => m + "'").join(', ')})`).join(' · ') : 'A goalless stalemate.';
-    $('ft-report').innerHTML = `${lead}${redLine}<div class="scorers">${scLine}</div>`;
+    const assists = new Map<string, number>();
+    for (const e of events) if (e.type === 'goal' && e.playerName2) assists.set(e.playerName2, (assists.get(e.playerName2) ?? 0) + 1);
+    const asLine = assists.size ? `<div class="scorers">🅰 Assists: ${[...assists.entries()].map(([n, c]) => c > 1 ? `${n} ×${c}` : n).join(' · ')}</div>` : '';
+    $('ft-report').innerHTML = `${lead}${redLine}<div class="scorers">${scLine}</div>${asLine}`;
     // player of the match: most goals, tie broken toward the winning side
     const winSide: 0 | 1 | null = h > a ? 0 : a > h ? 1 : null;
     names.sort((x, y) => y[1].mins.length - x[1].mins.length || (Number(y[1].team === winSide) - Number(x[1].team === winSide)));
@@ -1726,7 +1729,8 @@ class Game {
     else if (diff === 1) state = note(`${team} back in front.`);
     else if (diff >= 3) state = note('This is turning into a rout.');
     const score = ` <span class="cm-score">${this.liveScore[0]}–${this.liveScore[1]}</span>`;
-    return pool[bi] + score + tally + state;
+    const assist = e.playerName2 ? ` <span class="cm-assist">🅰 ${e.playerName2}</span>` : '';
+    return pool[bi] + score + tally + state + assist;
   }
   private playerAttrs = new Map<string, any>();
   private commentaryMode: 'full' | 'key' = 'full';

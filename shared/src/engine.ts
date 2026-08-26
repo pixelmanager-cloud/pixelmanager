@@ -48,6 +48,8 @@ export class MatchEngine {
   private subsUsed: [number, number] = [0, 0];
   private benchLeft: [Player[], Player[]] = [[], []]; // remaining substitutes per side
   private lastBenchMin = -1;
+  // last completed pass per side, for crediting assists (deterministic, no rng)
+  private lastPass: Array<{ passer: number; receiver: number; sec: number } | null> = [null, null];
 
   /** rough pitch third from the acting team's perspective — for commentary context ("in the final third"). */
   private zoneOf(teamIdx: 0 | 1, x: number): 'def' | 'mid' | 'att' {
@@ -476,6 +478,7 @@ export class MatchEngine {
         if (this.rng() < completion) {
           // commentary: a completed pass in the mid/final third (skip defensive knock-abouts to reduce noise)
           if (this.zoneOf(teamIdx, recS.x) !== 'def') this.flow('pass', teamIdx, recS.x, carrier.name, rec.name);
+          this.lastPass[teamIdx] = { passer: playerIdx, receiver: pick.idx, sec: s.clockSec }; // for assist credit
           s.carrier = { teamIdx, playerIdx: pick.idx };
           s.ball = { ...recS };
           // through-ball that springs a fast forward behind a high line => clear chance
@@ -597,7 +600,12 @@ export class MatchEngine {
       const goalProb = clamp(0.13 + quality * 0.55 - norm(gk.attrs.keeping) * fit(gks.fitness) * 0.2 + (clear ? 0.12 : 0) + finish - wall, 0.03, 0.9);
       if (this.rng() < goalProb) {
         s.score[teamIdx]++;
-        s.events.push({ minute, type: 'goal', teamIdx, playerName: shooter.name });
+        // assist = the player who played the last pass to this scorer, if recent (<=8s) and not himself
+        const lp = this.lastPass[teamIdx];
+        const assist = lp && lp.receiver === playerIdx && lp.passer !== playerIdx && s.clockSec - lp.sec <= 8
+          ? this.teams[teamIdx].players[lp.passer].name : undefined;
+        s.events.push({ minute, type: 'goal', teamIdx, playerName: shooter.name, playerName2: assist });
+        this.lastPass[teamIdx] = null;
         this.giveKickoff(defTeam);
         return;
       }
@@ -645,7 +653,9 @@ export class MatchEngine {
     const r = this.rng();
     if (r < goalP) {
       s.score[atkTeam]++;
-      s.events.push({ minute, type: 'goal', teamIdx: atkTeam, playerName: header.name });
+      // the corner delivery is the assist (unless the taker headed it in himself)
+      const assist = taker.i !== hi ? taker.p.name : undefined;
+      s.events.push({ minute, type: 'goal', teamIdx: atkTeam, playerName: header.name, playerName2: assist });
       this.giveKickoff(defTeam);
       return;
     }
