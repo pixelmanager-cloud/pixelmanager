@@ -102,7 +102,7 @@ app.post('/login', async (req, reply) => {
   } else if (!verifyPassword(password, auth.passwordHash)) {
     return reply.code(401).send({ error: 'wrong handle or password' });
   }
-  const c = await db.getClub(auth.id);
+  const c = await loadSquad(auth.id); // include pro tokens as fieldable players
   if (!c) return reply.code(404).send({ error: 'club not found' });
   return { token: auth.token, account: { id: auth.id, handle: auth.handle, rating: auth.rating, coins: await db.getCoins(auth.id), wallet: await db.walletOf(auth.id) }, club: c.club, standingOrders: c.standingOrders };
 });

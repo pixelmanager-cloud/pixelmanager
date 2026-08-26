@@ -419,6 +419,7 @@ class Game {
       + `<div class="pc-name">${p.name}</div>`
       + `<div class="pc-role">${roleName[p.role] ?? p.role}</div>`
       + `<div class="pc-stats">${stats}</div>`
+      + this.characterHtml(p)
       + contractHtml
       + `<div class="pc-foot">★ NFT${tokenId ? ` · #${tokenId}` : ''} · Base Sepolia · on-chain</div>`
       + `<button class="pc-close">${minted ? 'Nice ✓' : 'Close'}</button></div>`;
@@ -462,6 +463,28 @@ class Game {
     document.body.appendChild(el);
   }
 
+  /** The NFT's character: temperament, earned traits, and financial nature — the soul of the player. */
+  private characterHtml(p: Player): string {
+    const pers = (p as any).personality as string | undefined;
+    const traits = ((p as any).traits as string[] | undefined) ?? [];
+    const greed = (p as any).greed as number | undefined;
+    const market = (p as any).marketability as number | undefined;
+    const earnings = (p as any).earnings as number | undefined;
+    if (!pers && !traits.length && greed == null) return ''; // base players have no character layer
+    const PERS: Record<string, string> = { pro: 'Model Pro', biggame: 'Big-Game Player', fragile: 'Fragile', leader: 'Born Leader', workhorse: 'Workhorse', mercurial: 'Mercurial', maverick: 'Maverick' };
+    const TRAIT: Record<string, string> = { clinical: 'Clinical Finisher', ballwinner: 'Ball-Winner', metronome: 'Metronome', maestro: 'Creative Maestro', leader: 'Born Leader', livewire: 'Livewire', ironman: 'Iron Man', deadball: 'Dead-Ball Spec.', wall: 'The Wall', biggame: 'Big-Game', injury_prone: 'Injury-Prone', mercenary: 'Mercenary', loyal: 'One-Club Man', marketable: 'Marketable' };
+    const flaws = new Set(['injury_prone', 'mercenary', 'loyal', 'marketable']);
+    const perks = traits.filter((t) => !flaws.has(t)).map((t) => `<span class="pc-trait perk">${TRAIT[t] ?? t}</span>`);
+    const flags = traits.filter((t) => flaws.has(t)).map((t) => `<span class="pc-trait flag">${TRAIT[t] ?? t}</span>`);
+    const bar = (label: string, v: number, cls: string) => `<span class="pc-cbar"><i>${label}</i><span class="pc-cbg"><b class="${cls}" style="width:${v * 5}%"></b></span></span>`;
+    return `<div class="pc-char">`
+      + (pers ? `<div class="pc-crow2">🧠 <b>${PERS[pers] ?? pers}</b></div>` : '')
+      + (perks.length || flags.length ? `<div class="pc-traits2">${perks.join('')}${flags.join('')}</div>` : '')
+      + `<div class="pc-cbars">${greed != null ? bar('greed', greed, 'g') : ''}${market != null ? bar('fame', market, 'm') : ''}</div>`
+      + (earnings ? `<div class="pc-earn">💷 ${earnings.toLocaleString()}c career earnings</div>` : '')
+      + `</div>`;
+  }
+
   /** Pay to extend (re-sign) an NFT player's contract, then refresh the squad + reopen the card. */
   private async extendPlayer(playerId: string) {
     try {
@@ -474,6 +497,31 @@ class Game {
     } catch (err: any) {
       toast(err?.body?.error === 'not enough coins' ? `Not enough coins (need ${err.body.need})` : (err?.body?.error ?? 'Extend failed'));
     }
+  }
+
+  /** The manager's own legacy — rank + title, from titles/wins/tier. Shown as a hub chip. */
+  private async refreshPrestige() {
+    try {
+      const { prestige: pr } = await api.prestige();
+      const el = $('me-prestige');
+      el.classList.remove('hidden');
+      el.textContent = `${pr.icon} ${pr.title}`;
+      el.onclick = () => this.showPrestigeCard(pr);
+    } catch { $('me-prestige').classList.add('hidden'); }
+  }
+
+  private showPrestigeCard(pr: { score: number; title: string; icon: string; nextTitle: string | null; nextAt: number | null; progress: number; leagueTitles: number; cupTitles: number }) {
+    const el = document.createElement('div');
+    el.id = 'player-card-ov';
+    el.innerHTML = `<div class="pc-card tier-gold">`
+      + `<div class="pc-top"><div class="pc-ovr">${pr.score}<span>PRESTIGE</span></div><div class="pc-tier">${pr.icon}<span>GAFFER</span></div></div>`
+      + `<div class="pc-name">${pr.title}</div><div class="pc-role">Manager legacy</div>`
+      + `<div class="pc-char"><div class="pc-crow2">🏅 ${pr.leagueTitles} league · 🏆 ${pr.cupTitles} cup</div>`
+      + (pr.nextTitle ? `<div class="pc-cbars"><span class="pc-cbar" style="flex:1"><i>→ ${pr.nextTitle}</i><span class="pc-cbg" style="width:80px"><b class="m" style="width:${Math.round(pr.progress * 100)}%"></b></span></span></div>` : `<div class="pc-earn">the pinnacle — an immortal gaffer</div>`)
+      + `</div><div class="pc-foot">earned across your whole managerial career</div>`
+      + `<button class="pc-close">Close</button></div>`;
+    el.addEventListener('click', (e) => { const t = e.target as HTMLElement; if (t === el || t.classList.contains('pc-close')) el.remove(); });
+    document.body.appendChild(el);
   }
 
   private async refreshTokenBalance() {
@@ -554,6 +602,7 @@ class Game {
     $('me-token').classList.toggle('hidden', !w);
     if (w) void this.refreshTokenBalance();
     if (this.account.coins != null) $('me-coins').textContent = `💰 ${this.account.coins}`;
+    void this.refreshPrestige();
     $('fixtures-progress').textContent = '';
     $('opponents').innerHTML = SPINNER;
     try {

@@ -122,6 +122,18 @@
       .pc-card .pc-reborn { font-family: var(--display); font-size: 10px; padding: 7px 12px; cursor: pointer; border-radius: 6px;
         background: linear-gradient(90deg,#c9a24a,#e6c76a); color: #23180a; border: none; }
       .pc-card .pc-reborn:hover { filter: brightness(1.1); }
+      .pc-card .pc-char { width: 84%; margin: 2px auto 10px; padding: 9px 11px; border-radius: 8px; background: rgba(120,110,160,0.12); border: 1px solid rgba(150,140,200,0.24); }
+      .pc-card .pc-crow2 { font-size: 11px; color: #cbb8e6; margin-bottom: 6px; }
+      .pc-card .pc-traits2 { display: flex; gap: 5px; flex-wrap: wrap; justify-content: center; margin-bottom: 7px; }
+      .pc-card .pc-trait { font-size: 9px; padding: 2px 7px; border-radius: 9px; }
+      .pc-card .pc-trait.perk { background: rgba(90,200,120,0.18); color: #a8e6b8; }
+      .pc-card .pc-trait.flag { background: rgba(200,160,80,0.16); color: #e6cf9a; }
+      .pc-card .pc-cbars { display: flex; gap: 14px; justify-content: center; margin-bottom: 5px; }
+      .pc-card .pc-cbar { display: flex; align-items: center; gap: 5px; font-size: 9px; color: var(--muted); }
+      .pc-card .pc-cbar i { font-style: normal; }
+      .pc-card .pc-cbg { width: 52px; height: 5px; border-radius: 3px; background: #2a2a44; overflow: hidden; }
+      .pc-card .pc-cbg b { display: block; height: 100%; } .pc-cbg b.g { background: #e0864a; } .pc-cbg b.m { background: #4ab0e0; }
+      .pc-card .pc-earn { font-size: 10px; color: #9c9; text-align: center; }
       .pc-card .pc-close { font-family: var(--display); font-size: 11px; }
       /* fx layers */
       .pc-card .pc-ring { position: absolute; inset: -60%; z-index: 0; pointer-events: none; opacity: 0; filter: blur(5px);
@@ -199,6 +211,7 @@
       #hub-head { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
       #me-name { font-family: var(--display); font-size: 14px; color: var(--good); }
       #me-rating { font-family: var(--display); font-size: 11px; color: var(--warn); }
+      #me-prestige { font-family: var(--display); font-size: 10px; color: #d8c078; border: 1px solid #6a5a2a; border-radius: 5px; padding: 2px 8px; cursor: pointer; }
       .hub-actions { margin-left: auto; display: flex; gap: 10px; flex-wrap: wrap; }
       #skip { background: var(--pink); }
       /* standings / results page */
@@ -734,7 +747,7 @@
 
       <!-- HUB -->
       <div id="hub" class="panel hidden">
-        <div id="hub-head"><span id="me-name"></span><span id="me-rating"></span><span id="me-coins" title="Transfer-market coins — earn them by playing"></span><span id="me-wallet" class="hidden" title="Linked wallet"></span><span id="me-token" class="hidden" title="On-chain token balance (Base Sepolia)"></span>
+        <div id="hub-head"><span id="me-name"></span><span id="me-rating"></span><span id="me-prestige" class="hidden" title="Your manager legacy — earned from titles, wins, and how high you climb"></span><span id="me-coins" title="Transfer-market coins — earn them by playing"></span><span id="me-wallet" class="hidden" title="Linked wallet"></span><span id="me-token" class="hidden" title="On-chain token balance (Base Sepolia)"></span>
           <div class="hub-actions">
             <button id="view-standings">📊 League &amp; Results</button>
             <button id="view-club">🏛️ Club</button>

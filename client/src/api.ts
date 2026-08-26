@@ -101,7 +101,8 @@ export const api = {
   startCareer: (pid: string, agentId: string | null) => req<{ ok: true; state: CareerState }>(`/career/${encodeURIComponent(pid)}/start`, { method: 'POST', body: JSON.stringify({ agentId }) }),
   getCareer: (pid: string) => req<{ ok: true; state: CareerState }>(`/career/${encodeURIComponent(pid)}`),
   careerAct: (pid: string, action: { type: string; cardId: string }) => req<{ ok: true; graduated?: boolean; player?: Player; state?: CareerState }>(`/career/${encodeURIComponent(pid)}/act`, { method: 'POST', body: JSON.stringify(action) }),
-  legends: () => req<{ legends: Array<{ playerId: string; name: string; card: LegacyCard; retiredSeason: number; rebornId: string | null }> }>('/legends'),
+  legends: () => req<{ legends: Array<{ playerId: string; name: string; card: LegacyCard; retiredSeason: number }> }>('/legends'),
+  prestige: () => req<{ prestige: { score: number; levelIdx: number; title: string; icon: string; nextTitle: string | null; nextAt: number | null; progress: number; leagueTitles: number; cupTitles: number }; record: { wins: number; draws: number; losses: number; seasons: number } }>('/prestige'),
   setStandingOrders: (so: StandingOrders) => req<{ ok: true; standingOrders: StandingOrders }>(
     '/standing-orders', { method: 'PUT', body: JSON.stringify(so) }),
   opponents: () => req<{ opponents: Array<{ id: string; handle: string; rating: number; clubName: string }> }>('/opponents'),
