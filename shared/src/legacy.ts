@@ -11,7 +11,7 @@ export type { PlayerAchievements } from './career.js';
 import type { PlayerAchievements } from './career.js';
 // Career sim (Layer 1) — the breeder card-game engine, for the server to run authoritatively.
 export { Career, graduate, AGENTS, TOTAL_TURNS, bandAt, AGE_BANDS, type Agent, type CareerSnapshot, type CareerPlayer, type Track } from './career.js';
-export { prospectValuation, deriveStats, eligibleTraits, cardName, CARD_DESC, type ProspectValue, type CareerPlayerAttrs, type Personality } from './career.js';
+export { prospectValuation, deriveStats, eligibleTraits, cardName, CARD_DESC, clubInvestOf, type ProspectValue, type CareerPlayerAttrs, type Personality } from './career.js';
 export { narratePlay, scenarioStory, chapterRecap, graduationEpilogue, careerCast, narrateCoach, narrateDraft, narrateOffer, type NarrateCtx, type ScenarioCtx, type RecapCtx, type EpilogueCtx, type CareerCast } from './narrate.js';
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));

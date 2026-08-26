@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { randomUUID } from 'node:crypto';
-import { overall, managerPrestige, signContract, contractCost, contractLength, graduationEpilogue, gaffersDiaryEntry, type Lineup, type Tactics } from '@fm/shared';
+import { overall, managerPrestige, signContract, contractCost, contractLength, graduationEpilogue, gaffersDiaryEntry, clubInvestOf, type Lineup, type Tactics } from '@fm/shared';
 import { mintGenesis, tokenToPlayer, tokenContract, tokenAch, legendCardOf, unavailableTokenIds, loadCareer, actWithNarration, careerState, graduatedFields, rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, ageOf, SUPPLY_CAP, GENESIS_COST, REBORN_COST, MARKET_FEE_PCT, type CareerAction } from './tokens.js';
 import { bumpApps, bumpMorale, advanceTokensAtRollover } from './lifecycle.js';
 import { recordMatchStats } from './matchstats.js';
@@ -532,6 +532,8 @@ app.post('/career/:id/act', { preHandler: requireAuth }, async (req, reply) => {
   try { narration = actWithNarration(c, action); } catch (e: any) { return reply.code(400).send({ error: e?.message ?? 'illegal move' }); }
   // CONTINUOUS CLUB CUT — his success (wages/deals/good seasons) lifts the club's finances too.
   let clubGain = Math.round(Math.max(0, c.earnings - earningsBefore) * CLUB_WAGE_CUT);
+  // PLAYER-DIRECTED INVESTING — if he chose to back the club, the earnings he spent go to the club 1:1.
+  if (action.type === 'lifestyle') clubGain += clubInvestOf(action.cardId);
   // OUTCOME: for a match/training/life moment, expose how well the read + the play went so the UI can
   // give immediate, legible feedback (a fit verdict + a performance grade + the attributes developed).
   let outcome: { fit: number; bestFit: number; success: number; tags: string[]; answeredAsk: boolean } | null = null;

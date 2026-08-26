@@ -261,7 +261,9 @@ export const DRAFT_PICKS = 3;  // how many you add each draft → a deck that gr
 // marketability/fame that carries into the pro). It's the flip side of banking your earnings for a higher
 // valuation: spend now for a better career, or hoard for a richer graduate. Deterministic (no rng).
 // chapter index reference: 0 Grassroots · 1 Academy · 2 Scholar · 3 Youth Team · 4 Breakthrough · 5 First Team · 6 Establishing
-export interface LifestyleItem { id: string; icon: string; name: string; blurb: string; cost: number; minChapterIdx: number; maxChapterIdx?: number; recovery?: number; market?: number; greed?: number; perks?: Partial<Record<MeterKey, number>> }
+export interface LifestyleItem { id: string; icon: string; name: string; blurb: string; cost: number; minChapterIdx: number; maxChapterIdx?: number; recovery?: number; market?: number; greed?: number; perks?: Partial<Record<MeterKey, number>>; clubInvest?: number }
+/** How much of his earnings a lifestyle choice diverts to the club (0 = a personal treat, not an investment). */
+export function clubInvestOf(itemId: string): number { return LIFESTYLE.find((i) => i.id === itemId)?.clubInvest ?? 0; }
 export const LIFESTYLE: LifestyleItem[] = [
   // Grassroots / Academy — a kid: boots, a bike, a console, gifts for the folks (cheap; kid items retire by Youth Team)
   { id: 'boots',    icon: '👟', name: 'Your First Proper Boots', blurb: 'No more borrowed pairs — the boots the other kids have.',    cost: 80,   minChapterIdx: 0, maxChapterIdx: 2, perks: { authority: 5, peers: 3 } },
@@ -284,6 +286,11 @@ export const LIFESTYLE: LifestyleItem[] = [
   { id: 'watch',    icon: '⌚', name: 'A Statement Watch',         blurb: 'The one everyone clocks as you step off the coach.',        cost: 1500, minChapterIdx: 5, market: 1, greed: 1, perks: { sponsors: 6 } },
   { id: 'invest',   icon: '📈', name: 'A Property Portfolio',      blurb: 'Money makes money — a smart nest egg for after football.',  cost: 3200, minChapterIdx: 5, market: 3 },
   { id: 'mansion',  icon: '🏰', name: 'The Dream Mansion',         blurb: 'Gates, a pool, the lot — you have truly arrived.',          cost: 6000, minChapterIdx: 6, market: 2, greed: 1, recovery: 6, perks: { partner: 8, fans: 6 } },
+  // Player-directed investing — put earnings into the CLUB instead of a personal treat. Repeatable (never
+  // marked "owned"), no personal perk — the trade-off is you vs the dynasty. The coins are credited to the
+  // club server-side (clubInvestOf); buyLifestyle only spends the earnings and stays available.
+  { id: 'invest-club-sm', icon: '🏛️', name: "Back the Club",       blurb: "Put earnings into the club's future instead of your own — every coin goes to the club.", cost: 150, minChapterIdx: 1, clubInvest: 150 },
+  { id: 'invest-club-lg', icon: '🏟️', name: 'Back the Club — Big', blurb: 'A major injection into the club from your own pocket — the dynasty over the lifestyle.',       cost: 600, minChapterIdx: 3, clubInvest: 600 },
 ];
 
 // ── BACKROOM STAFF: at each age-chapter break you appoint a mentor/coach for the coming chapter.
@@ -666,12 +673,15 @@ export class Career {
     const it = LIFESTYLE.find((i) => i.id === itemId);
     if (!it || this.ownedLifestyle.includes(itemId) || this.earnings < it.cost) { if (tolerant) return; throw new Error('cannot buy that'); }
     this.earnings -= it.cost;
+    this.actions.push({ type: 'lifestyle', cardId: itemId });
+    // club investment: a repeatable choice that only spends earnings here (the coins reach the club
+    // server-side). No "owned" flag (so it stays available) and no personal perk — the whole point.
+    if (it.clubInvest) return;
     this.ownedLifestyle.push(itemId);
     this.energyRecoveryBonus += it.recovery ?? 0;
     this.marketBonus += it.market ?? 0;
     this.greedBonus += it.greed ?? 0;
     for (const [k, d] of Object.entries(it.perks ?? {})) this.standing[k as MeterKey] = clamp(this.standing[k as MeterKey] + (d ?? 0), 0, 100);
-    this.actions.push({ type: 'lifestyle', cardId: itemId });
   }
 
   /** Replay/robustness: an old snapshot (pre-focus) resolving an offer skips the summer neutrally. */

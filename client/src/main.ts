@@ -1038,9 +1038,13 @@ class Game {
       const effLabel = (e: Record<string, number>) => Object.entries(e).map(([k, v]) => `${METER_ICON[k] ?? ''}${v > 0 ? '+' : ''}${v}`).join(' · ');
       const perkLabel = (p?: Record<string, number>) => p ? Object.entries(p).map(([k, v]) => `${METER_ICON[k] ?? ''}${v > 0 ? '+' : ''}${v}`).join(' ') : '';
       const shop = (!s.side && s.lifestyle && s.lifestyle.length)
-        ? `<div class="cg-prompt cg-shop-h">💷 <b>Treat yourself</b> — spend earnings (you have <b>${(s.earnings ?? 0).toLocaleString()}c</b>) on your life off the pitch. Age-appropriate to where you are now:</div>`
-          + `<div class="cg-focus">` + s.lifestyle.map((li) => `<div class="cg-foc buy" data-act="lifestyle" data-id="${li.id}"><div class="cg-cname">${li.icon} ${li.name}</div><div class="cg-cdescr">${li.blurb}</div>`
-            + `<div class="cg-effs"><span class="cg-cost">💷 ${li.cost.toLocaleString()}c</span> ${li.recovery ? `· ⚡rec+${li.recovery} ` : ''}${li.market ? `· ⭐fame+${li.market} ` : ''}${perkLabel(li.perks)}</div></div>`).join('') + `</div>`
+        ? `<div class="cg-prompt cg-shop-h">💷 <b>Treat yourself — or back the club</b> — spend earnings (you have <b>${(s.earnings ?? 0).toLocaleString()}c</b>) on your life off the pitch, or invest them in the club's future:</div>`
+          + `<div class="cg-focus">` + s.lifestyle.map((li) => {
+            const effs = li.clubInvest
+              ? `<span class="cg-cost">💷 ${li.cost.toLocaleString()}c</span> · <span class="cg-invest-eff">🏛️ +${li.clubInvest.toLocaleString()}c to the club</span>`
+              : `<span class="cg-cost">💷 ${li.cost.toLocaleString()}c</span> ${li.recovery ? `· ⚡rec+${li.recovery} ` : ''}${li.market ? `· ⭐fame+${li.market} ` : ''}${perkLabel(li.perks)}`;
+            return `<div class="cg-foc buy${li.clubInvest ? ' invest' : ''}" data-act="lifestyle" data-id="${li.id}"><div class="cg-cname">${li.icon} ${li.name}</div><div class="cg-cdescr">${li.blurb}</div><div class="cg-effs">${effs}</div></div>`;
+          }).join('') + `</div>`
         : '';
       const focusPrompt = s.side
         ? '🤝 <b>One more thing</b> before pre-season — a smaller side activity, if you fancy it:'
