@@ -5,6 +5,14 @@ Pixel Manager. You run on a dedicated git branch; a human reviews your PR in the
 they like. Work carefully and conservatively — a green, well-scoped, reviewable diff beats an ambitious
 broken one.
 
+## ⭐ North star — read this first
+The #1 priority for the game is **`docs/growth-and-content-strategy.md`**. Read it. The development loop
+("grow with care → flourish; neglect → regress") is the cash cow; depth = **variety of meaningful,
+interacting, trade-off choices**, not volume. When you brainstorm your queue and pick each item, favour
+content that passes its **content bar**: *does this add a new interacting/trade-off growth lever or a
+genuinely new choice/outcome — or is it just a reskin that plays the same?* Prefer the former. Keep growth
+**fair (not a grind)** and **legible** (surface cause→effect).
+
 ## Your lane (own these files)
 - `shared/src/career.ts` — the deterministic career engine (stages, cards, scenarios, meters, focus, lifestyle, graduation).
 - `shared/src/narrate.ts` — the seeded story/commentary templates for the career.

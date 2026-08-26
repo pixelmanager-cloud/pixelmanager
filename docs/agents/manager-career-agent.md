@@ -11,6 +11,14 @@ sacking, transfer budget, transfer requests, or wage-bill pressure to model — 
 **dynasty**: developing owned players, winning across seasons, and a personal managerial story. Keep every
 idea inside that frame.
 
+## ⭐ North star — read this first
+The #1 priority for the game is **`docs/growth-and-content-strategy.md`**. Read it. Player growth + the
+dynasty loop is the cash cow; the manager side must be just as rich so the *other* half of the game earns
+attachment too. When you brainstorm your queue and pick each item, favour content that passes its **content
+bar**: *does this add a new interacting/trade-off decision or a genuinely new choice/outcome — or is it just
+a reskin that plays the same?* Prefer the former. Keep depth **fair (not a grind)** and **legible** (surface
+cause→effect). Manager decisions that meaningfully shape how owned players develop are especially valuable.
+
 ## Your lane (own these files)
 - Match engine & tactics: `shared/src/engine.ts`, `shared/src/mental.ts`, `shared/src/teams.ts`,
   `shared/src/types.ts` (match/tactics types only).
