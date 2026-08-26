@@ -3,7 +3,7 @@ import cors from '@fastify/cors';
 import { randomUUID } from 'node:crypto';
 import { overall, managerPrestige, signContract, contractCost, contractLength, graduationEpilogue, type Lineup, type Tactics } from '@fm/shared';
 import { mintGenesis, tokenToPlayer, tokenContract, tokenAch, legendCardOf, unavailableTokenIds, loadCareer, actWithNarration, careerState, graduatedFields, rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, ageOf, syncOnchainTokens, SUPPLY_CAP, GENESIS_COST, REBORN_COST, MARKET_FEE_PCT, type CareerAction } from './tokens.js';
-import { lifecycleEnabled, lifecycleInfo, serverSignerEnabled, serverMintTo, serverReborn, ownedTokens } from './lifecyclenft.js';
+import { lifecycleEnabled, lifecycleInfo, serverSignerEnabled, serverMintTo, serverReborn, ownedTokens, ownerOf, lineageOf } from './lifecyclenft.js';
 import { bumpApps, bumpMorale, advanceTokensAtRollover } from './lifecycle.js';
 import { recordMatchStats } from './matchstats.js';
 const isNftPlayer = (id: string) => id.startsWith('nft:');
@@ -146,6 +146,16 @@ app.post('/auth/wallet/verify', async (req, reply) => {
 // ── PlayerNFT (web3 Step 3) — is the NFT layer live, and at what address/chain.
 app.get('/nft', async () => nftInfo());
 app.get('/lifecycle', async () => lifecycleInfo());
+// Live on-chain state for one lifecycle token (owner / generation / genesSeed + chain metadata).
+app.get('/onchain/:id', { preHandler: requireAuth }, async (req) => {
+  const raw = String((req.params as any).id);
+  const tokenId = raw.startsWith('nft:') ? raw.slice(4) : raw;
+  const info = lifecycleInfo();
+  if (!info.enabled) return { enabled: false };
+  const [owner, lineage] = await Promise.all([ownerOf(tokenId), lineageOf(tokenId)]);
+  const explorer = info.chainId === 84532 && owner ? `https://sepolia.basescan.org/nft/${info.address}/${tokenId}` : null;
+  return { enabled: true, tokenId, chainId: info.chainId, contract: info.address, owner, generation: lineage?.generation ?? null, genesSeed: lineage?.genesSeed ?? null, explorer };
+});
 
 // ── Scout tiers — the caller's live opposition/player scout tiers (from owned Scout NFTs)
 // plus the ScoutNFT contract info for minting.

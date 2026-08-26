@@ -102,6 +102,7 @@ export const api = {
   prospects: () => req<{ prospects: Prospect[]; supply: number; cap: number }>('/prospects'),
   genesis: () => req<{ ok: true; supply: number; cap: number; cost?: number; coins?: number; onchain?: boolean; tokenId?: string; prospect: Prospect }>('/genesis', { method: 'POST' }),
   lifecycle: () => req<{ address: string; chainId: number; enabled: boolean; serverSigner: boolean; signerAddress: string | null }>('/lifecycle'),
+  onchain: (id: string) => req<{ enabled: boolean; tokenId?: string; chainId?: number; contract?: string; owner?: string | null; generation?: number | null; genesSeed?: string | null; explorer?: string | null }>(`/onchain/${encodeURIComponent(id)}`),
   careerAgents: () => req<{ agents: Array<{ id: string; name: string; desc: string }> }>('/career/agents'),
   startCareer: (pid: string, agentId: string | null) => req<{ ok: true; state: CareerState }>(`/career/${encodeURIComponent(pid)}/start`, { method: 'POST', body: JSON.stringify({ agentId }) }),
   getCareer: (pid: string) => req<{ ok: true; state: CareerState }>(`/career/${encodeURIComponent(pid)}`),

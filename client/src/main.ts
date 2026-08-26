@@ -462,6 +462,29 @@ class Game {
       if (t === el || t.classList.contains('pc-close')) el.remove();
     });
     document.body.appendChild(el);
+    void this.loadOnchainPanel(p.id, el);
+  }
+
+  /** Fetch a lifecycle token's LIVE on-chain state and inject an ⛓ panel into an open card. */
+  private async loadOnchainPanel(id: string, card: HTMLElement) {
+    if (!this.lifecycleOn || !id.startsWith('nft:')) return;
+    try {
+      const o = await api.onchain(id);
+      if (!o.enabled || !card.isConnected) return;
+      const short = (a?: string | null) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : '—');
+      const row = (k: string, v: string, title = '') => `<span class="oc-k">${k}</span><b class="oc-v"${title ? ` title="${title}"` : ''}>${v}</b>`;
+      const panel = `<div class="oc-panel"><span class="oc-lbl">⛓ ON-CHAIN</span><div class="oc-grid">`
+        + row('NFT', `#${o.tokenId}`)
+        + row('Generation', `${o.generation ?? '—'}`)
+        + row('Owner', short(o.owner), o.owner ?? '')
+        + row('Chain', `${o.chainId}`)
+        + row('Contract', short(o.contract), o.contract ?? '')
+        + `</div>`
+        + (o.explorer ? `<a class="oc-link" href="${o.explorer}" target="_blank" rel="noopener">view on explorer ↗</a>` : `<span class="oc-note">local chain — no block explorer</span>`)
+        + `</div>`;
+      const foot = card.querySelector('.pc-foot');
+      if (foot) foot.insertAdjacentHTML('beforebegin', panel);
+    } catch { /* chain unreachable → just skip the panel */ }
   }
 
   /** Breed a retired legend's next generation — a 10-year-old PROSPECT that re-enters the Career game. */
@@ -495,6 +518,7 @@ class Game {
       + `<button class="pc-close">${born ? 'Nice ✓' : 'Close'}</button></div>`;
     el.addEventListener('click', (e) => { const t = e.target as HTMLElement; if (t === el || t.classList.contains('pc-close')) el.remove(); });
     document.body.appendChild(el);
+    void this.loadOnchainPanel(p.id, el);
   }
 
   /** A lifecycle-at-a-glance panel for the manager's NFT stars — age, contract, morale, staking + quick actions. */
@@ -905,6 +929,10 @@ class Game {
       this.lifecycleOn = !!life.enabled;
       const mintLabel = life.enabled ? `🌱 Mint a genesis prospect · on-chain${life.chainId ? ` (chain ${life.chainId})` : ''}` : '🌱 Mint a genesis prospect · 300c';
       const chainNote = life.enabled ? ' Each player is an <b>on-chain NFT</b> — you own it in your wallet, and its whole career lives with the token.' : '';
+      const short = (a?: string | null) => (a ? `${a.slice(0, 6)}…${a.slice(-4)}` : '—');
+      const chainStatus = life.enabled
+        ? `<div id="chain-status">⛓ <span>chain <b>${life.chainId}</b></span><span>contract <b title="${(life as any).address ?? ''}">${short((life as any).address)}</b></span><span>your wallet <b title="${this.account?.wallet ?? ''}">${short(this.account?.wallet)}</b></span></div>`
+        : '';
       const intro = `<div class="scout-sub">Your youth prospects — 10-year-olds to <b>develop</b> through a career (age 10→25): play to each chapter's demands, appoint coaches, and make the big calls. At 25 the SAME NFT graduates into a pro you can field.${chainNote} Mint a fresh genesis prospect, or breed one by retiring a player and choosing <b>Reborn</b>. <span style="color:var(--muted);">· fixed supply: <b>${supply.toLocaleString()}</b> / ${cap.toLocaleString()} minted</span></div>`
         + `<div style="margin:10px 0 14px;"><button id="mint-genesis" class="primary">${mintLabel}</button></div>`;
       const rows = prospects.length ? prospects.map((p) => {
@@ -921,7 +949,7 @@ class Game {
           + `<div class="lc-name">${l.name}</div><div class="lc-meta">${l.card.role} · rating ${l.card.legendRating}</div>`
           + `<div class="lc-honours">${l.card.leagueTitles}🏅 ${l.card.cupTitles}🏆 · ${l.card.apps} apps · ${l.card.seasons} seasons</div>`
           + `<div class="lc-note">${l.card.note}</div></div>`).join('') + `</div>` : '';
-      $('academy-body').innerHTML = intro + rows + hall;
+      $('academy-body').innerHTML = chainStatus + intro + rows + hall;
       $('mint-genesis').addEventListener('click', () => this.mintGenesis());
       $('academy-body').querySelectorAll('[data-dev]').forEach((b) => b.addEventListener('click', () => this.openCareer((b as HTMLElement).dataset.dev!)));
     } catch { $('academy-body').innerHTML = '<div class="muted">Could not load — is the server running?</div>'; }
