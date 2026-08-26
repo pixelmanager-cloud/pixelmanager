@@ -3,6 +3,7 @@ import {
   TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty,
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData, type MissionsData, type ContractInfo, type LeaderStat, type AwardRow } from './api';
+import { sprite } from './sprites';
 
 // icons for the stage-aware life meters (keyed by underlying relationship) — used in focus effect labels
 const METER_ICON: Record<string, string> = { authority: '🧑‍🏫', peers: '👥', family: '🏠', school: '🎒', agent: '🤝', fans: '📣', sponsors: '📸', partner: '❤️' };
@@ -796,7 +797,7 @@ class Game {
         : `<div class="fac-next">Next: <b>${f.nextEffect ?? ''}</b></div>`
           + `<button class="fac-up" data-key="${f.key}" ${f.canAfford ? '' : 'disabled'}>Upgrade · 💰 ${f.upgradeCost} ▶</button>`;
       return `<div class="facility ${maxed ? 'maxed' : ''}">`
-        + `<div class="fac-top"><span class="fac-icon">${f.icon}</span><span class="fac-name">${f.name}</span><span class="fac-lvl">LVL ${f.level}/${f.maxLevel}</span></div>`
+        + `<div class="fac-top"><span class="fac-icon">${sprite(f.key) || f.icon}</span><span class="fac-name">${f.name}</span><span class="fac-lvl">LVL ${f.level}/${f.maxLevel}</span></div>`
         + `<div class="fac-pips">${pips}</div>`
         + `<div class="fac-blurb">${f.blurb}</div>`
         + `<div class="fac-effect">▸ ${f.effect}</div>`
