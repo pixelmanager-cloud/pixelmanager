@@ -128,6 +128,10 @@ const KIND_SETUP: Record<string, string[]> = {
   contract: ['The agent’s phone won’t stop ringing. A big decision looms.', 'Money and loyalty are pulling in different directions.', 'A career-shaping choice has landed on his plate.'],
   loan: ['A loan move is on the table — a fork in the road.', 'Stay and fight for minutes, or leave to find them elsewhere?', 'The club want him to go and toughen up somewhere real.'],
   setback: ['A very public mistake to bounce back from.', 'The headlines weren’t kind. Now he has to answer them.', 'Confidence dented, reputation on the line — this is about response.'],
+  media: ['A story has broken and his name is in it.', 'The papers have got hold of something, and now it’s everywhere.', 'Cameras and microphones where there used to be none — a storm to manage.'],
+  loyalty: ['The club he grew up supporting have come calling.', 'A boyhood dream is dangled in front of him — and it complicates everything.', 'Head or heart? The club of his childhood wants an answer.'],
+  role: ['The gaffer has laid out where he stands in the pecking order — and it isn’t where he hoped.', 'A blunt conversation about his role, and no easy way to take it.', 'Told plainly what he is and isn’t in this squad — now he has to respond.'],
+  fallout: ['Words were said in the dressing room that can’t be unsaid.', 'A rift with a teammate has spilled out where everyone can see it.', 'The changing room has taken sides, and he’s in the middle of it.'],
 };
 // What the moment ASKS of him. Kept setting-neutral so it reads sensibly whether the
 // situation is a training drill, a dressing-room moment or a cup tie (a drill is not
