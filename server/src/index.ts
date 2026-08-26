@@ -2,7 +2,8 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { randomUUID } from 'node:crypto';
 import { overall, managerPrestige, signContract, contractCost, contractLength, graduationEpilogue, type Lineup, type Tactics } from '@fm/shared';
-import { mintGenesis, tokenToPlayer, tokenContract, tokenAch, legendCardOf, unavailableTokenIds, loadCareer, actWithNarration, careerState, graduatedFields, rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, ageOf, SUPPLY_CAP, GENESIS_COST, REBORN_COST, MARKET_FEE_PCT, type CareerAction } from './tokens.js';
+import { mintGenesis, tokenToPlayer, tokenContract, tokenAch, legendCardOf, unavailableTokenIds, loadCareer, actWithNarration, careerState, graduatedFields, rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, ageOf, syncOnchainTokens, SUPPLY_CAP, GENESIS_COST, REBORN_COST, MARKET_FEE_PCT, type CareerAction } from './tokens.js';
+import { lifecycleEnabled, lifecycleInfo, serverSignerEnabled, serverMintTo, serverReborn, ownedTokens } from './lifecyclenft.js';
 import { bumpApps, bumpMorale, advanceTokensAtRollover } from './lifecycle.js';
 import { recordMatchStats } from './matchstats.js';
 const isNftPlayer = (id: string) => id.startsWith('nft:');
@@ -37,6 +38,7 @@ import { ownedPlayers, nftInfo, nftEnabled } from './nft.js';
 async function loadSquad(accountId: string): Promise<{ club: import('@fm/shared').Club; standingOrders: StandingOrders } | undefined> {
   const c = await db.getClub(accountId);
   if (!c) return undefined;
+  await syncOnchainTokens(db, accountId, await db.walletOf(accountId)); // reconcile on-chain ownership → off-chain state
   // merge the owner's PRO-state unified tokens as fieldable players (read-only; saveClub strips nft ids)
   const tokens = await db.tokensOwnedBy(accountId);
   const have = new Set(c.club.players.map((p) => p.id));
@@ -143,6 +145,7 @@ app.post('/auth/wallet/verify', async (req, reply) => {
 
 // ── PlayerNFT (web3 Step 3) — is the NFT layer live, and at what address/chain.
 app.get('/nft', async () => nftInfo());
+app.get('/lifecycle', async () => lifecycleInfo());
 
 // ── Scout tiers — the caller's live opposition/player scout tiers (from owned Scout NFTs)
 // plus the ScoutNFT contract info for minting.
@@ -475,10 +478,16 @@ app.post('/players/:id/reborn', { preHandler: requireAuth }, async (req, reply) 
   const t = await db.getToken(id);
   if (!t || t.owner_id !== ownerId) return reply.code(404).send({ error: 'no such token' });
   if (t.state !== 'retired') return reply.code(409).send({ error: 'not retired' });
-  const coins = await db.getCoins(ownerId);
-  if (coins < REBORN_COST) return reply.code(400).send({ error: 'not enough coins', need: REBORN_COST, have: coins });
-  await db.addCoins(ownerId, -REBORN_COST); // breeding fee — PTEST seam
-  await db.updateToken(id, rebornFields(t));
+  // WEB3 PATH: bump the generation ON-CHAIN first (dev signer), then evolve the off-chain state in place
+  if (lifecycleEnabled() && serverSignerEnabled() && id.startsWith('nft:')) {
+    try { await serverReborn(id.slice(4)); } catch (e: any) { return reply.code(500).send({ error: e?.message ?? 'on-chain reborn failed' }); }
+    await db.updateToken(id, rebornFields(t)); // retired → next-gen prospect (generation matches on-chain)
+  } else {
+    const coins = await db.getCoins(ownerId);
+    if (coins < REBORN_COST) return reply.code(400).send({ error: 'not enough coins', need: REBORN_COST, have: coins });
+    await db.addCoins(ownerId, -REBORN_COST); // breeding fee — PTEST seam (off-chain fallback)
+    await db.updateToken(id, rebornFields(t));
+  }
   const fresh = (await db.getToken(id))!;
   const pot = rebornPotential(fresh);
   return { ok: true, cost: REBORN_COST, coins: await db.getCoins(ownerId), prospect: { id, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: pot.pedigree, potentialStars: pot.stars, genes: JSON.parse(fresh.genes_json) } };
@@ -486,6 +495,7 @@ app.post('/players/:id/reborn', { preHandler: requireAuth }, async (req, reply) 
 
 // PROSPECTS: the owner's prospect-state tokens — 10-year-olds to DEVELOP in the Career game.
 app.get('/prospects', { preHandler: requireAuth }, async (req) => {
+  await syncOnchainTokens(db, req.account!.id, await db.walletOf(req.account!.id)); // reconcile on-chain first
   const tokens = (await db.tokensOwnedBy(req.account!.id)).filter((t) => t.state === 'prospect');
   return { supply: await db.countTokens(), cap: SUPPLY_CAP, prospects: tokens.map((t) => { const pot = rebornPotential(t); return { id: t.id, name: t.name, roleHint: t.role ?? 'MF', generation: t.generation, pedigree: t.pedigree, careerStarted: t.career_seed != null, potentialStars: pot.stars, genes: JSON.parse(t.genes_json) }; }) };
 });
@@ -493,13 +503,35 @@ app.get('/prospects', { preHandler: requireAuth }, async (req) => {
 // GENESIS: mint a brand-new 10-year-old prospect (fresh genes, generation 0) — the ONLY way a token
 // enters the economy. Enforces the fixed SUPPLY_CAP; after that, the fixed set just cycles forever.
 app.post('/genesis', { preHandler: requireAuth }, async (req, reply) => {
-  const coins = await db.getCoins(req.account!.id);
+  const accountId = req.account!.id;
+  // ── WEB3 PATH: the genesis prospect is an on-chain NFT; game state materializes off-chain by tokenId ──
+  if (lifecycleEnabled()) {
+    let wallet = await db.walletOf(accountId);
+    try {
+      if (serverSignerEnabled()) {
+        // DEV: the server signer mints on-chain. Auto-link the signer's wallet if the account has none.
+        if (!wallet) { const info = lifecycleInfo(); if (info.signerAddress) { await db.linkWallet(accountId, info.signerAddress); wallet = info.signerAddress; } }
+        if (!wallet) return reply.code(400).send({ error: 'link a wallet first' });
+        const minted = await serverMintTo(wallet);
+        await syncOnchainTokens(db, accountId, wallet); // materialize the off-chain prospect
+        const t = (await db.getToken(`nft:${minted.tokenId}`))!;
+        const pot = rebornPotential(t);
+        return { ok: true, onchain: true, tokenId: minted.tokenId, supply: await db.countTokens(), cap: SUPPLY_CAP, prospect: { id: t.id, name: t.name, roleHint: t.role ?? 'MF', generation: t.generation, pedigree: 0, potentialStars: pot.stars, genes: JSON.parse(t.genes_json) } };
+      }
+      // PROD: the client mints with the user's wallet, then calls this to reconcile.
+      if (!wallet) return reply.code(400).send({ error: 'connect a wallet to mint on-chain' });
+      await syncOnchainTokens(db, accountId, wallet);
+      return { ok: true, onchain: true, supply: await db.countTokens(), cap: SUPPLY_CAP, note: 'synced on-chain tokens' };
+    } catch (e: any) { return reply.code(500).send({ error: e?.message ?? 'on-chain mint failed' }); }
+  }
+  // ── OFF-CHAIN FALLBACK (no chain configured): coin-priced off-chain mint ──
+  const coins = await db.getCoins(accountId);
   if (coins < GENESIS_COST) return reply.code(400).send({ error: 'not enough coins', need: GENESIS_COST, have: coins });
   try {
-    const t = await mintGenesis(db, req.account!.id);
-    await db.addCoins(req.account!.id, -GENESIS_COST); // PTEST seam
+    const t = await mintGenesis(db, accountId);
+    await db.addCoins(accountId, -GENESIS_COST);
     const pot = rebornPotential(t);
-    return { ok: true, supply: await db.countTokens(), cap: SUPPLY_CAP, cost: GENESIS_COST, coins: await db.getCoins(req.account!.id), prospect: { id: t.id, name: t.name, roleHint: t.role ?? 'MF', generation: 0, pedigree: 0, potentialStars: pot.stars, genes: JSON.parse(t.genes_json) } };
+    return { ok: true, supply: await db.countTokens(), cap: SUPPLY_CAP, cost: GENESIS_COST, coins: await db.getCoins(accountId), prospect: { id: t.id, name: t.name, roleHint: t.role ?? 'MF', generation: 0, pedigree: 0, potentialStars: pot.stars, genes: JSON.parse(t.genes_json) } };
   } catch (e: any) { return reply.code(409).send({ error: e?.message ?? 'mint failed' }); }
 });
 
