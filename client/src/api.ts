@@ -126,7 +126,7 @@ export const api = {
   careerAct: (pid: string, action: { type: string; cardId: string }) => req<{ ok: true; graduated?: boolean; narration?: string | null; epilogue?: string; player?: Player; state?: CareerState }>(`/career/${encodeURIComponent(pid)}/act`, { method: 'POST', body: JSON.stringify(action) }),
   saveKit: (pid: string, kit: Kit) => req<{ ok: true; kit: Kit }>(`/career/${encodeURIComponent(pid)}/kit`, { method: 'PUT', body: JSON.stringify(kit) }),
   legends: () => req<{ legends: Array<{ playerId: string; name: string; card: LegacyCard; retiredSeason: number }> }>('/legends'),
-  prestige: () => req<{ prestige: { score: number; levelIdx: number; title: string; icon: string; nextTitle: string | null; nextAt: number | null; progress: number; leagueTitles: number; cupTitles: number }; record: { wins: number; draws: number; losses: number; seasons: number } }>('/prestige'),
+  prestige: () => req<{ prestige: { score: number; levelIdx: number; title: string; icon: string; nextTitle: string | null; nextAt: number | null; progress: number; leagueTitles: number; cupTitles: number; promotions: number; winPct: number; seasons: number }; record: { wins: number; draws: number; losses: number; seasons: number; promotions: number } }>('/prestige'),
   setStandingOrders: (so: StandingOrders) => req<{ ok: true; standingOrders: StandingOrders }>(
     '/standing-orders', { method: 'PUT', body: JSON.stringify(so) }),
   opponents: () => req<{ opponents: Array<{ id: string; handle: string; rating: number; clubName: string }> }>('/opponents'),

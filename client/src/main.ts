@@ -668,13 +668,14 @@ class Game {
     } catch { $('gaffers-diary').classList.add('hidden'); }
   }
 
-  private showPrestigeCard(pr: { score: number; title: string; icon: string; nextTitle: string | null; nextAt: number | null; progress: number; leagueTitles: number; cupTitles: number }) {
+  private showPrestigeCard(pr: { score: number; title: string; icon: string; nextTitle: string | null; nextAt: number | null; progress: number; leagueTitles: number; cupTitles: number; promotions: number; winPct: number; seasons: number }) {
     const el = document.createElement('div');
     el.id = 'player-card-ov';
     el.innerHTML = `<div class="pc-card tier-gold">`
       + `<div class="pc-top"><div class="pc-ovr">${pr.score}<span>PRESTIGE</span></div><div class="pc-tier">${pr.icon}<span>GAFFER</span></div></div>`
       + `<div class="pc-name">${pr.title}</div><div class="pc-role">Manager legacy</div>`
-      + `<div class="pc-char"><div class="pc-crow2">🏅 ${pr.leagueTitles} league · 🏆 ${pr.cupTitles} cup</div>`
+      + `<div class="pc-char"><div class="pc-crow2">🏅 ${pr.leagueTitles} league · 🏆 ${pr.cupTitles} cup · 📈 ${pr.promotions} promotion${pr.promotions === 1 ? '' : 's'}</div>`
+      + `<div class="pc-crow2">${pr.winPct}% win rate · ${pr.seasons} season${pr.seasons === 1 ? '' : 's'} managed</div>`
       + (pr.nextTitle ? `<div class="pc-cbars"><span class="pc-cbar" style="flex:1"><i>→ ${pr.nextTitle}</i><span class="pc-cbg" style="width:80px"><b class="m" style="width:${Math.round(pr.progress * 100)}%"></b></span></span></div>` : `<div class="pc-earn">the pinnacle — an immortal gaffer</div>`)
       + `</div><div class="pc-foot">earned across your whole managerial career</div>`
       + `<button class="pc-close">Close</button></div>`;

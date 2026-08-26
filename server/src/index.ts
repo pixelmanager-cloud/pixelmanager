@@ -525,7 +525,14 @@ app.get('/prestige', { preHandler: requireAuth }, async (req) => {
   const honourLites = honours.map((h) => ({ tierIdx: tierIdxOf(h.tier), title: h.title, kind: (h.kind === 'cup' ? 'cup' : 'league') as 'cup' | 'league' }));
   const highestTierIdx = Math.max(tierIdxOf(curTier), ...honourLites.map((h) => h.tierIdx), 0);
   const seasons = new Set(honours.map((h) => h.season_number)).size;
-  return { prestige: managerPrestige({ wins, draws, losses, honours: honourLites, highestTierIdx, seasons }), record: { wins, draws, losses, seasons } };
+  // one 'league' honour row is archived per season a club played — walking them in season order and
+  // spotting a tier increase reconstructs promotion count without a dedicated column.
+  const leagueHistory = honours.filter((h) => h.kind !== 'cup').sort((a, b) => a.season_number - b.season_number);
+  let promotions = 0;
+  for (let i = 1; i < leagueHistory.length; i++) {
+    if (tierIdxOf(leagueHistory[i].tier) > tierIdxOf(leagueHistory[i - 1].tier)) promotions++;
+  }
+  return { prestige: managerPrestige({ wins, draws, losses, honours: honourLites, highestTierIdx, seasons, promotions }), record: { wins, draws, losses, seasons, promotions } };
 });
 
 // EXTEND a player's contract: pay the wage (coins) to re-sign him for another full term. The NFT was

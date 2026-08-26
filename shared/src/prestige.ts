@@ -16,6 +16,7 @@ export interface ManagerRecord {
   honours: HonourLite[];      // every championship (and placement) they've archived
   highestTierIdx: number;     // the highest division they ever reached (climbing the pyramid = prestige)
   seasons: number;            // seasons managed (longevity)
+  promotions: number;         // times the club moved up a tier at a season boundary
 }
 
 /** A named prestige rank + the score you cross to reach it. Roughly geometric so titles always move you. */
@@ -42,6 +43,7 @@ export function prestigeScore(r: ManagerRecord): number {
   s += r.wins * 1 + r.draws * 0.3;                        // the grind counts, a little
   s += r.highestTierIdx * 40;                             // climbing the pyramid is itself an achievement
   s += r.seasons * 5;                                     // longevity — a long career at the top compounds
+  s += r.promotions * 25;                                 // every step up the pyramid, not just the peak
   return Math.round(s);
 }
 
@@ -56,6 +58,9 @@ export interface Prestige {
   progress: number;           // 0..1 toward the next rank (1 at max)
   leagueTitles: number;
   cupTitles: number;
+  promotions: number;
+  winPct: number;             // 0..100, career win rate
+  seasons: number;
 }
 export function managerPrestige(r: ManagerRecord): Prestige {
   const score = prestigeScore(r);
@@ -65,6 +70,7 @@ export function managerPrestige(r: ManagerRecord): Prestige {
   const next = PRESTIGE_LEVELS[levelIdx + 1] ?? null;
   const progress = next ? (score - cur.at) / (next.at - cur.at) : 1;
   const champs = r.honours.filter((h) => h.title === 1);
+  const played = r.wins + r.draws + r.losses;
   return {
     score, levelIdx, title: cur.title, icon: cur.icon,
     nextTitle: next?.title ?? null,
@@ -72,5 +78,8 @@ export function managerPrestige(r: ManagerRecord): Prestige {
     progress: Math.max(0, Math.min(1, progress)),
     leagueTitles: champs.filter((h) => h.kind === 'league').length,
     cupTitles: champs.filter((h) => h.kind === 'cup').length,
+    promotions: r.promotions,
+    winPct: played > 0 ? Math.round((r.wins / played) * 100) : 0,
+    seasons: r.seasons,
   };
 }

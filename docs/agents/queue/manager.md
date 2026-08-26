@@ -38,9 +38,13 @@ Work top to bottom, one item per commit. Tick `[x]` when done; add a one-line no
    shipped as `computeFormGuide`/`runInCallout` in shared (`shared/src/formGuide.ts`), wired into
    `/standings` (`form` map + `runIn` string), rendered as a Form column on the league table plus
    a callout banner above it on the standings screen.
-4. [ ] **Manager profile & reputation badge.** A derived reputation number from career trophies /
+4. [x] **Manager profile & reputation badge.** A derived reputation number from career trophies /
    win% / promotions (aggregate over `honours`), shown on the hub — extends the existing prestige
-   badge into a persistent manager-identity stat, no new mechanic underneath. (S)
+   badge into a persistent manager-identity stat, no new mechanic underneath. (S) — the hub badge
+   and prestige score already existed; added `promotions` (reconstructed from the `league` honour
+   history — a tier increase between consecutive seasons) and `winPct` to `ManagerRecord`/
+   `Prestige` in `shared/src/prestige.ts`, folded promotions into `prestigeScore`, and surfaced
+   both on the prestige card (`📈 N promotions`, `NN% win rate · N seasons managed`).
 5. [ ] **Rivalries / derby fixtures.** Deterministically designate a pod rival (repeat opponent /
    closest-rated club); flag those fixtures as "derby" in the fixture list and match report with a
    small extra commentary flourish and a head-to-head record line. (M)
