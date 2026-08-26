@@ -26,7 +26,7 @@ const OUTFIELD_TAGS: Tag[] = ['composure', 'aggression', 'creativity', 'teamwork
 export type Track = 'outfield' | 'goalkeeper';
 export interface SeasonEvent { id: string; name: string; desc: string }
 /** One recorded development decision. A career is fully reconstructable from (seed, track, actions). */
-export interface Action { type: 'play' | 'draft' | 'coach' | 'offer'; cardId: string }
+export interface Action { type: 'play' | 'draft' | 'coach' | 'offer' | 'focus'; cardId: string }
 /** Everything needed to persist/trade an in-progress prospect (stored off-chain, keyed by tokenId).
  *  Deterministic → the current stats can be re-derived + verified by replaying it. */
 export interface CareerSnapshot { seed: number; track: Track; agentId?: string; actions: Action[] }
@@ -212,6 +212,44 @@ export const OFFER_CHOICES = 3;
 /** Deterministic financial offer set for a chapter (all three archetypes; the player picks their path). */
 export function rollOffer(_rng: () => number, _turn: number): Offer[] { return OFFERS; }
 
+// ── FOCUS: between each chapter you decide how to spend the summer. Deterministic + development-neutral
+// (moves energy + relationships only, no rng), so it steers which meters you carry into the next chapter
+// — and thus which consequences bite — without disturbing the graduation trajectory. Stage-appropriate:
+// a kid rests / studies / plays with mates; a pro tends a partner, works his agent, courts sponsors.
+export interface FocusOption { id: string; icon: string; name: string; desc: string; energy: number; effects: Partial<Record<MeterKey, number>> }
+const FOCUS_REST: FocusOption = { id: 'rest', icon: '🛌', name: 'Rest & Recharge', desc: 'A proper summer off. Come back fresh.', energy: +22, effects: { family: +4, peers: +3 } };
+const FOCUS_BY_CHAPTER: Record<string, FocusOption[]> = {
+  Grassroots: [
+    { id: 'family',  icon: '🏠', name: 'Family Time',     desc: 'Kickabouts in the garden with your folks. Grounding.', energy: +10, effects: { family: +14, peers: +3 } },
+    { id: 'mates',   icon: '🧒', name: 'Out With Mates',  desc: 'Long summer days with your mates. Priceless at this age.', energy: +6, effects: { peers: +16, family: -3 } },
+    { id: 'skills',  icon: '⚽', name: 'Skills in the Park', desc: 'Hours against a wall. The coach will notice.', energy: -8, effects: { authority: +14, peers: +2 } },
+  ],
+  Academy: [
+    { id: 'school',  icon: '🎒', name: 'Hit the Books',   desc: 'Keep the grades up — a fallback and a discipline.', energy: -6, effects: { school: +16, family: +6 } },
+    { id: 'impress', icon: '🧑‍🏫', name: 'Impress the Coach', desc: 'Extra sessions, first to arrive. Staff love a grafter.', energy: -10, effects: { authority: +16, peers: -3 } },
+    { id: 'mates',   icon: '🧒', name: 'Team Bonding',    desc: 'Tight with the lads — a dressing room that fights for you.', energy: +4, effects: { peers: +15, school: -4 } },
+  ],
+  'Youth Team': [
+    { id: 'partner', icon: '❤️', name: 'A New Romance',    desc: 'You’ve met someone. Settled and happy off the pitch.', energy: +12, effects: { partner: +18 } },
+    { id: 'agent',   icon: '🤝', name: 'Work Your Agent',  desc: 'Dinners and phone calls — get him fighting for you.', energy: -8, effects: { agent: +18, authority: -2 } },
+    { id: 'impress', icon: '🧑‍🏫', name: 'Court the Gaffer', desc: 'Make yourself undroppable in pre-season.', energy: -12, effects: { authority: +16, partner: -4 } },
+  ],
+  Breakthrough: [
+    { id: 'partner', icon: '❤️', name: 'Time With Partner', desc: 'Protect your relationship as the spotlight grows.', energy: +10, effects: { partner: +16, fans: -2 } },
+    { id: 'fans',    icon: '📣', name: 'Work the Fans',     desc: 'Community days, autographs — the terraces will sing your name.', energy: -8, effects: { fans: +18, partner: -4 } },
+    { id: 'agent',   icon: '🤝', name: 'Lean on Your Agent', desc: 'Position yourself for the big move.', energy: -6, effects: { agent: +16, authority: -3 } },
+  ],
+  Establishing: [
+    { id: 'sponsors', icon: '📸', name: 'Sponsor Duties',   desc: 'Shoots and appearances. The brand — and the bank — grow.', energy: -12, effects: { sponsors: +18, peers: -4 } },
+    { id: 'fans',     icon: '📣', name: 'Icon of the Terraces', desc: 'Give the supporters everything. Become untouchable.', energy: -8, effects: { fans: +16, partner: -3 } },
+    { id: 'partner',  icon: '❤️', name: 'Settle Down',       desc: 'A stable home life behind the superstar.', energy: +10, effects: { partner: +16, sponsors: -4 } },
+  ],
+};
+/** The between-chapter focus choices for a life stage (Rest is always available). */
+export function rollFocus(chapter: string): FocusOption[] {
+  return [...(FOCUS_BY_CHAPTER[chapter] ?? FOCUS_BY_CHAPTER.Establishing), FOCUS_REST];
+}
+
 /** Seeded coach choices for a track: outfield sees no GK-only coach, GK sees the GK coach + mental ones. */
 export function rollCoaches(rng: () => number, track: Track, n = COACH_OFFER): Coach[] {
   const pool = COACHES.filter((c) => (track === 'goalkeeper' ? true : !c.specialty.includes('keeping')));
@@ -350,6 +388,10 @@ export class Career {
   coach: Coach | null = null;              // the staff member active this chapter (boosts their specialty)
   /** When set, a FINANCIAL OFFER is on the table (choose your path) before appointing a coach. */
   pendingOffer: Offer[] | null = null;
+  /** When set, the career pauses at a chapter break for a FOCUS choice: how to spend the summer. */
+  pendingFocus: FocusOption[] | null = null;
+  /** How your relationships PAID OFF (or bit back) over the chapter that just ended — surfaced at the break. */
+  chapterConsequences: string[] = [];
   earnings = 0;                            // running career earnings (coins) — wages + deals taken
   marketBonus = 0;                         // fame accrued from financial/brand decisions (→ marketability)
   greedBonus = 0;                          // greed accrued from chasing money in-career (→ final greed)
@@ -405,20 +447,43 @@ export class Career {
    *  buyer resumes development from precisely where the seller left off. */
   static resume(snap: CareerSnapshot): Career {
     const c = new Career(snap.seed, snap.track, snap.agentId);
-    for (const a of snap.actions) { if (a.type === 'draft') c.draft(a.cardId, true); else if (a.type === 'coach') c.appointCoach(a.cardId, true); else if (a.type === 'offer') c.resolveOffer(a.cardId); else c.play(a.cardId, true); }
+    for (const a of snap.actions) { if (a.type === 'draft') c.draft(a.cardId, true); else if (a.type === 'coach') c.appointCoach(a.cardId, true); else if (a.type === 'offer') c.resolveOffer(a.cardId); else if (a.type === 'focus') c.chooseFocus(a.cardId, true); else c.play(a.cardId, true); }
     return c;
   }
 
   /** Current state: a 'coach' phase (appoint staff), a 'draft' phase (add a card), or a 'play' phase. */
   current() {
+    if (this.pendingFocus) return { phase: 'focus' as const, age: this.age, chapter: this.chapter, focus: this.pendingFocus, seasonEvent: this.seasonEvent, consequences: this.chapterConsequences, energy: this.energy, deck: this.deck, finished: this.finished };
     if (this.pendingOffer) return { phase: 'offer' as const, age: this.age, chapter: this.chapter, offers: this.pendingOffer, earnings: this.earnings, deck: this.deck, finished: this.finished };
     if (this.pendingCoaches) return { phase: 'coach' as const, age: this.age, chapter: this.chapter, coaches: this.pendingCoaches, deck: this.deck, finished: this.finished };
     if (this.pendingDraft) return { phase: 'draft' as const, age: this.age, chapter: this.chapter, options: this.pendingDraft.options, picksLeft: this.pendingDraft.picksLeft, deck: this.deck, finished: this.finished };
     return { phase: 'play' as const, turn: this.turn, age: this.age, chapter: this.chapter, scenario: this.scenario, coach: this.coach, hand: this.hand, deck: this.deck, finished: this.finished };
   }
 
+  /** CHOOSE how to spend the summer between chapters (energy + relationships; no development effect). */
+  chooseFocus(focusId: string, tolerant = false) {
+    if (!this.pendingFocus) throw new Error('no focus pending');
+    let opt = this.pendingFocus.find((o) => o.id === focusId);
+    if (!opt) {
+      if (!tolerant) throw new Error('focus not on offer');
+      opt = FOCUS_REST; // replay: the chosen focus drifted off this stage's list — a neutral rest
+    }
+    this.energy = clamp(this.energy + opt.energy, 0, 100);
+    for (const [k, d] of Object.entries(opt.effects)) this.standing[k as MeterKey] = clamp(this.standing[k as MeterKey] + (d ?? 0), 0, 100);
+    this.actions.push({ type: 'focus', cardId: focusId });
+    this.pendingFocus = null;
+    this.pendingOffer = rollOffer(this.rng, this.turn);
+  }
+  /** Replay/robustness: an old snapshot (pre-focus) resolving an offer skips the summer neutrally. */
+  private autoResolveFocus() {
+    if (!this.pendingFocus) return;
+    this.pendingFocus = null;
+    this.pendingOffer = rollOffer(this.rng, this.turn);
+  }
+
   /** RESOLVE the financial offer on the table: apply its money/fame/greed/form, then move to the coach. */
   resolveOffer(offerId: string) {
+    this.autoResolveFocus();
     if (!this.pendingOffer) throw new Error('no offer pending');
     const offer = this.pendingOffer.find((o) => o.id === offerId);
     if (!offer) throw new Error('offer not on table');
@@ -465,6 +530,7 @@ export class Career {
    *  best-fit card so an old career never bricks — live play keeps validating. */
   play(cardId: string, tolerant = false): Choice {
     if (this.finished) throw new Error('career finished');
+    if (this.pendingFocus) throw new Error('choose a focus first');
     if (this.pendingOffer) throw new Error('resolve the financial offer first');
     if (this.pendingCoaches) throw new Error('appoint a coach first');
     if (this.pendingDraft) throw new Error('resolve the draft first');
@@ -491,8 +557,9 @@ export class Career {
     this.discard.push(card);
     this.turn++;
     if (this.turn >= TOTAL_TURNS) { this.finished = true; return choice; }
-    // at an age-chapter boundary: a narrative EVENT fires, then you APPOINT a coach, then a DRAFT
-    if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.earnings += 40 + this.turn * 12; this.pendingOffer = rollOffer(this.rng, this.turn); }
+    // at an age-chapter boundary: relationships pay off (or bite), a narrative EVENT fires, then you
+    // choose a summer FOCUS, take a financial offer, appoint a coach and draft.
+    if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.earnings += 40 + this.turn * 12; this.pendingFocus = rollFocus(this.chapter); }
     else { this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure); }
     return choice;
   }
@@ -502,7 +569,7 @@ export class Career {
     const s = choice.success, big = choice.stakes >= 2, kind = this.scenario.kind;
     const perf = (s - 0.5) * (big ? 6 : 4); // roughly -3..+3, bigger on big stages
     const answeredAsk = choice.fit >= choice.bestFit - 0.05; // did you do what the moment demanded?
-    const rev = (k: MeterKey) => (50 - this.standing[k]) * 0.04; // gentle mean-reversion → meters live in a band, don't spiral
+    const rev = (k: MeterKey) => (50 - this.standing[k]) * 0.022; // gentle mean-reversion → meters breathe but don't spiral
     const social = kind === 'social', teamy = choice.tags.includes('teamwork') || choice.tags.includes('leadership');
     // life() only moves meters ACTIVE this chapter, so we can nudge the whole set and the
     // age-appropriate ones respond (a kid's coach/parents/mates; a star's gaffer/fans/sponsors).
@@ -517,28 +584,70 @@ export class Career {
     this.energy = clamp(this.energy - (big ? 4 : 3), 0, 100); // living the moment costs energy
   }
 
+  /** How the chapter's relationships PAY OFF or BITE (deterministic — reads the end-of-chapter meters,
+   *  no rng). Returns narration + mechanical deltas (form → next chapter's success, energy, earnings). */
+  private computeConsequences(endedChapter: string): { notes: string[]; form: number; energy: number; earn: number; market: number } {
+    const active = new Set(activeMeters(endedChapter).map((m) => m.key));
+    const v = this.standing; const notes: string[] = []; let form = 0, energy = 0, earn = 0, market = 0;
+    const boss = endedChapter === 'Breakthrough' || endedChapter === 'Establishing' ? 'The gaffer' : 'The coach';
+    if (active.has('authority')) {
+      if (v.authority < 32) { form -= 0.10; notes.push(`🚫 ${boss} has lost patience — you spend the season in and out of the side.`); }
+      else if (v.authority > 70) { form += 0.06; notes.push(`✅ ${boss} trusts you completely — first name on the teamsheet.`); }
+    }
+    if (active.has('peers')) {
+      if (v.peers < 32) { form -= 0.06; notes.push('🧊 The dressing room has turned frosty — you feel alone out there.'); }
+      else if (v.peers > 70) { form += 0.04; notes.push('🤝 The lads would run through a wall for you.'); }
+    }
+    if (active.has('partner')) {
+      if (v.partner < 26) { energy -= 18; form -= 0.05; v.partner = Math.max(v.partner, 45); notes.push('💔 Your relationship broke down — a draining few months before a fresh start.'); }
+      else if (v.partner > 72) { energy += 12; notes.push('❤️ Settled and happy at home — you play with a clear head.'); }
+    }
+    if (active.has('family')) {
+      if (v.family < 30) notes.push('🏠 Tension at home is weighing on you.');
+      else if (v.family > 70) { energy += 8; notes.push('🏠 A rock-solid family behind you.'); }
+    }
+    if (active.has('school') && v.school < 30) notes.push('🎒 Your grades have collapsed — the academy is worried.');
+    if (active.has('agent')) {
+      if (v.agent > 70) { market += 1; notes.push('🤝 Your agent is buzzing — serious interest in you.'); }
+      else if (v.agent < 30) notes.push('🤝 Your agent has gone quiet on you.');
+    }
+    if (active.has('fans')) {
+      if (v.fans > 72) { earn += 120; notes.push('📣 The terraces worship you — a loyalty bonus lands.'); }
+      else if (v.fans < 28) { form -= 0.03; notes.push('📣 The fans are on your back.'); }
+    }
+    if (active.has('sponsors') && v.sponsors > 68) { earn += 200; market += 1; notes.push('📸 Sponsors are queuing up — the brand pays out.'); }
+    return { notes, form, energy, earn, market };
+  }
+
   /** Roll the narrative event for the upcoming age chapter and apply its mechanical effect. */
   private advanceSeasonEvent() {
-    this.energy = clamp(this.energy + 50, 0, 100);          // a break between chapters restores energy
-    this.life('partner', -6); this.life('family', -4); this.life('school', -3); // personal life drifts between chapters (tend it next slice)
-    this.demandBias = null; this.formBonus = 0;                  // last chapter's effect clears
+    const conseq = this.computeConsequences(bandAt(this.turn - 1).band.name); // read the chapter that just ended
+    this.chapterConsequences = conseq.notes;
+    this.energy = clamp(this.energy + 50 + conseq.energy, 0, 100);  // a break restores energy (± how life is going)
+    this.earnings += conseq.earn; this.marketBonus += conseq.market;
+    this.life('partner', -6); this.life('family', -4); this.life('school', -3); // relationships drift over a summer if untended
+    this.demandBias = null;
     const doneIdx = BAND_ENDS.indexOf(this.turn);               // the chapter that just ended
     const window = doneIdx >= 0 ? AGE_BANDS[doneIdx].turns : HAND_SIZE;
     const from = Math.max(0, this.log.length - window);
     const lastAvg = this.log.slice(from).reduce((s, c) => s + c.success, 0) / Math.max(1, this.log.length - from);
     const playedWell = lastAvg >= 0.55;
+    let form = 0; // this chapter's event form (consequence form added on top, below — rng order preserved)
     // a rare SERIOUS INJURY: months out (a big dip this chapter) AND lasting fragility (durability↓)
-    if (this.rng() < 0.06) { this.formBonus = -0.2; this.seriousInjuries++; this.seasonEvent = { id: 'serious-injury', name: 'Serious Injury', desc: 'Months on the sidelines — a setback that will linger.' }; return; }
-    const r = this.rng();
-    if (playedWell && r < 0.25) { this.extraPicks += 1; this.seasonEvent = { id: 'breakthrough', name: 'Breakthrough Season', desc: 'A breakout campaign earns you extra coaching time — an extra draft pick.' }; }
-    else if (r < 0.40) { const pool = this.track === 'goalkeeper' ? (['keeping', 'composure', 'leadership'] as Tag[]) : OUTFIELD_TAGS; this.demandBias = pool[Math.floor(this.rng() * pool.length)]; this.seasonEvent = { id: 'new-gaffer', name: 'New Manager', desc: `The new gaffer wants more ${this.demandBias} out of you.` }; }
-    else if (r < 0.52) { this.formBonus = 0.12; this.seasonEvent = { id: 'hot-streak', name: 'Purple Patch', desc: "You're in the form of your life — everything comes off." }; }
-    else if (r < 0.60) { this.formBonus = 0.08; this.seasonEvent = { id: 'cup-run', name: 'Cup Run', desc: 'A thrilling cup run has the whole club buzzing — he’s riding the wave.' }; }
-    else if (r < 0.72) { this.formBonus = -0.12; this.seasonEvent = { id: 'slump', name: 'Loss of Form', desc: 'A dip in confidence to battle through.' }; }
-    else if (r < 0.80) { this.formBonus = -0.05; this.seasonEvent = { id: 'transfer-links', name: 'Transfer Speculation', desc: 'His name is in the papers — a distraction he could do without.' }; }
-    else if (r < 0.88) { this.formBonus = -0.06; this.seasonEvent = { id: 'knock', name: 'Niggling Injury', desc: 'A knock to manage — not quite at your sharpest.' }; }
-    else if (r < 0.94) { this.formBonus = 0.06; this.seasonEvent = { id: 'fan-favourite', name: 'Fan Favourite', desc: 'The supporters have taken to him — he feeds off their energy.' }; }
-    else { this.seasonEvent = { id: 'steady', name: 'Steady Progress', desc: 'A solid, unremarkable season of graft.' }; }
+    if (this.rng() < 0.06) { form = -0.2; this.seriousInjuries++; this.seasonEvent = { id: 'serious-injury', name: 'Serious Injury', desc: 'Months on the sidelines — a setback that will linger.' }; }
+    else {
+      const r = this.rng();
+      if (playedWell && r < 0.25) { this.extraPicks += 1; this.seasonEvent = { id: 'breakthrough', name: 'Breakthrough Season', desc: 'A breakout campaign earns you extra coaching time — an extra draft pick.' }; }
+      else if (r < 0.40) { const pool = this.track === 'goalkeeper' ? (['keeping', 'composure', 'leadership'] as Tag[]) : OUTFIELD_TAGS; this.demandBias = pool[Math.floor(this.rng() * pool.length)]; this.seasonEvent = { id: 'new-gaffer', name: 'New Manager', desc: `The new gaffer wants more ${this.demandBias} out of you.` }; }
+      else if (r < 0.52) { form = 0.12; this.seasonEvent = { id: 'hot-streak', name: 'Purple Patch', desc: "You're in the form of your life — everything comes off." }; }
+      else if (r < 0.60) { form = 0.08; this.seasonEvent = { id: 'cup-run', name: 'Cup Run', desc: 'A thrilling cup run has the whole club buzzing — he’s riding the wave.' }; }
+      else if (r < 0.72) { form = -0.12; this.seasonEvent = { id: 'slump', name: 'Loss of Form', desc: 'A dip in confidence to battle through.' }; }
+      else if (r < 0.80) { form = -0.05; this.seasonEvent = { id: 'transfer-links', name: 'Transfer Speculation', desc: 'His name is in the papers — a distraction he could do without.' }; }
+      else if (r < 0.88) { form = -0.06; this.seasonEvent = { id: 'knock', name: 'Niggling Injury', desc: 'A knock to manage — not quite at your sharpest.' }; }
+      else if (r < 0.94) { form = 0.06; this.seasonEvent = { id: 'fan-favourite', name: 'Fan Favourite', desc: 'The supporters have taken to him — he feeds off their energy.' }; }
+      else { this.seasonEvent = { id: 'steady', name: 'Steady Progress', desc: 'A solid, unremarkable season of graft.' }; }
+    }
+    this.formBonus = form + conseq.form; // relationships tilt the coming chapter on top of its event
   }
 
   /** Offer OFFER_SIZE cards from the pool, weighted so epics are rare. */
@@ -869,6 +978,13 @@ export function simCareer(seed: number, style: Style, genes: Genes = rollGenes(s
   const prefScore = (c: Card) => c.tags.reduce((s, t) => s + (style.pref[t] ?? 0), 0);
   while (!career.finished) {
     const st = career.current();
+    if (st.phase === 'focus') {
+      // summer focus: shore up the neediest active relationship (lowest meter), else rest.
+      const lowest = [...career.meters].sort((a, b) => a.value - b.value)[0];
+      const pick = st.focus.find((f) => lowest && f.effects[lowest.key as MeterKey] != null && f.effects[lowest.key as MeterKey]! > 0) ?? st.focus[st.focus.length - 1];
+      career.chooseFocus(pick.id);
+      continue;
+    }
     if (st.phase === 'offer') {
       // financial path: ambitious/mercenary careers chase the money; grounded ones stay & develop.
       const wantsMoney = (career.agent?.greed ?? 0) + (PERSONALITY_GREED[career.personality.id] ?? 0) + (rng() - 0.5) * 4;

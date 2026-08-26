@@ -9,6 +9,9 @@ import { walletConfigured, nftConfigured, sendEmailCode, connectEmail, connectIn
 
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
 
+// icons for the stage-aware life meters (keyed by underlying relationship) — used in focus effect labels
+const METER_ICON: Record<string, string> = { authority: '🧑‍🏫', peers: '👥', family: '🏠', school: '🎒', agent: '🤝', fans: '📣', sponsors: '📸', partner: '❤️' };
+
 const LEVELS: Record<keyof Omit<Tactics, 'formation'>, string[]> = {
   mentality: ['Very Defensive', 'Defensive', 'Balanced', 'Attacking', 'Very Attacking'],
   line: ['Very Deep', 'Deep', 'Normal', 'High', 'Very High'],
@@ -1028,6 +1031,10 @@ class Game {
     const prof = s.profile ? this.careerProfileHtml(s.profile) : '';
     const narr = this.lastNarration ? `<div class="cg-narrate">“${this.lastNarration}”</div>` : '';
     const recap = s.recap ? `<div class="cg-recap"><span class="cg-recap-lbl">📖 The story so far</span>${s.recap}</div>` : '';
+    const conseq = s.consequences?.length
+      ? `<div class="cg-conseq"><span class="cg-conseq-lbl">📋 How the season paid off</span>`
+        + s.consequences.map((n) => `<div class="cg-conseq-row">${n}</div>`).join('') + `</div>`
+      : '';
     let body = '';
     if (s.phase === 'play' && s.scenario) {
       const tags = Object.entries(s.scenario.demand).sort((a, b) => b[1] - a[1]).map(([t]) => `<span class="cg-tag">${t}</span>`).join('');
@@ -1045,8 +1052,13 @@ class Game {
       body = `<div class="cg-prompt">A decision off the pitch — money now, or development?</div>`
         + s.offers.map((o) => `<div class="cg-offer" data-act="offer" data-id="${o.id}"><div class="cg-cname">💷 ${o.name}</div><div class="cg-cdesc">${o.desc}</div>`
           + `<div class="cg-effs">${o.earn > 0 ? `+${o.earn}c ` : ''}${o.greed > 0 ? '· greedier ' : o.greed < 0 ? '· more loyal ' : ''}${o.market > 0 ? '· more famous ' : ''}${o.form > 0 ? '· sharper' : o.form < 0 ? '· distracted' : ''}</div></div>`).join('');
+    } else if (s.phase === 'focus' && s.focus) {
+      const effLabel = (e: Record<string, number>) => Object.entries(e).map(([k, v]) => `${METER_ICON[k] ?? ''}${v > 0 ? '+' : ''}${v}`).join(' · ');
+      body = `<div class="cg-prompt">🌅 <b>Between seasons</b> — how do you spend the summer? Steer your relationships before the next chapter.</div>`
+        + `<div class="cg-focus">` + s.focus.map((f) => `<div class="cg-foc" data-act="focus" data-id="${f.id}"><div class="cg-cname">${f.icon} ${f.name}</div><div class="cg-cdescr">${f.desc}</div>`
+          + `<div class="cg-effs">${f.energy ? `⚡${f.energy > 0 ? '+' : ''}${f.energy} ` : ''}${effLabel(f.effects)}</div></div>`).join('') + `</div>`;
     }
-    $('academy-body').innerHTML = head + this.lifeDashHtml(s) + prof + narr + recap + evt + body;
+    $('academy-body').innerHTML = head + this.lifeDashHtml(s) + prof + narr + recap + conseq + evt + body;
     $('cg-back').addEventListener('click', () => this.showAcademy());
     $('academy-body').querySelectorAll('[data-act]').forEach((el) => el.addEventListener('click', () => this.doCareerAct(s.prospectId, { type: (el as HTMLElement).dataset.act!, cardId: (el as HTMLElement).dataset.id! })));
   }
