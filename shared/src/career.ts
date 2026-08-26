@@ -327,6 +327,14 @@ export class Career {
   private formBonus = 0;                    // hot streak / slump → success nudge this chapter
   private extraPicks = 0;                   // a breakthrough chapter → +draft picks at the next draft
 
+  // ── New Star Soccer-style life sim (deterministic — evolves from seeded outcomes, no extra rng) ──
+  /** stamina spent living the career; recovers between chapters. Purely surfaced for now. */
+  energy = 100;
+  /** the six relationships you juggle (0–100). Move with performances + choices; consequences layered next. */
+  standing: Record<'boss' | 'team' | 'fans' | 'sponsors' | 'partner' | 'friends', number> =
+    { boss: 50, team: 50, fans: 42, sponsors: 38, partner: 55, friends: 55 };
+  private life(k: keyof Career['standing'], d: number) { this.standing[k] = clamp(this.standing[k] + d, 0, 100); }
+
   readonly personality: Personality;
   readonly agent: Agent | null;            // the sports agent signed at career start — shapes exposure, opportunities, greed, value
   constructor(readonly seed: number, readonly track: Track = 'outfield', agentId?: string) {
@@ -439,6 +447,7 @@ export class Career {
     const success = clamp(f + (this.rng() - 0.5) * variance + form + bigGame + coaching, 0, 1);
     const choice: Choice = { cardId: card.id, tags: card.tags, power: cardPower(card), fit: f, bestFit, success, scenario: this.scenario.label, stakes: this.scenario.stakes };
     this.log.push(choice);
+    this.updateLife(choice); // NSS meters + energy react to how the moment went (deterministic, no rng)
     this.discard.push(card);
     this.turn++;
     if (this.turn >= TOTAL_TURNS) { this.finished = true; return choice; }
@@ -448,8 +457,24 @@ export class Career {
     return choice;
   }
 
+  /** NSS life meters react to a played moment (deterministic — reads the choice, consumes no rng). */
+  private updateLife(choice: Choice) {
+    const s = choice.success, big = choice.stakes >= 2, kind = this.scenario.kind;
+    const perf = (s - 0.5) * (big ? 6 : 4); // roughly -3..+3, bigger on big stages
+    const answeredAsk = choice.fit >= choice.bestFit - 0.05; // did you do what the moment demanded?
+    const rev = (v: number) => (50 - v) * 0.04; // gentle mean-reversion → meters live in a band, don't spiral
+    this.life('boss', Math.round(perf * (answeredAsk ? 1.2 : 0.7) + rev(this.standing.boss)));
+    this.life('fans', Math.round(perf * (kind === 'match' ? 1.1 : 0.6) + rev(this.standing.fans)));
+    this.life('team', Math.round((s - 0.45) * 3 * (choice.tags.includes('teamwork') || choice.tags.includes('leadership') ? 1.5 : 1) + rev(this.standing.team)));
+    this.life('sponsors', Math.round(Math.max(0, perf) * 0.5 + rev(this.standing.sponsors) * 0.5));
+    if (kind === 'social') { this.life('partner', Math.round(perf * 1.3)); this.life('friends', Math.round(perf)); } // social moments tend the personal life
+    this.energy = clamp(this.energy - (big ? 4 : 3), 0, 100); // living the moment costs energy
+  }
+
   /** Roll the narrative event for the upcoming age chapter and apply its mechanical effect. */
   private advanceSeasonEvent() {
+    this.energy = clamp(this.energy + 50, 0, 100);          // a break between chapters restores energy
+    this.life('partner', -6); this.life('friends', -6);     // personal life drifts between chapters (tend it next slice)
     this.demandBias = null; this.formBonus = 0;                  // last chapter's effect clears
     const doneIdx = BAND_ENDS.indexOf(this.turn);               // the chapter that just ended
     const window = doneIdx >= 0 ? AGE_BANDS[doneIdx].turns : HAND_SIZE;

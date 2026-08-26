@@ -19,6 +19,7 @@ export interface CareerState {
   seasonEvent?: { id: string; name: string; desc: string } | null; earnings?: number; deck?: CareerCard[];
   scenario?: { id: string; kind: string; demand: Record<string, number>; label: string; stakes: number };
   story?: string; recap?: string; lifeEvent?: string;
+  energy?: number; standing?: { boss: number; team: number; fans: number; sponsors: number; partner: number; friends: number };
   hand?: CareerCard[]; coach?: { id: string; name: string } | null;
   coaches?: Array<{ id: string; name: string; kind: string; desc: string; specialty: string[]; bonus: number }>;
   options?: CareerCard[]; picksLeft?: number;

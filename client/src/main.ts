@@ -1005,6 +1005,24 @@ class Game {
   }
 
   /** Render the card-game state and wire the choice for the current phase. */
+  /** The New Star Soccer-style life dashboard: energy + the six relationships you juggle. */
+  private lifeDashHtml(s: import('./api').CareerState): string {
+    if (!s.standing && s.energy == null) return '';
+    const st = s.standing;
+    const meterColor = (v: number) => v >= 66 ? '#5bd06a' : v >= 33 ? '#ffd75e' : '#ff6d6d';
+    const meter = (icon: string, label: string, v: number) =>
+      `<div class="cg-meter" title="${label}: ${v}/100"><span class="cg-m-icon">${icon}</span>`
+      + `<span class="cg-m-bar"><b style="width:${v}%;background:${meterColor(v)}"></b></span></div>`;
+    const meters = st
+      ? meter('👔', 'Boss', st.boss) + meter('👥', 'Team', st.team) + meter('📣', 'Fans', st.fans)
+        + meter('📸', 'Sponsors', st.sponsors) + meter('❤️', 'Partner', st.partner) + meter('🍻', 'Friends', st.friends)
+      : '';
+    const energy = s.energy != null
+      ? `<div class="cg-energy" title="Energy ${s.energy}/100"><span>⚡ ENERGY</span><span class="cg-e-bar"><b style="width:${s.energy}%"></b></span></div>`
+      : '';
+    const money = s.earnings != null ? `<div class="cg-money">💷 ${s.earnings.toLocaleString()}</div>` : '';
+    return `<div class="cg-dash">${energy}${money}<div class="cg-meters">${meters}</div></div>`;
+  }
   private renderCareer(s: import('./api').CareerState) {
     const pct = Math.round((s.turn / s.totalTurns) * 100);
     const head = `<div class="cg-head"><button id="cg-back">←</button><span class="cg-age">${s.name} · age ${s.age}</span>`
@@ -1031,7 +1049,7 @@ class Game {
         + s.offers.map((o) => `<div class="cg-offer" data-act="offer" data-id="${o.id}"><div class="cg-cname">💷 ${o.name}</div><div class="cg-cdesc">${o.desc}</div>`
           + `<div class="cg-effs">${o.earn > 0 ? `+${o.earn}c ` : ''}${o.greed > 0 ? '· greedier ' : o.greed < 0 ? '· more loyal ' : ''}${o.market > 0 ? '· more famous ' : ''}${o.form > 0 ? '· sharper' : o.form < 0 ? '· distracted' : ''}</div></div>`).join('');
     }
-    $('academy-body').innerHTML = head + prof + narr + recap + evt + body;
+    $('academy-body').innerHTML = head + this.lifeDashHtml(s) + prof + narr + recap + evt + body;
     $('cg-back').addEventListener('click', () => this.showAcademy());
     $('academy-body').querySelectorAll('[data-act]').forEach((el) => el.addEventListener('click', () => this.doCareerAct(s.prospectId, { type: (el as HTMLElement).dataset.act!, cardId: (el as HTMLElement).dataset.id! })));
   }
