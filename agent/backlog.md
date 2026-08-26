@@ -33,7 +33,7 @@ implements it on a branch, and opens a PR for you to review.
 - [ ] **[career] richer PLAY narration.** In `shared/src/narrate.ts`, add ≥6 fresh phrasings to EACH of
   `RESULTS.triumph/good/mixed/poor/dismal` and `REACTIONS.*`, and ≥3 new `SETTINGS` per chapter + more
   `BIG_SETTINGS`/`HUGE_SETTINGS`. Keep the seeded-pick structure; no repetition of existing lines. Verify.
-- [ ] **[career] narrate coach/draft/offer choices.** Extend the narrator so appointing a coach, drafting
+- [x] **[career] narrate coach/draft/offer choices.** Extend the narrator so appointing a coach, drafting
   a card, and resolving a financial offer ALSO produce a short immersive beat (new functions in
   `narrate.ts`; wire them in `server/src/tokens.ts` `actWithNarration` for those action types). Verify.
 - [ ] **[career] chapter-transition narration.** When a career crosses an age-chapter boundary, produce a

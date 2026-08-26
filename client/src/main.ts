@@ -893,7 +893,7 @@ class Game {
       + `<span class="cg-chapter">${s.chapter}</span><div class="cg-bar"><i style="width:${pct}%"></i></div><span class="pr-meta">${s.turn}/${s.totalTurns}</span></div>`;
     const evt = s.seasonEvent ? `<div class="cg-event"><b>${s.seasonEvent.name}</b> — ${s.seasonEvent.desc}</div>` : '';
     const prof = s.profile ? this.careerProfileHtml(s.profile) : '';
-    const narr = this.lastNarration && s.phase === 'play' ? `<div class="cg-narrate">“${this.lastNarration}”</div>` : '';
+    const narr = this.lastNarration ? `<div class="cg-narrate">“${this.lastNarration}”</div>` : '';
     let body = '';
     if (s.phase === 'play' && s.scenario) {
       const tags = Object.entries(s.scenario.demand).sort((a, b) => b[1] - a[1]).map(([t]) => `<span class="cg-tag">${t}</span>`).join('');

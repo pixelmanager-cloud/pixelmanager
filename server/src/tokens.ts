@@ -4,7 +4,7 @@
 // home for every transition, replacing the old prospects/contracts/lifecycle/achievements split.
 import {
   overall, contractView, signContract, contractLength, legacyCard, legacyBoost, inheritGenes, rollGenes, graduate,
-  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, moraleEffects, narratePlay, scenarioStory, cardName, CARD_DESC,
+  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, moraleEffects, narratePlay, narrateCoach, narrateDraft, narrateOffer, scenarioStory, cardName, cardOf, CARD_DESC,
   type Player, type Track, type PlayerAchievements, type Genes, type CareerPlayerAttrs,
 } from '@fm/shared';
 import type { Token, Store } from './store.js';
@@ -78,10 +78,35 @@ export function loadCareer(t: Token): Career {
   for (const a of JSON.parse(t.career_actions ?? '[]') as CareerAction[]) applyAction(c, a);
   return c;
 }
-/** Apply an action and, for a PLAY, return an immersive narration of the moment (null otherwise). */
+// Seed each beat off (career seed, turn, action-type salt, card id) so every off-pitch choice reads
+// differently yet replays identically. Salts keep the offer/coach/draft beats of one boundary distinct.
+function narrateSeed(c: Career, salt: number, cardId: string): number {
+  let h = ((c as any).seed >>> 0) ^ salt;
+  h = (h + c.turn * 2654435761) >>> 0;
+  for (let i = 0; i < cardId.length; i++) { h ^= cardId.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+function ctxFor(c: Career, seed: number) {
+  return { age: c.age, chapter: c.chapter, stakes: c.scenario?.stakes ?? 1, personalityId: c.personality.id, seasonEventId: c.seasonEvent?.id ?? null, seed };
+}
+
+/** Apply an action and return an immersive narration of the moment (play, coach, draft, or offer). */
 export function actWithNarration(c: Career, a: CareerAction): string | null {
-  if (a.type !== 'play') { applyAction(c, a); return null; }
-  const ctx = { age: c.age, chapter: c.chapter, stakes: c.scenario.stakes, personalityId: c.personality.id, seasonEventId: c.seasonEvent?.id ?? null, seed: (((c as any).seed >>> 0) + c.turn * 2654435761) >>> 0 };
+  if (a.type === 'coach') {
+    applyAction(c, a);
+    return c.coach ? narrateCoach(c.coach.name, c.coach.kind, c.coach.specialty, ctxFor(c, narrateSeed(c, 0x2222, a.cardId))) : null;
+  }
+  if (a.type === 'draft') {
+    const card = cardOf(a.cardId);
+    applyAction(c, a);
+    return card ? narrateDraft(card.name, card.tags, card.rarity, ctxFor(c, narrateSeed(c, 0x3333, a.cardId))) : null;
+  }
+  if (a.type === 'offer') {
+    const offer = c.pendingOffer?.find((o) => o.id === a.cardId) ?? null;   // capture before it's consumed
+    applyAction(c, a);
+    return offer ? narrateOffer(offer.name, { greed: offer.greed, earn: offer.earn, market: offer.market, form: offer.form }, ctxFor(c, narrateSeed(c, 0x1111, a.cardId))) : null;
+  }
+  const ctx = ctxFor(c, (((c as any).seed >>> 0) + c.turn * 2654435761) >>> 0);
   applyAction(c, a);
   const choice = c.log[c.log.length - 1];
   return narratePlay(cardName(a.cardId), choice.tags, choice.success, ctx);

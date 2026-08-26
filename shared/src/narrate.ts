@@ -114,3 +114,57 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
   const flavor = (b === 'triumph' || b === 'dismal') && rng() < 0.7 && PERSONALITY[ctx.personalityId] ? ' ' + PERSONALITY[ctx.personalityId] : '';
   return `${cap(lead)}, he ${verb} ${cardName} ${result}. ${reaction}${flavor}`;
 }
+
+// ── OFF-PITCH BEATS: the choices between chapters (appointing staff, drafting a new facet of your game,
+// taking or turning down a deal) each deserve their own immersive line. Same seeded template style as
+// narratePlay so a career reads as one continuous story, not just a run of matches. ──
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+const mkPick = (seed: number) => { const rng = mulberry32(seed >>> 0); return { rng, pick: <T,>(arr: T[]): T => arr[Math.floor(rng() * arr.length)] }; };
+
+// what a coach/mentor drills, phrased by their specialty tag
+const COACH_FOCUS: Record<string, string> = {
+  aggression: 'the darker side of the game', creativity: 'his eye for a pass', composure: 'his temperament',
+  teamwork: 'his link-up play', leadership: 'his voice on the pitch', stamina: 'his engine',
+  flair: 'the tricks in his locker', keeping: 'his goalkeeping',
+};
+const COACH_LEAD: Record<'coach' | 'mentor', string[]> = {
+  coach: ['the club paired him with', 'a new voice arrived — ', 'for the season ahead he’d work under', 'the staff brought in', 'onto the training pitch stepped'],
+  mentor: ['a wise old head took him under his wing —', 'he fell into the orbit of', 'an old pro pulled him aside —', 'a steadying influence arrived:', 'quietly, he was placed alongside'],
+};
+const COACH_PURPOSE = ['The work ahead would centre on {f}.', 'The brief was simple: sharpen {f}.', 'Session after session now aimed at {f}.', 'Everything geared toward honing {f}.', 'The plan: build {f}, week by week.'];
+/** A beat for appointing a coach/mentor for the coming chapter. */
+export function narrateCoach(name: string, kind: 'coach' | 'mentor', specialty: string[], ctx: NarrateCtx): string {
+  const { rng, pick } = mkPick(ctx.seed);
+  const focus = specialty.map((t) => COACH_FOCUS[t] ?? 'his all-round game').filter((v, i, a) => a.indexOf(v) === i);
+  const focusStr = focus.length > 1 ? `${focus.slice(0, -1).join(', ')} and ${focus[focus.length - 1]}` : focus[0] ?? 'his all-round game';
+  const purpose = pick(COACH_PURPOSE).replace('{f}', focusStr);
+  const flavor = rng() < 0.4 && PERSONALITY[ctx.personalityId] ? ' ' + PERSONALITY[ctx.personalityId] : '';
+  return `${cap(pick(COACH_LEAD[kind]))} ${name}. ${purpose}${flavor}`;
+}
+
+const DRAFT_LEAD = ['He added a new string to his bow:', 'Something new entered his game —', 'A fresh weapon went into the locker:', 'His game grew another facet —', 'Into his repertoire went', 'He set about learning'];
+const DRAFT_TAILS = ['One more tool for the trade.', 'Another layer to who he was becoming.', 'His identity, sharpening.', 'A piece that felt like him.', 'The coaches liked the fit.', 'Bit by bit, a player was taking shape.'];
+const DRAFT_RARE_TAILS = ['A signature in the making.', 'The sort of thing that defines a player.', 'Rare air, this.', 'A real statement of intent.', 'Not many carry that in their game.'];
+/** A beat for drafting a card into the deck (building the player's identity). */
+export function narrateDraft(cardName: string, _cardTags: string[], rarity: string | undefined, ctx: NarrateCtx): string {
+  const { rng, pick } = mkPick(ctx.seed);
+  const special = rarity === 'rare' || rarity === 'epic';
+  const tail = special && rng() < 0.85 ? pick(DRAFT_RARE_TAILS) : pick(DRAFT_TAILS);
+  return `${cap(pick(DRAFT_LEAD))} ${cardName}. ${tail}`;
+}
+
+interface OfferShape { greed: number; earn: number; market: number; form: number }
+const OFFER_MONEY_LEAD = ['He took the money.', 'The lure proved too strong — he signed.', 'He cashed in.', 'Off he went, chasing the bigger stage.', 'He put pen to paper on the deal.'];
+const OFFER_MONEY_TAIL = ['The bank balance swelled; whether his game did was another question.', 'Fame followed — and the distractions with it.', 'A life-changing sum, and a step into the unknown.', 'Wages climbed, and the expectations with them.', 'The spotlight found him now.'];
+const OFFER_BRAND_TAIL = ['His face started appearing on billboards.', 'The profile rose; so did the noise around him.', 'Sponsors circled — a name being made off the pitch too.', 'Fame arrived early, ready or not.'];
+const OFFER_GROUNDED_LEAD = ['He turned it down and stayed put.', 'He kept his feet on the ground and said no.', 'Money could wait — he stayed to develop.', 'He chose the pitch over the payday.', 'He shook his head and got back to work.'];
+const OFFER_GROUNDED_TAIL = ['The fans loved him for it.', 'Quietly, his game kept growing.', 'No fireworks — just graft, and improvement.', 'Loyalty now; the rewards, he hoped, would come later.', 'Nose down, still learning his trade.'];
+/** A beat for resolving a financial offer (the money-vs-development choice of a player's life). */
+export function narrateOffer(name: string, offer: OfferShape, ctx: NarrateCtx): string {
+  const { rng, pick } = mkPick(ctx.seed);
+  const chasedMoney = offer.greed > 0 || offer.form < 0;
+  const lead = chasedMoney ? pick(OFFER_MONEY_LEAD) : pick(OFFER_GROUNDED_LEAD);
+  const tail = chasedMoney ? (offer.market >= 2 && rng() < 0.6 ? pick(OFFER_BRAND_TAIL) : pick(OFFER_MONEY_TAIL)) : pick(OFFER_GROUNDED_TAIL);
+  const flavor = rng() < 0.35 && PERSONALITY[ctx.personalityId] ? ' ' + PERSONALITY[ctx.personalityId] : '';
+  return `${name}. ${lead} ${tail}${flavor}`;
+}
