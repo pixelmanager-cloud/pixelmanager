@@ -136,6 +136,27 @@ export function contractCost(overall: number, age: number, greed: number): numbe
   return Math.round(overall * overall * 1.2 * ageFactor * greedFactor);
 }
 
+/** How many SEASONS a player will commit to per signing: a loyal one-club man signs long deals, a
+ *  mercenary wants short ones (renew often, expensive each time) — so greed drives renewal cadence. */
+export function contractLength(greed: number, personality?: string): number {
+  const nudge = personality === 'leader' || personality === 'workhorse' ? 0.7
+    : personality === 'maverick' || personality === 'mercurial' ? -0.7 : 0;
+  return clamp(Math.round(5 - greed * 0.18 + nudge), 2, 5); // greed 3 → ~5 seasons, greed 19 → 2 (min 2, so renewals never every season)
+}
+
+/** Buy-out / asking price (coins) to SELL the NFT instead of extending: ability drives it, with fame
+ *  and greed inflating it. The other side of the "extend or sell" decision the owner faces. */
+export function releaseClause(overall: number, marketability = 10, greed = 10): number {
+  return Math.round(overall * overall * 3 * (1 + (marketability - 10) * 0.03) * (1 + (greed - 10) * 0.02));
+}
+
+/** Contract state in the Manager game. The NFT is ALWAYS owned; this only gates SELECTION. When a
+ *  contract lapses the player stays in the wallet as an asset but can't be picked until re-signed. */
+export interface Contract { signedSeason: number; lengthSeasons: number }
+export const contractExpirySeason = (c: Contract) => c.signedSeason + c.lengthSeasons;
+/** Is the player selectable this season? (false once the contract has lapsed → extend or sell.) */
+export const contractActive = (c: Contract, currentSeason: number) => currentSeason < contractExpirySeason(c);
+
 // ── FINANCIAL DECISIONS: at most age-chapter breaks (from the Academy on) an OFFER lands on the table.
 // This is the money layer of a player's life — and it MUST trade against the pitch. Chase the money and
 // your earnings, fame and greed climb but you lose a step of development that chapter (a distracted,

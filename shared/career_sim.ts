@@ -1,6 +1,6 @@
 // Career-sim harness. Validates: (1) different styles → distinct, specialised players + roles;
 // (2) skill → magnitude; (3) the turn-by-turn engine is deterministic. Run: `npx tsx career_sim.ts`.
-import { Career, simCareer, graduate, ageCurve, careerOverall, prospectValuation, contractCost, AGENTS, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, STARTER_DECK, cardPower, type Style, type CareerPlayerAttrs, type Role, type Genes } from './src/career.js';
+import { Career, simCareer, graduate, ageCurve, careerOverall, prospectValuation, contractCost, contractLength, releaseClause, AGENTS, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, STARTER_DECK, cardPower, type Style, type CareerPlayerAttrs, type Role, type Genes } from './src/career.js';
 
 const STYLES: Style[] = [
   { name: 'Poacher',   pref: { composure: 1, flair: 0.8 },        skill: 0.85 },
@@ -225,6 +225,24 @@ console.log('\n=== financial decisions — the money fork (same player, differen
   let mo = 0, de = 0; const N = 120;
   for (let i = 0; i < N; i++) { mo += runPath('money', seedFrom('fk', i)).p.overall; de += runPath('develop', seedFrom('fk', i)).p.overall; }
   console.log(`  averaged over ${N} careers — chase money: ovr ${(mo / N).toFixed(2)}   stay & develop: ovr ${(de / N).toFixed(2)}   (money pays now but staying develops a better, cheaper player)`);
+}
+
+// contract cost-of-ownership: greed drives BOTH renewal cadence (contract length) and per-renewal cost
+console.log('\n=== contract cost-of-ownership — extend or sell (NFT stays owned either way) ===');
+{
+  const ovr = 16;
+  // model a 15-season pro career (age 25→40); a player re-signs every contractLength seasons
+  const ownership = (greed: number, personality: string) => {
+    const len = contractLength(greed, personality);
+    let total = 0, renewals = 0;
+    for (let age = 25; age < 40; age += len) { total += contractCost(ovr, age, greed); renewals++; }
+    return { len, renewals, total };
+  };
+  for (const [label, greed, pers] of [['mercenary star', 18, 'maverick'], ['loyal one-club man', 4, 'leader']] as const) {
+    const o = ownership(greed, pers);
+    console.log(`  ${label.padEnd(18)} greed ${String(greed).padStart(2)} · ${o.len}-season deals · ${o.renewals} renewals over 15y · total wages ${String(o.total).padStart(5)} coins · sell for ${releaseClause(ovr, greed >= 15 ? 16 : 8, greed)} coins`);
+  }
+  console.log('  → a mercenary re-signs often at a premium (drains coins) but resells high; a loyal star is cheap to keep for years');
 }
 
 // prospect market: snapshot a half-developed player, resume it elsewhere, value it
