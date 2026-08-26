@@ -51,3 +51,51 @@ watch the dynasty grow. When he retires, his heir continues — one uninterrupte
 
 North star: by Phase 3 there is no seam a player can point to between "the career game" and "the manager
 game" — there is only their club and their bloodline.
+
+---
+
+## Phase 2 — technical design (the fused season timeline)
+
+**Goal:** the club season and the player's career are one timeline. Right now the career already renders
+matchday moments with a scoreboard (opponent, score, minute) invented per-turn by `matchContext` in
+`server/src/tokens.ts` (deterministic from seed+turn, purely presentational). The manager side, meanwhile,
+has a *real* league season (`server/src/seasons.ts`, fixtures, standings). Fusion = make those the **same
+matches**, and make managing a **stage the linear life grows into**, not a parallel menu.
+
+### The unlock model (the one design decision)
+The life is linear, so managing must enter *in sequence*. Proposed trigger, in order of how much it changes:
+- **A — Player-manager at the peak (recommended).** While the bloodline player is a senior pro (roughly the
+  `First Team` / `Establishing` stages, ~age 18+), his club matches become manageable: before his matchday
+  you set the XI/tactics, then play his moment inside that fixture. Managing and playing are the same event.
+- **B — Gaffer after retirement.** You only take the dugout once the player retires; the career stage is
+  "playing", the manager stage is "management", strictly sequential. Simpler, but the two never overlap.
+- **C — Hybrid.** B by default, with A available in the final playing stage as a "learning the trade" taster.
+
+This choice sets *when* `showHub` re-links the club surface and how the two engines share a clock. **Pending
+the user's pick** — do not build the timeline until it's chosen.
+
+### Data/engine plan (keeps determinism + `career_sim`/`verify` green)
+1. **One club identity, already shared.** A save = one account with a club and the bloodline token; no schema
+   change needed to *link* them — only to decide which fixtures are "his".
+2. **Career match moments ← real fixtures.** Replace `matchContext`'s invented opponent/scoreline with the
+   club's actual league fixture for that week: same opponent, same competition. Deterministic already (fixtures
+   are seeded per season); the career turn maps to a fixture index. The moment's *demand/cards* stay engine-
+   identical, so replay + the sim are untouched — only the surrounding context changes (as `matchContext` is
+   today: presentational).
+3. **His performance ← the moment's `success`.** The `Choice.success` we now surface (Phase-1 outcome) becomes
+   his contribution to that fixture's result — a soft nudge on the club match, not a rewrite of the match
+   engine (that's Phase 3).
+4. **One clock.** The season's matchday cadence drives career turns during the playing stages; between
+   matches, the off-pitch career moments (training/life) fill the gaps.
+5. **Unlock wiring.** `showHub` re-links the club/season surface only once the linear stage from the unlock
+   model is reached; before that it stays player-only (today's state).
+
+### Build order (each a green, shippable step)
+1. Pick the unlock model (A/B/C) — **user decision, blocks the rest.**
+2. Map career match-turns → the season's fixture list (context only; no engine change). Verify replay + sim.
+3. Re-link the club/season surface at the unlock stage; gate it behind the linear progression.
+4. Feed `success` into the fixture result as a nudge; show his line in the club result.
+5. (Phase 3) collapse the two matches into one simulation.
+
+Guardrails unchanged: no `Date.now`/`Math.random` in `shared/`; `npm run verify` **and**
+`npx tsx shared/career_sim.ts` green after every step; one shippable step per commit.
