@@ -483,16 +483,16 @@ class Game {
         $('opponents').innerHTML = '<div class="muted">No pod-mates yet — as players join your pod, fixtures appear here. (Register another handle in a second browser to test.)</div>';
       } else {
         $('opponents').innerHTML = fixtures.map((f) => {
-          const vb = `<span class="venue ${f.venue}" title="${f.venue === 'home' ? 'Home' : 'Away'}">${f.venue === 'home' ? 'H' : 'A'}</span>`;
+          const vb = `<span class="venue ${f.venue}" title="${f.venue === 'home' ? 'Home' : 'Away'} fixture">${f.venue === 'home' ? 'HOME' : 'AWAY'}</span>`;
           if (f.status === 'played' && f.result) {
             const { my, opp } = f.result;
             const cls = my > opp ? 'w' : my < opp ? 'l' : 'd';
-            return `<div class="fixture done"><span class="opp">${vb} <b>${f.clubName}</b> <span class="meta">${f.handle}</span></span><span class="pill ${cls}">${cls.toUpperCase()} ${my}-${opp}</span></div>`;
+            return `<div class="fixture done">${vb} <span class="opp"><b>${f.clubName}</b></span><span class="pill ${cls}">${cls.toUpperCase()} ${my}-${opp}</span></div>`;
           }
           const btn = capped
-            ? '<button disabled title="Daily limit reached — come back tomorrow">Play ▶</button>'
-            : `<button data-opp="${f.opponentId}" data-h="${f.handle}" data-venue="${f.venue}">Play ▶</button>`;
-          return `<div class="fixture">${vb} <span class="opp"><b>${f.clubName}</b> <span class="meta">${f.handle} · rating ${f.rating}</span></span>${btn}</div>`;
+            ? '<button class="fx-play" disabled title="Daily limit reached — come back tomorrow">Play ▶</button>'
+            : `<button class="fx-play" data-opp="${f.opponentId}" data-h="${f.handle}" data-venue="${f.venue}">Play ▶</button>`;
+          return `<div class="fixture">${vb} <span class="opp"><b>${f.clubName}</b> <span class="meta">rating ${f.rating}</span></span>${btn}</div>`;
         }).join('');
         Array.from($('opponents').querySelectorAll('button[data-opp]')).forEach((b) =>
           b.addEventListener('click', () => this.play((b as HTMLElement).dataset.opp!, (b as HTMLElement).dataset.h!, (b as HTMLElement).dataset.venue as 'home' | 'away')));

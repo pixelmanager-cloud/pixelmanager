@@ -297,21 +297,23 @@
       .result-row .rr-when { color: var(--cyan); font-size: 14px; flex: none; width: 62px; text-align: right; }
       #hub-cols { display: flex; gap: 24px; margin-top: 14px; flex-wrap: wrap; }
       #hub-cols > div { flex: 1; min-width: 240px; }
-      .fixture { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 2px solid var(--line);
-        background: var(--panel-2); margin-bottom: 8px; font-size: 19px; }
+      .fixture { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border: 2px solid var(--line);
+        background: var(--panel-2); margin-bottom: 5px; font-size: 17px; }
       .fixture .num { font-family: var(--display); font-size: 12px; color: var(--pink); width: 26px; }
-      .fixture .opp { flex: 1; }
-      .fixture .opp b { font-size: 21px; color: #fff; }
-      .fixture .meta { color: var(--cyan); font-size: 16px; }
+      .fixture .opp { flex: 1; min-width: 0; }
+      .fixture .opp b { font-size: 17px; color: #fff; }
+      .fixture .meta { color: var(--cyan); font-size: 14px; }
       .fixture.done { opacity: 0.72; }
       .fixture .pill { font-family: var(--display); font-size: 9px; line-height: 1; padding: 5px 7px; border: 2px solid; border-radius: 6px;
         background: rgba(0,0,0,0.35); text-shadow: 1px 1px 0 rgba(0,0,0,0.6); }
       .fixture .pill.w { color: var(--good); border-color: var(--good); }
       .fixture .pill.l { color: var(--home); border-color: var(--home); }
       .fixture .pill.d { color: var(--warn); border-color: var(--warn); }
-      .fixture .venue { font-family: var(--display); font-size: 8px; width: 22px; text-align: center; padding: 5px 0; border: 1px solid; border-radius: 4px; flex: none; }
-      .fixture .venue.home { color: var(--good); border-color: var(--good); }
-      .fixture .venue.away { color: var(--cyan); border-color: var(--cyan); }
+      .fixture .venue { font-family: var(--display); font-size: 8px; text-align: center; padding: 5px 6px; border: 1px solid;
+        border-radius: 4px; flex: none; letter-spacing: 0.5px; }
+      .fixture .venue.home { color: #04140b; background: var(--good); border-color: var(--good); }
+      .fixture .venue.away { color: #061018; background: var(--cyan); border-color: var(--cyan); }
+      .fixture .fx-play { font-size: 9px; padding: 6px 9px; box-shadow: 2px 2px 0 rgba(0,0,0,0.6); flex: none; }
       .fx-progress { font-family: var(--display); font-size: 9px; color: var(--warn); margin-left: 8px; }
       .lb-row { display: flex; justify-content: space-between; padding: 5px 8px; border-bottom: 1px solid var(--line); font-size: 17px; }
       .lb-row .r { font-family: var(--display); font-size: 11px; color: var(--warn); }
