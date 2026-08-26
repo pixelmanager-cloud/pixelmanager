@@ -1493,6 +1493,7 @@ class Game {
     this.playerAttrs = new Map();
     for (const t of [payload.home.team, payload.away.team]) for (const p of t.players) this.playerAttrs.set(p.name, p.attrs);
     this.move = null;
+    this.liveScore = [0, 0]; this.scorerTally = new Map(); this.lastGoalIdx = -1;
     this.running = true; this.accum = 0; this.eventsShown = 0;
     this.setMatchNames();
     $('ticker').innerHTML = '';
@@ -1603,11 +1604,43 @@ class Game {
   }
 
   private matchSeed = 0;
-  /** Deterministic pick from the match seed + event index + a salt — so a replay commentates identically. */
-  private cpick<T>(arr: T[], idx: number, salt: number): T {
+  /** Deterministic index from the match seed + event index + a salt (so a replay commentates identically). */
+  private cidx(len: number, idx: number, salt: number): number {
     let h = (this.matchSeed ^ Math.imul(idx + 1, 374761393) ^ Math.imul(salt, 2246822519)) >>> 0;
     h = Math.imul(h ^ (h >>> 15), 2246822519); h = Math.imul(h ^ (h >>> 13), 3266489917); h ^= h >>> 16;
-    return arr[(h >>> 0) % arr.length];
+    return (h >>> 0) % len;
+  }
+  private cpick<T>(arr: T[], idx: number, salt: number): T { return arr[this.cidx(arr.length, idx, salt)]; }
+  // running match context for narration (reset each match in startMatch)
+  private liveScore: [number, number] = [0, 0];
+  private scorerTally = new Map<string, number>();
+  private lastGoalIdx = -1;
+  /** Compose a goal line with running score, scorer tally (brace/hat-trick) and game-state framing. */
+  private goalLine(e: MatchEvent, team: string, idx: number): string {
+    this.liveScore[e.teamIdx]++;
+    const us = this.liveScore[e.teamIdx], them = this.liveScore[1 - e.teamIdx];
+    const raw = e.playerName ?? 'someone';
+    const n = (this.scorerTally.get(raw) ?? 0) + 1; this.scorerTally.set(raw, n);
+    const p = this.descriptor(raw);
+    const pool = [`⚽ GOAL! ${p} buries it for ${team}!`, `⚽ IT’S IN! ${p} finishes it off — ${team}!`, `⚽ GOAL! What a strike from ${p}!`, `⚽ ${p} makes no mistake — ${team}!`, `⚽ GET IN! ${p} lashes it home!`, `⚽ Clinical from ${p} — ${team} find the net!`, `⚽ ${p} steals in — ${team} score!`, `⚽ Tucked away by ${p}!`];
+    let bi = this.cidx(pool.length, idx, 1);
+    if (bi === this.lastGoalIdx) bi = (bi + 1) % pool.length; // never the same phrasing twice running
+    this.lastGoalIdx = bi;
+    const note = (t: string) => ` <span class="cm-note">${t}</span>`;
+    let tally = '';
+    if (n === 2) tally = note('His second!');
+    else if (n === 3) tally = note('HAT-TRICK!!');
+    else if (n >= 4) tally = note(`That’s ${n} for him today!`);
+    const diff = us - them, total = us + them, late = e.minute >= 80;
+    let state = '';
+    if (total === 1) state = note('The deadlock is broken.');
+    else if (diff === 0) state = note(this.cpick(['Level again!', 'It’s all square!', 'Right back in it!'], idx, 9));
+    else if (diff < 0) state = note(`A consolation for ${team}.`);
+    else if (diff === 1 && late) state = note('This could be the winner!');
+    else if (diff === 1) state = note(`${team} back in front.`);
+    else if (diff >= 3) state = note('This is turning into a rout.');
+    const score = ` <span class="cm-score">${this.liveScore[0]}–${this.liveScore[1]}</span>`;
+    return pool[bi] + score + tally + state;
   }
   private playerAttrs = new Map<string, any>();
   private move: { teamIdx: 0 | 1; names: string[]; zone?: string } | null = null;
@@ -1632,9 +1665,15 @@ class Game {
     const m = this.move; this.move = null;
     if (!m || m.names.length < 2) return;
     const team = m.teamIdx === 0 ? this.homeName : this.awayName;
-    const seq = m.names.slice(-4); // keep the last few touches
+    const uniq = m.names.filter((n, i) => n && n !== m.names[i - 1]); // collapse give-and-go repeats
+    const touches = uniq.length;
+    if (touches < 2) return;
+    const seq = uniq.slice(-4); // show the last few touches of the chain
     const chain = seq.join(' → ');
-    const lead = this.cpick([`${team} work it — `, `Neat from ${team}: `, `Patient build-up, ${team}: `, `${team} keep it: `], seq.length + m.names.length, 7);
+    // a genuinely sustained sequence gets a "total control" framing; a short one stays low-key
+    const lead = touches >= 7
+      ? this.cpick([`${touches} passes and counting — `, `Wonderful patience, ${team} (${touches} touches): `, `Total control from ${team} — `], touches, 7)
+      : this.cpick([`${team} work it — `, `Neat from ${team}: `, `Patient build-up, ${team}: `, `${team} keep it: `], seq.length + touches, 7);
     this.appendLine(`<span class="cm-min"></span> <span class="cm-flow">${lead}${chain} ${this.zoneWord(m.zone)}.</span>`, 'cm-flow');
   }
   private pushTicker(e: MatchEvent) {
@@ -1651,11 +1690,11 @@ class Game {
     const p = this.descriptor(e.playerName ?? 'someone');
     const zone = this.zoneWord(e.zone);
     const min = `<span class="cm-min">${e.minute}'</span>`;
-    const sc = this.engine?.state.score ?? [0, 0];
+    const sc = this.liveScore; // running tally (correct in live AND skip-to-end flush)
     let text = '', cls = '';
     switch (e.type) {
       case 'kickoff': text = this.cpick(['We’re underway!', 'And the match kicks off!', 'Here we go — game on!', 'The referee gets us started!'], idx, 5); break;
-      case 'goal': cls = 'cm-goal'; text = this.cpick([`⚽ GOAL! ${p} buries it for ${team}!`, `⚽ IT’S IN! ${p} finishes it off — ${team}!`, `⚽ GOAL! What a strike from ${p}! ${team} score!`, `⚽ ${p} makes no mistake — ${team}!`, `⚽ GET IN! ${p} lashes it home for ${team}!`, `⚽ Clinical from ${p} — ${team} find the net!`], idx, 1) + ` <span class="cm-score">${sc[0]}–${sc[1]}</span>`; break;
+      case 'goal': cls = 'cm-goal'; text = this.goalLine(e, team, idx); break;
       case 'chance': cls = 'cm-chance'; text = this.cpick([`${p} works a yard and shapes to shoot…`, `Here come ${team} — ${p} bursts in behind!`, `Big chance! ${p} is in for ${team}…`, `${team} carve it open — ${p} with a sight of goal!`, `${p} shifts it onto his stronger foot…`, `A gap opens up and ${p} goes for it…`], idx, 2); break;
       case 'shot_saved': cls = 'cm-save'; text = this.cpick([`🧤 SAVED! ${opp}’s keeper turns ${p} away!`, `🧤 Denied! A fine stop to keep ${p} out!`, `🧤 What a save — ${p} was sure he’d scored!`, `🧤 Beaten away! ${p} is foiled!`, `🧤 Big hands! ${opp} keep ${p} out!`], idx, 3); break;
       case 'shot_missed': cls = 'cm-miss'; text = this.cpick([`${p} drags it wide!`, `Off target — ${p} will want that one back.`, `${p} blazes over the bar!`, `Just past the post from ${p}!`, `Wild from ${p} — miles over!`], idx, 4); break;
@@ -1666,6 +1705,7 @@ class Game {
     }
     if (e.type === 'goal' && !this.silent) this.celebrateGoal(e);
     this.appendLine(`${min} ${text}`, cls);
+    if (e.type === 'goal') ($('ticker').lastElementChild as HTMLElement)?.classList.add('flash');
   }
 
   private celebrateGoal(e: MatchEvent) {

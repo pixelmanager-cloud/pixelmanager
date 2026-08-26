@@ -713,6 +713,16 @@
       #ticker .cm-break { color: #cbd; border-top: 1px solid var(--line); padding-top: 6px; margin-top: 2px; }
       #ticker .cm-flow { color: #9aa2b8; } #ticker .cm-flow .cm-flow { font-style: italic; }
       #ticker .cm-tackle { color: #e0a86a; } #ticker .cm-loose { color: #8a90a6; }
+      #ticker .cm-note { color: #ffb1e0; font-weight: bold; margin-left: 4px; }
+      #ticker .cm-goal { position: relative; } #ticker .cm-goal.flash { animation: cmgoal 1.1s ease; }
+      @keyframes cmgoal { 0%,100% { background: transparent; } 25% { background: rgba(255,215,94,0.22); } }
+      #ticker .cm-foul { color: #c7b46a; } #ticker .cm-card { font-weight: bold; }
+      #ticker .cm-card.yellow { color: #ffd75e; } #ticker .cm-card.red { color: #ff6d6d; }
+      #ticker .cm-corner, #ticker .cm-freekick { color: #86c5e0; } #ticker .cm-pen { color: #ff9de0; font-weight: bold; }
+      #ticker .cm-sub { color: #a7e0a0; } #ticker .cm-injury { color: #e09090; }
+      #ticker .cm-counter { color: #ffc98a; font-weight: bold; } #ticker .cm-press { color: #f2b06a; }
+      #ticker .cm-lull { color: #6a7088; font-style: italic; } #ticker .cm-momentum { color: #b0a0e0; font-style: italic; }
+      #ticker .cm-post { color: #e0c060; font-weight: bold; }
       #toggle-2d.on { background: var(--accent, #6ad06a); color: #10210f; }
       canvas { image-rendering: pixelated; }
 
