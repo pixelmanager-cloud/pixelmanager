@@ -160,32 +160,63 @@ function matchContext(seed: number, turn: number, stakes: number, big: string | 
   return { opponent, home, score, minute, comp, club: clubName ?? null };
 }
 
+// LEGACY PRESSURE: an heir of a club LEGEND (high inherited pedigree) carries the weight of the family
+// name. When his form dips, the fanbase's expectations turn to pressure — a re-skinned moment about living
+// in the shadow. Presentational (deterministic, sim-safe); handling it well silences the doubters.
+const LEGEND_PEDIGREE = 0.6;   // pedigree at/above this ⇒ the father was a revered club great (see legacyBoost)
+const POOR_FORM = 0.42;        // recent avg success below this ⇒ he's struggling and the crowd notices
+function legacyPressureStory(surname: string, seed: number): string {
+  const lines = [
+    `The name on his back is ${surname} — and this crowd remembers what that used to mean. A run of poor games has the terraces restless; every misplaced pass draws a groan. “He’s no ${surname},” someone jeers.`,
+    `They expected another ${surname}. Right now they’ve got a kid buckling under the weight of it — the boos aren’t loud yet, but they’re there, and he can hear every single one.`,
+    `Being a ${surname} opened every door. Today it feels like a target on his back: the phone-ins have started, the pundits are circling — is the boy simply not good enough to carry the name?`,
+    `His father is a banner on the terrace. The son is one mistake from the same crowd turning on him. This is the moment that decides whether the name lifts him or buries him.`,
+    `“And of course, the great ${surname}’s son,” the commentator sighs, “who has been a shadow of the father so far.” He hears it in his head every time he gets the ball.`,
+  ];
+  return lines[seed % lines.length];
+}
+
 export function careerState(t: Token, c: Career, clubName?: string | null, clubLevel = 0) {
   const st = c.current() as any;
+  const recentForm = (() => { const r = c.log.slice(-6); return r.length ? r.reduce((s, e) => s + e.success, 0) / r.length : 0.5; })();
   // STORY MODE: describe the situation + what each card would do
   if (st.phase === 'play' && st.scenario) {
     const demand = st.scenario.demand as Record<string, number>;
     const topTag = Object.keys(demand).sort((a, b) => (demand[b] ?? 0) - (demand[a] ?? 0))[0] ?? 'teamwork';
     let moment = st.scenario.stakes >= 2 ? String(st.scenario.label).replace(/^★\s*/, '') : null;
+    let kind = String(st.scenario.kind);
+    // LEGACY PRESSURE (checked first): a struggling heir of a legend faces the weight of the name.
+    const surname = t.name.trim().split(/\s+/).slice(1).join(' ') || t.name;
+    const heirOfLegend = t.generation > 0 && t.pedigree >= LEGEND_PEDIGREE;
+    const pressureGate = ((((c as any).seed >>> 0) ^ Math.imul(c.turn + 3, 40503)) >>> 0) % 100;
+    let legacyPressure = false;
+    if (heirOfLegend && recentForm < POOR_FORM && (kind === 'social' || kind === 'match') && c.age >= 15 && pressureGate < 55) {
+      legacyPressure = true;
+      st.lifeEvent = 'the weight of the name';
+      st.momentKind = 'life';
+      st.story = legacyPressureStory(surname, (((c as any).seed >>> 0) + c.turn * 40503) >>> 0);
+      moment = null;
+    }
     // RARE LIFE EVENTS (presentational re-skin only — no rng/mechanic change, so in-progress careers
     // and the sim stay identical): a fraction of low-stakes SOCIAL moments become a contract standoff,
     // a loan decision, or bouncing back from a public setback — resolved by the same card play.
-    let kind = String(st.scenario.kind);
     const lifeHash = ((((c as any).seed >>> 0) ^ Math.imul(c.turn + 1, 2654435761)) >>> 0) % 100;
     const LIFE_KINDS = ['contract', 'loan', 'setback', 'media', 'loyalty', 'role', 'fallout'];
     const LIFE_LABEL: Record<string, string> = {
       contract: 'a contract standoff', loan: 'a loan-move decision', setback: 'bouncing back from a public mistake',
       media: 'a media storm', loyalty: 'a boyhood-club approach', role: 'a squad-role ultimatum', fallout: 'a public falling-out with a teammate',
     };
-    if (kind === 'social' && st.scenario.stakes === 1 && c.age >= 16 && lifeHash < 22) {
+    if (!legacyPressure && kind === 'social' && st.scenario.stakes === 1 && c.age >= 16 && lifeHash < 22) {
       kind = LIFE_KINDS[lifeHash % LIFE_KINDS.length];
       st.scenario = { ...st.scenario, kind, label: LIFE_LABEL[kind] };
       st.lifeEvent = kind;
       moment = null;
     }
-    st.story = scenarioStory(kind, topTag, moment, { seed: (((c as any).seed >>> 0) + c.turn * 40503) >>> 0, age: c.age, chapter: c.chapter, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0 });
-    st.momentKind = kind === 'match' ? 'match' : (st.lifeEvent || kind === 'social') ? 'life' : 'training';
-    if (kind === 'match') st.matchCtx = matchContext((c as any).seed >>> 0, c.turn, st.scenario.stakes, moment, clubName);
+    if (!legacyPressure) {
+      st.story = scenarioStory(kind, topTag, moment, { seed: (((c as any).seed >>> 0) + c.turn * 40503) >>> 0, age: c.age, chapter: c.chapter, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0 });
+      st.momentKind = kind === 'match' ? 'match' : (st.lifeEvent || kind === 'social') ? 'life' : 'training';
+      if (kind === 'match') st.matchCtx = matchContext((c as any).seed >>> 0, c.turn, st.scenario.stakes, moment, clubName);
+    }
     st.hand = withDesc(st.hand);
   }
   if (st.options) st.options = withDesc(st.options); // draft cards get their "what he does" too
@@ -203,9 +234,7 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
   // NOT a fixed age: he gets a senior club season once he's broken into the first team — a prodigy early,
   // a late developer later, and a higher-level club is harder to break into (see firstTeamReady).
   if (clubName && firstTeamReady(bandIdx, prof.currentOverall, clubLevel)) {
-    const recent = c.log.slice(-6);
-    const form = recent.length ? recent.reduce((s, e) => s + e.success, 0) / recent.length : 0.5;
-    const strength = prof.currentOverall + (form - 0.5) * 6;      // his ability + current form
+    const strength = prof.currentOverall + (recentForm - 0.5) * 6; // his ability + current form
     const { share, apps, status } = squadRole(bandIdx, prof.currentOverall); // how much he features this season
     const seasonSeed = (((c as any).seed >>> 0) ^ Math.imul(bandIdx + 1, 2654435761)) >>> 0;
     clubSeasonData = { ...clubSeason(clubName, strength, share, seasonSeed), apps, status };

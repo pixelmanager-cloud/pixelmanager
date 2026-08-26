@@ -1020,6 +1020,9 @@ class Game {
           + `<span class="cg-md-team">${mc.opponent}</span></div>`
           + `<div class="cg-md-vs">${mc.home ? '🏟️ Home' : '✈️ Away'} · ${mc.comp}</div></div>`;
         prompt = 'The moment falls to him — what does he do?';
+      } else if (mk === 'life' && s.lifeEvent === 'the weight of the name') {
+        header = `<div class="cg-mtype pressure">🎭 THE WEIGHT OF THE NAME</div>`;
+        prompt = 'The name is a burden today — how does he respond?';
       } else if (mk === 'life') {
         header = `<div class="cg-mtype life">⚡ LIFE EVENT${s.lifeEvent ? ` · ${s.lifeEvent}` : ' · off the pitch'}</div>`;
         prompt = 'How does he handle it?';
