@@ -7,3 +7,4 @@ export * from './teams.js';
 export * from './engine.js';
 export * from './contracts.js';
 export * from './prestige.js';
+export * from './morale.js';
