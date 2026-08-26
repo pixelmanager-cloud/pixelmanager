@@ -442,11 +442,14 @@ app.post('/players/:id/reborn', { preHandler: requireAuth }, async (req, reply) 
   if (t.state !== 'retired') return reply.code(409).send({ error: 'not retired' });
   const coins = await db.getCoins(ownerId);
   if (coins < REBORN_COST) return reply.code(400).send({ error: 'not enough coins', need: REBORN_COST, have: coins });
+  // RETIREMENT LEGACY — the retiring pro's life wealth is bequeathed to the club, seeding the heir's era.
+  const legacy = Math.round((t.earnings ?? 0) * RETIREMENT_LEGACY_SHARE);
   await db.addCoins(ownerId, -REBORN_COST); // breeding fee (off-chain)
+  if (legacy > 0) await db.addCoins(ownerId, legacy);
   await db.updateToken(id, rebornFields(t)); // retired → next-gen prospect
   const fresh = (await db.getToken(id))!;
   const pot = rebornPotential(fresh);
-  return { ok: true, cost: REBORN_COST, coins: await db.getCoins(ownerId), prospect: { id, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: pot.pedigree, potentialStars: pot.stars, genes: JSON.parse(fresh.genes_json) } };
+  return { ok: true, cost: REBORN_COST, legacy, coins: await db.getCoins(ownerId), prospect: { id, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: pot.pedigree, potentialStars: pot.stars, genes: JSON.parse(fresh.genes_json) } };
 });
 
 // PROSPECTS: the owner's prospect-state tokens — 10-year-olds to DEVELOP in the Career game.
@@ -510,6 +513,12 @@ app.put('/career/:id/kit', { preHandler: requireAuth }, async (req, reply) => {
   return { ok: true, kit };
 });
 
+// ── ONE FAMILY ENTERPRISE: the bloodline player's career money feeds his club ──
+// (all bridges are server-side so the deterministic `shared/` career engine is untouched)
+const CLUB_WAGE_CUT = 0.25;    // continuous: share of everything he banks that also lands in the club coffers
+const PRO_SIGNING_SHARE = 0.4; // turning-pro windfall: share of his youth earnings the family invests at graduation
+const RETIREMENT_LEGACY_SHARE = 0.6; // retirement legacy: share of a retiring pro's wealth bequeathed to the club
+
 app.post('/career/:id/act', { preHandler: requireAuth }, async (req, reply) => {
   const ownerId = req.account!.id;
   const t = await db.getToken((req.params as any).id);
@@ -518,8 +527,11 @@ app.post('/career/:id/act', { preHandler: requireAuth }, async (req, reply) => {
   if (t.career_seed == null) return reply.code(400).send({ error: 'career not started' });
   const action = req.body as CareerAction;
   const c = loadCareer(t);
+  const earningsBefore = c.earnings; // to credit the club a cut of whatever this action earns him
   let narration: string | null = null;
   try { narration = actWithNarration(c, action); } catch (e: any) { return reply.code(400).send({ error: e?.message ?? 'illegal move' }); }
+  // CONTINUOUS CLUB CUT — his success (wages/deals/good seasons) lifts the club's finances too.
+  let clubGain = Math.round(Math.max(0, c.earnings - earningsBefore) * CLUB_WAGE_CUT);
   // OUTCOME: for a match/training/life moment, expose how well the read + the play went so the UI can
   // give immediate, legible feedback (a fit verdict + a performance grade + the attributes developed).
   let outcome: { fit: number; bestFit: number; success: number; tags: string[]; answeredAsk: boolean } | null = null;
@@ -534,11 +546,16 @@ app.post('/career/:id/act', { preHandler: requireAuth }, async (req, reply) => {
     const grad = graduatedFields(fresh, c);
     const deal = signContract(s.number, grad.greed ?? 10, grad.personality ?? undefined);
     await db.updateToken(t.id, { ...grad, prime_season: s.number, signed_season: deal.signedSeason, length_seasons: deal.lengthSeasons, staked_since: s.number });
+    // TURNING-PRO WINDFALL — the family backs the club as he signs his first pro deal.
+    const windfall = Math.round((grad.earnings ?? 0) * PRO_SIGNING_SHARE);
+    clubGain += windfall;
+    if (clubGain > 0) await db.addCoins(ownerId, clubGain);
     // an evocative epilogue of the whole 10→25 journey, shown before the pro reveal
     const epilogue = graduationEpilogue({ name: fresh.name, careerSeed: fresh.career_seed!, personalityId: grad.personality ?? c.personality.id, overall: grad.peak_overall ?? 10, role: grad.role ?? undefined, topTraits: JSON.parse(grad.traits_json ?? '[]') });
-    return { ok: true, graduated: true, narration, outcome, epilogue, player: tokenToPlayer((await db.getToken(t.id))!) };
+    return { ok: true, graduated: true, narration, outcome, clubGain, windfall, epilogue, player: tokenToPlayer((await db.getToken(t.id))!) };
   }
-  return { ok: true, narration, outcome, state: careerState((await db.getToken(t.id))!, c) };
+  if (clubGain > 0) await db.addCoins(ownerId, clubGain);
+  return { ok: true, narration, outcome, clubGain, state: careerState((await db.getToken(t.id))!, c) };
 });
 
 // LEGENDS: the manager's hall of retirement legacy cards (one per generation a token retired under them).

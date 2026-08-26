@@ -443,7 +443,7 @@ class Game {
       const r = await api.reborn(playerId);
       this.setMe(await api.me());
       await this.showHub();
-      toast(`✦ Next generation bred (−${r.cost}c)`);
+      toast(r.legacy && r.legacy > 0 ? `✦ Heir born · 🏟️ +${r.legacy.toLocaleString()}c legacy bequeathed to the club` : `✦ Next generation bred (−${r.cost}c)`);
       this.showProspectCard(r.prospect, true);
     } catch (err: any) {
       toast(err?.body?.error === 'already reborn' ? 'Bloodline already continued' : err?.body?.error === 'not enough coins' ? `Not enough coins (need ${err.body.need})` : (err?.body?.error ?? 'Reborn failed'));
@@ -1167,17 +1167,20 @@ class Game {
       const r = await api.careerAct(prospectId, action);
       this.lastNarration = r.narration ?? '';
       this.lastOutcome = r.outcome ?? null;
+      if (r.clubGain && r.clubGain > 0 && this.account?.coins != null) this.account.coins += r.clubGain; // his earnings feed the club
       if (r.graduated && r.player) {
         this.setMe(await api.me());
         const player = r.player;
+        const windfallLine = r.windfall && r.windfall > 0 ? `<div class="cg-grad-windfall">🏟️ +${r.windfall.toLocaleString()}c invested in the club as he signs pro</div>` : '';
         // an evocative epilogue of the whole journey, then the pro reveal
         $('academy-body').innerHTML = `<div class="cg-graduation">`
           + `<div class="cg-grad-title">🎓 ${player.name} — the journey's end</div>`
-          + `<div class="cg-epilogue">${r.epilogue ?? ''}</div>`
+          + `<div class="cg-epilogue">${r.epilogue ?? ''}</div>${windfallLine}`
           + `<button id="cg-reveal">Reveal the pro →</button></div>`;
         $('cg-reveal').addEventListener('click', () => { this.showPlayerCard(player, true); this.showAcademy(); });
       } else if (r.state) {
         this.renderCareer(r.state);
+        if (r.clubGain && r.clubGain > 0) toast(`🏟️ +${r.clubGain}c to the club`);
       }
     } catch (e: any) { toast(e?.body?.error ?? 'Move failed'); }
   }
