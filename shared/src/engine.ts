@@ -4,6 +4,7 @@ import { makeRng } from './rng.js';
 import { mirroredAnchor } from './teams.js';
 import { DEFAULT_TACTICS, deriveMods, type TacticMods, type Tactics } from './tactics.js';
 import { dutyMods, effectiveDuty, type DutyMods } from './duties.js';
+import { mMul, mAdd, hasTrait, teamLeadership } from './mental.js';
 
 export const TICK_SEC = 0.5; // game-seconds per tick
 const MATCH_SEC = 90 * 60;
@@ -35,6 +36,8 @@ export class MatchEngine {
    *  wider than a narrow opponent finds the flanks; a team with more central midfielders
    *  controls the middle. Precomputed (shape + width are fixed pre-kickoff). */
   private zonal: [number, number];
+  /** small team-wide finishing steadiness from each side's best leader (0 for a leaderless side) */
+  private leadershipBonus: [number, number];
 
   constructor(public teams: [Team, Team], seed: number, tactics?: [Tactics, Tactics]) {
     this.rng = makeRng(seed);
@@ -42,6 +45,7 @@ export class MatchEngine {
     this.mods = [deriveMods(this.tactics[0]), deriveMods(this.tactics[1])];
     this.dm = [teams[0].players.map((p) => dutyMods(effectiveDuty(p))), teams[1].players.map((p) => dutyMods(effectiveDuty(p)))];
     this.zonal = this.computeZonal();
+    this.leadershipBonus = [teamLeadership(teams[0].players), teamLeadership(teams[1].players)];
     this.state = {
       clockSec: 0,
       score: [0, 0],
@@ -298,7 +302,9 @@ export class MatchEngine {
       const ds = s.players[defTeam][i];
       if (Math.hypot(ds.x - cs.x, ds.y - cs.y) < tackleRange) {
         const def = this.teams[defTeam].players[i];
-        const defEff = norm(def.attrs.tackling) * fit(ds.fitness) * (0.6 + 0.4 * norm(def.attrs.workrate));
+        // aggression sharpens tackling; the Ball-Winner trait sharpens it further (centred → neutral players unchanged)
+        const defEff = norm(def.attrs.tackling) * fit(ds.fitness) * (0.6 + 0.4 * norm(def.attrs.workrate))
+          * mMul(def.attrs.aggression, 0.18) * (hasTrait(def, 'ballwinner') ? 1.08 : 1);
         const retain = (norm(carrier.attrs.strength) * 0.5 + norm(carrier.attrs.pace) * 0.3 + norm(carrier.attrs.passing) * 0.2) * fit(cs.fitness);
         const pTackle = clamp(0.12 + 0.5 * (defEff / (defEff + retain)), 0.05, 0.8) * defMods.pressIntensity
           * (1 + Math.max(0, this.dm[defTeam][i].press) * 0.25) * TICK_SEC;
@@ -341,7 +347,8 @@ export class MatchEngine {
         // without the chaos of forced turnovers.
         const patientUnderPress = Math.max(0, -this.mods[teamIdx].directness) * Math.max(0, defMods.pressIntensity - 1) * 0.42;
         const completion = clamp(
-          0.58 + 0.38 * norm(carrier.attrs.passing) * fit(cs.fitness) - dist * 0.008 - pressure * 0.18 - patientUnderPress - risk,
+          0.58 + 0.38 * norm(carrier.attrs.passing) * fit(cs.fitness) - dist * 0.008 - pressure * 0.18 - patientUnderPress - risk
+          + mAdd(carrier.attrs.teamwork, 0.07) + (hasTrait(carrier, 'metronome') ? 0.03 : 0), // teamwork/Metronome sharpen link-up
           0.1, 0.96,
         );
         if (this.rng() < completion) {
@@ -406,9 +413,12 @@ export class MatchEngine {
         - pressure * 3
         + this.dm[teamIdx][i].magnet
         + this.rng() * 6;
-      // a direct side, and especially one on the counter, slips more through-balls in behind
+      // a direct side, and especially one on the counter, slips more through-balls in behind;
+      // the passer's creativity (and the Creative Maestro trait) unlocks more of them
       const counter = this.onCounter(teamIdx);
-      const throughP = clamp(0.5 + 0.16 * mods.directness + (counter ? 0.14 : 0), 0.25, 0.9);
+      const passer = this.teams[teamIdx].players[playerIdx];
+      const throughP = clamp(0.5 + 0.16 * mods.directness + (counter ? 0.14 : 0)
+        + mAdd(passer.attrs.creativity, 0.12) + (hasTrait(passer, 'maestro') ? 0.05 : 0), 0.25, 0.9);
       const through = gain > (counter ? 14 : 16) && this.teams[teamIdx].players[i].role === 'FW' && this.rng() < throughP;
       if (gain > -6 && score > bestScore) { bestScore = score; best = { idx: i, through }; }
     }
@@ -448,7 +458,11 @@ export class MatchEngine {
       // only log clear-cut misses; hopeful long-range efforts don't clutter the feed
       if (quality > 0.32 || clear) s.events.push({ minute, type: 'shot_missed', teamIdx, playerName: shooter.name });
     } else {
-      const goalProb = clamp(0.13 + quality * 0.55 - norm(gk.attrs.keeping) * fit(gks.fitness) * 0.2 + (clear ? 0.12 : 0), 0.03, 0.9);
+      // composure (+ Clinical Finisher, + a calm well-led side) lifts conversion; The Wall keeper resists it.
+      // all centred → a neutral shooter/keeper/team scores exactly as before.
+      const finish = mAdd(shooter.attrs.composure, 0.1) + (hasTrait(shooter, 'clinical') ? 0.04 : 0) + this.leadershipBonus[teamIdx];
+      const wall = hasTrait(gk, 'wall') ? 0.06 : 0;
+      const goalProb = clamp(0.13 + quality * 0.55 - norm(gk.attrs.keeping) * fit(gks.fitness) * 0.2 + (clear ? 0.12 : 0) + finish - wall, 0.03, 0.9);
       if (this.rng() < goalProb) {
         s.score[teamIdx]++;
         s.events.push({ minute, type: 'goal', teamIdx, playerName: shooter.name });

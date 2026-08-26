@@ -35,6 +35,15 @@ export interface PlayerAttrs {
   keeping: number;
   setPiece: number; // corners / free kicks / penalties delivery + finishing
   stamina: number;  // endurance — how slowly the live in-match fitness drains
+  // ── MENTAL layer (from the Career Sim; OPTIONAL). The engine reads these CENTRED at 10, so a
+  // player without them behaves exactly as before — only career-built players with real mental
+  // stats deviate. composure→finishing under pressure, aggression→tackling(+)/turnover(−),
+  // creativity→chance creation, teamwork→pass completion, leadership→small team-wide steadiness.
+  composure?: number;
+  aggression?: number;
+  creativity?: number;
+  teamwork?: number;
+  leadership?: number;
 }
 
 export interface Player {
@@ -46,6 +55,10 @@ export interface Player {
   anchor: { x: number; y: number };
   /** optional manager-assigned duty; when absent the engine auto-derives one from stats */
   duty?: Duty;
+  /** earned career traits (Clinical Finisher, Ball-Winner…) — small match effects; optional */
+  traits?: string[];
+  /** innate temperament id (career-built players); read for cup-final composure later; optional */
+  personality?: string;
 }
 
 export interface Team {
