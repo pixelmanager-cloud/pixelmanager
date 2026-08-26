@@ -81,6 +81,63 @@ export const DECK: Card[] = [
   { id: 'vocal',       name: 'Vocal Leader',          tags: ['leadership'] },
   { id: 'roar',        name: 'Roar of Defiance',      tags: ['leadership', 'teamwork'], rarity: 'rare' },
   { id: 'iron-lung',   name: 'Iron Lung',             tags: ['stamina', 'leadership'], rarity: 'epic' },
+  // ── BIG VARIETY EXPANSION: many more moments per tag so a long career rarely repeats a card ──
+  // composure
+  { id: 'slow-it',     name: 'Slow it Down',          tags: ['composure'] },
+  { id: 'unflappable', name: 'Unflappable',           tags: ['composure'] },
+  { id: 'panenka',     name: 'Panenka Penalty',       tags: ['composure'], rarity: 'rare' },
+  { id: 'time-tackle', name: 'Time the Tackle',       tags: ['composure', 'aggression'] },
+  { id: 'the-pause',   name: 'The Pause',             tags: ['composure', 'creativity'], rarity: 'rare' },
+  { id: 'reverse',     name: 'Reverse Pass',          tags: ['composure', 'creativity'] },
+  // flair
+  { id: 'cheeky-flick', name: 'Cheeky Flick',         tags: ['flair'] },
+  { id: 'rabona',      name: 'Rabona',                tags: ['flair'], rarity: 'rare' },
+  { id: 'elastico',    name: 'Elástico',              tags: ['flair'], rarity: 'rare' },
+  { id: 'rainbow',     name: 'Rainbow Flick',         tags: ['flair'], rarity: 'rare' },
+  { id: 'aud-chip',    name: 'Audacious Chip',        tags: ['flair', 'composure'] },
+  { id: 'roulette',    name: 'Marseille Roulette',    tags: ['flair', 'stamina'], rarity: 'rare' },
+  { id: 'showboat',    name: 'Showboat',              tags: ['flair', 'creativity'] },
+  // aggression
+  { id: 'slide',       name: 'Slide Tackle',          tags: ['aggression'] },
+  { id: 'win-header',  name: 'Win the Header',        tags: ['aggression'] },
+  { id: 'agg-press',   name: 'Aggressive Press',      tags: ['aggression'] },
+  { id: 'block-shot',  name: 'Block the Shot',        tags: ['aggression', 'teamwork'] },
+  { id: 'shepherd',    name: 'Shepherd it Out',       tags: ['aggression', 'composure'] },
+  { id: 'lead-press',  name: 'Lead the Press',        tags: ['aggression', 'leadership'] },
+  // creativity
+  { id: 'vision',      name: 'Vision',                tags: ['creativity'] },
+  { id: 'half-space',  name: 'Find the Half-Space',   tags: ['creativity'] },
+  { id: 'diagonal',    name: 'Raking Diagonal',       tags: ['creativity'] },
+  { id: 'lofted',      name: 'Lofted Through-Ball',   tags: ['creativity', 'flair'] },
+  { id: 'dictate',     name: 'Dictate the Tempo',     tags: ['creativity', 'leadership'] },
+  // teamwork
+  { id: 'link',        name: 'Link the Play',         tags: ['teamwork'] },
+  { id: 'cover-space', name: 'Cover the Space',       tags: ['teamwork'] },
+  { id: 'press-unit',  name: 'Press as a Unit',       tags: ['teamwork'] },
+  { id: 'overload',    name: 'Create the Overload',   tags: ['teamwork', 'creativity'] },
+  { id: 'hold-shape',  name: 'Hold the Shape',        tags: ['teamwork', 'composure'] },
+  { id: 'selfless',    name: 'Selfless Graft',        tags: ['teamwork', 'stamina'] },
+  // leadership
+  { id: 'marshal',     name: 'Marshal the Line',      tags: ['leadership'] },
+  { id: 'demand-ball', name: 'Demand the Ball',       tags: ['leadership'] },
+  { id: 'step-up',     name: 'Step Up',               tags: ['leadership', 'composure'] },
+  { id: 'gee-up',      name: 'Gee Them Up',           tags: ['leadership', 'stamina'] },
+  { id: 'armband',     name: 'Wear the Armband',      tags: ['leadership', 'teamwork'], rarity: 'rare' },
+  // stamina
+  { id: 'press-90',    name: 'Press for 90',          tags: ['stamina'] },
+  { id: 'engine-room', name: 'Engine Room',           tags: ['stamina'] },
+  { id: 'late-run',    name: 'Late Run',              tags: ['stamina'] },
+  { id: 'counter-press', name: 'Counter-Press',       tags: ['stamina', 'aggression'] },
+  { id: 'up-and-down', name: 'Up and Down',           tags: ['stamina', 'teamwork'] },
+  // rare / epic signatures
+  { id: 'maestro',     name: 'Midfield Maestro',      tags: ['creativity', 'composure'], rarity: 'epic' },
+  { id: 'destroyer',   name: 'The Destroyer',         tags: ['aggression', 'stamina'], rarity: 'epic' },
+  { id: 'fox-box',     name: 'Fox in the Box',        tags: ['composure', 'flair'], rarity: 'rare' },
+  { id: 'set-piece',   name: 'Set-Piece Specialist',  tags: ['creativity', 'composure'], rarity: 'rare' },
+  { id: 'target-man',  name: 'Target Man',            tags: ['teamwork', 'aggression'], rarity: 'rare' },
+  { id: 'winger-wiz',  name: "Winger's Magic",        tags: ['flair', 'stamina'], rarity: 'epic' },
+  { id: 'libero',      name: 'Ball-Playing Libero',   tags: ['composure', 'creativity'], rarity: 'rare' },
+  { id: 'box-crash',   name: 'Crash the Box',         tags: ['stamina', 'aggression'] },
 ];
 
 // The small deck EVERY outfield career starts with; the rest is drafted between seasons.
@@ -109,6 +166,20 @@ export const GK_DECK: Card[] = [
   { id: 'parry',       name: 'Parry the Danger',  tags: ['keeping', 'aggression'] },
   { id: 'safe-hands',  name: 'Safe Hands',        tags: ['keeping', 'teamwork'] },
   { id: 'wonder-save', name: 'Wonder Save',       tags: ['keeping', 'flair'], rarity: 'rare' },
+  // ── GK variety expansion ──
+  { id: 'tip-over',    name: 'Tip it Over',       tags: ['keeping'] },
+  { id: 'reflex',      name: 'Reflex Save',       tags: ['keeping'] },
+  { id: 'stay-big',    name: 'Stay Big',          tags: ['keeping', 'composure'] },
+  { id: 'narrow-ang',  name: 'Narrow the Angle',  tags: ['keeping', 'composure'] },
+  { id: 'punch-clear', name: 'Punch Clear',       tags: ['keeping', 'aggression'] },
+  { id: 'brave-feet',  name: 'Brave at his Feet', tags: ['keeping', 'aggression'] },
+  { id: 'command-box', name: 'Command the Box',   tags: ['keeping', 'leadership'] },
+  { id: 'throw-launch', name: 'Throw a Counter',  tags: ['keeping', 'creativity'] },
+  { id: 'play-short',  name: 'Play it Short',     tags: ['keeping', 'teamwork'] },
+  { id: 'double-save', name: 'Double Save',       tags: ['keeping', 'stamina'], rarity: 'rare' },
+  { id: 'one-handed',  name: 'One-Handed Stop',   tags: ['keeping', 'flair'], rarity: 'rare' },
+  { id: 'spot-king',   name: 'Spot-Kick King',    tags: ['keeping', 'leadership'], rarity: 'rare' },
+  { id: 'save-season', name: 'Save of the Season', tags: ['keeping'], rarity: 'epic' },
 ];
 const GK_STARTER_IDS = ['shot-stop', 'claim-cross', 'organise', 'calm-back'];
 const GK_STARTER: Card[] = GK_DECK.filter((c) => GK_STARTER_IDS.includes(c.id));
@@ -146,11 +217,44 @@ export const CARD_DESC: Record<string, string> = {
   'penalty-hero': 'Guess right and become the hero from the spot.', 'sweeper-elite': 'Play as a modern sweeper-keeper, starting moves from the back.',
   fingertip: 'Get a vital fingertip to it and turn it round the post.', parry: 'Attack the ball and parry the danger to safety.',
   'safe-hands': 'Gather it cleanly with safe hands to settle everyone.', 'wonder-save': 'Somehow pull off a wonder save that defies belief.',
+  // expansion descriptions — outfield
+  'slow-it': 'Take the sting out of the game and keep it under control.', unflappable: 'Refuse to be rattled as the crowd turns up the heat.',
+  panenka: 'Dink it straight down the middle from the spot with pure nerve.', 'time-tackle': 'Wait, wait… then win it clean with perfect timing.',
+  'the-pause': 'Freeze the defence with a disguised pause before you release it.', reverse: 'Roll a reverse pass against the grain to spring the door open.',
+  'cheeky-flick': 'A cheeky backheel flick that leaves the stadium gasping.', rabona: 'Wrap your leg behind the standing one and whip it — a rabona.',
+  elastico: 'Snap it one way then the other in the blink of an eye.', rainbow: 'Scoop it up and over his head — pure showboat.',
+  'aud-chip': 'Spot the keeper off his line and dink it over with impudence.', roulette: 'Spin away through the challenge with a Marseille roulette.',
+  showboat: 'Juggle it past your man and draw the fury of the bench.', slide: 'Commit to a full-blooded sliding tackle to win it back.',
+  'win-header': 'Attack the ball and win the aerial duel with a thumping header.', 'agg-press': 'Hound the ball-carrier and force the mistake.',
+  'block-shot': 'Throw yourself in front of the shot for the team.', shepherd: 'Usher the winger away from danger — calm, strong, patient.',
+  'lead-press': 'Set the trigger and drag the whole team up to hunt the ball.', vision: 'See a pass no one else in the ground even imagined.',
+  'half-space': 'Drift into the pocket between the lines and turn to face goal.', diagonal: 'Spray a fifty-yard diagonal onto a teammate’s boot.',
+  lofted: 'Loft it delicately over the last man into the runner’s stride.', dictate: 'Get on the ball again and again and pull every string.',
+  link: 'Be the glue — one touch, keep it moving, bring others in.', 'cover-space': 'Do the unseen work, filling the space the runner left.',
+  'press-unit': 'Move as one, squeezing the pitch for the whole team.', overload: 'Drift across to make it two-on-one and free the full-back.',
+  'hold-shape': 'Discipline over instinct — hold your position and trust it.', selfless: 'Do the running for others, closing every angle.',
+  marshal: 'Push them up, drop them back — organise the whole line.', 'demand-ball': 'Show for it when others hide and take responsibility.',
+  'step-up': 'Grab the ball in the shoot-out — you’ll take one.', 'gee-up': 'Sprint back to your keeper and fire everyone up.',
+  armband: 'Be the one who holds it together when it’s all coming apart.', 'press-90': 'Never give the defenders a single moment’s peace all game.',
+  'engine-room': 'Cover ground others simply can’t, over and over.', 'late-run': 'Time the run into the box when everyone else is spent.',
+  'counter-press': 'Win it back within five seconds of losing it.', 'up-and-down': 'Get up and back all game as a tireless wing-back.',
+  maestro: 'Conduct the entire match to your own private rhythm.', destroyer: 'Break up everything and cover every blade — the screen.',
+  'fox-box': 'Always in the right place — a natural fox in the box.', 'set-piece': 'Whip a dead ball onto a sixpence, every single time.',
+  'target-man': 'Win it, hold it, bring the runners in — the focal point.', 'winger-wiz': 'Terrorise the full-back down the flank all afternoon.',
+  libero: 'Stride out from the back, a ball-playing libero splitting the lines.', 'box-crash': 'Crash the box late and get on the end of it.',
+  // expansion descriptions — goalkeeper
+  'tip-over': 'Get a strong hand up and tip it over the bar.', reflex: 'React to the deflection on pure reflex and keep it out.',
+  'stay-big': 'Hold your ground in the one-on-one and stay tall.', 'narrow-ang': 'Set yourself, make the goal small, force the miss.',
+  'punch-clear': 'Attack the cross and punch it clear to safety.', 'brave-feet': 'Spread yourself at the striker’s feet without flinching.',
+  'command-box': 'Come and claim everything — bark the orders.', 'throw-launch': 'Roll it out fast to spring a lightning counter.',
+  'play-short': 'Start the build-up calmly and short from the back.', 'double-save': 'Save one, scramble up, and save the rebound too.',
+  'one-handed': 'A full-stretch, one-handed save that beggars belief.', 'spot-king': 'Own the shoot-out and stand tall from twelve yards.',
+  'save-season': 'The kind of save they’ll still show years from now.',
 };
 
 // deck-building config
-export const OFFER_SIZE = 4;   // cards shown at a between-season draft
-export const DRAFT_PICKS = 2;  // how many you add each draft
+export const OFFER_SIZE = 5;   // cards shown at a between-season draft (a wider choice from the big pool)
+export const DRAFT_PICKS = 3;  // how many you add each draft → a deck that grows to ~25 over the 7 chapters
 
 // ── BACKROOM STAFF: at each age-chapter break you appoint a mentor/coach for the coming chapter.
 // A coach amplifies your work in their SPECIALTY — you get better SUCCESS playing cards in those tags,
@@ -672,11 +776,16 @@ export class Career {
   private openDraft() {
     const luck = this.agent?.draftLuck ?? 1;   // a good agent gets you better opportunities (rarer cards on offer)
     const weight = (c: Card) => Math.max(1, Math.round(c.rarity === 'epic' ? luck * luck : c.rarity === 'rare' ? 3 * luck : 6));
-    const bag = this.pool.flatMap((c) => Array(weight(c)).fill(c) as Card[]);
+    // draft only cards you DON'T already own → with a big pool every draft is fresh (real variety, no
+    // seeing the same card twice). Fall back to the full pool only if you've somehow drafted it dry.
+    const owned = new Set(this.deck.map((c) => c.id));
+    const source = this.pool.filter((c) => !owned.has(c.id));
+    const draftable = source.length >= OFFER_SIZE ? source : this.pool;
+    const bag = draftable.flatMap((c) => Array(weight(c)).fill(c) as Card[]);
     const options: Card[] = [];
     const picked = new Set<string>();
     let guard = 0;
-    while (options.length < Math.min(OFFER_SIZE, this.pool.length) && guard++ < 200) {
+    while (options.length < Math.min(OFFER_SIZE, draftable.length) && guard++ < 400) {
       const c = bag[Math.floor(this.rng() * bag.length)];
       if (!picked.has(c.id)) { picked.add(c.id); options.push(c); }
     }
