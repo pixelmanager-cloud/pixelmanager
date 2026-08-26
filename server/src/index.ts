@@ -86,6 +86,7 @@ app.post('/register', async (req, reply) => {
   await db.createAccount(id, handle, token, Date.now(), hashPassword(password));
   const { club, standingOrders } = makeClub(id, handle);
   await db.saveClub(id, club, standingOrders);
+  try { await mintGenesis(db, id); } catch { /* supply cap reached — no welcome prospect */ } // a free 10yo to develop in the Academy
   return { token, account: { id, handle, rating: 1000, coins: await db.getCoins(id), wallet: null }, club, standingOrders };
 });
 
