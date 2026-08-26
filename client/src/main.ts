@@ -1030,7 +1030,7 @@ class Game {
       }
       const p = m.player;
       const signed = m.status === 'signed';
-      const action = signed ? '<span class="tr-done" style="font-family:var(--body);font-size:14px;color:var(--good)">✓ Signed</span>'
+      const action = signed ? '<span class="tr-done" style="font-family:var(--body);font-size:17px;color:var(--good)">✓ Signed</span>'
         : capReached ? '<span class="muted">loanee cap</span>'
         : `<button class="sign-m" data-mid="${m.id}">Sign ▶</button>`;
       return `<div class="mission hit" data-id="${m.id}">`
