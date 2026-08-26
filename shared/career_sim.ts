@@ -142,10 +142,10 @@ console.log('\n=== a development life (age 10→25, seed arc) ===');
     const ch = c.play(st.hand[0].id);
     if (ch.stakes >= 2 && ch.success >= 0.75) bigWins++;
   }
-  const p = graduate(c.log, seedFrom('arc'));
+  const p = graduate(c.log, seedFrom('arc'), undefined, undefined, c.seriousInjuries);
   chapters.forEach((e) => console.log('  ' + e));
-  console.log(`  big moments faced: ${big} big + ${huge} huge  |  delivered in ${bigWins}`);
-  console.log(`  graduates at 25 (PRIME): ${p.role} ovr ${p.overall}, traits: ${p.traits.join(', ') || '—'}`);
+  console.log(`  big moments faced: ${big} big + ${huge} huge  |  delivered in ${bigWins}  |  serious injuries: ${c.seriousInjuries}`);
+  console.log(`  graduates at 25 (PRIME): ${p.role} ovr ${p.overall}, durability ${p.attrs.durability}, ${p.personality}${p.traits.length ? ', ' + p.traits.join(', ') : ''}`);
 
   // playing phase: the prime player's ability across ages 25→40 (read-time age curve)
   console.log('  pro career (age → ovr):', [25, 28, 30, 33, 36, 40].map((age) => {
@@ -191,7 +191,7 @@ console.log('\n=== prospect market — trade an in-development player ===');
   // verify: resume+continue is identical to developing straight through the same choices
   const straight = new Career(seedFrom('prospect'));
   while (!straight.finished) { const st = straight.current(); st.phase === 'coach' ? straight.appointCoach(st.coaches[0].id) : st.phase === 'draft' ? straight.draft(st.options[0].id) : straight.play(st.hand[0].id); }
-  const same = JSON.stringify(graduate(buyer.log, seedFrom('prospect'), genes)) === JSON.stringify(graduate(straight.log, seedFrom('prospect'), genes));
+  const same = JSON.stringify(graduate(buyer.log, seedFrom('prospect'), genes, undefined, buyer.seriousInjuries)) === JSON.stringify(graduate(straight.log, seedFrom('prospect'), genes, undefined, straight.seriousInjuries));
   console.log(`  buyer resumes → graduates the SAME player as continuous development: ${same}`);
 }
 

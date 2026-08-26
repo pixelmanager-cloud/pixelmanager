@@ -35,6 +35,9 @@ export interface PlayerAttrs {
   keeping: number;
   setPiece: number; // corners / free kicks / penalties delivery + finishing
   stamina: number;  // endurance — how slowly the live in-match fitness drains
+  /** injury resistance (OPTIONAL, from the Career Sim): high = robust, low = injury-prone. Feeds the
+   *  manager injury system; when absent it falls back to stamina, so existing players are unchanged. */
+  durability?: number;
   // ── MENTAL layer (from the Career Sim; OPTIONAL). The engine reads these CENTRED at 10, so a
   // player without them behaves exactly as before — only career-built players with real mental
   // stats deviate. composure→finishing under pressure, aggression→tackling(+)/turnover(−),

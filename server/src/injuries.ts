@@ -32,7 +32,9 @@ export function rollMatchInjuries(team: Team, endFitness: number[], medicalLevel
     const rng = mulberry32(seedFrom(`inj:${seed}:${p.id}`));
     const fit = endFitness[i] ?? 1;
     const fatigue = 0.5 + (1 - fit);                       // gassed players are ~1.5x likelier
-    const durability = 1.4 - 0.8 * norm(p.attrs.stamina ?? 10); // stamina 20 → 0.6x, stamina 1 → ~1.36x
+    // injury resistance: the explicit `durability` (from the Career Sim) when present, else stamina —
+    // so an injury-prone career-built player breaks down more, and existing players are unchanged.
+    const durability = 1.4 - 0.8 * norm(p.attrs.durability ?? p.attrs.stamina ?? 10);
     const chance = BASE_INJURY * fatigue * durability * medMult;
     if (rng() < chance) {
       const r = rng();                                     // severity, weighted toward short knocks

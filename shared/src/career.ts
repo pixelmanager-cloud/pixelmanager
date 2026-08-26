@@ -216,6 +216,7 @@ export class Career {
   /** When set, the career is paused to APPOINT a mentor/coach for the coming chapter. */
   pendingCoaches: Coach[] | null = null;
   coach: Coach | null = null;              // the staff member active this chapter (boosts their specialty)
+  seriousInjuries = 0;                     // major injuries suffered in development → lasting fragility
   /** The narrative event coloring the current age chapter (a new gaffer, a hot streak, a knock…). */
   seasonEvent: SeasonEvent | null = null;
   private demandBias: Tag | null = null;   // the gaffer's demand this chapter → scenarios lean this tag
@@ -316,6 +317,8 @@ export class Career {
     const from = Math.max(0, this.log.length - window);
     const lastAvg = this.log.slice(from).reduce((s, c) => s + c.success, 0) / Math.max(1, this.log.length - from);
     const playedWell = lastAvg >= 0.55;
+    // a rare SERIOUS INJURY: months out (a big dip this chapter) AND lasting fragility (durability↓)
+    if (this.rng() < 0.06) { this.formBonus = -0.2; this.seriousInjuries++; this.seasonEvent = { id: 'serious-injury', name: 'Serious Injury', desc: 'Months on the sidelines — a setback that will linger.' }; return; }
     const r = this.rng();
     if (playedWell && r < 0.25) { this.extraPicks += 1; this.seasonEvent = { id: 'breakthrough', name: 'Breakthrough Season', desc: 'A breakout campaign earns you extra coaching time — an extra draft pick.' }; }
     else if (r < 0.45) { const pool = this.track === 'goalkeeper' ? (['keeping', 'composure', 'leadership'] as Tag[]) : OUTFIELD_TAGS; this.demandBias = pool[Math.floor(this.rng() * pool.length)]; this.seasonEvent = { id: 'new-gaffer', name: 'New Manager', desc: `The new gaffer wants more ${this.demandBias} out of you.` }; }
@@ -366,6 +369,8 @@ export interface CareerPlayerAttrs {
   passing: number; shooting: number; tackling: number; positioning: number; workrate: number; keeping: number; setPiece: number;
   // mental (NEW — shaped by career play; the engine will read these for diversity)
   composure: number; aggression: number; creativity: number; teamwork: number; leadership: number;
+  // injury resistance — robust physique, dented by serious injuries suffered in development
+  durability: number;
 }
 export type Role = 'GK' | 'DF' | 'MF' | 'FW';
 export interface CareerPlayer { attrs: CareerPlayerAttrs; role: Role; overall: number; genes: Genes; traits: string[]; personality: string }
@@ -465,6 +470,7 @@ export function deriveStats(log: Choice[], seed: number, genes: Genes = rollGene
       out[stat] = clamp(Math.round((BASELINE + peaked * SPREAD) * magnitude + noise), 1, 20);
     }
   }
+  out.durability = clamp(Math.round(5 + 0.3 * out.strength + 0.3 * out.stamina + (rng() - 0.5) * 3), 1, 20); // ~11-12 for a healthy career; injury penalty applied at graduate
   return out;
 }
 
@@ -528,15 +534,18 @@ export function eligibleTraits(attrs: CareerPlayerAttrs, log: Choice[]): Trait[]
 /** Finish a career log into a complete Player (attrs + role + overall + traits). Genes default to a
  *  fresh genesis roll; pass inherited genes (lineage). `pickTraits` chooses among the eligible traits
  *  (the client lets a human pick; defaults to the first MAX_TRAITS for the sim). */
-export function graduate(log: Choice[], seed: number, genes: Genes = rollGenes(seed), pickTraits?: (eligible: Trait[]) => Trait[]): CareerPlayer {
+export function graduate(log: Choice[], seed: number, genes: Genes = rollGenes(seed), pickTraits?: (eligible: Trait[]) => Trait[], seriousInjuries = 0): CareerPlayer {
   const attrs = deriveStats(log, seed, genes);
   const personality = rollPersonality(seed);                          // same temperament the career developed under
   if (personality.signature) attrs[personality.signature] = clamp(attrs[personality.signature] + 1, 1, 20);
+  // serious injuries in development leave a lasting fragility (injury-proneness the Manager game reads)
+  attrs.durability = clamp(attrs.durability - Math.round(seriousInjuries * 2.5), 1, 20);
   const eligible = eligibleTraits(attrs, log);
   const chosen = (pickTraits ? pickTraits(eligible) : eligible.slice(0, MAX_TRAITS)).slice(0, MAX_TRAITS);
   for (const t of chosen) t.apply?.(attrs); // trait bonuses apply before role/overall
+  const flaws = attrs.durability <= 6 ? ['injury_prone'] : []; // a flaw flag, separate from earned perks
   const role = deriveRole(attrs);
-  return { attrs, role, overall: careerOverall(attrs, role), genes, traits: chosen.map((t) => t.id), personality: personality.id };
+  return { attrs, role, overall: careerOverall(attrs, role), genes, traits: [...chosen.map((t) => t.id), ...flaws], personality: personality.id };
 }
 
 // ── AGE CURVE (playing phase, age 25 → 40) ──
@@ -602,5 +611,5 @@ export function simCareer(seed: number, style: Style, genes: Genes = rollGenes(s
     }
     career.play(best.id);
   }
-  return graduate(career.log, seed, genes);
+  return graduate(career.log, seed, genes, undefined, career.seriousInjuries);
 }
