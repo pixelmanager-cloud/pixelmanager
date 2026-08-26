@@ -145,5 +145,8 @@ export function buildXI(club: Club, lineup: Lineup): Team {
     // a manager-assigned duty for this slot overrides the player's stat-derived default
     return { ...p, anchor: { x: slots[i].x, y: slots[i].y }, duty: lineup.duties?.[i] ?? p.duty };
   });
-  return { id: club.id, name: club.name, shortName: club.shortName, shirtColor: club.shirtColor, players };
+  // bench: the best squad players outside the XI (up to 7), for the engine's late-game subs
+  const used = new Set(lineup.playerIds);
+  const bench = club.players.filter((p) => !used.has(p.id)).sort((a, b) => overall(b) - overall(a)).slice(0, 7);
+  return { id: club.id, name: club.name, shortName: club.shortName, shirtColor: club.shirtColor, players, bench };
 }

@@ -1491,7 +1491,10 @@ class Game {
     this.engine = new MatchEngine([payload.home.team, payload.away.team], payload.seed, [payload.home.tactics, payload.away.tactics]);
     this.matchSeed = payload.seed >>> 0;
     this.playerAttrs = new Map();
-    for (const t of [payload.home.team, payload.away.team]) for (const p of t.players) this.playerAttrs.set(p.name, p.attrs);
+    for (const t of [payload.home.team, payload.away.team]) {
+      for (const p of t.players) this.playerAttrs.set(p.name, p.attrs);
+      for (const p of (t.bench ?? [])) this.playerAttrs.set(p.name, p.attrs); // subs appear later
+    }
     this.move = null;
     this.liveScore = [0, 0]; this.scorerTally = new Map(); this.lastGoalIdx = -1;
     this.attackBeats = []; this.lastMomentumMin = -99; this.lastAttackMin = 0;
@@ -1749,6 +1752,8 @@ class Game {
       case 'penalty': cls = 'cm-pen'; text = this.cpick([`⚠️ PENALTY to ${team}! ${p} will take it…`, `⚠️ The ref points to the spot — penalty ${team}! ${p} steps up…`, `⚠️ Spot kick for ${team}! It’s down to ${p}…`], idx, 18); break;
       case 'penalty_missed': cls = 'cm-miss'; text = this.cpick([`❌ MISSED! ${p} sends the penalty wide — what a let-off!`, `❌ Saved! The keeper guesses right and denies ${p} from the spot!`, `❌ ${p} blazes the penalty over! He’ll never forget that.`], idx, 19); break;
       case 'corner': cls = 'cm-corner'; text = this.cpick([`Corner to ${team} — ${p} to swing it in…`, `${p} jogs over to take the corner for ${team}…`], idx, 20); break;
+      case 'injury': cls = 'cm-injury'; text = this.cpick([`🚑 ${p} is down and hurt — he can’t continue for ${team}.`, `🚑 Trouble for ${team} — ${p} has pulled up injured.`, `🚑 ${p} signals to the bench; that’s him done for the day.`], idx, 23); break;
+      case 'sub': { const off = e.playerName2 ?? 'a teammate'; cls = 'cm-sub'; text = this.cpick([`🔄 Change for ${team}: ${e.playerName} comes on for ${off}.`, `🔄 ${team} go to the bench — ${e.playerName} replaces ${off}.`, `🔄 Fresh legs for ${team}: ${off} off, ${e.playerName} on.`], idx, 24); break; }
       case 'halftime': cls = 'cm-break'; text = `⏸ Half-time. ${this.homeName} ${sc[0]}–${sc[1]} ${this.awayName}.`; break;
       case 'fulltime': cls = 'cm-break'; text = `🏁 Full-time! ${this.homeName} ${sc[0]}–${sc[1]} ${this.awayName}.`; break;
     }

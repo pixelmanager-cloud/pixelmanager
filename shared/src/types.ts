@@ -85,6 +85,9 @@ export interface Team {
   /** Fan Zone home advantage: an attacking-chance multiplier for the HOME side only
    *  (1 = none, >1 = boosted). Set on teams[0] by runMatch; optional so tests are unchanged. */
   homeBoost?: number;
+  /** Substitutes available from the bench (best squad players outside the XI). When present the
+   *  engine makes deterministic fitness-driven subs late on; absent (tests/CPU) => no subs. */
+  bench?: Player[];
 }
 
 export interface PlayerState {

@@ -45,6 +45,9 @@ export class MatchEngine {
   private lastFatigueMin = -1;
   private sentOff = new Set<number>(); // key = team*100+idx of players shown a red card (removed from play)
   private booked = new Set<number>();  // key = team*100+idx already on a yellow (second yellow = red)
+  private subsUsed: [number, number] = [0, 0];
+  private benchLeft: [Player[], Player[]] = [[], []]; // remaining substitutes per side
+  private lastBenchMin = -1;
 
   /** rough pitch third from the acting team's perspective — for commentary context ("in the final third"). */
   private zoneOf(teamIdx: 0 | 1, x: number): 'def' | 'mid' | 'att' {
@@ -66,6 +69,9 @@ export class MatchEngine {
   }
 
   constructor(public teams: [Team, Team], seed: number, tactics?: [Tactics, Tactics]) {
+    // work on our own copy of each XI so late-game subs never mutate the caller's team object
+    this.teams = [{ ...teams[0], players: [...teams[0].players] }, { ...teams[1], players: [...teams[1].players] }];
+    this.benchLeft = [(teams[0].bench ?? []).slice(), (teams[1].bench ?? []).slice()];
     this.rng = makeRng(seed);
     this.tactics = tactics ?? [{ ...DEFAULT_TACTICS }, { ...DEFAULT_TACTICS }];
     this.mods = [deriveMods(this.tactics[0]), deriveMods(this.tactics[1])];
@@ -184,6 +190,7 @@ export class MatchEngine {
       }
     }
     this.checkFatigue();
+    this.manageBench();
   }
 
   private onCounter(teamIdx: 0 | 1): boolean {
@@ -209,6 +216,54 @@ export class MatchEngine {
         }
       }
     }
+  }
+
+  /** Deterministic late-game bench management (NO rng): swap a gassed player for a fresh sub, and
+   *  occasionally force an injury sub. Runs only when a bench is present (real matches) — the
+   *  bench-less test/CPU squads are completely unaffected, so calibration is untouched. */
+  private manageBench() {
+    const s = this.state;
+    const min = this.minute();
+    if (min < 58 || min > 87 || min === this.lastBenchMin) return;
+    this.lastBenchMin = min;
+    const isCarrier = (t: 0 | 1, i: number) => !!s.carrier && s.carrier.teamIdx === t && s.carrier.playerIdx === i;
+    for (const t of [0, 1] as const) {
+      if (!this.benchLeft[t].length || this.subsUsed[t] >= 3) continue;
+      // INJURY (independent of fatigue): a fragile outfielder picks up a knock and is forced off —
+      // deterministic hash, kept rare. One hashed candidate per side per minute.
+      const injI = 1 + (((min * 7919 + t * 104729) >>> 0) % 10);
+      if (!this.sentOff.has(t * 100 + injI) && !isCarrier(t, injI)) {
+        const inj = this.teams[t].players[injI];
+        const durab = norm(inj.attrs.durability ?? inj.attrs.stamina ?? 10);
+        const h = ((min * 2654435761 + t * 40503 + injI * 2246822519) >>> 0) % 10000;
+        if (durab < 0.6 && h < 250) { this.makeSub(t, injI, true); continue; }
+      }
+      // TACTICAL SUB: freshen up the most-gassed outfielder (never the current ball carrier)
+      let worstI = -1, worstFit = Infinity;
+      for (let i = 1; i < 11; i++) {
+        if (this.sentOff.has(t * 100 + i) || isCarrier(t, i)) continue;
+        const f = s.players[t][i].fitness;
+        if (f < worstFit) { worstFit = f; worstI = i; }
+      }
+      if (worstI >= 0 && worstFit < 0.80) this.makeSub(t, worstI, false);
+    }
+  }
+
+  private makeSub(t: 0 | 1, outI: number, injured: boolean) {
+    const s = this.state;
+    const min = this.minute();
+    const outP = this.teams[t].players[outI];
+    const bl = this.benchLeft[t];
+    let pick = bl.findIndex((p) => p.role === outP.role); // prefer a like-for-like replacement
+    if (pick < 0) pick = 0;
+    const inP = bl.splice(pick, 1)[0];
+    this.teams[t].players[outI] = { ...inP, anchor: outP.anchor, duty: outP.duty };
+    this.dm[t][outI] = dutyMods(effectiveDuty(this.teams[t].players[outI]));
+    const a = t === 0 ? outP.anchor : mirroredAnchor(outP.anchor);
+    s.players[t][outI] = { x: a.x, y: a.y, fitness: 0.9 }; // fresh legs
+    this.subsUsed[t]++;
+    if (injured) s.events.push({ minute: min, type: 'injury', teamIdx: t, playerName: outP.name });
+    s.events.push({ minute: min, type: 'sub', teamIdx: t, playerName: inP.name, playerName2: outP.name });
   }
 
   // ---- movement ----
