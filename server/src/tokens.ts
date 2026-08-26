@@ -214,9 +214,12 @@ export function rebornFields(t: Token): Partial<Token> {
   const band = (s: number) => ({ floor: clamp(s - 6, 1, 15), ceiling: clamp(s + 2, clamp(s - 6, 1, 15) + 3, 20) });
   const parentGenes: Genes = { pace: band(parent.pace ?? 10), strength: band(parent.strength ?? 10), stamina: band(parent.stamina ?? 10) };
   const genes = inheritGenes(parentGenes, seedFrom(`${t.id}:heir:g${t.generation}`), 0.6, boost.ceilingLift);
-  const firstName = t.name.split(' ')[0];
+  // BLOODLINE: the FAMILY NAME carries down the generations; each heir gets a fresh first name.
+  const parts = t.name.trim().split(/\s+/);
+  const surname = parts.length > 1 ? parts.slice(1).join(' ') : parts[0];
+  const heirFirst = FIRST[(seedFrom(`${t.id}:heirname:g${t.generation}`) >>> 0) % FIRST.length];
   return {
-    generation: t.generation + 1, state: 'prospect', name: `${firstName} Jr`,
+    generation: t.generation + 1, state: 'prospect', name: `${heirFirst} ${surname}`,
     genes_json: JSON.stringify(genes), pedigree: boost.pedigree, dev_bonus_json: JSON.stringify(boost.devBonus),
     // clear pro + career + achievement state for the new generation (role kept as a track hint)
     career_seed: null, agent_id: null, track: null, career_actions: null,
