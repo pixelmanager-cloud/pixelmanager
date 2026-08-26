@@ -1,5 +1,11 @@
 # Coin purchases — buying in-game coins with real money
 
+> ⚠️ **Platform pivot (2026-08-27) — see `docs/direction.md`.** Web3 removed; targeting Steam. This Stripe
+> plan is now **optional/off**: the simplest launch is **premium-priced, cosmetic DLC, no IAP.** If we later
+> go F2P-with-coins, real-money purchases on Steam must go through **Steamworks microtransactions**, not
+> Stripe (this doc's flow/rails are still a useful reference for that). The "closed, one-way, no-cash-out,
+> no-gacha, no-wagering" rails stay true regardless.
+
 **Status:** design / to build. **Decision:** no ERC-20 token — coins are a simple, **closed, one-way**
 in-game currency, bought with **fiat via Stripe**. This is the standard, lowest-risk game-monetization model
 (V-Bucks / Robux / gems).

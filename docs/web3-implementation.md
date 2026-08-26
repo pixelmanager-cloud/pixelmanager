@@ -1,5 +1,7 @@
 # Web3 implementation plan — decision record
 
+> ❌ **OBSOLETE (2026-08-27).** Web3 removed — see `docs/direction.md`. Historical only.
+
 Status: **in progress**. The technical layer for putting ownership + value on-chain.
 Builds on `docs/economy-and-web3.md` (the economic design). **Not legal advice.**
 

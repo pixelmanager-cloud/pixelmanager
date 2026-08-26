@@ -1,5 +1,9 @@
 # Two-Layer Architecture: Career Sim (breed) + Manager (play)
 
+> ⚠️ **Partially superseded (2026-08-27) — see `docs/direction.md`.** Web3 removed: any on-chain "breed/mint"
+> framing here is dead. The **two-layer game design (career-sim development + manager play) still stands** —
+> it was always off-chain game logic.
+
 Two interconnected games sharing **one Player NFT asset**:
 
 - **Layer 1 — Career Sim** (turn-based card game): *develop* a player through seeded

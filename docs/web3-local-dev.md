@@ -1,5 +1,7 @@
 # Web3 lifecycle loop — local dev (Anvil)
 
+> ❌ **OBSOLETE (2026-08-27).** Web3 removed — see `docs/direction.md`. Historical only.
+
 We prove the whole career→manager→reborn loop against a **local chain** first, then deploy the
 same contract to Base Sepolia. The chain holds only **ownership + lineage** (generation,
 genesSeed); all game state stays off-chain keyed by the on-chain tokenId (the "minimal on-chain"

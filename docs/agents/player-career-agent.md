@@ -25,7 +25,8 @@ genuinely new choice/outcome — or is it just a reskin that plays the same?* Pr
 - `client/src/api.ts` — only the `CareerState` / `Kit` / career method types.
 
 **Do NOT touch** the match engine (`shared/src/engine.ts`, `mental.ts`, `teams.ts`), manager-mode screens,
-seasons/standings/facilities, or the web3/contract code. That is the other agent's lane — staying out of it
+seasons/standings/facilities. (Web3 has been REMOVED from the project — see `docs/direction.md`; there is
+no on-chain/contract/wallet code, and none should be added.) The manager side is the other agent's lane — staying out of it
 prevents merge conflicts.
 
 ## Hard rules (non-negotiable)

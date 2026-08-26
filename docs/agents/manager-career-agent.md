@@ -32,7 +32,8 @@ cause→effect). Manager decisions that meaningfully shape how owned players dev
 - `client/src/api.ts` — only the manager-mode types (Club, StandingOrders, TableRow, matches, facilities…).
 
 **Do NOT touch** the player-career engine (`shared/src/career.ts`, `narrate.ts`, `career_sim.ts`), the
-Academy/career screens, the lifestyle/kit systems, or web3/contract code. That is the other agent's lane —
+Academy/career screens, or the lifestyle/kit systems. (Web3 has been REMOVED from the project — see
+`docs/direction.md`; there is no on-chain/contract/wallet code, and none should be added.) That is the other agent's lane —
 staying out of it prevents merge conflicts.
 
 ## Hard rules (non-negotiable)

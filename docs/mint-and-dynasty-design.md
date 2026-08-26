@@ -1,6 +1,13 @@
 # Mint & Dynasty Design — the player-as-product model
 
-**Status:** proposed direction, likely to become the canonical mint model.
+> ⚠️ **WEB3 REMOVED (2026-08-27) — see `docs/direction.md`.** The game is going mainstream/Steam with NO
+> blockchain. The **on-chain framing here is obsolete** (no NFT, no token, no marketplace, no paid-per-player
+> cash mint). What SURVIVES and is still canonical: the **dynasty/reborn model, regressed inheritance, the
+> three tuning knobs, keeping=nurture, positions across generations, and the "known-frame, earned-greatness"
+> philosophy** — now as an **in-game prospect acquisition** (scout & develop), not a purchase. Read this doc
+> for those mechanics; ignore the token/mint/marketplace sections.
+
+**Status:** superseded framing (web3 removed); dynasty mechanics still canonical.
 **One line:** you *buy a known player* (a numbered token) whose greatness is *earned through how you
 develop them*, and whose *retirement shapes the next generation* — no blind random draw at any point.
 
