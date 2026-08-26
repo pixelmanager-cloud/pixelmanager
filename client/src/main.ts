@@ -111,7 +111,7 @@ function statsTableHTML(players: Player[], highlight?: Set<string>, sort?: Squad
     if (key === 'pos') return ROLE_ORDER[p.role];
     if (key === 'name') return p.name.toLowerCase();
     if (key === 'ovr') return overall(p);
-    return p.attrs[key as keyof Player['attrs']];
+    return p.attrs[key as keyof Player['attrs']] ?? 0; // optional (mental) attrs default to 0 when absent
   };
   let sorted: Player[];
   if (sort) {
@@ -132,7 +132,7 @@ function statsTableHTML(players: Player[], highlight?: Set<string>, sort?: Squad
     const on = !!highlight?.has(p.id);
     const nft = isNftId(p.id);
     const tier = nft ? nftTier(overall(p)) : null;
-    const cells = cols.map(([, k]) => `<td class="stat" style="background:${statColor(p.attrs[k])}">${p.attrs[k]}</td>`).join('');
+    const cells = cols.map(([, k]) => `<td class="stat" style="background:${statColor(p.attrs[k] ?? 0)}">${p.attrs[k] ?? 0}</td>`).join('');
     const mark = on ? '<td class="inxi-mark">●</td>' : '<td></td>';
     const nameCell = tier
       ? `<td class="name nft-name tier-${tier.key}" data-card="${p.id}" title="Owned NFT · ${tier.name} — click to view card">${tier.icon} ${p.name}</td>`
@@ -144,7 +144,7 @@ function statsTableHTML(players: Player[], highlight?: Set<string>, sort?: Squad
 
 function squadInsight(team: Team): string {
   const byRole = (r: Player['role']) => team.players.filter((p) => p.role === r);
-  const avg = (ps: Player[], k: keyof Player['attrs']) => ps.length ? Math.round(ps.reduce((a, p) => a + p.attrs[k], 0) / ps.length) : 0;
+  const avg = (ps: Player[], k: keyof Player['attrs']) => ps.length ? Math.round(ps.reduce((a, p) => a + (p.attrs[k] ?? 0), 0) / ps.length) : 0;
   const fw = byRole('FW'), df = byRole('DF');
   const best = team.players.reduce((a, b) => (overall(b) > overall(a) ? b : a));
   const tips = [`★ Key player: <b>${best.name}</b> (${best.role}, OVR ${overall(best)})`];
@@ -152,6 +152,93 @@ function squadInsight(team: Team): string {
   else if (avg(fw, 'strength') >= 15) tips.push(`💪 Your forwards are strong (strength ${avg(fw, 'strength')}) — long balls pay off.`);
   if (avg(df, 'pace') <= 11) tips.push(`⚠️ Your defenders are slow (pace ${avg(df, 'pace')}) — a high line is risky.`);
   return tips.join('<br>');
+}
+
+// ---- Text commentary (client-only, deterministic) ----
+// Each match event is rendered as a line of natural commentary. The phrasing is
+// picked from a small per-event pool by a seed derived from the match seed + the
+// event's index, so replaying the same seed reads word-for-word identically
+// (never Math.random). Event types the engine doesn't emit yet (corner, free_kick,
+// penalty) already have pools, ready for when it does.
+type CommCtx = {
+  player: string; team: string; opp: string; minute: number;
+  homeName: string; awayName: string; homeScore: number; awayScore: number; teamIdx: 0 | 1;
+};
+type CommPhrase = (c: CommCtx) => string;
+
+const fullScore = (c: CommCtx) => `${c.homeName} ${c.homeScore} - ${c.awayScore} ${c.awayName}`;
+// Scoreline from the acting team's perspective, e.g. "Gaffer 1-0".
+const teamScore = (c: CommCtx) => c.teamIdx === 0
+  ? `${c.homeName} ${c.homeScore}-${c.awayScore}`
+  : `${c.awayName} ${c.awayScore}-${c.homeScore}`;
+
+const COMMENTARY: Record<string, CommPhrase[]> = {
+  kickoff: [
+    () => `🟢 We're underway — game on!`,
+    () => `🟢 The whistle blows and we're off.`,
+    () => `🟢 Kickoff! Here we go.`,
+  ],
+  chance: [
+    (c) => `📣 CHANCE! ${c.player} slips in behind for ${c.team}…`,
+    (c) => `📣 Big opening — ${c.player} works a yard of space…`,
+    (c) => `📣 Here come ${c.team}! ${c.player} bears down on goal…`,
+    (c) => `📣 ${c.player} bursts clear — this looks dangerous for ${c.opp}…`,
+    (c) => `📣 A sight of goal for ${c.player}, and ${c.team} smell blood…`,
+  ],
+  goal: [
+    (c) => `⚽ GOAL! ${c.player} makes no mistake — ${teamScore(c)}`,
+    (c) => `⚽ GOAL! ${c.player} buries it for ${c.team} — ${teamScore(c)}`,
+    (c) => `⚽ IT'S IN! ${c.player} finishes it off — ${teamScore(c)}`,
+    (c) => `⚽ GOAL! What a strike from ${c.player}! ${teamScore(c)}`,
+    (c) => `⚽ GET IN! ${c.player} tucks it away for ${c.team} — ${teamScore(c)}`,
+  ],
+  shot_saved: [
+    (c) => `🧤 ${c.player}'s effort is beaten away!`,
+    (c) => `🧤 Saved! The ${c.opp} keeper denies ${c.player}.`,
+    (c) => `🧤 Great stop — ${c.player} thought he'd scored.`,
+    (c) => `🧤 Fine save keeps ${c.player} and ${c.team} out.`,
+  ],
+  shot_missed: [
+    (c) => `😬 ${c.player} drags it wide for ${c.team}.`,
+    (c) => `😬 Off target! ${c.player} can't find the corner.`,
+    (c) => `😬 ${c.player} blazes over — chance gone.`,
+    (c) => `😬 Wayward from ${c.player}; ${c.opp} breathe again.`,
+  ],
+  corner: [
+    (c) => `🚩 Corner to ${c.team}, swung in by ${c.player}.`,
+    (c) => `🚩 ${c.team} win a corner — pressure building.`,
+  ],
+  free_kick: [
+    (c) => `🎯 Free kick for ${c.team} in a promising spot, ${c.player} over it.`,
+    (c) => `🎯 ${c.team} have a free kick — ${c.player} lines it up.`,
+  ],
+  penalty: [
+    (c) => `🥅 PENALTY to ${c.team}! ${c.player} to take it…`,
+    (c) => `🥅 Spot kick for ${c.team} — huge moment for ${c.player}.`,
+  ],
+  halftime: [(c) => `⏸️ Half-time. ${fullScore(c)}`],
+  fulltime: [(c) => `🏁 Full-time! ${fullScore(c)}`],
+};
+
+// Category → CSS class for colour-coding a line.
+const COMM_CLASS: Record<string, string> = {
+  goal: 'cm-goal', chance: 'cm-chance', shot_saved: 'cm-save', shot_missed: 'cm-miss',
+  corner: 'cm-set', free_kick: 'cm-set', penalty: 'cm-set',
+  kickoff: 'cm-break', halftime: 'cm-break', fulltime: 'cm-break',
+};
+
+// Deterministic index into [0,n): a small integer hash of (seed, event index). No RNG.
+function commPick(seed: number, index: number, n: number): number {
+  let h = (Math.imul(seed >>> 0, 0x9e3779b1) ^ Math.imul(index + 1, 0x85ebca77)) >>> 0;
+  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0;
+  h ^= h >>> 13;
+  return (h >>> 0) % n;
+}
+
+function commentaryText(type: string, index: number, seed: number, c: CommCtx): string {
+  const pool = COMMENTARY[type];
+  if (!pool?.length) return c.player ? `${c.player} on the ball for ${c.team}.` : '…';
+  return pool[commPick(seed, index, pool.length)](c);
 }
 
 let GAME: Game;
@@ -162,6 +249,7 @@ class Game {
   running = false;
   silent = false; // when true, flushing events shows no goal flash/shake (used by "skip")
   speed = 1; accum = 0; eventsShown = 0;
+  seed = 0; commScore: [number, number] = [0, 0]; // match seed + running score, for deterministic commentary
 
   account!: Account;
   club!: Club;
@@ -237,6 +325,13 @@ class Game {
     $('tab-cup').addEventListener('click', () => showTab('cup'));
     $('tab-honours').addEventListener('click', () => showTab('honours'));
     $('skip').addEventListener('click', () => this.skipToEnd());
+    $('view-2d').addEventListener('click', () => {
+      // The commentary feed is the primary view; this reveals the parked 2D pitch alongside it.
+      const show = $('game').classList.contains('hidden');
+      $('game').classList.toggle('hidden', !show);
+      $('view-2d').classList.toggle('active', show);
+      $('view-2d').textContent = show ? '📃 Feed only' : '⚽ 2D view';
+    });
     $('set-team').addEventListener('click', () => this.openLineup('standing'));
     $('autopick').addEventListener('click', () => { this.draftLineup = autoPickXI(this.availableClub(), this.draftTactics.formation); this.rebuildDuties(); this.renderLineupEditor(); });
     $('save-team').addEventListener('click', () => (this.editorMode === 'standing' ? this.saveTeam() : this.kickOffMatch()));
@@ -368,7 +463,7 @@ class Game {
       ['tackling', 'TAC'], ['strength', 'STR'], ['workrate', 'WRK'], ['keeping', 'KEE'],
       ['setPiece', 'SET'], ['stamina', 'STA'],
     ];
-    const stats = order.map(([k, l]) => `<div class="pc-stat"><span>${l}</span><b style="color:${statColor(p.attrs[k])}">${p.attrs[k]}</b></div>`).join('');
+    const stats = order.map(([k, l]) => `<div class="pc-stat"><span>${l}</span><b style="color:${statColor(p.attrs[k] ?? 0)}">${p.attrs[k] ?? 0}</b></div>`).join('');
     // FX escalate with tier: sheen from Silver, rotating glow ring + sparkles from Gold up.
     const sparkCount = { bronze: 0, silver: 3, gold: 6, diamond: 10, legend: 16 }[tier.key] ?? 0;
     const sparks = Array.from({ length: sparkCount }, () => {
@@ -1183,8 +1278,9 @@ class Game {
     }
     this.engine = new MatchEngine([payload.home.team, payload.away.team], payload.seed, [payload.home.tactics, payload.away.tactics]);
     this.running = true; this.accum = 0; this.eventsShown = 0;
+    this.seed = payload.seed; this.commScore = [0, 0];
     this.setMatchNames();
-    $('ticker').innerHTML = '';
+    $('commentary').innerHTML = '';
     this.scene!.buildSprites(this.engine.teams);
     this.showScreen('match');
   }
@@ -1288,25 +1384,30 @@ class Game {
     // hue sweeps 0 (red) → 120 (green) with fitness, so the bar shifts green→amber→red as it drops
     fill.style.background = `hsl(${Math.round(fitAvg * 120)}, 70%, 45%)`;
     $('fit-label').textContent = `Your squad fitness: ${fitPct}%`;
-    while (this.eventsShown < s.events.length) this.pushTicker(s.events[this.eventsShown++]);
+    // Speed drives the cadence: the engine only ticks (and so only reveals new events)
+    // as fast as the current speed lets it, so 1× spreads the lines out readably while
+    // 12× streams them quickly. Events are sparse (~30/match) so this never floods.
+    while (this.eventsShown < s.events.length) { this.renderCommentary(s.events[this.eventsShown], this.eventsShown); this.eventsShown++; }
   }
 
-  private pushTicker(e: MatchEvent) {
-    const who = e.teamIdx === 0 ? this.homeName : this.awayName;
-    const line: Record<MatchEvent['type'], string> = {
-      kickoff: `${e.minute}' Kickoff!`,
-      goal: `${e.minute}' ⚽ GOAL! ${e.playerName} (${who})`,
-      chance: `${e.minute}' Big chance for ${e.playerName} (${who})...`,
-      shot_saved: `${e.minute}' Save! ${e.playerName} (${who}) denied`,
-      shot_missed: `${e.minute}' ${e.playerName} (${who}) shoots wide`,
-      halftime: `${e.minute}' Half-time`,
-      fulltime: `${e.minute}' Full-time`,
+  private renderCommentary(e: MatchEvent, index: number) {
+    if (e.type === 'goal') this.commScore[e.teamIdx]++; // running score, so each goal line shows the right scoreline
+    const ctx: CommCtx = {
+      player: e.playerName ?? '', team: e.teamIdx === 0 ? this.homeName : this.awayName,
+      opp: e.teamIdx === 0 ? this.awayName : this.homeName, minute: e.minute,
+      homeName: this.homeName, awayName: this.awayName,
+      homeScore: this.commScore[0], awayScore: this.commScore[1], teamIdx: e.teamIdx,
     };
+    const feed = $('commentary');
+    const nearBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 48; // don't yank the view if the user scrolled up
     const div = document.createElement('div');
-    div.textContent = line[e.type];
-    if (e.type === 'goal') { div.style.color = '#ffd75e'; if (!this.silent) this.celebrateGoal(e); }
-    else if (e.type === 'chance') div.style.color = '#8ad';
-    $('ticker').prepend(div);
+    div.className = `cm-line ${COMM_CLASS[e.type] ?? ''}`.trim();
+    const min = document.createElement('span'); min.className = 'cm-min'; min.textContent = `${e.minute}'`;
+    const body = document.createElement('span'); body.textContent = commentaryText(e.type, index, this.seed, ctx);
+    div.append(min, body);
+    feed.appendChild(div);
+    if (nearBottom) feed.scrollTop = feed.scrollHeight;
+    if (e.type === 'goal' && !this.silent) this.celebrateGoal(e);
   }
 
   private celebrateGoal(e: MatchEvent) {

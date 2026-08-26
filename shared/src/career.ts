@@ -432,12 +432,15 @@ export function inheritGenes(parent: Genes, seed: number, keepPct = 0.6): Genes 
   return { pace: inheritBand(parent.pace), strength: inheritBand(parent.strength), stamina: inheritBand(parent.stamina) };
 }
 
-// each stat's source tags (≥1 each); keeping has none (GK is a future dedicated path)
+// each stat's source tags (≥1 each); keeping has none (GK is a future dedicated path).
+// durability is derived from strength+stamina below, not tag-sourced, so its entry is unused
+// (the derive loop skips it) — it's present only to satisfy the full-key record type.
 const STAT_SOURCES: Record<keyof CareerPlayerAttrs, Tag[]> = {
   pace: ['stamina', 'flair'], strength: ['aggression', 'stamina'], stamina: ['stamina'],
   passing: ['creativity', 'teamwork'], shooting: ['flair', 'composure'], tackling: ['aggression'],
   positioning: ['teamwork', 'composure'], workrate: ['stamina', 'teamwork'], keeping: ['keeping'], setPiece: ['composure', 'creativity'],
   composure: ['composure'], aggression: ['aggression'], creativity: ['creativity'], teamwork: ['teamwork'], leadership: ['leadership'],
+  durability: ['stamina'], // unused: durability is derived at the end of deriveStats, and the loop skips it
 };
 const BASELINE = 7, SPREAD = 12, PEAK = 1.5;
 
@@ -456,6 +459,7 @@ export function deriveStats(log: Choice[], seed: number, genes: Genes = rollGene
 
   const out = {} as CareerPlayerAttrs;
   for (const stat of Object.keys(STAT_SOURCES) as (keyof CareerPlayerAttrs)[]) {
+    if (stat === 'durability') continue; // derived below from strength+stamina, not from tags
     const src = STAT_SOURCES[stat];
     const shape = src.length ? src.reduce((s, t) => s + norm[t], 0) / src.length : 0;
     const peaked = Math.pow(shape, PEAK);

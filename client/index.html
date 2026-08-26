@@ -604,7 +604,23 @@
       #fit-bar { position: relative; height: 18px; width: 100%; background: #0c0c22; border: 2px solid #000; overflow: hidden; }
       #fit-fill { height: 100%; width: 100%; background: hsl(120, 70%, 45%); transition: width .2s linear, background-color .2s linear; }
       #fit-label { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; text-shadow: 1px 1px 0 #000, -1px 1px 0 #000; }
-      #ticker { width: 840px; max-width: 96vw; height: 84px; overflow-y: auto; background: #0c0c22; border: 2px solid var(--line); padding: 6px 10px; font-size: 17px; line-height: 1.45; }
+      /* Primary text-commentary feed — a tall scrolling log, newest line at the bottom. */
+      #commentary { width: 840px; max-width: 96vw; height: 420px; overflow-y: auto; background: #0c0c22;
+        border: 2px solid var(--line); padding: 10px 14px; font-size: 18px; line-height: 1.5;
+        display: flex; flex-direction: column; gap: 2px; scroll-behavior: smooth; }
+      #commentary .cm-line { padding: 5px 2px; border-bottom: 1px dashed rgba(255,255,255,0.06); }
+      #commentary .cm-line:last-child { border-bottom: 0; }
+      #commentary .cm-min { color: var(--muted); margin-right: 8px; font-variant-numeric: tabular-nums; }
+      #commentary .cm-goal { color: #ffd75e; font-weight: 700; text-shadow: 0 0 8px rgba(255,215,94,0.35); }
+      #commentary .cm-chance { color: var(--cyan); }
+      #commentary .cm-save { color: #9fd0ff; }
+      #commentary .cm-miss { color: var(--muted); }
+      #commentary .cm-set { color: #c9b6ff; }
+      /* Half-time / full-time / kickoff read as centred dividers, not play-by-play. */
+      #commentary .cm-break { text-align: center; color: var(--warn); border-bottom: 0;
+        margin: 4px 0; letter-spacing: 1px; }
+      #commentary .cm-break .cm-min { display: none; }
+      #view-2d.active { color: var(--cyan); border-color: var(--cyan); }
       canvas { image-rendering: pixelated; }
 
       /* reusable toast — fixed near top-centre, above the CRT overlay, non-interactive */
@@ -789,15 +805,18 @@
           <button id="spd4">4x</button>
           <button id="spd12">12x</button>
           <button id="skip" title="Skip to full-time">Skip ▶▶</button>
+          <button id="view-2d" title="Show the 2D pitch view">⚽ 2D view</button>
         </div>
         <div id="goal-flash"></div>
-        <div id="game"></div>
+        <!-- Primary match view: a live scrolling commentary feed. The 2D pitch below
+             is parked (hidden) and reachable via the "2D view" toggle. -->
+        <div id="commentary" role="log" aria-live="polite" aria-label="Match commentary"></div>
+        <div id="game" class="hidden"></div>
         <div id="meters">
           <div id="poss-label"><span id="poss-home-l">50%</span><span>possession</span><span id="poss-away-l">50%</span></div>
           <div id="poss-bar"><div id="poss-home"></div></div>
           <div id="fit-bar"><div id="fit-fill"></div><span id="fit-label">Your squad fitness: 100%</span></div>
         </div>
-        <div id="ticker"></div>
       </div>
 
       <!-- POST-MATCH SUMMARY CARD -->
