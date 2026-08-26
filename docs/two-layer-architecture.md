@@ -107,6 +107,46 @@ sequence, every player converges and the marketplace dies. Diversity must be str
 
 ---
 
+## 3b. A human life — age lifecycle (IMPLEMENTED in the prototype)
+
+An NFT player isn't a stat block, it's a *life*. Age is the through-line connecting the two games.
+
+- **Development (breeder), age 10 → 25** = the Career Sim. Rendered as **5 age chapters** — Grassroots
+  (10-13) → Academy (14-16) → Youth Team (17-19) → Breakthrough (20-22) → Establishing (23-25) — ~54
+  turns, *not* 300. Scenarios + stakes are **age-gated**: a 12-year-old plays park football; cup finals
+  only unlock as you break into the first team. A draft + an age-milestone event fires each chapter.
+  **Graduation at 25 = the player's PRIME.**
+- **Playing (manager), age 25 → 40** = the NFT's 15 pro seasons. The minted stats are the age-25 prime
+  (immutable on-chain); the Manager game applies a **read-time `ageCurve`**: raw physical (pace/strength/
+  stamina — the gene-capped stats) fades from ~29, while experience (composure/leadership/positioning)
+  rises into the 30s. So a player's ability/value *arcs* — buy a young star, they peak, then decline.
+  (Immutable base + deterministic curve = dynamic value with no on-chain writes.)
+- **Retirement at 40** → lineage: the physical genes pass to a **son** who begins development at 10.
+
+This makes genes even more meaningful: the innate physical band is your *prime ceiling*, realised by 25
+and then eroded by age — exactly like a real athlete.
+
+### NFT graduation at 25 — "burn & swap" options
+
+At graduation the in-development thing becomes the playable Player NFT. Three ways to realise it on-chain
+(a **P3+ / mint-bridge decision**, not needed for the off-chain prototype):
+
+1. **Mint-at-graduation (recommended for v1).** Development runs OFF-CHAIN (app/DB); only at 25 do you
+   **mint the Player NFT** with the prime stats. No Prospect token, no burn tx, one mint. The "burn" is
+   conceptual — the dev record is consumed into the mint. Cheapest, simplest; the finished pro is the
+   tradable asset (matches the breeder→manager economy).
+2. **Prospect NFT → burn → Player NFT.** Mint a *Prospect* NFT at 10 (on-chain-anchored development,
+   tradable youngsters), then **burn it and mint a Player NFT** at 25 (two collections). What "burn &
+   swap" literally describes. Enables a *prospect market* but costs a burn+mint (gas) and two contracts.
+3. **Evolve in place.** One token whose metadata/stats **flip from Prospect→Player** at 25 (same tokenId).
+   Cheaper than burn+remint, preserves provenance, still allows a prospect market.
+
+**Recommendation:** ship **#1** for v1 (mint finished players only), and add a prospect market later via
+#2 or #3 if trading in-progress youngsters proves desirable. All three keep the age-25 prime as the
+immutable base + the read-time `ageCurve` for the playing phase.
+
+---
+
 ## 4. Match-engine upgrade — read the mental layer for diversity
 
 The engine already reads physical/technical stats. Add small, bounded hooks so the new mental
