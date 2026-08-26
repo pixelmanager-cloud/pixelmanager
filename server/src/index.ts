@@ -2,7 +2,7 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { randomUUID } from 'node:crypto';
 import { overall, managerPrestige, signContract, contractCost, contractLength, type Lineup, type Tactics } from '@fm/shared';
-import { mintGenesis, tokenToPlayer, tokenContract, tokenAch, legendCardOf, unavailableTokenIds, loadCareer, applyAction, careerState, graduatedFields, rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, ageOf, SUPPLY_CAP, type CareerAction } from './tokens.js';
+import { mintGenesis, tokenToPlayer, tokenContract, tokenAch, legendCardOf, unavailableTokenIds, loadCareer, applyAction, careerState, graduatedFields, rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, ageOf, SUPPLY_CAP, GENESIS_COST, REBORN_COST, MARKET_FEE_PCT, type CareerAction } from './tokens.js';
 import { bumpApps, bumpMorale, advanceTokensAtRollover } from './lifecycle.js';
 const isNftPlayer = (id: string) => id.startsWith('nft:');
 import { db, type Account, type StandingOrders, type Listing } from './db.js';
@@ -437,10 +437,13 @@ app.post('/players/:id/reborn', { preHandler: requireAuth }, async (req, reply) 
   const t = await db.getToken(id);
   if (!t || t.owner_id !== ownerId) return reply.code(404).send({ error: 'no such token' });
   if (t.state !== 'retired') return reply.code(409).send({ error: 'not retired' });
+  const coins = await db.getCoins(ownerId);
+  if (coins < REBORN_COST) return reply.code(400).send({ error: 'not enough coins', need: REBORN_COST, have: coins });
+  await db.addCoins(ownerId, -REBORN_COST); // breeding fee — PTEST seam
   await db.updateToken(id, rebornFields(t));
   const fresh = (await db.getToken(id))!;
   const pot = rebornPotential(fresh);
-  return { ok: true, prospect: { id, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: pot.pedigree, potentialStars: pot.stars, genes: JSON.parse(fresh.genes_json) } };
+  return { ok: true, cost: REBORN_COST, coins: await db.getCoins(ownerId), prospect: { id, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: pot.pedigree, potentialStars: pot.stars, genes: JSON.parse(fresh.genes_json) } };
 });
 
 // PROSPECTS: the owner's prospect-state tokens — 10-year-olds to DEVELOP in the Career game.
@@ -452,10 +455,13 @@ app.get('/prospects', { preHandler: requireAuth }, async (req) => {
 // GENESIS: mint a brand-new 10-year-old prospect (fresh genes, generation 0) — the ONLY way a token
 // enters the economy. Enforces the fixed SUPPLY_CAP; after that, the fixed set just cycles forever.
 app.post('/genesis', { preHandler: requireAuth }, async (req, reply) => {
+  const coins = await db.getCoins(req.account!.id);
+  if (coins < GENESIS_COST) return reply.code(400).send({ error: 'not enough coins', need: GENESIS_COST, have: coins });
   try {
     const t = await mintGenesis(db, req.account!.id);
+    await db.addCoins(req.account!.id, -GENESIS_COST); // PTEST seam
     const pot = rebornPotential(t);
-    return { ok: true, supply: await db.countTokens(), cap: SUPPLY_CAP, prospect: { id: t.id, name: t.name, roleHint: t.role ?? 'MF', generation: 0, pedigree: 0, potentialStars: pot.stars, genes: JSON.parse(t.genes_json) } };
+    return { ok: true, supply: await db.countTokens(), cap: SUPPLY_CAP, cost: GENESIS_COST, coins: await db.getCoins(req.account!.id), prospect: { id: t.id, name: t.name, roleHint: t.role ?? 'MF', generation: 0, pedigree: 0, potentialStars: pot.stars, genes: JSON.parse(t.genes_json) } };
   } catch (e: any) { return reply.code(409).send({ error: e?.message ?? 'mint failed' }); }
 });
 
@@ -747,7 +753,8 @@ app.post('/market/:id/buy', { preHandler: requireAuth }, async (req, reply) => {
     // repair the seller's standing XI if it referenced the sold token
     const sc = await db.getClub(l.seller_id);
     if (sc && sc.standingOrders.playerIds.includes(l.player_id)) { const sq = (await loadSquad(l.seller_id))!; await db.saveClub(l.seller_id, sq.club, { ...sc.standingOrders, playerIds: autoPickXI(sq.club, sc.standingOrders.formation).playerIds, duties: undefined }); }
-    await Promise.all([db.addCoins(meId, -l.price), db.addCoins(l.seller_id, l.price), db.setListingStatus(l.id, 'sold', meId, Date.now())]);
+    const proceeds = Math.round(l.price * (1 - MARKET_FEE_PCT / 100)); // fee skimmed off (a burn) — PTEST seam
+    await Promise.all([db.addCoins(meId, -l.price), db.addCoins(l.seller_id, proceeds), db.setListingStatus(l.id, 'sold', meId, Date.now())]);
     return { ok: true, player: { name: t.name, role: t.role }, coins: coins - l.price };
   }
   const [buyerClub, sellerClub] = await Promise.all([db.getClub(meId), db.getClub(l.seller_id)]);

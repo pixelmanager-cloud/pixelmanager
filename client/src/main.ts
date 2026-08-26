@@ -398,7 +398,7 @@ class Game {
       contractHtml = `<div class="pc-contract retired">`
         + `<div class="pc-crow"><span>Age ${ci.age} · Retired</span><span>${lg?.icon ?? '🏅'} ${lg?.tier ?? 'Legend'}</span></div>`
         + (lg ? `<div class="pc-legend">Legend rating ${lg.legendRating} · ${lg.leagueTitles}🏅 ${lg.cupTitles}🏆 · ${lg.apps} apps · ${lg.seasons} seasons</div>` : '')
-        + `<div class="pc-cactions">${ci.rebornId ? '<span class="pc-sell">bloodline continued ✓</span>' : `<button class="pc-reborn" data-reborn="${p.id}">✦ Reborn — breed the next generation</button>`}</div>`
+        + `<div class="pc-cactions">${ci.rebornId ? '<span class="pc-sell">bloodline continued ✓</span>' : `<button class="pc-reborn" data-reborn="${p.id}">✦ Reborn — breed the next generation · 150c</button>`}</div>`
         + (lg?.note ? `<div class="pc-stake">${lg.note}</div>` : '') + `</div>`;
     } else if (ci) {
       contractHtml = `<div class="pc-contract${ci.available ? '' : ' lapsed'}">`
@@ -439,9 +439,10 @@ class Game {
       const r = await api.reborn(playerId);
       this.setMe(await api.me());
       await this.showHub();
+      toast(`✦ Next generation bred (−${r.cost}c)`);
       this.showProspectCard(r.prospect, true);
     } catch (err: any) {
-      toast(err?.body?.error === 'already reborn' ? 'Bloodline already continued' : (err?.body?.error ?? 'Reborn failed'));
+      toast(err?.body?.error === 'already reborn' ? 'Bloodline already continued' : err?.body?.error === 'not enough coins' ? `Not enough coins (need ${err.body.need})` : (err?.body?.error ?? 'Reborn failed'));
     }
   }
 
@@ -795,7 +796,7 @@ class Game {
     try {
       const { prospects } = await api.prospects();
       const intro = `<div class="scout-sub">Your youth prospects — 10-year-olds to <b>develop</b> through a career (age 10→25): play to each chapter's demands, appoint coaches, and make the big calls. At 25 the SAME NFT graduates into a pro you can field. Mint a fresh genesis prospect, or breed one by retiring a player and choosing <b>Reborn</b>.</div>`
-        + `<div style="margin:10px 0 14px;"><button id="mint-genesis" class="primary">🌱 Mint a genesis prospect</button></div>`;
+        + `<div style="margin:10px 0 14px;"><button id="mint-genesis" class="primary">🌱 Mint a genesis prospect · 300c</button></div>`;
       const rows = prospects.length ? prospects.map((p) => {
         const stars = '★'.repeat(p.potentialStars) + '☆'.repeat(5 - p.potentialStars);
         const gen = p.generation ? ` · gen ${p.generation}` : '';
@@ -819,10 +820,11 @@ class Game {
   private async mintGenesis() {
     try {
       const r = await api.genesis();
-      toast(`🌱 ${r.prospect.name} minted — ${r.supply}/${r.cap} in the economy`);
+      if (r.coins != null) this.account.coins = r.coins;
+      toast(`🌱 ${r.prospect.name} minted (−${r.cost}c) — ${r.supply}/${r.cap} in the economy`);
       this.showProspectCard(r.prospect, true);
       await this.showAcademy();
-    } catch (e: any) { toast(e?.body?.error === 'supply cap reached' ? 'Supply cap reached — no new tokens' : (e?.body?.error ?? 'Mint failed')); }
+    } catch (e: any) { toast(e?.body?.error === 'supply cap reached' ? 'Supply cap reached — no new tokens' : e?.body?.error === 'not enough coins' ? `Not enough coins (need ${e.body.need})` : (e?.body?.error ?? 'Mint failed')); }
   }
 
   private async openCareer(prospectId: string) {

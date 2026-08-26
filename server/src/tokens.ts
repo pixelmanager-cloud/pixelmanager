@@ -10,6 +10,11 @@ import {
 import type { Token, Store } from './store.js';
 
 export const SUPPLY_CAP = Number(process.env.SUPPLY_CAP ?? 10000); // fixed total NFTs in the economy
+// Lifecycle SINKS (coins now — the seam that becomes a PTEST spend later; see docs/economy-and-web3.md).
+// With fixed supply, token demand comes from the ACTIVITY of cycling the set, not from minting more.
+export const GENESIS_COST = Number(process.env.GENESIS_COST ?? 300);   // mint a brand-new prospect
+export const REBORN_COST = Number(process.env.REBORN_COST ?? 150);     // breed a retiree's next generation
+export const MARKET_FEE_PCT = Number(process.env.MARKET_FEE_PCT ?? 5); // % skimmed off every token sale (a burn)
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 function seedFrom(s: string): number { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) || 1; }
 
