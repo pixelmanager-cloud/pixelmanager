@@ -15,6 +15,45 @@ implements it on a branch, and opens a PR for you to review.
 
 ## Tasks (top = next)
 
+> **CAREER-GAME CONTENT EXPANSION (priority).** The Career sim (breeder card game) must feel like living
+> a real person's life and NEVER feel repetitive. These tasks add breadth. HARD RULES for every one:
+> (1) it's a small, self-contained, ADDITIVE PR (add content, don't restructure); (2) fully DETERMINISTIC
+> — no `Date.now`/`Math.random` anywhere in `shared/` (seed everything); (3) `npm run verify` MUST pass
+> (client build + engine + fuzz) — the mental/engine calibration must stay green; (4) run
+> `npx tsx shared/career_sim.ts` and confirm the diversity/role-balance/determinism checks still hold;
+> (5) match the existing code style/format in the file you edit. Files: cards/coaches/agents/traits/
+> personalities/scenarios in `shared/src/career.ts`; narration vocab in `shared/src/narrate.ts`. When you
+> finish one, LEAVE the others unchecked for the next run.
+
+- [ ] **[career] +8 outfield cards.** Add 8 new cards to `DECK` in `shared/src/career.ts` — a mix of
+  single-tag and dual-tag, with 1–2 rare/epic signature cards. Cover under-served tags; give each an
+  evocative name (e.g. "Trivela", "Recovery Sprint", "Backs-to-the-Wall", "Nutmeg"). Do NOT add them to
+  the STARTER lists (they enter via the draft pool automatically). Verify green + career_sim checks hold.
+- [ ] **[career] +4 goalkeeper cards.** Add 4 new cards to `GK_DECK` (keeping-flavoured, 1 rare). Verify.
+- [ ] **[career] richer PLAY narration.** In `shared/src/narrate.ts`, add ≥6 fresh phrasings to EACH of
+  `RESULTS.triumph/good/mixed/poor/dismal` and `REACTIONS.*`, and ≥3 new `SETTINGS` per chapter + more
+  `BIG_SETTINGS`/`HUGE_SETTINGS`. Keep the seeded-pick structure; no repetition of existing lines. Verify.
+- [ ] **[career] narrate coach/draft/offer choices.** Extend the narrator so appointing a coach, drafting
+  a card, and resolving a financial offer ALSO produce a short immersive beat (new functions in
+  `narrate.ts`; wire them in `server/src/tokens.ts` `actWithNarration` for those action types). Verify.
+- [ ] **[career] chapter-transition narration.** When a career crosses an age-chapter boundary, produce a
+  short paragraph summarising the chapter (how he fared, the season event) — a "life so far" beat. Seeded,
+  in `narrate.ts`; surfaced in the career state. Verify.
+- [ ] **[career] graduation narration.** At age 25 graduation, produce an evocative career-summary passage
+  (his journey, standout traits, what kind of pro he became). Seeded from the career. Verify.
+- [ ] **[career] +3 coaches / +2 mentors.** Add new staff to `COACHES` with fresh specialties/flavour. Verify.
+- [ ] **[career] +2 sports agents.** Add 2 new agents to `AGENTS` (distinct exposure/greed/valueMod
+  trade-offs — e.g. a "Streetwise Fixer", a "Boutique Agency"). Verify.
+- [ ] **[career] +3 earned traits.** Add 3 new traits to `TRAITS` (clear eligibility from stats/log; small
+  or no stat nudge). Verify + confirm trait distribution stays sane in career_sim.
+- [ ] **[career] +2 personalities.** Add 2 new temperaments to `PERSONALITIES` (e.g. "Late Bloomer",
+  "Hot-Head") with variance/bigGame/resilience + optional signature stat. Verify + personality-spread check.
+- [ ] **[career] more big/huge moments.** Add more entries to `BIG_MOMENTS`/`HUGE_MOMENTS` scenario labels
+  (evocative one-liners like "Relegation Six-Pointer", "Trophy on the Line"). Verify.
+- [ ] **[career] more season events.** Add 2–3 new between-chapter `seasonEvent`s in `advanceSeasonEvent`
+  (each with a bounded, deterministic mechanical effect + flavour text). Keep effects small; verify.
+
+
 > **UI/VISUAL FIX SWEEP** — the tasks below come from `docs/ui-visual-audit.md` (read it
 > first for full context). Priority is **readability**: the game must be easier to read and
 > look at while KEEPING the retro-arcade identity (Press Start 2P + VT323 + CRT palette).

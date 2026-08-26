@@ -19,7 +19,7 @@ source agent/notify.sh
 if [ -f agent/STOP ]; then echo "STOP file present — agent paused."; exit 0; fi
 
 # --- daily budget cap (bounds API spend) ---
-CAP="${MAX_RUNS_PER_DAY:-12}"
+CAP="${MAX_RUNS_PER_DAY:-40}"
 TODAY="$(date +%F)"
 STATE="agent/.runstate"
 COUNT=0

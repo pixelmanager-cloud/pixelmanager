@@ -2,10 +2,12 @@
 Description=Run the Pixel Manager dev agent on a schedule
 
 [Timer]
-# First run 3 min after boot, then every 30 min. The daily cap in run.sh
+# First run 2 min after boot, then every 10 min. The daily cap in run.sh
 # (MAX_RUNS_PER_DAY) is the real spend guardrail; adjust this cadence to taste.
-OnBootSec=3min
-OnUnitActiveSec=30min
+# A single-instance service won't double-run, so a short interval just means the
+# next run starts promptly after the previous finishes → higher throughput.
+OnBootSec=2min
+OnUnitActiveSec=10min
 Persistent=true
 
 [Install]
