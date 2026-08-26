@@ -30,7 +30,7 @@ implements it on a branch, and opens a PR for you to review.
   evocative name (e.g. "Trivela", "Recovery Sprint", "Backs-to-the-Wall", "Nutmeg"). Do NOT add them to
   the STARTER lists (they enter via the draft pool automatically). Verify green + career_sim checks hold.
 - [ ] **[career] +4 goalkeeper cards.** Add 4 new cards to `GK_DECK` (keeping-flavoured, 1 rare). Verify.
-- [ ] **[career] richer PLAY narration.** In `shared/src/narrate.ts`, add ≥6 fresh phrasings to EACH of
+- [x] **[career] richer PLAY narration.** In `shared/src/narrate.ts`, add ≥6 fresh phrasings to EACH of
   `RESULTS.triumph/good/mixed/poor/dismal` and `REACTIONS.*`, and ≥3 new `SETTINGS` per chapter + more
   `BIG_SETTINGS`/`HUGE_SETTINGS`. Keep the seeded-pick structure; no repetition of existing lines. Verify.
 - [ ] **[career] narrate coach/draft/offer choices.** Extend the narrator so appointing a coach, drafting
