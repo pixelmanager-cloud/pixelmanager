@@ -16,6 +16,7 @@ export interface CareerCard { id: string; name: string; tags: string[]; rarity?:
 export interface Kit { number: number; boots: string; celebration: string; nickname: string; hairstyle?: string; accessory?: string }
 /** Immediate feedback on a moment just played: how well the card fit the demand, and how it went. */
 export interface CareerOutcome { fit: number; bestFit: number; success: number; tags: string[]; answeredAsk: boolean }
+export interface LeagueRow { name: string; mine: boolean; P: number; W: number; D: number; L: number; GF: number; GA: number; GD: number; Pts: number }
 export interface CareerState {
   prospectId: string; name: string; pedigree: number; agentId?: string | null; phase: 'play' | 'coach' | 'draft' | 'offer' | 'focus';
   age: number; chapter: string; turn: number; totalTurns: number; finished: boolean;
@@ -29,6 +30,7 @@ export interface CareerState {
   consequences?: string[];
   momentKind?: 'match' | 'training' | 'life';
   matchCtx?: { opponent: string; home: boolean; score: string; minute: number; comp: string; club?: string | null };
+  clubSeason?: { pos: number; size: number; me: LeagueRow; table: LeagueRow[] } | null;
   kit?: Kit | null;
   hand?: CareerCard[]; coach?: { id: string; name: string } | null;
   coaches?: Array<{ id: string; name: string; kind: string; desc: string; specialty: string[]; bonus: number }>;

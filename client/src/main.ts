@@ -1062,11 +1062,14 @@ class Game {
     this.lastCareerState = s;
     // TABS declutter the view: NOW (the current decision + your life dashboard), PLAYER (full identity +
     // deck), KIT (cosmetic customization). The chapter header + scene banner stay above the tabs.
-    const TABS: Array<['now' | 'player' | 'kit', string]> = [['now', '⚽ Now'], ['player', '👤 Player'], ['kit', '🎽 Kit']];
+    const TABS: Array<['now' | 'player' | 'kit' | 'league', string]> = [['now', '⚽ Now'], ['player', '👤 Player'], ['kit', '🎽 Kit']];
+    if (s.clubSeason) TABS.push(['league', '🏆 League']);
+    if (this.careerTab === 'league' && !s.clubSeason) this.careerTab = 'now'; // league tab only exists in senior stages
     const tabBar = `<div class="cg-tabs">` + TABS.map(([t, label]) => `<button class="cg-tab${this.careerTab === t ? ' on' : ''}" data-tab="${t}">${label}</button>`).join('') + `</div>`;
     let content: string;
     if (this.careerTab === 'player') content = prof + this.deckHtml(s);
     else if (this.careerTab === 'kit') content = this.kitTabHtml(s);
+    else if (this.careerTab === 'league') content = this.leagueTableHtml(s);
     else content = this.lifeDashHtml(s) + narr + recap + conseq + evt + body;
     const tut = this.careerTab === 'now' ? this.tutorialHint(s) : '';
     $('academy-body').innerHTML = head + scene + tut + tabBar + content;
@@ -1102,7 +1105,23 @@ class Game {
 
   private lastNarration = '';
   private lastOutcome?: import('./api').CareerOutcome | null;
-  private careerTab: 'now' | 'player' | 'kit' = 'now';
+  private careerTab: 'now' | 'player' | 'kit' | 'league' = 'now';
+
+  /** The club's league table for the season — the small simulated league the bloodline player's club
+   *  competes in once he reaches the senior stages. His form + overall drive where the club finishes. */
+  private leagueTableHtml(s: import('./api').CareerState): string {
+    const cs = s.clubSeason; if (!cs) return '';
+    const ord = (n: number) => { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]); };
+    const zone = (i: number) => i === 0 ? 'champ' : i <= 2 ? 'promo' : i >= cs.size - 2 ? 'releg' : '';
+    const rows = cs.table.map((r, i) => `<tr class="lt-row ${r.mine ? 'mine' : ''} ${zone(i)}">`
+      + `<td class="lt-pos">${i + 1}</td><td class="lt-name">${r.name}</td>`
+      + `<td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td>`
+      + `<td>${r.GF}</td><td>${r.GA}</td><td>${r.GD > 0 ? '+' : ''}${r.GD}</td><td class="lt-pts">${r.Pts}</td></tr>`).join('');
+    return `<div class="cg-league">`
+      + `<div class="lt-head"><b>${cs.me.name}</b> sit <b>${ord(cs.pos)}</b> of ${cs.size} — ${cs.me.W}W ${cs.me.D}D ${cs.me.L}L · ${cs.me.Pts} pts</div>`
+      + `<div class="scout-sub">Your club's league season. Play well and his form carries the club up the table.</div>`
+      + `<table class="lt-table"><thead><tr><th></th><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
   private lastCareerState?: import('./api').CareerState;
 
   /** The immediate, legible verdict on the moment just played — a fit read + a performance grade + the
