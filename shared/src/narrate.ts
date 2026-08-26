@@ -34,8 +34,10 @@ export function careerCast(careerSeed: number): CareerCast {
 const SETTINGS: Record<string, string[]> = {
   Grassroots: ['on a muddy park pitch', 'under grey skies at the local rec', 'with a scatter of parents watching from the touchline', 'on a frostbitten Sunday-league morning', 'between two sets of jumpers-for-goalposts', 'as a dog wandered across the far corner'],
   Academy: ["on the academy's back pitches", 'in a youth-team fixture', 'under the academy floodlights', 'in a coaches-only trial game', 'on the manicured academy turf', 'in front of the youth-development staff'],
+  Scholar: ['in a youth-league fixture', 'in front of the scholarship staff', 'with his YTS place on the line', 'on a bitter midweek youth night', 'in a trial game against older lads', 'with the academy director watching closely'],
   'Youth Team': ['in a reserve-team match', 'with a couple of scouts jotting notes', 'in front of a smattering of regulars', 'on a wind-whipped afternoon', 'in a tight, chippy reserve derby', 'with a first-team coach watching from the tunnel'],
   Breakthrough: ['in front of a proper crowd now', 'with the first-team staff watching on', 'as the terraces found their voice', 'under real floodlights, real pressure', 'with the home end starting to sing his name', 'on a raucous midweek night'],
+  'First Team': ['as a first-team regular now', 'with the shirt his to lose', 'in front of a demanding home crowd', 'with the pressure of a starting spot', 'under the weight of real expectation', 'on a proper league Saturday'],
   Establishing: ['before a full, expectant stand', 'with cameras tracking his every touch', 'in the thick of a proper contest', 'with a lot of eyes on him', 'as a sell-out crowd leaned in', 'with the pundits watching for a reason to doubt him'],
 };
 // big-moment settings override the chapter setting when the stakes are high
@@ -255,8 +257,10 @@ export function chapterRecap(ctx: RecapCtx): string {
   const openers: Record<string, string[]> = {
     Grassroots: ['The park-pitch years are behind him now.', 'It began, as these things do, on a cold Sunday morning.'],
     Academy: ['The academy has shaped him.', 'Two seasons of drills, van journeys and hard lessons.'],
+    Scholar: ['The scholarship years tested more than his football.', 'A scholar now — the game got serious, and so did he.'],
     'Youth Team': ['The youth team taught him the game has teeth.', 'Reserve football is unglamorous — and it has toughened him.'],
     Breakthrough: ['The breakthrough came, as it had to.', 'The first-team door has creaked open.'],
+    'First Team': ['He is a first-team regular now — the shirt his to keep.', 'Week after week, he answered the bell.'],
     Establishing: ['He belongs here now.', 'No longer the kid — a fixture, a name.'],
   };
   const open = pickFrom(rng, openers[ctx.chapter] ?? openers.Academy);

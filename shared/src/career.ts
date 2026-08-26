@@ -229,6 +229,11 @@ const FOCUS_BY_CHAPTER: Record<string, FocusOption[]> = {
     { id: 'impress', icon: '🧑‍🏫', name: 'Impress the Coach', desc: 'Extra sessions, first to arrive. Staff love a grafter.', energy: -10, effects: { authority: +16, peers: -3 } },
     { id: 'mates',   icon: '🧒', name: 'Team Bonding',    desc: 'Tight with the lads — a dressing room that fights for you.', energy: +4, effects: { peers: +15, school: -4 } },
   ],
+  Scholar: [
+    { id: 'agent',   icon: '🤝', name: 'Sign With an Agent', desc: 'Someone to fight your corner as the offers start to whisper.', energy: -6, effects: { agent: +20 } },
+    { id: 'impress', icon: '🧑‍🏫', name: 'Extra Sessions',   desc: 'Stay behind, do the ugly work. The coach is watching who wants it.', energy: -12, effects: { authority: +16, peers: -2 } },
+    { id: 'school',  icon: '🎒', name: 'Finish Your Studies', desc: 'A scholar in name — keep the qualifications as a safety net.', energy: -6, effects: { school: +16, peers: +2 } },
+  ],
   'Youth Team': [
     { id: 'partner', icon: '❤️', name: 'A New Romance',    desc: 'You’ve met someone. Settled and happy off the pitch.', energy: +12, effects: { partner: +18 } },
     { id: 'agent',   icon: '🤝', name: 'Work Your Agent',  desc: 'Dinners and phone calls — get him fighting for you.', energy: -8, effects: { agent: +18, authority: -2 } },
@@ -238,6 +243,11 @@ const FOCUS_BY_CHAPTER: Record<string, FocusOption[]> = {
     { id: 'partner', icon: '❤️', name: 'Time With Partner', desc: 'Protect your relationship as the spotlight grows.', energy: +10, effects: { partner: +16, fans: -2 } },
     { id: 'fans',    icon: '📣', name: 'Work the Fans',     desc: 'Community days, autographs — the terraces will sing your name.', energy: -8, effects: { fans: +18, partner: -4 } },
     { id: 'agent',   icon: '🤝', name: 'Lean on Your Agent', desc: 'Position yourself for the big move.', energy: -6, effects: { agent: +16, authority: -3 } },
+  ],
+  'First Team': [
+    { id: 'starter', icon: '🧑‍🏫', name: 'Nail Your Starting Spot', desc: 'Pre-season graft — make the shirt yours and undroppable.', energy: -12, effects: { authority: +16, peers: -2 } },
+    { id: 'fans',    icon: '📣', name: 'Give Back to the Fans', desc: 'Become a terrace favourite — they’ll carry you on the bad days.', energy: -8, effects: { fans: +16, partner: -3 } },
+    { id: 'partner', icon: '❤️', name: 'Time With Partner', desc: 'A stable home life behind the rising star.', energy: +10, effects: { partner: +16, fans: -2 } },
   ],
   Establishing: [
     { id: 'sponsors', icon: '📸', name: 'Sponsor Duties',   desc: 'Shoots and appearances. The brand — and the bank — grow.', energy: -12, effects: { sponsors: +18, peers: -4 } },
@@ -306,17 +316,20 @@ export interface Choice { cardId: string; tags: Tag[]; power: number; fit: numbe
 // ── career config ──
 export const HAND_SIZE = 4;
 
-// A player's DEVELOPMENT is a human life from age 10 → 25, rendered as ~5 age chapters (not a 300-turn
-// grind). Scenarios + stakes are age-gated: a 12-year-old plays park football; cup finals only come once
-// you're breaking into the first team. A draft + an age-milestone event fires at each chapter boundary.
+// A player's DEVELOPMENT is a human life from age 10 → 25, rendered as SEVEN age chapters (a longer, more
+// textured journey — not a 300-turn grind, but far more than a slideshow). Scenarios + stakes are
+// age-gated: a 12-year-old plays park football; cup finals only come once you're in the first team. A
+// draft + a life-milestone event + a summer focus fire at each of the seven chapter boundaries.
 export const START_AGE = 10, PRO_AGE = 25, RETIRE_AGE = 40;
 export interface AgeBand { name: string; from: number; to: number; turns: number; maxStakes: 1 | 2 | 3; demand: Tag[] }
 export const AGE_BANDS: AgeBand[] = [
-  { name: 'Grassroots',   from: 10, to: 13, turns: 8,  maxStakes: 1, demand: ['flair', 'stamina', 'creativity', 'teamwork'] },
-  { name: 'Academy',      from: 14, to: 16, turns: 10, maxStakes: 1, demand: ['flair', 'stamina', 'creativity', 'teamwork', 'composure', 'aggression'] },
-  { name: 'Youth Team',   from: 17, to: 19, turns: 12, maxStakes: 2, demand: OUTFIELD_TAGS },
-  { name: 'Breakthrough', from: 20, to: 22, turns: 12, maxStakes: 3, demand: OUTFIELD_TAGS },
-  { name: 'Establishing', from: 23, to: 25, turns: 12, maxStakes: 3, demand: OUTFIELD_TAGS },
+  { name: 'Grassroots',   from: 10, to: 12, turns: 12, maxStakes: 1, demand: ['flair', 'stamina', 'creativity', 'teamwork'] },
+  { name: 'Academy',      from: 13, to: 14, turns: 14, maxStakes: 1, demand: ['flair', 'stamina', 'creativity', 'teamwork', 'composure', 'aggression'] },
+  { name: 'Scholar',      from: 15, to: 16, turns: 16, maxStakes: 2, demand: OUTFIELD_TAGS },
+  { name: 'Youth Team',   from: 17, to: 18, turns: 18, maxStakes: 2, demand: OUTFIELD_TAGS },
+  { name: 'Breakthrough', from: 19, to: 20, turns: 18, maxStakes: 3, demand: OUTFIELD_TAGS },
+  { name: 'First Team',   from: 21, to: 22, turns: 18, maxStakes: 3, demand: OUTFIELD_TAGS },
+  { name: 'Establishing', from: 23, to: 25, turns: 16, maxStakes: 3, demand: OUTFIELD_TAGS },
 ];
 export const TOTAL_TURNS = AGE_BANDS.reduce((s, b) => s + b.turns, 0);
 
@@ -344,8 +357,10 @@ const METER: Record<string, MeterDesc> = {
 const CHAPTER_METERS: Record<string, string[]> = {
   Grassroots:   ['coach', 'parents', 'mates'],
   Academy:      ['coach', 'parents', 'teammates', 'school'],
+  Scholar:      ['coach', 'teammates', 'school', 'agent'],   // scholarship years: an agent enters, school still counts
   'Youth Team': ['coach', 'teammates', 'agent', 'partner'],
   Breakthrough: ['gaffer', 'team', 'fans', 'agent', 'partner'],
+  'First Team': ['gaffer', 'team', 'fans', 'sponsors', 'partner'],
   Establishing: ['gaffer', 'team', 'fans', 'sponsors', 'partner'],
 };
 /** The age-appropriate meters (key + icon + stage label) for a given life chapter. */
@@ -592,7 +607,7 @@ export class Career {
   private computeConsequences(endedChapter: string): { notes: string[]; form: number; energy: number; earn: number; market: number } {
     const active = new Set(activeMeters(endedChapter).map((m) => m.key));
     const v = this.standing; const notes: string[] = []; let form = 0, energy = 0, earn = 0, market = 0;
-    const boss = endedChapter === 'Breakthrough' || endedChapter === 'Establishing' ? 'The gaffer' : 'The coach';
+    const boss = ['Breakthrough', 'First Team', 'Establishing'].includes(endedChapter) ? 'The gaffer' : 'The coach';
     if (active.has('authority')) {
       if (v.authority < 32) { form -= 0.10; notes.push(`🚫 ${boss} has lost patience — you spend the season in and out of the side.`); }
       else if (v.authority > 70) { form += 0.06; notes.push(`✅ ${boss} trusts you completely — first name on the teamsheet.`); }

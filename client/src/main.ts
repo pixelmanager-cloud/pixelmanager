@@ -17,8 +17,10 @@ const METER_ICON: Record<string, string> = { authority: '🧑‍🏫', peers: '�
 const CHAPTER_THEME: Record<string, { slug: string; scene: string; accent: string; bg: string; tagline: string }> = {
   Grassroots:   { slug: 'grassroots',   scene: '🌱⚽🥅', accent: '#5bd06a', bg: 'radial-gradient(120% 90% at 50% 0%, rgba(70,150,70,0.20), rgba(20,30,20,0.0) 60%)', tagline: 'Jumpers for goalposts — muddy knees and big dreams.' },
   Academy:      { slug: 'academy',      scene: '🎒📋⚽', accent: '#5aa9ff', bg: 'radial-gradient(120% 90% at 50% 0%, rgba(60,110,200,0.20), rgba(15,20,35,0.0) 60%)', tagline: 'Cones, drills and van journeys — the real schooling begins.' },
+  Scholar:      { slug: 'scholar',      scene: '📗🧤⚽', accent: '#3fd4c8', bg: 'radial-gradient(120% 90% at 50% 0%, rgba(50,190,180,0.20), rgba(15,32,30,0.0) 60%)', tagline: 'Scholarship signed — two years to prove you belong.' },
   'Youth Team': { slug: 'youth',        scene: '👕🔥⚽', accent: '#ffa53b', bg: 'radial-gradient(120% 90% at 50% 0%, rgba(210,130,40,0.20), rgba(35,25,15,0.0) 60%)', tagline: 'Knocking on the first-team door — the agents start circling.' },
   Breakthrough: { slug: 'breakthrough', scene: '🏟️📣✨', accent: '#b57bff', bg: 'radial-gradient(120% 90% at 50% 0%, rgba(150,90,230,0.22), rgba(25,15,40,0.0) 60%)', tagline: 'Floodlights and headlines — this is the big time.' },
+  'First Team': { slug: 'firstteam',    scene: '⚽🔴⭐', accent: '#ff5e6d', bg: 'radial-gradient(120% 90% at 50% 0%, rgba(220,70,90,0.20), rgba(38,15,20,0.0) 60%)', tagline: 'The shirt is yours now — hold onto it, week after week.' },
   Establishing: { slug: 'establishing', scene: '🏆⭐💫', accent: '#ffd75e', bg: 'radial-gradient(120% 90% at 50% 0%, rgba(210,170,60,0.22), rgba(35,30,10,0.0) 60%)', tagline: 'A name in lights — cement your place among the greats.' },
 };
 
