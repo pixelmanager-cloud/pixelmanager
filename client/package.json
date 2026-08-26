@@ -7,8 +7,7 @@
     "build": "tsc --noEmit && vite build"
   },
   "dependencies": {
-    "@fm/shared": "*",
-    "phaser": "^3.80.0"
+    "@fm/shared": "*"
   },
   "devDependencies": {
     "typescript": "^5.5.0",

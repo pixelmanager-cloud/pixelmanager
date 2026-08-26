@@ -1,12 +1,8 @@
-import Phaser from 'phaser';
 import {
-  MatchEngine, autoPickXI, buildXI, overall, PITCH, TICK_SEC, defaultDuty, DUTY_LABEL, DUTIES_BY_ROLE, isDutyForRole,
+  MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, DUTY_LABEL, DUTIES_BY_ROLE, isDutyForRole,
   TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty,
 } from '@fm/shared';
-import { SCALE, makeBallTexture, makeBallGhostTexture, makePitchTexture, makePlayerFrames, makeShadowTexture, makeCarrierTexture } from './pixelart';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData, type MissionsData, type ContractInfo, type LeaderStat, type AwardRow } from './api';
-
-const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
 
 // icons for the stage-aware life meters (keyed by underlying relationship) — used in focus effect labels
 const METER_ICON: Record<string, string> = { authority: '🧑‍🏫', peers: '👥', family: '🏠', school: '🎒', agent: '🤝', fans: '📣', sponsors: '📸', partner: '❤️' };
@@ -185,7 +181,6 @@ function squadInsight(team: Team): string {
 let GAME: Game;
 
 class Game {
-  scene?: MatchScene;
   engine?: MatchEngine;
   running = false;
   silent = false; // when true, flushing events shows no goal flash/shake (used by "skip")
@@ -257,10 +252,6 @@ class Game {
 
   private wireStaticButtons() {
     const setSpeed = (v: number, id: string) => { this.speed = v; ['spd1', 'spd4', 'spd12'].forEach((b) => $(b).classList.remove('active')); $(id).classList.add('active'); };
-    $('toggle-2d').addEventListener('click', () => {
-      const game = $('game'); const on = game.classList.toggle('hidden') === false;
-      $('toggle-2d').classList.toggle('on', on);
-    });
     $('spd1').addEventListener('click', () => setSpeed(1, 'spd1'));
     $('spd4').addEventListener('click', () => setSpeed(4, 'spd4'));
     $('spd12').addEventListener('click', () => setSpeed(12, 'spd12'));
@@ -1564,7 +1555,6 @@ class Game {
     this.running = true; this.accum = 0; this.eventsShown = 0;
     this.setMatchNames();
     $('ticker').innerHTML = '';
-    this.scene!.buildSprites(this.engine.teams);
     this.showScreen('match');
   }
 
@@ -1667,7 +1657,6 @@ class Game {
     this.running = false; // stop the animated tick loop from also advancing
     while (!this.engine.state.finished) this.engine.tick();
     this.silent = true;
-    this.scene!.sync(this.engine.state);
     this.syncMatchHud(); // final score/possession/fitness + flush ticker
     this.silent = false;
     this.onFullTime();
@@ -1683,7 +1672,6 @@ class Game {
         if (this.engine.state.finished) { this.onFullTime(); break; }
       }
     }
-    this.scene!.sync(this.engine.state);
     this.syncMatchHud();
   }
 
@@ -1885,8 +1873,6 @@ class Game {
     if (e.type === 'goal' && !this.silent) this.celebrateGoal(e);
     this.appendLine(`${min} ${text}`, cls);
     if (e.type === 'goal') ($('ticker').lastElementChild as HTMLElement)?.classList.add('flash');
-    // mirror a goal/chance on the 2D pitch when it's open (live only)
-    if ((e.type === 'goal' || e.type === 'chance') && !this.silent && !$('game').classList.contains('hidden')) this.scene?.flashGoal(e.teamIdx);
     if (!key && ATTACK_TYPES.includes(e.type)) this.checkMomentum(e.minute);
   }
 
@@ -1896,120 +1882,25 @@ class Game {
     el.classList.remove('show');
     void el.offsetWidth; // restart the CSS animation
     el.classList.add('show');
-    this.scene?.goalShake();
   }
-}
-
-class MatchScene extends Phaser.Scene {
-  private sprites: Phaser.GameObjects.Image[][] = [[], []];
-  private ppos: { x: number; y: number }[][] = [[], []]; // lerped ground positions (the running bob lifts only the drawn sprite, not the shadow)
-  private shadows: Phaser.GameObjects.Image[][] = [[], []];
-  private ballSprite!: Phaser.GameObjects.Image;
-  private ballShadow!: Phaser.GameObjects.Image;
-  private carrierRing!: Phaser.GameObjects.Image;
-  private ballTrail: Phaser.GameObjects.Image[] = []; // fading ghosts behind the ball (visual only)
-  private ballHist: { x: number; y: number }[] = [];  // recent rendered ball positions
-  private teams!: [Team, Team];
-
-  create() {
-    makePitchTexture(this);
-    makeBallTexture(this);
-    makeBallGhostTexture(this);
-    makeShadowTexture(this);
-    makeCarrierTexture(this);
-    this.add.image(0, 0, 'pitch').setOrigin(0);
-    GAME.scene = this;
-    GAME.boot();
-  }
-
-  buildSprites(teams: [Team, Team]) {
-    this.teams = teams;
-    [...this.sprites.flat(), ...this.shadows.flat(), ...this.ballTrail].forEach((s) => s.destroy());
-    this.ballSprite?.destroy(); this.ballShadow?.destroy(); this.carrierRing?.destroy();
-    // draw order (Canvas = creation order): shadows -> ball shadow -> carrier ring -> players -> trail -> ball
-    this.shadows = [0, 1].map((t) => teams[t].players.map(() => this.add.image(0, 0, 'shadow').setScale(2.4).setDepth(0)));
-    this.ballShadow = this.add.image(0, 0, 'shadow').setScale(1.1);
-    this.carrierRing = this.add.image(0, 0, 'carrier').setScale(2.4).setVisible(false);
-    this.sprites = [0, 1].map((t) =>
-      teams[t].players.map((p) => {
-        const key = `p-${t}-${p.role === 'GK' ? 'gk' : 'out'}`;
-        makePlayerFrames(this, key, teams[t].shirtColor, p.role === 'GK');
-        return this.add.image(-99, -99, key + '0').setScale(3).setOrigin(0.5, 0.85);
-      }),
-    );
-    this.ppos = [0, 1].map((t) => teams[t].players.map(() => ({ x: -99, y: -99 })));
-    // ghost balls (oldest -> newest) drawn just under the ball; a smooth alpha+scale
-    // ramp sampled from consecutive frames gives a short, tapering motion trail.
-    this.ballTrail = [0.06, 0.10, 0.16, 0.24, 0.34, 0.46].map((alpha) =>
-      this.add.image(0, 0, 'ball-ghost').setScale(1.8 + alpha * 3).setAlpha(alpha).setVisible(false),
-    );
-    this.ballHist = [];
-    this.ballSprite = this.add.image(0, 0, 'ball').setScale(3);
-  }
-
-  sync(state: MatchEngine['state']) {
-    if (!this.ballSprite) return;
-    const now = Date.now();
-    const frame = Math.floor(now / 110) % 2; // leg-swap cadence
-    const lerp = 0.28;
-    for (const t of [0, 1] as const) {
-      state.players[t].forEach((ps, i) => {
-        const s = this.sprites[t]?.[i]; if (!s) return;
-        const pos = this.ppos[t][i];
-        const tx = ps.x * SCALE, ty = ps.y * SCALE;
-        const dx = tx - pos.x, dy = ty - pos.y;
-        const moving = Math.hypot(dx, dy) > 1.2; // chasing a target => running
-        pos.x += dx * lerp; pos.y += dy * lerp;  // logical ground position (shadow tracks this)
-        if (Math.abs(dx) > 0.4) s.flipX = dx < 0;                       // face the direction of travel
-        // subtle run bob: the sprite lifts on each stride; per-player phase so the team doesn't bounce in unison.
-        const bob = moving ? Math.abs(Math.sin(now / 90 + i)) * 1.5 : 0;
-        s.setPosition(pos.x, pos.y - bob);
-        const key = `p-${t}-${this.teams[t].players[i].role === 'GK' ? 'gk' : 'out'}`;
-        s.setTexture(key + (moving ? frame : 0));
-        this.shadows[t][i].setPosition(pos.x, pos.y + 1);
-      });
-    }
-    // ball (sits a touch above its shadow for depth)
-    const bx = state.ball.x * SCALE, by = state.ball.y * SCALE;
-    this.ballShadow.setPosition(bx + (bx - this.ballSprite.x) * lerp, by);
-    this.ballSprite.x += (bx - this.ballSprite.x) * lerp;
-    this.ballSprite.y += (by - 4 - this.ballSprite.y) * lerp;
-    // subtle fading trail: ghost balls parked at recent rendered positions (visual only).
-    // Sampling consecutive frames (newest -> oldest) keeps the trail short and smooth.
-    const n = this.ballTrail.length;
-    this.ballHist.unshift({ x: this.ballSprite.x, y: this.ballSprite.y });
-    if (this.ballHist.length > n + 1) this.ballHist.pop();
-    this.ballTrail.forEach((g, i) => {
-      const h = this.ballHist[n - i]; // ghost i (fainter as i drops) sits at an older frame
-      if (h) g.setVisible(true).setPosition(h.x, h.y);
-      else g.setVisible(false);
-    });
-    // highlight the ball carrier with a gently pulsing glow so the eye can follow the play
-    if (state.carrier) {
-      const gp = this.ppos[state.carrier.teamIdx][state.carrier.playerIdx];
-      const pulse = 0.5 + 0.5 * Math.sin(now / 170);
-      this.carrierRing.setVisible(true).setPosition(gp.x, gp.y + 1)
-        .setAlpha(0.7 + 0.3 * pulse).setScale(2.4 + 0.22 * pulse);
-    } else this.carrierRing.setVisible(false);
-  }
-
-  // Brief, subtle camera shake to punctuate a goal. Purely cosmetic: the shake
-  // runs on the render camera and never touches the (seeded) simulation, and its
-  // fixed real-time duration is independent of match speed.
-  goalShake() { this.cameras.main.shake(250, 0.004); }
-
-  // Commentary↔pitch sync: briefly light up the goalmouth the acting team is attacking, so a
-  // goal/chance line in the feed is mirrored on the 2D pitch. Cosmetic; never touches the sim.
-  flashGoal(teamIdx: 0 | 1) {
-    const x = teamIdx === 0 ? (PITCH.w - 6) * SCALE : 0;
-    const g = this.add.graphics().setDepth(50);
-    g.fillStyle(0xffe14a, 0.45);
-    g.fillRect(x, (PITCH.h / 2 - 14) * SCALE, 6 * SCALE, 28 * SCALE);
-    this.tweens.add({ targets: g, alpha: 0, duration: 600, onComplete: () => g.destroy() });
-  }
-
-  update(_t: number, deltaMs: number) { GAME.onFrame(deltaMs); }
 }
 
 GAME = new Game();
-new Phaser.Game({ type: Phaser.CANVAS, parent: 'game', width: W, height: H, pixelArt: true, backgroundColor: '#0a0a16', scene: MatchScene });
+GAME.boot();
+
+// The match is simulated by the headless deterministic engine and presented as live text
+// commentary + HUD. The per-frame match tick loop used to be driven by the 2D render
+// scene's `update(t, deltaMs)`; with the 2D pitch removed we drive it here with a plain
+// requestAnimationFrame loop, feeding the frame delta into GAME.onFrame — which advances
+// the engine over real time (respecting the 1x/4x/12x speed + pause), streams events into
+// the commentary feed and updates the running score/clock/possession/pressure. Skip-to-
+// full-time and the post-match report card are handled inside GAME independently of this loop.
+let lastFrameMs = performance.now();
+function matchFrame(now: number) {
+  // clamp the delta so a backgrounded/stalled tab can't fast-forward the sim in one giant step
+  const dMs = Math.min(now - lastFrameMs, 100);
+  lastFrameMs = now;
+  GAME.onFrame(dMs);
+  requestAnimationFrame(matchFrame);
+}
+requestAnimationFrame(matchFrame);
