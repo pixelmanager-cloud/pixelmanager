@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { randomUUID } from 'node:crypto';
-import { overall, managerPrestige, signContract, contractCost, contractLength, graduationEpilogue, type Lineup, type Tactics } from '@fm/shared';
+import { overall, managerPrestige, signContract, contractCost, contractLength, graduationEpilogue, gaffersDiaryEntry, type Lineup, type Tactics } from '@fm/shared';
 import { mintGenesis, tokenToPlayer, tokenContract, tokenAch, legendCardOf, unavailableTokenIds, loadCareer, actWithNarration, careerState, graduatedFields, rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, ageOf, syncOnchainTokens, SUPPLY_CAP, GENESIS_COST, REBORN_COST, MARKET_FEE_PCT, type CareerAction } from './tokens.js';
 import { lifecycleEnabled, lifecycleInfo, serverSignerEnabled, serverMintTo, serverReborn, ownedTokens, ownerOf, lineageOf } from './lifecyclenft.js';
 import { bumpApps, bumpMorale, advanceTokensAtRollover } from './lifecycle.js';
@@ -403,6 +403,32 @@ app.get('/standings', { preHandler: requireAuth }, async (req) => {
   const ids = new Set(members.map((m) => m.id));
   const results = resultsAmong(await db.seasonResults(s.id), ids);
   return { season: { number: s.number, endsAt: s.endsAt }, tier, pod, promote: PROMOTE, relegate: RELEGATE, table: buildTable(members, results) };
+});
+
+// Gaffer's Diary: a seeded, deterministic running season-story line for the hub — a pure text
+// composition over already-known match/table state (see gaffersDiaryEntry in shared).
+app.get('/diary', { preHandler: requireAuth }, async (req) => {
+  const meId = req.account!.id;
+  const s = await ensureSeason(db, Date.now());
+  const { tier, pod } = await ensurePod(db, s, meId);
+  const members = await db.podMembers(s.id, tier, pod);
+  const ids = new Set(members.map((m) => m.id));
+  const table = buildTable(members, resultsAmong(await db.seasonResults(s.id), ids));
+  const myRow = table.findIndex((r) => r.id === meId);
+  const recent = (await db.recentResults(200, s.id)).filter((r) => ids.has(r.home_id) && ids.has(r.away_id) && (r.home_id === meId || r.away_id === meId));
+  const matches = recent.map((r) => {
+    const iAmHome = r.home_id === meId;
+    return {
+      id: r.id, createdAt: r.created_at,
+      myScore: iAmHome ? r.home_score : r.away_score, oppScore: iAmHome ? r.away_score : r.home_score,
+      oppId: iAmHome ? r.away_id : r.home_id, oppHandle: iAmHome ? r.away_handle : r.home_handle,
+    };
+  });
+  const entry = gaffersDiaryEntry({
+    seasonNumber: s.number, matches,
+    table: myRow >= 0 ? { position: myRow + 1, total: table.length, promote: PROMOTE, relegate: RELEGATE, points: table[myRow].Pts } : null,
+  });
+  return { entry };
 });
 
 // Individual leaderboards for the caller's pod this season: top scorers, assisters, POTM winners.

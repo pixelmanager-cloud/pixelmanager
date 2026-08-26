@@ -10,3 +10,4 @@ export * from './prestige.js';
 export * from './morale.js';
 export * from './legacy.js';
 export * from './staking.js';
+export * from './gaffersDiary.js';

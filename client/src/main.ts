@@ -656,6 +656,14 @@ class Game {
     } catch { $('me-prestige').classList.add('hidden'); }
   }
 
+  private async refreshDiary() {
+    try {
+      const { entry } = await api.diary();
+      $('gaffers-diary-text').textContent = entry;
+      $('gaffers-diary').classList.toggle('hidden', !entry);
+    } catch { $('gaffers-diary').classList.add('hidden'); }
+  }
+
   private showPrestigeCard(pr: { score: number; title: string; icon: string; nextTitle: string | null; nextAt: number | null; progress: number; leagueTitles: number; cupTitles: number }) {
     const el = document.createElement('div');
     el.id = 'player-card-ov';
@@ -749,6 +757,7 @@ class Game {
     if (w) void this.refreshTokenBalance();
     if (this.account.coins != null) $('me-coins').textContent = `💰 ${this.account.coins}`;
     void this.refreshPrestige();
+    void this.refreshDiary();
     $('fixtures-progress').textContent = '';
     $('opponents').innerHTML = SPINNER;
     try {

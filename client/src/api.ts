@@ -139,6 +139,7 @@ export const api = {
   dispatchScout: (destination: string) => req<{ ok: true; mission: Mission; coins: number }>('/scout/missions', { method: 'POST', body: JSON.stringify({ destination }) }),
   signMission: (id: string) => req<{ ok: true; player: { name: string; role: string }; signedCount: number }>(`/scout/missions/${id}/sign`, { method: 'POST' }),
   standings: () => req<{ season: { number: number; endsAt: number }; tier: string; pod: number; promote: number; relegate: number; table: TableRow[] }>('/standings'),
+  diary: () => req<{ entry: string }>('/diary'),
   honours: () => req<{ honours: HonourRow[] }>('/honours'),
   awards: () => req<{ awards: AwardRow[] }>('/awards'),
   cup: () => req<CupData>('/cup'),

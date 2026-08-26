@@ -15,7 +15,7 @@ Work top to bottom, one item per commit. Tick `[x]` when done; add a one-line no
 
 ## Queue
 
-1. [ ] **Gaffer's Diary — season story panel on the hub.** Seeded template narration (reuse the
+1. [x] **Gaffer's Diary — season story panel on the hub.** Seeded template narration (reuse the
    `narrate.ts` pattern) that turns match results + streaks + table position into a running season
    story: an unbeaten run, a rocky patch, "closing in on promotion", a first-ever win over a pod
    rival. Presentational only, pure function of existing match/standings data. New hub panel. (M)
