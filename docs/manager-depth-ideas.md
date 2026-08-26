@@ -1,5 +1,26 @@
 # Manager-game depth — brainstorm (current-state, 2026-08)
 
+> ## ⚠️ Framing correction (2026-08) — OWNER-MANAGER, not employed manager
+> The player is the **club owner** and **carries his own star NFTs** (portable assets across
+> seasons/divisions). So the classic FM tropes **do not fit** and are **cut**:
+> - ❌ **Board expectations / sack risk** — there's no board above an owner; you can't be fired.
+> - ❌ **Transfer budgets (board-granted)** — you spend your *own* treasury, not an allowance.
+> - ❌ **Transfer requests / forced sales** — you *own* the player NFT; he can't demand to leave.
+>
+> Reframe the whole side from **"serve a board"** → **"build a dynasty."** What survives:
+> - ✅ **Your OWN ambitions** (self-set goals: climb the pyramid, win the Cup, 5-star squad,
+>   take a bloodline to gen 5) — purpose without a boss.
+> - ✅ **Dynasty narrative / Gaffer's Diary**, **rivalries** (vs other owner-managers),
+>   **matchday decisions** (team talk / match plan — coaching *your* players).
+> - ✅ **Loyalty/morale → PERFORMANCE and LEGACY, not transfer demands.** A neglected star
+>   doesn't threaten to leave — he *declines / underperforms / retires a lesser legend*.
+> - 🌟 **The real depth = DYNASTY / squad-as-long-term-assets:** because you carry players over
+>   their whole arc, the strategic game is *developing* pros, managing *ageing/decline*, deciding
+>   *when to reborn*, squad hierarchy & minutes (which shape each player's legacy), building the
+>   *bloodline as a franchise* across generations, and spending *your* earned treasury on the club.
+> The sections below predate this note — read Theme 1 & the finance/requests bits through this lens.
+
+
 The **career (breeder) side is deep** now — story mode, named cast, chapters, epilogues,
 life-events, a rich card game. The **manager side is capable but thin on *role*:** you pick
 a lineup + tactics and watch a great match, but you don't yet *feel like a manager living a
