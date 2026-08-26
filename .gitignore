@@ -1,6 +1,7 @@
 node_modules/
 dist/
 *.log
+docs/agents/STOP
 .DS_Store
 
 # on-server agent runtime files (never commit these)

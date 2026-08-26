@@ -1,7 +1,8 @@
 # Overnight code agents
 
-Two scoped, autonomous Claude Code agents (Sonnet) that add depth + polish to Pixel Manager overnight, each
-on its own branch, each opening one PR you review in the morning. This is separate from `bots/` (which are
+Two scoped, **continuous** autonomous Claude Code agents (Sonnet) that keep adding depth + polish to Pixel
+Manager — brainstorming their own goals, working them down, and brainstorming more — each on its own
+evergreen branch with a live PR you review whenever you like. This is separate from `bots/` (which are
 gameplay bug-hunt bots, not code writers).
 
 - **Player-career agent** — `docs/agents/player-career-agent.md` (more cards, story variety, lifestyle,
@@ -15,23 +16,42 @@ Each agent **brainstorms its own depth plan** and writes a ranked, living work q
 briefs are just a starting point. The briefs put them in **separate file lanes** so their two PRs rarely
 conflict.
 
-## Run it (on this Mac, before bed)
+## Run it — continuous autonomous devs
 
+The agents run **forever**: brainstorm a queue → work it down one committed item at a time → when the queue
+empties, brainstorm more goals → keep going. They **interleave** on a single checkout, each on its own
+evergreen branch (`agent/player`, `agent/manager`) with a **live PR** that accumulates commits. Merge a PR
+and the agent rolls onto the new main and continues.
+
+On a server (recommended — runs 24/7), inside tmux:
+```bash
+export ANTHROPIC_API_KEY=sk-ant-...
+./scripts/agent-run.sh both
+# detach: Ctrl-b then d
+```
+
+On a Mac laptop (keep it awake):
 ```bash
 caffeinate -i ./scripts/agent-run.sh both
 ```
 
-`caffeinate -i` keeps the Mac awake for the run. Each agent attempts `ITERS` backlog items (default 6),
-one commit each, then pushes its branch and opens a PR.
-
 Tunables:
-
 ```bash
-ITERS=8 MODEL=sonnet ./scripts/agent-run.sh both   # more items per agent
-./scripts/agent-run.sh player                       # just one agent
+PACE_SECS=30 MODEL=sonnet ./scripts/agent-run.sh both   # pause between cycles
+MAX_CYCLES=20 ./scripts/agent-run.sh player             # bound it (0 = forever, default)
+./scripts/agent-run.sh manager                          # just one agent
 ```
 
-Requirements: `claude` and `gh` on PATH, `gh auth login` done. Nothing is merged automatically.
+## Stop it
+
+```bash
+./scripts/agent-stop.sh          # graceful: finishes the current item, pushes, exits
+./scripts/agent-stop.sh --now    # graceful + kill the running turn immediately
+```
+
+Requirements: `claude` on PATH (authenticated — `ANTHROPIC_API_KEY` for headless). `gh` is optional: with
+it, PRs are opened/managed automatically; without it, branches are pushed and PR URLs printed. **Nothing is
+ever merged automatically.** A safety breaker exits after 6 consecutive failed turns (e.g. a bad key).
 
 ## Guardrails (baked into the briefs + launcher)
 
