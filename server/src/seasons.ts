@@ -26,7 +26,12 @@ async function withNfts(db: Store, accountId: string, c: { club: any; standingOr
   return c;
 }
 
-const SEASON_MS = Math.max(1, Number(process.env.SEASON_DAYS ?? 7)) * 24 * 60 * 60 * 1000;
+// A manager season runs 3 real days (was 7). Paired with a full manager career of ~15 seasons
+// (graduation at 25 → retirement), that's a ~6–7 week arc — fast enough that retirements (and the
+// reborn prospects they yield) replenish the 10-year-old pool for career mode, instead of the player
+// career burning through NFTs far faster than the manager clock can make new ones. Both knobs are
+// env-tunable; the daily cap is raised in step so a 38-fixture season still fits inside 3 days.
+const SEASON_MS = Math.max(1, Number(process.env.SEASON_DAYS ?? 3)) * 24 * 60 * 60 * 1000;
 export const POD_SIZE = Math.max(2, Number(process.env.POD_SIZE ?? 20));
 export const PROMOTE = 3;
 export const RELEGATE = 3;
@@ -34,8 +39,8 @@ export const RELEGATE = 3;
 export const CUP_PRIZE_BASE = 200;
 export const CUP_PRIZE_STEP = 120;
 /** soft daily cap: matches a manager can actively start per UTC day (rest auto-resolve at season end).
- *  Default 6 pairs with a 38-fixture double round-robin (6×7=42 ≥ 38, so a diligent manager finishes). */
-export const MATCHES_PER_DAY = Math.max(1, Number(process.env.MATCHES_PER_DAY ?? 6));
+ *  38-fixture double round-robin ÷ a 3-day season ⇒ ~13/day so a diligent manager still completes it. */
+export const MATCHES_PER_DAY = Math.max(1, Number(process.env.MATCHES_PER_DAY ?? 13));
 
 /** Midnight UTC for the day containing `now` (ms since epoch). */
 export const startOfUtcDay = (now: number): number => now - (now % 86_400_000);
