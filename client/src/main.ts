@@ -961,6 +961,7 @@ class Game {
     const evt = s.seasonEvent ? `<div class="cg-event"><b>${s.seasonEvent.name}</b> — ${s.seasonEvent.desc}</div>` : '';
     const prof = s.profile ? this.careerProfileHtml(s.profile) : '';
     const narr = this.lastNarration && s.phase === 'play' ? `<div class="cg-narrate">“${this.lastNarration}”</div>` : '';
+    const recap = s.recap ? `<div class="cg-recap"><span class="cg-recap-lbl">📖 The story so far</span>${s.recap}</div>` : '';
     let body = '';
     if (s.phase === 'play' && s.scenario) {
       const tags = Object.entries(s.scenario.demand).sort((a, b) => b[1] - a[1]).map(([t]) => `<span class="cg-tag">${t}</span>`).join('');
@@ -978,7 +979,7 @@ class Game {
         + s.offers.map((o) => `<div class="cg-offer" data-act="offer" data-id="${o.id}"><div class="cg-cname">💷 ${o.name}</div><div class="cg-cdesc">${o.desc}</div>`
           + `<div class="cg-effs">${o.earn > 0 ? `+${o.earn}c ` : ''}${o.greed > 0 ? '· greedier ' : o.greed < 0 ? '· more loyal ' : ''}${o.market > 0 ? '· more famous ' : ''}${o.form > 0 ? '· sharper' : o.form < 0 ? '· distracted' : ''}</div></div>`).join('');
     }
-    $('academy-body').innerHTML = head + prof + narr + evt + body;
+    $('academy-body').innerHTML = head + prof + narr + recap + evt + body;
     $('cg-back').addEventListener('click', () => this.showAcademy());
     $('academy-body').querySelectorAll('[data-act]').forEach((el) => el.addEventListener('click', () => this.doCareerAct(s.prospectId, { type: (el as HTMLElement).dataset.act!, cardId: (el as HTMLElement).dataset.id! })));
   }
@@ -1013,10 +1014,13 @@ class Game {
       this.lastNarration = r.narration ?? '';
       if (r.graduated && r.player) {
         this.setMe(await api.me());
-        if (this.lastNarration) toast(this.lastNarration);
-        toast(`🎓 ${r.player.name} graduates as a pro!`);
-        this.showPlayerCard(r.player, true);
-        this.showAcademy();
+        const player = r.player;
+        // an evocative epilogue of the whole journey, then the pro reveal
+        $('academy-body').innerHTML = `<div class="cg-graduation">`
+          + `<div class="cg-grad-title">🎓 ${player.name} — the journey's end</div>`
+          + `<div class="cg-epilogue">${r.epilogue ?? ''}</div>`
+          + `<button id="cg-reveal">Reveal the pro →</button></div>`;
+        $('cg-reveal').addEventListener('click', () => { this.showPlayerCard(player, true); this.showAcademy(); });
       } else if (r.state) {
         this.renderCareer(r.state);
       }

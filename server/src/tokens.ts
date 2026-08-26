@@ -4,7 +4,7 @@
 // home for every transition, replacing the old prospects/contracts/lifecycle/achievements split.
 import {
   overall, contractView, signContract, contractLength, legacyCard, legacyBoost, inheritGenes, rollGenes, graduate,
-  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, moraleEffects, narratePlay, scenarioStory, cardName, CARD_DESC,
+  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, moraleEffects, narratePlay, scenarioStory, chapterRecap, bandAt, cardName, CARD_DESC,
   type Player, type Track, type PlayerAchievements, type Genes, type CareerPlayerAttrs,
 } from '@fm/shared';
 import type { Token, Store } from './store.js';
@@ -127,6 +127,11 @@ export function careerState(t: Token, c: Career) {
     st.hand = withDesc(st.hand);
   }
   if (st.options) st.options = withDesc(st.options); // draft cards get their "what he does" too
+  // CHAPTER RECAP: at an age-chapter boundary, a short "the story so far" beat about the chapter just closed
+  const prevChapter = c.turn > 0 ? bandAt(c.turn - 1).band.name : null;
+  if (prevChapter && prevChapter !== c.chapter && !c.finished) {
+    st.recap = chapterRecap({ chapter: prevChapter, nextChapter: c.chapter, age: c.age, careerSeed: (c as any).seed >>> 0, personalityId: c.personality.id, seasonEventId: c.seasonEvent?.id ?? null });
+  }
   return {
     prospectId: t.id, name: t.name, generation: t.generation, pedigree: t.pedigree, agentId: t.agent_id, track: t.track,
     turn: c.turn, totalTurns: TOTAL_TURNS, seasonEvent: c.seasonEvent, earnings: c.earnings, profile: careerProfile(t, c), ...st,

@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { randomUUID } from 'node:crypto';
-import { overall, managerPrestige, signContract, contractCost, contractLength, type Lineup, type Tactics } from '@fm/shared';
+import { overall, managerPrestige, signContract, contractCost, contractLength, graduationEpilogue, type Lineup, type Tactics } from '@fm/shared';
 import { mintGenesis, tokenToPlayer, tokenContract, tokenAch, legendCardOf, unavailableTokenIds, loadCareer, actWithNarration, careerState, graduatedFields, rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, ageOf, SUPPLY_CAP, GENESIS_COST, REBORN_COST, MARKET_FEE_PCT, type CareerAction } from './tokens.js';
 import { bumpApps, bumpMorale, advanceTokensAtRollover } from './lifecycle.js';
 import { recordMatchStats } from './matchstats.js';
@@ -541,7 +541,9 @@ app.post('/career/:id/act', { preHandler: requireAuth }, async (req, reply) => {
     const grad = graduatedFields(fresh, c);
     const deal = signContract(s.number, grad.greed ?? 10, grad.personality ?? undefined);
     await db.updateToken(t.id, { ...grad, prime_season: s.number, signed_season: deal.signedSeason, length_seasons: deal.lengthSeasons, staked_since: s.number });
-    return { ok: true, graduated: true, narration, player: tokenToPlayer((await db.getToken(t.id))!) };
+    // an evocative epilogue of the whole 10→25 journey, shown before the pro reveal
+    const epilogue = graduationEpilogue({ name: fresh.name, careerSeed: fresh.career_seed!, personalityId: grad.personality ?? c.personality.id, overall: grad.peak_overall ?? 10, role: grad.role ?? undefined, topTraits: JSON.parse(grad.traits_json ?? '[]') });
+    return { ok: true, graduated: true, narration, epilogue, player: tokenToPlayer((await db.getToken(t.id))!) };
   }
   return { ok: true, narration, state: careerState((await db.getToken(t.id))!, c) };
 });
