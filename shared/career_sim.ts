@@ -23,7 +23,7 @@ for (const style of STYLES) {
   const seed = seedFrom('career', style.name);
   const p = simCareer(seed, style);
   players.push({ name: style.name, role: p.role, a: p.attrs, ovr: p.overall });
-  console.log(pad(style.name, 15), pad(p.role, 4), num(p.overall) + '   ' + KEYS.map((k) => pad(num(p.attrs[k]), 4)).join('') + ' ' + (p.traits.join(', ') || '—'));
+  console.log(pad(style.name, 15), pad(p.role, 4), num(p.overall) + '   ' + KEYS.map((k) => pad(num(p.attrs[k]), 4)).join('') + ' ' + [p.personality, ...p.traits].join(', '));
 }
 
 // role spread + top-stat diversity
@@ -148,6 +148,26 @@ console.log('\n=== a development life (age 10→25, seed arc) ===');
     const aged = ageCurve(p.attrs, age); return `${age}:${careerOverall(aged, p.role)}`;
   }).join('  '));
   console.log(`  pace 25→40: ${p.attrs.pace} → ${ageCurve(p.attrs, 40).pace}   leadership 25→40: ${p.attrs.leadership} → ${ageCurve(p.attrs, 40).leadership}`);
+}
+
+// personality: temperament changes how the SAME big moments play out
+console.log('\n=== personality — same big moments, different temperament ===');
+{
+  // find seeds that roll each personality, then measure success in high-stakes moments
+  const bigGameAvg = (persId: string) => {
+    let sum = 0, n = 0, found = 0;
+    for (let i = 0; found < 40 && i < 20000; i++) {
+      const c = new Career(seedFrom('pers', i));
+      if (c.personality.id !== persId) continue; found++;
+      while (!c.finished) { const st = c.current(); if (st.phase === 'draft') { c.draft(st.options[0].id); continue; } c.play(st.hand[0].id); }
+      for (const ch of c.log) if (ch.stakes >= 2) { sum += ch.success; n++; }
+    }
+    return n ? (sum / n).toFixed(2) : 'n/a';
+  };
+  console.log(`  avg success in BIG moments — Big-Game Player: ${bigGameAvg('biggame')}  vs  Fragile: ${bigGameAvg('fragile')}  (big-game should be higher)`);
+  const dist: Record<string, number> = {};
+  for (let i = 0; i < 6000; i++) { const p = new Career(seedFrom('pd', i)).personality.id; dist[p] = (dist[p] ?? 0) + 1; }
+  console.log('  personality spread:', Object.fromEntries(Object.entries(dist).map(([k, v]) => [k, `${Math.round(v / 6000 * 100)}%`])));
 }
 
 // prospect market: snapshot a half-developed player, resume it elsewhere, value it

@@ -194,8 +194,10 @@ export class Career {
   private formBonus = 0;                    // hot streak / slump → success nudge this chapter
   private extraPicks = 0;                   // a breakthrough chapter → +draft picks at the next draft
 
+  readonly personality: Personality;
   constructor(readonly seed: number, readonly track: Track = 'outfield') {
     this.rng = mulberry32(seed);
+    this.personality = rollPersonality(seed);   // innate temperament shapes how big moments / slumps play out
     this.deck = [...(track === 'goalkeeper' ? GK_STARTER : STARTER_DECK)];
     this.pool = track === 'goalkeeper' ? GK_DRAFT_POOL : DRAFT_POOL;
     this.drawPile = this.shuffle([...this.deck]);
@@ -246,9 +248,12 @@ export class Career {
     const bestFit = Math.max(...this.hand.map((c) => fit(c, this.scenario))); // best you COULD have played this turn
     const card = this.hand.splice(idx, 1)[0];
     const f = fit(card, this.scenario);
-    // bigger stakes = more variance (nerves); current form (season event) nudges success.
-    const variance = 0.3 + 0.15 * (this.scenario.stakes - 1);
-    const success = clamp(f + (this.rng() - 0.5) * variance + this.formBonus, 0, 1);
+    // stakes add variance (nerves), scaled by temperament; personality lifts/sinks big moments and
+    // dampens slumps; form (season event) nudges success.
+    const variance = (0.3 + 0.15 * (this.scenario.stakes - 1)) * this.personality.variance;
+    const bigGame = this.scenario.stakes >= 2 ? this.personality.bigGame : 0;
+    const form = this.formBonus < 0 ? this.formBonus * this.personality.resilience : this.formBonus;
+    const success = clamp(f + (this.rng() - 0.5) * variance + form + bigGame, 0, 1);
     const choice: Choice = { cardId: card.id, tags: card.tags, power: cardPower(card), fit: f, bestFit, success, scenario: this.scenario.label, stakes: this.scenario.stakes };
     this.log.push(choice);
     this.discard.push(card);
@@ -320,7 +325,28 @@ export interface CareerPlayerAttrs {
   composure: number; aggression: number; creativity: number; teamwork: number; leadership: number;
 }
 export type Role = 'GK' | 'DF' | 'MF' | 'FW';
-export interface CareerPlayer { attrs: CareerPlayerAttrs; role: Role; overall: number; genes: Genes; traits: string[] }
+export interface CareerPlayer { attrs: CareerPlayerAttrs; role: Role; overall: number; genes: Genes; traits: string[]; personality: string }
+
+// ── PERSONALITY: an innate temperament (nature), seeded at genesis like genes. It shapes HOW a player
+// handles their career — steadiness vs volatility, and whether they rise or wilt under pressure — and
+// becomes a permanent, human, Manager-engine-readable attribute (a Big-Game Player is calmer in finals,
+// a Fragile one is not). Genes = physical nature; personality = mental nature; the stats are nurture.
+export interface Personality { id: string; name: string; desc: string; variance: number; bigGame: number; resilience: number; signature?: keyof CareerPlayerAttrs }
+export const PERSONALITIES: Personality[] = [
+  { id: 'pro',       name: 'Model Professional', desc: 'Metronomic, dependable, no drama',        variance: 0.75, bigGame: 0.02, resilience: 0.6 },
+  { id: 'biggame',   name: 'Big-Game Player',    desc: 'Lives for the big occasion',             variance: 1.0,  bigGame: 0.14, resilience: 0.8, signature: 'composure' },
+  { id: 'fragile',   name: 'Fragile',            desc: 'Wilts when the heat comes on',           variance: 1.1,  bigGame: -0.12, resilience: 1.35 },
+  { id: 'leader',    name: 'Born Leader',        desc: 'Drags everyone up to his level',         variance: 0.9,  bigGame: 0.06, resilience: 0.6, signature: 'leadership' },
+  { id: 'workhorse', name: 'Workhorse',          desc: 'Never stops, never hides',               variance: 0.85, bigGame: 0.02, resilience: 0.4, signature: 'stamina' },
+  { id: 'mercurial', name: 'Mercurial',          desc: 'Genius one week, anonymous the next',    variance: 1.45, bigGame: 0.05, resilience: 1.1 },
+  { id: 'maverick',  name: 'Maverick',           desc: 'Brilliant, infuriating, his own man',    variance: 1.5,  bigGame: 0.08, resilience: 1.1, signature: 'creativity' },
+];
+const PERSONALITY_WEIGHTS = [5, 2, 2, 2, 3, 2, 1]; // Model Pro most common; Maverick rarest
+export function rollPersonality(seed: number): Personality {
+  const rng = mulberry32(seed ^ 0x9e37b1);
+  const bag = PERSONALITIES.flatMap((p, i) => Array(PERSONALITY_WEIGHTS[i]).fill(p) as Personality[]);
+  return bag[Math.floor(rng() * bag.length)];
+}
 
 // ── HYBRID model: raw physical stats are INNATE (a floor→ceiling band seeded at genesis and
 // inherited via lineage); the career only decides how much of that band you REALISE. Technical +
@@ -461,11 +487,13 @@ export function eligibleTraits(attrs: CareerPlayerAttrs, log: Choice[]): Trait[]
  *  (the client lets a human pick; defaults to the first MAX_TRAITS for the sim). */
 export function graduate(log: Choice[], seed: number, genes: Genes = rollGenes(seed), pickTraits?: (eligible: Trait[]) => Trait[]): CareerPlayer {
   const attrs = deriveStats(log, seed, genes);
+  const personality = rollPersonality(seed);                          // same temperament the career developed under
+  if (personality.signature) attrs[personality.signature] = clamp(attrs[personality.signature] + 1, 1, 20);
   const eligible = eligibleTraits(attrs, log);
   const chosen = (pickTraits ? pickTraits(eligible) : eligible.slice(0, MAX_TRAITS)).slice(0, MAX_TRAITS);
   for (const t of chosen) t.apply?.(attrs); // trait bonuses apply before role/overall
   const role = deriveRole(attrs);
-  return { attrs, role, overall: careerOverall(attrs, role), genes, traits: chosen.map((t) => t.id) };
+  return { attrs, role, overall: careerOverall(attrs, role), genes, traits: chosen.map((t) => t.id), personality: personality.id };
 }
 
 // ── AGE CURVE (playing phase, age 25 → 40) ──
