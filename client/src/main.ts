@@ -224,11 +224,29 @@ class Game {
     $('spd1').addEventListener('click', () => setSpeed(1, 'spd1'));
     $('spd4').addEventListener('click', () => setSpeed(4, 'spd4'));
     $('spd12').addEventListener('click', () => setSpeed(12, 'spd12'));
+    $('toggle-density').addEventListener('click', () => {
+      this.commentaryMode = this.commentaryMode === 'full' ? 'key' : 'full';
+      $('toggle-density').textContent = this.commentaryMode === 'full' ? '🎙️ Full' : '🎙️ Key';
+      $('toggle-density').classList.toggle('on', this.commentaryMode === 'key');
+    });
     $('register-btn').addEventListener('click', () => this.doRegister());
     $('login-btn').addEventListener('click', () => this.doLogin());
     $('handle-input').addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Enter') $('password-input').focus(); });
     $('password-input').addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Enter') this.doLogin(); });
     $('logout').addEventListener('click', () => { clearToken(); this.showScreen('login'); });
+    // match keyboard shortcuts: 1/2/3 speed, space pause/resume, s skip, c cycle commentary detail
+    document.addEventListener('keydown', (ev) => {
+      const k = (ev as KeyboardEvent).key;
+      if ($('matchwrap').classList.contains('hidden') || !this.engine || this.engine.state.finished) return;
+      const tag = (ev.target as HTMLElement)?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+      if (k === '1') setSpeed(1, 'spd1');
+      else if (k === '2') setSpeed(4, 'spd4');
+      else if (k === '3') setSpeed(12, 'spd12');
+      else if (k === ' ') { ev.preventDefault(); this.running = !this.running; toast(this.running ? '▶ Resumed' : '⏸ Paused'); }
+      else if (k === 's' || k === 'S') this.skipToEnd();
+      else if (k === 'c' || k === 'C') $('toggle-density').click();
+    });
     $('view-standings').addEventListener('click', () => this.showStandings());
     $('standings-back').addEventListener('click', () => this.showHub());
     $('view-scouting').addEventListener('click', () => this.showScouting());
@@ -1518,6 +1536,42 @@ class Game {
     this.showFullTimeCard();
   }
 
+  /** Deterministic post-match report: a result narrative, scorers, red cards, and player of the match. */
+  private renderMatchReport(events: MatchEvent[], score: [number, number]) {
+    const [h, a] = score;
+    const home = this.homeName, away = this.awayName;
+    const goalsBy = new Map<string, { team: 0 | 1; mins: number[] }>();
+    for (const e of events) if (e.type === 'goal' && e.playerName) {
+      const g = goalsBy.get(e.playerName) ?? { team: e.teamIdx, mins: [] };
+      g.mins.push(e.minute); goalsBy.set(e.playerName, g);
+    }
+    const winner = h > a ? home : a > h ? away : null;
+    const loser = h > a ? away : a > h ? home : null;
+    const margin = Math.abs(h - a), hi = Math.max(h, a), lo = Math.min(h, a);
+    let lead: string;
+    if (!winner) lead = this.cpick([`${home} and ${away} shared the points in a ${h}–${a} draw.`, `Honours even at ${h}–${a}.`, `Nothing to separate them — ${h}–${a}.`], h + a, 30);
+    else {
+      const verb = margin >= 3 ? this.cpick(['ran riot against', 'romped past', 'were rampant against'], margin, 31)
+        : margin === 2 ? this.cpick(['saw off', 'got the better of', 'had too much for'], margin, 31)
+        : this.cpick(['edged out', 'nicked it against', 'just got past'], margin, 31);
+      lead = `${winner} ${verb} ${loser}, ${hi}–${lo}.`;
+    }
+    const reds = events.filter((e) => e.type === 'red_card').map((e) => e.playerName);
+    const redLine = reds.length ? ` ${reds.join(' and ')} saw red.` : '';
+    const names = [...goalsBy.entries()];
+    const scLine = names.length ? 'Scorers: ' + names.map(([n, g]) => `${n} (${g.mins.map((m) => m + "'").join(', ')})`).join(' · ') : 'A goalless stalemate.';
+    $('ft-report').innerHTML = `${lead}${redLine}<div class="scorers">${scLine}</div>`;
+    // player of the match: most goals, tie broken toward the winning side
+    const winSide: 0 | 1 | null = h > a ? 0 : a > h ? 1 : null;
+    names.sort((x, y) => y[1].mins.length - x[1].mins.length || (Number(y[1].team === winSide) - Number(x[1].team === winSide)));
+    const potmEl = $('ft-potm');
+    if (names.length) {
+      const [n, g] = names[0];
+      potmEl.classList.remove('hidden');
+      potmEl.innerHTML = `<span class="potm-lbl">★ PLAYER OF THE MATCH</span>${n}${g.mins.length >= 2 ? ` — ${g.mins.length} goals` : ''}`;
+    } else potmEl.classList.add('hidden');
+  }
+
   // Arcade full-time overlay: final score, possession % and total shots (goal + shot_*)
   // per side, then returns to the hub on tap or after a short auto-dismiss.
   private showFullTimeCard() {
@@ -1535,6 +1589,11 @@ class Game {
     $('ft-away-poss').textContent = `${100 - hp}%`;
     $('ft-home-shots').textContent = `${onTarget[0]}`;
     $('ft-away-shots').textContent = `${onTarget[1]}`;
+    const count = (ty: string): [number, number] => { const c: [number, number] = [0, 0]; for (const e of s.events) if (e.type === ty) c[e.teamIdx]++; return c; };
+    const corners = count('corner'), fouls = count('foul');
+    $('ft-home-corners').textContent = `${corners[0]}`; $('ft-away-corners').textContent = `${corners[1]}`;
+    $('ft-home-fouls').textContent = `${fouls[0]}`; $('ft-away-fouls').textContent = `${fouls[1]}`;
+    this.renderMatchReport(s.events, s.score);
     $('ft-gate').classList.toggle('hidden', this.lastGate <= 0);
     if (this.lastGate > 0) $('ft-gate-amt').textContent = String(this.lastGate);
 
@@ -1549,7 +1608,7 @@ class Game {
       card.classList.add('hidden');
       this.showHub();
     };
-    const timer = setTimeout(dismiss, 4500);
+    const timer = setTimeout(dismiss, 9000); // longer — there's a match report to read
     card.addEventListener('click', dismiss);
   }
 
@@ -1622,6 +1681,15 @@ class Game {
   private attackBeats: Array<{ t: 0 | 1; min: number }> = []; // rolling attacking moments for momentum
   private lastMomentumMin = -99;
   private lastAttackMin = 0;
+  /** Live pressure bar: home share of the attacking beats in the last ~12 minutes. */
+  private updatePressure(min: number) {
+    const recent = this.attackBeats.filter((b) => min - b.min <= 12);
+    const c0 = recent.filter((b) => b.t === 0).length, c1 = recent.filter((b) => b.t === 1).length, tot = c0 + c1;
+    const hp = tot ? Math.round((c0 / tot) * 100) : 50;
+    ($('pressure-home') as HTMLElement).style.width = `${hp}%`;
+    $('pres-home-l').textContent = tot ? `${hp}%` : '';
+    $('pres-away-l').textContent = tot ? `${100 - hp}%` : '';
+  }
   /** Emit a "sustained pressure" note when one side dominates the attacking beats of the last ~10'. */
   private checkMomentum(min: number) {
     const recent = this.attackBeats.filter((b) => min - b.min <= 10);
@@ -1661,6 +1729,9 @@ class Game {
     return pool[bi] + score + tally + state;
   }
   private playerAttrs = new Map<string, any>();
+  private commentaryMode: 'full' | 'key' = 'full';
+  // events hidden in "Key" mode — the running texture; the big moments always show
+  private static MINOR = new Set(['pass', 'tackle_won', 'loose_ball', 'foul', 'free_kick', 'corner', 'fatigue']);
   private move: { teamIdx: 0 | 1; names: string[]; zone?: string } | null = null;
   private zoneWord(z?: string) { return z === 'att' ? 'in the final third' : z === 'def' ? 'deep in their own half' : 'in midfield'; }
   /** A stat-flavoured descriptor for a standout player (deterministic — their highest attribute). */
@@ -1695,22 +1766,27 @@ class Game {
     this.appendLine(`<span class="cm-min"></span> <span class="cm-flow">${lead}${chain} ${this.zoneWord(m.zone)}.</span>`, 'cm-flow');
   }
   private pushTicker(e: MatchEvent) {
-    // buffer consecutive same-team passes into a flowing "passage of play"
+    const key = this.commentaryMode === 'key';
+    // buffer consecutive same-team passes into a flowing "passage of play" (never shown in Key mode)
     if (e.type === 'pass') {
+      if (key) return;
       if (this.move && this.move.teamIdx === e.teamIdx) { this.move.names.push(e.playerName2 ?? ''); this.move.zone = e.zone; }
       else { this.flushMove(); this.move = { teamIdx: e.teamIdx, names: [e.playerName ?? '', e.playerName2 ?? ''], zone: e.zone }; }
       return;
     }
     this.flushMove(); // any other event ends the passage
-    // a long quiet spell before this attacking beat gets a "gone flat" lull line
+    // track attacking beats (for momentum) regardless of mode; the lull/momentum LINES are Full-only
     const ATTACK_TYPES = ['chance', 'shot_saved', 'shot_missed', 'goal', 'woodwork', 'corner', 'penalty'];
     if (ATTACK_TYPES.includes(e.type)) {
-      if (e.minute - this.lastAttackMin >= 10 && e.minute > 12) {
+      if (!key && e.minute - this.lastAttackMin >= 10 && e.minute > 12) {
         this.appendLine(`<span class="cm-min">${e.minute}'</span> <span class="cm-lull">${this.cpick(['It had gone a bit flat — but here’s something.', 'The game needed a spark, and this might be it.', 'After a quiet spell, the tempo lifts again.'], e.minute, 22)}</span>`, 'cm-lull');
       }
       this.lastAttackMin = e.minute;
       this.attackBeats.push({ t: e.teamIdx, min: e.minute });
+      this.updatePressure(e.minute);
     }
+    // Key mode: drop the running texture, keep the big moments
+    if (key && Game.MINOR.has(e.type)) return;
     const idx = this.eventsShown;
     const team = e.teamIdx === 0 ? this.homeName : this.awayName;
     const opp = e.teamIdx === 0 ? this.awayName : this.homeName;
@@ -1760,7 +1836,7 @@ class Game {
     if (e.type === 'goal' && !this.silent) this.celebrateGoal(e);
     this.appendLine(`${min} ${text}`, cls);
     if (e.type === 'goal') ($('ticker').lastElementChild as HTMLElement)?.classList.add('flash');
-    if (ATTACK_TYPES.includes(e.type)) this.checkMomentum(e.minute);
+    if (!key && ATTACK_TYPES.includes(e.type)) this.checkMomentum(e.minute);
   }
 
   private celebrateGoal(e: MatchEvent) {

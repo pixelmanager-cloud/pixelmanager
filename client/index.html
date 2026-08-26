@@ -692,6 +692,9 @@
       #meters { width: 840px; max-width: 96vw; font-size: 16px; display: flex; flex-direction: column; gap: 4px; }
       #poss-bar { position: relative; height: 16px; width: 100%; background: var(--away); border: 2px solid #000; }
       #poss-home { height: 100%; background: var(--home); width: 50%; }
+      #pressure-label { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted); font-family: var(--body); margin-top: 2px; }
+      #pressure-bar { position: relative; height: 8px; width: 100%; background: color-mix(in srgb, var(--away) 55%, #000); border: 2px solid #000; }
+      #pressure-home { height: 100%; background: color-mix(in srgb, var(--home) 75%, #fff 0%); width: 50%; transition: width .4s ease; }
       /* Chunky retro segments: an overlay of vertical black gaps breaks the
          home/away fills into discrete pixel blocks instead of a smooth bar. */
       #poss-bar::after {
@@ -723,7 +726,7 @@
       #ticker .cm-counter { color: #ffc98a; font-weight: bold; } #ticker .cm-press { color: #f2b06a; }
       #ticker .cm-lull { color: #6a7088; font-style: italic; } #ticker .cm-momentum { color: #b0a0e0; font-style: italic; }
       #ticker .cm-post { color: #e0c060; font-weight: bold; }
-      #toggle-2d.on { background: var(--accent, #6ad06a); color: #10210f; }
+      #toggle-2d.on, #toggle-density.on { background: var(--accent, #6ad06a); color: #10210f; }
       canvas { image-rendering: pixelated; }
 
       /* reusable toast — fixed near top-centre, above the CRT overlay, non-interactive */
@@ -756,6 +759,10 @@
       #fulltime-card .ft-stats .v.home { text-align: right; } #fulltime-card .ft-stats .v.away { text-align: left; }
       #fulltime-card .ft-stats .lbl { font-family: var(--body); font-size: 12px; color: var(--warn); }
       #fulltime-card .ft-tap { font-family: var(--body); font-size: 12px; color: var(--muted); margin-top: 18px; }
+      #ft-report { font-family: var(--body); font-size: 13px; line-height: 1.5; color: #cdd3e6; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); text-align: left; }
+      #ft-report .scorers { color: var(--muted); font-size: 12px; margin-top: 6px; }
+      #ft-potm { font-family: var(--body); font-size: 13px; color: #10210f; background: var(--good); border-radius: 6px; padding: 8px 12px; margin-top: 12px; font-weight: bold; }
+      #ft-potm .potm-lbl { font-family: var(--display); font-size: 9px; letter-spacing: 1px; display: block; opacity: 0.8; }
       @keyframes ftfade { from { opacity: 0; } to { opacity: 1; } }
       @keyframes ftpop { 0% { opacity: 0; transform: scale(0.7); } 60% { transform: scale(1.05); } 100% { opacity: 1; transform: scale(1); } }
     </style>
@@ -915,6 +922,7 @@
           <button id="spd4">4x</button>
           <button id="spd12">12x</button>
           <button id="skip" title="Skip to full-time">Skip ▶▶</button>
+          <button id="toggle-density" title="Commentary detail">🎙️ Full</button>
           <button id="toggle-2d" title="Show the 2D pitch">⚽ 2D</button>
         </div>
         <div id="goal-flash"></div>
@@ -922,6 +930,8 @@
         <div id="meters">
           <div id="poss-label"><span id="poss-home-l">50%</span><span>possession</span><span id="poss-away-l">50%</span></div>
           <div id="poss-bar"><div id="poss-home"></div></div>
+          <div id="pressure-label"><span id="pres-home-l"></span><span>pressure</span><span id="pres-away-l"></span></div>
+          <div id="pressure-bar"><div id="pressure-home"></div></div>
           <div id="fit-bar"><div id="fit-fill"></div><span id="fit-label">Your squad fitness: 100%</span></div>
         </div>
         <div id="ticker"></div>
@@ -939,7 +949,11 @@
           <div class="ft-stats">
             <span class="v home" id="ft-home-poss">50%</span><span class="lbl">Possession</span><span class="v away" id="ft-away-poss">50%</span>
             <span class="v home" id="ft-home-shots">0</span><span class="lbl">On Target</span><span class="v away" id="ft-away-shots">0</span>
+            <span class="v home" id="ft-home-corners">0</span><span class="lbl">Corners</span><span class="v away" id="ft-away-corners">0</span>
+            <span class="v home" id="ft-home-fouls">0</span><span class="lbl">Fouls</span><span class="v away" id="ft-away-fouls">0</span>
           </div>
+          <div id="ft-report"></div>
+          <div id="ft-potm" class="hidden"></div>
           <div id="ft-gate" class="hidden" style="font-family:var(--display);font-size:10px;color:var(--warn);margin-top:14px;">🏟️ Gate receipts: +<span id="ft-gate-amt">0</span> coins</div>
           <div class="ft-tap">▶ Tap to continue</div>
         </div>
