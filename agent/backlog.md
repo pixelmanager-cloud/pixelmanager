@@ -116,7 +116,7 @@ implements it on a branch, and opens a PR for you to review.
   text), skip-to-fulltime, and the full-time card. Client-only (`client/src/main.ts` + `client/index.html`
   CSS); NO `shared/` changes in this task. Screenshot the feed. `npm run verify` passes.
 
-- [ ] **[readability] Reserve the pixel font for headings; make small text legible.** Per audit R1:
+- [x] **[readability] Reserve the pixel font for headings; make small text legible.** Per audit R1:
   Press Start 2P (`--display`) is currently used for buttons (10px), section `h3` (13px), the login
   tagline (9px), `#record`/`#timer` (10px), table headers, pills and badges — pixel type is illegible
   that small. In `client/index.html` CSS, switch **buttons, labels, table headers, blurbs, pills, and
@@ -149,22 +149,22 @@ implements it on a branch, and opens a PR for you to review.
   more fixtures fit, make the H/A venue chip clearer (label HOME/AWAY or stronger colour), and right-size the
   PLAY button. `client/src/main.ts` (the fixtures render) + CSS. `npm run verify` passes.
 
-- [ ] **[polish] Make the league promotion/relegation zones obvious.** Per audit C3: the green/red row tints
+- [x] **[polish] Make the league promotion/relegation zones obvious.** Per audit C3: the green/red row tints
   in the league table are almost invisible. Strengthen the promo (green) and releg (red) row backgrounds and
   add a thin coloured left-edge marker on those rows so the zones read at a glance. Keep it within the palette.
   `client/src/main.ts` (renderLeagueTable) + CSS. `npm run verify` passes.
 
-- [ ] **[polish] Consistent scouting tryout row chips.** Per audit C2: the small coloured square before each
+- [x] **[polish] Consistent scouting tryout row chips.** Per audit C2: the small coloured square before each
   Local-Tryout trialist name reads as noise. Replace it with the same role chip (GK/DF/MF/FW, role-coloured)
   used in the lineup editor and scout card, for consistency. `client/src/main.ts` (renderTrialPool) + CSS.
   `npm run verify` passes.
 
-- [ ] **[polish] Button interaction states.** Per audit C4: add a consistent hover / active / disabled
+- [x] **[polish] Button interaction states.** Per audit C4: add a consistent hover / active / disabled
   treatment to buttons (slight lift + brightness on hover, pressed offset on active, clearly dimmed +
   not-allowed cursor on disabled) so controls feel responsive and disabled ones are obvious. Global CSS in
   `client/index.html`. Don't change button colours/identity. `npm run verify` passes.
 
-- [ ] **[pivot][engine] Emit richer per-player events for commentary.** To make the text commentary
+- [x] **[pivot][engine] Emit richer per-player events for commentary.** To make the text commentary
   vivid ("Silva finds Vidal", "crunching tackle by Okafor", "Mensah skins his man"), the engine needs
   more granular events. In `shared/src` add new `MatchEventType`s (e.g. `pass`, `pass_intercepted`,
   `tackle_won`, `tackle_lost`, `dribble`, `header`, `clearance`, `block`, `loose_ball`) emitted at the
@@ -178,7 +178,7 @@ implements it on a branch, and opens a PR for you to review.
   UNCHANGED (outcomes identical). Then extend the text-commentary view to render the new events. This is
   the richer half of the text pivot — take extra care that balance does not move.
 
-- [ ] **[pivot] Deep, detailed commentary layer.** Make the feed read like real radio commentary, not a
+- [x] **[pivot] Deep, detailed commentary layer.** Make the feed read like real radio commentary, not a
   list of isolated events (the user specifically wants this VERY detailed). Building on the richer engine
   events: (1) **Passages of play** — string consecutive same-team events into one flowing move with
   connectives instead of one line per event ("Silva to Vidal… back inside to Mensah… and Vidal again —
