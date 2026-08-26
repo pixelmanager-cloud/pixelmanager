@@ -47,12 +47,18 @@ export class MatchEngine {
     const frac = teamIdx === 0 ? x / PITCH.w : 1 - x / PITCH.w; // 0 = own goal, 1 = opponent goal
     return frac > 0.66 ? 'att' : frac < 0.34 ? 'def' : 'mid';
   }
-  /** Emit a throttled commentary "flow" event (add-only; reads decided state, consumes no rng). */
+  /** Emit a throttled commentary "flow" event (add-only; reads decided state, consumes no rng).
+   *  The gap is PRESSURE-SENSITIVE so the feed breathes like real radio: chatter tightens near
+   *  either box (where play matters) and thins right out during midfield knock-abouts. Net effect
+   *  is far fewer lines than a flat throttle, with density that tracks where the ball is. */
   private flow(type: 'pass' | 'tackle_won' | 'loose_ball', teamIdx: 0 | 1, x: number, playerName?: string, playerName2?: string) {
     const sec = Math.floor(this.state.clockSec);
-    if (sec - this.lastFlowSec < 3) return; // at most one flow line every ~3 game-seconds
+    const zone = this.zoneOf(teamIdx, x);
+    // minimum seconds between flow lines by where the action is (att = busiest, def = sparsest)
+    const gap = zone === 'att' ? 5 : zone === 'mid' ? 11 : 16;
+    if (sec - this.lastFlowSec < gap) return;
     this.lastFlowSec = sec;
-    this.state.events.push({ minute: this.minute(), type, teamIdx, playerName, playerName2, zone: this.zoneOf(teamIdx, x) });
+    this.state.events.push({ minute: this.minute(), type, teamIdx, playerName, playerName2, zone });
   }
 
   constructor(public teams: [Team, Team], seed: number, tactics?: [Tactics, Tactics]) {
