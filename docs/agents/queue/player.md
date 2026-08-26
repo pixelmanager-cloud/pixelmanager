@@ -20,8 +20,11 @@ or newly imagined beyond the brief. Ranked safe/small/high-value first.
   career. Pure content addition, no determinism risk. **Done:** doubled every tag's `DEMAND` array
   from 3 to 6 lines (48 total), same setting-neutral tone; `npm run verify` and `career_sim` both
   green (diversity closest-pair distance 9, determinism identical: true).
-- [ ] 3. **More KIND_SETUP situations.** (S) `match`/`training`/`social` currently have 6-7 each. Add
-  3-4 more per kind for less repetition across a long career.
+- [x] 3. **More KIND_SETUP situations.** (S) `match`/`training`/`social` currently have 6-7 each. Add
+  3-4 more per kind for less repetition across a long career. **Done:** added 4 new lines each to
+  `match`/`training`/`social` in narrate.ts (11/10/10 lines now, up from 7/6/6), same setting-neutral
+  tone; `npm run verify` and `career_sim` both green (diversity closest-pair distance 9, determinism
+  identical: true).
 - [ ] 4. **More chapter-recap openers.** (S) `chapterRecap` only has 2 openers per chapter (14 total).
   Add 2-3 more per chapter so the "story so far" beat at each of the 6 chapter boundaries varies more
   across replays/careers.
