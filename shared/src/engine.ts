@@ -425,7 +425,7 @@ export class MatchEngine {
           // landing in the very top slice of the success band is a foul, and that slice widens with
           // the defender's aggression. Only actual fouls then draw fresh rng (card + set-piece).
           const aggr = norm(def.attrs.aggression ?? 10);
-          const foulBand = pTackle * (0.006 + aggr * 0.02);
+          const foulBand = pTackle * (0.005 + aggr * 0.015);
           if (roll > pTackle - foulBand) {
             this.awardFoul(defTeam, teamIdx, i, playerIdx, { x: cs.x, y: cs.y });
             return;
@@ -571,7 +571,7 @@ export class MatchEngine {
     return behind && faster;
   }
 
-  private resolveShot(teamIdx: 0 | 1, playerIdx: number, distGoal: number, clear: boolean) {
+  private resolveShot(teamIdx: 0 | 1, playerIdx: number, distGoal: number, clear: boolean, allowRebound = true) {
     const s = this.state;
     const shooter = this.teams[teamIdx].players[playerIdx];
     const ss = s.players[teamIdx][playerIdx];
@@ -602,8 +602,22 @@ export class MatchEngine {
         return;
       }
       s.events.push({ minute, type: 'shot_saved', teamIdx, playerName: shooter.name });
+      // the keeper can only parry — the ball spills to a lurking attacker for a follow-up (one only)
+      if (allowRebound && this.rng() < 0.05) {
+        let poacher = playerIdx, pd = Infinity; // nearest forward-ish teammate to the goal
+        for (let i = 1; i < 11; i++) {
+          if (this.sentOff.has(teamIdx * 100 + i)) continue;
+          const pl = this.teams[teamIdx].players[i];
+          if (pl.role !== 'FW' && pl.role !== 'MF') continue;
+          const d = Math.hypot(this.goalOf(teamIdx).x - s.players[teamIdx][i].x, this.goalOf(teamIdx).y - s.players[teamIdx][i].y);
+          if (d < pd) { pd = d; poacher = i; }
+        }
+        s.events.push({ minute, type: 'chance', teamIdx, playerName: this.teams[teamIdx].players[poacher].name });
+        this.resolveShot(teamIdx, poacher, Math.max(11, Math.min(distGoal, 14)), false, false); // rushed follow-up, no further rebound
+        return;
+      }
       // a save is often pushed behind for a corner
-      if (this.rng() < 0.20) { this.takeCorner(teamIdx, defTeam, minute); return; }
+      if (this.rng() < 0.14) { this.takeCorner(teamIdx, defTeam, minute); return; }
     }
     s.carrier = { teamIdx: defTeam, playerIdx: 0 };
     s.ball = { ...s.players[defTeam][0] };

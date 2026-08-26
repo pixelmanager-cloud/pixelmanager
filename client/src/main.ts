@@ -1836,6 +1836,8 @@ class Game {
     if (e.type === 'goal' && !this.silent) this.celebrateGoal(e);
     this.appendLine(`${min} ${text}`, cls);
     if (e.type === 'goal') ($('ticker').lastElementChild as HTMLElement)?.classList.add('flash');
+    // mirror a goal/chance on the 2D pitch when it's open (live only)
+    if ((e.type === 'goal' || e.type === 'chance') && !this.silent && !$('game').classList.contains('hidden')) this.scene?.flashGoal(e.teamIdx);
     if (!key && ATTACK_TYPES.includes(e.type)) this.checkMomentum(e.minute);
   }
 
@@ -1946,6 +1948,16 @@ class MatchScene extends Phaser.Scene {
   // runs on the render camera and never touches the (seeded) simulation, and its
   // fixed real-time duration is independent of match speed.
   goalShake() { this.cameras.main.shake(250, 0.004); }
+
+  // Commentary↔pitch sync: briefly light up the goalmouth the acting team is attacking, so a
+  // goal/chance line in the feed is mirrored on the 2D pitch. Cosmetic; never touches the sim.
+  flashGoal(teamIdx: 0 | 1) {
+    const x = teamIdx === 0 ? (PITCH.w - 6) * SCALE : 0;
+    const g = this.add.graphics().setDepth(50);
+    g.fillStyle(0xffe14a, 0.45);
+    g.fillRect(x, (PITCH.h / 2 - 14) * SCALE, 6 * SCALE, 28 * SCALE);
+    this.tweens.add({ targets: g, alpha: 0, duration: 600, onComplete: () => g.destroy() });
+  }
 
   update(_t: number, deltaMs: number) { GAME.onFrame(deltaMs); }
 }
