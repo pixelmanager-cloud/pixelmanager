@@ -2,9 +2,9 @@ import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { randomUUID } from 'node:crypto';
 import { overall, managerPrestige, signContract, contractCost, contractLength, type Lineup, type Tactics } from '@fm/shared';
-import { squadContracts, isNftPlayer, ageOf } from './contracts.js';
-import { advanceAccountLifecycle, rebornProspect, toAchievements } from './lifecycle.js';
-import { loadCareer, applyAction, careerState, graduateProspect, careerSeedFor, trackFor, agentsList, type CareerAction } from './breeder.js';
+import { mintGenesis, tokenToPlayer, tokenContract, tokenAch, legendCardOf, unavailableTokenIds, loadCareer, applyAction, careerState, graduatedFields, rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, ageOf, SUPPLY_CAP, type CareerAction } from './tokens.js';
+import { bumpApps, advanceTokensAtRollover } from './lifecycle.js';
+const isNftPlayer = (id: string) => id.startsWith('nft:');
 import { db, type Account, type StandingOrders, type Listing } from './db.js';
 import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMATIONS } from './game.js';
 import { hashPassword, verifyPassword } from './auth.js';
@@ -36,13 +36,14 @@ import { ownedPlayers, nftInfo, nftEnabled } from './nft.js';
 async function loadSquad(accountId: string): Promise<{ club: import('@fm/shared').Club; standingOrders: StandingOrders } | undefined> {
   const c = await db.getClub(accountId);
   if (!c) return undefined;
-  if (!nftEnabled()) return c;
-  const wallet = await db.walletOf(accountId);
-  const nfts = await ownedPlayers(wallet);
-  if (nfts.length) {
-    const have = new Set(c.club.players.map((p) => p.id));
-    c.club = { ...c.club, players: [...c.club.players, ...nfts.filter((p) => !have.has(p.id))] };
-  }
+  // merge the owner's PRO-state unified tokens as fieldable players (read-only; saveClub strips nft ids)
+  const tokens = await db.tokensOwnedBy(accountId);
+  const have = new Set(c.club.players.map((p) => p.id));
+  const merged = [...c.club.players];
+  for (const t of tokens) if ((t.state === 'pro' || t.state === 'retired') && !have.has(t.id)) { merged.push(tokenToPlayer(t)); have.add(t.id); } // retired shown (benched) so the owner can Reborn
+  // on-chain wallet NFTs (deferred path) merge on top when enabled
+  if (nftEnabled()) { for (const p of await ownedPlayers(await db.walletOf(accountId))) if (!have.has(p.id)) { merged.push(p); have.add(p.id); } }
+  c.club = { ...c.club, players: merged };
   return c;
 }
 
@@ -172,13 +173,17 @@ app.post('/auth/wallet/link', { preHandler: requireAuth }, async (req, reply) =>
 });
 
 app.get('/me', { preHandler: requireAuth }, async (req) => {
-  const c = (await loadSquad(req.account!.id))!; // includes any star NFTs the linked wallet owns
+  const c = (await loadSquad(req.account!.id))!; // pro tokens merged in as fieldable players
   const s = await ensureSeason(db, Date.now());
-  const [coins, wallet, injuries, contracts] = await Promise.all([
-    db.getCoins(req.account!.id), db.walletOf(req.account!.id), db.getInjuries(req.account!.id),
-    squadContracts(db, req.account!.id, c.club.players, s.number),
+  const [coins, wallet, injuries, tokens] = await Promise.all([
+    db.getCoins(req.account!.id), db.walletOf(req.account!.id), db.getInjuries(req.account!.id), db.tokensOwnedBy(req.account!.id),
   ]);
-  return { account: { ...req.account, coins, wallet }, club: c.club, standingOrders: c.standingOrders, injuries, contracts: Object.fromEntries(contracts), season: s.number };
+  const contracts = Object.fromEntries(tokens.filter((t) => t.state !== 'prospect').map((t) => {
+    const ci = tokenContract(t, s.number);
+    const legend = t.state === 'retired' ? legendCardOf(t) : undefined;
+    return [t.id, { playerId: t.id, ...ci, legend, rebornId: null }];
+  }));
+  return { account: { ...req.account, coins, wallet }, club: c.club, standingOrders: c.standingOrders, injuries, contracts, season: s.number };
 });
 
 app.put('/standing-orders', { preHandler: requireAuth }, async (req, reply) => {
@@ -255,7 +260,7 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const matchSeason = await ensureSeason(db, Date.now());
   const [meFac, oppFac, myInj, oppInj, myUnavail, oppUnavail] = await Promise.all([
     db.getFacilities(meId), db.getFacilities(oppId), db.getInjuries(meId), db.getInjuries(oppId),
-    unavailableNftIds(db, meId, me!.club.players, matchSeason.number), unavailableNftIds(db, oppId, oppClub.club.players, matchSeason.number),
+    unavailableTokenIds(db, meId, matchSeason.number), unavailableTokenIds(db, oppId, matchSeason.number),
   ]);
   const benchOut = (club: typeof me.club, inj: Array<{ player_id: string }>, unavail: Set<string>) => {
     const out = new Set([...inj.map((x) => x.player_id), ...unavail]);
@@ -311,7 +316,7 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const gate = Math.round(stadiumIncome(homeFacFull.stadium, Math.max(0, homeTierIdx), homeMatchOutcome) * fanIncomeMult(homeFacFull.fanzone));
   await Promise.all([db.setRating(meId, nMe), db.setRating(oppId, nOpp), db.addCoins(meId, myCoins), db.addCoins(oppId, oppCoins), db.addCoins(homeAcctId, gate)]);
   // appearances: every NFT that featured banks a cap (feeds longevity in the retirement legacy)
-  for (const pl of [...homeTeam.players, ...awayTeam.players]) if (isNftPlayer(pl.id)) await db.addApps(pl.id, 1);
+  for (const pl of [...homeTeam.players, ...awayTeam.players]) if (isNftPlayer(pl.id)) await bumpApps(db, pl.id);
   const myGate = iAmHome ? gate : 0; // only the host banks gate receipts
   const nHome = iAmHome ? nMe : nOpp, nAway = iAmHome ? nOpp : nMe;
 
@@ -405,108 +410,97 @@ app.get('/prestige', { preHandler: requireAuth }, async (req) => {
 // coin sink; a proven earner / greedy / unhappy player costs more, staking tenure discounts it.
 app.post('/players/:id/extend', { preHandler: requireAuth }, async (req, reply) => {
   const ownerId = req.account!.id;
-  const playerId = (req.params as any).id as string;
-  if (!isNftPlayer(playerId)) return reply.code(400).send({ error: 'only NFT players have contracts' });
-  const c = (await loadSquad(ownerId))!;
-  const player = c.club.players.find((p) => p.id === playerId);
-  if (!player) return reply.code(404).send({ error: 'not on your squad' });
+  const id = (req.params as any).id as string;
+  const t = await db.getToken(id);
+  if (!t || t.owner_id !== ownerId) return reply.code(404).send({ error: 'no such token' });
+  if (t.state !== 'pro') return reply.code(400).send({ error: 'not a pro under contract' });
   const s = await ensureSeason(db, Date.now());
-  const info = (await squadContracts(db, ownerId, c.club.players, s.number)).get(playerId);
-  if (!info) return reply.code(400).send({ error: 'no contract' });
+  const ci = tokenContract(t, s.number);
   const coins = await db.getCoins(ownerId);
-  if (coins < info.extendCost) return reply.code(400).send({ error: 'not enough coins', need: info.extendCost, have: coins });
-  await db.addCoins(ownerId, -info.extendCost);
-  const fresh = signContract(s.number, player.greed ?? 10, player.personality); // staked_since preserved by setContract
-  await db.setContract(ownerId, playerId, fresh.signedSeason, fresh.lengthSeasons, s.number);
-  const updated = (await squadContracts(db, ownerId, c.club.players, s.number)).get(playerId);
-  return { ok: true, coins: await db.getCoins(ownerId), contract: updated };
+  if (coins < ci.extendCost) return reply.code(400).send({ error: 'not enough coins', need: ci.extendCost, have: coins });
+  await db.addCoins(ownerId, -ci.extendCost);
+  const fresh = signContract(s.number, t.greed ?? 10, t.personality ?? undefined); // staked_since preserved
+  await db.updateToken(id, { signed_season: fresh.signedSeason, length_seasons: fresh.lengthSeasons });
+  return { ok: true, coins: await db.getCoins(ownerId), contract: { playerId: id, ...tokenContract((await db.getToken(id))!, s.number) } };
 });
 
-// REBORN: breed a retired player's next generation as a 10-YEAR-OLD PROSPECT (not a prime player). The
-// parent stays as a legacy keepsake; the prospect re-enters the Career sim to be DEVELOPED 10→25,
-// inheriting the bloodline's genes + the parent's TEAM-achievement pedigree. One reborn per legacy.
+// REBORN: a retired token becomes the NEXT GENERATION — the SAME token flips back to a 10-year-old
+// PROSPECT (generation++), inheriting the bloodline's genes + the retiree's team-achievement pedigree.
+// Fixed supply: no new token is minted; the asset regenerates.
 app.post('/players/:id/reborn', { preHandler: requireAuth }, async (req, reply) => {
   const ownerId = req.account!.id;
-  const playerId = (req.params as any).id as string;
-  const legacy = await db.getLegacy(playerId);
-  if (!legacy || legacy.owner_id !== ownerId) return reply.code(404).send({ error: 'no legacy for that player' });
-  if (legacy.reborn_id) return reply.code(409).send({ error: 'already reborn', rebornId: legacy.reborn_id });
-  const c = (await loadSquad(ownerId))!;
-  const parent = c.club.players.find((p) => p.id === playerId);
-  if (!parent) return reply.code(404).send({ error: 'parent not in your squad' });
-  const bred = rebornProspect(parent, toAchievements(await db.getAchievements(playerId)));
-  const s = await ensureSeason(db, Date.now());
-  const first = parent.name.split(' ')[0];
-  const prospectId = `prospect:${Date.now() % 1000000}`;
-  await db.createProspect({ id: prospectId, owner_id: ownerId, name: `${first} Jr`, parent_id: playerId, role_hint: bred.roleHint, genes_json: JSON.stringify(bred.genes), pedigree: bred.pedigree, dev_bonus_json: JSON.stringify(bred.devBonus), born_season: s.number });
-  await db.setReborn(playerId, prospectId);
-  return { ok: true, prospect: { id: prospectId, name: `${first} Jr`, roleHint: bred.roleHint, pedigree: bred.pedigree, potentialStars: bred.potentialStars, genes: bred.genes, note: bred.note } };
+  const id = (req.params as any).id as string;
+  const t = await db.getToken(id);
+  if (!t || t.owner_id !== ownerId) return reply.code(404).send({ error: 'no such token' });
+  if (t.state !== 'retired') return reply.code(409).send({ error: 'not retired' });
+  await db.updateToken(id, rebornFields(t));
+  const fresh = (await db.getToken(id))!;
+  const pot = rebornPotential(fresh);
+  return { ok: true, prospect: { id, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: pot.pedigree, potentialStars: pot.stars, genes: JSON.parse(fresh.genes_json) } };
 });
 
-// PROSPECTS: the reborn 10-year-olds awaiting development in the Career sim (Layer 1).
+// PROSPECTS: the owner's prospect-state tokens — 10-year-olds to DEVELOP in the Career game.
 app.get('/prospects', { preHandler: requireAuth }, async (req) => {
-  const rows = await db.prospectsFor(req.account!.id);
-  return { prospects: rows.map((r) => { const genes = JSON.parse(r.genes_json); const geneCeil = (genes.pace.ceiling + genes.strength.ceiling + genes.stamina.ceiling) / 3; return { id: r.id, name: r.name, roleHint: r.role_hint, pedigree: r.pedigree, bornSeason: r.born_season, developed: !!r.developed, developedPlayerId: r.developed_player_id, careerStarted: r.career_seed != null, potentialStars: Math.max(1, Math.min(5, Math.round(geneCeil / 4 + r.pedigree * 1.5))), genes }; }) };
+  const tokens = (await db.tokensOwnedBy(req.account!.id)).filter((t) => t.state === 'prospect');
+  return { prospects: tokens.map((t) => { const pot = rebornPotential(t); return { id: t.id, name: t.name, roleHint: t.role ?? 'MF', generation: t.generation, pedigree: t.pedigree, careerStarted: t.career_seed != null, potentialStars: pot.stars, genes: JSON.parse(t.genes_json) }; }) };
 });
 
-// ── CAREER GAME (Layer 1): develop a 10yo prospect 10→25 via the deterministic card game, then
-// graduate it into a manager Player NFT. Server-authoritative: the play LOG lives on the prospect.
+// GENESIS: mint a brand-new 10-year-old prospect (fresh genes, generation 0) — the ONLY way a token
+// enters the economy. Enforces the fixed SUPPLY_CAP; after that, the fixed set just cycles forever.
+app.post('/genesis', { preHandler: requireAuth }, async (req, reply) => {
+  try {
+    const t = await mintGenesis(db, req.account!.id);
+    const pot = rebornPotential(t);
+    return { ok: true, supply: await db.countTokens(), cap: SUPPLY_CAP, prospect: { id: t.id, name: t.name, roleHint: t.role ?? 'MF', generation: 0, pedigree: 0, potentialStars: pot.stars, genes: JSON.parse(t.genes_json) } };
+  } catch (e: any) { return reply.code(409).send({ error: e?.message ?? 'mint failed' }); }
+});
+
+// ── CAREER GAME (Layer 1): develop a prospect-state token 10→25, then GRADUATE it in place → the SAME
+// token flips to a pro in your squad. Server-authoritative: the play LOG lives on the token.
 app.get('/career/agents', { preHandler: requireAuth }, async () => ({ agents: agentsList() }));
 
-// Start (or resume) a prospect's career. First call sets the agent + seeds the run.
 app.post('/career/:id/start', { preHandler: requireAuth }, async (req, reply) => {
-  const p = await db.getProspect((req.params as any).id);
-  if (!p || p.owner_id !== req.account!.id) return reply.code(404).send({ error: 'no such prospect' });
-  if (p.developed) return reply.code(409).send({ error: 'already graduated', playerId: p.developed_player_id });
-  if (p.career_seed == null) {
-    const agentId = (req.body as any)?.agentId ?? null;
-    await db.startProspectCareer(p.id, careerSeedFor(p.id), agentId, trackFor(p.role_hint));
-  }
-  const fresh = (await db.getProspect(p.id))!;
+  const t = await db.getToken((req.params as any).id);
+  if (!t || t.owner_id !== req.account!.id) return reply.code(404).send({ error: 'no such token' });
+  if (t.state !== 'prospect') return reply.code(409).send({ error: 'not a prospect' });
+  if (t.career_seed == null) await db.updateToken(t.id, { career_seed: careerSeedFor(t.id, t.generation), agent_id: (req.body as any)?.agentId ?? null, track: trackFor(t.role ?? 'MF'), career_actions: '[]' });
+  const fresh = (await db.getToken(t.id))!;
   return { ok: true, state: careerState(fresh, loadCareer(fresh)) };
 });
 
-// Current playable state of an in-progress career.
 app.get('/career/:id', { preHandler: requireAuth }, async (req, reply) => {
-  const p = await db.getProspect((req.params as any).id);
-  if (!p || p.owner_id !== req.account!.id) return reply.code(404).send({ error: 'no such prospect' });
-  if (p.developed) return reply.code(409).send({ error: 'already graduated', playerId: p.developed_player_id });
-  if (p.career_seed == null) return reply.code(400).send({ error: 'career not started' });
-  return { ok: true, state: careerState(p, loadCareer(p)) };
+  const t = await db.getToken((req.params as any).id);
+  if (!t || t.owner_id !== req.account!.id) return reply.code(404).send({ error: 'no such token' });
+  if (t.state !== 'prospect') return reply.code(409).send({ error: 'not a prospect' });
+  if (t.career_seed == null) return reply.code(400).send({ error: 'career not started' });
+  return { ok: true, state: careerState(t, loadCareer(t)) };
 });
 
-// Submit one action (play a card / draft / appoint coach / resolve financial offer). At age 25 the
-// career finishes → graduate → mint the manager Player NFT into the owner's squad.
 app.post('/career/:id/act', { preHandler: requireAuth }, async (req, reply) => {
   const ownerId = req.account!.id;
-  const p = await db.getProspect((req.params as any).id);
-  if (!p || p.owner_id !== ownerId) return reply.code(404).send({ error: 'no such prospect' });
-  if (p.developed) return reply.code(409).send({ error: 'already graduated', playerId: p.developed_player_id });
-  if (p.career_seed == null) return reply.code(400).send({ error: 'career not started' });
+  const t = await db.getToken((req.params as any).id);
+  if (!t || t.owner_id !== ownerId) return reply.code(404).send({ error: 'no such token' });
+  if (t.state !== 'prospect') return reply.code(409).send({ error: 'not a prospect' });
+  if (t.career_seed == null) return reply.code(400).send({ error: 'career not started' });
   const action = req.body as CareerAction;
-  const c = loadCareer(p);
+  const c = loadCareer(t);
   try { applyAction(c, action); } catch (e: any) { return reply.code(400).send({ error: e?.message ?? 'illegal move' }); }
-  const actions: CareerAction[] = [...JSON.parse(p.career_actions ?? '[]'), action];
-  await db.saveProspectActions(p.id, JSON.stringify(actions));
-  if (c.finished) { // GRADUATE → mint the manager NFT
-    const fresh = (await db.getProspect(p.id))!;
-    const { player } = graduateProspect(fresh, c);
-    const sq = (await loadSquad(ownerId))!;
-    sq.club.players.push(player);
+  await db.updateToken(t.id, { career_actions: JSON.stringify([...JSON.parse(t.career_actions ?? '[]'), action]) });
+  if (c.finished) { // GRADUATE IN PLACE → the same token becomes a pro at age 25, signed to a first deal
+    const fresh = (await db.getToken(t.id))!;
     const s = await ensureSeason(db, Date.now());
-    await db.saveClub(ownerId, sq.club, sq.standingOrders);
-    await db.ensurePrimeSeason(player.id, s.number); // graduates at his prime (age 25)
-    await db.setProspectDeveloped(p.id, player.id);
-    return { ok: true, graduated: true, player };
+    const grad = graduatedFields(fresh, c);
+    const deal = signContract(s.number, grad.greed ?? 10, grad.personality ?? undefined);
+    await db.updateToken(t.id, { ...grad, prime_season: s.number, signed_season: deal.signedSeason, length_seasons: deal.lengthSeasons, staked_since: s.number });
+    return { ok: true, graduated: true, player: tokenToPlayer((await db.getToken(t.id))!) };
   }
-  const fresh = (await db.getProspect(p.id))!;
-  return { ok: true, state: careerState(fresh, c) };
+  return { ok: true, state: careerState((await db.getToken(t.id))!, c) };
 });
 
-// LEGENDS: the manager's collection of retirement legacy cards (a hall of players they saw out).
+// LEGENDS: the manager's hall of retirement legacy cards (one per generation a token retired under them).
 app.get('/legends', { preHandler: requireAuth }, async (req) => {
   const rows = await db.legaciesFor(req.account!.id);
-  return { legends: rows.map((r) => ({ playerId: r.player_id, name: r.name, card: JSON.parse(r.card_json), retiredSeason: r.retired_season, rebornId: r.reborn_id })) };
+  return { legends: rows.map((r) => ({ playerId: r.player_id.split(':g')[0], name: r.name, card: JSON.parse(r.card_json), retiredSeason: r.retired_season })) };
 });
 
 // DEV ONLY (local sqlite): run the lifecycle for your squad with a title-winning outcome, to force
@@ -517,7 +511,7 @@ app.post('/dev/run-lifecycle', { preHandler: requireAuth }, async (req, reply) =
   const s = await ensureSeason(db, Date.now());
   const body = (req.body as any) ?? {};
   const outcome = { league: body.league ?? 1, cup: body.cup ?? 0, promotion: body.promotion ?? 1, tierIdx: body.tierIdx ?? 5 };
-  const retired = await advanceAccountLifecycle(db, req.account!.id, c.club.players, s.number, outcome);
+  const retired = await advanceTokensAtRollover(db, req.account!.id, s.number, outcome);
   return { ok: true, retired, season: s.number };
 });
 
@@ -712,7 +706,7 @@ app.post('/market/list', { preHandler: requireAuth }, async (req, reply) => {
   const { playerId, price } = (req.body as any) ?? {};
   const pr = Math.round(Number(price));
   if (!playerId || !Number.isFinite(pr) || pr < PRICE_MIN || pr > PRICE_MAX) return reply.code(400).send({ error: `price must be ${PRICE_MIN}–${PRICE_MAX} coins` });
-  const c = await db.getClub(meId);
+  const c = await loadSquad(meId); // includes pro tokens as fieldable players
   if (!c) return reply.code(404).send({ error: 'club not found' });
   const player = c.club.players.find((p) => p.id === playerId);
   if (!player) return reply.code(404).send({ error: 'you do not own that player' });
@@ -739,24 +733,31 @@ app.post('/market/:id/buy', { preHandler: requireAuth }, async (req, reply) => {
   const l = await db.listingById(String((req.params as any).id));
   if (!l || l.status !== 'active') return reply.code(404).send({ error: 'no such listing' });
   if (l.seller_id === meId) return reply.code(409).send({ error: 'that is your own listing' });
-  const [coins, buyerClub, sellerClub] = await Promise.all([db.getCoins(meId), db.getClub(meId), db.getClub(l.seller_id)]);
-  if (!buyerClub || !sellerClub) return reply.code(404).send({ error: 'club not found' });
+  const coins = await db.getCoins(meId);
   if (coins < l.price) return reply.code(409).send({ error: 'not enough coins' });
+  if (isNftPlayer(l.player_id)) { // TOKEN transfer — just change ownership (fixed supply, staking resets for the new owner)
+    const t = await db.getToken(l.player_id);
+    if (!t || t.owner_id !== l.seller_id) { await db.setListingStatus(l.id, 'cancelled', null, null); return reply.code(409).send({ error: 'seller no longer owns that token' }); }
+    const s = await ensureSeason(db, Date.now());
+    await db.updateToken(l.player_id, { owner_id: meId, staked_since: s.number });
+    // repair the seller's standing XI if it referenced the sold token
+    const sc = await db.getClub(l.seller_id);
+    if (sc && sc.standingOrders.playerIds.includes(l.player_id)) { const sq = (await loadSquad(l.seller_id))!; await db.saveClub(l.seller_id, sq.club, { ...sc.standingOrders, playerIds: autoPickXI(sq.club, sc.standingOrders.formation).playerIds, duties: undefined }); }
+    await Promise.all([db.addCoins(meId, -l.price), db.addCoins(l.seller_id, l.price), db.setListingStatus(l.id, 'sold', meId, Date.now())]);
+    return { ok: true, player: { name: t.name, role: t.role }, coins: coins - l.price };
+  }
+  const [buyerClub, sellerClub] = await Promise.all([db.getClub(meId), db.getClub(l.seller_id)]);
+  if (!buyerClub || !sellerClub) return reply.code(404).send({ error: 'club not found' });
   if (buyerClub.club.players.length >= MAX_SQUAD) return reply.code(409).send({ error: `your squad is full (max ${MAX_SQUAD})` });
   const idx = sellerClub.club.players.findIndex((p) => p.id === l.player_id);
   if (idx < 0) { await db.setListingStatus(l.id, 'cancelled', null, null); return reply.code(409).send({ error: 'seller no longer owns that player' }); }
   const [player] = sellerClub.club.players.splice(idx, 1);
   buyerClub.club.players.push(player);
-  // repair the seller's standing XI if they'd just sold a starter
   let sellerSo = sellerClub.standingOrders;
   if (sellerSo.playerIds.includes(l.player_id)) sellerSo = { ...sellerSo, playerIds: autoPickXI(sellerClub.club, sellerSo.formation).playerIds, duties: undefined };
   await Promise.all([
-    db.saveClub(l.seller_id, sellerClub.club, sellerSo),
-    db.saveClub(meId, buyerClub.club, buyerClub.standingOrders),
-    db.addCoins(meId, -l.price),
-    db.addCoins(l.seller_id, l.price),
-    db.setListingStatus(l.id, 'sold', meId, Date.now()),
-    db.deleteContract(l.seller_id, l.player_id), // the NFT leaves the seller; the buyer re-signs on first sight (age persists via player_lifecycle)
+    db.saveClub(l.seller_id, sellerClub.club, sellerSo), db.saveClub(meId, buyerClub.club, buyerClub.standingOrders),
+    db.addCoins(meId, -l.price), db.addCoins(l.seller_id, l.price), db.setListingStatus(l.id, 'sold', meId, Date.now()),
   ]);
   return { ok: true, player: { name: player.name, role: player.role }, coins: coins - l.price };
 });
@@ -799,19 +800,18 @@ app.post('/dev/inject-nft', { preHandler: requireAuth }, async (req, reply) => {
     star: { name: 'Leo Marsh', role: 'MF', greed: 11, personality: 'pro', marketability: 13, earnings: 2600, attrs: { ...base, passing: 16, creativity: 16, composure: 15 } },
   };
   const p = presets[kind] ?? presets.star;
-  const tokenId = Date.now() % 1000000;
-  const player: Player = { id: `nft:dev-${tokenId}`, name: p.name, role: p.role, attrs: p.attrs, anchor: { x: 0, y: 0 }, greed: p.greed, personality: p.personality, marketability: p.marketability, earnings: p.earnings };
-  c.club.players.push(player);
-  await db.saveClub(id, c.club, c.standingOrders);
   const s = await ensureSeason(db, Date.now());
   const aged = Math.max(0, Number(body.agedSeasons) || 0);
-  if (aged > 0) { // back-date lifecycle + sign an already-expiring deal to test the benched → extend flow
-    await db.ensurePrimeSeason(player.id, s.number - aged);
-    const len = contractLength(p.greed, p.personality);
-    await db.setContract(id, player.id, s.number - aged, len, s.number - aged);
-  }
-  if (body.achievements) await db.setAchievements(player.id, { seasons: 0, apps: 0, league_titles: 0, cup_titles: 0, promotions: 0, highest_tier_idx: 0, ...body.achievements });
-  return { ok: true, player, season: s.number };
+  const tokenId = `nft:${(await db.countTokens()) + 1 + Math.floor(Date.now() % 1000)}`; // unique dev id
+  await db.createToken({ id: tokenId, owner_id: id, generation: 0, state: 'pro', name: p.name, genes_json: JSON.stringify({ pace: { floor: 8, ceiling: 18 }, strength: { floor: 8, ceiling: 18 }, stamina: { floor: 8, ceiling: 18 } }), pedigree: 0, dev_bonus_json: '{}' });
+  const len = contractLength(p.greed, p.personality);
+  const a = body.achievements ?? {};
+  await db.updateToken(tokenId, {
+    role: p.role, attrs_json: JSON.stringify(p.attrs), traits_json: '[]', personality: p.personality, greed: p.greed, marketability: p.marketability, earnings: p.earnings,
+    prime_season: s.number - aged, signed_season: s.number - aged, length_seasons: len, staked_since: s.number - aged,
+    ach_seasons: a.seasons ?? 0, ach_apps: a.apps ?? 0, ach_league: a.league_titles ?? 0, ach_cup: a.cup_titles ?? 0, ach_promotions: a.promotions ?? 0, ach_tier: a.highest_tier_idx ?? 0,
+  });
+  return { ok: true, player: tokenToPlayer((await db.getToken(tokenId))!), season: s.number };
 });
 
 // Regenerate every club's BASE squad at the current (weak filler) quality — the one-time

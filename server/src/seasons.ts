@@ -10,8 +10,9 @@ import { seasonPlacementReward, WIN_COINS, DRAW_COINS, LOSS_COINS } from './mark
 import { ownedPlayers } from './nft.js';
 import { trainingConditioning, stadiumIncome, fanIncomeMult, fanHomeBoost, sponsorIncome, squadMarketability } from './facilities.js';
 import { rollMatchInjuries } from './injuries.js';
-import { unavailableNftIds } from './contracts.js';
-import { advanceAccountLifecycle } from './lifecycle.js';
+import { unavailableTokenIds, tokenToPlayer } from './tokens.js';
+import { advanceTokensAtRollover } from './lifecycle.js';
+
 import { computeCup, type SquadMap } from './cup.js';
 
 /** Merge a club with the star NFTs its linked wallet owns (read-only). */
@@ -101,7 +102,7 @@ async function simulateMatch(db: Store, homeId: string, awayId: string, seasonId
   // full parity with a live match: bench injured + contract-lapsed NFTs, then conditioning/coins/gate/injuries
   const [homeFac, awayFac, homeInj, awayInj, homeUnavail, awayUnavail] = await Promise.all([
     db.getFacilities(homeId), db.getFacilities(awayId), db.getInjuries(homeId), db.getInjuries(awayId),
-    unavailableNftIds(db, homeId, homeC.club.players, seasonNumber), unavailableNftIds(db, awayId, awayC.club.players, seasonNumber),
+    unavailableTokenIds(db, homeId, seasonNumber), unavailableTokenIds(db, awayId, seasonNumber),
   ]);
   const benchOut = (club: typeof homeC.club, inj: Array<{ player_id: string }>, unavail: Set<string>) => {
     const out = new Set([...inj.map((x) => x.player_id), ...unavail]);
@@ -219,12 +220,7 @@ async function rollover(db: Store, s: Season, now: number): Promise<void> {
 
     // PLAYER LIFECYCLE: each owned NFT banks a season of team achievements + peak ability, and anyone
     // who has aged past 40 RETIRES (legacy card + testimonial). Runs after league + cup are settled.
-    for (const [ownerId, outcome] of outcomes) {
-      const c = await db.getClub(ownerId);
-      if (!c) continue;
-      const withStars = await withNfts(db, ownerId, c);
-      await advanceAccountLifecycle(db, ownerId, withStars.club.players, s.number, outcome);
-    }
+    for (const [ownerId, outcome] of outcomes) await advanceTokensAtRollover(db, ownerId, s.number, outcome);
   }
   await expireLoanees(db, s.id);
   await db.closeSeason(s.id);

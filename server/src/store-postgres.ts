@@ -2,7 +2,7 @@
 // (de)serialised in code, identical semantics to the SQLite backend.
 import pg from 'pg';
 import type { Club } from '@fm/shared';
-import type { Store, Account, AuthRow, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow, Season, HonourRow, PodRef, Listing, MissionRow } from './store.js';
+import { TOKEN_COLS, type Store, type Account, type AuthRow, type StandingOrders, type StoredMatch, type OpponentRow, type LeaderRow, type MatchRow, type ResultRow, type Season, type HonourRow, type PodRef, type Listing, type MissionRow } from './store.js';
 
 export function makePostgresStore(connectionString: string): Store {
   // Railway's internal DB (postgres.railway.internal) and localhost don't use SSL;
@@ -87,6 +87,17 @@ export function makePostgresStore(connectionString: string): Store {
         ALTER TABLE prospects ADD COLUMN IF NOT EXISTS track TEXT;
         ALTER TABLE prospects ADD COLUMN IF NOT EXISTS career_actions TEXT;
         ALTER TABLE prospects ADD COLUMN IF NOT EXISTS developed_player_id TEXT;
+        CREATE TABLE IF NOT EXISTS tokens (
+          id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, generation INTEGER NOT NULL DEFAULT 0,
+          state TEXT NOT NULL DEFAULT 'prospect', name TEXT NOT NULL,
+          genes_json TEXT NOT NULL, pedigree REAL NOT NULL DEFAULT 0, dev_bonus_json TEXT NOT NULL DEFAULT '{}', parent_gen_of TEXT,
+          career_seed BIGINT, agent_id TEXT, track TEXT, career_actions TEXT,
+          attrs_json TEXT, role TEXT, traits_json TEXT, personality TEXT,
+          greed INTEGER, marketability INTEGER, earnings INTEGER, prime_season INTEGER, peak_overall INTEGER NOT NULL DEFAULT 0,
+          signed_season INTEGER, length_seasons INTEGER, staked_since INTEGER,
+          ach_seasons INTEGER NOT NULL DEFAULT 0, ach_apps INTEGER NOT NULL DEFAULT 0, ach_league INTEGER NOT NULL DEFAULT 0,
+          ach_cup INTEGER NOT NULL DEFAULT 0, ach_promotions INTEGER NOT NULL DEFAULT 0, ach_tier INTEGER NOT NULL DEFAULT 0);
+        CREATE INDEX IF NOT EXISTS idx_tokens_owner ON tokens(owner_id);
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS season_id TEXT;
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS initiator_id TEXT;
         ALTER TABLE clubs ADD COLUMN IF NOT EXISTS so_duties TEXT;
@@ -158,11 +169,12 @@ export function makePostgresStore(connectionString: string): Store {
       return (await q('SELECT id, handle, rating FROM accounts ORDER BY rating DESC LIMIT $1', [limit])).rows as LeaderRow[];
     },
     async saveClub(accountId, club: Club, so: StandingOrders) {
+      const persisted = { ...club, players: club.players.filter((p) => !p.id.startsWith('nft:')) }; // tokens live in the tokens table, never in club JSON
       await q(
         `INSERT INTO clubs (account_id, club, so_formation, so_player_ids, so_tactics, so_duties) VALUES ($1,$2,$3,$4,$5,$6)
          ON CONFLICT(account_id) DO UPDATE SET club=EXCLUDED.club, so_formation=EXCLUDED.so_formation,
            so_player_ids=EXCLUDED.so_player_ids, so_tactics=EXCLUDED.so_tactics, so_duties=EXCLUDED.so_duties`,
-        [accountId, JSON.stringify(club), so.formation, JSON.stringify(so.playerIds), JSON.stringify(so.tactics), so.duties ? JSON.stringify(so.duties) : null],
+        [accountId, JSON.stringify(persisted), so.formation, JSON.stringify(so.playerIds), JSON.stringify(so.tactics), so.duties ? JSON.stringify(so.duties) : null],
       );
     },
     async saveStandingOrders(accountId, so: StandingOrders) {
@@ -274,6 +286,18 @@ export function makePostgresStore(connectionString: string): Store {
     },
     async setProspectDeveloped(id, playerId) {
       await q('UPDATE prospects SET developed=1, developed_player_id=$2 WHERE id=$1', [id, playerId]);
+    },
+    async createToken(t) {
+      await q('INSERT INTO tokens (id, owner_id, generation, state, name, genes_json, pedigree, dev_bonus_json) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+        [t.id, t.owner_id, t.generation, t.state, t.name, t.genes_json, t.pedigree, t.dev_bonus_json]);
+    },
+    async getToken(id) { return (await q('SELECT * FROM tokens WHERE id=$1', [id])).rows[0] as any; },
+    async tokensOwnedBy(ownerId) { return (await q('SELECT * FROM tokens WHERE owner_id=$1 ORDER BY id', [ownerId])).rows as any[]; },
+    async countTokens() { return Number(((await q('SELECT COUNT(*) AS n FROM tokens')).rows[0] as any).n); },
+    async updateToken(id, fields) {
+      const cols = Object.keys(fields).filter((k) => TOKEN_COLS.has(k));
+      if (!cols.length) return;
+      await q(`UPDATE tokens SET ${cols.map((c, i) => `${c}=$${i + 2}`).join(', ')} WHERE id=$1`, [id, ...cols.map((c) => (fields as any)[c])]);
     },
     async decrementInjuries(accountId) {
       await q('UPDATE injuries SET matches_remaining = matches_remaining - 1 WHERE account_id=$1', [accountId]);
@@ -391,6 +415,6 @@ export function makePostgresStore(connectionString: string): Store {
     async seasonPods(seasonId) {
       return (await q('SELECT DISTINCT tier, pod FROM pod_members WHERE season_id=$1 ORDER BY tier, pod', [seasonId])).rows as PodRef[];
     },
-    async reset() { await q('TRUNCATE accounts, clubs, matches, seasons, honours, pod_members, plans, loanees, listings, scout_missions, facilities, injuries, contracts, player_lifecycle, player_achievements, legacies, prospects'); },
+    async reset() { await q('TRUNCATE accounts, clubs, matches, seasons, honours, pod_members, plans, loanees, listings, scout_missions, facilities, injuries, contracts, player_lifecycle, player_achievements, legacies, prospects, tokens'); },
   };
 }

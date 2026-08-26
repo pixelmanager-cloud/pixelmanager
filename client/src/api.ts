@@ -11,7 +11,7 @@ export function clearToken() { token = ''; localStorage.removeItem('fm_token'); 
 
 export interface ApiError extends Error { status: number; body: any }
 export interface LegacyCard { role: string; primeOverall: number; peakOverall: number; seasons: number; apps: number; leagueTitles: number; cupTitles: number; legendRating: number; tier: string; icon: string; testimonial: number; mintable: boolean; note: string }
-export interface Prospect { id: string; name: string; roleHint: string; pedigree: number; potentialStars: number; bornSeason?: number; developed?: boolean; note?: string; genes?: any; careerStarted?: boolean; developedPlayerId?: string | null }
+export interface Prospect { id: string; name: string; roleHint: string; pedigree: number; potentialStars: number; generation?: number; bornSeason?: number; developed?: boolean; note?: string; genes?: any; careerStarted?: boolean; developedPlayerId?: string | null }
 export interface CareerCard { id: string; name: string; tags: string[]; rarity?: string }
 export interface CareerState {
   prospectId: string; name: string; pedigree: number; agentId?: string | null; phase: 'play' | 'coach' | 'draft' | 'offer';
@@ -22,6 +22,12 @@ export interface CareerState {
   coaches?: Array<{ id: string; name: string; kind: string; desc: string; specialty: string[]; bonus: number }>;
   options?: CareerCard[]; picksLeft?: number;
   offers?: Array<{ id: string; name: string; desc: string; earn: number; greed: number; market: number; form: number }>;
+  profile?: CareerProfile;
+}
+export interface CareerProfile {
+  role: string; currentOverall: number; potential: number; stars: number; physicalCeiling: number;
+  attrs: Record<string, number>; personality: { id: string; name: string; desc: string };
+  agent: string | null; coach: string | null; earnings: number; traitsForming: string[];
 }
 export interface ContractInfo { playerId: string; age: number; available: boolean; seasonsLeft: number; lengthSeasons: number; extendCost: number; sellValue: number; stakedSeasons: number; retired?: boolean; legend?: LegacyCard | null; rebornId?: string | null }
 
@@ -90,6 +96,7 @@ export const api = {
   extendContract: (playerId: string) => req<{ ok: true; coins: number; contract: ContractInfo }>(`/players/${encodeURIComponent(playerId)}/extend`, { method: 'POST' }),
   reborn: (playerId: string) => req<{ ok: true; prospect: Prospect }>(`/players/${encodeURIComponent(playerId)}/reborn`, { method: 'POST' }),
   prospects: () => req<{ prospects: Prospect[] }>('/prospects'),
+  genesis: () => req<{ ok: true; supply: number; cap: number; prospect: Prospect }>('/genesis', { method: 'POST' }),
   careerAgents: () => req<{ agents: Array<{ id: string; name: string; desc: string }> }>('/career/agents'),
   startCareer: (pid: string, agentId: string | null) => req<{ ok: true; state: CareerState }>(`/career/${encodeURIComponent(pid)}/start`, { method: 'POST', body: JSON.stringify({ agentId }) }),
   getCareer: (pid: string) => req<{ ok: true; state: CareerState }>(`/career/${encodeURIComponent(pid)}`),

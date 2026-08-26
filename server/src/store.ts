@@ -39,6 +39,23 @@ export interface AuthRow { id: string; handle: string; rating: number; token: st
 
 export interface ProspectRow { id: string; name: string; parent_id: string | null; role_hint: string; genes_json: string; pedigree: number; dev_bonus_json: string; born_season: number; developed: number; career_seed: number | null; agent_id: string | null; track: string | null; career_actions: string | null; developed_player_id: string | null }
 
+/** The UNIFIED, fixed-supply NFT — one persistent id through the whole lifecycle (prospect→pro→retired→
+ *  reborn). All lifecycle state lives on this one row. */
+export interface Token {
+  id: string; owner_id: string; generation: number; state: 'prospect' | 'pro' | 'retired'; name: string;
+  genes_json: string; pedigree: number; dev_bonus_json: string;
+  career_seed: number | null; agent_id: string | null; track: string | null; career_actions: string | null;
+  attrs_json: string | null; role: string | null; traits_json: string | null; personality: string | null;
+  greed: number | null; marketability: number | null; earnings: number | null; prime_season: number | null; peak_overall: number;
+  signed_season: number | null; length_seasons: number | null; staked_since: number | null;
+  ach_seasons: number; ach_apps: number; ach_league: number; ach_cup: number; ach_promotions: number; ach_tier: number;
+}
+/** Columns updateToken() may set (whitelist — guards the dynamic UPDATE). */
+export const TOKEN_COLS = new Set<string>(['owner_id', 'generation', 'state', 'name', 'genes_json', 'pedigree', 'dev_bonus_json',
+  'career_seed', 'agent_id', 'track', 'career_actions', 'attrs_json', 'role', 'traits_json', 'personality',
+  'greed', 'marketability', 'earnings', 'prime_season', 'peak_overall', 'signed_season', 'length_seasons', 'staked_since',
+  'ach_seasons', 'ach_apps', 'ach_league', 'ach_cup', 'ach_promotions', 'ach_tier']);
+
 export interface Store {
   init(): Promise<void>;
   createAccount(id: string, handle: string, token: string, createdAt: number, passwordHash: string): Promise<void>;
@@ -102,6 +119,12 @@ export interface Store {
   startProspectCareer(id: string, seed: number, agentId: string | null, track: string): Promise<void>;
   saveProspectActions(id: string, actionsJson: string): Promise<void>;
   setProspectDeveloped(id: string, playerId: string): Promise<void>;
+  // unified tokens (fixed-supply NFT flowing through the lifecycle)
+  createToken(t: { id: string; owner_id: string; generation: number; state: string; name: string; genes_json: string; pedigree: number; dev_bonus_json: string }): Promise<void>;
+  getToken(id: string): Promise<Token | undefined>;
+  tokensOwnedBy(ownerId: string): Promise<Token[]>;
+  countTokens(): Promise<number>;
+  updateToken(id: string, fields: Partial<Token>): Promise<void>;
   // scouting network: dispatched trips (sealed at dispatch, revealed after travel)
   createMission(m: MissionRow): Promise<void>;
   missionsInSeason(accountId: string, seasonId: string): Promise<MissionRow[]>;

@@ -1,7 +1,7 @@
 // Local-dev backend on Node's built-in SQLite (no native deps).
 import { DatabaseSync } from 'node:sqlite';
 import type { Club } from '@fm/shared';
-import type { Store, Account, AuthRow, StandingOrders, StoredMatch, OpponentRow, LeaderRow, MatchRow, ResultRow, Season, HonourRow, PodRef, Listing, MissionRow } from './store.js';
+import { TOKEN_COLS, type Store, type Account, type AuthRow, type StandingOrders, type StoredMatch, type OpponentRow, type LeaderRow, type MatchRow, type ResultRow, type Season, type HonourRow, type PodRef, type Listing, type MissionRow } from './store.js';
 
 export function makeSqliteStore(file: string): Store {
   const db = new DatabaseSync(file);
@@ -74,6 +74,22 @@ export function makeSqliteStore(file: string): Store {
       db.exec(`CREATE TABLE IF NOT EXISTS legacies (
         player_id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, name TEXT NOT NULL, card_json TEXT NOT NULL,
         retired_season INTEGER NOT NULL, reborn_id TEXT);`);
+      // TOKENS: the UNIFIED, fixed-supply NFT. One persistent id flows through the whole lifecycle —
+      // prospect (develop 10→25) → pro (play 25→40) → retired → reborn (→ prospect, generation++) — the
+      // SAME token, state flips, never minted anew. Replaces the old prospects/contracts/lifecycle/
+      // achievements split so a token's entire multi-generation history lives in one row.
+      db.exec(`CREATE TABLE IF NOT EXISTS tokens (
+        id TEXT PRIMARY KEY, owner_id TEXT NOT NULL, generation INTEGER NOT NULL DEFAULT 0,
+        state TEXT NOT NULL DEFAULT 'prospect', name TEXT NOT NULL,
+        genes_json TEXT NOT NULL, pedigree REAL NOT NULL DEFAULT 0, dev_bonus_json TEXT NOT NULL DEFAULT '{}', parent_gen_of TEXT,
+        career_seed INTEGER, agent_id TEXT, track TEXT, career_actions TEXT,
+        attrs_json TEXT, role TEXT, traits_json TEXT, personality TEXT,
+        greed INTEGER, marketability INTEGER, earnings INTEGER, prime_season INTEGER, peak_overall INTEGER NOT NULL DEFAULT 0,
+        signed_season INTEGER, length_seasons INTEGER, staked_since INTEGER,
+        ach_seasons INTEGER NOT NULL DEFAULT 0, ach_apps INTEGER NOT NULL DEFAULT 0, ach_league INTEGER NOT NULL DEFAULT 0,
+        ach_cup INTEGER NOT NULL DEFAULT 0, ach_promotions INTEGER NOT NULL DEFAULT 0, ach_tier INTEGER NOT NULL DEFAULT 0);`);
+      db.exec('CREATE INDEX IF NOT EXISTS idx_tokens_owner ON tokens(owner_id)');
+
       // PROSPECTS: a reborn is a 10-year-old to DEVELOP in the Career sim (Layer 1), inheriting the
       // parent's genes + pedigree — not a ready-made prime player. Held here until the breeder graduates it.
       db.exec(`CREATE TABLE IF NOT EXISTS prospects (
@@ -152,11 +168,12 @@ export function makeSqliteStore(file: string): Store {
       return db.prepare('SELECT id, handle, rating FROM accounts ORDER BY rating DESC LIMIT ?').all(limit) as LeaderRow[];
     },
     async saveClub(accountId, club: Club, so: StandingOrders) {
+      const persisted = { ...club, players: club.players.filter((p) => !p.id.startsWith('nft:')) }; // tokens live in the tokens table, never in club JSON
       db.prepare(
         `INSERT INTO clubs (account_id, club, so_formation, so_player_ids, so_tactics, so_duties) VALUES (?,?,?,?,?,?)
          ON CONFLICT(account_id) DO UPDATE SET club=excluded.club, so_formation=excluded.so_formation,
            so_player_ids=excluded.so_player_ids, so_tactics=excluded.so_tactics, so_duties=excluded.so_duties`,
-      ).run(accountId, JSON.stringify(club), so.formation, JSON.stringify(so.playerIds), JSON.stringify(so.tactics), so.duties ? JSON.stringify(so.duties) : null);
+      ).run(accountId, JSON.stringify(persisted), so.formation, JSON.stringify(so.playerIds), JSON.stringify(so.tactics), so.duties ? JSON.stringify(so.duties) : null);
     },
     async saveStandingOrders(accountId, so: StandingOrders) {
       db.prepare('UPDATE clubs SET so_formation=?, so_player_ids=?, so_tactics=?, so_duties=? WHERE account_id=?')
@@ -272,6 +289,19 @@ export function makeSqliteStore(file: string): Store {
     async setProspectDeveloped(id, playerId) {
       db.prepare('UPDATE prospects SET developed=1, developed_player_id=? WHERE id=?').run(playerId, id);
     },
+    // ── UNIFIED TOKENS ──
+    async createToken(t) {
+      db.prepare('INSERT INTO tokens (id, owner_id, generation, state, name, genes_json, pedigree, dev_bonus_json) VALUES (?,?,?,?,?,?,?,?)')
+        .run(t.id, t.owner_id, t.generation, t.state, t.name, t.genes_json, t.pedigree, t.dev_bonus_json);
+    },
+    async getToken(id) { return db.prepare('SELECT * FROM tokens WHERE id=?').get(id) as any; },
+    async tokensOwnedBy(ownerId) { return db.prepare('SELECT * FROM tokens WHERE owner_id=? ORDER BY id').all(ownerId) as any[]; },
+    async countTokens() { return (db.prepare('SELECT COUNT(*) AS n FROM tokens').get() as any).n as number; },
+    async updateToken(id, fields) {
+      const cols = Object.keys(fields).filter((k) => TOKEN_COLS.has(k));
+      if (!cols.length) return;
+      db.prepare(`UPDATE tokens SET ${cols.map((c) => `${c}=?`).join(', ')} WHERE id=?`).run(...cols.map((c) => (fields as any)[c]), id);
+    },
     async createMission(m) {
       db.prepare('INSERT INTO scout_missions (id, account_id, season_id, destination, dispatched_at, ready_at, found, player_json, band, status) VALUES (?,?,?,?,?,?,?,?,?,?)')
         .run(m.id, m.account_id, m.season_id, m.destination, m.dispatched_at, m.ready_at, m.found, m.player_json, m.band, m.status);
@@ -376,6 +406,6 @@ export function makeSqliteStore(file: string): Store {
     async seasonPods(seasonId) {
       return db.prepare('SELECT DISTINCT tier, pod FROM pod_members WHERE season_id=? ORDER BY tier, pod').all(seasonId) as PodRef[];
     },
-    async reset() { db.exec('DELETE FROM matches; DELETE FROM clubs; DELETE FROM accounts; DELETE FROM seasons; DELETE FROM honours; DELETE FROM pod_members; DELETE FROM plans; DELETE FROM loanees; DELETE FROM listings; DELETE FROM scout_missions; DELETE FROM facilities; DELETE FROM injuries; DELETE FROM contracts; DELETE FROM player_lifecycle; DELETE FROM player_achievements; DELETE FROM legacies; DELETE FROM prospects;'); },
+    async reset() { db.exec('DELETE FROM matches; DELETE FROM clubs; DELETE FROM accounts; DELETE FROM seasons; DELETE FROM honours; DELETE FROM pod_members; DELETE FROM plans; DELETE FROM loanees; DELETE FROM listings; DELETE FROM scout_missions; DELETE FROM facilities; DELETE FROM injuries; DELETE FROM contracts; DELETE FROM player_lifecycle; DELETE FROM player_achievements; DELETE FROM legacies; DELETE FROM prospects; DELETE FROM tokens;'); },
   };
 }

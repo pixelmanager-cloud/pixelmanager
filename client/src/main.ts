@@ -744,20 +744,28 @@ class Game {
     $('academy-body').innerHTML = SPINNER;
     try {
       const { prospects } = await api.prospects();
-      const intro = `<div class="scout-sub">Your youth prospects — 10-year-olds bred from retired legends. <b>Develop</b> one through its career (age 10→25): play to the demands of each chapter, appoint coaches, and make the big calls. At 25 it graduates into a pro you can field.</div>`;
-      if (!prospects.length) { $('academy-body').innerHTML = intro + '<div class="muted" style="margin-top:14px;">No prospects yet — retire a player at 40 and choose <b>Reborn</b> to breed the next generation.</div>'; return; }
-      const rows = prospects.map((p) => {
+      const intro = `<div class="scout-sub">Your youth prospects — 10-year-olds to <b>develop</b> through a career (age 10→25): play to each chapter's demands, appoint coaches, and make the big calls. At 25 the SAME NFT graduates into a pro you can field. Mint a fresh genesis prospect, or breed one by retiring a player and choosing <b>Reborn</b>.</div>`
+        + `<div style="margin:10px 0 14px;"><button id="mint-genesis" class="primary">🌱 Mint a genesis prospect</button></div>`;
+      const rows = prospects.length ? prospects.map((p) => {
         const stars = '★'.repeat(p.potentialStars) + '☆'.repeat(5 - p.potentialStars);
-        const btn = p.developed ? `<button data-view="${p.developedPlayerId}">View pro ✓</button>`
-          : p.careerStarted ? `<button class="primary" data-dev="${p.id}">Continue →</button>`
-          : `<button class="primary" data-dev="${p.id}">Develop →</button>`;
+        const gen = p.generation ? ` · gen ${p.generation}` : '';
+        const btn = `<button class="primary" data-dev="${p.id}">${p.careerStarted ? 'Continue' : 'Develop'} →</button>`;
         return `<div class="prospect-row"><div><div class="pr-name">🌱 ${p.name} <span class="pr-stars">${stars}</span></div>`
-          + `<div class="pr-meta">${p.roleHint} · pedigree ${(p.pedigree * 100) | 0}% ${p.developed ? '· graduated' : p.careerStarted ? '· in development' : '· age 10, ready to develop'}</div></div>${btn}</div>`;
-      }).join('');
+          + `<div class="pr-meta">${p.roleHint}${gen} · pedigree ${(p.pedigree * 100) | 0}% ${p.careerStarted ? '· in development' : '· age 10, ready to develop'}</div></div>${btn}</div>`;
+      }).join('') : '<div class="muted">No prospects yet — mint a genesis prospect above to begin.</div>';
       $('academy-body').innerHTML = intro + rows;
+      $('mint-genesis').addEventListener('click', () => this.mintGenesis());
       $('academy-body').querySelectorAll('[data-dev]').forEach((b) => b.addEventListener('click', () => this.openCareer((b as HTMLElement).dataset.dev!)));
-      $('academy-body').querySelectorAll('[data-view]').forEach((b) => b.addEventListener('click', () => { const p = this.club.players.find((x) => x.id === (b as HTMLElement).dataset.view); if (p) this.showPlayerCard(p); }));
     } catch { $('academy-body').innerHTML = '<div class="muted">Could not load — is the server running?</div>'; }
+  }
+
+  private async mintGenesis() {
+    try {
+      const r = await api.genesis();
+      toast(`🌱 ${r.prospect.name} minted — ${r.supply}/${r.cap} in the economy`);
+      this.showProspectCard(r.prospect, true);
+      await this.showAcademy();
+    } catch (e: any) { toast(e?.body?.error === 'supply cap reached' ? 'Supply cap reached — no new tokens' : (e?.body?.error ?? 'Mint failed')); }
   }
 
   private async openCareer(prospectId: string) {
@@ -785,6 +793,7 @@ class Game {
     const head = `<div class="cg-head"><button id="cg-back">←</button><span class="cg-age">${s.name} · age ${s.age}</span>`
       + `<span class="cg-chapter">${s.chapter}</span><div class="cg-bar"><i style="width:${pct}%"></i></div><span class="pr-meta">${s.turn}/${s.totalTurns}</span></div>`;
     const evt = s.seasonEvent ? `<div class="cg-event"><b>${s.seasonEvent.name}</b> — ${s.seasonEvent.desc}</div>` : '';
+    const prof = s.profile ? this.careerProfileHtml(s.profile) : '';
     let body = '';
     if (s.phase === 'play' && s.scenario) {
       const tags = Object.entries(s.scenario.demand).sort((a, b) => b[1] - a[1]).map(([t]) => `<span class="cg-tag">${t}</span>`).join('');
@@ -802,9 +811,25 @@ class Game {
         + s.offers.map((o) => `<div class="cg-offer" data-act="offer" data-id="${o.id}"><div class="cg-cname">💷 ${o.name}</div><div class="cg-cdesc">${o.desc}</div>`
           + `<div class="cg-effs">${o.earn > 0 ? `+${o.earn}c ` : ''}${o.greed > 0 ? '· greedier ' : o.greed < 0 ? '· more loyal ' : ''}${o.market > 0 ? '· more famous ' : ''}${o.form > 0 ? '· sharper' : o.form < 0 ? '· distracted' : ''}</div></div>`).join('');
     }
-    $('academy-body').innerHTML = head + evt + body;
+    $('academy-body').innerHTML = head + prof + evt + body;
     $('cg-back').addEventListener('click', () => this.showAcademy());
     $('academy-body').querySelectorAll('[data-act]').forEach((el) => el.addEventListener('click', () => this.doCareerAct(s.prospectId, { type: (el as HTMLElement).dataset.act!, cardId: (el as HTMLElement).dataset.id! })));
+  }
+
+  /** The developing player's live identity panel — shows him taking shape as you play. */
+  private careerProfileHtml(p: import('./api').CareerProfile): string {
+    const stars = '★'.repeat(p.stars) + '☆'.repeat(5 - p.stars);
+    const key: Array<[string, string]> = [['pace', 'PAC'], ['shooting', 'SHO'], ['passing', 'PAS'], ['tackling', 'TAC'], ['strength', 'STR'], ['composure', 'CMP'], ['creativity', 'CRE'], ['leadership', 'LDR']];
+    const stat = (k: string) => `<span class="cgp-stat"><b>${key.find((x) => x[0] === k)?.[1]}</b> ${p.attrs[k] ?? 0}</span>`;
+    const traits = p.traitsForming.length ? `<div class="cgp-traits">forming: ${p.traitsForming.map((t) => `<span class="cg-tag">${t}</span>`).join(' ')}</div>` : '';
+    return `<div class="cg-profile"><div class="cgp-top">`
+      + `<span class="cgp-role role-${p.role}">${p.role}</span>`
+      + `<span class="cgp-ovr">OVR ${p.currentOverall} <i>→ ${p.potential} pot ${stars}</i></span>`
+      + `<span class="cgp-pers" title="${p.personality.desc}">🧠 ${p.personality.name}</span>`
+      + (p.agent ? `<span class="cgp-meta">🤝 ${p.agent}</span>` : '')
+      + (p.coach ? `<span class="cgp-meta">📋 ${p.coach}</span>` : '')
+      + `<span class="cgp-meta">💷 ${p.earnings}c earned</span></div>`
+      + `<div class="cgp-stats">${key.map(([k]) => stat(k)).join('')}</div>${traits}</div>`;
   }
 
   private cardHtml(c: import('./api').CareerCard, act: string): string {
