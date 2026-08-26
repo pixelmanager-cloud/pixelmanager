@@ -54,13 +54,15 @@ export interface PlayerContractView {
  *  (benched until you sign him). greed/marketability default to neutral for non-career-built players. */
 export function contractView(
   overall: number, age: number, greed = 10, marketability = 10, personality: string | undefined,
-  contract: Contract | null, currentSeason: number, earnings = 0,
+  contract: Contract | null, currentSeason: number, earnings = 0, seasonsStaked = 0,
 ): PlayerContractView {
+  // continuous staking tenure with one account earns a loyalty discount on the re-sign cost (−4%/season, cap −25%)
+  const loyalty = clamp(1 - Math.max(0, seasonsStaked) * 0.04, 0.75, 1);
   return {
     available: contract ? contractActive(contract, currentSeason) : false,
     seasonsLeft: contract ? Math.max(0, contractExpirySeason(contract) - currentSeason) : 0,
     lengthSeasons: contractLength(greed, personality),
-    extendCost: contractCost(overall, age, greed, earnings),
+    extendCost: Math.round(contractCost(overall, age, greed, earnings) * loyalty),
     sellValue: releaseClause(overall, marketability, greed),
   };
 }
