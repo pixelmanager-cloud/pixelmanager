@@ -36,10 +36,16 @@ or newly imagined beyond the brief. Ranked safe/small/high-value first.
   **Done:** added 7 more entries to `BIG_SETTINGS` (7→14) and 6 more to `HUGE_SETTINGS` (7→13) in
   narrate.ts, same setting-neutral `pick(rng)` usage so no rng draw-order change; `npm run verify` and
   `career_sim` both green (diversity closest-pair distance 9, determinism identical: true).
-- [ ] 6. **Kit tab: hairstyle + accessory cosmetic axes.** (M) Extend the Kit tab beyond boots +
+- [x] 6. **Kit tab: hairstyle + accessory cosmetic axes.** (M) Extend the Kit tab beyond boots +
   celebration — add a hairstyle option and a headband/wristband accessory, persisted in the same
   `kit_json` blob (no schema change). Needs new consts in main.ts (mirroring `BOOT_COLOURS`/
-  `CELEBRATIONS`) + swatch/selector UI in `kitTabHtml` + matching `.cg-*` CSS.
+  `CELEBRATIONS`) + swatch/selector UI in `kitTabHtml` + matching `.cg-*` CSS. **Done:** added
+  `HAIRSTYLES` (8) and `ACCESSORIES` (6) consts in main.ts, two new `<select>` rows in `kitTabHtml`
+  (reusing existing `.cg-kit-row select` CSS, no new rules needed), wired into `wireKitTab`'s save
+  payload, `Kit` interface in api.ts extended with optional `hairstyle`/`accessory`, and the server
+  `/career/:id/kit` route now cleans + defaults both into the persisted `kit_json` blob. Purely
+  cosmetic, no career.ts/rng touch; `npm run verify` and `career_sim` both green (diversity
+  closest-pair distance 9, determinism identical: true).
 - [ ] 7. **A second summer-focus slot for later chapters.** (M) Seed idea #9: from Breakthrough
   onward, offer a second, smaller "side activity" pick alongside the main focus (e.g. a charity
   five-a-side, a media day) with its own tiny meter nudge. Must stay deterministic (energy + meters
