@@ -147,6 +147,45 @@ immutable base + the read-time `ageCurve` for the playing phase.
 
 ---
 
+## 3c. Player finances & contracts — "extend or sell" (model DONE, wiring TODO)
+
+A footballer's financial life, layered onto the shared NFT. All the **rules are already built and
+verified** in `@fm/shared` (`contracts.ts`, re-exported through the barrel; career-side inputs in
+`career.ts`). What's left is server persistence + client UI — no new game-design decisions.
+
+**Career-side inputs (done, `career.ts`).** A career yields, alongside stats: `greed` (financial
+temperament, set by the **agent** you sign + nature + money chased in-career), `marketability` (brand/
+fame), and running `earnings`. A mid-career **financial-offer** phase (`type:'offer'`) forks money vs
+development. All deterministic + snapshot/resume-safe.
+
+**Contract brain (done, `contracts.ts`).** The NFT is **always** an owned wallet asset; a contract only
+gates **selection**.
+- `signContract(season, greed, personality) → { signedSeason, lengthSeasons }` — length from
+  `contractLength` (loyal 5 seasons, mercenary 2).
+- `contractView(overall, age, greed, marketability, personality, contract|null, season)` →
+  `{ available, seasonsLeft, lengthSeasons, extendCost, sellValue }`. A lapsed contract (or an unsigned,
+  just-acquired NFT) → `available:false` (**benched, not gone**) with `extendCost` (`contractCost`) and
+  `sellValue` (`releaseClause`) both surfaced.
+- Manager payoff already wired: `sponsorIncome` scales with squad `marketability` (fame helps pay wages).
+
+**Server wiring (TODO — needs the running DB; do at PC).**
+1. **Table** `contracts(owner_id, player_id, signed_season, length_seasons)` in both stores
+   (`store-sqlite.ts` + `store-postgres.ts`); `Store` methods `getContract/setContract/contractsFor`.
+2. **Acquire → sign.** When an NFT first joins a club (mint at graduation, or a market purchase), call
+   `signContract(currentSeason, greed, personality)` and persist. `currentSeason()` already exists.
+3. **Selection gate.** In lineup building (where injuries are already filtered — `injuries.ts` / the
+   `healthy` filter in `seasons.ts`), also drop NFT players whose `contractActive(...)` is false. Base
+   academy players have no contract and are always available.
+4. **Extend endpoint** `POST /players/:id/extend`: charge `extendCost` coins (reuse `addCoins`), then
+   `setContract(signContract(currentSeason, …))`. Reject if coins short.
+5. **Sell** reuses the existing **market** (`market.ts` listings) — list at ≥ `releaseClause` as guidance.
+
+**Client UI (TODO — at PC).** In the squad view, render each owned player's `contractView`: a
+"contract expires in N" badge; when `available:false`, grey the row out of selection and show two buttons
+— **Extend (–extendCost coins)** and **Sell (list on market, ~sellValue)**.
+
+---
+
 ## 4. Match-engine upgrade — read the mental layer for diversity
 
 The engine already reads physical/technical stats. Add small, bounded hooks so the new mental
