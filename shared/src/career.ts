@@ -306,6 +306,9 @@ export const COACHES: Coach[] = [
   { id: 'creative',   name: 'Creativity Coach',   kind: 'coach',  desc: 'Frees the imagination in tight spaces',       specialty: ['creativity', 'composure'], bonus: 0.12 },
   { id: 'talisman-m', name: 'Talisman Mentor',    kind: 'mentor', desc: 'A born matchwinner teaches you to seize it',  specialty: ['flair', 'leadership'], bonus: 0.12 },
   { id: 'general-m',  name: 'The General',        kind: 'mentor', desc: 'A commanding centre-half drills your reading of the game', specialty: ['aggression', 'composure', 'teamwork'], bonus: 0.11 },
+  { id: 'setpiece',   name: 'Set-Piece Coach',    kind: 'coach',  desc: 'Free-kicks, corners, every rehearsed dead ball',           specialty: ['composure', 'creativity', 'flair'], bonus: 0.1 },
+  { id: 'psych',      name: 'Sports Psychologist', kind: 'coach', desc: 'Gets inside your head — and settles it',                   specialty: ['composure'], bonus: 0.15 },
+  { id: 'scout-m',    name: 'Scout Mentor',       kind: 'mentor', desc: 'An old scout teaches you what the eye in the stand looks for', specialty: ['flair', 'creativity'], bonus: 0.12 },
 ];
 export const COACH_OFFER = 3; // choices shown at each appointment
 

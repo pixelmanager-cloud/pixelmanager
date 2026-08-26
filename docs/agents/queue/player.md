@@ -86,10 +86,15 @@ or newly imagined beyond the brief. Ranked safe/small/high-value first.
   CSS). `npm run verify` and `career_sim` both green (diversity closest-pair distance 9, magnitude
   decreases with skill, determinism identical: true) — no engine/rng behaviour change, just a new
   field on an already-logged struct and a read-only scan of it.
-- [ ] 10. **2-3 new backroom staff.** (S/M) `COACHES` has 14 entries but no dedicated flair or
-  goalkeeper-distribution specialist beyond the generic gk-coach. Add e.g. a "Set-Piece Coach"
-  (composure/creativity), a "Sports Psychologist" (composure/leadership, higher bonus but narrower),
-  and a "Recruitment-Style Scout Mentor" (flair/creativity). Re-run `career_sim` after.
+- [x] 10. **2-3 new backroom staff.** (S/M) `COACHES` had 14 entries. Added 3: a **Set-Piece Coach**
+  (composure/creativity/flair, triple-tag, bonus 0.10 — a rehearsed-dead-ball specialist), a
+  **Sports Psychologist** (composure only, bonus 0.15 — narrow single-tag, highest bonus in the table
+  since narrowness earns a bigger pull, matching the existing single-tag pattern of fitness/gk/
+  leadership coaches at 0.14), and a **Scout Mentor** (flair/creativity, mentor kind, bonus 0.12).
+  **Done:** appended all three to `COACHES` in career.ts; no other file keys coaches by id (checked
+  main.ts/tokens.ts/narrate.ts/career_sim.ts — coach lists render generically from the array), so no
+  map updates needed. `npm run verify` and `career_sim` both green (diversity closest-pair distance
+  10, determinism identical: true).
 - [ ] 11. **A 4th sports agent archetype.** (S) `AGENTS` has 6; add one more distinct archetype (e.g.
   a "Local Fixer" — very low exposure/greed, very high draftLuck, for a grounded, opportunity-rich
   path) to widen the agent-choice spread. Check `career_sim` determinism + magnitude after.
