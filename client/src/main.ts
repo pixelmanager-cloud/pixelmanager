@@ -1490,6 +1490,9 @@ class Game {
     }
     this.engine = new MatchEngine([payload.home.team, payload.away.team], payload.seed, [payload.home.tactics, payload.away.tactics]);
     this.matchSeed = payload.seed >>> 0;
+    this.playerAttrs = new Map();
+    for (const t of [payload.home.team, payload.away.team]) for (const p of t.players) this.playerAttrs.set(p.name, p.attrs);
+    this.move = null;
     this.running = true; this.accum = 0; this.eventsShown = 0;
     this.setMatchNames();
     $('ticker').innerHTML = '';
@@ -1606,11 +1609,47 @@ class Game {
     h = Math.imul(h ^ (h >>> 15), 2246822519); h = Math.imul(h ^ (h >>> 13), 3266489917); h ^= h >>> 16;
     return arr[(h >>> 0) % arr.length];
   }
+  private playerAttrs = new Map<string, any>();
+  private move: { teamIdx: 0 | 1; names: string[]; zone?: string } | null = null;
+  private zoneWord(z?: string) { return z === 'att' ? 'in the final third' : z === 'def' ? 'deep in their own half' : 'in midfield'; }
+  /** A stat-flavoured descriptor for a standout player (deterministic — their highest attribute). */
+  private descriptor(name: string): string {
+    const a = this.playerAttrs.get(name); if (!a) return name;
+    const cand: Array<[number, string]> = [[a.pace ?? 0, 'lightning-quick'], [a.shooting ?? 0, 'sharp-shooting'], [a.strength ?? 0, 'powerful'], [a.passing ?? 0, 'classy'], [a.tackling ?? 0, 'combative'], [a.composure ?? 0, 'ice-cool'], [a.creativity ?? 0, 'inventive'], [a.leadership ?? 0, 'commanding']];
+    const [top, adj] = cand.sort((x, y) => y[0] - x[0])[0];
+    return top >= 14 ? `the ${adj} ${name}` : name; // only genuine standouts earn an epithet
+  }
+  private appendLine(html: string, cls = '') {
+    const div = document.createElement('div');
+    div.className = `cm-line ${cls}`;
+    div.innerHTML = html;
+    const feed = $('ticker');
+    feed.appendChild(div);
+    feed.scrollTop = feed.scrollHeight;
+  }
+  /** Render the buffered passage of play (consecutive same-team passes) as one flowing line. */
+  private flushMove() {
+    const m = this.move; this.move = null;
+    if (!m || m.names.length < 2) return;
+    const team = m.teamIdx === 0 ? this.homeName : this.awayName;
+    const seq = m.names.slice(-4); // keep the last few touches
+    const chain = seq.join(' → ');
+    const lead = this.cpick([`${team} work it — `, `Neat from ${team}: `, `Patient build-up, ${team}: `, `${team} keep it: `], seq.length + m.names.length, 7);
+    this.appendLine(`<span class="cm-min"></span> <span class="cm-flow">${lead}${chain} ${this.zoneWord(m.zone)}.</span>`, 'cm-flow');
+  }
   private pushTicker(e: MatchEvent) {
-    const idx = this.eventsShown; // stable per event
+    // buffer consecutive same-team passes into a flowing "passage of play"
+    if (e.type === 'pass') {
+      if (this.move && this.move.teamIdx === e.teamIdx) { this.move.names.push(e.playerName2 ?? ''); this.move.zone = e.zone; }
+      else { this.flushMove(); this.move = { teamIdx: e.teamIdx, names: [e.playerName ?? '', e.playerName2 ?? ''], zone: e.zone }; }
+      return;
+    }
+    this.flushMove(); // any other event ends the passage
+    const idx = this.eventsShown;
     const team = e.teamIdx === 0 ? this.homeName : this.awayName;
     const opp = e.teamIdx === 0 ? this.awayName : this.homeName;
-    const p = e.playerName ?? 'someone';
+    const p = this.descriptor(e.playerName ?? 'someone');
+    const zone = this.zoneWord(e.zone);
     const min = `<span class="cm-min">${e.minute}'</span>`;
     const sc = this.engine?.state.score ?? [0, 0];
     let text = '', cls = '';
@@ -1620,16 +1659,13 @@ class Game {
       case 'chance': cls = 'cm-chance'; text = this.cpick([`${p} works a yard and shapes to shoot…`, `Here come ${team} — ${p} bursts in behind!`, `Big chance! ${p} is in for ${team}…`, `${team} carve it open — ${p} with a sight of goal!`, `${p} shifts it onto his stronger foot…`, `A gap opens up and ${p} goes for it…`], idx, 2); break;
       case 'shot_saved': cls = 'cm-save'; text = this.cpick([`🧤 SAVED! ${opp}’s keeper turns ${p} away!`, `🧤 Denied! A fine stop to keep ${p} out!`, `🧤 What a save — ${p} was sure he’d scored!`, `🧤 Beaten away! ${p} is foiled!`, `🧤 Big hands! ${opp} keep ${p} out!`], idx, 3); break;
       case 'shot_missed': cls = 'cm-miss'; text = this.cpick([`${p} drags it wide!`, `Off target — ${p} will want that one back.`, `${p} blazes over the bar!`, `Just past the post from ${p}!`, `Wild from ${p} — miles over!`], idx, 4); break;
+      case 'tackle_won': cls = 'cm-tackle'; text = this.cpick([`🦵 ${p} wins it back for ${team} ${zone}.`, `🦵 Strong challenge — ${p} nicks it for ${team} ${zone}.`, `🦵 ${p} steps in and dispossesses the man ${zone}.`, `🦵 Turnover! ${p} robs him ${zone}.`], idx, 6); break;
+      case 'loose_ball': cls = 'cm-loose'; text = this.cpick([`The ball breaks loose ${zone}.`, `Cut out! ${p}'s pass is intercepted ${zone}.`, `Scrappy — it pinballs around ${zone}.`, `${p}'s ball is cut out ${zone}.`], idx, 8); break;
       case 'halftime': cls = 'cm-break'; text = `⏸ Half-time. ${this.homeName} ${sc[0]}–${sc[1]} ${this.awayName}.`; break;
       case 'fulltime': cls = 'cm-break'; text = `🏁 Full-time! ${this.homeName} ${sc[0]}–${sc[1]} ${this.awayName}.`; break;
     }
-    const div = document.createElement('div');
-    div.className = `cm-line ${cls}`;
-    div.innerHTML = `${min} ${text}`;
     if (e.type === 'goal' && !this.silent) this.celebrateGoal(e);
-    const feed = $('ticker');
-    feed.appendChild(div);
-    feed.scrollTop = feed.scrollHeight; // auto-scroll to the newest line
+    this.appendLine(`${min} ${text}`, cls);
   }
 
   private celebrateGoal(e: MatchEvent) {
