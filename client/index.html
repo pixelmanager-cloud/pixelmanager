@@ -106,6 +106,17 @@
       .pc-card .pc-stat span { font-family: var(--display); font-size: 8px; color: var(--muted); }
       .pc-card .pc-stat b { font-size: 17px; }
       .pc-card .pc-foot { font-size: 11px; color: #667; margin-bottom: 14px; letter-spacing: 0.3px; }
+      /* contract block */
+      .pc-card .pc-contract { position: relative; z-index: 2; width: 84%; margin: 4px auto 12px; padding: 9px 11px; border-radius: 8px;
+        background: rgba(90,120,90,0.14); border: 1px solid rgba(120,200,120,0.28); }
+      .pc-card .pc-contract.lapsed { background: rgba(150,70,70,0.16); border-color: rgba(220,110,110,0.36); }
+      .pc-card .pc-crow { display: flex; justify-content: space-between; font-size: 11px; color: #cbd; margin-bottom: 7px; letter-spacing: 0.2px; }
+      .pc-card .pc-cactions { display: flex; align-items: center; justify-content: center; gap: 10px; }
+      .pc-card .pc-extend { font-family: var(--display); font-size: 10px; padding: 6px 10px; cursor: pointer; border-radius: 6px;
+        background: #6ad06a; color: #10210f; border: none; }
+      .pc-card .pc-extend:hover { background: #7ee07e; }
+      .pc-card .pc-sell { font-size: 10px; color: #9aa; }
+      .pc-card .pc-stake { margin-top: 7px; font-size: 10px; color: #8cd0c8; text-align: center; }
       .pc-card .pc-close { font-family: var(--display); font-size: 11px; }
       /* fx layers */
       .pc-card .pc-ring { position: absolute; inset: -60%; z-index: 0; pointer-events: none; opacity: 0; filter: blur(5px);

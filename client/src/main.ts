@@ -4,7 +4,7 @@ import {
   TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty,
 } from '@fm/shared';
 import { SCALE, makeBallTexture, makeBallGhostTexture, makePitchTexture, makePlayerFrames, makeShadowTexture, makeCarrierTexture } from './pixelart';
-import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData, type MissionsData } from './api';
+import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData, type MissionsData, type ContractInfo } from './api';
 import { walletConfigured, nftConfigured, sendEmailCode, connectEmail, connectInjected, autoConnectInApp, signMessage, claimTokens, mintPlayer, mintScout, type Account as WalletAccount } from './wallet';
 
 const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
@@ -187,15 +187,25 @@ class Game {
   }
 
   private injured = new Map<string, number>(); // playerId → matches remaining out
-  private setMe(me: { account: Account; club: Club; standingOrders: StandingOrders; injuries?: Array<{ player_id: string; matches_remaining: number }> }) {
+  private contracts: Record<string, ContractInfo> = {}; // NFT playerId → contract situation
+  private season = 0;
+  private setMe(me: { account: Account; club: Club; standingOrders: StandingOrders; injuries?: Array<{ player_id: string; matches_remaining: number }>; contracts?: Record<string, ContractInfo>; season?: number }) {
     this.account = me.account; this.club = me.club; this.standingOrders = me.standingOrders;
     this.injured = new Map((me.injuries ?? []).map((i) => [i.player_id, i.matches_remaining]));
+    this.contracts = me.contracts ?? {};
+    this.season = me.season ?? 0;
   }
-  /** The squad minus injured players (who can't be fielded) — falls back to the full squad
-   *  if benching the injured would leave fewer than 11, mirroring the server. */
+  /** NFT players benched by a lapsed contract (unavailable for selection until extended). */
+  private lapsed(): Set<string> {
+    return new Set(Object.values(this.contracts).filter((c) => !c.available).map((c) => c.playerId));
+  }
+  /** The squad minus injured AND contract-lapsed players (who can't be fielded) — falls back to the
+   *  full squad if benching them would leave fewer than 11, mirroring the server. */
   private availableClub(): Club {
-    if (!this.injured.size) return this.club;
-    const healthy = this.club.players.filter((p) => !this.injured.has(p.id));
+    const out = this.lapsed();
+    for (const id of this.injured.keys()) out.add(id);
+    if (!out.size) return this.club;
+    const healthy = this.club.players.filter((p) => !out.has(p.id));
     return healthy.length >= 11 ? { ...this.club, players: healthy } : this.club;
   }
 
@@ -377,6 +387,14 @@ class Game {
       return `<i class="pc-spark" style="left:${x}%;top:${y}%;animation-delay:${delay}s;animation-duration:${dur}s">✦</i>`;
     }).join('');
     const ring = tier.key === 'gold' || tier.key === 'diamond' || tier.key === 'legend' ? '<div class="pc-ring"></div>' : '';
+    // contract situation (NFT players only): age, deal status, extend/sell — the NFT stays owned either way
+    const ci = this.contracts[p.id];
+    const stakeHtml = ci && ci.stakedSeasons > 0 ? `<div class="pc-stake">🔒 staked ${ci.stakedSeasons} season${ci.stakedSeasons === 1 ? '' : 's'} — loyalty discount applied</div>` : '';
+    const contractHtml = ci ? `<div class="pc-contract${ci.available ? '' : ' lapsed'}">`
+      + `<div class="pc-crow"><span>Age ${ci.age}${ci.age >= 40 ? ' · retiring' : ''}</span>`
+      + `<span>${ci.available ? `📜 ${ci.seasonsLeft} season${ci.seasonsLeft === 1 ? '' : 's'} left` : '⛔ contract lapsed — benched'}</span></div>`
+      + `<div class="pc-cactions"><button class="pc-extend" data-extend="${p.id}">${ci.available ? 'Re-sign' : 'Extend'} · ${ci.extendCost}c · ${ci.lengthSeasons}y</button>`
+      + `<span class="pc-sell">or sell ~${ci.sellValue}c</span></div>` + stakeHtml + `</div>` : '';
     const el = document.createElement('div');
     el.id = 'player-card-ov';
     el.innerHTML =
@@ -389,10 +407,29 @@ class Game {
       + `<div class="pc-name">${p.name}</div>`
       + `<div class="pc-role">${roleName[p.role] ?? p.role}</div>`
       + `<div class="pc-stats">${stats}</div>`
+      + contractHtml
       + `<div class="pc-foot">★ NFT${tokenId ? ` · #${tokenId}` : ''} · Base Sepolia · on-chain</div>`
       + `<button class="pc-close">${minted ? 'Nice ✓' : 'Close'}</button></div>`;
-    el.addEventListener('click', (e) => { const t = e.target as HTMLElement; if (t === el || t.classList.contains('pc-close')) el.remove(); });
+    el.addEventListener('click', async (e) => {
+      const t = e.target as HTMLElement;
+      if (t.dataset.extend) { await this.extendPlayer(t.dataset.extend); el.remove(); return; }
+      if (t === el || t.classList.contains('pc-close')) el.remove();
+    });
     document.body.appendChild(el);
+  }
+
+  /** Pay to extend (re-sign) an NFT player's contract, then refresh the squad + reopen the card. */
+  private async extendPlayer(playerId: string) {
+    try {
+      const r = await api.extendContract(playerId);
+      toast(`Re-signed · −${(this.contracts[playerId]?.extendCost ?? 0)}c · ${r.contract.lengthSeasons}-season deal`);
+      this.setMe(await api.me());
+      await this.showHub();
+      const p = this.club.players.find((x) => x.id === playerId);
+      if (p) this.showPlayerCard(p);
+    } catch (err: any) {
+      toast(err?.body?.error === 'not enough coins' ? `Not enough coins (need ${err.body.need})` : (err?.body?.error ?? 'Extend failed'));
+    }
   }
 
   private async refreshTokenBalance() {

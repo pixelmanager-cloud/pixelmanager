@@ -75,6 +75,12 @@ export interface Store {
   getInjuries(accountId: string): Promise<Array<{ player_id: string; matches_remaining: number }>>;
   addInjury(accountId: string, playerId: string, matches: number): Promise<void>;
   decrementInjuries(accountId: string): Promise<void>;
+  // contracts (off-chain terms gating selection of owned NFT players) + owner-independent player age
+  getContracts(ownerId: string): Promise<Array<{ player_id: string; signed_season: number; length_seasons: number; staked_since: number }>>;
+  setContract(ownerId: string, playerId: string, signedSeason: number, lengthSeasons: number, stakedSince: number): Promise<void>;
+  deleteContract(ownerId: string, playerId: string): Promise<void>;
+  getPrimeSeason(playerId: string): Promise<number | undefined>;
+  ensurePrimeSeason(playerId: string, season: number): Promise<number>;
   // scouting network: dispatched trips (sealed at dispatch, revealed after travel)
   createMission(m: MissionRow): Promise<void>;
   missionsInSeason(accountId: string, seasonId: string): Promise<MissionRow[]>;

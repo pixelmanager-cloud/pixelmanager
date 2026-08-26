@@ -64,6 +64,12 @@ export function makePostgresStore(connectionString: string): Store {
         CREATE TABLE IF NOT EXISTS injuries (
           account_id TEXT NOT NULL, player_id TEXT NOT NULL, matches_remaining INTEGER NOT NULL,
           PRIMARY KEY (account_id, player_id));
+        CREATE TABLE IF NOT EXISTS contracts (
+          owner_id TEXT NOT NULL, player_id TEXT NOT NULL, signed_season INTEGER NOT NULL,
+          length_seasons INTEGER NOT NULL, staked_since INTEGER NOT NULL DEFAULT 0,
+          PRIMARY KEY (owner_id, player_id));
+        CREATE TABLE IF NOT EXISTS player_lifecycle (
+          player_id TEXT PRIMARY KEY, prime_season INTEGER NOT NULL, retired INTEGER NOT NULL DEFAULT 0);
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS season_id TEXT;
         ALTER TABLE matches ADD COLUMN IF NOT EXISTS initiator_id TEXT;
         ALTER TABLE clubs ADD COLUMN IF NOT EXISTS so_duties TEXT;
@@ -175,6 +181,23 @@ export function makePostgresStore(connectionString: string): Store {
     },
     async addInjury(accountId, playerId, matches) {
       await q('INSERT INTO injuries (account_id, player_id, matches_remaining) VALUES ($1,$2,$3) ON CONFLICT (account_id, player_id) DO UPDATE SET matches_remaining=$3', [accountId, playerId, matches]);
+    },
+    async getContracts(ownerId) {
+      return (await q('SELECT player_id, signed_season, length_seasons, staked_since FROM contracts WHERE owner_id=$1', [ownerId])).rows as Array<{ player_id: string; signed_season: number; length_seasons: number; staked_since: number }>;
+    },
+    async setContract(ownerId, playerId, signedSeason, lengthSeasons, stakedSince) {
+      await q('INSERT INTO contracts (owner_id, player_id, signed_season, length_seasons, staked_since) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (owner_id, player_id) DO UPDATE SET signed_season=$3, length_seasons=$4', [ownerId, playerId, signedSeason, lengthSeasons, stakedSince]);
+    },
+    async deleteContract(ownerId, playerId) {
+      await q('DELETE FROM contracts WHERE owner_id=$1 AND player_id=$2', [ownerId, playerId]);
+    },
+    async getPrimeSeason(playerId) {
+      const r = (await q('SELECT prime_season FROM player_lifecycle WHERE player_id=$1', [playerId])).rows[0] as any;
+      return r ? r.prime_season as number : undefined;
+    },
+    async ensurePrimeSeason(playerId, season) {
+      await q('INSERT INTO player_lifecycle (player_id, prime_season) VALUES ($1,$2) ON CONFLICT (player_id) DO NOTHING', [playerId, season]);
+      return ((await q('SELECT prime_season FROM player_lifecycle WHERE player_id=$1', [playerId])).rows[0] as any).prime_season as number;
     },
     async decrementInjuries(accountId) {
       await q('UPDATE injuries SET matches_remaining = matches_remaining - 1 WHERE account_id=$1', [accountId]);
@@ -292,6 +315,6 @@ export function makePostgresStore(connectionString: string): Store {
     async seasonPods(seasonId) {
       return (await q('SELECT DISTINCT tier, pod FROM pod_members WHERE season_id=$1 ORDER BY tier, pod', [seasonId])).rows as PodRef[];
     },
-    async reset() { await q('TRUNCATE accounts, clubs, matches, seasons, honours, pod_members, plans, loanees, listings, scout_missions, facilities, injuries'); },
+    async reset() { await q('TRUNCATE accounts, clubs, matches, seasons, honours, pod_members, plans, loanees, listings, scout_missions, facilities, injuries, contracts, player_lifecycle'); },
   };
 }

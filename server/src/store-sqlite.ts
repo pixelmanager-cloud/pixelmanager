@@ -54,6 +54,15 @@ export function makeSqliteStore(file: string): Store {
       db.exec(`CREATE TABLE IF NOT EXISTS injuries (
         account_id TEXT NOT NULL, player_id TEXT NOT NULL, matches_remaining INTEGER NOT NULL,
         PRIMARY KEY (account_id, player_id));`);
+      // CONTRACTS: off-chain terms gating selection of an owned NFT player (extend or sell).
+      db.exec(`CREATE TABLE IF NOT EXISTS contracts (
+        owner_id TEXT NOT NULL, player_id TEXT NOT NULL, signed_season INTEGER NOT NULL,
+        length_seasons INTEGER NOT NULL, staked_since INTEGER NOT NULL DEFAULT 0,
+        PRIMARY KEY (owner_id, player_id));`);
+      // PLAYER LIFECYCLE: owner-independent, so age can't be reset by selling+rebuying. prime_season =
+      // the global season the player turned 25 (age = 25 + currentSeason - prime_season, capped at 40).
+      db.exec(`CREATE TABLE IF NOT EXISTS player_lifecycle (
+        player_id TEXT PRIMARY KEY, prime_season INTEGER NOT NULL, retired INTEGER NOT NULL DEFAULT 0);`);
       // migrate pre-existing tables (adds columns; throws-and-ignored if already present)
       try { db.exec('ALTER TABLE matches ADD COLUMN season_id TEXT'); } catch { /* already added */ }
       try { db.exec('ALTER TABLE matches ADD COLUMN initiator_id TEXT'); } catch { /* already added */ }
@@ -169,6 +178,23 @@ export function makeSqliteStore(file: string): Store {
       db.prepare('UPDATE injuries SET matches_remaining = matches_remaining - 1 WHERE account_id=?').run(accountId);
       db.prepare('DELETE FROM injuries WHERE account_id=? AND matches_remaining <= 0').run(accountId);
     },
+    async getContracts(ownerId) {
+      return db.prepare('SELECT player_id, signed_season, length_seasons, staked_since FROM contracts WHERE owner_id=?').all(ownerId) as Array<{ player_id: string; signed_season: number; length_seasons: number; staked_since: number }>;
+    },
+    async setContract(ownerId, playerId, signedSeason, lengthSeasons, stakedSince) {
+      db.prepare('INSERT INTO contracts (owner_id, player_id, signed_season, length_seasons, staked_since) VALUES (?,?,?,?,?) ON CONFLICT(owner_id, player_id) DO UPDATE SET signed_season=excluded.signed_season, length_seasons=excluded.length_seasons').run(ownerId, playerId, signedSeason, lengthSeasons, stakedSince);
+    },
+    async deleteContract(ownerId, playerId) {
+      db.prepare('DELETE FROM contracts WHERE owner_id=? AND player_id=?').run(ownerId, playerId);
+    },
+    async getPrimeSeason(playerId) {
+      const r = db.prepare('SELECT prime_season FROM player_lifecycle WHERE player_id=?').get(playerId) as any;
+      return r ? r.prime_season as number : undefined;
+    },
+    async ensurePrimeSeason(playerId, season) {
+      db.prepare('INSERT OR IGNORE INTO player_lifecycle (player_id, prime_season) VALUES (?,?)').run(playerId, season);
+      return (db.prepare('SELECT prime_season FROM player_lifecycle WHERE player_id=?').get(playerId) as any).prime_season as number;
+    },
     async createMission(m) {
       db.prepare('INSERT INTO scout_missions (id, account_id, season_id, destination, dispatched_at, ready_at, found, player_json, band, status) VALUES (?,?,?,?,?,?,?,?,?,?)')
         .run(m.id, m.account_id, m.season_id, m.destination, m.dispatched_at, m.ready_at, m.found, m.player_json, m.band, m.status);
@@ -273,6 +299,6 @@ export function makeSqliteStore(file: string): Store {
     async seasonPods(seasonId) {
       return db.prepare('SELECT DISTINCT tier, pod FROM pod_members WHERE season_id=? ORDER BY tier, pod').all(seasonId) as PodRef[];
     },
-    async reset() { db.exec('DELETE FROM matches; DELETE FROM clubs; DELETE FROM accounts; DELETE FROM seasons; DELETE FROM honours; DELETE FROM pod_members; DELETE FROM plans; DELETE FROM loanees; DELETE FROM listings; DELETE FROM scout_missions; DELETE FROM facilities; DELETE FROM injuries;'); },
+    async reset() { db.exec('DELETE FROM matches; DELETE FROM clubs; DELETE FROM accounts; DELETE FROM seasons; DELETE FROM honours; DELETE FROM pod_members; DELETE FROM plans; DELETE FROM loanees; DELETE FROM listings; DELETE FROM scout_missions; DELETE FROM facilities; DELETE FROM injuries; DELETE FROM contracts; DELETE FROM player_lifecycle;'); },
   };
 }

@@ -10,6 +10,7 @@ import { seasonPlacementReward, WIN_COINS, DRAW_COINS, LOSS_COINS } from './mark
 import { ownedPlayers } from './nft.js';
 import { trainingConditioning, stadiumIncome, fanIncomeMult, fanHomeBoost, sponsorIncome, squadMarketability } from './facilities.js';
 import { rollMatchInjuries } from './injuries.js';
+import { unavailableNftIds } from './contracts.js';
 import { computeCup, type SquadMap } from './cup.js';
 
 /** Merge a club with the star NFTs its linked wallet owns (read-only). */
@@ -92,19 +93,22 @@ export function resultsAmong(results: Array<{ home_id: string; away_id: string; 
 
 /** Simulate one fixture from both clubs' standing orders and persist it (used to auto-resolve
  *  fixtures a manager never got to at season end, so every table completes fairly). */
-async function simulateMatch(db: Store, homeId: string, awayId: string, seasonId: string, now: number): Promise<void> {
+async function simulateMatch(db: Store, homeId: string, awayId: string, seasonId: string, seasonNumber: number, now: number): Promise<void> {
   const [home, away, homeC0, awayC0] = await Promise.all([db.accountById(homeId), db.accountById(awayId), db.getClub(homeId), db.getClub(awayId)]);
   if (!home || !away || !homeC0 || !awayC0) return;
   const [homeC, awayC] = await Promise.all([withNfts(db, homeId, homeC0), withNfts(db, awayId, awayC0)]);
-  // full parity with a live match: bench injured, then conditioning + coins + gate + fresh injury rolls
-  const [homeFac, awayFac, homeInj, awayInj] = await Promise.all([db.getFacilities(homeId), db.getFacilities(awayId), db.getInjuries(homeId), db.getInjuries(awayId)]);
-  const benchInjured = (club: typeof homeC.club, inj: Array<{ player_id: string }>) => {
-    const out = new Set(inj.map((x) => x.player_id));
-    const healthy = club.players.filter((p) => !out.has(p.id));
-    return healthy.length >= 11 ? { ...club, players: healthy } : club;
+  // full parity with a live match: bench injured + contract-lapsed NFTs, then conditioning/coins/gate/injuries
+  const [homeFac, awayFac, homeInj, awayInj, homeUnavail, awayUnavail] = await Promise.all([
+    db.getFacilities(homeId), db.getFacilities(awayId), db.getInjuries(homeId), db.getInjuries(awayId),
+    unavailableNftIds(db, homeId, homeC.club.players, seasonNumber), unavailableNftIds(db, awayId, awayC.club.players, seasonNumber),
+  ]);
+  const benchOut = (club: typeof homeC.club, inj: Array<{ player_id: string }>, unavail: Set<string>) => {
+    const out = new Set([...inj.map((x) => x.player_id), ...unavail]);
+    const available = club.players.filter((p) => !out.has(p.id));
+    return available.length >= 11 ? { ...club, players: available } : club;
   };
-  homeC.club = benchInjured(homeC.club, homeInj);
-  awayC.club = benchInjured(awayC.club, awayInj);
+  homeC.club = benchOut(homeC.club, homeInj, homeUnavail);
+  awayC.club = benchOut(awayC.club, awayInj, awayUnavail);
   // fall back to a valid auto-pick if a standing XI references unavailable players (injured / transferred NFT)
   const lineupFor = (c: typeof homeC) => {
     const l = { formation: c.standingOrders.formation, playerIds: c.standingOrders.playerIds, duties: c.standingOrders.duties };
@@ -165,7 +169,7 @@ async function rollover(db: Store, s: Season, now: number): Promise<void> {
         if (a === b) continue;
         const home = active[a], away = active[b];
         const done = results.some((r) => r.home_id === home && r.away_id === away);
-        if (!done) await simulateMatch(db, home, away, s.id, now);
+        if (!done) await simulateMatch(db, home, away, s.id, s.number, now);
       }
     }
     // re-read this pod's results now that the fixtures are complete

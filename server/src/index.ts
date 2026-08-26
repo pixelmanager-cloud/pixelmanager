@@ -1,7 +1,8 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { randomUUID } from 'node:crypto';
-import { overall, managerPrestige, type Lineup, type Tactics } from '@fm/shared';
+import { overall, managerPrestige, signContract, contractCost, contractLength, type Lineup, type Tactics } from '@fm/shared';
+import { squadContracts, isNftPlayer, ageOf } from './contracts.js';
 import { db, type Account, type StandingOrders, type Listing } from './db.js';
 import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMATIONS } from './game.js';
 import { hashPassword, verifyPassword } from './auth.js';
@@ -170,8 +171,12 @@ app.post('/auth/wallet/link', { preHandler: requireAuth }, async (req, reply) =>
 
 app.get('/me', { preHandler: requireAuth }, async (req) => {
   const c = (await loadSquad(req.account!.id))!; // includes any star NFTs the linked wallet owns
-  const [coins, wallet, injuries] = await Promise.all([db.getCoins(req.account!.id), db.walletOf(req.account!.id), db.getInjuries(req.account!.id)]);
-  return { account: { ...req.account, coins, wallet }, club: c.club, standingOrders: c.standingOrders, injuries };
+  const s = await ensureSeason(db, Date.now());
+  const [coins, wallet, injuries, contracts] = await Promise.all([
+    db.getCoins(req.account!.id), db.walletOf(req.account!.id), db.getInjuries(req.account!.id),
+    squadContracts(db, req.account!.id, c.club.players, s.number),
+  ]);
+  return { account: { ...req.account, coins, wallet }, club: c.club, standingOrders: c.standingOrders, injuries, contracts: Object.fromEntries(contracts), season: s.number };
 });
 
 app.put('/standing-orders', { preHandler: requireAuth }, async (req, reply) => {
@@ -242,18 +247,21 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const playedToday = await db.matchesToday(meId, season.id, startOfUtcDay(Date.now()));
   if (playedToday >= MATCHES_PER_DAY) return reply.code(429).send({ error: `daily match limit reached (${MATCHES_PER_DAY}/day) — come back tomorrow` });
 
-  // facilities + injuries: injured players are unavailable this match, so filter them out
-  // before either side picks its XI (keep everyone if fewer than 11 would remain — emergency).
-  const [meFac, oppFac, myInj, oppInj] = await Promise.all([
+  // facilities + injuries + contracts: injured players AND NFT players whose contract has lapsed are
+  // unavailable this match, filtered out before either side picks its XI (keep everyone if fewer than
+  // 11 would remain — emergency). The NFT stays owned; a lapsed contract only benches him.
+  const matchSeason = await ensureSeason(db, Date.now());
+  const [meFac, oppFac, myInj, oppInj, myUnavail, oppUnavail] = await Promise.all([
     db.getFacilities(meId), db.getFacilities(oppId), db.getInjuries(meId), db.getInjuries(oppId),
+    unavailableNftIds(db, meId, me!.club.players, matchSeason.number), unavailableNftIds(db, oppId, oppClub.club.players, matchSeason.number),
   ]);
-  const benchInjured = (club: typeof me.club, inj: Array<{ player_id: string }>) => {
-    const out = new Set(inj.map((x) => x.player_id));
-    const healthy = club.players.filter((p) => !out.has(p.id));
-    return healthy.length >= 11 ? { ...club, players: healthy } : club;
+  const benchOut = (club: typeof me.club, inj: Array<{ player_id: string }>, unavail: Set<string>) => {
+    const out = new Set([...inj.map((x) => x.player_id), ...unavail]);
+    const available = club.players.filter((p) => !out.has(p.id));
+    return available.length >= 11 ? { ...club, players: available } : club;
   };
-  me!.club = benchInjured(me!.club, myInj);
-  oppClub.club = benchInjured(oppClub.club, oppInj);
+  me!.club = benchOut(me!.club, myInj, myUnavail);
+  oppClub.club = benchOut(oppClub.club, oppInj, oppUnavail);
 
   let myLineup: Lineup = body.myLineup
     ? { formation: body.myLineup.formation, playerIds: body.myLineup.playerIds, duties: body.myLineup.duties }
@@ -386,6 +394,28 @@ app.get('/prestige', { preHandler: requireAuth }, async (req) => {
   const highestTierIdx = Math.max(tierIdxOf(curTier), ...honourLites.map((h) => h.tierIdx), 0);
   const seasons = new Set(honours.map((h) => h.season_number)).size;
   return { prestige: managerPrestige({ wins, draws, losses, honours: honourLites, highestTierIdx, seasons }), record: { wins, draws, losses, seasons } };
+});
+
+// EXTEND a player's contract: pay the wage (coins) to re-sign him for another full term. The NFT was
+// never at risk — a lapsed contract just benched him — so this is buy-back-in, not rescue. Reuses the
+// coin sink; a proven earner / greedy / unhappy player costs more, staking tenure discounts it.
+app.post('/players/:id/extend', { preHandler: requireAuth }, async (req, reply) => {
+  const ownerId = req.account!.id;
+  const playerId = (req.params as any).id as string;
+  if (!isNftPlayer(playerId)) return reply.code(400).send({ error: 'only NFT players have contracts' });
+  const c = (await loadSquad(ownerId))!;
+  const player = c.club.players.find((p) => p.id === playerId);
+  if (!player) return reply.code(404).send({ error: 'not on your squad' });
+  const s = await ensureSeason(db, Date.now());
+  const info = (await squadContracts(db, ownerId, c.club.players, s.number)).get(playerId);
+  if (!info) return reply.code(400).send({ error: 'no contract' });
+  const coins = await db.getCoins(ownerId);
+  if (coins < info.extendCost) return reply.code(400).send({ error: 'not enough coins', need: info.extendCost, have: coins });
+  await db.addCoins(ownerId, -info.extendCost);
+  const fresh = signContract(s.number, player.greed ?? 10, player.personality); // staked_since preserved by setContract
+  await db.setContract(ownerId, playerId, fresh.signedSeason, fresh.lengthSeasons, s.number);
+  const updated = (await squadContracts(db, ownerId, c.club.players, s.number)).get(playerId);
+  return { ok: true, coins: await db.getCoins(ownerId), contract: updated };
 });
 
 // SCOUT an opponent: their expected formation (standing-orders shape) + roster with
@@ -623,6 +653,7 @@ app.post('/market/:id/buy', { preHandler: requireAuth }, async (req, reply) => {
     db.addCoins(meId, -l.price),
     db.addCoins(l.seller_id, l.price),
     db.setListingStatus(l.id, 'sold', meId, Date.now()),
+    db.deleteContract(l.seller_id, l.player_id), // the NFT leaves the seller; the buyer re-signs on first sight (age persists via player_lifecycle)
   ]);
   return { ok: true, player: { name: player.name, role: player.role }, coins: coins - l.price };
 });
@@ -647,6 +678,36 @@ app.post('/admin/rollover', async (req, reply) => {
   if (!secret || (req.headers['x-admin-secret'] as string) !== secret) return reply.code(403).send({ error: 'forbidden' });
   const s = await forceRollover(db, Date.now());
   return { ok: true, season: { number: s.number, endsAt: s.endsAt } };
+});
+
+// DEV ONLY (local sqlite; never prod/postgres): inject a synthetic career-built NFT into your club so
+// the contract/age/morale/staking flows can be exercised without minting on-chain. Optional `kind`
+// (mercenary|loyal|star) and `agedSeasons` (back-date the contract to test the lapsed → extend state).
+app.post('/dev/inject-nft', { preHandler: requireAuth }, async (req, reply) => {
+  if (process.env.DATABASE_URL) return reply.code(403).send({ error: 'dev only' });
+  const id = req.account!.id;
+  const c = (await db.getClub(id))!;
+  const body = (req.body as any) ?? {};
+  const kind: string = body.kind ?? 'star';
+  const base = { pace: 14, strength: 13, stamina: 14, passing: 13, shooting: 14, tackling: 12, positioning: 13, workrate: 14, keeping: 2, setPiece: 12, composure: 14, aggression: 12, creativity: 14, teamwork: 13, leadership: 13, durability: 13 };
+  const presets: Record<string, any> = {
+    mercenary: { name: 'Rico Vance', role: 'FW', greed: 18, personality: 'maverick', marketability: 17, earnings: 5200, attrs: { ...base, shooting: 17, pace: 16, composure: 16 } },
+    loyal: { name: 'Sam Oakes', role: 'DF', greed: 4, personality: 'leader', marketability: 8, earnings: 1400, attrs: { ...base, tackling: 16, positioning: 16, leadership: 16, strength: 15 } },
+    star: { name: 'Leo Marsh', role: 'MF', greed: 11, personality: 'pro', marketability: 13, earnings: 2600, attrs: { ...base, passing: 16, creativity: 16, composure: 15 } },
+  };
+  const p = presets[kind] ?? presets.star;
+  const tokenId = Date.now() % 1000000;
+  const player: Player = { id: `nft:dev-${tokenId}`, name: p.name, role: p.role, attrs: p.attrs, anchor: { x: 0, y: 0 }, greed: p.greed, personality: p.personality, marketability: p.marketability, earnings: p.earnings };
+  c.club.players.push(player);
+  await db.saveClub(id, c.club, c.standingOrders);
+  const s = await ensureSeason(db, Date.now());
+  const aged = Math.max(0, Number(body.agedSeasons) || 0);
+  if (aged > 0) { // back-date lifecycle + sign an already-expiring deal to test the benched → extend flow
+    await db.ensurePrimeSeason(player.id, s.number - aged);
+    const len = contractLength(p.greed, p.personality);
+    await db.setContract(id, player.id, s.number - aged, len, s.number - aged);
+  }
+  return { ok: true, player, season: s.number };
 });
 
 // Regenerate every club's BASE squad at the current (weak filler) quality — the one-time

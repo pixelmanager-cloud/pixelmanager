@@ -10,6 +10,7 @@ export function setToken(t: string) { token = t; localStorage.setItem('fm_token'
 export function clearToken() { token = ''; localStorage.removeItem('fm_token'); }
 
 export interface ApiError extends Error { status: number; body: any }
+export interface ContractInfo { playerId: string; age: number; available: boolean; seasonsLeft: number; lengthSeasons: number; extendCost: number; sellValue: number; stakedSeasons: number }
 
 async function req<T>(path: string, opts: RequestInit = {}): Promise<T> {
   const res = await fetch(API_URL + path, {
@@ -72,7 +73,8 @@ export const api = {
     '/register', { method: 'POST', body: JSON.stringify({ handle, password }) }),
   login: (handle: string, password: string) => req<{ token: string; account: Account; club: Club; standingOrders: StandingOrders }>(
     '/login', { method: 'POST', body: JSON.stringify({ handle, password }) }),
-  me: () => req<{ account: Account; club: Club; standingOrders: StandingOrders; injuries: Array<{ player_id: string; matches_remaining: number }> }>('/me'),
+  me: () => req<{ account: Account; club: Club; standingOrders: StandingOrders; injuries: Array<{ player_id: string; matches_remaining: number }>; contracts: Record<string, ContractInfo>; season: number }>('/me'),
+  extendContract: (playerId: string) => req<{ ok: true; coins: number; contract: ContractInfo }>(`/players/${encodeURIComponent(playerId)}/extend`, { method: 'POST' }),
   setStandingOrders: (so: StandingOrders) => req<{ ok: true; standingOrders: StandingOrders }>(
     '/standing-orders', { method: 'PUT', body: JSON.stringify(so) }),
   opponents: () => req<{ opponents: Array<{ id: string; handle: string; rating: number; clubName: string }> }>('/opponents'),
