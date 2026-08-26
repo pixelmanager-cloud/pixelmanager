@@ -29,7 +29,7 @@ export interface SeasonEvent { id: string; name: string; desc: string }
 export interface Action { type: 'play' | 'draft' | 'coach'; cardId: string }
 /** Everything needed to persist/trade an in-progress prospect (stored off-chain, keyed by tokenId).
  *  Deterministic → the current stats can be re-derived + verified by replaying it. */
-export interface CareerSnapshot { seed: number; track: Track; actions: Action[] }
+export interface CareerSnapshot { seed: number; track: Track; agentId?: string; actions: Action[] }
 
 export type Rarity = 'common' | 'rare' | 'epic';
 export interface Card { id: string; name: string; tags: Tag[]; rarity?: Rarity }
@@ -113,6 +113,29 @@ export const COACHES: Coach[] = [
 ];
 export const COACH_OFFER = 3; // choices shown at each appointment
 
+// ── SPORTS AGENTS: chosen when you start a career, an agent shapes your whole trajectory — how much
+// EXPOSURE you get (big-stage moments), how good your opportunities are (draft luck), your market
+// VALUE, and how GREEDY you turn out (what it'll cost a manager to keep you). A super-agent maximises
+// fame and fees but makes you mercenary; a family advisor keeps you loyal and cheap.
+export interface Agent { id: string; name: string; desc: string; exposure: number; draftLuck: number; greed: number; valueMod: number }
+export const AGENTS: Agent[] = [
+  { id: 'ambitious', name: 'Ambitious Agent',  desc: 'Chases the big stage and the big move',        exposure: 1.4,  draftLuck: 1.2,  greed: 3,  valueMod: 1.1 },
+  { id: 'loyal',     name: 'Loyal Agent',      desc: 'Keeps you grounded, settled and well-liked',   exposure: 1.0,  draftLuck: 1.0,  greed: -3, valueMod: 1.0 },
+  { id: 'super',     name: 'Super-Agent',      desc: 'Elite connections and elite fees — for a cut', exposure: 1.6,  draftLuck: 1.35, greed: 6,  valueMod: 1.25 },
+  { id: 'family',    name: 'Family Advisor',   desc: 'A trusted relative — in it for you, not money', exposure: 0.95, draftLuck: 1.0,  greed: -5, valueMod: 0.95 },
+];
+export const agentById = (id?: string) => AGENTS.find((a) => a.id === id) ?? null;
+/** how each temperament tilts greed (nature) — layered on the agent's influence */
+const PERSONALITY_GREED: Record<string, number> = { maverick: 3, mercurial: 2, biggame: 1, fragile: 0, workhorse: -1, pro: -2, leader: -2 };
+
+/** Wage (in coins) to EXTEND a player's contract in the Manager game: better + greedier players cost
+ *  more; veterans get cheaper as they decline. This is the sink that makes greed matter. */
+export function contractCost(overall: number, age: number, greed: number): number {
+  const ageFactor = age <= 30 ? 1 : clamp(1 - (age - 30) * 0.06, 0.4, 1); // veterans are cheaper to keep
+  const greedFactor = 0.6 + 0.08 * greed;                                 // greed 10 → 1.4x, 20 → 2.2x, 1 → 0.68x
+  return Math.round(overall * overall * 1.2 * ageFactor * greedFactor);
+}
+
 /** Seeded coach choices for a track: outfield sees no GK-only coach, GK sees the GK coach + mental ones. */
 export function rollCoaches(rng: () => number, track: Track, n = COACH_OFFER): Coach[] {
   const pool = COACHES.filter((c) => (track === 'goalkeeper' ? true : !c.specialty.includes('keeping')));
@@ -137,7 +160,7 @@ const HUGE_MOMENTS = ['CUP FINAL', 'Title Decider', 'Promotion Play-Off Final'];
 
 /** A seeded scenario. Tag demand comes from the current AGE BAND (age-appropriate); stakes are gated
  *  by the band (no cup finals at grassroots). `demandBias` (a gaffer's demand) leans the demand. */
-export function makeScenario(rng: () => number, i: number, track: Track = 'outfield', demandBias?: Tag | null, band?: AgeBand): Scenario {
+export function makeScenario(rng: () => number, i: number, track: Track = 'outfield', demandBias?: Tag | null, band?: AgeBand, exposure = 1): Scenario {
   const kind = KIND_POOL[Math.floor(rng() * KIND_POOL.length)];
   const bias = track === 'goalkeeper' ? GK_BIAS : (band ? band.demand : OUTFIELD_TAGS);
   const n = 1 + Math.floor(rng() * Math.min(3, bias.length));
@@ -150,7 +173,7 @@ export function makeScenario(rng: () => number, i: number, track: Track = 'outfi
   for (const t of Object.keys(demand) as Tag[]) demand[t] = (demand[t] ?? 0) / sum;
   const maxStakes = band ? band.maxStakes : 3;
   const r = rng();
-  const stakes: 1 | 2 | 3 = maxStakes >= 3 && r < 0.05 ? 3 : maxStakes >= 2 && r < 0.22 ? 2 : 1;
+  const stakes: 1 | 2 | 3 = maxStakes >= 3 && r < 0.05 * exposure ? 3 : maxStakes >= 2 && r < 0.22 * exposure ? 2 : 1; // an agent's exposure = more big stages
   const moment = stakes === 3 ? HUGE_MOMENTS[Math.floor(rng() * HUGE_MOMENTS.length)]
     : stakes === 2 ? BIG_MOMENTS[Math.floor(rng() * BIG_MOMENTS.length)] : null;
   const label = moment ? `★ ${moment}` : `${kind}: ${Object.keys(demand).join(' / ')}`;
@@ -224,27 +247,30 @@ export class Career {
   private extraPicks = 0;                   // a breakthrough chapter → +draft picks at the next draft
 
   readonly personality: Personality;
-  constructor(readonly seed: number, readonly track: Track = 'outfield') {
+  readonly agent: Agent | null;            // the sports agent signed at career start — shapes exposure, opportunities, greed, value
+  constructor(readonly seed: number, readonly track: Track = 'outfield', agentId?: string) {
     this.rng = mulberry32(seed);
     this.personality = rollPersonality(seed);   // innate temperament shapes how big moments / slumps play out
+    this.agent = agentById(agentId);
     this.deck = [...(track === 'goalkeeper' ? GK_STARTER : STARTER_DECK)];
     this.pool = track === 'goalkeeper' ? GK_DRAFT_POOL : DRAFT_POOL;
     this.drawPile = this.shuffle([...this.deck]);
     this.refillHand();
-    this.scenario = makeScenario(this.rng, this.turn, track, null, bandAt(0).band);
+    this.scenario = makeScenario(this.rng, this.turn, track, null, bandAt(0).band, this.exposure);
   }
+  private get exposure() { return this.agent?.exposure ?? 1; }
 
   /** The player's current age + life chapter (Grassroots … Establishing). */
   get age() { return bandAt(Math.min(this.turn, TOTAL_TURNS - 1)).age; }
   get chapter() { return bandAt(Math.min(this.turn, TOTAL_TURNS - 1)).band.name; }
 
   /** Persist/trade this in-progress prospect: everything needed to resume it later or elsewhere. */
-  snapshot(): CareerSnapshot { return { seed: this.seed, track: this.track, actions: [...this.actions] }; }
+  snapshot(): CareerSnapshot { return { seed: this.seed, track: this.track, agentId: this.agent?.id, actions: [...this.actions] }; }
 
   /** Reconstruct a career from a snapshot by replaying its actions (deterministic → exact state). A
    *  buyer resumes development from precisely where the seller left off. */
   static resume(snap: CareerSnapshot): Career {
-    const c = new Career(snap.seed, snap.track);
+    const c = new Career(snap.seed, snap.track, snap.agentId);
     for (const a of snap.actions) { if (a.type === 'draft') c.draft(a.cardId); else if (a.type === 'coach') c.appointCoach(a.cardId); else c.play(a.cardId); }
     return c;
   }
@@ -305,7 +331,7 @@ export class Career {
     if (this.turn >= TOTAL_TURNS) { this.finished = true; return choice; }
     // at an age-chapter boundary: a narrative EVENT fires, then you APPOINT a coach, then a DRAFT
     if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.pendingCoaches = rollCoaches(this.rng, this.track); }
-    else { this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band); }
+    else { this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure); }
     return choice;
   }
 
@@ -330,7 +356,8 @@ export class Career {
 
   /** Offer OFFER_SIZE cards from the pool, weighted so epics are rare. */
   private openDraft() {
-    const weight = (c: Card) => (c.rarity === 'epic' ? 1 : c.rarity === 'rare' ? 3 : 6);
+    const luck = this.agent?.draftLuck ?? 1;   // a good agent gets you better opportunities (rarer cards on offer)
+    const weight = (c: Card) => Math.max(1, Math.round(c.rarity === 'epic' ? luck * luck : c.rarity === 'rare' ? 3 * luck : 6));
     const bag = this.pool.flatMap((c) => Array(weight(c)).fill(c) as Card[]);
     const options: Card[] = [];
     const picked = new Set<string>();
@@ -345,7 +372,7 @@ export class Career {
 
   private startNextChapter() {
     this.refillHand();
-    this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band);
+    this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure);
   }
 
   private refillHand() { while (this.hand.length < HAND_SIZE) this.hand.push(this.drawOne()); }
@@ -373,7 +400,7 @@ export interface CareerPlayerAttrs {
   durability: number;
 }
 export type Role = 'GK' | 'DF' | 'MF' | 'FW';
-export interface CareerPlayer { attrs: CareerPlayerAttrs; role: Role; overall: number; genes: Genes; traits: string[]; personality: string }
+export interface CareerPlayer { attrs: CareerPlayerAttrs; role: Role; overall: number; genes: Genes; traits: string[]; personality: string; greed: number }
 
 // ── PERSONALITY: an innate temperament (nature), seeded at genesis like genes. It shapes HOW a player
 // handles their career — steadiness vs volatility, and whether they rise or wilt under pressure — and
@@ -433,7 +460,7 @@ export function inheritGenes(parent: Genes, seed: number, keepPct = 0.6): Genes 
 }
 
 // each stat's source tags (≥1 each); keeping has none (GK is a future dedicated path)
-const STAT_SOURCES: Record<keyof CareerPlayerAttrs, Tag[]> = {
+const STAT_SOURCES: Record<Exclude<keyof CareerPlayerAttrs, 'durability'>, Tag[]> = { // durability is computed from physique below, not from tags
   pace: ['stamina', 'flair'], strength: ['aggression', 'stamina'], stamina: ['stamina'],
   passing: ['creativity', 'teamwork'], shooting: ['flair', 'composure'], tackling: ['aggression'],
   positioning: ['teamwork', 'composure'], workrate: ['stamina', 'teamwork'], keeping: ['keeping'], setPiece: ['composure', 'creativity'],
@@ -455,7 +482,7 @@ export function deriveStats(log: Choice[], seed: number, genes: Genes = rollGene
   const magnitude = 0.5 + 0.7 * avgSuccess; // ~0.5x (played poorly) .. ~1.2x (played superbly)
 
   const out = {} as CareerPlayerAttrs;
-  for (const stat of Object.keys(STAT_SOURCES) as (keyof CareerPlayerAttrs)[]) {
+  for (const stat of Object.keys(STAT_SOURCES) as (keyof typeof STAT_SOURCES)[]) {
     const src = STAT_SOURCES[stat];
     const shape = src.length ? src.reduce((s, t) => s + norm[t], 0) / src.length : 0;
     const peaked = Math.pow(shape, PEAK);
@@ -534,18 +561,24 @@ export function eligibleTraits(attrs: CareerPlayerAttrs, log: Choice[]): Trait[]
 /** Finish a career log into a complete Player (attrs + role + overall + traits). Genes default to a
  *  fresh genesis roll; pass inherited genes (lineage). `pickTraits` chooses among the eligible traits
  *  (the client lets a human pick; defaults to the first MAX_TRAITS for the sim). */
-export function graduate(log: Choice[], seed: number, genes: Genes = rollGenes(seed), pickTraits?: (eligible: Trait[]) => Trait[], seriousInjuries = 0): CareerPlayer {
+export function graduate(log: Choice[], seed: number, genes: Genes = rollGenes(seed), pickTraits?: (eligible: Trait[]) => Trait[], seriousInjuries = 0, agentGreed = 0): CareerPlayer {
   const attrs = deriveStats(log, seed, genes);
   const personality = rollPersonality(seed);                          // same temperament the career developed under
   if (personality.signature) attrs[personality.signature] = clamp(attrs[personality.signature] + 1, 1, 20);
   // serious injuries in development leave a lasting fragility (injury-proneness the Manager game reads)
   attrs.durability = clamp(attrs.durability - Math.round(seriousInjuries * 2.5), 1, 20);
+  // GREED (financial temperament): what it'll cost a manager to keep this player. Set by the AGENT he
+  // signed with + his nature. High → mercenary (expensive extensions); low → a loyal one-club man.
+  const gRng = mulberry32(seed ^ 0x9e3779b9);
+  const greed = clamp(Math.round(9 + agentGreed + (PERSONALITY_GREED[personality.id] ?? 0) + (gRng() - 0.5) * 4), 1, 20);
   const eligible = eligibleTraits(attrs, log);
   const chosen = (pickTraits ? pickTraits(eligible) : eligible.slice(0, MAX_TRAITS)).slice(0, MAX_TRAITS);
   for (const t of chosen) t.apply?.(attrs); // trait bonuses apply before role/overall
   const flaws = attrs.durability <= 6 ? ['injury_prone'] : []; // a flaw flag, separate from earned perks
+  if (greed >= 15) flaws.push('mercenary');                    // financially greedy — costs a fortune to extend
+  else if (greed <= 5) flaws.push('loyal');                    // a bargain to keep — a one-club man
   const role = deriveRole(attrs);
-  return { attrs, role, overall: careerOverall(attrs, role), genes, traits: [...chosen.map((t) => t.id), ...flaws], personality: personality.id };
+  return { attrs, role, overall: careerOverall(attrs, role), genes, traits: [...chosen.map((t) => t.id), ...flaws], personality: personality.id, greed };
 }
 
 // ── AGE CURVE (playing phase, age 25 → 40) ──
@@ -577,14 +610,14 @@ export function prospectValuation(c: Career, genes: Genes): ProspectValue {
   // a rough prime-overall ceiling: physical bounded by genes, technique/mental by a well-played nominal ~17
   const ceiling = clamp(Math.round(0.45 * geneCeil + 0.55 * 17), current, 20);
   const potential = Math.round(current + remaining * (ceiling - current)); // projected prime if developed well
-  const stars = clamp(Math.round((potential + remaining * 3) / 4.2), 1, 5); // young high-upside prospects sparkle
+  const stars = clamp(Math.round((potential + remaining * 3) / 4.2 * (c.agent?.valueMod ?? 1)), 1, 5); // a good agent markets the prospect (higher perceived value)
   return { age: c.age, chapter: c.chapter, role, currentOverall: current, potential, physicalCeiling: Math.round(geneCeil), stars };
 }
 
 // ── balance helper: auto-play a career under a "style" policy (picks the best hand card) ──
 export interface Style { name: string; pref: Partial<Record<Tag, number>>; skill: number }
-export function simCareer(seed: number, style: Style, genes: Genes = rollGenes(seed), track: Track = 'outfield'): CareerPlayer {
-  const career = new Career(seed, track);
+export function simCareer(seed: number, style: Style, genes: Genes = rollGenes(seed), track: Track = 'outfield', agentId?: string): CareerPlayer {
+  const career = new Career(seed, track, agentId);
   const rng = mulberry32(seed ^ 0x1234567);
   const prefScore = (c: Card) => c.tags.reduce((s, t) => s + (style.pref[t] ?? 0), 0);
   while (!career.finished) {
@@ -611,5 +644,5 @@ export function simCareer(seed: number, style: Style, genes: Genes = rollGenes(s
     }
     career.play(best.id);
   }
-  return graduate(career.log, seed, genes, undefined, career.seriousInjuries);
+  return graduate(career.log, seed, genes, undefined, career.seriousInjuries, career.agent?.greed ?? 0);
 }

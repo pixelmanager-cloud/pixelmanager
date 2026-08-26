@@ -1,6 +1,6 @@
 // Career-sim harness. Validates: (1) different styles → distinct, specialised players + roles;
 // (2) skill → magnitude; (3) the turn-by-turn engine is deterministic. Run: `npx tsx career_sim.ts`.
-import { Career, simCareer, graduate, ageCurve, careerOverall, prospectValuation, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, STARTER_DECK, cardPower, type Style, type CareerPlayerAttrs, type Role, type Genes } from './src/career.js';
+import { Career, simCareer, graduate, ageCurve, careerOverall, prospectValuation, contractCost, AGENTS, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, STARTER_DECK, cardPower, type Style, type CareerPlayerAttrs, type Role, type Genes } from './src/career.js';
 
 const STYLES: Style[] = [
   { name: 'Poacher',   pref: { composure: 1, flair: 0.8 },        skill: 0.85 },
@@ -172,6 +172,29 @@ console.log('\n=== personality — same big moments, different temperament ===')
   const dist: Record<string, number> = {};
   for (let i = 0; i < 6000; i++) { const p = new Career(seedFrom('pd', i)).personality.id; dist[p] = (dist[p] ?? 0) + 1; }
   console.log('  personality spread:', Object.fromEntries(Object.entries(dist).map(([k, v]) => [k, `${Math.round(v / 6000 * 100)}%`])));
+}
+
+// sports agents: the agent you sign shapes exposure (big stages), opportunities, greed → contract cost
+console.log('\n=== sports agents — the agent you sign shapes a whole career ===');
+{
+  const style: Style = { name: 'Talent', pref: { creativity: 1, flair: 0.8, composure: 0.5 }, skill: 0.85 };
+  const bigMoments = (seed: number, agentId?: string) => {
+    const c = new Career(seed, 'outfield', agentId);
+    while (!c.finished) { const st = c.current(); st.phase === 'coach' ? c.appointCoach(st.coaches[0].id) : st.phase === 'draft' ? c.draft(st.options[0].id) : c.play(st.hand[0].id); }
+    return c.log.filter((ch) => ch.stakes >= 2).length;
+  };
+  // average big-stage moments each agent's exposure produces (over many careers)
+  const avgBig = (agentId?: string) => { let s = 0; const N = 200; for (let i = 0; i < N; i++) s += bigMoments(seedFrom('agent', i), agentId); return (s / N).toFixed(1); };
+  console.log(`  big-stage moments/career — none: ${avgBig(undefined)}  loyal: ${avgBig('loyal')}  ambitious: ${avgBig('ambitious')}  super-agent: ${avgBig('super')}  (exposure buys the big stage)`);
+  console.log('  same talent, different representation → greed + what it costs a manager to keep him at his peak (age 26):');
+  for (const ag of AGENTS) {
+    const p = simCareer(seedFrom('rep'), style, undefined, 'outfield', ag.id);
+    const flag = p.traits.find((t) => t === 'mercenary' || t === 'loyal') ?? '—';
+    console.log(`    ${ag.name.padEnd(16)} greed ${String(p.greed).padStart(2)} ${flag.padEnd(9)} · extend @26 ${String(contractCost(p.overall, 26, p.greed)).padStart(4)} coins`);
+  }
+  // contract cost bends with age: a mercenary star costs a fortune at his peak, a bargain past 33
+  const ovr = 16, greedy = 18, cheap = 4;
+  console.log(`  contract cost by age (ovr ${ovr}) — greedy(18): 26→${contractCost(ovr, 26, greedy)} 30→${contractCost(ovr, 30, greedy)} 35→${contractCost(ovr, 35, greedy)}  |  loyal(4): 26→${contractCost(ovr, 26, cheap)} 35→${contractCost(ovr, 35, cheap)}`);
 }
 
 // prospect market: snapshot a half-developed player, resume it elsewhere, value it

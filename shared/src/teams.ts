@@ -112,7 +112,7 @@ export function generateTrialist(id: string, quality: number, seed: number, maxS
   const role = roles[Math.floor(rng() * roles.length)];
   const name = `${FIRST[Math.floor(rng() * FIRST.length)]} ${LAST[Math.floor(rng() * LAST.length)]}`;
   const attrs = rollAttrs(rng, role, quality);
-  (Object.keys(attrs) as Array<keyof PlayerAttrs>).forEach((k) => { attrs[k] = Math.min(maxStat, attrs[k]); });
+  (Object.keys(attrs) as Array<keyof PlayerAttrs>).forEach((k) => { const v = attrs[k]; if (v !== undefined) attrs[k] = Math.min(maxStat, v); });
   return { id, name, role, attrs, anchor: { x: 0, y: 0 } };
 }
 

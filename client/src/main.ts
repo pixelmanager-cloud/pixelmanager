@@ -111,7 +111,7 @@ function statsTableHTML(players: Player[], highlight?: Set<string>, sort?: Squad
     if (key === 'pos') return ROLE_ORDER[p.role];
     if (key === 'name') return p.name.toLowerCase();
     if (key === 'ovr') return overall(p);
-    return p.attrs[key as keyof Player['attrs']];
+    return p.attrs[key as keyof Player['attrs']] ?? 0;
   };
   let sorted: Player[];
   if (sort) {
@@ -132,7 +132,7 @@ function statsTableHTML(players: Player[], highlight?: Set<string>, sort?: Squad
     const on = !!highlight?.has(p.id);
     const nft = isNftId(p.id);
     const tier = nft ? nftTier(overall(p)) : null;
-    const cells = cols.map(([, k]) => `<td class="stat" style="background:${statColor(p.attrs[k])}">${p.attrs[k]}</td>`).join('');
+    const cells = cols.map(([, k]) => `<td class="stat" style="background:${statColor(p.attrs[k] ?? 0)}">${p.attrs[k] ?? 0}</td>`).join('');
     const mark = on ? '<td class="inxi-mark">●</td>' : '<td></td>';
     const nameCell = tier
       ? `<td class="name nft-name tier-${tier.key}" data-card="${p.id}" title="Owned NFT · ${tier.name} — click to view card">${tier.icon} ${p.name}</td>`
@@ -144,7 +144,7 @@ function statsTableHTML(players: Player[], highlight?: Set<string>, sort?: Squad
 
 function squadInsight(team: Team): string {
   const byRole = (r: Player['role']) => team.players.filter((p) => p.role === r);
-  const avg = (ps: Player[], k: keyof Player['attrs']) => ps.length ? Math.round(ps.reduce((a, p) => a + p.attrs[k], 0) / ps.length) : 0;
+  const avg = (ps: Player[], k: keyof Player['attrs']) => ps.length ? Math.round(ps.reduce((a, p) => a + (p.attrs[k] ?? 0), 0) / ps.length) : 0;
   const fw = byRole('FW'), df = byRole('DF');
   const best = team.players.reduce((a, b) => (overall(b) > overall(a) ? b : a));
   const tips = [`★ Key player: <b>${best.name}</b> (${best.role}, OVR ${overall(best)})`];
@@ -368,7 +368,7 @@ class Game {
       ['tackling', 'TAC'], ['strength', 'STR'], ['workrate', 'WRK'], ['keeping', 'KEE'],
       ['setPiece', 'SET'], ['stamina', 'STA'],
     ];
-    const stats = order.map(([k, l]) => `<div class="pc-stat"><span>${l}</span><b style="color:${statColor(p.attrs[k])}">${p.attrs[k]}</b></div>`).join('');
+    const stats = order.map(([k, l]) => `<div class="pc-stat"><span>${l}</span><b style="color:${statColor(p.attrs[k] ?? 0)}">${p.attrs[k] ?? 0}</b></div>`).join('');
     // FX escalate with tier: sheen from Silver, rotating glow ring + sparkles from Gold up.
     const sparkCount = { bronze: 0, silver: 3, gold: 6, diamond: 10, legend: 16 }[tier.key] ?? 0;
     const sparks = Array.from({ length: sparkCount }, () => {
