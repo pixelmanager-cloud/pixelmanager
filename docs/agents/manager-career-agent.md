@@ -103,7 +103,9 @@ Keep refining the queue as you go — add ideas you discover, re-rank, drop bad 
 6. **More individual awards & records.** Extend the awards/leaderboards (`matchstats.ts`, awards routes):
    more season awards, all-time records, a club hall of fame, milestone badges for owned NFTs.
 7. **Manager-screen visual polish.** Improve the hub, squad editor, match viewer, standings and scouting
-   screens — clearer layout, better pixel-art match rendering, nicer tables/cards. No regressions on
+   screens — clearer layout, nicer tables/cards. NOTE: the live 2D/Phaser match engine is being REMOVED
+   (matches are text-commentary — see `docs/direction.md`); do NOT invest in the 2D pixel match renderer,
+   camera, or sprite sim. Put match effort into the TEXT commentary instead. No regressions on
    mobile widths. Keep it consistent with the existing visual language.
 8. **Deeper scouting.** More scouting depth/tiers, opponent analysis, prospect scouting flavour — kept fair
    and within the existing scout-NFT/tier framework.
