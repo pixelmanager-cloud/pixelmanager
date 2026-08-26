@@ -180,7 +180,7 @@ class Game {
     this.wireStaticButtons();
     this.wireWallet();
     if (hasToken()) {
-      try { this.setMe(await api.me()); await this.showHub(); return; }
+      try { this.setMe(await api.me()); this.showSelect(); return; }
       catch { clearToken(); }
     }
     this.showScreen('login');
@@ -210,10 +210,21 @@ class Game {
     return healthy.length >= 11 ? { ...this.club, players: healthy } : this.club;
   }
 
-  private showScreen(s: 'login' | 'hub' | 'lineup' | 'match' | 'standings' | 'scouting' | 'market' | 'club' | 'academy') {
-    for (const id of ['login', 'hub', 'lineup', 'matchwrap', 'standings', 'scouting', 'market', 'club', 'academy']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
+  private showScreen(s: 'login' | 'select' | 'hub' | 'lineup' | 'match' | 'standings' | 'scouting' | 'market' | 'club' | 'academy') {
+    for (const id of ['login', 'select', 'hub', 'lineup', 'matchwrap', 'standings', 'scouting', 'market', 'club', 'academy']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
     $('logout').classList.toggle('hidden', s === 'login');
+    $('app-title').classList.toggle('clickable', s !== 'login'); // title is a "home → modes" once you're in
     if (s !== 'scouting' && this.missionTimer) { clearInterval(this.missionTimer); this.missionTimer = null; } // stop the mission countdown when leaving
+  }
+
+  /** Mode-select landing: two big panels — enter the Career game or the Manager game. */
+  private showSelect() {
+    this.showScreen('select');
+    $('select-hello').textContent = this.account?.handle ? `Welcome, ${this.account.handle}` : 'Welcome';
+    // light stats on each card
+    $('manager-stat').textContent = this.account ? `Rating ${this.account.rating}${this.account.coins != null ? ` · 💰 ${this.account.coins}` : ''}` : '';
+    $('career-stat').textContent = '';
+    api.prospects().then((p) => { $('career-stat').textContent = `${p.prospects.length} prospect${p.prospects.length === 1 ? '' : 's'} in development · ${p.supply}/${p.cap} minted`; }).catch(() => {});
   }
 
   private wireStaticButtons() {
@@ -253,8 +264,12 @@ class Game {
     $('view-scouting').addEventListener('click', () => this.showScouting());
     $('scouting-back').addEventListener('click', () => this.showHub());
     $('view-market').addEventListener('click', () => this.showMarket());
-    $('view-academy').addEventListener('click', () => this.showAcademy());
-    $('academy-back').addEventListener('click', () => this.showHub());
+    // mode select ⇄ the two games
+    $('enter-career').addEventListener('click', () => this.showAcademy());
+    $('enter-manager').addEventListener('click', () => this.showHub());
+    $('view-modes').addEventListener('click', () => this.showSelect());
+    $('app-title').addEventListener('click', () => { if (hasToken()) this.showSelect(); });
+    $('academy-back').addEventListener('click', () => this.showSelect()); // Academy is a top-level mode now
     $('market-back').addEventListener('click', () => this.showHub());
     $('view-club').addEventListener('click', () => this.showClub());
     $('club-back').addEventListener('click', () => this.showHub());
@@ -302,7 +317,7 @@ class Game {
       const r = await api.register(handle, password);
       setToken(r.token);
       this.setMe({ account: r.account, club: r.club, standingOrders: r.standingOrders });
-      await this.showHub();
+      this.showSelect();
     } catch (e: any) {
       $('login-error').textContent = e?.status === 409 ? 'Handle already taken — log in instead, or pick another.'
         : e?.status === 400 ? 'Handle must be 2–20 chars and password 4–64.'
@@ -318,7 +333,7 @@ class Game {
       const r = await api.login(handle, password);
       setToken(r.token);
       this.setMe({ account: r.account, club: r.club, standingOrders: r.standingOrders });
-      await this.showHub();
+      this.showSelect();
     } catch (e: any) {
       $('login-error').textContent = e?.status === 401 ? 'Wrong handle or password.'
         : e?.status === 404 ? 'That account has no club — try creating one.'
@@ -679,7 +694,7 @@ class Game {
         const r = await api.walletVerify(account.address, signature);
         setToken(r.token);
         this.setMe({ account: r.account, club: r.club, standingOrders: r.standingOrders });
-        await this.showHub();
+        this.showSelect();
       }
     } catch (e: any) {
       const msg = e?.body?.error ?? e?.message ?? 'Wallet sign-in failed.';

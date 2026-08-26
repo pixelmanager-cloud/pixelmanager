@@ -34,6 +34,26 @@
       #topbar { display: flex; gap: 16px; align-items: center; font-size: 24px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: var(--app-w); }
       #topbar .title { font-family: var(--display); font-size: 24px; letter-spacing: 1px; color: var(--good);
         text-shadow: 2px 2px 0 var(--pink), 4px 4px 0 rgba(0,0,0,0.6); }
+      #topbar .title.clickable { cursor: pointer; }
+      #topbar .title.clickable:hover { filter: brightness(1.12); }
+      /* ── MODE SELECT ── */
+      #select-head { font-family: var(--display); font-size: 16px; color: var(--cyan); margin-bottom: 8px; }
+      #select-tagline { font-family: var(--body); font-size: 18px; color: var(--pink); margin-bottom: 22px; }
+      #mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+      @media (max-width: 720px) { #mode-grid { grid-template-columns: 1fr; } }
+      .mode-card { display: flex; flex-direction: column; align-items: flex-start; text-align: left; gap: 10px;
+        padding: 26px 24px; border-radius: 14px; cursor: pointer; color: var(--text); text-transform: none; letter-spacing: 0;
+        background: var(--panel-2); border: 2px solid var(--line); transition: transform .12s ease, border-color .12s ease, box-shadow .12s ease; min-height: 260px; }
+      .mode-card:hover { transform: translateY(-4px); }
+      .mode-card.mode-career:hover { border-color: var(--good); box-shadow: 0 10px 30px rgba(106,208,106,0.18); }
+      .mode-card.mode-manager:hover { border-color: var(--cyan); box-shadow: 0 10px 30px rgba(90,190,255,0.18); }
+      .mode-card .mode-icon { font-size: 52px; line-height: 1; }
+      .mode-card .mode-title { font-family: var(--display); font-size: 24px; letter-spacing: 1px; }
+      .mode-card.mode-career .mode-title { color: var(--good); }
+      .mode-card.mode-manager .mode-title { color: var(--cyan); }
+      .mode-card .mode-desc { font-family: var(--body); font-size: 17px; line-height: 1.5; color: #cdd3e6; }
+      .mode-card .mode-stat { font-family: var(--body); font-size: 15px; color: var(--warn); }
+      .mode-card .mode-go { margin-top: auto; font-family: var(--display); font-size: 13px; letter-spacing: 0.5px; color: #fff; padding-top: 8px; }
       #topbar #record { font-family: var(--body); font-size: 18px; color: var(--warn); }
       #topbar #timer { font-family: var(--body); font-size: 18px; color: var(--pink); }
       #topbar .spacer { margin-left: auto; }
@@ -809,7 +829,7 @@
   <body>
     <div id="app">
       <div id="topbar">
-        <span class="title">PIXEL MANAGER</span>
+        <span class="title" id="app-title" title="Home — choose a mode">PIXEL MANAGER</span>
         <span class="spacer"></span>
         <button id="logout" class="hidden">Log out</button>
       </div>
@@ -841,6 +861,28 @@
         </div>
       </div>
 
+      <!-- MODE SELECT -->
+      <div id="select" class="panel hidden">
+        <div id="select-head"><span id="select-hello"></span></div>
+        <div id="select-tagline">Choose how you want to play — two games, one persistent world of players.</div>
+        <div id="mode-grid">
+          <button class="mode-card mode-career" id="enter-career">
+            <div class="mode-icon">⚽</div>
+            <div class="mode-title">CAREER</div>
+            <div class="mode-desc">Take a 10-year-old prospect and live his whole story — a turn-by-turn card game from the park pitch to the pros. Shape his identity, appoint coaches, make the big calls. Graduate him at 25.</div>
+            <div class="mode-stat" id="career-stat"></div>
+            <div class="mode-go">Enter the Academy →</div>
+          </button>
+          <button class="mode-card mode-manager" id="enter-manager">
+            <div class="mode-icon">🧢</div>
+            <div class="mode-title">MANAGER</div>
+            <div class="mode-desc">Run a club. Pick your XI, out-think the gaffer with tactics and duties, sign stars, build facilities, and chase the league title and the cup — season after season.</div>
+            <div class="mode-stat" id="manager-stat"></div>
+            <div class="mode-go">Enter the dugout →</div>
+          </button>
+        </div>
+      </div>
+
       <!-- HUB -->
       <div id="hub" class="panel hidden">
         <div id="hub-head"><span id="me-name"></span><span id="me-rating"></span><span id="me-prestige" class="hidden" title="Your manager legacy — earned from titles, wins, and how high you climb"></span><span id="me-coins" title="Transfer-market coins — earn them by playing"></span><span id="me-wallet" class="hidden" title="Linked wallet"></span><span id="me-token" class="hidden" title="On-chain token balance (Base Sepolia)"></span>
@@ -849,7 +891,7 @@
             <button id="view-club">🏛️ Club</button>
             <button id="view-scouting">🔎 Scouting</button>
             <button id="view-market">💰 Transfer Market</button>
-            <button id="view-academy">🎓 Academy</button>
+            <button id="view-modes">⇄ Modes</button>
             <button id="link-wallet" class="hidden">🔗 Link Wallet</button>
             <button id="faucet-btn" class="hidden">💠 Get test tokens</button>
             <button id="mint-player" class="hidden">★ Mint Player</button>
