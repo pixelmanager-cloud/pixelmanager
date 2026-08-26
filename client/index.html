@@ -380,10 +380,10 @@
       table.league td.pts { font-family: var(--body); font-size: 14px; color: var(--good); }
       table.league tr.me td { color: var(--good); }
       table.league tr.me td.club { font-weight: bold; }
-      table.league tr.promo td { background: rgba(57,255,158,0.16); }
-      table.league tr.releg td { background: rgba(255,77,94,0.16); }
-      table.league tr.promo td.pos { border-left: 4px solid var(--good); box-shadow: inset 3px 0 0 rgba(57,255,158,0.35); }
-      table.league tr.releg td.pos { border-left: 4px solid var(--home); box-shadow: inset 3px 0 0 rgba(255,77,94,0.35); }
+      table.league tr.promo td { background: rgba(57,255,158,0.30); }
+      table.league tr.releg td { background: rgba(255,77,94,0.30); }
+      table.league tr.promo td.pos { border-left: 6px solid var(--good); box-shadow: inset 4px 0 0 var(--good); font-weight: bold; }
+      table.league tr.releg td.pos { border-left: 6px solid var(--home); box-shadow: inset 4px 0 0 var(--home); font-weight: bold; }
       /* scouting / trial academy */
       #scouting-head { display: flex; align-items: center; gap: 14px; margin-bottom: 6px; }
       #scouting-head h3 { margin: 0; } #scouting-back { margin-left: auto; }
@@ -505,9 +505,8 @@
       .trial .tr-band.band-squad { color: var(--df); border-color: var(--df); }
       .trial .tr-band.band-quality { color: var(--good); border-color: var(--good); }
       .trial .tr-band.band-gem { color: var(--warn); border-color: var(--warn); background: rgba(255,206,58,0.12); }
-      .trial .tr-role { font-family: var(--body); font-size: 12px; width: 30px; text-align: center; flex: none; }
-      .trial .tr-role.role-GK { color: var(--gk); } .trial .tr-role.role-DF { color: var(--df); }
-      .trial .tr-role.role-MF { color: var(--mf); } .trial .tr-role.role-FW { color: var(--fw); }
+      .trial .tr-role { font-family: var(--body); font-size: 12px; width: 34px; text-align: center; flex: none; padding: 3px 0; border-radius: 4px; color: #0a0a16; font-weight: bold; }
+      /* role-colour background comes from the global .role-GK/DF/MF/FW rules — same chip as the lineup editor */
       .trial .tr-name { flex: 1; color: #fff; }
       .trial .tr-ovr { font-family: var(--display); font-size: 13px; color: var(--good); width: 30px; text-align: right; flex: none; }
       .trial .tr-done { font-family: var(--body); font-size: 12px; color: var(--good); }
