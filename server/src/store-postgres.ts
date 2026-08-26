@@ -103,6 +103,7 @@ export function makePostgresStore(connectionString: string): Store {
         ALTER TABLE tokens ADD COLUMN IF NOT EXISTS ach_goals INTEGER NOT NULL DEFAULT 0;
         ALTER TABLE tokens ADD COLUMN IF NOT EXISTS ach_assists INTEGER NOT NULL DEFAULT 0;
         ALTER TABLE tokens ADD COLUMN IF NOT EXISTS ach_potm INTEGER NOT NULL DEFAULT 0;
+        ALTER TABLE tokens ADD COLUMN IF NOT EXISTS kit_json TEXT;
         CREATE TABLE IF NOT EXISTS player_stats (
           season_id TEXT NOT NULL, account_id TEXT NOT NULL, player_id TEXT NOT NULL, player_name TEXT NOT NULL,
           goals INTEGER NOT NULL DEFAULT 0, assists INTEGER NOT NULL DEFAULT 0, apps INTEGER NOT NULL DEFAULT 0, potm INTEGER NOT NULL DEFAULT 0,

@@ -93,6 +93,7 @@ export function makeSqliteStore(file: string): Store {
       for (const c of ['ach_goals', 'ach_assists', 'ach_potm']) {
         try { db.exec(`ALTER TABLE tokens ADD COLUMN ${c} INTEGER NOT NULL DEFAULT 0`); } catch {}
       }
+      try { db.exec('ALTER TABLE tokens ADD COLUMN kit_json TEXT'); } catch {}
       // per-season player stats (all players — base + NFT — for leaderboards + awards)
       db.exec(`CREATE TABLE IF NOT EXISTS player_stats (
         season_id TEXT NOT NULL, account_id TEXT NOT NULL, player_id TEXT NOT NULL, player_name TEXT NOT NULL,

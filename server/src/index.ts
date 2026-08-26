@@ -576,6 +576,23 @@ app.get('/career/:id', { preHandler: requireAuth }, async (req, reply) => {
   return { ok: true, state: careerState(t, loadCareer(t)) };
 });
 
+// KIT & IDENTITY: cosmetic customization (squad number, boot colour, celebration, nickname). Carries to
+// the pro. Purely presentational — never touches the deterministic career.
+app.put('/career/:id/kit', { preHandler: requireAuth }, async (req, reply) => {
+  const t = await db.getToken((req.params as any).id);
+  if (!t || t.owner_id !== req.account!.id) return reply.code(404).send({ error: 'no such token' });
+  const b = (req.body ?? {}) as any;
+  const clean = (s: any, max: number) => String(s ?? '').slice(0, max).replace(/[<>]/g, '');
+  const kit = {
+    number: Math.max(1, Math.min(99, Math.round(Number(b.number) || 10))),
+    boots: clean(b.boots, 16) || 'white',
+    celebration: clean(b.celebration, 24) || 'kneeslide',
+    nickname: clean(b.nickname, 20),
+  };
+  await db.updateToken(t.id, { kit_json: JSON.stringify(kit) });
+  return { ok: true, kit };
+});
+
 app.post('/career/:id/act', { preHandler: requireAuth }, async (req, reply) => {
   const ownerId = req.account!.id;
   const t = await db.getToken((req.params as any).id);

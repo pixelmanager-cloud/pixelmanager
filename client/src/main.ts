@@ -12,6 +12,20 @@ const W = PITCH.w * SCALE, H = PITCH.h * SCALE;
 // icons for the stage-aware life meters (keyed by underlying relationship) — used in focus effect labels
 const METER_ICON: Record<string, string> = { authority: '🧑‍🏫', peers: '👥', family: '🏠', school: '🎒', agent: '🤝', fans: '📣', sponsors: '📸', partner: '❤️' };
 
+// KIT customization options (cosmetic identity for the career player, carried to the pro)
+const BOOT_COLOURS = [
+  { id: 'white', name: 'Classic White', hex: '#f0f0f0' }, { id: 'black', name: 'Blackout', hex: '#1a1a1a' },
+  { id: 'red', name: 'Crimson', hex: '#e0483a' }, { id: 'blue', name: 'Electric Blue', hex: '#3a7ce0' },
+  { id: 'gold', name: 'Gold', hex: '#e6c14a' }, { id: 'pink', name: 'Hot Pink', hex: '#e653a0' },
+  { id: 'green', name: 'Neon Green', hex: '#5bd06a' }, { id: 'orange', name: 'Volt Orange', hex: '#ff8a3b' },
+];
+const CELEBRATIONS = [
+  { id: 'kneeslide', name: 'Knee Slide' }, { id: 'badge', name: 'Kiss the Badge' },
+  { id: 'calm', name: 'Ice Cold — Arms Out' }, { id: 'wheel', name: 'Slide & Wheel Away' },
+  { id: 'point-sky', name: 'Point to the Sky' }, { id: 'shush', name: 'Shush the Crowd' },
+  { id: 'heart', name: 'Heart Hands' }, { id: 'rock', name: 'Rock the Baby' },
+];
+
 // each life stage re-themes the whole career view — its own accent, backdrop mood + scene banner, so the
 // career FEELS like turning a page from a muddy park to a floodlit stadium (the "chapter-like UI").
 const CHAPTER_THEME: Record<string, { slug: string; scene: string; accent: string; bg: string; tagline: string }> = {
@@ -1100,9 +1114,20 @@ class Game {
         + `<div class="cg-focus">` + s.focus.map((f) => `<div class="cg-foc" data-act="focus" data-id="${f.id}"><div class="cg-cname">${f.icon} ${f.name}</div><div class="cg-cdescr">${f.desc}</div>`
           + `<div class="cg-effs">${f.energy ? `⚡${f.energy > 0 ? '+' : ''}${f.energy} ` : ''}${effLabel(f.effects)}</div></div>`).join('') + `</div>` + shop;
     }
-    $('academy-body').innerHTML = head + scene + this.lifeDashHtml(s) + prof + narr + recap + conseq + evt + body;
+    this.lastCareerState = s;
+    // TABS declutter the view: NOW (the current decision + your life dashboard), PLAYER (full identity +
+    // deck), KIT (cosmetic customization). The chapter header + scene banner stay above the tabs.
+    const TABS: Array<['now' | 'player' | 'kit', string]> = [['now', '⚽ Now'], ['player', '👤 Player'], ['kit', '🎽 Kit']];
+    const tabBar = `<div class="cg-tabs">` + TABS.map(([t, label]) => `<button class="cg-tab${this.careerTab === t ? ' on' : ''}" data-tab="${t}">${label}</button>`).join('') + `</div>`;
+    let content: string;
+    if (this.careerTab === 'player') content = prof + this.deckHtml(s);
+    else if (this.careerTab === 'kit') content = this.kitTabHtml(s);
+    else content = this.lifeDashHtml(s) + narr + recap + conseq + evt + body;
+    $('academy-body').innerHTML = head + scene + tabBar + content;
     $('cg-back').addEventListener('click', () => this.showAcademy());
+    $('academy-body').querySelectorAll('.cg-tab').forEach((el) => el.addEventListener('click', () => { this.careerTab = (el as HTMLElement).dataset.tab as any; this.renderCareer(s); }));
     $('academy-body').querySelectorAll('[data-act]').forEach((el) => el.addEventListener('click', () => this.doCareerAct(s.prospectId, { type: (el as HTMLElement).dataset.act!, cardId: (el as HTMLElement).dataset.id! })));
+    if (this.careerTab === 'kit') this.wireKitTab(s);
   }
 
   /** The developing player's live identity panel — shows him taking shape as you play. */
@@ -1129,7 +1154,53 @@ class Game {
   }
 
   private lastNarration = '';
+  private careerTab: 'now' | 'player' | 'kit' = 'now';
+  private lastCareerState?: import('./api').CareerState;
+
+  /** PLAYER tab: the full deck (identity cards) grouped visually. */
+  private deckHtml(s: import('./api').CareerState): string {
+    const deck = s.deck ?? [];
+    if (!deck.length) return '';
+    return `<div class="cg-prompt cg-shop-h">🃏 <b>Your deck</b> — the ${deck.length} cards that define how he plays:</div>`
+      + `<div class="cg-cards deck">` + deck.map((c) => this.cardHtml(c, 'view')).join('') + `</div>`;
+  }
+
+  /** KIT tab: cosmetic identity — squad number, boot colour, celebration, nickname (carries to the pro). */
+  private kitTabHtml(s: import('./api').CareerState): string {
+    const k = s.kit ?? { number: 10, boots: 'white', celebration: 'kneeslide', nickname: '' };
+    const boots = BOOT_COLOURS.map((b) => `<button type="button" class="cg-swatch${k.boots === b.id ? ' on' : ''}" data-boot="${b.id}" title="${b.name}" style="background:${b.hex}"></button>`).join('');
+    const cels = CELEBRATIONS.map((c) => `<option value="${c.id}"${k.celebration === c.id ? ' selected' : ''}>${c.name}</option>`).join('');
+    return `<div class="cg-kit">`
+      + `<div class="cg-prompt">🎽 <b>Kit & identity</b> — make him unmistakably yours. Purely cosmetic, and it carries into the pro.</div>`
+      + `<div class="cg-kit-row"><label>Squad number</label><input id="kit-number" type="number" min="1" max="99" value="${k.number}"></div>`
+      + `<div class="cg-kit-row"><label>Nickname <span class="cg-kit-hint">(what the crowd calls him)</span></label><input id="kit-nick" type="text" maxlength="20" placeholder="e.g. The Wolf" value="${(k.nickname ?? '').replace(/"/g, '&quot;')}"></div>`
+      + `<div class="cg-kit-row"><label>Boots</label><div class="cg-swatches">${boots}</div></div>`
+      + `<div class="cg-kit-row"><label>Signature celebration</label><select id="kit-cel">${cels}</select></div>`
+      + `<button id="kit-save" class="cg-kit-save">Save kit</button>`
+      + `</div>`;
+  }
+  private wireKitTab(s: import('./api').CareerState) {
+    let boot = (s.kit?.boots) ?? 'white';
+    $('academy-body').querySelectorAll('.cg-swatch').forEach((el) => el.addEventListener('click', () => {
+      boot = (el as HTMLElement).dataset.boot!;
+      $('academy-body').querySelectorAll('.cg-swatch').forEach((x) => x.classList.remove('on'));
+      el.classList.add('on');
+    }));
+    $('kit-save').addEventListener('click', async () => {
+      const kit = {
+        number: Math.max(1, Math.min(99, parseInt(($('kit-number') as HTMLInputElement).value) || 10)),
+        boots: boot,
+        celebration: ($('kit-cel') as HTMLSelectElement).value,
+        nickname: ($('kit-nick') as HTMLInputElement).value.trim(),
+      };
+      try { const r = await api.saveKit(s.prospectId, kit); if (this.lastCareerState) this.lastCareerState.kit = r.kit; s.kit = r.kit; toast('Kit saved ✓'); }
+      catch (e: any) { toast(e?.body?.error ?? 'Could not save kit'); }
+    });
+  }
+
   private async doCareerAct(prospectId: string, action: { type: string; cardId: string }) {
+    if (!['play', 'draft', 'coach', 'offer', 'focus', 'lifestyle'].includes(action.type)) return; // ignore view-only (deck) cards
+    if (action.type !== 'lifestyle') this.careerTab = 'now'; // after acting, return to the action view (but stay put while shopping)
     try {
       const r = await api.careerAct(prospectId, action);
       this.lastNarration = r.narration ?? '';

@@ -55,13 +55,14 @@ export interface Token {
   signed_season: number | null; length_seasons: number | null; staked_since: number | null;
   ach_seasons: number; ach_apps: number; ach_league: number; ach_cup: number; ach_promotions: number; ach_tier: number; morale: number;
   ach_goals: number; ach_assists: number; ach_potm: number;
+  kit_json: string | null;   // cosmetic kit & identity (number, boots, celebration, nickname) — carries to the pro
 }
 /** Columns updateToken() may set (whitelist — guards the dynamic UPDATE). */
 export const TOKEN_COLS = new Set<string>(['owner_id', 'generation', 'state', 'name', 'genes_json', 'pedigree', 'dev_bonus_json',
   'career_seed', 'agent_id', 'track', 'career_actions', 'attrs_json', 'role', 'traits_json', 'personality',
   'greed', 'marketability', 'earnings', 'prime_season', 'peak_overall', 'signed_season', 'length_seasons', 'staked_since',
   'ach_seasons', 'ach_apps', 'ach_league', 'ach_cup', 'ach_promotions', 'ach_tier', 'morale',
-  'ach_goals', 'ach_assists', 'ach_potm']);
+  'ach_goals', 'ach_assists', 'ach_potm', 'kit_json']);
 
 /** A player's per-season tallies (all players — base + NFT — for leaderboards). */
 export interface PlayerSeasonStat {
