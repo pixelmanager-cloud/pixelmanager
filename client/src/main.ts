@@ -20,6 +20,17 @@ const CELEBRATIONS = [
   { id: 'point-sky', name: 'Point to the Sky' }, { id: 'shush', name: 'Shush the Crowd' },
   { id: 'heart', name: 'Heart Hands' }, { id: 'rock', name: 'Rock the Baby' },
 ];
+const HAIRSTYLES = [
+  { id: 'buzz', name: 'Buzz Cut' }, { id: 'curls', name: 'Curls' },
+  { id: 'quiff', name: 'Quiff' }, { id: 'mohawk', name: 'Mohawk' },
+  { id: 'afro', name: 'Afro' }, { id: 'dreadlocks', name: 'Dreadlocks' },
+  { id: 'ponytail', name: 'Ponytail' }, { id: 'bald', name: 'Shaved Head' },
+];
+const ACCESSORIES = [
+  { id: 'none', name: 'None' }, { id: 'headband', name: 'Headband' },
+  { id: 'wristband', name: 'Wristbands' }, { id: 'snood', name: 'Snood' },
+  { id: 'undersleeve', name: 'Undersleeves' }, { id: 'strapping', name: 'Ankle Strapping' },
+];
 
 // each life stage re-themes the whole career view — its own accent, backdrop mood + scene banner, so the
 // career FEELS like turning a page from a muddy park to a floodlit stadium (the "chapter-like UI").
@@ -989,15 +1000,19 @@ class Game {
 
   /** KIT tab: cosmetic identity — squad number, boot colour, celebration, nickname (carries to the pro). */
   private kitTabHtml(s: import('./api').CareerState): string {
-    const k = s.kit ?? { number: 10, boots: 'white', celebration: 'kneeslide', nickname: '' };
+    const k = s.kit ?? { number: 10, boots: 'white', celebration: 'kneeslide', nickname: '', hairstyle: 'buzz', accessory: 'none' };
     const boots = BOOT_COLOURS.map((b) => `<button type="button" class="cg-swatch${k.boots === b.id ? ' on' : ''}" data-boot="${b.id}" title="${b.name}" style="background:${b.hex}"></button>`).join('');
     const cels = CELEBRATIONS.map((c) => `<option value="${c.id}"${k.celebration === c.id ? ' selected' : ''}>${c.name}</option>`).join('');
+    const hairs = HAIRSTYLES.map((h) => `<option value="${h.id}"${(k.hairstyle ?? 'buzz') === h.id ? ' selected' : ''}>${h.name}</option>`).join('');
+    const accs = ACCESSORIES.map((a) => `<option value="${a.id}"${(k.accessory ?? 'none') === a.id ? ' selected' : ''}>${a.name}</option>`).join('');
     return `<div class="cg-kit">`
       + `<div class="cg-prompt">🎽 <b>Kit & identity</b> — make him unmistakably yours. Purely cosmetic, and it carries into the pro.</div>`
       + `<div class="cg-kit-row"><label>Squad number</label><input id="kit-number" type="number" min="1" max="99" value="${k.number}"></div>`
       + `<div class="cg-kit-row"><label>Nickname <span class="cg-kit-hint">(what the crowd calls him)</span></label><input id="kit-nick" type="text" maxlength="20" placeholder="e.g. The Wolf" value="${(k.nickname ?? '').replace(/"/g, '&quot;')}"></div>`
       + `<div class="cg-kit-row"><label>Boots</label><div class="cg-swatches">${boots}</div></div>`
       + `<div class="cg-kit-row"><label>Signature celebration</label><select id="kit-cel">${cels}</select></div>`
+      + `<div class="cg-kit-row"><label>Hairstyle</label><select id="kit-hair">${hairs}</select></div>`
+      + `<div class="cg-kit-row"><label>Accessory</label><select id="kit-acc">${accs}</select></div>`
       + `<button id="kit-save" class="cg-kit-save">Save kit</button>`
       + `</div>`;
   }
@@ -1014,6 +1029,8 @@ class Game {
         boots: boot,
         celebration: ($('kit-cel') as HTMLSelectElement).value,
         nickname: ($('kit-nick') as HTMLInputElement).value.trim(),
+        hairstyle: ($('kit-hair') as HTMLSelectElement).value,
+        accessory: ($('kit-acc') as HTMLSelectElement).value,
       };
       try { const r = await api.saveKit(s.prospectId, kit); if (this.lastCareerState) this.lastCareerState.kit = r.kit; s.kit = r.kit; toast('Kit saved ✓'); }
       catch (e: any) { toast(e?.body?.error ?? 'Could not save kit'); }

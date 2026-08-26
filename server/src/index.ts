@@ -476,6 +476,8 @@ app.put('/career/:id/kit', { preHandler: requireAuth }, async (req, reply) => {
     boots: clean(b.boots, 16) || 'white',
     celebration: clean(b.celebration, 24) || 'kneeslide',
     nickname: clean(b.nickname, 20),
+    hairstyle: clean(b.hairstyle, 16) || 'buzz',
+    accessory: clean(b.accessory, 16) || 'none',
   };
   await db.updateToken(t.id, { kit_json: JSON.stringify(kit) });
   return { ok: true, kit };
