@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { randomUUID } from 'node:crypto';
-import { overall, type Lineup, type Tactics } from '@fm/shared';
+import { overall, managerPrestige, type Lineup, type Tactics } from '@fm/shared';
 import { db, type Account, type StandingOrders, type Listing } from './db.js';
 import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMATIONS } from './game.js';
 import { hashPassword, verifyPassword } from './auth.js';
@@ -369,6 +369,24 @@ app.get('/results', { preHandler: requireAuth }, async (req) => {
 
 // the caller's honours board (past-season finishes)
 app.get('/honours', { preHandler: requireAuth }, async (req) => ({ honours: await db.honoursFor(req.account!.id) }));
+
+// PRESTIGE: the manager's career legacy — level + title from titles won (tier-weighted), win record,
+// highest division reached, and seasons managed. Read-only aggregate over honours + match history.
+app.get('/prestige', { preHandler: requireAuth }, async (req) => {
+  const id = req.account!.id;
+  const [honours, matches, curTier] = await Promise.all([db.honoursFor(id, 9999), db.matchesFor(id, 9999), db.accountTier(id)]);
+  let wins = 0, draws = 0, losses = 0;
+  for (const m of matches) {
+    const my = m.home_id === id ? m.home_score : m.away_score;
+    const opp = m.home_id === id ? m.away_score : m.home_score;
+    if (my > opp) wins++; else if (my < opp) losses++; else draws++;
+  }
+  const tierIdxOf = (t: string) => Math.max(0, TIERS.indexOf(t as typeof TIERS[number]));
+  const honourLites = honours.map((h) => ({ tierIdx: tierIdxOf(h.tier), title: h.title, kind: (h.kind === 'cup' ? 'cup' : 'league') as 'cup' | 'league' }));
+  const highestTierIdx = Math.max(tierIdxOf(curTier), ...honourLites.map((h) => h.tierIdx), 0);
+  const seasons = new Set(honours.map((h) => h.season_number)).size;
+  return { prestige: managerPrestige({ wins, draws, losses, honours: honourLites, highestTierIdx, seasons }), record: { wins, draws, losses, seasons } };
+});
 
 // SCOUT an opponent: their expected formation (standing-orders shape) + roster with
 // OVERALL ratings only — deliberately limited (no individual stats; premium later).
