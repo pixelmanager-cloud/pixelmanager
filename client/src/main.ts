@@ -2105,6 +2105,16 @@ class Game {
     $('ft-home-corners').textContent = `${corners[0]}`; $('ft-away-corners').textContent = `${corners[1]}`;
     $('ft-home-fouls').textContent = `${fouls[0]}`; $('ft-away-fouls').textContent = `${fouls[1]}`;
     this.renderMatchReport(s.events, s.score);
+    // single-player post-match REACTION — keyed to the result vs what was expected (your strength vs theirs)
+    if (this.spFixture) {
+      const my = s.score[this.mySide], opp = s.score[1 - this.mySide], gd = my - opp;
+      const edge = this.squadStrength() - this.spFixture.oppStrength; // + = you were favourites
+      let reaction: string;
+      if (gd > 0) reaction = edge < -2 ? '🎉 A famous win against the odds — the fans are in raptures!' : gd >= 3 ? '👏 A commanding win — statement made.' : 'A hard-earned three points.';
+      else if (gd < 0) reaction = edge > 2 ? '😤 A dismal result — a game the club should have won.' : 'A tough one to take, but the season rolls on.';
+      else reaction = edge > 2 ? 'Two points dropped — the fans expected more.' : 'A share of the spoils.';
+      $('ft-report').insertAdjacentHTML('beforeend', `<div class="ft-reaction">${reaction}</div>`);
+    }
     $('ft-gate').classList.toggle('hidden', this.lastGate <= 0);
     if (this.lastGate > 0) $('ft-gate-amt').textContent = String(this.lastGate);
 
