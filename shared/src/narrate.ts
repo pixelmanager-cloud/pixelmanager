@@ -93,6 +93,10 @@ const PERSONALITY: Record<string, string> = {
   pro: 'Consummate, as ever.',
   latebloom: 'Better every single week, this lad.',
   showman: 'He plays with a grin and one eye on the crowd.',
+  stoic: 'Nothing about his face ever gives it away.',
+  hothead: 'It could go off at any second, and everyone knows it.',
+  perfectionist: 'Even that wasn’t quite good enough, by his own standard.',
+  joker: 'Somewhere in the huddle, he’s already found something to laugh about.',
 };
 // personality-flavoured verbs woven in occasionally so the temperament is felt, not just stated
 const PERSONALITY_ADV: Record<string, string[]> = {
@@ -105,6 +109,10 @@ const PERSONALITY_ADV: Record<string, string[]> = {
   pro: ['methodically,', 'as drilled,', 'ice in his veins,'],
   latebloom: ['growing into it,', 'sharper than last month,', 'still learning,'],
   showman: ['playing to the gallery,', 'with a flourish,', 'grinning,'],
+  stoic: ['face like stone,', 'without a flicker,', 'utterly unmoved,'],
+  hothead: ['jaw clenched,', 'simmering,', 'right on the edge,'],
+  perfectionist: ['already dissecting it in his head,', 'never quite satisfied,', 'chasing the perfect version,'],
+  joker: ['with a wink,', 'cracking a smile,', 'enjoying himself far too much,'],
 };
 // season-event prefixes (weave the chapter's story into the beat)
 const EVENT_PREFIX: Record<string, string> = {
@@ -434,6 +442,10 @@ export function graduationEpilogue(ctx: EpilogueCtx): string {
     pro: 'Professional to his boots, from the very first session.',
     latebloom: 'He was never the best kid in the room — until, quietly, he was.',
     showman: 'He always played with a grin, and the crowd always grinned back.',
+    stoic: 'Nobody ever quite worked out what was going on behind those eyes. Maybe that was the point.',
+    hothead: 'The temper cost him as much as it won him — and it won him plenty.',
+    perfectionist: 'He was never once satisfied. It’s exactly why he got this far.',
+    joker: 'He never took himself too seriously. Everyone else took him plenty seriously enough.',
   };
   const pers = ctx.personalityId && persLine[ctx.personalityId] ? ' ' + persLine[ctx.personalityId] : '';
   const start = pickFrom(rng, ['It started on a park pitch with jumpers for goalposts.', 'Fifteen years ago he was the smallest kid on a muddy rec.', 'From a scatter of parents on a touchline to this.']);

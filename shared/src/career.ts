@@ -412,6 +412,12 @@ export const COACHES: Coach[] = [
   { id: 'setpiece',   name: 'Set-Piece Coach',    kind: 'coach',  desc: 'Free-kicks, corners, every rehearsed dead ball',           specialty: ['composure', 'creativity', 'flair'], bonus: 0.1 },
   { id: 'psych',      name: 'Sports Psychologist', kind: 'coach', desc: 'Gets inside your head — and settles it',                   specialty: ['composure'], bonus: 0.15 },
   { id: 'scout-m',    name: 'Scout Mentor',       kind: 'mentor', desc: 'An old scout teaches you what the eye in the stand looks for', specialty: ['flair', 'creativity'], bonus: 0.12 },
+  { id: 'youth-guru', name: 'Youth Development Guru', kind: 'mentor', desc: 'Coaxes raw talent out at its own pace, never forcing it', specialty: ['creativity', 'stamina'], bonus: 0.11 },
+  { id: 'analytics',  name: 'Data & Analytics Coach', kind: 'coach', desc: 'Numbers over instinct — drills the patterns the data reveals', specialty: ['composure', 'teamwork'], bonus: 0.11 },
+  { id: 'man-mgmt',   name: 'Man-Management Specialist', kind: 'mentor', desc: 'Knows exactly which button to push in which player', specialty: ['leadership', 'teamwork'], bonus: 0.13 },
+  { id: 'street',     name: 'Street-Football Mentor', kind: 'mentor', desc: 'Learned the game on concrete, not carpet — and it shows', specialty: ['flair', 'creativity'], bonus: 0.13 },
+  { id: 'discipline', name: 'Old-School Disciplinarian', kind: 'coach', desc: 'Fear and respect in equal measure — no excuses, ever', specialty: ['aggression', 'leadership'], bonus: 0.12 },
+  { id: 'nutrition',  name: 'Nutrition & Recovery Coach', kind: 'coach', desc: 'What goes in matters as much as what comes out', specialty: ['stamina'], bonus: 0.13 },
 ];
 export const COACH_OFFER = 3; // choices shown at each appointment
 
@@ -428,10 +434,14 @@ export const AGENTS: Agent[] = [
   { id: 'fixer',     name: 'The Local Fixer',   desc: 'Knows every scout in the county — low fuss, right doors', exposure: 0.85, draftLuck: 1.45, greed: -4, valueMod: 0.9 },
   { id: 'showman',   name: 'The Showman',      desc: 'Markets you relentlessly — fame over fees',     exposure: 1.5,  draftLuck: 1.1,  greed: 2,  valueMod: 1.2 },
   { id: 'grafter',   name: 'The Grafter’s Agent', desc: 'Old-school; picks clubs where you’ll play', exposure: 1.05, draftLuck: 1.15, greed: -2, valueMod: 1.0 },
+  { id: 'maverick-a', name: 'The Maverick Agent', desc: 'Unconventional, controversial, occasionally brilliant', exposure: 1.2,  draftLuck: 1.3,  greed: 4,  valueMod: 1.1 },
+  { id: 'boutique',   name: 'Boutique Agency',    desc: 'A small, hand-picked roster — total personal attention', exposure: 0.9,  draftLuck: 1.2,  greed: -1, valueMod: 1.05 },
+  { id: 'legal',      name: 'The Legal Eagle',    desc: 'Reads every clause twice — protects you, slows everything down', exposure: 0.8, draftLuck: 0.95, greed: -3, valueMod: 0.95 },
+  { id: 'superstar-a', name: 'Global Superstar Agency', desc: 'The biggest names, the biggest cut, the biggest stage', exposure: 1.7, draftLuck: 1.3, greed: 7, valueMod: 1.3 },
 ];
 export const agentById = (id?: string) => AGENTS.find((a) => a.id === id) ?? null;
 /** how each temperament tilts greed (nature) — layered on the agent's influence */
-const PERSONALITY_GREED: Record<string, number> = { maverick: 3, mercurial: 2, biggame: 1, fragile: 0, workhorse: -1, pro: -2, leader: -2, latebloom: -1, showman: 3 };
+const PERSONALITY_GREED: Record<string, number> = { maverick: 3, mercurial: 2, biggame: 1, fragile: 0, workhorse: -1, pro: -2, leader: -2, latebloom: -1, showman: 3, stoic: -1, hothead: 2, perfectionist: -1, joker: 1 };
 
 // Manager-side contract economics (contractCost / contractLength / releaseClause / Contract …) live in
 // contracts.ts so the Manager game gets them via the barrel without the Layer-1 sim. Re-exported here
@@ -1191,8 +1201,12 @@ export const PERSONALITIES: Personality[] = [
   { id: 'maverick',  name: 'Maverick',           desc: 'Brilliant, infuriating, his own man',    variance: 1.5,  bigGame: 0.08, resilience: 1.1, signature: 'creativity' },
   { id: 'latebloom', name: 'Late Bloomer',       desc: 'Slow to start, but never stops improving', variance: 1.0, bigGame: 0.03, resilience: 0.9, signature: 'stamina' },
   { id: 'showman',   name: 'Showman',            desc: 'Plays for the crowd — thrilling, maddening', variance: 1.35, bigGame: 0.10, resilience: 1.0, signature: 'creativity' },
+  { id: 'stoic',     name: 'The Stoic',          desc: 'Utterly unreadable, utterly unbothered',    variance: 0.5,  bigGame: 0.05, resilience: 0.25 },
+  { id: 'hothead',   name: 'Hothead',            desc: 'Wears his heart, and his temper, on his sleeve', variance: 1.3, bigGame: -0.05, resilience: 1.4, signature: 'aggression' },
+  { id: 'perfectionist', name: 'Perfectionist',  desc: 'Never satisfied, always sharpening the edges', variance: 0.8, bigGame: 0.04, resilience: 0.5, signature: 'positioning' },
+  { id: 'joker',     name: 'Dressing-Room Joker', desc: 'Lightens the mood, occasionally at his own expense', variance: 1.15, bigGame: 0.03, resilience: 0.7, signature: 'teamwork' },
 ];
-const PERSONALITY_WEIGHTS = [5, 2, 2, 2, 3, 2, 1, 2, 1]; // Model Pro most common; Maverick/Showman rarest
+const PERSONALITY_WEIGHTS = [5, 2, 2, 2, 3, 2, 1, 2, 1, 2, 2, 2, 2]; // Model Pro most common; Maverick/Showman rarest
 export function rollPersonality(seed: number): Personality {
   const rng = mulberry32(seed ^ 0x9e37b1);
   const bag = PERSONALITIES.flatMap((p, i) => Array(PERSONALITY_WEIGHTS[i]).fill(p) as Personality[]);
@@ -1373,6 +1387,12 @@ export const TRAITS: Trait[] = [
   { id: 'engine',    name: 'Box-to-Box Engine',    desc: 'Covers every blade of grass',      eligible: (a) => a.stamina >= 14 && a.teamwork >= 14, apply: (a) => { a.stamina = clamp(a.stamina + 1, 1, 20); } },
   { id: 'rock',      name: 'Defensive Rock',       desc: 'Immovable at the back',            eligible: (a) => a.tackling >= 14 && a.strength >= 14, apply: (a) => { a.strength = clamp(a.strength + 1, 1, 20); } },
   { id: 'spark',     name: 'The Spark',            desc: 'Makes something from nothing',     eligible: (a) => a.creativity >= 14 && a.pace >= 14 },
+  { id: 'aerial',    name: 'Aerial Threat',        desc: 'Wins everything in the air',       eligible: (a) => a.strength >= 14 && a.pace <= 10, apply: (a) => { a.strength = clamp(a.strength + 1, 1, 20); } },
+  { id: 'general2',  name: 'Engine-Room General',  desc: 'Drags the team through matches by will alone', eligible: (a) => a.stamina >= 14 && a.leadership >= 13 },
+  { id: 'showstopper', name: 'Showstopper',        desc: 'The player fans pay to watch',     eligible: (a) => a.creativity >= 15 && a.setPiece >= 13 },
+  { id: 'ironwill',  name: 'Iron Will',            desc: 'Never seems to get injured',       eligible: (a) => a.durability >= 16 },
+  { id: 'quarterback', name: 'The Quarterback',    desc: 'Picks locks from forty yards with a single pass', eligible: (a) => a.passing >= 16, apply: (a) => { a.passing = clamp(a.passing + 1, 1, 20); } },
+  { id: 'utility',   name: 'Utility Man',          desc: 'Can play almost anywhere and do a job', eligible: (a) => a.teamwork >= 13 && a.positioning >= 13 && a.stamina >= 13 },
 ];
 
 /** Which traits a finished career qualifies for (before the player locks any in). */
