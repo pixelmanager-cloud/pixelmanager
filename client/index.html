@@ -127,6 +127,13 @@
       /* Generic link — plain <a> tags had no rule at all and would render in browser-default blue. */
       a { color: var(--cyan); text-decoration: none; }
       a:hover { text-decoration: underline; }
+      /* Generic table base — every table currently carries its own class (table.squad, table.league,
+         .lt-table…) which keeps winning by specificity, so this only fills in defaults they don't
+         already set: zebra striping and a row hover, so any table — present or future — reads a
+         little more premium/scannable without each screen having to opt in separately. */
+      table { border-collapse: collapse; width: 100%; }
+      table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.025); }
+      table tbody tr:hover td { background: rgba(255,255,255,0.05); }
       /* Global keyboard-focus ring — visible only for keyboard nav (not mouse clicks), on every
          interactive element app-wide, so tabbing through the game is always trackable. */
       button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible,
