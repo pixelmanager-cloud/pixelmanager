@@ -58,7 +58,7 @@ const PERSONALITY: Record<StaffRole, string[]> = {
     'Former international stopper; still saves shots better than most first-teamers can strike them.',
     'Softly spoken but relentless — keepers either love the process or struggle with it.',
     'Big on video analysis — every save and every mistake gets replayed and dissected.',
-    'Builds real trust with young keepers; several academy prospects credit him directly.',
+    'Builds real trust with young keepers — several academy prospects point to those sessions directly.',
   ],
 };
 
@@ -95,32 +95,32 @@ export function staffRoster(seed: number): StaffRoster {
 export type StaffMoment = 'bigWin' | 'bigLoss' | 'signing' | 'preSeason' | 'milestone';
 const QUIP: Record<StaffRole, Record<StaffMoment, string[]>> = {
   'Assistant Manager': {
-    bigWin: [`"That's the level we should be at every week," he tells the group.`, `"Don't get carried away — but yes, that felt good," he admits with a rare smile.`],
-    bigLoss: [`"We regroup, we work, we go again," he says, already onto the next session in his head.`, `"That one's on all of us. No excuses in this dressing room," he tells the players.`],
-    signing: [`"Good bit of business, that," he nods approvingly at the new arrival.`, `"Fits exactly what we needed. Now it's about settling him in quickly."`],
-    preSeason: [`"Foundations first. The results follow if the work's right," he tells the squad.`, `"New season, same standards. Nothing gets handed to anyone here."`],
-    milestone: [`"Proud doesn't begin to cover it," he says, watching from the touchline.`, `"Moments like this are what make the long days worth it."`],
+    bigWin: [`"That's the level we should be at every week," they tell the group.`, `"Don't get carried away — but yes, that felt good," comes the rare admission, with a smile.`],
+    bigLoss: [`"We regroup, we work, we go again," they say, already onto the next session mentally.`, `"That one's on all of us. No excuses in this dressing room," is the message to the players.`],
+    signing: [`"Good bit of business, that," comes the approving nod at the new arrival.`, `"Fits exactly what we needed. Now it's about settling the new arrival in quickly."`],
+    preSeason: [`"Foundations first. The results follow if the work's right," they tell the squad.`, `"New season, same standards. Nothing gets handed to anyone here."`],
+    milestone: [`"Proud doesn't begin to cover it," they say, watching from the touchline.`, `"Moments like this are what make the long days worth it."`],
   },
   'Head Scout': {
-    bigWin: [`"Told you the squad had more in it," he says with a knowing grin.`, `"Performances like that make my job of finding upgrades a lot harder — happily."`],
-    bigLoss: [`"Nothing in that result changes what I saw watching this group all summer," he says.`, `"One bad night. The list of targets doesn't change because of it."`],
-    signing: [`"Been watching him for eighteen months. Delighted it's finally over the line," he says.`, `"Best piece of business we'll do this window, mark my words."`],
-    preSeason: [`"The recruitment plan is set. Now it's about patience," he tells the board.`, `"A few names still on the list, but the spine of the squad is right."`],
-    milestone: [`"Scouted him as a kid. Never gets old, seeing days like this," he says quietly.`, `"That's exactly the trajectory the reports always said was possible."`],
+    bigWin: [`"Told you the squad had more in it," comes the knowing grin.`, `"Performances like that make finding upgrades a lot harder — happily."`],
+    bigLoss: [`"Nothing in that result changes what I saw watching this group all summer," they say.`, `"One bad night. The list of targets doesn't change because of it."`],
+    signing: [`"Been watching this one for eighteen months. Delighted it's finally over the line," they say.`, `"Best piece of business we'll do this window, mark my words."`],
+    preSeason: [`"The recruitment plan is set. Now it's about patience," they tell the board.`, `"A few names still on the list, but the spine of the squad is right."`],
+    milestone: [`"Scouted this one as a kid. Never gets old, seeing days like this," they say quietly.`, `"That's exactly the trajectory the reports always said was possible."`],
   },
   'Fitness Coach': {
-    bigWin: [`"Legs were fresh, and it showed in the last twenty minutes," he says, pleased.`, `"That's the conditioning work paying off in real time."`],
-    bigLoss: [`"Physically we were there. Whatever went wrong wasn't fitness," he says firmly.`, `"We regroup in the gym tomorrow, same as any other week."`],
-    signing: [`"Already sent over the individual programme. He'll be up to speed inside a fortnight."`, `"Good athlete. Looking forward to working with him."`],
-    preSeason: [`"Best pre-season numbers I've had at this club," he reports to the gaffer.`, `"The squad's in good shape. The building blocks are there."`],
-    milestone: [`"Years of graft behind a moment like that," he says, arms folded, watching on.`, `"That's what all the early mornings are for."`],
+    bigWin: [`"Legs were fresh, and it showed in the last twenty minutes," they say, pleased.`, `"That's the conditioning work paying off in real time."`],
+    bigLoss: [`"Physically we were there. Whatever went wrong wasn't fitness," comes the firm response.`, `"We regroup in the gym tomorrow, same as any other week."`],
+    signing: [`"Already sent over the individual programme — up to speed inside a fortnight."`, `"Good athlete. Looking forward to working with the new arrival."`],
+    preSeason: [`"Best pre-season numbers I've had at this club," goes the report to the gaffer.`, `"The squad's in good shape. The building blocks are there."`],
+    milestone: [`"Years of graft behind a moment like that," they say, arms folded, watching on.`, `"That's what all the early mornings are for."`],
   },
   'Goalkeeping Coach': {
-    bigWin: [`"Clean night between the sticks. Exactly the platform we build from," he says.`, `"Distribution was excellent all evening — that starts on the training pitch."`],
-    bigLoss: [`"We'll go through every one of those goals on Monday, no exceptions," he says.`, `"Concentration lapses. Fixable, and we'll fix them."`],
-    signing: [`"Good technique, good size, coachable — I like what I've seen already."`, `"He'll need work on his kicking, but the raw material is there."`],
+    bigWin: [`"Clean night between the sticks. Exactly the platform we build from," they say.`, `"Distribution was excellent all evening — that starts on the training pitch."`],
+    bigLoss: [`"We'll go through every one of those goals on Monday, no exceptions," they say.`, `"Concentration lapses. Fixable, and we'll fix them."`],
+    signing: [`"Good technique, good size, coachable — I like what I've seen already."`, `"The kicking needs work, but the raw material is there."`],
     preSeason: [`"New shot-stopping drills this summer. Keepers have bought straight into it."`, `"Solid group of keepers this year. Healthy competition for the jersey."`],
-    milestone: [`"Every keeper remembers their first one of those. He'll never forget this."`, `"That's a special moment for a goalkeeper. Thoroughly deserved."`],
+    milestone: [`"Every keeper remembers their first one of those. Not one this squad will forget."`, `"That's a special moment for a goalkeeper. Thoroughly deserved."`],
   },
 };
 
