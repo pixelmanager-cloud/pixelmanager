@@ -35,10 +35,17 @@ export function squadRole(bandIdx: number, overall: number) {
 }
 
 // The pool of fictional clubs the league is drawn from (same flavour as the matchday opponents).
+// Widened from the original 16 (audit finding: with only 9 opponents drawn per save, 16 names meant
+// two saves sharing a seed range could see heavy overlap in their league). 32 names roughly doubles
+// the per-save variety without touching seededOpponents/seededLeague's selection logic at all.
 const LEAGUE_POOL = [
   'Riverside Rovers', 'Ashcombe Town', 'Kingsford United', 'Dockside FC', 'Hallby City',
   'Fenwick Rangers', 'Stonebridge', 'Portland Vale', 'Oakfield United', 'Brightmoor',
   'Cranleigh Town', 'Whitlow Wanderers', 'Eastgate FC', 'Redhaven', 'Millbrook County', 'Marlow Athletic',
+  'Aldergate United', 'Bramwell Town', 'Corvedale FC', 'Dunmore Rangers', 'Elmsworth Athletic',
+  'Foxleigh United', 'Gladewick Town', 'Harrowgate FC', 'Ironmoor Rovers', 'Juniper Vale',
+  'Kettlebrook', 'Larkspur United', 'Moorside Wanderers', 'Northgate Athletic', 'Ottersby Town',
+  'Pemberton FC', 'Quarrymoor United',
 ];
 
 function hash32(...nums: number[]): number {

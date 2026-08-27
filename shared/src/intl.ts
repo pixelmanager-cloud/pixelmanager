@@ -35,10 +35,15 @@ function knockout(aStr: number, bStr: number, h: number, neutral = false): { gh:
 
 // ── 1. Continental club cup ──────────────────────────────────────────────────────────────────────
 // Stronger, more glamorous fictional clubs than the domestic league — the continent's elite.
+// Widened from the original 16 (audit finding: a continental run can span many seasons in one save,
+// and the QF/SF/Final opponent is redrawn each season, so a small pool repeats faces fast). 30 names.
 const CONT_POOL = [
   'Atlético Verdano', 'Real Solaris', 'FC Nordwind', 'Olympique Marenne', 'Internazio Milano',
   'Sporting Listerra', 'Rot-Weiss Halden', 'Dynamo Volgar', 'AC Fiorina', 'Galata Boru',
   'Ajaccio United', 'Benfica do Sul', 'Zenit Nevsky', 'Bayern Hafen', 'Porto Marinho', 'Sevilla Real',
+  'Vitesse Aurel', 'Crvena Dunja', 'Slavia Bornholm', 'PSK Ostrand', 'Union Kastel',
+  'Girondins Vasco', 'Steaua Marn', 'Legia Torvath', 'Anderlecht Bruun', 'Feyenoord Sael',
+  'Panathinos Delta', 'Celtic Boru', 'Rangers Kilmoor', 'Standard Reyval',
 ];
 export const CONT_ROUNDS = ['Quarter-final', 'Semi-final', 'Final'] as const;
 export type ContRound = 0 | 1 | 2;
