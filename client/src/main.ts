@@ -644,7 +644,7 @@ class Game {
     ($('hub-club').querySelector('.legacy-ico') as HTMLElement).innerHTML = sprite('stadium');
     ($('hub-legacy').querySelector('.legacy-ico') as HTMLElement).innerHTML = sprite('trophy');
     $('me-name').textContent = this.club.name;
-    $('me-rating').textContent = `RATING ${this.account.rating}`;
+    $('me-rating').textContent = ''; // PvP ELO — hidden: the game is single-player (multiplayer removed, see direction.md)
     if (this.account.coins != null) {
       $('me-coins').textContent = `💰 ${this.account.coins}`;
       $('hub-club-sub').textContent = `💰 ${this.account.coins.toLocaleString()} to invest — facilities, youth & scouting. Levels are permanent.`;
@@ -655,10 +655,12 @@ class Game {
     void this.refreshHubLegacy();
   }
 
-  // NOTE: the manager season/fixtures loop (api.fixtures/this.play) is intentionally NOT surfaced on the
-  // home. The game is one LINEAR life — you live the bloodline player's career; running the club is a
-  // later stage of that same timeline, not a parallel menu. Phase 2 fuses club matches into the player's
-  // own season. The manager screens (standings/club/market/scouting) remain in code, unlinked, until then.
+  // NOTE: the game is one LINEAR single-player life — you live the bloodline player's career; running the
+  // club is a later stage of that same timeline, not a parallel menu. Multiplayer/async-PvP has been REMOVED
+  // (with web3): the PvP-facing screens (standings/leaderboard, player transfer market, opponent scouting,
+  // matchmaking/fixtures) are intentionally UNLINKED — dead code kept only for reference, slated for deletion
+  // in the planned full-offline migration (server logic → @fm/shared + local saves). See docs/direction.md.
+  // Do not re-surface them. Single-player content (own youth academy, facilities, season, trophy room) stays.
 
   /** The "Your Player" block on the home hub — the bloodline you're living, inline with a develop/continue CTA. */
   private async refreshHubPlayer() {

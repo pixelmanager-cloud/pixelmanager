@@ -27,6 +27,23 @@ The web3 layer was never where the fun lived. All of this is untouched:
 - The **closed coin economy** (already web3-free by design).
 - The deterministic seeded match engine, and the whole content roadmap.
 
+## Multiplayer / async-PvP REMOVED (2026-08-27) — single-player offline
+With web3 gone, **multiplayer is dropped too.** Football Royalty is a **single-player, offline-first** dynasty
+life-sim: you live one bloodline across generations. There is no player-vs-player, no shared league, no ELO.
+
+**Decided approach — phase it (reversible, lowest-risk first):**
+- ✅ **Now:** the PvP-facing screens (standings/leaderboard, player-to-player transfer market, opponent
+  scouting, matchmaking/fixtures vs other accounts) are already UNLINKED from the hub (from the linear-life
+  fusion) — they're dead code, kept only for reference, and must not be re-surfaced. The PvP ELO rating is
+  hidden on the hub. The game presents as pure single-player.
+- ⏳ **Planned (separate deliberate effort):** the **full-offline migration** — move the server backbone
+  (token/career lifecycle in `server/src/tokens.ts` + `careerState`, the coin economy, persistence) into
+  `@fm/shared` + the client, replace the SQLite/Postgres DB with local save files, and delete the Fastify
+  server + the vestigial PvP modules (matchmaking, pods, ratings, cross-player standings/market/scouting).
+- Consequence: server-side economy "exploits" (e.g. the `/sp/season-reward` claim-guard gap) are **moot** —
+  a solo player's own offline coin balance harms no one; not worth server-auth work that the offline migration
+  will delete anyway. (Safe correctness clamps were still applied; the claim-guard was intentionally skipped.)
+
 ## What GOES (subtraction)
 - thirdweb, viem, wallet sign-in, the LifecycleNFT contract + Foundry/Anvil, RPC/on-chain sync, all
   `LIFECYCLE_*`/RPC/SIGNER env, `scripts/dev-web3.sh`.
