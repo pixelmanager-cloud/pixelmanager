@@ -27,6 +27,29 @@ Trophy Room**. The manager screens (season fixtures, standings, club, transfer m
 in the code but are **unlinked from the home** until the linear progression unlocks them in Phase 2. There is
 no "play a league match" task sitting next to a 10-year-old in the academy.
 
+## THE HANDOFF MODEL (DECIDED 2026-08-27) — both modes are played, in sequence
+Not one collapsed track. Both the **player card-career** and the **manager mode** are played, and the game
+**switches between them at a milestone**:
+
+1. **Player mode** — you play the bloodline player's card-career (youth → breaking in), as today.
+2. **THE SWITCH** — once he becomes a **regular in the first team** (squad status reaches Regular starter),
+   the game **switches to manager mode**: he graduates into your squad and you take the reins as manager.
+3. **Manager mode** — you run the club season with him as your star: XI, tactics, matches, the league table,
+   transfers, facilities. He plays out his prime under your management until he retires.
+4. **The loop** — his **heir** comes through the youth ranks → the game switches **back to player mode** for
+   the heir's card-career → and switches to manager again when *he* becomes a regular. One club, generations
+   deep, alternating player-mode and manager-mode.
+
+This supersedes the "one continuous flexible-length career" idea: the player career does NOT run to age ~35;
+it hands off to manager mode at the **regular** milestone. So there is no need to make the 112-turn career
+open-ended — instead the switch is the natural end of each generation's *player* phase.
+
+**The crux:** manager mode is built entirely around **pod-mates** (other real accounts, `ensurePod` /
+`computeFixtures` in `index.ts` + `seasons.ts`), so single-player has no opponents. Making manager mode
+playable requires a **single-player league**: fixtures vs the seeded fictional clubs (the `clubseason.ts`
+league), matches played via the existing match engine + the rest simulated, a real table and rollover. That
+league is the thing the handoff hands off *into*.
+
 ## The target — a fully fused timeline
 The club season is the clock. Your bloodline player is a member of the squad you manage. A **matchday** is
 one event on one timeline:
