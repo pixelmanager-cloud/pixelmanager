@@ -1,5 +1,59 @@
 # Football Royalty — UI / Visual Audit & Fix List
 
+## 2026-08-27 overnight visual-agent pass, round 3 — wiring the sprites into main.ts
+
+main.ts unblocked after reconcile (both feature agents merged, commit `8922d7e`). Wired the
+round-2 wiring-table proposals into real call sites, using design judgment per the coordinator's
+brief: only swap where the sprite genuinely improves on the emoji/text, and don't flatten
+meaningful variety (star ratings, the per-award varied emoji, the bronze→diamond tier ladder).
+Verified every change on my own scoped vite (`npx vite --config client/vite.config.ts --port 5199
+client` — the shared `:5173` still points at `main`), `npm run verify` green after each commit.
+
+### Done
+- **`coin`** → topbar/club/scout coin balance (`main.ts` `me-coins`/`club-coins`/`scout-coins`,
+  switched `.textContent` → `.innerHTML`, all three internally-computed numbers, safe). Verified in
+  the live hub, Club Facilities screen.
+- **`briefcase`** → the agent-selection list ("Ambitious Agent / Loyal Agent / Super-Agent…").
+  Verified live by scouting a fresh prospect and opening its career.
+- **`card` / `card-red`** (new red variant, see below) → yellow/red booking lines in the match
+  ticker (8 narrative strings). Verified with a mock `#ticker`-styled injection — icons read
+  correctly coloured, sized, and baseline-aligned; left every other commentary emoji untouched
+  (out of scope — that's the whole narrative-emoji language, not a "card" ask).
+- **`crown`** → (a) the legend-tier only, at the two big collectible-card reveal moments
+  (`pc-flash` "TURNED PRO" banner + the `pc-tier` badge) via a new `tierIconHtml(tier)` helper that
+  leaves bronze/silver/gold/diamond as their plain emoji everywhere — deliberately NOT touched: the
+  squad-table cell, bench list, `tagText`, the legends-grid, `tr-gen-badge` (all show multiple
+  different tiers side-by-side, so a partial swap there would look inconsistent and flatten the
+  ladder); (b) the Trophy Room's "No bloodlines yet" empty state (was `sprite('youth')`, now
+  `sprite('crown')` — a literal dynasty-founding moment). Verified both via mock/injected tier-legend
+  card and the real empty Trophy Room screen.
+- **`laurel`** → the "HALL OF LEGENDS" section header. **`banner`** → the retirement/succession
+  screen title (`retireStar()`, "★ hangs up his boots" → bloodline continues → heir) — the other two
+  `cg-graduation` screens (first-team handoff, academy turning-pro) were left alone, they're not
+  succession moments. Both needed a size bump — see `.ico-lg` below.
+- **`seal` + `contract`** → the contract-renewal block in the player card: `contract` replaces the
+  📜 emoji in "N seasons left"; `seal` prefixes the Re-sign/Extend button. **Redesigned both sprites
+  mid-round** after visual testing showed the originals didn't hold up at inline sizes: `contract`
+  was a wide horizontal band in a 16×16 canvas (illegible squeezed into an inline icon box —
+  redrawn as an upright document filling the frame vertically); `seal`'s two bottom ribbon-tail
+  lobes read as a heart at small size (redrawn with one central tapering drip instead). Left
+  `toast()` alone (e.g. "Re-signed · −Xc…") — it's `.textContent`-based and shared by every toast in
+  the app; switching it to `innerHTML` for one call site was a much bigger blast-radius change than
+  asked for.
+- **`.ico-lg` modifier** (new, `client/index.html`, alongside `.ico-inline`): busier multi-colour
+  sprites (laurel, banner, seal, contract) lose their detail at the default `1em` next to small body
+  text — this gives them a legible ~20px floor. The simple bold single-colour ones (coin, card,
+  crown, briefcase) read fine at plain `1em` in their actual contexts and didn't need it.
+- **`art(sprites): add red-card variant`** — `card-red`, identical shape to `card` with red fill, so
+  a sending-off never shows a yellow-card icon.
+
+### Explicitly NOT wired this round (still open, no action needed unless revisited)
+- `role-gk`/`df`/`mf`/`fw`, `flag`, `badge`, `whistle`, `kit`, `armband`, `calendar` — no call site
+  identified, or out of this round's scope.
+- `star`, `medal` — **not proposals anymore, vetoed by design**: `.hp-stars`/`.pr-stars` encode a
+  0–5 rating (text, not a single icon) and the honours-feed `.aw-icon` is deliberately varied
+  per-award; swapping either would flatten information the emoji/text currently carries.
+
 ## 2026-08-27 overnight visual-agent pass, round 2 — sprite expansion + base component polish
 
 Continuing the same session/lane (client/index.html theme + client/src/sprites.ts only). Verified
@@ -23,24 +77,22 @@ used in the squad table/lineup editor):
 - Fixed round-1 `training` (dumbbell) sprite: it was letterboxed with 3 empty rows top+bottom,
   reading as a tiny "H" at facility-card size — resized to fill the 16×16 frame like the other icons.
 
-**None of these are wired into `main.ts` call sites yet** — proposals below, with exact locations,
-for reconcile to apply quickly:
+**Wiring status as of round 3 (see the round-3 section above for the full detail on each):**
 
-| sprite | proposed call site | current state |
+| sprite | call site | status |
 |---|---|---|
-| `coin` | `main.ts:643` `$('me-coins').textContent = \`💰 ${...}\`` (topbar balance); `main.ts:1338` `$('club-coins')`; `main.ts:1859` `$('scout-coins')` | plain 💰 emoji text, 3 call sites |
-| `star` | `main.ts:666,687` `.hp-stars` (hub player row); `main.ts:1402` `.pr-stars` (academy prospect row) | plain `★` text character |
-| `medal` | `main.ts:1227` `<span class="aw-icon">${m.icon}</span>` (honours feed awards) | dynamic per-award emoji via `m.icon` |
-| `card` | ticker commentary `.cm-card.yellow`/`.cm-card.red` (`index.html` ~1131) | pure CSS color on text, no icon glyph at all |
-| `crown` | `main.ts:701` `$('hub-legacy-sub')` legend count (`⭐ ${l.legends.length} legend(s)`); or as an alternate/companion to the existing `sprite('trophy')` at `main.ts:639` for `#hub-legacy` specifically since that screen is "Dynasty & Trophy Room" — crown for the dynasty half, trophy for the cabinet half | trophy sprite already used for the whole hub-legacy row; legend count is a bare ⭐ emoji |
-| `laurel` | wherever a "legend" milestone/hall-of-fame moment renders (didn't find an exact single call site — search for "legend" in `main.ts` render paths) | none |
-| `banner` | succession/bloodline chapter-break moments (`cg-graduation`/retirement flow) | none, currently plain text headers |
-| `seal` | contract-signing moments — pairs naturally with the new `contract` sprite at the same call sites (`.pc-extend` flow, contract renewal toasts) | none |
-| `briefcase` | the agent-selection screen (Academy → "Sign an agent" — the "Ambitious Agent / Loyal Agent / Super-Agent…" list) | plain 🤝 emoji per row currently |
-| `contract` | same agent/contract screens as `seal` above, and the `pc-contract`/`pc-extend` block in the player card overlay | none |
-| `armband` | wherever captaincy is picked/shown (didn't locate an exact call site — search `captain` in `main.ts`) | none found |
-| `role-gk`/`df`/`mf`/`fw` | `.slot.role-GK` etc. in the lineup editor (`index.html` ~1078), `.mission .m-prospect .m-role` (~1039) — these already colour-code by role via CSS custom classes; the sprites could sit *next to* the existing text/colour coding, not replace it | role already colour-coded via CSS classes, no icon |
-| `flag`, `badge`, `whistle` | held in reserve — no call site identified this pass (competition markers / club-badge placeholders / referee flourish) | — |
+| `coin` | `main.ts` `me-coins`/`club-coins`/`scout-coins` (topbar/club/scout balances) | ✅ done (round 3) |
+| `briefcase` | agent-selection list ("Ambitious Agent / Loyal Agent…") | ✅ done (round 3) |
+| `card` / `card-red` | match-ticker yellow/red booking lines | ✅ done (round 3) — added the `card-red` variant too |
+| `crown` | legend-tier only at the `pc-flash`/`pc-tier` reveal moments; Trophy Room "no bloodlines" empty state | ✅ done (round 3) — NOT applied to the squad table/bench/legends-grid/`tr-gen-badge` (multi-tier lists, would flatten the ladder) |
+| `laurel` | "HALL OF LEGENDS" section header | ✅ done (round 3) |
+| `banner` | `retireStar()` succession screen title | ✅ done (round 3) — NOT the other two `cg-graduation` screens (not succession moments) |
+| `seal` + `contract` | contract-renewal block (player card) | ✅ done (round 3) — both sprites redesigned mid-round for inline legibility, see round-3 notes |
+| `star` | `.hp-stars`/`.pr-stars` (0–5 rating text) | ❌ vetoed — would flatten a rating into a single icon |
+| `medal` | honours-feed `.aw-icon` (`m.icon`, varied per award) | ❌ vetoed — per-award variety is deliberate |
+| `role-gk`/`df`/`mf`/`fw` | `.slot.role-GK` etc. (lineup editor), `.mission .m-prospect .m-role` — already colour-coded via CSS, no icon | still open — no urgency, colour-coding already does the job |
+| `armband` | captaincy pick/display | still open — no call site located |
+| `flag`, `badge`, `whistle`, `kit`, `calendar` | — | still open — no call site identified across 3 rounds; likely need a new UI surface (competition markers, club badges, a referee flourish, kit customizer header, a season/matchday marker) rather than an existing one |
 
 ### Base/shared component polish (C-series), global-only — no feature CSS touched
 - **`style(theme): generic input, link, and select hover/disabled base styles`** — real gap found:
