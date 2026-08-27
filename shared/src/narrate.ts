@@ -127,6 +127,7 @@ const EVENT_PREFIX: Record<string, string> = {
   'cup-run': 'Buzzing off a thrilling cup run, ',
   'transfer-links': 'Trying to tune out the transfer talk, ',
   'fan-favourite': 'Roared on by supporters who adore him, ',
+  'international-honour': 'Still pinching himself over the international honour, ',
 };
 
 // ── SCENARIO STORY: describe the SITUATION the player faces this turn (before he chooses) ──

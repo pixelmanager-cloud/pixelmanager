@@ -886,6 +886,30 @@ const EVENT_FLAVOR: Record<string, Partial<Record<'kid' | 'teen', (bias?: string
     kid:  () => ({ name: 'A Sore Ankle', desc: 'A knock from an awkward tackle in Sunday league — nothing serious, but it nags.' }),
     teen: () => ({ name: 'A Niggling Knock', desc: 'A knock picked up in training — the physio says it’s nothing, but you can feel it.' }),
   },
+  'serious-injury': {
+    kid:  () => ({ name: 'A Scary Fall', desc: 'A bad landing in a Sunday league game — nothing broken, but you’re out for weeks, and it shakes you more than the ankle does.' }),
+    teen: () => ({ name: 'A Long Lay-Off', desc: 'A bad injury in an academy match sends you for scans — months of rehab ahead, and the first time football’s ever felt like it could be taken away.' }),
+  },
+  breakthrough: {
+    kid:  () => ({ name: 'Best Player at School', desc: 'Everything clicks this year — you’re the best player in your year group, and the coaches start giving you extra one-on-one time.' }),
+    teen: () => ({ name: 'Breakout Year', desc: 'A breakout year in the academy — the staff carve out extra individual sessions just for you.' }),
+  },
+  'hot-streak': {
+    kid:  () => ({ name: 'On Fire', desc: 'Every game this term you’re the best player on the pitch — it just clicks, and you can’t explain why.' }),
+    teen: () => ({ name: 'Can’t Miss', desc: 'You can’t miss right now — every session, every match, it’s just coming off.' }),
+  },
+  slump: {
+    kid:  () => ({ name: 'A Rough Patch', desc: 'Games just aren’t going your way lately — the bounce of the ball, a bit of confidence, gone missing.' }),
+    teen: () => ({ name: 'Dip in Form', desc: 'You can feel it — the touch isn’t quite there, and it’s got into your head a bit.' }),
+  },
+  steady: {
+    kid:  () => ({ name: 'Just Getting On With It', desc: 'A quiet year — no fireworks, just steady improvement, week after week.' }),
+    teen: () => ({ name: 'Solid Progress', desc: 'Nothing flashy this year, but steady, unglamorous improvement — the kind that adds up.' }),
+  },
+  'international-honour': {
+    kid:  () => ({ name: 'District Selection', desc: 'A letter home: you’ve been picked for the district representative side — your name read out in front of the whole school.' }),
+    teen: () => ({ name: 'Youth International Honours', desc: 'Selected for the youth international set-up — a shirt with your country’s crest on it, and pride nobody in the family saw coming.' }),
+  },
 };
 /** Which flavor tier an age band's events should read as — kids/early-teens vs everyone from Youth Team on. */
 const flavorTier = (chapter: string): 'kid' | 'teen' | null =>
@@ -1281,6 +1305,12 @@ export class Career {
       else if (r < 0.80) { form = -0.05; this.seasonEvent = { id: 'transfer-links', name: 'Transfer Speculation', desc: 'His name is in the papers — a distraction he could do without.' }; }
       else if (r < 0.88) { form = -0.06; this.seasonEvent = { id: 'knock', name: 'Niggling Injury', desc: 'A knock to manage — not quite at your sharpest.' }; }
       else if (r < 0.94) { form = 0.06; this.seasonEvent = { id: 'fan-favourite', name: 'Fan Favourite', desc: 'The supporters have taken to him — he feeds off their energy.' }; }
+      // a rarer, distinct-feeling honour carved out of the old catch-all: national pride rather than
+      // local love (fan-favourite) or a breakout campaign (breakthrough). NOTE: named 'international-honour',
+      // NOT 'call-up' — that word is already taken by the unrelated "shock call-up" scenario mechanic
+      // (career.ts Scenario.callup / narrate.ts CALLUP_SETUP) which means being thrown into a first-team
+      // match at short notice. This is full senior/youth international selection — a different feeling.
+      else if (r < 0.97) { form = 0.05; this.seasonEvent = { id: 'international-honour', name: 'International Recognition', desc: 'Full international honours — a shirt with his country’s crest on it, pride nobody in the family saw coming.' }; }
       else { this.seasonEvent = { id: 'steady', name: 'Steady Progress', desc: 'A solid, unremarkable season of graft.' }; }
     }
     // reword for the stage it lands in (pure narration — the id, and every mechanical effect above, is untouched)
