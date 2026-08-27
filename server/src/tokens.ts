@@ -8,7 +8,7 @@ import {
   type Player, type Track, type PlayerAchievements, type Genes, type CareerPlayerAttrs,
 } from '@fm/shared';
 import type { Token, Store } from './store.js';
-import { clubSeason, squadRole, firstTeamReady, homeNation, nationalFixture } from '@fm/shared';
+import { clubSeason, squadRole, firstTeamReady, homeNation, nationalFixture, computeOffPitch } from '@fm/shared';
 
 export const SUPPLY_CAP = Number(process.env.SUPPLY_CAP ?? 10000); // fixed total NFTs in the economy
 // Lifecycle SINKS (coins now — the seam that becomes a PTEST spend later; see docs/economy-and-web3.md).
@@ -284,9 +284,21 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
     const progress = Math.min(pick.target, bandLog.filter(pick.test).length);
     objective = { desc: pick.label(pick.target), target: pick.target, progress, done: progress >= pick.target };
   }
+  // OFF-PITCH LIFE — fame/image, reputation, endorsement deals, earned signature boots and risky-lifestyle
+  // temptations. Senior stages only; fully derived from the log (deterministic, sim-safe — no engine change).
+  let offPitch: ReturnType<typeof computeOffPitch> | null = null;
+  if (bandIdx >= 4) {
+    const tagCounts: Record<string, number> = {};
+    for (const l of c.log) for (const tag of (l.tags ?? [])) tagCounts[tag] = (tagCounts[tag] ?? 0) + 1;
+    const bigWins = c.log.filter((l) => (l.stakes ?? 1) >= 2 && l.success >= 0.6).length;
+    offPitch = computeOffPitch({
+      careerScore, caps: international?.caps ?? 0, seed: (c as any).seed >>> 0, turn: c.turn,
+      tags: tagCounts, bigWins, flair: tagCounts.flair ?? 0,
+    });
+  }
   return {
     prospectId: t.id, name: t.name, generation: t.generation, pedigree: t.pedigree, agentId: t.agent_id, track: t.track,
-    turn: c.turn, totalTurns: TOTAL_TURNS, seasonEvent: c.seasonEvent, earnings: c.earnings, energy: c.energy, meters: c.meters, profile: prof, clubSeason: clubSeasonData, careerScore, objective, rival, international, kit: t.kit_json ? JSON.parse(t.kit_json) : null, ...st,
+    turn: c.turn, totalTurns: TOTAL_TURNS, seasonEvent: c.seasonEvent, earnings: c.earnings, energy: c.energy, meters: c.meters, profile: prof, clubSeason: clubSeasonData, careerScore, objective, rival, international, offPitch, kit: t.kit_json ? JSON.parse(t.kit_json) : null, ...st,
   };
 }
 /** Graduate the finished career → the pro attrs to write onto the SAME token (state → pro). */

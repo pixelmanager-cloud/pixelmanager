@@ -712,6 +712,35 @@
       .wc-champ { margin-top: 8px; font-size: 14px; color: var(--text); }
       .cg-intl-row { display: flex; align-items: center; gap: 10px; }
       .cg-intl-cap { margin-top: 6px; font-size: 13px; color: var(--muted); }
+      /* Off-pitch life — fame, endorsements, boots, temptation */
+      .cg-offpitch { display: flex; flex-direction: column; gap: 12px; }
+      .op-lbl { font-family: var(--display); font-size: 10px; letter-spacing: 0.5px; color: var(--accent); }
+      .op-sub { font-family: var(--display); font-size: 10px; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 7px; }
+      .op-fame { padding: 12px 14px; border-radius: 9px; background: color-mix(in srgb, var(--accent) 8%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent); }
+      .op-fame-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+      .op-tier { font-family: var(--display); font-size: 12px; color: var(--accent); }
+      .op-bar { height: 8px; border-radius: 5px; background: rgba(255,255,255,0.06); overflow: hidden; }
+      .op-bar-fill { height: 100%; background: linear-gradient(90deg, var(--purple), var(--accent)); border-radius: 5px; transition: width .3s; }
+      .op-rep { margin-top: 9px; font-size: 13px; color: var(--muted); }
+      .op-rep-clean { color: var(--good); } .op-rep-edgy { color: #ffb454; }
+      .op-deals, .op-boots, .op-tempt { padding: 11px 14px; border-radius: 9px; background: rgba(255,255,255,0.03); border: 1px solid var(--line); }
+      .op-none, .op-none-inline { color: var(--muted); font-size: 13px; }
+      .op-deal { padding: 8px 0; border-bottom: 1px solid var(--line); }
+      .op-deal:last-child { border-bottom: none; }
+      .op-deal-head { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text); }
+      .op-deal-tier { font-family: var(--display); font-size: 9px; padding: 1px 5px; border-radius: 4px; background: rgba(255,255,255,0.08); color: var(--muted); }
+      .op-deal-tier.global { background: color-mix(in srgb, #e6c76a 30%, transparent); color: #e6c76a; }
+      .op-deal-tier.national { background: color-mix(in srgb, var(--accent) 25%, transparent); color: var(--accent); }
+      .op-deal-pay { margin-left: auto; color: var(--good); font-family: var(--display); font-size: 11px; }
+      .op-deal-cat { font-size: 12px; color: var(--muted); margin-top: 1px; }
+      .op-deal-obl { font-size: 12px; color: #ffb454; margin-top: 3px; }
+      .op-boot { display: inline-block; font-size: 12px; padding: 4px 9px; margin: 0 5px 5px 0; border-radius: 6px; background: color-mix(in srgb, var(--purple) 14%, transparent); border: 1px solid color-mix(in srgb, var(--purple) 35%, transparent); color: var(--text); cursor: help; }
+      .op-count { color: var(--good); font-family: var(--display); font-size: 9px; margin-left: 4px; }
+      .op-boot-next { margin-top: 7px; font-size: 12px; color: var(--muted); }
+      .op-boot-prog { color: var(--accent); }
+      .op-tempt { background: color-mix(in srgb, #ffb454 10%, transparent); border-color: color-mix(in srgb, #ffb454 40%, transparent); }
+      .op-tempt-lbl { font-family: var(--display); font-size: 11px; color: #ffb454; }
+      .op-tempt-blurb { font-size: 13px; color: var(--text); margin-top: 6px; font-style: italic; }
       .sf-gaffer { font-size: 15px; color: #d8e0ea; font-style: italic; margin: 0 0 14px; padding: 10px 14px; border-radius: 9px; background: linear-gradient(160deg, rgba(80,90,130,0.14), rgba(40,45,70,0.1)); border-left: 3px solid var(--purple); }
       .ff { font-family: var(--display); font-size: 9px; padding: 1px 3px; border-radius: 3px; margin-left: 2px; }
       .ff-w { background: color-mix(in srgb, var(--good) 25%, transparent); color: var(--good); }

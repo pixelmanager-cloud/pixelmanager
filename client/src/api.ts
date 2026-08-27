@@ -36,6 +36,13 @@ export interface CareerState {
   objective?: { desc: string; target: number; progress: number; done: boolean } | null;
   rival?: { name: string; score: number; lead: number } | null;
   international?: { capped: boolean; caps: number; nation?: string; lastCap?: { oppNation: string; venue: 'H' | 'A' | 'N'; kind: 'friendly' | 'qualifier'; forGoals: number; ourGoals: number; scored: number } } | null;
+  offPitch?: {
+    image: { score: number; tier: string };
+    reputation: { score: number; label: string; edge: 'clean' | 'edgy' };
+    endorsements: { brand: string; category: string; tier: 'Local' | 'National' | 'Global'; payout: number; obligation: string }[];
+    boots: { owned: { id: string; name: string; edge: string; unlock: string }[]; next: { boot: { id: string; name: string; edge: string; unlock: string }; progress: number; target: number } | null };
+    temptation: { kind: string; title: string; blurb: string } | null;
+  } | null;
   kit?: Kit | null;
   hand?: CareerCard[]; coach?: { id: string; name: string } | null;
   coaches?: Array<{ id: string; name: string; kind: string; desc: string; specialty: string[]; bonus: number }>;

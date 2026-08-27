@@ -10,10 +10,22 @@
 > - **International call-up arc** (#2) — from the senior stages, a good player earns caps (rate scales with
 >   overall). `careerState.international`.
 >
-> **Still open (bigger / engine-touching):** sponsorship deals (5), risky lifestyle/gambling (6, partly via
-> the 'Speak to the Press' focus), earned equipment/signature boots (7), light attribute focus (8 — touches
-> the deterministic development, re-check `career_sim` diversity), public image/media (9, partly via life
-> events + Speak to the Press).
+> ## ✅ SHIPPED (2026-08-27) — the off-pitch batch, one cohesive "💼 Life" tab
+> All deterministic (hash-seeded, derived from the career log — no engine/development change; `career_sim`
+> stays byte-identical). Engine in `shared/src/offpitch.ts` → `careerState.offPitch` (senior stages).
+> - **Public image / media (#9)** — a marketability score (0-100) + tier (Unknown → Global icon) from career
+>   score, caps, big moments and flair, plus a **reputation** axis (Model professional ↔ Firebrand) read from
+>   the player's *style* over the career (teamwork/leadership/composure vs aggression/flair).
+> - **Sponsorship deals (#5)** — named endorsement deals whose count/tier scale with image; the **reputation
+>   splits the brand pool** (clean → wholesome family brands; edgy → louder, higher-paying, more demanding
+>   labels), and each deal carries an **obligation/trade-off**. The fame → money → image loop, made visible.
+> - **Earned signature boots (#7)** — a collectible catalogue unlocked by milestones (first team, big-game win,
+>   first cap, career-score landmark, icon status); earned never bought, perks are off-pitch only (no pay-to-win).
+> - **Risky lifestyle (#6)** — an occasional **temptation** beat (card game / bribe / nightlife / bad investment);
+>   edgier players are courted more often. Moral-hazard flavour tied to the reputation axis.
+>
+> **Still open:** light attribute focus (#8 — the one engine-touching item; must re-check `career_sim`
+> diversity + determinism when built).
 
 
 Curated from the be-a-pro genre — **New Star Soccer** (the model), **EA FC / Madden Superstar** (skill trees,

@@ -1554,6 +1554,24 @@ class Game {
     return `<div class="cg-intl capped"><div class="cg-intl-row"><span class="cg-intl-lbl">🌍 ${nat.toUpperCase()}</span><span class="cg-intl-txt">Called up for his country — <b>${i.caps}</b> cap${i.caps === 1 ? '' : 's'}</span></div>${capLine}</div>`;
   }
 
+  /** Off-pitch life: fame/image, reputation, endorsement deals (each with an obligation), earned signature
+   *  boots and the occasional risky-lifestyle temptation. The be-a-pro layer around the matches. */
+  private offPitchHtml(s: import('./api').CareerState): string {
+    const o = s.offPitch; if (!o) return '';
+    const imgPct = o.image.score;
+    const image = `<div class="op-fame"><div class="op-fame-top"><span class="op-lbl">🌟 PUBLIC IMAGE</span><span class="op-tier">${o.image.tier}</span></div>`
+      + `<div class="op-bar"><div class="op-bar-fill" style="width:${imgPct}%"></div></div>`
+      + `<div class="op-rep">📣 Reputation: <b class="op-rep-${o.reputation.edge}">${o.reputation.label}</b></div></div>`;
+    const deals = o.endorsements.length
+      ? `<div class="op-deals"><div class="op-sub">🤝 ENDORSEMENTS</div>${o.endorsements.map((d) => `<div class="op-deal"><div class="op-deal-head"><b>${d.brand}</b> <span class="op-deal-tier ${d.tier.toLowerCase()}">${d.tier}</span> <span class="op-deal-pay">+${d.payout.toLocaleString()}c</span></div><div class="op-deal-cat">${d.category}</div><div class="op-deal-obl">⚠ ${d.obligation}</div></div>`).join('')}</div>`
+      : `<div class="op-deals op-none">🤝 No endorsements yet — build your profile to attract brands.</div>`;
+    const bootChips = o.boots.owned.map((b) => `<span class="op-boot" title="${b.edge}">👟 ${b.name}</span>`).join('');
+    const nextBoot = o.boots.next ? `<div class="op-boot-next">🔒 Next: <b>${o.boots.next.boot.name}</b> — ${o.boots.next.boot.unlock} <span class="op-boot-prog">(${o.boots.next.progress}/${o.boots.next.target})</span></div>` : '';
+    const boots = `<div class="op-boots"><div class="op-sub">👟 SIGNATURE BOOTS ${o.boots.owned.length ? `<span class="op-count">${o.boots.owned.length} earned</span>` : ''}</div>${bootChips || '<span class="op-none-inline">None earned yet</span>'}${nextBoot}</div>`;
+    const tempt = o.temptation ? `<div class="op-tempt"><span class="op-tempt-lbl">🎲 TEMPTATION — ${o.temptation.title}</span><div class="op-tempt-blurb">${o.temptation.blurb}</div></div>` : '';
+    return `<div class="cg-offpitch">${image}${deals}${boots}${tempt}</div>`;
+  }
+
   /** The stage objective — a target the club/coach sets for this chapter, with a progress bar. Gives each
    *  stage direction and a reward beat when it's hit. */
   private objectiveHtml(s: import('./api').CareerState): string {
@@ -1670,13 +1688,16 @@ class Game {
     this.lastCareerState = s;
     // TABS declutter the view: NOW (the current decision + your life dashboard), PLAYER (full identity +
     // deck), KIT (cosmetic customization). The chapter header + scene banner stay above the tabs.
-    const TABS: Array<['now' | 'player' | 'kit' | 'league', string]> = [['now', '⚽ Now'], ['player', '👤 Player'], ['kit', '🎽 Kit']];
+    const TABS: Array<['now' | 'player' | 'kit' | 'league' | 'life', string]> = [['now', '⚽ Now'], ['player', '👤 Player'], ['kit', '🎽 Kit']];
+    if (s.offPitch) TABS.push(['life', `💼 Life${s.offPitch.temptation ? ' 🎲' : ''}`]); // fame/deals/boots — senior stages
     if (s.clubSeason) TABS.push(['league', '🏆 League']);
     if (this.careerTab === 'league' && !s.clubSeason) this.careerTab = 'now'; // league tab only exists in senior stages
+    if (this.careerTab === 'life' && !s.offPitch) this.careerTab = 'now';       // life tab only exists in senior stages
     const tabBar = `<div class="cg-tabs">` + TABS.map(([t, label]) => `<button class="cg-tab${this.careerTab === t ? ' on' : ''}" data-tab="${t}">${label}</button>`).join('') + `</div>`;
     let content: string;
     if (this.careerTab === 'player') content = prof + this.deckHtml(s);
     else if (this.careerTab === 'kit') content = this.kitTabHtml(s);
+    else if (this.careerTab === 'life') content = this.offPitchHtml(s);
     else if (this.careerTab === 'league') content = this.leagueTableHtml(s);
     else content = this.objectiveHtml(s) + this.rivalHtml(s) + this.intlHtml(s) + this.lifeDashHtml(s) + narr + recap + conseq + evt + body;
     const tut = this.careerTab === 'now' ? this.tutorialHint(s) : '';
@@ -1713,7 +1734,7 @@ class Game {
 
   private lastNarration = '';
   private lastOutcome?: import('./api').CareerOutcome | null;
-  private careerTab: 'now' | 'player' | 'kit' | 'league' = 'now';
+  private careerTab: 'now' | 'player' | 'kit' | 'league' | 'life' = 'now';
 
   /** The club's league table for the season — the small simulated league the bloodline player's club
    *  competes in once he reaches the senior stages. His form + overall drive where the club finishes. */
