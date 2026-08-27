@@ -68,19 +68,21 @@ const TAG_TRIUMPH: Record<string, string[]> = {
   keeping: ['and he saved his side single-handed', 'and the striker held his head in disbelief'],
 };
 // results + reactions by outcome band (≥6 each)
+// register spread within each band so a long career doesn't read one emotional note throughout — wry,
+// tender, tense and flatly matter-of-fact lines sit alongside the straightforwardly triumphant/dismal ones.
 const RESULTS: Record<string, string[]> = {
-  triumph: ['and it was sublime', 'and it came off brilliantly', '— pure, unarguable quality', 'and it was worth the admission alone', 'and the whole thing was a joy to watch', 'and he made it look absurdly easy', 'and jaws hit the floor', 'and it was the moment of the match'],
-  good: ['and it came off', 'and it did the job well', '— a good, clean piece of play', 'and it worked a treat', 'and it was tidy, assured stuff', 'and he executed it without fuss', 'and it drew a ripple of approval', 'and it was exactly the right call'],
-  mixed: ['with mixed results', '— not quite clean, but it held up', 'and just about got away with it', 'in fits and starts', '— the right idea, roughly done', 'and it half-worked', '— ambition outrunning execution', 'and it was a qualified success'],
-  poor: ["but it didn't come off", 'and it fell flat', 'only for it to unravel', 'and the moment slipped away', 'but the execution let him down', 'and it came to nothing', 'and the chance evaporated'],
-  dismal: ['and it went badly wrong', '— a moment to forget', 'and it fell apart completely', 'and he was left red-faced', 'and it was a total mess', 'and the crowd groaned', 'and it was a genuine howler'],
+  triumph: ['and it was sublime', 'and it came off brilliantly', '— pure, unarguable quality', 'and it was worth the admission alone', 'and the whole thing was a joy to watch', 'and he made it look absurdly easy', 'and jaws hit the floor', 'and it was the moment of the match', '— and that, really, is that', 'and there’s something almost tender in how easy he makes it look'],
+  good: ['and it came off', 'and it did the job well', '— a good, clean piece of play', 'and it worked a treat', 'and it was tidy, assured stuff', 'and he executed it without fuss', 'and it drew a ripple of approval', 'and it was exactly the right call', '— nothing spectacular, just correct', 'and it’s the kind of moment nobody but the coaches will ever mention again'],
+  mixed: ['with mixed results', '— not quite clean, but it held up', 'and just about got away with it', 'in fits and starts', '— the right idea, roughly done', 'and it half-worked', '— ambition outrunning execution', 'and it was a qualified success', 'and somewhere between the two, a shrug will do'],
+  poor: ["but it didn't come off", 'and it fell flat', 'only for it to unravel', 'and the moment slipped away', 'but the execution let him down', 'and it came to nothing', 'and the chance evaporated', 'and, quietly, he knows exactly why'],
+  dismal: ['and it went badly wrong', '— a moment to forget', 'and it fell apart completely', 'and he was left red-faced', 'and it was a total mess', 'and the crowd groaned', 'and it was a genuine howler', 'and there’s a strange, dark humour in just how wrong it went'],
 };
 const REACTIONS: Record<string, string[]> = {
-  triumph: ['The coaches exchanged a look.', 'You could feel the buzz ripple round the ground.', 'A statement.', 'Scouts scribbled.', 'The bench was on its feet.', 'One for the highlight reel.', 'Even the opposition applauded.', 'That one will be talked about.'],
-  good: ['A nod from the gaffer.', 'Good habits.', 'Quietly impressive.', 'The staff liked that.', 'Ticked a box.', 'Exactly what was asked.', 'Solid, dependable stuff.'],
-  mixed: ['Something to work on.', 'Raw, but there.', 'Room to grow.', 'A shrug from the bench.', 'Half a mark.', "There's a player in there.", 'The talent is obvious; the polish isn’t — yet.'],
-  poor: ['The gaffer frowned.', 'A lesson, that.', 'Back to the training ground.', 'He knew it, too.', 'Words at half-time, surely.', 'File under learning.', 'A teachable moment.'],
-  dismal: ['Heads dropped.', 'One to bury and move on from.', 'The bench winced.', 'A long walk back to the halfway line.', 'The gaffer looked away.', 'Best forgotten.', 'He’ll want the ground to swallow him.'],
+  triumph: ['The coaches exchanged a look.', 'You could feel the buzz ripple round the ground.', 'A statement.', 'Scouts scribbled.', 'The bench was on its feet.', 'One for the highlight reel.', 'Even the opposition applauded.', 'That one will be talked about.', 'Somebody, somewhere, will tell this story wrong in twenty years.'],
+  good: ['A nod from the gaffer.', 'Good habits.', 'Quietly impressive.', 'The staff liked that.', 'Ticked a box.', 'Exactly what was asked.', 'Solid, dependable stuff.', 'Nothing to write home about — but nothing to hide, either.'],
+  mixed: ['Something to work on.', 'Raw, but there.', 'Room to grow.', 'A shrug from the bench.', 'Half a mark.', "There's a player in there.", 'The talent is obvious; the polish isn’t — yet.', 'Filed under needs-work, not panic.'],
+  poor: ['The gaffer frowned.', 'A lesson, that.', 'Back to the training ground.', 'He knew it, too.', 'Words at half-time, surely.', 'File under learning.', 'A teachable moment.', 'Not the end of the world. Doesn’t feel like that right now, though.'],
+  dismal: ['Heads dropped.', 'One to bury and move on from.', 'The bench winced.', 'A long walk back to the halfway line.', 'The gaffer looked away.', 'Best forgotten.', 'He’ll want the ground to swallow him.', 'Somewhere, someone is already making a joke of it.'],
 };
 // per-personality VOICE: colours the beat throughout (not just a rare tag-on clause)
 const PERSONALITY: Record<string, string> = {

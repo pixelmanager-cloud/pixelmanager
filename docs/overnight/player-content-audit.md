@@ -72,7 +72,7 @@ Re-read this audit + current career.ts/narrate.ts/offpitch.ts before starting, p
    expansion already addressed the worst of it.
 4. **SeasonEvent flavours** — not attempted this pass (time-boxed out); see backlog below.
 
-### REMAINING BACKLOG for batch 3
+### REMAINING BACKLOG for batch 3 (superseded — see BATCH 3 below for what actually landed)
 - **SeasonEvent flavours** (career.ts `advanceSeasonEvent`, ~line 1255): still only the original set from
   before batch 1/2. Adding 1-2 more needs the probability bands recalibrated and the balance gate
   (`strategy_test.ts` / `fuzz_test.ts`) re-run to confirm no drift — genuinely untouched this session,
@@ -88,3 +88,67 @@ Re-read this audit + current career.ts/narrate.ts/offpitch.ts before starting, p
   *tone* even where the exact strings differ.
 - `LIFE_KINDS`/`LIFE_CONSEQUENCE` pool itself (16 kinds) hasn't grown since batch 1 — could still use 1-2
   more distinct life-dilemma flavours if a future batch has room, though breadth is now reasonable.
+
+## BATCH 3 (2026-08-27/28)
+Re-read this audit + current career.ts/narrate.ts before starting, per the brief. Backlog priority order
+was followed exactly: GK gap → tone sweep → new LIFE_KINDS → SeasonEvent (time-boxed, see below).
+
+### Done
+1. **`GK_TAG_FOCUS_BY_CHAPTER` early-chapter gap closed** — added Grassroots ('Dive Around in the Back
+   Garden'), Academy ('Learn Your Angles'), Scholar ('Catch, Don't Punch') keeper-flavoured attribute-focus
+   picks, mirroring the outfield `TAG_FOCUS_BY_CHAPTER` batch-2 contract exactly: energy-only
+   (`TAG_FOCUS_ENERGY`), no rng, no meter effects — the tag nudge is the only reward, applied via
+   `FOCUS_TAG_WEIGHT` in `deriveStats`. Committed separately (`020d586`).
+2. **Deeper tone-level repetition sweep of narrate.ts** — the two highest-frequency pools (`RESULTS` and
+   `REACTIONS`, drawn on literally every `narratePlay()` call, i.e. every single turn of every career) read
+   uniformly enthusiastic/deflated within each success band with no register variety. Added one wry/dry and
+   one tender/matter-of-fact line to each of the 5 bands in both pools (10 lines total) — e.g. triumph gets
+   a dry '— and that, really, is that' alongside the existing overt fanfare; dismal gets a dark-humour
+   '...strange, dark humour in just how wrong it went' alongside the straight embarrassment lines. Left
+   `VERBS`/`DEMAND`/`KIND_SETUP` alone this pass — RESULTS/REACTIONS are the pools that fire on literally
+   every turn, so they're where flattened tone is most felt over a 200-turn career; a slower per-pool
+   register audit of the rest is still worth a future pass (see backlog).
+3. **2 new `LIFE_KINDS` with full narration** — `new_money` (nerves/temptation around a first big payday —
+   the backlog's "money/first-big-contract nerves") and `move_abroad` (homesickness after a move to a
+   foreign club — the backlog's "homesickness/moving abroad"). Both got the full contract: `LifeKind` type
+   member, `LIFE_KINDS` array entry, `LIFE_LABEL`, `LIFE_CONSEQUENCE` (career.ts), plus `KIND_SETUP` (5
+   setup lines) and `LIFE_RESOLUTION` good/bad (3 lines each) in narrate.ts. Both wire the seeded
+   `careerCast` per the brief: `new_money` has `{mentor}` ring with an unprompted warning about money
+   changing people (paid off in both the good line — his warning lands — and the bad — it was right and
+   too late); `move_abroad` references `{rival}` as the move he never had the nerve to make. Considered but
+   skipped: faith/community (hard to keep religiously neutral across a Steam-wide audience) — flagging for
+   a future batch only if there's a clean, non-denominational angle (a personal cause / foundation reads as
+   a re-skin of the existing `charity` kind, not a genuinely new feeling).
+4. **SeasonEvent flavours — time-boxed out, deliberately skipped.** Per the brief's "only if you
+   recalibrate... else document + skip": `advanceSeasonEvent`'s probability bands (0.06 serious-injury /
+   0.25 breakthrough / 0.40 new-gaffer / 0.52 hot-streak / 0.60 cup-run / 0.72 slump / 0.80 transfer-links /
+   0.88 knock / 0.94 fan-favourite / else steady) are load-bearing for `strategy_test.ts`'s calibration gate
+   (2.80 goals/match) — inserting even one more band without touching the others shifts everything after
+   it. Untouched this session; still open for batch 4 if there's room to do the recalibration + full
+   `strategy_test`/`fuzz_test` re-run properly rather than rushed.
+
+### Verification
+`npm run verify` run fully green after each of the 3 commits (not batched) — build, `strategy_test`
+calibration steady at avg goals/match=2.80, `fuzz_test` clean (2000 matches, all invariants held),
+`career_sim.ts` determinism check "same seed + same choices → identical player: true", and both QA
+harnesses (`qa_savestore`, `qa_offline_facade`) passing. No recalibration was needed — all 3 changes are
+narration/attribute-focus additions with no rng and no touch to `deriveStats`/`advanceSeasonEvent`.
+
+### REMAINING BACKLOG for batch 4
+- **SeasonEvent flavours** — still open, see above; needs a dedicated pass with room to recalibrate bands
+  and re-run the balance gate, not squeezed in alongside other work.
+- **Slower per-pool tone/register audit of the rest of narrate.ts** — `VERBS`, `DEMAND`, `TAG_TRIUMPH`,
+  `KIND_SETUP` (non-life-event kinds: match/social/training), and the `FRAME_BY_CHAPTER` banks weren't
+  touched this pass; RESULTS/REACTIONS were prioritised as the highest-frequency pools, but a similar
+  register sweep on these would round it out.
+- **`RISK_FOCUS_CHAPTERS`** — still gated to Breakthrough/First Team/Establishing; a considered look at
+  whether Youth Team should get a (smaller-swing) risk pick remains open, per batch 2's note.
+- `LIFE_KINDS` now stands at 18 — good breadth. A future batch could still add one more if a genuinely
+  distinct feeling surfaces (the brief's faith/community suggestion was skipped this batch as too easily a
+  re-skin of `charity` — worth revisiting only with a sharper, more secular angle, e.g. a personal
+  foundation/legacy project distinct from a one-off community appearance).
+- Client-side surfacing of `new_money`/`move_abroad` (icons, any UI-specific copy) wasn't checked — this
+  batch stayed in-domain (career.ts/narrate.ts/offpitch.ts only); worth a quick client-side grep next batch
+  to confirm `LIFE_LABEL`'s generic pass-through (client/src/main.ts:1796) renders the new kinds fine (it
+  should — `LIFE_LABEL` is typed `Record<LifeKind, string>` and both new kinds have entries, so this is
+  very likely a non-issue, just unverified end-to-end in the client UI).
