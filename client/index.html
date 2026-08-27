@@ -999,6 +999,9 @@
          and don't need this. */
       .ico-inline { display: inline-flex; align-items: center; }
       .ico-inline .px { width: 1em; height: 1em; vertical-align: middle; }
+      /* busier multi-colour sprites (laurel, banner) lose their detail at 1em next to small body
+         text — this modifier gives them a legible fixed floor size for header/title contexts. */
+      .ico-inline.ico-lg .px { width: 20px; height: 20px; }
       .facility .fac-icon .px { width: 40px; height: 40px; }
       .mm-emblem { display: flex; justify-content: center; margin-bottom: 6px; }
       .mm-emblem .px { width: 64px; height: 64px; filter: drop-shadow(0 3px 0 rgba(0,0,0,0.5)); }

@@ -1143,7 +1143,7 @@ class Game {
     const mentorLine = mentorship > 0 ? ` In his veteran years he took the youngsters under his wing — that wisdom passes to his heir.` : '';
     const honours = [titles ? `${titles} league title${titles === 1 ? '' : 's'}` : '', contTitles ? `${contTitles} continental cup${contTitles === 1 ? '' : 's'}` : '', (m.wcWins ?? 0) ? `${m.wcWins} World Finals title${(m.wcWins ?? 0) === 1 ? '' : 's'}` : ''].filter(Boolean);
     const honourLine = honours.length ? ` and ${honours.join(', ')}` : '';
-    $('academy-body').innerHTML = `<div class="cg-graduation"><div class="cg-grad-title">🎬 ${m.starName} hangs up his boots</div>`
+    $('academy-body').innerHTML = `<div class="cg-graduation"><div class="cg-grad-title"><span class="ico-inline ico-lg">${sprite('banner')}</span> ${m.starName} hangs up his boots</div>`
       + `<div class="cg-epilogue">After ${seasons} season${seasons === 1 ? '' : 's'} steering <b>${this.club?.name}</b>${honourLine}, ${m.starName} retires a club great.${mentorLine} But the <b>${surname}</b> name isn't done — his son is already coming through the youth ranks.</div>`
       + `<div class="cg-grad-windfall">🌳 The bloodline continues${mentorship > 0 ? ` · 🎓 mentored heir (+${Math.min(3, Math.ceil(mentorship / 2))} mentality)` : ''}</div>`
       + `<button id="cg-heir" class="primary">Bring through the heir →</button></div>`;
@@ -1422,7 +1422,7 @@ class Game {
           + `<div class="pr-meta">${p.roleHint}${gen} · pedigree ${(p.pedigree * 100) | 0}% ${p.careerStarted ? '· in development' : '· age 10, ready to develop'}</div></div>${btn}</div>`;
       }).join('') : '<div class="muted">No prospects yet — scout one above to begin.</div>';
       const { legends } = await api.legends().catch(() => ({ legends: [] as any[] }));
-      const hall = legends.length ? `<h4 class="scout-h4" style="margin-top:22px;">🏅 HALL OF LEGENDS</h4>`
+      const hall = legends.length ? `<h4 class="scout-h4" style="margin-top:22px;"><span class="ico-inline ico-lg">${sprite('laurel')}</span> HALL OF LEGENDS</h4>`
         + `<div class="scout-sub">The great careers your bloodlines have had — one card per retirement.</div>`
         + `<div class="legends-grid">` + legends.map((l: any) => `<div class="legend-card"><div class="lc-top">${l.card.icon} <b>${l.card.tier}</b></div>`
           + `<div class="lc-name">${l.name}</div><div class="lc-meta">${l.card.role} · rating ${l.card.legendRating}</div>`
