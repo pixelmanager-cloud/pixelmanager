@@ -1,6 +1,6 @@
 import type { Role } from './types.js';
 
-export type Formation = '4-4-2' | '4-3-3' | '3-5-2' | '4-2-3-1' | '3-4-3' | '4-1-2-1-2' | '5-3-2' | '4-5-1' | '4-1-4-1';
+export type Formation = '4-4-2' | '4-3-3' | '3-5-2' | '4-2-3-1' | '3-4-3' | '4-1-2-1-2' | '5-3-2' | '4-5-1' | '4-1-4-1' | '5-4-1';
 
 export interface Slot {
   role: Role;
@@ -77,6 +77,15 @@ export const FORMATIONS: Record<Formation, Slot[]> = {
     { role: 'DF', x: 20, y: 10 }, { role: 'DF', x: 18, y: 26 }, { role: 'DF', x: 18, y: 42 }, { role: 'DF', x: 20, y: 58 },
     { role: 'MF', x: 32, y: 34 },
     { role: 'MF', x: 46, y: 10 }, { role: 'MF', x: 50, y: 27 }, { role: 'MF', x: 50, y: 41 }, { role: 'MF', x: 46, y: 58 },
+    { role: 'FW', x: 72, y: 34 },
+  ],
+  // back five + one striker — the most defensively bodied shape in the pool: a real extra defender (not
+  // just a repositioned midfielder, unlike 4-1-4-1/4-5-1), so it genuinely concedes fewer goals to a
+  // direct attack than 4-4-2 or 4-5-1 (proven in strategy_test.ts) — at the cost of a lone striker up top.
+  '5-4-1': [
+    { role: 'GK', x: 5, y: 34 },
+    { role: 'DF', x: 22, y: 7 }, { role: 'DF', x: 16, y: 21 }, { role: 'DF', x: 14, y: 34 }, { role: 'DF', x: 16, y: 47 }, { role: 'DF', x: 22, y: 61 },
+    { role: 'MF', x: 44, y: 12 }, { role: 'MF', x: 40, y: 27 }, { role: 'MF', x: 40, y: 41 }, { role: 'MF', x: 44, y: 56 },
     { role: 'FW', x: 72, y: 34 },
   ],
 };

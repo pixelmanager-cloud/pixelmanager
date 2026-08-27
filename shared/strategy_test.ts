@@ -184,6 +184,24 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
   assert(w > l, `4-1-4-1's extra central midfielder should beat an equally narrow diamond (got ${w} vs ${l})`);
 }
 
+// ---- 8c. New formation 5-4-1: a real extra defender should concede fewer goals to a direct attack ----
+{
+  const direct: Tactics = { ...DEFAULT_TACTICS, formation: '4-3-3', mentality: 1, tempo: 2 };
+  const concedeVsDirect = (defFormation: any) => {
+    let ga = 0;
+    for (let i = 0; i < N; i++) {
+      const def = mk('def', 13, i * 7 + 1, defFormation);
+      const atk = mk('atk', 13, i * 11 + 3, '4-3-3');
+      ga += play(def, atk, { ...DEFAULT_TACTICS, formation: defFormation }, direct, i * 31 + 5).score[1];
+    }
+    return ga;
+  };
+  const ga541 = concedeVsDirect('5-4-1'), ga442 = concedeVsDirect('4-4-2'), ga451 = concedeVsDirect('4-5-1');
+  console.log(`[shape]     conceded vs direct attack: 5-4-1=${(ga541 / N).toFixed(2)}  4-4-2=${(ga442 / N).toFixed(2)}  4-5-1=${(ga451 / N).toFixed(2)}`);
+  assert(ga541 < ga442, `5-4-1's extra real defender should concede fewer goals than 4-4-2 vs a direct attack (got ${ga541} vs ${ga442})`);
+  assert(ga541 < ga451, `5-4-1 should concede fewer goals than the lone-striker 4-5-1 vs a direct attack (got ${ga541} vs ${ga451})`);
+}
+
 // ---- 9. Seeded opponent tactical profiles: stable per-seed identity, but varied across opponents ----
 // Every SP opponent used to play flat DEFAULT_TACTICS 4-4-2 regardless of who they were. Prove the
 // fix has real teeth: the same club seed always gets the same style (determinism), and a spread of

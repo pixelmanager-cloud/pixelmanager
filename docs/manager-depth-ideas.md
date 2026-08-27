@@ -297,6 +297,13 @@ content bar (a new interacting/trade-off decision, not a reskin).
   matches both `chase-ht` and `chase-ht-big`), the later rule in the array wins since each computes its
   shift from the fixed kickoff tactics — array order was chosen so the more drastic reaction overrides.
 
+### 🎮 ✅ SHIPPED (2026-08-27, batch 2) — more formations/roles/instructions
+- **New formation: 5-4-1** — back five + one striker, added to `shared/src/formations.ts` + client
+  `FORMATIONS`/`SLOT_ROLES`. Unlike 4-1-4-1/4-5-1 (a repositioned midfielder pretending to be defensive),
+  this is a REAL extra defender, so it genuinely concedes fewer goals to a direct attack: proven in
+  `strategy_test.ts` — 5-4-1 concedes 1.70/match vs a direct (mentality+1/tempo+2) attacker, vs 1.82 for
+  4-4-2 and 2.62 for the lone-midfielder-heavy 4-5-1. Cost: a lone striker up top.
+
 **Guardrails (unchanged):** deterministic (no wall-clock/Math.random in shared/), `npm run verify` green with
 every engine-touching change (paste before/after calibration in the commit), one item per commit, fair not
 grindy, legible cause→effect. Sources: FM24 (Goal.com, Most Wanted Gamers), Goomba Stomp, gmgames.org.
