@@ -61,8 +61,11 @@ Legend: ☐ todo · ◐ in progress · ☑ done.
   bit-rot); zero engine bugs across 15k+ dynasty generations; zero calibration drift; a cross-lane text linter.
 - **Shell/UX** (research-driven): onboarding scout board, Settings (volume/mute/reduce-motion/CRT/UI-scale),
   pause menu, delete-confirm, default focus. Research docs: feature-gap-analysis, competitive-deep-dive, ui-ux.
-- **Manager narrative → client wiring:** ☑ backroom staff on the club screen · ☑ board season verdict on the
-  season screen · ☑ press-conference line on the full-time card · ☐ intl rivalry/drama blurbs in cup screens (last one).
+- **Manager narrative → client wiring (DONE):** ☑ backroom staff on the club screen · ☑ board season verdict on
+  the season screen · ☑ press-conference line on the full-time card · ☑ continental tie "how it felt" blurb in the
+  cup card. (Wiring also surfaced + fixed a real content bug: contTieBlurb used a win-flavoured pool for pens losses.)
+  Remaining optional polish: World-Finals group/knockout drama blurbs (wcGroupDramaBlurb/wcKnockoutDramaBlurb exist,
+  not yet wired into the WC screens).
 - **Design questions flagged for you:** (1) should board mood ever drive real *sacking* risk? (2) static art
   assets — the #1 feature-gap finding (all "pixel art" is currently procedural SVG). (3) staff: flavour-only or hireable?
 
