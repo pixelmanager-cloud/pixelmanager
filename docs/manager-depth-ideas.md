@@ -298,6 +298,11 @@ content bar (a new interacting/trade-off decision, not a reskin).
   shift from the fixed kickoff tactics — array order was chosen so the more drastic reaction overrides.
 
 ### 🎮 ✅ SHIPPED (2026-08-27, batch 2) — more formations/roles/instructions
+- **Sweeper DF duty** — a new named DF duty: covers space and steps forward to intercept rather than
+  engaging in duels (lowest press of any DF duty, extra `come` to link the build-up as an auxiliary
+  passing outlet). Proven in `strategy_test.ts`: concedes fewer goals to a direct attack than both
+  stopper (1.30 vs 1.60/match) and the existing cover duty (1.30 vs 2.18/match) — discipline and
+  positioning beat both raw aggression and passive sitting-off.
 - **New formation: 4-2-2-2** — a back four behind a narrow double-pivot + double-ten box midfield and
   two strikers. The tightest MF spread of any formation in the pool, so it loses width battles against
   most shapes (an earlier attempt, 3-4-1-2, was tried and dropped — no formation in the pool could beat

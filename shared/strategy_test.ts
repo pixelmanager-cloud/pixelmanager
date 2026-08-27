@@ -131,6 +131,26 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
   assert(possWingBack > possCover, `wing-back fullbacks should edge possession above cover-duty fullbacks vs a narrow opponent (got ${(possWingBack / N * 100).toFixed(1)}% vs ${(possCover / N * 100).toFixed(1)}%)`);
 }
 
+// ---- 6c. Sweeper DF duty: covers rather than engages — concedes fewer goals to a direct attack ----
+{
+  const withDefDuty = (t: Team, duty: Duty): Team =>
+    ({ ...t, players: t.players.map((p) => (p.role === 'DF' ? { ...p, duty } : p)) });
+  const direct: Tactics = { ...DEFAULT_TACTICS, formation: '4-3-3', mentality: 1, tempo: 2 };
+  const concedeWithDuty = (duty: Duty) => {
+    let ga = 0;
+    for (let i = 0; i < N; i++) {
+      const def = withDefDuty(mk('def', 13, i * 7 + 1, '4-4-2'), duty);
+      const atk = mk('atk', 13, i * 11 + 3, '4-3-3');
+      ga += play(def, atk, DEFAULT_TACTICS, direct, i * 31 + 5).score[1];
+    }
+    return ga;
+  };
+  const gaSweeper = concedeWithDuty('sweeper'), gaStopper = concedeWithDuty('stopper'), gaCover = concedeWithDuty('cover');
+  console.log(`[duty]      conceded vs direct attack: SWEEPER=${(gaSweeper / N).toFixed(2)}  STOPPER=${(gaStopper / N).toFixed(2)}  COVER=${(gaCover / N).toFixed(2)}`);
+  assert(gaSweeper < gaStopper, `sweeper should concede fewer goals than stopper vs a direct attack (got ${gaSweeper} vs ${gaStopper})`);
+  assert(gaSweeper < gaCover, `sweeper should concede fewer goals than cover vs a direct attack (got ${gaSweeper} vs ${gaCover})`);
+}
+
 // ---- 7. Anti-spam: no single tactic may dominate the field (equal stats) ----
 // Guards against a globally-dominant "spam" strategy (Tiki-Taka used to win ~69% of the
 // field with no counter). Every viable tactic must have at least one losing matchup, and
