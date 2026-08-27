@@ -1,6 +1,7 @@
 import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
-  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
+  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry,
+  FORMATIONS as FORMATION_SHAPES, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type Trialist, type MissionsData, type ContractInfo } from './api';
 import { sprite } from './sprites';
@@ -97,6 +98,36 @@ const SLOT_ROLES: Record<Formation, string[]> = {
   '5-4-1': ['GK', 'DF', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'FW'],
   '4-2-2-2': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'FW', 'FW'],
 };
+
+// ── Pre-match matchup insight (pure flavour, deterministic from the two seeded formation shapes) ──
+// Real scouting logic: formations counter each other less by raw shape and more by WHO GETS
+// OUTNUMBERED WHERE — a central-midfield overload vs a wide overload, the recurring rock-paper-scissors
+// underneath every real formation matchup (see docs/research-manager-career.md §1). Reads the same
+// static formation anchors the pitch view already uses — no engine change, no rng, no calibration risk.
+const CENTRAL_BAND = 10; // y within 10 of the pitch's 34-wide centre counts as "central"
+function midfieldSplit(f: Formation): { central: number; wide: number } {
+  const mf = FORMATION_SHAPES[f].filter((s) => s.role === 'MF');
+  const central = mf.filter((s) => Math.abs(s.y - 34) <= CENTRAL_BAND).length;
+  return { central, wide: mf.length - central };
+}
+function backLineSize(f: Formation): number { return FORMATION_SHAPES[f].filter((s) => s.role === 'DF').length; }
+function wideOutlets(f: Formation): number {
+  return FORMATION_SHAPES[f].filter((s) => s.role !== 'GK' && (s.y <= 15 || s.y >= 53)).length;
+}
+function formationMatchupInsight(mine: Formation, opp: Formation): string {
+  const mMine = midfieldSplit(mine), mOpp = midfieldSplit(opp);
+  if (mMine.central > mOpp.central) {
+    return `Your ${mine}'s midfield should outnumber their ${opp} centrally — look to dominate the middle third.`;
+  }
+  if (mOpp.central > mMine.central) {
+    return `Their ${opp} outnumbers your ${mine} through the middle — expect to be squeezed there; win it back quickly.`;
+  }
+  const oppWide = wideOutlets(opp), myBack = backLineSize(mine);
+  const myWide = wideOutlets(mine), oppBack = backLineSize(opp);
+  if (oppWide > myBack) return `Their wide outlets will stretch your ${mine} back line out wide — tuck in and cover the flanks.`;
+  if (myWide > oppBack) return `Your ${mine}'s width should overload their ${opp} back line — attack down the channels.`;
+  return `Evenly matched shapes (${mine} vs ${opp}) — no clean numbers edge either way; small margins will decide it.`;
+}
 
 const $ = (id: string) => document.getElementById(id)!;
 
@@ -1919,7 +1950,8 @@ class Game {
       const dutyNote = dangerMan
         ? `<div class="scout-sub scout-role">👤 <b>${dangerMan.name}</b> — ${DUTY_LABEL[effectiveDuty(dangerMan)]}: ${DUTY_DESC[effectiveDuty(dangerMan)]}</div>` : '';
       sc.classList.remove('hidden');
-      sc.innerHTML = `<div class="scout-head">🔍 ${this.spFixture.oppName}</div><div class="scout-sub">${this.spFixture.venue === 'away' ? 'Away' : 'Home'} fixture · squad rating ~${this.spFixture.oppStrength} <span style="color:#e6c76a">${stars}</span></div>${dutyNote}`;
+      sc.innerHTML = `<div class="scout-head">🔍 ${this.spFixture.oppName}</div><div class="scout-sub">${this.spFixture.venue === 'away' ? 'Away' : 'Home'} fixture · squad rating ~${this.spFixture.oppStrength} <span style="color:#e6c76a">${stars}</span></div>${dutyNote}`
+        + `<div class="scout-sub scout-matchup" id="scout-matchup">📐 ${formationMatchupInsight(this.draftTactics.formation, this.spFixture.oppTactics.formation)}</div>`;
     } else {
       sc.classList.add('hidden'); sc.innerHTML = '';
     }
@@ -1966,6 +1998,8 @@ class Game {
       this.draftLineup = autoPickXI(this.availableClub(), this.draftTactics.formation);
       this.rebuildDuties();
       this.renderLineupEditor();
+      const mu = document.getElementById('scout-matchup');
+      if (mu && this.spFixture) mu.innerHTML = `📐 ${formationMatchupInsight(this.draftTactics.formation, this.spFixture.oppTactics.formation)}`;
     });
     (Object.keys(LEVELS) as Array<keyof typeof LEVELS>).forEach((k) => {
       ($(`e-${k}`) as HTMLSelectElement).addEventListener('change', (ev) => {
