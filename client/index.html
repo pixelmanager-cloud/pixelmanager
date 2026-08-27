@@ -24,6 +24,16 @@
       @media (min-width: 1680px) { :root { --app-w: 1200px; } }
       * { box-sizing: border-box; }
       html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: var(--body); font-size: 22px; }
+      /* Respect the OS-level "reduce motion" preference app-wide: every animation/transition
+         (card fx, pulses, sheens, shimmers, spinners, everywhere) collapses to effectively-instant
+         rather than picking them off component by component. !important is deliberate here — it's
+         the one place a low-specificity global rule must always win over per-component animation. */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.001ms !important; animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important; scroll-behavior: auto !important;
+        }
+      }
       /* CRT scanline overlay — kept as a faint hint so small text stays crisp */
       body::after { content: ''; position: fixed; inset: 0; z-index: 9999; pointer-events: none;
         background: repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px, rgba(0,0,0,0.045) 3px, rgba(0,0,0,0) 4px); }
