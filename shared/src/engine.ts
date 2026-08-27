@@ -570,7 +570,14 @@ export class MatchEngine {
     const def = this.teams[defTeam].players[nearest];
     const ds = s.players[defTeam][nearest];
     const behind = dir === 1 ? recS.x > ds.x : recS.x < ds.x; // receiver already past that defender
-    const faster = norm(rec.attrs.pace) * fit(recS.fitness) > norm(def.attrs.pace) * fit(ds.fitness);
+    const paceGap = norm(rec.attrs.pace) * fit(recS.fitness) - norm(def.attrs.pace) * fit(ds.fitness);
+    // OFFSIDE TRAP instruction (off by default, and only meaningful with a high/very-high line): the
+    // back line steps up together the instant the ball is played, so a receiver needs a REAL pace
+    // edge to spring it clean — a marginal one just gets caught. Bounded to this one decision, so a
+    // side without a genuine outlet threat gets far fewer clear breakaways; a side with real pace
+    // (e.g. a poacher/pressing-forward with a big gap) still tears the trap open exactly as before.
+    const trap = !!this.tactics[defTeam].offsideTrap && this.tactics[defTeam].line >= 1;
+    const faster = paceGap > (trap ? 0.12 : 0);
     return behind && faster;
   }
 

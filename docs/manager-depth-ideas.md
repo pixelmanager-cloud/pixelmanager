@@ -259,6 +259,18 @@ content bar (a new interacting/trade-off decision, not a reskin).
   in `shared/src/tactics.ts`; wired into all 3 SP fixture-creation sites in `client/src/main.ts`. Proven
   by a new `strategy_test.ts` assertion: 40 seeded opponents → 6 distinct profiles, fully deterministic.
 
+- **Offside trap** — a new off-by-default INSTRUCTION (`Tactics.offsideTrap`, only live with a high/very-high
+  line). The back line steps up together on a through-ball, so a receiver needs a real pace edge to spring
+  it clean — a marginal one gets caught. A real toggle in the lineup editor (hints "needs high line" until
+  the line slider is raised). Contained entirely to `beatsLastDefender()` in `shared/src/engine.ts`, so it
+  can't interact with the counter-attack/foul system; off by default means every existing preset/DEFAULT_TACTICS
+  match is bit-for-bit unchanged. Proven in `strategy_test.ts`: against an ordinary-pace direct attack, a high
+  line with the trap armed concedes ~34% fewer clear-cut breakaway chances than a plain high line (6579 → 4373
+  over the harness). (An earlier "tactical fouling" instruction tied to the counter-attack flag was tried and
+  reverted — the existing "committed high → counter" trigger fires far more often than a real fast break, so
+  widening the foul chance during it caused a runaway spike in cards and free-kick goals; offside trap avoids
+  that system entirely.)
+
 **Guardrails (unchanged):** deterministic (no wall-clock/Math.random in shared/), `npm run verify` green with
 every engine-touching change (paste before/after calibration in the commit), one item per commit, fair not
 grindy, legible cause→effect. Sources: FM24 (Goal.com, Most Wanted Gamers), Goomba Stomp, gmgames.org.

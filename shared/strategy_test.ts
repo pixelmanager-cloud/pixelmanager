@@ -172,6 +172,31 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
   assert(styles.size >= 3, `seeded opponents should show real tactical variety (got only ${styles.size} distinct profiles across ${seeds.length} seeds)`);
 }
 
+// ---- 10. Offside trap instruction: a high line + trap concedes fewer clear breakaways to an average-pace attack ----
+// A new off-by-default INSTRUCTION (Tactics.offsideTrap, only live with line >= 1): the back line steps
+// up together, so a through-ball needs a real pace edge to beat it clean. Prove it does what it says
+// against a same-quality, ordinary-pace attacking side (no elite pace outlet to blow the trap open).
+{
+  const highLine: Tactics = { ...DEFAULT_TACTICS, formation: '4-4-2', line: 2 };
+  const trapLine: Tactics = { ...highLine, offsideTrap: true };
+  const attack: Tactics = { ...DEFAULT_TACTICS, formation: '4-3-3', mentality: 1, tempo: 2 }; // direct, springs through-balls
+  const runWith = (t: Tactics) => {
+    let concededChances = 0;
+    for (let i = 0; i < N; i++) {
+      const def = mk('def', 13, i * 7 + 1, '4-4-2');
+      const atk = mk('atk', 13, i * 11 + 3, '4-3-3');
+      const m = new MatchEngine([def, atk], i * 31 + 5, [t, attack]);
+      while (!m.state.finished) m.tick();
+      concededChances += m.state.events.filter((e) => e.teamIdx === 1 && e.type === 'chance').length;
+    }
+    return concededChances;
+  };
+  const noTrap = runWith(highLine);
+  const withTrap = runWith(trapLine);
+  console.log(`[offside]   high line clear-cut chances conceded: no trap=${noTrap}  with trap=${withTrap}`);
+  assert(withTrap < noTrap, `offside trap should concede fewer clear breakaways than a plain high line (got ${withTrap} vs ${noTrap})`);
+}
+
 // ---- verdict ----
 if (failures.length) {
   console.error('\nENGINE REGRESSION — assertions failed:');

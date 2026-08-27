@@ -16,6 +16,10 @@ export interface Tactics {
   press: number;
   tempo: number;
   width: number;
+  /** INSTRUCTION (off by default): a defensive-line trick — the back line steps up together the instant
+   *  a through-ball is played, catching a receiver who doesn't have a real pace edge. Only meaningful
+   *  with a high/very-high line (line >= 1). See engine.ts beatsLastDefender(). */
+  offsideTrap?: boolean;
 }
 
 export const DEFAULT_TACTICS: Tactics = {

@@ -58,7 +58,7 @@ const CHAPTER_THEME: Record<string, { slug: string; scene: string; accent: strin
   Establishing: { slug: 'establishing', scene: '🏆⭐💫', accent: '#ffd75e', bg: 'radial-gradient(120% 90% at 50% 0%, rgba(210,170,60,0.22), rgba(35,30,10,0.0) 60%)', tagline: 'A name in lights — cement your place among the greats.' },
 };
 
-const LEVELS: Record<keyof Omit<Tactics, 'formation'>, string[]> = {
+const LEVELS: Record<keyof Omit<Tactics, 'formation' | 'offsideTrap'>, string[]> = {
   mentality: ['Very Defensive', 'Defensive', 'Balanced', 'Attacking', 'Very Attacking'],
   line: ['Very Deep', 'Deep', 'Normal', 'High', 'Very High'],
   press: ['Contain', 'Low', 'Balanced', 'High', 'Gegenpress'],
@@ -2217,6 +2217,10 @@ class Game {
     (Object.keys(LEVELS) as Array<keyof typeof LEVELS>).forEach((k) => {
       tac.push(`<label>${k[0].toUpperCase() + k.slice(1)}<select id="e-${k}">${LEVELS[k].map((lab, i) => `<option value="${i - 2}" ${i - 2 === this.draftTactics[k] ? 'selected' : ''}>${lab}</option>`).join('')}</select></label>`);
     });
+    // INSTRUCTION toggle (only bites with a high/very-high line): the back four steps up together on
+    // a through-ball, catching a receiver without a real pace edge — fewer clean breakaways conceded.
+    const lineHigh = this.draftTactics.line >= 1;
+    tac.push(`<label class="tac-toggle" title="${lineHigh ? 'Catches attackers without a real pace edge — needs a high/very-high line' : 'Only bites with a High or Very High defensive line'}"><span>Offside Trap${lineHigh ? '' : ' (needs high line)'}</span><input type="checkbox" id="e-offside" ${this.draftTactics.offsideTrap ? 'checked' : ''} /></label>`);
     $('tac-row').innerHTML = tac.join('');
     ($('e-formation') as HTMLSelectElement).addEventListener('change', (ev) => {
       this.draftTactics.formation = (ev.target as HTMLSelectElement).value as Formation;
@@ -2225,7 +2229,15 @@ class Game {
       this.renderLineupEditor();
     });
     (Object.keys(LEVELS) as Array<keyof typeof LEVELS>).forEach((k) => {
-      ($(`e-${k}`) as HTMLSelectElement).addEventListener('change', (ev) => { this.draftTactics[k] = Number((ev.target as HTMLSelectElement).value); this.updateEditorInsight(); });
+      ($(`e-${k}`) as HTMLSelectElement).addEventListener('change', (ev) => {
+        this.draftTactics[k] = Number((ev.target as HTMLSelectElement).value);
+        if (k === 'line') this.renderLineupEditor(); // re-render so the trap's "needs high line" hint stays accurate
+        this.updateEditorInsight();
+      });
+    });
+    ($('e-offside') as HTMLInputElement).addEventListener('change', (ev) => {
+      this.draftTactics.offsideTrap = (ev.target as HTMLInputElement).checked;
+      this.updateEditorInsight();
     });
     this.renderMatchPlan();
 
