@@ -149,6 +149,8 @@ const KIND_SETUP: Record<string, string[]> = {
   romance: ['Someone new in his life, and it’s starting to feel serious.', 'A big, public step in his relationship — the kind that can’t be undone.', 'Balancing a settling-down life with the chaos of a football schedule.', 'A quiet proposal, planned for months, finally about to happen.', 'The first time he’s introduced someone to the people who matter most.'],
   mentor_crossroads: ['{mentor} rings with advice nobody asked him for.', 'The coach who first believed in him — {mentor} — wants a word, and it isn’t small talk.', 'A phone call from the man who shaped him, {mentor}, and a choice he didn’t expect to face.', 'Years on, {mentor} still sees him as the raw kid he once coached — and says so.', 'The advice {mentor} is giving him cuts against everything the club wants from him.'],
   friend_rivalry: ['{rival} — the mate he grew up playing with — lines up in the opposite shirt today.', 'A childhood friendship with {rival} is starting to curdle into something sharper.', '{rival}, who once shared a bedroom with him on away trips, now wants his shirt.', '{rival}’s success has started to sting more than he’d like to admit.', 'What used to be banter between him and {rival} doesn’t feel like banter anymore.'],
+  new_money: ['The first proper payday lands in his account, and the number doesn’t look real yet.', 'A wage slip with more zeros than he knows what to do with — and everyone around him has noticed.', '{mentor} rings, unprompted, with a blunt warning: money changes people before they notice it happening.', 'His agent already has plans for the money. He isn’t sure he has any of his own.', 'Old mates have started asking for favours that never used to come up.'],
+  move_abroad: ['A move to a club in a country whose language he doesn’t speak yet — everything about home feels a long way off.', 'Boxes still half-packed, a new time zone, and a dressing room where the jokes go straight over his head.', 'The kind of move {rival} always talked about making and never had the nerve to.', 'A city he can’t read the street signs in, and a football club expecting him to be brilliant in it anyway.', 'The new flat is furnished, but it doesn’t feel like anything close to home yet.'],
 };
 // What the moment ASKS of him. Kept setting-neutral so it reads sensibly whether the
 // situation is a training drill, a dressing-room moment or a cup tie (a drill is not
@@ -403,6 +405,14 @@ const LIFE_RESOLUTION: Record<string, { good: string[]; bad: string[] }> = {
   friend_rivalry: {
     good: ['and he and {rival} shake hands after, the friendship bigger than the result.', 'and the needle between him and {rival} stays good-natured, right where it belongs.', 'and it sharpens both him and {rival} rather than souring anything.'],
     bad: ['and something real gets lost between him and {rival} that day.', 'and the handshake with {rival} after is colder than either would admit.', 'and an old friendship with {rival} is left carrying a new weight.'],
+  },
+  new_money: {
+    good: ['and he keeps his feet on the ground — same digs, same mates, just a fatter account.', 'and {mentor}’s warning lands; he handles the money like an adult about it.', 'and he quietly sets most of it aside, the sensible way, and says nothing about it.'],
+    bad: ['and it goes to his head faster than anyone expected.', 'and the new money buys him a bit of distance from people who used to matter.', 'and {mentor}’s warning turns out to be exactly right — and exactly too late.'],
+  },
+  move_abroad: {
+    good: ['and it starts to feel like home sooner than he expected.', 'and the language comes easier than the football ever needed to.', 'and he settles in a way that makes the whole gamble look obvious in hindsight.'],
+    bad: ['and the homesickness doesn’t let up, no matter how well it’s going on the pitch.', 'and he counts down the days to the next trip home like a kid at boarding school.', 'and something about the move still doesn’t sit right, months in.'],
   },
 };
 // INJURY COMEBACK — "rush back" (aggression/stamina-led, real reinjury-risk cost on a bad outcome) vs

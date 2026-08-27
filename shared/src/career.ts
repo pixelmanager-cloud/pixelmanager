@@ -700,8 +700,8 @@ const CALLUP_CONSEQUENCE = { good: { authority: 10, fans: 8 } as Partial<Record<
 // itself nudges standing (small, same order of magnitude as the existing per-turn meter reactions).
 export type LifeKind = 'contract' | 'loan' | 'setback' | 'media' | 'loyalty' | 'role' | 'fallout'
   | 'injury_comeback' | 'transfer_rumour' | 'manager_fallout' | 'charity' | 'social_storm' | 'family_illness' | 'romance'
-  | 'mentor_crossroads' | 'friend_rivalry';
-export const LIFE_KINDS: LifeKind[] = ['contract', 'loan', 'setback', 'media', 'loyalty', 'role', 'fallout', 'injury_comeback', 'transfer_rumour', 'manager_fallout', 'charity', 'social_storm', 'family_illness', 'romance', 'mentor_crossroads', 'friend_rivalry'];
+  | 'mentor_crossroads' | 'friend_rivalry' | 'new_money' | 'move_abroad';
+export const LIFE_KINDS: LifeKind[] = ['contract', 'loan', 'setback', 'media', 'loyalty', 'role', 'fallout', 'injury_comeback', 'transfer_rumour', 'manager_fallout', 'charity', 'social_storm', 'family_illness', 'romance', 'mentor_crossroads', 'friend_rivalry', 'new_money', 'move_abroad'];
 export const LIFE_LABEL: Record<LifeKind, string> = {
   contract: 'a contract standoff', loan: 'a loan-move decision', setback: 'bouncing back from a public mistake',
   media: 'a media storm', loyalty: 'a boyhood-club approach', role: 'a squad-role ultimatum', fallout: 'a public falling-out with a teammate',
@@ -709,6 +709,7 @@ export const LIFE_LABEL: Record<LifeKind, string> = {
   manager_fallout: 'a falling-out with the manager', charity: 'a charity and community appearance',
   social_storm: 'a social-media storm', family_illness: 'a family illness pulling at him', romance: 'settling down off the pitch',
   mentor_crossroads: 'a crossroads moment with an old mentor', friend_rivalry: 'an old friendship turning into real rivalry',
+  new_money: 'a first big payday changing the money around him', move_abroad: 'a life-changing move to a foreign club',
 };
 // good/bad meter + earnings swing per life-kind, applied ON TOP of the generic per-turn reaction — this is
 // what makes a life event mechanically distinct from an ordinary social scenario, not just a re-skin.
@@ -729,6 +730,8 @@ const LIFE_CONSEQUENCE: Record<LifeKind, { good: Partial<Record<MeterKey, number
   romance:          { good: { partner: 16 },              bad: { partner: -10 } },
   mentor_crossroads: { good: { authority: 10, peers: 4 }, bad: { authority: -6, family: -4 } },
   friend_rivalry:   { good: { peers: 8, fans: 4 },        bad: { peers: -10 } },
+  new_money:        { good: { family: 6, peers: 6 },      bad: { peers: -10, family: -4 } },
+  move_abroad:      { good: { authority: 8, agent: 4 },   bad: { family: -8, peers: -4 } },
 };
 /** Pure deterministic hash → [0,1), independent of the career's rng() stream (never consumes it). */
 function pureHash01(seed: number, turn: number, salt: number): number { return mulberry32(((seed ^ Math.imul(turn + 1, 2654435761)) ^ salt) >>> 0)(); }
