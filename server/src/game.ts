@@ -1,72 +1,12 @@
-// Server-side game logic — reuses the SAME deterministic engine as the client.
-import {
-  generateClub, autoPickXI, buildXI, MatchEngine, TACTIC_PRESETS, defaultDuty, isDutyForRole,
-  type Club, type Duty, type Lineup, type Tactics, type Team, type Formation, type MatchEvent,
-} from '@fm/shared';
-import type { StandingOrders } from './db.js';
+// Server-only PvP game logic — league tables and Elo from live match results, plus
+// the fresh-entropy bits (kit colour + match/club seeds) that @fm/shared's pure
+// makeClub/runMatch (phase 1 offline migration) intentionally take as parameters
+// instead of drawing themselves.
 
-// Base squads are weak FILLERS (validated filler tier from ladder_sim). Strength/star
-// players come only from owned PlayerNFTs, which merge in on top (see loadSquad/nft.ts).
-const BASE_QUALITY = 6;
-
-const short = (h: string) => (h.replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() || 'FC');
 // distinct kit colours so opponents are easy to tell apart on the pitch
-const KIT_COLORS = [0xd23b3b, 0x3b6bd2, 0x2fae6a, 0xe08a2a, 0x9b3bd2, 0x2ab0c0, 0xc0392b, 0xd23b7a, 0x7f8c2a];
-
-/** A fresh club + sensible default standing orders for a new account. */
-export function makeClub(accountId: string, handle: string, clubName?: string): { club: Club; standingOrders: StandingOrders } {
-  const seed = Math.floor(Math.random() * 2 ** 31);
-  const color = KIT_COLORS[Math.floor(Math.random() * KIT_COLORS.length)];
-  const name = clubName?.trim() || `${handle}'s Club`;
-  const club = generateClub(accountId, name, short(clubName?.trim() || handle), color, BASE_QUALITY, seed);
-  const lineup = autoPickXI(club, '4-4-2');
-  return { club, standingOrders: { formation: '4-4-2', playerIds: lineup.playerIds, tactics: { ...TACTIC_PRESETS.Balanced } } };
-}
-
-/** A lineup is valid if it fields 11 distinct players the club actually owns. */
-export function validateLineup(club: Club, lineup: Lineup): boolean {
-  const owned = new Set(club.players.map((p) => p.id));
-  if (!Array.isArray(lineup.playerIds) || lineup.playerIds.length !== 11) return false;
-  if (new Set(lineup.playerIds).size !== 11) return false;
-  return lineup.playerIds.every((id) => owned.has(id));
-}
-
-/**
- * Sanitise manager-supplied duties against each slot's player: an illegal or missing
- * duty falls back to that player's stat-derived default. Returns undefined if none
- * were supplied (the engine then auto-derives — identical behaviour). Assumes the
- * lineup already passed validateLineup, so every playerId is owned.
- */
-export function cleanDuties(club: Club, lineup: Lineup): Duty[] | undefined {
-  if (!Array.isArray(lineup.duties)) return undefined;
-  return lineup.playerIds.map((pid, i) => {
-    const p = club.players.find((x) => x.id === pid)!;
-    const d = lineup.duties![i];
-    return isDutyForRole(p.role, d) ? d : defaultDuty(p);
-  });
-}
-
-/** Run a full match on the authoritative engine and return the deterministic result.
- *  Optional per-side conditioning (training-ground fitness-drain multiplier, 1 = normal). */
-export function runMatch(
-  homeClub: Club, homeLineup: Lineup, homeTactics: Tactics,
-  awayClub: Club, awayLineup: Lineup, awayTactics: Tactics,
-  conditioning?: { home?: number; away?: number },
-  homeBoost?: number,
-): { seed: number; homeTeam: Team; awayTeam: Team; result: [number, number]; homeFitness: number[]; awayFitness: number[]; events: MatchEvent[] } {
-  const homeTeam = buildXI(homeClub, homeLineup);
-  const awayTeam = buildXI(awayClub, awayLineup);
-  if (conditioning?.home != null) homeTeam.conditioning = conditioning.home;
-  if (conditioning?.away != null) awayTeam.conditioning = conditioning.away;
-  if (homeBoost != null) homeTeam.homeBoost = homeBoost; // Fan Zone home advantage on the host
-  const seed = Math.floor(Math.random() * 2 ** 31);
-  const m = new MatchEngine([homeTeam, awayTeam], seed, [homeTactics, awayTactics]);
-  while (!m.state.finished) m.tick();
-  // end-of-match fitness per XI slot (drives injury rolls — gassed players break down more)
-  const homeFitness = m.state.players[0].map((p) => p.fitness);
-  const awayFitness = m.state.players[1].map((p) => p.fitness);
-  return { seed, homeTeam, awayTeam, result: [m.state.score[0], m.state.score[1]], homeFitness, awayFitness, events: m.state.events };
-}
+export const KIT_COLORS = [0xd23b3b, 0x3b6bd2, 0x2fae6a, 0xe08a2a, 0x9b3bd2, 0x2ab0c0, 0xc0392b, 0xd23b7a, 0x7f8c2a];
+export const randomSeed = (): number => Math.floor(Math.random() * 2 ** 31);
+export const randomKitColor = (): number => KIT_COLORS[Math.floor(Math.random() * KIT_COLORS.length)];
 
 /** Standard Elo update. scoreHome: 1 win / 0.5 draw / 0 loss. */
 export function elo(rHome: number, rAway: number, scoreHome: number, k = 32): [number, number] {
@@ -75,8 +15,6 @@ export function elo(rHome: number, rAway: number, scoreHome: number, k = 32): [n
   const nAway = Math.round(rAway + k * ((1 - scoreHome) - (1 - expHome)));
   return [nHome, nAway];
 }
-
-export const FORMATIONS: Formation[] = ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1', '3-4-3', '4-1-2-1-2', '5-3-2', '4-5-1'];
 
 export interface TableRow { id: string; handle: string; rating: number; P: number; W: number; D: number; L: number; GF: number; GA: number; GD: number; Pts: number }
 

@@ -21,7 +21,8 @@ function cleanRoles(body: any): { captainIdx?: number; takers?: { pen?: number; 
   return { ...(captainIdx != null ? { captainIdx } : {}), ...(hasTakers ? { takers } : {}) };
 }
 import { db, type Account, type StandingOrders, type Listing } from './db.js';
-import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMATIONS } from './game.js';
+import { elo, buildTable, randomSeed, randomKitColor } from './game.js';
+import { makeClub, validateLineup, cleanDuties, runMatch, PICKABLE_FORMATIONS as FORMATIONS } from '@fm/shared';
 import { hashPassword, verifyPassword } from './auth.js';
 import { describeIntel } from './scouting.js';
 import { generatePool, trialistAt, LOANEE_CAP, OPP_REVEAL, type OppTier, DESTINATIONS, destinationById, rollMission, travelMs as travelMsPure, previewOdds } from '@fm/shared';
@@ -87,7 +88,7 @@ app.post('/register', async (req, reply) => {
   const clubName = String((req.body as any)?.clubName ?? '').trim().slice(0, 24);
   const id = randomUUID(), token = randomUUID().replace(/-/g, '');
   await db.createAccount(id, handle, token, Date.now(), hashPassword(password));
-  const { club, standingOrders } = makeClub(id, handle, clubName);
+  const { club, standingOrders } = makeClub(id, handle, randomSeed(), randomKitColor(), clubName);
   await db.saveClub(id, club, standingOrders);
   try { await mintGenesis(db, id); } catch { /* supply cap reached — no welcome prospect */ } // a free 10yo to develop in the Academy
   return { token, account: { id, handle, rating: 1000, coins: await db.getCoins(id), wallet: null }, club, standingOrders };
@@ -237,7 +238,7 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const aClub = iAmHome ? oppClub.club : me!.club, aLineup = iAmHome ? oppLineup : myLineup, aTactics = iAmHome ? oppTactics : myTactics;
   const conditioning = { home: iAmHome ? meCond : oppCond, away: iAmHome ? oppCond : meCond };
   const homeBoost = fanHomeBoost((iAmHome ? meFac : oppFac).fanzone); // Fan Zone edge for the host
-  const { seed, homeTeam, awayTeam, result, homeFitness, awayFitness, events } = runMatch(hClub, hLineup, hTactics, aClub, aLineup, aTactics, conditioning, homeBoost);
+  const { seed, homeTeam, awayTeam, result, homeFitness, awayFitness, events } = runMatch(hClub, hLineup, hTactics, aClub, aLineup, aTactics, randomSeed(), conditioning, homeBoost);
 
   // injuries: everyone recovers a match, then the XIs that played are rolled for fresh knocks
   const homeNew = rollMatchInjuries(homeTeam, homeFitness, (iAmHome ? meFac : oppFac).medical, seed);
@@ -1010,7 +1011,7 @@ app.post('/admin/regen-base', async (req, reply) => {
   for (const a of accounts) {
     const [acc, c] = await Promise.all([db.accountById(a.id), db.getClub(a.id)]);
     if (!acc || !c) continue;
-    const fresh = makeClub(a.id, acc.handle).club;                       // 20 weak base players (ids <id>-0..19)
+    const fresh = makeClub(a.id, acc.handle, randomSeed(), randomKitColor()).club; // 20 weak base players (ids <id>-0..19)
     const kept = c.club.players.filter((p) => !p.id.startsWith(`${a.id}-`)); // bought + loaned players stay
     fresh.players = [...fresh.players, ...kept];
     const so = { ...c.standingOrders, playerIds: autoPickXI(fresh, c.standingOrders.formation).playerIds, duties: undefined };
