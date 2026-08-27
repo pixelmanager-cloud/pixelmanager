@@ -580,6 +580,30 @@ app.post('/career/:id/handoff', { preHandler: requireAuth }, async (req, reply) 
   return { ok: true, player: tokenToPlayer((await db.getToken(t.id))!) };
 });
 
+// SUCCESSION: the managed star retires and his heir comes through the youth ranks. Unlike the shop 'reborn',
+// this is the automatic dynasty milestone — free, and it FOLDS his managed career (seasons + titles) into
+// his legacy so a long, decorated career breeds a stronger heir. Returns the heir prospect.
+app.post('/players/:id/succeed', { preHandler: requireAuth }, async (req, reply) => {
+  const ownerId = req.account!.id;
+  const t = await db.getToken((req.params as any).id);
+  if (!t || t.owner_id !== ownerId) return reply.code(404).send({ error: 'no such token' });
+  if (t.state === 'prospect') return reply.code(409).send({ error: 'not a graduated player' });
+  const body = req.body as any;
+  const seasons = Math.max(0, Math.min(20, Math.floor(Number(body?.seasons) || 0)));
+  const titles = Math.max(0, Math.min(20, Math.floor(Number(body?.titles) || 0)));
+  // fold the managed career into his achievements so the heir's pedigree reflects it
+  await db.updateToken(t.id, {
+    ach_seasons: (t.ach_seasons ?? 0) + seasons, ach_apps: (t.ach_apps ?? 0) + seasons * 18, ach_league: (t.ach_league ?? 0) + titles,
+  });
+  const decorated = (await db.getToken(t.id))!;
+  const legacy = Math.round((decorated.earnings ?? 0) * RETIREMENT_LEGACY_SHARE);
+  if (legacy > 0) await db.addCoins(ownerId, legacy); // his life's wealth to the club
+  await db.updateToken(t.id, rebornFields(decorated)); // pro → next-gen prospect (free — the dynasty continues)
+  const fresh = (await db.getToken(t.id))!;
+  const pot = rebornPotential(fresh);
+  return { ok: true, legacy, prospect: { id: t.id, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: fresh.pedigree, careerStarted: false, potentialStars: pot.stars, genes: JSON.parse(fresh.genes_json) } };
+});
+
 // LEGENDS: the manager's hall of retirement legacy cards (one per generation a token retired under them).
 app.get('/legends', { preHandler: requireAuth }, async (req) => {
   const rows = await db.legaciesFor(req.account!.id);

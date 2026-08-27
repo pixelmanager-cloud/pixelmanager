@@ -5,6 +5,9 @@ import {
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData, type MissionsData, type ContractInfo, type LeaderStat, type AwardRow } from './api';
 import { sprite } from './sprites';
 
+/** Single-player manager-season state (per save, in localStorage). `starId` present ⇒ manager phase. */
+interface MgrState { season: number; results: PlayedResult[]; starId?: string; starName?: string; starAge?: number; titles?: number }
+
 // icons for the stage-aware life meters (keyed by underlying relationship) — used in focus effect labels
 const METER_ICON: Record<string, string> = { authority: '🧑‍🏫', peers: '👥', family: '🏠', school: '🎒', agent: '🤝', fans: '📣', sponsors: '📸', partner: '❤️' };
 
@@ -624,6 +627,18 @@ class Game {
   /** The "Your Player" block on the home hub — the bloodline you're living, inline with a develop/continue CTA. */
   private async refreshHubPlayer() {
     const el = $('hub-player');
+    // MANAGER PHASE: you've handed off — the home shows the managed star + Continue the season.
+    const mgr = this.loadMgr();
+    if (mgr.starId) {
+      const seed = this.leagueSeed();
+      const total = seasonFixtures(this.club?.name ?? 'club', seed).length;
+      const md = Math.min(mgr.results.length, total);
+      el.innerHTML = `<div class="hub-prow"><div class="hp-main"><div class="hp-name">🧢 Managing ${this.club?.name ?? 'your club'} <span class="hp-stars">★ ${mgr.starName} on the pitch</span></div>`
+        + `<div class="hp-meta">Season ${mgr.season} · Matchday ${Math.min(md + 1, total)}/${total}${mgr.starAge ? ` · ${mgr.starName} is ${mgr.starAge}` : ''}</div></div>`
+        + `<button class="primary hp-go" id="hub-continue-season">Continue the season →</button></div>`;
+      $('hub-continue-season').addEventListener('click', () => this.showSeason());
+      return;
+    }
     el.innerHTML = SPINNER;
     try {
       const { prospects } = await api.prospects();
@@ -662,11 +677,14 @@ class Game {
 
   // ── SINGLE-PLAYER MANAGER SEASON: play the club's fixtures one at a time vs the seeded fictional league ──
   private mgrKey() { return 'fm_mgr_' + (this.account?.handle ?? ''); }
-  private loadMgr(): { season: number; results: PlayedResult[] } {
+  private loadMgr(): MgrState {
     try { const m = JSON.parse(localStorage.getItem(this.mgrKey()) || ''); if (m && Array.isArray(m.results)) return m; } catch { /* fall through */ }
     return { season: 1, results: [] };
   }
-  private saveMgr(m: { season: number; results: PlayedResult[] }) { try { localStorage.setItem(this.mgrKey(), JSON.stringify(m)); } catch { /* ignore */ } }
+  private saveMgr(m: MgrState) { try { localStorage.setItem(this.mgrKey(), JSON.stringify(m)); } catch { /* ignore */ } }
+  private clearMgr() { try { localStorage.removeItem(this.mgrKey()); } catch { /* ignore */ } }
+  /** manager phase = you've handed off and are now managing the club with a bloodline star on the pitch */
+  private isManagerPhase(): boolean { return !!this.loadMgr().starId; }
   private leagueSeed(): number { const h = this.account?.handle ?? 'x'; return [...h].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) >>> 0; }
   /** the club's league strength = average overall of the best XI (1-20 scale) */
   private squadStrength(): number {
@@ -698,14 +716,68 @@ class Game {
       const isNext = i === nextIdx;
       return `<div class="sf-fx${isNext ? ' next' : ''}"><span class="sf-md">${i + 1}</span>${vTag}<span class="sf-opp">${f.oppName}</span>${isNext ? `<button class="sf-play primary" id="sf-play">Play ▶</button>` : '<span class="sf-res pending">–</span>'}</div>`;
     }).join('');
+    const starLine = m.starName && m.starAge ? ` · ★ ${m.starName} (${m.starAge})` : '';
     const header = done
-      ? `<div class="season-summary done">✅ Season ${m.season} complete — <b>${clubName}</b> finished <b>${this.ordinal(t.pos)}</b> of ${t.size}. <button class="primary" id="sf-next-season">Next season →</button></div>`
-      : `<div class="season-summary"><b>${clubName}</b> · Season ${m.season} · Matchday ${nextIdx + 1}/${fixtures.length} · currently <b>${this.ordinal(t.pos)}</b> of ${t.size}</div>`;
+      ? `<div class="season-summary done">✅ Season ${m.season} complete — <b>${clubName}</b> finished <b>${this.ordinal(t.pos)}</b> of ${t.size}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ''}. <button class="primary" id="sf-next-season">Next season →</button></div>`
+      : `<div class="season-summary"><b>${clubName}</b> · Season ${m.season} · Matchday ${nextIdx + 1}/${fixtures.length} · currently <b>${this.ordinal(t.pos)}</b> of ${t.size}${starLine}</div>`;
+    const simBtn = done ? '' : `<div style="text-align:center;margin-top:10px;"><button id="sf-sim" style="font-family:var(--display);font-size:11px;padding:7px 14px;">⏩ Sim the rest of the season</button></div>`;
     $('season-body').innerHTML = header
-      + `<div class="season-cols"><div class="season-fixtures"><h4 class="scout-h4">FIXTURES</h4>${fxRows}</div>`
+      + `<div class="season-cols"><div class="season-fixtures"><h4 class="scout-h4">FIXTURES</h4>${fxRows}${simBtn}</div>`
       + `<div class="season-table-wrap"><h4 class="scout-h4">LEAGUE TABLE</h4>${this.spTableHtml(t)}</div></div>`;
     $('sf-play')?.addEventListener('click', () => this.playNextSpFixture());
-    $('sf-next-season')?.addEventListener('click', () => { const mm = this.loadMgr(); this.saveMgr({ season: mm.season + 1, results: [] }); this.showSeason(); });
+    $('sf-sim')?.addEventListener('click', () => this.simRemainingFixtures());
+    $('sf-next-season')?.addEventListener('click', () => this.nextSeason());
+  }
+
+  /** A deterministic scoreline for a simulated (not played-live) fixture, by squad strength. */
+  private simFixtureResult(myStr: number, oppStr: number, seed: number): PlayedResult {
+    const rnd = (n: number) => (((seed >>> (n & 15)) ^ (seed >>> ((n + 7) & 15))) % 100) / 100;
+    const diff = (myStr - oppStr) * 0.12 + 0.25;
+    return { myGoals: Math.min(6, Math.max(0, Math.round(1.2 + diff + (rnd(1) - 0.5) * 2.2))), oppGoals: Math.min(6, Math.max(0, Math.round(1.2 - diff + (rnd(2) - 0.5) * 2.2))) };
+  }
+  private simRemainingFixtures() {
+    const seed = this.leagueSeed(), clubName = this.club.name;
+    const fixtures = seasonFixtures(clubName, seed), opps = seededOpponents(clubName, seed);
+    const m = this.loadMgr(), myStr = this.squadStrength();
+    for (let i = m.results.length; i < fixtures.length; i++) {
+      const opp = opps.find((o) => o.name === fixtures[i].oppName)!;
+      m.results.push(this.simFixtureResult(myStr, opp.strength, ((seed >>> 0) ^ ((m.season * 131 + i) >>> 0)) >>> 0));
+    }
+    this.saveMgr(m);
+    this.showSeason();
+  }
+
+  /** Roll into the next season: bank a title if the club finished top, age the star a year, and — once he
+   *  reaches the end of his career — trigger his retirement and the succession to the heir. */
+  private nextSeason() {
+    const m = this.loadMgr();
+    const t = liveTable(this.club.name, this.squadStrength(), 1, this.leagueSeed(), m.results);
+    const titles = (m.titles ?? 0) + (t.pos === 1 ? 1 : 0);
+    const age = (m.starAge ?? 22) + 1;
+    if (age >= 34) { this.retireStar(titles); return; } // his playing days are over — the heir comes through
+    this.saveMgr({ ...m, season: m.season + 1, results: [], starAge: age, titles });
+    this.showSeason();
+  }
+
+  private retireStar(titles: number) {
+    const m = this.loadMgr();
+    const seasons = m.season;
+    this.showScreen('academy');
+    const surname = (m.starName ?? '').trim().split(/\s+/).slice(1).join(' ') || m.starName || 'the family';
+    $('academy-body').innerHTML = `<div class="cg-graduation"><div class="cg-grad-title">🎬 ${m.starName} hangs up his boots</div>`
+      + `<div class="cg-epilogue">After ${seasons} season${seasons === 1 ? '' : 's'} steering <b>${this.club?.name}</b>${titles ? ` and ${titles} league title${titles === 1 ? '' : 's'}` : ''}, ${m.starName} retires a club great. But the <b>${surname}</b> name isn't done — his son is already coming through the youth ranks.</div>`
+      + `<div class="cg-grad-windfall">🌳 The bloodline continues</div>`
+      + `<button id="cg-heir" class="primary">Bring through the heir →</button></div>`;
+    $('cg-heir').addEventListener('click', async () => {
+      try {
+        ($('cg-heir') as HTMLButtonElement).textContent = 'Raising the next generation…';
+        const r = await api.succeed(m.starId!, { seasons, titles });
+        this.clearMgr(); // back to player phase — the heir's card-career begins
+        this.setMe(await api.me());
+        if (r.legacy) toast(`🏟️ +${r.legacy.toLocaleString()}c legacy to the club`);
+        this.showProspectCard(r.prospect, true); // reveal the heir → Develop him → play his career → hand off again
+      } catch (e: any) { toast(e?.body?.error ?? 'Succession failed'); ($('cg-heir') as HTMLButtonElement).textContent = 'Bring through the heir →'; }
+    });
   }
 
   private playNextSpFixture() {
@@ -1082,6 +1154,7 @@ class Game {
         ($('cg-takereins') as HTMLButtonElement).textContent = 'Signing the contracts…';
         await api.careerHandoff(s.prospectId);
         this.setMe(await api.me());
+        this.saveMgr({ season: 1, results: [], starId: s.prospectId, starName: s.name, starAge: s.age }); // enter manager phase with him as the star
         toast(`🧢 You're the manager now — ${s.name} is in your squad`);
         this.showSeason();
       } catch (e: any) { toast(e?.body?.error ?? 'Handoff failed'); }
