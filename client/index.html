@@ -24,6 +24,24 @@
       @media (min-width: 1680px) { :root { --app-w: 1200px; } }
       * { box-sizing: border-box; }
       html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--text); font-family: var(--body); font-size: 22px; }
+      /* Respect the OS-level "reduce motion" preference app-wide: every animation/transition
+         (card fx, pulses, sheens, shimmers, spinners, everywhere) collapses to effectively-instant
+         rather than picking them off component by component. !important is deliberate here — it's
+         the one place a low-specificity global rule must always win over per-component animation. */
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after {
+          animation-duration: 0.001ms !important; animation-iteration-count: 1 !important;
+          transition-duration: 0.001ms !important; scroll-behavior: auto !important;
+        }
+      }
+      /* Themed scrollbars app-wide — the default OS scrollbar (bright grey on Windows, chunky on
+         some Linux setups) breaks the retro-arcade look everywhere something scrolls (the match
+         ticker, results/leaders feeds, cup bracket, any tall panel on a short viewport). */
+      * { scrollbar-width: thin; scrollbar-color: var(--line) var(--panel); }
+      *::-webkit-scrollbar { width: 10px; height: 10px; }
+      *::-webkit-scrollbar-track { background: var(--panel); }
+      *::-webkit-scrollbar-thumb { background: var(--line); border-radius: 5px; border: 2px solid var(--panel); }
+      *::-webkit-scrollbar-thumb:hover { background: var(--accent); }
       /* CRT scanline overlay — kept as a faint hint so small text stays crisp */
       body::after { content: ''; position: fixed; inset: 0; z-index: 9999; pointer-events: none;
         background: repeating-linear-gradient(to bottom, rgba(0,0,0,0) 0, rgba(0,0,0,0) 2px, rgba(0,0,0,0.045) 3px, rgba(0,0,0,0) 4px); }
@@ -100,6 +118,48 @@
         appearance: none; -webkit-appearance: none; text-overflow: ellipsis; white-space: nowrap; overflow: hidden;
         background-color: var(--panel-2); background-repeat: no-repeat; background-position: right 8px center; background-size: 11px;
         background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%238f9bd4'/%3E%3C/svg%3E"); }
+      select:hover:not(:disabled) { border-color: var(--cyan); }
+      select:disabled { opacity: 0.5; cursor: not-allowed; }
+      /* Generic text input — a baseline for any input that doesn't have its own dedicated id/class
+         rule (e.g. #sell-price on the market screen currently falls through to the unstyled browser
+         default with no rule at all). Dedicated rules like #handle-input keep winning by specificity. */
+      input:not([type="checkbox"]):not([type="radio"]) {
+        font-family: var(--body); font-size: 18px; color: var(--text);
+        background: var(--panel-2); border: 2px solid var(--line); border-radius: 0;
+        padding: 6px 10px; outline: none;
+      }
+      input:not([type="checkbox"]):not([type="radio"])::placeholder { color: #7a7ab0; }
+      input:not([type="checkbox"]):not([type="radio"]):hover:not(:disabled) { border-color: var(--cyan); }
+      input:not([type="checkbox"]):not([type="radio"]):focus { border-color: var(--good); }
+      input:disabled { opacity: 0.5; cursor: not-allowed; }
+      /* Generic link — plain <a> tags had no rule at all and would render in browser-default blue. */
+      a { color: var(--cyan); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      /* Generic table base — every table currently carries its own class (table.squad, table.league,
+         .lt-table…) which keeps winning by specificity, so this only fills in defaults they don't
+         already set: zebra striping and a row hover, so any table — present or future — reads a
+         little more premium/scannable without each screen having to opt in separately. */
+      table { border-collapse: collapse; width: 100%; }
+      table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.025); }
+      table tbody tr:hover td { background: rgba(255,255,255,0.05); }
+      /* Generic chip/badge base classes — a lot of screens hand-roll their own one-off pill CSS
+         (`.pill`, `.tag`, `.cg-oc-pill`, `.op-deal-tier`…). These are reusable defaults any future
+         screen can reach for directly instead of inventing another bespoke pill class; existing
+         bespoke pills are untouched since nothing currently uses these class names. */
+      .chip { display: inline-flex; align-items: center; gap: 4px; font-family: var(--body); font-size: 13px;
+        padding: 3px 9px; border-radius: 999px; background: var(--panel-2); border: 1px solid var(--line); color: var(--text); }
+      .chip.good { background: color-mix(in srgb, var(--good) 16%, transparent); border-color: color-mix(in srgb, var(--good) 42%, transparent); color: var(--good); }
+      .chip.warn { background: color-mix(in srgb, var(--warn) 16%, transparent); border-color: color-mix(in srgb, var(--warn) 42%, transparent); color: var(--warn); }
+      .chip.bad { background: color-mix(in srgb, var(--home) 16%, transparent); border-color: color-mix(in srgb, var(--home) 42%, transparent); color: var(--home); }
+      .chip.accent { background: color-mix(in srgb, var(--accent) 16%, transparent); border-color: color-mix(in srgb, var(--accent) 42%, transparent); color: var(--accent); }
+      .badge { display: inline-flex; align-items: center; font-family: var(--display); font-size: 10px; letter-spacing: 0.5px;
+        padding: 3px 7px; border-radius: 5px; background: var(--purple); color: #fff; }
+      /* Global keyboard-focus ring — visible only for keyboard nav (not mouse clicks), on every
+         interactive element app-wide, so tabbing through the game is always trackable. */
+      button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible,
+      [tabindex]:focus-visible, [role="button"]:focus-visible {
+        outline: 3px solid var(--cyan); outline-offset: 2px;
+      }
 
       .panel { width: var(--app-w); max-width: 96vw; background: var(--panel); border: 3px solid var(--line);
         box-shadow: 0 0 0 2px #000, 6px 6px 0 rgba(0,0,0,0.45); padding: 16px 18px; }
@@ -116,6 +176,9 @@
       #mainmenu { text-align: center; padding: 24px 8px 8px; }
       #mm-title { font-family: var(--display); font-size: 40px; letter-spacing: 2px; margin: 0 0 8px; }
       #mm-tagline { font-family: var(--body); font-size: 19px; color: var(--pink); letter-spacing: 1px; margin-bottom: 26px; text-shadow: 1px 1px 0 rgba(0,0,0,0.6); }
+      /* the display font is wide/chunky — shrink the title on narrow screens so "FOOTBALL ROYALTY"
+         stays inside the panel instead of clipping past its right edge. */
+      @media (max-width: 480px) { #mm-title { font-size: 7.2vw; } }
       #mm-buttons, #mm-newgame { display: flex; flex-direction: column; gap: 12px; align-items: center; max-width: 320px; margin: 0 auto; }
       #mm-buttons button, #mm-newgame button { font-family: var(--display); font-size: 18px; padding: 14px 22px; width: 100%; cursor: pointer;
         background: var(--panel-2); color: var(--text); border: 2px solid var(--line); box-shadow: 3px 3px 0 rgba(0,0,0,0.6); }
@@ -495,6 +558,9 @@
       .ns-act { font-size: 11px; padding: 4px 8px; }
       /* ── Academy / Career game ── */
       #academy-head { display: flex; align-items: center; gap: 12px; } #academy-head h3 { margin: 0; } #academy-back { margin-left: auto; }
+      /* Trophy Room reuses #academy-head but its back button has a different id — without this it
+         sits right next to the title instead of at the far right like every other screen's back button. */
+      #trophies-back { margin-left: auto; }
       .prospect-row { display: flex; align-items: center; gap: 12px; padding: 11px 14px; margin: 8px 0; border-radius: 9px; background: var(--panel2, #1a1a2e); border: 1px solid #2a2a44; }
       .prospect-row .pr-name { font-family: var(--display); font-size: 15px; }
       .prospect-row .pr-meta { font-size: 13px; color: var(--muted); }

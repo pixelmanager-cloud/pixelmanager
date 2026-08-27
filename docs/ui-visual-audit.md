@@ -1,5 +1,155 @@
 # Football Royalty — UI / Visual Audit & Fix List
 
+## 2026-08-27 overnight visual-agent pass, round 2 — sprite expansion + base component polish
+
+Continuing the same session/lane (client/index.html theme + client/src/sprites.ts only). Verified
+every sprite at 4–8× on my own scoped vite (see round-1 note on the shared `:5173` server pointing
+at `main` — still true, used `npx vite --config client/vite.config.ts --port 5199 client` instead).
+`npm run verify` green after every commit.
+
+### Sprite set: 17 → 27 icons
+Added, palette-consistent (extended `PAL` with `u` royal-purple `#8b5cff`, `e` mf-green `#39ff9e`,
+`f` fw-orange `#ff7a3c` — the latter two picked to match `--mf`/`--fw` theme tokens *exactly*, not
+just approximately, since the whole point is these read as the same role-colour language already
+used in the squad table/lineup editor):
+- **Royalty family** (the game is called Football Royalty and had zero crown/regal imagery):
+  `crown` (round 1), `laurel` (wreath), `banner` (hanging purple/gold dynasty pennant), `seal`
+  (red/gold wax seal).
+- **Position jerseys**: `role-gk`/`role-df`/`role-mf`/`role-fw` — tinted to `--gk`/`--df`/`--mf`/
+  `--fw` exactly, same shape as the existing `kit` sprite recoloured per role.
+- **Squad/career props**: `armband` (striped captain's cuff), `contract` (ribboned scroll),
+  `briefcase` (agent icon), `star` (5-point rating star), `calendar` (season/matchday marker with a
+  highlighted "today" cell).
+- Fixed round-1 `training` (dumbbell) sprite: it was letterboxed with 3 empty rows top+bottom,
+  reading as a tiny "H" at facility-card size — resized to fill the 16×16 frame like the other icons.
+
+**None of these are wired into `main.ts` call sites yet** — proposals below, with exact locations,
+for reconcile to apply quickly:
+
+| sprite | proposed call site | current state |
+|---|---|---|
+| `coin` | `main.ts:643` `$('me-coins').textContent = \`💰 ${...}\`` (topbar balance); `main.ts:1338` `$('club-coins')`; `main.ts:1859` `$('scout-coins')` | plain 💰 emoji text, 3 call sites |
+| `star` | `main.ts:666,687` `.hp-stars` (hub player row); `main.ts:1402` `.pr-stars` (academy prospect row) | plain `★` text character |
+| `medal` | `main.ts:1227` `<span class="aw-icon">${m.icon}</span>` (honours feed awards) | dynamic per-award emoji via `m.icon` |
+| `card` | ticker commentary `.cm-card.yellow`/`.cm-card.red` (`index.html` ~1131) | pure CSS color on text, no icon glyph at all |
+| `crown` | `main.ts:701` `$('hub-legacy-sub')` legend count (`⭐ ${l.legends.length} legend(s)`); or as an alternate/companion to the existing `sprite('trophy')` at `main.ts:639` for `#hub-legacy` specifically since that screen is "Dynasty & Trophy Room" — crown for the dynasty half, trophy for the cabinet half | trophy sprite already used for the whole hub-legacy row; legend count is a bare ⭐ emoji |
+| `laurel` | wherever a "legend" milestone/hall-of-fame moment renders (didn't find an exact single call site — search for "legend" in `main.ts` render paths) | none |
+| `banner` | succession/bloodline chapter-break moments (`cg-graduation`/retirement flow) | none, currently plain text headers |
+| `seal` | contract-signing moments — pairs naturally with the new `contract` sprite at the same call sites (`.pc-extend` flow, contract renewal toasts) | none |
+| `briefcase` | the agent-selection screen (Academy → "Sign an agent" — the "Ambitious Agent / Loyal Agent / Super-Agent…" list) | plain 🤝 emoji per row currently |
+| `contract` | same agent/contract screens as `seal` above, and the `pc-contract`/`pc-extend` block in the player card overlay | none |
+| `armband` | wherever captaincy is picked/shown (didn't locate an exact call site — search `captain` in `main.ts`) | none found |
+| `role-gk`/`df`/`mf`/`fw` | `.slot.role-GK` etc. in the lineup editor (`index.html` ~1078), `.mission .m-prospect .m-role` (~1039) — these already colour-code by role via CSS custom classes; the sprites could sit *next to* the existing text/colour coding, not replace it | role already colour-coded via CSS classes, no icon |
+| `flag`, `badge`, `whistle` | held in reserve — no call site identified this pass (competition markers / club-badge placeholders / referee flourish) | — |
+
+### Base/shared component polish (C-series), global-only — no feature CSS touched
+- **`style(theme): generic input, link, and select hover/disabled base styles`** — real gap found:
+  `#sell-price` (the market "list for sale" input, `index.html:1347`) had **zero** styling rule at
+  all and was rendering as an unstyled native number input in an otherwise fully-themed screen.
+  Added a baseline `input` rule (any input lacking its own dedicated id/class keeps falling back to
+  this instead of the browser default), plus `select:hover`/`:disabled`, plus a global `a` rule
+  (plain links had no rule and would've rendered browser-default blue/underlined).
+- **`style(theme): generic table zebra striping + row hover`** — every table already has its own
+  class (`table.squad`, `table.league`, `.lt-table`…) so this only fills gaps they don't already set:
+  subtle even-row zebra tint + a hover highlight. Verified with an injected `.lt-table` clone
+  (champ/mine/promo/releg row classes all still won on specificity — no regression) and confirmed
+  hover fires. Effect is intentionally subtle (`rgba(255,255,255,0.025)`) so it doesn't fight
+  existing row-status colouring.
+- **`style(theme): themed scrollbars app-wide`** — `::-webkit-scrollbar` + Firefox
+  `scrollbar-color`/`scrollbar-width`, themed to `--line`/`--panel`/`--accent`. Affects every
+  scrolling container (`#ticker`, `#results-feed`, `#leaders-feed`, the cup bracket, any tall panel
+  on a short viewport) without touching any of their component CSS. Could not get a visual capture
+  in this sandboxed browser (macOS/Chromium here uses overlay auto-hide scrollbars regardless of
+  CSS) — the rule itself is standard and correct; worth a real visual check on Windows/Linux or a
+  browser with classic scrollbars before fully trusting it.
+- **`style(theme): add reusable .chip and .badge base components`** — new opt-in utility classes
+  (`.chip`/`.chip.good/.warn/.bad/.accent`, `.badge`) for any *future* screen that needs a pill/badge
+  instead of hand-rolling another one-off class. Nothing currently uses these class names, so this
+  is purely additive — zero visual change to existing screens, just a component now available.
+
+### Two bugs found and fixed (both genuine regressions, not style opinions)
+- `FOOTBALL ROYALTY` title clipped past the panel edge below 480px width (round 1).
+- Trophy Room's back button (`id="trophies-back"`) didn't match the CSS selector that right-aligns
+  it (`#academy-back`), so it sat left-aligned next to the title instead of at the far edge like
+  every other screen's back button (round 1).
+
+### Still open from round 1 (unchanged, still valid)
+- `.cg-tut` flex/text-reflow bug — proposed fix in round-1 section below, not applied (feature CSS).
+- M1–M6 match-engine visual items — likely obsolete, confirm before investing (see below).
+
+## 2026-08-27 overnight visual-agent pass — status update
+
+**P0 readability items R1–R4 below are already DONE** (fixed before this session, verified in the
+current shipped code at `b57aa88`): buttons/labels/tables now use VT323 not Press Start 2P; base
+font is 22px with roomier controls; `--muted:#c8c8e8` clears ~8:1 on `--panel`; the CRT overlay is
+already faint (scanline alpha 0.045, vignette 0.15). Left the R1–R4 write-ups below for context/history
+— don't re-do them.
+
+**Shipped this pass** (client/index.html theme + client/src/sprites.ts — my lane only):
+- `style(theme): global keyboard focus-visible ring` — every button/select/input/link/`[tabindex]`
+  now gets a visible cyan `:focus-visible` outline. There was previously *no* global focus ring
+  (a couple of inputs even set `outline:none` with no replacement), so keyboard-only nav had no way
+  to see where it was. Before: invisible. After: 3px cyan ring, offset 2px, keyboard-only (doesn't
+  show on mouse clicks).
+- `style(theme): app-wide prefers-reduced-motion support` — added a global
+  `@media (prefers-reduced-motion: reduce)` that collapses all animation/transition durations to
+  ~0 (via `!important`, deliberately, so it wins over every current and future per-component
+  animation without needing to chase each one down). Before: only `.pc-card` respected the OS
+  reduced-motion setting; the CRT scanlines aside, dozens of other keyframes (toasts, trophy glows,
+  pulses, shimmers, the pixel loader) did not. After: the whole app respects it.
+- `style(theme): fix FOOTBALL ROYALTY title overflow on narrow/mobile widths` — **real bug**,
+  found by screenshotting at 375px: `#mm-title` was a fixed `40px` Press Start 2P and clipped past
+  the right edge of the panel on any phone-width screen ("FOOTBALL" ran off-panel, uncontained).
+  Fixed with a `max-width:480px` query dropping it to `7.2vw`. Verify with a mobile-width screenshot
+  of the main menu if you touch this again.
+- `art(sprites): add medal, card, kit, flag, badge, crown, coin, whistle` (two commits) — expanded
+  the pixel-icon set in `sprites.ts` from 9 to 17 icons, all in the existing 16×16 grid + shared
+  `PAL` palette so they're visually consistent with the existing set. Rendered and eyeballed all of
+  them at 4–8× scale before committing (one first draft — `medal` — read as "mouse ears" on a coin
+  and was redrawn as a proper ribbon+disc). **None of these are wired into `main.ts` yet** — that's
+  intentionally left to whoever next touches the relevant screen, to avoid a main.ts collision:
+  - `crown` — thematic fit for the "Royalty"/bloodline moments (dynasty screen, retirement/legend
+    beats, the mode-select ROYALTY branding) — the game's namesake but currently has zero crown
+    imagery anywhere in the UI.
+  - `medal` — POTM / end-of-season individual awards (`#honours-feed .aw-icon` currently just uses
+    an emoji at 26px; swapping in `sprite('medal')` would match the rest of the pixel-icon language).
+  - `card` — bookings in match commentary/ticker (`.cm-card.yellow`/`.cm-card.red` currently pure
+    color text, no icon).
+  - `coin` — the earned-coin economy display (topbar balance, upgrade-cost pills) uses a 💰 emoji
+    everywhere; `sprite('coin')` would be more in-keeping once someone's ready to touch those call
+    sites.
+  - `kit` — kit/identity customizer tab header (screenshotted this pass — currently a plain 🎽 emoji
+    next to "KIT").
+  - `flag`, `badge`, `whistle` — held in reserve for competition markers, club-badge placeholders,
+    and a referee/match-official flourish respectively; no current call site identified yet.
+
+### Bug found, NOT fixed (out of lane — lives in the feature CSS block, not the global theme)
+- **`.cg-tut` (career-game tutorial banner, `client/index.html` ~line 844) breaks text reflow.**
+  Screenshotted mid-career (Academy → Now tab, first tutorial banner): the sentence "This is a
+  moment in his young career. Read what it needs (the tags), then play the card that fits best —
+  good fits develop him faster." renders as disjointed fragments on their own lines instead of
+  wrapping naturally. Root cause: `.cg-tut { display:flex; ... }` on a container whose direct
+  children are a mix of raw text nodes and inline `<b>` tags plus a trailing `<button>` — flex turns
+  each text run and each `<b>` into its own flex item (no `flex-wrap` set), so the sentence can't
+  reflow as normal text; each fragment breaks independently instead. **Proposed fix (CSS-only, no
+  main.ts change needed):** drop `display:flex` from `.cg-tut`, let it flow as a normal block
+  (text + inline `<b>`s reflow correctly), and absolutely-position `.cg-tut-x` (the "Got it ✕"
+  button) top-right with `padding-right` on the container to reserve space for it instead of using
+  flex to lay it out. This is in the feature CSS block at the bottom of the file (career-game
+  screens), so left for whoever owns that block / post-reconcile rather than touched directly here.
+
+### Presentation-direction update — M1–M6 below are likely OBSOLETE
+`docs/direction.md` (dated today) DECIDED to **drop the live 2D match engine + `pixelart.ts` sprite
+sim entirely** in favor of text-driven match commentary (already built) — "text-driven matches +
+gorgeous management UI + a stunning dynasty tree." I could not find `pixelart.ts` or any Phaser/2D
+match-sprite code in the current tree at all (only `sprites.ts`, the static pixel-icon system, which
+is unaffected and is what this pass worked on) — so this removal may already be done, or the M1–M6
+items below (kickoff cluster, shot volume, home/away bias, sprite polish, playback speed, movement
+interpolation) may simply no longer have a code path to fix. **Whoever picks up P1 match-engine
+items should first confirm whether a 2D match sprite view still exists before investing in M1–M6.**
+If it's gone, those items should be struck from this list; if some 2D fallback still exists, they
+still apply.
+
 A walkthrough of every screen (login, hub, lineup editor, match view, league/cup/honours,
 club facilities, scouting, market) plus the match engine, on desktop + mobile. Goal:
 **make the game easier to read and look at while keeping the retro-arcade identity**
