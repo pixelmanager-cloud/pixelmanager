@@ -18,10 +18,19 @@
 > - **Season prize money** — finishing a season banks coins by position (`/sp/season-reward`), closing the
 >   loop: play → earn → upgrade facilities → better matches.
 >
-> **Still open (bigger — engine/development):** named player roles (2 — the engine already has *duties*,
-> which cover much of this), per-player training focus (1/3 — pre-season stat drift, re-verify calibration),
-> backroom staff hired with coins (3), mentoring (4), match plan / conditional orders, sponsorship/finance
-> levers. These each deserve their own careful, calibration-checked commit.
+> **✅ ALSO SHIPPED — the 5 core-four/depth items (2026-08-27, calibration-checked):**
+> - **Named player roles** — 5 FM-style roles added to the duties system (ball-playing DF, inverted FB,
+>   deep-lying playmaker, pressing forward, false 9), behaviour nudges only; calibration held (goals 2.80).
+> - **Per-player training focus** — the managed star develops/declines season to season by a chosen focus
+>   (young grow, veterans fade); `POST /players/:id/develop`.
+> - **Backroom staff** — hire Fitness/Attacking coach + Assistant Manager with coins for small stacking
+>   match edges; `POST /sp/hire-staff` (cost validated server-side).
+> - **Mentoring** — a veteran star's years (age 30+) imprint on the heir (composure/leadership head start
+>   via the heir's dev bonus); folded into `POST /players/:id/succeed`. A real dynasty tradeoff.
+> - **Sponsorship deals** — each season pick a Steady (flat cash) or Performance (top-3 bonus) shirt deal;
+>   `POST /sp/sponsor` + the bonus via `/sp/season-reward`.
+>
+> **Still open:** match plan / conditional orders; the international competitions in the to-do below.
 >
 > ### 🌍 To-do — competitions beyond the league (added 2026-08-27)
 > - **International club cup** — a continental knockout the club qualifies for by a high league finish;
