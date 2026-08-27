@@ -374,17 +374,21 @@ class Game {
    *  reduced-motion, applied live. (SFX volume joins here once the SFX set ships.) */
   private openSettings() {
     document.getElementById('settings-ov')?.remove();
-    const sw = (on: boolean) => `<div class="set-sw${on ? ' on' : ''}" role="switch" aria-checked="${on}" tabindex="0"></div>`;
+    const sw = (on: boolean, key: string) => `<div class="set-sw${on ? ' on' : ''}" role="switch" aria-checked="${on}" tabindex="0" data-sw="${key}"></div>`;
     const ov = document.createElement('div'); ov.id = 'settings-ov';
     ov.innerHTML = `<div class="tt-card set-card">`
       + `<div class="set-head"><div class="tt-title">⚙ SETTINGS</div><button class="set-x" aria-label="Close">✕</button></div>`
       + `<div class="set-row"><div class="set-lbl"><span>Music</span><span class="set-val" id="set-volval">${Math.round(audio.getVolume() * 100)}%</span></div>`
       + `<input type="range" id="set-vol" min="0" max="100" value="${Math.round(audio.getVolume() * 100)}" aria-label="Music volume"></div>`
-      + `<div class="set-row"><div class="set-lbl"><span>Mute music</span>${sw(audio.isMuted())}</div>`
+      + `<div class="set-row"><div class="set-lbl"><span>Mute music</span>${sw(audio.isMuted(), 'music')}</div>`
       + `<div class="set-hint">Silence the soundtrack. Your volume is remembered.</div></div>`
-      + `<div class="set-row"><div class="set-lbl"><span>Reduce motion</span>${sw(this.prefs.reducedMotion)}</div>`
+      + `<div class="set-row"><div class="set-lbl"><span>Sound effects</span><span class="set-val" id="set-sfxval">${Math.round(audio.getSfxVolume() * 100)}%</span></div>`
+      + `<input type="range" id="set-sfx" min="0" max="100" value="${Math.round(audio.getSfxVolume() * 100)}" aria-label="Sound-effects volume"></div>`
+      + `<div class="set-row"><div class="set-lbl"><span>Mute sound effects</span>${sw(audio.isSfxMuted(), 'sfx')}</div>`
+      + `<div class="set-hint">The reward chimes on big moments. No routine click sounds.</div></div>`
+      + `<div class="set-row"><div class="set-lbl"><span>Reduce motion</span>${sw(this.prefs.reducedMotion, 'motion')}</div>`
       + `<div class="set-hint">Tone down animations and screen transitions (card flips, moving effects).</div></div>`
-      + `<div class="set-row"><div class="set-lbl"><span>CRT screen effect</span>${sw(this.prefs.crt)}</div>`
+      + `<div class="set-row"><div class="set-lbl"><span>CRT screen effect</span>${sw(this.prefs.crt, 'crt')}</div>`
       + `<div class="set-hint">The retro scanline + vignette overlay. Turn off for a flat, crisp picture.</div></div>`
       + `<div class="set-row"><div class="set-lbl"><span>UI scale</span><span class="set-val" id="set-scaleval">${this.prefs.uiScale}%</span></div>`
       + `<input type="range" id="set-scale" min="80" max="130" step="5" value="${this.prefs.uiScale}" aria-label="UI scale">`
@@ -396,20 +400,26 @@ class Game {
     ov.querySelector('.set-x')!.addEventListener('click', close);
     // music volume — live
     const vol = ov.querySelector('#set-vol') as HTMLInputElement;
-    vol.addEventListener('input', () => { const v = Number(vol.value) / 100; audio.setVolume(v); if (audio.isMuted() && v > 0) { audio.setMuted(false); this.syncMuteBtn(); (ov.querySelectorAll('.set-sw')[0] as HTMLElement).classList.add('on'); } $('set-volval').textContent = `${vol.value}%`; });
+    vol.addEventListener('input', () => { const v = Number(vol.value) / 100; audio.setVolume(v); if (audio.isMuted() && v > 0) { audio.setMuted(false); this.syncMuteBtn(); (ov.querySelector('[data-sw="music"]') as HTMLElement)?.classList.add('on'); } $('set-volval').textContent = `${vol.value}%`; });
+    // SFX volume — live, with a sample chime so the level is audible while dragging
+    const sfx = ov.querySelector('#set-sfx') as HTMLInputElement;
+    sfx.addEventListener('input', () => { audio.setSfxVolume(Number(sfx.value) / 100); if (audio.isSfxMuted() && Number(sfx.value) > 0) { audio.setSfxMuted(false); (ov.querySelector('[data-sw="sfx"]') as HTMLElement)?.classList.add('on'); } $('set-sfxval').textContent = `${sfx.value}%`; });
+    sfx.addEventListener('change', () => audio.chime('confirm')); // preview once on release
     // UI scale — live
     const scale = ov.querySelector('#set-scale') as HTMLInputElement;
     scale.addEventListener('input', () => { this.prefs.uiScale = Number(scale.value); this.savePrefs(); this.applyPrefs(); $('set-scaleval').textContent = `${scale.value}%`; });
-    // the three toggles, in DOM order: [0] mute music, [1] reduce motion, [2] CRT effect
-    const [muteSw, motionSw, crtSw] = Array.from(ov.querySelectorAll('.set-sw')) as HTMLElement[];
+    // toggles wired by data-sw key (robust to row order/additions)
     const flip = (el: HTMLElement, on: boolean) => { el.classList.toggle('on', on); el.setAttribute('aria-checked', String(on)); };
+    const byKey = (k: string) => ov.querySelector(`[data-sw="${k}"]`) as HTMLElement;
     const wireSw = (el: HTMLElement, fn: () => void) => {
+      if (!el) return;
       el.addEventListener('click', fn);
       el.addEventListener('keydown', (e) => { const k = (e as KeyboardEvent).key; if (k === ' ' || k === 'Enter') { e.preventDefault(); fn(); } });
     };
-    wireSw(muteSw, () => { const m = audio.toggleMuted(); flip(muteSw, m); this.syncMuteBtn(); });
-    wireSw(motionSw, () => { this.prefs.reducedMotion = !this.prefs.reducedMotion; this.savePrefs(); this.applyPrefs(); flip(motionSw, this.prefs.reducedMotion); });
-    wireSw(crtSw, () => { this.prefs.crt = !this.prefs.crt; this.savePrefs(); this.applyPrefs(); flip(crtSw, this.prefs.crt); });
+    wireSw(byKey('music'), () => { const m = audio.toggleMuted(); flip(byKey('music'), m); this.syncMuteBtn(); });
+    wireSw(byKey('sfx'), () => { const m = audio.toggleSfxMuted(); flip(byKey('sfx'), m); if (!m) audio.chime('confirm'); });
+    wireSw(byKey('motion'), () => { this.prefs.reducedMotion = !this.prefs.reducedMotion; this.savePrefs(); this.applyPrefs(); flip(byKey('motion'), this.prefs.reducedMotion); });
+    wireSw(byKey('crt'), () => { this.prefs.crt = !this.prefs.crt; this.savePrefs(); this.applyPrefs(); flip(byKey('crt'), this.prefs.crt); });
     const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); } };
     document.addEventListener('keydown', onEsc);
   }
@@ -498,6 +508,7 @@ class Game {
     try {
       const r = await api.signProspect(seed);
       this.onboarding = true; // now show the academy welcome, with his story ahead
+      audio.chime('confirm');
       toast(`✍️ Signed ${r.prospect.name} — the bloodline begins`);
       this.showAcademy();
     } catch { toast('Could not sign him'); }
@@ -545,7 +556,7 @@ class Game {
       fresh.forEach((id) => have.add(id));
       this.saveUnlockedAch(have);
       // stagger the toasts a touch so multiple unlocks in one event don't collapse into one
-      fresh.forEach((id, i) => { const a = achievementById(id); if (!a) return; setTimeout(() => { toast(`${a.icon} Achievement unlocked — ${a.name}`); }, i * 1400); });
+      fresh.forEach((id, i) => { const a = achievementById(id); if (!a) return; setTimeout(() => { toast(`${a.icon} Achievement unlocked — ${a.name}`); audio.chime('achievement'); }, i * 1400); });
     } catch { /* offline — try again on the next event */ }
   }
 
@@ -1165,6 +1176,7 @@ class Game {
         const contTitles = (m.contTitles ?? 0) + 1;
         this.saveMgr({ ...m, contRound: 3, contTitles, contBlurb });
         this.checkAchievements(); // continental cup won
+        audio.chime('triumph');
         toast(`🏆 CONTINENTAL CHAMPIONS! ${this.club?.name} win the cup${pens ? ' on penalties' : ''}`);
         api.spSeasonReward({ pos: 1, size: 10, sponsor: undefined }).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; toast(`💰 Continental prize +${x.prize.toLocaleString()}c`); }).catch(() => {});
       } else {
@@ -1268,6 +1280,7 @@ class Game {
     }
     if (stage === 'final') { // champions!
       this.saveMgr({ ...m, wcStage: 'done', wcSeen: m.wcEdition, wcWins: (m.wcWins ?? 0) + 1, wcFinals: (m.wcFinals ?? 0) + 1, wcRun: run });
+      audio.chime('triumph');
       toast(`🏆 WORLD CHAMPIONS! ${homeNation(this.starSurname())} win the final${pens ? ' on penalties' : ''}`);
       this.concludeWorldCup('Champions', oppName); return;
     }
@@ -1395,7 +1408,7 @@ class Game {
     if (m.starId) {
       try { const d = await api.developPlayer(m.starId, { focus: m.trainFocus ?? 'passing', age: m.starAge ?? 27 }); this.setMe(await api.me()); toast(`🏋️ ${m.starName} — off-season training (OVR now ${d.overall})`); } catch { /* offline */ }
     }
-    if (t.pos === 1) audio.play('triumph'); // league champions — the victory cue
+    if (t.pos === 1) { audio.play('triumph'); audio.chime('triumph'); } // league champions — the victory cue
     const titles = (m.titles ?? 0) + (t.pos === 1 ? 1 : 0);
     const age = (m.starAge ?? 22) + 1;
     if (age >= (m.retireAge ?? 34)) { this.retireStar(titles, m.contTitles ?? 0); return; } // his playing days are over — the heir comes through
@@ -2117,6 +2130,8 @@ class Game {
       if (r.clubGain && r.clubGain > 0 && this.account?.coins != null) this.account.coins += r.clubGain; // his earnings feed the club
       if (r.graduated && r.player) {
         this.setMe(await api.me());
+        this.checkAchievements(); // first graduate milestone
+        audio.chime('success'); // graduation — a real milestone beat
         const player = r.player;
         const windfallLine = r.windfall && r.windfall > 0 ? `<div class="cg-grad-windfall">🏟️ +${r.windfall.toLocaleString()}c invested in the club as he signs pro</div>` : '';
         // an evocative epilogue of the whole journey, then the pro reveal

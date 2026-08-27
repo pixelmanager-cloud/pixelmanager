@@ -26,21 +26,64 @@ const MANIFEST: Record<MusicContext, string[]> = {
   emotional: ['/audio/emotional-1.ogg'],
 };
 
-interface AudioSettings { volume: number; muted: boolean }
+interface AudioSettings { volume: number; muted: boolean; sfxVolume: number; sfxMuted: boolean }
 const SETTINGS_KEY = 'fm_audio';
 const FADE_MS = 800;
 
+// A named reward CHIME is a tiny chiptune arpeggio — a soft square-wave phrase, synthesised in the Web
+// Audio graph (no sample files). Deliberately gentle + reserved for big commitment/celebration beats, NOT
+// routine clicks. {f: Hz, t: start offset s, d: duration s, type?: waveform}.
+type ChimeNote = { f: number; t: number; d: number; type?: OscillatorType };
+const CHIMES: Record<string, ChimeNote[]> = {
+  confirm:     [{ f: 523.25, t: 0, d: 0.08, type: 'triangle' }, { f: 783.99, t: 0.07, d: 0.13, type: 'triangle' }],
+  success:     [{ f: 523.25, t: 0, d: 0.09 }, { f: 659.25, t: 0.08, d: 0.09 }, { f: 783.99, t: 0.16, d: 0.18 }],
+  triumph:     [{ f: 523.25, t: 0, d: 0.1 }, { f: 659.25, t: 0.09, d: 0.1 }, { f: 783.99, t: 0.18, d: 0.1 }, { f: 1046.5, t: 0.27, d: 0.3 }],
+  achievement: [{ f: 783.99, t: 0, d: 0.08, type: 'triangle' }, { f: 1046.5, t: 0.07, d: 0.08, type: 'triangle' }, { f: 1318.5, t: 0.14, d: 0.22, type: 'triangle' }],
+};
+
 class AudioManager {
-  private settings: AudioSettings = { volume: 0.5, muted: false };
+  private settings: AudioSettings = { volume: 0.5, muted: false, sfxVolume: 0.6, sfxMuted: false };
   private unlocked = false;              // browsers block audio until a user gesture
   private pending: MusicContext | null = null; // context requested before unlock
   private current: MusicContext | null = null;
   private deck: HTMLAudioElement | null = null;      // the playing loop
   private fadeTimer: number | null = null;
+  private actx: AudioContext | null = null;          // lazily-created, shared by all chimes
 
   constructor() {
-    try { const raw = localStorage.getItem(SETTINGS_KEY); if (raw) { const s = JSON.parse(raw); this.settings = { volume: clamp01(s.volume ?? 0.5), muted: !!s.muted }; } } catch { /* defaults */ }
+    try { const raw = localStorage.getItem(SETTINGS_KEY); if (raw) { const s = JSON.parse(raw); this.settings = { volume: clamp01(s.volume ?? 0.5), muted: !!s.muted, sfxVolume: clamp01(s.sfxVolume ?? 0.6), sfxMuted: !!s.sfxMuted }; } } catch { /* defaults */ }
   }
+
+  private ensureCtx(): AudioContext | null {
+    try { if (!this.actx) { const Ctor = (window.AudioContext || (window as any).webkitAudioContext); if (!Ctor) return null; this.actx = new Ctor(); } if (this.actx.state === 'suspended') this.actx.resume().catch(() => {}); return this.actx; } catch { return null; }
+  }
+
+  /** Play a named reward chime (see CHIMES). No-op if SFX is muted, before the first gesture, or if the
+   *  chime name is unknown. Presentational only — never touches the engine. */
+  chime(name: keyof typeof CHIMES | string): void {
+    if (this.settings.sfxMuted || !this.unlocked) return;
+    const seq = CHIMES[name]; if (!seq) return;
+    const ctx = this.ensureCtx(); if (!ctx) return;
+    const now = ctx.currentTime, master = this.settings.sfxVolume;
+    for (const n of seq) {
+      try {
+        const osc = ctx.createOscillator(), g = ctx.createGain();
+        osc.type = n.type ?? 'square'; osc.frequency.value = n.f;
+        const start = now + n.t, end = start + n.d;
+        g.gain.setValueAtTime(0.0001, start);
+        g.gain.linearRampToValueAtTime(clamp01(master * 0.22), start + 0.012);
+        g.gain.exponentialRampToValueAtTime(0.0001, end);
+        osc.connect(g); g.connect(ctx.destination);
+        osc.start(start); osc.stop(end + 0.03);
+      } catch { /* a node failed — skip this note */ }
+    }
+  }
+
+  getSfxVolume(): number { return this.settings.sfxVolume; }
+  isSfxMuted(): boolean { return this.settings.sfxMuted; }
+  setSfxVolume(v: number): void { this.settings.sfxVolume = clamp01(v); this.persist(); }
+  setSfxMuted(m: boolean): void { this.settings.sfxMuted = m; this.persist(); }
+  toggleSfxMuted(): boolean { this.setSfxMuted(!this.settings.sfxMuted); return this.settings.sfxMuted; }
 
   /** Call on the first user gesture (e.g. New Game / Continue click) so autoplay is allowed. */
   unlock(): void {
