@@ -138,8 +138,16 @@
         border: 2px solid var(--line); box-shadow: 3px 3px 0 rgba(0,0,0,0.6); padding: 8px 12px; outline: none; }
       #handle-input::placeholder, #password-input::placeholder { color: #7a7ab0; }
       /* NFT collectible player card — effects escalate hard with tier */
-      #player-card-ov { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center;
+      #player-card-ov, #teamtalk-ov { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center;
         background: rgba(4,4,12,0.85); cursor: pointer; animation: ftfade 0.25s ease-out; }
+      .tt-card { width: 420px; max-width: 92vw; padding: 20px 22px; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; cursor: default; }
+      .tt-title { font-family: var(--display); font-size: 15px; color: var(--cyan); text-align: center; }
+      .tt-sub { font-size: 15px; color: var(--muted); text-align: center; margin: 6px 0 16px; }
+      .tt-opt { display: block; width: 100%; text-align: left; margin-bottom: 10px; padding: 12px 16px; cursor: pointer;
+        background: var(--panel-2, #1f1f4d); border: 1px solid var(--line); border-radius: 10px; transition: border-color .12s, transform .1s; }
+      .tt-opt:hover { border-color: var(--cyan); transform: translateY(-2px); }
+      .tt-opt b { display: block; font-family: var(--display); font-size: 13px; color: var(--text); margin-bottom: 3px; }
+      .tt-opt span { font-size: 13px; color: var(--muted); }
       .pc-card { position: relative; width: 320px; max-width: 92vw; padding: 20px 22px 22px; text-align: center; cursor: default;
         border: 3px solid var(--cyan); border-radius: 14px; overflow: hidden; isolation: isolate; animation: ftpop 0.35s ease-out;
         background: linear-gradient(160deg, #12122a 0%, #0a0a18 60%); box-shadow: 0 0 0 2px #000, 0 0 26px rgba(0,229,255,0.4), 10px 10px 0 rgba(0,0,0,0.5); }

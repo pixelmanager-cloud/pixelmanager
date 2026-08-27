@@ -836,10 +836,31 @@ class Game {
     this.openLineup('match', { id: 'sp-opp', handle: opp.name, venue });
   }
 
+  /** Pre-kickoff TEAM TALK — a real matchday decision. Each tone applies a small, bounded pre-kickoff edge
+   *  to your side (deterministic — baked into the match snapshot), then kicks off. */
   private kickOffSpMatch() {
+    const sp = this.spFixture!;
+    const el = document.createElement('div'); el.id = 'teamtalk-ov'; el.className = 'pc-overlay';
+    el.innerHTML = `<div class="tt-card"><div class="tt-title">🗣️ TEAM TALK</div>`
+      + `<div class="tt-sub">In the dressing room before ${sp.venue === 'away' ? 'the away trip to' : 'hosting'} <b>${sp.oppName}</b> — set the tone:</div>`
+      + `<button class="tt-opt" data-tt="fire"><b>🔥 Go for the throat</b><span>Attack hard — sharper in front of goal, but the legs tire faster</span></button>`
+      + `<button class="tt-opt" data-tt="calm"><b>🧊 Keep your shape</b><span>Stay compact and disciplined — fresher late on, harder to break down</span></button>`
+      + `<button class="tt-opt" data-tt="focus"><b>🎯 Just play your game</b><span>A calm, balanced edge</span></button></div>`;
+    el.addEventListener('click', (e) => {
+      const tt = (e.target as HTMLElement).closest('[data-tt]')?.getAttribute('data-tt');
+      if (!tt) return;
+      el.remove();
+      this.startSpMatchWith(tt);
+    });
+    document.body.appendChild(el);
+  }
+  private startSpMatchWith(tone: string) {
     const sp = this.spFixture!;
     const myLineup: Lineup = { ...this.draftLineup, duties: [...this.draftDuties], ...this.draftRoles() };
     const myTeam = buildXI(this.availableClub(), myLineup);
+    if (tone === 'fire') { myTeam.homeBoost = 1.08; myTeam.conditioning = 1.06; }       // more shots, tire faster
+    else if (tone === 'calm') { myTeam.conditioning = 0.92; }                            // fresher legs, solidity
+    else { myTeam.homeBoost = 1.04; }                                                    // a small balanced edge
     const oppTeam = buildXI(sp.oppClub, sp.oppLineup);
     const oppTactics: Tactics = { formation: '4-4-2', mentality: 0, line: 0, press: 0, tempo: 0, width: 0 };
     const iAmHome = sp.venue === 'home';
