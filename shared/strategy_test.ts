@@ -171,6 +171,25 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
   assert(gaAnchor < gaB2B, `anchor should concede fewer goals than box-to-box vs a direct attack (got ${gaAnchor} vs ${gaB2B})`);
 }
 
+// ---- 6e. Inverted-winger FW duty: cutting inside off the touchline edges possession up ----
+{
+  const withWideFwDuty = (t: Team, duty: Duty): Team =>
+    ({ ...t, players: t.players.map((p) => {
+      if (p.role !== 'FW') return p;
+      // 3-4-3 anchors: y=11/57 are the wide FW slots, y=34 the central one — assign the wide pair.
+      return Math.abs(p.anchor.y - 34) > 15 ? { ...p, duty } : { ...p, duty: 'poacher' as Duty };
+    }) });
+  let possIW = 0, possPoacher = 0;
+  for (let i = 0; i < N; i++) {
+    const base = mk('atk', 14, i * 7 + 1, '3-4-3');
+    const opp = mk('def', 13, i * 11 + 3, '4-4-2');
+    possIW += play(withWideFwDuty(base, 'inverted-winger'), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).poss[0];
+    possPoacher += play(withWideFwDuty(base, 'poacher'), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).poss[0];
+  }
+  console.log(`[duty]      possession with wide FWs cutting inside: INVERTED-WINGER=${(possIW / N * 100).toFixed(1)}%  POACHER(wide)=${(possPoacher / N * 100).toFixed(1)}%`);
+  assert(possIW > possPoacher, `inverted wingers cutting inside should edge possession above wide poachers (got ${(possIW / N * 100).toFixed(1)}% vs ${(possPoacher / N * 100).toFixed(1)}%)`);
+}
+
 // ---- 7. Anti-spam: no single tactic may dominate the field (equal stats) ----
 // Guards against a globally-dominant "spam" strategy (Tiki-Taka used to win ~69% of the
 // field with no counter). Every viable tactic must have at least one losing matchup, and

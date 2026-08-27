@@ -307,6 +307,13 @@ content bar (a new interacting/trade-off decision, not a reskin).
   (lowest push, highest press of any MF duty, and a negative magnet so play doesn't get funnelled through
   him as an out-ball). Proven in `strategy_test.ts`: concedes fewer goals vs a direct attack than
   ball-winner (1.78 vs 1.82), box-to-box (1.78 vs 2.02).
+- **Inverted-Winger FW duty** — a new named FW duty for a wide forward slot (3-4-3/4-3-3's wide FW):
+  cuts inside off the touchline (negative `hug`, reusing the width dimension added for wing-back) onto
+  a more central role instead of hugging the line. Proven in `strategy_test.ts`: edges team possession
+  up vs a wide poacher (52.4% vs 47.7% against a plain back four) — the extra central passing/creation
+  presence outweighs losing the out-and-out width. (Team shots/goals were tried first and didn't hold —
+  crowding the centre stole space from other central attackers rather than adding net chances;
+  possession is the honest, provable effect.)
 - **New formation: 4-2-2-2** — a back four behind a narrow double-pivot + double-ten box midfield and
   two strikers. The tightest MF spread of any formation in the pool, so it loses width battles against
   most shapes (an earlier attempt, 3-4-1-2, was tried and dropped — no formation in the pool could beat

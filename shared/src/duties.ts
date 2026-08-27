@@ -13,7 +13,7 @@ export const DUTIES_BY_ROLE: Record<Role, Duty[]> = {
   GK: ['keeper', 'sweeper-keeper'],
   DF: ['cover', 'stopper', 'ball-playing-defender', 'inverted-fullback', 'wing-back', 'sweeper'],
   MF: ['box-to-box', 'playmaker', 'ball-winner', 'deep-lying-playmaker', 'anchor'],
-  FW: ['poacher', 'target-man', 'pressing-forward', 'false-9'],
+  FW: ['poacher', 'target-man', 'pressing-forward', 'false-9', 'inverted-winger'],
 };
 
 /** Short human label for UI. */
@@ -27,6 +27,7 @@ export const DUTY_LABEL: Record<Duty, string> = {
   'wing-back': 'Wing-Back',
   'sweeper': 'Sweeper',
   'anchor': 'Anchor',
+  'inverted-winger': 'Inverted Winger',
   'box-to-box': 'Box-to-Box',
   'playmaker': 'Playmaker',
   'ball-winner': 'Ball-Winner',
@@ -78,6 +79,7 @@ const TABLE: Record<Duty, DutyMods> = {
   'anchor':                { ...NEUTRAL, push: 0.4, come: -0.08, shoot: 0.5, magnet: -4, press: 0.75 }, // pure destroyer — sits, screens, never strays
   'pressing-forward':      { ...NEUTRAL, push: 1.15, shoot: 1.0, magnet: 2, press: 0.7 },             // defends from the front
   'false-9':               { ...NEUTRAL, push: 0.9, come: 0.12, shoot: 0.9, magnet: 6 },              // drops deep to link
+  'inverted-winger':       { ...NEUTRAL, push: 1.2, come: 0.1, shoot: 1.35, magnet: 4, hug: -0.6 },    // cuts inside off the touchline onto their stronger foot — extra central passing/creation edges possession up (see strategy_test.ts)
 };
 
 export function dutyMods(d: Duty | undefined): DutyMods {
