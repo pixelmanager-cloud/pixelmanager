@@ -61,8 +61,8 @@ Legend: ☐ todo · ◐ in progress · ☑ done.
   bit-rot); zero engine bugs across 15k+ dynasty generations; zero calibration drift; a cross-lane text linter.
 - **Shell/UX** (research-driven): onboarding scout board, Settings (volume/mute/reduce-motion/CRT/UI-scale),
   pause menu, delete-confirm, default focus. Research docs: feature-gap-analysis, competitive-deep-dive, ui-ux.
-- **Manager narrative → client wiring (in progress):** ☑ backroom staff on the club screen · ☑ board season
-  verdict on the season screen · ☐ press-conference line post-match · ☐ intl rivalry/drama blurbs in cup screens.
+- **Manager narrative → client wiring:** ☑ backroom staff on the club screen · ☑ board season verdict on the
+  season screen · ☑ press-conference line on the full-time card · ☐ intl rivalry/drama blurbs in cup screens (last one).
 - **Design questions flagged for you:** (1) should board mood ever drive real *sacking* risk? (2) static art
   assets — the #1 feature-gap finding (all "pixel art" is currently procedural SVG). (3) staff: flavour-only or hireable?
 
