@@ -1,6 +1,7 @@
 // Thin client for the fm-server async-PvP API. Token (the "code") is kept in
 // localStorage; every request sends it as a Bearer header.
-import type { Club, Duty, Lineup, Tactics, Team, Player } from '@fm/shared';
+import type { Club, Lineup, Tactics, Team, Player, StandingOrders } from '@fm/shared';
+export type { StandingOrders };
 
 const API_URL = (import.meta as any).env?.VITE_API_URL ?? 'http://localhost:8787';
 
@@ -79,7 +80,6 @@ export interface Account { id: string; handle: string; rating: number; coins?: n
 export interface MarketPlayer { name: string; role: string; overall: number; attrs: Record<string, number>; hidden: number }
 export interface MarketListing { id: string; playerId: string; price: number; sellerHandle: string; mine: boolean; player: MarketPlayer }
 export interface TableRow { id: string; handle: string; rating: number; P: number; W: number; D: number; L: number; GF: number; GA: number; GD: number; Pts: number }
-export interface StandingOrders { formation: Lineup['formation']; playerIds: string[]; tactics: Tactics; duties?: Duty[]; captainIdx?: number; takers?: { pen?: number; fk?: number; corner?: number } }
 export interface ResultRow { id: string; home_id: string; away_id: string; home_handle: string; away_handle: string; home_score: number; away_score: number; created_at: number }
 export interface SeasonMeta { number: number; startsAt: number; endsAt: number; status: string; endsInMs: number }
 export interface Fixture { opponentId: string; handle: string; clubName: string; rating: number; venue: 'home' | 'away'; status: 'played' | 'pending'; result: { my: number; opp: number } | null }

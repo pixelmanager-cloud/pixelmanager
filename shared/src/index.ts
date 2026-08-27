@@ -24,3 +24,5 @@ export * from './game.js';
 export * from './lifecycle.js';
 export * from './token.js';
 export * from './tokens.js';
+export * from './standingOrders.js';
+export * from './gamestore.js';

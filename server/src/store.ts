@@ -1,14 +1,9 @@
 // Storage interface. Two backends implement it: node:sqlite (local dev) and
 // Postgres (production). Everything is async so both fit the same shape.
-import type { Club, Duty, Lineup, Tactics, Token } from '@fm/shared';
-export type { Token };
-
-export interface StandingOrders { formation: Lineup['formation']; playerIds: string[]; tactics: Tactics; duties?: Duty[]; captainIdx?: number; takers?: { pen?: number; fk?: number; corner?: number } }
-/** Serialize / parse the manager squad roles (captain + set-piece takers) for the so_roles column. */
-export const rolesJson = (so: StandingOrders): string | null =>
-  so.captainIdx != null || so.takers ? JSON.stringify({ captainIdx: so.captainIdx, takers: so.takers }) : null;
-export const parseRoles = (s: string | null | undefined): { captainIdx?: number; takers?: { pen?: number; fk?: number; corner?: number } } =>
-  s ? JSON.parse(s) : {};
+import type { Club, Tactics, Token, StandingOrders } from '@fm/shared';
+import { rolesJson, parseRoles } from '@fm/shared';
+export type { Token, StandingOrders };
+export { rolesJson, parseRoles };
 export interface Account { id: string; handle: string; rating: number; createdAt: number }
 export interface OpponentRow { id: string; handle: string; rating: number; clubName: string }
 export interface LeaderRow { id: string; handle: string; rating: number }
