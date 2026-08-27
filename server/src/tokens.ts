@@ -4,8 +4,8 @@
 // home for every transition, replacing the old prospects/contracts/lifecycle/achievements split.
 import {
   overall, contractView, signContract, contractLength, legacyCard, legacyBoost, inheritGenes, rollGenes, graduate,
-  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, AGE_BANDS, moraleEffects, narratePlay, scenarioStory, chapterRecap, narrateCoach, narrateDraft, narrateOffer, careerCast, bandAt, cardName, CARD_DESC, LIFE_LABEL,
-  type Player, type Track, type PlayerAchievements, type Genes, type CareerPlayerAttrs,
+  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, AGE_BANDS, moraleEffects, narratePlay, narrateLifeEvent, scenarioStory, chapterRecap, narrateCoach, narrateDraft, narrateOffer, careerCast, bandAt, cardName, CARD_DESC, LIFE_LABEL,
+  type Player, type Track, type PlayerAchievements, type Genes, type CareerPlayerAttrs, type LifeKind,
 } from '@fm/shared';
 import type { Token, Store } from './store.js';
 import { clubSeason, squadRole, firstTeamReady, homeNation, nationalFixture, computeOffPitch } from '@fm/shared';
@@ -112,9 +112,10 @@ export function actWithNarration(c: Career, a: CareerAction): string | null {
   const baseCtx = { age: c.age, chapter: c.chapter, stakes: 1 as 1 | 2 | 3, personalityId: c.personality.id, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0, milestone: null as string | null, seed: (((c as any).seed >>> 0) + c.turn * 2654435761) >>> 0 };
   if (a.type === 'play') {
     const ctx = { ...baseCtx, stakes: c.scenario.stakes, milestone: careerMilestone(c) };
+    const lifeKind = c.scenario.life; // capture BEFORE applying — play() advances to the NEXT scenario
     applyAction(c, a);
     const choice = c.log[c.log.length - 1];
-    return narratePlay(cardName(a.cardId), choice.tags, choice.success, ctx);
+    return lifeKind ? narrateLifeEvent(lifeKind, cardName(a.cardId), choice.success, ctx) : narratePlay(cardName(a.cardId), choice.tags, choice.success, ctx);
   }
   // coach / draft / offer — read the chosen item from the current phase BEFORE applying
   const st = c.current() as any;
@@ -201,10 +202,11 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
     // hash of seed+turn, never drawn from the rng() stream). Each of the 14 kinds carries its own good/bad
     // meter+earnings consequence (LIFE_CONSEQUENCE), applied when the card resolves. Here we just SURFACE
     // it: the label + story text, and — once it resolves — how it actually went (c.lastLifeEvent).
-    if (!legacyPressure && st.scenario.life) {
-      kind = st.scenario.life;
-      st.scenario = { ...st.scenario, kind, label: LIFE_LABEL[st.scenario.life] };
-      st.lifeEvent = st.scenario.life;
+    const lifeKind: LifeKind | null = st.scenario.life ?? null;
+    if (!legacyPressure && lifeKind) {
+      kind = lifeKind;
+      st.scenario = { ...st.scenario, kind, label: LIFE_LABEL[lifeKind] };
+      st.lifeEvent = lifeKind;
       moment = null;
     }
     if (!legacyPressure) {
