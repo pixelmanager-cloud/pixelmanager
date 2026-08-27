@@ -1152,6 +1152,14 @@ class Game {
     return hint ? `<div class="cg-tut" id="cg-tut">${hint} <button class="cg-tut-x" id="cg-tut-x">Got it ✕</button></div>` : '';
   }
 
+  /** The rival to chase — a named academy contemporary running his own career; you're measured against him. */
+  private rivalHtml(s: import('./api').CareerState): string {
+    const r = s.rival; if (!r) return '';
+    const ahead = r.lead >= 0;
+    return `<div class="cg-rival"><span class="cg-rival-lbl">🆚 RIVAL</span><span class="cg-rival-name">${r.name}</span>`
+      + `<span class="cg-rival-gap ${ahead ? 'up' : 'down'}">${ahead ? `▲ ${r.lead} ahead` : `▼ ${Math.abs(r.lead)} behind`}</span></div>`;
+  }
+
   /** The stage objective — a target the club/coach sets for this chapter, with a progress bar. Gives each
    *  stage direction and a reward beat when it's hit. */
   private objectiveHtml(s: import('./api').CareerState): string {
@@ -1276,7 +1284,7 @@ class Game {
     if (this.careerTab === 'player') content = prof + this.deckHtml(s);
     else if (this.careerTab === 'kit') content = this.kitTabHtml(s);
     else if (this.careerTab === 'league') content = this.leagueTableHtml(s);
-    else content = this.objectiveHtml(s) + this.lifeDashHtml(s) + narr + recap + conseq + evt + body;
+    else content = this.objectiveHtml(s) + this.rivalHtml(s) + this.lifeDashHtml(s) + narr + recap + conseq + evt + body;
     const tut = this.careerTab === 'now' ? this.tutorialHint(s) : '';
     $('academy-body').innerHTML = head + scene + tut + tabBar + content;
     ($('cg-tut-x') as any)?.addEventListener('click', () => { localStorage.setItem('fm_tut_done', '1'); ($('cg-tut') as any)?.remove(); });
