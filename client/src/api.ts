@@ -331,7 +331,7 @@ export const api = {
     await localStore.updateToken(pid, { ...grad, prime_season: season, signed_season: deal.signedSeason, length_seasons: deal.lengthSeasons, staked_since: season });
     return { ok: true as const, player: tokenToPlayer((await localStore.getToken(pid))!) };
   },
-  succeed: async (pid: string, body: { seasons: number; titles: number; mentorship: number }) => {
+  succeed: async (pid: string, body: { seasons: number; titles: number; mentorship: number; inheritance?: 'craft' | 'fortune' | 'name' }) => {
     await ensureActive();
     const t = await localStore.getToken(pid);
     if (!t) throw apiErr('no such token', {}, 404);
@@ -339,21 +339,25 @@ export const api = {
     const seasons = Math.max(0, Math.min(20, Math.floor(Number(body?.seasons) || 0)));
     const titles = Math.max(0, Math.min(20, Math.floor(Number(body?.titles) || 0)));
     const mentorship = Math.max(0, Math.min(10, Math.floor(Number(body?.mentorship) || 0)));
+    const inheritance = body?.inheritance; // the will/heirloom decision (see client's showWillDecision)
     await localStore.updateToken(pid, { ach_seasons: (t.ach_seasons ?? 0) + seasons, ach_apps: (t.ach_apps ?? 0) + seasons * 18, ach_league: (t.ach_league ?? 0) + titles });
     const decorated = (await localStore.getToken(pid))!;
-    const legacy = Math.round((decorated.earnings ?? 0) * RETIREMENT_LEGACY_SHARE);
+    // THE FORTUNE — the family wealth passes down: a larger cash inheritance to the club.
+    let legacy = Math.round((decorated.earnings ?? 0) * RETIREMENT_LEGACY_SHARE);
+    if (inheritance === 'fortune') legacy = Math.round(legacy * 1.75) + 200;
     if (legacy > 0) await localStore.addCoins(OWNER, legacy);
     const rf = rebornFields(decorated);
-    if (mentorship > 0) {
-      const dev = JSON.parse(rf.dev_bonus_json ?? '{}');
-      const b = Math.min(3, Math.ceil(mentorship / 2));
-      dev.composure = (dev.composure ?? 0) + b; dev.leadership = (dev.leadership ?? 0) + b;
-      rf.dev_bonus_json = JSON.stringify(dev);
-    }
+    const dev = JSON.parse(rf.dev_bonus_json ?? '{}');
+    if (mentorship > 0) { const b = Math.min(3, Math.ceil(mentorship / 2)); dev.composure = (dev.composure ?? 0) + b; dev.leadership = (dev.leadership ?? 0) + b; }
+    // THE CRAFT — his footballing brain passes down: a mental development head-start for the heir.
+    if (inheritance === 'craft') { dev.composure = (dev.composure ?? 0) + 2; dev.leadership = (dev.leadership ?? 0) + 2; }
+    rf.dev_bonus_json = JSON.stringify(dev);
+    // THE NAME — the family renown opens doors: a pedigree (potential) head-start for the heir.
+    if (inheritance === 'name') rf.pedigree = Math.min(1, (rf.pedigree ?? 0) + 0.15);
     await localStore.updateToken(pid, rf);
     const fresh = (await localStore.getToken(pid))!;
     const pot = rebornPotential(fresh);
-    return { ok: true as const, legacy, prospect: { id: pid, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: fresh.pedigree, careerStarted: false, potentialStars: pot.stars, genes: JSON.parse(fresh.genes_json) } };
+    return { ok: true as const, legacy, inheritance: inheritance ?? null, prospect: { id: pid, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: fresh.pedigree, careerStarted: false, potentialStars: pot.stars, genes: JSON.parse(fresh.genes_json) } };
   },
   // SP SEASON PRIZE — also where the local season counter advances (see docs note in save.ts's
   // profile.season) and where a league finish is banked as an honour (the old pod/wall-clock season

@@ -1439,6 +1439,13 @@ class Game {
     media: { icon: '🎙️', label: 'Move into the media', blurb: 'A studio wants him behind a microphone next season — a new way to stay close to a game he can’t quite leave behind.' },
     mentoring: { icon: '🧭', label: 'Stay close, mentor the heir', blurb: 'He isn’t going far. The next generation of the family will have him in their corner, every step of the way.' },
   };
+  // the will/inheritance decision at generation hand-off — a concrete named choice about what the heir
+  // carries forward (each maps to a real deterministic effect applied in api.succeed).
+  private static readonly WILL: Record<'craft' | 'name' | 'fortune', { label: string; icon: string; blurb: string }> = {
+    craft:   { icon: '🧠', label: 'The Craft',   blurb: 'His footballing brain — a mental head-start in the heir’s development.' },
+    name:    { icon: '👑', label: 'The Name',    blurb: 'The family renown — the heir starts with more pedigree, more doors open.' },
+    fortune: { icon: '💰', label: 'The Fortune', blurb: 'The family wealth — a larger inheritance banked for the club.' },
+  };
   private retireStar(titles: number, contTitles = 0) {
     const m = this.loadMgr();
     const seasons = m.season;
@@ -1463,21 +1470,45 @@ class Game {
       const nl = Game.NEXT_LIFE[choice];
       const appliedMentorship = choice === 'mentoring' ? mentorship : 0; // reuse the existing mentoring→heir bonus, only for this choice
       const windfall = appliedMentorship > 0 ? ` · 🎓 mentored heir (+${Math.min(3, Math.ceil(appliedMentorship / 2))} mentality)` : '';
+      // THE WILL: a concrete named choice about what the heir inherits (BitLife-style hand-off decision)
+      const willCards = (Object.keys(Game.WILL) as Array<'craft' | 'name' | 'fortune'>).map((k) => {
+        const w = Game.WILL[k];
+        return `<div class="cg-coach" data-will="${k}"><div class="cg-cname">${w.icon} ${w.label}</div><div class="cg-cdesc">${w.blurb}</div></div>`;
+      }).join('');
       $('cg-nextlife').outerHTML = `<div class="cg-epilogue">${nl.blurb}</div>`
         + `<div class="cg-grad-windfall">🌳 The bloodline continues${windfall}</div>`
-        + `<button id="cg-heir" class="primary">Bring through the heir →</button>`;
-      $('cg-heir').addEventListener('click', async () => {
-        try {
-          ($('cg-heir') as HTMLButtonElement).textContent = 'Raising the next generation…';
-          const r = await api.succeed(m.starId!, { seasons, titles, mentorship: appliedMentorship });
-          this.clearMgr(); // back to player phase — the heir's card-career begins
-          this.setMe(await api.me());
-          this.checkAchievements(); // a legend retired → new generation / legends / rating milestones
-          if (r.legacy) toast(`🏟️ +${r.legacy.toLocaleString()}c legacy to the club`);
-          this.showProspectCard(r.prospect, true); // reveal the heir → Develop him → play his career → hand off again
-        } catch (e: any) { toast(e?.body?.error ?? 'Succession failed'); ($('cg-heir') as HTMLButtonElement).textContent = 'Bring through the heir →'; }
-      });
+        + `<div class="cg-prompt">What does ${m.starName} pass down to his heir?</div>`
+        + `<div id="cg-will">${willCards}</div>`;
+      document.querySelectorAll('#cg-will [data-will]').forEach((el) => el.addEventListener('click', () =>
+        this.bringThroughHeir(m, seasons, titles, appliedMentorship, (el as HTMLElement).dataset.will as 'craft' | 'name' | 'fortune')));
     }));
+  }
+
+  /** Complete the succession: apply the chosen inheritance, record the heirloom for the Trophy Room, and
+   *  reveal the heir. */
+  private async bringThroughHeir(m: MgrState, seasons: number, titles: number, mentorship: number, inheritance: 'craft' | 'name' | 'fortune') {
+    const w = Game.WILL[inheritance];
+    const will = $('cg-will');
+    if (will) will.outerHTML = `<div class="cg-grad-windfall">${w.icon} The heir inherits <b>${w.label}</b></div><button id="cg-heir" class="primary" disabled>Raising the next generation…</button>`;
+    try {
+      const r = await api.succeed(m.starId!, { seasons, titles, mentorship, inheritance });
+      this.recordHeirloom(r.prospect.generation, `${w.icon} ${w.label}`); // remembered against the heir's generation
+      this.clearMgr(); // back to player phase — the heir's card-career begins
+      this.setMe(await api.me());
+      this.checkAchievements(); // a legend retired → new generation / legends / rating milestones
+      toast(`${w.icon} The heir inherits ${w.label}${r.legacy ? ` · +${r.legacy.toLocaleString()}c legacy` : ''}`);
+      this.showProspectCard(r.prospect, true); // reveal the heir → Develop him → play his career → hand off again
+    } catch (e: any) {
+      toast(e?.body?.error ?? 'Succession failed');
+      const b = $('cg-heir') as HTMLButtonElement | null; if (b) { b.disabled = false; b.textContent = 'Try again →'; b.addEventListener('click', () => this.bringThroughHeir(m, seasons, titles, mentorship, inheritance)); }
+    }
+  }
+  // heirlooms: which inheritance each generation was handed, shown in the bloodline tree (per save)
+  private recordHeirloom(generation: number, label: string) {
+    try { const k = 'fm_heir_' + (this.account?.handle ?? 'x'); const map = JSON.parse(localStorage.getItem(k) || '{}'); map[generation] = label; localStorage.setItem(k, JSON.stringify(map)); } catch { /* ignore */ }
+  }
+  private loadHeirlooms(): Record<string, string> {
+    try { return JSON.parse(localStorage.getItem('fm_heir_' + (this.account?.handle ?? 'x')) || '{}'); } catch { return {}; }
   }
 
   private playNextSpFixture() {
@@ -1692,15 +1723,17 @@ class Game {
       const lines = [...byLine.values()].map((chain) => chain.slice().sort((a, b) => a.retiredSeason - b.retiredSeason));
       // the family surname a bloodline carries (last name of its founder, falling back to the full name)
       const familyName = (chain: typeof legends) => { const parts = (chain[0]?.name ?? '').trim().split(/\s+/); return parts.slice(1).join(' ') || parts[0] || 'the family'; };
+      const heirlooms = this.loadHeirlooms(); // generation → the inheritance that generation was handed
       // one generation as a node on the lineage spine
       const treeNode = (l: typeof legends[number], gi: number) => {
         const num = l.card.number, numTag = num ? ` <span class="tr-gen-num">#${num}</span>` : '';
         const eligible = l.card.tier === TOP_TIER && num && !retiredNums.has(num);
         const retireBtn = eligible ? `<button class="tr-retire" data-num="${num}" data-name="${l.name.replace(/"/g, '&quot;')}">🎽 Retire #${num}</button>` : '';
+        const heir = gi >= 1 && heirlooms[gi] ? `<div class="bt-heir">🎁 inherited ${heirlooms[gi]}</div>` : '';
         return `<div class="bt-node"><div class="bt-dot">${l.card.icon}</div>`
           + `<div class="bt-card"><div class="bt-genlbl">Generation ${gi + 1}</div>`
           + `<div class="bt-badge">${l.card.tier}${numTag}</div><div class="bt-name">${l.name}</div>`
-          + `<div class="bt-meta">${l.card.role} · rating ${l.card.legendRating} · ${l.card.leagueTitles}🏅 ${l.card.cupTitles}🏆 · ${l.card.apps} apps · ${l.card.seasons} seasons</div>${retireBtn}</div></div>`;
+          + `<div class="bt-meta">${l.card.role} · rating ${l.card.legendRating} · ${l.card.leagueTitles}🏅 ${l.card.cupTitles}🏆 · ${l.card.apps} apps · ${l.card.seasons} seasons</div>${heir}${retireBtn}</div></div>`;
       };
       // a whole bloodline as a vertical family tree: crest + surname header, then a connected generational spine
       const bloodlineTree = (chain: typeof legends) => {
