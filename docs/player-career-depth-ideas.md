@@ -45,6 +45,40 @@
 > **Still open / next up:** deeper sponsorship variety, more coaches/agents/personalities/traits, more
 > objective/milestone/epilogue variety, and further human life-events with branching consequences beyond
 > the season-boundary system (e.g. a mid-chapter event, not just at chapter breaks).
+>
+> ## ✅ SHIPPED (2026-08-27, third pass) — scenario variety + real mid-chapter life events
+> - **Real mechanical life events (engine)** — `Scenario.life`, 14 kinds (the existing 7 — contract/loan/
+>   setback/media/loyalty/role/fallout — now genuinely wired up, plus 7 new: injury_comeback/transfer_rumour/
+>   manager_fallout/charity/social_storm/family_illness/romance), chosen by a pure hash of (seed, turn) that
+>   never touches the rng() stream. Each kind has its OWN good/bad meter+earnings consequence
+>   (`LIFE_CONSEQUENCE`), applied on top of the usual per-turn reaction — a contract standoff and a family
+>   illness now leave genuinely different marks depending on how the card resolves. `server/tokens.ts` reads
+>   this directly instead of its old cosmetic-only re-skin, and surfaces a `lastLifeOutcome` beat.
+> - **Massive scenario/narrative variety** (`shared/src/narrate.ts`) — `FRAME_BY_CHAPTER` replaces the old
+>   age-bracket framing with ~10 lines per band of real, specific texture (school/parents/growth-spurts at
+>   Grassroots-Academy; digs/homesickness/rivalry/trials at Scholar-Youth Team; contracts/media/dressing-room
+>   politics/captaincy/legacy at Breakthrough-Establishing); match/training/social situation banks roughly
+>   doubled; every life-kind's setup text expanded; a new `narrateLifeEvent()` gives life events their own
+>   resolution prose instead of ill-fitting football-action language.
+> - **Deeper sponsorship** (`offpitch.ts`) — brand pools doubled (5→10 each) across more categories; a global
+>   icon (image 88+) lands a 4th deal; **obligations that bite** — risky-category deals (betting, crypto,
+>   gambling-adjacent gaming, nightlife) have a real ~40% chance of a backlash that cuts the deal's own payout.
+> - **More coaches/agents/personalities/traits** — +6 coaches, +4 agents, +4 personalities (Stoic, Hothead,
+>   Perfectionist, Dressing-Room Joker — full narration flavour), +6 traits with fresh eligibility combos.
+> - **Objective + epilogue/retirement variety** — 3 more season-objective types (flair/leadership showcase,
+>   consistency); graduation-epilogue beats doubled; `legacyCard`'s retirement note now picks from several
+>   phrasings per tier instead of one fixed line.
+>
+> All re-verified per change: `npm run verify` + `career_sim` green throughout; card/coach/agent/personality/
+> trait additions are development-touching (re-checked magnitude stays in band, diversity healthy, determinism
+> true each time — see commits `419c227`, `3271227`); narration/tokens/offpitch/objective/epilogue changes are
+> presentational (outside `career_sim`'s import graph, byte-identical). Server-side changes type-checked via
+> an ad-hoc tsconfig since the real server has none and isn't covered by `npm run verify`.
+>
+> **Still open / next up:** mid-chapter dilemmas beyond the current per-turn life-event gate (e.g. a
+> multi-turn arc that spans several scenarios), deeper club-legend/mentoring-youngsters content at
+> Establishing, and more milestone-specific epilogue branches (e.g. a distinct beat for a GK vs an outfield
+> retirement).
 
 
 Curated from the be-a-pro genre — **New Star Soccer** (the model), **EA FC / Madden Superstar** (skill trees,
