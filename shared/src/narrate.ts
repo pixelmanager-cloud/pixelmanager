@@ -147,8 +147,8 @@ const KIND_SETUP: Record<string, string[]> = {
   social_storm: ['An old post has resurfaced, and it’s spreading fast.', 'A throwaway comment online has become a full-blown story.', 'Thousands of strangers suddenly have an opinion about him.', 'A photo, taken without his knowledge, is everywhere by lunchtime.', 'His phone won’t stop buzzing, and none of it is good news.'],
   family_illness: ['A phone call from home changes everything, right before kick-off week.', 'A parent’s health scare has his mind a thousand miles from the training ground.', 'Torn between being where the team needs him and where his family does.', 'News from home he wasn’t ready to hear.', 'A hospital corridor, a waiting room, and a match he can barely think about.'],
   romance: ['Someone new in his life, and it’s starting to feel serious.', 'A big, public step in his relationship — the kind that can’t be undone.', 'Balancing a settling-down life with the chaos of a football schedule.', 'A quiet proposal, planned for months, finally about to happen.', 'The first time he’s introduced someone to the people who matter most.'],
-  mentor_crossroads: ['An old mentor rings with advice nobody asked him for.', 'The coach who first believed in him wants a word — and it isn’t small talk.', 'A phone call from the man who shaped him, and a choice he didn’t expect to face.', 'Years on, his old mentor still sees him as the raw kid he once coached — and says so.', 'The advice on the table cuts against everything the club wants from him.'],
-  friend_rivalry: ['The mate he grew up playing with lines up in the opposite shirt today.', 'A childhood friendship is starting to curdle into something sharper.', 'The lad he shared a bedroom with on away trips now wants his shirt.', 'An old friend’s success has started to sting more than he’d like to admit.', 'What used to be banter between them doesn’t feel like banter anymore.'],
+  mentor_crossroads: ['{mentor} rings with advice nobody asked him for.', 'The coach who first believed in him — {mentor} — wants a word, and it isn’t small talk.', 'A phone call from the man who shaped him, {mentor}, and a choice he didn’t expect to face.', 'Years on, {mentor} still sees him as the raw kid he once coached — and says so.', 'The advice {mentor} is giving him cuts against everything the club wants from him.'],
+  friend_rivalry: ['{rival} — the mate he grew up playing with — lines up in the opposite shirt today.', 'A childhood friendship with {rival} is starting to curdle into something sharper.', '{rival}, who once shared a bedroom with him on away trips, now wants his shirt.', '{rival}’s success has started to sting more than he’d like to admit.', 'What used to be banter between him and {rival} doesn’t feel like banter anymore.'],
 };
 // What the moment ASKS of him. Kept setting-neutral so it reads sensibly whether the
 // situation is a training drill, a dressing-room moment or a cup tie (a drill is not
@@ -250,7 +250,11 @@ export function scenarioStory(kind: string, topTag: string, moment: string | nul
     const frame = eventTint || ageFraming(rng, c.age, c.chapter);
     return `${frame ? cap(frame) + `it’s ${moment}.` : `It’s ${moment}.`} ${demand}${charline}`;
   }
-  const setup = pickFrom(rng, KIND_SETUP[kind] ?? KIND_SETUP.match);
+  let setup = pickFrom(rng, KIND_SETUP[kind] ?? KIND_SETUP.match);
+  // recurring-character payoff: friend_rivalry / mentor_crossroads name the SAME seeded rival/mentor
+  // across the whole career, so the callback lands rather than reading as a random stranger each time.
+  if (setup.includes('{rival}')) setup = setup.replace(/\{rival\}/g, cast ? cast.rival : 'his old mate');
+  if (setup.includes('{mentor}')) setup = setup.replace(/\{mentor\}/g, cast ? cast.mentor : 'his old mentor');
   const frame = eventTint || ageFraming(rng, c.age, c.chapter);
   return `${frame ? cap(frame) + setup.charAt(0).toLowerCase() + setup.slice(1) : setup} ${demand}${charline}`;
 }
@@ -393,12 +397,12 @@ const LIFE_RESOLUTION: Record<string, { good: string[]; bad: string[] }> = {
     bad: ['and the timing, as ever, could not be worse.', 'and something has to give, and it’s not obvious what.', 'and he handles it clumsily, the way anyone might.'],
   },
   mentor_crossroads: {
-    good: ['and the old advice lands exactly the way it always used to.', 'and he leaves the call seeing the game — and himself — a little clearer.', 'and years of trust between them pays off once again.'],
-    bad: ['and, for the first time, the advice feels out of date.', 'and he quietly decides to find his own answer this time.', 'and the call ends more awkward than either of them wanted.'],
+    good: ['and {mentor}’s old advice lands exactly the way it always used to.', 'and he leaves the call with {mentor} seeing the game — and himself — a little clearer.', 'and years of trust between him and {mentor} pays off once again.'],
+    bad: ['and, for the first time, {mentor}’s advice feels out of date.', 'and he quietly decides to find his own answer instead of {mentor}’s this time.', 'and the call with {mentor} ends more awkward than either of them wanted.'],
   },
   friend_rivalry: {
-    good: ['and they shake hands after, the friendship bigger than the result.', 'and the needle stays good-natured, right where it belongs.', 'and it sharpens them both rather than souring anything.'],
-    bad: ['and something real gets lost between them that day.', 'and the handshake after is colder than either would admit.', 'and an old friendship is left carrying a new weight.'],
+    good: ['and he and {rival} shake hands after, the friendship bigger than the result.', 'and the needle between him and {rival} stays good-natured, right where it belongs.', 'and it sharpens both him and {rival} rather than souring anything.'],
+    bad: ['and something real gets lost between him and {rival} that day.', 'and the handshake with {rival} after is colder than either would admit.', 'and an old friendship with {rival} is left carrying a new weight.'],
   },
 };
 // INJURY COMEBACK — "rush back" (aggression/stamina-led, real reinjury-risk cost on a bad outcome) vs
@@ -422,12 +426,15 @@ export function narrateLifeEvent(kind: string, cardName: string, success: number
   const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
   const good = band(success) === 'triumph' || band(success) === 'good';
   const table = LIFE_RESOLUTION[kind] ?? LIFE_RESOLUTION.setback;
-  const resline = pick(good ? table.good : table.bad);
+  const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed) : null;
+  let resline = pick(good ? table.good : table.bad);
+  // same recurring-character payoff as scenarioStory above — the resolution names the SAME rival/mentor
+  if (resline.includes('{rival}')) resline = resline.replace(/\{rival\}/g, cast ? cast.rival : 'his old mate');
+  if (resline.includes('{mentor}')) resline = resline.replace(/\{mentor\}/g, cast ? cast.mentor : 'his old mentor');
   const approachLine = kind === 'injury_comeback' && approach
     ? ' ' + pick(good ? INJURY_APPROACH_LINE[approach].good : INJURY_APPROACH_LINE[approach].bad)
     : '';
   const lead = pick(LIFE_APPROACH);
-  const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed) : null;
   const castReact = cast && rng() < 0.3 && good
     ? ' ' + pick([`${cast.gaffer} appreciates how he handled it.`, `Even ${cast.rival} would admit that was well played.`, `His agent breathes a quiet sigh of relief.`])
     : '';
@@ -656,9 +663,13 @@ export function graduationEpilogue(ctx: EpilogueCtx): string {
     'Somewhere there’s a photo of him, aged ten, grinning with a medal too big for a ten-year-old’s neck.',
   ]);
   const close = pickFrom(rng, [
-    `${cast.gaffer} always said he’d make it. He was right.`, `${cap0(cast.mentor)} shook his hand and said little. He didn’t need to.`, `Somewhere, ${cast.rival} is watching, and wondering.`,
+    `${cast.gaffer} always said he’d make it. He was right.`,
+    `${cap0(cast.mentor)} — the same voice at the end of the phone through every crossroads — shook his hand and said little. He didn’t need to.`,
+    `Somewhere, ${cast.rival} — the mate turned rival turned, somehow, still a friend — is watching, and wondering.`,
     `His family were there for every step of it — and they’re still there now.`, `${cast.captain} is already talking about a dressing room with him in it.`,
     `Fifteen years of Sunday mornings and van journeys, and it was worth every single one.`,
+    `He and ${cast.rival} came up together, fell out, and came out the other side still able to look each other in the eye. That, in the end, might be the real story.`,
+    `${cap0(cast.mentor)}’s advice is still in his head, all these years on — even the bits of it he eventually chose to ignore.`,
   ]);
   return `${start} At twenty-five, ${ctx.name} emerges as ${tier}.${pers} ${close}`;
 }
