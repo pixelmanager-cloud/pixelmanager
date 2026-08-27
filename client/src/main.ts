@@ -1237,7 +1237,7 @@ class Game {
     $('academy-body').innerHTML = `<div class="cg-graduation cg-handoff">`
       + `<div class="cg-grad-title">🏆 ${s.name} — a first-team regular</div>`
       + `<div class="cg-epilogue">He's done it. After a full season in the first team — <b>${h.status}</b>, ${h.apps} appearances — ${s.name} is a fixture in the side. This is where his career becomes <b>your club's story</b>: it's time to take the reins. From here you pick the XI, set the tactics, and steer <b>${this.club?.name ?? 'the club'}</b> through the season, with ${s.name} your man on the pitch.</div>`
-      + `<div class="cg-grad-windfall">⚽ OVR ${h.overall} · ${h.status}</div>`
+      + `<div class="cg-grad-windfall">⚽ OVR ${h.overall} · ${h.status}${s.careerScore != null ? ` · ★ career score ${s.careerScore.toLocaleString()}` : ''}</div>`
       + `<button id="cg-takereins" class="primary">🧢 Take the reins as manager →</button></div>`;
     $('cg-takereins').addEventListener('click', async () => {
       try {

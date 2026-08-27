@@ -1,5 +1,21 @@
 # Player-career depth — research-informed roadmap (2026-08)
 
+> ## ✅ SHIPPED (2026-08-27) — worked through by hand
+> - **Season objectives** (#1) — seeded per-stage target (strong displays / big-game moments / perfect
+>   reads) with a progress bar + done beat. `careerState.objective`.
+> - **Career score** (#4) — headline number that climbs with every good moment (× stakes); in the career
+>   header + as a handoff payoff. The replay hook. `careerState.careerScore`.
+> - **Rival to chase** (#3) — the seeded academy rival now runs his own scoring career; you're measured
+>   against him (▲ ahead / ▼ behind). `careerState.rival`.
+> - **International call-up arc** (#2) — from the senior stages, a good player earns caps (rate scales with
+>   overall). `careerState.international`.
+>
+> **Still open (bigger / engine-touching):** sponsorship deals (5), risky lifestyle/gambling (6, partly via
+> the 'Speak to the Press' focus), earned equipment/signature boots (7), light attribute focus (8 — touches
+> the deterministic development, re-check `career_sim` diversity), public image/media (9, partly via life
+> events + Speak to the Press).
+
+
 Curated from the be-a-pro genre — **New Star Soccer** (the model), **EA FC / Madden Superstar** (skill trees,
 objectives), and mobile career sims — filtered against what the game **already has** (energy, six stage-aware
 relationship meters + consequences, summer focus, age-gated lifestyle economy, kit, deck-building

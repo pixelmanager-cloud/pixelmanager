@@ -1,5 +1,23 @@
 # Manager-game depth — brainstorm (current-state, 2026-08)
 
+> ## ✅ SHIPPED (2026-08-27) — for the NEW single-player fixture-by-fixture manager mode
+> The manager mode was reworked into a single-player fixture-by-fixture season (see `one-save-fusion.md`),
+> so these were built against that (not the old pod-based multiplayer). Board/sack/budgets stay cut.
+> - **Form guide** — last-5 W/D/L strip in the season header.
+> - **Rivalries & derby days** — one seeded league club is your rival; those fixtures are flagged 🔥 DERBY.
+> - **Club records** — biggest win + longest unbeaten run this season.
+> - **The Gaffer's take** (season feed / diary) — a seeded season-narrative line from form + position
+>   (title race, relegation scrap, unbeaten run, statement win…).
+> - **Team talk** — a real pre-kickoff decision (go for the throat / keep shape / play your game), each a
+>   small bounded pre-kickoff edge (homeBoost/conditioning) baked into the deterministic snapshot.
+> - **Post-match reaction** — a manager/fan line keyed to the result vs expectation.
+>
+> **Still open (bigger — engine/development):** named player roles (2 — the engine already has *duties*,
+> which cover much of this), per-player training focus (1/3 — pre-season stat drift, re-verify calibration),
+> backroom staff hired with coins (3), mentoring (4), match plan / conditional orders, sponsorship/finance
+> levers. These each deserve their own careful, calibration-checked commit.
+
+
 > ## ⚠️ Framing correction (2026-08) — OWNER-MANAGER, not employed manager
 > The player is the **club owner** and **carries his own star NFTs** (portable assets across
 > seasons/divisions). So the classic FM tropes **do not fit** and are **cut**:
