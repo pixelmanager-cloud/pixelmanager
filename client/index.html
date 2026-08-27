@@ -992,6 +992,13 @@
       .facility .fac-icon { font-size: 31px; line-height: 1; display: inline-flex; }
       /* pixel-art sprites: crisp blocky scaling, no smoothing */
       .px { image-rendering: pixelated; display: block; }
+      /* generic inline-icon sizing — for a sprite dropped inline with running text (a balance
+         readout, a button label, a narrative line): ties the icon size to the surrounding
+         font-size (1em) so it sits on the text baseline without per-context tuning. Contexts that
+         need a fixed size already have their own `.foo .px { width:Npx }` rule (see below/elsewhere)
+         and don't need this. */
+      .ico-inline { display: inline-flex; align-items: center; }
+      .ico-inline .px { width: 1em; height: 1em; vertical-align: middle; }
       .facility .fac-icon .px { width: 40px; height: 40px; }
       .mm-emblem { display: flex; justify-content: center; margin-bottom: 6px; }
       .mm-emblem .px { width: 64px; height: 64px; filter: drop-shadow(0 3px 0 rgba(0,0,0,0.5)); }
