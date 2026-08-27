@@ -6,7 +6,7 @@ import { api, hasToken, setToken, clearToken, type Account, type StandingOrders,
 import { sprite } from './sprites';
 
 /** Single-player manager-season state (per save, in localStorage). `starId` present ⇒ manager phase. */
-interface MgrState { season: number; results: PlayedResult[]; starId?: string; starName?: string; starAge?: number; retireAge?: number; titles?: number; trainFocus?: string; staff?: string[] }
+interface MgrState { season: number; results: PlayedResult[]; starId?: string; starName?: string; starAge?: number; retireAge?: number; titles?: number; trainFocus?: string; staff?: string[]; sponsor?: string }
 const BACKROOM_STAFF = [
   { id: 'fitness', icon: '🏋️', name: 'Fitness Coach', cost: 350, desc: 'Sharper conditioning — your side fades less over 90.' },
   { id: 'attack', icon: '⚔️', name: 'Attacking Coach', cost: 350, desc: 'Drills the final third — a small finishing edge, home and away.' },
@@ -765,6 +765,7 @@ class Game {
     const focusSel = m.starName ? `<div class="sf-focus">🏋️ <b>Training focus</b> for ${m.starName}: <select id="sf-focus">${FOCI.map((f) => `<option ${f === curFocus ? 'selected' : ''}>${f}</option>`).join('')}</select> <span class="sf-focus-hint">applied when the season ends</span></div>` : '';
     $('season-body').innerHTML = header
       + `<div class="sf-gaffer">📔 ${this.gafferTake(played, t.pos, t.size, clubName)}</div>`
+      + this.sponsorHtml()
       + `<div class="season-cols"><div class="season-fixtures"><h4 class="scout-h4">FIXTURES</h4>${fxRows}${records}${focusSel}${simBtn}</div>`
       + `<div class="season-table-wrap"><h4 class="scout-h4">LEAGUE TABLE</h4>${this.spTableHtml(t)}${this.staffHtml()}</div></div>`;
     $('sf-play')?.addEventListener('click', () => this.playNextSpFixture());
@@ -772,6 +773,25 @@ class Game {
     $('sf-next-season')?.addEventListener('click', () => this.nextSeason());
     ($('sf-focus') as any)?.addEventListener('change', (e: Event) => { const mm = this.loadMgr(); this.saveMgr({ ...mm, trainFocus: (e.target as HTMLSelectElement).value }); });
     $('season-body').querySelectorAll('[data-staff]').forEach((b) => b.addEventListener('click', () => this.hireStaff((b as HTMLElement).dataset.staff!)));
+    $('season-body').querySelectorAll('[data-sponsor]').forEach((b) => b.addEventListener('click', () => this.chooseSponsor((b as HTMLElement).dataset.sponsor!)));
+  }
+
+  private sponsorHtml(): string {
+    const m = this.loadMgr();
+    if (m.sponsor) return `<div class="sf-sponsor active">📣 Shirt sponsor: <b>${m.sponsor === 'steady' ? 'Steady deal' : 'Performance deal — top-3 bonus pending'}</b></div>`;
+    if (m.results.length > 0) return ''; // the deal is chosen at the start of the season
+    return `<div class="sf-sponsor"><div class="sf-sponsor-lbl">📣 SHIRT SPONSOR — pick this season's deal:</div>`
+      + `<button class="sf-sponsor-opt" data-sponsor="steady"><b>📄 Steady deal</b><span>+450c now, guaranteed</span></button>`
+      + `<button class="sf-sponsor-opt" data-sponsor="performance"><b>📈 Performance deal</b><span>+150c now, +400–700c bonus for a top-3 finish</span></button></div>`;
+  }
+  private async chooseSponsor(deal: string) {
+    try {
+      const r = await api.spSponsor(deal);
+      if (this.account?.coins != null) this.account.coins = r.coins;
+      const m = this.loadMgr(); this.saveMgr({ ...m, sponsor: deal });
+      toast(`📣 Sponsor signed (+${r.upfront.toLocaleString()}c upfront)`);
+      this.showSeason();
+    } catch { toast('Could not sign the sponsor'); }
   }
 
   private staffHtml(): string {
@@ -835,7 +855,7 @@ class Game {
     const m = this.loadMgr();
     const t = liveTable(this.club.name, this.clubLeagueStrength(), 1, this.leagueSeed(), m.results);
     // bank the season prize money (coins → reinvest in facilities), closing the manager economy loop
-    try { const r = await api.spSeasonReward({ pos: t.pos, size: t.size }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 Season prize: +${r.prize.toLocaleString()}c${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ` · ${this.ordinal(t.pos)}`}`); } catch { /* offline: no prize */ }
+    try { const r = await api.spSeasonReward({ pos: t.pos, size: t.size, sponsor: m.sponsor }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 Season prize: +${r.prize.toLocaleString()}c${r.sponsorBonus ? ` + 📣 ${r.sponsorBonus}c sponsor bonus` : ''}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ` · ${this.ordinal(t.pos)}`}`); } catch { /* offline: no prize */ }
     // TRAINING: the star develops per the focus (young grow it, veterans decline) — his overall shifts the club
     if (m.starId) {
       try { const d = await api.developPlayer(m.starId, { focus: m.trainFocus ?? 'passing', age: m.starAge ?? 27 }); this.setMe(await api.me()); toast(`🏋️ ${m.starName} — off-season training (OVR now ${d.overall})`); } catch { /* offline */ }
@@ -843,7 +863,7 @@ class Game {
     const titles = (m.titles ?? 0) + (t.pos === 1 ? 1 : 0);
     const age = (m.starAge ?? 22) + 1;
     if (age >= (m.retireAge ?? 34)) { this.retireStar(titles); return; } // his playing days are over — the heir comes through
-    this.saveMgr({ ...m, season: m.season + 1, results: [], starAge: age, titles });
+    this.saveMgr({ ...m, season: m.season + 1, results: [], starAge: age, titles, sponsor: undefined }); // new season → pick a fresh sponsor
     this.showSeason();
   }
 

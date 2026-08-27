@@ -625,8 +625,21 @@ app.post('/sp/season-reward', { preHandler: requireAuth }, async (req, reply) =>
   // prize by finishing position: champions banked handsomely, tapering to a small survival cheque
   const frac = (pos - 1) / (size - 1); // 0 = top, 1 = bottom
   const prize = pos === 1 ? 800 : Math.round(120 + (1 - frac) * 480); // ~600 for 2nd → ~120 for last
-  await db.addCoins(ownerId, prize);
-  return { ok: true, prize, coins: await db.getCoins(ownerId) };
+  // SPONSOR performance bonus — a 'performance' deal pays a big bonus for a top-3 finish (nothing otherwise)
+  const sponsorBonus = String(body?.sponsor) === 'performance' && pos <= 3 ? (pos === 1 ? 700 : 400) : 0;
+  await db.addCoins(ownerId, prize + sponsorBonus);
+  return { ok: true, prize, sponsorBonus, coins: await db.getCoins(ownerId) };
+});
+
+// SPONSOR upfront — at the start of a season the club takes a shirt deal: a steady flat cheque, or a
+// smaller upfront on a performance-linked deal (the top-3 bonus is paid at season end via season-reward).
+app.post('/sp/sponsor', { preHandler: requireAuth }, async (req, reply) => {
+  const ownerId = req.account!.id;
+  const deal = String((req.body as any)?.deal ?? '');
+  const upfront = deal === 'steady' ? 450 : deal === 'performance' ? 150 : null;
+  if (upfront == null) return reply.code(400).send({ error: 'unknown deal' });
+  await db.addCoins(ownerId, upfront);
+  return { ok: true, upfront, coins: await db.getCoins(ownerId) };
 });
 
 // SUCCESSION: the managed star retires and his heir comes through the youth ranks. Unlike the shop 'reborn',
