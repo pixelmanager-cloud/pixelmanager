@@ -23,7 +23,7 @@ import {
 import { legacyCard } from './src/legacy.js';
 import { clubSeason } from './src/clubseason.js';
 import { tieScore, contOpponent } from './src/intl.js';
-import { developAttrs } from '../server/src/lifecycle.js';
+import { developAttrs } from './src/lifecycle.js'; // moved from server/src/lifecycle.js when the server/web3 layer was removed (offline-first pivot)
 
 const MAX_LOGGED = 60;
 const failures: string[] = [];

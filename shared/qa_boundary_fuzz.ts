@@ -5,7 +5,7 @@
 // never catch. New file — does not modify server/src or shared/src.
 // Run: `npx tsx shared/qa_boundary_fuzz.ts`.
 
-import { ageOf } from '../server/src/tokens.js';
+import { ageOf } from './src/tokens.js'; // moved from server/src/tokens.js when the server/web3 layer was removed (offline-first pivot)
 import { squadRole, firstTeamReady, FIXTURES_PER_SEASON } from './src/clubseason.js';
 import { worldCup, NATIONS } from './src/intl.js';
 import { computeOffPitch } from './src/offpitch.js';

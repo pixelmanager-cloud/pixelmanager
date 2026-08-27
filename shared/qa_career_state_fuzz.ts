@@ -1,13 +1,15 @@
-// QA fuzz harness — server-side `careerState()` STRESS (server/src/tokens.ts).
+// QA fuzz harness — `careerState()` STRESS (shared/src/tokens.ts, the offline presentational layer —
+// this logic moved here from server/src/tokens.ts when the server/web3 layer was removed for the
+// offline-first pivot).
 // Drives full careers on both tracks calling careerState(token, career, clubName, clubLevel) at EVERY
-// turn, exactly like the /career/:id/start and /career/:id/act endpoints do. `careerState` is a pure
-// function of (Token, Career, clubName, clubLevel) — no DB/network needed — so we build a minimal fake
-// Token matching server/src/store.ts's `Token` interface and drive it directly.
-// New file — does not modify server/src or shared/src. Run: `npx tsx shared/qa_career_state_fuzz.ts`.
+// turn, exactly like the client's offline facade does. `careerState` is a pure function of
+// (Token, Career, clubName, clubLevel) — no DB/network needed — so we build a minimal fake
+// Token matching shared/src/token.ts's `Token` interface and drive it directly.
+// New file — does not modify shared/src. Run: `npx tsx shared/qa_career_state_fuzz.ts`.
 
 import { Career, seedFrom, mulberry32, AGENTS, bandAt, TOTAL_TURNS, type Track } from './src/career.js';
-import { careerState, careerSeedFor, type CareerAction } from '../server/src/tokens.js';
-import type { Token } from '../server/src/store.js';
+import { careerState, careerSeedFor, type CareerAction } from './src/tokens.js';
+import type { Token } from './src/token.js';
 
 const MAX_LOGGED = 60;
 const failures: string[] = [];
@@ -67,7 +69,8 @@ function checkState(st: any, ctx: string) {
     const op = st.offPitch;
     if (!finite(op.image.score) || op.image.score < 0 || op.image.score > 100) log(`offPitch.image.score=${op.image.score} out of [0,100]  ${ctx}`);
     if (!['clean', 'edgy'].includes(op.reputation.edge)) log(`offPitch.reputation.edge invalid: "${op.reputation.edge}"  ${ctx}`);
-    if (!Array.isArray(op.endorsements) || op.endorsements.length > 3) log(`offPitch.endorsements invalid length  ${ctx}`);
+    // count caps at 4: a true global icon (imageScore >= 88) lands a 4th deal by design (see offpitch.ts computeOffPitch)
+    if (!Array.isArray(op.endorsements) || op.endorsements.length > 4) log(`offPitch.endorsements invalid length  ${ctx}`);
     if (op.boots.next && op.boots.next.progress > op.boots.next.target) log(`offPitch.boots.next.progress > target  ${ctx}`);
   }
 
