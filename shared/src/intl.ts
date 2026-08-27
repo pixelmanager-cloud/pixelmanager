@@ -294,3 +294,83 @@ export function playerPath(wc: WCResult): WCPlayerPath {
     seededChampion: wc.champion,
   };
 }
+
+// ── Rivalry arcs & tournament-stage drama (batch 2) ────────────────────────────────────────────────
+// Batch 1 gave continental ties and World-Finals runs a one-off "how it felt" blurb. This section adds
+// DEPTH across a save: a stable continental "old enemy" club that recurs season to season (so meeting
+// them again means something, the way a domestic rival does in gaffersDiary.ts), plus knife-edge
+// drama blurbs for tight group-stage finishes and shootout nerves. All pure + seeded off (seed, …) —
+// no persisted meeting history is needed because the "old enemy" is a stable per-save pick, not a
+// counted rivalry (the same simplification tieScore/contOpponent already make for the rest of intl.ts).
+
+/** The club's stable continental "bogey side" for this save — the same club every time a save's seed
+ *  is queried, so repeat meetings across seasons read as a real, recurring rivalry rather than just
+ *  another random draw. Deliberately excludes index 0 bias by hashing seed against a fixed salt. */
+export function contRivalClub(seed: number): string {
+  const h = hash32(seed, 0x52a1, 0x76b3);
+  return CONT_POOL[h % CONT_POOL.length];
+}
+
+const CONT_RIVALRY_WIN: string[] = [
+  'Beat them again. This rivalry is starting to tilt firmly in our favour.',
+  'Another win over the old enemy — the fixture that never feels routine, whatever the stakes.',
+  'That\'s the one the fans wanted more than any other. The rivalry stays lopsided, our way.',
+  'Bragging rights again over a club that just cannot get the better of us these days.',
+];
+const CONT_RIVALRY_LOSS: string[] = [
+  'Beaten by the old enemy again. That one will sting in the dressing room for a while yet.',
+  'The rivalry stings tonight — they have the bragging rights again, and they will let us know it.',
+  'A tough one to lose, and to THEM of all sides. The rematch cannot come soon enough.',
+  'They have our number in this fixture lately. Something to fix before the next meeting.',
+];
+/** A deterministic rivalry-arc line for a tie against the save's continental "old enemy"
+ *  (`contRivalClub(seed)`), layered ON TOP of the ordinary contTieBlurb for extra colour when the
+ *  opponent happens to be that club. Caller decides whether to use this or the plain blurb. */
+export function contRivalryBlurb(seed: number, season: number, round: ContRound, aWon: boolean): string {
+  const h = hash32(seed, season * 977 + 41, round * 131, 0xb17a1);
+  return pick(h, aWon ? CONT_RIVALRY_WIN : CONT_RIVALRY_LOSS);
+}
+
+const WC_GROUP_DECIDER: string[] = [
+  'Goal difference is doing the talking in this group — every minute of the last game mattered.',
+  'A group settled by the finest of margins. Nerve-shredding stuff for anyone watching from home.',
+  'Came down to the very last kick of the group stage. Qualification never felt safe until the whistle.',
+  'A group that stayed live until the final whistle of the final round — no dead rubbers here.',
+];
+const WC_GROUP_COMFORTABLE: string[] = [
+  'A comfortable passage out of the group, points to spare before the last round even kicked off.',
+  'Job done early in the group — the closing matches were about rhythm, not survival.',
+  'Cruised through the group stage. The knockouts is where the real tournament starts.',
+];
+/** A deterministic "how tight was it" line for a World-Finals group, based on the ACTUAL computed
+ *  standings (`WCGroupRow[]` from `worldCup().groups[gi].rows`) — a tiny points/GD gap between 2nd
+ *  and 3rd reads as squeaky-bum-time; a big gap reads as comfortable. Pure function of that data. */
+export function wcGroupDramaBlurb(seed: number, edition: number, groupIndex: number, rows: readonly WCGroupRow[]): string {
+  const h = hash32(seed, edition * 7919 + 3, groupIndex * 331, 0xc201);
+  const second = rows[1], third = rows[2];
+  const tight = !!second && !!third && (second.Pts - third.Pts <= 1) && (Math.abs(second.GD - third.GD) <= 2);
+  return pick(h, tight ? WC_GROUP_DECIDER : WC_GROUP_COMFORTABLE);
+}
+
+const WC_KNOCKOUT_PENS: string[] = [
+  'Settled on penalties. The cruellest way for a tournament run to turn, one way or the other.',
+  'A shootout decided it — twelve yards of pure nerve, and somebody had to lose it.',
+  'Penalties. The whole nation held its breath for every single kick.',
+];
+const WC_KNOCKOUT_TIGHT: string[] = [
+  'One goal in it. The margins at this stage of a tournament rarely get any finer.',
+  'A single strike separated the sides. Knockout football at its most unforgiving.',
+  'Backs to the wall for long spells, but the result held by the barest of margins.',
+];
+const WC_KNOCKOUT_CLEAR: string[] = [
+  'A comfortable, controlled knockout performance — no last-minute nerves required tonight.',
+  'Dominant from early on. The kind of knockout win that settles a squad for the round ahead.',
+];
+/** A deterministic "how it went" drama line for a specific World-Finals knockout tie, using the
+ *  ACTUAL score margin + whether it went to penalties (from `WCTie`). Pure function of that data. */
+export function wcKnockoutDramaBlurb(seed: number, edition: number, tie: WCTie): string {
+  const h = hash32(seed, edition * 7919 + 3, nameSeed(tie.a), nameSeed(tie.b), 0xd309);
+  if (tie.pens) return pick(h, WC_KNOCKOUT_PENS);
+  const margin = Math.abs(tie.gh - tie.ga);
+  return pick(h, margin <= 1 ? WC_KNOCKOUT_TIGHT : WC_KNOCKOUT_CLEAR);
+}
