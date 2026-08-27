@@ -286,6 +286,9 @@ export const LIFESTYLE: LifestyleItem[] = [
   { id: 'watch',    icon: '⌚', name: 'A Statement Watch',         blurb: 'The one everyone clocks as you step off the coach.',        cost: 1500, minChapterIdx: 5, market: 1, greed: 1, perks: { sponsors: 6 } },
   { id: 'invest',   icon: '📈', name: 'A Property Portfolio',      blurb: 'Money makes money — a smart nest egg for after football.',  cost: 3200, minChapterIdx: 5, market: 3 },
   { id: 'mansion',  icon: '🏰', name: 'The Dream Mansion',         blurb: 'Gates, a pool, the lot — you have truly arrived.',          cost: 6000, minChapterIdx: 6, market: 2, greed: 1, recovery: 6, perks: { partner: 8, fans: 6 } },
+  { id: 'supercar', icon: '🏎️', name: 'A Supercar',               blurb: 'Turn heads pulling into the car park — the boyhood dream, made real.', cost: 2400, minChapterIdx: 5, market: 1, perks: { fans: 8 } },
+  { id: 'testim',   icon: '🎟️', name: 'Pledge a Testimonial Fund', blurb: 'Set some earnings aside for a benefit match — the dressing room notices.', cost: 2600, minChapterIdx: 5, perks: { peers: 14, fans: 6 } },
+  { id: 'restaurant', icon: '🍷', name: 'Boutique Restaurant Investment', blurb: 'Put your name over the door of a place the whole city is talking about.', cost: 4200, minChapterIdx: 6, market: 2, greed: 1, perks: { sponsors: 8 } },
   // Player-directed investing — put earnings into the CLUB instead of a personal treat. Repeatable (never
   // marked "owned"), no personal perk — the trade-off is you vs the dynasty. The coins are credited to the
   // club server-side (clubInvestOf); buyLifestyle only spends the earnings and stays available.
@@ -313,6 +316,9 @@ export const COACHES: Coach[] = [
   { id: 'creative',   name: 'Creativity Coach',   kind: 'coach',  desc: 'Frees the imagination in tight spaces',       specialty: ['creativity', 'composure'], bonus: 0.12 },
   { id: 'talisman-m', name: 'Talisman Mentor',    kind: 'mentor', desc: 'A born matchwinner teaches you to seize it',  specialty: ['flair', 'leadership'], bonus: 0.12 },
   { id: 'general-m',  name: 'The General',        kind: 'mentor', desc: 'A commanding centre-half drills your reading of the game', specialty: ['aggression', 'composure', 'teamwork'], bonus: 0.11 },
+  { id: 'setpiece',   name: 'Set-Piece Coach',    kind: 'coach',  desc: 'Free-kicks, corners, every rehearsed dead ball',           specialty: ['composure', 'creativity', 'flair'], bonus: 0.1 },
+  { id: 'psych',      name: 'Sports Psychologist', kind: 'coach', desc: 'Gets inside your head — and settles it',                   specialty: ['composure'], bonus: 0.15 },
+  { id: 'scout-m',    name: 'Scout Mentor',       kind: 'mentor', desc: 'An old scout teaches you what the eye in the stand looks for', specialty: ['flair', 'creativity'], bonus: 0.12 },
 ];
 export const COACH_OFFER = 3; // choices shown at each appointment
 
@@ -326,6 +332,7 @@ export const AGENTS: Agent[] = [
   { id: 'loyal',     name: 'Loyal Agent',      desc: 'Keeps you grounded, settled and well-liked',   exposure: 1.0,  draftLuck: 1.0,  greed: -3, valueMod: 1.0 },
   { id: 'super',     name: 'Super-Agent',      desc: 'Elite connections and elite fees — for a cut', exposure: 1.6,  draftLuck: 1.35, greed: 6,  valueMod: 1.25 },
   { id: 'family',    name: 'Family Advisor',   desc: 'A trusted relative — in it for you, not money', exposure: 0.95, draftLuck: 1.0,  greed: -5, valueMod: 0.95 },
+  { id: 'fixer',     name: 'The Local Fixer',   desc: 'Knows every scout in the county — low fuss, right doors', exposure: 0.85, draftLuck: 1.45, greed: -4, valueMod: 0.9 },
   { id: 'showman',   name: 'The Showman',      desc: 'Markets you relentlessly — fame over fees',     exposure: 1.5,  draftLuck: 1.1,  greed: 2,  valueMod: 1.2 },
   { id: 'grafter',   name: 'The Grafter’s Agent', desc: 'Old-school; picks clubs where you’ll play', exposure: 1.05, draftLuck: 1.15, greed: -2, valueMod: 1.0 },
 ];
@@ -396,9 +403,26 @@ const FOCUS_BY_CHAPTER: Record<string, FocusOption[]> = {
     { id: 'partner',  icon: '❤️', name: 'Settle Down',       desc: 'A stable home life behind the superstar.', energy: +10, effects: { partner: +16, sponsors: -4 } },
   ],
 };
-/** The between-chapter focus choices for a life stage (Rest is always available). */
-export function rollFocus(chapter: string): FocusOption[] {
-  return [...(FOCUS_BY_CHAPTER[chapter] ?? FOCUS_BY_CHAPTER.Establishing), FOCUS_REST];
+/** The between-chapter focus choices for a life stage (Rest is always available). `standing`, if given,
+ *  adds a high-variance RISK pick for later chapters — sized off current state, not rng (see below). */
+export function rollFocus(chapter: string, standing?: Record<MeterKey, number>): FocusOption[] {
+  const base = [...(FOCUS_BY_CHAPTER[chapter] ?? FOCUS_BY_CHAPTER.Establishing), FOCUS_REST];
+  const risk = standing ? riskFocusFor(chapter, standing) : null;
+  return risk ? [...base, risk] : base;
+}
+
+// ── RISK FOCUS: from Breakthrough onward, a bold high-variance pick alongside the safe ones — a small
+// guaranteed cost for a fan swing sized off your CURRENT fan standing (more headroom when you're not yet
+// adored, less once you are). Deterministic from state, not rng — same replay-safe contract as the rest.
+const RISK_FOCUS_CHAPTERS = new Set(['Breakthrough', 'First Team', 'Establishing']);
+function riskFocusFor(chapter: string, standing: Record<MeterKey, number>): FocusOption | null {
+  if (!RISK_FOCUS_CHAPTERS.has(chapter)) return null;
+  const gain = Math.round(8 + (100 - (standing.fans ?? 50)) * 0.28); // low standing = more room to swing
+  return {
+    id: 'risk_press', icon: '🎤', name: 'Speak to the Press',
+    desc: `A bold, headline-grabbing interview — could win the terraces over big (+${gain} fans), but the dressing room won't love the grandstanding.`,
+    energy: -10, effects: { fans: +gain, peers: -8 },
+  };
 }
 
 // ── SIDE FOCUS: from Breakthrough onward, a smaller SECOND summer pick alongside the main one — a
@@ -772,7 +796,7 @@ export class Career {
     if (this.turn >= TOTAL_TURNS) { this.finished = true; return choice; }
     // at an age-chapter boundary: relationships pay off (or bite), a narrative EVENT fires, then you
     // choose a summer FOCUS, take a financial offer, appoint a coach and draft.
-    if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.earnings += 40 + this.turn * 12; this.pendingFocus = rollFocus(this.chapter); }
+    if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.earnings += 40 + this.turn * 12; this.pendingFocus = rollFocus(this.chapter, this.standing); }
     else { this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure); }
     return choice;
   }
