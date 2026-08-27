@@ -35,6 +35,7 @@ export interface CareerState {
   careerScore?: number;
   objective?: { desc: string; target: number; progress: number; done: boolean } | null;
   rival?: { name: string; score: number; lead: number } | null;
+  international?: { capped: boolean; caps: number } | null;
   kit?: Kit | null;
   hand?: CareerCard[]; coach?: { id: string; name: string } | null;
   coaches?: Array<{ id: string; name: string; kind: string; desc: string; specialty: string[]; bonus: number }>;

@@ -255,6 +255,15 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
   const rivalRate = 6 + ((((c as any).seed >>> 0) >>> 3) % 4); // 6..9 points/turn — competitive
   const rivalScore = Math.round(c.turn * rivalRate);
   const rival = { name: cast.rival, score: rivalScore, lead: careerScore - rivalScore };
+  // INTERNATIONAL CALL-UP — perform well at the senior stages and you earn a national call-up + caps: an
+  // aspirational ceiling to chase. Presentational, from overall × stage (only the good get capped).
+  let international: { capped: boolean; caps: number } | null = null;
+  if (bandIdx >= 4) {
+    const ov = prof.currentOverall;
+    const rate = ov >= 15 ? 0.4 : ov >= 13 ? 0.25 : ov >= 11 ? 0.12 : 0;
+    const caps = Math.max(0, Math.round((c.turn - 60) * rate));
+    international = { capped: caps > 0, caps };
+  }
   // SEASON OBJECTIVE — a per-stage target that gives each chapter direction + a reward beat. Seeded per
   // stage, progress read from this stage's log entries. Deterministic; presentational (no engine change).
   let objective: { desc: string; target: number; progress: number; done: boolean } | null = null;
@@ -273,7 +282,7 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
   }
   return {
     prospectId: t.id, name: t.name, generation: t.generation, pedigree: t.pedigree, agentId: t.agent_id, track: t.track,
-    turn: c.turn, totalTurns: TOTAL_TURNS, seasonEvent: c.seasonEvent, earnings: c.earnings, energy: c.energy, meters: c.meters, profile: prof, clubSeason: clubSeasonData, careerScore, objective, rival, kit: t.kit_json ? JSON.parse(t.kit_json) : null, ...st,
+    turn: c.turn, totalTurns: TOTAL_TURNS, seasonEvent: c.seasonEvent, earnings: c.earnings, energy: c.energy, meters: c.meters, profile: prof, clubSeason: clubSeasonData, careerScore, objective, rival, international, kit: t.kit_json ? JSON.parse(t.kit_json) : null, ...st,
   };
 }
 /** Graduate the finished career → the pro attrs to write onto the SAME token (state → pro). */

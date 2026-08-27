@@ -1160,6 +1160,14 @@ class Game {
       + `<span class="cg-rival-gap ${ahead ? 'up' : 'down'}">${ahead ? `▲ ${r.lead} ahead` : `▼ ${Math.abs(r.lead)} behind`}</span></div>`;
   }
 
+  /** International call-up — the aspirational ceiling. Uncapped at first; caps accrue once he's good enough. */
+  private intlHtml(s: import('./api').CareerState): string {
+    const i = s.international; if (!i) return '';
+    return i.capped
+      ? `<div class="cg-intl capped"><span class="cg-intl-lbl">🌍 INTERNATIONAL</span><span class="cg-intl-txt">Called up for his country — <b>${i.caps}</b> cap${i.caps === 1 ? '' : 's'}</span></div>`
+      : `<div class="cg-intl"><span class="cg-intl-lbl">🌍 INTERNATIONAL</span><span class="cg-intl-txt">Uncapped — keep impressing at this level to earn a national call-up.</span></div>`;
+  }
+
   /** The stage objective — a target the club/coach sets for this chapter, with a progress bar. Gives each
    *  stage direction and a reward beat when it's hit. */
   private objectiveHtml(s: import('./api').CareerState): string {
@@ -1284,7 +1292,7 @@ class Game {
     if (this.careerTab === 'player') content = prof + this.deckHtml(s);
     else if (this.careerTab === 'kit') content = this.kitTabHtml(s);
     else if (this.careerTab === 'league') content = this.leagueTableHtml(s);
-    else content = this.objectiveHtml(s) + this.rivalHtml(s) + this.lifeDashHtml(s) + narr + recap + conseq + evt + body;
+    else content = this.objectiveHtml(s) + this.rivalHtml(s) + this.intlHtml(s) + this.lifeDashHtml(s) + narr + recap + conseq + evt + body;
     const tut = this.careerTab === 'now' ? this.tutorialHint(s) : '';
     $('academy-body').innerHTML = head + scene + tut + tabBar + content;
     ($('cg-tut-x') as any)?.addEventListener('click', () => { localStorage.setItem('fm_tut_done', '1'); ($('cg-tut') as any)?.remove(); });
