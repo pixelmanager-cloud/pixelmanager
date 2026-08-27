@@ -138,12 +138,88 @@ export const DECK: Card[] = [
   { id: 'winger-wiz',  name: "Winger's Magic",        tags: ['flair', 'stamina'], rarity: 'epic' },
   { id: 'libero',      name: 'Ball-Playing Libero',   tags: ['composure', 'creativity'], rarity: 'rare' },
   { id: 'box-crash',   name: 'Crash the Box',         tags: ['stamina', 'aggression'] },
+  // ── HUGE VARIETY EXPANSION #2: many more moments per tag, so a 200-turn career keeps feeling fresh ──
+  // composure
+  { id: 'nerves-steel',   name: 'Nerves of Steel',            tags: ['composure'] },
+  { id: 'big-moment',     name: 'Big Moment Man',             tags: ['composure', 'leadership'], rarity: 'rare' },
+  { id: 'no-panic',       name: 'No Panic',                   tags: ['composure'] },
+  { id: 'ice-cold-spot',  name: 'Ice-Cold from the Spot',     tags: ['composure'], rarity: 'rare' },
+  { id: 'composed-touch', name: 'A Composed First Touch',     tags: ['composure', 'creativity'] },
+  // flair
+  { id: 'flick-on',       name: 'Flick-On',                   tags: ['flair', 'teamwork'] },
+  { id: 'audacious',      name: 'Audacious Backheel',         tags: ['flair'] },
+  { id: 'samba',          name: 'Samba Skill',                tags: ['flair', 'creativity'], rarity: 'rare' },
+  { id: 'bicycle',        name: 'Bicycle Kick',               tags: ['flair'], rarity: 'epic' },
+  { id: 'cruyff',         name: 'Cruyff Turn',                tags: ['flair', 'creativity'], rarity: 'rare' },
+  { id: 'sombrero',       name: 'Sombrero Flick',             tags: ['flair'] },
+  // aggression
+  { id: 'bruiser',        name: 'Bruising Challenge',         tags: ['aggression'] },
+  { id: 'no-nonsense',    name: 'No-Nonsense Clearance',      tags: ['aggression', 'teamwork'] },
+  { id: 'body-check',     name: 'Shoulder to Shoulder',       tags: ['aggression'] },
+  { id: 'hunt-pack',      name: 'Hunt in a Pack',             tags: ['aggression', 'teamwork'] },
+  { id: 'red-mist',       name: 'Red Mist Moment',            tags: ['aggression'], rarity: 'rare' },
+  // creativity
+  { id: 'through-eye',    name: 'Through the Eye of a Needle', tags: ['creativity'], rarity: 'rare' },
+  { id: 'disguised-pass', name: 'The Disguised Pass',         tags: ['creativity'] },
+  { id: 'weighted-pass',  name: 'Perfectly Weighted Pass',    tags: ['creativity', 'composure'] },
+  { id: 'outside-boot',   name: 'Outside of the Boot',        tags: ['creativity', 'flair'] },
+  { id: 'spatial-iq',     name: 'Spatial Awareness',          tags: ['creativity', 'teamwork'] },
+  // teamwork
+  { id: 'bricklayer',     name: 'Bricklayer',                 tags: ['teamwork'] },
+  { id: 'team-ethic',     name: 'Team Ethic',                 tags: ['teamwork'] },
+  { id: 'tracking-back',  name: 'Tracking Back',              tags: ['teamwork', 'stamina'] },
+  { id: 'plug-gap',       name: 'Plug the Gap',               tags: ['teamwork'] },
+  // leadership
+  { id: 'captain-arm',    name: 'Lead by Example',            tags: ['leadership'] },
+  { id: 'dressing-voice', name: 'Dressing Room Voice',        tags: ['leadership', 'teamwork'] },
+  { id: 'calm-fire',      name: 'Calm Under Fire',            tags: ['leadership', 'composure'] },
+  { id: 'gaffer-word',    name: 'A Word from the Gaffer',     tags: ['leadership'], rarity: 'rare' },
+  { id: 'never-say-die',  name: 'Never-Say-Die Spirit',       tags: ['leadership', 'stamina'] },
+  // stamina
+  { id: 'marathon-man',   name: 'Marathon Man',               tags: ['stamina'] },
+  { id: 'extra-yard',     name: 'Find the Extra Yard',        tags: ['stamina'] },
+  { id: 'gas-tank',       name: 'Full Tank',                  tags: ['stamina'] },
+  { id: 'relentless',     name: 'Relentless Pressing',        tags: ['stamina', 'aggression'] },
+  { id: 'legs-of-steel',  name: 'Legs of Steel',              tags: ['stamina'], rarity: 'rare' },
+  // rare / epic signatures
+  { id: 'matchwinner',    name: 'Matchwinner',                tags: ['flair', 'composure'], rarity: 'epic' },
+  { id: 'wonderkid',      name: 'Wonderkid Moment',           tags: ['creativity', 'flair'], rarity: 'epic' },
 ];
 
 // The small deck EVERY outfield career starts with; the rest is drafted between seasons.
 const STARTER_IDS = ['ice-veins', 'crunch', 'splitter', 'anchor', 'lung-buster', 'stepover', 'hold-up'];
 export const STARTER_DECK: Card[] = DECK.filter((c) => STARTER_IDS.includes(c.id));
 export const DRAFT_POOL: Card[] = DECK.filter((c) => !STARTER_IDS.includes(c.id));
+
+// ── DECK CHEMISTRY: a real deck-building strategy layer on top of the (now large) card pool. Each named
+// SYNERGY is a pair of tags; collecting enough BLEND cards that carry BOTH tags together (not just either
+// one) "activates" it, giving the player a small, permanent lean toward those tags — so WHICH cards you
+// draft matters strategically (build a focused identity), not just how many you've collected. Pure and
+// deterministic: derived from the final deck composition only, no rng, no card-play-order dependence.
+export interface Synergy { id: string; name: string; tags: [Tag, Tag]; threshold: number; desc: string }
+export const SYNERGIES: Synergy[] = [
+  { id: 'playmaker',   name: 'Playmaker Chemistry',    tags: ['creativity', 'teamwork'],   threshold: 3, desc: 'Vision and unselfishness, drilled together — he sees the pass AND makes it.' },
+  { id: 'enforcer',    name: 'Enforcer Chemistry',     tags: ['aggression', 'leadership'], threshold: 3, desc: 'Nobody messes with a side he marshals.' },
+  { id: 'entertainer', name: 'Entertainer Chemistry',  tags: ['flair', 'composure'],       threshold: 3, desc: 'The outrageous, delivered with total calm.' },
+  { id: 'engine-room', name: 'Engine-Room Chemistry',  tags: ['stamina', 'teamwork'],       threshold: 3, desc: 'Covers every blade of grass, always for someone else.' },
+  { id: 'general',     name: 'General Chemistry',      tags: ['aggression', 'composure'],   threshold: 3, desc: 'Reads the danger early and deals with it without fuss.' },
+  { id: 'talisman',    name: 'Talisman Chemistry',     tags: ['leadership', 'creativity'],  threshold: 3, desc: 'The one the team looks to when it needs an answer.' },
+  { id: 'flanker',     name: 'Flanker Chemistry',      tags: ['stamina', 'flair'],          threshold: 3, desc: 'Torments a full-back for ninety minutes and never stops running.' },
+  { id: 'sweeper-gk',  name: 'Sweeper-Keeper Chemistry', tags: ['keeping', 'composure'],    threshold: 3, desc: 'Calm enough with the ball at his feet to start attacks from his own box.' },
+];
+/** Which synergies a deck has ACTIVATED (enough blend cards sharing both tags of the pair). */
+export function activeSynergies(deck: Card[]): Synergy[] {
+  return SYNERGIES.filter((s) => deck.filter((c) => c.tags.includes(s.tags[0]) && c.tags.includes(s.tags[1])).length >= s.threshold);
+}
+// how much each active synergy leans its two tags — merged into the attribute-focus channel in deriveStats
+// (see FOCUS_TAG_WEIGHT), so chemistry is a real, if modest, on-top-of-cards bonus, not a card replacement.
+const SYNERGY_TAG_POINTS = 2;
+/** Deck chemistry expressed as virtual attribute-focus points (see deriveStats/FOCUS_TAG_WEIGHT). */
+export function chemistryFocus(deck: Card[]): Partial<Record<Tag, number>> {
+  const out: Partial<Record<Tag, number>> = {};
+  for (const s of activeSynergies(deck)) for (const t of s.tags) out[t] = (out[t] ?? 0) + SYNERGY_TAG_POINTS;
+  return out;
+}
 
 // The goalkeeper track's deck: keeping-focused with a few shared mental cards. A GK career draws
 // from this instead of the outfield DECK, so `keeping` (and the calm/commanding traits that suit a
@@ -180,6 +256,19 @@ export const GK_DECK: Card[] = [
   { id: 'one-handed',  name: 'One-Handed Stop',   tags: ['keeping', 'flair'], rarity: 'rare' },
   { id: 'spot-king',   name: 'Spot-Kick King',    tags: ['keeping', 'leadership'], rarity: 'rare' },
   { id: 'save-season', name: 'Save of the Season', tags: ['keeping'], rarity: 'epic' },
+  // ── GK variety expansion #2 ──
+  { id: 'read-forward',    name: "Read the Forward's Mind", tags: ['keeping', 'composure'] },
+  { id: 'quick-reflex',    name: 'Lightning Reflexes',      tags: ['keeping'] },
+  { id: 'commanding-punch', name: 'Commanding Punch',       tags: ['keeping', 'aggression'] },
+  { id: 'sweeper-dash',    name: 'Sweeper Dash',            tags: ['keeping', 'stamina'] },
+  { id: 'long-throw',      name: 'Raking Long Throw',       tags: ['keeping', 'creativity'] },
+  { id: 'penalty-read',    name: 'Read the Penalty',        tags: ['keeping', 'composure'], rarity: 'rare' },
+  { id: 'shotstop-clinic', name: 'Shot-Stopping Clinic',    tags: ['keeping'], rarity: 'rare' },
+  { id: 'last-line',       name: 'Last Line of Defence',    tags: ['keeping', 'leadership'] },
+  { id: 'brave-block',     name: 'Brave Block at Feet',     tags: ['keeping', 'aggression'] },
+  { id: 'calm-high-ball',  name: 'Calm Under the High Ball', tags: ['keeping', 'composure'] },
+  { id: 'acrobatic',       name: 'Acrobatic Save',          tags: ['keeping', 'flair'], rarity: 'epic' },
+  { id: 'leader-box',      name: 'Leader of the Box',       tags: ['keeping', 'leadership'], rarity: 'rare' },
 ];
 const GK_STARTER_IDS = ['shot-stop', 'claim-cross', 'organise', 'calm-back'];
 const GK_STARTER: Card[] = GK_DECK.filter((c) => GK_STARTER_IDS.includes(c.id));
@@ -250,6 +339,33 @@ export const CARD_DESC: Record<string, string> = {
   'play-short': 'Start the build-up calmly and short from the back.', 'double-save': 'Save one, scramble up, and save the rebound too.',
   'one-handed': 'A full-stretch, one-handed save that beggars belief.', 'spot-king': 'Own the shoot-out and stand tall from twelve yards.',
   'save-season': 'The kind of save they’ll still show years from now.',
+  // expansion descriptions #2 — outfield
+  'nerves-steel': 'Not a flicker of doubt — pure nerves of steel.', 'big-moment': 'Stand tall and drag the team through the biggest moment of the season.',
+  'no-panic': 'Everyone around you is losing it — you stay dead calm.', 'ice-cold-spot': 'Walk up, no fuss, and bury it from the spot.',
+  'composed-touch': 'Kill it stone dead with a composed first touch, then look up.', 'flick-on': 'A deft flick-on into the path of a teammate.',
+  audacious: 'Try the outrageous backheel — and pull it off.', samba: 'A flash of samba skill that has the crowd on its feet.',
+  bicycle: 'Launch into an overhead bicycle kick — the stuff of highlight reels.', cruyff: 'Drag it behind your standing leg and spin the defender inside out.',
+  sombrero: 'Flick it up and over his head with a sombrero — pure disrespect.', bruiser: 'Go through the ball, not around it — a bruising challenge.',
+  'no-nonsense': 'No fuss, no frills — just clear your lines.', 'body-check': 'Use your frame, shoulder to shoulder, to knock him off it.',
+  'hunt-pack': 'Close him down together, in a pack, and leave him nowhere to go.', 'red-mist': "Let the red mist come down for one reckless moment.",
+  'through-eye': 'Thread it through a gap that shouldn’t exist.', 'disguised-pass': 'Sell the dummy with your eyes, then play it the other way.',
+  'weighted-pass': 'Weight it perfectly onto a teammate’s stride.', 'outside-boot': 'Curl it round with the outside of the boot.',
+  'spatial-iq': 'See the picture forming before anyone else does.', bricklayer: 'Do the unglamorous work, brick by brick, that nobody notices.',
+  'team-ethic': 'Put the team above yourself, every single time.', 'tracking-back': 'Sprint the length of the pitch to track your man back.',
+  'plug-gap': 'Spot the hole in the shape and fill it before it’s exploited.', 'captain-arm': 'Lead by example — first to every fifty-fifty.',
+  'dressing-voice': 'Be the voice that cuts through the noise in the dressing room.', 'calm-fire': 'Stay composed while everything round you is chaos.',
+  'gaffer-word': 'A quiet word from the gaffer lands, and you deliver.', 'never-say-die': 'Refuse to accept it’s over, right to the final whistle.',
+  'marathon-man': 'Still sprinting in the 90th minute like it’s the first.', 'extra-yard': 'Find one more yard when your legs say no.',
+  'gas-tank': 'A full tank when everyone else is running on empty.', relentless: 'Press and press and press — give them no time on the ball.',
+  'legs-of-steel': 'Legs that simply refuse to tire, minute after minute.', matchwinner: 'One moment, out of nothing, that wins the whole game.',
+  wonderkid: 'A touch of pure class that reminds everyone why they rated you.',
+  // expansion descriptions #2 — goalkeeper
+  'read-forward': 'Read the striker’s intentions a split-second before he acts.', 'quick-reflex': 'React on pure instinct before your brain catches up.',
+  'commanding-punch': 'Come and punch it clear with real authority.', 'sweeper-dash': 'Race off your line to sweep up behind a high defence.',
+  'long-throw': 'Launch a raking throw to spark a counter in seconds.', 'penalty-read': 'Guess the corner and get there — read the penalty.',
+  'shotstop-clinic': 'A clinic in shot-stopping, save after save.', 'last-line': 'Be the very last line — nothing gets past you today.',
+  'brave-block': 'Stand your ground and block it at his feet, brave as they come.', 'calm-high-ball': 'Rise above the chaos and claim the high ball with total calm.',
+  acrobatic: 'Contort yourself into an acrobatic save that defies gravity.', 'leader-box': 'Own your box and organise everyone in front of you.',
 };
 
 // deck-building config
@@ -261,7 +377,13 @@ export const DRAFT_PICKS = 3;  // how many you add each draft → a deck that gr
 // marketability/fame that carries into the pro). It's the flip side of banking your earnings for a higher
 // valuation: spend now for a better career, or hoard for a richer graduate. Deterministic (no rng).
 // chapter index reference: 0 Grassroots · 1 Academy · 2 Scholar · 3 Youth Team · 4 Breakthrough · 5 First Team · 6 Establishing
-export interface LifestyleItem { id: string; icon: string; name: string; blurb: string; cost: number; minChapterIdx: number; maxChapterIdx?: number; recovery?: number; market?: number; greed?: number; perks?: Partial<Record<MeterKey, number>>; clubInvest?: number }
+export interface LifestyleItem { id: string; icon: string; name: string; blurb: string; cost: number; minChapterIdx: number; maxChapterIdx?: number; recovery?: number; market?: number; greed?: number; perks?: Partial<Record<MeterKey, number>>; clubInvest?: number;
+  /** METER-GATED: only on offer once ALL these standings are met — a high-standing OPPORTUNITY. */
+  minMeter?: Partial<Record<MeterKey, number>>;
+  /** METER-GATED: only on offer while ALL these standings are BELOW threshold — a low-standing TROUBLE
+   *  intervention (paying to fix a mess, not a treat). */
+  maxMeter?: Partial<Record<MeterKey, number>>;
+}
 /** How much of his earnings a lifestyle choice diverts to the club (0 = a personal treat, not an investment). */
 export function clubInvestOf(itemId: string): number { return LIFESTYLE.find((i) => i.id === itemId)?.clubInvest ?? 0; }
 export const LIFESTYLE: LifestyleItem[] = [
@@ -289,11 +411,28 @@ export const LIFESTYLE: LifestyleItem[] = [
   { id: 'supercar', icon: '🏎️', name: 'A Supercar',               blurb: 'Turn heads pulling into the car park — the boyhood dream, made real.', cost: 2400, minChapterIdx: 5, market: 1, perks: { fans: 8 } },
   { id: 'testim',   icon: '🎟️', name: 'Pledge a Testimonial Fund', blurb: 'Set some earnings aside for a benefit match — the dressing room notices.', cost: 2600, minChapterIdx: 5, perks: { peers: 14, fans: 6 } },
   { id: 'restaurant', icon: '🍷', name: 'Boutique Restaurant Investment', blurb: 'Put your name over the door of a place the whole city is talking about.', cost: 4200, minChapterIdx: 6, market: 2, greed: 1, perks: { sponsors: 8 } },
+  // Real trade-offs: a flashy purchase that BUYS fame/fans but COSTS a relationship — money doesn't just
+  // add, it reallocates. Lets a career choose an image, not just a shopping list.
+  { id: 'flash-jewellery', icon: '💎', name: 'Flash the Jewellery', blurb: 'Chains and watches on full display — the cameras love it, the dressing room less so.', cost: 1100, minChapterIdx: 4, market: 2, greed: 1, perks: { fans: 10, peers: -10 } },
+  { id: 'nightclub', icon: '🍾', name: 'A Night Out That Makes the Papers', blurb: 'A big night, splashed across the tabloids the next morning.', cost: 700, minChapterIdx: 4, market: 1, perks: { fans: 6, partner: -12, authority: -6 } },
+  { id: 'private-tutor', icon: '📚', name: 'A Private Tutor', blurb: 'Keep learning off the pitch — a level head the papers can never take from you.', cost: 500, minChapterIdx: 2, maxChapterIdx: 4, perks: { school: 16, family: 6 } },
+  { id: 'youth-coach-gift', icon: '🎁', name: 'Give Back to Your First Club', blurb: 'A donation to the grassroots club that made you — a nod to where it all started.', cost: 900, minChapterIdx: 5, perks: { fans: 10, family: 8 } },
+  { id: 'entourage', icon: '🕴️', name: 'Build an Entourage', blurb: 'Old mates on the payroll now — loyal, but it costs, and the club whispers about who’s really around you.', cost: 1800, minChapterIdx: 5, greed: 1, perks: { peers: 12, authority: -6 } },
   // Player-directed investing — put earnings into the CLUB instead of a personal treat. Repeatable (never
   // marked "owned"), no personal perk — the trade-off is you vs the dynasty. The coins are credited to the
   // club server-side (clubInvestOf); buyLifestyle only spends the earnings and stays available.
   { id: 'invest-club-sm', icon: '🏛️', name: "Back the Club",       blurb: "Put earnings into the club's future instead of your own — every coin goes to the club.", cost: 150, minChapterIdx: 1, clubInvest: 150 },
   { id: 'invest-club-lg', icon: '🏟️', name: 'Back the Club — Big', blurb: 'A major injection into the club from your own pocket — the dynasty over the lifestyle.',       cost: 600, minChapterIdx: 3, clubInvest: 600 },
+  // METER-GATED OPPORTUNITIES — tending a relationship has real teeth: a genuinely high standing unlocks
+  // something money alone can't buy (only shows up on the shelf once you've earned the standing for it).
+  { id: 'testimonial-seat', icon: '🎗️', name: 'A Seat on the Testimonial Committee', blurb: 'The fans have taken to him so completely, the club asks him to help plan his own future send-off.', cost: 1200, minChapterIdx: 5, market: 1, perks: { sponsors: 6 }, minMeter: { fans: 75 } },
+  { id: 'dressing-room-mvp', icon: '🏅', name: 'Voted Dressing-Room Player of the Year', blurb: 'His own team-mates put him top of the pile — a peer-voted honour money could never buy.', cost: 400, minChapterIdx: 4, perks: { authority: 8, fans: 4 }, minMeter: { peers: 75 } },
+  { id: 'trusted-voice', icon: '📣', name: "The Gaffer's Trusted Voice", blurb: 'So complete is the manager\'s trust, he starts being consulted before big calls are made.', cost: 800, minChapterIdx: 4, perks: { peers: 8, agent: 6 }, minMeter: { authority: 78 } },
+  // METER-GATED TROUBLE — a low standing doesn't just cost you passively; it opens a costly damage-control
+  // shelf you'd rather not need. Paying doesn't undo the mess, but it stops the bleeding.
+  { id: 'crisis-pr', icon: '🧯', name: 'Hire a Crisis PR Team', blurb: 'The fans have turned on him and it shows no sign of blowing over — time to pay someone to manage the fallout.', cost: 900, minChapterIdx: 4, perks: { fans: 14 }, maxMeter: { fans: 25 } },
+  { id: 'agent-firing', icon: '✂️', name: 'Cut Your Agent Loose', blurb: 'The relationship has soured beyond repair — an expensive, awkward, necessary split.', cost: 600, minChapterIdx: 3, perks: { agent: 30 }, maxMeter: { agent: 20 } },
+  { id: 'counselling', icon: '🛋️', name: 'See a Relationship Counsellor', blurb: 'Things at home have got bad enough that pretending it will sort itself out isn’t working anymore.', cost: 500, minChapterIdx: 3, perks: { partner: 20 }, maxMeter: { partner: 25 } },
 ];
 
 // ── BACKROOM STAFF: at each age-chapter break you appoint a mentor/coach for the coming chapter.
@@ -319,6 +458,12 @@ export const COACHES: Coach[] = [
   { id: 'setpiece',   name: 'Set-Piece Coach',    kind: 'coach',  desc: 'Free-kicks, corners, every rehearsed dead ball',           specialty: ['composure', 'creativity', 'flair'], bonus: 0.1 },
   { id: 'psych',      name: 'Sports Psychologist', kind: 'coach', desc: 'Gets inside your head — and settles it',                   specialty: ['composure'], bonus: 0.15 },
   { id: 'scout-m',    name: 'Scout Mentor',       kind: 'mentor', desc: 'An old scout teaches you what the eye in the stand looks for', specialty: ['flair', 'creativity'], bonus: 0.12 },
+  { id: 'youth-guru', name: 'Youth Development Guru', kind: 'mentor', desc: 'Coaxes raw talent out at its own pace, never forcing it', specialty: ['creativity', 'stamina'], bonus: 0.11 },
+  { id: 'analytics',  name: 'Data & Analytics Coach', kind: 'coach', desc: 'Numbers over instinct — drills the patterns the data reveals', specialty: ['composure', 'teamwork'], bonus: 0.11 },
+  { id: 'man-mgmt',   name: 'Man-Management Specialist', kind: 'mentor', desc: 'Knows exactly which button to push in which player', specialty: ['leadership', 'teamwork'], bonus: 0.13 },
+  { id: 'street',     name: 'Street-Football Mentor', kind: 'mentor', desc: 'Learned the game on concrete, not carpet — and it shows', specialty: ['flair', 'creativity'], bonus: 0.13 },
+  { id: 'discipline', name: 'Old-School Disciplinarian', kind: 'coach', desc: 'Fear and respect in equal measure — no excuses, ever', specialty: ['aggression', 'leadership'], bonus: 0.12 },
+  { id: 'nutrition',  name: 'Nutrition & Recovery Coach', kind: 'coach', desc: 'What goes in matters as much as what comes out', specialty: ['stamina'], bonus: 0.13 },
 ];
 export const COACH_OFFER = 3; // choices shown at each appointment
 
@@ -335,10 +480,14 @@ export const AGENTS: Agent[] = [
   { id: 'fixer',     name: 'The Local Fixer',   desc: 'Knows every scout in the county — low fuss, right doors', exposure: 0.85, draftLuck: 1.45, greed: -4, valueMod: 0.9 },
   { id: 'showman',   name: 'The Showman',      desc: 'Markets you relentlessly — fame over fees',     exposure: 1.5,  draftLuck: 1.1,  greed: 2,  valueMod: 1.2 },
   { id: 'grafter',   name: 'The Grafter’s Agent', desc: 'Old-school; picks clubs where you’ll play', exposure: 1.05, draftLuck: 1.15, greed: -2, valueMod: 1.0 },
+  { id: 'maverick-a', name: 'The Maverick Agent', desc: 'Unconventional, controversial, occasionally brilliant', exposure: 1.2,  draftLuck: 1.3,  greed: 4,  valueMod: 1.1 },
+  { id: 'boutique',   name: 'Boutique Agency',    desc: 'A small, hand-picked roster — total personal attention', exposure: 0.9,  draftLuck: 1.2,  greed: -1, valueMod: 1.05 },
+  { id: 'legal',      name: 'The Legal Eagle',    desc: 'Reads every clause twice — protects you, slows everything down', exposure: 0.8, draftLuck: 0.95, greed: -3, valueMod: 0.95 },
+  { id: 'superstar-a', name: 'Global Superstar Agency', desc: 'The biggest names, the biggest cut, the biggest stage', exposure: 1.7, draftLuck: 1.3, greed: 7, valueMod: 1.3 },
 ];
 export const agentById = (id?: string) => AGENTS.find((a) => a.id === id) ?? null;
 /** how each temperament tilts greed (nature) — layered on the agent's influence */
-const PERSONALITY_GREED: Record<string, number> = { maverick: 3, mercurial: 2, biggame: 1, fragile: 0, workhorse: -1, pro: -2, leader: -2, latebloom: -1, showman: 3 };
+const PERSONALITY_GREED: Record<string, number> = { maverick: 3, mercurial: 2, biggame: 1, fragile: 0, workhorse: -1, pro: -2, leader: -2, latebloom: -1, showman: 3, stoic: -1, hothead: 2, perfectionist: -1, joker: 1 };
 
 // Manager-side contract economics (contractCost / contractLength / releaseClause / Contract …) live in
 // contracts.ts so the Manager game gets them via the barrel without the Layer-1 sim. Re-exported here
@@ -364,51 +513,94 @@ export function rollOffer(_rng: () => number, _turn: number): Offer[] { return O
 // (moves energy + relationships only, no rng), so it steers which meters you carry into the next chapter
 // — and thus which consequences bite — without disturbing the graduation trajectory. Stage-appropriate:
 // a kid rests / studies / plays with mates; a pro tends a partner, works his agent, courts sponsors.
-export interface FocusOption { id: string; icon: string; name: string; desc: string; energy: number; effects: Partial<Record<MeterKey, number>> }
+export interface FocusOption { id: string; icon: string; name: string; desc: string; energy: number; effects: Partial<Record<MeterKey, number>>; tag?: Tag }
 const FOCUS_REST: FocusOption = { id: 'rest', icon: '🛌', name: 'Rest & Recharge', desc: 'A proper summer off. Come back fresh.', energy: +22, effects: { family: +4, peers: +3 } };
 const FOCUS_BY_CHAPTER: Record<string, FocusOption[]> = {
   Grassroots: [
     { id: 'family',  icon: '🏠', name: 'Family Time',     desc: 'Kickabouts in the garden with your folks. Grounding.', energy: +10, effects: { family: +14, peers: +3 } },
     { id: 'mates',   icon: '🧒', name: 'Out With Mates',  desc: 'Long summer days with your mates. Priceless at this age.', energy: +6, effects: { peers: +16, family: -3 } },
     { id: 'skills',  icon: '⚽', name: 'Skills in the Park', desc: 'Hours against a wall. The coach will notice.', energy: -8, effects: { authority: +14, peers: +2 } },
+    { id: 'firstcoach', icon: '🧑‍🏫', name: 'Sunday Mornings With Your First Coach', desc: 'He sees something in you and gives up his weekends to work on it — a bond that shapes you.', energy: -4, effects: { authority: +18, family: +2 } },
   ],
   Academy: [
     { id: 'school',  icon: '🎒', name: 'Hit the Books',   desc: 'Keep the grades up — a fallback and a discipline.', energy: -6, effects: { school: +16, family: +6 } },
     { id: 'impress', icon: '🧑‍🏫', name: 'Impress the Coach', desc: 'Extra sessions, first to arrive. Staff love a grafter.', energy: -10, effects: { authority: +16, peers: -3 } },
     { id: 'mates',   icon: '🧒', name: 'Team Bonding',    desc: 'Tight with the lads — a dressing room that fights for you.', energy: +4, effects: { peers: +15, school: -4 } },
+    { id: 'rivalry', icon: '🔥', name: 'Chase Your Best Mate', desc: 'You and your closest friend push each other every single session — it sharpens you both, but it stings when he pips you to a place.', energy: -6, effects: { peers: +8, authority: +8 } },
   ],
   Scholar: [
     { id: 'agent',   icon: '🤝', name: 'Sign With an Agent', desc: 'Someone to fight your corner as the offers start to whisper.', energy: -6, effects: { agent: +20 } },
     { id: 'impress', icon: '🧑‍🏫', name: 'Extra Sessions',   desc: 'Stay behind, do the ugly work. The coach is watching who wants it.', energy: -12, effects: { authority: +16, peers: -2 } },
     { id: 'school',  icon: '🎒', name: 'Finish Your Studies', desc: 'A scholar in name — keep the qualifications as a safety net.', energy: -6, effects: { school: +16, peers: +2 } },
+    { id: 'setback', icon: '💪', name: 'Bounce Back From the Cut', desc: 'A string of released mates rattles the digs — you knuckle down and refuse to be next.', energy: -10, effects: { authority: +12, family: +6 } },
   ],
   'Youth Team': [
     { id: 'partner', icon: '❤️', name: 'A New Romance',    desc: 'You’ve met someone. Settled and happy off the pitch.', energy: +12, effects: { partner: +18 } },
     { id: 'agent',   icon: '🤝', name: 'Work Your Agent',  desc: 'Dinners and phone calls — get him fighting for you.', energy: -8, effects: { agent: +18, authority: -2 } },
     { id: 'impress', icon: '🧑‍🏫', name: 'Court the Gaffer', desc: 'Make yourself undroppable in pre-season.', energy: -12, effects: { authority: +16, partner: -4 } },
+    { id: 'loan',    icon: '🚐', name: 'Push for a Loan Move', desc: 'Real senior football, away from home comforts — game time that toughens you up fast.', energy: -8, effects: { agent: +10, authority: +8, partner: -4 } },
   ],
   Breakthrough: [
     { id: 'partner', icon: '❤️', name: 'Time With Partner', desc: 'Protect your relationship as the spotlight grows.', energy: +10, effects: { partner: +16, fans: -2 } },
     { id: 'fans',    icon: '📣', name: 'Work the Fans',     desc: 'Community days, autographs — the terraces will sing your name.', energy: -8, effects: { fans: +18, partner: -4 } },
     { id: 'agent',   icon: '🤝', name: 'Lean on Your Agent', desc: 'Position yourself for the big move.', energy: -6, effects: { agent: +16, authority: -3 } },
+    { id: 'contract', icon: '✍️', name: 'Talk Terms on Your First Pro Deal', desc: 'The club wants you tied down — negotiate hard, but don’t burn the bridge to the manager who gave you your chance.', energy: -8, effects: { agent: +14, authority: -4, fans: +4 } },
   ],
   'First Team': [
     { id: 'starter', icon: '🧑‍🏫', name: 'Nail Your Starting Spot', desc: 'Pre-season graft — make the shirt yours and undroppable.', energy: -12, effects: { authority: +16, peers: -2 } },
     { id: 'fans',    icon: '📣', name: 'Give Back to the Fans', desc: 'Become a terrace favourite — they’ll carry you on the bad days.', energy: -8, effects: { fans: +16, partner: -3 } },
     { id: 'partner', icon: '❤️', name: 'Time With Partner', desc: 'A stable home life behind the rising star.', energy: +10, effects: { partner: +16, fans: -2 } },
+    { id: 'leadership', icon: '🎗️', name: 'Grow Into a Leader', desc: 'The younger lads look to you now — start acting like the senior pro you’re becoming.', energy: -10, effects: { authority: +10, peers: +12 } },
   ],
   Establishing: [
     { id: 'sponsors', icon: '📸', name: 'Sponsor Duties',   desc: 'Shoots and appearances. The brand — and the bank — grow.', energy: -12, effects: { sponsors: +18, peers: -4 } },
     { id: 'fans',     icon: '📣', name: 'Icon of the Terraces', desc: 'Give the supporters everything. Become untouchable.', energy: -8, effects: { fans: +16, partner: -3 } },
     { id: 'partner',  icon: '❤️', name: 'Settle Down',       desc: 'A stable home life behind the superstar.', energy: +10, effects: { partner: +16, sponsors: -4 } },
+    { id: 'legacy',   icon: '👑', name: 'Think About Your Legacy', desc: 'What do you want them to say about you when it’s all over? You start carrying yourself like it.', energy: -6, effects: { authority: +10, fans: +10, peers: -2 } },
   ],
 };
+// ── LIGHT ATTRIBUTE FOCUS (a soft skill-tree): from Youth Team on, the summer offers one or two picks
+// that ALSO nudge a specific stat family — a small, player-directed lean layered on top of the
+// card-driven "earned, not chosen" development. No rng, no meter effects of its own beyond the small
+// energy cost — the reward is purely the tag nudge (applied in deriveStats, see FOCUS_TAG_WEIGHT).
+const TAG_FOCUS_BY_CHAPTER: Record<string, Array<{ id: string; icon: string; name: string; desc: string; tag: Tag }>> = {
+  'Youth Team':   [
+    { id: 'focus_stamina',    icon: '🏃', name: 'Punish Yourself in Pre-Season', desc: 'Double sessions, extra miles — build the engine now while your body can take it.', tag: 'stamina' },
+    { id: 'focus_teamwork',   icon: '🧩', name: 'Study the Shape',               desc: 'Hours with the whiteboard and the analyst — learn to read the team, not just the ball.', tag: 'teamwork' },
+  ],
+  Breakthrough:   [
+    { id: 'focus_composure',  icon: '🧊', name: 'Work on Big-Game Composure',    desc: 'Visualisation, breathing, reps under pressure — train the nerves as hard as the legs.', tag: 'composure' },
+    { id: 'focus_creativity', icon: '🎨', name: 'Sharpen Your Vision',           desc: 'Extra time on the training pitch, trying passes no one else sees.', tag: 'creativity' },
+  ],
+  'First Team':   [
+    { id: 'focus_leadership', icon: '🎖️', name: 'Grow Into a Leader on the Pitch', desc: 'Start talking, start organising — take on the responsibility.', tag: 'leadership' },
+    { id: 'focus_aggression', icon: '⚔️', name: 'Sharpen Your Edge',             desc: 'Add a nastier, more competitive streak to your game.', tag: 'aggression' },
+  ],
+  Establishing:   [
+    { id: 'focus_flair',      icon: '✨', name: 'Perfect a Signature Move',      desc: 'One trick, drilled a thousand times, until it’s unstoppable.', tag: 'flair' },
+    { id: 'focus_leadership2', icon: '🎖️', name: 'Become the Dressing-Room Leader', desc: 'The senior voice everyone else follows now.', tag: 'leadership' },
+  ],
+};
+const GK_TAG_FOCUS_BY_CHAPTER: Record<string, { id: string; icon: string; name: string; desc: string; tag: Tag }> = {
+  'Youth Team':   { id: 'focus_keeping1', icon: '🧤', name: 'Extra Hours on the Shot-Stopping Machine', desc: 'Ball after ball, low and hard — drill the reactions until they’re instinct.', tag: 'keeping' },
+  Breakthrough:   { id: 'focus_keeping2', icon: '🧤', name: 'Master Commanding Your Box',              desc: 'Crosses, corners, one-on-ones — own every inch of your penalty area.', tag: 'keeping' },
+  'First Team':   { id: 'focus_keeping3', icon: '🧤', name: 'Perfect Your Distribution',                desc: 'Turn every save into the first pass of a counter-attack.', tag: 'keeping' },
+  Establishing:   { id: 'focus_keeping4', icon: '🧤', name: 'Become the Last Word',                     desc: 'The kind of keeper a defence plays with total confidence in front of.', tag: 'keeping' },
+};
+const TAG_FOCUS_ENERGY = -5; // a light, deliberate training focus — a small energy cost, no meter swing
+
 /** The between-chapter focus choices for a life stage (Rest is always available). `standing`, if given,
- *  adds a high-variance RISK pick for later chapters — sized off current state, not rng (see below). */
-export function rollFocus(chapter: string, standing?: Record<MeterKey, number>): FocusOption[] {
-  const base = [...(FOCUS_BY_CHAPTER[chapter] ?? FOCUS_BY_CHAPTER.Establishing), FOCUS_REST];
+ *  adds a high-variance RISK pick for later chapters — sized off current state, not rng (see below).
+ *  `track` adds a GK-specific attribute-focus pick from Youth Team onward. */
+export function rollFocus(chapter: string, standing?: Record<MeterKey, number>, track: Track = 'outfield'): FocusOption[] {
+  const base = FOCUS_BY_CHAPTER[chapter] ?? FOCUS_BY_CHAPTER.Establishing;
   const risk = standing ? riskFocusFor(chapter, standing) : null;
-  return risk ? [...base, risk] : base;
+  const tagPicks = (TAG_FOCUS_BY_CHAPTER[chapter] ?? []).map((t) => ({ id: t.id, icon: t.icon, name: t.name, desc: t.desc, energy: TAG_FOCUS_ENERGY, effects: {}, tag: t.tag }));
+  const gk = track === 'goalkeeper' ? GK_TAG_FOCUS_BY_CHAPTER[chapter] : null;
+  const gkPick = gk ? [{ id: gk.id, icon: gk.icon, name: gk.name, desc: gk.desc, energy: TAG_FOCUS_ENERGY, effects: {}, tag: gk.tag }] : [];
+  // Rest stays LAST — it's the deliberate, meter-neutral fallback the balance harness picks when nothing
+  // else matches a need, so it must never be displaced by the newer attribute-focus picks.
+  return [...base, ...(risk ? [risk] : []), ...tagPicks, ...gkPick, FOCUS_REST];
 }
 
 // ── RISK FOCUS: from Breakthrough onward, a bold high-variance pick alongside the safe ones — a small
@@ -454,7 +646,49 @@ export function rollCoaches(rng: () => number, track: Track, n = COACH_OFFER): C
 // ── scenarios: each moment demands a weighted mix of tags; kind biases the demand ──
 // stakes 1 (normal) / 2 (big) / 3 (huge). Big moments are worth MORE (shape you harder) and are
 // riskier (more variance) — this is where reputations are made and the Big-Game Player trait is earned.
-export interface Scenario { id: string; kind: 'match' | 'social' | 'training'; demand: Partial<Record<Tag, number>>; label: string; stakes: 1 | 2 | 3 }
+export interface Scenario { id: string; kind: 'match' | 'social' | 'training'; demand: Partial<Record<Tag, number>>; label: string; stakes: 1 | 2 | 3; life?: LifeKind | null; rival?: boolean }
+// RIVALRY CONSEQUENCE: a real, distinct payoff when a big-stage MATCH scenario is framed as a head-to-head
+// against the seeded academy rival (see careerCast in narrate.ts — this module doesn't need his name, just
+// the mechanic). Bigger than a routine big-game swing: bragging rights are worth more than the occasion alone.
+const RIVAL_CONSEQUENCE = { good: { fans: 8, agent: 4 } as Partial<Record<MeterKey, number>>, bad: { fans: -5 } as Partial<Record<MeterKey, number>>, earnGood: 80 };
+
+// ── LIFE EVENTS: a fraction of low-stakes SOCIAL moments become a proper off-pitch dilemma — a contract
+// standoff, a loan decision, a media storm — instead of a generic dressing-room beat. Resolved by the SAME
+// card play (fit/success unchanged), but the OUTCOME carries a real, persisted consequence: differentiated
+// meter/earnings swings on top of the usual updateLife() reaction (see LIFE_CONSEQUENCE, applied in play()).
+// Selection is a pure hash of (seed, turn) — NOT drawn from the rng() stream — so it never perturbs the
+// scenario's demand/stakes or any other rng-derived number; only development-touching where the consequence
+// itself nudges standing (small, same order of magnitude as the existing per-turn meter reactions).
+export type LifeKind = 'contract' | 'loan' | 'setback' | 'media' | 'loyalty' | 'role' | 'fallout'
+  | 'injury_comeback' | 'transfer_rumour' | 'manager_fallout' | 'charity' | 'social_storm' | 'family_illness' | 'romance';
+export const LIFE_KINDS: LifeKind[] = ['contract', 'loan', 'setback', 'media', 'loyalty', 'role', 'fallout', 'injury_comeback', 'transfer_rumour', 'manager_fallout', 'charity', 'social_storm', 'family_illness', 'romance'];
+export const LIFE_LABEL: Record<LifeKind, string> = {
+  contract: 'a contract standoff', loan: 'a loan-move decision', setback: 'bouncing back from a public mistake',
+  media: 'a media storm', loyalty: 'a boyhood-club approach', role: 'a squad-role ultimatum', fallout: 'a public falling-out with a teammate',
+  injury_comeback: 'fighting his way back from injury', transfer_rumour: 'transfer speculation swirling around him',
+  manager_fallout: 'a falling-out with the manager', charity: 'a charity and community appearance',
+  social_storm: 'a social-media storm', family_illness: 'a family illness pulling at him', romance: 'settling down off the pitch',
+};
+// good/bad meter + earnings swing per life-kind, applied ON TOP of the generic per-turn reaction — this is
+// what makes a life event mechanically distinct from an ordinary social scenario, not just a re-skin.
+const LIFE_CONSEQUENCE: Record<LifeKind, { good: Partial<Record<MeterKey, number>>; bad: Partial<Record<MeterKey, number>>; earnGood?: number; earnBad?: number }> = {
+  contract:         { good: { agent: 10, authority: 4 },  bad: { agent: -8, authority: -6 }, earnGood: 150 },
+  loan:             { good: { authority: 8, agent: 4 },   bad: { authority: -6, peers: -4 } },
+  setback:          { good: { fans: 6, authority: 6 },    bad: { fans: -8, authority: -8 } },
+  media:            { good: { fans: 8, sponsors: 4 },     bad: { fans: -6, agent: -4 } },
+  loyalty:          { good: { fans: 10, family: 6 },      bad: { agent: -6, fans: -4 } },
+  role:             { good: { authority: 8 },             bad: { authority: -10, peers: -4 } },
+  fallout:          { good: { peers: 6, authority: 4 },   bad: { peers: -12, authority: -4 } },
+  injury_comeback:  { good: { authority: 6, family: 4 },  bad: { authority: -4, family: -4 } },
+  transfer_rumour:  { good: { agent: 8, fans: -2 },       bad: { agent: -4, peers: -6 } },
+  manager_fallout:  { good: { authority: 4, peers: 4 },   bad: { authority: -14 } },
+  charity:          { good: { fans: 10, family: 4 },      bad: { fans: 2 } },
+  social_storm:     { good: { fans: 6, sponsors: 4 },     bad: { fans: -10, sponsors: -8 } },
+  family_illness:   { good: { family: 10 },               bad: { family: -14, authority: -4 } },
+  romance:          { good: { partner: 16 },              bad: { partner: -10 } },
+};
+/** Pure deterministic hash → [0,1), independent of the career's rng() stream (never consumes it). */
+function pureHash01(seed: number, turn: number, salt: number): number { return mulberry32(((seed ^ Math.imul(turn + 1, 2654435761)) ^ salt) >>> 0)(); }
 const KIND_BIAS: Record<Scenario['kind'], Tag[]> = {
   match: TAGS,                                                   // anything can come up in a match
   social: ['leadership', 'composure', 'teamwork'],              // dressing room / media
@@ -468,7 +702,7 @@ const HUGE_MOMENTS = ['CUP FINAL', 'Title Decider', 'Promotion Play-Off Final', 
 
 /** A seeded scenario. Tag demand comes from the current AGE BAND (age-appropriate); stakes are gated
  *  by the band (no cup finals at grassroots). `demandBias` (a gaffer's demand) leans the demand. */
-export function makeScenario(rng: () => number, i: number, track: Track = 'outfield', demandBias?: Tag | null, band?: AgeBand, exposure = 1): Scenario {
+export function makeScenario(rng: () => number, i: number, track: Track = 'outfield', demandBias?: Tag | null, band?: AgeBand, exposure = 1, seed?: number): Scenario {
   const kind = KIND_POOL[Math.floor(rng() * KIND_POOL.length)];
   const bias = track === 'goalkeeper' ? GK_BIAS : (band ? band.demand : OUTFIELD_TAGS);
   const n = 1 + Math.floor(rng() * Math.min(3, bias.length));
@@ -484,8 +718,19 @@ export function makeScenario(rng: () => number, i: number, track: Track = 'outfi
   const stakes: 1 | 2 | 3 = maxStakes >= 3 && r < 0.05 * exposure ? 3 : maxStakes >= 2 && r < 0.22 * exposure ? 2 : 1; // an agent's exposure = more big stages
   const moment = stakes === 3 ? HUGE_MOMENTS[Math.floor(rng() * HUGE_MOMENTS.length)]
     : stakes === 2 ? BIG_MOMENTS[Math.floor(rng() * BIG_MOMENTS.length)] : null;
-  const label = moment ? `★ ${moment}` : `${kind}: ${Object.keys(demand).join(' / ')}`;
-  return { id: `sc${i}`, kind, demand, label, stakes };
+  // LIFE EVENT: a slice of low-stakes social moments, from Scholar onward, become an off-pitch dilemma
+  // instead of a generic dressing-room beat. A pure hash of (seed, turn) — costs no rng() draws, so it
+  // never perturbs demand/stakes/moment above for careers that predate this feature or don't hit the gate.
+  const bandIdx = band ? AGE_BANDS.indexOf(band) : -1;
+  const life: LifeKind | null = seed != null && kind === 'social' && stakes === 1 && bandIdx >= 2 && pureHash01(seed, i, 0x5a17e) < 0.22
+    ? LIFE_KINDS[Math.floor(pureHash01(seed, i, 0x1123bc) * LIFE_KINDS.length)]
+    : null;
+  // RIVALRY MOMENT: a slice of big-stage MATCH scenarios, from Youth Team on, become an explicit
+  // head-to-head against the seeded academy rival — same pure-hash technique as `life`, no extra rng()
+  // draws, so it never perturbs demand/stakes/moment for careers that predate this or don't hit the gate.
+  const rival = seed != null && kind === 'match' && stakes >= 2 && bandIdx >= 3 && pureHash01(seed, i, 0x72195) < 0.3;
+  const label = life ? LIFE_LABEL[life] : moment ? `★ ${moment}` : `${kind}: ${Object.keys(demand).join(' / ')}`;
+  return { id: `sc${i}`, kind, demand, label, stakes, life, rival };
 }
 
 /** How well a card's tags satisfy a scenario's demand, 0..1. */
@@ -507,13 +752,13 @@ export const HAND_SIZE = 4;
 export const START_AGE = 10, PRO_AGE = 25, RETIRE_AGE = 40;
 export interface AgeBand { name: string; from: number; to: number; turns: number; maxStakes: 1 | 2 | 3; demand: Tag[] }
 export const AGE_BANDS: AgeBand[] = [
-  { name: 'Grassroots',   from: 10, to: 12, turns: 12, maxStakes: 1, demand: ['flair', 'stamina', 'creativity', 'teamwork'] },
-  { name: 'Academy',      from: 13, to: 14, turns: 14, maxStakes: 1, demand: ['flair', 'stamina', 'creativity', 'teamwork', 'composure', 'aggression'] },
-  { name: 'Scholar',      from: 15, to: 16, turns: 16, maxStakes: 2, demand: OUTFIELD_TAGS },
-  { name: 'Youth Team',   from: 17, to: 18, turns: 18, maxStakes: 2, demand: OUTFIELD_TAGS },
-  { name: 'Breakthrough', from: 19, to: 20, turns: 18, maxStakes: 3, demand: OUTFIELD_TAGS },
-  { name: 'First Team',   from: 21, to: 22, turns: 18, maxStakes: 3, demand: OUTFIELD_TAGS },
-  { name: 'Establishing', from: 23, to: 25, turns: 16, maxStakes: 3, demand: OUTFIELD_TAGS },
+  { name: 'Grassroots',   from: 10, to: 12, turns: 22, maxStakes: 1, demand: ['flair', 'stamina', 'creativity', 'teamwork'] },
+  { name: 'Academy',      from: 13, to: 14, turns: 26, maxStakes: 1, demand: ['flair', 'stamina', 'creativity', 'teamwork', 'composure', 'aggression'] },
+  { name: 'Scholar',      from: 15, to: 16, turns: 30, maxStakes: 2, demand: OUTFIELD_TAGS },
+  { name: 'Youth Team',   from: 17, to: 18, turns: 32, maxStakes: 2, demand: OUTFIELD_TAGS },
+  { name: 'Breakthrough', from: 19, to: 20, turns: 32, maxStakes: 3, demand: OUTFIELD_TAGS },
+  { name: 'First Team',   from: 21, to: 22, turns: 32, maxStakes: 3, demand: OUTFIELD_TAGS },
+  { name: 'Establishing', from: 23, to: 25, turns: 28, maxStakes: 3, demand: OUTFIELD_TAGS },
 ];
 export const TOTAL_TURNS = AGE_BANDS.reduce((s, b) => s + b.turns, 0);
 
@@ -563,6 +808,36 @@ export function bandAt(turn: number): { index: number; band: AgeBand; age: numbe
   return { index, band, age: Math.round(band.from + frac * (band.to - band.from)) };
 }
 
+/** Re-word a season event for the life stage it lands in — the mechanics (form/rng) never change, only
+ *  how it's told: a kid's "new gaffer" is a new coach his mum hears about at the school gates; a
+ *  20-something's is the same event but about a real manager and real transfer speculation. Keeps each
+ *  age band feeling distinctly lived-in without touching a single number. */
+const EVENT_FLAVOR: Record<string, Partial<Record<'kid' | 'teen', (bias?: string | null) => { name: string; desc: string }>>> = {
+  'new-gaffer': {
+    kid:  (bias) => ({ name: 'New Coach', desc: `The club brings in a new coach for the season — he wants to see more ${bias} out on the pitch.` }),
+    teen: (bias) => ({ name: 'New Coach', desc: `The academy appoints a new coach — he's made it clear he wants more ${bias} from your game.` }),
+  },
+  'transfer-links': {
+    kid:  () => ({ name: 'Whispers Around the Club', desc: 'Other academies are said to be watching you — exciting to hear, hard to ignore at training.' }),
+    teen: () => ({ name: 'Scouts in the Stands', desc: 'Word is bigger clubs have taken notice — flattering, and a proper distraction from the football.' }),
+  },
+  'fan-favourite': {
+    kid:  () => ({ name: 'Local Hero', desc: 'Word is getting round the local leagues about you — the other parents ask about you on the touchline.' }),
+    teen: () => ({ name: 'Academy Buzz', desc: 'The younger lads in the academy look up to you now — you’re the one they all talk about.' }),
+  },
+  'cup-run': {
+    kid:  () => ({ name: 'A Cup Run With the School Team', desc: 'A giant-killing cup run has the whole school buzzing about you.' }),
+    teen: () => ({ name: 'A Cup Run With the Academy Side', desc: 'A thrilling academy cup run — scouts are starting to take notice.' }),
+  },
+  knock: {
+    kid:  () => ({ name: 'A Sore Ankle', desc: 'A knock from an awkward tackle in Sunday league — nothing serious, but it nags.' }),
+    teen: () => ({ name: 'A Niggling Knock', desc: 'A knock picked up in training — the physio says it’s nothing, but you can feel it.' }),
+  },
+};
+/** Which flavor tier an age band's events should read as — kids/early-teens vs everyone from Youth Team on. */
+const flavorTier = (chapter: string): 'kid' | 'teen' | null =>
+  chapter === 'Grassroots' ? 'kid' : chapter === 'Academy' || chapter === 'Scholar' ? 'teen' : null;
+
 /**
  * A stateful career the client drives one turn at a time. Deterministic given (seed, choices):
  * RNG is consumed in a fixed order (scenario → resolve → draw) regardless of which card is picked,
@@ -593,6 +868,9 @@ export class Career {
   private sideFocusFor: string | null = null;
   /** lifestyle upgrades bought with career earnings (permanent perks). */
   ownedLifestyle: string[] = [];
+  /** the soft skill-tree: summer training focuses picked from Youth Team on, tallied per tag — a small,
+   *  deliberate lean applied on top of the card-driven development in deriveStats (see FOCUS_TAG_WEIGHT). */
+  attrFocus: Partial<Record<Tag, number>> = {};
   private energyRecoveryBonus = 0;   // better living → more energy restored each summer
   /** How your relationships PAID OFF (or bit back) over the chapter that just ended — surfaced at the break. */
   chapterConsequences: string[] = [];
@@ -631,7 +909,7 @@ export class Career {
     this.pool = track === 'goalkeeper' ? GK_DRAFT_POOL : DRAFT_POOL;
     this.drawPile = this.shuffle([...this.deck]);
     this.refillHand();
-    this.scenario = makeScenario(this.rng, this.turn, track, null, bandAt(0).band, this.exposure);
+    this.scenario = makeScenario(this.rng, this.turn, track, null, bandAt(0).band, this.exposure, this.seed);
   }
   private get exposure() { return this.agent?.exposure ?? 1; }
 
@@ -644,8 +922,15 @@ export class Career {
 
   /** The financial/agent context graduate() needs (greed, fame, earnings, injuries, exposure). */
   finContext(): GraduateCtx {
-    return { seriousInjuries: this.seriousInjuries, agentGreed: this.agent?.greed ?? 0, agentExposure: this.agent?.exposure ?? 1, greedBonus: this.greedBonus, marketBonus: this.marketBonus, earnings: this.earnings };
+    // deck CHEMISTRY (see SYNERGIES) merges into the same attribute-focus channel as the summer training
+    // picks — a deliberate, focused deck earns the same kind of small, capped lean deriveStats already understands.
+    const chem = chemistryFocus(this.deck);
+    const attrFocus: Partial<Record<Tag, number>> = { ...this.attrFocus };
+    for (const t of Object.keys(chem) as Tag[]) attrFocus[t] = (attrFocus[t] ?? 0) + (chem[t] ?? 0);
+    return { seriousInjuries: this.seriousInjuries, agentGreed: this.agent?.greed ?? 0, agentExposure: this.agent?.exposure ?? 1, greedBonus: this.greedBonus, marketBonus: this.marketBonus, earnings: this.earnings, attrFocus };
   }
+  /** Deck chemistry ACTIVE right now — a live strategic readout of how his card collection is shaping up. */
+  get chemistry(): Synergy[] { return activeSynergies(this.deck); }
 
   /** Reconstruct a career from a snapshot by replaying its actions (deterministic → exact state). A
    *  buyer resumes development from precisely where the seller left off. */
@@ -674,6 +959,7 @@ export class Career {
     }
     this.energy = clamp(this.energy + opt.energy, 0, 100);
     for (const [k, d] of Object.entries(opt.effects)) this.standing[k as MeterKey] = clamp(this.standing[k as MeterKey] + (d ?? 0), 0, 100);
+    if (opt.tag) this.attrFocus[opt.tag] = (this.attrFocus[opt.tag] ?? 0) + 1; // the soft skill-tree lean
     this.actions.push({ type: 'focus', cardId: focusId });
     this.pendingFocus = null;
     // Breakthrough onward: a second, smaller SIDE focus round follows the main pick (once per chapter).
@@ -686,10 +972,15 @@ export class Career {
       this.pendingOffer = rollOffer(this.rng, this.turn);
     }
   }
-  /** Lifestyle upgrades affordable + unlocked RIGHT NOW (offered at the between-chapter focus screen). */
+  /** Lifestyle upgrades affordable + unlocked RIGHT NOW (offered at the between-chapter focus screen).
+   *  Meter-gated items only appear once the relevant standing actually earns (or costs) them — see
+   *  LifestyleItem.minMeter/maxMeter: relationships gate real opportunities and real trouble, not just flavour. */
   get lifestyleOffer(): LifestyleItem[] {
     const chapterIdx = bandAt(Math.min(this.turn, TOTAL_TURNS - 1)).index;
-    return LIFESTYLE.filter((it) => !this.ownedLifestyle.includes(it.id) && chapterIdx >= it.minChapterIdx && (it.maxChapterIdx == null || chapterIdx <= it.maxChapterIdx) && this.earnings >= it.cost);
+    const meterGatesPass = (it: LifestyleItem) =>
+      (!it.minMeter || Object.entries(it.minMeter).every(([k, v]) => this.standing[k as MeterKey] >= (v ?? 0))) &&
+      (!it.maxMeter || Object.entries(it.maxMeter).every(([k, v]) => this.standing[k as MeterKey] <= (v ?? 100)));
+    return LIFESTYLE.filter((it) => !this.ownedLifestyle.includes(it.id) && chapterIdx >= it.minChapterIdx && (it.maxChapterIdx == null || chapterIdx <= it.maxChapterIdx) && this.earnings >= it.cost && meterGatesPass(it));
   }
   /** BUY a lifestyle upgrade with career earnings — a permanent perk. Does NOT advance the phase (you can
    *  buy several at a break, then choose your summer focus). Deterministic, no rng. */
@@ -791,14 +1082,41 @@ export class Career {
     const choice: Choice = { cardId: card.id, tags: card.tags, power: cardPower(card), fit: f, bestFit, success, scenario: this.scenario.label, stakes: this.scenario.stakes };
     this.log.push(choice);
     this.updateLife(choice); // NSS meters + energy react to how the moment went (deterministic, no rng)
+    if (this.scenario.life) this.applyLifeConsequence(this.scenario.life, success); // the life-event's OWN, distinct payoff
+    if (this.scenario.rival) this.applyRivalConsequence(success); // bragging rights are worth more than the occasion alone
     this.discard.push(card);
     this.turn++;
     if (this.turn >= TOTAL_TURNS) { this.finished = true; return choice; }
     // at an age-chapter boundary: relationships pay off (or bite), a narrative EVENT fires, then you
     // choose a summer FOCUS, take a financial offer, appoint a coach and draft.
-    if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.earnings += 40 + this.turn * 12; this.pendingFocus = rollFocus(this.chapter, this.standing); }
-    else { this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure); }
+    if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.earnings += 40 + this.turn * 12; this.pendingFocus = rollFocus(this.chapter, this.standing, this.track); }
+    else { this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure, this.seed); }
     return choice;
+  }
+
+  /** How the LAST life event resolved — surfaced for narration (a distinct "how it went" beat). */
+  lastLifeEvent: { kind: LifeKind; success: number; good: boolean } | null = null;
+  /** A life event's OWN distinct payoff — on top of the generic updateLife() reaction — so a contract
+   *  standoff and a family illness leave genuinely different marks on the same 'good outcome'. */
+  private applyLifeConsequence(kind: LifeKind, success: number) {
+    const good = success >= 0.55;
+    const cq = LIFE_CONSEQUENCE[kind];
+    const eff = good ? cq.good : cq.bad;
+    for (const [k, d] of Object.entries(eff)) this.life(k as MeterKey, d ?? 0);
+    const earn = good ? (cq.earnGood ?? 0) : (cq.earnBad ?? 0);
+    if (earn) this.earnings += earn;
+    this.lastLifeEvent = { kind, success, good };
+  }
+
+  /** How the LAST rivalry moment resolved — surfaced for narration (overtake/fall-behind payoff). */
+  lastRivalMoment: { success: number; good: boolean } | null = null;
+  /** A head-to-head vs the rival carries a bigger swing than a routine big-game moment — bragging rights. */
+  private applyRivalConsequence(success: number) {
+    const good = success >= 0.55;
+    const eff = good ? RIVAL_CONSEQUENCE.good : RIVAL_CONSEQUENCE.bad;
+    for (const [k, d] of Object.entries(eff)) this.life(k as MeterKey, d ?? 0);
+    if (good && RIVAL_CONSEQUENCE.earnGood) this.earnings += RIVAL_CONSEQUENCE.earnGood;
+    this.lastRivalMoment = { success, good };
   }
 
   /** NSS life meters react to a played moment (deterministic — reads the choice, consumes no rng). */
@@ -884,6 +1202,10 @@ export class Career {
       else if (r < 0.94) { form = 0.06; this.seasonEvent = { id: 'fan-favourite', name: 'Fan Favourite', desc: 'The supporters have taken to him — he feeds off their energy.' }; }
       else { this.seasonEvent = { id: 'steady', name: 'Steady Progress', desc: 'A solid, unremarkable season of graft.' }; }
     }
+    // reword for the stage it lands in (pure narration — the id, and every mechanical effect above, is untouched)
+    const tier = flavorTier(this.chapter);
+    const flavor = tier && this.seasonEvent ? EVENT_FLAVOR[this.seasonEvent.id]?.[tier] : undefined;
+    if (flavor && this.seasonEvent) this.seasonEvent = { ...this.seasonEvent, ...flavor(this.demandBias) };
     this.formBonus = form + conseq.form; // relationships tilt the coming chapter on top of its event
   }
 
@@ -910,7 +1232,7 @@ export class Career {
 
   private startNextChapter() {
     this.refillHand();
-    this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure);
+    this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure, this.seed);
   }
 
   private refillHand() { while (this.hand.length < HAND_SIZE) this.hand.push(this.drawOne()); }
@@ -940,7 +1262,7 @@ export interface CareerPlayerAttrs {
 export type Role = 'GK' | 'DF' | 'MF' | 'FW';
 export interface CareerPlayer { attrs: CareerPlayerAttrs; role: Role; overall: number; genes: Genes; traits: string[]; personality: string; greed: number; marketability: number; earnings: number }
 /** Financial/agent context carried out of a career into graduation (all optional → neutral defaults). */
-export interface GraduateCtx { seriousInjuries?: number; agentGreed?: number; agentExposure?: number; greedBonus?: number; marketBonus?: number; earnings?: number; legacyBonus?: Partial<Record<keyof CareerPlayerAttrs, number>> }
+export interface GraduateCtx { seriousInjuries?: number; agentGreed?: number; agentExposure?: number; greedBonus?: number; marketBonus?: number; earnings?: number; legacyBonus?: Partial<Record<keyof CareerPlayerAttrs, number>>; attrFocus?: Partial<Record<Tag, number>> }
 
 // ── PERSONALITY: an innate temperament (nature), seeded at genesis like genes. It shapes HOW a player
 // handles their career — steadiness vs volatility, and whether they rise or wilt under pressure — and
@@ -957,8 +1279,12 @@ export const PERSONALITIES: Personality[] = [
   { id: 'maverick',  name: 'Maverick',           desc: 'Brilliant, infuriating, his own man',    variance: 1.5,  bigGame: 0.08, resilience: 1.1, signature: 'creativity' },
   { id: 'latebloom', name: 'Late Bloomer',       desc: 'Slow to start, but never stops improving', variance: 1.0, bigGame: 0.03, resilience: 0.9, signature: 'stamina' },
   { id: 'showman',   name: 'Showman',            desc: 'Plays for the crowd — thrilling, maddening', variance: 1.35, bigGame: 0.10, resilience: 1.0, signature: 'creativity' },
+  { id: 'stoic',     name: 'The Stoic',          desc: 'Utterly unreadable, utterly unbothered',    variance: 0.5,  bigGame: 0.05, resilience: 0.25 },
+  { id: 'hothead',   name: 'Hothead',            desc: 'Wears his heart, and his temper, on his sleeve', variance: 1.3, bigGame: -0.05, resilience: 1.4, signature: 'aggression' },
+  { id: 'perfectionist', name: 'Perfectionist',  desc: 'Never satisfied, always sharpening the edges', variance: 0.8, bigGame: 0.04, resilience: 0.5, signature: 'positioning' },
+  { id: 'joker',     name: 'Dressing-Room Joker', desc: 'Lightens the mood, occasionally at his own expense', variance: 1.15, bigGame: 0.03, resilience: 0.7, signature: 'teamwork' },
 ];
-const PERSONALITY_WEIGHTS = [5, 2, 2, 2, 3, 2, 1, 2, 1]; // Model Pro most common; Maverick/Showman rarest
+const PERSONALITY_WEIGHTS = [5, 2, 2, 2, 3, 2, 1, 2, 1, 2, 2, 2, 2]; // Model Pro most common; Maverick/Showman rarest
 export function rollPersonality(seed: number): Personality {
   const rng = mulberry32(seed ^ 0x9e37b1);
   const bag = PERSONALITIES.flatMap((p, i) => Array(PERSONALITY_WEIGHTS[i]).fill(p) as Personality[]);
@@ -1047,12 +1373,18 @@ const STAT_SOURCES: Record<Exclude<keyof CareerPlayerAttrs, 'durability'>, Tag[]
 };
 const BASELINE = 7, SPREAD = 12, PEAK = 1.5;
 
-export function deriveStats(log: Choice[], seed: number, genes: Genes = rollGenes(seed)): CareerPlayerAttrs {
+// how much one summer's attribute-focus pick (see rollFocus) leans a tag's frequency — deliberately small:
+// comparable to one strong (epic, stakes-3) card play, so a handful of picks across a career nudges shape
+// without overriding the card-driven "earned, not chosen" development.
+const FOCUS_TAG_WEIGHT = 6;
+
+export function deriveStats(log: Choice[], seed: number, genes: Genes = rollGenes(seed), attrFocus?: Partial<Record<Tag, number>>): CareerPlayerAttrs {
   const rng = mulberry32(seed ^ 0x9e3779b9);
   const innate = new Set<keyof CareerPlayerAttrs>(INNATE);
   const freq = Object.fromEntries(TAGS.map((t) => [t, 0])) as Record<Tag, number>;
   // weight by card power AND stakes: a great play in a cup final shapes you more than a training drill
   for (const c of log) for (const t of c.tags) freq[t] += c.power * c.stakes;
+  if (attrFocus) for (const t of TAGS) freq[t] += (attrFocus[t] ?? 0) * FOCUS_TAG_WEIGHT; // the soft skill-tree lean
   const maxFreq = Math.max(1, ...TAGS.map((t) => freq[t]));
   const norm = Object.fromEntries(TAGS.map((t) => [t, freq[t] / maxFreq])) as Record<Tag, number>;
   // MAGNITUDE = how well you actually played (avg success across the career). With a capped flywheel
@@ -1133,6 +1465,12 @@ export const TRAITS: Trait[] = [
   { id: 'engine',    name: 'Box-to-Box Engine',    desc: 'Covers every blade of grass',      eligible: (a) => a.stamina >= 14 && a.teamwork >= 14, apply: (a) => { a.stamina = clamp(a.stamina + 1, 1, 20); } },
   { id: 'rock',      name: 'Defensive Rock',       desc: 'Immovable at the back',            eligible: (a) => a.tackling >= 14 && a.strength >= 14, apply: (a) => { a.strength = clamp(a.strength + 1, 1, 20); } },
   { id: 'spark',     name: 'The Spark',            desc: 'Makes something from nothing',     eligible: (a) => a.creativity >= 14 && a.pace >= 14 },
+  { id: 'aerial',    name: 'Aerial Threat',        desc: 'Wins everything in the air',       eligible: (a) => a.strength >= 14 && a.pace <= 10, apply: (a) => { a.strength = clamp(a.strength + 1, 1, 20); } },
+  { id: 'general2',  name: 'Engine-Room General',  desc: 'Drags the team through matches by will alone', eligible: (a) => a.stamina >= 14 && a.leadership >= 13 },
+  { id: 'showstopper', name: 'Showstopper',        desc: 'The player fans pay to watch',     eligible: (a) => a.creativity >= 15 && a.setPiece >= 13 },
+  { id: 'ironwill',  name: 'Iron Will',            desc: 'Never seems to get injured',       eligible: (a) => a.durability >= 16 },
+  { id: 'quarterback', name: 'The Quarterback',    desc: 'Picks locks from forty yards with a single pass', eligible: (a) => a.passing >= 16, apply: (a) => { a.passing = clamp(a.passing + 1, 1, 20); } },
+  { id: 'utility',   name: 'Utility Man',          desc: 'Can play almost anywhere and do a job', eligible: (a) => a.teamwork >= 13 && a.positioning >= 13 && a.stamina >= 13 },
 ];
 
 /** Which traits a finished career qualifies for (before the player locks any in). */
@@ -1144,8 +1482,8 @@ export function eligibleTraits(attrs: CareerPlayerAttrs, log: Choice[]): Trait[]
  *  fresh genesis roll; pass inherited genes (lineage). `pickTraits` chooses among the eligible traits
  *  (the client lets a human pick; defaults to the first MAX_TRAITS for the sim). */
 export function graduate(log: Choice[], seed: number, genes: Genes = rollGenes(seed), pickTraits?: (eligible: Trait[]) => Trait[], ctx: GraduateCtx = {}): CareerPlayer {
-  const { seriousInjuries = 0, agentGreed = 0, agentExposure = 1, greedBonus = 0, marketBonus = 0, earnings = 0, legacyBonus } = ctx;
-  const attrs = deriveStats(log, seed, genes);
+  const { seriousInjuries = 0, agentGreed = 0, agentExposure = 1, greedBonus = 0, marketBonus = 0, earnings = 0, legacyBonus, attrFocus } = ctx;
+  const attrs = deriveStats(log, seed, genes, attrFocus);
   const personality = rollPersonality(seed);                          // same temperament the career developed under
   if (personality.signature) attrs[personality.signature] = clamp(attrs[personality.signature] + 1, 1, 20);
   // inherited pedigree from a decorated father (team achievements) — a bounded, position-neutral head-start
@@ -1200,7 +1538,10 @@ export function ageCurve(prime: CareerPlayerAttrs, age: number): CareerPlayerAtt
 // and its physical gene ceiling (the scarce, un-grindable part). Deterministic + verifiable.
 export interface ProspectValue { age: number; chapter: string; role: Role; currentOverall: number; potential: number; physicalCeiling: number; stars: number }
 export function prospectValuation(c: Career, genes: Genes): ProspectValue {
-  const partial = deriveStats(c.log, c.seed, genes);           // stats so far (deterministic)
+  const chem = chemistryFocus(c.deck);
+  const focus: Partial<Record<Tag, number>> = { ...c.attrFocus };
+  for (const t of Object.keys(chem) as Tag[]) focus[t] = (focus[t] ?? 0) + (chem[t] ?? 0);
+  const partial = deriveStats(c.log, c.seed, genes, focus); // stats so far (deterministic, incl. deck chemistry)
   const role = deriveRole(partial);
   const current = careerOverall(partial, role);
   const remaining = Math.max(0, 1 - c.turn / TOTAL_TURNS);     // fraction of the career still to develop
@@ -1221,9 +1562,11 @@ export function simCareer(seed: number, style: Style, genes: Genes = rollGenes(s
   while (!career.finished) {
     const st = career.current();
     if (st.phase === 'focus') {
-      // summer focus: shore up the neediest active relationship (lowest meter), else rest.
+      // summer focus: an identity-matching attribute-focus pick (the soft skill-tree) beats a relationship
+      // top-up beats a plain rest — a style-consistent career leans into its own strengths when it can.
+      const tagPick = [...st.focus].filter((f) => f.tag && (style.pref[f.tag] ?? 0) > 0).sort((a, b) => (style.pref[b.tag!] ?? 0) - (style.pref[a.tag!] ?? 0))[0];
       const lowest = [...career.meters].sort((a, b) => a.value - b.value)[0];
-      const pick = st.focus.find((f) => lowest && f.effects[lowest.key as MeterKey] != null && f.effects[lowest.key as MeterKey]! > 0) ?? st.focus[st.focus.length - 1];
+      const pick = tagPick ?? st.focus.find((f) => lowest && f.effects[lowest.key as MeterKey] != null && f.effects[lowest.key as MeterKey]! > 0) ?? st.focus[st.focus.length - 1];
       career.chooseFocus(pick.id);
       continue;
     }

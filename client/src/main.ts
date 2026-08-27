@@ -1,6 +1,6 @@
 import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, DUTY_LABEL, DUTIES_BY_ROLE, isDutyForRole,
-  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
+  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData, type MissionsData, type ContractInfo, type LeaderStat, type AwardRow } from './api';
 import { sprite } from './sprites';
@@ -20,6 +20,7 @@ const BACKROOM_STAFF = [
 
 // icons for the stage-aware life meters (keyed by underlying relationship) — used in focus effect labels
 const METER_ICON: Record<string, string> = { authority: '🧑‍🏫', peers: '👥', family: '🏠', school: '🎒', agent: '🤝', fans: '📣', sponsors: '📸', partner: '❤️' };
+const TAG_ICON: Record<string, string> = { composure: '🧊', aggression: '⚔️', creativity: '🎨', teamwork: '🧩', leadership: '🎖️', stamina: '🏃', flair: '✨', keeping: '🧤' };
 
 // KIT customization options (cosmetic identity for the career player, carried to the pro)
 const BOOT_COLOURS = [
@@ -1545,7 +1546,8 @@ class Game {
     const r = s.rival; if (!r) return '';
     const ahead = r.lead >= 0;
     return `<div class="cg-rival"><span class="cg-rival-lbl">🆚 RIVAL</span><span class="cg-rival-name">${r.name}</span>`
-      + `<span class="cg-rival-gap ${ahead ? 'up' : 'down'}">${ahead ? `▲ ${r.lead} ahead` : `▼ ${Math.abs(r.lead)} behind`}</span></div>`;
+      + `<span class="cg-rival-gap ${ahead ? 'up' : 'down'}">${ahead ? `▲ ${r.lead} ahead` : `▼ ${Math.abs(r.lead)} behind`}</span>`
+      + (r.news ? `<div class="cg-rival-news">📰 ${r.name} ${r.news}</div>` : '') + `</div>`;
   }
 
   /** International call-up — the aspirational ceiling. Uncapped at first; caps accrue once he's good enough. */
@@ -1573,7 +1575,7 @@ class Game {
       + `<div class="op-bar"><div class="op-bar-fill" style="width:${imgPct}%"></div></div>`
       + `<div class="op-rep">📣 Reputation: <b class="op-rep-${o.reputation.edge}">${o.reputation.label}</b></div></div>`;
     const deals = o.endorsements.length
-      ? `<div class="op-deals"><div class="op-sub">🤝 ENDORSEMENTS</div>${o.endorsements.map((d) => `<div class="op-deal"><div class="op-deal-head"><b>${d.brand}</b> <span class="op-deal-tier ${d.tier.toLowerCase()}">${d.tier}</span> <span class="op-deal-pay">+${d.payout.toLocaleString()}c</span></div><div class="op-deal-cat">${d.category}</div><div class="op-deal-obl">⚠ ${d.obligation}</div></div>`).join('')}</div>`
+      ? `<div class="op-deals"><div class="op-sub">🤝 ENDORSEMENTS</div>${o.endorsements.map((d) => `<div class="op-deal"><div class="op-deal-head"><b>${d.brand}</b> <span class="op-deal-tier ${d.tier.toLowerCase()}">${d.tier}</span> <span class="op-deal-pay">+${d.payout.toLocaleString()}c</span></div><div class="op-deal-cat">${d.category}</div><div class="op-deal-obl">⚠ ${d.obligation}</div>${d.strain ? `<div class="op-deal-strain">💥 ${d.strain}</div>` : ''}</div>`).join('')}</div>`
       : `<div class="op-deals op-none">🤝 No endorsements yet — build your profile to attract brands.</div>`;
     const bootChips = o.boots.owned.map((b) => `<span class="op-boot" title="${b.edge}">👟 ${b.name}</span>`).join('');
     const nextBoot = o.boots.next ? `<div class="op-boot-next">🔒 Next: <b>${o.boots.next.boot.name}</b> — ${o.boots.next.boot.unlock} <span class="op-boot-prog">(${o.boots.next.progress}/${o.boots.next.target})</span></div>` : '';
@@ -1632,6 +1634,7 @@ class Game {
     const prof = s.profile ? this.careerProfileHtml(s.profile) : '';
     const narr = this.lastNarration ? this.outcomeChipHtml() + `<div class="cg-narrate">“${this.lastNarration}”</div>` : '';
     const recap = s.recap ? `<div class="cg-recap"><span class="cg-recap-lbl">📖 The story so far</span>${s.recap}</div>` : '';
+    const lifeOutcome = s.lastLifeOutcome ? `<div class="cg-conseq"><div class="cg-conseq-row">${s.lastLifeOutcome}</div></div>` : '';
     const conseq = s.consequences?.length
       ? `<div class="cg-conseq"><span class="cg-conseq-lbl">📋 How the season paid off</span>`
         + s.consequences.map((n) => `<div class="cg-conseq-row">${n}</div>`).join('') + `</div>`
@@ -1645,9 +1648,10 @@ class Game {
       if (mk === 'match' && s.matchCtx) {
         const mc = s.matchCtx; const [us, them] = mc.score.split('-');
         const big = s.scenario.stakes >= 3 ? ' · ★ THE BIG ONE' : s.scenario.stakes >= 2 ? ' · BIG GAME' : '';
+        const rivalTag = s.rivalMoment ? ` · 🆚 vs ${s.rival?.name ?? 'HIS RIVAL'}` : '';
         const club = mc.club || this.club?.name || 'Your Club';
-        header = `<div class="cg-matchday stakes-${s.scenario.stakes}">`
-          + `<div class="cg-md-top"><span class="cg-md-badge">⚽ MATCHDAY${big}</span><span class="cg-md-min">${mc.minute}'</span></div>`
+        header = `<div class="cg-matchday stakes-${s.scenario.stakes}${s.rivalMoment ? ' rivalry' : ''}">`
+          + `<div class="cg-md-top"><span class="cg-md-badge">⚽ MATCHDAY${big}${rivalTag}</span><span class="cg-md-min">${mc.minute}'</span></div>`
           + `<div class="cg-md-fixture"><span class="cg-md-team mine">${club}</span>`
           + `<span class="cg-md-score">${us} <span class="cg-md-ball">${sprite('ball')}</span> ${them}</span>`
           + `<span class="cg-md-team">${mc.opponent}</span></div>`
@@ -1657,7 +1661,8 @@ class Game {
         header = `<div class="cg-mtype pressure">🎭 THE WEIGHT OF THE NAME</div>`;
         prompt = 'The name is a burden today — how does he respond?';
       } else if (mk === 'life') {
-        header = `<div class="cg-mtype life">⚡ LIFE EVENT${s.lifeEvent ? ` · ${s.lifeEvent}` : ' · off the pitch'}</div>`;
+        const lifeLabel = s.lifeEvent ? (LIFE_LABEL as Record<string, string>)[s.lifeEvent] ?? s.lifeEvent : null;
+        header = `<div class="cg-mtype life">⚡ LIFE EVENT${lifeLabel ? ` · ${lifeLabel}` : ' · off the pitch'}</div>`;
         prompt = 'How does he handle it?';
       } else {
         header = `<div class="cg-mtype training">🏋️ TRAINING GROUND</div>`;
@@ -1693,7 +1698,7 @@ class Game {
         : '🌅 <b>Between seasons</b> — how do you spend the summer? Steer your relationships before the next chapter.';
       body = `<div class="cg-prompt">${focusPrompt}</div>`
         + `<div class="cg-focus">` + s.focus.map((f) => `<div class="cg-foc" data-act="focus" data-id="${f.id}"><div class="cg-cname">${f.icon} ${f.name}</div><div class="cg-cdescr">${f.desc}</div>`
-          + `<div class="cg-effs">${f.energy ? `⚡${f.energy > 0 ? '+' : ''}${f.energy} ` : ''}${effLabel(f.effects)}</div></div>`).join('') + `</div>` + shop;
+          + `<div class="cg-effs">${f.energy ? `⚡${f.energy > 0 ? '+' : ''}${f.energy} ` : ''}${effLabel(f.effects)}${f.tag ? `${TAG_ICON[f.tag] ?? ''} train ${f.tag}` : ''}</div></div>`).join('') + `</div>` + shop;
     }
     this.lastCareerState = s;
     // TABS declutter the view: NOW (the current decision + your life dashboard), PLAYER (full identity +
@@ -1709,7 +1714,7 @@ class Game {
     else if (this.careerTab === 'kit') content = this.kitTabHtml(s);
     else if (this.careerTab === 'life') content = this.offPitchHtml(s);
     else if (this.careerTab === 'league') content = this.leagueTableHtml(s);
-    else content = this.objectiveHtml(s) + this.rivalHtml(s) + this.intlHtml(s) + this.lifeDashHtml(s) + narr + recap + conseq + evt + body;
+    else content = this.objectiveHtml(s) + this.rivalHtml(s) + this.intlHtml(s) + this.lifeDashHtml(s) + narr + recap + lifeOutcome + conseq + evt + body;
     const tut = this.careerTab === 'now' ? this.tutorialHint(s) : '';
     $('academy-body').innerHTML = head + scene + tut + tabBar + content;
     ($('cg-tut-x') as any)?.addEventListener('click', () => { localStorage.setItem('fm_tut_done', '1'); ($('cg-tut') as any)?.remove(); });
@@ -1790,7 +1795,12 @@ class Game {
   private deckHtml(s: import('./api').CareerState): string {
     const deck = s.deck ?? [];
     if (!deck.length) return '';
+    const chem = s.chemistry?.length
+      ? `<div class="cg-chemistry"><div class="cg-conseq-lbl">⚗️ Deck chemistry active</div>`
+        + s.chemistry.map((c) => `<div class="cg-chem-row"><b>${c.name}</b> <span class="cg-chem-tags">(${c.tags.join(' + ')})</span> — ${c.desc}</div>`).join('') + `</div>`
+      : '';
     return `<div class="cg-prompt cg-shop-h">🃏 <b>Your deck</b> — the ${deck.length} cards that define how he plays:</div>`
+      + chem
       + `<div class="cg-cards deck">` + deck.map((c) => this.cardHtml(c, 'view')).join('') + `</div>`;
   }
 

@@ -4,8 +4,8 @@
 // home for every transition, replacing the old prospects/contracts/lifecycle/achievements split.
 import {
   overall, contractView, signContract, contractLength, legacyCard, legacyBoost, inheritGenes, rollGenes, graduate,
-  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, AGE_BANDS, moraleEffects, narratePlay, scenarioStory, chapterRecap, narrateCoach, narrateDraft, narrateOffer, careerCast, bandAt, cardName, CARD_DESC,
-  type Player, type Track, type PlayerAchievements, type Genes, type CareerPlayerAttrs,
+  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, AGE_BANDS, moraleEffects, narratePlay, narrateLifeEvent, scenarioStory, chapterRecap, narrateCoach, narrateDraft, narrateOffer, careerCast, bandAt, cardName, CARD_DESC, LIFE_LABEL, rivalMomentStory, narrateRivalMoment, rivalNews,
+  type Player, type Track, type PlayerAchievements, type Genes, type CareerPlayerAttrs, type LifeKind,
 } from '@fm/shared';
 import type { Token, Store } from './store.js';
 import { clubSeason, squadRole, firstTeamReady, homeNation, nationalFixture, computeOffPitch } from '@fm/shared';
@@ -107,13 +107,27 @@ function careerMilestone(c: Career): string | null {
   if (c.scenario.stakes === 3 && !c.log.some((l) => l.stakes >= 3)) return 'cup_final';
   return null;
 }
+// Shared formulas for the CAREER SCORE / RIVAL headline (see careerState below) — factored out so the
+// rivalry-moment narration (actWithNarration) computes the exact same numbers, not a drifted duplicate.
+function careerScoreOf(c: Career): number { return Math.round(c.log.reduce((s, ch) => s + ch.success * 8 * (ch.stakes ?? 1), 0)); }
+function rivalRateOf(seed: number): number { return 6 + ((seed >>> 3) % 4); } // 6..9 points/turn — competitive
 /** Apply an action and return an immersive narration of the moment (play, or a coach/draft/offer choice). */
 export function actWithNarration(c: Career, a: CareerAction): string | null {
   const baseCtx = { age: c.age, chapter: c.chapter, stakes: 1 as 1 | 2 | 3, personalityId: c.personality.id, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0, milestone: null as string | null, seed: (((c as any).seed >>> 0) + c.turn * 2654435761) >>> 0 };
   if (a.type === 'play') {
     const ctx = { ...baseCtx, stakes: c.scenario.stakes, milestone: careerMilestone(c) };
+    const lifeKind = c.scenario.life; // capture BEFORE applying — play() advances to the NEXT scenario
+    const rivalMoment = c.scenario.rival;
+    const turnBefore = c.turn;
+    const csBefore = careerScoreOf(c);
     applyAction(c, a);
     const choice = c.log[c.log.length - 1];
+    if (lifeKind) return narrateLifeEvent(lifeKind, cardName(a.cardId), choice.success, ctx);
+    if (rivalMoment) {
+      const rate = rivalRateOf((c as any).seed >>> 0);
+      const payoff = { rivalName: careerCast((c as any).seed >>> 0).rival, leadBefore: csBefore - Math.round(turnBefore * rate), leadAfter: careerScoreOf(c) - Math.round(c.turn * rate) };
+      return narrateRivalMoment(cardName(a.cardId), choice.success, ctx, payoff);
+    }
     return narratePlay(cardName(a.cardId), choice.tags, choice.success, ctx);
   }
   // coach / draft / offer — read the chosen item from the current phase BEFORE applying
@@ -197,22 +211,26 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
       st.story = legacyPressureStory(surname, (((c as any).seed >>> 0) + c.turn * 40503) >>> 0);
       moment = null;
     }
-    // RARE LIFE EVENTS (presentational re-skin only — no rng/mechanic change, so in-progress careers
-    // and the sim stay identical): a fraction of low-stakes SOCIAL moments become a contract standoff,
-    // a loan decision, or bouncing back from a public setback — resolved by the same card play.
-    const lifeHash = ((((c as any).seed >>> 0) ^ Math.imul(c.turn + 1, 2654435761)) >>> 0) % 100;
-    const LIFE_KINDS = ['contract', 'loan', 'setback', 'media', 'loyalty', 'role', 'fallout'];
-    const LIFE_LABEL: Record<string, string> = {
-      contract: 'a contract standoff', loan: 'a loan-move decision', setback: 'bouncing back from a public mistake',
-      media: 'a media storm', loyalty: 'a boyhood-club approach', role: 'a squad-role ultimatum', fallout: 'a public falling-out with a teammate',
-    };
-    if (!legacyPressure && kind === 'social' && st.scenario.stakes === 1 && c.age >= 16 && lifeHash < 22) {
-      kind = LIFE_KINDS[lifeHash % LIFE_KINDS.length];
-      st.scenario = { ...st.scenario, kind, label: LIFE_LABEL[kind] };
-      st.lifeEvent = kind;
+    // LIFE EVENTS: a REAL engine mechanic now (shared/src/career.ts — `Scenario.life`, chosen by a pure
+    // hash of seed+turn, never drawn from the rng() stream). Each of the 14 kinds carries its own good/bad
+    // meter+earnings consequence (LIFE_CONSEQUENCE), applied when the card resolves. Here we just SURFACE
+    // it: the label + story text, and — once it resolves — how it actually went (c.lastLifeEvent).
+    const lifeKind: LifeKind | null = st.scenario.life ?? null;
+    if (!legacyPressure && lifeKind) {
+      kind = lifeKind;
+      st.scenario = { ...st.scenario, kind, label: LIFE_LABEL[lifeKind] };
+      st.lifeEvent = lifeKind;
       moment = null;
     }
-    if (!legacyPressure) {
+    // RIVALRY MOMENT: a REAL engine mechanic (career.ts Scenario.rival) — a big-stage match explicitly
+    // framed as a head-to-head against the seeded academy rival, with its own consequence (see
+    // applyRivalConsequence). Here we just surface it: the situation text names him directly.
+    if (!legacyPressure && !lifeKind && st.scenario.rival) {
+      st.story = rivalMomentStory(careerCast((c as any).seed >>> 0).rival, moment, { seed: (((c as any).seed >>> 0) + c.turn * 40503) >>> 0 });
+      st.momentKind = 'match';
+      st.rivalMoment = true;
+      if (kind === 'match') st.matchCtx = matchContext((c as any).seed >>> 0, c.turn, st.scenario.stakes, moment, clubName);
+    } else if (!legacyPressure) {
       st.story = scenarioStory(kind, topTag, moment, { seed: (((c as any).seed >>> 0) + c.turn * 40503) >>> 0, age: c.age, chapter: c.chapter, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0 });
       st.momentKind = kind === 'match' ? 'match' : (st.lifeEvent || kind === 'social') ? 'life' : 'training';
       if (kind === 'match') st.matchCtx = matchContext((c as any).seed >>> 0, c.turn, st.scenario.stakes, moment, clubName);
@@ -248,13 +266,16 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
   }
   // CAREER SCORE — a single headline number that climbs with every good moment (weighted by the stakes).
   // A satisfying meta-number + the replay hook (beat your best run). Presentational (from the log).
-  const careerScore = Math.round(c.log.reduce((s, ch) => s + ch.success * 8 * (ch.stakes ?? 1), 0));
+  const careerScore = careerScoreOf(c);
   // RIVAL TO CHASE — a named academy rival running his own career alongside yours. His score climbs at a
-  // steady seeded rate; you're measured against him, so out-performing him is the motivation. Presentational.
+  // steady seeded rate; you're measured against him, so out-performing him is the motivation. A real
+  // head-to-head storyline now (see Scenario.rival / applyRivalConsequence in career.ts) rather than just
+  // a comparative number: occasional big matches are framed as a straight duel with him, and his OWN
+  // career surfaces as a small seeded news beat appropriate to the current life stage.
   const cast = careerCast((c as any).seed >>> 0);
-  const rivalRate = 6 + ((((c as any).seed >>> 0) >>> 3) % 4); // 6..9 points/turn — competitive
+  const rivalRate = rivalRateOf((c as any).seed >>> 0);
   const rivalScore = Math.round(c.turn * rivalRate);
-  const rival = { name: cast.rival, score: rivalScore, lead: careerScore - rivalScore };
+  const rival = { name: cast.rival, score: rivalScore, lead: careerScore - rivalScore, news: rivalNews((c as any).seed >>> 0, c.chapter) };
   // INTERNATIONAL CALL-UP — perform well at the senior stages and you earn a national call-up + caps: an
   // aspirational ceiling to chase. Presentational, from overall × stage (only the good get capped).
   let international: { capped: boolean; caps: number; nation?: string; lastCap?: ReturnType<typeof nationalFixture> } | null = null;
@@ -279,6 +300,9 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
       { id: 'strong', test: (ch: any) => ch.success >= 0.68, target: Math.max(2, Math.round(band.turns * 0.35)), label: (n: number) => `Turn in ${n} strong displays this stage` },
       { id: 'big', test: (ch: any) => ch.stakes >= 2 && ch.success >= 0.6, target: 2, label: (n: number) => `Rise to the occasion in ${n} big-game moments` },
       { id: 'reads', test: (ch: any) => ch.fit >= ch.bestFit - 0.05, target: Math.max(3, Math.round(band.turns * 0.3)), label: (n: number) => `Read the game right ${n} times (perfect reads)` },
+      { id: 'flair', test: (ch: any) => (ch.tags ?? []).includes('flair') && ch.success >= 0.65, target: Math.max(2, Math.round(band.turns * 0.2)), label: (n: number) => `Produce ${n} moments of real quality (flair)` },
+      { id: 'leadership', test: (ch: any) => (ch.tags ?? []).includes('leadership') && ch.success >= 0.6, target: Math.max(2, Math.round(band.turns * 0.2)), label: (n: number) => `Lead by example ${n} times` },
+      { id: 'consistency', test: (ch: any) => ch.success >= 0.5, target: Math.max(4, Math.round(band.turns * 0.6)), label: (n: number) => `Never dip below a solid standard — ${n} respectable performances` },
     ].filter((o) => o.id !== 'big' || band.maxStakes >= 2); // big-game target only where big games happen
     const pick = OBJS[((((c as any).seed >>> 0) ^ Math.imul(bandIdx + 1, 2654435761)) >>> 0) % OBJS.length];
     const progress = Math.min(pick.target, bandLog.filter(pick.test).length);
@@ -296,9 +320,15 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
       tags: tagCounts, bigWins, flair: tagCounts.flair ?? 0,
     });
   }
+  // LIFE EVENT RESOLUTION: a short "how it went" beat once the last life-event card resolves — surfaced
+  // once, right after the moment (read from Career.lastLifeEvent, cleared on the next chapter boundary).
+  const lastLife = (c as any).lastLifeEvent as { kind: string; success: number; good: boolean } | null;
+  const lastLifeOutcome = lastLife
+    ? (lastLife.good ? `That went well — ${LIFE_LABEL[lastLife.kind as keyof typeof LIFE_LABEL]}, handled.` : `That didn't land — ${LIFE_LABEL[lastLife.kind as keyof typeof LIFE_LABEL]} leaves a mark.`)
+    : null;
   return {
     prospectId: t.id, name: t.name, generation: t.generation, pedigree: t.pedigree, agentId: t.agent_id, track: t.track,
-    turn: c.turn, totalTurns: TOTAL_TURNS, seasonEvent: c.seasonEvent, earnings: c.earnings, energy: c.energy, meters: c.meters, profile: prof, clubSeason: clubSeasonData, careerScore, objective, rival, international, offPitch, kit: t.kit_json ? JSON.parse(t.kit_json) : null, ...st,
+    turn: c.turn, totalTurns: TOTAL_TURNS, seasonEvent: c.seasonEvent, earnings: c.earnings, energy: c.energy, meters: c.meters, profile: prof, clubSeason: clubSeasonData, careerScore, objective, rival, international, offPitch, kit: t.kit_json ? JSON.parse(t.kit_json) : null, lastLifeOutcome, chemistry: c.chemistry, ...st,
   };
 }
 /** Graduate the finished career → the pro attrs to write onto the SAME token (state → pro). */
@@ -344,7 +374,7 @@ export async function unavailableTokenIds(db: Store, ownerId: string, season: nu
 /** The retirement legacy card for a retired (or retiring) token. */
 export function legendCardOf(t: Token) {
   const ovr = overall(tokenToPlayer(t));
-  const card = legacyCard((t.role as any) ?? 'MF', ovr, Math.max(t.peak_overall, ovr), tokenAch(t));
+  const card = legacyCard((t.role as any) ?? 'MF', ovr, Math.max(t.peak_overall, ovr), tokenAch(t), t.career_seed ?? 0);
   const number = t.kit_json ? (JSON.parse(t.kit_json).number ?? null) : null; // squad number, if the manager set one — for number retirement
   return { ...card, number };
 }

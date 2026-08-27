@@ -24,8 +24,90 @@
 > - **Risky lifestyle (#6)** — an occasional **temptation** beat (card game / bribe / nightlife / bad investment);
 >   edgier players are courted more often. Moral-hazard flavour tied to the reputation axis.
 >
-> **Still open:** light attribute focus (#8 — the one engine-touching item; must re-check `career_sim`
-> diversity + determinism when built).
+> ## ✅ SHIPPED (2026-08-27, later same day) — "many more moments" pass
+> - **~1.8× more turns per age band** (112 → 202 total, `AGE_BANDS`) — a career now spans a few hundred
+>   moments, not 112. `deriveStats` averages success per turn rather than accumulating by turn count, so
+>   magnitude stayed in band with no re-tuning needed (verified via the 120-career average in `career_sim`).
+> - **Big deck expansion** — 36 more outfield + 12 more GK cards, spread across every tag, with fresh
+>   rare/epic signatures, so the longer career keeps drawing variety instead of repeating.
+> - **A 4th human-flavoured summer focus per age band** — first-coach bonding at Grassroots, peer rivalry
+>   at Academy, the release-day scare at Scholar, pushing for a loan at Youth Team, negotiating a first pro
+>   deal at Breakthrough, growing into a leader at First Team, thinking about legacy at Establishing.
+> - **Stage-aware season-event narration** — "new manager" / "transfer speculation" / "fan favourite" /
+>   "niggling knock" now read differently for a kid ("new coach his mum hears about at the school gates")
+>   vs a teen vs a pro — same ids, same mechanics, purely how it's told. Byte-identical `career_sim` output.
+> - **Lifestyle purchases with real trade-offs** — flashing the jewellery, a headline-making night out, and
+>   building an entourage all buy fame/loyalty at a direct cost to another relationship, not just perks.
+> - **Light attribute focus at milestones (#8)** — from Youth Team on, 2 identity-matching training picks
+>   per band (+ a GK-specific keeping one) nudge a stat family via a small, capped weight in `deriveStats`.
+>   Engine-touching; re-verified magnitude/diversity/determinism (see commit `467a9e4`).
+>
+> **Still open / next up:** deeper sponsorship variety, more coaches/agents/personalities/traits, more
+> objective/milestone/epilogue variety, and further human life-events with branching consequences beyond
+> the season-boundary system (e.g. a mid-chapter event, not just at chapter breaks).
+>
+> ## ✅ SHIPPED (2026-08-27, third pass) — scenario variety + real mid-chapter life events
+> - **Real mechanical life events (engine)** — `Scenario.life`, 14 kinds (the existing 7 — contract/loan/
+>   setback/media/loyalty/role/fallout — now genuinely wired up, plus 7 new: injury_comeback/transfer_rumour/
+>   manager_fallout/charity/social_storm/family_illness/romance), chosen by a pure hash of (seed, turn) that
+>   never touches the rng() stream. Each kind has its OWN good/bad meter+earnings consequence
+>   (`LIFE_CONSEQUENCE`), applied on top of the usual per-turn reaction — a contract standoff and a family
+>   illness now leave genuinely different marks depending on how the card resolves. `server/tokens.ts` reads
+>   this directly instead of its old cosmetic-only re-skin, and surfaces a `lastLifeOutcome` beat.
+> - **Massive scenario/narrative variety** (`shared/src/narrate.ts`) — `FRAME_BY_CHAPTER` replaces the old
+>   age-bracket framing with ~10 lines per band of real, specific texture (school/parents/growth-spurts at
+>   Grassroots-Academy; digs/homesickness/rivalry/trials at Scholar-Youth Team; contracts/media/dressing-room
+>   politics/captaincy/legacy at Breakthrough-Establishing); match/training/social situation banks roughly
+>   doubled; every life-kind's setup text expanded; a new `narrateLifeEvent()` gives life events their own
+>   resolution prose instead of ill-fitting football-action language.
+> - **Deeper sponsorship** (`offpitch.ts`) — brand pools doubled (5→10 each) across more categories; a global
+>   icon (image 88+) lands a 4th deal; **obligations that bite** — risky-category deals (betting, crypto,
+>   gambling-adjacent gaming, nightlife) have a real ~40% chance of a backlash that cuts the deal's own payout.
+> - **More coaches/agents/personalities/traits** — +6 coaches, +4 agents, +4 personalities (Stoic, Hothead,
+>   Perfectionist, Dressing-Room Joker — full narration flavour), +6 traits with fresh eligibility combos.
+> - **Objective + epilogue/retirement variety** — 3 more season-objective types (flair/leadership showcase,
+>   consistency); graduation-epilogue beats doubled; `legacyCard`'s retirement note now picks from several
+>   phrasings per tier instead of one fixed line.
+>
+> All re-verified per change: `npm run verify` + `career_sim` green throughout; card/coach/agent/personality/
+> trait additions are development-touching (re-checked magnitude stays in band, diversity healthy, determinism
+> true each time — see commits `419c227`, `3271227`); narration/tokens/offpitch/objective/epilogue changes are
+> presentational (outside `career_sim`'s import graph, byte-identical). Server-side changes type-checked via
+> an ad-hoc tsconfig since the real server has none and isn't covered by `npm run verify`.
+>
+> **Still open / next up:** mid-chapter dilemmas beyond the current per-turn life-event gate (e.g. a
+> multi-turn arc that spans several scenarios), deeper club-legend/mentoring-youngsters content at
+> Establishing, and more milestone-specific epilogue branches (e.g. a distinct beat for a GK vs an outfield
+> retirement).
+>
+> ## ✅ SHIPPED (2026-08-27, fourth pass) — mechanics that make the content INTERACT
+> Genuinely new interacting systems on top of the now-large content base, not more of the same:
+> - **Card synergies / deck chemistry** — `SYNERGIES` (career.ts): 8 named tag-pairs (Playmaker: creativity+
+>   teamwork, Enforcer: aggression+leadership, Entertainer: flair+composure, Engine-Room: stamina+teamwork,
+>   General: aggression+composure, Talisman: leadership+creativity, Flanker: stamina+flair, Sweeper-Keeper:
+>   keeping+composure) that ACTIVATE once the final deck holds 3+ blend cards sharing both tags — a real
+>   deck-building strategy layer where WHICH cards you draft matters, not just how many. Feeds a small capped
+>   bonus into `deriveStats` via the attribute-focus channel; `Career.chemistry` surfaces live status.
+> - **Rivalry storyline arc** — `Scenario.rival` (career.ts): a slice of big-stage matches, from Youth Team
+>   on, become an explicit head-to-head vs the seeded academy rival, with its own bigger consequence
+>   (`RIVAL_CONSEQUENCE`) than a routine big game. `narrate.ts` gives it a proper story (`rivalMomentStory`,
+>   `narrateRivalMoment` — names the actual lead swing, "he's overtaken Turner…") plus a seeded `rivalNews`
+>   ticker about the rival's OWN career, worded per life stage. No longer just a comparative number.
+> - **Richer HUGE-moment sequences** — stakes-3 moments (cup finals, title deciders) get a genuine
+>   multi-beat TENSION → action → AFTERMATH sequence in `narratePlay`, so the rare career peaks actually
+>   read like standout occasions instead of the same-length beat as everything else.
+> - **Meter-gated lifestyle opportunities + trouble** — `LifestyleItem.minMeter`/`maxMeter`: 3 high-standing
+>   OPPORTUNITY items only appear once a relationship genuinely earns them (money can't buy a testimonial-
+>   committee seat without fans>=75); 3 low-standing TROUBLE items (crisis PR, cutting an agent loose,
+>   relationship counselling) only appear once things have gone badly wrong — a costly necessary
+>   intervention, not a treat. Relationships now gate real content, not just chapter-boundary flavour text.
+>
+> All re-verified: card-chemistry and rivalry are engine-touching (magnitude/diversity/determinism re-checked
+> — see commits `bf13692`, `e894cd1`); huge-moment sequences and lifestyle gating are presentational/opt-in
+> (career_sim byte-identical). This batch is intentionally the final one for this pass — flagged by the
+> coordinator to conserve tokens once the core "much more human depth" asks were delivered; remaining ideas
+> (multi-turn dilemma arcs, GK-specific retirement epilogues, deeper mentoring-youngsters content) are left
+> for a future session.
 
 
 Curated from the be-a-pro genre — **New Star Soccer** (the model), **EA FC / Madden Superstar** (skill trees,
