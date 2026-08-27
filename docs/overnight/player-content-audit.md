@@ -42,3 +42,49 @@ Read shared/src/career.ts (1641 lines) and shared/src/offpitch.ts (138 lines) in
 3. career.ts: +2 LIFE_KINDS (mentor_crossroads, friend_falling_out) with labels + consequences.
 4. career.ts: +1 FOCUS_BY_CHAPTER option per chapter (7 new options total).
 5. career.ts: +2 chapters of SIDE_FOCUS_BY_CHAPTER (Scholar, Youth Team).
+
+## BATCH 2 (2026-08-27/28)
+Re-read this audit + current career.ts/narrate.ts/offpitch.ts before starting, per the brief.
+
+### Done
+1. **Recurring-character payoff (highest-value item, now closed)** — `friend_rivalry` and
+   `mentor_crossroads` life-events previously used generic "an old mentor" / "the mate he grew up
+   playing with" phrasing that never actually named the seeded `careerCast().rival`/`.mentor`. Now:
+   - `KIND_SETUP.friend_rivalry` / `.mentor_crossroads` use `{rival}`/`{mentor}` placeholders,
+     substituted in `scenarioStory()` with the real seeded name (falls back to generic phrasing only
+     if `careerSeed` is absent from the ctx).
+   - `LIFE_RESOLUTION.friend_rivalry` / `.mentor_crossroads` good/bad lines do the same substitution in
+     `narrateLifeEvent()` — so the SAME named character shows up in both the setup and the resolution.
+   - `graduationEpilogue()`'s closing lines enriched with 2 new options that explicitly call back to the
+     rivalry/mentorship arc ("the mate turned rival turned, somehow, still a friend", "the same voice
+     at the end of the phone through every crossroads") instead of a bare name-drop.
+   - Note: this was done entirely within narrate.ts using the `careerSeed` already threaded through
+     `NarrateCtx`/`ScenarioCtx` by `tokens.ts` (off-domain, not touched) — no new plumbing needed.
+2. **`TAG_FOCUS_BY_CHAPTER` gap closed** — added Grassroots (flair/stamina), Academy
+   (teamwork/aggression), Scholar (composure/creativity) attribute-focus picks, same energy-only
+   contract as the existing 4 chapters (no rng, no meter effects, `FOCUS_TAG_WEIGHT` nudge only).
+   Verified via `npm run verify`: strategy_test calibration unchanged (2.80 goals/match), fuzz clean,
+   career_sim "identical player: true".
+3. **Repetition sweep of narrate.ts** — scripted a check for literal duplicate strings across all pools;
+   none found. Manually scanned FRAME_BY_CHAPTER/KIND_SETUP/DEMAND for near-duplicate phrasing; the
+   apparent overlaps (e.g. "growth spurt" in both Grassroots and Academy frames) read as an intentional
+   callback across chapters, not accidental repetition. No rewrites needed this pass — batch 1's
+   expansion already addressed the worst of it.
+4. **SeasonEvent flavours** — not attempted this pass (time-boxed out); see backlog below.
+
+### REMAINING BACKLOG for batch 3
+- **SeasonEvent flavours** (career.ts `advanceSeasonEvent`, ~line 1255): still only the original set from
+  before batch 1/2. Adding 1-2 more needs the probability bands recalibrated and the balance gate
+  (`strategy_test.ts` / `fuzz_test.ts`) re-run to confirm no drift — genuinely untouched this session,
+  flagged rather than rushed.
+- **`GK_TAG_FOCUS_BY_CHAPTER`** still only covers Youth Team onward (Grassroots/Academy/Scholar
+  goalkeepers get the new generic TAG_FOCUS_BY_CHAPTER picks added this batch, but no keeper-specific
+  early pick). Minor, but a natural next step now the outfield gap is closed.
+- **`RISK_FOCUS_CHAPTERS`** (the "Speak to the Press" high-variance pick) is still gated to
+  Breakthrough/First Team/Establishing only — deliberately left as-is (a genuine risk pick probably
+  shouldn't exist for a 12-year-old), but worth a second look re: Youth Team.
+- Deeper repetition sweep of `RESULTS`/`REACTIONS`/`VERBS` in narrate.ts wasn't done this pass (spot-
+  checked only, no literal dupes found) — a slower, closer read might still surface near-duplicate
+  *tone* even where the exact strings differ.
+- `LIFE_KINDS`/`LIFE_CONSEQUENCE` pool itself (16 kinds) hasn't grown since batch 1 — could still use 1-2
+  more distinct life-dilemma flavours if a future batch has room, though breadth is now reasonable.
