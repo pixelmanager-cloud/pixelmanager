@@ -147,6 +147,8 @@ const KIND_SETUP: Record<string, string[]> = {
   social_storm: ['An old post has resurfaced, and it’s spreading fast.', 'A throwaway comment online has become a full-blown story.', 'Thousands of strangers suddenly have an opinion about him.', 'A photo, taken without his knowledge, is everywhere by lunchtime.', 'His phone won’t stop buzzing, and none of it is good news.'],
   family_illness: ['A phone call from home changes everything, right before kick-off week.', 'A parent’s health scare has his mind a thousand miles from the training ground.', 'Torn between being where the team needs him and where his family does.', 'News from home he wasn’t ready to hear.', 'A hospital corridor, a waiting room, and a match he can barely think about.'],
   romance: ['Someone new in his life, and it’s starting to feel serious.', 'A big, public step in his relationship — the kind that can’t be undone.', 'Balancing a settling-down life with the chaos of a football schedule.', 'A quiet proposal, planned for months, finally about to happen.', 'The first time he’s introduced someone to the people who matter most.'],
+  mentor_crossroads: ['An old mentor rings with advice nobody asked him for.', 'The coach who first believed in him wants a word — and it isn’t small talk.', 'A phone call from the man who shaped him, and a choice he didn’t expect to face.', 'Years on, his old mentor still sees him as the raw kid he once coached — and says so.', 'The advice on the table cuts against everything the club wants from him.'],
+  friend_rivalry: ['The mate he grew up playing with lines up in the opposite shirt today.', 'A childhood friendship is starting to curdle into something sharper.', 'The lad he shared a bedroom with on away trips now wants his shirt.', 'An old friend’s success has started to sting more than he’d like to admit.', 'What used to be banter between them doesn’t feel like banter anymore.'],
 };
 // What the moment ASKS of him. Kept setting-neutral so it reads sensibly whether the
 // situation is a training drill, a dressing-room moment or a cup tie (a drill is not
@@ -389,6 +391,14 @@ const LIFE_RESOLUTION: Record<string, { good: string[]; bad: string[] }> = {
   romance: {
     good: ['and it’s a rare, uncomplicated kind of happy.', 'and a settled home life starts to show in his football too.', 'and, for once, the biggest headline in his life has nothing to do with football.'],
     bad: ['and the timing, as ever, could not be worse.', 'and something has to give, and it’s not obvious what.', 'and he handles it clumsily, the way anyone might.'],
+  },
+  mentor_crossroads: {
+    good: ['and the old advice lands exactly the way it always used to.', 'and he leaves the call seeing the game — and himself — a little clearer.', 'and years of trust between them pays off once again.'],
+    bad: ['and, for the first time, the advice feels out of date.', 'and he quietly decides to find his own answer this time.', 'and the call ends more awkward than either of them wanted.'],
+  },
+  friend_rivalry: {
+    good: ['and they shake hands after, the friendship bigger than the result.', 'and the needle stays good-natured, right where it belongs.', 'and it sharpens them both rather than souring anything.'],
+    bad: ['and something real gets lost between them that day.', 'and the handshake after is colder than either would admit.', 'and an old friendship is left carrying a new weight.'],
   },
 };
 // INJURY COMEBACK — "rush back" (aggression/stamina-led, real reinjury-risk cost on a bad outcome) vs

@@ -433,6 +433,10 @@ export const LIFESTYLE: LifestyleItem[] = [
   { id: 'crisis-pr', icon: '🧯', name: 'Hire a Crisis PR Team', blurb: 'The fans have turned on him and it shows no sign of blowing over — time to pay someone to manage the fallout.', cost: 900, minChapterIdx: 4, perks: { fans: 14 }, maxMeter: { fans: 25 } },
   { id: 'agent-firing', icon: '✂️', name: 'Cut Your Agent Loose', blurb: 'The relationship has soured beyond repair — an expensive, awkward, necessary split.', cost: 600, minChapterIdx: 3, perks: { agent: 30 }, maxMeter: { agent: 20 } },
   { id: 'counselling', icon: '🛋️', name: 'See a Relationship Counsellor', blurb: 'Things at home have got bad enough that pretending it will sort itself out isn’t working anymore.', cost: 500, minChapterIdx: 3, perks: { partner: 20 }, maxMeter: { partner: 25 } },
+  // More texture: mischief and friendship purchases that don't fit a neat category above.
+  { id: 'prank-fund', icon: '🎈', name: 'Fund the Dressing-Room Prank War', blurb: 'Bankroll the escalating nonsense — cling film on the boots, itching powder in the gloves. Worth every penny.', cost: 350, minChapterIdx: 3, perks: { peers: 12 } },
+  { id: 'road-trip', icon: '🚐', name: 'A Road Trip With the Old Crew', blurb: 'Pile the mates from home into a van for a few days before pre-season — a last taste of before-all-this.', cost: 600, minChapterIdx: 3, maxChapterIdx: 5, perks: { peers: 10, family: 4 } },
+  { id: 'club-legend-lunch', icon: '🍽️', name: 'Take a Club Legend to Lunch', blurb: 'Pick the brains of the man whose picture is on the wall — some things you can only learn over a meal.', cost: 450, minChapterIdx: 4, perks: { authority: 10 } },
 ];
 
 // ── BACKROOM STAFF: at each age-chapter break you appoint a mentor/coach for the coming chapter.
@@ -521,42 +525,49 @@ const FOCUS_BY_CHAPTER: Record<string, FocusOption[]> = {
     { id: 'mates',   icon: '🧒', name: 'Out With Mates',  desc: 'Long summer days with your mates. Priceless at this age.', energy: +6, effects: { peers: +16, family: -3 } },
     { id: 'skills',  icon: '⚽', name: 'Skills in the Park', desc: 'Hours against a wall. The coach will notice.', energy: -8, effects: { authority: +14, peers: +2 } },
     { id: 'firstcoach', icon: '🧑‍🏫', name: 'Sunday Mornings With Your First Coach', desc: 'He sees something in you and gives up his weekends to work on it — a bond that shapes you.', energy: -4, effects: { authority: +18, family: +2 } },
+    { id: 'streetball', icon: '🏙️', name: 'Street Football Til Dark', desc: 'No coaches, no rules, just jumpers for goalposts and the older kids never taking it easy on you.', energy: -6, effects: { peers: +12, authority: +4 } },
   ],
   Academy: [
     { id: 'school',  icon: '🎒', name: 'Hit the Books',   desc: 'Keep the grades up — a fallback and a discipline.', energy: -6, effects: { school: +16, family: +6 } },
     { id: 'impress', icon: '🧑‍🏫', name: 'Impress the Coach', desc: 'Extra sessions, first to arrive. Staff love a grafter.', energy: -10, effects: { authority: +16, peers: -3 } },
     { id: 'mates',   icon: '🧒', name: 'Team Bonding',    desc: 'Tight with the lads — a dressing room that fights for you.', energy: +4, effects: { peers: +15, school: -4 } },
     { id: 'rivalry', icon: '🔥', name: 'Chase Your Best Mate', desc: 'You and your closest friend push each other every single session — it sharpens you both, but it stings when he pips you to a place.', energy: -6, effects: { peers: +8, authority: +8 } },
+    { id: 'video', icon: '📹', name: 'Study the Pros on VHS', desc: 'Rewinding the same clip over and over, trying to steal a touch you saw on the telly.', energy: -4, effects: { authority: +10, peers: +2 } },
   ],
   Scholar: [
     { id: 'agent',   icon: '🤝', name: 'Sign With an Agent', desc: 'Someone to fight your corner as the offers start to whisper.', energy: -6, effects: { agent: +20 } },
     { id: 'impress', icon: '🧑‍🏫', name: 'Extra Sessions',   desc: 'Stay behind, do the ugly work. The coach is watching who wants it.', energy: -12, effects: { authority: +16, peers: -2 } },
     { id: 'school',  icon: '🎒', name: 'Finish Your Studies', desc: 'A scholar in name — keep the qualifications as a safety net.', energy: -6, effects: { school: +16, peers: +2 } },
     { id: 'setback', icon: '💪', name: 'Bounce Back From the Cut', desc: 'A string of released mates rattles the digs — you knuckle down and refuse to be next.', energy: -10, effects: { authority: +12, family: +6 } },
+    { id: 'homesick', icon: '📞', name: 'Call Home Every Night', desc: 'Digs still don\'t feel like home — a nightly phone call keeps you tethered to who you are.', energy: +6, effects: { family: +16, peers: -2 } },
   ],
   'Youth Team': [
     { id: 'partner', icon: '❤️', name: 'A New Romance',    desc: 'You’ve met someone. Settled and happy off the pitch.', energy: +12, effects: { partner: +18 } },
     { id: 'agent',   icon: '🤝', name: 'Work Your Agent',  desc: 'Dinners and phone calls — get him fighting for you.', energy: -8, effects: { agent: +18, authority: -2 } },
     { id: 'impress', icon: '🧑‍🏫', name: 'Court the Gaffer', desc: 'Make yourself undroppable in pre-season.', energy: -12, effects: { authority: +16, partner: -4 } },
     { id: 'loan',    icon: '🚐', name: 'Push for a Loan Move', desc: 'Real senior football, away from home comforts — game time that toughens you up fast.', energy: -8, effects: { agent: +10, authority: +8, partner: -4 } },
+    { id: 'firstflat', icon: '🔑', name: 'Move Into Your First Flat', desc: 'Your own front door for the first time — freedom, and a lot more washing-up.', energy: +8, effects: { peers: +6, family: -4 } },
   ],
   Breakthrough: [
     { id: 'partner', icon: '❤️', name: 'Time With Partner', desc: 'Protect your relationship as the spotlight grows.', energy: +10, effects: { partner: +16, fans: -2 } },
     { id: 'fans',    icon: '📣', name: 'Work the Fans',     desc: 'Community days, autographs — the terraces will sing your name.', energy: -8, effects: { fans: +18, partner: -4 } },
     { id: 'agent',   icon: '🤝', name: 'Lean on Your Agent', desc: 'Position yourself for the big move.', energy: -6, effects: { agent: +16, authority: -3 } },
     { id: 'contract', icon: '✍️', name: 'Talk Terms on Your First Pro Deal', desc: 'The club wants you tied down — negotiate hard, but don’t burn the bridge to the manager who gave you your chance.', energy: -8, effects: { agent: +14, authority: -4, fans: +4 } },
+    { id: 'oldmentor', icon: '📖', name: 'Reconnect With an Old Mentor', desc: 'A visit to the coach who first believed in you — a reminder of where all this started.', energy: +6, effects: { authority: +10, family: +4 } },
   ],
   'First Team': [
     { id: 'starter', icon: '🧑‍🏫', name: 'Nail Your Starting Spot', desc: 'Pre-season graft — make the shirt yours and undroppable.', energy: -12, effects: { authority: +16, peers: -2 } },
     { id: 'fans',    icon: '📣', name: 'Give Back to the Fans', desc: 'Become a terrace favourite — they’ll carry you on the bad days.', energy: -8, effects: { fans: +16, partner: -3 } },
     { id: 'partner', icon: '❤️', name: 'Time With Partner', desc: 'A stable home life behind the rising star.', energy: +10, effects: { partner: +16, fans: -2 } },
     { id: 'leadership', icon: '🎗️', name: 'Grow Into a Leader', desc: 'The younger lads look to you now — start acting like the senior pro you’re becoming.', energy: -10, effects: { authority: +10, peers: +12 } },
+    { id: 'oldfriend', icon: '🤜', name: 'Catch Up With an Old Friend', desc: 'The mate you came up with is at a rival club now — a beer and a reminder of simpler days.', energy: +8, effects: { peers: +10, fans: -2 } },
   ],
   Establishing: [
     { id: 'sponsors', icon: '📸', name: 'Sponsor Duties',   desc: 'Shoots and appearances. The brand — and the bank — grow.', energy: -12, effects: { sponsors: +18, peers: -4 } },
     { id: 'fans',     icon: '📣', name: 'Icon of the Terraces', desc: 'Give the supporters everything. Become untouchable.', energy: -8, effects: { fans: +16, partner: -3 } },
     { id: 'partner',  icon: '❤️', name: 'Settle Down',       desc: 'A stable home life behind the superstar.', energy: +10, effects: { partner: +16, sponsors: -4 } },
     { id: 'legacy',   icon: '👑', name: 'Think About Your Legacy', desc: 'What do you want them to say about you when it’s all over? You start carrying yourself like it.', energy: -6, effects: { authority: +10, fans: +10, peers: -2 } },
+    { id: 'givingback', icon: '🧑‍🏫', name: 'Coach a Grassroots Session', desc: 'An afternoon back where you started, watching some kid make the same mistakes you did.', energy: -4, effects: { fans: +8, family: +6 } },
   ],
 };
 // ── LIGHT ATTRIBUTE FOCUS (a soft skill-tree): from Youth Team on, the summer offers one or two picks
@@ -622,6 +633,14 @@ function riskFocusFor(chapter: string, standing: Record<MeterKey, number>): Focu
 // development-neutral contract as the main focus (energy + relationships only, no rng).
 const FOCUS_SIDE_SKIP: FocusOption = { id: 'side_skip', icon: '➖', name: 'Nothing Else', desc: 'Keep it simple this summer — no extra commitments.', energy: 0, effects: {} };
 const SIDE_FOCUS_BY_CHAPTER: Record<string, FocusOption[]> = {
+  Scholar: [
+    { id: 'letters',  icon: '✉️', name: 'Write Home',          desc: 'A quick letter back to the people who can\'t make every game.', energy: -2, effects: { family: +6 } },
+    { id: 'trial',    icon: '🎽', name: 'Turn Out for a Trial Game', desc: 'An extra, unpaid ninety minutes in front of a watching scout.', energy: -4, effects: { authority: +6 } },
+  ],
+  'Youth Team': [
+    { id: 'digsparty', icon: '🎉', name: 'A Night In With the Digs Lads', desc: 'Cheap pizza and FIFA with the other academy kids — small, but it matters.', energy: -2, effects: { peers: +6 } },
+    { id: 'reserves',  icon: '🎽', name: 'Volunteer for an Extra Reserves Game', desc: 'Nobody\'s forcing you, but the minutes are the minutes.', energy: -4, effects: { authority: +6 } },
+  ],
   Breakthrough: [
     { id: 'charity',  icon: '🤝', name: 'Charity Five-a-Side', desc: 'A low-key kickabout for a good cause — the fans notice the little things.', energy: -3, effects: { fans: +6 } },
     { id: 'mediaday', icon: '📷', name: 'A Media Day',         desc: 'An hour of interviews and photos squeezed in between the main plans.',        energy: -3, effects: { agent: +6 } },
@@ -665,14 +684,16 @@ const CALLUP_CONSEQUENCE = { good: { authority: 10, fans: 8 } as Partial<Record<
 // scenario's demand/stakes or any other rng-derived number; only development-touching where the consequence
 // itself nudges standing (small, same order of magnitude as the existing per-turn meter reactions).
 export type LifeKind = 'contract' | 'loan' | 'setback' | 'media' | 'loyalty' | 'role' | 'fallout'
-  | 'injury_comeback' | 'transfer_rumour' | 'manager_fallout' | 'charity' | 'social_storm' | 'family_illness' | 'romance';
-export const LIFE_KINDS: LifeKind[] = ['contract', 'loan', 'setback', 'media', 'loyalty', 'role', 'fallout', 'injury_comeback', 'transfer_rumour', 'manager_fallout', 'charity', 'social_storm', 'family_illness', 'romance'];
+  | 'injury_comeback' | 'transfer_rumour' | 'manager_fallout' | 'charity' | 'social_storm' | 'family_illness' | 'romance'
+  | 'mentor_crossroads' | 'friend_rivalry';
+export const LIFE_KINDS: LifeKind[] = ['contract', 'loan', 'setback', 'media', 'loyalty', 'role', 'fallout', 'injury_comeback', 'transfer_rumour', 'manager_fallout', 'charity', 'social_storm', 'family_illness', 'romance', 'mentor_crossroads', 'friend_rivalry'];
 export const LIFE_LABEL: Record<LifeKind, string> = {
   contract: 'a contract standoff', loan: 'a loan-move decision', setback: 'bouncing back from a public mistake',
   media: 'a media storm', loyalty: 'a boyhood-club approach', role: 'a squad-role ultimatum', fallout: 'a public falling-out with a teammate',
   injury_comeback: 'fighting his way back from injury', transfer_rumour: 'transfer speculation swirling around him',
   manager_fallout: 'a falling-out with the manager', charity: 'a charity and community appearance',
   social_storm: 'a social-media storm', family_illness: 'a family illness pulling at him', romance: 'settling down off the pitch',
+  mentor_crossroads: 'a crossroads moment with an old mentor', friend_rivalry: 'an old friendship turning into real rivalry',
 };
 // good/bad meter + earnings swing per life-kind, applied ON TOP of the generic per-turn reaction — this is
 // what makes a life event mechanically distinct from an ordinary social scenario, not just a re-skin.
@@ -691,6 +712,8 @@ const LIFE_CONSEQUENCE: Record<LifeKind, { good: Partial<Record<MeterKey, number
   social_storm:     { good: { fans: 6, sponsors: 4 },     bad: { fans: -10, sponsors: -8 } },
   family_illness:   { good: { family: 10 },               bad: { family: -14, authority: -4 } },
   romance:          { good: { partner: 16 },              bad: { partner: -10 } },
+  mentor_crossroads: { good: { authority: 10, peers: 4 }, bad: { authority: -6, family: -4 } },
+  friend_rivalry:   { good: { peers: 8, fans: 4 },        bad: { peers: -10 } },
 };
 /** Pure deterministic hash → [0,1), independent of the career's rng() stream (never consumes it). */
 function pureHash01(seed: number, turn: number, salt: number): number { return mulberry32(((seed ^ Math.imul(turn + 1, 2654435761)) ^ salt) >>> 0)(); }
@@ -702,8 +725,10 @@ const KIND_BIAS: Record<Scenario['kind'], Tag[]> = {
 const KIND_POOL: Scenario['kind'][] = ['match', 'match', 'match', 'social', 'training'];
 // goalkeeper moments demand keeping heavily, plus the calm/commanding traits that suit a keeper
 const GK_BIAS: Tag[] = ['keeping', 'keeping', 'keeping', 'composure', 'leadership', 'creativity'];
-const BIG_MOMENTS = ['Derby Day', 'Cup Quarter-Final', 'Relegation Six-Pointer', 'Live on TV', 'Top-of-the-Table Clash', 'The Return to a Former Club', 'A Scout-Packed Showcase', 'Local Bragging Rights'];
-const HUGE_MOMENTS = ['CUP FINAL', 'Title Decider', 'Promotion Play-Off Final', 'The Last Day of the Season', 'A Cup Semi Under the Lights', 'The Biggest Game in the Club’s History'];
+const BIG_MOMENTS = ['Derby Day', 'Cup Quarter-Final', 'Relegation Six-Pointer', 'Live on TV', 'Top-of-the-Table Clash', 'The Return to a Former Club', 'A Scout-Packed Showcase', 'Local Bragging Rights',
+  'Boxing Day Away Day', 'A New Manager\'s First Big Test', 'A Point to Prove to the Doubters', 'The Fixture the Fans Circle', 'A Testimonial for a Club Legend', 'Under the Lights, First Time on This Stage'];
+const HUGE_MOMENTS = ['CUP FINAL', 'Title Decider', 'Promotion Play-Off Final', 'The Last Day of the Season', 'A Cup Semi Under the Lights', 'The Biggest Game in the Club’s History',
+  'A Continental Final', 'The Match That Decides Who Goes Down', 'A Derby With the Title on the Line', 'A Comeback From the Brink', 'The Game Your Whole Career Gets Judged On'];
 
 /** A seeded scenario. Tag demand comes from the current AGE BAND (age-appropriate); stakes are gated
  *  by the band (no cup finals at grassroots). `demandBias` (a gaffer's demand) leans the demand. */
