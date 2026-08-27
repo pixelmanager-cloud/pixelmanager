@@ -65,6 +65,21 @@ const LEVELS: Record<keyof Omit<Tactics, 'formation'>, string[]> = {
   tempo: ['Very Patient', 'Patient', 'Balanced', 'Direct', 'Very Direct'],
   width: ['Very Narrow', 'Narrow', 'Balanced', 'Wide', 'Very Wide'],
 };
+// ── Match plan: conditional in-game orders ──────────────────────────────────────────────────────
+// Pre-match rules the manager arms; each fires ONCE during a single-player match when its trigger is met
+// (minute reached + scoreline), auto-shifting your tactics via the engine's setTactics. Shifts are applied
+// from the kickoff tactics (last-fired situation wins), each field clamped to the −2..+2 tactic range.
+type TacticKey = keyof Omit<Tactics, 'formation'>;
+interface PlanRule { id: string; ico: string; ifText: string; thenText: string; minMinute: number; cond: (my: number, opp: number) => boolean; shift: Partial<Record<TacticKey, number>>; fired: string }
+const MATCH_PLAN_RULES: PlanRule[] = [
+  { id: 'chase-ht', ico: '🔴', ifText: 'Losing at half-time', thenText: 'throw men forward — more attacking, higher line', minMinute: 45, cond: (my, opp) => my < opp, shift: { mentality: +1, line: +1, tempo: +1 }, fired: '📋 Behind at the break — going more attacking' },
+  { id: 'chase-late', ico: '🟠', ifText: 'Still losing at 70′', thenText: 'all-out attack for the comeback', minMinute: 70, cond: (my, opp) => my < opp, shift: { mentality: +2, line: +1, press: +1, tempo: +1 }, fired: '📋 Chasing the game — all-out attack' },
+  { id: 'hold-lead', ico: '🟢', ifText: 'Leading at 75′', thenText: 'see it out — drop deeper, slow the tempo', minMinute: 75, cond: (my, opp) => my > opp, shift: { mentality: -1, line: -1, press: -1, tempo: -1 }, fired: '📋 Protecting the lead — shutting up shop' },
+  { id: 'push-draw', ico: '🟡', ifText: 'Level at 78′', thenText: 'go for the winner', minMinute: 78, cond: (my, opp) => my === opp, shift: { mentality: +1, tempo: +1 }, fired: '📋 Pushing for a winner' },
+  { id: 'manage-2up', ico: '🔵', ifText: 'Two+ goals up after 60′', thenText: 'game management — protect the lead & the legs', minMinute: 60, cond: (my, opp) => my - opp >= 2, shift: { mentality: -1, tempo: -1, press: -1 }, fired: '📋 Comfortable — managing the game out' },
+];
+const clampTac = (v: number) => Math.max(-2, Math.min(2, v));
+
 const FORMATIONS: Formation[] = ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1', '3-4-3', '4-1-2-1-2', '5-3-2', '4-5-1'];
 const SLOT_ROLES: Record<Formation, string[]> = {
   '4-4-2': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'FW', 'FW'],
@@ -225,6 +240,9 @@ class Game {
   spFixture: { idx: number; oppClub: Club; oppName: string; oppStrength: number; venue: 'home' | 'away'; oppLineup: Lineup; comp?: 'league' | 'cont' | 'wc'; contRound?: number } | null = null; // the single-player fixture being played
   pendingCont: { myGoals: number; oppGoals: number; oppStrength: number } | null = null; // a continental tie awaiting resolution once the full-time card is dismissed
   pendingWc: { myGoals: number; oppGoals: number; oppName: string } | null = null; // a World-Finals knockout tie awaiting resolution
+  draftPlan = new Set<string>();          // armed conditional match-plan rule ids (single-player)
+  planFired = new Set<string>();          // rules already triggered this match
+  planBaseTactics: Tactics | null = null; // the kickoff tactics — shifts apply relative to this
   mySide: 0 | 1 = 0;   // which team index (0 home / 1 away) is the player in the current match
   homeName = '';
   awayName = '';
@@ -694,6 +712,12 @@ class Game {
     return { season: 1, results: [] };
   }
   private saveMgr(m: MgrState) { try { localStorage.setItem(this.mgrKey(), JSON.stringify(m)); } catch { /* ignore */ } }
+  private planKey(): string { return `fm_plan_${this.account?.handle ?? 'x'}`; }
+  private loadPlan(): Set<string> {
+    try { const raw = localStorage.getItem(this.planKey()); if (raw) return new Set(JSON.parse(raw)); } catch { /* fall through */ }
+    return new Set(['chase-ht', 'hold-lead']); // sensible defaults: chase when behind, see out a lead
+  }
+  private savePlan() { try { localStorage.setItem(this.planKey(), JSON.stringify([...this.draftPlan])); } catch { /* ignore */ } }
   private clearMgr() { try { localStorage.removeItem(this.mgrKey()); } catch { /* ignore */ } }
   /** manager phase = you've handed off and are now managing the club with a bloodline star on the pitch */
   private isManagerPhase(): boolean { return !!this.loadMgr().starId; }
@@ -2069,6 +2093,7 @@ class Game {
   private openLineup(mode: 'standing' | 'match', opp?: { id: string; handle: string; venue: 'home' | 'away' }) {
     this.editorMode = mode;
     this.pendingOpp = opp;
+    this.draftPlan = this.loadPlan(); // armed conditional match-plan orders
     this.draftTactics = { ...this.standingOrders.tactics, formation: this.standingOrders.formation };
     // the saved XI can reference players no longer in the squad (e.g. an NFT star that's
     // been transferred/de-listed) — fall back to a valid auto-pick so the editor still opens
@@ -2141,6 +2166,26 @@ class Game {
       + intel;
   }
 
+  /** The conditional match-plan panel — only for single-player fixtures (the client is authoritative there;
+   *  async-PvP results are server-simulated, so mid-match changes must not diverge). */
+  private renderMatchPlan() {
+    const host = $('match-plan'); if (!host) return;
+    if (this.editorMode !== 'match' || !this.spFixture) { host.innerHTML = ''; return; }
+    const rows = MATCH_PLAN_RULES.map((r) => {
+      const on = this.draftPlan.has(r.id);
+      return `<div class="mp-rule${on ? ' on' : ''}" data-plan="${r.id}"><span class="mp-check">✓</span><span class="mp-ico">${r.ico}</span>`
+        + `<span class="mp-body"><span class="mp-if">If ${r.ifText}</span> <span class="mp-then">→ ${r.thenText}</span></span></div>`;
+    }).join('');
+    host.innerHTML = `<div class="mp-head">📋 MATCH PLAN — conditional orders</div>`
+      + `<div class="mp-sub">Arm the moves your side makes automatically as the game unfolds.</div>${rows}`;
+    host.querySelectorAll('[data-plan]').forEach((el) => el.addEventListener('click', () => {
+      const id = (el as HTMLElement).dataset.plan!;
+      if (this.draftPlan.has(id)) this.draftPlan.delete(id); else this.draftPlan.add(id);
+      this.savePlan();
+      el.classList.toggle('on');
+    }));
+  }
+
   private renderLineupEditor() {
     const tac: string[] = [`<label>Formation<select id="e-formation">${FORMATIONS.map((f) => `<option ${f === this.draftTactics.formation ? 'selected' : ''}>${f}</option>`).join('')}</select></label>`];
     (Object.keys(LEVELS) as Array<keyof typeof LEVELS>).forEach((k) => {
@@ -2156,6 +2201,7 @@ class Game {
     (Object.keys(LEVELS) as Array<keyof typeof LEVELS>).forEach((k) => {
       ($(`e-${k}`) as HTMLSelectElement).addEventListener('change', (ev) => { this.draftTactics[k] = Number((ev.target as HTMLSelectElement).value); this.updateEditorInsight(); });
     });
+    this.renderMatchPlan();
 
     const slots = this.draftLineup.playerIds;
     const benched = this.lapsed(); // NFTs unavailable via a lapsed contract or retirement — not selectable
@@ -2328,6 +2374,9 @@ class Game {
     this.move = null;
     this.liveScore = [0, 0]; this.scorerTally = new Map(); this.lastGoalIdx = -1;
     this.attackBeats = []; this.lastMomentumMin = -99; this.lastAttackMin = 0;
+    // match plan: snapshot the kickoff tactics (shifts apply from here) and clear the fired set
+    this.planFired = new Set();
+    this.planBaseTactics = { ...(payload.mySide === 0 ? payload.home.tactics : payload.away.tactics) };
     this.running = true; this.accum = 0; this.eventsShown = 0;
     this.setMatchNames();
     $('ticker').innerHTML = '';
@@ -2465,7 +2514,8 @@ class Game {
   private skipToEnd() {
     if (!this.engine || this.engine.state.finished) return;
     this.running = false; // stop the animated tick loop from also advancing
-    while (!this.engine.state.finished) this.engine.tick();
+    const plan = this.spFixture && this.draftPlan.size;
+    while (!this.engine.state.finished) { this.engine.tick(); if (plan) this.evalMatchPlan(); }
     this.silent = true;
     this.syncMatchHud(); // final score/possession/fitness + flush ticker
     this.silent = false;
@@ -2481,8 +2531,28 @@ class Game {
         this.accum -= TICK_SEC;
         if (this.engine.state.finished) { this.onFullTime(); break; }
       }
+      if (this.spFixture && this.draftPlan.size && !this.engine.state.finished) this.evalMatchPlan();
     }
     this.syncMatchHud();
+  }
+
+  /** Fire any armed match-plan order whose trigger (minute + scoreline) is now met — once each. When it
+   *  fires, the shift is applied from the kickoff tactics and pushed to the engine mid-match. SP-only. */
+  private evalMatchPlan() {
+    const s = this.engine!.state;
+    const min = Math.floor(s.clockSec / 60);
+    const my = s.score[this.mySide], opp = s.score[1 - this.mySide];
+    for (const r of MATCH_PLAN_RULES) {
+      if (!this.draftPlan.has(r.id) || this.planFired.has(r.id)) continue;
+      if (min >= r.minMinute && r.cond(my, opp)) {
+        this.planFired.add(r.id);
+        const base = this.planBaseTactics ?? this.draftTactics;
+        const nt: Tactics = { ...base };
+        for (const k in r.shift) (nt as any)[k] = clampTac((base as any)[k] + (r.shift as any)[k]!);
+        this.engine!.setTactics(this.mySide, nt);
+        toast(r.fired);
+      }
+    }
   }
 
   private syncMatchHud() {

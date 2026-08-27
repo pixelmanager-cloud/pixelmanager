@@ -30,7 +30,12 @@
 > - **Sponsorship deals** — each season pick a Steady (flat cash) or Performance (top-3 bonus) shirt deal;
 >   `POST /sp/sponsor` + the bonus via `/sp/season-reward`.
 >
-> **Still open:** match plan / conditional orders.
+> **✅ Match plan / conditional orders (2026-08-27):** pre-match rules the manager arms in the lineup editor
+> (e.g. *losing at half-time → more attacking*, *leading at 75′ → shut up shop*, *2+ up → game management*).
+> Each fires once mid-match when its minute + scoreline trigger is met, auto-shifting your tactics via the
+> engine's `setTactics` (shifts applied from the kickoff tactics, clamped to the −2..+2 range) with a
+> commentary toast. Single-player only (the client is authoritative there); armed set persists per save.
+> **Nothing on the manager side is still open** — the remaining ideas below are stretch/flavour.
 >
 > ### 🌍 ✅ SHIPPED — competitions beyond the league (2026-08-27) — engine in `shared/src/intl.ts`
 > All three are deterministic (hash-seeded, no rng/wall-clock), so they replay identically from a save seed.
