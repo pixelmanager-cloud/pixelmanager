@@ -256,6 +256,17 @@ export function scenarioStory(kind: string, topTag: string, moment: string | nul
 const band = (success: number) => (success >= 0.8 ? 'triumph' : success >= 0.62 ? 'good' : success >= 0.42 ? 'mixed' : success >= 0.24 ? 'poor' : 'dismal');
 const domTag = (tags: string[]) => tags.find((t) => VERBS[t]) ?? 'teamwork';
 
+// ── DEBUT: research shows first-team debuts as visceral, almost drug-like highs ("floating across the
+// grass" — Steve Coppell, 1975) — and just as often a chastening night that DOESN'T end a career (Phil
+// Chisnall's 1961 debut ended 5-1, and he kept his place). A milestone flourish that reads either way.
+const DEBUT_EUPHORIA = [
+  'It’s beyond a fairy tale — he isn’t running out there, he’s floating across the grass.', 'Whatever else his career becomes, nothing will ever quite match this first, perfect afternoon.',
+  'Pure, drug-like euphoria — the kind old pros still describe decades later, word for word.', 'He will remember every blade of grass on this pitch for the rest of his life.',
+];
+const DEBUT_ROUGH = [
+  'A tough afternoon to start a career on — but a bad debut has never once ended a good one.', 'Not the dream start, but plenty of careers worth having began exactly like this.', 'It stings tonight. In a year it will just be the answer to a trivia question about how it all began.',
+];
+
 // milestone flourishes — prepended when a beat marks a career-first
 const MILESTONE: Record<string, string> = {
   debut: '🎬 His debut. ',
@@ -310,7 +321,12 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
   const aftermath = ctx.stakes === 3
     ? ' ' + (b === 'triumph' ? pick(HUGE_AFTERMATH.triumph) : b === 'good' ? pick(HUGE_AFTERMATH.good) : b === 'poor' || b === 'dismal' ? pick(HUGE_AFTERMATH_BAD) : '')
     : '';
-  return `${tension}${milestone}${cap(lead)}, ${action} ${cardName} ${result}. ${reaction}${flavor}${castReact}${aftermath}`;
+  // DEBUT EUPHORIA / "a rough debut isn't the end": a distinct flourish on the career-first beat, coloured
+  // by how it actually went — real debut anecdotes read either as euphoric or as a night to shrug off.
+  const debutFlourish = ctx.milestone === 'debut'
+    ? ' ' + (b === 'triumph' || b === 'good' ? pick(DEBUT_EUPHORIA) : b === 'poor' || b === 'dismal' ? pick(DEBUT_ROUGH) : '')
+    : '';
+  return `${tension}${milestone}${cap(lead)}, ${action} ${cardName} ${result}. ${reaction}${flavor}${castReact}${aftermath}${debutFlourish}`;
 }
 
 // ── LIFE EVENTS: the resolution beat for a mid-chapter dilemma (see career.ts Scenario.life /
@@ -375,20 +391,37 @@ const LIFE_RESOLUTION: Record<string, { good: string[]; bad: string[] }> = {
     bad: ['and the timing, as ever, could not be worse.', 'and something has to give, and it’s not obvious what.', 'and he handles it clumsily, the way anyone might.'],
   },
 };
+// INJURY COMEBACK — "rush back" (aggression/stamina-led, real reinjury-risk cost on a bad outcome) vs
+// "patient graded return" (anything else — the safe, documented "fear of reinjury" grind). Distinct
+// resolution prose per approach, layered on the standard good/bad LIFE_RESOLUTION.injury_comeback lines.
+const INJURY_APPROACH_LINE: Record<'rush' | 'patient', { good: string[]; bad: string[] }> = {
+  rush: {
+    good: ['He pushed to come back early, and for once the gamble pays off in full.', 'Against the physio’s better judgement, he rushed it — and it held.'],
+    bad: ['He pushed to come back too soon, and the body sends him a warning he can’t ignore.', 'Rushing it felt right at the time; right now, it very much doesn’t.'],
+  },
+  patient: {
+    good: ['He took the slow, graded route back, and the patience is rewarded.', 'No shortcuts, no rush — just a careful, honest return, done properly.'],
+    bad: ['Even the patient route has its bad days — this is one of them.', 'He did it the right way, by the book, and it still didn’t quite click today.'],
+  },
+};
 /** The resolution beat for a mid-chapter LIFE EVENT (contract standoff, loan call, media storm, etc.) —
- *  distinct from narratePlay: this reads like an off-pitch moment resolving, using the same success band. */
-export function narrateLifeEvent(kind: string, cardName: string, success: number, ctx: NarrateCtx): string {
+ *  distinct from narratePlay: this reads like an off-pitch moment resolving, using the same success band.
+ *  `approach` ('rush'/'patient') only ever arrives for injury_comeback (see career.ts's lastLifeEvent). */
+export function narrateLifeEvent(kind: string, cardName: string, success: number, ctx: NarrateCtx, approach?: 'rush' | 'patient'): string {
   const rng = mulberry32(ctx.seed >>> 0);
   const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
   const good = band(success) === 'triumph' || band(success) === 'good';
   const table = LIFE_RESOLUTION[kind] ?? LIFE_RESOLUTION.setback;
   const resline = pick(good ? table.good : table.bad);
-  const approach = pick(LIFE_APPROACH);
+  const approachLine = kind === 'injury_comeback' && approach
+    ? ' ' + pick(good ? INJURY_APPROACH_LINE[approach].good : INJURY_APPROACH_LINE[approach].bad)
+    : '';
+  const lead = pick(LIFE_APPROACH);
   const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed) : null;
   const castReact = cast && rng() < 0.3 && good
     ? ' ' + pick([`${cast.gaffer} appreciates how he handled it.`, `Even ${cast.rival} would admit that was well played.`, `His agent breathes a quiet sigh of relief.`])
     : '';
-  return `${approach} ${cardName} ${resline}${castReact}`;
+  return `${lead} ${cardName} ${resline}${approachLine}${castReact}`;
 }
 
 // ── RIVALRY STORYLINE: the seeded academy rival isn't just a number to chase — a slice of big-stage MATCH
@@ -427,6 +460,90 @@ export function narrateRivalMoment(cardName: string, success: number, ctx: Narra
     : '';
   return `He goes to work on ${cardName} ${resline}${swing}`;
 }
+// ── SHOCK CALL-UP: the seeded reskin of a first-teamer going down hours before kickoff (see
+// career.ts Scenario.callup) — nervier framing than a routine big game, a bigger reward for standing up
+// to it. Real anecdote behind it: Sammy McIlroy told four hours before kickoff in 1971, scored on debut.
+const CALLUP_SETUP = [
+  'The phone call came four hours before kick-off — someone’s gone down injured, and it’s him in the XI.', 'He was warming the bench for the reserves; now the physio is strapping HIS ankle for the first team.',
+  'A late fitness test has failed. No time to think about it — he’s starting.', 'Suspension, a red card review, a withdrawal — whatever the reason, the sheet has his name on it tonight.',
+  'The kit man is already laying his shirt out in the home dressing room. Nobody warned him this morning.', 'One phone call and his whole week changed — he’s starting, and there’s no time left to be nervous about it.',
+];
+const CALLUP_RESOLUTION = {
+  good: [
+    'and he looks like he’s been starting there for years.', 'and the shock call-up becomes the best story of his career so far.',
+    'and nobody in that stadium would ever guess he found out four hours ago.', 'and it’s the kind of debut managers dream of handing a kid.',
+  ],
+  bad: [
+    'and the nerves get the better of him.', 'and it’s a chastening first taste of it, the kind you learn from.',
+    'and the step up shows, painfully, just how big it is.', 'and he looks every inch a boy thrown in before he was ready.',
+  ],
+};
+/** The SITUATION for a shock call-up — call before the card is played. */
+export function callupMomentStory(moment: string | null, ctx: ScenarioCtx): string {
+  const rng = mulberry32(ctx.seed >>> 0);
+  const setup = pickFrom(rng, CALLUP_SETUP);
+  return moment ? `It’s ${moment} — and ${setup.charAt(0).toLowerCase() + setup.slice(1)}` : setup;
+}
+/** The RESOLUTION beat for a shock call-up. */
+export function narrateCallupMoment(cardName: string, success: number, ctx: NarrateCtx): string {
+  const rng = mulberry32(ctx.seed >>> 0);
+  const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
+  const good = band(success) === 'triumph' || band(success) === 'good';
+  const resline = pick(good ? CALLUP_RESOLUTION.good : CALLUP_RESOLUTION.bad);
+  const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed) : null;
+  const reax = cast && rng() < 0.3
+    ? ' ' + (good ? `${cast.gaffer} could not have asked for more.` : `${cast.gaffer} will give him another chance — everyone gets one bad night.`)
+    : '';
+  return `Thrown in cold, he goes to work on ${cardName} ${resline}${reax}`;
+}
+
+// ── ACADEMY KEEP-OR-CUT SCARE: a tense "will he be kept?" scholarship-decision beat at the Academy/
+// Scholar/Youth Team stages (real release odds — 85% of scholars released within two years, per
+// docs/research-player-career.md §1 — but this is HIS story: the bloodline star always comes through it).
+// TONE RULE: hopeful and serious only — never a real cut, never any hint of the tragedy the release
+// research documents. The tension is real; the outcome never is in doubt.
+const SCARE_SETUP: Record<string, string[]> = {
+  Academy: [
+    'Word is the coaches are trimming the squad again at the end of term, and nobody in the year group feels safe.',
+    'A couple of letters have already gone out to other families. His hasn’t come. Yet.',
+    'The kit room is full of quiet, nervous talk about who gets let go this summer.',
+  ],
+  Scholar: [
+    'Scholarship review week. Two years of trials come down to a sit-down with the academy director.',
+    'A string of released team-mates has the whole dorm on edge — and today it’s his turn to be called in.',
+    'The paperwork that made this feel real two years ago is about to decide whether it carries on.',
+  ],
+  'Youth Team': [
+    'A cull of the older age group is coming, and the coaches have started having "the conversations."',
+    'He’s watched older lads get the call to the office and not come back the same. Today it’s his name on the list.',
+    'One more contract review before first-team football is even a conversation — if there’s still a contract to review.',
+  ],
+};
+const SCARE_RESOLUTION_GOOD = [
+  'and the answer, when it comes, is the one he needed: he’s being kept on. Two years of worry, gone in a sentence.',
+  'and the director doesn’t make him wait — he’s staying. He’s out of that office and on the phone home before the door shuts.',
+  'and it’s good news: the club is keeping faith in him. He allows himself, finally, to breathe out.',
+];
+const SCARE_RESOLUTION_SHAKY = [
+  'and it’s close — the room goes quiet for a beat too long — but the answer is still yes. He’s staying.',
+  'and he braces for the worst, but they back him anyway. Not every doubt gets answered kindly, but this one just did.',
+  'and it wasn’t the case he wanted to make for himself, yet somehow it was enough. He’s kept on — and he knows exactly how close it was.',
+];
+/** The SITUATION for the academy keep-or-cut scare — call before the card is played. */
+export function academyScareStory(chapter: string, seed: number): string {
+  const rng = mulberry32(seed >>> 0);
+  return pickFrom(rng, SCARE_SETUP[chapter] ?? SCARE_SETUP.Academy);
+}
+/** The RESOLUTION beat — he is ALWAYS kept on (see TONE RULE above); only the framing (comfortable vs
+ *  narrow) reads from how the moment right before the decision actually went. */
+export function narrateAcademyScare(cardName: string, success: number, ctx: NarrateCtx): string {
+  const rng = mulberry32(ctx.seed >>> 0);
+  const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
+  const strong = band(success) === 'triumph' || band(success) === 'good';
+  const resline = pick(strong ? SCARE_RESOLUTION_GOOD : SCARE_RESOLUTION_SHAKY);
+  return `He falls back on ${cardName} to make his case ${resline}`;
+}
+
 // Deterministic "news" about the rival's own career — surfaced as a small ticker alongside the score, so
 // he feels like a real career unfolding in parallel, not just a number that climbs on a fixed schedule.
 const RIVAL_NEWS: Record<string, string[]> = {
