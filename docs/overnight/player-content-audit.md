@@ -152,3 +152,22 @@ narration/attribute-focus additions with no rng and no touch to `deriveStats`/`a
   to confirm `LIFE_LABEL`'s generic pass-through (client/src/main.ts:1796) renders the new kinds fine (it
   should — `LIFE_LABEL` is typed `Record<LifeKind, string>` and both new kinds have entries, so this is
   very likely a non-issue, just unverified end-to-end in the client UI).
+
+## Batch 4 (recorded by orchestrator — the agent's worktree was cleaned up before it wrote this)
+**Shipped** (commit "career: SeasonEvent flavours + new 'international-honour' event"):
+- `EVENT_FLAVOR` kid/teen reword entries for the 5 SeasonEvent ids that had none (`breakthrough`,
+  `hot-streak`, `slump`, `steady`, `serious-injury`) — fixes age-inappropriate phrasing for
+  Grassroots/Academy/Scholar-aged players.
+- One new, genuinely distinct SeasonEvent: `international-honour` (full international recognition),
+  carved minimally from the old `steady` catch-all (`steady` [0.94,1.0)→[0.97,1.0); `international-honour`
+  takes [0.94,0.97)) — all other bands untouched. Named away from `call-up` to avoid colliding with the
+  unrelated "shock call-up" match mechanic. career_sim replay determinism preserved; calibration 2.80 held.
+
+**Saturation verdict (important):** the player-career content lane is now judged **effectively saturated**.
+- `LIFE_KINDS` (18) is comprehensive — no genuinely distinct 19th feeling found (a 19th would be a re-skin).
+- `RISK_FOCUS_CHAPTERS`: Youth Team is ages 17–18; the Breakthrough+ gate is correctly placed.
+- `VERBS`/`DEMAND`/`KIND_SETUP`/`FRAME_BY_CHAPTER`: read in full — functional/specific text, not the
+  flattened-register problem batch 3 fixed in RESULTS/REACTIONS. No changes needed.
+- **Recommendation for any batch 5:** NOT more pool-breadth (that would be filler) — instead a full
+  read-through *playtest* of a complete career, judging flow and pacing, plus client-side surfacing of the
+  newer content. Do not relaunch this lane for more breadth.
