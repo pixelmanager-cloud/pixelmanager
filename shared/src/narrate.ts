@@ -265,6 +265,21 @@ const MILESTONE: Record<string, string> = {
   first_start: '📋 His first start. ',
 };
 
+// ── HUGE MOMENTS (stakes 3 — the rarest, biggest occasions: cup finals, title deciders, promotion
+// play-offs) get a genuine multi-beat sequence instead of one sentence: a TENSION build-up before the
+// card is even played, then (on top of the usual result/reaction) an AFTERMATH line on how it's REMEMBERED
+// — the kind of standout peak a 200-turn career should have only a handful of.
+const HUGE_TENSION = [
+  'Ninety minutes of football have come down to this one moment.', 'Everything he has worked for since he was a boy is riding on the next few seconds.',
+  'The whole stadium seems to hold its breath at once.', 'This is the moment careers are actually remembered for.',
+  'Every eye in the ground, and plenty watching at home, are on him right now.', 'There is no bigger stage than this, and it has fallen to him.',
+];
+const HUGE_AFTERMATH: Record<'triumph' | 'good', string[]> = {
+  triumph: ['This is the moment they’ll show highlight reels of for years.', 'Whatever happens next in his career, this will be the moment people bring up first.', 'Somewhere, a boy watching at home just decided he wants to be a footballer.', 'This is the kind of moment a statue gets built on.'],
+  good: ['It won’t make the front pages, but everyone inside the stadium knows what it meant.', 'Not the headline act, but exactly the moment the team needed from him.', 'A quiet, vital contribution on the biggest of stages.'],
+};
+const HUGE_AFTERMATH_BAD = ['It’s the kind of moment that follows a player around for a long time.', 'The biggest stage has a way of finding a player’s weakest moment — and it just did.', 'He will replay this one in his head for longer than he’d like.', 'Not every big-stage story has a happy ending, and this is one of them.'];
+
 /** One immersive sentence (or two) for a card played this turn. */
 export function narratePlay(cardName: string, cardTags: string[], success: number, ctx: NarrateCtx): string {
   const rng = mulberry32(ctx.seed >>> 0);
@@ -289,7 +304,13 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
     : '';
   const milestone = ctx.milestone && MILESTONE[ctx.milestone] ? MILESTONE[ctx.milestone] : '';
   const action = adv ? `he, ${adv}${verb}` : `he ${verb}`; // "he, grinning, flew into …"
-  return `${milestone}${cap(lead)}, ${action} ${cardName} ${result}. ${reaction}${flavor}${castReact}`;
+  // HUGE moments (stakes 3) get a genuine multi-beat sequence: tension build-up before, a remembered-by
+  // aftermath after — the standout peaks a long career should have only a handful of.
+  const tension = ctx.stakes === 3 ? pick(HUGE_TENSION) + ' ' : '';
+  const aftermath = ctx.stakes === 3
+    ? ' ' + (b === 'triumph' ? pick(HUGE_AFTERMATH.triumph) : b === 'good' ? pick(HUGE_AFTERMATH.good) : b === 'poor' || b === 'dismal' ? pick(HUGE_AFTERMATH_BAD) : '')
+    : '';
+  return `${tension}${milestone}${cap(lead)}, ${action} ${cardName} ${result}. ${reaction}${flavor}${castReact}${aftermath}`;
 }
 
 // ── LIFE EVENTS: the resolution beat for a mid-chapter dilemma (see career.ts Scenario.life /
