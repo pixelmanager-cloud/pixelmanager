@@ -67,18 +67,29 @@ const LEVELS: Record<keyof Omit<Tactics, 'formation' | 'offsideTrap' | 'playOutO
   tempo: ['Very Patient', 'Patient', 'Balanced', 'Direct', 'Very Direct'],
   width: ['Very Narrow', 'Narrow', 'Balanced', 'Wide', 'Very Wide'],
 };
+// In-fiction "manager's notebook" explainer for each slider — real coaching principle behind the
+// number, not a restatement of the mechanic (docs/research-manager-career.md §3). Pure flavour tooltip.
+const TAC_NOTE: Record<keyof typeof LEVELS, string> = {
+  mentality: "How far you push bodies forward when you've got the ball — go Attacking and you risk men caught upfield if it breaks down; sit Defensive and you bank numbers behind the ball.",
+  line: 'How high your back line holds. A high line compresses the pitch and squeezes the opponent into risky forward passes — but the space in behind grows if it\'s beaten.',
+  press: "How hard you hunt the ball the moment you lose it. Full Gegenpress is Klopp's five-second rule: win it back inside five seconds while they're disorganised, or abandon the chase and drop into shape.",
+  tempo: 'Patient keeps it on the deck through midfield, working the opening; Direct goes long and early, betting on the second ball over control of it.',
+  width: 'How far your shape stretches side to side. Wide creates room out on the flanks for crosses and overlaps; Narrow packs bodies through the middle for combination play.',
+};
 // ── Match plan: conditional in-game orders ──────────────────────────────────────────────────────
 // Pre-match rules the manager arms; each fires ONCE during a single-player match when its trigger is met
 // (minute reached + scoreline), auto-shifting your tactics via the engine's setTactics. Shifts are applied
 // from the kickoff tactics (last-fired situation wins), each field clamped to the −2..+2 tactic range.
 type TacticKey = keyof Omit<Tactics, 'formation'>;
-interface PlanRule { id: string; ico: string; ifText: string; thenText: string; minMinute: number; cond: (my: number, opp: number) => boolean; shift: Partial<Record<TacticKey, number>>; fired: string }
+interface PlanRule { id: string; ico: string; ifText: string; thenText: string; minMinute: number; cond: (my: number, opp: number) => boolean; shift: Partial<Record<TacticKey, number>>; fired: string; note?: string }
 const MATCH_PLAN_RULES: PlanRule[] = [
   { id: 'chase-ht', ico: '🔴', ifText: 'Losing at half-time', thenText: 'throw men forward — more attacking, higher line', minMinute: 45, cond: (my, opp) => my < opp, shift: { mentality: +1, line: +1, tempo: +1 }, fired: '📋 Behind at the break — going more attacking' },
   { id: 'chase-late', ico: '🟠', ifText: 'Still losing at 70′', thenText: 'all-out attack for the comeback', minMinute: 70, cond: (my, opp) => my < opp, shift: { mentality: +2, line: +1, press: +1, tempo: +1 }, fired: '📋 Chasing the game — all-out attack' },
-  { id: 'hold-lead', ico: '🟢', ifText: 'Leading at 75′', thenText: 'see it out — drop deeper, slow the tempo', minMinute: 75, cond: (my, opp) => my > opp, shift: { mentality: -1, line: -1, press: -1, tempo: -1 }, fired: '📋 Protecting the lead — shutting up shop' },
+  { id: 'hold-lead', ico: '🟢', ifText: 'Leading at 75′', thenText: 'see it out — drop deeper, slow the tempo', minMinute: 75, cond: (my, opp) => my > opp, shift: { mentality: -1, line: -1, press: -1, tempo: -1 }, fired: '📋 Protecting the lead — shutting up shop',
+    note: '"Park the bus" — an ultra-defensive block with numbers behind the ball. Mourinho, after a 2004 goalless draw: "they brought the bus and they left the bus in front of the goal."' },
   { id: 'push-draw', ico: '🟡', ifText: 'Level at 78′', thenText: 'go for the winner', minMinute: 78, cond: (my, opp) => my === opp, shift: { mentality: +1, tempo: +1 }, fired: '📋 Pushing for a winner' },
-  { id: 'manage-2up', ico: '🔵', ifText: 'Two+ goals up after 60′', thenText: 'game management — protect the lead & the legs', minMinute: 60, cond: (my, opp) => my - opp >= 2, shift: { mentality: -1, tempo: -1, press: -1 }, fired: '📋 Comfortable — managing the game out' },
+  { id: 'manage-2up', ico: '🔵', ifText: 'Two+ goals up after 60′', thenText: 'game management — protect the lead & the legs', minMinute: 60, cond: (my, opp) => my - opp >= 2, shift: { mentality: -1, tempo: -1, press: -1 }, fired: '📋 Comfortable — managing the game out',
+    note: 'Real teams deliberately drop deeper and cede possession late while leading — the bet is that less space in behind outweighs the extra pressure they invite.' },
   { id: 'blowout-lead', ico: '🟣', ifText: 'Three+ goals up after 55′', thenText: 'total game management — rest the legs for what\'s ahead', minMinute: 55, cond: (my, opp) => my - opp >= 3, shift: { mentality: -2, tempo: -2, press: -2 }, fired: '📋 Job done — shutting it down completely' },
   { id: 'chase-ht-big', ico: '⚫', ifText: 'Two+ down at half-time', thenText: 'monumental push — maximum attack, high press, high line', minMinute: 45, cond: (my, opp) => opp - my >= 2, shift: { mentality: +2, line: +2, press: +1, tempo: +2 }, fired: '📋 Facing a hiding — throwing absolutely everything forward' },
 ];
@@ -2006,7 +2017,7 @@ class Game {
     if (this.editorMode !== 'match' || !this.spFixture) { host.innerHTML = ''; return; }
     const rows = MATCH_PLAN_RULES.map((r) => {
       const on = this.draftPlan.has(r.id);
-      return `<div class="mp-rule${on ? ' on' : ''}" data-plan="${r.id}"><span class="mp-check">✓</span><span class="mp-ico">${r.ico}</span>`
+      return `<div class="mp-rule${on ? ' on' : ''}" data-plan="${r.id}"${r.note ? ` title="${r.note}"` : ''}><span class="mp-check">✓</span><span class="mp-ico">${r.ico}</span>`
         + `<span class="mp-body"><span class="mp-if">If ${r.ifText}</span> <span class="mp-then">→ ${r.thenText}</span></span></div>`;
     }).join('');
     host.innerHTML = `<div class="mp-head">📋 MATCH PLAN — conditional orders</div>`
@@ -2022,15 +2033,15 @@ class Game {
   private renderLineupEditor() {
     const tac: string[] = [`<label>Formation<select id="e-formation">${FORMATIONS.map((f) => `<option ${f === this.draftTactics.formation ? 'selected' : ''}>${f}</option>`).join('')}</select></label>`];
     (Object.keys(LEVELS) as Array<keyof typeof LEVELS>).forEach((k) => {
-      tac.push(`<label>${k[0].toUpperCase() + k.slice(1)}<select id="e-${k}">${LEVELS[k].map((lab, i) => `<option value="${i - 2}" ${i - 2 === this.draftTactics[k] ? 'selected' : ''}>${lab}</option>`).join('')}</select></label>`);
+      tac.push(`<label title="${TAC_NOTE[k]}">${k[0].toUpperCase() + k.slice(1)}<select id="e-${k}">${LEVELS[k].map((lab, i) => `<option value="${i - 2}" ${i - 2 === this.draftTactics[k] ? 'selected' : ''}>${lab}</option>`).join('')}</select></label>`);
     });
     // INSTRUCTION toggle (only bites with a high/very-high line): the back four steps up together on
     // a through-ball, catching a receiver without a real pace edge — fewer clean breakaways conceded.
     const lineHigh = this.draftTactics.line >= 1;
-    tac.push(`<label class="tac-toggle" title="${lineHigh ? 'Catches attackers without a real pace edge — needs a high/very-high line' : 'Only bites with a High or Very High defensive line'}"><span>Offside Trap${lineHigh ? '' : ' (needs high line)'}</span><input type="checkbox" id="e-offside" ${this.draftTactics.offsideTrap ? 'checked' : ''} /></label>`);
-    tac.push(`<label class="tac-toggle" title="When the keeper has the ball, always pick the safest short option — fewer risky giveaways right after a save, especially vs a high press"><span>Play Out From Back</span><input type="checkbox" id="e-playout" ${this.draftTactics.playOutOfDefence ? 'checked' : ''} /></label>`);
+    tac.push(`<label class="tac-toggle" title="${lineHigh ? "The back line steps up together to spring the trap — mistime it and they're through." : 'Only bites with a High or Very High defensive line — the back four needs room to step up together.'}"><span>Offside Trap${lineHigh ? '' : ' (needs high line)'}</span><input type="checkbox" id="e-offside" ${this.draftTactics.offsideTrap ? 'checked' : ''} /></label>`);
+    tac.push(`<label class="tac-toggle" title="Always the safest short option out of the keeper's hands, drawing the opponent's press forward and opening space in behind it — even under pressure, never force a hopeful long ball."><span>Play Out From Back</span><input type="checkbox" id="e-playout" ${this.draftTactics.playOutOfDefence ? 'checked' : ''} /></label>`);
     const focus = this.draftTactics.attackFocus ?? 'balanced';
-    tac.push(`<label title="Bias who the ball goes to — lean into (or correct) your formation's natural width">Attack Focus<select id="e-focus"><option value="balanced" ${focus === 'balanced' ? 'selected' : ''}>Balanced</option><option value="wide" ${focus === 'wide' ? 'selected' : ''}>Wing Focus</option><option value="central" ${focus === 'central' ? 'selected' : ''}>Central Focus</option></select></label>`);
+    tac.push(`<label title="Bias who gets the ball — lean into (or correct) your formation's natural width. Wide floods the flanks for crosses; Central packs it through the mixer for cutbacks and one-twos.">Attack Focus<select id="e-focus"><option value="balanced" ${focus === 'balanced' ? 'selected' : ''}>Balanced</option><option value="wide" ${focus === 'wide' ? 'selected' : ''}>Wing Focus</option><option value="central" ${focus === 'central' ? 'selected' : ''}>Central Focus</option></select></label>`);
     $('tac-row').innerHTML = tac.join('');
     ($('e-formation') as HTMLSelectElement).addEventListener('change', (ev) => {
       this.draftTactics.formation = (ev.target as HTMLSelectElement).value as Formation;
