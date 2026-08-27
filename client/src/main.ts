@@ -850,16 +850,18 @@ class Game {
   private retireStar(titles: number) {
     const m = this.loadMgr();
     const seasons = m.season;
+    const mentorship = Math.max(0, (m.starAge ?? 30) - 30); // veteran years spent passing on the game to the next gen
     this.showScreen('academy');
     const surname = (m.starName ?? '').trim().split(/\s+/).slice(1).join(' ') || m.starName || 'the family';
+    const mentorLine = mentorship > 0 ? ` In his veteran years he took the youngsters under his wing — that wisdom passes to his heir.` : '';
     $('academy-body').innerHTML = `<div class="cg-graduation"><div class="cg-grad-title">🎬 ${m.starName} hangs up his boots</div>`
-      + `<div class="cg-epilogue">After ${seasons} season${seasons === 1 ? '' : 's'} steering <b>${this.club?.name}</b>${titles ? ` and ${titles} league title${titles === 1 ? '' : 's'}` : ''}, ${m.starName} retires a club great. But the <b>${surname}</b> name isn't done — his son is already coming through the youth ranks.</div>`
-      + `<div class="cg-grad-windfall">🌳 The bloodline continues</div>`
+      + `<div class="cg-epilogue">After ${seasons} season${seasons === 1 ? '' : 's'} steering <b>${this.club?.name}</b>${titles ? ` and ${titles} league title${titles === 1 ? '' : 's'}` : ''}, ${m.starName} retires a club great.${mentorLine} But the <b>${surname}</b> name isn't done — his son is already coming through the youth ranks.</div>`
+      + `<div class="cg-grad-windfall">🌳 The bloodline continues${mentorship > 0 ? ` · 🎓 mentored heir (+${Math.min(3, Math.ceil(mentorship / 2))} mentality)` : ''}</div>`
       + `<button id="cg-heir" class="primary">Bring through the heir →</button></div>`;
     $('cg-heir').addEventListener('click', async () => {
       try {
         ($('cg-heir') as HTMLButtonElement).textContent = 'Raising the next generation…';
-        const r = await api.succeed(m.starId!, { seasons, titles });
+        const r = await api.succeed(m.starId!, { seasons, titles, mentorship });
         this.clearMgr(); // back to player phase — the heir's card-career begins
         this.setMe(await api.me());
         if (r.legacy) toast(`🏟️ +${r.legacy.toLocaleString()}c legacy to the club`);

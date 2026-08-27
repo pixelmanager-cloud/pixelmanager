@@ -640,6 +640,7 @@ app.post('/players/:id/succeed', { preHandler: requireAuth }, async (req, reply)
   const body = req.body as any;
   const seasons = Math.max(0, Math.min(20, Math.floor(Number(body?.seasons) || 0)));
   const titles = Math.max(0, Math.min(20, Math.floor(Number(body?.titles) || 0)));
+  const mentorship = Math.max(0, Math.min(10, Math.floor(Number(body?.mentorship) || 0))); // veteran years spent mentoring
   // fold the managed career into his achievements so the heir's pedigree reflects it
   await db.updateToken(t.id, {
     ach_seasons: (t.ach_seasons ?? 0) + seasons, ach_apps: (t.ach_apps ?? 0) + seasons * 18, ach_league: (t.ach_league ?? 0) + titles,
@@ -647,7 +648,16 @@ app.post('/players/:id/succeed', { preHandler: requireAuth }, async (req, reply)
   const decorated = (await db.getToken(t.id))!;
   const legacy = Math.round((decorated.earnings ?? 0) * RETIREMENT_LEGACY_SHARE);
   if (legacy > 0) await db.addCoins(ownerId, legacy); // his life's wealth to the club
-  await db.updateToken(t.id, rebornFields(decorated)); // pro → next-gen prospect (free — the dynasty continues)
+  // MENTORING: the veteran's years passing on the game imprint on the heir — a head start in the mentality
+  // stats (composure/leadership) via the heir's dev bonus, applied when the heir graduates.
+  const rf = rebornFields(decorated);
+  if (mentorship > 0) {
+    const dev = JSON.parse(rf.dev_bonus_json ?? '{}');
+    const b = Math.min(3, Math.ceil(mentorship / 2));
+    dev.composure = (dev.composure ?? 0) + b; dev.leadership = (dev.leadership ?? 0) + b;
+    rf.dev_bonus_json = JSON.stringify(dev);
+  }
+  await db.updateToken(t.id, rf); // pro → next-gen prospect (free — the dynasty continues)
   const fresh = (await db.getToken(t.id))!;
   const pot = rebornPotential(fresh);
   return { ok: true, legacy, prospect: { id: t.id, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: fresh.pedigree, careerStarted: false, potentialStars: pot.stars, genes: JSON.parse(fresh.genes_json) } };
