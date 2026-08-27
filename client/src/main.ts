@@ -1067,7 +1067,30 @@ class Game {
     return hint ? `<div class="cg-tut" id="cg-tut">${hint} <button class="cg-tut-x" id="cg-tut-x">Got it ✕</button></div>` : '';
   }
 
+  /** The handoff moment: he's a first-team regular — the game switches from playing his career to
+   *  MANAGING the club he plays for. Graduates him into your squad, then enters the manager season. */
+  private renderHandoff(s: import('./api').CareerState) {
+    this.showScreen('academy');
+    const h = s.handoff!;
+    $('academy-body').innerHTML = `<div class="cg-graduation cg-handoff">`
+      + `<div class="cg-grad-title">🏆 ${s.name} — a first-team regular</div>`
+      + `<div class="cg-epilogue">He's done it. After a full season in the first team — <b>${h.status}</b>, ${h.apps} appearances — ${s.name} is a fixture in the side. This is where his career becomes <b>your club's story</b>: it's time to take the reins. From here you pick the XI, set the tactics, and steer <b>${this.club?.name ?? 'the club'}</b> through the season, with ${s.name} your man on the pitch.</div>`
+      + `<div class="cg-grad-windfall">⚽ OVR ${h.overall} · ${h.status}</div>`
+      + `<button id="cg-takereins" class="primary">🧢 Take the reins as manager →</button></div>`;
+    $('cg-takereins').addEventListener('click', async () => {
+      try {
+        ($('cg-takereins') as HTMLButtonElement).textContent = 'Signing the contracts…';
+        await api.careerHandoff(s.prospectId);
+        this.setMe(await api.me());
+        toast(`🧢 You're the manager now — ${s.name} is in your squad`);
+        this.showSeason();
+      } catch (e: any) { toast(e?.body?.error ?? 'Handoff failed'); }
+    });
+  }
+
   private renderCareer(s: import('./api').CareerState) {
+    // HANDOFF: he's established himself as a first-team regular — take the reins as manager.
+    if (s.handoff) { this.renderHandoff(s); return; }
     const pct = Math.round((s.turn / s.totalTurns) * 100);
     // re-theme the whole view for this life stage (accent + backdrop + scene banner)
     const th = CHAPTER_THEME[s.chapter] ?? CHAPTER_THEME.Grassroots;

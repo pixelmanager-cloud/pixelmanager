@@ -220,12 +220,19 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
     st.hand = withDesc(st.hand);
   }
   if (st.options) st.options = withDesc(st.options); // draft cards get their "what he does" too
+  const prof = careerProfile(t, c);
   // CHAPTER RECAP: at an age-chapter boundary, a short "the story so far" beat about the chapter just closed
   const prevChapter = c.turn > 0 ? bandAt(c.turn - 1).band.name : null;
   if (prevChapter && prevChapter !== c.chapter && !c.finished) {
     st.recap = chapterRecap({ chapter: prevChapter, nextChapter: c.chapter, age: c.age, careerSeed: (c as any).seed >>> 0, personalityId: c.personality.id, seasonEventId: c.seasonEvent?.id ?? null });
+    // HANDOFF: if he just completed a full season as a first-team REGULAR (Regular starter+), the game is
+    // ready to switch to manager mode — you take the reins with him as your star. Offered once, at the boundary.
+    const prevBand = bandAt(c.turn - 1).index;
+    const prevRole = squadRole(prevBand, prof.currentOverall);
+    if (clubName && firstTeamReady(prevBand, prof.currentOverall, clubLevel) && prevRole.apps >= 11) {
+      st.handoff = { season: prevChapter, apps: prevRole.apps, status: prevRole.status, overall: prof.currentOverall };
+    }
   }
-  const prof = careerProfile(t, c);
   // CLUB SEASON: from the senior stages on (Breakthrough+, ~age 19), the player's club competes in a small
   // simulated league. His league strength = his overall + recent form, so a strong career season lifts the
   // club up the table. Deterministic (seeded from the career + stage); youth stages have no senior league.

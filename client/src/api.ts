@@ -31,6 +31,7 @@ export interface CareerState {
   momentKind?: 'match' | 'training' | 'life';
   matchCtx?: { opponent: string; home: boolean; score: string; minute: number; comp: string; club?: string | null };
   clubSeason?: { pos: number; size: number; me: LeagueRow; table: LeagueRow[]; apps: number; fixtures: number; status: string } | null;
+  handoff?: { season: string; apps: number; status: string; overall: number } | null;
   kit?: Kit | null;
   hand?: CareerCard[]; coach?: { id: string; name: string } | null;
   coaches?: Array<{ id: string; name: string; kind: string; desc: string; specialty: string[]; bonus: number }>;
@@ -112,6 +113,7 @@ export const api = {
   extendContract: (playerId: string) => req<{ ok: true; coins: number; contract: ContractInfo }>(`/players/${encodeURIComponent(playerId)}/extend`, { method: 'POST' }),
   stake: (playerId: string, on: boolean) => req<{ ok: true; contract: ContractInfo }>(`/players/${encodeURIComponent(playerId)}/${on ? 'stake' : 'unstake'}`, { method: 'POST' }),
   reborn: (playerId: string) => req<{ ok: true; cost: number; legacy?: number; coins: number; prospect: Prospect }>(`/players/${encodeURIComponent(playerId)}/reborn`, { method: 'POST' }),
+  careerHandoff: (pid: string) => req<{ ok: true; player: Player }>(`/career/${encodeURIComponent(pid)}/handoff`, { method: 'POST' }),
   prospects: () => req<{ prospects: Prospect[]; supply: number; cap: number }>('/prospects'),
   genesis: () => req<{ ok: true; supply: number; cap: number; cost?: number; coins?: number; prospect: Prospect }>('/genesis', { method: 'POST' }),
   careerAgents: () => req<{ agents: Array<{ id: string; name: string; desc: string }> }>('/career/agents'),

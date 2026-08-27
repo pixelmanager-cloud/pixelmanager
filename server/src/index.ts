@@ -563,6 +563,23 @@ app.post('/career/:id/act', { preHandler: requireAuth }, async (req, reply) => {
   return { ok: true, narration, outcome, clubGain, state: careerState((await db.getToken(t.id))!, c, clubName) };
 });
 
+// HANDOFF: the bloodline player has established himself as a first-team regular → graduate him into the
+// squad EARLY (at his current age/level) and take the reins as manager. Same graduation as at 25, just
+// sooner. From here the player is a fieldable pro and the manager season takes over.
+app.post('/career/:id/handoff', { preHandler: requireAuth }, async (req, reply) => {
+  const ownerId = req.account!.id;
+  const t = await db.getToken((req.params as any).id);
+  if (!t || t.owner_id !== ownerId) return reply.code(404).send({ error: 'no such token' });
+  if (t.state !== 'prospect') return reply.code(409).send({ error: 'not a prospect' });
+  if (t.career_seed == null) return reply.code(400).send({ error: 'career not started' });
+  const c = loadCareer(t);
+  const s = await ensureSeason(db, Date.now());
+  const grad = graduatedFields(t, c);
+  const deal = signContract(s.number, grad.greed ?? 10, grad.personality ?? undefined);
+  await db.updateToken(t.id, { ...grad, prime_season: s.number, signed_season: deal.signedSeason, length_seasons: deal.lengthSeasons, staked_since: s.number });
+  return { ok: true, player: tokenToPlayer((await db.getToken(t.id))!) };
+});
+
 // LEGENDS: the manager's hall of retirement legacy cards (one per generation a token retired under them).
 app.get('/legends', { preHandler: requireAuth }, async (req) => {
   const rows = await db.legaciesFor(req.account!.id);
