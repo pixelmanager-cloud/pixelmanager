@@ -1496,7 +1496,7 @@ class Game {
       if (cur) { this.renderCareer(cur.state); return; }
       // not started → choose an agent first
       const { agents } = await api.careerAgents();
-      const opts = agents.map((a) => `<div class="cg-coach" data-agent="${a.id}"><div class="cg-cname">🤝 ${a.name}</div><div class="cg-cdesc">${a.desc}</div></div>`).join('');
+      const opts = agents.map((a) => `<div class="cg-coach" data-agent="${a.id}"><div class="cg-cname"><span class="ico-inline">${sprite('briefcase')}</span> ${a.name}</div><div class="cg-cdesc">${a.desc}</div></div>`).join('');
       $('academy-body').innerHTML = `<button id="acad-back2" style="margin-bottom:10px;">← Prospects</button>`
         + `<div class="cg-prompt">Sign an <b>agent</b> to represent this prospect — it shapes his whole career (exposure, opportunities, and how much he'll want to be paid).</div>` + opts;
       $('acad-back2').addEventListener('click', () => this.showAcademy());
