@@ -457,36 +457,43 @@ const FOCUS_BY_CHAPTER: Record<string, FocusOption[]> = {
     { id: 'family',  icon: '🏠', name: 'Family Time',     desc: 'Kickabouts in the garden with your folks. Grounding.', energy: +10, effects: { family: +14, peers: +3 } },
     { id: 'mates',   icon: '🧒', name: 'Out With Mates',  desc: 'Long summer days with your mates. Priceless at this age.', energy: +6, effects: { peers: +16, family: -3 } },
     { id: 'skills',  icon: '⚽', name: 'Skills in the Park', desc: 'Hours against a wall. The coach will notice.', energy: -8, effects: { authority: +14, peers: +2 } },
+    { id: 'firstcoach', icon: '🧑‍🏫', name: 'Sunday Mornings With Your First Coach', desc: 'He sees something in you and gives up his weekends to work on it — a bond that shapes you.', energy: -4, effects: { authority: +18, family: +2 } },
   ],
   Academy: [
     { id: 'school',  icon: '🎒', name: 'Hit the Books',   desc: 'Keep the grades up — a fallback and a discipline.', energy: -6, effects: { school: +16, family: +6 } },
     { id: 'impress', icon: '🧑‍🏫', name: 'Impress the Coach', desc: 'Extra sessions, first to arrive. Staff love a grafter.', energy: -10, effects: { authority: +16, peers: -3 } },
     { id: 'mates',   icon: '🧒', name: 'Team Bonding',    desc: 'Tight with the lads — a dressing room that fights for you.', energy: +4, effects: { peers: +15, school: -4 } },
+    { id: 'rivalry', icon: '🔥', name: 'Chase Your Best Mate', desc: 'You and your closest friend push each other every single session — it sharpens you both, but it stings when he pips you to a place.', energy: -6, effects: { peers: +8, authority: +8 } },
   ],
   Scholar: [
     { id: 'agent',   icon: '🤝', name: 'Sign With an Agent', desc: 'Someone to fight your corner as the offers start to whisper.', energy: -6, effects: { agent: +20 } },
     { id: 'impress', icon: '🧑‍🏫', name: 'Extra Sessions',   desc: 'Stay behind, do the ugly work. The coach is watching who wants it.', energy: -12, effects: { authority: +16, peers: -2 } },
     { id: 'school',  icon: '🎒', name: 'Finish Your Studies', desc: 'A scholar in name — keep the qualifications as a safety net.', energy: -6, effects: { school: +16, peers: +2 } },
+    { id: 'setback', icon: '💪', name: 'Bounce Back From the Cut', desc: 'A string of released mates rattles the digs — you knuckle down and refuse to be next.', energy: -10, effects: { authority: +12, family: +6 } },
   ],
   'Youth Team': [
     { id: 'partner', icon: '❤️', name: 'A New Romance',    desc: 'You’ve met someone. Settled and happy off the pitch.', energy: +12, effects: { partner: +18 } },
     { id: 'agent',   icon: '🤝', name: 'Work Your Agent',  desc: 'Dinners and phone calls — get him fighting for you.', energy: -8, effects: { agent: +18, authority: -2 } },
     { id: 'impress', icon: '🧑‍🏫', name: 'Court the Gaffer', desc: 'Make yourself undroppable in pre-season.', energy: -12, effects: { authority: +16, partner: -4 } },
+    { id: 'loan',    icon: '🚐', name: 'Push for a Loan Move', desc: 'Real senior football, away from home comforts — game time that toughens you up fast.', energy: -8, effects: { agent: +10, authority: +8, partner: -4 } },
   ],
   Breakthrough: [
     { id: 'partner', icon: '❤️', name: 'Time With Partner', desc: 'Protect your relationship as the spotlight grows.', energy: +10, effects: { partner: +16, fans: -2 } },
     { id: 'fans',    icon: '📣', name: 'Work the Fans',     desc: 'Community days, autographs — the terraces will sing your name.', energy: -8, effects: { fans: +18, partner: -4 } },
     { id: 'agent',   icon: '🤝', name: 'Lean on Your Agent', desc: 'Position yourself for the big move.', energy: -6, effects: { agent: +16, authority: -3 } },
+    { id: 'contract', icon: '✍️', name: 'Talk Terms on Your First Pro Deal', desc: 'The club wants you tied down — negotiate hard, but don’t burn the bridge to the manager who gave you your chance.', energy: -8, effects: { agent: +14, authority: -4, fans: +4 } },
   ],
   'First Team': [
     { id: 'starter', icon: '🧑‍🏫', name: 'Nail Your Starting Spot', desc: 'Pre-season graft — make the shirt yours and undroppable.', energy: -12, effects: { authority: +16, peers: -2 } },
     { id: 'fans',    icon: '📣', name: 'Give Back to the Fans', desc: 'Become a terrace favourite — they’ll carry you on the bad days.', energy: -8, effects: { fans: +16, partner: -3 } },
     { id: 'partner', icon: '❤️', name: 'Time With Partner', desc: 'A stable home life behind the rising star.', energy: +10, effects: { partner: +16, fans: -2 } },
+    { id: 'leadership', icon: '🎗️', name: 'Grow Into a Leader', desc: 'The younger lads look to you now — start acting like the senior pro you’re becoming.', energy: -10, effects: { authority: +10, peers: +12 } },
   ],
   Establishing: [
     { id: 'sponsors', icon: '📸', name: 'Sponsor Duties',   desc: 'Shoots and appearances. The brand — and the bank — grow.', energy: -12, effects: { sponsors: +18, peers: -4 } },
     { id: 'fans',     icon: '📣', name: 'Icon of the Terraces', desc: 'Give the supporters everything. Become untouchable.', energy: -8, effects: { fans: +16, partner: -3 } },
     { id: 'partner',  icon: '❤️', name: 'Settle Down',       desc: 'A stable home life behind the superstar.', energy: +10, effects: { partner: +16, sponsors: -4 } },
+    { id: 'legacy',   icon: '👑', name: 'Think About Your Legacy', desc: 'What do you want them to say about you when it’s all over? You start carrying yourself like it.', energy: -6, effects: { authority: +10, fans: +10, peers: -2 } },
   ],
 };
 /** The between-chapter focus choices for a life stage (Rest is always available). `standing`, if given,
@@ -648,6 +655,36 @@ export function bandAt(turn: number): { index: number; band: AgeBand; age: numbe
   const frac = band.turns > 1 ? (turn - start) / (band.turns - 1) : 0;
   return { index, band, age: Math.round(band.from + frac * (band.to - band.from)) };
 }
+
+/** Re-word a season event for the life stage it lands in — the mechanics (form/rng) never change, only
+ *  how it's told: a kid's "new gaffer" is a new coach his mum hears about at the school gates; a
+ *  20-something's is the same event but about a real manager and real transfer speculation. Keeps each
+ *  age band feeling distinctly lived-in without touching a single number. */
+const EVENT_FLAVOR: Record<string, Partial<Record<'kid' | 'teen', (bias?: string | null) => { name: string; desc: string }>>> = {
+  'new-gaffer': {
+    kid:  (bias) => ({ name: 'New Coach', desc: `The club brings in a new coach for the season — he wants to see more ${bias} out on the pitch.` }),
+    teen: (bias) => ({ name: 'New Coach', desc: `The academy appoints a new coach — he's made it clear he wants more ${bias} from your game.` }),
+  },
+  'transfer-links': {
+    kid:  () => ({ name: 'Whispers Around the Club', desc: 'Other academies are said to be watching you — exciting to hear, hard to ignore at training.' }),
+    teen: () => ({ name: 'Scouts in the Stands', desc: 'Word is bigger clubs have taken notice — flattering, and a proper distraction from the football.' }),
+  },
+  'fan-favourite': {
+    kid:  () => ({ name: 'Local Hero', desc: 'Word is getting round the local leagues about you — the other parents ask about you on the touchline.' }),
+    teen: () => ({ name: 'Academy Buzz', desc: 'The younger lads in the academy look up to you now — you’re the one they all talk about.' }),
+  },
+  'cup-run': {
+    kid:  () => ({ name: 'A Cup Run With the School Team', desc: 'A giant-killing cup run has the whole school buzzing about you.' }),
+    teen: () => ({ name: 'A Cup Run With the Academy Side', desc: 'A thrilling academy cup run — scouts are starting to take notice.' }),
+  },
+  knock: {
+    kid:  () => ({ name: 'A Sore Ankle', desc: 'A knock from an awkward tackle in Sunday league — nothing serious, but it nags.' }),
+    teen: () => ({ name: 'A Niggling Knock', desc: 'A knock picked up in training — the physio says it’s nothing, but you can feel it.' }),
+  },
+};
+/** Which flavor tier an age band's events should read as — kids/early-teens vs everyone from Youth Team on. */
+const flavorTier = (chapter: string): 'kid' | 'teen' | null =>
+  chapter === 'Grassroots' ? 'kid' : chapter === 'Academy' || chapter === 'Scholar' ? 'teen' : null;
 
 /**
  * A stateful career the client drives one turn at a time. Deterministic given (seed, choices):
@@ -970,6 +1007,10 @@ export class Career {
       else if (r < 0.94) { form = 0.06; this.seasonEvent = { id: 'fan-favourite', name: 'Fan Favourite', desc: 'The supporters have taken to him — he feeds off their energy.' }; }
       else { this.seasonEvent = { id: 'steady', name: 'Steady Progress', desc: 'A solid, unremarkable season of graft.' }; }
     }
+    // reword for the stage it lands in (pure narration — the id, and every mechanical effect above, is untouched)
+    const tier = flavorTier(this.chapter);
+    const flavor = tier && this.seasonEvent ? EVENT_FLAVOR[this.seasonEvent.id]?.[tier] : undefined;
+    if (flavor && this.seasonEvent) this.seasonEvent = { ...this.seasonEvent, ...flavor(this.demandBias) };
     this.formBonus = form + conseq.form; // relationships tilt the coming chapter on top of its event
   }
 
