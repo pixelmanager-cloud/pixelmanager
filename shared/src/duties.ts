@@ -11,9 +11,9 @@ import type { Duty, Player, Role } from './types.js';
 /** Duties a position can be assigned; first entry is the neutral default. */
 export const DUTIES_BY_ROLE: Record<Role, Duty[]> = {
   GK: ['keeper', 'sweeper-keeper'],
-  DF: ['cover', 'stopper'],
-  MF: ['box-to-box', 'playmaker', 'ball-winner'],
-  FW: ['poacher', 'target-man'],
+  DF: ['cover', 'stopper', 'ball-playing-defender', 'inverted-fullback'],
+  MF: ['box-to-box', 'playmaker', 'ball-winner', 'deep-lying-playmaker'],
+  FW: ['poacher', 'target-man', 'pressing-forward', 'false-9'],
 };
 
 /** Short human label for UI. */
@@ -22,11 +22,16 @@ export const DUTY_LABEL: Record<Duty, string> = {
   'sweeper-keeper': 'Sweeper-K',
   'cover': 'Cover',
   'stopper': 'Stopper',
+  'ball-playing-defender': 'Ball-Playing DF',
+  'inverted-fullback': 'Inverted FB',
   'box-to-box': 'Box-to-Box',
   'playmaker': 'Playmaker',
   'ball-winner': 'Ball-Winner',
+  'deep-lying-playmaker': 'Deep Playmaker',
   'poacher': 'Poacher',
   'target-man': 'Target Man',
+  'pressing-forward': 'Pressing Fwd',
+  'false-9': 'False 9',
 };
 
 export interface DutyMods {
@@ -58,6 +63,12 @@ const TABLE: Record<Duty, DutyMods> = {
   'ball-winner':    { ...NEUTRAL, push: 0.8, shoot: 0.7, magnet: -2, press: 0.8 },
   'poacher':        { ...NEUTRAL, push: 1.25, come: -0.05, shoot: 1.3, magnet: 3 },
   'target-man':     { ...NEUTRAL, come: 0.05, shoot: 0.95, magnet: 5 },
+  // ── FM-style named roles (still small nudges — calibration-safe) ──
+  'ball-playing-defender': { ...NEUTRAL, push: 0.9, come: 0.05, shoot: 0.7, magnet: 3, press: -0.2 }, // brings it out, links play
+  'inverted-fullback':     { ...NEUTRAL, push: 1.0, come: 0.08, magnet: 2, press: 0.1 },              // tucks into midfield
+  'deep-lying-playmaker':  { ...NEUTRAL, push: 0.7, come: 0.12, shoot: 0.6, magnet: 6, press: -0.2 }, // deep regista, sprays it
+  'pressing-forward':      { ...NEUTRAL, push: 1.15, shoot: 1.0, magnet: 2, press: 0.7 },             // defends from the front
+  'false-9':               { ...NEUTRAL, push: 0.9, come: 0.12, shoot: 0.9, magnet: 6 },              // drops deep to link
 };
 
 export function dutyMods(d: Duty | undefined): DutyMods {
