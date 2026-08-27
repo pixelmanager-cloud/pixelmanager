@@ -209,6 +209,7 @@ class Game {
   editorMode: 'standing' | 'match' = 'standing';
   squadSort: SquadSort | null = null;
   pendingOpp?: { id: string; handle: string; venue: 'home' | 'away' };
+  spFixture: { idx: number; oppClub: Club; oppName: string; oppStrength: number; venue: 'home' | 'away'; oppLineup: Lineup } | null = null; // the single-player fixture being played
   mySide: 0 | 1 = 0;   // which team index (0 home / 1 away) is the player in the current match
   homeName = '';
   awayName = '';
@@ -340,6 +341,8 @@ class Game {
     // unified home: one Club & Dynasty hub, no mode wall
     $('hub-academy').addEventListener('click', () => this.showAcademy());
     $('view-club').addEventListener('click', () => this.showClub()); // the club-facilities coin sink (dynasty-building, not the gated match loop)
+    $('season-back').addEventListener('click', () => this.showHub());
+    ($('hub-season-dev') as any)?.addEventListener('click', () => this.showSeason()); // TEMP entry until the handoff wires it
     $('app-title').addEventListener('click', () => { if (hasToken()) void this.showHub(); });
     $('academy-back').addEventListener('click', () => this.showHub());
     $('market-back').addEventListener('click', () => this.showHub());
@@ -655,6 +658,80 @@ class Game {
         $('hub-legacy-sub').textContent = 'Your bloodlines, silverware and retired numbers.';
       }
     } catch { /* leave default text */ }
+  }
+
+  // ── SINGLE-PLAYER MANAGER SEASON: play the club's fixtures one at a time vs the seeded fictional league ──
+  private mgrKey() { return 'fm_mgr_' + (this.account?.handle ?? ''); }
+  private loadMgr(): { season: number; results: PlayedResult[] } {
+    try { const m = JSON.parse(localStorage.getItem(this.mgrKey()) || ''); if (m && Array.isArray(m.results)) return m; } catch { /* fall through */ }
+    return { season: 1, results: [] };
+  }
+  private saveMgr(m: { season: number; results: PlayedResult[] }) { try { localStorage.setItem(this.mgrKey(), JSON.stringify(m)); } catch { /* ignore */ } }
+  private leagueSeed(): number { const h = this.account?.handle ?? 'x'; return [...h].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) >>> 0; }
+  /** the club's league strength = average overall of the best XI (1-20 scale) */
+  private squadStrength(): number {
+    const ovrs = this.club.players.map((p) => overall(p)).sort((a, b) => b - a).slice(0, 11);
+    return ovrs.length ? ovrs.reduce((a, b) => a + b, 0) / ovrs.length : 8;
+  }
+  private ordinal(n: number): string { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]); }
+
+  private spTableHtml(t: ReturnType<typeof liveTable>): string {
+    const zone = (i: number) => i === 0 ? 'champ' : i <= 2 ? 'promo' : i >= t.size - 2 ? 'releg' : '';
+    const rows = t.table.map((r, i) => `<tr class="lt-row ${r.mine ? 'mine' : ''} ${zone(i)}"><td class="lt-pos">${i + 1}</td><td class="lt-name">${r.name}</td><td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GD > 0 ? '+' : ''}${r.GD}</td><td class="lt-pts">${r.Pts}</td></tr>`).join('');
+    return `<table class="lt-table"><thead><tr><th></th><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>${rows}</tbody></table>`;
+  }
+
+  private showSeason() {
+    this.spFixture = null;
+    this.showScreen('season');
+    const clubName = this.club.name, seed = this.leagueSeed();
+    const fixtures = seasonFixtures(clubName, seed);
+    const m = this.loadMgr(), played = m.results;
+    const t = liveTable(clubName, this.squadStrength(), 1, seed, played);
+    const nextIdx = played.length, done = nextIdx >= fixtures.length;
+    const fxRows = fixtures.map((f, i) => {
+      const vTag = `<span class="sf-v ${f.venue === 'H' ? 'home' : 'away'}">${f.venue}</span>`;
+      if (i < played.length) {
+        const r = played[i], cls = r.myGoals > r.oppGoals ? 'w' : r.myGoals < r.oppGoals ? 'l' : 'd';
+        return `<div class="sf-fx done"><span class="sf-md">${i + 1}</span>${vTag}<span class="sf-opp">${f.oppName}</span><span class="sf-res ${cls}">${r.myGoals}-${r.oppGoals}</span></div>`;
+      }
+      const isNext = i === nextIdx;
+      return `<div class="sf-fx${isNext ? ' next' : ''}"><span class="sf-md">${i + 1}</span>${vTag}<span class="sf-opp">${f.oppName}</span>${isNext ? `<button class="sf-play primary" id="sf-play">Play ▶</button>` : '<span class="sf-res pending">–</span>'}</div>`;
+    }).join('');
+    const header = done
+      ? `<div class="season-summary done">✅ Season ${m.season} complete — <b>${clubName}</b> finished <b>${this.ordinal(t.pos)}</b> of ${t.size}. <button class="primary" id="sf-next-season">Next season →</button></div>`
+      : `<div class="season-summary"><b>${clubName}</b> · Season ${m.season} · Matchday ${nextIdx + 1}/${fixtures.length} · currently <b>${this.ordinal(t.pos)}</b> of ${t.size}</div>`;
+    $('season-body').innerHTML = header
+      + `<div class="season-cols"><div class="season-fixtures"><h4 class="scout-h4">FIXTURES</h4>${fxRows}</div>`
+      + `<div class="season-table-wrap"><h4 class="scout-h4">LEAGUE TABLE</h4>${this.spTableHtml(t)}</div></div>`;
+    $('sf-play')?.addEventListener('click', () => this.playNextSpFixture());
+    $('sf-next-season')?.addEventListener('click', () => { const mm = this.loadMgr(); this.saveMgr({ season: mm.season + 1, results: [] }); this.showSeason(); });
+  }
+
+  private playNextSpFixture() {
+    const seed = this.leagueSeed(), clubName = this.club.name;
+    const fixtures = seasonFixtures(clubName, seed);
+    const idx = this.loadMgr().results.length;
+    if (idx >= fixtures.length) return;
+    const f = fixtures[idx];
+    const opp = seededOpponents(clubName, seed).find((o) => o.name === f.oppName)!;
+    const short = (opp.name.match(/[A-Z]/g) ?? ['O', 'P', 'P']).join('').slice(0, 3);
+    const oppClub = generateClub('sp-' + opp.seed, opp.name, short, 0xcc4444, opp.strength, opp.seed);
+    const venue: 'home' | 'away' = f.venue === 'H' ? 'home' : 'away';
+    this.spFixture = { idx, oppClub, oppName: opp.name, oppStrength: opp.strength, venue, oppLineup: autoPickXI(oppClub, '4-4-2') };
+    this.openLineup('match', { id: 'sp-opp', handle: opp.name, venue });
+  }
+
+  private kickOffSpMatch() {
+    const sp = this.spFixture!;
+    const myLineup: Lineup = { ...this.draftLineup, duties: [...this.draftDuties], ...this.draftRoles() };
+    const myTeam = buildXI(this.availableClub(), myLineup);
+    const oppTeam = buildXI(sp.oppClub, sp.oppLineup);
+    const oppTactics: Tactics = { formation: '4-4-2', mentality: 0, line: 0, press: 0, tempo: 0, width: 0 };
+    const iAmHome = sp.venue === 'home';
+    const me = { id: 'me', handle: this.club.name, team: myTeam, tactics: this.draftTactics };
+    const them = { id: 'opp', handle: sp.oppName, team: oppTeam, tactics: oppTactics };
+    this.startMatch({ matchId: 'sp', seed: (Math.random() * 2 ** 31) | 0, result: [0, 0], mySide: iAmHome ? 0 : 1, home: iAmHome ? me : them, away: iAmHome ? them : me });
   }
 
   // ---- standings / results page ----
@@ -1512,7 +1589,12 @@ class Game {
     $('lineup-title').textContent = mode === 'standing' ? 'SET MY TEAM' : `SET LINEUP  ${opp!.venue === 'away' ? 'away at' : 'vs'} ${opp!.handle}`;
     // scout the opponent (match mode only): show their expected shape + rated roster
     const sc = $('scout-card');
-    if (mode === 'match' && opp) {
+    if (this.spFixture) {
+      // single-player fixture: a lightweight opponent card (no server scout), just their strength
+      const stars = '★'.repeat(Math.max(1, Math.round(this.spFixture.oppStrength / 4))) + '☆'.repeat(5 - Math.max(1, Math.round(this.spFixture.oppStrength / 4)));
+      sc.classList.remove('hidden');
+      sc.innerHTML = `<div class="scout-head">🔍 ${this.spFixture.oppName}</div><div class="scout-sub">${this.spFixture.venue === 'away' ? 'Away' : 'Home'} fixture · squad rating ~${this.spFixture.oppStrength} <span style="color:#e6c76a">${stars}</span></div>`;
+    } else if (mode === 'match' && opp) {
       sc.classList.remove('hidden');
       sc.innerHTML = '<div class="scout-head">🔍 Scouting…</div>';
       api.scout(opp.id).then((s) => { if (this.pendingOpp?.id === opp.id) sc.innerHTML = this.renderScout(s); }).catch(() => sc.classList.add('hidden'));
@@ -1706,6 +1788,7 @@ class Game {
     return { ...(this.draftCaptain != null ? { captainIdx: this.draftCaptain } : {}), ...(hasTakers ? { takers: { ...t } } : {}) };
   }
   private async kickOffMatch() {
+    if (this.spFixture) { this.kickOffSpMatch(); return; } // single-player fixture: build the match locally
     if (!this.pendingOpp) return;
     $('lineup-insight').innerHTML = '<span style="color:var(--cyan)">Playing…</span>';
     try {
@@ -1758,6 +1841,15 @@ class Game {
 
   private async onFullTime() {
     this.running = false;
+    // SINGLE-PLAYER fixture: record the result into the club season and return to the season view (no server).
+    if (this.spFixture) {
+      const s = this.engine!.state;
+      const m = this.loadMgr();
+      m.results.push({ myGoals: s.score[this.mySide], oppGoals: s.score[1 - this.mySide] });
+      this.saveMgr(m);
+      this.showFullTimeCard();
+      return;
+    }
     try { this.setMe(await api.me()); } catch { /* keep old rating */ }
     // surface any injuries picked up this match (staggered so they don't overlap the result toast)
     this.lastInjuries.forEach((inj, i) => setTimeout(() => toast(`🤕 ${inj.name} injured — out ${inj.matches} match${inj.matches > 1 ? 'es' : ''}`), 800 * (i + 1)));
@@ -1837,7 +1929,7 @@ class Game {
       clearTimeout(timer);
       card.removeEventListener('click', dismiss);
       card.classList.add('hidden');
-      this.showHub();
+      if (this.spFixture) this.showSeason(); else this.showHub(); // SP: back to the season fixture list
     };
     const timer = setTimeout(dismiss, 9000); // longer — there's a match report to read
     card.addEventListener('click', dismiss);

@@ -587,6 +587,24 @@
       .lt-row.champ .lt-pos { color: #ffd75e; }
       .lt-row.promo .lt-pos { color: var(--good); }
       .lt-row.releg .lt-pos { color: var(--home); }
+      #season-head { display: flex; align-items: center; gap: 12px; } #season-head h3 { margin: 0; } #season-back { margin-left: auto; }
+      .season-summary { font-size: 17px; color: var(--text); margin: 4px 0 14px; padding: 10px 14px; background: color-mix(in srgb, var(--cyan) 8%, transparent); border: 1px solid var(--line); border-radius: 9px; }
+      .season-summary b { color: var(--cyan); }
+      .season-summary.done { background: color-mix(in srgb, var(--good) 10%, transparent); }
+      .season-cols { display: grid; grid-template-columns: 1fr 1.1fr; gap: 18px; }
+      @media (max-width: 720px) { .season-cols { grid-template-columns: 1fr; } }
+      .sf-fx { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid color-mix(in srgb, var(--line) 40%, transparent); font-size: 14px; }
+      .sf-fx.next { background: color-mix(in srgb, var(--cyan) 12%, transparent); border-radius: 6px; }
+      .sf-fx.done { color: var(--muted); }
+      .sf-md { width: 20px; color: var(--muted); font-size: 12px; text-align: right; }
+      .sf-v { font-family: var(--display); font-size: 9px; padding: 2px 5px; border-radius: 4px; }
+      .sf-v.home { background: color-mix(in srgb, var(--good) 20%, transparent); color: var(--good); }
+      .sf-v.away { background: color-mix(in srgb, var(--cyan) 18%, transparent); color: var(--cyan); }
+      .sf-opp { flex: 1; color: var(--text); }
+      .sf-fx.done .sf-opp { color: var(--muted); }
+      .sf-res { font-family: var(--display); font-size: 12px; }
+      .sf-res.w { color: var(--good); } .sf-res.l { color: var(--home); } .sf-res.d { color: var(--warn); } .sf-res.pending { color: var(--muted); }
+      .sf-play { font-family: var(--display); font-size: 11px; padding: 5px 12px; }
       .cg-md-score b { color: #8899b8; font-weight: normal; }
       .cg-md-vs { font-size: 14px; color: #dde3ee; margin-top: 3px; } .cg-md-vs b { color: #fff; }
       .cg-md-comp { font-size: 12px; color: #9aa4b8; margin-top: 2px; font-style: italic; }
@@ -1060,6 +1078,8 @@
             <span class="legacy-go">→</span>
           </button>
         </div>
+        <!-- TEMP: manager-season entry (until the player-career handoff wires it) -->
+        <div style="margin-top:14px;text-align:center;"><button id="hub-season-dev" style="font-family:var(--display);font-size:11px;padding:8px 14px;">🧢 Manage the club season (dev)</button></div>
         <!-- DYNASTY -->
         <div id="hub-legacy">
           <button id="view-trophies" class="legacy-btn">
