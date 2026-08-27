@@ -698,3 +698,18 @@ export function contractCost(overall: number, age: number, greed: number, earnin
 
 **Verification after applying:** re-run `npx tsx shared/qa_economy_fuzz.ts` with its out-of-domain probe
 un-commented/widened to the previously-failing range (`greed <= -8`) — should stay non-negative.
+
+## Text-quality linter (qa_text_lint_fuzz.ts) — added QA batch 5
+A cross-lane linter samples every generated text surface (career scenarios, life events, epilogues,
+offpitch, diary, board, press, staff, intl) across many seeds and asserts well-formedness.
+- **Format checks all PASS**: no unreplaced `{...}`/`${...}` placeholders, no empty/whitespace strings, no
+  doubled spaces/punctuation, no literal "undefined"/"null"/"NaN". Confirms the recurring rival/mentor
+  callback substitution never leaks a raw placeholder.
+- **Gendered-pronoun co-occurrence notes (heuristic, non-fatal):** the linter flags lines where a generated
+  PERSON name co-occurs with he/him/his. Reviewed 2026-08-28: these are **expected false positives** — the
+  player character is canonically male, so "he/him/his" correctly refers to the player, while the named
+  rivals/mentors/coaches are only ever referred to by name. The one genuine name↔pronoun mismatch (staff.ts
+  personality/quip lines paired with seed-assigned mixed-gender names) was found + fixed separately.
+- **Design note for the human:** all player-facing career prose assumes a **male** player character. If
+  female/nonbinary player characters are ever wanted, this entire text corpus needs a pronoun pass. Not a bug
+  today — a fixed design choice.
