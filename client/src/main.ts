@@ -6,7 +6,7 @@ import { api, hasToken, setToken, clearToken, type Account, type StandingOrders,
 import { sprite } from './sprites';
 
 /** Single-player manager-season state (per save, in localStorage). `starId` present ⇒ manager phase. */
-interface MgrState { season: number; results: PlayedResult[]; starId?: string; starName?: string; starAge?: number; titles?: number }
+interface MgrState { season: number; results: PlayedResult[]; starId?: string; starName?: string; starAge?: number; retireAge?: number; titles?: number }
 
 // icons for the stage-aware life meters (keyed by underlying relationship) — used in focus effect labels
 const METER_ICON: Record<string, string> = { authority: '🧑‍🏫', peers: '👥', family: '🏠', school: '🎒', agent: '🤝', fans: '📣', sponsors: '📸', partner: '❤️' };
@@ -692,6 +692,19 @@ class Game {
     return ovrs.length ? ovrs.reduce((a, b) => a + b, 0) / ovrs.length : 8;
   }
   private ordinal(n: number): string { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]); }
+  /** A player's retirement age varies with him: keepers last longest, pace-reliant forwards fade earliest;
+   *  a strong, durable body plays on, a pacey one declines sooner; plus a small individual quirk. ~30–41. */
+  private retireAgeFor(player: Player): number {
+    const a = player.attrs as any;
+    let base = 34;
+    base += player.role === 'GK' ? 4 : player.role === 'DF' ? 1 : player.role === 'FW' ? -1 : 0;
+    const robust = ((a.strength ?? 10) + (a.stamina ?? 10) + (a.durability ?? a.stamina ?? 10)) / 3;
+    base += Math.round((robust - 11) * 0.35);          // a durable body plays on
+    base -= Math.round(((a.pace ?? 11) - 12) * 0.2);   // pace-reliant players decline earlier
+    const h = [...player.id].reduce((x, c) => (x * 31 + c.charCodeAt(0)) >>> 0, 7); // deterministic per player
+    base += (h % 5) - 2;                               // an individual quirk (±2 years)
+    return Math.max(30, Math.min(41, Math.round(base)));
+  }
 
   private spTableHtml(t: ReturnType<typeof liveTable>): string {
     const zone = (i: number) => i === 0 ? 'champ' : i <= 2 ? 'promo' : i >= t.size - 2 ? 'releg' : '';
@@ -716,7 +729,7 @@ class Game {
       const isNext = i === nextIdx;
       return `<div class="sf-fx${isNext ? ' next' : ''}"><span class="sf-md">${i + 1}</span>${vTag}<span class="sf-opp">${f.oppName}</span>${isNext ? `<button class="sf-play primary" id="sf-play">Play ▶</button>` : '<span class="sf-res pending">–</span>'}</div>`;
     }).join('');
-    const starLine = m.starName && m.starAge ? ` · ★ ${m.starName} (${m.starAge})` : '';
+    const starLine = m.starName && m.starAge ? ` · ★ ${m.starName} (age ${m.starAge}${m.retireAge ? `, likely retires ~${m.retireAge}` : ''})` : '';
     const header = done
       ? `<div class="season-summary done">✅ Season ${m.season} complete — <b>${clubName}</b> finished <b>${this.ordinal(t.pos)}</b> of ${t.size}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ''}. <button class="primary" id="sf-next-season">Next season →</button></div>`
       : `<div class="season-summary"><b>${clubName}</b> · Season ${m.season} · Matchday ${nextIdx + 1}/${fixtures.length} · currently <b>${this.ordinal(t.pos)}</b> of ${t.size}${starLine}</div>`;
@@ -754,7 +767,7 @@ class Game {
     const t = liveTable(this.club.name, this.squadStrength(), 1, this.leagueSeed(), m.results);
     const titles = (m.titles ?? 0) + (t.pos === 1 ? 1 : 0);
     const age = (m.starAge ?? 22) + 1;
-    if (age >= 34) { this.retireStar(titles); return; } // his playing days are over — the heir comes through
+    if (age >= (m.retireAge ?? 34)) { this.retireStar(titles); return; } // his playing days are over — the heir comes through
     this.saveMgr({ ...m, season: m.season + 1, results: [], starAge: age, titles });
     this.showSeason();
   }
@@ -1152,9 +1165,10 @@ class Game {
     $('cg-takereins').addEventListener('click', async () => {
       try {
         ($('cg-takereins') as HTMLButtonElement).textContent = 'Signing the contracts…';
-        await api.careerHandoff(s.prospectId);
+        const { player } = await api.careerHandoff(s.prospectId);
         this.setMe(await api.me());
-        this.saveMgr({ season: 1, results: [], starId: s.prospectId, starName: s.name, starAge: s.age }); // enter manager phase with him as the star
+        const retireAge = this.retireAgeFor(player);
+        this.saveMgr({ season: 1, results: [], starId: s.prospectId, starName: s.name, starAge: s.age, retireAge }); // enter manager phase
         toast(`🧢 You're the manager now — ${s.name} is in your squad`);
         this.showSeason();
       } catch (e: any) { toast(e?.body?.error ?? 'Handoff failed'); }
