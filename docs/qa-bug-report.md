@@ -4,6 +4,75 @@ Living report from the QA sim-fuzzing agent. Base commit: `b57aa88` (confirmed v
 after `git reset --hard main`; both `npm run verify` and `npx tsx shared/career_sim.ts` were GREEN before
 any QA work began).
 
+## UPDATE — 2026-08-27, offline-first repair + relaunch pass (base commit `4601959`)
+
+Fresh `git reset --hard main` picked up a large stretch of intervening work, most importantly a full
+**offline-first pivot**: the entire `server/` directory (web3/multiplayer/marketplace layer) is now
+GONE from the repo — the game is a pure client-side, offline single-player app (`client/src/api.ts` is
+now the "server", backed by a local `LocalStore`). This retroactively resolved two of this report's
+findings and broke three harnesses that imported from the now-deleted `server/src/*`:
+
+- **H1 (unbounded coin mint via repeated `POST /sp/season-reward`/`POST /sp/sponsor`) — RESOLVED BY
+  REMOVAL.** There is no server, no network endpoint, and no other player's economy to defend in an
+  offline single-player game — calling your own local save's reward function repeatedly only affects
+  your own save, the same as any other single-player economy lever. Not re-flagged.
+- **M3 (`pos > size` → negative prize) — ALREADY FIXED**, independently, in the ported
+  `client/src/api.ts::spSeasonReward`: `size` is clamped first, then `pos = Math.max(1, Math.min(size,
+  ...))` cross-clamps against it, and `prize = Math.max(0, ...)` floors at zero. Confirmed by direct
+  sweep of the full pos×size domain (see `shared/qa_money_loop_fuzz.ts`, rewritten this pass — 300
+  combinations, zero negative/non-finite payouts).
+- **M1/M2 (NaN-slider / NaN-strength propagation in `tactics.ts`/`intl.ts`/`clubseason.ts`) — ALREADY
+  FIXED.** All three now guard with an explicit `Number.isFinite(...)` check before the arithmetic
+  (`deriveMods()`'s `fin()` helper, `tieScore()`'s `aStr`/`bStr` guard, `simMatch()`'s equivalent) —
+  confirmed by reading current source; the suggested `clampFinite` fix-spec at the bottom of this file
+  was superseded by these narrower, already-applied guards and is now historical only.
+- **L1 (`contractCost()` negative-greed edge) — ALREADY FIXED** (`greedFactor` clamps `greed` via
+  `clamp(greed, 1, 20)` before use).
+
+**New findings this pass, both harness bugs (not game bugs) — found and fixed:**
+- `shared/qa_meta_loops_fuzz.ts` and `shared/qa_career_state_fuzz.ts` both asserted
+  `computeOffPitch().endorsements.length <= 3`, but `shared/src/offpitch.ts` intentionally awards a 4th
+  endorsement deal to a true global icon (`imageScore >= 88`) — documented in that function's own
+  comment ("A true global icon lands a 4th deal — the portfolio a real superstar carries."). The
+  assertion predated that feature and was flagging correct, designed behavior as a bug. Widened both to
+  `<= 4`. No game code changed.
+
+**Harness repairs (import paths only, no logic changes) — 3 harnesses that broke when `server/` was
+deleted, now green again:**
+- `shared/qa_boundary_fuzz.ts` — `ageOf` moved `server/src/tokens.js` → `shared/src/tokens.js`.
+- `shared/qa_career_state_fuzz.ts` — `careerState`/`careerSeedFor`/`Token` moved to
+  `shared/src/tokens.js`/`shared/src/token.js`.
+- `shared/qa_dynasty_fuzz.ts` — `developAttrs` moved `server/src/lifecycle.js` → `shared/src/lifecycle.js`.
+
+**`shared/qa_money_loop_fuzz.ts` — fully rewritten** (not just re-pointed): its old premise was a
+line-by-line mirror of dead `server/src/index.ts` route handlers, including the now-moot H1 exploit.
+Rewritten to drive the REAL `client/src/api.ts` offline facade (in-memory backend, same pattern as
+`client/qa_offline_facade.ts`) through its actual economy surface — `spSeasonReward`, `spSponsor`,
+`hireStaff`, `genesis` — checking prize bounds/monotonicity across the full pos×size domain, that
+insufficient-funds throws never partially deduct, and that coins never go negative across 400
+randomized economy calls. All green.
+
+**Large-scale sim results this pass (all clean, no new invariant violations):**
+- `shared/qa_dynasty_fuzz.ts` at `QA_ROOTS=200 QA_GENS=25` — 200 dynasties × 25 generations = **5,000
+  generation-lifecycles** (career → graduate → 15 pro/manager seasons with real `clubSeason()` +
+  continental-cup `tieScore()`/`contOpponent()` fixtures each season → retirement/legacy → reborn →
+  next generation), plus determinism-replay and snapshot/resume round-trip checks. Clean.
+- `shared/qa_career_fuzz.ts` at `QA_N=20000` — 20,000 random-choice careers (mixed tracks/agents/
+  personalities), 0 softlocks, 0 exceptions, 0 invariant violations.
+- `npm run verify` — full green (client build, `strategy_test.ts`, `fuzz_test.ts`, `career_sim.ts`,
+  `qa_savestore.ts`, `qa_offline_facade.ts`).
+- `npx tsx shared/qa_calibration_baseline.ts` re-run on `4601959` reproduced the **exact same numbers,
+  to 3 decimal places**, as the recorded baseline captured on `b57aa88` (goals/match 2.567, 0-0 rate
+  11.27%, home/away/draw 38.40/39.07/22.53%, all preset/duty/shape head-to-heads identical) — the
+  match-engine core has had **zero calibration drift** across all of this development window.
+- `strategy_test.ts`/`fuzz_test.ts` reference metrics (this session): 2.80 goals/match (strategy_test),
+  5.36 goals/match / 43%-43% home-away (fuzz_test) — both within the documented reference bands (~2.80
+  and ~5.0-5.6 / 43/43%).
+
+No crashes, NaN/Infinity/undefined leaks, negative economy values, softlocks, or determinism breaks were
+found anywhere in `shared/` this pass. All prior open findings are either resolved-by-removal or already
+fixed in current `main`; the remaining open item is purely a `server/`-references cleanup (see backlog).
+
 Methodology: new, standalone deterministic fuzz harnesses (this agent does not edit any file under
 `shared/src/` or the existing `career.ts`/`engine.ts`/`career_sim.ts`/`fuzz_test.ts`/`strategy_test.ts`).
 Each harness is runnable directly with `npx tsx <file>` and prints an exact reproducing seed/context for
