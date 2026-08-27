@@ -180,3 +180,78 @@ no hard consequences baked in):
   scout is currently prioritising) to `staff.ts` for even more surface area once the human
   decides whether staff become a real hireable system (see design question above) — hold
   off until that decision is made to avoid building flavour for a shape that changes.
+
+## Batch 3 (this pass, 2026-08-28)
+
+Backlog items addressed:
+
+1. **`board.ts`: `deriveExpectation(input)`** — a pure `{ prestigeLevelIdx, priorFinish }
+   → BoardExpectation` mapping, so `boardStanding()`'s callers no longer have to invent
+   their own heuristic. Reputation (a `PRESTIGE_LEVELS`-shaped index, 0-8) sets a baseline
+   band; `priorFinish` (a small enum deliberately reusing the diary's own table-band
+   vocabulary — title/promotion/playoffs/midtable/survival/relegated/null) nudges it up or
+   down. Decoupled on purpose: `board.ts` still doesn't import anything from
+   `prestige.ts`/`clubseason.ts` — the caller reduces its own state to the small input
+   shape first. Pure API for client wiring: `deriveExpectation(input: ExpectationInput):
+   BoardExpectation`.
+2. **`gaffersDiaryEntry` now reads board mood** — `DiaryInput` gained an OPTIONAL
+   `boardMood?: BoardMood` field. When present, a notable mood (delighted / pleased /
+   concerned / restless / furious — 'patient' deliberately excluded, it reads no
+   differently from the diary's own generic fallback) competes as its own weighted
+   candidate in the existing picker, so a swinging boardroom can colour the diary the way
+   a win streak or a relegation battle already does. 100% backward compatible — omitting
+   `boardMood` reproduces the exact prior behaviour (confirmed by the existing fuzz suite,
+   which now calls it with `boardMood` omitted ~40% of the time).
+3. **`press.ts`: `pressConferenceLineWithStaff(seed, roundSalt, input, roster)`** — a
+   combinator, not a change to `pressConferenceLine` itself (untouched, so no existing
+   caller is affected). On a stakes>=2 post-match win/loss beat only, about 1-in-3 of the
+   time it appends a named staff member (drawn from a `StaffRoster`) fielding an
+   in-character follow-up via `staffQuip()`. Deliberately narrow trigger conditions (no
+   pre-match asides, no routine/draw asides) so it reads as an occasional real moment
+   rather than a permanent tag-along.
+4. **Bug fix (flagged mid-pass by the orchestrator, addressed same pass):** `staff.ts`'s
+   `STAFF_FIRST` name pool is deliberately mixed-gender, but every `PERSONALITY` and
+   `staffQuip()` line hardcoded he/him/his — misgendering roughly half of any generated
+   staff member, now live on the client's club screen. Rewrote every line to be
+   pronoun-neutral (they/them, or the pronoun dropped/rephrased entirely, including two
+   incidental "him" references to a new signing). Added a permanent regression check to
+   the fuzz harness (`GENDERED_PRONOUN` regex over every generated personality + quip
+   line) so this can't silently regress.
+5. Extended `shared/qa_manager_content_fuzz.ts`: `deriveExpectation` (bounds, determinism,
+   monotonicity in `priorFinish`, round-trips through `boardStanding`), the diary's new
+   `boardMood` input, `pressConferenceLineWithStaff` (determinism, "always extends the
+   base line", "never fires on an ineligible beat"), and the gendered-pronoun regression
+   check above. `npm run verify` + the fuzz harness both green after every commit in this
+   pass (see final report for the commit list).
+6. **Intl depth**: reviewed `intl.ts` again per the brief's "only if genuinely additive"
+   instruction — batch 2 already added rivalry arcs (`contRivalClub`/`contRivalryBlurb`)
+   and tournament drama (`wcGroupDramaBlurb`/`wcKnockoutDramaBlurb`) on top of batch 1's
+   tie/finish blurbs. Judged **saturated** for this pass: the module now has flavour for
+   every structural moment it produces (tie win/loss, rivalry escalation, group tightness,
+   knockout margin, call-up, World Cup finish) and the remaining gap is entirely
+   client-wiring, not more shared-side content. Left untouched, per the "quality over
+   quantity — don't pad an already-rich system" instruction.
+
+### Design questions (unchanged from batch 2, still undecided)
+
+- Sacking-risk system consuming `boardScore()` — still deliberately not built.
+- Where press conferences (and now the staff-aside variant) surface in the UI.
+- Whether staff become a real hireable/replaceable system, or stay presentational.
+
+## Remaining backlog (batch 4 / relaunch)
+
+- **Client wiring is now the dominant gap.** Nothing from batches 1-3 is wired into
+  `client/src/main.ts` yet from THIS lane's perspective (the orchestrator's parallel pass
+  is handling batch 1+2 wiring; `board.ts`'s `deriveExpectation`, the diary's `boardMood`
+  input, and `pressConferenceLineWithStaff` are all new batch-3 surface that will need the
+  same treatment). Recommend treating "manager content client wiring" as its own
+  dedicated lane going forward rather than growing the shared-side backlog further.
+- **Real opponent identity in the local season sim** (carried over since batch 1,
+  still unaddressed — `main.ts` still passes blank `oppId`/`oppHandle`, so
+  `gaffersDiary.ts`'s rival/revenge detection remains a no-op in practice today).
+- **`boardStanding()` has no persisted history.** Every read is a fresh, memoryless
+  snapshot (by design, per the scope guard) — if the human ever wants the sacking-risk
+  follow-up sketched above, it needs a small stateful wrapper OUTSIDE this pure module.
+- Everything else from the batch-2 backlog not listed above (intl `LEAGUE_POOL`/
+  `CONT_POOL` name-pool expansion, staff "department focus" field) remains open at the
+  same low priority noted there — neither felt worth doing ahead of client wiring.
