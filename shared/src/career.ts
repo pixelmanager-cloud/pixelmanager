@@ -138,6 +138,52 @@ export const DECK: Card[] = [
   { id: 'winger-wiz',  name: "Winger's Magic",        tags: ['flair', 'stamina'], rarity: 'epic' },
   { id: 'libero',      name: 'Ball-Playing Libero',   tags: ['composure', 'creativity'], rarity: 'rare' },
   { id: 'box-crash',   name: 'Crash the Box',         tags: ['stamina', 'aggression'] },
+  // ── HUGE VARIETY EXPANSION #2: many more moments per tag, so a 200-turn career keeps feeling fresh ──
+  // composure
+  { id: 'nerves-steel',   name: 'Nerves of Steel',            tags: ['composure'] },
+  { id: 'big-moment',     name: 'Big Moment Man',             tags: ['composure', 'leadership'], rarity: 'rare' },
+  { id: 'no-panic',       name: 'No Panic',                   tags: ['composure'] },
+  { id: 'ice-cold-spot',  name: 'Ice-Cold from the Spot',     tags: ['composure'], rarity: 'rare' },
+  { id: 'composed-touch', name: 'A Composed First Touch',     tags: ['composure', 'creativity'] },
+  // flair
+  { id: 'flick-on',       name: 'Flick-On',                   tags: ['flair', 'teamwork'] },
+  { id: 'audacious',      name: 'Audacious Backheel',         tags: ['flair'] },
+  { id: 'samba',          name: 'Samba Skill',                tags: ['flair', 'creativity'], rarity: 'rare' },
+  { id: 'bicycle',        name: 'Bicycle Kick',               tags: ['flair'], rarity: 'epic' },
+  { id: 'cruyff',         name: 'Cruyff Turn',                tags: ['flair', 'creativity'], rarity: 'rare' },
+  { id: 'sombrero',       name: 'Sombrero Flick',             tags: ['flair'] },
+  // aggression
+  { id: 'bruiser',        name: 'Bruising Challenge',         tags: ['aggression'] },
+  { id: 'no-nonsense',    name: 'No-Nonsense Clearance',      tags: ['aggression', 'teamwork'] },
+  { id: 'body-check',     name: 'Shoulder to Shoulder',       tags: ['aggression'] },
+  { id: 'hunt-pack',      name: 'Hunt in a Pack',             tags: ['aggression', 'teamwork'] },
+  { id: 'red-mist',       name: 'Red Mist Moment',            tags: ['aggression'], rarity: 'rare' },
+  // creativity
+  { id: 'through-eye',    name: 'Through the Eye of a Needle', tags: ['creativity'], rarity: 'rare' },
+  { id: 'disguised-pass', name: 'The Disguised Pass',         tags: ['creativity'] },
+  { id: 'weighted-pass',  name: 'Perfectly Weighted Pass',    tags: ['creativity', 'composure'] },
+  { id: 'outside-boot',   name: 'Outside of the Boot',        tags: ['creativity', 'flair'] },
+  { id: 'spatial-iq',     name: 'Spatial Awareness',          tags: ['creativity', 'teamwork'] },
+  // teamwork
+  { id: 'bricklayer',     name: 'Bricklayer',                 tags: ['teamwork'] },
+  { id: 'team-ethic',     name: 'Team Ethic',                 tags: ['teamwork'] },
+  { id: 'tracking-back',  name: 'Tracking Back',              tags: ['teamwork', 'stamina'] },
+  { id: 'plug-gap',       name: 'Plug the Gap',               tags: ['teamwork'] },
+  // leadership
+  { id: 'captain-arm',    name: 'Lead by Example',            tags: ['leadership'] },
+  { id: 'dressing-voice', name: 'Dressing Room Voice',        tags: ['leadership', 'teamwork'] },
+  { id: 'calm-fire',      name: 'Calm Under Fire',            tags: ['leadership', 'composure'] },
+  { id: 'gaffer-word',    name: 'A Word from the Gaffer',     tags: ['leadership'], rarity: 'rare' },
+  { id: 'never-say-die',  name: 'Never-Say-Die Spirit',       tags: ['leadership', 'stamina'] },
+  // stamina
+  { id: 'marathon-man',   name: 'Marathon Man',               tags: ['stamina'] },
+  { id: 'extra-yard',     name: 'Find the Extra Yard',        tags: ['stamina'] },
+  { id: 'gas-tank',       name: 'Full Tank',                  tags: ['stamina'] },
+  { id: 'relentless',     name: 'Relentless Pressing',        tags: ['stamina', 'aggression'] },
+  { id: 'legs-of-steel',  name: 'Legs of Steel',              tags: ['stamina'], rarity: 'rare' },
+  // rare / epic signatures
+  { id: 'matchwinner',    name: 'Matchwinner',                tags: ['flair', 'composure'], rarity: 'epic' },
+  { id: 'wonderkid',      name: 'Wonderkid Moment',           tags: ['creativity', 'flair'], rarity: 'epic' },
 ];
 
 // The small deck EVERY outfield career starts with; the rest is drafted between seasons.
@@ -180,6 +226,19 @@ export const GK_DECK: Card[] = [
   { id: 'one-handed',  name: 'One-Handed Stop',   tags: ['keeping', 'flair'], rarity: 'rare' },
   { id: 'spot-king',   name: 'Spot-Kick King',    tags: ['keeping', 'leadership'], rarity: 'rare' },
   { id: 'save-season', name: 'Save of the Season', tags: ['keeping'], rarity: 'epic' },
+  // ── GK variety expansion #2 ──
+  { id: 'read-forward',    name: "Read the Forward's Mind", tags: ['keeping', 'composure'] },
+  { id: 'quick-reflex',    name: 'Lightning Reflexes',      tags: ['keeping'] },
+  { id: 'commanding-punch', name: 'Commanding Punch',       tags: ['keeping', 'aggression'] },
+  { id: 'sweeper-dash',    name: 'Sweeper Dash',            tags: ['keeping', 'stamina'] },
+  { id: 'long-throw',      name: 'Raking Long Throw',       tags: ['keeping', 'creativity'] },
+  { id: 'penalty-read',    name: 'Read the Penalty',        tags: ['keeping', 'composure'], rarity: 'rare' },
+  { id: 'shotstop-clinic', name: 'Shot-Stopping Clinic',    tags: ['keeping'], rarity: 'rare' },
+  { id: 'last-line',       name: 'Last Line of Defence',    tags: ['keeping', 'leadership'] },
+  { id: 'brave-block',     name: 'Brave Block at Feet',     tags: ['keeping', 'aggression'] },
+  { id: 'calm-high-ball',  name: 'Calm Under the High Ball', tags: ['keeping', 'composure'] },
+  { id: 'acrobatic',       name: 'Acrobatic Save',          tags: ['keeping', 'flair'], rarity: 'epic' },
+  { id: 'leader-box',      name: 'Leader of the Box',       tags: ['keeping', 'leadership'], rarity: 'rare' },
 ];
 const GK_STARTER_IDS = ['shot-stop', 'claim-cross', 'organise', 'calm-back'];
 const GK_STARTER: Card[] = GK_DECK.filter((c) => GK_STARTER_IDS.includes(c.id));
@@ -250,6 +309,33 @@ export const CARD_DESC: Record<string, string> = {
   'play-short': 'Start the build-up calmly and short from the back.', 'double-save': 'Save one, scramble up, and save the rebound too.',
   'one-handed': 'A full-stretch, one-handed save that beggars belief.', 'spot-king': 'Own the shoot-out and stand tall from twelve yards.',
   'save-season': 'The kind of save they’ll still show years from now.',
+  // expansion descriptions #2 — outfield
+  'nerves-steel': 'Not a flicker of doubt — pure nerves of steel.', 'big-moment': 'Stand tall and drag the team through the biggest moment of the season.',
+  'no-panic': 'Everyone around you is losing it — you stay dead calm.', 'ice-cold-spot': 'Walk up, no fuss, and bury it from the spot.',
+  'composed-touch': 'Kill it stone dead with a composed first touch, then look up.', 'flick-on': 'A deft flick-on into the path of a teammate.',
+  audacious: 'Try the outrageous backheel — and pull it off.', samba: 'A flash of samba skill that has the crowd on its feet.',
+  bicycle: 'Launch into an overhead bicycle kick — the stuff of highlight reels.', cruyff: 'Drag it behind your standing leg and spin the defender inside out.',
+  sombrero: 'Flick it up and over his head with a sombrero — pure disrespect.', bruiser: 'Go through the ball, not around it — a bruising challenge.',
+  'no-nonsense': 'No fuss, no frills — just clear your lines.', 'body-check': 'Use your frame, shoulder to shoulder, to knock him off it.',
+  'hunt-pack': 'Close him down together, in a pack, and leave him nowhere to go.', 'red-mist': "Let the red mist come down for one reckless moment.",
+  'through-eye': 'Thread it through a gap that shouldn’t exist.', 'disguised-pass': 'Sell the dummy with your eyes, then play it the other way.',
+  'weighted-pass': 'Weight it perfectly onto a teammate’s stride.', 'outside-boot': 'Curl it round with the outside of the boot.',
+  'spatial-iq': 'See the picture forming before anyone else does.', bricklayer: 'Do the unglamorous work, brick by brick, that nobody notices.',
+  'team-ethic': 'Put the team above yourself, every single time.', 'tracking-back': 'Sprint the length of the pitch to track your man back.',
+  'plug-gap': 'Spot the hole in the shape and fill it before it’s exploited.', 'captain-arm': 'Lead by example — first to every fifty-fifty.',
+  'dressing-voice': 'Be the voice that cuts through the noise in the dressing room.', 'calm-fire': 'Stay composed while everything round you is chaos.',
+  'gaffer-word': 'A quiet word from the gaffer lands, and you deliver.', 'never-say-die': 'Refuse to accept it’s over, right to the final whistle.',
+  'marathon-man': 'Still sprinting in the 90th minute like it’s the first.', 'extra-yard': 'Find one more yard when your legs say no.',
+  'gas-tank': 'A full tank when everyone else is running on empty.', relentless: 'Press and press and press — give them no time on the ball.',
+  'legs-of-steel': 'Legs that simply refuse to tire, minute after minute.', matchwinner: 'One moment, out of nothing, that wins the whole game.',
+  wonderkid: 'A touch of pure class that reminds everyone why they rated you.',
+  // expansion descriptions #2 — goalkeeper
+  'read-forward': 'Read the striker’s intentions a split-second before he acts.', 'quick-reflex': 'React on pure instinct before your brain catches up.',
+  'commanding-punch': 'Come and punch it clear with real authority.', 'sweeper-dash': 'Race off your line to sweep up behind a high defence.',
+  'long-throw': 'Launch a raking throw to spark a counter in seconds.', 'penalty-read': 'Guess the corner and get there — read the penalty.',
+  'shotstop-clinic': 'A clinic in shot-stopping, save after save.', 'last-line': 'Be the very last line — nothing gets past you today.',
+  'brave-block': 'Stand your ground and block it at his feet, brave as they come.', 'calm-high-ball': 'Rise above the chaos and claim the high ball with total calm.',
+  acrobatic: 'Contort yourself into an acrobatic save that defies gravity.', 'leader-box': 'Own your box and organise everyone in front of you.',
 };
 
 // deck-building config
