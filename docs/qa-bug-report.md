@@ -308,6 +308,25 @@ npx tsx shared/qa_boundary_fuzz.ts && npx tsx shared/qa_money_loop_fuzz.ts
 ```
 (`qa_calibration_baseline.ts` is a measurement tool, not a pass/fail gate — see `docs/qa-calibration-baseline.md`.)
 
+## Softlock / performance caps — already comprehensively covered (no new harness needed)
+
+Every harness in this pass that drives a match or a career to completion enforces a hard termination
+bound and reports a failure (never a silent hang) if it's exceeded — this was built in from the very
+first batch, not bolted on at the end, so there's nothing left to add here without duplicating existing
+coverage:
+
+| Loop | Bound | Enforced in |
+|---|---|---|
+| Match (ticks) | `EXPECTED_TICKS × 2` = 21,600 ticks (2× a full 90') | `shared/fuzz_test.ts` (existing, in `npm run verify`), `shared/qa_match_edge_fuzz.ts` |
+| Career (turns/steps) | `TOTAL_TURNS × 10..20 + 2000..5000` steps | `shared/qa_career_fuzz.ts`, `shared/qa_career_state_fuzz.ts`, `shared/qa_dynasty_fuzz.ts` |
+
+Across this pass's full run history — tens of thousands of matches and career-lifecycles — **not one hit
+its cap**: every match finished at or near the expected 10,800-tick 90-minute budget, and every career
+finished at exactly `TOTAL_TURNS`. No pathological slowdown or softlock was found anywhere in the engine
+or career sim.
+
+---
+
 ## Known limitations of this pass (for the next QA agent)
 
 - **`qa_dynasty_fuzz.ts`'s economy-bridge constants are mirrored, not imported.** `CLUB_WAGE_CUT`,

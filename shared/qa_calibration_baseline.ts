@@ -26,7 +26,11 @@ function play(teamA: Team, teamB: Team, tA: Tactics, tB: Tactics, seed: number):
 }
 const mk = (id: string, q: number, seed: number, formation: any = '4-4-2') => generateTeam(id, id, id.toUpperCase(), 0xff0000, q, seed, formation);
 
-const N = Number(process.env.QA_N ?? 20000);
+// NOTE: a full 90' match on this engine costs ~35-40ms (measured on this machine), so N is kept modest
+// enough for the whole baseline to finish in a few minutes while still giving tight-enough confidence
+// intervals for a reconcile diff (a few thousand matches per headline metric). Raise via QA_N for a
+// tighter baseline if wall-clock time isn't a concern.
+const N = Number(process.env.QA_N ?? 1500);
 const lines: string[] = [];
 const rec = (s: string) => { console.log(s); lines.push(s); };
 
@@ -130,7 +134,7 @@ rec('');
 // ── 7. anti-spam field check at higher N: no tactic's average win rate across the whole field should
 //    run away (strategy_test.ts gates this at <60% with N=45/matchup; reproduced here at bigger N) ──
 {
-  const n2 = Math.round(N / 60);
+  const n2 = Math.max(8, Math.round(N / 150)); // 56 matchups in the field x field grid — keep this section's total bounded
   const field: Record<string, Tactics> = { Balanced: DEFAULT_TACTICS, ...TACTIC_PRESETS };
   const fnames = Object.keys(field);
   const winRate = (tA: Tactics, tB: Tactics, n: number) => {
