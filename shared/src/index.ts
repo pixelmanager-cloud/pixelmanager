@@ -16,6 +16,7 @@ export * from './intl.js';
 export * from './board.js';
 export * from './press.js';
 export * from './staff.js';
+export * from './achievements.js';
 export * from './offpitch.js';
 export * from './facilities.js';
 export * from './missions.js';

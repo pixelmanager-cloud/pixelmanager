@@ -2,6 +2,7 @@ import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
   TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry,
   FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, deriveExpectation, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition, contTieBlurb, wcGroupDramaBlurb, wcKnockoutDramaBlurb,
+  ACHIEVEMENTS, evaluateAchievements, achievementById, type AchSnapshot,
   type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type Trialist, type MissionsData, type ContractInfo } from './api';
@@ -15,7 +16,7 @@ interface MgrState { season: number; results: PlayedResult[]; starId?: string; s
   // international: continental club cup (qualified by a top-3 finish the previous season)
   contElig?: boolean; contRound?: number; contOut?: boolean; contTitles?: number; contBlurb?: string;
   // World-Finals national tournament — the star's nation's knockout run is playable
-  wcSeen?: number; wcWins?: number; wcEdition?: number; wcStage?: 'qf' | 'sf' | 'final' | 'done';
+  wcSeen?: number; wcWins?: number; wcFinals?: number; wcEdition?: number; wcStage?: 'qf' | 'sf' | 'final' | 'done';
   wcRun?: { round: string; my: number; opp: number; oppName: string; won: boolean }[] }
 const BACKROOM_STAFF = [
   { id: 'fitness', icon: '🏋️', name: 'Fitness Coach', cost: 350, desc: 'Sharper conditioning — your side fades less over 90.' },
@@ -500,6 +501,52 @@ class Game {
       toast(`✍️ Signed ${r.prospect.name} — the bloodline begins`);
       this.showAcademy();
     } catch { toast('Could not sign him'); }
+  }
+
+  // ── achievements ──────────────────────────────────────────────────────────────────────────────
+  private loadUnlockedAch(): Set<string> {
+    try { return new Set(JSON.parse(localStorage.getItem('fm_ach_' + (this.account?.handle ?? 'x')) || '[]')); } catch { return new Set(); }
+  }
+  private saveUnlockedAch(s: Set<string>) {
+    try { localStorage.setItem('fm_ach_' + (this.account?.handle ?? 'x'), JSON.stringify([...s])); } catch { /* ignore */ }
+  }
+  /** Assemble the lifetime-progress snapshot the achievement predicates read, from data already tracked. */
+  private async buildAchSnapshot(): Promise<AchSnapshot> {
+    const m = this.loadMgr();
+    const [pr, lg, pros] = await Promise.all([
+      api.prestige().catch(() => null as any),
+      api.legends().catch(() => ({ legends: [] as any[] })),
+      api.prospects().catch(() => ({ prospects: [] as any[] })),
+    ]);
+    const legends = lg.legends ?? [];
+    const generation = Math.max(0, ...(pros.prospects ?? []).map((p: any) => p.generation ?? 0));
+    const topLegendRating = legends.reduce((mx: number, l: any) => Math.max(mx, l.card?.legendRating ?? 0), 0);
+    return {
+      leagueTitles: m.titles ?? 0,
+      contTitles: m.contTitles ?? 0,
+      wcWins: m.wcWins ?? 0,
+      wcFinals: m.wcFinals ?? 0,
+      seasons: pr?.record?.seasons ?? m.season ?? 0,
+      wins: pr?.record?.wins ?? 0,
+      prestigeIdx: pr?.prestige?.levelIdx ?? 0,
+      generation,
+      legends: legends.length,
+      topLegendRating,
+      graduated: (m.starId ? 1 : 0) + legends.length,
+    };
+  }
+  /** Re-evaluate achievements after a progress event; toast (and chime) anything newly earned. Idempotent. */
+  private async checkAchievements(): Promise<void> {
+    try {
+      const earned = evaluateAchievements(await this.buildAchSnapshot());
+      const have = this.loadUnlockedAch();
+      const fresh = earned.filter((id) => !have.has(id));
+      if (!fresh.length) return;
+      fresh.forEach((id) => have.add(id));
+      this.saveUnlockedAch(have);
+      // stagger the toasts a touch so multiple unlocks in one event don't collapse into one
+      fresh.forEach((id, i) => { const a = achievementById(id); if (!a) return; setTimeout(() => { toast(`${a.icon} Achievement unlocked — ${a.name}`); }, i * 1400); });
+    } catch { /* offline — try again on the next event */ }
   }
 
   private onboarding = false; // true right after New Game → academy shows a first-time welcome
@@ -1117,6 +1164,7 @@ class Game {
       if (nextRound >= 3) {
         const contTitles = (m.contTitles ?? 0) + 1;
         this.saveMgr({ ...m, contRound: 3, contTitles, contBlurb });
+        this.checkAchievements(); // continental cup won
         toast(`🏆 CONTINENTAL CHAMPIONS! ${this.club?.name} win the cup${pens ? ' on penalties' : ''}`);
         api.spSeasonReward({ pos: 1, size: 10, sponsor: undefined }).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; toast(`💰 Continental prize +${x.prize.toLocaleString()}c`); }).catch(() => {});
       } else {
@@ -1214,12 +1262,12 @@ class Game {
     const run = [...(m.wcRun ?? []), { round: shortRound, my: myGoals, opp: oppGoals, oppName, won }];
     if (!won) { // knocked out — the run ends here
       const finish = stage === 'final' ? 'Runners-up' : stage === 'sf' ? 'Semi-finals' : 'Quarter-finals';
-      this.saveMgr({ ...m, wcStage: 'done', wcSeen: m.wcEdition, wcRun: run });
+      this.saveMgr({ ...m, wcStage: 'done', wcSeen: m.wcEdition, wcRun: run, wcFinals: (m.wcFinals ?? 0) + (stage === 'final' ? 1 : 0) });
       toast(`${label} lost ${myGoals}-${oppGoals}${pens ? ' on pens' : ''} — ${finish}`);
       this.concludeWorldCup(finish, oppName); return;
     }
     if (stage === 'final') { // champions!
-      this.saveMgr({ ...m, wcStage: 'done', wcSeen: m.wcEdition, wcWins: (m.wcWins ?? 0) + 1, wcRun: run });
+      this.saveMgr({ ...m, wcStage: 'done', wcSeen: m.wcEdition, wcWins: (m.wcWins ?? 0) + 1, wcFinals: (m.wcFinals ?? 0) + 1, wcRun: run });
       toast(`🏆 WORLD CHAMPIONS! ${homeNation(this.starSurname())} win the final${pens ? ' on penalties' : ''}`);
       this.concludeWorldCup('Champions', oppName); return;
     }
@@ -1233,6 +1281,7 @@ class Game {
     const m = this.loadMgr();
     try { const r = await api.spSeasonReward({ pos: finish === 'Champions' ? 1 : finish === 'Runners-up' ? 2 : finish === 'Semi-finals' ? 3 : 4, size: 10, sponsor: undefined }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 World Finals payoff +${r.prize.toLocaleString()}c`); } catch { /* offline */ }
     const { wc } = this.wcData(m.wcEdition!);
+    this.checkAchievements(); // World Finals final reached / won
     this.showWorldCup(wc, finish, finalFoe);
   }
   /** The tournament report. `playedFinish` (+ `finalFoe`) reflect the star's ACTUAL played run and override
@@ -1354,6 +1403,7 @@ class Game {
     if (qualified) toast('🌍 Top-3 finish — qualified for the Continental Cup!');
     // new season → fresh sponsor; drop any unfinished World-Finals run (it belongs to its staging season)
     this.saveMgr({ ...m, season: m.season + 1, results: [], starAge: age, titles, sponsor: undefined, contElig: qualified, contRound: 0, contOut: false, contBlurb: undefined, wcStage: undefined, wcEdition: undefined, wcRun: undefined, lastBoard, lastFinishPos: t.pos });
+    this.checkAchievements(); // titles / seasons / prestige milestones
     this.showSeason();
   }
 
@@ -1409,6 +1459,7 @@ class Game {
           const r = await api.succeed(m.starId!, { seasons, titles, mentorship: appliedMentorship });
           this.clearMgr(); // back to player phase — the heir's card-career begins
           this.setMe(await api.me());
+          this.checkAchievements(); // a legend retired → new generation / legends / rating milestones
           if (r.legacy) toast(`🏟️ +${r.legacy.toLocaleString()}c legacy to the club`);
           this.showProspectCard(r.prospect, true); // reveal the heir → Develop him → play his career → hand off again
         } catch (e: any) { toast(e?.body?.error ?? 'Succession failed'); ($('cg-heir') as HTMLButtonElement).textContent = 'Bring through the heir →'; }
@@ -1641,10 +1692,21 @@ class Game {
         : '';
       const seasons = honours.length ? Math.max(...honours.map((h) => h.season_number)) : 0;
       const summary = `<div class="tr-summary">🏆 ${titles.length} title${titles.length === 1 ? '' : 's'} · 🌳 ${lines.length} bloodline${lines.length === 1 ? '' : 's'} · ⭐ ${legends.length} legend${legends.length === 1 ? '' : 's'}${retired.length ? ` · 🎽 ${retired.length} retired` : ''} · ${seasons} season${seasons === 1 ? '' : 's'} managed</div>`;
+      // ACHIEVEMENTS — evaluate live and union with the persisted unlocked set (so the screen is always
+      // accurate even if a milestone was crossed without a check firing), then persist the union.
+      const earnedAch = new Set([...this.loadUnlockedAch(), ...evaluateAchievements(await this.buildAchSnapshot())]);
+      this.saveUnlockedAch(earnedAch);
+      const gotCount = ACHIEVEMENTS.filter((a) => earnedAch.has(a.id)).length;
+      const achGrid = `<div class="ach-grid">` + ACHIEVEMENTS.map((a) => {
+        const got = earnedAch.has(a.id);
+        return `<div class="ach ${got ? 'got' : 'locked'}"><span class="ach-ico">${got ? a.icon : '🔒'}</span><div class="ach-txt"><div class="ach-name">${a.name}</div><div class="ach-desc">${a.desc}</div></div></div>`;
+      }).join('') + `</div>`;
+      const achSection = `<h4 class="scout-h4" style="margin-top:24px;">🏅 ACHIEVEMENTS <span class="ach-count">${gotCount}/${ACHIEVEMENTS.length}</span></h4>` + achGrid;
       $('trophies-body').innerHTML = summary
         + `<h4 class="scout-h4">🏆 TROPHY CABINET</h4>` + cabinet
         + `<h4 class="scout-h4" style="margin-top:24px;">🌳 BLOODLINES</h4><div class="scout-sub">The dynasties you've built — each line is a bloodline across the generations, newest at the bottom.</div>` + bloodlines
-        + retiredSection;
+        + retiredSection
+        + achSection;
       $('trophies-body').querySelectorAll('.tr-retire').forEach((el) => el.addEventListener('click', () => {
         const n = Number((el as HTMLElement).dataset.num); const name = (el as HTMLElement).dataset.name!;
         let cur: Array<{ n: number; name: string }>; try { cur = JSON.parse(localStorage.getItem(rKey) || '[]'); } catch { cur = []; }
