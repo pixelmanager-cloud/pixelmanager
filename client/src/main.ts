@@ -1,5 +1,5 @@
 import {
-  MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, DUTY_LABEL, DUTIES_BY_ROLE, isDutyForRole,
+  MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
   TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type Trialist, type MissionsData, type ContractInfo } from './api';
@@ -1911,8 +1911,15 @@ class Game {
     if (this.spFixture) {
       // single-player fixture: a lightweight opponent card (no server scout), just their strength
       const stars = '★'.repeat(Math.max(1, Math.round(this.spFixture.oppStrength / 4))) + '☆'.repeat(5 - Math.max(1, Math.round(this.spFixture.oppStrength / 4)));
+      // pure flavour: name-check the danger man's duty (their best FW, or best MF if none) — real
+      // scouting vocabulary, deterministic from the seeded opponent squad.
+      const oppXI = this.spFixture.oppLineup.playerIds.map((pid) => this.spFixture!.oppClub.players.find((p) => p.id === pid)!);
+      const dangerMan = [...oppXI].filter((p) => p.role === 'FW').sort((a, b) => overall(b) - overall(a))[0]
+        ?? [...oppXI].filter((p) => p.role === 'MF').sort((a, b) => overall(b) - overall(a))[0];
+      const dutyNote = dangerMan
+        ? `<div class="scout-sub scout-role">👤 <b>${dangerMan.name}</b> — ${DUTY_LABEL[effectiveDuty(dangerMan)]}: ${DUTY_DESC[effectiveDuty(dangerMan)]}</div>` : '';
       sc.classList.remove('hidden');
-      sc.innerHTML = `<div class="scout-head">🔍 ${this.spFixture.oppName}</div><div class="scout-sub">${this.spFixture.venue === 'away' ? 'Away' : 'Home'} fixture · squad rating ~${this.spFixture.oppStrength} <span style="color:#e6c76a">${stars}</span></div>`;
+      sc.innerHTML = `<div class="scout-head">🔍 ${this.spFixture.oppName}</div><div class="scout-sub">${this.spFixture.venue === 'away' ? 'Away' : 'Home'} fixture · squad rating ~${this.spFixture.oppStrength} <span style="color:#e6c76a">${stars}</span></div>${dutyNote}`;
     } else {
       sc.classList.add('hidden'); sc.innerHTML = '';
     }
@@ -1999,7 +2006,8 @@ class Game {
       const tag = isLoan(cur.id) ? `<span class="loan" title="Loanee — plays this season only, then leaves">LOAN</span>`
         : isNftId(cur.id) ? `<span class="nft tier-${curTier.key}" data-card="${cur.id}" title="NFT star · ${curTier.name} tier — click to view card">${curTier.icon} ${curTier.name}</span>` : '';
       const dutyOpts = DUTIES_BY_ROLE[cur.role]
-        .map((d) => `<option value="${d}" ${d === this.draftDuties[i] ? 'selected' : ''}>${DUTY_LABEL[d]}</option>`).join('');
+        .map((d) => `<option value="${d}" title="${DUTY_DESC[d]}" ${d === this.draftDuties[i] ? 'selected' : ''}>${DUTY_LABEL[d]}</option>`).join('');
+      const curDutyDesc = DUTY_DESC[this.draftDuties[i]] ?? '';
       const rb = (role: string, on: boolean, glyph: string, title: string) => `<button class="rb ${role}${on ? ' on' : ''}" data-role="${role}" data-i="${i}" title="${title}">${glyph}</button>`;
       const badges = `<span class="role-badges">`
         + rb('cap', this.draftCaptain === i, '©', 'Captain')
@@ -2007,7 +2015,7 @@ class Game {
         + rb('fk', this.draftTakers.fk === i, 'F', 'Free-kick taker')
         + rb('corner', this.draftTakers.corner === i, 'C', 'Corner taker')
         + `</span>`;
-      return `<div class="slot role-${roleForSlot}"><span class="role role-${roleForSlot}">${roleForSlot}</span><select class="player-sel" data-i="${i}">${opts}</select><select class="duty-sel" data-i="${i}" title="This player's duty — how they play">${dutyOpts}</select>${tag}<span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span>${badges}</div>`;
+      return `<div class="slot role-${roleForSlot}"><span class="role role-${roleForSlot}">${roleForSlot}</span><select class="player-sel" data-i="${i}">${opts}</select><select class="duty-sel" data-i="${i}" title="${curDutyDesc}">${dutyOpts}</select>${tag}<span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span>${badges}</div>`;
     }).join('');
     Array.from($('xi').querySelectorAll('button.rb')).forEach((b) => {
       b.addEventListener('click', () => {
@@ -2029,7 +2037,9 @@ class Game {
     Array.from($('xi').querySelectorAll('select.duty-sel')).forEach((sel) => {
       sel.addEventListener('change', (ev) => {
         const t = ev.target as HTMLSelectElement;
-        this.draftDuties[Number(t.dataset.i)] = t.value as Duty;
+        const d = t.value as Duty;
+        this.draftDuties[Number(t.dataset.i)] = d;
+        t.title = DUTY_DESC[d] ?? ''; // live-refresh the tooltip so it always matches the picked duty
       });
     });
 
