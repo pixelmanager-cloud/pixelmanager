@@ -33,7 +33,18 @@ One small `AudioManager` singleton so any source drops in behind it:
    "warmth" half of the style earns its place.)
 A menu + career + match + one triumph/emotional pair is a solid first set; expand later.
 
-## Sourcing guide (for buying the licensed pack — your part)
+## ✅ Source secured (2026-08-27): Bit By Bit Sound
+Purchased the **Bit By Bit Sound** library (Ultimate Retro RPG Music Pack — 400+ human-composed tracks,
+16-bit/JRPG/chiptune with Emotional Story Themes + Positive/Town moods covering all five contexts). Royalty-
+free, commercial, perpetual **Synchronisation + Master Use** license — EULA + full compliance list in
+`docs/licenses/`. Cherry-pick a handful of fitting tracks into `client/public/audio/` (OGG); don't bundle the
+whole library. **Compliance (see `docs/licenses/README.md` + `/CREDITS.md`):** credit the composer (required,
+not an endorsement) · never Content-ID / PRO-register the tracks · no standalone soundtrack (OST) product
+without a separate agreement · embed in the game only, don't offer the raw files as an audio pack. Football-
+specific SFX (whistle/crowd/kick/net) are NOT in this RPG pack — source those separately later (free CC0 via
+freesound.org, or the companion Bit By Bit SFX pack for UI sounds).
+
+## Sourcing guide (reference — how the pack was chosen)
 Look for **chiptune / 8–16-bit game music with warmth** (some packs blend chip leads with real pads/piano),
 sold with a **commercial game license**. Reputable places to look (vet each pack's own license):
 - **itch.io** game-music assets (many chiptune/JRPG-style packs with clear game licenses).
