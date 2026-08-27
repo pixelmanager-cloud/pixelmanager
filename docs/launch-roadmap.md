@@ -8,12 +8,12 @@ Legend: ☐ todo · ◐ in progress · ☑ done.
 
 ## 1. Audio
 - ☑ Music system (12 contexts, rotation, crossfade, mute) + soundtrack finalized (18 licensed tracks wired)
-- ☐ **SFX** — generate the chiptune UI/economy set in code; wire real CC0 football samples (whistle/crowd/net) once sourced; separate SFX volume + off toggle; sparing use (routine clicks silent)
+- ☐ **SFX (scaled down)** — football foley (whistle/crowd/net) **CUT for launch** (couldn't source samples good enough; generated ones were poor, and cheap SFX reads worse than silence in a menu/card life-sim). Ship only a small chiptune **reward** set generated in-code — a soft confirm tone on the big commitment beats (sign prospect, graduate, title win); NO routine click sounds. Add a separate SFX volume + off toggle. A great CC0 whistle can drop into audio.ts later in one line if ever found.
 
 ## 2. Onboarding & first 15 minutes  ← highest leverage (make-or-break on Steam)
-- ☐ New-game → guided first career (scout a kid → develop → graduate → play a match → tease the dynasty)
+- ☑ Polish the new-game flow + the "first prospect" moment — new game now opens a **scouting board**: 3 seeded ten-year-olds, each shown a position hint + one glimpsed physical trait + a hedged scout note and **no potential stars** (deliberate mystery/anticipation); you pick on a hunch, and the true ceiling only reveals once he's signed. Sign → academy welcome → develop.
+- ◐ New-game → guided first career (scout ✓ → develop → graduate → play a match → tease the dynasty) — contextual tutorial hints already lead gen-0; remaining: make sure the graduate→field→match beat is clearly signposted
 - ☐ Light, skippable tutorial that teaches the development loop by *playing* it
-- ☐ Polish the new-game flow + the "first prospect" moment
 - (see `offline-shell-design.md` §2)
 
 ## 3. Settings, saves & UX

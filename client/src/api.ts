@@ -205,9 +205,52 @@ export const api = {
   register: async (_handle: string, _password: string, clubName?: string) => {
     const name = (clubName && clubName.trim()) || 'My Club';
     const id = await newGameSlot(name); // freshSave() (save.ts) already builds the starting club + standing orders
-    try { await mintGenesisLocal(); } catch { /* supply cap reached — no welcome prospect (never happens at 0 tokens) */ }
+    // NO auto-mint — the player scouts + PICKS their founding prospect (see scoutProspects/signProspect).
     const model = getActiveModel();
     return { token: id, account: { id: OWNER, handle: id, rating: 1000, coins: model.profile.coins }, ...mergedClub() };
+  },
+  /** Scout board: `n` seeded 10-year-old candidates to choose from. Deliberately shows only what a scout
+   *  could glimpse — a position, ONE physical trait, and a hedged note — never the true ceiling. The
+   *  potential is a mystery that only emerges by developing him. Deterministic per save (no reroll). */
+  scoutProspects: async (n = 3) => {
+    await ensureActive();
+    const slot = getActiveSlotId() ?? 'x';
+    const TRAIT: Record<string, string[]> = {
+      pace: ['looks lightning quick', 'has electric feet', 'quick as a whip'],
+      strength: ['a strong, sturdy frame', 'built sturdy for his age', 'wins every physical duel'],
+      stamina: ['an engine that never quits', 'runs all day', 'boundless energy'],
+    };
+    const NOTES = [
+      "Raw, but there's something about him.", 'Fearless on the ball — the temperament, time will tell.',
+      "A rough diamond. Could be special, could fizzle — that's scouting.", 'Quiet lad who reads the game beyond his years.',
+      'All heart. The rest is yours to shape.', "The coaches are split on him — usually a sign he's interesting.",
+      'A natural. Whether he does the work is up to you.', 'Nothing flashy yet, but he never stops learning.',
+    ];
+    const cands = [];
+    for (let i = 0; i < n; i++) {
+      const seed = seedFrom(`${slot}:scout:${i}`);
+      const genes = rollGenes(seed);
+      const rh = seed % 100, roleHint = rh < 10 ? 'GK' : rh < 40 ? 'DF' : rh < 72 ? 'MF' : 'FW';
+      const ceils: Array<[string, number]> = [['pace', genes.pace.ceiling], ['strength', genes.strength.ceiling], ['stamina', genes.stamina.ceiling]];
+      const top = ceils.sort((a, b) => b[1] - a[1])[0][0];
+      const glimpse = TRAIT[top][seedFrom(`${slot}:g:${i}`) % TRAIT[top].length];
+      const note = NOTES[seedFrom(`${slot}:n:${i}`) % NOTES.length];
+      cands.push({ seed, name: nameFor(seed), roleHint, glimpse, note });
+    }
+    return { candidates: cands };
+  },
+  /** Sign the scouted prospect identified by its candidate `seed` — mints it (with that kid's exact genes
+   *  and name) as the founding, generation-0 token; the unpicked candidates are simply never minted. */
+  signProspect: async (seed: number) => {
+    await ensureActive();
+    if ((await localStore.countTokens()) >= SUPPLY_CAP) throw apiErr('supply cap reached', {}, 409);
+    const id = `nft:${(await localStore.countTokens()) + 1}`;
+    const genes = rollGenes(seed);
+    const rh = seed % 100, roleHint = rh < 10 ? 'GK' : rh < 40 ? 'DF' : rh < 72 ? 'MF' : 'FW';
+    await localStore.createToken({ id, owner_id: OWNER, generation: 0, state: 'prospect', name: nameFor(seed), genes_json: JSON.stringify(genes), pedigree: 0, dev_bonus_json: '{}' });
+    await localStore.updateToken(id, { role: roleHint });
+    const t = (await localStore.getToken(id))!;
+    return { ok: true as const, prospect: { id, name: t.name, roleHint, generation: 0, pedigree: 0, careerStarted: false, potentialStars: rebornPotential(t).stars, genes } };
   },
   login: async (handle: string, _password: string) => {
     // no passwords locally — `handle` here is a save-slot id (kept for signature-compatibility; unused

@@ -348,9 +348,39 @@ class Game {
       setToken(r.token);
       this.setMe({ account: r.account, club: r.club, standingOrders: r.standingOrders });
       const saves = this.loadSaves(); saves.push({ id: handle, token: r.token, name, lastPlayed: Date.now() }); this.saveSaves(saves);
-      this.onboarding = true; // lead a new player straight to their first prospect (the unique hook)
-      this.showAcademy();
+      this.showScoutBoard(); // the FIRST decision: scout + pick your founding prospect (the unique hook)
     } catch { $('login-error').textContent = 'Could not create your club. Is the game server running?'; }
+  }
+
+  /** The founding-prospect scouting board — the player's very first choice. Deliberately mysterious: a
+   *  position, one glimpsed trait, a hedged note — never the true potential. You pick on a hunch; who he
+   *  becomes is the payoff of developing him. */
+  private async showScoutBoard() {
+    this.showScreen('academy');
+    audio.play('scout');
+    $('academy-body').innerHTML = SPINNER;
+    const ROLE_LABEL: Record<string, string> = { GK: 'a keeper', DF: 'a defender', MF: 'a midfielder', FW: 'a forward' };
+    try {
+      const { candidates } = await api.scoutProspects(3);
+      const cards = candidates.map((c) => `<div class="scout-cand" data-seed="${c.seed}">`
+        + `<div class="sc-head"><span class="sc-name">${c.name}</span><span class="sc-age">age 10</span></div>`
+        + `<div class="sc-role">Looks like ${ROLE_LABEL[c.roleHint] ?? 'a player'} · <span class="sc-glimpse">${c.glimpse}</span></div>`
+        + `<div class="sc-note">“${c.note}”</div>`
+        + `<button class="primary sc-sign" data-seed="${c.seed}">Sign him →</button></div>`).join('');
+      $('academy-body').innerHTML = `<div class="scout-board"><div class="scout-intro">`
+        + `<b>Three kids are on trial.</b> They're ten years old — nobody can tell you how far any of them will go. `
+        + `Trust your eye, pick the one to carry the family name, and <b>make</b> him into a star.</div>`
+        + `<div class="scout-cands">${cards}</div></div>`;
+      $('academy-body').querySelectorAll('.sc-sign').forEach((b) => b.addEventListener('click', () => this.signProspect(Number((b as HTMLElement).dataset.seed))));
+    } catch { $('academy-body').innerHTML = '<div class="muted">Could not scout right now.</div>'; }
+  }
+  private async signProspect(seed: number) {
+    try {
+      const r = await api.signProspect(seed);
+      this.onboarding = true; // now show the academy welcome, with his story ahead
+      toast(`✍️ Signed ${r.prospect.name} — the bloodline begins`);
+      this.showAcademy();
+    } catch { toast('Could not sign him'); }
   }
 
   private onboarding = false; // true right after New Game → academy shows a first-time welcome

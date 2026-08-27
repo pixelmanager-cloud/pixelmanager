@@ -22,7 +22,7 @@ async function assertThrows(label: string, fn: () => Promise<any>): Promise<void
 console.log('=== 1. New Game ===');
 const reg = await api.register('ignored', 'ignored', 'Bloodline FC');
 assert(!!reg.token, 'register() returns a save-slot token');
-assert(reg.account.coins === 500, 'welcome-prospect genesis mint is free (no coin charge, matching the original server register())');
+assert(reg.account.coins === 500, 'register() does not charge coins (the founding prospect is scouted + signed, not auto-minted)');
 assert(reg.club.name === "Bloodline FC's Club", "club name derives from the chosen name (makeClub appends 's Club, see shared/src/game.ts)");
 assert(reg.club.players.length === 20, 'starting squad has 20 base players');
 assert(reg.standingOrders.playerIds.length === 11, 'a valid starting XI is set');
@@ -32,9 +32,16 @@ const me1 = await api.me();
 assert(me1.account.coins === reg.account.coins, 'me() coins match register()');
 assert(me1.season === 0, 'season starts at 0');
 
-console.log('=== 3. prospects() -> the welcome prospect ===');
+console.log('=== 3. scout board -> sign the founding prospect ===');
+assert((await api.prospects()).prospects.length === 0, 'register mints nothing — the academy is empty until you sign someone');
+const board = await api.scoutProspects(3);
+assert(board.candidates.length === 3, 'scoutProspects returns 3 candidates');
+assert(board.candidates.every((c) => c.roleHint && c.glimpse && c.note), 'each candidate shows a role hint, a glimpsed trait and a note');
+assert(board.candidates.every((c) => !('potentialStars' in c)), 'the board hides the true potential (mystery/anticipation) — no stars shown');
+const signed = await api.signProspect(board.candidates[0].seed);
+assert(signed.ok && signed.prospect.generation === 0, 'signProspect mints the founding generation-0 token');
 const { prospects, supply, cap } = await api.prospects();
-assert(prospects.length === 1, 'exactly one prospect (the welcome genesis mint)');
+assert(prospects.length === 1, 'exactly one prospect now (the signed founder)');
 assert(supply === 1 && cap > 0, 'supply/cap reported');
 const prospectId = prospects[0].id;
 
