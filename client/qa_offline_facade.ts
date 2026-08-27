@@ -86,7 +86,7 @@ assert(up.level === 2, 'stadium upgraded to level 2');
 assert(up.coins === facBefore.coins - (stadium.upgradeCost ?? 0), 'coins debited by the upgrade cost');
 
 const coinsBeforeReward = (await api.me()).account.coins;
-const reward = await api.spSeasonReward({ pos: 1, size: 10 });
+const reward = await api.spSeasonReward({ pos: 1, size: 10, wins: 24, draws: 8, losses: 6 });
 assert(reward.prize === 800, 'champion prize for pos=1/size=10');
 assert(reward.coins === coinsBeforeReward + reward.prize, 'season prize banked');
 const meAfterReward = await api.me();
@@ -99,9 +99,15 @@ console.log('=== 9. honours recorded a title for the champion finish ===');
 const { honours } = await api.honours();
 assert(honours.length === 1 && honours[0].title === 1, 'spSeasonReward(pos=1) banks a league title honour');
 
-console.log('=== 10. prestige + trophy-room data don\'t throw ===');
+console.log('=== 10. prestige (rebuilt: accrues local W/D/L) + trophy-room data ===');
 const prestige = await api.prestige();
 assert(prestige.prestige.leagueTitles >= 1, 'prestige reflects the banked title');
+assert(prestige.record.wins === 24 && prestige.record.draws === 8 && prestige.record.losses === 6, 'prestige accrues the season W/D/L passed to spSeasonReward (offline rebuild)');
+assert(prestige.record.seasons >= 1, 'prestige counts seasons managed');
+// second season accumulates onto the lifetime record
+await api.spSeasonReward({ pos: 4, size: 10, wins: 10, draws: 10, losses: 18 });
+const prestige2 = await api.prestige();
+assert(prestige2.record.wins === 34 && prestige2.record.losses === 24, 'a second season adds to the lifetime W/D/L record');
 const { legends } = await api.legends();
 assert(Array.isArray(legends), 'legends() returns an array (empty — nobody has retired yet)');
 

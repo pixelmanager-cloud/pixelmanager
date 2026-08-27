@@ -314,7 +314,7 @@ export const api = {
   // SP SEASON PRIZE — also where the local season counter advances (see docs note in save.ts's
   // profile.season) and where a league finish is banked as an honour (the old pod/wall-clock season
   // rollover that used to write honours is gone; this is the one call-per-season-end main.ts makes).
-  spSeasonReward: async (body: { pos: number; size: number; sponsor?: string }) => {
+  spSeasonReward: async (body: { pos: number; size: number; sponsor?: string; wins?: number; draws?: number; losses?: number }) => {
     await ensureActive();
     const model = getActiveModel();
     const size = Math.max(2, Math.min(30, Math.floor(Number(body?.size) || 10)));
@@ -323,6 +323,12 @@ export const api = {
     const prize = Math.max(0, pos === 1 ? 800 : Math.round(120 + (1 - frac) * 480));
     const sponsorBonus = String(body?.sponsor) === 'performance' && pos <= 3 ? (pos === 1 ? 700 : 400) : 0;
     const season = model.profile.season;
+    // accrue this season's W/D/L into the lifetime manager record (drives prestige, now that the PvP
+    // match history is gone) — the caller (nextSeason) passes it from the local season results.
+    const clampN = (n: unknown) => Math.max(0, Math.floor(Number(n) || 0));
+    model.profile.wins = (model.profile.wins ?? 0) + clampN(body?.wins);
+    model.profile.draws = (model.profile.draws ?? 0) + clampN(body?.draws);
+    model.profile.losses = (model.profile.losses ?? 0) + clampN(body?.losses);
     await localStore.addHonour(OWNER, String(season), season, 'Local', pos, pos === 1 ? 1 : 0, Date.now(), prize + sponsorBonus, 'league');
     model.profile.season = season + 1; // local counter — advances once per season played
     await localStore.addCoins(OWNER, prize + sponsorBonus); // also schedules the persist that banks the season bump above
@@ -453,11 +459,12 @@ export const api = {
   },
   prestige: async () => {
     await ensureActive();
-    // PvP match history no longer exists locally, so win/draw/loss + "highest tier reached" have no
-    // signal left to derive from — they read as 0 always. Honours (title count) still work — see
-    // spSeasonReward, which is now the one place a league finish gets recorded.
+    // Rebuilt for offline: the lifetime W/D/L record is accrued locally at each season-end (see
+    // spSeasonReward), and honours (title count) come from the banked league finishes. No tier pyramid
+    // in single-player, so highestTierIdx stays 0 (titles + wins + longevity carry the prestige).
+    const model = getActiveModel();
     const honours = await localStore.honoursFor(OWNER, 9999);
-    const wins = 0, draws = 0, losses = 0, highestTierIdx = 0;
+    const wins = model.profile.wins ?? 0, draws = model.profile.draws ?? 0, losses = model.profile.losses ?? 0, highestTierIdx = 0;
     const honourLites = honours.map((h) => ({ tierIdx: 0, title: h.title, kind: (h.kind === 'cup' ? 'cup' : 'league') as 'cup' | 'league' }));
     const seasons = new Set(honours.map((h) => h.season_number)).size;
     return { prestige: managerPrestige({ wins, draws, losses, honours: honourLites, highestTierIdx, seasons }), record: { wins, draws, losses, seasons } };
@@ -599,6 +606,6 @@ export const api = {
     return { entry };
   },
   honours: async () => { await ensureActive(); return { honours: await localStore.honoursFor(OWNER) }; },
-  awards: async () => { await ensureActive(); return { awards: [] as AwardRow[] }; }, // season leaderboards were PvP-pod-scoped; no local equivalent (see final report)
+  awards: async () => { await ensureActive(); return { awards: [] as AwardRow[] }; }, // superseded, not downgraded: the old Golden Boot/Playmaker awards were PvP-pod individual-stat leaderboards; single-player surfaces the star's real achievements via honours/caps/legends in the Trophy Room instead. Kept as a stub (no caller remains).
   scoutTiers: async () => ({ opp: TIER, player: TIER, nft: { address: '', chainId: 0, enabled: false } }),
 };

@@ -18,7 +18,7 @@ const OWNER = 'local';
 // ── the SaveModel — everything that persists (see docs/offline-savestore-design.md) ──
 export interface SaveModel {
   version: number; // save-format version, for future migrations (starts at 1 — none needed yet)
-  profile: { name: string; coins: number; createdAt: number; season: number }; // season = local counter, replaces the synced clock
+  profile: { name: string; coins: number; createdAt: number; season: number; wins?: number; draws?: number; losses?: number }; // season = local counter; W/D/L = lifetime manager record (accrued at each season-end, powers prestige)
   club: Club;
   standingOrders: StandingOrders;
   tokens: Token[]; // THE HEART — unified lifecycle records (prospect/pro/retired)

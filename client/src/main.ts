@@ -1,6 +1,6 @@
 import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, DUTY_LABEL, DUTIES_BY_ROLE, isDutyForRole,
-  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
+  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type Trialist, type MissionsData, type ContractInfo } from './api';
 import { sprite } from './sprites';
@@ -588,7 +588,19 @@ class Game {
 
   private async refreshDiary() {
     try {
-      const { entry } = await api.diary();
+      let entry: string;
+      const m = this.loadMgr();
+      if (m.starId && this.club) {
+        // MANAGER PHASE: feed the diary the REAL local season — results + live table — so it narrates
+        // form, win streaks, promotion/relegation watch etc. (rebuilt offline; the old PvP feed is gone).
+        const results = m.results ?? [];
+        const t = liveTable(this.club.name, this.clubLeagueStrength(), 1, this.leagueSeed(), results);
+        const matches = results.map((r, i) => ({ id: `s${m.season}-m${i}`, myScore: r.myGoals, oppScore: r.oppGoals, oppId: '', oppHandle: '', createdAt: i }));
+        const table = { position: t.pos, total: t.size, promote: 3, relegate: 2, points: t.me.Pts }; // top-3 = continental zone, bottom-2 = relegation (matches spTableHtml)
+        entry = gaffersDiaryEntry({ seasonNumber: m.season, matches, table });
+      } else {
+        entry = (await api.diary()).entry; // player-career phase: the generic blank-page line
+      }
       $('gaffers-diary-text').textContent = entry;
       $('gaffers-diary').classList.toggle('hidden', !entry);
     } catch { $('gaffers-diary').classList.add('hidden'); }
@@ -1082,8 +1094,10 @@ class Game {
   private async nextSeason() {
     const m = this.loadMgr();
     const t = liveTable(this.club.name, this.clubLeagueStrength(), 1, this.leagueSeed(), m.results);
+    // this season's W/D/L (fed to the lifetime manager record that powers prestige)
+    const rec = (m.results ?? []).reduce((a, r) => { r.myGoals > r.oppGoals ? a.wins++ : r.myGoals < r.oppGoals ? a.losses++ : a.draws++; return a; }, { wins: 0, draws: 0, losses: 0 });
     // bank the season prize money (coins → reinvest in facilities), closing the manager economy loop
-    try { const r = await api.spSeasonReward({ pos: t.pos, size: t.size, sponsor: m.sponsor }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 Season prize: +${r.prize.toLocaleString()}c${r.sponsorBonus ? ` + 📣 ${r.sponsorBonus}c sponsor bonus` : ''}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ` · ${this.ordinal(t.pos)}`}`); } catch { /* offline: no prize */ }
+    try { const r = await api.spSeasonReward({ pos: t.pos, size: t.size, sponsor: m.sponsor, ...rec }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 Season prize: +${r.prize.toLocaleString()}c${r.sponsorBonus ? ` + 📣 ${r.sponsorBonus}c sponsor bonus` : ''}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ` · ${this.ordinal(t.pos)}`}`); } catch { /* offline: no prize */ }
     // TRAINING: the star develops per the focus (young grow it, veterans decline) — his overall shifts the club
     if (m.starId) {
       try { const d = await api.developPlayer(m.starId, { focus: m.trainFocus ?? 'passing', age: m.starAge ?? 27 }); this.setMe(await api.me()); toast(`🏋️ ${m.starName} — off-season training (OVR now ${d.overall})`); } catch { /* offline */ }
