@@ -297,6 +297,7 @@ class Game {
     // unlock audio on the first user interaction (browsers block autoplay until then); once is enough
     const unlock = () => { audio.unlock(); document.removeEventListener('pointerdown', unlock); };
     document.addEventListener('pointerdown', unlock);
+    this.loadPrefs(); // reduced-motion etc., applied before first paint
     this.wireStaticButtons();
     this.showScreen('login');
     this.renderMainMenu();
@@ -335,7 +336,77 @@ class Game {
     catch { $('login-error').textContent = 'Could not load that save (is the game server running?).'; clearToken(); }
   }
 
-  private deleteSave(id: string) { this.saveSaves(this.loadSaves().filter((s) => s.id !== id)); this.renderMainMenu(); }
+  private deleteSave(id: string) {
+    const save = this.loadSaves().find((s) => s.id === id);
+    this.openConfirm(`Delete <b>${save?.name ?? 'this save'}</b>? This bloodline is gone for good — there's no undo.`, 'Delete forever', () => {
+      this.saveSaves(this.loadSaves().filter((s) => s.id !== id)); this.renderMainMenu(); toast('Save deleted');
+    });
+  }
+
+  // ── settings + confirm dialogs ────────────────────────────────────────────────────────────────
+  private static PREFS_KEY = 'fm_prefs';
+  private prefs: { reducedMotion: boolean } = { reducedMotion: false };
+  /** Load persisted prefs (defaulting reduced-motion to the OS setting) and apply them app-wide. */
+  private loadPrefs() {
+    let saved: Partial<{ reducedMotion: boolean }> = {};
+    try { saved = JSON.parse(localStorage.getItem(Game.PREFS_KEY) || '{}'); } catch { /* defaults */ }
+    const osReduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    this.prefs = { reducedMotion: saved.reducedMotion ?? osReduced };
+    this.applyPrefs();
+  }
+  private applyPrefs() { document.body.classList.toggle('reduced-motion', this.prefs.reducedMotion); }
+  private savePrefs() { try { localStorage.setItem(Game.PREFS_KEY, JSON.stringify(this.prefs)); } catch { /* ignore */ } }
+
+  /** The settings dialog — reachable from the menu AND mid-game (top-bar ⚙). Music volume + mute and
+   *  reduced-motion, applied live. (SFX volume joins here once the SFX set ships.) */
+  private openSettings() {
+    document.getElementById('settings-ov')?.remove();
+    const sw = (on: boolean) => `<div class="set-sw${on ? ' on' : ''}" role="switch" aria-checked="${on}" tabindex="0"></div>`;
+    const ov = document.createElement('div'); ov.id = 'settings-ov';
+    ov.innerHTML = `<div class="tt-card set-card">`
+      + `<div class="set-head"><div class="tt-title">⚙ SETTINGS</div><button class="set-x" aria-label="Close">✕</button></div>`
+      + `<div class="set-row"><div class="set-lbl"><span>Music</span><span class="set-val" id="set-volval">${Math.round(audio.getVolume() * 100)}%</span></div>`
+      + `<input type="range" id="set-vol" min="0" max="100" value="${Math.round(audio.getVolume() * 100)}" aria-label="Music volume"></div>`
+      + `<div class="set-row"><div class="set-lbl"><span>Mute music</span>${sw(audio.isMuted())}</div>`
+      + `<div class="set-hint">Silence the soundtrack. Your volume is remembered.</div></div>`
+      + `<div class="set-row"><div class="set-lbl"><span>Reduce motion</span>${sw(this.prefs.reducedMotion)}</div>`
+      + `<div class="set-hint">Tone down animations and screen effects (card flips, the CRT shimmer, transitions).</div></div>`
+      + `</div>`;
+    document.body.appendChild(ov);
+    const close = () => ov.remove();
+    ov.addEventListener('click', (e) => { if (e.target === ov) close(); }); // click backdrop to dismiss
+    ov.querySelector('.set-x')!.addEventListener('click', close);
+    // music volume — live
+    const vol = ov.querySelector('#set-vol') as HTMLInputElement;
+    vol.addEventListener('input', () => { const v = Number(vol.value) / 100; audio.setVolume(v); if (audio.isMuted() && v > 0) { audio.setMuted(false); this.syncMuteBtn(); (ov.querySelectorAll('.set-sw')[0] as HTMLElement).classList.add('on'); } $('set-volval').textContent = `${vol.value}%`; });
+    // the two toggles: [0] mute music, [1] reduce motion
+    const [muteSw, motionSw] = Array.from(ov.querySelectorAll('.set-sw')) as HTMLElement[];
+    const flip = (el: HTMLElement, on: boolean) => { el.classList.toggle('on', on); el.setAttribute('aria-checked', String(on)); };
+    const toggleMute = () => { const m = audio.toggleMuted(); flip(muteSw, m); this.syncMuteBtn(); };
+    const toggleMotion = () => { this.prefs.reducedMotion = !this.prefs.reducedMotion; this.savePrefs(); this.applyPrefs(); flip(motionSw, this.prefs.reducedMotion); };
+    muteSw.addEventListener('click', toggleMute);
+    motionSw.addEventListener('click', toggleMotion);
+    muteSw.addEventListener('keydown', (e) => { const k = (e as KeyboardEvent).key; if (k === ' ' || k === 'Enter') { e.preventDefault(); toggleMute(); } });
+    motionSw.addEventListener('keydown', (e) => { const k = (e as KeyboardEvent).key; if (k === ' ' || k === 'Enter') { e.preventDefault(); toggleMotion(); } });
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); } };
+    document.addEventListener('keydown', onEsc);
+  }
+
+  private syncMuteBtn() { const at = $('audio-toggle'); at.textContent = audio.isMuted() ? '🔇' : '🔊'; at.classList.toggle('muted', audio.isMuted()); }
+
+  /** A generic yes/cancel confirm overlay (used for destructive actions like deleting a save). */
+  private openConfirm(message: string, confirmLabel: string, onYes: () => void) {
+    document.getElementById('confirm-ov')?.remove();
+    const ov = document.createElement('div'); ov.id = 'confirm-ov';
+    ov.innerHTML = `<div class="tt-card"><div class="tt-title">⚠ ARE YOU SURE?</div>`
+      + `<div class="tt-sub" style="margin-bottom:6px">${message}</div>`
+      + `<div class="cf-btns"><button id="cf-no">Cancel</button><button id="cf-yes" class="danger">${confirmLabel}</button></div></div>`;
+    document.body.appendChild(ov);
+    const close = () => ov.remove();
+    ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+    ov.querySelector('#cf-no')!.addEventListener('click', close);
+    ov.querySelector('#cf-yes')!.addEventListener('click', () => { close(); onYes(); });
+  }
 
   /** New Game: silently create a local profile (no handle/password shown) and drop the player in. */
   private async startNewGame(rawName: string) {
@@ -425,6 +496,7 @@ class Game {
     const syncAudio = () => { at.textContent = audio.isMuted() ? '🔇' : '🔊'; at.classList.toggle('muted', audio.isMuted()); };
     syncAudio();
     at.addEventListener('click', () => { audio.toggleMuted(); syncAudio(); });
+    $('settings-btn').addEventListener('click', () => this.openSettings());
     const setSpeed = (v: number, id: string) => { this.speed = v; ['spd1', 'spd4', 'spd12'].forEach((b) => $(b).classList.remove('active')); $(id).classList.add('active'); };
     $('spd1').addEventListener('click', () => setSpeed(1, 'spd1'));
     $('spd4').addEventListener('click', () => setSpeed(4, 'spd4'));
