@@ -35,6 +35,14 @@ const CLEAN_BRANDS: { brand: string; category: string; obligation: string; risky
   { brand: 'Brightline Telecom', category: 'Telecom', obligation: 'A monthly video call-in with a competition winner — takes real time.' },
   { brand: 'Oakfield Motors', category: 'Family cars', obligation: 'Drive the sponsored estate to training, no exceptions.' },
   { brand: 'Steadfast Coffee', category: 'Coffee', obligation: 'An early-morning shoot before every home game — sleep be damned.' },
+  { brand: 'Harbourlight Books', category: 'Publishing', obligation: 'A ghost-written autobiography chapter due every off-season — harder than it sounds.' },
+  { brand: 'Greenfield Dairy', category: 'Dairy', obligation: 'A milk-moustache billboard the whole town will rib you about for years.' },
+  { brand: 'Ironclad Building Society', category: 'Mortgages', obligation: 'A dull, dependable face for a dull, dependable brand — no surprises allowed.' },
+  { brand: 'Willowmere Opticians', category: 'Eyewear', obligation: 'Wear their frames for every press conference — vision jokes included, free of charge.' },
+  { brand: 'Cobblestone Bakery', category: 'Bakery', obligation: 'A weekly loaf delivered to the training ground with your face on the bag.' },
+  { brand: 'Parkside Pharmacy', category: 'Healthcare', obligation: 'A flu-jab photo op every autumn, rolled sleeve and all.' },
+  { brand: 'Thistledown Wool', category: 'Knitwear', obligation: 'A Christmas jumper campaign that follows you online every December.' },
+  { brand: 'Lantern & Co Removals', category: 'Removals', obligation: "Turn up for the van's unveiling — yes, they named the van after you." },
 ];
 const EDGY_BRANDS: { brand: string; category: string; obligation: string; riskyCategory?: boolean }[] = [
   { brand: 'Riot Energy', category: 'Energy drink', obligation: 'Stay in the headlines — they want noise, not silence.' },
@@ -47,6 +55,14 @@ const EDGY_BRANDS: { brand: string; category: string; obligation: string; riskyC
   { brand: 'Renegade Ink', category: 'Tattoo studio', obligation: 'Show off the work — the club’s image team is not thrilled.' },
   { brand: 'Overdrive Crypto', category: 'Crypto exchange', obligation: 'Front a currency half the fanbase thinks is a scam.', riskyCategory: true },
   { brand: 'Midnight Streaming', category: 'Streaming service', obligation: 'A late-night talk-show slot — the sort managers hate the week of a big game.' },
+  { brand: 'Blackout Vodka', category: 'Spirits', obligation: 'A club-night residency in your own name — the club chairman has Opinions.', riskyCategory: true },
+  { brand: 'Ferox Cologne', category: 'Fragrance', obligation: 'A shirtless billboard campaign the whole league will screenshot.' },
+  { brand: 'Underdog Records', category: 'Music label', obligation: 'A guest verse on a grime track — the pundits will never let it go.' },
+  { brand: 'Warpaint Streetwear', category: 'Fashion', obligation: 'Front a drop that sells out and offends somebody\'s grandmother in the same week.' },
+  { brand: 'Skyhigh Bookmakers', category: 'Betting', obligation: 'Odds boosts with your face on them, every matchday — supporters\' trust groups are watching.', riskyCategory: true },
+  { brand: 'Nocturne Nightclubs', category: 'Nightlife', obligation: 'A standing VIP table with your name on it, cameras included.', riskyCategory: true },
+  { brand: 'Fastlane Customs', category: 'Car customisation', obligation: 'A wrapped supercar paraded outside the ground — subtle, it is not.' },
+  { brand: 'Provocateur Media', category: 'Podcast network', obligation: 'Say something spicy every episode, or they cut the mic.' },
 ];
 
 // Signature boots — EARNED through play (never bought). Each carries a small OFF-PITCH perk (flavour /
@@ -57,6 +73,12 @@ export const BOOT_CATALOG: (SignatureBoot & { needCaps?: number; needBigWin?: bo
   { id: 'cap-pride', name: 'National Pride', edge: 'Gold-flash boots stitched after his first cap — a marketability boost.', unlock: 'Earn an international cap', needCaps: 1 },
   { id: 'century', name: 'The Century', edge: 'Commemorative boots for a landmark career score — draws the sponsors.', unlock: 'Career score 900+', needScore: 900 },
   { id: 'signature', name: 'The Signature', edge: 'His OWN signature line — the mark of a genuine icon.', unlock: 'Global icon status (image 80+)', needImage: 80 },
+  { id: 'homecoming', name: 'The Homecoming', edge: 'Worn on the return to the club where it all started — a quiet, personal moment nobody outside the family understands.', unlock: 'Career score 300+', needScore: 300 },
+  { id: 'iron-will', name: 'Iron Will', edge: 'Battered, restitched, worn through a dozen setbacks — these boots have earned their scars.', unlock: 'Career score 600+', needScore: 600 },
+  { id: 'silverware', name: 'Silverware', edge: 'Boots from the biggest night of his career so far — a trophy in leather form.', unlock: 'Win a huge-stakes moment', needBigWin: true, needScore: 700 },
+  { id: 'road-warrior', name: 'The Road Warrior', edge: 'Every away end has seen these boots by now — a well-travelled career.', unlock: 'Multiple international caps', needCaps: 4 },
+  { id: 'people-choice', name: "The People's Choice", edge: 'Voted for by the fans themselves — a marketability boost money can\'t buy.', unlock: 'National-name marketability (image 60+)', needImage: 60 },
+  { id: 'last-word', name: 'The Last Word', edge: 'Custom boots for a player everyone in the game now has to talk about.', unlock: 'Career score 1200+', needScore: 1200 },
 ];
 
 export function computeOffPitch(input: {
@@ -127,6 +149,12 @@ export function computeOffPitch(input: {
     { kind: 'bribe', title: 'A quiet word', blurb: 'A stranger offers a fat envelope to "take it easy" in a dead-rubber game. No one would ever know… except you.' },
     { kind: 'nightlife', title: 'One more night out', blurb: 'The lads want a big night before a huge week. Fun and bonding — or a back-page photo and a heavy-legged performance.' },
     { kind: 'invest', title: 'A can’t-miss tip', blurb: 'A mate swears a risky investment is a sure thing. Double your money, or learn an expensive lesson about "sure things".' },
+    { kind: 'old-mates', title: 'The old crew comes calling', blurb: 'Mates from before the money want a favour — a loan, a job, a “quick word” with your agent. Loyalty, or a slippery slope?' },
+    { kind: 'prank', title: 'A dressing-room prank goes too far', blurb: 'The lads want you in on a stitch-up of the new signing. Harmless fun — or the sort of thing that ends up online.' },
+    { kind: 'secret-tab', title: 'A tab nobody’s meant to see', blurb: 'A late-night order somewhere that really shouldn’t be discreet about it. Nothing illegal — but the receipt would raise eyebrows.' },
+    { kind: 'ghost-post', title: 'A ghost-written hot take', blurb: 'Your agent wants to post something spicy from your account “to build the brand.” It’s not really you talking.' },
+    { kind: 'freebie', title: 'A gift with strings attached', blurb: 'A watch turns up, “no strings attached,” from someone who clearly wants something eventually.' },
+    { kind: 'curfew', title: 'Breaking curfew the night before a big one', blurb: 'One quiet drink turns into a late one, the night before the biggest game of the season.' },
   ];
   const temptation = tempted ? TEMPT[hash32(seed, 5400 + turn) % TEMPT.length] : null;
 
