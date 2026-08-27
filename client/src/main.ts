@@ -5,6 +5,7 @@ import {
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type Trialist, type MissionsData, type ContractInfo } from './api';
 import { sprite } from './sprites';
+import { audio } from './audio';
 
 /** Single-player manager-season state (per save, in localStorage). `starId` present ⇒ manager phase. */
 interface MgrState { season: number; results: PlayedResult[]; starId?: string; starName?: string; starAge?: number; retireAge?: number; titles?: number; trainFocus?: string; staff?: string[]; sponsor?: string;
@@ -293,6 +294,9 @@ class Game {
   awayName = '';
 
   async boot() {
+    // unlock audio on the first user interaction (browsers block autoplay until then); once is enough
+    const unlock = () => { audio.unlock(); document.removeEventListener('pointerdown', unlock); };
+    document.addEventListener('pointerdown', unlock);
     this.wireStaticButtons();
     this.showScreen('login');
     this.renderMainMenu();
@@ -379,9 +383,18 @@ class Game {
     $('app-title').classList.toggle('hidden', s === 'login'); // menu shows the big title already — no duplicate brand
     $('app-title').classList.toggle('clickable', s !== 'login'); // title is "home" once you're in
     if (s !== 'scouting' && this.missionTimer) { clearInterval(this.missionTimer); this.missionTimer = null; } // stop the mission countdown when leaving
+    // MUSIC — base track per screen (career-moment screens get refined in renderCareer; retirement/title
+    // beats override at their event). Deferred contexts (scout/bigmatch/emotional) fall back gracefully.
+    const CTX: Record<typeof s, import('./audio').MusicContext> = { login: 'menu', hub: 'hub', lineup: 'hub', match: 'match', scouting: 'career', club: 'hub', academy: 'career', trophies: 'legends', season: 'hub' };
+    audio.play(CTX[s]);
   }
 
   private wireStaticButtons() {
+    // MUSIC mute toggle (persists via audio.ts; icon reflects state)
+    const at = $('audio-toggle');
+    const syncAudio = () => { at.textContent = audio.isMuted() ? '🔇' : '🔊'; at.classList.toggle('muted', audio.isMuted()); };
+    syncAudio();
+    at.addEventListener('click', () => { audio.toggleMuted(); syncAudio(); });
     const setSpeed = (v: number, id: string) => { this.speed = v; ['spd1', 'spd4', 'spd12'].forEach((b) => $(b).classList.remove('active')); $(id).classList.add('active'); };
     $('spd1').addEventListener('click', () => setSpeed(1, 'spd1'));
     $('spd4').addEventListener('click', () => setSpeed(4, 'spd4'));
@@ -1152,6 +1165,7 @@ class Game {
     if (m.starId) {
       try { const d = await api.developPlayer(m.starId, { focus: m.trainFocus ?? 'passing', age: m.starAge ?? 27 }); this.setMe(await api.me()); toast(`🏋️ ${m.starName} — off-season training (OVR now ${d.overall})`); } catch { /* offline */ }
     }
+    if (t.pos === 1) audio.play('triumph'); // league champions — the victory cue
     const titles = (m.titles ?? 0) + (t.pos === 1 ? 1 : 0);
     const age = (m.starAge ?? 22) + 1;
     if (age >= (m.retireAge ?? 34)) { this.retireStar(titles, m.contTitles ?? 0); return; } // his playing days are over — the heir comes through
@@ -1176,6 +1190,7 @@ class Game {
     const seasons = m.season;
     const mentorship = Math.max(0, (m.starAge ?? 30) - 30); // veteran years spent passing on the game to the next gen — only banked if he chooses to mentor
     this.showScreen('academy');
+    audio.play('emotional'); // the retirement/succession beat — the bloodline moment (its track carries the weight)
     const surname = (m.starName ?? '').trim().split(/\s+/).slice(1).join(' ') || m.starName || 'the family';
     const honours = [titles ? `${titles} league title${titles === 1 ? '' : 's'}` : '', contTitles ? `${contTitles} continental cup${contTitles === 1 ? '' : 's'}` : '', (m.wcWins ?? 0) ? `${m.wcWins} World Finals title${(m.wcWins ?? 0) === 1 ? '' : 's'}` : ''].filter(Boolean);
     const honourLine = honours.length ? ` and ${honours.join(', ')}` : '';
@@ -1583,6 +1598,8 @@ class Game {
   private renderCareer(s: import('./api').CareerState) {
     // HANDOFF: he's established himself as a first-team regular — take the reins as manager.
     if (s.handoff) { this.renderHandoff(s); return; }
+    // MUSIC follows the moment: a shock call-up gets tension, a life-event gets drama, else the career loop.
+    audio.play(s.callupMoment ? 'tension' : (s.momentKind === 'life' || s.lifeEvent) ? 'drama' : 'career');
     const pct = Math.round((s.turn / s.totalTurns) * 100);
     // re-theme the whole view for this life stage (accent + backdrop + scene banner)
     const th = CHAPTER_THEME[s.chapter] ?? CHAPTER_THEME.Grassroots;
