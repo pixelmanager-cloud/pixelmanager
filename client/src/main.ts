@@ -1,6 +1,6 @@
 import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, DUTY_LABEL, DUTIES_BY_ROLE, isDutyForRole,
-  TACTIC_PRESETS, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty,
+  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult,
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData, type MissionsData, type ContractInfo, type LeaderStat, type AwardRow } from './api';
 import { sprite } from './sprites';
@@ -228,14 +228,18 @@ class Game {
   private renderMainMenu() {
     $('mm-emblem').innerHTML = sprite('ball');
     const saves = this.loadSaves().sort((a, b) => b.lastPlayed - a.lastPlayed);
+    const multi = saves.length > 1; // with one save, Continue already loads it — the list would just duplicate that
     $('mm-buttons').classList.remove('hidden');
     $('mm-newgame').classList.add('hidden');
-    $('mm-continue').classList.toggle('hidden', saves.length === 0);
+    const cont = $('mm-continue');
+    cont.classList.toggle('hidden', saves.length === 0);
+    if (saves.length) cont.textContent = `▶ Continue — ${saves[0].name}`; // name the save it resumes
     $('login-error').textContent = '';
+    // the save list is a SWITCHER (only meaningful with 2+ saves); with one save it's just an info row + delete
     $('mm-saves').innerHTML = saves.length
-      ? `<div class="mm-saves-lbl">Your saves</div>` + saves.map((s) => `<div class="mm-save" data-id="${s.id}"><span class="mm-save-name">${s.name}</span><span class="mm-save-meta">${new Date(s.lastPlayed).toLocaleDateString()}</span><button class="mm-save-del" data-del="${s.id}" title="Delete save">✕</button></div>`).join('')
+      ? `<div class="mm-saves-lbl">${multi ? 'Switch save' : 'Your save'}</div>` + saves.map((s) => `<div class="mm-save${multi ? ' load' : ''}" data-id="${s.id}"><span class="mm-save-name">${s.name}</span><span class="mm-save-meta">${new Date(s.lastPlayed).toLocaleDateString()}</span><button class="mm-save-del" data-del="${s.id}" title="Delete save">✕</button></div>`).join('')
       : '';
-    $('mm-saves').querySelectorAll('.mm-save').forEach((el) => el.addEventListener('click', (e) => { if ((e.target as HTMLElement).dataset.del) return; this.loadSave((el as HTMLElement).dataset.id!); }));
+    if (multi) $('mm-saves').querySelectorAll('.mm-save').forEach((el) => el.addEventListener('click', (e) => { if ((e.target as HTMLElement).dataset.del) return; this.loadSave((el as HTMLElement).dataset.id!); }));
     $('mm-saves').querySelectorAll('.mm-save-del').forEach((el) => el.addEventListener('click', (e) => { e.stopPropagation(); this.deleteSave((el as HTMLElement).dataset.del!); }));
   }
 
@@ -290,8 +294,8 @@ class Game {
     return healthy.length >= 11 ? { ...this.club, players: healthy } : this.club;
   }
 
-  private showScreen(s: 'login' | 'hub' | 'lineup' | 'match' | 'standings' | 'scouting' | 'market' | 'club' | 'academy' | 'trophies') {
-    for (const id of ['login', 'hub', 'lineup', 'matchwrap', 'standings', 'scouting', 'market', 'club', 'academy', 'trophies']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
+  private showScreen(s: 'login' | 'hub' | 'lineup' | 'match' | 'standings' | 'scouting' | 'market' | 'club' | 'academy' | 'trophies' | 'season') {
+    for (const id of ['login', 'hub', 'lineup', 'matchwrap', 'standings', 'scouting', 'market', 'club', 'academy', 'trophies', 'season']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
     $('logout').classList.toggle('hidden', s === 'login');
     $('app-title').classList.toggle('hidden', s === 'login'); // menu shows the big title already — no duplicate brand
     $('app-title').classList.toggle('clickable', s !== 'login'); // title is "home" once you're in

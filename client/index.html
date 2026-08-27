@@ -13,7 +13,7 @@
         --bg:#0a0a16; --panel:#161637; --panel-2:#1f1f4d; --line:#4a4a9c; --text:#f2f2ff;
         --muted:#c8c8e8; /* de-emphasized copy — ~8:1 on --panel, one clear step below --text */
         --home:#ff4d5e; --away:#4d8bff; --good:#39ff9e; --warn:#ffce3a;
-        --pink:#ff3c8a; --cyan:#37e6ff; --purple:#8b5cff;
+        --pink:#ff3c8a; --cyan:#37e6ff; --purple:#8b5cff; --accent:#6d8bff;
         --gk:#ffce3a; --df:#4d8bff; --mf:#39ff9e; --fw:#ff7a3c;
         --display:'Press Start 2P', monospace; --body:'VT323', 'Courier New', monospace;
         /* app column width — grows on wide viewports so panels use the widescreen dead-space */
@@ -126,9 +126,10 @@
       #mm-name:focus { border-color: var(--accent); }
       #mm-saves { max-width: 360px; margin: 22px auto 0; }
       .mm-saves-lbl { font-family: var(--display); font-size: 11px; letter-spacing: 1px; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; }
-      .mm-save { display: flex; align-items: center; gap: 10px; padding: 9px 12px; margin-bottom: 6px; cursor: pointer; text-align: left;
+      .mm-save { display: flex; align-items: center; gap: 10px; padding: 9px 12px; margin-bottom: 6px; cursor: default; text-align: left;
         background: var(--panel-2); border: 1px solid var(--line); border-radius: 7px; transition: border-color .12s; }
-      .mm-save:hover { border-color: var(--accent); }
+      .mm-save.load { cursor: pointer; }
+      .mm-save.load:hover { border-color: var(--accent); }
       .mm-save-name { font-family: var(--display); font-size: 14px; flex: 1; }
       .mm-save-meta { font-size: 12px; color: var(--muted); }
       .mm-save-del { background: none; border: none; color: var(--muted); font-size: 15px; cursor: pointer; padding: 2px 6px; }
@@ -1115,6 +1116,12 @@
       <div id="academy" class="panel hidden">
         <div id="academy-head"><h3>🎓 ACADEMY</h3><button id="academy-back">← Back to hub</button></div>
         <div id="academy-body"></div>
+      </div>
+
+      <!-- MANAGER SEASON (single-player fixture-by-fixture) -->
+      <div id="season" class="panel hidden">
+        <div id="season-head"><h3>🧢 CLUB SEASON</h3><button id="season-back">← Back to hub</button></div>
+        <div id="season-body"></div>
       </div>
 
       <!-- TROPHY ROOM -->
