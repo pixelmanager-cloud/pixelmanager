@@ -238,7 +238,7 @@ const SPRITES: Record<string, string[]> = {
     '................',
     '................',
   ],
-  // 🟨🟥 Referee card — yellow by default (used for both bookings; tint via CSS if needed)
+  // 🟨 Referee card — yellow booking
   card: [
     '................',
     '................',
@@ -250,6 +250,26 @@ const SPRITES: Record<string, string[]> = {
     '..kyyyyyyyyyk...',
     '..kyyyyyyyyyk...',
     '..kyyyyyyyyyk...',
+    '...kkkkkkkkk....',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+  ],
+  // 🟥 Referee card — red booking (same shape as `card`, red fill so a sending-off never shows
+  // a yellow icon)
+  'card-red': [
+    '................',
+    '................',
+    '...kkkkkkkkk....',
+    '..krrrrrrrrrk...',
+    '..krrrrrrrrrk...',
+    '..krrrrrrrrrk...',
+    '..krrrrrrrrrk...',
+    '..krrrrrrrrrk...',
+    '..krrrrrrrrrk...',
+    '..krrrrrrrrrk...',
     '...kkkkkkkkk....',
     '................',
     '................',
