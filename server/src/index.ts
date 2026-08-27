@@ -580,6 +580,27 @@ app.post('/career/:id/handoff', { preHandler: requireAuth }, async (req, reply) 
   return { ok: true, player: tokenToPlayer((await db.getToken(t.id))!) };
 });
 
+// TRAINING FOCUS — a managed pro develops/declines over seasons. Between seasons the manager picks a focus
+// stat; young players improve (the focus + generally), veterans decline (pace/stamina fade). A concrete
+// season-to-season choice that makes the Training facility + squad management matter. Deterministic drift.
+app.post('/players/:id/develop', { preHandler: requireAuth }, async (req, reply) => {
+  const ownerId = req.account!.id;
+  const t = await db.getToken((req.params as any).id);
+  if (!t || t.owner_id !== ownerId) return reply.code(404).send({ error: 'no such token' });
+  if (t.state !== 'pro') return reply.code(409).send({ error: 'not an active pro' });
+  const body = req.body as any;
+  const age = Math.max(18, Math.min(42, Math.floor(Number(body?.age) || 27)));
+  const focus = String(body?.focus ?? '');
+  const attrs = JSON.parse(t.attrs_json ?? '{}') as Record<string, number>;
+  const bump = (k: string, d: number) => { if (attrs[k] != null) attrs[k] = Math.max(1, Math.min(20, Math.round(attrs[k] + d))); };
+  if (age < 27) { bump(focus || 'passing', 1); bump('stamina', 1); }              // improving years — grow into it
+  else if (age < 31) { bump(focus || 'passing', 1); bump('pace', -1); }           // peak, but the legs start to go
+  else { bump('pace', -1); bump('stamina', -1); if (age >= 34) bump('strength', -1); } // veteran decline
+  const player = tokenToPlayer({ ...t, attrs_json: JSON.stringify(attrs) } as any);
+  await db.updateToken(t.id, { attrs_json: JSON.stringify(attrs), peak_overall: Math.max(t.peak_overall ?? 0, overall(player)) });
+  return { ok: true, player, overall: overall(player) };
+});
+
 // SP SEASON PRIZE — the single-player manager season is client-side, so it reports its finish here to bank
 // the prize money (coins → reinvest in facilities). Single-player only; amounts are modest + capped.
 app.post('/sp/season-reward', { preHandler: requireAuth }, async (req, reply) => {
