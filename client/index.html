@@ -687,6 +687,11 @@
       .wc-ko-tie { font-size: 14px; color: var(--muted); padding: 6px 10px; margin-bottom: 5px; border-radius: 7px; background: rgba(255,255,255,0.03); }
       .wc-ko-tie.mine { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--text); }
       .wc-win { color: var(--good); font-weight: 700; }
+      .wc-out { color: var(--bad, #ff6b6b); font-weight: 700; }
+      .wc-run-strip { margin-top: 6px; display: flex; gap: 5px; flex-wrap: wrap; }
+      .wc-run-chip { font-family: var(--display); font-size: 9px; padding: 2px 6px; border-radius: 4px; }
+      .wc-run-chip.w { background: color-mix(in srgb, var(--good) 25%, transparent); color: var(--good); }
+      .wc-run-chip.l { background: color-mix(in srgb, #ff6b6b 22%, transparent); color: #ff9b9b; }
       .wc-final { margin-top: 10px; padding: 12px 15px; border-radius: 10px; text-align: center; font-size: 16px; background: color-mix(in srgb, #e6c76a 10%, transparent); border: 1px solid color-mix(in srgb, #e6c76a 40%, transparent); }
       .wc-final.mine { border-color: var(--accent); }
       .wc-final-lbl { font-family: var(--display); font-size: 12px; color: #e6c76a; margin-bottom: 6px; }

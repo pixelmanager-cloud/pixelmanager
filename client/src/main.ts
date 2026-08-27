@@ -1,6 +1,6 @@
 import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, DUTY_LABEL, DUTIES_BY_ROLE, isDutyForRole,
-  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult,
+  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData, type MissionsData, type ContractInfo, type LeaderStat, type AwardRow } from './api';
 import { sprite } from './sprites';
@@ -9,8 +9,9 @@ import { sprite } from './sprites';
 interface MgrState { season: number; results: PlayedResult[]; starId?: string; starName?: string; starAge?: number; retireAge?: number; titles?: number; trainFocus?: string; staff?: string[]; sponsor?: string;
   // international: continental club cup (qualified by a top-3 finish the previous season)
   contElig?: boolean; contRound?: number; contOut?: boolean; contTitles?: number;
-  // World-Cup-style national tournament — the edition last followed (so it shows once per staging)
-  wcSeen?: number; wcWins?: number }
+  // World-Finals national tournament — the star's nation's knockout run is playable
+  wcSeen?: number; wcWins?: number; wcEdition?: number; wcStage?: 'qf' | 'sf' | 'final' | 'done';
+  wcRun?: { round: string; my: number; opp: number; oppName: string; won: boolean }[] }
 const BACKROOM_STAFF = [
   { id: 'fitness', icon: '🏋️', name: 'Fitness Coach', cost: 350, desc: 'Sharper conditioning — your side fades less over 90.' },
   { id: 'attack', icon: '⚔️', name: 'Attacking Coach', cost: 350, desc: 'Drills the final third — a small finishing edge, home and away.' },
@@ -221,8 +222,9 @@ class Game {
   editorMode: 'standing' | 'match' = 'standing';
   squadSort: SquadSort | null = null;
   pendingOpp?: { id: string; handle: string; venue: 'home' | 'away' };
-  spFixture: { idx: number; oppClub: Club; oppName: string; oppStrength: number; venue: 'home' | 'away'; oppLineup: Lineup; comp?: 'league' | 'cont'; contRound?: number } | null = null; // the single-player fixture being played
+  spFixture: { idx: number; oppClub: Club; oppName: string; oppStrength: number; venue: 'home' | 'away'; oppLineup: Lineup; comp?: 'league' | 'cont' | 'wc'; contRound?: number } | null = null; // the single-player fixture being played
   pendingCont: { myGoals: number; oppGoals: number; oppStrength: number } | null = null; // a continental tie awaiting resolution once the full-time card is dismissed
+  pendingWc: { myGoals: number; oppGoals: number; oppName: string } | null = null; // a World-Finals knockout tie awaiting resolution
   mySide: 0 | 1 = 0;   // which team index (0 home / 1 away) is the player in the current match
   homeName = '';
   awayName = '';
@@ -778,6 +780,8 @@ class Game {
     $('sf-cont-play')?.addEventListener('click', () => this.playContinentalTie());
     $('sf-cont-sim')?.addEventListener('click', () => this.simContinentalTie());
     $('sf-wc-follow')?.addEventListener('click', () => this.followWorldCup());
+    $('sf-wc-play')?.addEventListener('click', () => this.playWorldCupTie());
+    $('sf-wc-sim')?.addEventListener('click', () => this.simWorldCupTie());
     $('sf-play')?.addEventListener('click', () => this.playNextSpFixture());
     $('sf-sim')?.addEventListener('click', () => this.simRemainingFixtures());
     $('sf-next-season')?.addEventListener('click', () => this.nextSeason());
@@ -887,53 +891,147 @@ class Game {
     this.showSeason();
   }
 
-  // ── World-Cup-style national tournament — every 4 seasons, the bloodline star's nation competes ──
+  // ── World-Finals national tournament — every 4 seasons; the star's nation's knockout ties are playable ──
   private wcEditionDue(): number | null {
     const m = this.loadMgr();
     if (m.season % 4 !== 0) return null;            // staged every 4th season
     const edition = m.season / 4;                    // 1,2,3,…
     return m.wcSeen === edition ? null : edition;    // once per staging
   }
+  private wcData(edition: number): { wc: WCResult; path: WCPlayerPath; nation: string } {
+    const nation = homeNation(this.starSurname());
+    const wc = worldCup(this.leagueSeed(), edition, nation, this.starOverall());
+    return { wc, path: playerPath(wc), nation };
+  }
+  private wcStageOpp(path: WCPlayerPath, stage: 'qf' | 'sf' | 'final'): { opp: string; oppStrength: number } {
+    return stage === 'qf' ? path.qf! : stage === 'sf' ? path.sf! : path.final!;
+  }
+  private wcStageLabel(stage: string): string { return stage === 'qf' ? 'Quarter-final' : stage === 'sf' ? 'Semi-final' : 'Final'; }
+
+  /** The World-Finals block in the season view: a teaser before it's followed, then the live knockout run. */
   private worldCupHtml(): string {
+    const m = this.loadMgr();
+    // an in-progress knockout run takes priority over the teaser
+    if (m.wcStage && m.wcStage !== 'done' && m.wcEdition != null) return this.wcRunHtml();
     const edition = this.wcEditionDue();
     if (edition == null) return '';
     const nation = homeNation(this.starSurname());
     return `<div class="sf-wc"><div class="sf-wc-head">🌐 THE WORLD FINALS — Edition ${edition}</div>`
-      + `<div class="sf-wc-txt">The international summer is here. <b>${this.loadMgr().starName ?? 'Your star'}</b> is away with <b>${nation}</b>, chasing the game's greatest prize.</div>`
+      + `<div class="sf-wc-txt">The international summer is here. <b>${m.starName ?? 'Your star'}</b> is away with <b>${nation}</b>, chasing the game's greatest prize.</div>`
       + `<button class="primary" id="sf-wc-follow">Follow the tournament 🌍</button></div>`;
+  }
+  private wcRunHtml(): string {
+    const m = this.loadMgr();
+    const stage = m.wcStage as 'qf' | 'sf' | 'final';
+    const { path, nation } = this.wcData(m.wcEdition!);
+    const dots = (['qf', 'sf', 'final'] as const).map((s, i) => { const order = { qf: 0, sf: 1, final: 2 }; const cur = order[stage]; return `<span class="sf-cont-dot ${i < cur ? 'won' : i === cur ? 'now' : ''}">${['QF', 'SF', 'F'][i]}</span>`; }).join('');
+    const opp = this.wcStageOpp(path, stage);
+    const runList = (m.wcRun ?? []).map((r) => `<span class="wc-run-chip ${r.won ? 'w' : 'l'}">${r.round} ${r.my}-${r.opp}</span>`).join(' ');
+    return `<div class="sf-wc"><div class="sf-wc-head">🌐 THE WORLD FINALS — Edition ${m.wcEdition} · ${nation}</div>`
+      + `<div class="sf-wc-txt">Group ${String.fromCharCode(65 + path.groupIndex)} ${path.groupFinish?.toLowerCase()} → into the knockouts. ${runList ? `<div class="wc-run-strip">${runList}</div>` : ''}</div>`
+      + `<div class="sf-cont-head" style="margin-bottom:7px;">${dots}</div>`
+      + `<div class="sf-cont-tie"><b>${this.wcStageLabel(stage)}</b> (neutral) vs <b>${opp.opp}</b> · rating ~${opp.oppStrength}</div>`
+      + `<div class="sf-cont-btns"><button class="primary" id="sf-wc-play">Play the tie ▶</button> <button id="sf-wc-sim">⏩ Sim it</button></div></div>`;
   }
   private async followWorldCup() {
     const edition = this.wcEditionDue(); if (edition == null) return;
     const m = this.loadMgr();
-    const nation = homeNation(this.starSurname());
-    const wc = worldCup(this.leagueSeed(), edition, nation, this.starOverall());
-    this.saveMgr({ ...m, wcSeen: edition, wcWins: (m.wcWins ?? 0) + (wc.myFinish === 'Champions' ? 1 : 0) });
-    // legacy reward to the club, scaled by how far the nation went (aspirational peak = real payoff)
-    try { const r = await api.spSeasonReward({ pos: wc.myFinish === 'Champions' ? 1 : wc.myFinish === 'Runners-up' ? 2 : 4, size: 10, sponsor: undefined }); if (this.account?.coins != null) this.account.coins = r.coins; } catch { /* offline */ }
-    this.showWorldCup(wc);
+    const { wc, path } = this.wcData(edition);
+    if (!path.qualified) { // group-stage exit — nothing to play; show the full tournament and bank a small payoff
+      this.saveMgr({ ...m, wcSeen: edition, wcStage: 'done' });
+      try { const r = await api.spSeasonReward({ pos: 6, size: 10, sponsor: undefined }); if (this.account?.coins != null) this.account.coins = r.coins; } catch { /* offline */ }
+      this.showWorldCup(wc, 'Group stage'); return;
+    }
+    this.saveMgr({ ...m, wcEdition: edition, wcStage: 'qf', wcRun: [] }); // qualified → play the knockout run
+    this.showSeason();
   }
-  private showWorldCup(wc: WCResult) {
+  private wcTie(stage: 'qf' | 'sf' | 'final') {
+    const m = this.loadMgr(); if (m.wcEdition == null) return;
+    const { path, nation } = this.wcData(m.wcEdition);
+    const opp = this.wcStageOpp(path, stage);
+    const short = (opp.opp.match(/[A-Z]/g) ?? ['N', 'A', 'T']).join('').slice(0, 3);
+    const oppClub = generateClub('wc-' + m.wcEdition + '-' + stage, opp.opp, short, 0x3a7bd5, opp.oppStrength, (this.leagueSeed() ^ ([...opp.opp].reduce((a, c) => a + c.charCodeAt(0), 0) * 131)) >>> 0);
+    void nation;
+    this.spFixture = { idx: -1, oppClub, oppName: opp.opp, oppStrength: opp.oppStrength, venue: 'home', oppLineup: autoPickXI(oppClub, '4-4-2'), comp: 'wc' }; // neutral ground → treat as home (no home edge applied in startSpMatchWith for wc? kept simple)
+    this.openLineup('match', { id: 'wc-opp', handle: opp.opp, venue: 'home' });
+  }
+  private playWorldCupTie() { const s = this.loadMgr().wcStage; if (s === 'qf' || s === 'sf' || s === 'final') this.wcTie(s); }
+  private simWorldCupTie() {
+    const m = this.loadMgr(); const stage = m.wcStage; if (stage !== 'qf' && stage !== 'sf' && stage !== 'final' || m.wcEdition == null) return;
+    const { path } = this.wcData(m.wcEdition);
+    const opp = this.wcStageOpp(path, stage);
+    const r = this.simFixtureResult(this.starOverall(), opp.oppStrength, ((this.leagueSeed() >>> 0) ^ ((m.wcEdition * 977 + stage.length * 131) >>> 0)) >>> 0);
+    this.resolveWorldCup(r.myGoals, r.oppGoals, opp.opp);
+  }
+  /** Apply a knockout result: win → next round (or lift the trophy); level → seeded shootout; loss → out. */
+  private resolveWorldCup(myGoals: number, oppGoals: number, oppName: string) {
+    const m = this.loadMgr(); const stage = m.wcStage as 'qf' | 'sf' | 'final'; if (m.wcEdition == null) return;
+    let won = myGoals > oppGoals, pens = false;
+    if (myGoals === oppGoals) { pens = true; const h = ((this.leagueSeed() >>> 0) ^ ((m.wcEdition * 733 + stage.length * 29) >>> 0)) >>> 0; won = ((h % 1000) / 1000) < 0.5; }
+    const label = this.wcStageLabel(stage);
+    const shortRound = stage === 'qf' ? 'QF' : stage === 'sf' ? 'SF' : 'F';
+    const run = [...(m.wcRun ?? []), { round: shortRound, my: myGoals, opp: oppGoals, oppName, won }];
+    if (!won) { // knocked out — the run ends here
+      const finish = stage === 'final' ? 'Runners-up' : stage === 'sf' ? 'Semi-finals' : 'Quarter-finals';
+      this.saveMgr({ ...m, wcStage: 'done', wcSeen: m.wcEdition, wcRun: run });
+      toast(`${label} lost ${myGoals}-${oppGoals}${pens ? ' on pens' : ''} — ${finish}`);
+      this.concludeWorldCup(finish, oppName); return;
+    }
+    if (stage === 'final') { // champions!
+      this.saveMgr({ ...m, wcStage: 'done', wcSeen: m.wcEdition, wcWins: (m.wcWins ?? 0) + 1, wcRun: run });
+      toast(`🏆 WORLD CHAMPIONS! ${homeNation(this.starSurname())} win the final${pens ? ' on penalties' : ''}`);
+      this.concludeWorldCup('Champions', oppName); return;
+    }
+    const next = stage === 'qf' ? 'sf' : 'final';
+    this.saveMgr({ ...m, wcStage: next, wcRun: run });
+    toast(`✅ ${label} won ${myGoals}-${oppGoals}${pens ? ' (pens)' : ''} — into the ${this.wcStageLabel(next)}!`);
+    this.showSeason();
+  }
+  /** After a played run ends, show the tournament with the star's ACTUAL result + bank the legacy payoff. */
+  private async concludeWorldCup(finish: WCResult['myFinish'], finalFoe: string) {
+    const m = this.loadMgr();
+    try { const r = await api.spSeasonReward({ pos: finish === 'Champions' ? 1 : finish === 'Runners-up' ? 2 : finish === 'Semi-finals' ? 3 : 4, size: 10, sponsor: undefined }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 World Finals payoff +${r.prize.toLocaleString()}c`); } catch { /* offline */ }
+    const { wc } = this.wcData(m.wcEdition!);
+    this.showWorldCup(wc, finish, finalFoe);
+  }
+  /** The tournament report. `playedFinish` (+ `finalFoe`) reflect the star's ACTUAL played run and override
+   *  the seeded outcome; for a group-stage exit (or no played run) the full seeded bracket is shown instead. */
+  private showWorldCup(wc: WCResult, playedFinish?: WCResult['myFinish'], finalFoe?: string) {
     this.showScreen('season');
     const nation = wc.myNation;
+    const finish = playedFinish ?? wc.myFinish;
+    const run = this.loadMgr().wcRun ?? [];
+    const played = playedFinish != null && playedFinish !== 'Group stage' && run.length > 0;
     const groupHtml = wc.groups.map((g, gi) => `<div class="wc-group"><h5>Group ${String.fromCharCode(65 + gi)}</h5>`
       + `<table class="lt-table wc-gtable"><thead><tr><th>Nation</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>`
       + g.rows.map((r, i) => `<tr class="${r.mine ? 'mine' : ''} ${i < 2 ? 'wc-qual' : ''}"><td class="lt-name">${r.nation}</td><td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GD > 0 ? '+' : ''}${r.GD}</td><td class="lt-pts">${r.Pts}</td></tr>`).join('')
       + `</tbody></table></div>`).join('');
-    const koTie = (t: import('@fm/shared').WCTie) => `<div class="wc-ko-tie ${t.mine ? 'mine' : ''}"><b>${t.a}</b> ${t.gh}-${t.ga} <b>${t.b}</b>${t.pens ? ' (pens)' : ''} → <span class="wc-win">${t.winner}</span></div>`;
-    const qfHtml = `<h4 class="scout-h4">QUARTER-FINALS</h4>${wc.quarters.map(koTie).join('')}`;
-    const semiHtml = `<h4 class="scout-h4">SEMI-FINALS</h4>${wc.semis.map(koTie).join('')}`;
-    const f = wc.final;
-    const finalHtml = `<div class="wc-final ${f.mine ? 'mine' : ''}"><div class="wc-final-lbl">🏆 FINAL</div><b>${f.a}</b> ${f.gh}-${f.ga} <b>${f.b}</b>${f.pens ? ' (pens)' : ''}<div class="wc-champ">Champions: <b>${wc.champion}</b></div></div>`;
-    const badge = wc.myFinish === 'Champions' ? '🏆 WORLD CHAMPIONS' : wc.myFinish === 'Runners-up' ? '🥈 Runners-up' : wc.myFinish === 'Semi-finals' ? '🥉 Semi-finalists' : wc.myFinish === 'Quarter-finals' ? '🎯 Quarter-finalists' : '⚽ Group stage';
-    const verdict = wc.myFinish === 'Champions' ? `${nation} are champions of the world — an immortal chapter for the ${this.starSurname()} name.`
-      : wc.myFinish === 'Runners-up' ? `So close — ${nation} fall at the final hurdle, but what a run.`
-      : wc.myFinish === 'Semi-finals' ? `${nation} reach the last four before bowing out — heads held high.`
-      : wc.myFinish === 'Quarter-finals' ? `${nation} make the last eight before their run is ended.`
+    // the actual champion for a played run: you (if you won), the side that beat you in the final, or —
+    // if you fell earlier — the seeded champion (never showing an eliminated you as champion).
+    const realChampion = finish === 'Champions' ? nation : finish === 'Runners-up' ? (finalFoe ?? wc.champion)
+      : wc.champion !== nation ? wc.champion : (wc.final.a === nation ? wc.final.b : wc.final.a);
+    let bracketHtml: string;
+    if (played) {
+      const runChips = run.map((r) => `<div class="wc-ko-tie ${r.won ? 'mine' : ''}"><b>${nation}</b> ${r.my}-${r.opp} <b>${r.oppName}</b> → <span class="${r.won ? 'wc-win' : 'wc-out'}">${r.won ? nation : r.oppName}</span></div>`).join('');
+      bracketHtml = `<h4 class="scout-h4">${nation.toUpperCase()}'S KNOCKOUT RUN</h4>${runChips}`
+        + `<div class="wc-final"><div class="wc-champ">🏆 Champions: <b>${realChampion}</b></div></div>`;
+    } else {
+      const koTie = (t: import('@fm/shared').WCTie) => `<div class="wc-ko-tie ${t.mine ? 'mine' : ''}"><b>${t.a}</b> ${t.gh}-${t.ga} <b>${t.b}</b>${t.pens ? ' (pens)' : ''} → <span class="wc-win">${t.winner}</span></div>`;
+      const f = wc.final;
+      bracketHtml = `<h4 class="scout-h4">QUARTER-FINALS</h4>${wc.quarters.map(koTie).join('')}`
+        + `<h4 class="scout-h4">SEMI-FINALS</h4>${wc.semis.map(koTie).join('')}`
+        + `<div class="wc-final ${f.mine ? 'mine' : ''}"><div class="wc-final-lbl">🏆 FINAL</div><b>${f.a}</b> ${f.gh}-${f.ga} <b>${f.b}</b>${f.pens ? ' (pens)' : ''}<div class="wc-champ">Champions: <b>${wc.champion}</b></div></div>`;
+    }
+    const badge = finish === 'Champions' ? '🏆 WORLD CHAMPIONS' : finish === 'Runners-up' ? '🥈 Runners-up' : finish === 'Semi-finals' ? '🥉 Semi-finalists' : finish === 'Quarter-finals' ? '🎯 Quarter-finalists' : '⚽ Group stage';
+    const verdict = finish === 'Champions' ? `${nation} are champions of the world — an immortal chapter for the ${this.starSurname()} name.`
+      : finish === 'Runners-up' ? `So close — ${nation} fall at the final hurdle, but what a run.`
+      : finish === 'Semi-finals' ? `${nation} reach the last four before bowing out — heads held high.`
+      : finish === 'Quarter-finals' ? `${nation} make the last eight before their run is ended.`
       : `${nation}'s tournament ends in the group stage. The dream lives on for next time.`;
     $('season-body').innerHTML = `<div class="wc-report"><div class="wc-report-head">🌐 THE WORLD FINALS — Edition ${wc.edition}</div>`
-      + `<div class="wc-verdict ${wc.myFinish === 'Champions' ? 'champ' : ''}"><span class="wc-badge">${badge}</span> ${verdict}</div>`
+      + `<div class="wc-verdict ${finish === 'Champions' ? 'champ' : ''}"><span class="wc-badge">${badge}</span> ${verdict}</div>`
       + `<div class="wc-groups">${groupHtml}</div>`
-      + qfHtml + semiHtml + finalHtml
+      + bracketHtml
       + `<div style="text-align:center;margin-top:16px;"><button class="primary" id="wc-back">Back to the season →</button></div></div>`;
     $('wc-back')?.addEventListener('click', () => this.showSeason());
   }
@@ -989,7 +1087,8 @@ class Game {
     if (age >= (m.retireAge ?? 34)) { this.retireStar(titles, m.contTitles ?? 0); return; } // his playing days are over — the heir comes through
     const qualified = t.pos <= 3; // a top-3 finish books a place in next season's continental cup
     if (qualified) toast('🌍 Top-3 finish — qualified for the Continental Cup!');
-    this.saveMgr({ ...m, season: m.season + 1, results: [], starAge: age, titles, sponsor: undefined, contElig: qualified, contRound: 0, contOut: false }); // new season → pick a fresh sponsor
+    // new season → fresh sponsor; drop any unfinished World-Finals run (it belongs to its staging season)
+    this.saveMgr({ ...m, season: m.season + 1, results: [], starAge: age, titles, sponsor: undefined, contElig: qualified, contRound: 0, contOut: false, wcStage: undefined, wcEdition: undefined, wcRun: undefined });
     this.showSeason();
   }
 
@@ -2252,6 +2351,12 @@ class Game {
         this.pendingCont = { myGoals, oppGoals, oppStrength };
         return;
       }
+      if (this.spFixture.comp === 'wc') {
+        const oppName = this.spFixture.oppName;
+        this.showFullTimeCard();
+        this.pendingWc = { myGoals, oppGoals, oppName };
+        return;
+      }
       const m = this.loadMgr();
       m.results.push({ myGoals, oppGoals });
       this.saveMgr(m);
@@ -2348,6 +2453,7 @@ class Game {
       card.removeEventListener('click', dismiss);
       card.classList.add('hidden');
       if (this.pendingCont) { const c = this.pendingCont; this.pendingCont = null; this.spFixture = null; this.resolveContinental(c.myGoals, c.oppGoals, c.oppStrength); return; } // continental tie → advance/out
+      if (this.pendingWc) { const c = this.pendingWc; this.pendingWc = null; this.spFixture = null; this.resolveWorldCup(c.myGoals, c.oppGoals, c.oppName); return; } // World-Finals knockout tie → advance/out
       if (this.spFixture) this.showSeason(); else this.showHub(); // SP: back to the season fixture list
     };
     const timer = setTimeout(dismiss, 9000); // longer — there's a match report to read

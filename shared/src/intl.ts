@@ -85,6 +85,7 @@ export interface WCGroupRow { nation: string; P: number; W: number; D: number; L
 export interface WCTie { round: 'QF' | 'SF' | 'F'; a: string; b: string; gh: number; ga: number; winner: string; pens: boolean; mine: boolean }
 export interface WCResult {
   edition: number; myNation: string; field: string[];
+  strengths: Record<string, number>;
   groups: { rows: WCGroupRow[] }[];
   quarters: WCTie[];
   semis: WCTie[];
@@ -151,5 +152,37 @@ export function worldCup(seed: number, edition: number, myNation: string, myStre
     : field.includes(myNation) ? 'Group stage' : 'Did not qualify';
   const legacyMult = myFinish === 'Champions' ? 2.0 : myFinish === 'Runners-up' ? 1.6 : myFinish === 'Semi-finals' ? 1.3 : myFinish === 'Quarter-finals' ? 1.15 : myFinish === 'Group stage' ? 1.05 : 1.0;
 
-  return { edition, myNation, field, groups, quarters, semis, final, champion, myFinish, legacyMult };
+  return { edition, myNation, field, strengths: strength, groups, quarters, semis, final, champion, myFinish, legacyMult };
+}
+
+// The star's nation's own route through the knockouts, so those ties can be PLAYED (the rest of the bracket
+// auto-resolves). Each round's opponent is read from the seeded bracket's *other* side, so it's independent
+// of how the player's own ties actually turn out — keeping a played run consistent with the seeded field.
+export interface WCPlayerPath {
+  qualified: boolean;
+  groupIndex: number;
+  groupFinish: 'Winner' | 'Runner-up' | null;
+  qf?: { opp: string; oppStrength: number };
+  sf?: { opp: string; oppStrength: number };
+  final?: { opp: string; oppStrength: number };
+  seededChampion: string;
+}
+export function playerPath(wc: WCResult): WCPlayerPath {
+  const me = wc.myNation;
+  const gi = wc.groups.findIndex((g) => g.rows.some((r) => r.mine));
+  const rank = gi >= 0 ? wc.groups[gi].rows.findIndex((r) => r.mine) : -1; // 0 = group winner, 1 = runner-up
+  if (rank !== 0 && rank !== 1) return { qualified: false, groupIndex: gi, groupFinish: null, seededChampion: wc.champion };
+  const myQF = wc.quarters.findIndex((q) => q.a === me || q.b === me);
+  const qfOpp = wc.quarters[myQF].a === me ? wc.quarters[myQF].b : wc.quarters[myQF].a;
+  const otherQF = myQF % 2 === 0 ? myQF + 1 : myQF - 1;     // the sibling QF that feeds the same semi
+  const sfOpp = wc.quarters[otherQF].winner;                 // seeded winner of that other QF
+  const mySF = Math.floor(myQF / 2);                         // semis[0] = QF0/QF1 winners, semis[1] = QF2/QF3
+  const finalOpp = wc.semis[mySF === 0 ? 1 : 0].winner;      // seeded winner of the other semi
+  return {
+    qualified: true, groupIndex: gi, groupFinish: rank === 0 ? 'Winner' : 'Runner-up',
+    qf: { opp: qfOpp, oppStrength: wc.strengths[qfOpp] },
+    sf: { opp: sfOpp, oppStrength: wc.strengths[sfOpp] },
+    final: { opp: finalOpp, oppStrength: wc.strengths[finalOpp] },
+    seededChampion: wc.champion,
+  };
 }
