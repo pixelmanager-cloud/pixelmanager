@@ -6,7 +6,8 @@
     "dev": "npm run dev --workspace=client",
     "test:engine": "tsx shared/strategy_test.ts",
     "fuzz": "tsx shared/fuzz_test.ts",
-    "verify": "npm run build --workspace=client && npm run test:engine && npm run fuzz && tsx shared/career_sim.ts && tsx client/qa_savestore.ts && tsx client/qa_offline_facade.ts"
+    "verify": "npm run build --workspace=client && npm run test:engine && npm run fuzz && tsx shared/career_sim.ts && tsx client/qa_savestore.ts && tsx client/qa_offline_facade.ts",
+    "qa": "node scripts/run-qa.mjs"
   },
   "devDependencies": {
     "tsx": "^4.19.0"

@@ -178,10 +178,11 @@ console.log('\n[qa-boundary] computeOffPitch() temptation-gate empirical rate...
   if (Math.abs(edgyRate - 0.26) > 0.03) log(`temptation rate for edgy reputations is ${(edgyRate * 100).toFixed(1)}%, documented as ~26% (tolerance ±3pp) — n=${edgyTotal}`);
   if (Math.abs(cleanRate - 0.12) > 0.03) log(`temptation rate for clean reputations is ${(cleanRate * 100).toFixed(1)}%, documented as ~12% (tolerance ±3pp) — n=${cleanTotal}`);
   // every temptation object, when present, must be well-formed and one of the 4 documented kinds
-  const KINDS = new Set(['gamble', 'bribe', 'nightlife', 'invest']);
+  // must track the temptation `kind`s defined in shared/src/offpitch.ts (keep in sync when new ones are added)
+  const KINDS = new Set(['gamble', 'bribe', 'nightlife', 'invest', 'old-mates', 'prank', 'secret-tab', 'ghost-post', 'freebie', 'curfew']);
   for (let i = 0; i < 3000; i++) {
     const op = computeOffPitch({ careerScore: 300, caps: 1, seed: seedFrom('qa-boundary-tempt2', i), turn: i % 80, tags: { aggression: 15 }, bigWins: 1, flair: 8 });
-    if (op.temptation && !KINDS.has(op.temptation.kind)) log(`computeOffPitch.temptation.kind="${op.temptation.kind}" not one of the documented 4 kinds`);
+    if (op.temptation && !KINDS.has(op.temptation.kind)) log(`computeOffPitch.temptation.kind="${op.temptation.kind}" not one of the known kinds (see offpitch.ts / KINDS above)`);
   }
 }
 
