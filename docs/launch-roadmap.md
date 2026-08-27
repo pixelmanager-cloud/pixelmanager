@@ -45,7 +45,26 @@ Legend: ☐ todo · ◐ in progress · ☑ done.
 - ☐ Ship the CREDITS screen (music attribution is a licensing requirement — see /CREDITS.md)
 
 ## 8. Ongoing / optional
-- ☐ More content depth (cards, events, competitions) · ☐ localization · ☐ marketing
+- ◐ More content depth — big overnight push landed (see below). Player-career content now judged **saturated**;
+  manager content near-saturated (board/press/staff/rivalry systems built). · ☐ localization (not needed pre-launch,
+  see the chat decision) · ☐ marketing
+
+## Overnight autonomous push (2026-08-27 → 28) — landed on main, all green (verify + `npm run qa` 18 harnesses)
+- **Player career content** (batches 1–4): more big/huge moments, LIFE_KINDS 12→18 (incl. new_money/move_abroad/
+  serious-injury etc.), recurring rival/mentor callback payoff across setup→resolution→epilogue, early-chapter
+  tag/GK focus, SeasonEvent flavours + a new `international-honour` event, tone-register sweeps. **Lane saturated** —
+  next step is a read-through playtest, not more breadth (docs/overnight/player-content-audit.md).
+- **Manager career content** (batches 1–3): Gaffer's Diary rebuilt into a 22-category storyline picker; new
+  `board.ts` (mood/verdict + deriveExpectation), `press.ts` (conference lines + staff cross-pollination),
+  `staff.ts` (seeded backroom cast); continental rivalry + tournament drama; misgendered-staff bug fixed.
+- **QA** (batches 1–5): 18 fuzz harnesses + `npm run qa` auto-globbing runner (so harnesses can't silently
+  bit-rot); zero engine bugs across 15k+ dynasty generations; zero calibration drift; a cross-lane text linter.
+- **Shell/UX** (research-driven): onboarding scout board, Settings (volume/mute/reduce-motion/CRT/UI-scale),
+  pause menu, delete-confirm, default focus. Research docs: feature-gap-analysis, competitive-deep-dive, ui-ux.
+- **Manager narrative → client wiring (in progress):** ☑ backroom staff on the club screen · ☑ board season
+  verdict on the season screen · ☐ press-conference line post-match · ☐ intl rivalry/drama blurbs in cup screens.
+- **Design questions flagged for you:** (1) should board mood ever drive real *sacking* risk? (2) static art
+  assets — the #1 feature-gap finding (all "pixel art" is currently procedural SVG). (3) staff: flavour-only or hireable?
 
 ## Suggested sequence
 Audio SFX → **Onboarding** → Settings/Saves + UI polish → Balance/playtest → Steam wrapper + store.
