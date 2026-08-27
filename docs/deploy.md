@@ -1,64 +1,28 @@
-# Deploying the async-PvP game
+# Deploy — offline single-player (no backend)
 
-Two pieces go live: the **server** (Fastify + Postgres) on a host, and the
-**client** (already on Netlify) pointed at the server's URL. Recommended host is
-**Railway** because it provides both the server and a Postgres database in one
-project. (Fly.io + Neon also works — same Dockerfile.)
+**Status:** current (2026-08-27). Supersedes the old Railway+Postgres server-deploy guide (removed when the
+multiplayer server was deleted — see `direction.md` and the offline migration).
 
-The server code is on the `async-pvp-client` branch. Deploy from that branch,
-verify, then merge to `main` to flip the live Netlify client to PvP.
+Football Royalty is a **fully offline, single-player** app: one static Vite client (`client/`) with all game
+logic in `@fm/shared`, saving to the browser's **IndexedDB** (a local save file in the future desktop
+wrapper). **There is no server and no database** — nothing to host but the static site.
 
----
+- ❌ **Railway** — no longer used. It hosted the old Fastify + Postgres backend, which has been deleted. The
+  `Dockerfile` and the `server/` workspace are gone. Decommission the Railway project.
+- ✅ **Netlify** — hosts the static client. `netlify.toml` builds `client/dist` and serves `index.html` for
+  all paths (SPA). **No `VITE_API_URL` needed** anymore (there's no API) — remove it from the Netlify
+  dashboard env if it's still set. Any static host works equally well (Vercel, Cloudflare Pages, GitHub Pages).
 
-## 1. Server + database on Railway
+## Web deploy (a playable browser demo)
+1. Point Netlify at the repo (root). Build command `npm run build --workspace=client`, publish `client/dist`
+   — already set in `netlify.toml`.
+2. That's it. Saves live in the visitor's browser (IndexedDB); nothing server-side.
 
-1. Create a **Railway** account ([railway.app](https://railway.app)) and a **New Project**.
-2. **Deploy from GitHub repo** → pick `pixelmanager-cloud/pixelmanager`, branch
-   `async-pvp-client`. Railway builds the root **Dockerfile** automatically.
-3. In the project, **+ New → Database → Postgres**. Railway provisions it and
-   exposes a `DATABASE_URL`.
-4. On the **server service → Variables**, add a reference to the database URL:
-   set `DATABASE_URL` = `${{Postgres.DATABASE_URL}}` (Railway's variable-reference
-   syntax; pick the Postgres service). The server auto-creates its tables on boot.
-5. **Networking → Generate Domain** on the server service → you get a public URL
-   like `https://pixelmanager-production.up.railway.app`.
-6. Check it: open `<that URL>/health` — you should see `{"ok":true,...}`.
+## The real target — Steam (desktop)
+The client is packaged into a desktop app (Electron/Tauri wrapping the same static build), with local save
+**files** synced by **Steam Cloud** (the `SaveBackend` abstraction in `client/src/save.ts` swaps IndexedDB
+for a file backend). Steamworks provides achievements/cloud/overlay. See `direction.md` (Steam-readiness).
 
-**Cost:** Railway's trial/hobby tier covers a small app + Postgres; watch usage.
-
-## 2. Point the client at the server (Netlify)
-
-1. In **Netlify → Site settings → Environment variables**, add
-   `VITE_API_URL` = your Railway server URL (no trailing slash).
-2. This is read at **build time**, so a rebuild is needed — the merge in step 3
-   triggers it.
-
-## 3. Flip the live site to PvP
-
-Merge `async-pvp-client` → `main`:
-- Open a PR from `async-pvp-client` to `main` on GitHub, let CI pass, and merge; **or**
-- locally: `git checkout main && git merge async-pvp-client && git push`.
-
-Netlify rebuilds `main` with `VITE_API_URL` set, and the live site becomes the
-async-PvP game.
-
-## 4. Smoke-test in production
-
-- Open the live site, register a handle, set your team.
-- Open a second browser / incognito, register another handle.
-- From the first, play the second (who is offline) — you should see the match,
-  a result, and both ratings + the leaderboard update.
-
----
-
-## Notes
-
-- **CORS** is open (`origin: true`) so the Netlify origin can call the server. Lock
-  this down to your Netlify domain later.
-- **Auth** is still the prototype handle+token (no recovery). Swap to wallet
-  sign-in with the web3 phase.
-- **Storage**: local dev uses Node's `node:sqlite`; production uses Postgres via
-  `DATABASE_URL` — same `Store` interface, chosen in `server/src/db.ts`.
-- **Fly.io alternative**: `fly launch` (uses the Dockerfile) + a Neon Postgres
-  `DATABASE_URL` secret (`fly secrets set DATABASE_URL=...`). Everything else is
-  identical.
+## Local dev
+`npm run dev` (Vite client only — no server to start anymore). `npm run verify` runs the full gate
+(client build + engine tests + fuzz + career_sim + the offline save/facade harnesses).
