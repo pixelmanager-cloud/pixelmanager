@@ -1536,7 +1536,8 @@ class Game {
     const r = s.rival; if (!r) return '';
     const ahead = r.lead >= 0;
     return `<div class="cg-rival"><span class="cg-rival-lbl">🆚 RIVAL</span><span class="cg-rival-name">${r.name}</span>`
-      + `<span class="cg-rival-gap ${ahead ? 'up' : 'down'}">${ahead ? `▲ ${r.lead} ahead` : `▼ ${Math.abs(r.lead)} behind`}</span></div>`;
+      + `<span class="cg-rival-gap ${ahead ? 'up' : 'down'}">${ahead ? `▲ ${r.lead} ahead` : `▼ ${Math.abs(r.lead)} behind`}</span>`
+      + (r.news ? `<div class="cg-rival-news">📰 ${r.name} ${r.news}</div>` : '') + `</div>`;
   }
 
   /** International call-up — the aspirational ceiling. Uncapped at first; caps accrue once he's good enough. */
@@ -1637,9 +1638,10 @@ class Game {
       if (mk === 'match' && s.matchCtx) {
         const mc = s.matchCtx; const [us, them] = mc.score.split('-');
         const big = s.scenario.stakes >= 3 ? ' · ★ THE BIG ONE' : s.scenario.stakes >= 2 ? ' · BIG GAME' : '';
+        const rivalTag = s.rivalMoment ? ` · 🆚 vs ${s.rival?.name ?? 'HIS RIVAL'}` : '';
         const club = mc.club || this.club?.name || 'Your Club';
-        header = `<div class="cg-matchday stakes-${s.scenario.stakes}">`
-          + `<div class="cg-md-top"><span class="cg-md-badge">⚽ MATCHDAY${big}</span><span class="cg-md-min">${mc.minute}'</span></div>`
+        header = `<div class="cg-matchday stakes-${s.scenario.stakes}${s.rivalMoment ? ' rivalry' : ''}">`
+          + `<div class="cg-md-top"><span class="cg-md-badge">⚽ MATCHDAY${big}${rivalTag}</span><span class="cg-md-min">${mc.minute}'</span></div>`
           + `<div class="cg-md-fixture"><span class="cg-md-team mine">${club}</span>`
           + `<span class="cg-md-score">${us} <span class="cg-md-ball">${sprite('ball')}</span> ${them}</span>`
           + `<span class="cg-md-team">${mc.opponent}</span></div>`

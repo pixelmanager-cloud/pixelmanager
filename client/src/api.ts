@@ -30,12 +30,13 @@ export interface CareerState {
   lifestyle?: Array<{ id: string; icon: string; name: string; blurb: string; cost: number; recovery?: number; market?: number; greed?: number; perks?: Record<string, number>; clubInvest?: number }>;
   consequences?: string[];
   momentKind?: 'match' | 'training' | 'life';
+  rivalMoment?: boolean;
   matchCtx?: { opponent: string; home: boolean; score: string; minute: number; comp: string; club?: string | null };
   clubSeason?: { pos: number; size: number; me: LeagueRow; table: LeagueRow[]; apps: number; fixtures: number; status: string } | null;
   handoff?: { season: string; apps: number; status: string; overall: number } | null;
   careerScore?: number;
   objective?: { desc: string; target: number; progress: number; done: boolean } | null;
-  rival?: { name: string; score: number; lead: number } | null;
+  rival?: { name: string; score: number; lead: number; news?: string } | null;
   international?: { capped: boolean; caps: number; nation?: string; lastCap?: { oppNation: string; venue: 'H' | 'A' | 'N'; kind: 'friendly' | 'qualifier'; forGoals: number; ourGoals: number; scored: number } } | null;
   offPitch?: {
     image: { score: number; tier: string };

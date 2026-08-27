@@ -630,7 +630,11 @@ export function rollCoaches(rng: () => number, track: Track, n = COACH_OFFER): C
 // ── scenarios: each moment demands a weighted mix of tags; kind biases the demand ──
 // stakes 1 (normal) / 2 (big) / 3 (huge). Big moments are worth MORE (shape you harder) and are
 // riskier (more variance) — this is where reputations are made and the Big-Game Player trait is earned.
-export interface Scenario { id: string; kind: 'match' | 'social' | 'training'; demand: Partial<Record<Tag, number>>; label: string; stakes: 1 | 2 | 3; life?: LifeKind | null }
+export interface Scenario { id: string; kind: 'match' | 'social' | 'training'; demand: Partial<Record<Tag, number>>; label: string; stakes: 1 | 2 | 3; life?: LifeKind | null; rival?: boolean }
+// RIVALRY CONSEQUENCE: a real, distinct payoff when a big-stage MATCH scenario is framed as a head-to-head
+// against the seeded academy rival (see careerCast in narrate.ts — this module doesn't need his name, just
+// the mechanic). Bigger than a routine big-game swing: bragging rights are worth more than the occasion alone.
+const RIVAL_CONSEQUENCE = { good: { fans: 8, agent: 4 } as Partial<Record<MeterKey, number>>, bad: { fans: -5 } as Partial<Record<MeterKey, number>>, earnGood: 80 };
 
 // ── LIFE EVENTS: a fraction of low-stakes SOCIAL moments become a proper off-pitch dilemma — a contract
 // standoff, a loan decision, a media storm — instead of a generic dressing-room beat. Resolved by the SAME
@@ -705,8 +709,12 @@ export function makeScenario(rng: () => number, i: number, track: Track = 'outfi
   const life: LifeKind | null = seed != null && kind === 'social' && stakes === 1 && bandIdx >= 2 && pureHash01(seed, i, 0x5a17e) < 0.22
     ? LIFE_KINDS[Math.floor(pureHash01(seed, i, 0x1123bc) * LIFE_KINDS.length)]
     : null;
+  // RIVALRY MOMENT: a slice of big-stage MATCH scenarios, from Youth Team on, become an explicit
+  // head-to-head against the seeded academy rival — same pure-hash technique as `life`, no extra rng()
+  // draws, so it never perturbs demand/stakes/moment for careers that predate this or don't hit the gate.
+  const rival = seed != null && kind === 'match' && stakes >= 2 && bandIdx >= 3 && pureHash01(seed, i, 0x72195) < 0.3;
   const label = life ? LIFE_LABEL[life] : moment ? `★ ${moment}` : `${kind}: ${Object.keys(demand).join(' / ')}`;
-  return { id: `sc${i}`, kind, demand, label, stakes, life };
+  return { id: `sc${i}`, kind, demand, label, stakes, life, rival };
 }
 
 /** How well a card's tags satisfy a scenario's demand, 0..1. */
@@ -1054,6 +1062,7 @@ export class Career {
     this.log.push(choice);
     this.updateLife(choice); // NSS meters + energy react to how the moment went (deterministic, no rng)
     if (this.scenario.life) this.applyLifeConsequence(this.scenario.life, success); // the life-event's OWN, distinct payoff
+    if (this.scenario.rival) this.applyRivalConsequence(success); // bragging rights are worth more than the occasion alone
     this.discard.push(card);
     this.turn++;
     if (this.turn >= TOTAL_TURNS) { this.finished = true; return choice; }
@@ -1076,6 +1085,17 @@ export class Career {
     const earn = good ? (cq.earnGood ?? 0) : (cq.earnBad ?? 0);
     if (earn) this.earnings += earn;
     this.lastLifeEvent = { kind, success, good };
+  }
+
+  /** How the LAST rivalry moment resolved — surfaced for narration (overtake/fall-behind payoff). */
+  lastRivalMoment: { success: number; good: boolean } | null = null;
+  /** A head-to-head vs the rival carries a bigger swing than a routine big-game moment — bragging rights. */
+  private applyRivalConsequence(success: number) {
+    const good = success >= 0.55;
+    const eff = good ? RIVAL_CONSEQUENCE.good : RIVAL_CONSEQUENCE.bad;
+    for (const [k, d] of Object.entries(eff)) this.life(k as MeterKey, d ?? 0);
+    if (good && RIVAL_CONSEQUENCE.earnGood) this.earnings += RIVAL_CONSEQUENCE.earnGood;
+    this.lastRivalMoment = { success, good };
   }
 
   /** NSS life meters react to a played moment (deterministic — reads the choice, consumes no rng). */

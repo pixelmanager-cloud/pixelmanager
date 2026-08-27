@@ -370,6 +370,60 @@ export function narrateLifeEvent(kind: string, cardName: string, success: number
   return `${approach} ${cardName} ${resline}${castReact}`;
 }
 
+// ── RIVALRY STORYLINE: the seeded academy rival isn't just a number to chase — a slice of big-stage MATCH
+// moments (see career.ts Scenario.rival) are framed as a straight head-to-head against him, with a real
+// consequence (RIVAL_CONSEQUENCE) attached and a narrative payoff that names the actual lead swing.
+const RIVAL_SETUP = [
+  '{rival} is out there today too — right in his eye line the whole game.', 'Everyone in the ground knows the subplot: him against {rival}, all over again.',
+  'This one always means a little more when {rival}’s on the other side.', 'He can see {rival} warming up down the other end — old habits, old rivalries.',
+  '{rival} has never quite let him forget the last time these two met.', 'The whispers in the tunnel all say the same thing: settle it against {rival}, right here.',
+];
+const RIVAL_RESOLUTION = {
+  good: [
+    'and he gets the better of {rival} again — the story of their whole rivalry, really.', 'and it’s one more for the ledger against {rival}.',
+    'and {rival} has no answer for it — none at all.', 'and the bragging rights are his, at least until next time.',
+  ],
+  bad: [
+    'and {rival} gets the better of this one.', 'and it’s {rival}’s turn to enjoy the bragging rights.',
+    'and he can’t find an answer to {rival} today.', 'and {rival} will not let him forget this one in a hurry.',
+  ],
+};
+/** The SITUATION for a rivalry-flagged big moment — call before the card is played. */
+export function rivalMomentStory(rivalName: string, moment: string | null, ctx: ScenarioCtx): string {
+  const rng = mulberry32(ctx.seed >>> 0);
+  const setup = pickFrom(rng, RIVAL_SETUP).replace('{rival}', rivalName);
+  return moment ? `It’s ${moment} — and ${setup.charAt(0).toLowerCase() + setup.slice(1)}` : setup;
+}
+export interface RivalPayoff { rivalName: string; leadBefore: number; leadAfter: number }
+/** The RESOLUTION beat for a rivalry moment — names the actual lead swing (overtook him / fell behind). */
+export function narrateRivalMoment(cardName: string, success: number, ctx: NarrateCtx, payoff: RivalPayoff): string {
+  const rng = mulberry32(ctx.seed >>> 0);
+  const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
+  const good = band(success) === 'triumph' || band(success) === 'good';
+  const resline = pick(good ? RIVAL_RESOLUTION.good : RIVAL_RESOLUTION.bad).replace(/{rival}/g, payoff.rivalName);
+  const swing = payoff.leadBefore < 0 && payoff.leadAfter >= 0 ? ` He’s overtaken ${payoff.rivalName} in the race that matters most to him.`
+    : payoff.leadBefore >= 0 && payoff.leadAfter < 0 ? ` ${payoff.rivalName} has just gone back ahead of him — and it stings.`
+    : '';
+  return `He goes to work on ${cardName} ${resline}${swing}`;
+}
+// Deterministic "news" about the rival's own career — surfaced as a small ticker alongside the score, so
+// he feels like a real career unfolding in parallel, not just a number that climbs on a fixed schedule.
+const RIVAL_NEWS: Record<string, string[]> = {
+  Grassroots: ['is turning heads in the district league too.', 'has just been picked up by a bigger local side.', 'scored a hat-trick at the weekend — word travels fast.'],
+  Academy: ['has been fast-tracked up an age group.', 'picked up an injury that will keep him out for a spell.', 'is the other name scouts keep mentioning in the same breath.'],
+  Scholar: ['has signed his own scholarship forms at a rival academy.', 'is being talked about as the standout of his year group.', 'had a quiet trial and it showed.'],
+  'Youth Team': ['has broken into a reserve side of his own.', 'is on the fringes of a first-team squad now.', 'picked up his first taste of first-team training this month.'],
+  Breakthrough: ['has made his own first-team debut.', 'is being linked with a move across the city.', 'scored the winner in a game that made the papers.'],
+  'First Team': ['has just signed a new long-term contract.', 'was named in a team of the season shortlist.', 'is dealing with a loss of form of his own.'],
+  Establishing: ['has been given the captain’s armband at his club.', 'is being talked about for a testimonial of his own.', 'is closing in on a personal milestone.'],
+};
+/** A small seeded "news" beat about the rival's own career, appropriate to the current life stage. */
+export function rivalNews(seed: number, chapter: string): string {
+  const bank = RIVAL_NEWS[chapter] ?? RIVAL_NEWS.Establishing;
+  const rng = mulberry32((seed ^ 0x1a2b3c) >>> 0);
+  return pickFrom(rng, bank);
+}
+
 // ── NON-PLAY CHOICES: a flavour beat when he appoints a coach, drafts a card, or takes an offer ──
 export function narrateCoach(name: string, kind: string, specialty: string[], ctx: NarrateCtx): string {
   const rng = mulberry32(ctx.seed >>> 0);

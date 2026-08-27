@@ -4,7 +4,7 @@
 // home for every transition, replacing the old prospects/contracts/lifecycle/achievements split.
 import {
   overall, contractView, signContract, contractLength, legacyCard, legacyBoost, inheritGenes, rollGenes, graduate,
-  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, AGE_BANDS, moraleEffects, narratePlay, narrateLifeEvent, scenarioStory, chapterRecap, narrateCoach, narrateDraft, narrateOffer, careerCast, bandAt, cardName, CARD_DESC, LIFE_LABEL,
+  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, AGE_BANDS, moraleEffects, narratePlay, narrateLifeEvent, scenarioStory, chapterRecap, narrateCoach, narrateDraft, narrateOffer, careerCast, bandAt, cardName, CARD_DESC, LIFE_LABEL, rivalMomentStory, narrateRivalMoment, rivalNews,
   type Player, type Track, type PlayerAchievements, type Genes, type CareerPlayerAttrs, type LifeKind,
 } from '@fm/shared';
 import type { Token, Store } from './store.js';
@@ -107,15 +107,28 @@ function careerMilestone(c: Career): string | null {
   if (c.scenario.stakes === 3 && !c.log.some((l) => l.stakes >= 3)) return 'cup_final';
   return null;
 }
+// Shared formulas for the CAREER SCORE / RIVAL headline (see careerState below) — factored out so the
+// rivalry-moment narration (actWithNarration) computes the exact same numbers, not a drifted duplicate.
+function careerScoreOf(c: Career): number { return Math.round(c.log.reduce((s, ch) => s + ch.success * 8 * (ch.stakes ?? 1), 0)); }
+function rivalRateOf(seed: number): number { return 6 + ((seed >>> 3) % 4); } // 6..9 points/turn — competitive
 /** Apply an action and return an immersive narration of the moment (play, or a coach/draft/offer choice). */
 export function actWithNarration(c: Career, a: CareerAction): string | null {
   const baseCtx = { age: c.age, chapter: c.chapter, stakes: 1 as 1 | 2 | 3, personalityId: c.personality.id, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0, milestone: null as string | null, seed: (((c as any).seed >>> 0) + c.turn * 2654435761) >>> 0 };
   if (a.type === 'play') {
     const ctx = { ...baseCtx, stakes: c.scenario.stakes, milestone: careerMilestone(c) };
     const lifeKind = c.scenario.life; // capture BEFORE applying — play() advances to the NEXT scenario
+    const rivalMoment = c.scenario.rival;
+    const turnBefore = c.turn;
+    const csBefore = careerScoreOf(c);
     applyAction(c, a);
     const choice = c.log[c.log.length - 1];
-    return lifeKind ? narrateLifeEvent(lifeKind, cardName(a.cardId), choice.success, ctx) : narratePlay(cardName(a.cardId), choice.tags, choice.success, ctx);
+    if (lifeKind) return narrateLifeEvent(lifeKind, cardName(a.cardId), choice.success, ctx);
+    if (rivalMoment) {
+      const rate = rivalRateOf((c as any).seed >>> 0);
+      const payoff = { rivalName: careerCast((c as any).seed >>> 0).rival, leadBefore: csBefore - Math.round(turnBefore * rate), leadAfter: careerScoreOf(c) - Math.round(c.turn * rate) };
+      return narrateRivalMoment(cardName(a.cardId), choice.success, ctx, payoff);
+    }
+    return narratePlay(cardName(a.cardId), choice.tags, choice.success, ctx);
   }
   // coach / draft / offer — read the chosen item from the current phase BEFORE applying
   const st = c.current() as any;
@@ -209,7 +222,15 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
       st.lifeEvent = lifeKind;
       moment = null;
     }
-    if (!legacyPressure) {
+    // RIVALRY MOMENT: a REAL engine mechanic (career.ts Scenario.rival) — a big-stage match explicitly
+    // framed as a head-to-head against the seeded academy rival, with its own consequence (see
+    // applyRivalConsequence). Here we just surface it: the situation text names him directly.
+    if (!legacyPressure && !lifeKind && st.scenario.rival) {
+      st.story = rivalMomentStory(careerCast((c as any).seed >>> 0).rival, moment, { seed: (((c as any).seed >>> 0) + c.turn * 40503) >>> 0 });
+      st.momentKind = 'match';
+      st.rivalMoment = true;
+      if (kind === 'match') st.matchCtx = matchContext((c as any).seed >>> 0, c.turn, st.scenario.stakes, moment, clubName);
+    } else if (!legacyPressure) {
       st.story = scenarioStory(kind, topTag, moment, { seed: (((c as any).seed >>> 0) + c.turn * 40503) >>> 0, age: c.age, chapter: c.chapter, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0 });
       st.momentKind = kind === 'match' ? 'match' : (st.lifeEvent || kind === 'social') ? 'life' : 'training';
       if (kind === 'match') st.matchCtx = matchContext((c as any).seed >>> 0, c.turn, st.scenario.stakes, moment, clubName);
@@ -245,13 +266,16 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
   }
   // CAREER SCORE — a single headline number that climbs with every good moment (weighted by the stakes).
   // A satisfying meta-number + the replay hook (beat your best run). Presentational (from the log).
-  const careerScore = Math.round(c.log.reduce((s, ch) => s + ch.success * 8 * (ch.stakes ?? 1), 0));
+  const careerScore = careerScoreOf(c);
   // RIVAL TO CHASE — a named academy rival running his own career alongside yours. His score climbs at a
-  // steady seeded rate; you're measured against him, so out-performing him is the motivation. Presentational.
+  // steady seeded rate; you're measured against him, so out-performing him is the motivation. A real
+  // head-to-head storyline now (see Scenario.rival / applyRivalConsequence in career.ts) rather than just
+  // a comparative number: occasional big matches are framed as a straight duel with him, and his OWN
+  // career surfaces as a small seeded news beat appropriate to the current life stage.
   const cast = careerCast((c as any).seed >>> 0);
-  const rivalRate = 6 + ((((c as any).seed >>> 0) >>> 3) % 4); // 6..9 points/turn — competitive
+  const rivalRate = rivalRateOf((c as any).seed >>> 0);
   const rivalScore = Math.round(c.turn * rivalRate);
-  const rival = { name: cast.rival, score: rivalScore, lead: careerScore - rivalScore };
+  const rival = { name: cast.rival, score: rivalScore, lead: careerScore - rivalScore, news: rivalNews((c as any).seed >>> 0, c.chapter) };
   // INTERNATIONAL CALL-UP — perform well at the senior stages and you earn a national call-up + caps: an
   // aspirational ceiling to chase. Presentational, from overall × stage (only the good get capped).
   let international: { capped: boolean; caps: number; nation?: string; lastCap?: ReturnType<typeof nationalFixture> } | null = null;
