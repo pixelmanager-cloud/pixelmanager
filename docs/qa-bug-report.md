@@ -16,7 +16,7 @@ every violation. Findings below are ranked most-severe first.
 | CRITICAL | 0 |
 | HIGH | 0 |
 | MEDIUM | 1 |
-| LOW | 0 |
+| LOW | 1 |
 
 No exceptions, softlocks, NaN/Infinity leaks, out-of-range attributes, non-determinism, or bracket/table
 integrity failures were found across ~40,000+ simulated careers, ~130 simulated matches at extreme
@@ -62,6 +62,21 @@ the engine is genuinely rng-free/replay-safe at the source level (confirmed by `
 
 ---
 
+## LOW
+
+### L1 — `contractCost()` has no input validation; a `greed` below about −8 makes the extension fee go NEGATIVE
+- **File/function:** `shared/src/contracts.ts`, `contractCost(overall, age, greed, earnings)`: `greedFactor = 0.6 + 0.08 * greed` goes negative once `greed < -7.5`, and the function returns `Math.round(overall * overall * 1.2 * ageFactor * greedFactor * wageMult)` — a negative multiplier flows straight through to a negative final cost.
+- **Repro:** `npx tsx shared/qa_economy_fuzz.ts` — section "contracts.ts fuzz", out-of-domain note. Minimal repro:
+  ```ts
+  import { contractCost } from './src/contracts.js';
+  console.log(contractCost(12, 27, -15, 0)); // negative coin cost to extend a contract
+  ```
+- **Expected:** a contract extension should never cost negative coins (at worst free / a small floor).
+- **Actual:** returns a negative number once `greed <= -8`.
+- **Why LOW not MEDIUM/HIGH:** `greed` is **always** produced by `career.ts`'s `graduate()`, which clamps it to `[1, 20]` before it's ever stored on a player — so this path is not reachable through any normal gameplay flow found in this codebase today. It's purely a defensive-coding gap: `contractCost`/`contractView` take a raw `number` with no validation, so if any future caller (a save-migration script, a manually-constructed test player, a modding/debug tool) ever passes an ungoverned `greed` value, the economy silently produces a negative wage instead of erroring. A one-line `clamp(greed, 1, 20)` (or documenting the precondition loudly) at the top of `contractCost` would close this off cheaply.
+
+---
+
 ## Notes on things checked and found CLEAN (for future QA agents / to avoid re-litigating)
 
 - **No `Date.now()`/`Math.random()` anywhere in `shared/src/`** (`grep -rn "Date.now\|Math.random" shared/src`) — confirmed replay-safe at the source level.
@@ -98,6 +113,19 @@ the engine is genuinely rng-free/replay-safe at the source level (confirmed by `
   negative `caps`, huge `flair`): `image.score` always clamped to `[0,100]`, `endorsements.length` always
   `≤ 3`, endorsement payouts always non-negative, `boots.next.progress ≤ target` always held, and
   `computeOffPitch` is deterministic across repeat calls with identical input.
+- **Manager-side economy** (`shared/qa_economy_fuzz.ts`, ~14,000 checks across `contracts.ts`,
+  `prestige.ts`, `morale.ts`, `legacy.ts`, `staking.ts` within each module's real/documented input
+  domain): `contractCost`/`contractLength`/`releaseClause` stay non-negative and in-bounds for the
+  realistic `greed ∈ [1,20]` domain those values actually come from; `contractActive`'s expiry boundary
+  is exact (active the season before expiry, inactive at/after); `managerPrestige.progress` stays in
+  `[0,1]` and `levelIdx` in range across thousands of randomized (including malformed/out-of-band)
+  `ManagerRecord`s; a 5000-event morale random-walk plus `driftMorale` never left `[0,100]`;
+  `moraleEffects`' `extendMult`/`sellMult` stayed within their documented caps even for wildly
+  out-of-range starting morale; `legacyCard.mintable` was consistent with the `legendRating ≥ 65`
+  threshold in every one of 3000 cases; `staking.ts`'s discount/progress/bonus functions all stayed
+  bounded across extreme (including negative and huge) tenure values. One LOW finding (L1) came out of
+  deliberately probing `contractCost` far outside the domain its `greed` input is ever actually
+  constructed in.
 
 ---
 
@@ -108,5 +136,6 @@ the engine is genuinely rng-free/replay-safe at the source level (confirmed by `
 | `shared/qa_career_fuzz.ts` | Career (random-choice fuzz, `simCareer` sweep, determinism, lineage) | ~13,300 checks (`QA_N` env overrides the main sweep) |
 | `shared/qa_meta_loops_fuzz.ts` | Club season, continental cup, national call-ups, World Cup, off-pitch | ~15,000 checks |
 | `shared/qa_match_edge_fuzz.ts` | Match engine edge cases (extreme quality/tactics, determinism, immutability) | ~170 matches |
+| `shared/qa_economy_fuzz.ts` | Manager economy: contracts, prestige, morale, legacy cards, staking | ~14,000 checks |
 
-Re-run everything: `npx tsx shared/qa_career_fuzz.ts && npx tsx shared/qa_meta_loops_fuzz.ts && npx tsx shared/qa_match_edge_fuzz.ts`
+Re-run everything: `npx tsx shared/qa_career_fuzz.ts && npx tsx shared/qa_meta_loops_fuzz.ts && npx tsx shared/qa_match_edge_fuzz.ts && npx tsx shared/qa_economy_fuzz.ts`
