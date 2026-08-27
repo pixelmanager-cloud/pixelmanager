@@ -686,10 +686,17 @@ class Game {
   /** manager phase = you've handed off and are now managing the club with a bloodline star on the pitch */
   private isManagerPhase(): boolean { return !!this.loadMgr().starId; }
   private leagueSeed(): number { const h = this.account?.handle ?? 'x'; return [...h].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) >>> 0; }
-  /** the club's league strength = average overall of the best XI (1-20 scale) */
+  /** the club's raw squad strength = average overall of the best XI (1-20 scale) */
   private squadStrength(): number {
     const ovrs = this.club.players.map((p) => overall(p)).sort((a, b) => b - a).slice(0, 11);
     return ovrs.length ? ovrs.reduce((a, b) => a + b, 0) / ovrs.length : 8;
+  }
+  /** the strength the LEAGUE sees — the squad, shifted by the bloodline star's age curve: he peaks in his
+   *  mid-20s and declines toward retirement, so the club's results rise then fade over his managed career. */
+  private clubLeagueStrength(): number {
+    const age = this.loadMgr().starAge ?? 24;
+    const mod = age <= 27 ? 0.5 : age <= 30 ? 0 : age <= 33 ? -0.7 : -1.6;
+    return this.squadStrength() + mod;
   }
   private ordinal(n: number): string { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]); }
   /** A player's retirement age varies with him: keepers last longest, pace-reliant forwards fade earliest;
@@ -718,7 +725,7 @@ class Game {
     const clubName = this.club.name, seed = this.leagueSeed();
     const fixtures = seasonFixtures(clubName, seed);
     const m = this.loadMgr(), played = m.results;
-    const t = liveTable(clubName, this.squadStrength(), 1, seed, played);
+    const t = liveTable(clubName, this.clubLeagueStrength(), 1, seed, played);
     const nextIdx = played.length, done = nextIdx >= fixtures.length;
     // your seeded RIVAL club — those fixtures are derbies
     const opps = seededOpponents(clubName, seed);
@@ -780,7 +787,7 @@ class Game {
   private simRemainingFixtures() {
     const seed = this.leagueSeed(), clubName = this.club.name;
     const fixtures = seasonFixtures(clubName, seed), opps = seededOpponents(clubName, seed);
-    const m = this.loadMgr(), myStr = this.squadStrength();
+    const m = this.loadMgr(), myStr = this.clubLeagueStrength();
     for (let i = m.results.length; i < fixtures.length; i++) {
       const opp = opps.find((o) => o.name === fixtures[i].oppName)!;
       m.results.push(this.simFixtureResult(myStr, opp.strength, ((seed >>> 0) ^ ((m.season * 131 + i) >>> 0)) >>> 0));
@@ -793,7 +800,7 @@ class Game {
    *  reaches the end of his career — trigger his retirement and the succession to the heir. */
   private nextSeason() {
     const m = this.loadMgr();
-    const t = liveTable(this.club.name, this.squadStrength(), 1, this.leagueSeed(), m.results);
+    const t = liveTable(this.club.name, this.clubLeagueStrength(), 1, this.leagueSeed(), m.results);
     const titles = (m.titles ?? 0) + (t.pos === 1 ? 1 : 0);
     const age = (m.starAge ?? 22) + 1;
     if (age >= (m.retireAge ?? 34)) { this.retireStar(titles); return; } // his playing days are over — the heir comes through
@@ -2108,7 +2115,7 @@ class Game {
     // single-player post-match REACTION — keyed to the result vs what was expected (your strength vs theirs)
     if (this.spFixture) {
       const my = s.score[this.mySide], opp = s.score[1 - this.mySide], gd = my - opp;
-      const edge = this.squadStrength() - this.spFixture.oppStrength; // + = you were favourites
+      const edge = this.clubLeagueStrength() - this.spFixture.oppStrength; // + = you were favourites
       let reaction: string;
       if (gd > 0) reaction = edge < -2 ? '🎉 A famous win against the odds — the fans are in raptures!' : gd >= 3 ? '👏 A commanding win — statement made.' : 'A hard-earned three points.';
       else if (gd < 0) reaction = edge > 2 ? '😤 A dismal result — a game the club should have won.' : 'A tough one to take, but the season rolls on.';
