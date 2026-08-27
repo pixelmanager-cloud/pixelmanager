@@ -350,3 +350,32 @@ content bar (a new interacting/trade-off decision, not a reskin).
 **Guardrails (unchanged):** deterministic (no wall-clock/Math.random in shared/), `npm run verify` green with
 every engine-touching change (paste before/after calibration in the commit), one item per commit, fair not
 grindy, legible cause→effect. Sources: FM24 (Goal.com, Most Wanted Gamers), Goomba Stomp, gmgames.org.
+
+### 📖 ✅ SHIPPED (2026-08-27) — research-informed authenticity pass (`docs/research-manager-career.md`)
+Four flavour/UI features from real coaching terminology and manager psychology — mostly pure text, one
+small bounded tactical nuance. `npm run verify` green after every commit; calibration untouched (only one
+of the four even touches numbers, and it stays inside the existing bounded homeBoost/conditioning range).
+- **Authentic role tooltips** — `DUTY_DESC` (`shared/src/duties.ts`) gives every duty a real one-line
+  coaching definition (regista, mezzala-flavoured wide-playmaker, false 9, inverted full-back,
+  sweeper-keeper, target man, etc. — research §2), shown as a live tooltip on the duty dropdown in the
+  lineup editor. The SP scout card also name-checks the opponent's most advanced player's duty ("danger
+  man") with the same definition. Pure flavour, zero gameplay effect.
+- **Pre-match formation matchup insight** — a deterministic "who gets outnumbered where" line on the SP
+  scout card, comparing the manager's chosen formation against the seeded opponent's shape (central-MF
+  count, wide-outlet count, back-line size — read straight off the existing static formation anchors) —
+  the central-vs-wide-overload logic behind real formation matchups (research §1). Refreshes live on a
+  formation change. No engine change, no rng.
+- **Team-talk personality nuance** — the pre-kickoff team talk now reads the managed STAR's rolled
+  personality (`shared/src/career.ts` `PERSONALITIES`) and applies a small, bounded nudge on top of the
+  existing tone edge: sensitive personalities (Fragile, Hothead, Perfectionist) get less out of — or
+  slightly worse from — the fiery talk and prefer calm; personalities who thrive on the occasion (Born
+  Leader, Workhorse, Big-Game Player, Maverick, Showman) get a touch more from fiery and less from calm;
+  everyone else (Model Pro, Mercurial, Late Bloomer, Stoic, Joker) is unmoved. Ferguson's hairdryer vs
+  Ancelotti's quiet leadership (research §4). Modulation is ±0.02-0.03 on multipliers already in the
+  0.92-1.08 range — deliberately small, calibration held. A one-line flavour note in the team-talk
+  overlay names which way the squad leans.
+- **Tactic notebook explainers** — `TAC_NOTE` in-fiction tooltip text for the 5 tactics sliders (real
+  coaching principle behind each dial, e.g. press: Klopp's five-second gegenpress rule) plus rewritten
+  Offside Trap / Play Out From The Back / Attack Focus toggle copy, and an optional `note` field on
+  match-plan rules used for the two lead-protection rules (Mourinho's "park the bus" quote — research
+  §3). Pure flavour text — same tactics, same effects.
