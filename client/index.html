@@ -855,6 +855,15 @@
       #club-head #club-back { margin-left: auto; }
       #facilities-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
       @media (max-width: 640px) { #facilities-grid { grid-template-columns: 1fr; } }
+      /* backroom staff — deterministic per-save cast, flavour only */
+      #club-staff { margin-top: 20px; }
+      #club-staff .cs-title { font-family: var(--display); font-size: 12px; color: var(--cyan); margin-bottom: 10px; letter-spacing: 0.5px; }
+      #club-staff .cs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+      @media (max-width: 640px) { #club-staff .cs-grid { grid-template-columns: 1fr; } }
+      .cs-card { display: flex; flex-direction: column; gap: 3px; padding: 12px 14px; border-radius: 10px; background: var(--panel-2, #1f1f4d); border: 1px solid var(--line); }
+      .cs-role { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+      .cs-name { font-family: var(--display); font-size: 13px; color: var(--good); }
+      .cs-personality { font-size: 13px; color: var(--text); font-style: italic; line-height: 1.4; }
       .facility { border: 2px solid var(--line); border-radius: 9px; padding: 14px; background: var(--panel-2);
         display: flex; flex-direction: column; gap: 8px; }
       .facility .fac-top { display: flex; align-items: center; gap: 10px; }
@@ -1208,6 +1217,7 @@
         <div id="club-head"><h3>🏛️ CLUB FACILITIES</h3><span id="club-coins"></span><button id="club-back">← Back to hub</button></div>
         <div class="scout-sub">Invest coins to build your club up over the seasons. A bigger <b>Stadium</b> earns home-match gate receipts; the <b>Training Ground</b> keeps your legs fresh; the <b>Youth Academy</b> and <b>Scouting HQ</b> sharpen your recruitment. Levels are permanent.</div>
         <div id="facilities-grid"></div>
+        <div id="club-staff"></div>
       </div>
 
       <!-- LINEUP EDITOR (my standing orders) -->

@@ -1,7 +1,8 @@
 import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
   TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry,
-  FORMATIONS as FORMATION_SHAPES, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
+  FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember,
+  type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type Trialist, type MissionsData, type ContractInfo } from './api';
 import { sprite } from './sprites';
@@ -1465,8 +1466,21 @@ class Game {
   private async showClub() {
     this.showScreen('club');
     $('facilities-grid').innerHTML = SPINNER;
+    this.renderStaff();
     try { this.renderFacilities(await api.facilities()); }
     catch { $('facilities-grid').innerHTML = '<div class="muted">Could not load — is the server running?</div>'; }
+  }
+
+  /** The backroom staff — four deterministic, save-stable characters (from @fm/shared staffRoster).
+   *  Flavour only; gives the club screen recurring faces the way the player side has its careerCast. */
+  private renderStaff() {
+    const el = $('club-staff'); if (!el) return;
+    const roster = staffRoster(this.leagueSeed());
+    const card = (s: StaffMember) => `<div class="cs-card"><span class="cs-role">${s.role}</span>`
+      + `<span class="cs-name">${s.name}</span><span class="cs-personality">“${s.personality}”</span></div>`;
+    el.innerHTML = `<div class="cs-title">🧑‍🏫 YOUR BACKROOM STAFF</div><div class="cs-grid">`
+      + card(roster.assistant) + card(roster.scout) + card(roster.fitnessCoach) + card(roster.goalkeepingCoach)
+      + `</div>`;
   }
 
   private renderFacilities(d: { coins: number; facilities: import('./api').Facility[] }) {
