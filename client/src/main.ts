@@ -1079,6 +1079,7 @@ class Game {
    *  the seeded outcome; for a group-stage exit (or no played run) the full seeded bracket is shown instead. */
   private showWorldCup(wc: WCResult, playedFinish?: WCResult['myFinish'], finalFoe?: string) {
     this.showScreen('season');
+    audio.play('international'); // the World Finals — a national-team competition, gets the international theme
     const nation = wc.myNation;
     const finish = playedFinish ?? wc.myFinish;
     const run = this.loadMgr().wcRun ?? [];
@@ -1374,6 +1375,7 @@ class Game {
   // ── ACADEMY: the Career game (Layer 1) — develop 10yo prospects into pro players ──
   private async showAcademy() {
     this.showScreen('academy');
+    audio.play('scout'); // the academy scouting board — scout/pick a prospect (career play switches to 'career' in renderCareer)
     $('academy-body').innerHTML = SPINNER;
     try {
       const { prospects } = await api.prospects();
@@ -2282,6 +2284,7 @@ class Game {
     this.setMatchNames();
     $('ticker').innerHTML = '';
     this.showScreen('match');
+    if (this.spFixture?.comp === 'wc' || this.spFixture?.comp === 'cont') audio.play('bigmatch'); // cup / World-Finals ties get the big-match theme
   }
 
   private setMatchNames() {

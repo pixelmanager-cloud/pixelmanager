@@ -13,17 +13,17 @@ export type MusicContext =
 // pool is a silent no-op (used for slots whose track isn't chosen yet). Files live in client/public/audio/.
 const MANIFEST: Record<MusicContext, string[]> = {
   menu: ['/audio/menu-1.ogg'],
-  scout: [], // pending track choice
+  scout: ['/audio/scout-1.ogg'],
   career: ['/audio/career-1.ogg', '/audio/career-2.ogg', '/audio/career-3.ogg', '/audio/career-4.ogg', '/audio/career-5.ogg'],
   hub: ['/audio/hub-1.ogg'],
   match: ['/audio/match-1.ogg'],
-  bigmatch: [], // pending track choice
+  bigmatch: ['/audio/bigmatch-1.ogg'],
   triumph: ['/audio/triumph-1.ogg'],
   tension: ['/audio/tension-1.ogg'],
   drama: ['/audio/drama-1.ogg', '/audio/drama-2.ogg', '/audio/drama-3.ogg'],
   international: ['/audio/international-1.ogg'],
   legends: ['/audio/legends-1.ogg'],
-  emotional: [], // pending track choice
+  emotional: ['/audio/emotional-1.ogg'],
 };
 
 interface AudioSettings { volume: number; muted: boolean }
