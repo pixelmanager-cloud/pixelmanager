@@ -525,6 +525,11 @@ export class MatchEngine {
     const defTeam = (1 - teamIdx) as 0 | 1;
     const cs = s.players[teamIdx][playerIdx];
     const myDistGoal = Math.hypot(goal.x - cs.x, goal.y - cs.y);
+    // PLAY-OUT-OF-DEFENCE instruction (off by default): when the KEEPER has the ball, a side with it
+    // armed insists on the safest short option regardless of the tempo slider — the trade-off is fewer
+    // risky giveaways right after a save/gather, at the cost of the counter-attacking speed a longer,
+    // more direct restart would have given. Only overrides directness for this one decision.
+    const directness = (playerIdx === 0 && this.tactics[teamIdx].playOutOfDefence) ? -1 : mods.directness;
     let best: { idx: number; through: boolean } | null = null;
     let bestScore = -Infinity;
     for (let i = 0; i < 11; i++) {
@@ -538,8 +543,8 @@ export class MatchEngine {
       const pressure = this.pressureOn(defTeam, ts);
       // directness>0 rewards forward gain and tolerates longer passes; <0 rewards safe short options.
       // duty "magnet" makes playmakers/target-men more (and ball-winners less) sought as an out-ball.
-      const score = gain * (0.7 + 0.6 * (mods.directness + 1))
-        - dPass * (0.2 - mods.directness * 0.1)
+      const score = gain * (0.7 + 0.6 * (directness + 1))
+        - dPass * (0.2 - directness * 0.1)
         - pressure * 3
         + this.dm[teamIdx][i].magnet
         + this.rng() * 6;
@@ -547,7 +552,7 @@ export class MatchEngine {
       // the passer's creativity (and the Creative Maestro trait) unlocks more of them
       const counter = this.onCounter(teamIdx);
       const passer = this.teams[teamIdx].players[playerIdx];
-      const throughP = clamp(0.5 + 0.16 * mods.directness + (counter ? 0.14 : 0)
+      const throughP = clamp(0.5 + 0.16 * directness + (counter ? 0.14 : 0)
         + mAdd(passer.attrs.creativity, 0.12) + (hasTrait(passer, 'maestro') ? 0.05 : 0), 0.25, 0.9);
       const through = gain > (counter ? 14 : 16) && this.teams[teamIdx].players[i].role === 'FW' && this.rng() < throughP;
       if (gain > -6 && score > bestScore) { bestScore = score; best = { idx: i, through }; }

@@ -295,6 +295,25 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
   assert(w > l, `4-2-2-2's second striker should beat 4-1-4-1's lone-striker shape (got ${w} vs ${l})`);
 }
 
+// ---- 8e. Play-out-of-defence instruction: off-by-default, neutral when off, concedes fewer to a high press ----
+{
+  const highPress: Tactics = { ...DEFAULT_TACTICS, press: 2 };
+  // neutrality: explicitly false must reproduce the exact goal tally of the field never being set at all
+  let gaBase = 0, gaExplicitFalse = 0;
+  for (let i = 0; i < N; i++) {
+    gaBase += play(mk('a', 13, i * 7 + 1), mk('b', 13, i * 11 + 3), DEFAULT_TACTICS, highPress, i * 31 + 5).score[1];
+    gaExplicitFalse += play(mk('a', 13, i * 7 + 1), mk('b', 13, i * 11 + 3), { ...DEFAULT_TACTICS, playOutOfDefence: false }, highPress, i * 31 + 5).score[1];
+  }
+  assert(gaBase === gaExplicitFalse, `playOutOfDefence:false must be bit-for-bit identical to the field being absent (got ${gaBase} vs ${gaExplicitFalse})`);
+  // effect: armed vs a high-press side, concede fewer goals (fewer risky giveaways right off the keeper)
+  let gaOn = 0;
+  for (let i = 0; i < N; i++) {
+    gaOn += play(mk('a', 13, i * 7 + 1), mk('b', 13, i * 11 + 3), { ...DEFAULT_TACTICS, playOutOfDefence: true }, highPress, i * 31 + 5).score[1];
+  }
+  console.log(`[instr]     conceded vs a high press: OFF=${(gaBase / N).toFixed(2)}  playOutOfDefence ON=${(gaOn / N).toFixed(2)}`);
+  assert(gaOn < gaBase, `play-out-of-defence should concede fewer goals vs a high press than the default (got ${gaOn} vs ${gaBase})`);
+}
+
 // ---- 9. Seeded opponent tactical profiles: stable per-seed identity, but varied across opponents ----
 // Every SP opponent used to play flat DEFAULT_TACTICS 4-4-2 regardless of who they were. Prove the
 // fix has real teeth: the same club seed always gets the same style (determinism), and a spread of

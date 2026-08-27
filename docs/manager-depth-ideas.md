@@ -314,6 +314,13 @@ content bar (a new interacting/trade-off decision, not a reskin).
   presence outweighs losing the out-and-out width. (Team shots/goals were tried first and didn't hold —
   crowding the centre stole space from other central attackers rather than adding net chances;
   possession is the honest, provable effect.)
+- **Play Out From The Back instruction** — a new off-by-default toggle, `Tactics.playOutOfDefence`: when
+  the keeper has the ball, always pick the safest short option regardless of the tempo slider. Contained
+  entirely to the one `pickPassTarget()` decision where `playerIdx === 0` (the keeper), so it can't touch
+  anything else. Proven in `strategy_test.ts`: (a) neutrality — `playOutOfDefence: false` reproduces the
+  *exact* goal tally of the field being absent entirely (bit-for-bit, not just "close"); (b) effect —
+  armed vs a high-press side, concedes fewer goals (0.92 vs 1.03/match) by avoiding risky giveaways right
+  off the keeper's distribution. A real toggle in the lineup editor.
 - **Wide-Playmaker MF duty** — a new named MF duty for a wide midfield slot: hugs the touchline
   (positive `hug`) but dictates play from out there (high magnet, moderate shoot, low press). Proven in
   `strategy_test.ts`: generates more team shots than both box-to-box (38.3 vs 36.1) and ball-winner

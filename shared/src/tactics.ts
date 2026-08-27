@@ -20,6 +20,10 @@ export interface Tactics {
    *  a through-ball is played, catching a receiver who doesn't have a real pace edge. Only meaningful
    *  with a high/very-high line (line >= 1). See engine.ts beatsLastDefender(). */
   offsideTrap?: boolean;
+  /** INSTRUCTION (off by default): when the keeper has the ball, always pick the safest short option
+   *  instead of following the tempo slider — fewer risky giveaways right after a save/gather, at the
+   *  cost of the faster restart a direct clearance would give. See engine.ts pickPassTarget(). */
+  playOutOfDefence?: boolean;
 }
 
 export const DEFAULT_TACTICS: Tactics = {
