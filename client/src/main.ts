@@ -746,11 +746,29 @@ class Game {
       : `<div class="season-summary"><b>${clubName}</b> · Season ${m.season} · Matchday ${nextIdx + 1}/${fixtures.length} · <b>${this.ordinal(t.pos)}</b> of ${t.size}${formStrip}${starLine}</div>`;
     const simBtn = done ? '' : `<div style="text-align:center;margin-top:10px;"><button id="sf-sim" style="font-family:var(--display);font-size:11px;padding:7px 14px;">⏩ Sim the rest of the season</button></div>`;
     $('season-body').innerHTML = header
+      + `<div class="sf-gaffer">📔 ${this.gafferTake(played, t.pos, t.size, clubName)}</div>`
       + `<div class="season-cols"><div class="season-fixtures"><h4 class="scout-h4">FIXTURES</h4>${fxRows}${records}${simBtn}</div>`
       + `<div class="season-table-wrap"><h4 class="scout-h4">LEAGUE TABLE</h4>${this.spTableHtml(t)}</div></div>`;
     $('sf-play')?.addEventListener('click', () => this.playNextSpFixture());
     $('sf-sim')?.addEventListener('click', () => this.simRemainingFixtures());
     $('sf-next-season')?.addEventListener('click', () => this.nextSeason());
+  }
+
+  /** A seeded 'gaffer's take' on the season so far — composed from recent form + league position, so the
+   *  season reads as a story, not just a table. Deterministic (no rng). */
+  private gafferTake(played: PlayedResult[], pos: number, size: number, club: string): string {
+    if (!played.length) return `A new season, a blank page. ${club} kick off with everything to play for.`;
+    const last = played[played.length - 1], won = last.myGoals > last.oppGoals, lost = last.myGoals < last.oppGoals;
+    let run = 0; for (let i = played.length - 1; i >= 0; i--) { const r = played[i]; if (r.myGoals >= r.oppGoals) run++; else break; }
+    let lose = 0; for (let i = played.length - 1; i >= 0; i--) { const r = played[i]; if (r.myGoals < r.oppGoals) lose++; else break; }
+    if (pos === 1) return `Top of the table — ${club} are the team to catch. Dare they dream of the title?`;
+    if (pos >= size - 1) return `Rooted near the foot of the table — this is a relegation scrap now for ${club}.`;
+    if (run >= 3) return `${run} unbeaten and climbing — ${club} are on a real roll.`;
+    if (lose >= 2) return `${lose} defeats on the spin — the mood around ${club} has turned; a response is needed.`;
+    if (won && last.myGoals - last.oppGoals >= 3) return `A statement win, ${last.myGoals}-${last.oppGoals} — the ${club} fans went home happy.`;
+    if (lost) return `A defeat to swallow. ${club} regroup and go again.`;
+    if (won) return `A big three points banked — ${club} keep pushing up the table.`;
+    return `Honours even, but every point counts in ${club}'s season.`;
   }
 
   /** A deterministic scoreline for a simulated (not played-live) fixture, by squad strength. */
