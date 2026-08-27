@@ -1,6 +1,7 @@
 // Storage interface. Two backends implement it: node:sqlite (local dev) and
 // Postgres (production). Everything is async so both fit the same shape.
-import type { Club, Duty, Lineup, Tactics } from '@fm/shared';
+import type { Club, Duty, Lineup, Tactics, Token } from '@fm/shared';
+export type { Token };
 
 export interface StandingOrders { formation: Lineup['formation']; playerIds: string[]; tactics: Tactics; duties?: Duty[]; captainIdx?: number; takers?: { pen?: number; fk?: number; corner?: number } }
 /** Serialize / parse the manager squad roles (captain + set-piece takers) for the so_roles column. */
@@ -44,19 +45,8 @@ export interface AuthRow { id: string; handle: string; rating: number; token: st
 
 export interface ProspectRow { id: string; name: string; parent_id: string | null; role_hint: string; genes_json: string; pedigree: number; dev_bonus_json: string; born_season: number; developed: number; career_seed: number | null; agent_id: string | null; track: string | null; career_actions: string | null; developed_player_id: string | null }
 
-/** The UNIFIED, fixed-supply NFT — one persistent id through the whole lifecycle (prospect→pro→retired→
- *  reborn). All lifecycle state lives on this one row. */
-export interface Token {
-  id: string; owner_id: string; generation: number; state: 'prospect' | 'pro' | 'retired'; name: string;
-  genes_json: string; pedigree: number; dev_bonus_json: string;
-  career_seed: number | null; agent_id: string | null; track: string | null; career_actions: string | null;
-  attrs_json: string | null; role: string | null; traits_json: string | null; personality: string | null;
-  greed: number | null; marketability: number | null; earnings: number | null; prime_season: number | null; peak_overall: number;
-  signed_season: number | null; length_seasons: number | null; staked_since: number | null;
-  ach_seasons: number; ach_apps: number; ach_league: number; ach_cup: number; ach_promotions: number; ach_tier: number; morale: number;
-  ach_goals: number; ach_assists: number; ach_potm: number;
-  kit_json: string | null;   // cosmetic kit & identity (number, boots, celebration, nickname) — carries to the pro
-}
+// Token (the UNIFIED, fixed-supply NFT save-record shape) moved to @fm/shared/token.ts
+// (phase 1 offline migration) — imported above.
 /** Columns updateToken() may set (whitelist — guards the dynamic UPDATE). */
 export const TOKEN_COLS = new Set<string>(['owner_id', 'generation', 'state', 'name', 'genes_json', 'pedigree', 'dev_bonus_json',
   'career_seed', 'agent_id', 'track', 'career_actions', 'attrs_json', 'role', 'traits_json', 'personality',
