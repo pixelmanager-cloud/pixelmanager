@@ -15,7 +15,7 @@ import {
 } from './career.js';
 import {
   narratePlay, narrateLifeEvent, scenarioStory, chapterRecap, narrateCoach, narrateDraft, narrateOffer, careerCast, rivalMomentStory, narrateRivalMoment, rivalNews,
-  callupMomentStory, narrateCallupMoment,
+  callupMomentStory, narrateCallupMoment, academyScareStory, narrateAcademyScare,
 } from './narrate.js';
 import { clubSeason, squadRole, firstTeamReady } from './clubseason.js';
 import { computeOffPitch } from './offpitch.js';
@@ -102,17 +102,19 @@ export function actWithNarration(c: Career, a: CareerAction): string | null {
     const lifeKind = c.scenario.life; // capture BEFORE applying — play() advances to the NEXT scenario
     const rivalMoment = c.scenario.rival;
     const callupMoment = c.scenario.callup;
+    const academyScare = !lifeKind && isAcademyScareTurn(c, c.scenario.kind); // presentational — see isAcademyScareTurn
     const turnBefore = c.turn;
     const csBefore = careerScoreOf(c);
     applyAction(c, a);
     const choice = c.log[c.log.length - 1];
-    if (lifeKind) return narrateLifeEvent(lifeKind, cardName(a.cardId), choice.success, ctx);
+    if (lifeKind) return narrateLifeEvent(lifeKind, cardName(a.cardId), choice.success, ctx, (c as any).lastLifeEvent?.approach);
     if (rivalMoment) {
       const rate = rivalRateOf((c as any).seed >>> 0);
       const payoff = { rivalName: careerCast((c as any).seed >>> 0).rival, leadBefore: csBefore - Math.round(turnBefore * rate), leadAfter: careerScoreOf(c) - Math.round(c.turn * rate) };
       return narrateRivalMoment(cardName(a.cardId), choice.success, ctx, payoff);
     }
     if (callupMoment) return narrateCallupMoment(cardName(a.cardId), choice.success, ctx);
+    if (academyScare) return narrateAcademyScare(cardName(a.cardId), choice.success, ctx);
     return narratePlay(cardName(a.cardId), choice.tags, choice.success, ctx);
   }
   // coach / draft / offer — read the chosen item from the current phase BEFORE applying
@@ -175,6 +177,16 @@ function legacyPressureStory(surname: string, seed: number): string {
   return lines[seed % lines.length];
 }
 
+// ACADEMY KEEP-OR-CUT SCARE: a tense "will he be kept?" beat at the Academy/Scholar/Youth Team stages —
+// presentational (no engine change; career_sim byte-identical), so this gate is a pure hash shared between
+// careerState (which SURFACES the situation before the card is played) and actWithNarration (which picks
+// the dedicated resolution narration for the SAME turn) — see narrate.ts's TONE RULE: he's never released.
+const SCARE_CHAPTERS = new Set(['Academy', 'Scholar', 'Youth Team']);
+function isAcademyScareTurn(c: Career, kind: string): boolean {
+  const gate = ((((c as any).seed >>> 0) ^ Math.imul(c.turn + 5, 2971215073)) >>> 0) % 100;
+  return SCARE_CHAPTERS.has(c.chapter) && kind === 'social' && gate < 10;
+}
+
 export function careerState(t: Token, c: Career, clubName?: string | null, clubLevel = 0) {
   const st = c.current() as any;
   const recentForm = (() => { const r = c.log.slice(-6); return r.length ? r.reduce((s, e) => s + e.success, 0) / r.length : 0.5; })();
@@ -222,10 +234,20 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
       st.momentKind = 'match';
       st.callupMoment = true;
       if (kind === 'match') st.matchCtx = matchContext((c as any).seed >>> 0, c.turn, st.scenario.stakes, moment, clubName);
+    } else if (!legacyPressure && !lifeKind && isAcademyScareTurn(c, kind)) {
+      // ACADEMY KEEP-OR-CUT SCARE: presentational (see isAcademyScareTurn above) — foreshadowing tension,
+      // never a real release. He always comes through it.
+      st.story = academyScareStory(c.chapter, (((c as any).seed >>> 0) + c.turn * 2971215073) >>> 0);
+      st.lifeEvent = 'keep_or_cut';
+      st.momentKind = 'life';
     } else if (!legacyPressure) {
       st.story = scenarioStory(kind, topTag, moment, { seed: (((c as any).seed >>> 0) + c.turn * 40503) >>> 0, age: c.age, chapter: c.chapter, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0 });
       st.momentKind = kind === 'match' ? 'match' : (st.lifeEvent || kind === 'social') ? 'life' : 'training';
       if (kind === 'match') st.matchCtx = matchContext((c as any).seed >>> 0, c.turn, st.scenario.stakes, moment, clubName);
+      // INJURY COMEBACK CHOICE: spell out the real trade-off — which card he leans on decides "rush back"
+      // (grit-led, greater reward, real reinjury-risk cost on a bad outcome) vs "patient graded return"
+      // (safer, no shortcuts) — see career.ts's applyLifeConsequence.
+      if (lifeKind === 'injury_comeback') st.story += ' A card built on grit reads as pushing to rush back — bigger reward, real reinjury risk if it goes wrong. Anything else is the patient, graded route: safer, no shortcuts.';
     }
     st.hand = withDesc(st.hand);
   }

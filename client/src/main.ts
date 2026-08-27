@@ -1519,6 +1519,9 @@ class Game {
       } else if (mk === 'life' && s.lifeEvent === 'the weight of the name') {
         header = `<div class="cg-mtype pressure">🎭 THE WEIGHT OF THE NAME</div>`;
         prompt = 'The name is a burden today — how does he respond?';
+      } else if (mk === 'life' && s.lifeEvent === 'keep_or_cut') {
+        header = `<div class="cg-mtype life">📋 KEEP OR CUT?</div>`;
+        prompt = 'His scholarship review is coming — how does he make his case?';
       } else if (mk === 'life') {
         const lifeLabel = s.lifeEvent ? (LIFE_LABEL as Record<string, string>)[s.lifeEvent] ?? s.lifeEvent : null;
         header = `<div class="cg-mtype life">⚡ LIFE EVENT${lifeLabel ? ` · ${lifeLabel}` : ' · off the pitch'}</div>`;
