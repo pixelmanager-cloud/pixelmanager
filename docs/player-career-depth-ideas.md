@@ -11,6 +11,29 @@
 >   `npm run verify` green, `career_sim` diversity/magnitude/determinism healthy — one archetype-count line
 >   shifted 128→127, everything else byte-identical).
 >
+> ## ✅ SHIPPED (2026-08-27, research-informed pass) — academy scare, debut euphoria, injury choice, retirement
+> - **Academy keep-or-cut scare** — a tense "will he be kept?" scholarship-decision beat (foreshadowing →
+>   the meeting) at Academy/Scholar/Youth Team, gated the same pure-hash way as the existing legacy-pressure
+>   overlay (`isAcademyScareTurn`, tokens.ts). TONE RULE: the bloodline star is NEVER released — real
+>   release research (§1) documents a genuine tragedy, so this is hopeful/serious tension only, never a real
+>   cut. Presentational (career.ts untouched; career_sim byte-identical).
+> - **Debut euphoria / "a rough debut isn't the end"** — the existing debut milestone flourish now reads
+>   as visceral euphoria (Steve Coppell, "floating across the grass") on a strong showing, or a reassuring
+>   "plenty of good careers began exactly like this" on a poor one (Phil Chisnall's 5-1 debut who kept his
+>   place) — §2. Presentational (narrate.ts, outside career_sim's import graph).
+> - **Injury comeback choice** — deepens `injury_comeback`: which card he leans on decides "rush back"
+>   (aggression/stamina-led — bigger reward, real reinjury-risk cost on a bad outcome) vs "patient graded
+>   return" (safe, no shortcuts) — §5, the "fear of reinjury" research. Development-touching (career.ts's
+>   `applyLifeConsequence`); re-verified, magnitude/diversity unchanged from the shock-call-up baseline.
+> - **Retirement send-off** — "the headlines stop the day after" epilogue beat (§11, Joe Thompson's own
+>   words) + a NEXT LIFE choice (coaching / media / mentoring the heir) that colours the epilogue; the
+>   existing mentoring→heir dev-bonus is now only banked when he actually picks mentoring. Client-only
+>   (`main.ts`'s `retireStar`), no engine touched.
+>
+> All re-verified per commit: `npm run verify` green throughout; `career_sim` byte-identical for the
+> presentational adds (academy scare, debut euphoria, retirement), diversity/magnitude/determinism re-checked
+> healthy for the development-touching adds (shock call-up, injury comeback).
+>
 > ## ✅ SHIPPED (2026-08-27) — worked through by hand
 > - **Season objectives** (#1) — seeded per-stage target (strong displays / big-game moments / perfect
 >   reads) with a progress bar + done beat. `careerState.objective`.
