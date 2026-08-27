@@ -24,7 +24,13 @@ import { db, type Account, type StandingOrders, type Listing } from './db.js';
 import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMATIONS } from './game.js';
 import { hashPassword, verifyPassword } from './auth.js';
 import { generatePool, trialistAt, LOANEE_CAP, OPP_REVEAL, describeIntel, type OppTier } from './scouting.js';
-import { DESTINATIONS, destinationById, rollMission, travelMs, previewOdds, TRIPS_PER_SEASON } from './missions.js';
+import { DESTINATIONS, destinationById, rollMission, travelMs as travelMsPure, previewOdds } from '@fm/shared';
+
+// Scouting-network runtime config (env-driven, so not part of the pure @fm/shared rules).
+const TRIPS_PER_SEASON = Math.max(1, Number(process.env.SCOUT_TRIPS_PER_SEASON ?? 3));
+// Compresses every travel time (set e.g. 0.01 locally to test the reveal quickly).
+const TRAVEL_SCALE = Math.max(0, Number(process.env.SCOUT_TRAVEL_SCALE ?? 1));
+const travelMs = (dest: Parameters<typeof travelMsPure>[0]) => travelMsPure(dest, TRAVEL_SCALE);
 import type { Player } from '@fm/shared';
 import { rollMatchInjuries } from './injuries.js';
 import { viewerTiers, scoutNftInfo } from './scoutnft.js';

@@ -15,3 +15,4 @@ export * from './clubseason.js';
 export * from './intl.js';
 export * from './offpitch.js';
 export * from './facilities.js';
+export * from './missions.js';

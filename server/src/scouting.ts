@@ -2,12 +2,11 @@
 // of trialists appears; you sign up to LOANEE_CAP of them for the season (they expire
 // at rollover). Rarity is gated by scout tier (only 'base' is free/active now; the
 // rest are the future paid Scout-NFT tiers). See docs / the design chat.
-import { generateTrialist, overall, type Club, type Player, type Tactics } from '@fm/shared';
+import { generateTrialist, overall, type ScoutBand as Band, type Club, type Player, type Tactics } from '@fm/shared';
 
 export const LOANEE_CAP = 3;   // max loanees a club can field per season (shared with the scouting network)
 export const POOL_SIZE = 3;    // local-tryout walk-ups shown per season (kept small now the scouting network is the main path)
 
-export type Band = 'raw' | 'squad' | 'quality' | 'gem';
 // probability of each band per scout tier (rows sum to 1)
 export const SCOUT_TIERS: Record<string, Record<Band, number>> = {
   base:   { raw: 0.62, squad: 0.30, quality: 0.07, gem: 0.01 },

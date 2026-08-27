@@ -6,18 +6,19 @@
 // once the trip's travel time elapses. A higher player-scout NFT tier lifts both the
 // hit rate and the odds of an upgraded prospect. Signed prospects reuse the loanee
 // machinery (season-length), so squad balance is unchanged — only how you shop is new.
-import { generateTrialist, overall, type Player } from '@fm/shared';
-import type { Band } from './scouting.js';
+import { generateTrialist, overall } from './teams.js';
+import type { Player } from './types.js';
 
-export const TRIPS_PER_SEASON = Math.max(1, Number(process.env.SCOUT_TRIPS_PER_SEASON ?? 3));
-// Compresses every travel time (set e.g. 0.01 locally to test the reveal quickly).
-const TRAVEL_SCALE = Math.max(0, Number(process.env.SCOUT_TRAVEL_SCALE ?? 1));
+// Rarity band shared with the trial/loan academy pool (see scouting.ts) — kept here
+// so both pure prospect-generation modules can reference it without a cycle.
+export type ScoutBand = 'raw' | 'squad' | 'quality' | 'gem';
+
 const LOANEE_MAX_STAT = 12; // same hard cap as trial loanees — prospects are gap-fillers, not stars
 
 export interface Destination {
   id: string; name: string; blurb: string;
   hitRate: number;                 // base chance of returning ANY player
-  weights: Record<Band, number>;   // band distribution WHEN a player is found (sums ~1)
+  weights: Record<ScoutBand, number>;   // band distribution WHEN a player is found (sums ~1)
   travelMins: number;              // real-time travel before the result reveals
   cost: number;                    // coins to dispatch (elite places cost more)
 }
@@ -46,9 +47,9 @@ export function previewOdds(dest: Destination, playerTier: string, hqMult = 1): 
   return { hitRate: Math.min(0.95, dest.hitRate * (HIT_MULT[playerTier] ?? 1) * hqMult), upgradeChance: UPGRADE[playerTier] ?? 0 };
 }
 
-const BAND_Q: Record<Band, [number, number]> = { raw: [1, 3], squad: [4, 6], quality: [6, 8], gem: [8, 10] };
-const bumpUp: Record<Band, Band> = { raw: 'squad', squad: 'quality', quality: 'gem', gem: 'gem' };
-function bandOf(ovr: number): Band { return ovr >= 11 ? 'gem' : ovr >= 9 ? 'quality' : ovr >= 7 ? 'squad' : 'raw'; }
+const BAND_Q: Record<ScoutBand, [number, number]> = { raw: [1, 3], squad: [4, 6], quality: [6, 8], gem: [8, 10] };
+const bumpUp: Record<ScoutBand, ScoutBand> = { raw: 'squad', squad: 'quality', quality: 'gem', gem: 'gem' };
+function bandOf(ovr: number): ScoutBand { return ovr >= 11 ? 'gem' : ovr >= 9 ? 'quality' : ovr >= 7 ? 'squad' : 'raw'; }
 
 function mulberry32(seed: number): () => number {
   let a = seed >>> 0;
@@ -60,7 +61,7 @@ function seedFrom(s: string): number {
   return (h >>> 0) || 1;
 }
 
-export interface MissionOutcome { found: boolean; player: Player | null; band: Band | null; overall: number | null }
+export interface MissionOutcome { found: boolean; player: Player | null; band: ScoutBand | null; overall: number | null }
 
 /** Deterministically seal a trip's outcome at dispatch. Same (missionId, destination,
  *  playerTier) → same result forever; travel time only controls WHEN it's shown. */
@@ -70,8 +71,8 @@ export function rollMission(missionId: string, dest: Destination, playerTier: st
   if (!hit) return { found: false, player: null, band: null, overall: null };
   // pick a band from the destination's distribution
   const r = rng();
-  let acc = 0, band: Band = 'raw';
-  for (const b of ['gem', 'quality', 'squad', 'raw'] as Band[]) { acc += dest.weights[b]; if (r < acc) { band = b; break; } }
+  let acc = 0, band: ScoutBand = 'raw';
+  for (const b of ['gem', 'quality', 'squad', 'raw'] as ScoutBand[]) { acc += dest.weights[b]; if (r < acc) { band = b; break; } }
   if (rng() < (UPGRADE[playerTier] ?? 0)) band = bumpUp[band]; // scout-tier upgrade
   const [lo, hi] = BAND_Q[band];
   const q = lo + rng() * (hi - lo);
@@ -81,5 +82,7 @@ export function rollMission(missionId: string, dest: Destination, playerTier: st
   return { found: true, player, band: bandOf(ovr), overall: ovr };
 }
 
-/** Travel time in ms for a destination, honouring the test-compression scale. */
-export function travelMs(dest: Destination): number { return Math.round(dest.travelMins * 60_000 * TRAVEL_SCALE); }
+/** Travel time in ms for a destination. `scale` compresses every travel time (e.g. 0.01
+ *  to test the reveal quickly) — callers that honour a runtime override (env var, etc.)
+ *  pass it in; pure by default (scale=1, i.e. real travel time). */
+export function travelMs(dest: Destination, scale = 1): number { return Math.round(dest.travelMins * 60_000 * scale); }
