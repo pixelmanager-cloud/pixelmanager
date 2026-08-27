@@ -24,6 +24,10 @@ export interface Tactics {
    *  instead of following the tempo slider — fewer risky giveaways right after a save/gather, at the
    *  cost of the faster restart a direct clearance would give. See engine.ts pickPassTarget(). */
   playOutOfDefence?: boolean;
+  /** INSTRUCTION (unset = neutral): bias who the ball gets played to — 'wide' favours the widest
+   *  available option, 'central' favours the most central one. Lets a manager lean into (or fight)
+   *  the shape they picked. See engine.ts pickPassTarget(). */
+  attackFocus?: 'wide' | 'central';
 }
 
 export const DEFAULT_TACTICS: Tactics = {

@@ -58,7 +58,7 @@ const CHAPTER_THEME: Record<string, { slug: string; scene: string; accent: strin
   Establishing: { slug: 'establishing', scene: '🏆⭐💫', accent: '#ffd75e', bg: 'radial-gradient(120% 90% at 50% 0%, rgba(210,170,60,0.22), rgba(35,30,10,0.0) 60%)', tagline: 'A name in lights — cement your place among the greats.' },
 };
 
-const LEVELS: Record<keyof Omit<Tactics, 'formation' | 'offsideTrap' | 'playOutOfDefence'>, string[]> = {
+const LEVELS: Record<keyof Omit<Tactics, 'formation' | 'offsideTrap' | 'playOutOfDefence' | 'attackFocus'>, string[]> = {
   mentality: ['Very Defensive', 'Defensive', 'Balanced', 'Attacking', 'Very Attacking'],
   line: ['Very Deep', 'Deep', 'Normal', 'High', 'Very High'],
   press: ['Contain', 'Low', 'Balanced', 'High', 'Gegenpress'],
@@ -2227,6 +2227,8 @@ class Game {
     const lineHigh = this.draftTactics.line >= 1;
     tac.push(`<label class="tac-toggle" title="${lineHigh ? 'Catches attackers without a real pace edge — needs a high/very-high line' : 'Only bites with a High or Very High defensive line'}"><span>Offside Trap${lineHigh ? '' : ' (needs high line)'}</span><input type="checkbox" id="e-offside" ${this.draftTactics.offsideTrap ? 'checked' : ''} /></label>`);
     tac.push(`<label class="tac-toggle" title="When the keeper has the ball, always pick the safest short option — fewer risky giveaways right after a save, especially vs a high press"><span>Play Out From Back</span><input type="checkbox" id="e-playout" ${this.draftTactics.playOutOfDefence ? 'checked' : ''} /></label>`);
+    const focus = this.draftTactics.attackFocus ?? 'balanced';
+    tac.push(`<label title="Bias who the ball goes to — lean into (or correct) your formation's natural width">Attack Focus<select id="e-focus"><option value="balanced" ${focus === 'balanced' ? 'selected' : ''}>Balanced</option><option value="wide" ${focus === 'wide' ? 'selected' : ''}>Wing Focus</option><option value="central" ${focus === 'central' ? 'selected' : ''}>Central Focus</option></select></label>`);
     $('tac-row').innerHTML = tac.join('');
     ($('e-formation') as HTMLSelectElement).addEventListener('change', (ev) => {
       this.draftTactics.formation = (ev.target as HTMLSelectElement).value as Formation;
@@ -2247,6 +2249,11 @@ class Game {
     });
     ($('e-playout') as HTMLInputElement).addEventListener('change', (ev) => {
       this.draftTactics.playOutOfDefence = (ev.target as HTMLInputElement).checked;
+      this.updateEditorInsight();
+    });
+    ($('e-focus') as HTMLSelectElement).addEventListener('change', (ev) => {
+      const v = (ev.target as HTMLSelectElement).value;
+      this.draftTactics.attackFocus = v === 'wide' || v === 'central' ? v : undefined;
       this.updateEditorInsight();
     });
     this.renderMatchPlan();

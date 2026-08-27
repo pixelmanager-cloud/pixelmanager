@@ -314,6 +314,38 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
   assert(gaOn < gaBase, `play-out-of-defence should concede fewer goals vs a high press than the default (got ${gaOn} vs ${gaBase})`);
 }
 
+// ---- 8f. Attack-focus instruction: it should CORRECT your shape's natural width, not amplify it ----
+// A new instruction (Tactics.attackFocus: 'wide' | 'central', unset = neutral). Rock-paper-scissors with
+// your own formation's shape: a WIDE formation (3-4-3) already floods the flanks, so doubling down there
+// overshoots into areas too wide to shoot from — CENTRAL focus consolidates it into shots. A NARROW
+// formation (4-1-2-1-2 diamond) has no width of its own, so WIDE focus finds space the shape doesn't
+// naturally offer. Same instruction, opposite correct answer depending on the shape underneath it.
+{
+  const shotsWithFocus = (formation: any, focus: 'wide' | 'central') => {
+    let sh = 0;
+    for (let i = 0; i < N; i++) {
+      const a = mk('a', 13, i * 7 + 1, formation);
+      const b = mk('b', 13, i * 11 + 3, '4-4-2');
+      sh += play(a, b, { ...DEFAULT_TACTICS, formation, attackFocus: focus }, DEFAULT_TACTICS, i * 31 + 5).shots[0];
+    }
+    return sh;
+  };
+  // neutrality: attackFocus unset must be bit-for-bit identical to the field never existing at all
+  let shotsUnset = 0, shotsBase = 0;
+  for (let i = 0; i < N; i++) {
+    const a = mk('a', 13, i * 7 + 1, '4-4-2');
+    const b = mk('b', 13, i * 11 + 3, '4-4-2');
+    shotsUnset += play(a, b, { ...DEFAULT_TACTICS, formation: '4-4-2' }, DEFAULT_TACTICS, i * 31 + 5).shots[0];
+    shotsBase += play(a, b, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).shots[0];
+  }
+  assert(shotsUnset === shotsBase, `attackFocus unset should be bit-for-bit identical to the field being absent (got ${shotsUnset} vs ${shotsBase})`);
+  const wideFormWide = shotsWithFocus('3-4-3', 'wide'), wideFormCentral = shotsWithFocus('3-4-3', 'central');
+  const narrowFormWide = shotsWithFocus('4-1-2-1-2', 'wide'), narrowFormCentral = shotsWithFocus('4-1-2-1-2', 'central');
+  console.log(`[instr]     attack-focus x shape: 3-4-3(wide fmn) central-focus=${(wideFormCentral / N).toFixed(1)} vs wide-focus=${(wideFormWide / N).toFixed(1)}  |  diamond(narrow fmn) wide-focus=${(narrowFormWide / N).toFixed(1)} vs central-focus=${(narrowFormCentral / N).toFixed(1)}`);
+  assert(wideFormCentral > wideFormWide, `a wide formation (3-4-3) should shoot more with CENTRAL focus, consolidating its natural width (got ${wideFormCentral} vs ${wideFormWide})`);
+  assert(narrowFormWide > narrowFormCentral, `a narrow formation (diamond) should shoot more with WIDE focus, finding space it lacks natively (got ${narrowFormWide} vs ${narrowFormCentral})`);
+}
+
 // ---- 9. Seeded opponent tactical profiles: stable per-seed identity, but varied across opponents ----
 // Every SP opponent used to play flat DEFAULT_TACTICS 4-4-2 regardless of who they were. Prove the
 // fix has real teeth: the same club seed always gets the same style (determinism), and a spread of

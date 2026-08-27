@@ -541,12 +541,18 @@ export class MatchEngine {
       if (dPass > 42 || dPass < 3) continue;
       const gain = myDistGoal - dGoal; // positive = progresses toward goal
       const pressure = this.pressureOn(defTeam, ts);
+      // ATTACK-FOCUS instruction (unset = neutral): bias the ball toward the widest or the most
+      // central available option, on top of everything else — a deliberate lean into (or away from)
+      // the shape's natural width, independent of any single duty's magnet.
+      const focus = this.tactics[teamIdx].attackFocus;
+      const focusBias = focus === 'wide' ? Math.abs(ts.y - 34) * 0.18 : focus === 'central' ? -Math.abs(ts.y - 34) * 0.18 : 0;
       // directness>0 rewards forward gain and tolerates longer passes; <0 rewards safe short options.
       // duty "magnet" makes playmakers/target-men more (and ball-winners less) sought as an out-ball.
       const score = gain * (0.7 + 0.6 * (directness + 1))
         - dPass * (0.2 - directness * 0.1)
         - pressure * 3
         + this.dm[teamIdx][i].magnet
+        + focusBias
         + this.rng() * 6;
       // a direct side, and especially one on the counter, slips more through-balls in behind;
       // the passer's creativity (and the Creative Maestro trait) unlocks more of them

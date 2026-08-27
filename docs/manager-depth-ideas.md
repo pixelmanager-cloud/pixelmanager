@@ -321,6 +321,14 @@ content bar (a new interacting/trade-off decision, not a reskin).
   *exact* goal tally of the field being absent entirely (bit-for-bit, not just "close"); (b) effect —
   armed vs a high-press side, concedes fewer goals (0.92 vs 1.03/match) by avoiding risky giveaways right
   off the keeper's distribution. A real toggle in the lineup editor.
+- **Attack-Focus instruction (wide/central)** — a new toggle, `Tactics.attackFocus: 'wide' | 'central'`
+  (unset = neutral, bit-for-bit unchanged — proven), biasing which teammate the ball gets played to.
+  Genuine rock-paper-scissors with the formation underneath it: a WIDE formation (3-4-3) already floods
+  the flanks, so doubling down with wing focus overshoots into areas too wide to shoot from — CENTRAL
+  focus consolidates it into more shots (23.7 vs 18.8/match, proven in `strategy_test.ts`). A NARROW
+  formation (4-1-2-1-2 diamond) has no width of its own, so WIDE focus finds space the shape doesn't
+  natively offer (23.5 vs 22.4/match) — the *opposite* correct answer for the *same* instruction,
+  depending on the shape it's paired with. Real 3-way selector in the lineup editor.
 - **Wide-Playmaker MF duty** — a new named MF duty for a wide midfield slot: hugs the touchline
   (positive `hug`) but dictates play from out there (high magnet, moderate shoot, low press). Proven in
   `strategy_test.ts`: generates more team shots than both box-to-box (38.3 vs 36.1) and ball-winner
