@@ -22,7 +22,7 @@ import {
 } from './src/career.js';
 import { legacyCard } from './src/legacy.js';
 import { clubSeason } from './src/clubseason.js';
-import { tieScore, contOpponent } from './src/intl.js';
+import { tieScore, contOpponent, nationalFixture, homeNation, worldCup, playerPath, NATIONS } from './src/intl.js';
 import { developAttrs } from './src/lifecycle.js'; // moved from server/src/lifecycle.js when the server/web3 layer was removed (offline-first pivot)
 
 const MAX_LOGGED = 60;
@@ -130,6 +130,17 @@ function simulateGeneration(
   let leagueTitles = 0, cupTitles = 0, promotions = 0;
   let apps = 0;
   const myClub = 'Marlow';
+  // NATIONAL CALL-UPS + WORLD CUP — chained into the per-generation pro/manager phase for the first time
+  // this batch (backlog item #2). Mirrors main.ts's real production cadence: worldCup() fires once every
+  // 4 seasons off a stable per-save "league seed" (here: the dynasty/generation seed), the player's
+  // nation is derived once from his surname via homeNation() (stable across his whole arc, same as
+  // tokens.ts's careerState()), and call-up rate scales with current overall exactly like tokens.ts's
+  // `international` block (ov>=15:0.4, ov>=13:0.25, ov>=11:0.12, else 0) — reused here as a per-season
+  // Bernoulli trial rather than tokens.ts's turn-based cumulative count, since this loop is season-
+  // granular, not turn-granular.
+  const nation = homeNation(`Dynasty${dynastySeed}Gen${generation}`); // CareerPlayer has no surname field; a stable synthetic one mirrors tokens.ts's `homeNation(surname)` call
+  const wcLeagueSeed = seedFrom('qa-dynasty-wc-league', dynastySeed, generation);
+  let caps = 0;
   for (let season = 0; season < 15; season++) {
     const age = 25 + season;
     attrs = developAttrs(attrs, genes, age, 3); // trainingLvl fixed at 3 (mid)
@@ -155,6 +166,53 @@ function simulateGeneration(
         const [gh, ga] = tieScore(strength, tie.oppStrength, seedFrom('qa-dynasty-tie', seasonSeed, r), tie.neutral);
         if (!finite(gh) || !finite(ga) || gh < 0 || ga < 0 || gh > 6 || ga > 6) log(`tieScore out of [0,6]: [${gh},${ga}]  ${ctx} season=${season} round=${r}`);
         if (gh > ga) { if (r === 2) cupTitles++; } else stillIn = false;
+      }
+    }
+
+    // NATIONAL CALL-UP — same rate curve tokens.ts's careerState() uses for its `international` block,
+    // applied as a per-season Bernoulli trial (this loop is season-granular, tokens.ts is turn-granular).
+    const capRate = ovrProxy >= 15 ? 0.4 : ovrProxy >= 13 ? 0.25 : ovrProxy >= 11 ? 0.12 : 0;
+    if (capRate > 0 && rng() < capRate) {
+      caps++;
+      const cu = nationalFixture(seedFrom('qa-dynasty-natl', dynastySeed, generation, season), caps, nation, ovrProxy);
+      if (!NATIONS.includes(cu.oppNation)) log(`nationalFixture: unknown oppNation "${cu.oppNation}"  ${ctx} season=${season} caps=${caps}`);
+      if (cu.oppNation === nation) log(`nationalFixture: opponent equals own nation "${nation}"  ${ctx} season=${season}`);
+      if (!['H', 'A', 'N'].includes(cu.venue)) log(`nationalFixture: bad venue "${cu.venue}"  ${ctx} season=${season}`);
+      if (!finite(cu.forGoals) || !finite(cu.ourGoals) || cu.forGoals < 0 || cu.ourGoals < 0) log(`nationalFixture: non-finite/negative goals ${JSON.stringify(cu)}  ${ctx} season=${season}`);
+      if (!finite(cu.scored) || cu.scored < 0) log(`nationalFixture: bad scored=${cu.scored}  ${ctx} season=${season}`);
+    }
+
+    // WORLD CUP — chained once every 4 seasons, mirroring main.ts's `edition = m.season / 4` cadence,
+    // keyed off a stable per-generation "league seed" (the closest analogue to main.ts's leagueSeed(),
+    // which is stable for the whole save). The player's national-team strength is his current overall
+    // proxy — the same value main.ts's starOverall() feeds worldCup(). This is the first time worldCup()
+    // is exercised chained INTO the multi-season/multi-generation loop rather than standalone.
+    if ((season + 1) % 4 === 0) {
+      const edition = (season + 1) / 4;
+      let wc: ReturnType<typeof worldCup>;
+      try { wc = worldCup(wcLeagueSeed, edition, nation, ovrProxy); }
+      catch (err) { log(`EXCEPTION in chained worldCup: ${(err as Error).stack ?? err}  ${ctx} season=${season} edition=${edition}`); wc = null as any; }
+      if (wc) {
+        if (wc.field.length !== 16 || new Set(wc.field).size !== 16) log(`chained worldCup: field corrupted (len=${wc.field.length}, unique=${new Set(wc.field).size})  ${ctx} season=${season} edition=${edition}`);
+        if (!wc.field.includes(nation)) log(`chained worldCup: myNation "${nation}" missing from its own field  ${ctx} season=${season} edition=${edition}`);
+        if (!['Champions', 'Runners-up', 'Semi-finals', 'Quarter-finals', 'Group stage', 'Did not qualify'].includes(wc.myFinish)) log(`chained worldCup: invalid myFinish "${wc.myFinish}"  ${ctx} season=${season} edition=${edition}`);
+        if (!finite(wc.legacyMult) || wc.legacyMult < 1 || wc.legacyMult > 2) log(`chained worldCup: legacyMult=${wc.legacyMult} out of [1,2]  ${ctx} season=${season} edition=${edition}`);
+        for (const g of wc.groups) for (const r of g.rows) if (!finite(r.GF) || !finite(r.GA) || !finite(r.Pts)) log(`chained worldCup: non-finite group row ${JSON.stringify(r)}  ${ctx} season=${season} edition=${edition}`);
+        // CROSS-FIXTURE CHECK: the same season's continental-cup strength value (`strength`, possibly
+        // fractional/negative-jittered by `rng()`) must not corrupt worldCup when reused as its national
+        // strength input via the ovrProxy path — worldCup() itself only ever receives the integer-clamped
+        // ovrProxy, but confirm strengths stay in the engine's usual band regardless (a compounding-
+        // generations blow-up would show up here as an out-of-band strength never seen in standalone runs).
+        if (!finite(wc.strengths[nation]) || wc.strengths[nation] < 1 || wc.strengths[nation] > 20) log(`chained worldCup: myNation strength=${wc.strengths[nation]} out of [1,20] after ${generation} generations of inheritance  ${ctx} season=${season} edition=${edition}`);
+        let path: ReturnType<typeof playerPath>;
+        try { path = playerPath(wc); }
+        catch (err) { log(`EXCEPTION in chained playerPath: ${(err as Error).stack ?? err}  ${ctx} season=${season} edition=${edition}`); path = null as any; }
+        if (path?.qualified) {
+          for (const leg of [path.qf, path.sf, path.final]) {
+            if (leg && (!finite(leg.oppStrength) || leg.oppStrength < 1 || leg.oppStrength > 20)) log(`chained playerPath: leg oppStrength=${leg.oppStrength} out of [1,20]  ${ctx} season=${season} edition=${edition}`);
+          }
+        }
+        if (wc.myFinish === 'Champions') { leagueTitles += 0; cupTitles += 1; } // world titles count toward the "cup" honour bucket for the achievements check below (documented, not a promotion/league title)
       }
     }
   }
