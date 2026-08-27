@@ -23,6 +23,7 @@ const PAL: Record<string, string> = {
   m: '#ff6ab0', // pink
   l: '#c9a24a', // dark gold
   t: '#1f8f5a', // dark grass
+  u: '#8b5cff', // royal purple (matches theme --purple)
 };
 
 /** Build an inline-SVG pixel sprite from a char grid. Rows may vary in length. */
@@ -312,6 +313,63 @@ const SPRITES: Record<string, string[]> = {
     '................',
   ],
   // 👑 Crown — the "Royalty" bloodline emblem, for dynasty / legend moments
+  // 🌿 Laurel wreath — a champion's laurel, for legend/hall-of-fame moments
+  laurel: [
+    '................',
+    '.g............g.',
+    '.gg....yy....gg.',
+    '..gG...yy...Gg..',
+    '..gGg.....gGg...',
+    '...gGg...gGg....',
+    '...gGGg.gGGg....',
+    '....gGgggGg.....',
+    '....gGGGGGg.....',
+    '.....ggggg......',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+    '................',
+  ],
+  // 🏰 Royal banner — a hanging dynasty pennant, for succession / bloodline chapter breaks
+  banner: [
+    '................',
+    '..kkkkkkkkkkkk..',
+    '..uuuuuuuuuuuu..',
+    '..uyyyyyyyyyyu..',
+    '..uyuuuuuuuuyu..',
+    '..uyuuwwwwuuyu..',
+    '..uyuuwyywuuyu..',
+    '..uyuuwwwwuuyu..',
+    '..uyuuuuuuuuyu..',
+    '..uyyyyyyyyyyu..',
+    '..uuuuuuuuuuuu..',
+    '..uuu......uuu..',
+    '..uu........uu..',
+    '...u........u...',
+    '................',
+    '................',
+  ],
+  // 🖋️ Royal seal — a wax seal on a decree, for contract / legacy-milestone moments
+  seal: [
+    '................',
+    '................',
+    '....rrrrrrr.....',
+    '...rrrrrrrrr....',
+    '..rrryyyyyrrr...',
+    '..rryyyyyyyrr...',
+    '..rryyywyyyrr...',
+    '..rryyyyyyyrr...',
+    '..rrryyyyyrrr...',
+    '...rrrrrrrrr....',
+    '....rrr.rrr.....',
+    '.....rr.rr......',
+    '................',
+    '................',
+    '................',
+    '................',
+  ],
   crown: [
     '................',
     '..y.y.y.y.y.y...',
