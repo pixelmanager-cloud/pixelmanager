@@ -11,5 +11,8 @@
     "@fm/shared": "*",
     "fastify": "^4.28.1",
     "pg": "^8.13.1"
+  },
+  "devDependencies": {
+    "@types/node": "^26.4.0"
   }
 }
