@@ -6,7 +6,7 @@ import { randomUUID } from 'node:crypto';
 import { autoPickXI } from '@fm/shared';
 import type { Store, Season, PodRef } from './store.js';
 import { buildTable, runMatch, elo, validateLineup } from './game.js';
-import { seasonPlacementReward, WIN_COINS, DRAW_COINS, LOSS_COINS } from './market.js';
+import { seasonPlacementReward, WIN_COINS, DRAW_COINS, LOSS_COINS } from '@fm/shared';
 import { trainingConditioning, stadiumIncome, fanIncomeMult, fanHomeBoost, sponsorIncome, squadMarketability, rollMatchInjuries } from '@fm/shared';
 import { unavailableTokenIds, tokenToPlayer } from './tokens.js';
 import { advanceTokensAtRollover } from './lifecycle.js';

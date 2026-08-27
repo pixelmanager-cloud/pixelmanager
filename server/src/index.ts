@@ -34,13 +34,12 @@ const travelMs = (dest: Parameters<typeof travelMsPure>[0]) => travelMsPure(dest
 import { type Player, rollMatchInjuries } from '@fm/shared';
 import { viewerTiers, scoutNftInfo } from './scoutnft.js';
 import { computeCup, type SquadMap } from './cup.js';
-import type { PlayerScoutTier } from './market.js';
 import { ensureSeason, ensurePod, forceRollover, resultsAmong, startOfUtcDay, PROMOTE, RELEGATE, MATCHES_PER_DAY, TIERS } from './seasons.js';
 import {
+  autoPickXI, backfillAttrs,
   revealPlayer, WIN_COINS, DRAW_COINS, LOSS_COINS,
-  MIN_SQUAD, MAX_SQUAD, PRICE_MIN, PRICE_MAX,
-} from './market.js';
-import { autoPickXI, backfillAttrs } from '@fm/shared';
+  MIN_SQUAD, MAX_SQUAD, PRICE_MIN, PRICE_MAX, type PlayerScoutTier,
+} from '@fm/shared';
 
 /** Load a club and MERGE in the owner's pro-state tokens as fieldable players.
  * Read/gameplay only — never feed this into saveClub. Returns undefined if the

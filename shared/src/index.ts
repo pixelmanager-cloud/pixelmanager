@@ -19,3 +19,4 @@ export * from './missions.js';
 export * from './injuries.js';
 export * from './scouting.js';
 export * from './matchstats.js';
+export * from './market.js';
