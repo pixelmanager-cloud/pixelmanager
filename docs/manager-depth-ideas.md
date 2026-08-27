@@ -303,6 +303,10 @@ content bar (a new interacting/trade-off decision, not a reskin).
   passing outlet). Proven in `strategy_test.ts`: concedes fewer goals to a direct attack than both
   stopper (1.30 vs 1.60/match) and the existing cover duty (1.30 vs 2.18/match) — discipline and
   positioning beat both raw aggression and passive sitting-off.
+- **Anchor MF duty** — a new named MF duty: pure destroyer who never strays from screening the back four
+  (lowest push, highest press of any MF duty, and a negative magnet so play doesn't get funnelled through
+  him as an out-ball). Proven in `strategy_test.ts`: concedes fewer goals vs a direct attack than
+  ball-winner (1.78 vs 1.82), box-to-box (1.78 vs 2.02).
 - **New formation: 4-2-2-2** — a back four behind a narrow double-pivot + double-ten box midfield and
   two strikers. The tightest MF spread of any formation in the pool, so it loses width battles against
   most shapes (an earlier attempt, 3-4-1-2, was tried and dropped — no formation in the pool could beat

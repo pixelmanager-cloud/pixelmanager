@@ -151,6 +151,26 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
   assert(gaSweeper < gaCover, `sweeper should concede fewer goals than cover vs a direct attack (got ${gaSweeper} vs ${gaCover})`);
 }
 
+// ---- 6d. Anchor MF duty: pure destroyer — never strays, so it concedes least of the MF duties ----
+{
+  const withMfDuty = (t: Team, duty: Duty): Team =>
+    ({ ...t, players: t.players.map((p) => (p.role === 'MF' ? { ...p, duty } : p)) });
+  const direct: Tactics = { ...DEFAULT_TACTICS, formation: '4-3-3', mentality: 1, tempo: 2 };
+  const concedeWithDuty = (duty: Duty) => {
+    let ga = 0;
+    for (let i = 0; i < N; i++) {
+      const def = withMfDuty(mk('def', 13, i * 7 + 1, '4-4-2'), duty);
+      const atk = mk('atk', 13, i * 11 + 3, '4-3-3');
+      ga += play(def, atk, DEFAULT_TACTICS, direct, i * 31 + 5).score[1];
+    }
+    return ga;
+  };
+  const gaAnchor = concedeWithDuty('anchor'), gaBallWinner = concedeWithDuty('ball-winner'), gaB2B = concedeWithDuty('box-to-box');
+  console.log(`[duty]      conceded vs direct attack: ANCHOR=${(gaAnchor / N).toFixed(2)}  BALL-WINNER=${(gaBallWinner / N).toFixed(2)}  BOX-TO-BOX=${(gaB2B / N).toFixed(2)}`);
+  assert(gaAnchor < gaBallWinner, `anchor should concede fewer goals than ball-winner vs a direct attack (got ${gaAnchor} vs ${gaBallWinner})`);
+  assert(gaAnchor < gaB2B, `anchor should concede fewer goals than box-to-box vs a direct attack (got ${gaAnchor} vs ${gaB2B})`);
+}
+
 // ---- 7. Anti-spam: no single tactic may dominate the field (equal stats) ----
 // Guards against a globally-dominant "spam" strategy (Tiki-Taka used to win ~69% of the
 // field with no counter). Every viable tactic must have at least one losing matchup, and

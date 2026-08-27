@@ -12,7 +12,7 @@ import type { Duty, Player, Role } from './types.js';
 export const DUTIES_BY_ROLE: Record<Role, Duty[]> = {
   GK: ['keeper', 'sweeper-keeper'],
   DF: ['cover', 'stopper', 'ball-playing-defender', 'inverted-fullback', 'wing-back', 'sweeper'],
-  MF: ['box-to-box', 'playmaker', 'ball-winner', 'deep-lying-playmaker'],
+  MF: ['box-to-box', 'playmaker', 'ball-winner', 'deep-lying-playmaker', 'anchor'],
   FW: ['poacher', 'target-man', 'pressing-forward', 'false-9'],
 };
 
@@ -26,6 +26,7 @@ export const DUTY_LABEL: Record<Duty, string> = {
   'inverted-fullback': 'Inverted FB',
   'wing-back': 'Wing-Back',
   'sweeper': 'Sweeper',
+  'anchor': 'Anchor',
   'box-to-box': 'Box-to-Box',
   'playmaker': 'Playmaker',
   'ball-winner': 'Ball-Winner',
@@ -74,6 +75,7 @@ const TABLE: Record<Duty, DutyMods> = {
   'wing-back':             { ...NEUTRAL, push: 1.4, come: 0.05, magnet: 1.5, press: -0.15, hug: 0.55 }, // bombs on as an auxiliary winger
   'sweeper':               { ...NEUTRAL, push: 0.75, come: 0.1, shoot: 0.4, magnet: 2, press: -0.45 }, // covers rather than engages, steps forward to sweep up
   'deep-lying-playmaker':  { ...NEUTRAL, push: 0.7, come: 0.12, shoot: 0.6, magnet: 6, press: -0.2 }, // deep regista, sprays it
+  'anchor':                { ...NEUTRAL, push: 0.4, come: -0.08, shoot: 0.5, magnet: -4, press: 0.75 }, // pure destroyer — sits, screens, never strays
   'pressing-forward':      { ...NEUTRAL, push: 1.15, shoot: 1.0, magnet: 2, press: 0.7 },             // defends from the front
   'false-9':               { ...NEUTRAL, push: 0.9, come: 0.12, shoot: 0.9, magnet: 6 },              // drops deep to link
 };

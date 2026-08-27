@@ -9,7 +9,7 @@ export type Role = 'GK' | 'DF' | 'MF' | 'FW';
 export type Duty =
   | 'keeper' | 'sweeper-keeper'
   | 'cover' | 'stopper' | 'ball-playing-defender' | 'inverted-fullback' | 'wing-back' | 'sweeper'
-  | 'box-to-box' | 'playmaker' | 'ball-winner' | 'deep-lying-playmaker'
+  | 'box-to-box' | 'playmaker' | 'ball-winner' | 'deep-lying-playmaker' | 'anchor'
   | 'poacher' | 'target-man' | 'pressing-forward' | 'false-9';
 
 /**
