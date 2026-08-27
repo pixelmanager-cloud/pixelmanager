@@ -1,5 +1,82 @@
 # Football Royalty — UI / Visual Audit & Fix List
 
+## 2026-08-27 overnight visual-agent pass, round 2 — sprite expansion + base component polish
+
+Continuing the same session/lane (client/index.html theme + client/src/sprites.ts only). Verified
+every sprite at 4–8× on my own scoped vite (see round-1 note on the shared `:5173` server pointing
+at `main` — still true, used `npx vite --config client/vite.config.ts --port 5199 client` instead).
+`npm run verify` green after every commit.
+
+### Sprite set: 17 → 27 icons
+Added, palette-consistent (extended `PAL` with `u` royal-purple `#8b5cff`, `e` mf-green `#39ff9e`,
+`f` fw-orange `#ff7a3c` — the latter two picked to match `--mf`/`--fw` theme tokens *exactly*, not
+just approximately, since the whole point is these read as the same role-colour language already
+used in the squad table/lineup editor):
+- **Royalty family** (the game is called Football Royalty and had zero crown/regal imagery):
+  `crown` (round 1), `laurel` (wreath), `banner` (hanging purple/gold dynasty pennant), `seal`
+  (red/gold wax seal).
+- **Position jerseys**: `role-gk`/`role-df`/`role-mf`/`role-fw` — tinted to `--gk`/`--df`/`--mf`/
+  `--fw` exactly, same shape as the existing `kit` sprite recoloured per role.
+- **Squad/career props**: `armband` (striped captain's cuff), `contract` (ribboned scroll),
+  `briefcase` (agent icon), `star` (5-point rating star), `calendar` (season/matchday marker with a
+  highlighted "today" cell).
+- Fixed round-1 `training` (dumbbell) sprite: it was letterboxed with 3 empty rows top+bottom,
+  reading as a tiny "H" at facility-card size — resized to fill the 16×16 frame like the other icons.
+
+**None of these are wired into `main.ts` call sites yet** — proposals below, with exact locations,
+for reconcile to apply quickly:
+
+| sprite | proposed call site | current state |
+|---|---|---|
+| `coin` | `main.ts:643` `$('me-coins').textContent = \`💰 ${...}\`` (topbar balance); `main.ts:1338` `$('club-coins')`; `main.ts:1859` `$('scout-coins')` | plain 💰 emoji text, 3 call sites |
+| `star` | `main.ts:666,687` `.hp-stars` (hub player row); `main.ts:1402` `.pr-stars` (academy prospect row) | plain `★` text character |
+| `medal` | `main.ts:1227` `<span class="aw-icon">${m.icon}</span>` (honours feed awards) | dynamic per-award emoji via `m.icon` |
+| `card` | ticker commentary `.cm-card.yellow`/`.cm-card.red` (`index.html` ~1131) | pure CSS color on text, no icon glyph at all |
+| `crown` | `main.ts:701` `$('hub-legacy-sub')` legend count (`⭐ ${l.legends.length} legend(s)`); or as an alternate/companion to the existing `sprite('trophy')` at `main.ts:639` for `#hub-legacy` specifically since that screen is "Dynasty & Trophy Room" — crown for the dynasty half, trophy for the cabinet half | trophy sprite already used for the whole hub-legacy row; legend count is a bare ⭐ emoji |
+| `laurel` | wherever a "legend" milestone/hall-of-fame moment renders (didn't find an exact single call site — search for "legend" in `main.ts` render paths) | none |
+| `banner` | succession/bloodline chapter-break moments (`cg-graduation`/retirement flow) | none, currently plain text headers |
+| `seal` | contract-signing moments — pairs naturally with the new `contract` sprite at the same call sites (`.pc-extend` flow, contract renewal toasts) | none |
+| `briefcase` | the agent-selection screen (Academy → "Sign an agent" — the "Ambitious Agent / Loyal Agent / Super-Agent…" list) | plain 🤝 emoji per row currently |
+| `contract` | same agent/contract screens as `seal` above, and the `pc-contract`/`pc-extend` block in the player card overlay | none |
+| `armband` | wherever captaincy is picked/shown (didn't locate an exact call site — search `captain` in `main.ts`) | none found |
+| `role-gk`/`df`/`mf`/`fw` | `.slot.role-GK` etc. in the lineup editor (`index.html` ~1078), `.mission .m-prospect .m-role` (~1039) — these already colour-code by role via CSS custom classes; the sprites could sit *next to* the existing text/colour coding, not replace it | role already colour-coded via CSS classes, no icon |
+| `flag`, `badge`, `whistle` | held in reserve — no call site identified this pass (competition markers / club-badge placeholders / referee flourish) | — |
+
+### Base/shared component polish (C-series), global-only — no feature CSS touched
+- **`style(theme): generic input, link, and select hover/disabled base styles`** — real gap found:
+  `#sell-price` (the market "list for sale" input, `index.html:1347`) had **zero** styling rule at
+  all and was rendering as an unstyled native number input in an otherwise fully-themed screen.
+  Added a baseline `input` rule (any input lacking its own dedicated id/class keeps falling back to
+  this instead of the browser default), plus `select:hover`/`:disabled`, plus a global `a` rule
+  (plain links had no rule and would've rendered browser-default blue/underlined).
+- **`style(theme): generic table zebra striping + row hover`** — every table already has its own
+  class (`table.squad`, `table.league`, `.lt-table`…) so this only fills gaps they don't already set:
+  subtle even-row zebra tint + a hover highlight. Verified with an injected `.lt-table` clone
+  (champ/mine/promo/releg row classes all still won on specificity — no regression) and confirmed
+  hover fires. Effect is intentionally subtle (`rgba(255,255,255,0.025)`) so it doesn't fight
+  existing row-status colouring.
+- **`style(theme): themed scrollbars app-wide`** — `::-webkit-scrollbar` + Firefox
+  `scrollbar-color`/`scrollbar-width`, themed to `--line`/`--panel`/`--accent`. Affects every
+  scrolling container (`#ticker`, `#results-feed`, `#leaders-feed`, the cup bracket, any tall panel
+  on a short viewport) without touching any of their component CSS. Could not get a visual capture
+  in this sandboxed browser (macOS/Chromium here uses overlay auto-hide scrollbars regardless of
+  CSS) — the rule itself is standard and correct; worth a real visual check on Windows/Linux or a
+  browser with classic scrollbars before fully trusting it.
+- **`style(theme): add reusable .chip and .badge base components`** — new opt-in utility classes
+  (`.chip`/`.chip.good/.warn/.bad/.accent`, `.badge`) for any *future* screen that needs a pill/badge
+  instead of hand-rolling another one-off class. Nothing currently uses these class names, so this
+  is purely additive — zero visual change to existing screens, just a component now available.
+
+### Two bugs found and fixed (both genuine regressions, not style opinions)
+- `FOOTBALL ROYALTY` title clipped past the panel edge below 480px width (round 1).
+- Trophy Room's back button (`id="trophies-back"`) didn't match the CSS selector that right-aligns
+  it (`#academy-back`), so it sat left-aligned next to the title instead of at the far edge like
+  every other screen's back button (round 1).
+
+### Still open from round 1 (unchanged, still valid)
+- `.cg-tut` flex/text-reflow bug — proposed fix in round-1 section below, not applied (feature CSS).
+- M1–M6 match-engine visual items — likely obsolete, confirm before investing (see below).
+
 ## 2026-08-27 overnight visual-agent pass — status update
 
 **P0 readability items R1–R4 below are already DONE** (fixed before this session, verified in the
