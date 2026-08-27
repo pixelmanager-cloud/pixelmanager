@@ -919,18 +919,21 @@ class Game {
       + `<table class="lt-table wc-gtable"><thead><tr><th>Nation</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>`
       + g.rows.map((r, i) => `<tr class="${r.mine ? 'mine' : ''} ${i < 2 ? 'wc-qual' : ''}"><td class="lt-name">${r.nation}</td><td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GD > 0 ? '+' : ''}${r.GD}</td><td class="lt-pts">${r.Pts}</td></tr>`).join('')
       + `</tbody></table></div>`).join('');
-    const semiHtml = wc.semis.map((s) => `<div class="wc-ko-tie ${s.a === nation || s.b === nation ? 'mine' : ''}"><b>${s.a}</b> ${s.gh}-${s.ga} <b>${s.b}</b>${s.pens ? ' (pens)' : ''} → <span class="wc-win">${s.winner}</span></div>`).join('');
+    const koTie = (t: import('@fm/shared').WCTie) => `<div class="wc-ko-tie ${t.mine ? 'mine' : ''}"><b>${t.a}</b> ${t.gh}-${t.ga} <b>${t.b}</b>${t.pens ? ' (pens)' : ''} → <span class="wc-win">${t.winner}</span></div>`;
+    const qfHtml = `<h4 class="scout-h4">QUARTER-FINALS</h4>${wc.quarters.map(koTie).join('')}`;
+    const semiHtml = `<h4 class="scout-h4">SEMI-FINALS</h4>${wc.semis.map(koTie).join('')}`;
     const f = wc.final;
-    const finalHtml = `<div class="wc-final ${f.a === nation || f.b === nation ? 'mine' : ''}"><div class="wc-final-lbl">🏆 FINAL</div><b>${f.a}</b> ${f.gh}-${f.ga} <b>${f.b}</b>${f.pens ? ' (pens)' : ''}<div class="wc-champ">Champions: <b>${wc.champion}</b></div></div>`;
-    const badge = wc.myFinish === 'Champions' ? '🏆 WORLD CHAMPIONS' : wc.myFinish === 'Runners-up' ? '🥈 Runners-up' : wc.myFinish === 'Semi-finals' ? '🥉 Semi-finalists' : '⚽ Group stage';
+    const finalHtml = `<div class="wc-final ${f.mine ? 'mine' : ''}"><div class="wc-final-lbl">🏆 FINAL</div><b>${f.a}</b> ${f.gh}-${f.ga} <b>${f.b}</b>${f.pens ? ' (pens)' : ''}<div class="wc-champ">Champions: <b>${wc.champion}</b></div></div>`;
+    const badge = wc.myFinish === 'Champions' ? '🏆 WORLD CHAMPIONS' : wc.myFinish === 'Runners-up' ? '🥈 Runners-up' : wc.myFinish === 'Semi-finals' ? '🥉 Semi-finalists' : wc.myFinish === 'Quarter-finals' ? '🎯 Quarter-finalists' : '⚽ Group stage';
     const verdict = wc.myFinish === 'Champions' ? `${nation} are champions of the world — an immortal chapter for the ${this.starSurname()} name.`
       : wc.myFinish === 'Runners-up' ? `So close — ${nation} fall at the final hurdle, but what a run.`
       : wc.myFinish === 'Semi-finals' ? `${nation} reach the last four before bowing out — heads held high.`
+      : wc.myFinish === 'Quarter-finals' ? `${nation} make the last eight before their run is ended.`
       : `${nation}'s tournament ends in the group stage. The dream lives on for next time.`;
     $('season-body').innerHTML = `<div class="wc-report"><div class="wc-report-head">🌐 THE WORLD FINALS — Edition ${wc.edition}</div>`
       + `<div class="wc-verdict ${wc.myFinish === 'Champions' ? 'champ' : ''}"><span class="wc-badge">${badge}</span> ${verdict}</div>`
       + `<div class="wc-groups">${groupHtml}</div>`
-      + `<h4 class="scout-h4">SEMI-FINALS</h4>${semiHtml}${finalHtml}`
+      + qfHtml + semiHtml + finalHtml
       + `<div style="text-align:center;margin-top:16px;"><button class="primary" id="wc-back">Back to the season →</button></div></div>`;
     $('wc-back')?.addEventListener('click', () => this.showSeason());
   }

@@ -56,6 +56,8 @@ export function contOpponent(seed: number, season: number, r: ContRound): ContTi
 export const NATIONS = [
   'Astoria', 'Calderia', 'Vinland', 'Montara', 'Sorvania', 'Kesselund',
   'Norhavn', 'Lechia', 'Trentino', 'Valgard', 'Rhodania', 'Cascar', 'Ferralta', 'Ostmark', 'Bruneland', 'Aldoria',
+  'Marenne', 'Duruvia', 'Halden', 'Poranto', 'Zelmark', 'Ivria', 'Caldros', 'Ostrovia',
+  'Menteria', 'Bravanto', 'Nystrand', 'Tavora', 'Groland', 'Escalona', 'Volenza', 'Ardennes',
 ];
 /** A deterministic home nation for a bloodline surname — stable across a player's whole arc. */
 export function homeNation(surname: string): string { return NATIONS[nameSeed(surname || 'Astoria') % NATIONS.length]; }
@@ -74,35 +76,40 @@ export function nationalFixture(seed: number, capNo: number, nation: string, ove
 }
 
 // ── 3. World-Cup-style national-team tournament ───────────────────────────────────────────────────
-// 8 nations, two groups of four → round-robin → top two into semis → final. The player's nation strength
-// is his overall (his aspirational peak); the field is seeded from the save + tournament edition.
+// 16 nations, four groups of four → round-robin → top two into an 8-team knockout (QF → SF → Final).
+// The player's nation strength is his overall (his aspirational peak); the rest of the field is seeded
+// from the save + tournament edition, so the line-up varies staging to staging.
+const WC_FIELD_SIZE = 16;
+const WC_GROUPS = 4;
 export interface WCGroupRow { nation: string; P: number; W: number; D: number; L: number; GF: number; GA: number; GD: number; Pts: number; mine: boolean }
+export interface WCTie { round: 'QF' | 'SF' | 'F'; a: string; b: string; gh: number; ga: number; winner: string; pens: boolean; mine: boolean }
 export interface WCResult {
   edition: number; myNation: string; field: string[];
   groups: { rows: WCGroupRow[] }[];
-  semis: { a: string; b: string; gh: number; ga: number; winner: string; pens: boolean }[];
-  final: { a: string; b: string; gh: number; ga: number; winner: string; pens: boolean };
+  quarters: WCTie[];
+  semis: WCTie[];
+  final: WCTie;
   champion: string;
-  myFinish: 'Champions' | 'Runners-up' | 'Semi-finals' | 'Group stage' | 'Did not qualify';
+  myFinish: 'Champions' | 'Runners-up' | 'Semi-finals' | 'Quarter-finals' | 'Group stage' | 'Did not qualify';
   /** legacy multiplier for the bloodline, 1.0 (group) → up to ~2.0 (world champions) */
   legacyMult: number;
 }
 
-/** Simulate a full seeded World-Cup-style tournament. `myNation`'s strength is `myStrength` (the star's
+/** Simulate a full seeded World-Finals-style tournament. `myNation`'s strength is `myStrength` (the star's
  *  overall); every other nation gets a seeded strength. Fully deterministic. */
 export function worldCup(seed: number, edition: number, myNation: string, myStrength: number): WCResult {
   const base = hash32(seed, edition * 7919 + 3);
-  // pick 7 rival nations, seed the field, and drop `myNation` into a stable slot
+  // seed a field of 16: myNation plus the (WC_FIELD_SIZE-1) best-seeded rivals from the nation pool
   const rivals = NATIONS.filter((n) => n !== myNation)
     .map((n) => ({ n, k: hash32(base, nameSeed(n)) }))
-    .sort((a, b) => a.k - b.k).slice(0, 7).map((x) => x.n);
+    .sort((a, b) => a.k - b.k).slice(0, WC_FIELD_SIZE - 1).map((x) => x.n);
   const field = [myNation, ...rivals];
   const strength: Record<string, number> = { [myNation]: myStrength };
   for (const n of rivals) strength[n] = 8 + (hash32(base, nameSeed(n) * 2654435761 >>> 0) % 12); // 8..19
 
-  // snake the seeded field into two groups of four
-  const groupsN: string[][] = [[], []];
-  field.forEach((n, i) => groupsN[i % 2].push(n));
+  // snake the seeded field into four groups of four
+  const groupsN: string[][] = Array.from({ length: WC_GROUPS }, () => []);
+  field.forEach((n, i) => groupsN[i % WC_GROUPS].push(n));
 
   const runGroup = (nations: string[], gi: number): { rows: WCGroupRow[] } => {
     const rows: WCGroupRow[] = nations.map((n) => ({ nation: n, P: 0, W: 0, D: 0, L: 0, GF: 0, GA: 0, GD: 0, Pts: 0, mine: n === myNation }));
@@ -118,25 +125,31 @@ export function worldCup(seed: number, edition: number, myNation: string, myStre
     return { rows };
   };
   const groups = groupsN.map(runGroup);
-  const [A, B] = groups.map((g) => g.rows);
+  const win = (g: number) => groups[g].rows[0].nation, run = (g: number) => groups[g].rows[1].nation; // group winner / runner-up
 
-  // semis: winners cross with runners-up (A1 v B2, B1 v A2)
-  const semiPairs: [string, string][] = [[A[0].nation, B[1].nation], [B[0].nation, A[1].nation]];
-  const semis = semiPairs.map(([a, b], i) => {
-    const k = knockout(strength[a], strength[b], hash32(base, 5000 + i), true);
-    return { a, b, gh: k.gh, ga: k.ga, winner: k.aWon ? a : b, pens: k.pens };
-  });
-  const fa = semis[0].winner, fb = semis[1].winner;
-  const fk = knockout(strength[fa], strength[fb], hash32(base, 9000), true);
-  const final = { a: fa, b: fb, gh: fk.gh, ga: fk.ga, winner: fk.aWon ? fa : fb, pens: fk.pens };
+  const tie = (round: WCTie['round'], a: string, b: string, salt: number): WCTie => {
+    const k = knockout(strength[a], strength[b], hash32(base, salt), true);
+    return { round, a, b, gh: k.gh, ga: k.ga, winner: k.aWon ? a : b, pens: k.pens, mine: a === myNation || b === myNation };
+  };
+  // QF — standard cross-bracket: A1-B2, C1-D2, B1-A2, D1-C2 (winners kept on opposite sides)
+  const quarters: WCTie[] = [
+    tie('QF', win(0), run(1), 4001), tie('QF', win(2), run(3), 4002),
+    tie('QF', win(1), run(0), 4003), tie('QF', win(3), run(2), 4004),
+  ];
+  const semis: WCTie[] = [
+    tie('SF', quarters[0].winner, quarters[1].winner, 5001),
+    tie('SF', quarters[2].winner, quarters[3].winner, 5002),
+  ];
+  const final = tie('F', semis[0].winner, semis[1].winner, 9000);
   const champion = final.winner;
 
-  const inSemis = semis.some((s) => s.a === myNation || s.b === myNation);
-  const inFinal = final.a === myNation || final.b === myNation;
+  const inQF = quarters.some((q) => q.mine);
+  const inSF = semis.some((s) => s.mine);
+  const inFinal = final.mine;
   const myFinish: WCResult['myFinish'] = champion === myNation ? 'Champions'
-    : inFinal ? 'Runners-up' : inSemis ? 'Semi-finals'
+    : inFinal ? 'Runners-up' : inSF ? 'Semi-finals' : inQF ? 'Quarter-finals'
     : field.includes(myNation) ? 'Group stage' : 'Did not qualify';
-  const legacyMult = myFinish === 'Champions' ? 2.0 : myFinish === 'Runners-up' ? 1.6 : myFinish === 'Semi-finals' ? 1.3 : myFinish === 'Group stage' ? 1.1 : 1.0;
+  const legacyMult = myFinish === 'Champions' ? 2.0 : myFinish === 'Runners-up' ? 1.6 : myFinish === 'Semi-finals' ? 1.3 : myFinish === 'Quarter-finals' ? 1.15 : myFinish === 'Group stage' ? 1.05 : 1.0;
 
-  return { edition, myNation, field, groups, semis, final, champion, myFinish, legacyMult };
+  return { edition, myNation, field, groups, quarters, semis, final, champion, myFinish, legacyMult };
 }
