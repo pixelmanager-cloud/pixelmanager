@@ -77,6 +77,8 @@ const MATCH_PLAN_RULES: PlanRule[] = [
   { id: 'hold-lead', ico: '🟢', ifText: 'Leading at 75′', thenText: 'see it out — drop deeper, slow the tempo', minMinute: 75, cond: (my, opp) => my > opp, shift: { mentality: -1, line: -1, press: -1, tempo: -1 }, fired: '📋 Protecting the lead — shutting up shop' },
   { id: 'push-draw', ico: '🟡', ifText: 'Level at 78′', thenText: 'go for the winner', minMinute: 78, cond: (my, opp) => my === opp, shift: { mentality: +1, tempo: +1 }, fired: '📋 Pushing for a winner' },
   { id: 'manage-2up', ico: '🔵', ifText: 'Two+ goals up after 60′', thenText: 'game management — protect the lead & the legs', minMinute: 60, cond: (my, opp) => my - opp >= 2, shift: { mentality: -1, tempo: -1, press: -1 }, fired: '📋 Comfortable — managing the game out' },
+  { id: 'blowout-lead', ico: '🟣', ifText: 'Three+ goals up after 55′', thenText: 'total game management — rest the legs for what\'s ahead', minMinute: 55, cond: (my, opp) => my - opp >= 3, shift: { mentality: -2, tempo: -2, press: -2 }, fired: '📋 Job done — shutting it down completely' },
+  { id: 'chase-ht-big', ico: '⚫', ifText: 'Two+ down at half-time', thenText: 'monumental push — maximum attack, high press, high line', minMinute: 45, cond: (my, opp) => opp - my >= 2, shift: { mentality: +2, line: +2, press: +1, tempo: +2 }, fired: '📋 Facing a hiding — throwing absolutely everything forward' },
 ];
 const clampTac = (v: number) => Math.max(-2, Math.min(2, v));
 

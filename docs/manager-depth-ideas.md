@@ -289,6 +289,14 @@ content bar (a new interacting/trade-off decision, not a reskin).
   head-to-head (28W-25L over the harness), proven as a new `strategy_test.ts` assertion. A "control the
   middle, sacrifice a striker" pick for the formation menu.
 
+- **Two more conditional match-plan orders** — `blowout-lead` ("3+ up after 55′" → total shutdown: mentality/
+  tempo/press all −2) and `chase-ht-big` ("2+ down at half-time" → maximum push: mentality/line/tempo +2,
+  press +1), added to `MATCH_PLAN_RULES` in `client/src/main.ts`. Pure data alongside the existing 5 rules —
+  reuses the already-proven `setTactics`/clamp mechanism, so no engine change and no new calibration risk.
+  When both a milder and a more extreme rule's conditions hold at once (e.g. losing by exactly 2 at HT
+  matches both `chase-ht` and `chase-ht-big`), the later rule in the array wins since each computes its
+  shift from the fixed kickoff tactics — array order was chosen so the more drastic reaction overrides.
+
 **Guardrails (unchanged):** deterministic (no wall-clock/Math.random in shared/), `npm run verify` green with
 every engine-touching change (paste before/after calibration in the commit), one item per commit, fair not
 grindy, legible cause→effect. Sources: FM24 (Goal.com, Most Wanted Gamers), Goomba Stomp, gmgames.org.
