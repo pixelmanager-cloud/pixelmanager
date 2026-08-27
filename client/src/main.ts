@@ -1,7 +1,7 @@
 import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
   TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry,
-  FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, deriveExpectation, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition,
+  FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, deriveExpectation, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition, contTieBlurb,
   type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type Trialist, type MissionsData, type ContractInfo } from './api';
@@ -13,7 +13,7 @@ interface MgrState { season: number; results: PlayedResult[]; starId?: string; s
   // board verdict on the season just gone + that finishing position (feeds next season's expectation)
   lastBoard?: { message: string; mood: BoardMood; expectation: string }; lastFinishPos?: number;
   // international: continental club cup (qualified by a top-3 finish the previous season)
-  contElig?: boolean; contRound?: number; contOut?: boolean; contTitles?: number;
+  contElig?: boolean; contRound?: number; contOut?: boolean; contTitles?: number; contBlurb?: string;
   // World-Finals national tournament — the star's nation's knockout run is playable
   wcSeen?: number; wcWins?: number; wcEdition?: number; wcStage?: 'qf' | 'sf' | 'final' | 'done';
   wcRun?: { round: string; my: number; opp: number; oppName: string; won: boolean }[] }
@@ -1074,11 +1074,13 @@ class Game {
     const m = this.loadMgr();
     if (!m.contElig) return '';
     const round = m.contRound ?? 0;
-    if (m.contOut) return `<div class="sf-cont out"><span class="sf-cont-lbl">🌍 CONTINENTAL CUP</span> <span class="sf-cont-txt">Knocked out — the European run ends here. There's always next season.</span></div>`;
-    if (round >= 3) return `<div class="sf-cont won"><span class="sf-cont-lbl">🏆 CONTINENTAL CHAMPIONS</span> <span class="sf-cont-txt"><b>${this.club?.name}</b> are kings of the continent!</span></div>`;
+    const blurb = m.contBlurb ? ` <span class="sf-cont-blurb">${m.contBlurb}</span>` : '';
+    if (m.contOut) return `<div class="sf-cont out"><span class="sf-cont-lbl">🌍 CONTINENTAL CUP</span> <span class="sf-cont-txt">Knocked out — the European run ends here. There's always next season.${blurb}</span></div>`;
+    if (round >= 3) return `<div class="sf-cont won"><span class="sf-cont-lbl">🏆 CONTINENTAL CHAMPIONS</span> <span class="sf-cont-txt"><b>${this.club?.name}</b> are kings of the continent!${blurb}</span></div>`;
     const tie = contOpponent(this.leagueSeed(), m.season, round as 0 | 1 | 2);
     const dots = CONT_ROUNDS.map((r, i) => `<span class="sf-cont-dot ${i < round ? 'won' : i === round ? 'now' : ''}">${['QF', 'SF', 'F'][i]}</span>`).join('');
     return `<div class="sf-cont"><div class="sf-cont-head"><span class="sf-cont-lbl">🌍 CONTINENTAL CUP</span>${dots}</div>`
+      + (m.contBlurb ? `<div class="sf-cont-blurb">${m.contBlurb}</div>` : '')
       + `<div class="sf-cont-tie"><b>${tie.label}</b> ${tie.neutral ? '(neutral)' : ''} vs <b>${tie.oppName}</b> · rating ~${tie.oppStrength}</div>`
       + `<div class="sf-cont-btns"><button class="primary" id="sf-cont-play">Play the tie ▶</button> <button id="sf-cont-sim">⏩ Sim it</button></div></div>`;
   }
@@ -1108,19 +1110,21 @@ class Game {
     let pens = false;
     if (myGoals === oppGoals) { pens = true; const h = ((this.leagueSeed() >>> 0) ^ ((m.season * 733 + round * 29) >>> 0)) >>> 0; won = ((h % 1000) / 1000) < (0.5 + (this.clubLeagueStrength() - oppStrength) * 0.03); }
     const label = CONT_ROUNDS[round];
+    // a "how the tie felt" line for the continental card (from @fm/shared intl.ts)
+    const contBlurb = contTieBlurb(this.leagueSeed(), m.season, round as 0 | 1 | 2, won, pens);
     if (won) {
       const nextRound = round + 1;
       if (nextRound >= 3) {
         const contTitles = (m.contTitles ?? 0) + 1;
-        this.saveMgr({ ...m, contRound: 3, contTitles });
+        this.saveMgr({ ...m, contRound: 3, contTitles, contBlurb });
         toast(`🏆 CONTINENTAL CHAMPIONS! ${this.club?.name} win the cup${pens ? ' on penalties' : ''}`);
         api.spSeasonReward({ pos: 1, size: 10, sponsor: undefined }).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; toast(`💰 Continental prize +${x.prize.toLocaleString()}c`); }).catch(() => {});
       } else {
-        this.saveMgr({ ...m, contRound: nextRound });
+        this.saveMgr({ ...m, contRound: nextRound, contBlurb });
         toast(`✅ ${label} won ${myGoals}-${oppGoals}${pens ? ' (pens)' : ''} — into the ${CONT_ROUNDS[nextRound]}!`);
       }
     } else {
-      this.saveMgr({ ...m, contOut: true });
+      this.saveMgr({ ...m, contOut: true, contBlurb });
       toast(`❌ Out of the cup — lost the ${label} ${myGoals}-${oppGoals}${pens ? ' on penalties' : ''}`);
     }
     this.showSeason();
@@ -1342,7 +1346,7 @@ class Game {
     const qualified = t.pos <= 3; // a top-3 finish books a place in next season's continental cup
     if (qualified) toast('🌍 Top-3 finish — qualified for the Continental Cup!');
     // new season → fresh sponsor; drop any unfinished World-Finals run (it belongs to its staging season)
-    this.saveMgr({ ...m, season: m.season + 1, results: [], starAge: age, titles, sponsor: undefined, contElig: qualified, contRound: 0, contOut: false, wcStage: undefined, wcEdition: undefined, wcRun: undefined, lastBoard, lastFinishPos: t.pos });
+    this.saveMgr({ ...m, season: m.season + 1, results: [], starAge: age, titles, sponsor: undefined, contElig: qualified, contRound: 0, contOut: false, contBlurb: undefined, wcStage: undefined, wcEdition: undefined, wcRun: undefined, lastBoard, lastFinishPos: t.pos });
     this.showSeason();
   }
 

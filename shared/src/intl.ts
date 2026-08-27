@@ -189,10 +189,17 @@ const CONT_WIN: string[] = [
   'The kind of European result that lingers in the memory long after the final whistle.',
   'A big scalp on the continental run, and belief is growing that this could go somewhere.',
 ];
-const CONT_DRAW_PENS: string[] = [
+// won the shootout — through to the next round
+const CONT_WIN_PENS: string[] = [
   'Settled on penalties — the cruellest way to go through, but a way through all the same.',
   'Nerves shredded from twelve yards, but the club lives to fight another round.',
   'A shootout decided it. Somebody had to blink first, and it wasn\'t us.',
+];
+// lost the shootout — out on penalties
+const CONT_LOSS_PENS: string[] = [
+  'Settled on penalties — the cruellest way to go out, inches from the next round.',
+  'Nerves shredded from twelve yards, and this time the shootout went against us.',
+  'A shootout decided it. Somebody had to blink first, and this time it was us.',
 ];
 const CONT_LOSS: string[] = [
   'The continental run ends here. A step further than some feared, not as far as others hoped.',
@@ -216,8 +223,8 @@ const CONT_FINAL_LOSS: string[] = [
 export function contTieBlurb(seed: number, season: number, round: ContRound, aWon: boolean, pens: boolean): string {
   const h = hash32(seed, season * 977 + 41, round * 131, 8801);
   const isFinal = round === 2;
-  if (aWon) return pick(h, isFinal ? CONT_FINAL_WIN : pens ? CONT_DRAW_PENS : CONT_WIN);
-  return pick(h, isFinal ? CONT_FINAL_LOSS : pens ? CONT_DRAW_PENS : CONT_LOSS);
+  if (aWon) return pick(h, isFinal ? CONT_FINAL_WIN : pens ? CONT_WIN_PENS : CONT_WIN);
+  return pick(h, isFinal ? CONT_FINAL_LOSS : pens ? CONT_LOSS_PENS : CONT_LOSS);
 }
 
 const CALLUP_DEBUT: string[] = [
