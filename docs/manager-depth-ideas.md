@@ -314,6 +314,12 @@ content bar (a new interacting/trade-off decision, not a reskin).
   presence outweighs losing the out-and-out width. (Team shots/goals were tried first and didn't hold —
   crowding the centre stole space from other central attackers rather than adding net chances;
   possession is the honest, provable effect.)
+- **Wide-Playmaker MF duty** — a new named MF duty for a wide midfield slot: hugs the touchline
+  (positive `hug`) but dictates play from out there (high magnet, moderate shoot, low press). Proven in
+  `strategy_test.ts`: generates more team shots than both box-to-box (38.3 vs 36.1) and ball-winner
+  (38.3 vs 36.8) in the same wide slot. (Possession share was tried first vs both rivals and came back
+  flat — a wide MF's press setting feeds back into how fast the *team* wins the ball back elsewhere,
+  which roughly cancels out any passing-magnet gain; shots is the metric that actually moves.)
 - **New formation: 4-2-2-2** — a back four behind a narrow double-pivot + double-ten box midfield and
   two strikers. The tightest MF spread of any formation in the pool, so it loses width battles against
   most shapes (an earlier attempt, 3-4-1-2, was tried and dropped — no formation in the pool could beat

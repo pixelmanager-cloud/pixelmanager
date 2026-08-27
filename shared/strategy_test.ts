@@ -190,6 +190,29 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
   assert(possIW > possPoacher, `inverted wingers cutting inside should edge possession above wide poachers (got ${(possIW / N * 100).toFixed(1)}% vs ${(possPoacher / N * 100).toFixed(1)}%)`);
 }
 
+// ---- 6f. Wide-playmaker MF duty: hugs the touchline but dictates — more shots than box-to-box/ball-winner ----
+{
+  const withWideMfDuty = (t: Team, duty: Duty): Team =>
+    ({ ...t, players: t.players.map((p) => {
+      if (p.role !== 'MF') return p;
+      // 4-4-2 anchors: y=10/58 are the wide MF slots — assign the wide pair, keep the centre box-to-box.
+      return Math.abs(p.anchor.y - 34) > 15 ? { ...p, duty } : { ...p, duty: 'box-to-box' as Duty };
+    }) });
+  const shotsWithDuty = (duty: Duty) => {
+    let sh = 0;
+    for (let i = 0; i < N; i++) {
+      const base = mk('atk', 14, i * 7 + 1, '4-4-2');
+      const opp = mk('def', 13, i * 11 + 3, '4-4-2');
+      sh += play(withWideMfDuty(base, duty), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).shots[0];
+    }
+    return sh;
+  };
+  const shotsWP = shotsWithDuty('wide-playmaker'), shotsB2B = shotsWithDuty('box-to-box'), shotsBW = shotsWithDuty('ball-winner');
+  console.log(`[duty]      shots with wide MF duty: WIDE-PLAYMAKER=${(shotsWP / N).toFixed(1)}  BOX-TO-BOX=${(shotsB2B / N).toFixed(1)}  BALL-WINNER=${(shotsBW / N).toFixed(1)}`);
+  assert(shotsWP > shotsB2B, `wide-playmaker should generate more shots than box-to-box in the wide slot (got ${shotsWP} vs ${shotsB2B})`);
+  assert(shotsWP > shotsBW, `wide-playmaker should generate more shots than ball-winner in the wide slot (got ${shotsWP} vs ${shotsBW})`);
+}
+
 // ---- 7. Anti-spam: no single tactic may dominate the field (equal stats) ----
 // Guards against a globally-dominant "spam" strategy (Tiki-Taka used to win ~69% of the
 // field with no counter). Every viable tactic must have at least one losing matchup, and
