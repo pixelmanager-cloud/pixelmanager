@@ -31,8 +31,7 @@ const TRIPS_PER_SEASON = Math.max(1, Number(process.env.SCOUT_TRIPS_PER_SEASON ?
 // Compresses every travel time (set e.g. 0.01 locally to test the reveal quickly).
 const TRAVEL_SCALE = Math.max(0, Number(process.env.SCOUT_TRAVEL_SCALE ?? 1));
 const travelMs = (dest: Parameters<typeof travelMsPure>[0]) => travelMsPure(dest, TRAVEL_SCALE);
-import type { Player } from '@fm/shared';
-import { rollMatchInjuries } from './injuries.js';
+import { type Player, rollMatchInjuries } from '@fm/shared';
 import { viewerTiers, scoutNftInfo } from './scoutnft.js';
 import { computeCup, type SquadMap } from './cup.js';
 import type { PlayerScoutTier } from './market.js';

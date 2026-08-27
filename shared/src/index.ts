@@ -16,3 +16,4 @@ export * from './intl.js';
 export * from './offpitch.js';
 export * from './facilities.js';
 export * from './missions.js';
+export * from './injuries.js';
