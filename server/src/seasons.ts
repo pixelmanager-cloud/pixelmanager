@@ -3,13 +3,13 @@
 // player's pod, so a table is a legible ~20-row race no matter the population.
 // See docs/seasons-and-divisions.md.
 import { randomUUID } from 'node:crypto';
-import { autoPickXI } from '@fm/shared';
+import { autoPickXI, runMatch, validateLineup } from '@fm/shared';
 import type { Store, Season, PodRef } from './store.js';
-import { buildTable, runMatch, elo, validateLineup } from './game.js';
-import { seasonPlacementReward, WIN_COINS, DRAW_COINS, LOSS_COINS } from './market.js';
-import { trainingConditioning, stadiumIncome, fanIncomeMult, fanHomeBoost, sponsorIncome, squadMarketability } from './facilities.js';
-import { rollMatchInjuries } from './injuries.js';
-import { unavailableTokenIds, tokenToPlayer } from './tokens.js';
+import { buildTable, elo, randomSeed } from './game.js';
+import { seasonPlacementReward, WIN_COINS, DRAW_COINS, LOSS_COINS } from '@fm/shared';
+import { trainingConditioning, stadiumIncome, fanIncomeMult, fanHomeBoost, sponsorIncome, squadMarketability, rollMatchInjuries } from '@fm/shared';
+import { unavailableTokenIds } from './tokens.js';
+import { tokenToPlayer } from '@fm/shared';
 import { advanceTokensAtRollover } from './lifecycle.js';
 import { recordMatchStats } from './matchstats.js';
 
@@ -119,7 +119,7 @@ async function simulateMatch(db: Store, homeId: string, awayId: string, seasonId
   const hl = lineupFor(homeC);
   const al = lineupFor(awayC);
   const conditioning = { home: trainingConditioning(homeFac.training), away: trainingConditioning(awayFac.training) };
-  const { seed, homeTeam, awayTeam, result, homeFitness, awayFitness, events } = runMatch(homeC.club, hl, homeC.standingOrders.tactics, awayC.club, al, awayC.standingOrders.tactics, conditioning, fanHomeBoost(homeFac.fanzone));
+  const { seed, homeTeam, awayTeam, result, homeFitness, awayFitness, events } = runMatch(homeC.club, hl, homeC.standingOrders.tactics, awayC.club, al, awayC.standingOrders.tactics, randomSeed(), conditioning, fanHomeBoost(homeFac.fanzone));
   await recordMatchStats(db, seasonId, homeId, awayId, homeTeam, awayTeam, events, result); // auto-resolved matches count too
   const sh = result[0] > result[1] ? 1 : result[0] < result[1] ? 0 : 0.5;
   const [nh, na] = elo(home.rating, away.rating, sh);

@@ -4,7 +4,7 @@
 // penalty shootout keyed off the setPiece + keeping stats — cup drama, and a real use for
 // setPiece. Reuses the SAME deterministic match engine as everything else.
 import { MatchEngine, buildXI, autoPickXI, type Club, type Lineup, type Player, type Tactics } from '@fm/shared';
-import { validateLineup } from './game.js';
+import { validateLineup } from '@fm/shared';
 import type { LeaderRow, StandingOrders } from './store.js';
 
 export interface CupTie {

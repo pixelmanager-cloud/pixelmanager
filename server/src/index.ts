@@ -1,8 +1,14 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { randomUUID } from 'node:crypto';
-import { overall, managerPrestige, signContract, contractCost, contractLength, graduationEpilogue, gaffersDiaryEntry, clubInvestOf, type Lineup, type Tactics } from '@fm/shared';
-import { mintGenesis, tokenToPlayer, tokenContract, tokenAch, legendCardOf, unavailableTokenIds, loadCareer, actWithNarration, careerState, graduatedFields, rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, ageOf, SUPPLY_CAP, GENESIS_COST, REBORN_COST, MARKET_FEE_PCT, type CareerAction } from './tokens.js';
+import {
+  overall, managerPrestige, signContract, contractCost, contractLength, graduationEpilogue, gaffersDiaryEntry, clubInvestOf,
+  FACILITY_KEYS, FACILITY_META, MAX_LEVEL, upgradeCost, effectAt, trainingConditioning, stadiumIncome,
+  youthPoolBonus, youthUpgradeChance, scoutHitMult, scoutCostDiscount, scoutExtraTrips, fanIncomeMult, fanHomeBoost,
+  type Lineup, type Tactics, type FacilityKey,
+} from '@fm/shared';
+import { mintGenesis, unavailableTokenIds, SUPPLY_CAP, GENESIS_COST, REBORN_COST, MARKET_FEE_PCT } from './tokens.js';
+import { tokenToPlayer, tokenContract, tokenAch, legendCardOf, loadCareer, actWithNarration, careerState, graduatedFields, rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, ageOf, type CareerAction } from '@fm/shared';
 import { bumpApps, bumpMorale, advanceTokensAtRollover } from './lifecycle.js';
 import { recordMatchStats } from './matchstats.js';
 const isNftPlayer = (id: string) => id.startsWith('nft:');
@@ -16,25 +22,26 @@ function cleanRoles(body: any): { captainIdx?: number; takers?: { pen?: number; 
   return { ...(captainIdx != null ? { captainIdx } : {}), ...(hasTakers ? { takers } : {}) };
 }
 import { db, type Account, type StandingOrders, type Listing } from './db.js';
-import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMATIONS } from './game.js';
+import { elo, buildTable, randomSeed, randomKitColor } from './game.js';
+import { makeClub, validateLineup, cleanDuties, runMatch, PICKABLE_FORMATIONS as FORMATIONS } from '@fm/shared';
 import { hashPassword, verifyPassword } from './auth.js';
-import { generatePool, trialistAt, LOANEE_CAP, OPP_REVEAL, describeIntel, type OppTier } from './scouting.js';
-import { DESTINATIONS, destinationById, rollMission, travelMs, previewOdds, TRIPS_PER_SEASON } from './missions.js';
-import {
-  FACILITY_KEYS, FACILITY_META, MAX_LEVEL, upgradeCost, effectAt, trainingConditioning, stadiumIncome,
-  youthPoolBonus, youthUpgradeChance, scoutHitMult, scoutCostDiscount, scoutExtraTrips, fanIncomeMult, fanHomeBoost, type FacilityKey,
-} from './facilities.js';
-import type { Player } from '@fm/shared';
-import { rollMatchInjuries } from './injuries.js';
+import { describeIntel } from './scouting.js';
+import { generatePool, trialistAt, LOANEE_CAP, OPP_REVEAL, type OppTier, DESTINATIONS, destinationById, rollMission, travelMs as travelMsPure, previewOdds } from '@fm/shared';
+
+// Scouting-network runtime config (env-driven, so not part of the pure @fm/shared rules).
+const TRIPS_PER_SEASON = Math.max(1, Number(process.env.SCOUT_TRIPS_PER_SEASON ?? 3));
+// Compresses every travel time (set e.g. 0.01 locally to test the reveal quickly).
+const TRAVEL_SCALE = Math.max(0, Number(process.env.SCOUT_TRAVEL_SCALE ?? 1));
+const travelMs = (dest: Parameters<typeof travelMsPure>[0]) => travelMsPure(dest, TRAVEL_SCALE);
+import { type Player, rollMatchInjuries } from '@fm/shared';
 import { viewerTiers, scoutNftInfo } from './scoutnft.js';
 import { computeCup, type SquadMap } from './cup.js';
-import type { PlayerScoutTier } from './market.js';
 import { ensureSeason, ensurePod, forceRollover, resultsAmong, startOfUtcDay, PROMOTE, RELEGATE, MATCHES_PER_DAY, TIERS } from './seasons.js';
 import {
+  autoPickXI, backfillAttrs,
   revealPlayer, WIN_COINS, DRAW_COINS, LOSS_COINS,
-  MIN_SQUAD, MAX_SQUAD, PRICE_MIN, PRICE_MAX,
-} from './market.js';
-import { autoPickXI, backfillAttrs } from '@fm/shared';
+  MIN_SQUAD, MAX_SQUAD, PRICE_MIN, PRICE_MAX, type PlayerScoutTier,
+} from '@fm/shared';
 
 /** Load a club and MERGE in the owner's pro-state tokens as fieldable players.
  * Read/gameplay only — never feed this into saveClub. Returns undefined if the
@@ -82,7 +89,7 @@ app.post('/register', async (req, reply) => {
   const clubName = String((req.body as any)?.clubName ?? '').trim().slice(0, 24);
   const id = randomUUID(), token = randomUUID().replace(/-/g, '');
   await db.createAccount(id, handle, token, Date.now(), hashPassword(password));
-  const { club, standingOrders } = makeClub(id, handle, clubName);
+  const { club, standingOrders } = makeClub(id, handle, randomSeed(), randomKitColor(), clubName);
   await db.saveClub(id, club, standingOrders);
   try { await mintGenesis(db, id); } catch { /* supply cap reached — no welcome prospect */ } // a free 10yo to develop in the Academy
   return { token, account: { id, handle, rating: 1000, coins: await db.getCoins(id), wallet: null }, club, standingOrders };
@@ -232,7 +239,7 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
   const aClub = iAmHome ? oppClub.club : me!.club, aLineup = iAmHome ? oppLineup : myLineup, aTactics = iAmHome ? oppTactics : myTactics;
   const conditioning = { home: iAmHome ? meCond : oppCond, away: iAmHome ? oppCond : meCond };
   const homeBoost = fanHomeBoost((iAmHome ? meFac : oppFac).fanzone); // Fan Zone edge for the host
-  const { seed, homeTeam, awayTeam, result, homeFitness, awayFitness, events } = runMatch(hClub, hLineup, hTactics, aClub, aLineup, aTactics, conditioning, homeBoost);
+  const { seed, homeTeam, awayTeam, result, homeFitness, awayFitness, events } = runMatch(hClub, hLineup, hTactics, aClub, aLineup, aTactics, randomSeed(), conditioning, homeBoost);
 
   // injuries: everyone recovers a match, then the XIs that played are rolled for fresh knocks
   const homeNew = rollMatchInjuries(homeTeam, homeFitness, (iAmHome ? meFac : oppFac).medical, seed);
@@ -1005,7 +1012,7 @@ app.post('/admin/regen-base', async (req, reply) => {
   for (const a of accounts) {
     const [acc, c] = await Promise.all([db.accountById(a.id), db.getClub(a.id)]);
     if (!acc || !c) continue;
-    const fresh = makeClub(a.id, acc.handle).club;                       // 20 weak base players (ids <id>-0..19)
+    const fresh = makeClub(a.id, acc.handle, randomSeed(), randomKitColor()).club; // 20 weak base players (ids <id>-0..19)
     const kept = c.club.players.filter((p) => !p.id.startsWith(`${a.id}-`)); // bought + loaned players stay
     fresh.players = [...fresh.players, ...kept];
     const so = { ...c.standingOrders, playerIds: autoPickXI(fresh, c.standingOrders.formation).playerIds, duties: undefined };
