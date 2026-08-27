@@ -646,11 +646,16 @@ export function rollCoaches(rng: () => number, track: Track, n = COACH_OFFER): C
 // ── scenarios: each moment demands a weighted mix of tags; kind biases the demand ──
 // stakes 1 (normal) / 2 (big) / 3 (huge). Big moments are worth MORE (shape you harder) and are
 // riskier (more variance) — this is where reputations are made and the Big-Game Player trait is earned.
-export interface Scenario { id: string; kind: 'match' | 'social' | 'training'; demand: Partial<Record<Tag, number>>; label: string; stakes: 1 | 2 | 3; life?: LifeKind | null; rival?: boolean }
+export interface Scenario { id: string; kind: 'match' | 'social' | 'training'; demand: Partial<Record<Tag, number>>; label: string; stakes: 1 | 2 | 3; life?: LifeKind | null; rival?: boolean; callup?: boolean }
 // RIVALRY CONSEQUENCE: a real, distinct payoff when a big-stage MATCH scenario is framed as a head-to-head
 // against the seeded academy rival (see careerCast in narrate.ts — this module doesn't need his name, just
 // the mechanic). Bigger than a routine big-game swing: bragging rights are worth more than the occasion alone.
 const RIVAL_CONSEQUENCE = { good: { fans: 8, agent: 4 } as Partial<Record<MeterKey, number>>, bad: { fans: -5 } as Partial<Record<MeterKey, number>>, earnGood: 80 };
+// SHOCK CALL-UP CONSEQUENCE: a senior first-teamer goes down injured/suspended hours before kickoff and he's
+// thrown straight in (see makeScenario's `callup` gate + the "shock call-up" research hook — a real, common
+// debut anecdote). Nervier than a routine big game, so it swings bigger both ways: a big reward for standing
+// up to it, a real dent if the nerves get him.
+const CALLUP_CONSEQUENCE = { good: { authority: 10, fans: 8 } as Partial<Record<MeterKey, number>>, bad: { authority: -8, fans: -3 } as Partial<Record<MeterKey, number>>, earnGood: 100 };
 
 // ── LIFE EVENTS: a fraction of low-stakes SOCIAL moments become a proper off-pitch dilemma — a contract
 // standoff, a loan decision, a media storm — instead of a generic dressing-room beat. Resolved by the SAME
@@ -729,8 +734,13 @@ export function makeScenario(rng: () => number, i: number, track: Track = 'outfi
   // head-to-head against the seeded academy rival — same pure-hash technique as `life`, no extra rng()
   // draws, so it never perturbs demand/stakes/moment for careers that predate this or don't hit the gate.
   const rival = seed != null && kind === 'match' && stakes >= 2 && bandIdx >= 3 && pureHash01(seed, i, 0x72195) < 0.3;
+  // SHOCK CALL-UP: from Breakthrough on, a slice of big-stage MATCH moments become a "shock call-up" — a
+  // senior first-teamer is out and he's told hours before kickoff he's starting. Same pure-hash technique
+  // as `life`/`rival` (no extra rng() draws); mutually exclusive with a rivalry moment so one big-stage
+  // reskin doesn't crowd out another.
+  const callup = !rival && seed != null && kind === 'match' && stakes >= 2 && bandIdx >= 4 && pureHash01(seed, i, 0x9c41f) < 0.18;
   const label = life ? LIFE_LABEL[life] : moment ? `★ ${moment}` : `${kind}: ${Object.keys(demand).join(' / ')}`;
-  return { id: `sc${i}`, kind, demand, label, stakes, life, rival };
+  return { id: `sc${i}`, kind, demand, label, stakes, life, rival, callup };
 }
 
 /** How well a card's tags satisfy a scenario's demand, 0..1. */
@@ -1084,6 +1094,7 @@ export class Career {
     this.updateLife(choice); // NSS meters + energy react to how the moment went (deterministic, no rng)
     if (this.scenario.life) this.applyLifeConsequence(this.scenario.life, success); // the life-event's OWN, distinct payoff
     if (this.scenario.rival) this.applyRivalConsequence(success); // bragging rights are worth more than the occasion alone
+    if (this.scenario.callup) this.applyCallupConsequence(success); // thrown in cold — a bigger swing than a routine big game
     this.discard.push(card);
     this.turn++;
     if (this.turn >= TOTAL_TURNS) { this.finished = true; return choice; }
@@ -1117,6 +1128,17 @@ export class Career {
     for (const [k, d] of Object.entries(eff)) this.life(k as MeterKey, d ?? 0);
     if (good && RIVAL_CONSEQUENCE.earnGood) this.earnings += RIVAL_CONSEQUENCE.earnGood;
     this.lastRivalMoment = { success, good };
+  }
+
+  /** How the LAST shock call-up resolved — surfaced for narration. */
+  lastCallupMoment: { success: number; good: boolean } | null = null;
+  /** Thrown in cold for a first-teamer — a bigger swing, good or bad, than a routine big-game moment. */
+  private applyCallupConsequence(success: number) {
+    const good = success >= 0.55;
+    const eff = good ? CALLUP_CONSEQUENCE.good : CALLUP_CONSEQUENCE.bad;
+    for (const [k, d] of Object.entries(eff)) this.life(k as MeterKey, d ?? 0);
+    if (good && CALLUP_CONSEQUENCE.earnGood) this.earnings += CALLUP_CONSEQUENCE.earnGood;
+    this.lastCallupMoment = { success, good };
   }
 
   /** NSS life meters react to a played moment (deterministic — reads the choice, consumes no rng). */

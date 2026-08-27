@@ -15,6 +15,7 @@ import {
 } from './career.js';
 import {
   narratePlay, narrateLifeEvent, scenarioStory, chapterRecap, narrateCoach, narrateDraft, narrateOffer, careerCast, rivalMomentStory, narrateRivalMoment, rivalNews,
+  callupMomentStory, narrateCallupMoment,
 } from './narrate.js';
 import { clubSeason, squadRole, firstTeamReady } from './clubseason.js';
 import { computeOffPitch } from './offpitch.js';
@@ -100,6 +101,7 @@ export function actWithNarration(c: Career, a: CareerAction): string | null {
     const ctx = { ...baseCtx, stakes: c.scenario.stakes, milestone: careerMilestone(c) };
     const lifeKind = c.scenario.life; // capture BEFORE applying — play() advances to the NEXT scenario
     const rivalMoment = c.scenario.rival;
+    const callupMoment = c.scenario.callup;
     const turnBefore = c.turn;
     const csBefore = careerScoreOf(c);
     applyAction(c, a);
@@ -110,6 +112,7 @@ export function actWithNarration(c: Career, a: CareerAction): string | null {
       const payoff = { rivalName: careerCast((c as any).seed >>> 0).rival, leadBefore: csBefore - Math.round(turnBefore * rate), leadAfter: careerScoreOf(c) - Math.round(c.turn * rate) };
       return narrateRivalMoment(cardName(a.cardId), choice.success, ctx, payoff);
     }
+    if (callupMoment) return narrateCallupMoment(cardName(a.cardId), choice.success, ctx);
     return narratePlay(cardName(a.cardId), choice.tags, choice.success, ctx);
   }
   // coach / draft / offer — read the chosen item from the current phase BEFORE applying
@@ -211,6 +214,13 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
       st.story = rivalMomentStory(careerCast((c as any).seed >>> 0).rival, moment, { seed: (((c as any).seed >>> 0) + c.turn * 40503) >>> 0 });
       st.momentKind = 'match';
       st.rivalMoment = true;
+      if (kind === 'match') st.matchCtx = matchContext((c as any).seed >>> 0, c.turn, st.scenario.stakes, moment, clubName);
+    } else if (!legacyPressure && !lifeKind && st.scenario.callup) {
+      // SHOCK CALL-UP: a senior first-teamer is out and he's thrown in cold hours before kickoff —
+      // nervier framing, bigger reward on a strong showing (see career.ts Scenario.callup).
+      st.story = callupMomentStory(moment, { seed: (((c as any).seed >>> 0) + c.turn * 40503) >>> 0 });
+      st.momentKind = 'match';
+      st.callupMoment = true;
       if (kind === 'match') st.matchCtx = matchContext((c as any).seed >>> 0, c.turn, st.scenario.stakes, moment, clubName);
     } else if (!legacyPressure) {
       st.story = scenarioStory(kind, topTag, moment, { seed: (((c as any).seed >>> 0) + c.turn * 40503) >>> 0, age: c.age, chapter: c.chapter, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0 });

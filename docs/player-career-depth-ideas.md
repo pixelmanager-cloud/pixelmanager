@@ -1,5 +1,16 @@
 # Player-career depth — research-informed roadmap (2026-08)
 
+> ## ✅ SHIPPED (2026-08-27, research-informed pass) — shock call-up
+> - **Shock call-up** (`docs/research-player-career.md` §2 — the Sammy McIlroy debut anecdote) —
+>   `Scenario.callup` (career.ts): from Breakthrough on, a slice of big-stage MATCH moments become a
+>   senior first-teamer's late injury/suspension call-up, mirroring the existing `rival` mechanic (a pure
+>   hash of seed+turn, mutually exclusive with a rivalry moment, no extra rng() draws). Its own, bigger
+>   consequence (`CALLUP_CONSEQUENCE`) than a routine big game — nervier framing, a bigger reward for
+>   standing up to it. Dedicated setup/resolution prose (`callupMomentStory`/`narrateCallupMoment` in
+>   narrate.ts) and a `🚑 SHOCK CALL-UP` matchday badge in the client. Development-touching (re-verified:
+>   `npm run verify` green, `career_sim` diversity/magnitude/determinism healthy — one archetype-count line
+>   shifted 128→127, everything else byte-identical).
+>
 > ## ✅ SHIPPED (2026-08-27) — worked through by hand
 > - **Season objectives** (#1) — seeded per-stage target (strong displays / big-game moments / perfect
 >   reads) with a progress bar + done beat. `careerState.objective`.

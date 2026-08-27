@@ -1507,14 +1507,15 @@ class Game {
         const mc = s.matchCtx; const [us, them] = mc.score.split('-');
         const big = s.scenario.stakes >= 3 ? ' · ★ THE BIG ONE' : s.scenario.stakes >= 2 ? ' · BIG GAME' : '';
         const rivalTag = s.rivalMoment ? ` · 🆚 vs ${s.rival?.name ?? 'HIS RIVAL'}` : '';
+        const callupTag = s.callupMoment ? ' · 🚑 SHOCK CALL-UP' : '';
         const club = mc.club || this.club?.name || 'Your Club';
-        header = `<div class="cg-matchday stakes-${s.scenario.stakes}${s.rivalMoment ? ' rivalry' : ''}">`
-          + `<div class="cg-md-top"><span class="cg-md-badge">⚽ MATCHDAY${big}${rivalTag}</span><span class="cg-md-min">${mc.minute}'</span></div>`
+        header = `<div class="cg-matchday stakes-${s.scenario.stakes}${s.rivalMoment ? ' rivalry' : ''}${s.callupMoment ? ' callup' : ''}">`
+          + `<div class="cg-md-top"><span class="cg-md-badge">⚽ MATCHDAY${big}${rivalTag}${callupTag}</span><span class="cg-md-min">${mc.minute}'</span></div>`
           + `<div class="cg-md-fixture"><span class="cg-md-team mine">${club}</span>`
           + `<span class="cg-md-score">${us} <span class="cg-md-ball">${sprite('ball')}</span> ${them}</span>`
           + `<span class="cg-md-team">${mc.opponent}</span></div>`
           + `<div class="cg-md-vs">${mc.home ? '🏟️ Home' : '✈️ Away'} · ${mc.comp}</div></div>`;
-        prompt = 'The moment falls to him — what does he do?';
+        prompt = s.callupMoment ? 'Thrown in cold, hours to think about it — what does he do?' : 'The moment falls to him — what does he do?';
       } else if (mk === 'life' && s.lifeEvent === 'the weight of the name') {
         header = `<div class="cg-mtype pressure">🎭 THE WEIGHT OF THE NAME</div>`;
         prompt = 'The name is a burden today — how does he respond?';

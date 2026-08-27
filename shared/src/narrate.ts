@@ -427,6 +427,43 @@ export function narrateRivalMoment(cardName: string, success: number, ctx: Narra
     : '';
   return `He goes to work on ${cardName} ${resline}${swing}`;
 }
+// ── SHOCK CALL-UP: the seeded reskin of a first-teamer going down hours before kickoff (see
+// career.ts Scenario.callup) — nervier framing than a routine big game, a bigger reward for standing up
+// to it. Real anecdote behind it: Sammy McIlroy told four hours before kickoff in 1971, scored on debut.
+const CALLUP_SETUP = [
+  'The phone call came four hours before kick-off — someone’s gone down injured, and it’s him in the XI.', 'He was warming the bench for the reserves; now the physio is strapping HIS ankle for the first team.',
+  'A late fitness test has failed. No time to think about it — he’s starting.', 'Suspension, a red card review, a withdrawal — whatever the reason, the sheet has his name on it tonight.',
+  'The kit man is already laying his shirt out in the home dressing room. Nobody warned him this morning.', 'One phone call and his whole week changed — he’s starting, and there’s no time left to be nervous about it.',
+];
+const CALLUP_RESOLUTION = {
+  good: [
+    'and he looks like he’s been starting there for years.', 'and the shock call-up becomes the best story of his career so far.',
+    'and nobody in that stadium would ever guess he found out four hours ago.', 'and it’s the kind of debut managers dream of handing a kid.',
+  ],
+  bad: [
+    'and the nerves get the better of him.', 'and it’s a chastening first taste of it, the kind you learn from.',
+    'and the step up shows, painfully, just how big it is.', 'and he looks every inch a boy thrown in before he was ready.',
+  ],
+};
+/** The SITUATION for a shock call-up — call before the card is played. */
+export function callupMomentStory(moment: string | null, ctx: ScenarioCtx): string {
+  const rng = mulberry32(ctx.seed >>> 0);
+  const setup = pickFrom(rng, CALLUP_SETUP);
+  return moment ? `It’s ${moment} — and ${setup.charAt(0).toLowerCase() + setup.slice(1)}` : setup;
+}
+/** The RESOLUTION beat for a shock call-up. */
+export function narrateCallupMoment(cardName: string, success: number, ctx: NarrateCtx): string {
+  const rng = mulberry32(ctx.seed >>> 0);
+  const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
+  const good = band(success) === 'triumph' || band(success) === 'good';
+  const resline = pick(good ? CALLUP_RESOLUTION.good : CALLUP_RESOLUTION.bad);
+  const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed) : null;
+  const reax = cast && rng() < 0.3
+    ? ' ' + (good ? `${cast.gaffer} could not have asked for more.` : `${cast.gaffer} will give him another chance — everyone gets one bad night.`)
+    : '';
+  return `Thrown in cold, he goes to work on ${cardName} ${resline}${reax}`;
+}
+
 // Deterministic "news" about the rival's own career — surfaced as a small ticker alongside the score, so
 // he feels like a real career unfolding in parallel, not just a number that climbs on a fixed schedule.
 const RIVAL_NEWS: Record<string, string[]> = {
