@@ -1,6 +1,6 @@
 import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, DUTY_LABEL, DUTIES_BY_ROLE, isDutyForRole,
-  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
+  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, LIFE_LABEL, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData, type MissionsData, type ContractInfo, type LeaderStat, type AwardRow } from './api';
 import { sprite } from './sprites';
@@ -1623,6 +1623,7 @@ class Game {
     const prof = s.profile ? this.careerProfileHtml(s.profile) : '';
     const narr = this.lastNarration ? this.outcomeChipHtml() + `<div class="cg-narrate">“${this.lastNarration}”</div>` : '';
     const recap = s.recap ? `<div class="cg-recap"><span class="cg-recap-lbl">📖 The story so far</span>${s.recap}</div>` : '';
+    const lifeOutcome = s.lastLifeOutcome ? `<div class="cg-conseq"><div class="cg-conseq-row">${s.lastLifeOutcome}</div></div>` : '';
     const conseq = s.consequences?.length
       ? `<div class="cg-conseq"><span class="cg-conseq-lbl">📋 How the season paid off</span>`
         + s.consequences.map((n) => `<div class="cg-conseq-row">${n}</div>`).join('') + `</div>`
@@ -1648,7 +1649,8 @@ class Game {
         header = `<div class="cg-mtype pressure">🎭 THE WEIGHT OF THE NAME</div>`;
         prompt = 'The name is a burden today — how does he respond?';
       } else if (mk === 'life') {
-        header = `<div class="cg-mtype life">⚡ LIFE EVENT${s.lifeEvent ? ` · ${s.lifeEvent}` : ' · off the pitch'}</div>`;
+        const lifeLabel = s.lifeEvent ? (LIFE_LABEL as Record<string, string>)[s.lifeEvent] ?? s.lifeEvent : null;
+        header = `<div class="cg-mtype life">⚡ LIFE EVENT${lifeLabel ? ` · ${lifeLabel}` : ' · off the pitch'}</div>`;
         prompt = 'How does he handle it?';
       } else {
         header = `<div class="cg-mtype training">🏋️ TRAINING GROUND</div>`;
@@ -1700,7 +1702,7 @@ class Game {
     else if (this.careerTab === 'kit') content = this.kitTabHtml(s);
     else if (this.careerTab === 'life') content = this.offPitchHtml(s);
     else if (this.careerTab === 'league') content = this.leagueTableHtml(s);
-    else content = this.objectiveHtml(s) + this.rivalHtml(s) + this.intlHtml(s) + this.lifeDashHtml(s) + narr + recap + conseq + evt + body;
+    else content = this.objectiveHtml(s) + this.rivalHtml(s) + this.intlHtml(s) + this.lifeDashHtml(s) + narr + recap + lifeOutcome + conseq + evt + body;
     const tut = this.careerTab === 'now' ? this.tutorialHint(s) : '';
     $('academy-body').innerHTML = head + scene + tut + tabBar + content;
     ($('cg-tut-x') as any)?.addEventListener('click', () => { localStorage.setItem('fm_tut_done', '1'); ($('cg-tut') as any)?.remove(); });

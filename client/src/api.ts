@@ -22,7 +22,7 @@ export interface CareerState {
   age: number; chapter: string; turn: number; totalTurns: number; finished: boolean;
   seasonEvent?: { id: string; name: string; desc: string } | null; earnings?: number; deck?: CareerCard[];
   scenario?: { id: string; kind: string; demand: Record<string, number>; label: string; stakes: number };
-  story?: string; recap?: string; lifeEvent?: string;
+  story?: string; recap?: string; lifeEvent?: string; lastLifeOutcome?: string | null;
   energy?: number; meters?: Array<{ key: string; icon: string; label: string; value: number }>;
   focus?: Array<{ id: string; icon: string; name: string; desc: string; energy: number; effects: Record<string, number>; tag?: string }>;
   side?: boolean;

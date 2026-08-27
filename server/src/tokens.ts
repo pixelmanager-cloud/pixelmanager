@@ -4,7 +4,7 @@
 // home for every transition, replacing the old prospects/contracts/lifecycle/achievements split.
 import {
   overall, contractView, signContract, contractLength, legacyCard, legacyBoost, inheritGenes, rollGenes, graduate,
-  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, AGE_BANDS, moraleEffects, narratePlay, scenarioStory, chapterRecap, narrateCoach, narrateDraft, narrateOffer, careerCast, bandAt, cardName, CARD_DESC,
+  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, AGE_BANDS, moraleEffects, narratePlay, scenarioStory, chapterRecap, narrateCoach, narrateDraft, narrateOffer, careerCast, bandAt, cardName, CARD_DESC, LIFE_LABEL,
   type Player, type Track, type PlayerAchievements, type Genes, type CareerPlayerAttrs,
 } from '@fm/shared';
 import type { Token, Store } from './store.js';
@@ -197,19 +197,14 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
       st.story = legacyPressureStory(surname, (((c as any).seed >>> 0) + c.turn * 40503) >>> 0);
       moment = null;
     }
-    // RARE LIFE EVENTS (presentational re-skin only — no rng/mechanic change, so in-progress careers
-    // and the sim stay identical): a fraction of low-stakes SOCIAL moments become a contract standoff,
-    // a loan decision, or bouncing back from a public setback — resolved by the same card play.
-    const lifeHash = ((((c as any).seed >>> 0) ^ Math.imul(c.turn + 1, 2654435761)) >>> 0) % 100;
-    const LIFE_KINDS = ['contract', 'loan', 'setback', 'media', 'loyalty', 'role', 'fallout'];
-    const LIFE_LABEL: Record<string, string> = {
-      contract: 'a contract standoff', loan: 'a loan-move decision', setback: 'bouncing back from a public mistake',
-      media: 'a media storm', loyalty: 'a boyhood-club approach', role: 'a squad-role ultimatum', fallout: 'a public falling-out with a teammate',
-    };
-    if (!legacyPressure && kind === 'social' && st.scenario.stakes === 1 && c.age >= 16 && lifeHash < 22) {
-      kind = LIFE_KINDS[lifeHash % LIFE_KINDS.length];
-      st.scenario = { ...st.scenario, kind, label: LIFE_LABEL[kind] };
-      st.lifeEvent = kind;
+    // LIFE EVENTS: a REAL engine mechanic now (shared/src/career.ts — `Scenario.life`, chosen by a pure
+    // hash of seed+turn, never drawn from the rng() stream). Each of the 14 kinds carries its own good/bad
+    // meter+earnings consequence (LIFE_CONSEQUENCE), applied when the card resolves. Here we just SURFACE
+    // it: the label + story text, and — once it resolves — how it actually went (c.lastLifeEvent).
+    if (!legacyPressure && st.scenario.life) {
+      kind = st.scenario.life;
+      st.scenario = { ...st.scenario, kind, label: LIFE_LABEL[st.scenario.life] };
+      st.lifeEvent = st.scenario.life;
       moment = null;
     }
     if (!legacyPressure) {
@@ -296,9 +291,15 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
       tags: tagCounts, bigWins, flair: tagCounts.flair ?? 0,
     });
   }
+  // LIFE EVENT RESOLUTION: a short "how it went" beat once the last life-event card resolves — surfaced
+  // once, right after the moment (read from Career.lastLifeEvent, cleared on the next chapter boundary).
+  const lastLife = (c as any).lastLifeEvent as { kind: string; success: number; good: boolean } | null;
+  const lastLifeOutcome = lastLife
+    ? (lastLife.good ? `That went well — ${LIFE_LABEL[lastLife.kind as keyof typeof LIFE_LABEL]}, handled.` : `That didn't land — ${LIFE_LABEL[lastLife.kind as keyof typeof LIFE_LABEL]} leaves a mark.`)
+    : null;
   return {
     prospectId: t.id, name: t.name, generation: t.generation, pedigree: t.pedigree, agentId: t.agent_id, track: t.track,
-    turn: c.turn, totalTurns: TOTAL_TURNS, seasonEvent: c.seasonEvent, earnings: c.earnings, energy: c.energy, meters: c.meters, profile: prof, clubSeason: clubSeasonData, careerScore, objective, rival, international, offPitch, kit: t.kit_json ? JSON.parse(t.kit_json) : null, ...st,
+    turn: c.turn, totalTurns: TOTAL_TURNS, seasonEvent: c.seasonEvent, earnings: c.earnings, energy: c.energy, meters: c.meters, profile: prof, clubSeason: clubSeasonData, careerScore, objective, rival, international, offPitch, kit: t.kit_json ? JSON.parse(t.kit_json) : null, lastLifeOutcome, ...st,
   };
 }
 /** Graduate the finished career → the pro attrs to write onto the SAME token (state → pro). */
