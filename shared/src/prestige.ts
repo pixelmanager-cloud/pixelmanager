@@ -57,6 +57,63 @@ export interface Prestige {
   leagueTitles: number;
   cupTitles: number;
 }
+// ── Rank-up flavour (additive, presentational-only) ────────────────────────────────────────────────
+// Crossing a prestige rank is silent today — managerPrestige() just returns the new title. Add a
+// deterministic one-line "how it feels" blurb per rank, seeded off the record itself so two managers
+// hitting the same rank on different careers don't always read the identical sentence. Pure; no
+// change to prestigeScore/managerPrestige's existing behaviour. Not yet wired into
+// client/src/main.ts's showPrestigeCard (a client-shell change, left for the backlog).
+function hash32(...nums: number[]): number {
+  let h = 2166136261 >>> 0;
+  for (const n of nums) { h ^= (n >>> 0); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+const RANK_UP_BLURB: Record<string, string[]> = {
+  'Rookie Gaffer': [
+    'Every legend starts somewhere. This is where it begins.',
+    'First steps in the dugout. The rest is still to be written.',
+  ],
+  'Local Hero': [
+    'Word is getting around locally — this is a manager worth watching.',
+    'A reputation is starting to form in these parts.',
+  ],
+  'Promising Boss': [
+    'The wider footballing world is starting to take notice.',
+    'No longer just a local name — the profile is growing.',
+  ],
+  'Established Manager': [
+    'A genuinely established name in the dugout now — respect, not just recognition.',
+    'This is no longer a rising manager. This is an established one.',
+  ],
+  'Seasoned Tactician': [
+    'The tactics board tells the story: a seasoned operator now, in any dugout.',
+    'Years of decisions have sharpened into real, seasoned know-how.',
+  ],
+  'Trophy Winner': [
+    'Silverware on the shelf, and a title to match: Trophy Winner. Nobody can take that away.',
+    'The medals are starting to add up, and so is the reputation.',
+  ],
+  'Elite Manager': [
+    'Elite company now — the kind of name mentioned alongside the very best.',
+    'This is what an elite managerial career looks like from the inside.',
+  ],
+  'Footballing Legend': [
+    'Legend status. Whatever comes next, this is already a career for the history books.',
+    'A footballing legend, by any honest measure. The story writes itself from here.',
+  ],
+  'Immortal Gaffer': [
+    'Immortal. The very top of the managerial pyramid, reached and claimed.',
+    'There is no higher rank than this. A career for the ages.',
+  ],
+};
+/** A deterministic one-line blurb for crossing INTO `title` with this record — same record, same
+ *  rank always reads the same way; different records at the same rank vary. */
+export function prestigeRankUpBlurb(title: string, r: ManagerRecord): string {
+  const pool = RANK_UP_BLURB[title] ?? RANK_UP_BLURB['Rookie Gaffer'];
+  const h = hash32(r.wins, r.draws, r.losses, r.seasons, r.honours.length, 7331);
+  return pool[h % pool.length];
+}
+
 export function managerPrestige(r: ManagerRecord): Prestige {
   const score = prestigeScore(r);
   let levelIdx = 0;
