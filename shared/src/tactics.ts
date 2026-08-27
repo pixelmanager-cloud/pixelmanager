@@ -54,6 +54,24 @@ export interface TacticMods {
   staminaDrain: number;
 }
 
+const PRESET_NAMES = Object.keys(TACTIC_PRESETS);
+
+/**
+ * Deterministic seeded tactical IDENTITY for a CPU opponent. Previously every single-player
+ * opponent (league/continental/World-Finals) played flat DEFAULT_TACTICS 4-4-2 regardless of who
+ * they were — same shape, same sliders, every match. This picks one of the already-proven presets
+ * (balanced against each other by the anti-spam gate in strategy_test.ts, so none dominates) so a
+ * given opponent has a stable, recognisable style across the whole save — "Ashcombe Town press you
+ * high", "Kingsford United sit deep and hit you on the counter" — without inventing any new,
+ * untested tactical math. Pure hash of the seed: same club always plays the same way.
+ */
+export function seededOpponentTactics(seed: number): Tactics {
+  let h = (seed ^ 0x9e3779b9) >>> 0;
+  h = Math.imul(h ^ (h >>> 15), 0x2c1b3c6d) >>> 0;
+  h = (h ^ (h >>> 13)) >>> 0;
+  return { ...TACTIC_PRESETS[PRESET_NAMES[h % PRESET_NAMES.length]] };
+}
+
 export function deriveMods(t: Tactics): TacticMods {
   // Tactical effects are deliberately BOUNDED: stats are the primary driver, and a
   // tactical edge is worth ~1.5 overall rating points at most — enough to swing a close

@@ -249,6 +249,16 @@ content bar (a new interacting/trade-off decision, not a reskin).
 14. Club finances — gate/sponsor income (facilities already have this) → reinvest coins into facilities/staff/youth.
 15. More competitions — super cup, continental, friendlies (fitness).
 
+### 🎮 ✅ SHIPPED (2026-08-27, match-engine/tactics agent) — beyond the core four
+- **Seeded opponent tactical profiles** — every single-player opponent (league/continental/World-Finals)
+  used to play flat `DEFAULT_TACTICS` 4-4-2 regardless of who they were. Now each opponent's club seed
+  deterministically picks one of the already-proven `TACTIC_PRESETS` (Gegenpress/Park the Bus/Tiki-Taka/
+  Route One/Counter/Balanced) as its stable identity for the whole save — same club always plays the
+  same way, but different clubs genuinely feel different. Zero new tactical math (reuses presets already
+  balanced by the anti-spam gate), so calibration is untouched by construction. `seededOpponentTactics()`
+  in `shared/src/tactics.ts`; wired into all 3 SP fixture-creation sites in `client/src/main.ts`. Proven
+  by a new `strategy_test.ts` assertion: 40 seeded opponents → 6 distinct profiles, fully deterministic.
+
 **Guardrails (unchanged):** deterministic (no wall-clock/Math.random in shared/), `npm run verify` green with
 every engine-touching change (paste before/after calibration in the commit), one item per commit, fair not
 grindy, legible cause→effect. Sources: FM24 (Goal.com, Most Wanted Gamers), Goomba Stomp, gmgames.org.

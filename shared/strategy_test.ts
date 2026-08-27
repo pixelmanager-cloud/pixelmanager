@@ -1,7 +1,7 @@
 // Headless harness: calibrate scoring AND prove tactics change outcomes.
 import { MatchEngine } from './src/engine.js';
 import { generateTeam } from './src/teams.js';
-import { TACTIC_PRESETS, DEFAULT_TACTICS, type Tactics } from './src/tactics.js';
+import { TACTIC_PRESETS, DEFAULT_TACTICS, seededOpponentTactics, type Tactics } from './src/tactics.js';
 import type { Team, Role, Duty } from './src/types.js';
 
 interface Result { score: [number, number]; shots: [number, number]; poss: [number, number]; fitEnd: [number, number] }
@@ -156,6 +156,20 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
   }
   console.log(`[shape]     wide 3-4-3 vs narrow diamond: wide ${w}W-${l}L (want wide > narrow)`);
   assert(w > l, `a wide formation should beat a narrow one on the flanks (got ${w} vs ${l})`);
+}
+
+// ---- 9. Seeded opponent tactical profiles: stable per-seed identity, but varied across opponents ----
+// Every SP opponent used to play flat DEFAULT_TACTICS 4-4-2 regardless of who they were. Prove the
+// fix has real teeth: the same club seed always gets the same style (determinism), and a spread of
+// club seeds produces a genuine MIX of presets (not everyone funnelled into one style).
+{
+  const seeds = Array.from({ length: 40 }, (_, i) => (i * 2654435761) >>> 0);
+  const styles = new Set(seeds.map((s) => JSON.stringify(seededOpponentTactics(s))));
+  const repeat1 = JSON.stringify(seededOpponentTactics(seeds[3]));
+  const repeat2 = JSON.stringify(seededOpponentTactics(seeds[3]));
+  console.log(`[opp-style]  ${seeds.length} seeded opponents → ${styles.size} distinct tactical profiles (deterministic: ${repeat1 === repeat2})`);
+  assert(repeat1 === repeat2, 'seededOpponentTactics is not deterministic for the same seed');
+  assert(styles.size >= 3, `seeded opponents should show real tactical variety (got only ${styles.size} distinct profiles across ${seeds.length} seeds)`);
 }
 
 // ---- verdict ----

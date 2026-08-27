@@ -1,6 +1,6 @@
 import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, DUTY_LABEL, DUTIES_BY_ROLE, isDutyForRole,
-  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
+  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData, type MissionsData, type ContractInfo, type LeaderStat, type AwardRow } from './api';
 import { sprite } from './sprites';
@@ -237,7 +237,7 @@ class Game {
   editorMode: 'standing' | 'match' = 'standing';
   squadSort: SquadSort | null = null;
   pendingOpp?: { id: string; handle: string; venue: 'home' | 'away' };
-  spFixture: { idx: number; oppClub: Club; oppName: string; oppStrength: number; venue: 'home' | 'away'; oppLineup: Lineup; comp?: 'league' | 'cont' | 'wc'; contRound?: number } | null = null; // the single-player fixture being played
+  spFixture: { idx: number; oppClub: Club; oppName: string; oppStrength: number; venue: 'home' | 'away'; oppLineup: Lineup; oppTactics: Tactics; comp?: 'league' | 'cont' | 'wc'; contRound?: number } | null = null; // the single-player fixture being played
   pendingCont: { myGoals: number; oppGoals: number; oppStrength: number } | null = null; // a continental tie awaiting resolution once the full-time card is dismissed
   pendingWc: { myGoals: number; oppGoals: number; oppName: string } | null = null; // a World-Finals knockout tie awaiting resolution
   draftPlan = new Set<string>();          // armed conditional match-plan rule ids (single-player)
@@ -878,9 +878,11 @@ class Game {
     if (!m.contElig || m.contOut || round >= 3) return;
     const tie = contOpponent(this.leagueSeed(), m.season, round as 0 | 1 | 2);
     const short = (tie.oppName.match(/[A-Z]/g) ?? ['C', 'O', 'N']).join('').slice(0, 3);
-    const oppClub = generateClub('cont-' + m.season + '-' + round, tie.oppName, short, 0x8844cc, tie.oppStrength, (this.leagueSeed() ^ (round * 131)) >>> 0);
+    const oppSeed = (this.leagueSeed() ^ (round * 131)) >>> 0;
+    const oppClub = generateClub('cont-' + m.season + '-' + round, tie.oppName, short, 0x8844cc, tie.oppStrength, oppSeed);
     const venue: 'home' | 'away' = tie.neutral ? 'home' : (round % 2 === 0 ? 'home' : 'away'); // final on neutral ground, else alternate
-    this.spFixture = { idx: -1, oppClub, oppName: tie.oppName, oppStrength: tie.oppStrength, venue, oppLineup: autoPickXI(oppClub, '4-4-2'), comp: 'cont', contRound: round };
+    const oppTactics = seededOpponentTactics(oppSeed);
+    this.spFixture = { idx: -1, oppClub, oppName: tie.oppName, oppStrength: tie.oppStrength, venue, oppLineup: autoPickXI(oppClub, oppTactics.formation), oppTactics, comp: 'cont', contRound: round };
     this.openLineup('match', { id: 'cont-opp', handle: tie.oppName, venue });
   }
   private simContinentalTie() {
@@ -974,9 +976,11 @@ class Game {
     const { path, nation } = this.wcData(m.wcEdition);
     const opp = this.wcStageOpp(path, stage);
     const short = (opp.opp.match(/[A-Z]/g) ?? ['N', 'A', 'T']).join('').slice(0, 3);
-    const oppClub = generateClub('wc-' + m.wcEdition + '-' + stage, opp.opp, short, 0x3a7bd5, opp.oppStrength, (this.leagueSeed() ^ ([...opp.opp].reduce((a, c) => a + c.charCodeAt(0), 0) * 131)) >>> 0);
+    const oppSeed = (this.leagueSeed() ^ ([...opp.opp].reduce((a, c) => a + c.charCodeAt(0), 0) * 131)) >>> 0;
+    const oppClub = generateClub('wc-' + m.wcEdition + '-' + stage, opp.opp, short, 0x3a7bd5, opp.oppStrength, oppSeed);
     void nation;
-    this.spFixture = { idx: -1, oppClub, oppName: opp.opp, oppStrength: opp.oppStrength, venue: 'home', oppLineup: autoPickXI(oppClub, '4-4-2'), comp: 'wc' }; // neutral ground → treat as home (no home edge applied in startSpMatchWith for wc? kept simple)
+    const oppTactics = seededOpponentTactics(oppSeed);
+    this.spFixture = { idx: -1, oppClub, oppName: opp.opp, oppStrength: opp.oppStrength, venue: 'home', oppLineup: autoPickXI(oppClub, oppTactics.formation), oppTactics, comp: 'wc' }; // neutral ground → treat as home (no home edge applied in startSpMatchWith for wc? kept simple)
     this.openLineup('match', { id: 'wc-opp', handle: opp.opp, venue: 'home' });
   }
   private playWorldCupTie() { const s = this.loadMgr().wcStage; if (s === 'qf' || s === 'sf' || s === 'final') this.wcTie(s); }
@@ -1151,7 +1155,8 @@ class Game {
     const short = (opp.name.match(/[A-Z]/g) ?? ['O', 'P', 'P']).join('').slice(0, 3);
     const oppClub = generateClub('sp-' + opp.seed, opp.name, short, 0xcc4444, opp.strength, opp.seed);
     const venue: 'home' | 'away' = f.venue === 'H' ? 'home' : 'away';
-    this.spFixture = { idx, oppClub, oppName: opp.name, oppStrength: opp.strength, venue, oppLineup: autoPickXI(oppClub, '4-4-2') };
+    const oppTactics = seededOpponentTactics(opp.seed);
+    this.spFixture = { idx, oppClub, oppName: opp.name, oppStrength: opp.strength, venue, oppLineup: autoPickXI(oppClub, oppTactics.formation), oppTactics };
     this.openLineup('match', { id: 'sp-opp', handle: opp.name, venue });
   }
 
@@ -1190,7 +1195,7 @@ class Game {
     if (staff.includes('attack')) myTeam.homeBoost = (myTeam.homeBoost ?? 1) * 1.03;
     if (staff.includes('assistant')) { myTeam.homeBoost = (myTeam.homeBoost ?? 1) * 1.02; myTeam.conditioning = (myTeam.conditioning ?? 1) * 0.98; }
     const oppTeam = buildXI(sp.oppClub, sp.oppLineup);
-    const oppTactics: Tactics = { formation: '4-4-2', mentality: 0, line: 0, press: 0, tempo: 0, width: 0 };
+    const oppTactics: Tactics = sp.oppTactics;
     const iAmHome = sp.venue === 'home';
     const me = { id: 'me', handle: this.club.name, team: myTeam, tactics: this.draftTactics };
     const them = { id: 'opp', handle: sp.oppName, team: oppTeam, tactics: oppTactics };
