@@ -191,6 +191,36 @@ const STARTER_IDS = ['ice-veins', 'crunch', 'splitter', 'anchor', 'lung-buster',
 export const STARTER_DECK: Card[] = DECK.filter((c) => STARTER_IDS.includes(c.id));
 export const DRAFT_POOL: Card[] = DECK.filter((c) => !STARTER_IDS.includes(c.id));
 
+// ── DECK CHEMISTRY: a real deck-building strategy layer on top of the (now large) card pool. Each named
+// SYNERGY is a pair of tags; collecting enough BLEND cards that carry BOTH tags together (not just either
+// one) "activates" it, giving the player a small, permanent lean toward those tags — so WHICH cards you
+// draft matters strategically (build a focused identity), not just how many you've collected. Pure and
+// deterministic: derived from the final deck composition only, no rng, no card-play-order dependence.
+export interface Synergy { id: string; name: string; tags: [Tag, Tag]; threshold: number; desc: string }
+export const SYNERGIES: Synergy[] = [
+  { id: 'playmaker',   name: 'Playmaker Chemistry',    tags: ['creativity', 'teamwork'],   threshold: 3, desc: 'Vision and unselfishness, drilled together — he sees the pass AND makes it.' },
+  { id: 'enforcer',    name: 'Enforcer Chemistry',     tags: ['aggression', 'leadership'], threshold: 3, desc: 'Nobody messes with a side he marshals.' },
+  { id: 'entertainer', name: 'Entertainer Chemistry',  tags: ['flair', 'composure'],       threshold: 3, desc: 'The outrageous, delivered with total calm.' },
+  { id: 'engine-room', name: 'Engine-Room Chemistry',  tags: ['stamina', 'teamwork'],       threshold: 3, desc: 'Covers every blade of grass, always for someone else.' },
+  { id: 'general',     name: 'General Chemistry',      tags: ['aggression', 'composure'],   threshold: 3, desc: 'Reads the danger early and deals with it without fuss.' },
+  { id: 'talisman',    name: 'Talisman Chemistry',     tags: ['leadership', 'creativity'],  threshold: 3, desc: 'The one the team looks to when it needs an answer.' },
+  { id: 'flanker',     name: 'Flanker Chemistry',      tags: ['stamina', 'flair'],          threshold: 3, desc: 'Torments a full-back for ninety minutes and never stops running.' },
+  { id: 'sweeper-gk',  name: 'Sweeper-Keeper Chemistry', tags: ['keeping', 'composure'],    threshold: 3, desc: 'Calm enough with the ball at his feet to start attacks from his own box.' },
+];
+/** Which synergies a deck has ACTIVATED (enough blend cards sharing both tags of the pair). */
+export function activeSynergies(deck: Card[]): Synergy[] {
+  return SYNERGIES.filter((s) => deck.filter((c) => c.tags.includes(s.tags[0]) && c.tags.includes(s.tags[1])).length >= s.threshold);
+}
+// how much each active synergy leans its two tags — merged into the attribute-focus channel in deriveStats
+// (see FOCUS_TAG_WEIGHT), so chemistry is a real, if modest, on-top-of-cards bonus, not a card replacement.
+const SYNERGY_TAG_POINTS = 2;
+/** Deck chemistry expressed as virtual attribute-focus points (see deriveStats/FOCUS_TAG_WEIGHT). */
+export function chemistryFocus(deck: Card[]): Partial<Record<Tag, number>> {
+  const out: Partial<Record<Tag, number>> = {};
+  for (const s of activeSynergies(deck)) for (const t of s.tags) out[t] = (out[t] ?? 0) + SYNERGY_TAG_POINTS;
+  return out;
+}
+
 // The goalkeeper track's deck: keeping-focused with a few shared mental cards. A GK career draws
 // from this instead of the outfield DECK, so `keeping` (and the calm/commanding traits that suit a
 // keeper) is what grows.
@@ -868,8 +898,15 @@ export class Career {
 
   /** The financial/agent context graduate() needs (greed, fame, earnings, injuries, exposure). */
   finContext(): GraduateCtx {
-    return { seriousInjuries: this.seriousInjuries, agentGreed: this.agent?.greed ?? 0, agentExposure: this.agent?.exposure ?? 1, greedBonus: this.greedBonus, marketBonus: this.marketBonus, earnings: this.earnings, attrFocus: this.attrFocus };
+    // deck CHEMISTRY (see SYNERGIES) merges into the same attribute-focus channel as the summer training
+    // picks — a deliberate, focused deck earns the same kind of small, capped lean deriveStats already understands.
+    const chem = chemistryFocus(this.deck);
+    const attrFocus: Partial<Record<Tag, number>> = { ...this.attrFocus };
+    for (const t of Object.keys(chem) as Tag[]) attrFocus[t] = (attrFocus[t] ?? 0) + (chem[t] ?? 0);
+    return { seriousInjuries: this.seriousInjuries, agentGreed: this.agent?.greed ?? 0, agentExposure: this.agent?.exposure ?? 1, greedBonus: this.greedBonus, marketBonus: this.marketBonus, earnings: this.earnings, attrFocus };
   }
+  /** Deck chemistry ACTIVE right now — a live strategic readout of how his card collection is shaping up. */
+  get chemistry(): Synergy[] { return activeSynergies(this.deck); }
 
   /** Reconstruct a career from a snapshot by replaying its actions (deterministic → exact state). A
    *  buyer resumes development from precisely where the seller left off. */
@@ -1460,7 +1497,10 @@ export function ageCurve(prime: CareerPlayerAttrs, age: number): CareerPlayerAtt
 // and its physical gene ceiling (the scarce, un-grindable part). Deterministic + verifiable.
 export interface ProspectValue { age: number; chapter: string; role: Role; currentOverall: number; potential: number; physicalCeiling: number; stars: number }
 export function prospectValuation(c: Career, genes: Genes): ProspectValue {
-  const partial = deriveStats(c.log, c.seed, genes, c.attrFocus); // stats so far (deterministic)
+  const chem = chemistryFocus(c.deck);
+  const focus: Partial<Record<Tag, number>> = { ...c.attrFocus };
+  for (const t of Object.keys(chem) as Tag[]) focus[t] = (focus[t] ?? 0) + (chem[t] ?? 0);
+  const partial = deriveStats(c.log, c.seed, genes, focus); // stats so far (deterministic, incl. deck chemistry)
   const role = deriveRole(partial);
   const current = careerOverall(partial, role);
   const remaining = Math.max(0, 1 - c.turn / TOTAL_TURNS);     // fraction of the career still to develop

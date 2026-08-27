@@ -21,6 +21,7 @@ export interface CareerState {
   prospectId: string; name: string; pedigree: number; agentId?: string | null; phase: 'play' | 'coach' | 'draft' | 'offer' | 'focus';
   age: number; chapter: string; turn: number; totalTurns: number; finished: boolean;
   seasonEvent?: { id: string; name: string; desc: string } | null; earnings?: number; deck?: CareerCard[];
+  chemistry?: { id: string; name: string; tags: string[]; desc: string }[];
   scenario?: { id: string; kind: string; demand: Record<string, number>; label: string; stakes: number };
   story?: string; recap?: string; lifeEvent?: string; lastLifeOutcome?: string | null;
   energy?: number; meters?: Array<{ key: string; icon: string; label: string; value: number }>;
