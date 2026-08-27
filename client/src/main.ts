@@ -1152,6 +1152,17 @@ class Game {
     return hint ? `<div class="cg-tut" id="cg-tut">${hint} <button class="cg-tut-x" id="cg-tut-x">Got it ✕</button></div>` : '';
   }
 
+  /** The stage objective — a target the club/coach sets for this chapter, with a progress bar. Gives each
+   *  stage direction and a reward beat when it's hit. */
+  private objectiveHtml(s: import('./api').CareerState): string {
+    const o = s.objective; if (!o) return '';
+    const pct = Math.min(100, Math.round((o.progress / o.target) * 100));
+    return `<div class="cg-objective${o.done ? ' done' : ''}"><div class="cg-obj-top"><span class="cg-obj-lbl">🎯 STAGE OBJECTIVE</span>`
+      + `<span class="cg-obj-prog">${o.done ? '✓ complete' : `${o.progress}/${o.target}`}</span></div>`
+      + `<div class="cg-obj-desc">${o.desc}</div>`
+      + `<div class="cg-obj-bar"><b style="width:${pct}%"></b></div></div>`;
+  }
+
   /** The handoff moment: he's a first-team regular — the game switches from playing his career to
    *  MANAGING the club he plays for. Graduates him into your squad, then enters the manager season. */
   private renderHandoff(s: import('./api').CareerState) {
@@ -1185,7 +1196,8 @@ class Game {
     acad.style.setProperty('--cg-accent', th.accent); acad.style.setProperty('--cg-bg', th.bg);
     const scene = `<div class="cg-scene"><span class="cg-scene-emoji">${th.scene}</span><span class="cg-scene-tag"><b>${s.chapter}</b> · ${th.tagline}</span></div>`;
     const head = `<div class="cg-head"><button id="cg-back">←</button><span class="cg-age">${s.name} · age ${s.age}</span>`
-      + `<span class="cg-chapter">${s.chapter}</span><div class="cg-bar"><i style="width:${pct}%"></i></div><span class="pr-meta">${s.turn}/${s.totalTurns}</span></div>`;
+      + `<span class="cg-chapter">${s.chapter}</span><div class="cg-bar"><i style="width:${pct}%"></i></div><span class="pr-meta">${s.turn}/${s.totalTurns}</span>`
+      + (s.careerScore != null ? `<span class="cg-score" title="Career score — climbs with every good moment; beat it next run">★ ${s.careerScore.toLocaleString()}</span>` : '') + `</div>`;
     const evt = s.seasonEvent ? `<div class="cg-event"><b>${s.seasonEvent.name}</b> — ${s.seasonEvent.desc}</div>` : '';
     const prof = s.profile ? this.careerProfileHtml(s.profile) : '';
     const narr = this.lastNarration ? this.outcomeChipHtml() + `<div class="cg-narrate">“${this.lastNarration}”</div>` : '';
@@ -1264,7 +1276,7 @@ class Game {
     if (this.careerTab === 'player') content = prof + this.deckHtml(s);
     else if (this.careerTab === 'kit') content = this.kitTabHtml(s);
     else if (this.careerTab === 'league') content = this.leagueTableHtml(s);
-    else content = this.lifeDashHtml(s) + narr + recap + conseq + evt + body;
+    else content = this.objectiveHtml(s) + this.lifeDashHtml(s) + narr + recap + conseq + evt + body;
     const tut = this.careerTab === 'now' ? this.tutorialHint(s) : '';
     $('academy-body').innerHTML = head + scene + tut + tabBar + content;
     ($('cg-tut-x') as any)?.addEventListener('click', () => { localStorage.setItem('fm_tut_done', '1'); ($('cg-tut') as any)?.remove(); });

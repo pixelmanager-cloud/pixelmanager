@@ -4,7 +4,7 @@
 // home for every transition, replacing the old prospects/contracts/lifecycle/achievements split.
 import {
   overall, contractView, signContract, contractLength, legacyCard, legacyBoost, inheritGenes, rollGenes, graduate,
-  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, moraleEffects, narratePlay, scenarioStory, chapterRecap, narrateCoach, narrateDraft, narrateOffer, bandAt, cardName, CARD_DESC,
+  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, AGE_BANDS, moraleEffects, narratePlay, scenarioStory, chapterRecap, narrateCoach, narrateDraft, narrateOffer, bandAt, cardName, CARD_DESC,
   type Player, type Track, type PlayerAchievements, type Genes, type CareerPlayerAttrs,
 } from '@fm/shared';
 import type { Token, Store } from './store.js';
@@ -246,9 +246,28 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
     const seasonSeed = (((c as any).seed >>> 0) ^ Math.imul(bandIdx + 1, 2654435761)) >>> 0;
     clubSeasonData = { ...clubSeason(clubName, strength, share, seasonSeed), apps, status };
   }
+  // CAREER SCORE — a single headline number that climbs with every good moment (weighted by the stakes).
+  // A satisfying meta-number + the replay hook (beat your best run). Presentational (from the log).
+  const careerScore = Math.round(c.log.reduce((s, ch) => s + ch.success * 8 * (ch.stakes ?? 1), 0));
+  // SEASON OBJECTIVE — a per-stage target that gives each chapter direction + a reward beat. Seeded per
+  // stage, progress read from this stage's log entries. Deterministic; presentational (no engine change).
+  let objective: { desc: string; target: number; progress: number; done: boolean } | null = null;
+  if (st.phase === 'play' && !c.finished) {
+    const bandStart = AGE_BANDS.slice(0, bandIdx).reduce((s, b) => s + b.turns, 0);
+    const bandLog = c.log.slice(bandStart, c.turn);
+    const band = AGE_BANDS[bandIdx];
+    const OBJS = [
+      { id: 'strong', test: (ch: any) => ch.success >= 0.68, target: Math.max(2, Math.round(band.turns * 0.35)), label: (n: number) => `Turn in ${n} strong displays this stage` },
+      { id: 'big', test: (ch: any) => ch.stakes >= 2 && ch.success >= 0.6, target: 2, label: (n: number) => `Rise to the occasion in ${n} big-game moments` },
+      { id: 'reads', test: (ch: any) => ch.fit >= ch.bestFit - 0.05, target: Math.max(3, Math.round(band.turns * 0.3)), label: (n: number) => `Read the game right ${n} times (perfect reads)` },
+    ].filter((o) => o.id !== 'big' || band.maxStakes >= 2); // big-game target only where big games happen
+    const pick = OBJS[((((c as any).seed >>> 0) ^ Math.imul(bandIdx + 1, 2654435761)) >>> 0) % OBJS.length];
+    const progress = Math.min(pick.target, bandLog.filter(pick.test).length);
+    objective = { desc: pick.label(pick.target), target: pick.target, progress, done: progress >= pick.target };
+  }
   return {
     prospectId: t.id, name: t.name, generation: t.generation, pedigree: t.pedigree, agentId: t.agent_id, track: t.track,
-    turn: c.turn, totalTurns: TOTAL_TURNS, seasonEvent: c.seasonEvent, earnings: c.earnings, energy: c.energy, meters: c.meters, profile: prof, clubSeason: clubSeasonData, kit: t.kit_json ? JSON.parse(t.kit_json) : null, ...st,
+    turn: c.turn, totalTurns: TOTAL_TURNS, seasonEvent: c.seasonEvent, earnings: c.earnings, energy: c.energy, meters: c.meters, profile: prof, clubSeason: clubSeasonData, careerScore, objective, kit: t.kit_json ? JSON.parse(t.kit_json) : null, ...st,
   };
 }
 /** Graduate the finished career → the pro attrs to write onto the SAME token (state → pro). */
