@@ -23,8 +23,8 @@ function cleanRoles(body: any): { captainIdx?: number; takers?: { pen?: number; 
 import { db, type Account, type StandingOrders, type Listing } from './db.js';
 import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMATIONS } from './game.js';
 import { hashPassword, verifyPassword } from './auth.js';
-import { generatePool, trialistAt, LOANEE_CAP, OPP_REVEAL, describeIntel, type OppTier } from './scouting.js';
-import { DESTINATIONS, destinationById, rollMission, travelMs as travelMsPure, previewOdds } from '@fm/shared';
+import { describeIntel } from './scouting.js';
+import { generatePool, trialistAt, LOANEE_CAP, OPP_REVEAL, type OppTier, DESTINATIONS, destinationById, rollMission, travelMs as travelMsPure, previewOdds } from '@fm/shared';
 
 // Scouting-network runtime config (env-driven, so not part of the pure @fm/shared rules).
 const TRIPS_PER_SEASON = Math.max(1, Number(process.env.SCOUT_TRIPS_PER_SEASON ?? 3));
