@@ -703,7 +703,7 @@ class Game {
     base -= Math.round(((a.pace ?? 11) - 12) * 0.2);   // pace-reliant players decline earlier
     const h = [...player.id].reduce((x, c) => (x * 31 + c.charCodeAt(0)) >>> 0, 7); // deterministic per player
     base += (h % 5) - 2;                               // an individual quirk (±2 years)
-    return Math.max(30, Math.min(41, Math.round(base)));
+    return Math.max(32, Math.min(41, Math.round(base)));
   }
 
   private spTableHtml(t: ReturnType<typeof liveTable>): string {
