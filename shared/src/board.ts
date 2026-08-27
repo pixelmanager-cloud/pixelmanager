@@ -134,3 +134,56 @@ export function boardStanding(seed: number, input: BoardMoodInput): BoardStandin
   const h = hash32(seed, input.matchesPlayed * 613 + 11, input.position * 17, score + 1000);
   return { mood, score, message: pick(h, MOOD_LINES[mood]) };
 }
+
+// ── Deriving an expectation from club stature (batch-3 backlog item) ────────────────────────────────
+// boardStanding()/boardScore() need a BoardExpectation band, but nothing produced one — every call site
+// had to invent its own heuristic. This maps "how good is this manager/club right now" into that band
+// without board.ts having to know anything about prestige.ts's or clubseason.ts's actual types (same
+// decoupling principle as the rest of this file): the caller reduces its own state down to a small,
+// generic ExpectationInput first.
+
+/** A coarse "how did the club finish, relative to ITS OWN division, last time out" band — deliberately
+ *  the same vocabulary `gaffersDiaryEntry`'s table-position candidates already use, so a caller with a
+ *  `DiaryTable`-shaped prior season can derive this trivially (finished in the promote spots ⇒
+ *  'promotion', etc.) without board.ts importing anything from clubseason.ts/gaffersDiary.ts. */
+export type PriorFinish = 'title' | 'promotion' | 'playoffs' | 'midtable' | 'survival' | 'relegated' | null;
+
+export interface ExpectationInput {
+  /** The manager's career prestige level index (0 = Rookie Gaffer .. 8 = Immortal Gaffer, matching
+   *  `PRESTIGE_LEVELS` in prestige.ts) — a bigger reputation raises what's expected of them, independent
+   *  of which club they're actually at right now. */
+  prestigeLevelIdx: number;
+  /** How the CLUB finished last season, if there was one (null for a brand-new save / a manager's first
+   *  season at this club) — tempers or raises the reputation-driven baseline. */
+  priorFinish: PriorFinish;
+}
+
+const EXPECTATION_ORDER: readonly BoardExpectation[] = ['survival', 'midtable', 'playoffs', 'promotion', 'title'];
+
+/** A reputation-only baseline expectation band, before last season's finish is factored in. */
+function baselineFromPrestige(prestigeLevelIdx: number): BoardExpectation {
+  if (prestigeLevelIdx >= 7) return 'title';      // Footballing Legend, Immortal Gaffer
+  if (prestigeLevelIdx >= 5) return 'promotion';  // Trophy Winner, Elite Manager
+  if (prestigeLevelIdx >= 3) return 'playoffs';   // Established Manager, Seasoned Tactician
+  if (prestigeLevelIdx >= 1) return 'midtable';   // Local Hero, Promising Boss
+  return 'survival';                              // Rookie Gaffer
+}
+
+/** Pure `expectation` derivation for `BoardMoodInput` — reputation sets the baseline, last season's
+ *  finish nudges it up (a big season raises the bar) or down (the board tempers expectations after a
+ *  relegation or a bare-survival scrap, even for a big-name manager). Clamped to the same 5-band scale
+ *  `boardScore()` already understands. */
+export function deriveExpectation(input: ExpectationInput): BoardExpectation {
+  let idx = EXPECTATION_ORDER.indexOf(baselineFromPrestige(input.prestigeLevelIdx));
+  switch (input.priorFinish) {
+    case 'title':
+    case 'promotion': idx += 1; break;
+    case 'relegated': idx -= 2; break;
+    case 'survival': idx -= 1; break;
+    case 'playoffs':
+    case 'midtable':
+    case null: break; // roughly on-target — no nudge
+  }
+  idx = Math.max(0, Math.min(EXPECTATION_ORDER.length - 1, idx));
+  return EXPECTATION_ORDER[idx];
+}
