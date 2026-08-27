@@ -8,7 +8,8 @@ import type { Store, Season, PodRef } from './store.js';
 import { buildTable, elo, randomSeed } from './game.js';
 import { seasonPlacementReward, WIN_COINS, DRAW_COINS, LOSS_COINS } from '@fm/shared';
 import { trainingConditioning, stadiumIncome, fanIncomeMult, fanHomeBoost, sponsorIncome, squadMarketability, rollMatchInjuries } from '@fm/shared';
-import { unavailableTokenIds, tokenToPlayer } from './tokens.js';
+import { unavailableTokenIds } from './tokens.js';
+import { tokenToPlayer } from '@fm/shared';
 import { advanceTokensAtRollover } from './lifecycle.js';
 import { recordMatchStats } from './matchstats.js';
 

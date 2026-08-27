@@ -7,7 +7,8 @@ import {
   youthPoolBonus, youthUpgradeChance, scoutHitMult, scoutCostDiscount, scoutExtraTrips, fanIncomeMult, fanHomeBoost,
   type Lineup, type Tactics, type FacilityKey,
 } from '@fm/shared';
-import { mintGenesis, tokenToPlayer, tokenContract, tokenAch, legendCardOf, unavailableTokenIds, loadCareer, actWithNarration, careerState, graduatedFields, rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, ageOf, SUPPLY_CAP, GENESIS_COST, REBORN_COST, MARKET_FEE_PCT, type CareerAction } from './tokens.js';
+import { mintGenesis, unavailableTokenIds, SUPPLY_CAP, GENESIS_COST, REBORN_COST, MARKET_FEE_PCT } from './tokens.js';
+import { tokenToPlayer, tokenContract, tokenAch, legendCardOf, loadCareer, actWithNarration, careerState, graduatedFields, rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, ageOf, type CareerAction } from '@fm/shared';
 import { bumpApps, bumpMorale, advanceTokensAtRollover } from './lifecycle.js';
 import { recordMatchStats } from './matchstats.js';
 const isNftPlayer = (id: string) => id.startsWith('nft:');

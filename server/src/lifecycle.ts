@@ -2,9 +2,8 @@
 // achievements + peak ability, and once it ages past 40 it RETIRES — a legacy card is saved as a
 // keepsake and a testimonial pays the owner. The SAME token stays owned (state → retired), ready to be
 // reborn into the next generation. Achievements live on the token, so they follow it through sales.
-import { overall, updateMorale, driftMorale, developAttrs, RETIREMENT_AGE, type MoraleEvent } from '@fm/shared';
+import { overall, updateMorale, driftMorale, developAttrs, RETIREMENT_AGE, tokenToPlayer, ageOf, legendCardOf, type MoraleEvent } from '@fm/shared';
 import type { Store } from './store.js';
-import { tokenToPlayer, ageOf, legendCardOf } from './tokens.js';
 
 /** Nudge a token's morale by one event (played/benched/extended/trophy). */
 export async function bumpMorale(db: Store, tokenId: string, event: MoraleEvent): Promise<void> {
