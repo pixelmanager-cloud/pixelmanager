@@ -39,6 +39,33 @@ export const DUTY_LABEL: Record<Duty, string> = {
   'false-9': 'False 9',
 };
 
+/**
+ * Authentic one-line definitions, real coaching/scouting terminology (see
+ * docs/research-manager-career.md §2) — pure flavour, shown as a tooltip on the duty
+ * dropdown in the lineup editor and woven into scout-report copy. No gameplay effect.
+ */
+export const DUTY_DESC: Record<Duty, string> = {
+  'keeper': 'Stays on his line — shot-stopping first, distribution second.',
+  'sweeper-keeper': 'An auxiliary defender — sweeps up behind a high line and starts attacks with quick distribution.',
+  'cover': 'Sits off, reads the game, and covers space rather than diving into duels.',
+  'stopper': 'Steps up to engage and win the ball — meets attackers head-on.',
+  'ball-playing-defender': 'Comfortable in possession — brings it out of defence and starts attacks from deep.',
+  'inverted-fullback': 'Tucks infield into midfield in possession instead of hugging the touchline.',
+  'wing-back': 'Bombs on as an auxiliary winger — width and end product from a defensive slot.',
+  'sweeper': 'The old-school libero — covers rather than engages, stepping forward to sweep up loose balls.',
+  'anchor': 'Pure destroyer — sits, screens the back four, and never strays from his zone.',
+  'wide-playmaker': 'Hugs the touchline but dictates play from out there, like a winger who thinks like a No.10.',
+  'inverted-winger': "Cuts inside off the touchline onto his stronger foot, hunting the box instead of the byline.",
+  'box-to-box': 'Covers the full length of the pitch — mobility and stamina over a fixed zone.',
+  'playmaker': 'Beats you with passing, not dribbling — the side\'s creative hub.',
+  'ball-winner': 'Hunts the ball and breaks up play — a destroyer with license to close down hard.',
+  'deep-lying-playmaker': 'The regista — sits deep and dictates tempo, spraying passes rather than carrying the ball.',
+  'poacher': 'Lives for the six-yard box — minimal build-up involvement, maximum finishing instinct.',
+  'target-man': 'Physically dominant, back to goal — wins aerial ball and holds up play for others.',
+  'pressing-forward': 'Defends from the front — first line of the press, harrying centre-backs into mistakes.',
+  'false-9': 'Drops off the front line to overload midfield, dragging his marker out of position.',
+};
+
 export interface DutyMods {
   /** scales how far the player pushes upfield when their team attacks (1 = neutral). */
   push: number;

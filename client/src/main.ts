@@ -1,6 +1,7 @@
 import {
-  MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, DUTY_LABEL, DUTIES_BY_ROLE, isDutyForRole,
-  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
+  MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
+  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry,
+  FORMATIONS as FORMATION_SHAPES, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type Trialist, type MissionsData, type ContractInfo } from './api';
 import { sprite } from './sprites';
@@ -66,18 +67,29 @@ const LEVELS: Record<keyof Omit<Tactics, 'formation' | 'offsideTrap' | 'playOutO
   tempo: ['Very Patient', 'Patient', 'Balanced', 'Direct', 'Very Direct'],
   width: ['Very Narrow', 'Narrow', 'Balanced', 'Wide', 'Very Wide'],
 };
+// In-fiction "manager's notebook" explainer for each slider — real coaching principle behind the
+// number, not a restatement of the mechanic (docs/research-manager-career.md §3). Pure flavour tooltip.
+const TAC_NOTE: Record<keyof typeof LEVELS, string> = {
+  mentality: "How far you push bodies forward when you've got the ball — go Attacking and you risk men caught upfield if it breaks down; sit Defensive and you bank numbers behind the ball.",
+  line: 'How high your back line holds. A high line compresses the pitch and squeezes the opponent into risky forward passes — but the space in behind grows if it\'s beaten.',
+  press: "How hard you hunt the ball the moment you lose it. Full Gegenpress is Klopp's five-second rule: win it back inside five seconds while they're disorganised, or abandon the chase and drop into shape.",
+  tempo: 'Patient keeps it on the deck through midfield, working the opening; Direct goes long and early, betting on the second ball over control of it.',
+  width: 'How far your shape stretches side to side. Wide creates room out on the flanks for crosses and overlaps; Narrow packs bodies through the middle for combination play.',
+};
 // ── Match plan: conditional in-game orders ──────────────────────────────────────────────────────
 // Pre-match rules the manager arms; each fires ONCE during a single-player match when its trigger is met
 // (minute reached + scoreline), auto-shifting your tactics via the engine's setTactics. Shifts are applied
 // from the kickoff tactics (last-fired situation wins), each field clamped to the −2..+2 tactic range.
 type TacticKey = keyof Omit<Tactics, 'formation'>;
-interface PlanRule { id: string; ico: string; ifText: string; thenText: string; minMinute: number; cond: (my: number, opp: number) => boolean; shift: Partial<Record<TacticKey, number>>; fired: string }
+interface PlanRule { id: string; ico: string; ifText: string; thenText: string; minMinute: number; cond: (my: number, opp: number) => boolean; shift: Partial<Record<TacticKey, number>>; fired: string; note?: string }
 const MATCH_PLAN_RULES: PlanRule[] = [
   { id: 'chase-ht', ico: '🔴', ifText: 'Losing at half-time', thenText: 'throw men forward — more attacking, higher line', minMinute: 45, cond: (my, opp) => my < opp, shift: { mentality: +1, line: +1, tempo: +1 }, fired: '📋 Behind at the break — going more attacking' },
   { id: 'chase-late', ico: '🟠', ifText: 'Still losing at 70′', thenText: 'all-out attack for the comeback', minMinute: 70, cond: (my, opp) => my < opp, shift: { mentality: +2, line: +1, press: +1, tempo: +1 }, fired: '📋 Chasing the game — all-out attack' },
-  { id: 'hold-lead', ico: '🟢', ifText: 'Leading at 75′', thenText: 'see it out — drop deeper, slow the tempo', minMinute: 75, cond: (my, opp) => my > opp, shift: { mentality: -1, line: -1, press: -1, tempo: -1 }, fired: '📋 Protecting the lead — shutting up shop' },
+  { id: 'hold-lead', ico: '🟢', ifText: 'Leading at 75′', thenText: 'see it out — drop deeper, slow the tempo', minMinute: 75, cond: (my, opp) => my > opp, shift: { mentality: -1, line: -1, press: -1, tempo: -1 }, fired: '📋 Protecting the lead — shutting up shop',
+    note: '"Park the bus" — an ultra-defensive block with numbers behind the ball. Mourinho, after a 2004 goalless draw: "they brought the bus and they left the bus in front of the goal."' },
   { id: 'push-draw', ico: '🟡', ifText: 'Level at 78′', thenText: 'go for the winner', minMinute: 78, cond: (my, opp) => my === opp, shift: { mentality: +1, tempo: +1 }, fired: '📋 Pushing for a winner' },
-  { id: 'manage-2up', ico: '🔵', ifText: 'Two+ goals up after 60′', thenText: 'game management — protect the lead & the legs', minMinute: 60, cond: (my, opp) => my - opp >= 2, shift: { mentality: -1, tempo: -1, press: -1 }, fired: '📋 Comfortable — managing the game out' },
+  { id: 'manage-2up', ico: '🔵', ifText: 'Two+ goals up after 60′', thenText: 'game management — protect the lead & the legs', minMinute: 60, cond: (my, opp) => my - opp >= 2, shift: { mentality: -1, tempo: -1, press: -1 }, fired: '📋 Comfortable — managing the game out',
+    note: 'Real teams deliberately drop deeper and cede possession late while leading — the bet is that less space in behind outweighs the extra pressure they invite.' },
   { id: 'blowout-lead', ico: '🟣', ifText: 'Three+ goals up after 55′', thenText: 'total game management — rest the legs for what\'s ahead', minMinute: 55, cond: (my, opp) => my - opp >= 3, shift: { mentality: -2, tempo: -2, press: -2 }, fired: '📋 Job done — shutting it down completely' },
   { id: 'chase-ht-big', ico: '⚫', ifText: 'Two+ down at half-time', thenText: 'monumental push — maximum attack, high press, high line', minMinute: 45, cond: (my, opp) => opp - my >= 2, shift: { mentality: +2, line: +2, press: +1, tempo: +2 }, fired: '📋 Facing a hiding — throwing absolutely everything forward' },
 ];
@@ -97,6 +109,44 @@ const SLOT_ROLES: Record<Formation, string[]> = {
   '5-4-1': ['GK', 'DF', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'FW'],
   '4-2-2-2': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'FW', 'FW'],
 };
+
+// ── Pre-match matchup insight (pure flavour, deterministic from the two seeded formation shapes) ──
+// Real scouting logic: formations counter each other less by raw shape and more by WHO GETS
+// OUTNUMBERED WHERE — a central-midfield overload vs a wide overload, the recurring rock-paper-scissors
+// underneath every real formation matchup (see docs/research-manager-career.md §1). Reads the same
+// static formation anchors the pitch view already uses — no engine change, no rng, no calibration risk.
+const CENTRAL_BAND = 10; // y within 10 of the pitch's 34-wide centre counts as "central"
+function midfieldSplit(f: Formation): { central: number; wide: number } {
+  const mf = FORMATION_SHAPES[f].filter((s) => s.role === 'MF');
+  const central = mf.filter((s) => Math.abs(s.y - 34) <= CENTRAL_BAND).length;
+  return { central, wide: mf.length - central };
+}
+function backLineSize(f: Formation): number { return FORMATION_SHAPES[f].filter((s) => s.role === 'DF').length; }
+function wideOutlets(f: Formation): number {
+  return FORMATION_SHAPES[f].filter((s) => s.role !== 'GK' && (s.y <= 15 || s.y >= 53)).length;
+}
+function formationMatchupInsight(mine: Formation, opp: Formation): string {
+  const mMine = midfieldSplit(mine), mOpp = midfieldSplit(opp);
+  if (mMine.central > mOpp.central) {
+    return `Your ${mine}'s midfield should outnumber their ${opp} centrally — look to dominate the middle third.`;
+  }
+  if (mOpp.central > mMine.central) {
+    return `Their ${opp} outnumbers your ${mine} through the middle — expect to be squeezed there; win it back quickly.`;
+  }
+  const oppWide = wideOutlets(opp), myBack = backLineSize(mine);
+  const myWide = wideOutlets(mine), oppBack = backLineSize(opp);
+  if (oppWide > myBack) return `Their wide outlets will stretch your ${mine} back line out wide — tuck in and cover the flanks.`;
+  if (myWide > oppBack) return `Your ${mine}'s width should overload their ${opp} back line — attack down the channels.`;
+  return `Evenly matched shapes (${mine} vs ${opp}) — no clean numbers edge either way; small margins will decide it.`;
+}
+
+// ── Team-talk personality nuance (research §4: Ferguson's hairdryer vs Ancelotti's quiet leadership) ──
+// Sensitive personalities wilt/backfire under a fiery talk and prefer calm; personalities who thrive on
+// the big occasion / drag others up respond well to being fired up. Everyone else is unmoved either way.
+// Deliberately SMALL bounded nudges layered on top of the existing bounded homeBoost/conditioning edge
+// (see startSpMatchWith()) — never a big swing, calibration stays untouched.
+const TALK_SENSITIVE = new Set(['fragile', 'hothead', 'perfectionist']);
+const TALK_FIERY = new Set(['biggame', 'leader', 'workhorse', 'maverick', 'showman']);
 
 const $ = (id: string) => document.getElementById(id)!;
 
@@ -1152,13 +1202,35 @@ class Game {
     this.openLineup('match', { id: 'sp-opp', handle: opp.name, venue });
   }
 
+  /** The managed STAR player (club owner's own NFT pro) — his personality colours how team talks land. */
+  private starPlayer(): Player | undefined {
+    const id = this.loadMgr().starId;
+    return id ? this.club.players.find((p) => p.id === id) : undefined;
+  }
+
   /** Pre-kickoff TEAM TALK — a real matchday decision. Each tone applies a small, bounded pre-kickoff edge
-   *  to your side (deterministic — baked into the match snapshot), then kicks off. */
+   *  to your side (deterministic — baked into the match snapshot), then kicks off. A fiery talk fires up
+   *  some personalities (Born Leader, Workhorse, Big-Game Player, Maverick, Showman) but is less effective
+   *  — or slightly backfires — for sensitive ones (Fragile, Hothead, Perfectionist), who respond better to
+   *  a calm talk instead (Ferguson's hairdryer vs Ancelotti's quiet leadership — research §4). Everyone else
+   *  is unmoved either way. The modulation stays a SMALL nudge on top of the existing bounded edge — see
+   *  startSpMatchWith(). */
+  private teamTalkNote(): string {
+    const star = this.starPlayer();
+    const pid = star && (star as any).personality as string | undefined;
+    if (!star || !pid) return '';
+    if (TALK_SENSITIVE.has(pid)) return `🧠 ${star.name} doesn't respond well to fire and brimstone — a calmer word gets more out of him.`;
+    if (TALK_FIERY.has(pid)) return `🧠 ${star.name} thrives on a rev-up before kickoff — a fiery talk lifts him.`;
+    return '';
+  }
+
   private kickOffSpMatch() {
     const sp = this.spFixture!;
+    const note = this.teamTalkNote();
     const el = document.createElement('div'); el.id = 'teamtalk-ov'; el.className = 'pc-overlay';
     el.innerHTML = `<div class="tt-card"><div class="tt-title">🗣️ TEAM TALK</div>`
       + `<div class="tt-sub">In the dressing room before ${sp.venue === 'away' ? 'the away trip to' : 'hosting'} <b>${sp.oppName}</b> — set the tone:</div>`
+      + (note ? `<div class="tt-note">${note}</div>` : '')
       + `<button class="tt-opt" data-tt="fire"><b>🔥 Go for the throat</b><span>Attack hard — sharper in front of goal, but the legs tire faster</span></button>`
       + `<button class="tt-opt" data-tt="calm"><b>🧊 Keep your shape</b><span>Stay compact and disciplined — fresher late on, harder to break down</span></button>`
       + `<button class="tt-opt" data-tt="focus"><b>🎯 Just play your game</b><span>A calm, balanced edge</span></button></div>`;
@@ -1174,9 +1246,18 @@ class Game {
     const sp = this.spFixture!;
     const myLineup: Lineup = { ...this.draftLineup, duties: [...this.draftDuties], ...this.draftRoles() };
     const myTeam = buildXI(this.availableClub(), myLineup);
-    if (tone === 'fire') { myTeam.homeBoost = 1.08; myTeam.conditioning = 1.06; }       // more shots, tire faster
-    else if (tone === 'calm') { myTeam.conditioning = 0.92; }                            // fresher legs, solidity
-    else { myTeam.homeBoost = 1.04; }                                                    // a small balanced edge
+    const starPid = (this.starPlayer() as any)?.personality as string | undefined;
+    if (tone === 'fire') {
+      // sensitive personalities get LESS out of the fiery talk (and tire a touch faster, keyed-up rather
+      // than sharp); the ones who thrive on the big rev-up get a touch more. Small, bounded either way.
+      const sensitive = starPid && TALK_SENSITIVE.has(starPid), fiery = starPid && TALK_FIERY.has(starPid);
+      myTeam.homeBoost = 1.08 + (fiery ? 0.02 : sensitive ? -0.03 : 0);
+      myTeam.conditioning = 1.06 + (sensitive ? 0.02 : 0);
+    } else if (tone === 'calm') {
+      // suits sensitive personalities best (extra composure); the fire-loving ones feel a bit flat under it.
+      const sensitive = starPid && TALK_SENSITIVE.has(starPid), fiery = starPid && TALK_FIERY.has(starPid);
+      myTeam.conditioning = 0.92 + (sensitive ? -0.02 : fiery ? 0.02 : 0);
+    } else { myTeam.homeBoost = 1.04; }                                                  // a small balanced edge, unmodulated
     // CLUB FACILITIES apply to the match: Training Ground → less fitness drain; Fan Zone → home attack edge.
     const trainLvl = this.facLevels.training ?? 1, fanLvl = this.facLevels.fanzone ?? 1;
     myTeam.conditioning = (myTeam.conditioning ?? 1) * (1 - (trainLvl - 1) * 0.05);
@@ -1911,8 +1992,16 @@ class Game {
     if (this.spFixture) {
       // single-player fixture: a lightweight opponent card (no server scout), just their strength
       const stars = '★'.repeat(Math.max(1, Math.round(this.spFixture.oppStrength / 4))) + '☆'.repeat(5 - Math.max(1, Math.round(this.spFixture.oppStrength / 4)));
+      // pure flavour: name-check the danger man's duty (their best FW, or best MF if none) — real
+      // scouting vocabulary, deterministic from the seeded opponent squad.
+      const oppXI = this.spFixture.oppLineup.playerIds.map((pid) => this.spFixture!.oppClub.players.find((p) => p.id === pid)!);
+      const dangerMan = [...oppXI].filter((p) => p.role === 'FW').sort((a, b) => overall(b) - overall(a))[0]
+        ?? [...oppXI].filter((p) => p.role === 'MF').sort((a, b) => overall(b) - overall(a))[0];
+      const dutyNote = dangerMan
+        ? `<div class="scout-sub scout-role">👤 <b>${dangerMan.name}</b> — ${DUTY_LABEL[effectiveDuty(dangerMan)]}: ${DUTY_DESC[effectiveDuty(dangerMan)]}</div>` : '';
       sc.classList.remove('hidden');
-      sc.innerHTML = `<div class="scout-head">🔍 ${this.spFixture.oppName}</div><div class="scout-sub">${this.spFixture.venue === 'away' ? 'Away' : 'Home'} fixture · squad rating ~${this.spFixture.oppStrength} <span style="color:#e6c76a">${stars}</span></div>`;
+      sc.innerHTML = `<div class="scout-head">🔍 ${this.spFixture.oppName}</div><div class="scout-sub">${this.spFixture.venue === 'away' ? 'Away' : 'Home'} fixture · squad rating ~${this.spFixture.oppStrength} <span style="color:#e6c76a">${stars}</span></div>${dutyNote}`
+        + `<div class="scout-sub scout-matchup" id="scout-matchup">📐 ${formationMatchupInsight(this.draftTactics.formation, this.spFixture.oppTactics.formation)}</div>`;
     } else {
       sc.classList.add('hidden'); sc.innerHTML = '';
     }
@@ -1928,7 +2017,7 @@ class Game {
     if (this.editorMode !== 'match' || !this.spFixture) { host.innerHTML = ''; return; }
     const rows = MATCH_PLAN_RULES.map((r) => {
       const on = this.draftPlan.has(r.id);
-      return `<div class="mp-rule${on ? ' on' : ''}" data-plan="${r.id}"><span class="mp-check">✓</span><span class="mp-ico">${r.ico}</span>`
+      return `<div class="mp-rule${on ? ' on' : ''}" data-plan="${r.id}"${r.note ? ` title="${r.note}"` : ''}><span class="mp-check">✓</span><span class="mp-ico">${r.ico}</span>`
         + `<span class="mp-body"><span class="mp-if">If ${r.ifText}</span> <span class="mp-then">→ ${r.thenText}</span></span></div>`;
     }).join('');
     host.innerHTML = `<div class="mp-head">📋 MATCH PLAN — conditional orders</div>`
@@ -1944,21 +2033,23 @@ class Game {
   private renderLineupEditor() {
     const tac: string[] = [`<label>Formation<select id="e-formation">${FORMATIONS.map((f) => `<option ${f === this.draftTactics.formation ? 'selected' : ''}>${f}</option>`).join('')}</select></label>`];
     (Object.keys(LEVELS) as Array<keyof typeof LEVELS>).forEach((k) => {
-      tac.push(`<label>${k[0].toUpperCase() + k.slice(1)}<select id="e-${k}">${LEVELS[k].map((lab, i) => `<option value="${i - 2}" ${i - 2 === this.draftTactics[k] ? 'selected' : ''}>${lab}</option>`).join('')}</select></label>`);
+      tac.push(`<label title="${TAC_NOTE[k]}">${k[0].toUpperCase() + k.slice(1)}<select id="e-${k}">${LEVELS[k].map((lab, i) => `<option value="${i - 2}" ${i - 2 === this.draftTactics[k] ? 'selected' : ''}>${lab}</option>`).join('')}</select></label>`);
     });
     // INSTRUCTION toggle (only bites with a high/very-high line): the back four steps up together on
     // a through-ball, catching a receiver without a real pace edge — fewer clean breakaways conceded.
     const lineHigh = this.draftTactics.line >= 1;
-    tac.push(`<label class="tac-toggle" title="${lineHigh ? 'Catches attackers without a real pace edge — needs a high/very-high line' : 'Only bites with a High or Very High defensive line'}"><span>Offside Trap${lineHigh ? '' : ' (needs high line)'}</span><input type="checkbox" id="e-offside" ${this.draftTactics.offsideTrap ? 'checked' : ''} /></label>`);
-    tac.push(`<label class="tac-toggle" title="When the keeper has the ball, always pick the safest short option — fewer risky giveaways right after a save, especially vs a high press"><span>Play Out From Back</span><input type="checkbox" id="e-playout" ${this.draftTactics.playOutOfDefence ? 'checked' : ''} /></label>`);
+    tac.push(`<label class="tac-toggle" title="${lineHigh ? "The back line steps up together to spring the trap — mistime it and they're through." : 'Only bites with a High or Very High defensive line — the back four needs room to step up together.'}"><span>Offside Trap${lineHigh ? '' : ' (needs high line)'}</span><input type="checkbox" id="e-offside" ${this.draftTactics.offsideTrap ? 'checked' : ''} /></label>`);
+    tac.push(`<label class="tac-toggle" title="Always the safest short option out of the keeper's hands, drawing the opponent's press forward and opening space in behind it — even under pressure, never force a hopeful long ball."><span>Play Out From Back</span><input type="checkbox" id="e-playout" ${this.draftTactics.playOutOfDefence ? 'checked' : ''} /></label>`);
     const focus = this.draftTactics.attackFocus ?? 'balanced';
-    tac.push(`<label title="Bias who the ball goes to — lean into (or correct) your formation's natural width">Attack Focus<select id="e-focus"><option value="balanced" ${focus === 'balanced' ? 'selected' : ''}>Balanced</option><option value="wide" ${focus === 'wide' ? 'selected' : ''}>Wing Focus</option><option value="central" ${focus === 'central' ? 'selected' : ''}>Central Focus</option></select></label>`);
+    tac.push(`<label title="Bias who gets the ball — lean into (or correct) your formation's natural width. Wide floods the flanks for crosses; Central packs it through the mixer for cutbacks and one-twos.">Attack Focus<select id="e-focus"><option value="balanced" ${focus === 'balanced' ? 'selected' : ''}>Balanced</option><option value="wide" ${focus === 'wide' ? 'selected' : ''}>Wing Focus</option><option value="central" ${focus === 'central' ? 'selected' : ''}>Central Focus</option></select></label>`);
     $('tac-row').innerHTML = tac.join('');
     ($('e-formation') as HTMLSelectElement).addEventListener('change', (ev) => {
       this.draftTactics.formation = (ev.target as HTMLSelectElement).value as Formation;
       this.draftLineup = autoPickXI(this.availableClub(), this.draftTactics.formation);
       this.rebuildDuties();
       this.renderLineupEditor();
+      const mu = document.getElementById('scout-matchup');
+      if (mu && this.spFixture) mu.innerHTML = `📐 ${formationMatchupInsight(this.draftTactics.formation, this.spFixture.oppTactics.formation)}`;
     });
     (Object.keys(LEVELS) as Array<keyof typeof LEVELS>).forEach((k) => {
       ($(`e-${k}`) as HTMLSelectElement).addEventListener('change', (ev) => {
@@ -1999,7 +2090,8 @@ class Game {
       const tag = isLoan(cur.id) ? `<span class="loan" title="Loanee — plays this season only, then leaves">LOAN</span>`
         : isNftId(cur.id) ? `<span class="nft tier-${curTier.key}" data-card="${cur.id}" title="NFT star · ${curTier.name} tier — click to view card">${curTier.icon} ${curTier.name}</span>` : '';
       const dutyOpts = DUTIES_BY_ROLE[cur.role]
-        .map((d) => `<option value="${d}" ${d === this.draftDuties[i] ? 'selected' : ''}>${DUTY_LABEL[d]}</option>`).join('');
+        .map((d) => `<option value="${d}" title="${DUTY_DESC[d]}" ${d === this.draftDuties[i] ? 'selected' : ''}>${DUTY_LABEL[d]}</option>`).join('');
+      const curDutyDesc = DUTY_DESC[this.draftDuties[i]] ?? '';
       const rb = (role: string, on: boolean, glyph: string, title: string) => `<button class="rb ${role}${on ? ' on' : ''}" data-role="${role}" data-i="${i}" title="${title}">${glyph}</button>`;
       const badges = `<span class="role-badges">`
         + rb('cap', this.draftCaptain === i, '©', 'Captain')
@@ -2007,7 +2099,7 @@ class Game {
         + rb('fk', this.draftTakers.fk === i, 'F', 'Free-kick taker')
         + rb('corner', this.draftTakers.corner === i, 'C', 'Corner taker')
         + `</span>`;
-      return `<div class="slot role-${roleForSlot}"><span class="role role-${roleForSlot}">${roleForSlot}</span><select class="player-sel" data-i="${i}">${opts}</select><select class="duty-sel" data-i="${i}" title="This player's duty — how they play">${dutyOpts}</select>${tag}<span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span>${badges}</div>`;
+      return `<div class="slot role-${roleForSlot}"><span class="role role-${roleForSlot}">${roleForSlot}</span><select class="player-sel" data-i="${i}">${opts}</select><select class="duty-sel" data-i="${i}" title="${curDutyDesc}">${dutyOpts}</select>${tag}<span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span>${badges}</div>`;
     }).join('');
     Array.from($('xi').querySelectorAll('button.rb')).forEach((b) => {
       b.addEventListener('click', () => {
@@ -2029,7 +2121,9 @@ class Game {
     Array.from($('xi').querySelectorAll('select.duty-sel')).forEach((sel) => {
       sel.addEventListener('change', (ev) => {
         const t = ev.target as HTMLSelectElement;
-        this.draftDuties[Number(t.dataset.i)] = t.value as Duty;
+        const d = t.value as Duty;
+        this.draftDuties[Number(t.dataset.i)] = d;
+        t.title = DUTY_DESC[d] ?? ''; // live-refresh the tooltip so it always matches the picked duty
       });
     });
 
