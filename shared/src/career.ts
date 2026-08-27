@@ -1092,7 +1092,7 @@ export class Career {
     const choice: Choice = { cardId: card.id, tags: card.tags, power: cardPower(card), fit: f, bestFit, success, scenario: this.scenario.label, stakes: this.scenario.stakes };
     this.log.push(choice);
     this.updateLife(choice); // NSS meters + energy react to how the moment went (deterministic, no rng)
-    if (this.scenario.life) this.applyLifeConsequence(this.scenario.life, success); // the life-event's OWN, distinct payoff
+    if (this.scenario.life) this.applyLifeConsequence(this.scenario.life, success, card.tags); // the life-event's OWN, distinct payoff
     if (this.scenario.rival) this.applyRivalConsequence(success); // bragging rights are worth more than the occasion alone
     if (this.scenario.callup) this.applyCallupConsequence(success); // thrown in cold — a bigger swing than a routine big game
     this.discard.push(card);
@@ -1105,18 +1105,34 @@ export class Career {
     return choice;
   }
 
-  /** How the LAST life event resolved — surfaced for narration (a distinct "how it went" beat). */
-  lastLifeEvent: { kind: LifeKind; success: number; good: boolean } | null = null;
+  /** How the LAST life event resolved — surfaced for narration (a distinct "how it went" beat). `approach`
+   *  is only ever set for injury_comeback (see below) — 'rush' vs 'patient' graded return. */
+  lastLifeEvent: { kind: LifeKind; success: number; good: boolean; approach?: 'rush' | 'patient' } | null = null;
   /** A life event's OWN distinct payoff — on top of the generic updateLife() reaction — so a contract
-   *  standoff and a family illness leave genuinely different marks on the same 'good outcome'. */
-  private applyLifeConsequence(kind: LifeKind, success: number) {
+   *  standoff and a family illness leave genuinely different marks on the same 'good outcome'.
+   *
+   *  INJURY COMEBACK (docs/research-player-career.md §5 — "fear of reinjury" as the dominant late-stage
+   *  psychological barrier): which CARD he leans on decides his approach. An aggression/stamina-led card
+   *  reads as "rush back" — greater reward if it comes off, a real reinjury-risk cost (energy + authority)
+   *  if it doesn't. Anything else reads as the safe, documented "patient graded return" — no extra upside,
+   *  but no extra risk either. */
+  private applyLifeConsequence(kind: LifeKind, success: number, cardTags?: Tag[]) {
     const good = success >= 0.55;
     const cq = LIFE_CONSEQUENCE[kind];
     const eff = good ? cq.good : cq.bad;
     for (const [k, d] of Object.entries(eff)) this.life(k as MeterKey, d ?? 0);
     const earn = good ? (cq.earnGood ?? 0) : (cq.earnBad ?? 0);
     if (earn) this.earnings += earn;
-    this.lastLifeEvent = { kind, success, good };
+    let approach: 'rush' | 'patient' | undefined;
+    if (kind === 'injury_comeback' && cardTags) {
+      const rushed = cardTags.some((t) => t === 'aggression' || t === 'stamina');
+      approach = rushed ? 'rush' : 'patient';
+      if (rushed) {
+        if (good) this.earnings += 40; // came back hard and it held — worth more than the safe route
+        else { this.energy = clamp(this.energy - 10, 0, 100); this.life('authority', -3); } // reinjury-risk cost
+      }
+    }
+    this.lastLifeEvent = { kind, success, good, approach };
   }
 
   /** How the LAST rivalry moment resolved — surfaced for narration (overtake/fall-behind payoff). */

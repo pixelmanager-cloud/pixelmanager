@@ -375,20 +375,37 @@ const LIFE_RESOLUTION: Record<string, { good: string[]; bad: string[] }> = {
     bad: ['and the timing, as ever, could not be worse.', 'and something has to give, and it’s not obvious what.', 'and he handles it clumsily, the way anyone might.'],
   },
 };
+// INJURY COMEBACK — "rush back" (aggression/stamina-led, real reinjury-risk cost on a bad outcome) vs
+// "patient graded return" (anything else — the safe, documented "fear of reinjury" grind). Distinct
+// resolution prose per approach, layered on the standard good/bad LIFE_RESOLUTION.injury_comeback lines.
+const INJURY_APPROACH_LINE: Record<'rush' | 'patient', { good: string[]; bad: string[] }> = {
+  rush: {
+    good: ['He pushed to come back early, and for once the gamble pays off in full.', 'Against the physio’s better judgement, he rushed it — and it held.'],
+    bad: ['He pushed to come back too soon, and the body sends him a warning he can’t ignore.', 'Rushing it felt right at the time; right now, it very much doesn’t.'],
+  },
+  patient: {
+    good: ['He took the slow, graded route back, and the patience is rewarded.', 'No shortcuts, no rush — just a careful, honest return, done properly.'],
+    bad: ['Even the patient route has its bad days — this is one of them.', 'He did it the right way, by the book, and it still didn’t quite click today.'],
+  },
+};
 /** The resolution beat for a mid-chapter LIFE EVENT (contract standoff, loan call, media storm, etc.) —
- *  distinct from narratePlay: this reads like an off-pitch moment resolving, using the same success band. */
-export function narrateLifeEvent(kind: string, cardName: string, success: number, ctx: NarrateCtx): string {
+ *  distinct from narratePlay: this reads like an off-pitch moment resolving, using the same success band.
+ *  `approach` ('rush'/'patient') only ever arrives for injury_comeback (see career.ts's lastLifeEvent). */
+export function narrateLifeEvent(kind: string, cardName: string, success: number, ctx: NarrateCtx, approach?: 'rush' | 'patient'): string {
   const rng = mulberry32(ctx.seed >>> 0);
   const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
   const good = band(success) === 'triumph' || band(success) === 'good';
   const table = LIFE_RESOLUTION[kind] ?? LIFE_RESOLUTION.setback;
   const resline = pick(good ? table.good : table.bad);
-  const approach = pick(LIFE_APPROACH);
+  const approachLine = kind === 'injury_comeback' && approach
+    ? ' ' + pick(good ? INJURY_APPROACH_LINE[approach].good : INJURY_APPROACH_LINE[approach].bad)
+    : '';
+  const lead = pick(LIFE_APPROACH);
   const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed) : null;
   const castReact = cast && rng() < 0.3 && good
     ? ' ' + pick([`${cast.gaffer} appreciates how he handled it.`, `Even ${cast.rival} would admit that was well played.`, `His agent breathes a quiet sigh of relief.`])
     : '';
-  return `${approach} ${cardName} ${resline}${castReact}`;
+  return `${lead} ${cardName} ${resline}${approachLine}${castReact}`;
 }
 
 // ── RIVALRY STORYLINE: the seeded academy rival isn't just a number to chase — a slice of big-stage MATCH
