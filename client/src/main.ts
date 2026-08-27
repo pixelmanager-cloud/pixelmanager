@@ -1,7 +1,7 @@
 import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
   TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry,
-  FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, deriveExpectation, type BoardMood, type PriorFinish,
+  FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, deriveExpectation, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition,
   type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type Trialist, type MissionsData, type ContractInfo } from './api';
@@ -2584,6 +2584,17 @@ class Game {
       else if (gd < 0) reaction = edge > 2 ? '😤 A dismal result — a game the club should have won.' : 'A tough one to take, but the season rolls on.';
       else reaction = edge > 2 ? 'Two points dropped — the fans expected more.' : 'A share of the spoils.';
       $('ft-report').insertAdjacentHTML('beforeend', `<div class="ft-reaction">${reaction}</div>`);
+      // the manager at the presser — a different register from the fans' reaction (from @fm/shared press.ts)
+      const recent = (this.loadMgr().results ?? []).slice(-5);
+      const wl = recent.reduce((a, r) => a + (r.myGoals > r.oppGoals ? 1 : r.myGoals < r.oppGoals ? -1 : 0), 0);
+      const form: PressForm = wl >= 2 ? 'hot' : wl <= -2 ? 'cold' : 'level';
+      const competition: PressCompetition = this.spFixture.comp === 'cont' ? 'continental' : this.spFixture.comp === 'wc' ? 'international' : 'league';
+      const rivals = seededOpponents(this.club.name, this.leagueSeed());
+      const rivalName = rivals.length ? rivals[this.leagueSeed() % rivals.length].name : null;
+      const stakes: 1 | 2 | 3 = this.spFixture.comp === 'wc' || this.spFixture.comp === 'cont' ? 3 : this.spFixture.oppName === rivalName ? 2 : 1;
+      const salt = (this.loadMgr().season * 97 + (this.loadMgr().results?.length ?? 0)) >>> 0;
+      const line = pressConferenceLine(this.leagueSeed(), salt, { timing: 'post', competition, stakes, form, result: gd > 0 ? 'win' : gd < 0 ? 'loss' : 'draw' });
+      $('ft-report').insertAdjacentHTML('beforeend', `<div class="ft-presser">🎙️ <b>At the presser</b> — “${line}”</div>`);
     }
     $('ft-gate').classList.toggle('hidden', this.lastGate <= 0);
     if (this.lastGate > 0) $('ft-gate-amt').textContent = String(this.lastGate);
