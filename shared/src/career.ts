@@ -575,6 +575,18 @@ const FOCUS_BY_CHAPTER: Record<string, FocusOption[]> = {
 // card-driven "earned, not chosen" development. No rng, no meter effects of its own beyond the small
 // energy cost — the reward is purely the tag nudge (applied in deriveStats, see FOCUS_TAG_WEIGHT).
 const TAG_FOCUS_BY_CHAPTER: Record<string, Array<{ id: string; icon: string; name: string; desc: string; tag: Tag }>> = {
+  Grassroots:     [
+    { id: 'focus_flair0',     icon: '🎨', name: 'Try Tricks in the Garden',      desc: 'Keepie-uppies against the shed wall until it’s dark — nobody taught you this, you just love it.', tag: 'flair' },
+    { id: 'focus_stamina0',   icon: '🏃', name: 'Run to School and Back',        desc: 'Every day, rain or shine, because it beats the bus and it keeps you fit.', tag: 'stamina' },
+  ],
+  Academy:        [
+    { id: 'focus_teamwork0',  icon: '🧩', name: 'Learn to Play for the Team',    desc: 'The coaches keep saying it: it’s not about you, it’s about the shirt.', tag: 'teamwork' },
+    { id: 'focus_aggression0', icon: '⚔️', name: 'Toughen Up in the Tackle',     desc: 'Bigger lads, harder ground — learn to compete or get left behind.', tag: 'aggression' },
+  ],
+  Scholar:        [
+    { id: 'focus_composure0', icon: '🧊', name: 'Work on Your Head, Not Just Your Feet', desc: 'A sports psychologist the club brought in — some of it actually sticks.', tag: 'composure' },
+    { id: 'focus_creativity0', icon: '🎨', name: 'Spend Hours on the Rondo',     desc: 'Small-sided, tight spaces — the kind of practice that teaches you to see a pass before it’s there.', tag: 'creativity' },
+  ],
   'Youth Team':   [
     { id: 'focus_stamina',    icon: '🏃', name: 'Punish Yourself in Pre-Season', desc: 'Double sessions, extra miles — build the engine now while your body can take it.', tag: 'stamina' },
     { id: 'focus_teamwork',   icon: '🧩', name: 'Study the Shape',               desc: 'Hours with the whiteboard and the analyst — learn to read the team, not just the ball.', tag: 'teamwork' },
