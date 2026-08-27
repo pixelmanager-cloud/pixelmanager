@@ -590,7 +590,45 @@ export function rollCoaches(rng: () => number, track: Track, n = COACH_OFFER): C
 // ── scenarios: each moment demands a weighted mix of tags; kind biases the demand ──
 // stakes 1 (normal) / 2 (big) / 3 (huge). Big moments are worth MORE (shape you harder) and are
 // riskier (more variance) — this is where reputations are made and the Big-Game Player trait is earned.
-export interface Scenario { id: string; kind: 'match' | 'social' | 'training'; demand: Partial<Record<Tag, number>>; label: string; stakes: 1 | 2 | 3 }
+export interface Scenario { id: string; kind: 'match' | 'social' | 'training'; demand: Partial<Record<Tag, number>>; label: string; stakes: 1 | 2 | 3; life?: LifeKind | null }
+
+// ── LIFE EVENTS: a fraction of low-stakes SOCIAL moments become a proper off-pitch dilemma — a contract
+// standoff, a loan decision, a media storm — instead of a generic dressing-room beat. Resolved by the SAME
+// card play (fit/success unchanged), but the OUTCOME carries a real, persisted consequence: differentiated
+// meter/earnings swings on top of the usual updateLife() reaction (see LIFE_CONSEQUENCE, applied in play()).
+// Selection is a pure hash of (seed, turn) — NOT drawn from the rng() stream — so it never perturbs the
+// scenario's demand/stakes or any other rng-derived number; only development-touching where the consequence
+// itself nudges standing (small, same order of magnitude as the existing per-turn meter reactions).
+export type LifeKind = 'contract' | 'loan' | 'setback' | 'media' | 'loyalty' | 'role' | 'fallout'
+  | 'injury_comeback' | 'transfer_rumour' | 'manager_fallout' | 'charity' | 'social_storm' | 'family_illness' | 'romance';
+export const LIFE_KINDS: LifeKind[] = ['contract', 'loan', 'setback', 'media', 'loyalty', 'role', 'fallout', 'injury_comeback', 'transfer_rumour', 'manager_fallout', 'charity', 'social_storm', 'family_illness', 'romance'];
+export const LIFE_LABEL: Record<LifeKind, string> = {
+  contract: 'a contract standoff', loan: 'a loan-move decision', setback: 'bouncing back from a public mistake',
+  media: 'a media storm', loyalty: 'a boyhood-club approach', role: 'a squad-role ultimatum', fallout: 'a public falling-out with a teammate',
+  injury_comeback: 'fighting his way back from injury', transfer_rumour: 'transfer speculation swirling around him',
+  manager_fallout: 'a falling-out with the manager', charity: 'a charity and community appearance',
+  social_storm: 'a social-media storm', family_illness: 'a family illness pulling at him', romance: 'settling down off the pitch',
+};
+// good/bad meter + earnings swing per life-kind, applied ON TOP of the generic per-turn reaction — this is
+// what makes a life event mechanically distinct from an ordinary social scenario, not just a re-skin.
+const LIFE_CONSEQUENCE: Record<LifeKind, { good: Partial<Record<MeterKey, number>>; bad: Partial<Record<MeterKey, number>>; earnGood?: number; earnBad?: number }> = {
+  contract:         { good: { agent: 10, authority: 4 },  bad: { agent: -8, authority: -6 }, earnGood: 150 },
+  loan:             { good: { authority: 8, agent: 4 },   bad: { authority: -6, peers: -4 } },
+  setback:          { good: { fans: 6, authority: 6 },    bad: { fans: -8, authority: -8 } },
+  media:            { good: { fans: 8, sponsors: 4 },     bad: { fans: -6, agent: -4 } },
+  loyalty:          { good: { fans: 10, family: 6 },      bad: { agent: -6, fans: -4 } },
+  role:             { good: { authority: 8 },             bad: { authority: -10, peers: -4 } },
+  fallout:          { good: { peers: 6, authority: 4 },   bad: { peers: -12, authority: -4 } },
+  injury_comeback:  { good: { authority: 6, family: 4 },  bad: { authority: -4, family: -4 } },
+  transfer_rumour:  { good: { agent: 8, fans: -2 },       bad: { agent: -4, peers: -6 } },
+  manager_fallout:  { good: { authority: 4, peers: 4 },   bad: { authority: -14 } },
+  charity:          { good: { fans: 10, family: 4 },      bad: { fans: 2 } },
+  social_storm:     { good: { fans: 6, sponsors: 4 },     bad: { fans: -10, sponsors: -8 } },
+  family_illness:   { good: { family: 10 },               bad: { family: -14, authority: -4 } },
+  romance:          { good: { partner: 16 },              bad: { partner: -10 } },
+};
+/** Pure deterministic hash → [0,1), independent of the career's rng() stream (never consumes it). */
+function pureHash01(seed: number, turn: number, salt: number): number { return mulberry32(((seed ^ Math.imul(turn + 1, 2654435761)) ^ salt) >>> 0)(); }
 const KIND_BIAS: Record<Scenario['kind'], Tag[]> = {
   match: TAGS,                                                   // anything can come up in a match
   social: ['leadership', 'composure', 'teamwork'],              // dressing room / media
@@ -604,7 +642,7 @@ const HUGE_MOMENTS = ['CUP FINAL', 'Title Decider', 'Promotion Play-Off Final', 
 
 /** A seeded scenario. Tag demand comes from the current AGE BAND (age-appropriate); stakes are gated
  *  by the band (no cup finals at grassroots). `demandBias` (a gaffer's demand) leans the demand. */
-export function makeScenario(rng: () => number, i: number, track: Track = 'outfield', demandBias?: Tag | null, band?: AgeBand, exposure = 1): Scenario {
+export function makeScenario(rng: () => number, i: number, track: Track = 'outfield', demandBias?: Tag | null, band?: AgeBand, exposure = 1, seed?: number): Scenario {
   const kind = KIND_POOL[Math.floor(rng() * KIND_POOL.length)];
   const bias = track === 'goalkeeper' ? GK_BIAS : (band ? band.demand : OUTFIELD_TAGS);
   const n = 1 + Math.floor(rng() * Math.min(3, bias.length));
@@ -620,8 +658,15 @@ export function makeScenario(rng: () => number, i: number, track: Track = 'outfi
   const stakes: 1 | 2 | 3 = maxStakes >= 3 && r < 0.05 * exposure ? 3 : maxStakes >= 2 && r < 0.22 * exposure ? 2 : 1; // an agent's exposure = more big stages
   const moment = stakes === 3 ? HUGE_MOMENTS[Math.floor(rng() * HUGE_MOMENTS.length)]
     : stakes === 2 ? BIG_MOMENTS[Math.floor(rng() * BIG_MOMENTS.length)] : null;
-  const label = moment ? `★ ${moment}` : `${kind}: ${Object.keys(demand).join(' / ')}`;
-  return { id: `sc${i}`, kind, demand, label, stakes };
+  // LIFE EVENT: a slice of low-stakes social moments, from Scholar onward, become an off-pitch dilemma
+  // instead of a generic dressing-room beat. A pure hash of (seed, turn) — costs no rng() draws, so it
+  // never perturbs demand/stakes/moment above for careers that predate this feature or don't hit the gate.
+  const bandIdx = band ? AGE_BANDS.indexOf(band) : -1;
+  const life: LifeKind | null = seed != null && kind === 'social' && stakes === 1 && bandIdx >= 2 && pureHash01(seed, i, 0x5a17e) < 0.22
+    ? LIFE_KINDS[Math.floor(pureHash01(seed, i, 0x1123bc) * LIFE_KINDS.length)]
+    : null;
+  const label = life ? LIFE_LABEL[life] : moment ? `★ ${moment}` : `${kind}: ${Object.keys(demand).join(' / ')}`;
+  return { id: `sc${i}`, kind, demand, label, stakes, life };
 }
 
 /** How well a card's tags satisfy a scenario's demand, 0..1. */
@@ -800,7 +845,7 @@ export class Career {
     this.pool = track === 'goalkeeper' ? GK_DRAFT_POOL : DRAFT_POOL;
     this.drawPile = this.shuffle([...this.deck]);
     this.refillHand();
-    this.scenario = makeScenario(this.rng, this.turn, track, null, bandAt(0).band, this.exposure);
+    this.scenario = makeScenario(this.rng, this.turn, track, null, bandAt(0).band, this.exposure, this.seed);
   }
   private get exposure() { return this.agent?.exposure ?? 1; }
 
@@ -961,14 +1006,29 @@ export class Career {
     const choice: Choice = { cardId: card.id, tags: card.tags, power: cardPower(card), fit: f, bestFit, success, scenario: this.scenario.label, stakes: this.scenario.stakes };
     this.log.push(choice);
     this.updateLife(choice); // NSS meters + energy react to how the moment went (deterministic, no rng)
+    if (this.scenario.life) this.applyLifeConsequence(this.scenario.life, success); // the life-event's OWN, distinct payoff
     this.discard.push(card);
     this.turn++;
     if (this.turn >= TOTAL_TURNS) { this.finished = true; return choice; }
     // at an age-chapter boundary: relationships pay off (or bite), a narrative EVENT fires, then you
     // choose a summer FOCUS, take a financial offer, appoint a coach and draft.
     if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.earnings += 40 + this.turn * 12; this.pendingFocus = rollFocus(this.chapter, this.standing, this.track); }
-    else { this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure); }
+    else { this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure, this.seed); }
     return choice;
+  }
+
+  /** How the LAST life event resolved — surfaced for narration (a distinct "how it went" beat). */
+  lastLifeEvent: { kind: LifeKind; success: number; good: boolean } | null = null;
+  /** A life event's OWN distinct payoff — on top of the generic updateLife() reaction — so a contract
+   *  standoff and a family illness leave genuinely different marks on the same 'good outcome'. */
+  private applyLifeConsequence(kind: LifeKind, success: number) {
+    const good = success >= 0.55;
+    const cq = LIFE_CONSEQUENCE[kind];
+    const eff = good ? cq.good : cq.bad;
+    for (const [k, d] of Object.entries(eff)) this.life(k as MeterKey, d ?? 0);
+    const earn = good ? (cq.earnGood ?? 0) : (cq.earnBad ?? 0);
+    if (earn) this.earnings += earn;
+    this.lastLifeEvent = { kind, success, good };
   }
 
   /** NSS life meters react to a played moment (deterministic — reads the choice, consumes no rng). */
@@ -1084,7 +1144,7 @@ export class Career {
 
   private startNextChapter() {
     this.refillHand();
-    this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure);
+    this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure, this.seed);
   }
 
   private refillHand() { while (this.hand.length < HAND_SIZE) this.hand.push(this.drawOne()); }
