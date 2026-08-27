@@ -6,7 +6,12 @@ import { api, hasToken, setToken, clearToken, type Account, type StandingOrders,
 import { sprite } from './sprites';
 
 /** Single-player manager-season state (per save, in localStorage). `starId` present ⇒ manager phase. */
-interface MgrState { season: number; results: PlayedResult[]; starId?: string; starName?: string; starAge?: number; retireAge?: number; titles?: number; trainFocus?: string }
+interface MgrState { season: number; results: PlayedResult[]; starId?: string; starName?: string; starAge?: number; retireAge?: number; titles?: number; trainFocus?: string; staff?: string[] }
+const BACKROOM_STAFF = [
+  { id: 'fitness', icon: '🏋️', name: 'Fitness Coach', cost: 350, desc: 'Sharper conditioning — your side fades less over 90.' },
+  { id: 'attack', icon: '⚔️', name: 'Attacking Coach', cost: 350, desc: 'Drills the final third — a small finishing edge, home and away.' },
+  { id: 'assistant', icon: '🧠', name: 'Assistant Manager', cost: 500, desc: 'A steady hand — a small all-round edge every match.' },
+];
 
 // icons for the stage-aware life meters (keyed by underlying relationship) — used in focus effect labels
 const METER_ICON: Record<string, string> = { authority: '🧑‍🏫', peers: '👥', family: '🏠', school: '🎒', agent: '🤝', fans: '📣', sponsors: '📸', partner: '❤️' };
@@ -761,11 +766,32 @@ class Game {
     $('season-body').innerHTML = header
       + `<div class="sf-gaffer">📔 ${this.gafferTake(played, t.pos, t.size, clubName)}</div>`
       + `<div class="season-cols"><div class="season-fixtures"><h4 class="scout-h4">FIXTURES</h4>${fxRows}${records}${focusSel}${simBtn}</div>`
-      + `<div class="season-table-wrap"><h4 class="scout-h4">LEAGUE TABLE</h4>${this.spTableHtml(t)}</div></div>`;
+      + `<div class="season-table-wrap"><h4 class="scout-h4">LEAGUE TABLE</h4>${this.spTableHtml(t)}${this.staffHtml()}</div></div>`;
     $('sf-play')?.addEventListener('click', () => this.playNextSpFixture());
     $('sf-sim')?.addEventListener('click', () => this.simRemainingFixtures());
     $('sf-next-season')?.addEventListener('click', () => this.nextSeason());
     ($('sf-focus') as any)?.addEventListener('change', (e: Event) => { const mm = this.loadMgr(); this.saveMgr({ ...mm, trainFocus: (e.target as HTMLSelectElement).value }); });
+    $('season-body').querySelectorAll('[data-staff]').forEach((b) => b.addEventListener('click', () => this.hireStaff((b as HTMLElement).dataset.staff!)));
+  }
+
+  private staffHtml(): string {
+    const owned = this.loadMgr().staff ?? [];
+    const rows = BACKROOM_STAFF.map((s) => {
+      const has = owned.includes(s.id);
+      return `<div class="sf-staff-row${has ? ' owned' : ''}"><span class="sf-staff-ico">${s.icon}</span><div class="sf-staff-body"><div class="sf-staff-name">${s.name}${has ? ' ✓' : ''}</div><div class="sf-staff-desc">${s.desc}</div></div>`
+        + (has ? '' : `<button class="sf-hire" data-staff="${s.id}">Hire · 💰${s.cost}</button>`) + `</div>`;
+    }).join('');
+    return `<h4 class="scout-h4" style="margin-top:18px;">🧑‍🏫 BACKROOM STAFF</h4>${rows}`;
+  }
+  private async hireStaff(id: string) {
+    const s = BACKROOM_STAFF.find((x) => x.id === id); if (!s) return;
+    try {
+      const r = await api.hireStaff(id);
+      if (this.account?.coins != null) this.account.coins = r.coins;
+      const m = this.loadMgr(); this.saveMgr({ ...m, staff: [...(m.staff ?? []), id] });
+      toast(`🧑‍🏫 Hired ${s.name} (−${r.cost.toLocaleString()}c)`);
+      this.showSeason();
+    } catch (e: any) { toast(e?.status === 409 ? 'Not enough coins' : 'Could not hire'); }
   }
 
   /** A seeded 'gaffer's take' on the season so far — composed from recent form + league position, so the
@@ -885,6 +911,11 @@ class Game {
     const trainLvl = this.facLevels.training ?? 1, fanLvl = this.facLevels.fanzone ?? 1;
     myTeam.conditioning = (myTeam.conditioning ?? 1) * (1 - (trainLvl - 1) * 0.05);
     if (sp.venue === 'home') myTeam.homeBoost = (myTeam.homeBoost ?? 1) * (1 + (fanLvl - 1) * 0.02);
+    // BACKROOM STAFF edges (apply home AND away)
+    const staff = this.loadMgr().staff ?? [];
+    if (staff.includes('fitness')) myTeam.conditioning = (myTeam.conditioning ?? 1) * 0.95;
+    if (staff.includes('attack')) myTeam.homeBoost = (myTeam.homeBoost ?? 1) * 1.03;
+    if (staff.includes('assistant')) { myTeam.homeBoost = (myTeam.homeBoost ?? 1) * 1.02; myTeam.conditioning = (myTeam.conditioning ?? 1) * 0.98; }
     const oppTeam = buildXI(sp.oppClub, sp.oppLineup);
     const oppTactics: Tactics = { formation: '4-4-2', mentality: 0, line: 0, press: 0, tempo: 0, width: 0 };
     const iAmHome = sp.venue === 'home';

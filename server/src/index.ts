@@ -601,6 +601,20 @@ app.post('/players/:id/develop', { preHandler: requireAuth }, async (req, reply)
   return { ok: true, player, overall: overall(player) };
 });
 
+// BACKROOM STAFF — hire specialists with coins for a small, permanent match edge (a coin sink + a
+// management layer). Single-player; the client tracks who's hired, the server just charges the fixed fee.
+const STAFF_COSTS: Record<string, number> = { fitness: 350, attack: 350, assistant: 500 };
+app.post('/sp/hire-staff', { preHandler: requireAuth }, async (req, reply) => {
+  const ownerId = req.account!.id;
+  const staffId = String((req.body as any)?.staffId ?? '');
+  const cost = STAFF_COSTS[staffId];
+  if (cost == null) return reply.code(400).send({ error: 'unknown staff' });
+  const coins = await db.getCoins(ownerId);
+  if (coins < cost) return reply.code(409).send({ error: `not enough coins — ${staffId} costs ${cost}` });
+  await db.addCoins(ownerId, -cost);
+  return { ok: true, cost, coins: await db.getCoins(ownerId) };
+});
+
 // SP SEASON PRIZE — the single-player manager season is client-side, so it reports its finish here to bank
 // the prize money (coins → reinvest in facilities). Single-player only; amounts are modest + capped.
 app.post('/sp/season-reward', { preHandler: requireAuth }, async (req, reply) => {

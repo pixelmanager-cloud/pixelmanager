@@ -121,6 +121,7 @@ export const api = {
   succeed: (pid: string, body: { seasons: number; titles: number }) => req<{ ok: true; legacy?: number; prospect: Prospect }>(`/players/${encodeURIComponent(pid)}/succeed`, { method: 'POST', body: JSON.stringify(body) }),
   spSeasonReward: (body: { pos: number; size: number }) => req<{ ok: true; prize: number; coins: number }>(`/sp/season-reward`, { method: 'POST', body: JSON.stringify(body) }),
   developPlayer: (pid: string, body: { focus: string; age: number }) => req<{ ok: true; player: Player; overall: number }>(`/players/${encodeURIComponent(pid)}/develop`, { method: 'POST', body: JSON.stringify(body) }),
+  hireStaff: (staffId: string) => req<{ ok: true; cost: number; coins: number }>(`/sp/hire-staff`, { method: 'POST', body: JSON.stringify({ staffId }) }),
   prospects: () => req<{ prospects: Prospect[]; supply: number; cap: number }>('/prospects'),
   genesis: () => req<{ ok: true; supply: number; cap: number; cost?: number; coins?: number; prospect: Prospect }>('/genesis', { method: 'POST' }),
   careerAgents: () => req<{ agents: Array<{ id: string; name: string; desc: string }> }>('/career/agents'),

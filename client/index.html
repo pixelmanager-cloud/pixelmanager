@@ -639,6 +639,14 @@
       .sf-focus { font-size: 14px; color: var(--text); margin-top: 10px; padding: 9px 12px; background: color-mix(in srgb, var(--good) 8%, transparent); border: 1px solid color-mix(in srgb, var(--good) 30%, transparent); border-radius: 6px; }
       .sf-focus select { margin: 0 4px; }
       .sf-focus-hint { color: var(--muted); font-size: 12px; }
+      .sf-staff-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; margin-bottom: 6px; background: rgba(255,255,255,0.03); border: 1px solid var(--line); border-radius: 8px; }
+      .sf-staff-row.owned { border-color: color-mix(in srgb, var(--good) 40%, transparent); }
+      .sf-staff-ico { font-size: 22px; }
+      .sf-staff-body { flex: 1; }
+      .sf-staff-name { font-family: var(--display); font-size: 12px; color: var(--text); }
+      .sf-staff-row.owned .sf-staff-name { color: var(--good); }
+      .sf-staff-desc { font-size: 12px; color: var(--muted); }
+      .sf-hire { font-family: var(--display); font-size: 10px; padding: 6px 10px; cursor: pointer; background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); border-radius: 6px; }
       .sf-gaffer { font-size: 15px; color: #d8e0ea; font-style: italic; margin: 0 0 14px; padding: 10px 14px; border-radius: 9px; background: linear-gradient(160deg, rgba(80,90,130,0.14), rgba(40,45,70,0.1)); border-left: 3px solid var(--purple); }
       .ff { font-family: var(--display); font-size: 9px; padding: 1px 3px; border-radius: 3px; margin-left: 2px; }
       .ff-w { background: color-mix(in srgb, var(--good) 25%, transparent); color: var(--good); }
