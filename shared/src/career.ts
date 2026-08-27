@@ -377,7 +377,13 @@ export const DRAFT_PICKS = 3;  // how many you add each draft → a deck that gr
 // marketability/fame that carries into the pro). It's the flip side of banking your earnings for a higher
 // valuation: spend now for a better career, or hoard for a richer graduate. Deterministic (no rng).
 // chapter index reference: 0 Grassroots · 1 Academy · 2 Scholar · 3 Youth Team · 4 Breakthrough · 5 First Team · 6 Establishing
-export interface LifestyleItem { id: string; icon: string; name: string; blurb: string; cost: number; minChapterIdx: number; maxChapterIdx?: number; recovery?: number; market?: number; greed?: number; perks?: Partial<Record<MeterKey, number>>; clubInvest?: number }
+export interface LifestyleItem { id: string; icon: string; name: string; blurb: string; cost: number; minChapterIdx: number; maxChapterIdx?: number; recovery?: number; market?: number; greed?: number; perks?: Partial<Record<MeterKey, number>>; clubInvest?: number;
+  /** METER-GATED: only on offer once ALL these standings are met — a high-standing OPPORTUNITY. */
+  minMeter?: Partial<Record<MeterKey, number>>;
+  /** METER-GATED: only on offer while ALL these standings are BELOW threshold — a low-standing TROUBLE
+   *  intervention (paying to fix a mess, not a treat). */
+  maxMeter?: Partial<Record<MeterKey, number>>;
+}
 /** How much of his earnings a lifestyle choice diverts to the club (0 = a personal treat, not an investment). */
 export function clubInvestOf(itemId: string): number { return LIFESTYLE.find((i) => i.id === itemId)?.clubInvest ?? 0; }
 export const LIFESTYLE: LifestyleItem[] = [
@@ -417,6 +423,16 @@ export const LIFESTYLE: LifestyleItem[] = [
   // club server-side (clubInvestOf); buyLifestyle only spends the earnings and stays available.
   { id: 'invest-club-sm', icon: '🏛️', name: "Back the Club",       blurb: "Put earnings into the club's future instead of your own — every coin goes to the club.", cost: 150, minChapterIdx: 1, clubInvest: 150 },
   { id: 'invest-club-lg', icon: '🏟️', name: 'Back the Club — Big', blurb: 'A major injection into the club from your own pocket — the dynasty over the lifestyle.',       cost: 600, minChapterIdx: 3, clubInvest: 600 },
+  // METER-GATED OPPORTUNITIES — tending a relationship has real teeth: a genuinely high standing unlocks
+  // something money alone can't buy (only shows up on the shelf once you've earned the standing for it).
+  { id: 'testimonial-seat', icon: '🎗️', name: 'A Seat on the Testimonial Committee', blurb: 'The fans have taken to him so completely, the club asks him to help plan his own future send-off.', cost: 1200, minChapterIdx: 5, market: 1, perks: { sponsors: 6 }, minMeter: { fans: 75 } },
+  { id: 'dressing-room-mvp', icon: '🏅', name: 'Voted Dressing-Room Player of the Year', blurb: 'His own team-mates put him top of the pile — a peer-voted honour money could never buy.', cost: 400, minChapterIdx: 4, perks: { authority: 8, fans: 4 }, minMeter: { peers: 75 } },
+  { id: 'trusted-voice', icon: '📣', name: "The Gaffer's Trusted Voice", blurb: 'So complete is the manager\'s trust, he starts being consulted before big calls are made.', cost: 800, minChapterIdx: 4, perks: { peers: 8, agent: 6 }, minMeter: { authority: 78 } },
+  // METER-GATED TROUBLE — a low standing doesn't just cost you passively; it opens a costly damage-control
+  // shelf you'd rather not need. Paying doesn't undo the mess, but it stops the bleeding.
+  { id: 'crisis-pr', icon: '🧯', name: 'Hire a Crisis PR Team', blurb: 'The fans have turned on him and it shows no sign of blowing over — time to pay someone to manage the fallout.', cost: 900, minChapterIdx: 4, perks: { fans: 14 }, maxMeter: { fans: 25 } },
+  { id: 'agent-firing', icon: '✂️', name: 'Cut Your Agent Loose', blurb: 'The relationship has soured beyond repair — an expensive, awkward, necessary split.', cost: 600, minChapterIdx: 3, perks: { agent: 30 }, maxMeter: { agent: 20 } },
+  { id: 'counselling', icon: '🛋️', name: 'See a Relationship Counsellor', blurb: 'Things at home have got bad enough that pretending it will sort itself out isn’t working anymore.', cost: 500, minChapterIdx: 3, perks: { partner: 20 }, maxMeter: { partner: 25 } },
 ];
 
 // ── BACKROOM STAFF: at each age-chapter break you appoint a mentor/coach for the coming chapter.
@@ -956,10 +972,15 @@ export class Career {
       this.pendingOffer = rollOffer(this.rng, this.turn);
     }
   }
-  /** Lifestyle upgrades affordable + unlocked RIGHT NOW (offered at the between-chapter focus screen). */
+  /** Lifestyle upgrades affordable + unlocked RIGHT NOW (offered at the between-chapter focus screen).
+   *  Meter-gated items only appear once the relevant standing actually earns (or costs) them — see
+   *  LifestyleItem.minMeter/maxMeter: relationships gate real opportunities and real trouble, not just flavour. */
   get lifestyleOffer(): LifestyleItem[] {
     const chapterIdx = bandAt(Math.min(this.turn, TOTAL_TURNS - 1)).index;
-    return LIFESTYLE.filter((it) => !this.ownedLifestyle.includes(it.id) && chapterIdx >= it.minChapterIdx && (it.maxChapterIdx == null || chapterIdx <= it.maxChapterIdx) && this.earnings >= it.cost);
+    const meterGatesPass = (it: LifestyleItem) =>
+      (!it.minMeter || Object.entries(it.minMeter).every(([k, v]) => this.standing[k as MeterKey] >= (v ?? 0))) &&
+      (!it.maxMeter || Object.entries(it.maxMeter).every(([k, v]) => this.standing[k as MeterKey] <= (v ?? 100)));
+    return LIFESTYLE.filter((it) => !this.ownedLifestyle.includes(it.id) && chapterIdx >= it.minChapterIdx && (it.maxChapterIdx == null || chapterIdx <= it.maxChapterIdx) && this.earnings >= it.cost && meterGatesPass(it));
   }
   /** BUY a lifestyle upgrade with career earnings — a permanent perk. Does NOT advance the phase (you can
    *  buy several at a break, then choose your summer focus). Deterministic, no rng. */
