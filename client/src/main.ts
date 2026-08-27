@@ -1112,29 +1112,52 @@ class Game {
     this.showSeason();
   }
 
+  /** What the retiring star does NEXT — a mostly-narrative choice that colours the epilogue and decides
+   *  whether the existing mentoring→heir bonus (dev_bonus on composure/leadership) actually applies. Real
+   *  retired pros describe identity loss and pivoting into coaching/media/mentoring (docs/research-player-
+   *  career.md §11 — Joe Thompson, Karen Bardsley). */
+  private static readonly NEXT_LIFE: Record<'coaching' | 'media' | 'mentoring', { label: string; icon: string; blurb: string }> = {
+    coaching: { icon: '🎓', label: 'Move into coaching', blurb: 'He’s already talked about his first badge — the dressing room hasn’t seen the last of him, just from a different angle.' },
+    media: { icon: '🎙️', label: 'Move into the media', blurb: 'A studio wants him behind a microphone next season — a new way to stay close to a game he can’t quite leave behind.' },
+    mentoring: { icon: '🧭', label: 'Stay close, mentor the heir', blurb: 'He isn’t going far. The next generation of the family will have him in their corner, every step of the way.' },
+  };
   private retireStar(titles: number, contTitles = 0) {
     const m = this.loadMgr();
     const seasons = m.season;
-    const mentorship = Math.max(0, (m.starAge ?? 30) - 30); // veteran years spent passing on the game to the next gen
+    const mentorship = Math.max(0, (m.starAge ?? 30) - 30); // veteran years spent passing on the game to the next gen — only banked if he chooses to mentor
     this.showScreen('academy');
     const surname = (m.starName ?? '').trim().split(/\s+/).slice(1).join(' ') || m.starName || 'the family';
-    const mentorLine = mentorship > 0 ? ` In his veteran years he took the youngsters under his wing — that wisdom passes to his heir.` : '';
     const honours = [titles ? `${titles} league title${titles === 1 ? '' : 's'}` : '', contTitles ? `${contTitles} continental cup${contTitles === 1 ? '' : 's'}` : '', (m.wcWins ?? 0) ? `${m.wcWins} World Finals title${(m.wcWins ?? 0) === 1 ? '' : 's'}` : ''].filter(Boolean);
     const honourLine = honours.length ? ` and ${honours.join(', ')}` : '';
+    // THE HEADLINES STOP: real retired pros describe the abruptness of the press/media drop-off — front
+    // pages one day, silence the next, the game already moved on (research §11, Joe Thompson's own words).
+    const headlinesLine = ` The back pages carried him for one last day. By the morning after, the game had already moved on to someone else’s story.`;
     $('academy-body').innerHTML = `<div class="cg-graduation"><div class="cg-grad-title"><span class="ico-inline ico-lg">${sprite('banner')}</span> ${m.starName} hangs up his boots</div>`
-      + `<div class="cg-epilogue">After ${seasons} season${seasons === 1 ? '' : 's'} steering <b>${this.club?.name}</b>${honourLine}, ${m.starName} retires a club great.${mentorLine} But the <b>${surname}</b> name isn't done — his son is already coming through the youth ranks.</div>`
-      + `<div class="cg-grad-windfall">🌳 The bloodline continues${mentorship > 0 ? ` · 🎓 mentored heir (+${Math.min(3, Math.ceil(mentorship / 2))} mentality)` : ''}</div>`
-      + `<button id="cg-heir" class="primary">Bring through the heir →</button></div>`;
-    $('cg-heir').addEventListener('click', async () => {
-      try {
-        ($('cg-heir') as HTMLButtonElement).textContent = 'Raising the next generation…';
-        const r = await api.succeed(m.starId!, { seasons, titles, mentorship });
-        this.clearMgr(); // back to player phase — the heir's card-career begins
-        this.setMe(await api.me());
-        if (r.legacy) toast(`🏟️ +${r.legacy.toLocaleString()}c legacy to the club`);
-        this.showProspectCard(r.prospect, true); // reveal the heir → Develop him → play his career → hand off again
-      } catch (e: any) { toast(e?.body?.error ?? 'Succession failed'); ($('cg-heir') as HTMLButtonElement).textContent = 'Bring through the heir →'; }
-    });
+      + `<div class="cg-epilogue">After ${seasons} season${seasons === 1 ? '' : 's'} steering <b>${this.club?.name}</b>${honourLine}, ${m.starName} retires a club great.${headlinesLine} But the <b>${surname}</b> name isn't done — his son is already coming through the youth ranks.</div>`
+      + `<div class="cg-prompt">What does ${m.starName} do next?</div>`
+      + `<div id="cg-nextlife">` + (Object.keys(Game.NEXT_LIFE) as Array<'coaching' | 'media' | 'mentoring'>).map((k) => {
+        const nl = Game.NEXT_LIFE[k];
+        return `<div class="cg-coach" data-nextlife="${k}"><div class="cg-cname">${nl.icon} ${nl.label}</div></div>`;
+      }).join('') + `</div></div>`;
+    document.querySelectorAll('#cg-nextlife [data-nextlife]').forEach((el) => el.addEventListener('click', () => {
+      const choice = (el as HTMLElement).dataset.nextlife as 'coaching' | 'media' | 'mentoring';
+      const nl = Game.NEXT_LIFE[choice];
+      const appliedMentorship = choice === 'mentoring' ? mentorship : 0; // reuse the existing mentoring→heir bonus, only for this choice
+      const windfall = appliedMentorship > 0 ? ` · 🎓 mentored heir (+${Math.min(3, Math.ceil(appliedMentorship / 2))} mentality)` : '';
+      $('cg-nextlife').outerHTML = `<div class="cg-epilogue">${nl.blurb}</div>`
+        + `<div class="cg-grad-windfall">🌳 The bloodline continues${windfall}</div>`
+        + `<button id="cg-heir" class="primary">Bring through the heir →</button>`;
+      $('cg-heir').addEventListener('click', async () => {
+        try {
+          ($('cg-heir') as HTMLButtonElement).textContent = 'Raising the next generation…';
+          const r = await api.succeed(m.starId!, { seasons, titles, mentorship: appliedMentorship });
+          this.clearMgr(); // back to player phase — the heir's card-career begins
+          this.setMe(await api.me());
+          if (r.legacy) toast(`🏟️ +${r.legacy.toLocaleString()}c legacy to the club`);
+          this.showProspectCard(r.prospect, true); // reveal the heir → Develop him → play his career → hand off again
+        } catch (e: any) { toast(e?.body?.error ?? 'Succession failed'); ($('cg-heir') as HTMLButtonElement).textContent = 'Bring through the heir →'; }
+      });
+    }));
   }
 
   private playNextSpFixture() {
