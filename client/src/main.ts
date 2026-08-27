@@ -800,9 +800,11 @@ class Game {
 
   /** Roll into the next season: bank a title if the club finished top, age the star a year, and — once he
    *  reaches the end of his career — trigger his retirement and the succession to the heir. */
-  private nextSeason() {
+  private async nextSeason() {
     const m = this.loadMgr();
     const t = liveTable(this.club.name, this.clubLeagueStrength(), 1, this.leagueSeed(), m.results);
+    // bank the season prize money (coins → reinvest in facilities), closing the manager economy loop
+    try { const r = await api.spSeasonReward({ pos: t.pos, size: t.size }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 Season prize: +${r.prize.toLocaleString()}c${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ` · ${this.ordinal(t.pos)}`}`); } catch { /* offline: no prize */ }
     const titles = (m.titles ?? 0) + (t.pos === 1 ? 1 : 0);
     const age = (m.starAge ?? 22) + 1;
     if (age >= (m.retireAge ?? 34)) { this.retireStar(titles); return; } // his playing days are over — the heir comes through

@@ -119,6 +119,7 @@ export const api = {
   reborn: (playerId: string) => req<{ ok: true; cost: number; legacy?: number; coins: number; prospect: Prospect }>(`/players/${encodeURIComponent(playerId)}/reborn`, { method: 'POST' }),
   careerHandoff: (pid: string) => req<{ ok: true; player: Player }>(`/career/${encodeURIComponent(pid)}/handoff`, { method: 'POST' }),
   succeed: (pid: string, body: { seasons: number; titles: number }) => req<{ ok: true; legacy?: number; prospect: Prospect }>(`/players/${encodeURIComponent(pid)}/succeed`, { method: 'POST', body: JSON.stringify(body) }),
+  spSeasonReward: (body: { pos: number; size: number }) => req<{ ok: true; prize: number; coins: number }>(`/sp/season-reward`, { method: 'POST', body: JSON.stringify(body) }),
   prospects: () => req<{ prospects: Prospect[]; supply: number; cap: number }>('/prospects'),
   genesis: () => req<{ ok: true; supply: number; cap: number; cost?: number; coins?: number; prospect: Prospect }>('/genesis', { method: 'POST' }),
   careerAgents: () => req<{ agents: Array<{ id: string; name: string; desc: string }> }>('/career/agents'),

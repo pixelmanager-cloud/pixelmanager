@@ -580,6 +580,20 @@ app.post('/career/:id/handoff', { preHandler: requireAuth }, async (req, reply) 
   return { ok: true, player: tokenToPlayer((await db.getToken(t.id))!) };
 });
 
+// SP SEASON PRIZE — the single-player manager season is client-side, so it reports its finish here to bank
+// the prize money (coins → reinvest in facilities). Single-player only; amounts are modest + capped.
+app.post('/sp/season-reward', { preHandler: requireAuth }, async (req, reply) => {
+  const ownerId = req.account!.id;
+  const body = req.body as any;
+  const pos = Math.max(1, Math.min(20, Math.floor(Number(body?.pos) || 10)));
+  const size = Math.max(2, Math.min(30, Math.floor(Number(body?.size) || 10)));
+  // prize by finishing position: champions banked handsomely, tapering to a small survival cheque
+  const frac = (pos - 1) / (size - 1); // 0 = top, 1 = bottom
+  const prize = pos === 1 ? 800 : Math.round(120 + (1 - frac) * 480); // ~600 for 2nd → ~120 for last
+  await db.addCoins(ownerId, prize);
+  return { ok: true, prize, coins: await db.getCoins(ownerId) };
+});
+
 // SUCCESSION: the managed star retires and his heir comes through the youth ranks. Unlike the shop 'reborn',
 // this is the automatic dynasty milestone — free, and it FOLDS his managed career (seasons + titles) into
 // his legacy so a long, decorated career breeds a stronger heir. Returns the heir prospect.
