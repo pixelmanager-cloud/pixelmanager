@@ -375,6 +375,13 @@ export const LIFESTYLE: LifestyleItem[] = [
   { id: 'supercar', icon: '🏎️', name: 'A Supercar',               blurb: 'Turn heads pulling into the car park — the boyhood dream, made real.', cost: 2400, minChapterIdx: 5, market: 1, perks: { fans: 8 } },
   { id: 'testim',   icon: '🎟️', name: 'Pledge a Testimonial Fund', blurb: 'Set some earnings aside for a benefit match — the dressing room notices.', cost: 2600, minChapterIdx: 5, perks: { peers: 14, fans: 6 } },
   { id: 'restaurant', icon: '🍷', name: 'Boutique Restaurant Investment', blurb: 'Put your name over the door of a place the whole city is talking about.', cost: 4200, minChapterIdx: 6, market: 2, greed: 1, perks: { sponsors: 8 } },
+  // Real trade-offs: a flashy purchase that BUYS fame/fans but COSTS a relationship — money doesn't just
+  // add, it reallocates. Lets a career choose an image, not just a shopping list.
+  { id: 'flash-jewellery', icon: '💎', name: 'Flash the Jewellery', blurb: 'Chains and watches on full display — the cameras love it, the dressing room less so.', cost: 1100, minChapterIdx: 4, market: 2, greed: 1, perks: { fans: 10, peers: -10 } },
+  { id: 'nightclub', icon: '🍾', name: 'A Night Out That Makes the Papers', blurb: 'A big night, splashed across the tabloids the next morning.', cost: 700, minChapterIdx: 4, market: 1, perks: { fans: 6, partner: -12, authority: -6 } },
+  { id: 'private-tutor', icon: '📚', name: 'A Private Tutor', blurb: 'Keep learning off the pitch — a level head the papers can never take from you.', cost: 500, minChapterIdx: 2, maxChapterIdx: 4, perks: { school: 16, family: 6 } },
+  { id: 'youth-coach-gift', icon: '🎁', name: 'Give Back to Your First Club', blurb: 'A donation to the grassroots club that made you — a nod to where it all started.', cost: 900, minChapterIdx: 5, perks: { fans: 10, family: 8 } },
+  { id: 'entourage', icon: '🕴️', name: 'Build an Entourage', blurb: 'Old mates on the payroll now — loyal, but it costs, and the club whispers about who’s really around you.', cost: 1800, minChapterIdx: 5, greed: 1, perks: { peers: 12, authority: -6 } },
   // Player-directed investing — put earnings into the CLUB instead of a personal treat. Repeatable (never
   // marked "owned"), no personal perk — the trade-off is you vs the dynasty. The coins are credited to the
   // club server-side (clubInvestOf); buyLifestyle only spends the earnings and stays available.
