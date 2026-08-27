@@ -165,6 +165,12 @@ function nftTier(ov: number): Tier {
   if (ov >= 12) return { key: 'silver', name: 'SILVER', icon: '🥈' };
   return { key: 'bronze', name: 'BRONZE', icon: '🥉' };
 }
+/** The legend tier gets the pixel crown at the two big collectible-card reveal moments (the
+ *  "TURNED PRO" flash and the tier badge) — bronze/silver/gold/diamond keep their plain emoji so
+ *  the escalating ladder still reads consistently. innerHTML-only: this returns raw SVG markup. */
+function tierIconHtml(tier: Tier): string {
+  return tier.key === 'legend' ? `<span class="ico-inline">${sprite('crown')}</span>` : tier.icon;
+}
 
 // Sort state for the full-squad-stats table. `null` = default role grouping.
 type SquadSort = { key: string; dir: 'asc' | 'desc' };
@@ -464,9 +470,9 @@ class Game {
     el.innerHTML =
       `<div class="pc-card tier-${tier.key}">`
       + ring + '<div class="pc-burst"></div>' + sparks
-      + (minted ? `<div class="pc-flash">${tier.icon} TURNED PRO · ${tier.name}</div>` : '')
+      + (minted ? `<div class="pc-flash">${tierIconHtml(tier)} TURNED PRO · ${tier.name}</div>` : '')
       + `<div class="pc-top"><div class="pc-ovr">${overall(p)}<span>OVR</span></div>`
-      + `<div class="pc-tier">${tier.icon}<span>${tier.name}</span></div></div>`
+      + `<div class="pc-tier">${tierIconHtml(tier)}<span>${tier.name}</span></div></div>`
       + `<div class="pc-crest role-${p.role}"><span class="pc-crest-role">${p.role}</span></div>`
       + `<div class="pc-name">${p.name}</div>`
       + `<div class="pc-role">${roleName[p.role] ?? p.role}</div>`
@@ -1454,7 +1460,7 @@ class Game {
       };
       const bloodlines = lines.length
         ? lines.map((chain) => `<div class="tr-line">` + chain.map((l, i) => genCard(l, i, chain.length)).join('') + `</div>`).join('')
-        : `<div class="tr-empty"><div class="tr-empty-art">${sprite('youth')}</div><div class="muted">No bloodlines yet — develop a player, field him for a career, and retire him to found a dynasty. Every generation after adds a link to the tree.</div></div>`;
+        : `<div class="tr-empty"><div class="tr-empty-art">${sprite('crown')}</div><div class="muted">No bloodlines yet — develop a player, field him for a career, and retire him to found a dynasty. Every generation after adds a link to the tree.</div></div>`;
       const retiredSection = retired.length
         ? `<h4 class="scout-h4" style="margin-top:24px;">🎽 RETIRED NUMBERS</h4><div class="scout-sub">Shirts hung up forever for the club's immortals — no future player wears these.</div>`
           + `<div class="tr-cabinet">` + retired.map((r) => `<div class="tr-trophy"><div class="tr-trophy-ico">#${r.n}</div><div class="tr-trophy-name">${r.name}</div><div class="tr-trophy-sub">retired</div></div>`).join('') + `</div>`
