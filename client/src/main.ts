@@ -1,7 +1,7 @@
 import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
   TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry,
-  FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, deriveExpectation, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition, contTieBlurb,
+  FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, deriveExpectation, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition, contTieBlurb, wcGroupDramaBlurb, wcKnockoutDramaBlurb,
   type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type Trialist, type MissionsData, type ContractInfo } from './api';
@@ -1270,8 +1270,15 @@ class Game {
       : finish === 'Semi-finals' ? `${nation} reach the last four before bowing out — heads held high.`
       : finish === 'Quarter-finals' ? `${nation} make the last eight before their run is ended.`
       : `${nation}'s tournament ends in the group stage. The dream lives on for next time.`;
+    // a deterministic "tournament story" — how the star's group went + how the final played out (from intl.ts)
+    const wcSeed = this.leagueSeed();
+    const myGi = wc.groups.findIndex((g) => g.rows.some((r) => r.mine));
+    const groupDrama = myGi >= 0 ? wcGroupDramaBlurb(wcSeed, wc.edition, myGi, wc.groups[myGi].rows) : '';
+    const finalDrama = wcKnockoutDramaBlurb(wcSeed, wc.edition, wc.final);
+    const dramaLine = (groupDrama || finalDrama) ? `<div class="wc-drama">📖 ${[groupDrama, finalDrama].filter(Boolean).join(' ')}</div>` : '';
     $('season-body').innerHTML = `<div class="wc-report"><div class="wc-report-head">🌐 THE WORLD FINALS — Edition ${wc.edition}</div>`
       + `<div class="wc-verdict ${finish === 'Champions' ? 'champ' : ''}"><span class="wc-badge">${badge}</span> ${verdict}</div>`
+      + dramaLine
       + `<div class="wc-groups">${groupHtml}</div>`
       + bracketHtml
       + `<div style="text-align:center;margin-top:16px;"><button class="primary" id="wc-back">Back to the season →</button></div></div>`;
