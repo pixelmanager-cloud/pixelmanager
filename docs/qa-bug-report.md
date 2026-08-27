@@ -4,6 +4,58 @@ Living report from the QA sim-fuzzing agent. Base commit: `b57aa88` (confirmed v
 after `git reset --hard main`; both `npm run verify` and `npx tsx shared/career_sim.ts` were GREEN before
 any QA work began).
 
+## UPDATE — 2026-08-28, batch 2 (base commit `4fafc59`)
+
+Synced clean off `main` (`git reset --hard main`, `git log --oneline -6` showed the prior batch's qa
+commits plus new player-content commits through `b6fd086`). Worked the batch-2 backlog in priority order;
+zero game bugs found. All new work is new standalone harnesses under `shared/qa_*.ts` — no file under
+`shared/src/` or `client/src/` was touched.
+
+1. **Broadened facade invariant coverage — `shared/qa_facade_invariant_fuzz.ts` (new).** Drives the real
+   `client/src/api.ts` offline facade through `developPlayer`, `careerHandoff`, the loan/trial flow
+   (`trials`/`signTrial`), `extendContract`, `upgradeFacility`, and `succeed()`/`reborn()` — call paths no
+   prior harness exercised with randomized/adversarial input. Checks: no negative coins, no NaN/Infinity in
+   any returned stat/economy number, no partial deduction on insufficient-funds throws, exact coin deltas,
+   cap enforcement (loanee cap, facility max-level), and correct one-shot/state-guard rejection (double
+   `careerHandoff`, double `succeed`, `extendContract`/`reborn` on the wrong token state). Clean.
+   - Note: an early draft of this harness assumed `succeed()` was repeatable on the same token; it isn't —
+     `succeed()` reverts the token's state back to `'prospect'` after one call (by design, matching
+     `client/qa_offline_facade.ts` step 12). Fixed the harness, not a game bug.
+2. **World Cup + national call-ups chained into the dynasty harness — `shared/qa_dynasty_fuzz.ts`
+   (extended).** The per-generation 15-season pro/manager loop previously only chained `clubSeason()` +
+   continental-cup fixtures; `worldCup()`/`nationalFixture()` were only exercised standalone. Now each
+   generation also rolls national call-ups (same rate curve as `tokens.ts`'s `careerState()` international
+   block) and a World Cup every 4 seasons (mirroring `main.ts`'s real `edition = season/4` cadence), with a
+   cross-generation check that national-team strength stays in `[1,20]` even after many generations of
+   inherited/legacy-boosted attrs compound. 5,000 generation-lifecycles (`QA_ROOTS=200 QA_GENS=25`) clean.
+3. **Scripted deterministic strategy variants — `shared/qa_strategy_fuzz.ts` (new).** Three zero-rng-jitter
+   policies (`always-develop` = deterministic max-`fit()` play; `always-safe` = min-power/min-risk play;
+   `always-aggressive` = max-power play regardless of fit) driven straight off `career.ts`'s exported
+   `fit()`/`cardPower()`. 1,800 careers (600/policy) clean, plus a strict determinism replay (same
+   seed+policy must be byte-identical — a stronger bar than the rng-driven harnesses, since any
+   nondeterminism here can only come from the engine, never policy noise). Balance data point:
+   `always-aggressive` trades ~27% lower avg overall for ~53% higher avg earnings vs `always-develop`.
+4. **Re-fuzzed the newly-expanded player content — `shared/qa_new_content_fuzz.ts` (new).** Targets
+   everything added in `b6fd086` since this agent's last pass: the 2 new `LifeKind` dilemmas
+   (`mentor_crossroads`, `friend_rivalry`), +1 focus option per chapter, `SIDE_FOCUS` extended to Scholar/
+   Youth Team, and 3 new lifestyle items. Unlike prior harnesses (bounds/NaN on whatever comes up), this one
+   explicitly tallies REACHABILITY of every declared content id across 4,000 random-choice careers and flags
+   anything that never fires. Result: all 16 `LifeKind`s reachable (`mentor_crossroads` x1267,
+   `friend_rivalry` x1298), all 6 chapters with a focus phase reached including Scholar + Youth Team, 43
+   distinct focus ids / 33 distinct lifestyle ids seen, 141 new-content careers replayed byte-identical, and
+   `actWithNarration()` on the two new kinds always returns non-empty narration with meters staying
+   finite/bounded before and after resolution. No dead content, no NaN, no determinism breaks.
+5. **Balance / calibration re-check.** `npx tsx shared/qa_calibration_baseline.ts` reproduced the recorded
+   baseline (`docs/qa-calibration-baseline.md`) **exactly** — goals/match 2.567, 0-0 rate 11.27%, home/away
+   38.40%/39.07%, poacher/target-man shot ratio 1.988×, wide/narrow 58.0%/16.0%/26.0% — zero drift (expected
+   for a deterministic seeded engine, but confirms nothing touched match-engine calibration this batch).
+   `npm run verify` reference metrics this session: `strategy_test.ts` 2.80 goals/match, `fuzz_test.ts` 5.36
+   goals/match / 43%-43% home-away — both within the documented reference bands.
+
+`npm run verify` stayed fully green throughout (re-run 3 times across this batch, after each new harness).
+No crashes, NaN/Infinity/undefined leaks, negative economy values, softlocks, dead/unreachable content, or
+determinism breaks were found anywhere this batch.
+
 ## UPDATE — 2026-08-27, offline-first repair + relaunch pass (base commit `4601959`)
 
 Fresh `git reset --hard main` picked up a large stretch of intervening work, most importantly a full
