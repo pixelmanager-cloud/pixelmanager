@@ -11,8 +11,12 @@ import { clubSeason, liveTable, seededLeague, seasonFixtures, seededOpponents, s
 import {
   tieScore, contOpponent, worldCup, playerPath, nationalFixture, homeNation,
   contTieBlurb, callUpBlurb, worldCupFinishBlurb, NATIONS,
+  contRivalClub, contRivalryBlurb, wcGroupDramaBlurb, wcKnockoutDramaBlurb,
 } from './src/intl.js';
 import { prestigeScore, managerPrestige, prestigeRankUpBlurb, type ManagerRecord } from './src/prestige.js';
+import { boardScore, boardStanding, type BoardMoodInput, type BoardExpectation } from './src/board.js';
+import { pressConferenceLine, pressAgendaTag, type PressInput, type PressCompetition, type PressForm } from './src/press.js';
+import { staffRoster, staffQuip, type StaffRole, type StaffMoment } from './src/staff.js';
 
 const N = Number(process.env.QA_N ?? 3000);
 const MAX_LOGGED = 60;
@@ -190,6 +194,112 @@ function mulberry32(seed: number): () => number {
   const more: ManagerRecord = { ...base, wins: 50 };
   if (prestigeScore(more) < prestigeScore(base)) log('prestigeScore NOT monotonic in wins');
   console.log('[prestige] fuzzed OK');
+}
+
+// ── 4b. intl.ts rivalry arcs & tournament drama (batch 2 additions) ──
+{
+  for (let s = 0; s < Math.min(N, 1500); s++) {
+    const rng = mulberry32(s + 6161);
+    let rival: string;
+    try { rival = contRivalClub(s); } catch (e) { log(`contRivalClub THROW seed=${s}: ${e}`); continue; }
+    if (!nonBlankStr(rival)) log(`contRivalClub blank seed=${s}`);
+    if (contRivalClub(s) !== rival) log(`contRivalClub NON-DETERMINISTIC seed=${s}`);
+    const round = (s % 3) as 0 | 1 | 2;
+    const rivBlurb = contRivalryBlurb(s, s % 20, round, rng() < 0.5);
+    if (!nonBlankStr(rivBlurb)) log(`contRivalryBlurb blank seed=${s}`);
+
+    const nation = NATIONS[s % NATIONS.length];
+    let wc;
+    try { wc = worldCup(s, s % 8, nation, 8 + (s % 12)); } catch (e) { log(`worldCup THROW (rivalry/drama pass) seed=${s}: ${e}`); continue; }
+    for (let gi = 0; gi < wc.groups.length; gi++) {
+      const drama = wcGroupDramaBlurb(s, s % 8, gi, wc.groups[gi].rows);
+      if (!nonBlankStr(drama)) log(`wcGroupDramaBlurb blank seed=${s} group=${gi}`);
+    }
+    for (const tie of [...wc.quarters, ...wc.semis, wc.final]) {
+      const drama = wcKnockoutDramaBlurb(s, s % 8, tie);
+      if (!nonBlankStr(drama)) log(`wcKnockoutDramaBlurb blank seed=${s} tie=${tie.a}v${tie.b}`);
+    }
+  }
+  console.log('[intl rivalry/drama] fuzzed OK');
+}
+
+// ── 5. board.ts: boardScore bounds, determinism, mood text non-blank ──
+{
+  const EXPECTATIONS: BoardExpectation[] = ['title', 'promotion', 'playoffs', 'midtable', 'survival'];
+  const seenMoods = new Set<string>();
+  for (let s = 0; s < Math.min(N, 1500); s++) {
+    const rng = mulberry32(s + 8181);
+    const total = 10 + Math.floor(rng() * 20);
+    const promote = 1 + Math.floor(rng() * 4);
+    const relegate = 1 + Math.floor(rng() * 4);
+    const totalMatches = 18 + Math.floor(rng() * 20);
+    const input: BoardMoodInput = {
+      position: 1 + Math.floor(rng() * total), total, promote, relegate,
+      points: Math.floor(rng() * 100),
+      matchesPlayed: Math.floor(rng() * totalMatches), totalMatches,
+      expectation: EXPECTATIONS[Math.floor(rng() * EXPECTATIONS.length)],
+    };
+    let score: number, standing: ReturnType<typeof boardStanding>;
+    try { score = boardScore(input); standing = boardStanding(s, input); } catch (e) { log(`board THROW seed=${s}: ${e}`); continue; }
+    if (!finite(score) || score < -100 || score > 100) log(`boardScore out of -100..100 seed=${s}: ${score}`);
+    if (!nonBlankStr(standing.message)) log(`boardStanding blank message seed=${s}`);
+    if (standing.score !== score) log(`boardStanding score mismatch vs boardScore seed=${s}`);
+    seenMoods.add(standing.mood);
+    // determinism
+    const standing2 = boardStanding(s, input);
+    if (standing.message !== standing2.message || standing.mood !== standing2.mood) log(`boardStanding NON-DETERMINISTIC seed=${s}`);
+  }
+  console.log(`[board] fuzzed OK, moods observed: ${[...seenMoods].sort().join(', ')}`);
+  if (seenMoods.size < 4) log(`boardStanding mood variety suspiciously low: only ${seenMoods.size} distinct moods`);
+}
+
+// ── 6. press.ts: no-throw, non-blank, determinism ──
+{
+  const COMPETITIONS: PressCompetition[] = ['league', 'continental', 'international', 'cup'];
+  const FORMS: PressForm[] = ['hot', 'cold', 'level'];
+  const seen = new Set<string>();
+  for (let s = 0; s < Math.min(N, 1500); s++) {
+    const rng = mulberry32(s + 9191);
+    const timing = rng() < 0.5 ? 'pre' as const : 'post' as const;
+    const input: PressInput = {
+      timing, competition: COMPETITIONS[Math.floor(rng() * COMPETITIONS.length)],
+      stakes: (1 + Math.floor(rng() * 3)) as 1 | 2 | 3,
+      form: FORMS[Math.floor(rng() * FORMS.length)],
+      result: timing === 'post' ? (['win', 'draw', 'loss'] as const)[Math.floor(rng() * 3)] : undefined,
+    };
+    let line: string;
+    try { line = pressConferenceLine(s, s % 40, input); } catch (e) { log(`pressConferenceLine THROW seed=${s}: ${e}`); continue; }
+    if (!nonBlankStr(line)) log(`pressConferenceLine blank seed=${s}`);
+    seen.add(line);
+    const line2 = pressConferenceLine(s, s % 40, input);
+    if (line !== line2) log(`pressConferenceLine NON-DETERMINISTIC seed=${s}`);
+    const tag = pressAgendaTag(input);
+    if (!nonBlankStr(tag)) log(`pressAgendaTag blank seed=${s}`);
+  }
+  console.log(`[press] fuzzed OK, ${seen.size} distinct lines observed`);
+  if (seen.size < 10) log(`pressConferenceLine variety suspiciously low: only ${seen.size} distinct lines`);
+}
+
+// ── 7. staff.ts: roster shape, determinism, quip non-blank ──
+{
+  const ROLES: StaffRole[] = ['Assistant Manager', 'Head Scout', 'Fitness Coach', 'Goalkeeping Coach'];
+  const MOMENTS: StaffMoment[] = ['bigWin', 'bigLoss', 'signing', 'preSeason', 'milestone'];
+  for (let s = 0; s < Math.min(N, 1500); s++) {
+    let roster: ReturnType<typeof staffRoster>;
+    try { roster = staffRoster(s); } catch (e) { log(`staffRoster THROW seed=${s}: ${e}`); continue; }
+    for (const m of [roster.assistant, roster.scout, roster.fitnessCoach, roster.goalkeepingCoach]) {
+      if (!nonBlankStr(m.name) || !nonBlankStr(m.personality)) log(`staffRoster malformed member seed=${s}: ${JSON.stringify(m)}`);
+    }
+    const roster2 = staffRoster(s);
+    if (JSON.stringify(roster) !== JSON.stringify(roster2)) log(`staffRoster NON-DETERMINISTIC seed=${s}`);
+    const rng = mulberry32(s + 2020);
+    const role = ROLES[Math.floor(rng() * ROLES.length)];
+    const moment = MOMENTS[Math.floor(rng() * MOMENTS.length)];
+    let quip: string;
+    try { quip = staffQuip(s, role, moment, s % 10); } catch (e) { log(`staffQuip THROW seed=${s}: ${e}`); continue; }
+    if (!nonBlankStr(quip)) log(`staffQuip blank seed=${s} role=${role} moment=${moment}`);
+  }
+  console.log('[staff] fuzzed OK');
 }
 
 console.log('');

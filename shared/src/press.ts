@@ -1,0 +1,146 @@
+// ── Press conferences — a deterministic pool of pre-/post-match media beats ──
+// Audit finding: variety in the manager hub was folded entirely into the Gaffer's Diary; there was no
+// distinct "press conference" surface. This module is a standalone system (its own file, per the
+// batch brief) so it doesn't duplicate the diary's storyline detection — instead it riffs on FORM,
+// COMPETITION and STAKES, which the diary never explicitly surfaces as its own axis. Pure + seeded;
+// no LLM, no wall-clock, no persisted state.
+
+function hash32(...nums: number[]): number {
+  let h = 2166136261 >>> 0;
+  for (const n of nums) { h ^= (n >>> 0); h = Math.imul(h, 16777619); }
+  return h >>> 0;
+}
+const nameSeed = (s: string) => [...s].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) >>> 0;
+function pick<T>(h: number, arr: readonly T[]): T { return arr[h % arr.length]; }
+
+export type PressTiming = 'pre' | 'post';
+export type PressCompetition = 'league' | 'continental' | 'international' | 'cup';
+export type PressForm = 'hot' | 'cold' | 'level';
+export type PressResult = 'win' | 'draw' | 'loss' | null; // null only valid for timing='pre'
+
+export interface PressInput {
+  timing: PressTiming;
+  competition: PressCompetition;
+  /** 1 = routine fixture, 2 = big occasion, 3 = season-defining (title decider, relegation six-pointer,
+   *  cup final, World-Finals knockout). Drives how loaded the questions get. */
+  stakes: 1 | 2 | 3;
+  form: PressForm;
+  result?: PressResult; // required (non-null) when timing === 'post'
+}
+
+const COMPETITION_TAG: Record<PressCompetition, string> = {
+  league: 'league fixture', continental: 'continental tie', international: 'international break', cup: 'cup tie',
+};
+
+// ── PRE-match: reporters probe team news, pressure, expectation ──
+const PRE_ROUTINE: string[] = [
+  'A quiet room today — mostly routine questions about team news and fitness.',
+  '"Just another game to us, prepare the same way every week," is the line to the press.',
+  'The press pack are more interested in the team sheet than any grand narrative today.',
+  'Nothing to read into the tone in the room — a routine build-up to a routine fixture.',
+];
+const PRE_STAKES_HIGH: string[] = [
+  'The room is packed. Every question circles back to the same word: pressure.',
+  '"We embrace it, we don\'t hide from it," comes the answer when the stakes are put to the room.',
+  'A charged press conference — everyone in the building knows what tonight could mean.',
+  'The line about "taking each game as it comes" gets a harder test than usual today.',
+];
+const PRE_HOT_FORM: string[] = [
+  'Reporters are asking about momentum, and there\'s no reason to talk it down.',
+  '"We\'re playing with real confidence right now, and it shows," is the message to the press.',
+  'A relaxed, upbeat room — good form makes for easy press conferences.',
+];
+const PRE_COLD_FORM: string[] = [
+  'Every question today comes back to the recent run, one way or another.',
+  '"We\'re better than the results suggest, and we\'ll prove it," is the line under pressure.',
+  'A tense room. The questions about form keep coming, and there\'s no ducking them.',
+];
+const PRE_CONTINENTAL: string[] = [
+  'The foreign press are in the room too today — a different kind of occasion, a different set of questions.',
+  '"European nights are what you dream about as a kid," the manager tells the assembled media.',
+];
+const PRE_INTERNATIONAL: string[] = [
+  'Talk turns to the players away on international duty, and the risk of picking up knocks.',
+  '"We just hope everyone comes back in one piece," is the honest answer on the international break.',
+];
+const PRE_CUP: string[] = [
+  'Cup magic gets a mention more than once — reporters love a giant-killing storyline.',
+  '"Respect for the opposition, but we\'re here to win it," is the message ahead of the tie.',
+];
+
+// ── POST-match: reaction to the result just gone ──
+const POST_WIN_ROUTINE: string[] = [
+  '"Job done, professional performance," is the summary for the cameras.',
+  'A satisfied but low-key press conference — three points, nothing more said about it.',
+  '"We take the three points and move on to the next one," comes the familiar line.',
+];
+const POST_WIN_BIG: string[] = [
+  '"That\'s as complete a performance as we\'ve put in all season," beams the manager.',
+  'A genuinely buoyant press conference — this result will be talked about for a while.',
+  '"I couldn\'t be prouder of this group after that," is the verdict, and it\'s not for show.',
+];
+const POST_DRAW: string[] = [
+  '"A point\'s a point, and on another day it\'s three," is the diplomatic line afterward.',
+  'A measured press conference — mild frustration, but no panic in the answers.',
+  '"We\'ll take the positives and fix what didn\'t work," comes the response.',
+];
+const POST_LOSS_ROUTINE: string[] = [
+  '"We\'ll analyse it, learn from it, and move on," is the composed reaction.',
+  'A short, businesslike press conference — no excuses offered, none really needed.',
+  '"Not our day. It happens over a long season," comes the shrugged-off answer.',
+];
+const POST_LOSS_STAKES: string[] = [
+  'A tense room afterward — every question carries an edge that wasn\'t there before kick-off.',
+  '"We\'ll take the criticism, that\'s part of the job," comes the answer, jaw tight.',
+  'A defensive, careful press conference — the manager picks every word with real caution.',
+  '"I take responsibility. The buck stops with me," is the blunt line to a packed room.',
+];
+const POST_HOT_FORM_CONTINUES: string[] = [
+  '"We just keep winning and let people talk about it," is the relaxed response to another good result.',
+  'The questions about momentum get easier to answer with every passing week like this one.',
+];
+const POST_COLD_FORM_CONTINUES: string[] = [
+  '"We know it needs to change, and it will," is the tired but defiant line after another below-par result.',
+  'A press conference that\'s starting to feel repetitive — same questions, same patient answers, different week.',
+];
+
+/** A deterministic press-conference line for the given moment. `seed` should be the save seed (or a
+ *  combination of save seed + round/season number) so the same moment always reads the same way, but
+ *  different moments across a save vary widely. Pure; no state. */
+export function pressConferenceLine(seed: number, roundSalt: number, input: PressInput): string {
+  const h = hash32(seed, roundSalt * 733 + 19, nameSeed(input.timing), nameSeed(input.competition), input.stakes * 97, nameSeed(input.form));
+
+  const pools: string[][] = [];
+  if (input.timing === 'pre') {
+    if (input.stakes >= 3) pools.push(PRE_STAKES_HIGH);
+    else if (input.form === 'hot') pools.push(PRE_HOT_FORM);
+    else if (input.form === 'cold') pools.push(PRE_COLD_FORM);
+    else pools.push(PRE_ROUTINE);
+    if (input.competition === 'continental') pools.push(PRE_CONTINENTAL);
+    if (input.competition === 'international') pools.push(PRE_INTERNATIONAL);
+    if (input.competition === 'cup') pools.push(PRE_CUP);
+  } else {
+    const result = input.result ?? 'draw';
+    if (result === 'win') {
+      if (input.stakes >= 2) pools.push(POST_WIN_BIG); else pools.push(POST_WIN_ROUTINE);
+      if (input.form === 'hot') pools.push(POST_HOT_FORM_CONTINUES);
+    } else if (result === 'draw') {
+      pools.push(POST_DRAW);
+    } else {
+      if (input.stakes >= 2) pools.push(POST_LOSS_STAKES); else pools.push(POST_LOSS_ROUTINE);
+      if (input.form === 'cold') pools.push(POST_COLD_FORM_CONTINUES);
+    }
+  }
+
+  const chosenPool = pick(h, pools);
+  return pick(hash32(h, 7), chosenPool);
+}
+
+/** A short "on the agenda" tag line for a fixture preview card, independent of the full quote above —
+ *  useful when a caller just wants a one-line label rather than a full press-conference beat. */
+export function pressAgendaTag(input: Pick<PressInput, 'competition' | 'stakes'>): string {
+  const base = COMPETITION_TAG[input.competition];
+  if (input.stakes >= 3) return `Season-defining ${base}`;
+  if (input.stakes === 2) return `Big ${base}`;
+  return `Routine ${base}`;
+}
