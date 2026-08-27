@@ -132,6 +132,9 @@
       #mainmenu { text-align: center; padding: 24px 8px 8px; }
       #mm-title { font-family: var(--display); font-size: 40px; letter-spacing: 2px; margin: 0 0 8px; }
       #mm-tagline { font-family: var(--body); font-size: 19px; color: var(--pink); letter-spacing: 1px; margin-bottom: 26px; text-shadow: 1px 1px 0 rgba(0,0,0,0.6); }
+      /* the display font is wide/chunky — shrink the title on narrow screens so "FOOTBALL ROYALTY"
+         stays inside the panel instead of clipping past its right edge. */
+      @media (max-width: 480px) { #mm-title { font-size: 7.2vw; } }
       #mm-buttons, #mm-newgame { display: flex; flex-direction: column; gap: 12px; align-items: center; max-width: 320px; margin: 0 auto; }
       #mm-buttons button, #mm-newgame button { font-family: var(--display); font-size: 18px; padding: 14px 22px; width: 100%; cursor: pointer;
         background: var(--panel-2); color: var(--text); border: 2px solid var(--line); box-shadow: 3px 3px 0 rgba(0,0,0,0.6); }
