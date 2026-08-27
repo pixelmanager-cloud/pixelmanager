@@ -17,9 +17,10 @@ Legend: ☐ todo · ◐ in progress · ☑ done.
 - (see `offline-shell-design.md` §2)
 
 ## 3. Settings, saves & UX
-- ☐ Settings screen (music/SFX volume, reduced-motion, difficulty?)
-- ☐ Save-slot UX — multiple saves, autosave, delete/rename, "are you sure" flows (LocalStore exists; UX doesn't)
-- ☐ Pause/quit-to-menu flows
+- ◐ Settings screen — DONE: music volume + mute, reduce-motion (honours OS default), CRT screen-effect toggle, UI scale (80–130% live zoom). TODO: SFX volume (with the SFX set), difficulty (design decision).
+- ◐ Save-slot UX — multiple saves + switch + delete-with-confirmation DONE. TODO: rename, autosave indicator.
+- ☑ Pause/quit-to-menu flows — pause overlay (Resume/Settings/Quit), quit-mid-match confirms first.
+- ☑ Accessibility baseline — reduce-motion, CRT off, UI scale, switch a11y roles + keyboard toggles, default focus on primary action. TODO (see docs/feature-gap-analysis.md): text-contrast pass, full controller nav for Steam Deck.
 
 ## 4. UI/UX polish pass
 - ☐ Full visual audit for a premium feel; wire remaining sprites; fix flagged `.cg-tut` reflow bug
