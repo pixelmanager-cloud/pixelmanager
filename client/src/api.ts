@@ -24,7 +24,7 @@ export interface CareerState {
   scenario?: { id: string; kind: string; demand: Record<string, number>; label: string; stakes: number };
   story?: string; recap?: string; lifeEvent?: string;
   energy?: number; meters?: Array<{ key: string; icon: string; label: string; value: number }>;
-  focus?: Array<{ id: string; icon: string; name: string; desc: string; energy: number; effects: Record<string, number> }>;
+  focus?: Array<{ id: string; icon: string; name: string; desc: string; energy: number; effects: Record<string, number>; tag?: string }>;
   side?: boolean;
   lifestyle?: Array<{ id: string; icon: string; name: string; blurb: string; cost: number; recovery?: number; market?: number; greed?: number; perks?: Record<string, number>; clubInvest?: number }>;
   consequences?: string[];

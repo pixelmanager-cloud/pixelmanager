@@ -20,6 +20,7 @@ const BACKROOM_STAFF = [
 
 // icons for the stage-aware life meters (keyed by underlying relationship) — used in focus effect labels
 const METER_ICON: Record<string, string> = { authority: '🧑‍🏫', peers: '👥', family: '🏠', school: '🎒', agent: '🤝', fans: '📣', sponsors: '📸', partner: '❤️' };
+const TAG_ICON: Record<string, string> = { composure: '🧊', aggression: '⚔️', creativity: '🎨', teamwork: '🧩', leadership: '🎖️', stamina: '🏃', flair: '✨', keeping: '🧤' };
 
 // KIT customization options (cosmetic identity for the career player, carried to the pro)
 const BOOT_COLOURS = [
@@ -1683,7 +1684,7 @@ class Game {
         : '🌅 <b>Between seasons</b> — how do you spend the summer? Steer your relationships before the next chapter.';
       body = `<div class="cg-prompt">${focusPrompt}</div>`
         + `<div class="cg-focus">` + s.focus.map((f) => `<div class="cg-foc" data-act="focus" data-id="${f.id}"><div class="cg-cname">${f.icon} ${f.name}</div><div class="cg-cdescr">${f.desc}</div>`
-          + `<div class="cg-effs">${f.energy ? `⚡${f.energy > 0 ? '+' : ''}${f.energy} ` : ''}${effLabel(f.effects)}</div></div>`).join('') + `</div>` + shop;
+          + `<div class="cg-effs">${f.energy ? `⚡${f.energy > 0 ? '+' : ''}${f.energy} ` : ''}${effLabel(f.effects)}${f.tag ? `${TAG_ICON[f.tag] ?? ''} train ${f.tag}` : ''}</div></div>`).join('') + `</div>` + shop;
     }
     this.lastCareerState = s;
     // TABS declutter the view: NOW (the current decision + your life dashboard), PLAYER (full identity +

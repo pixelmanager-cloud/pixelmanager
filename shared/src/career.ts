@@ -457,7 +457,7 @@ export function rollOffer(_rng: () => number, _turn: number): Offer[] { return O
 // (moves energy + relationships only, no rng), so it steers which meters you carry into the next chapter
 // — and thus which consequences bite — without disturbing the graduation trajectory. Stage-appropriate:
 // a kid rests / studies / plays with mates; a pro tends a partner, works his agent, courts sponsors.
-export interface FocusOption { id: string; icon: string; name: string; desc: string; energy: number; effects: Partial<Record<MeterKey, number>> }
+export interface FocusOption { id: string; icon: string; name: string; desc: string; energy: number; effects: Partial<Record<MeterKey, number>>; tag?: Tag }
 const FOCUS_REST: FocusOption = { id: 'rest', icon: '🛌', name: 'Rest & Recharge', desc: 'A proper summer off. Come back fresh.', energy: +22, effects: { family: +4, peers: +3 } };
 const FOCUS_BY_CHAPTER: Record<string, FocusOption[]> = {
   Grassroots: [
@@ -503,12 +503,48 @@ const FOCUS_BY_CHAPTER: Record<string, FocusOption[]> = {
     { id: 'legacy',   icon: '👑', name: 'Think About Your Legacy', desc: 'What do you want them to say about you when it’s all over? You start carrying yourself like it.', energy: -6, effects: { authority: +10, fans: +10, peers: -2 } },
   ],
 };
+// ── LIGHT ATTRIBUTE FOCUS (a soft skill-tree): from Youth Team on, the summer offers one or two picks
+// that ALSO nudge a specific stat family — a small, player-directed lean layered on top of the
+// card-driven "earned, not chosen" development. No rng, no meter effects of its own beyond the small
+// energy cost — the reward is purely the tag nudge (applied in deriveStats, see FOCUS_TAG_WEIGHT).
+const TAG_FOCUS_BY_CHAPTER: Record<string, Array<{ id: string; icon: string; name: string; desc: string; tag: Tag }>> = {
+  'Youth Team':   [
+    { id: 'focus_stamina',    icon: '🏃', name: 'Punish Yourself in Pre-Season', desc: 'Double sessions, extra miles — build the engine now while your body can take it.', tag: 'stamina' },
+    { id: 'focus_teamwork',   icon: '🧩', name: 'Study the Shape',               desc: 'Hours with the whiteboard and the analyst — learn to read the team, not just the ball.', tag: 'teamwork' },
+  ],
+  Breakthrough:   [
+    { id: 'focus_composure',  icon: '🧊', name: 'Work on Big-Game Composure',    desc: 'Visualisation, breathing, reps under pressure — train the nerves as hard as the legs.', tag: 'composure' },
+    { id: 'focus_creativity', icon: '🎨', name: 'Sharpen Your Vision',           desc: 'Extra time on the training pitch, trying passes no one else sees.', tag: 'creativity' },
+  ],
+  'First Team':   [
+    { id: 'focus_leadership', icon: '🎖️', name: 'Grow Into a Leader on the Pitch', desc: 'Start talking, start organising — take on the responsibility.', tag: 'leadership' },
+    { id: 'focus_aggression', icon: '⚔️', name: 'Sharpen Your Edge',             desc: 'Add a nastier, more competitive streak to your game.', tag: 'aggression' },
+  ],
+  Establishing:   [
+    { id: 'focus_flair',      icon: '✨', name: 'Perfect a Signature Move',      desc: 'One trick, drilled a thousand times, until it’s unstoppable.', tag: 'flair' },
+    { id: 'focus_leadership2', icon: '🎖️', name: 'Become the Dressing-Room Leader', desc: 'The senior voice everyone else follows now.', tag: 'leadership' },
+  ],
+};
+const GK_TAG_FOCUS_BY_CHAPTER: Record<string, { id: string; icon: string; name: string; desc: string; tag: Tag }> = {
+  'Youth Team':   { id: 'focus_keeping1', icon: '🧤', name: 'Extra Hours on the Shot-Stopping Machine', desc: 'Ball after ball, low and hard — drill the reactions until they’re instinct.', tag: 'keeping' },
+  Breakthrough:   { id: 'focus_keeping2', icon: '🧤', name: 'Master Commanding Your Box',              desc: 'Crosses, corners, one-on-ones — own every inch of your penalty area.', tag: 'keeping' },
+  'First Team':   { id: 'focus_keeping3', icon: '🧤', name: 'Perfect Your Distribution',                desc: 'Turn every save into the first pass of a counter-attack.', tag: 'keeping' },
+  Establishing:   { id: 'focus_keeping4', icon: '🧤', name: 'Become the Last Word',                     desc: 'The kind of keeper a defence plays with total confidence in front of.', tag: 'keeping' },
+};
+const TAG_FOCUS_ENERGY = -5; // a light, deliberate training focus — a small energy cost, no meter swing
+
 /** The between-chapter focus choices for a life stage (Rest is always available). `standing`, if given,
- *  adds a high-variance RISK pick for later chapters — sized off current state, not rng (see below). */
-export function rollFocus(chapter: string, standing?: Record<MeterKey, number>): FocusOption[] {
-  const base = [...(FOCUS_BY_CHAPTER[chapter] ?? FOCUS_BY_CHAPTER.Establishing), FOCUS_REST];
+ *  adds a high-variance RISK pick for later chapters — sized off current state, not rng (see below).
+ *  `track` adds a GK-specific attribute-focus pick from Youth Team onward. */
+export function rollFocus(chapter: string, standing?: Record<MeterKey, number>, track: Track = 'outfield'): FocusOption[] {
+  const base = FOCUS_BY_CHAPTER[chapter] ?? FOCUS_BY_CHAPTER.Establishing;
   const risk = standing ? riskFocusFor(chapter, standing) : null;
-  return risk ? [...base, risk] : base;
+  const tagPicks = (TAG_FOCUS_BY_CHAPTER[chapter] ?? []).map((t) => ({ id: t.id, icon: t.icon, name: t.name, desc: t.desc, energy: TAG_FOCUS_ENERGY, effects: {}, tag: t.tag }));
+  const gk = track === 'goalkeeper' ? GK_TAG_FOCUS_BY_CHAPTER[chapter] : null;
+  const gkPick = gk ? [{ id: gk.id, icon: gk.icon, name: gk.name, desc: gk.desc, energy: TAG_FOCUS_ENERGY, effects: {}, tag: gk.tag }] : [];
+  // Rest stays LAST — it's the deliberate, meter-neutral fallback the balance harness picks when nothing
+  // else matches a need, so it must never be displaced by the newer attribute-focus picks.
+  return [...base, ...(risk ? [risk] : []), ...tagPicks, ...gkPick, FOCUS_REST];
 }
 
 // ── RISK FOCUS: from Breakthrough onward, a bold high-variance pick alongside the safe ones — a small
@@ -723,6 +759,9 @@ export class Career {
   private sideFocusFor: string | null = null;
   /** lifestyle upgrades bought with career earnings (permanent perks). */
   ownedLifestyle: string[] = [];
+  /** the soft skill-tree: summer training focuses picked from Youth Team on, tallied per tag — a small,
+   *  deliberate lean applied on top of the card-driven development in deriveStats (see FOCUS_TAG_WEIGHT). */
+  attrFocus: Partial<Record<Tag, number>> = {};
   private energyRecoveryBonus = 0;   // better living → more energy restored each summer
   /** How your relationships PAID OFF (or bit back) over the chapter that just ended — surfaced at the break. */
   chapterConsequences: string[] = [];
@@ -774,7 +813,7 @@ export class Career {
 
   /** The financial/agent context graduate() needs (greed, fame, earnings, injuries, exposure). */
   finContext(): GraduateCtx {
-    return { seriousInjuries: this.seriousInjuries, agentGreed: this.agent?.greed ?? 0, agentExposure: this.agent?.exposure ?? 1, greedBonus: this.greedBonus, marketBonus: this.marketBonus, earnings: this.earnings };
+    return { seriousInjuries: this.seriousInjuries, agentGreed: this.agent?.greed ?? 0, agentExposure: this.agent?.exposure ?? 1, greedBonus: this.greedBonus, marketBonus: this.marketBonus, earnings: this.earnings, attrFocus: this.attrFocus };
   }
 
   /** Reconstruct a career from a snapshot by replaying its actions (deterministic → exact state). A
@@ -804,6 +843,7 @@ export class Career {
     }
     this.energy = clamp(this.energy + opt.energy, 0, 100);
     for (const [k, d] of Object.entries(opt.effects)) this.standing[k as MeterKey] = clamp(this.standing[k as MeterKey] + (d ?? 0), 0, 100);
+    if (opt.tag) this.attrFocus[opt.tag] = (this.attrFocus[opt.tag] ?? 0) + 1; // the soft skill-tree lean
     this.actions.push({ type: 'focus', cardId: focusId });
     this.pendingFocus = null;
     // Breakthrough onward: a second, smaller SIDE focus round follows the main pick (once per chapter).
@@ -926,7 +966,7 @@ export class Career {
     if (this.turn >= TOTAL_TURNS) { this.finished = true; return choice; }
     // at an age-chapter boundary: relationships pay off (or bite), a narrative EVENT fires, then you
     // choose a summer FOCUS, take a financial offer, appoint a coach and draft.
-    if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.earnings += 40 + this.turn * 12; this.pendingFocus = rollFocus(this.chapter, this.standing); }
+    if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.earnings += 40 + this.turn * 12; this.pendingFocus = rollFocus(this.chapter, this.standing, this.track); }
     else { this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure); }
     return choice;
   }
@@ -1074,7 +1114,7 @@ export interface CareerPlayerAttrs {
 export type Role = 'GK' | 'DF' | 'MF' | 'FW';
 export interface CareerPlayer { attrs: CareerPlayerAttrs; role: Role; overall: number; genes: Genes; traits: string[]; personality: string; greed: number; marketability: number; earnings: number }
 /** Financial/agent context carried out of a career into graduation (all optional → neutral defaults). */
-export interface GraduateCtx { seriousInjuries?: number; agentGreed?: number; agentExposure?: number; greedBonus?: number; marketBonus?: number; earnings?: number; legacyBonus?: Partial<Record<keyof CareerPlayerAttrs, number>> }
+export interface GraduateCtx { seriousInjuries?: number; agentGreed?: number; agentExposure?: number; greedBonus?: number; marketBonus?: number; earnings?: number; legacyBonus?: Partial<Record<keyof CareerPlayerAttrs, number>>; attrFocus?: Partial<Record<Tag, number>> }
 
 // ── PERSONALITY: an innate temperament (nature), seeded at genesis like genes. It shapes HOW a player
 // handles their career — steadiness vs volatility, and whether they rise or wilt under pressure — and
@@ -1181,12 +1221,18 @@ const STAT_SOURCES: Record<Exclude<keyof CareerPlayerAttrs, 'durability'>, Tag[]
 };
 const BASELINE = 7, SPREAD = 12, PEAK = 1.5;
 
-export function deriveStats(log: Choice[], seed: number, genes: Genes = rollGenes(seed)): CareerPlayerAttrs {
+// how much one summer's attribute-focus pick (see rollFocus) leans a tag's frequency — deliberately small:
+// comparable to one strong (epic, stakes-3) card play, so a handful of picks across a career nudges shape
+// without overriding the card-driven "earned, not chosen" development.
+const FOCUS_TAG_WEIGHT = 6;
+
+export function deriveStats(log: Choice[], seed: number, genes: Genes = rollGenes(seed), attrFocus?: Partial<Record<Tag, number>>): CareerPlayerAttrs {
   const rng = mulberry32(seed ^ 0x9e3779b9);
   const innate = new Set<keyof CareerPlayerAttrs>(INNATE);
   const freq = Object.fromEntries(TAGS.map((t) => [t, 0])) as Record<Tag, number>;
   // weight by card power AND stakes: a great play in a cup final shapes you more than a training drill
   for (const c of log) for (const t of c.tags) freq[t] += c.power * c.stakes;
+  if (attrFocus) for (const t of TAGS) freq[t] += (attrFocus[t] ?? 0) * FOCUS_TAG_WEIGHT; // the soft skill-tree lean
   const maxFreq = Math.max(1, ...TAGS.map((t) => freq[t]));
   const norm = Object.fromEntries(TAGS.map((t) => [t, freq[t] / maxFreq])) as Record<Tag, number>;
   // MAGNITUDE = how well you actually played (avg success across the career). With a capped flywheel
@@ -1278,8 +1324,8 @@ export function eligibleTraits(attrs: CareerPlayerAttrs, log: Choice[]): Trait[]
  *  fresh genesis roll; pass inherited genes (lineage). `pickTraits` chooses among the eligible traits
  *  (the client lets a human pick; defaults to the first MAX_TRAITS for the sim). */
 export function graduate(log: Choice[], seed: number, genes: Genes = rollGenes(seed), pickTraits?: (eligible: Trait[]) => Trait[], ctx: GraduateCtx = {}): CareerPlayer {
-  const { seriousInjuries = 0, agentGreed = 0, agentExposure = 1, greedBonus = 0, marketBonus = 0, earnings = 0, legacyBonus } = ctx;
-  const attrs = deriveStats(log, seed, genes);
+  const { seriousInjuries = 0, agentGreed = 0, agentExposure = 1, greedBonus = 0, marketBonus = 0, earnings = 0, legacyBonus, attrFocus } = ctx;
+  const attrs = deriveStats(log, seed, genes, attrFocus);
   const personality = rollPersonality(seed);                          // same temperament the career developed under
   if (personality.signature) attrs[personality.signature] = clamp(attrs[personality.signature] + 1, 1, 20);
   // inherited pedigree from a decorated father (team achievements) — a bounded, position-neutral head-start
@@ -1334,7 +1380,7 @@ export function ageCurve(prime: CareerPlayerAttrs, age: number): CareerPlayerAtt
 // and its physical gene ceiling (the scarce, un-grindable part). Deterministic + verifiable.
 export interface ProspectValue { age: number; chapter: string; role: Role; currentOverall: number; potential: number; physicalCeiling: number; stars: number }
 export function prospectValuation(c: Career, genes: Genes): ProspectValue {
-  const partial = deriveStats(c.log, c.seed, genes);           // stats so far (deterministic)
+  const partial = deriveStats(c.log, c.seed, genes, c.attrFocus); // stats so far (deterministic)
   const role = deriveRole(partial);
   const current = careerOverall(partial, role);
   const remaining = Math.max(0, 1 - c.turn / TOTAL_TURNS);     // fraction of the career still to develop
@@ -1355,9 +1401,11 @@ export function simCareer(seed: number, style: Style, genes: Genes = rollGenes(s
   while (!career.finished) {
     const st = career.current();
     if (st.phase === 'focus') {
-      // summer focus: shore up the neediest active relationship (lowest meter), else rest.
+      // summer focus: an identity-matching attribute-focus pick (the soft skill-tree) beats a relationship
+      // top-up beats a plain rest — a style-consistent career leans into its own strengths when it can.
+      const tagPick = [...st.focus].filter((f) => f.tag && (style.pref[f.tag] ?? 0) > 0).sort((a, b) => (style.pref[b.tag!] ?? 0) - (style.pref[a.tag!] ?? 0))[0];
       const lowest = [...career.meters].sort((a, b) => a.value - b.value)[0];
-      const pick = st.focus.find((f) => lowest && f.effects[lowest.key as MeterKey] != null && f.effects[lowest.key as MeterKey]! > 0) ?? st.focus[st.focus.length - 1];
+      const pick = tagPick ?? st.focus.find((f) => lowest && f.effects[lowest.key as MeterKey] != null && f.effects[lowest.key as MeterKey]! > 0) ?? st.focus[st.focus.length - 1];
       career.chooseFocus(pick.id);
       continue;
     }
