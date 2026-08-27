@@ -720,22 +720,33 @@ class Game {
     const m = this.loadMgr(), played = m.results;
     const t = liveTable(clubName, this.squadStrength(), 1, seed, played);
     const nextIdx = played.length, done = nextIdx >= fixtures.length;
+    // your seeded RIVAL club — those fixtures are derbies
+    const opps = seededOpponents(clubName, seed);
+    const rivalName = opps.length ? opps[seed % opps.length].name : null;
     const fxRows = fixtures.map((f, i) => {
+      const derby = f.oppName === rivalName;
       const vTag = `<span class="sf-v ${f.venue === 'H' ? 'home' : 'away'}">${f.venue}</span>`;
+      const oppTag = `<span class="sf-opp">${f.oppName}${derby ? ' <span class="sf-derby">🔥 DERBY</span>' : ''}</span>`;
       if (i < played.length) {
         const r = played[i], cls = r.myGoals > r.oppGoals ? 'w' : r.myGoals < r.oppGoals ? 'l' : 'd';
-        return `<div class="sf-fx done"><span class="sf-md">${i + 1}</span>${vTag}<span class="sf-opp">${f.oppName}</span><span class="sf-res ${cls}">${r.myGoals}-${r.oppGoals}</span></div>`;
+        return `<div class="sf-fx done${derby ? ' derby' : ''}"><span class="sf-md">${i + 1}</span>${vTag}${oppTag}<span class="sf-res ${cls}">${r.myGoals}-${r.oppGoals}</span></div>`;
       }
       const isNext = i === nextIdx;
-      return `<div class="sf-fx${isNext ? ' next' : ''}"><span class="sf-md">${i + 1}</span>${vTag}<span class="sf-opp">${f.oppName}</span>${isNext ? `<button class="sf-play primary" id="sf-play">Play ▶</button>` : '<span class="sf-res pending">–</span>'}</div>`;
+      return `<div class="sf-fx${isNext ? ' next' : ''}${derby ? ' derby' : ''}"><span class="sf-md">${i + 1}</span>${vTag}${oppTag}${isNext ? `<button class="sf-play primary" id="sf-play">Play ▶</button>` : '<span class="sf-res pending">–</span>'}</div>`;
     }).join('');
+    // FORM GUIDE (last 5) + season RECORDS (biggest win, longest unbeaten run)
+    const form = played.slice(-5).map((r) => r.myGoals > r.oppGoals ? 'W' : r.myGoals < r.oppGoals ? 'L' : 'D');
+    const formStrip = form.length ? ` · ${form.map((x) => `<span class="ff ff-${x.toLowerCase()}">${x}</span>`).join('')}` : '';
+    let biggest: { gd: number; sc: string } | null = null, run = 0, bestRun = 0;
+    for (const r of played) { const gd = r.myGoals - r.oppGoals; if (gd > 0 && (!biggest || gd > biggest.gd)) biggest = { gd, sc: `${r.myGoals}-${r.oppGoals}` }; if (gd >= 0) { run++; bestRun = Math.max(bestRun, run); } else run = 0; }
+    const records = played.length ? `<div class="sf-records">📋 ${biggest ? `Biggest win ${biggest.sc}` : 'No win yet'} · Longest unbeaten ${bestRun}</div>` : '';
     const starLine = m.starName && m.starAge ? ` · ★ ${m.starName} (age ${m.starAge}${m.retireAge ? `, likely retires ~${m.retireAge}` : ''})` : '';
     const header = done
       ? `<div class="season-summary done">✅ Season ${m.season} complete — <b>${clubName}</b> finished <b>${this.ordinal(t.pos)}</b> of ${t.size}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ''}. <button class="primary" id="sf-next-season">Next season →</button></div>`
-      : `<div class="season-summary"><b>${clubName}</b> · Season ${m.season} · Matchday ${nextIdx + 1}/${fixtures.length} · currently <b>${this.ordinal(t.pos)}</b> of ${t.size}${starLine}</div>`;
+      : `<div class="season-summary"><b>${clubName}</b> · Season ${m.season} · Matchday ${nextIdx + 1}/${fixtures.length} · <b>${this.ordinal(t.pos)}</b> of ${t.size}${formStrip}${starLine}</div>`;
     const simBtn = done ? '' : `<div style="text-align:center;margin-top:10px;"><button id="sf-sim" style="font-family:var(--display);font-size:11px;padding:7px 14px;">⏩ Sim the rest of the season</button></div>`;
     $('season-body').innerHTML = header
-      + `<div class="season-cols"><div class="season-fixtures"><h4 class="scout-h4">FIXTURES</h4>${fxRows}${simBtn}</div>`
+      + `<div class="season-cols"><div class="season-fixtures"><h4 class="scout-h4">FIXTURES</h4>${fxRows}${records}${simBtn}</div>`
       + `<div class="season-table-wrap"><h4 class="scout-h4">LEAGUE TABLE</h4>${this.spTableHtml(t)}</div></div>`;
     $('sf-play')?.addEventListener('click', () => this.playNextSpFixture());
     $('sf-sim')?.addEventListener('click', () => this.simRemainingFixtures());
