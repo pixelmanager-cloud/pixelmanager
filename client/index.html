@@ -692,6 +692,13 @@
       .op-tempt-lbl { font-family: var(--display); font-size: 11px; color: #ffb454; }
       .op-tempt-blurb { font-size: 13px; color: var(--text); margin-top: 6px; font-style: italic; }
       .sf-gaffer { font-size: 15px; color: #d8e0ea; font-style: italic; margin: 0 0 14px; padding: 10px 14px; border-radius: 9px; background: linear-gradient(160deg, rgba(80,90,130,0.14), rgba(40,45,70,0.1)); border-left: 3px solid var(--purple); }
+      /* board verdict on last season — accent colour tracks the board's mood */
+      .sf-board { font-size: 14px; color: #e2e8f0; margin: 0 0 12px; padding: 10px 14px; border-radius: 9px; background: rgba(40,45,70,0.16); border-left: 3px solid var(--muted); }
+      .sf-board .sf-board-exp { color: var(--muted); }
+      .sf-board-delighted, .sf-board-pleased { border-left-color: var(--good); }
+      .sf-board-patient { border-left-color: var(--cyan); }
+      .sf-board-concerned { border-left-color: var(--warn); }
+      .sf-board-restless, .sf-board-furious { border-left-color: var(--pink); }
       .ff { font-family: var(--display); font-size: 9px; padding: 1px 3px; border-radius: 3px; margin-left: 2px; }
       .ff-w { background: color-mix(in srgb, var(--good) 25%, transparent); color: var(--good); }
       .ff-d { background: color-mix(in srgb, var(--warn) 22%, transparent); color: var(--warn); }

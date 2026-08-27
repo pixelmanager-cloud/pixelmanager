@@ -1,7 +1,7 @@
 import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
   TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry,
-  FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember,
+  FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, deriveExpectation, type BoardMood, type PriorFinish,
   type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type Trialist, type MissionsData, type ContractInfo } from './api';
@@ -10,6 +10,8 @@ import { audio } from './audio';
 
 /** Single-player manager-season state (per save, in localStorage). `starId` present ⇒ manager phase. */
 interface MgrState { season: number; results: PlayedResult[]; starId?: string; starName?: string; starAge?: number; retireAge?: number; titles?: number; trainFocus?: string; staff?: string[]; sponsor?: string;
+  // board verdict on the season just gone + that finishing position (feeds next season's expectation)
+  lastBoard?: { message: string; mood: BoardMood; expectation: string }; lastFinishPos?: number;
   // international: continental club cup (qualified by a top-3 finish the previous season)
   contElig?: boolean; contRound?: number; contOut?: boolean; contTitles?: number;
   // World-Finals national tournament — the star's nation's knockout run is playable
@@ -995,7 +997,13 @@ class Game {
     const FOCI = ['pace', 'shooting', 'passing', 'tackling', 'strength', 'positioning', 'stamina'];
     const curFocus = m.trainFocus ?? 'passing';
     const focusSel = m.starName ? `<div class="sf-focus">🏋️ <b>Training focus</b> for ${m.starName}: <select id="sf-focus">${FOCI.map((f) => `<option ${f === curFocus ? 'selected' : ''}>${f}</option>`).join('')}</select> <span class="sf-focus-hint">applied when the season ends</span></div>` : '';
+    // the board's verdict on LAST season (set in nextSeason) — shown while the new season is still young
+    const lb = m.lastBoard;
+    const boardLine = lb && !done && nextIdx <= 3
+      ? `<div class="sf-board sf-board-${lb.mood}">🪑 <b>The board</b> — on last season: “${lb.message}” <span class="sf-board-exp">This season they expect: ${lb.expectation}.</span></div>`
+      : '';
     $('season-body').innerHTML = header
+      + boardLine
       + `<div class="sf-gaffer">📔 ${this.gafferTake(played, t.pos, t.size, clubName)}</div>`
       + this.sponsorHtml()
       + this.worldCupHtml()
@@ -1310,6 +1318,19 @@ class Game {
     const rec = (m.results ?? []).reduce((a, r) => { r.myGoals > r.oppGoals ? a.wins++ : r.myGoals < r.oppGoals ? a.losses++ : a.draws++; return a; }, { wins: 0, draws: 0, losses: 0 });
     // bank the season prize money (coins → reinvest in facilities), closing the manager economy loop
     try { const r = await api.spSeasonReward({ pos: t.pos, size: t.size, sponsor: m.sponsor, ...rec }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 Season prize: +${r.prize.toLocaleString()}c${r.sponsorBonus ? ` + 📣 ${r.sponsorBonus}c sponsor bonus` : ''}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ` · ${this.ordinal(t.pos)}`}`); } catch { /* offline: no prize */ }
+    // BOARD VERDICT — how the board judges this season vs what your prestige (and last season) earned you.
+    // Stored on the save and surfaced atop next season's planning screen (see showSeason).
+    let lastBoard: { message: string; mood: BoardMood; expectation: string } | undefined;
+    try {
+      const { prestige } = await api.prestige();
+      const expectation = deriveExpectation({ prestigeLevelIdx: prestige.levelIdx, priorFinish: this.finishOf(m.lastFinishPos, t.size) });
+      const gp = Math.max(1, rec.wins + rec.draws + rec.losses);
+      const st = boardStanding((this.leagueSeed() ^ (m.season * 0x9e3779b1)) >>> 0, {
+        position: t.pos, total: t.size, promote: 3, relegate: 3,
+        points: rec.wins * 3 + rec.draws, matchesPlayed: gp, totalMatches: gp, expectation,
+      });
+      lastBoard = { message: st.message, mood: st.mood, expectation };
+    } catch { /* offline / no prestige — skip the verdict */ }
     // TRAINING: the star develops per the focus (young grow it, veterans decline) — his overall shifts the club
     if (m.starId) {
       try { const d = await api.developPlayer(m.starId, { focus: m.trainFocus ?? 'passing', age: m.starAge ?? 27 }); this.setMe(await api.me()); toast(`🏋️ ${m.starName} — off-season training (OVR now ${d.overall})`); } catch { /* offline */ }
@@ -1321,8 +1342,18 @@ class Game {
     const qualified = t.pos <= 3; // a top-3 finish books a place in next season's continental cup
     if (qualified) toast('🌍 Top-3 finish — qualified for the Continental Cup!');
     // new season → fresh sponsor; drop any unfinished World-Finals run (it belongs to its staging season)
-    this.saveMgr({ ...m, season: m.season + 1, results: [], starAge: age, titles, sponsor: undefined, contElig: qualified, contRound: 0, contOut: false, wcStage: undefined, wcEdition: undefined, wcRun: undefined });
+    this.saveMgr({ ...m, season: m.season + 1, results: [], starAge: age, titles, sponsor: undefined, contElig: qualified, contRound: 0, contOut: false, wcStage: undefined, wcEdition: undefined, wcRun: undefined, lastBoard, lastFinishPos: t.pos });
     this.showSeason();
+  }
+
+  /** Map a final league position → the board's shorthand for how that season went, feeding
+   *  deriveExpectation()'s momentum nudge. Undefined position (first season) → null (no prior). */
+  private finishOf(pos: number | undefined, size: number): PriorFinish {
+    if (pos == null) return null;
+    if (pos === 1) return 'title';
+    if (pos <= 3) return 'playoffs';           // top-3 books continental football
+    if (pos > size - 3) return 'survival';     // scrapping near the bottom
+    return 'midtable';
   }
 
   /** What the retiring star does NEXT — a mostly-narrative choice that colours the epilogue and decides
