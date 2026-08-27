@@ -325,6 +325,9 @@ class Game {
       : '';
     if (multi) $('mm-saves').querySelectorAll('.mm-save').forEach((el) => el.addEventListener('click', (e) => { if ((e.target as HTMLElement).dataset.del) return; this.loadSave((el as HTMLElement).dataset.id!); }));
     $('mm-saves').querySelectorAll('.mm-save-del').forEach((el) => el.addEventListener('click', (e) => { e.stopPropagation(); this.deleteSave((el as HTMLElement).dataset.del!); }));
+    // pre-focus the most-used action (Continue if a save exists, else New Game) so Enter/Space just works
+    const focusBtn = saves.length ? cont : $('mm-new');
+    try { (focusBtn as HTMLElement).focus(); } catch { /* not focusable yet */ }
   }
 
   private continueGame() { const s = this.loadSaves().sort((a, b) => b.lastPlayed - a.lastPlayed)[0]; if (s) this.loadSave(s.id); }
@@ -345,16 +348,19 @@ class Game {
 
   // ── settings + confirm dialogs ────────────────────────────────────────────────────────────────
   private static PREFS_KEY = 'fm_prefs';
-  private prefs: { reducedMotion: boolean } = { reducedMotion: false };
+  private prefs: { reducedMotion: boolean; crt: boolean } = { reducedMotion: false, crt: true };
   /** Load persisted prefs (defaulting reduced-motion to the OS setting) and apply them app-wide. */
   private loadPrefs() {
-    let saved: Partial<{ reducedMotion: boolean }> = {};
+    let saved: Partial<{ reducedMotion: boolean; crt: boolean }> = {};
     try { saved = JSON.parse(localStorage.getItem(Game.PREFS_KEY) || '{}'); } catch { /* defaults */ }
     const osReduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    this.prefs = { reducedMotion: saved.reducedMotion ?? osReduced };
+    this.prefs = { reducedMotion: saved.reducedMotion ?? osReduced, crt: saved.crt ?? true };
     this.applyPrefs();
   }
-  private applyPrefs() { document.body.classList.toggle('reduced-motion', this.prefs.reducedMotion); }
+  private applyPrefs() {
+    document.body.classList.toggle('reduced-motion', this.prefs.reducedMotion);
+    document.body.classList.toggle('no-crt', !this.prefs.crt);
+  }
   private savePrefs() { try { localStorage.setItem(Game.PREFS_KEY, JSON.stringify(this.prefs)); } catch { /* ignore */ } }
 
   /** The settings dialog — reachable from the menu AND mid-game (top-bar ⚙). Music volume + mute and
@@ -370,7 +376,9 @@ class Game {
       + `<div class="set-row"><div class="set-lbl"><span>Mute music</span>${sw(audio.isMuted())}</div>`
       + `<div class="set-hint">Silence the soundtrack. Your volume is remembered.</div></div>`
       + `<div class="set-row"><div class="set-lbl"><span>Reduce motion</span>${sw(this.prefs.reducedMotion)}</div>`
-      + `<div class="set-hint">Tone down animations and screen effects (card flips, the CRT shimmer, transitions).</div></div>`
+      + `<div class="set-hint">Tone down animations and screen transitions (card flips, moving effects).</div></div>`
+      + `<div class="set-row"><div class="set-lbl"><span>CRT screen effect</span>${sw(this.prefs.crt)}</div>`
+      + `<div class="set-hint">The retro scanline + vignette overlay. Turn off for a flat, crisp picture.</div></div>`
       + `</div>`;
     document.body.appendChild(ov);
     const close = () => ov.remove();
@@ -379,15 +387,16 @@ class Game {
     // music volume — live
     const vol = ov.querySelector('#set-vol') as HTMLInputElement;
     vol.addEventListener('input', () => { const v = Number(vol.value) / 100; audio.setVolume(v); if (audio.isMuted() && v > 0) { audio.setMuted(false); this.syncMuteBtn(); (ov.querySelectorAll('.set-sw')[0] as HTMLElement).classList.add('on'); } $('set-volval').textContent = `${vol.value}%`; });
-    // the two toggles: [0] mute music, [1] reduce motion
-    const [muteSw, motionSw] = Array.from(ov.querySelectorAll('.set-sw')) as HTMLElement[];
+    // the three toggles, in DOM order: [0] mute music, [1] reduce motion, [2] CRT effect
+    const [muteSw, motionSw, crtSw] = Array.from(ov.querySelectorAll('.set-sw')) as HTMLElement[];
     const flip = (el: HTMLElement, on: boolean) => { el.classList.toggle('on', on); el.setAttribute('aria-checked', String(on)); };
-    const toggleMute = () => { const m = audio.toggleMuted(); flip(muteSw, m); this.syncMuteBtn(); };
-    const toggleMotion = () => { this.prefs.reducedMotion = !this.prefs.reducedMotion; this.savePrefs(); this.applyPrefs(); flip(motionSw, this.prefs.reducedMotion); };
-    muteSw.addEventListener('click', toggleMute);
-    motionSw.addEventListener('click', toggleMotion);
-    muteSw.addEventListener('keydown', (e) => { const k = (e as KeyboardEvent).key; if (k === ' ' || k === 'Enter') { e.preventDefault(); toggleMute(); } });
-    motionSw.addEventListener('keydown', (e) => { const k = (e as KeyboardEvent).key; if (k === ' ' || k === 'Enter') { e.preventDefault(); toggleMotion(); } });
+    const wireSw = (el: HTMLElement, fn: () => void) => {
+      el.addEventListener('click', fn);
+      el.addEventListener('keydown', (e) => { const k = (e as KeyboardEvent).key; if (k === ' ' || k === 'Enter') { e.preventDefault(); fn(); } });
+    };
+    wireSw(muteSw, () => { const m = audio.toggleMuted(); flip(muteSw, m); this.syncMuteBtn(); });
+    wireSw(motionSw, () => { this.prefs.reducedMotion = !this.prefs.reducedMotion; this.savePrefs(); this.applyPrefs(); flip(motionSw, this.prefs.reducedMotion); });
+    wireSw(crtSw, () => { this.prefs.crt = !this.prefs.crt; this.savePrefs(); this.applyPrefs(); flip(crtSw, this.prefs.crt); });
     const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); } };
     document.addEventListener('keydown', onEsc);
   }
@@ -407,6 +416,33 @@ class Game {
     ov.querySelector('#cf-no')!.addEventListener('click', close);
     ov.querySelector('#cf-yes')!.addEventListener('click', () => { close(); onYes(); });
   }
+
+  /** The in-game pause/menu overlay (top-bar ≡ Menu). Resume is first and pre-focused (expected pause-menu
+   *  order); quitting mid-match confirms first so progress isn't lost by accident. */
+  private openPauseMenu() {
+    document.getElementById('pause-ov')?.remove();
+    const ov = document.createElement('div'); ov.id = 'settings-ov'; // reuse the centred-overlay styling
+    ov.innerHTML = `<div class="tt-card"><div class="set-head"><div class="tt-title">⏸ PAUSED</div><button class="set-x" aria-label="Close">✕</button></div>`
+      + `<button class="tt-opt" id="pm-resume"><b>▶ Resume</b><span>Back to the game</span></button>`
+      + `<button class="tt-opt" id="pm-settings"><b>⚙ Settings</b><span>Music, motion, screen effects</span></button>`
+      + `<button class="tt-opt" id="pm-quit"><b>≡ Quit to menu</b><span>Your progress is saved</span></button></div>`;
+    document.body.appendChild(ov);
+    const close = () => ov.remove();
+    ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+    ov.querySelector('.set-x')!.addEventListener('click', close);
+    ov.querySelector('#pm-resume')!.addEventListener('click', close);
+    ov.querySelector('#pm-settings')!.addEventListener('click', () => { close(); this.openSettings(); });
+    ov.querySelector('#pm-quit')!.addEventListener('click', () => {
+      const midMatch = !$('matchwrap').classList.contains('hidden') && this.engine && !this.engine.state.finished;
+      close();
+      if (midMatch) this.openConfirm('Quit to the menu <b>during a match</b>? This match won\'t be saved — your season is.', 'Quit to menu', () => this.quitToMenu());
+      else this.quitToMenu();
+    });
+    (ov.querySelector('#pm-resume') as HTMLElement).focus(); // Resume pre-selected, Enter resumes
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); } };
+    document.addEventListener('keydown', onEsc);
+  }
+  private quitToMenu() { $('mm-saves').classList.remove('hidden'); this.showScreen('login'); this.renderMainMenu(); }
 
   /** New Game: silently create a local profile (no handle/password shown) and drop the player in. */
   private async startNewGame(rawName: string) {
@@ -511,7 +547,7 @@ class Game {
     $('mm-start').addEventListener('click', () => this.startNewGame(($('mm-name') as HTMLInputElement).value));
     $('mm-name').addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Enter') this.startNewGame(($('mm-name') as HTMLInputElement).value); });
     $('mm-continue').addEventListener('click', () => this.continueGame());
-    $('logout').addEventListener('click', () => { $('mm-saves').classList.remove('hidden'); this.showScreen('login'); this.renderMainMenu(); }); // single-player: "quit to menu" keeps the save
+    $('logout').addEventListener('click', () => this.openPauseMenu()); // ≡ Menu → pause overlay (Resume / Settings / Quit-to-menu, with confirm mid-match)
     // match keyboard shortcuts: 1/2/3 speed, space pause/resume, s skip, c cycle commentary detail
     document.addEventListener('keydown', (ev) => {
       const k = (ev as KeyboardEvent).key;

@@ -48,6 +48,8 @@
       /* CRT vignette overlay — subtle corner darkening for a retro-monitor curve */
       body::before { content: ''; position: fixed; inset: 0; z-index: 9998; pointer-events: none;
         background: radial-gradient(ellipse at center, rgba(0,0,0,0) 62%, rgba(0,0,0,0.15) 100%); }
+      /* accessibility: let players switch off the CRT scanline/vignette (can strain some eyes) */
+      body.no-crt::after, body.no-crt::before { display: none; }
       #app { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 16px; }
       #topbar { display: flex; gap: 16px; align-items: center; font-size: 24px; flex-wrap: wrap; justify-content: center; width: 100%; max-width: var(--app-w); }
       #topbar .title { font-family: var(--display); font-size: 24px; letter-spacing: 1px; color: var(--good);
