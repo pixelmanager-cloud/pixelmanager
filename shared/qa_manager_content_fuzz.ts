@@ -14,8 +14,8 @@ import {
   contRivalClub, contRivalryBlurb, wcGroupDramaBlurb, wcKnockoutDramaBlurb,
 } from './src/intl.js';
 import { prestigeScore, managerPrestige, prestigeRankUpBlurb, type ManagerRecord } from './src/prestige.js';
-import { boardScore, boardStanding, type BoardMoodInput, type BoardExpectation } from './src/board.js';
-import { pressConferenceLine, pressAgendaTag, type PressInput, type PressCompetition, type PressForm } from './src/press.js';
+import { boardScore, boardStanding, deriveExpectation, type BoardMoodInput, type BoardExpectation, type BoardMood, type PriorFinish } from './src/board.js';
+import { pressConferenceLine, pressConferenceLineWithStaff, pressAgendaTag, type PressInput, type PressCompetition, type PressForm } from './src/press.js';
 import { staffRoster, staffQuip, type StaffRole, type StaffMoment } from './src/staff.js';
 
 const N = Number(process.env.QA_N ?? 3000);
@@ -51,7 +51,9 @@ function mulberry32(seed: number): () => number {
       position: 1 + Math.floor(rng() * total), total, promote: 1 + Math.floor(rng() * 4), relegate: 1 + Math.floor(rng() * 4),
       points: Math.floor(rng() * 100),
     } : null;
-    const input = { seasonNumber: s, matches, table };
+    const MOODS: BoardMood[] = ['delighted', 'pleased', 'patient', 'concerned', 'restless', 'furious'];
+    const boardMood = rng() < 0.6 ? MOODS[Math.floor(rng() * MOODS.length)] : undefined; // sometimes omitted, like a caller with no board reading yet
+    const input = { seasonNumber: s, matches, table, boardMood };
     let a: string, b: string;
     try { a = gaffersDiaryEntry(input); b = gaffersDiaryEntry(input); } catch (e) { log(`gaffersDiaryEntry THROW seed=${s}: ${e}`); continue; }
     calls++;
@@ -253,6 +255,36 @@ function mulberry32(seed: number): () => number {
   if (seenMoods.size < 4) log(`boardStanding mood variety suspiciously low: only ${seenMoods.size} distinct moods`);
 }
 
+// ── 5b. board.ts: deriveExpectation() bounds + determinism (batch-3 addition) ──
+{
+  const PRIOR_FINISHES: PriorFinish[] = ['title', 'promotion', 'playoffs', 'midtable', 'survival', 'relegated', null];
+  const VALID: BoardExpectation[] = ['title', 'promotion', 'playoffs', 'midtable', 'survival'];
+  const seenExp = new Set<BoardExpectation>();
+  for (let s = 0; s < Math.min(N, 1500); s++) {
+    const rng = mulberry32(s + 7373);
+    const prestigeLevelIdx = Math.floor(rng() * 12) - 1; // occasionally out-of-range, deliberately
+    const priorFinish = PRIOR_FINISHES[Math.floor(rng() * PRIOR_FINISHES.length)];
+    let exp: BoardExpectation;
+    try { exp = deriveExpectation({ prestigeLevelIdx, priorFinish }); } catch (e) { log(`deriveExpectation THROW seed=${s}: ${e}`); continue; }
+    if (!VALID.includes(exp)) log(`deriveExpectation OUT-OF-RANGE seed=${s}: ${exp}`);
+    seenExp.add(exp);
+    const exp2 = deriveExpectation({ prestigeLevelIdx, priorFinish });
+    if (exp !== exp2) log(`deriveExpectation NON-DETERMINISTIC seed=${s}`);
+    // feed straight into boardStanding to confirm it round-trips as a valid BoardMoodInput.expectation
+    const input: BoardMoodInput = { position: 5, total: 20, promote: 2, relegate: 3, points: 40, matchesPlayed: 20, totalMatches: 38, expectation: exp };
+    try { boardStanding(s, input); } catch (e) { log(`boardStanding THREW on deriveExpectation output seed=${s}: ${e}`); }
+  }
+  console.log(`[deriveExpectation] fuzzed OK, bands observed: ${[...seenExp].sort().join(', ')}`);
+  if (seenExp.size < 5) log(`deriveExpectation variety suspiciously low: only ${seenExp.size} / 5 bands observed`);
+  // monotonicity: a title-winning prior season should never derive a LOWER band than a relegated one, same prestige
+  const order: BoardExpectation[] = ['survival', 'midtable', 'playoffs', 'promotion', 'title'];
+  for (let p = 0; p <= 8; p++) {
+    const afterTitle = deriveExpectation({ prestigeLevelIdx: p, priorFinish: 'title' });
+    const afterRelegated = deriveExpectation({ prestigeLevelIdx: p, priorFinish: 'relegated' });
+    if (order.indexOf(afterTitle) < order.indexOf(afterRelegated)) log(`deriveExpectation NOT monotonic in priorFinish at prestigeLevelIdx=${p}`);
+  }
+}
+
 // ── 6. press.ts: no-throw, non-blank, determinism ──
 {
   const COMPETITIONS: PressCompetition[] = ['league', 'continental', 'international', 'cup'];
@@ -280,7 +312,12 @@ function mulberry32(seed: number): () => number {
   if (seen.size < 10) log(`pressConferenceLine variety suspiciously low: only ${seen.size} distinct lines`);
 }
 
-// ── 7. staff.ts: roster shape, determinism, quip non-blank ──
+// ── 7. staff.ts: roster shape, determinism, quip non-blank, NO GENDERED PRONOUNS ──
+// The first-name pool (STAFF_FIRST) is deliberately mixed-gender, so any PERSONALITY or QUIP line that
+// hardcodes he/him/his/she/her would misgender roughly half the generated staff. Regression check for
+// exactly that bug (fixed in batch 3): scan every generated personality + quip line for a gendered
+// third-person pronoun as a whole word.
+const GENDERED_PRONOUN = /\b(he|him|his|she|her|hers)\b/i;
 {
   const ROLES: StaffRole[] = ['Assistant Manager', 'Head Scout', 'Fitness Coach', 'Goalkeeping Coach'];
   const MOMENTS: StaffMoment[] = ['bigWin', 'bigLoss', 'signing', 'preSeason', 'milestone'];
@@ -289,6 +326,7 @@ function mulberry32(seed: number): () => number {
     try { roster = staffRoster(s); } catch (e) { log(`staffRoster THROW seed=${s}: ${e}`); continue; }
     for (const m of [roster.assistant, roster.scout, roster.fitnessCoach, roster.goalkeepingCoach]) {
       if (!nonBlankStr(m.name) || !nonBlankStr(m.personality)) log(`staffRoster malformed member seed=${s}: ${JSON.stringify(m)}`);
+      if (GENDERED_PRONOUN.test(m.personality)) log(`staffRoster GENDERED PRONOUN in personality seed=${s} role=${m.role}: "${m.personality}"`);
     }
     const roster2 = staffRoster(s);
     if (JSON.stringify(roster) !== JSON.stringify(roster2)) log(`staffRoster NON-DETERMINISTIC seed=${s}`);
@@ -298,8 +336,44 @@ function mulberry32(seed: number): () => number {
     let quip: string;
     try { quip = staffQuip(s, role, moment, s % 10); } catch (e) { log(`staffQuip THROW seed=${s}: ${e}`); continue; }
     if (!nonBlankStr(quip)) log(`staffQuip blank seed=${s} role=${role} moment=${moment}`);
+    if (GENDERED_PRONOUN.test(quip)) log(`staffQuip GENDERED PRONOUN seed=${s} role=${role} moment=${moment}: "${quip}"`);
   }
-  console.log('[staff] fuzzed OK');
+  console.log('[staff] fuzzed OK, no gendered pronouns found');
+}
+
+// ── 8. press.ts x staff.ts: pressConferenceLineWithStaff combinator (batch-3 addition) ──
+{
+  const COMPETITIONS: PressCompetition[] = ['league', 'continental', 'international', 'cup'];
+  const FORMS: PressForm[] = ['hot', 'cold', 'level'];
+  let asides = 0, total = 0;
+  for (let s = 0; s < Math.min(N, 1500); s++) {
+    const rng = mulberry32(s + 4646);
+    const roster = staffRoster(s);
+    const timing = rng() < 0.5 ? 'pre' as const : 'post' as const;
+    const input: PressInput = {
+      timing, competition: COMPETITIONS[Math.floor(rng() * COMPETITIONS.length)],
+      stakes: (1 + Math.floor(rng() * 3)) as 1 | 2 | 3,
+      form: FORMS[Math.floor(rng() * FORMS.length)],
+      result: timing === 'post' ? (['win', 'draw', 'loss'] as const)[Math.floor(rng() * 3)] : undefined,
+    };
+    let line: string, base: string;
+    try {
+      line = pressConferenceLineWithStaff(s, s % 40, input, roster);
+      base = pressConferenceLine(s, s % 40, input);
+    } catch (e) { log(`pressConferenceLineWithStaff THROW seed=${s}: ${e}`); continue; }
+    total++;
+    if (!nonBlankStr(line)) log(`pressConferenceLineWithStaff blank seed=${s}`);
+    if (!line.startsWith(base)) log(`pressConferenceLineWithStaff doesn't extend the base line seed=${s}`);
+    if (line !== base) asides++;
+    const line2 = pressConferenceLineWithStaff(s, s % 40, input, roster);
+    if (line !== line2) log(`pressConferenceLineWithStaff NON-DETERMINISTIC seed=${s}`);
+    // eligible-only asides: never appended on a pre-match or draw/routine beat
+    if (line !== base && (input.timing !== 'post' || input.stakes < 2 || input.result === 'draw')) {
+      log(`pressConferenceLineWithStaff added an aside on an INELIGIBLE beat seed=${s}: timing=${input.timing} stakes=${input.stakes} result=${input.result}`);
+    }
+  }
+  console.log(`[pressConferenceLineWithStaff] fuzzed OK, ${asides}/${total} beats got a staff aside`);
+  if (asides === 0) log('pressConferenceLineWithStaff never added a staff aside across the whole fuzz run');
 }
 
 console.log('');

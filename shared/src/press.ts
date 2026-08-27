@@ -5,6 +5,9 @@
 // COMPETITION and STAKES, which the diary never explicitly surfaces as its own axis. Pure + seeded;
 // no LLM, no wall-clock, no persisted state.
 
+import type { StaffRoster, StaffMoment } from './staff.js';
+import { staffQuip } from './staff.js';
+
 function hash32(...nums: number[]): number {
   let h = 2166136261 >>> 0;
   for (const n of nums) { h ^= (n >>> 0); h = Math.imul(h, 16777619); }
@@ -143,4 +146,28 @@ export function pressAgendaTag(input: Pick<PressInput, 'competition' | 'stakes'>
   if (input.stakes >= 3) return `Season-defining ${base}`;
   if (input.stakes === 2) return `Big ${base}`;
   return `Routine ${base}`;
+}
+
+// ── Staff cross-pollination (batch-3): occasionally let a named staff member field a follow-up ──
+// `pressConferenceLine` itself is left untouched (its signature/behaviour is unchanged, so any
+// existing caller is unaffected) — this is a separate combinator a caller can opt into when it also
+// has a `staffRoster()` to hand. Only fires on the higher-stakes post-match beats (a routine result or
+// a pre-match presser doesn't need a second voice), and even then only about a third of the time, so
+// it reads as a genuine occasional aside rather than a permanent fixture.
+const PRESS_ASIDE_MOMENT: Record<'win' | 'loss', StaffMoment> = { win: 'bigWin', loss: 'bigLoss' };
+
+/** `pressConferenceLine` plus, roughly one time in three on a stakes>=2 post-match beat, a named staff
+ *  member (drawn from `roster`) fielding a follow-up in character — a small joined-up-backroom touch
+ *  without duplicating either module's own pools. Deterministic; same inputs always read the same way,
+ *  same as the two underlying functions it composes. */
+export function pressConferenceLineWithStaff(seed: number, roundSalt: number, input: PressInput, roster: StaffRoster): string {
+  const base = pressConferenceLine(seed, roundSalt, input);
+  if (input.timing !== 'post' || input.stakes < 2 || input.result !== 'win' && input.result !== 'loss') return base;
+  const moment = PRESS_ASIDE_MOMENT[input.result];
+  const h = hash32(seed, roundSalt * 331 + 41, nameSeed(moment), 0xa51de);
+  if (h % 3 !== 0) return base; // ~1-in-3: an occasional aside, not every time
+  const members = [roster.assistant, roster.scout, roster.fitnessCoach, roster.goalkeepingCoach];
+  const member = pick(h, members);
+  const quip = staffQuip(seed, member.role, moment, roundSalt);
+  return `${base} ${member.name} adds: ${quip}`;
 }

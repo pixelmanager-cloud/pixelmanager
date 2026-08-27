@@ -11,6 +11,7 @@
 // repeat itself so fast once a season settled down.
 
 import { makeRng } from './rng.js';
+import type { BoardMood } from './board.js';
 
 function hashStr(s: string): number {
   let h = 2166136261;
@@ -21,7 +22,10 @@ function pickFrom<T>(rng: () => number, arr: readonly T[]): T { return arr[Math.
 
 export interface DiaryMatch { id: string; myScore: number; oppScore: number; oppId: string; oppHandle: string; createdAt: number }
 export interface DiaryTable { position: number; total: number; promote: number; relegate: number; points: number }
-export interface DiaryInput { seasonNumber: number; matches: DiaryMatch[]; table: DiaryTable | null }
+/** `boardMood` is OPTIONAL and additive — existing callers that don't pass it behave exactly as before.
+ *  When present, it lets a notable board-mood swing (delighted / furious, etc.) compete as its own
+ *  diary candidate alongside the table/streak storylines, for cohesion between the two systems. */
+export interface DiaryInput { seasonNumber: number; matches: DiaryMatch[]; table: DiaryTable | null; boardMood?: BoardMood }
 
 type Phrase = (a: number, b: number) => string;
 
@@ -162,6 +166,45 @@ const FORM_DOWNTURN: Phrase[] = [
   () => `The form's dipped lately, no way around it. A response is needed.`,
   () => `Something's slipped in the last few games. Time to find it and fix it.`,
 ];
+// ── Board-mood colour (batch-3: board.ts's mood threaded in as its own competing storyline) ──
+// Only the notable moods get a pool — 'patient' is the board's neutral resting state and reads no
+// differently from the diary's own GENERIC fallback, so it's deliberately left out rather than padded.
+const BOARD_DELIGHTED: Phrase[] = [
+  () => `Word from upstairs: the board couldn't be happier with how this is going.`,
+  () => `The chairman popped his head round the training ground door again this week. Always a good sign.`,
+  () => `Whatever's said in the boardroom these days, it's all warm words. Enjoy it while it lasts.`,
+  () => `The directors are delighted, and for once that's not faint praise.`,
+];
+const BOARD_PLEASED: Phrase[] = [
+  () => `Quiet approval from the boardroom this week — nothing to worry about upstairs.`,
+  () => `The board are pleased with the trajectory. No news is good news, and this is better than that.`,
+  () => `A satisfied noise from the directors' box on Saturday. Keep it up.`,
+];
+const BOARD_CONCERNED: Phrase[] = [
+  () => `A couple of pointed questions from the board this week. Nothing dramatic, but it's there.`,
+  () => `The boardroom mood has cooled a touch. Worth noting, not worth panicking over.`,
+  () => `Some quiet unease upstairs now — the kind that answers itself with a good week of results.`,
+];
+const BOARD_RESTLESS: Phrase[] = [
+  () => `The board's patience is visibly thinning. This is the moment to answer it on the pitch.`,
+  () => `Restlessness in the boardroom now — the sort of mood that filters down to a press conference fast.`,
+  () => `Whispers upstairs are getting harder to ignore. The next few results carry real weight.`,
+];
+const BOARD_FURIOUS: Phrase[] = [
+  () => `The boardroom mood is about as bad as it gets. This needs turning around, fast.`,
+  () => `Real anger from the directors now — the kind of mood that ends careers if it doesn't shift.`,
+  () => `Furious upstairs. Every word in the next press conference will be picked apart because of it.`,
+];
+const BOARD_POOL_BY_MOOD: Partial<Record<BoardMood, Phrase[]>> = {
+  delighted: BOARD_DELIGHTED, pleased: BOARD_PLEASED, concerned: BOARD_CONCERNED,
+  restless: BOARD_RESTLESS, furious: BOARD_FURIOUS,
+};
+// Weighted so a furious/delighted board can genuinely steal the entry, but a merely-concerned one
+// stays a minor voice among the table/streak storylines rather than crowding them out every week.
+const BOARD_WEIGHT_BY_MOOD: Partial<Record<BoardMood, number>> = {
+  delighted: 14, pleased: 8, concerned: 10, restless: 16, furious: 20,
+};
+
 const GENERIC: Phrase[] = [
   (pos, pts) => `${pos}${ord(pos)} in the table on ${pts} points — steady progress, building for the run-in.`,
   (pos) => `A quiet week in ${pos}${ord(pos)} — no fireworks, just the daily grind of a season.`,
@@ -289,6 +332,12 @@ export function gaffersDiaryEntry(input: DiaryInput): string {
       if (diff >= 1.0) add(10, FORM_UPTURN);
       else if (diff <= -1.0) add(10, FORM_DOWNTURN);
     }
+  }
+
+  if (input.boardMood) {
+    const pool = BOARD_POOL_BY_MOOD[input.boardMood];
+    const weight = BOARD_WEIGHT_BY_MOOD[input.boardMood];
+    if (pool && weight) add(weight, pool);
   }
 
   // GENERIC is always a fallback candidate so the pool is never empty, but at low weight so it
