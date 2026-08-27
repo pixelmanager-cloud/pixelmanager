@@ -15,8 +15,15 @@ every violation. Findings below are ranked most-severe first.
 |---|---|
 | CRITICAL | 0 |
 | HIGH | 0 |
-| MEDIUM | 1 |
+| MEDIUM | 2 |
 | LOW | 1 |
+
+**Update (deeper autonomous pass, still on `b57aa88`):** added 4 more standalone harnesses covering the
+full multi-generation dynasty/fusion loop, `careerState()` (the server's presentational layer) driven
+turn-by-turn, and documented-threshold/boundary exactness. Found one more MEDIUM (M2, the same root
+pattern as M1 — see below) in a second, independent location; everything else (7500+ simulated
+generation-lifecycles across 300 dynasties 25 generations deep, ~168,000 `careerState()` calls, and
+thousands of threshold/boundary probes) came back clean.
 
 No exceptions, softlocks, NaN/Infinity leaks, out-of-range attributes, non-determinism, or bracket/table
 integrity failures were found across ~40,000+ simulated careers, ~130 simulated matches at extreme
@@ -59,6 +66,22 @@ the engine is genuinely rng-free/replay-safe at the source level (confirmed by `
   defensive-coding gap that would only bite if a NaN ever leaks into a `Tactics` object from somewhere
   else in the codebase (a save/load bug, a division-by-zero upstream, etc.) — worth a guard at the
   `MatchEngine` boundary so such a bug fails loudly instead of shipping a silently-broken match.
+
+### M2 — Same root cause as M1, second location: `tieScore()`/`simMatch()` propagate `NaN` strength straight into `NaN` goals in both `shared/src/intl.ts` (World Cup / continental cup) and `shared/src/clubseason.ts` (the club league)
+- **File/function:** `shared/src/intl.ts`'s `tieScore(aStr, bStr, h, neutral)` — `const diff = (aStr - bStr) * 0.12 + ...; const gh = Math.min(6, Math.max(0, Math.round(1.2 + diff + ...)));` — and the structurally identical `simMatch()` in `shared/src/clubseason.ts`. Both do arithmetic directly on the raw strength inputs with no finiteness check, and `Math.max(0, NaN)` / `Math.min(6, NaN)` are themselves `NaN`, so the "clamp" does nothing for a `NaN` input.
+- **Repro:** `npx tsx shared/qa_boundary_fuzz.ts` — section "worldCup nation-strength extremes". Minimal repro:
+  ```ts
+  import { worldCup } from './src/intl.js';
+  import { clubSeason } from './src/clubseason.js';
+  const wc = worldCup(12345, 1, 'Astoria', NaN);
+  console.log(wc.groups[0].rows[0]); // { ..., GF: NaN, GA: NaN, GD: NaN, Pts: <still an integer> }
+  const cs = clubSeason('Marlow', NaN, 0.5, 12345);
+  console.log(cs.me); // { ..., GF: NaN, GA: NaN, GD: NaN, W: 0, D: 18, L: 0, Pts: 18 }
+  ```
+- **Expected:** goal tallies stay finite integers (or the function rejects/clamps a non-finite strength) regardless of what's passed in as a team/nation "strength".
+- **Actual:** every goals-for/goals-against cell for the affected side becomes `NaN` (silently propagating through the whole tournament/season — `GD` becomes `NaN` too), while `W`/`D`/`L`/`Pts` stay valid integers because `gh > ga` / `gh < ga` both evaluate `false` for `NaN` operands, so the match is scored as a **draw** by default. This means a `NaN` strength doesn't even fail visibly in the standings table — it just quietly turns every affected fixture into a 0-pt-looking draw with garbage goal columns.
+- **Likely cause:** identical pattern to M1 — pure presentational/simulation modules that assume their numeric inputs are already sane (a real `Player.overall`/pedigree-derived strength is always `[1,20]` in practice) and never guard against a `NaN` leaking in from a bad upstream computation (e.g. a division by a zero-length roster, an unset stat defaulting to `undefined` and coercing to `NaN`, etc.).
+- **Severity rationale:** MEDIUM, same reasoning as M1 — not reachable through the normal gameplay paths audited in this pass (`careerState()`'s club-season/international code always feeds a real overall-derived strength), but it's the *second* independent module found with this exact defensive-coding gap, which suggests it's a systemic pattern worth a single shared clamp/finite-guard utility rather than three separate point fixes (`tactics.ts`, `intl.ts`, `clubseason.ts`).
 
 ---
 
@@ -126,6 +149,41 @@ the engine is genuinely rng-free/replay-safe at the source level (confirmed by `
   bounded across extreme (including negative and huge) tenure values. One LOW finding (L1) came out of
   deliberately probing `contractCost` far outside the domain its `greed` input is ever actually
   constructed in.
+- **Full dynasty/fusion loop, end-to-end, many generations** (`shared/qa_dynasty_fuzz.ts`, 300 dynasties
+  × 25 generations = 7500 generation-lifecycles, plus a 10-dynasty and a 90-generation-career deep pass):
+  drove the whole chain a save actually walks — career → `graduate()` → 15 simulated pro seasons (real
+  `clubSeason()` table positions + continental-cup runs via real `contOpponent()`/`tieScore()`, attrs
+  developed each season via the server's real, pure `developAttrs()`) → retirement (`legacyCard()`) →
+  reborn (`legacyBoost()` → `inheritGenes()` → the next generation), repeated 25 generations deep from one
+  root seed. Every generation's attrs/overall/genes stayed in bounds with **no cross-generation drift or
+  blow-up** (pedigree stayed in `[0,1]`, gene ceilings stayed in `[1,20]` every generation, no runaway
+  accumulation past a 5,000,000-coin sanity cap across the whole mirrored economy-bridge chain —
+  `CLUB_WAGE_CUT`/`PRO_SIGNING_SHARE`/`RETIREMENT_LEGACY_SHARE`, mirrored from `server/src/index.ts`'s
+  route-local consts since they aren't exported). **The entire multi-generation chain replayed
+  byte-identically from the same root seed** across 10 full dynasties, and a dedicated replay-round-trip
+  pass (`Career.resume()` from a snapshot → `graduate()`) matched the original `graduate()` output exactly
+  across 90 generation-careers spanning multiple dynasties.
+- **`careerState()` stress** (`shared/qa_career_state_fuzz.ts`, up to 1500 full careers driven turn-by-turn
+  through the server's actual presentational function — ~168,000 `careerState()` calls, using a
+  minimal hand-built `Token` fixture since `careerState()` needs no DB/network): both tracks, all 7
+  agents + none, `clubName` present/absent, `clubLevel` 0-4, and a "badPlayer" policy (always plays the
+  worst-fit card) specifically to depress recent form and exercise low-form/legacy-pressure paths. Every
+  presentational field checked every turn: `profile` (`currentOverall`/`potential` ∈ `[1,20]`, `stars` ∈
+  `[1,5]`), `offPitch`, `clubSeason`, `international`, `objective` (`progress ≤ target`, `done` consistent),
+  `handoff` (only fires with `apps ≥ 11`, matching the source's own gate), and the **"weight of the
+  name" legacy-pressure** narrative path for heirs of a legend (`generation > 0 && pedigree ≥ 0.6`) — all
+  code paths (legacy-pressure, handoff, off-pitch, international call-ups, objectives, chapter recaps)
+  were confirmed to actually fire during the sweep, not just theoretically reachable. No exceptions, no
+  malformed fields, at any turn, in any phase.
+- **Boundary/threshold exactness** (`shared/qa_boundary_fuzz.ts`): `ageOf()` clamps to `[25,40]` and hits
+  the retirement age (`40`) at exactly `season = primeSeason + 15`, never before, and stays pinned at `40`
+  after (100 `(prime, season)` pairs); `squadRole()`'s status label (`Key player`/`Regular starter`/
+  `Squad rotation`/`Breaking in`) matched its own documented apps-threshold in all 182 `(band, overall)`
+  cells; `firstTeamReady()` matched its documented `9 + clubLevel*1.2` formula exactly across 2002
+  `(band, clubLevel, overall)` cells; `computeOffPitch()`'s image-tier, endorsement-count, endorsement-tier
+  and reputation-edge cut points all flip exactly where documented; the off-pitch temptation gate's
+  empirical trigger rate over 20,000 turns matched its documented ~26% (edgy)/~12% (clean) odds to within
+  1 percentage point. **This pass is also where M2 was found** (`worldCup()`'s `NaN`-strength probe).
 
 ---
 
@@ -137,5 +195,33 @@ the engine is genuinely rng-free/replay-safe at the source level (confirmed by `
 | `shared/qa_meta_loops_fuzz.ts` | Club season, continental cup, national call-ups, World Cup, off-pitch | ~15,000 checks |
 | `shared/qa_match_edge_fuzz.ts` | Match engine edge cases (extreme quality/tactics, determinism, immutability) | ~170 matches |
 | `shared/qa_economy_fuzz.ts` | Manager economy: contracts, prestige, morale, legacy cards, staking | ~14,000 checks |
+| `shared/qa_dynasty_fuzz.ts` | Full multi-generation dynasty/fusion loop (career→pro→retire→reborn) | 300 dynasties × 25 gens (`QA_ROOTS`/`QA_GENS` env) |
+| `shared/qa_career_state_fuzz.ts` | `careerState()` driven every turn (server presentational layer) | 250 careers by default (`QA_N` env; run at 1500 in this pass) |
+| `shared/qa_boundary_fuzz.ts` | Documented-threshold exactness: ageOf, squadRole, firstTeamReady, worldCup extremes, offPitch tiers/temptation | ~4300 boundary probes |
 
-Re-run everything: `npx tsx shared/qa_career_fuzz.ts && npx tsx shared/qa_meta_loops_fuzz.ts && npx tsx shared/qa_match_edge_fuzz.ts && npx tsx shared/qa_economy_fuzz.ts`
+Re-run everything:
+```
+npx tsx shared/qa_career_fuzz.ts && npx tsx shared/qa_meta_loops_fuzz.ts && npx tsx shared/qa_match_edge_fuzz.ts && \
+npx tsx shared/qa_economy_fuzz.ts && npx tsx shared/qa_dynasty_fuzz.ts && npx tsx shared/qa_career_state_fuzz.ts && \
+npx tsx shared/qa_boundary_fuzz.ts
+```
+
+## Known limitations of this pass (for the next QA agent)
+
+- **`qa_dynasty_fuzz.ts`'s economy-bridge constants are mirrored, not imported.** `CLUB_WAGE_CUT`,
+  `PRO_SIGNING_SHARE` and `RETIREMENT_LEGACY_SHARE` live as un-exported consts inside route handlers in
+  `server/src/index.ts` (search for those names). If a future change edits those numbers, this harness's
+  copies will silently go stale — worth exporting them from `server/src/index.ts` (or a shared constants
+  module) so a test can import the real values instead of a hand-copied literal.
+- **`qa_dynasty_fuzz.ts`'s pro-season simulation is a simplified proxy**, not a literal replay of the
+  server's season-rollover (`server/src/lifecycle.ts`'s `advanceTokensAtRollover`, `server/src/seasons.ts`)
+  — it calls the same real, pure `clubSeason()`/`contOpponent()`/`tieScore()`/`developAttrs()` functions
+  the server uses, but the season-to-season bookkeeping (apps counted, promotion tracking — `promotions`
+  is currently hard-coded to 0 in this harness, not modeled) is a hand-rolled approximation. It's good
+  enough to stress the shared math across many generations, but a bug that only manifests in the DB-backed
+  `advanceTokensAtRollover`/`ensureSeason` orchestration itself (transaction ordering, partial writes,
+  concurrent owners, etc.) would need a DB-backed integration harness, which this pass did not build.
+- **`retireAgeFor`, as such, does not exist in the codebase** — retirement age is a fixed literal
+  (`age >= 40`) checked in `server/src/lifecycle.ts#advanceTokensAtRollover`, with `ageOf()` (in
+  `server/src/tokens.ts`) doing the clamping. This report's ageOf boundary checks cover the equivalent
+  ground the request described.
