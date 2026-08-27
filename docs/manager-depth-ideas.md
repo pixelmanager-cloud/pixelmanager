@@ -11,6 +11,12 @@
 > - **Team talk** — a real pre-kickoff decision (go for the throat / keep shape / play your game), each a
 >   small bounded pre-kickoff edge (homeBoost/conditioning) baked into the deterministic snapshot.
 > - **Post-match reaction** — a manager/fan line keyed to the result vs expectation.
+> - **Star age curve** — the club's league strength peaks in the star's mid-20s and declines toward
+>   retirement, so the managed career is a real arc (title window = his prime).
+> - **Facilities → matches** — Training Ground (conditioning) + Fan Zone (home edge) now apply to the
+>   single-player match snapshot, so the facilities coin sink matters.
+> - **Season prize money** — finishing a season banks coins by position (`/sp/season-reward`), closing the
+>   loop: play → earn → upgrade facilities → better matches.
 >
 > **Still open (bigger — engine/development):** named player roles (2 — the engine already has *duties*,
 > which cover much of this), per-player training focus (1/3 — pre-season stat drift, re-verify calibration),
