@@ -1,6 +1,6 @@
 import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, DUTY_LABEL, DUTIES_BY_ROLE, isDutyForRole,
-  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
+  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData, type MissionsData, type ContractInfo, type LeaderStat, type AwardRow } from './api';
 import { sprite } from './sprites';
@@ -58,7 +58,7 @@ const CHAPTER_THEME: Record<string, { slug: string; scene: string; accent: strin
   Establishing: { slug: 'establishing', scene: '🏆⭐💫', accent: '#ffd75e', bg: 'radial-gradient(120% 90% at 50% 0%, rgba(210,170,60,0.22), rgba(35,30,10,0.0) 60%)', tagline: 'A name in lights — cement your place among the greats.' },
 };
 
-const LEVELS: Record<keyof Omit<Tactics, 'formation'>, string[]> = {
+const LEVELS: Record<keyof Omit<Tactics, 'formation' | 'offsideTrap' | 'playOutOfDefence' | 'attackFocus'>, string[]> = {
   mentality: ['Very Defensive', 'Defensive', 'Balanced', 'Attacking', 'Very Attacking'],
   line: ['Very Deep', 'Deep', 'Normal', 'High', 'Very High'],
   press: ['Contain', 'Low', 'Balanced', 'High', 'Gegenpress'],
@@ -77,10 +77,12 @@ const MATCH_PLAN_RULES: PlanRule[] = [
   { id: 'hold-lead', ico: '🟢', ifText: 'Leading at 75′', thenText: 'see it out — drop deeper, slow the tempo', minMinute: 75, cond: (my, opp) => my > opp, shift: { mentality: -1, line: -1, press: -1, tempo: -1 }, fired: '📋 Protecting the lead — shutting up shop' },
   { id: 'push-draw', ico: '🟡', ifText: 'Level at 78′', thenText: 'go for the winner', minMinute: 78, cond: (my, opp) => my === opp, shift: { mentality: +1, tempo: +1 }, fired: '📋 Pushing for a winner' },
   { id: 'manage-2up', ico: '🔵', ifText: 'Two+ goals up after 60′', thenText: 'game management — protect the lead & the legs', minMinute: 60, cond: (my, opp) => my - opp >= 2, shift: { mentality: -1, tempo: -1, press: -1 }, fired: '📋 Comfortable — managing the game out' },
+  { id: 'blowout-lead', ico: '🟣', ifText: 'Three+ goals up after 55′', thenText: 'total game management — rest the legs for what\'s ahead', minMinute: 55, cond: (my, opp) => my - opp >= 3, shift: { mentality: -2, tempo: -2, press: -2 }, fired: '📋 Job done — shutting it down completely' },
+  { id: 'chase-ht-big', ico: '⚫', ifText: 'Two+ down at half-time', thenText: 'monumental push — maximum attack, high press, high line', minMinute: 45, cond: (my, opp) => opp - my >= 2, shift: { mentality: +2, line: +2, press: +1, tempo: +2 }, fired: '📋 Facing a hiding — throwing absolutely everything forward' },
 ];
 const clampTac = (v: number) => Math.max(-2, Math.min(2, v));
 
-const FORMATIONS: Formation[] = ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1', '3-4-3', '4-1-2-1-2', '5-3-2', '4-5-1'];
+const FORMATIONS: Formation[] = ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1', '3-4-3', '4-1-2-1-2', '5-3-2', '4-5-1', '4-1-4-1', '5-4-1', '4-2-2-2'];
 const SLOT_ROLES: Record<Formation, string[]> = {
   '4-4-2': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'FW', 'FW'],
   '4-3-3': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'FW', 'FW', 'FW'],
@@ -90,6 +92,9 @@ const SLOT_ROLES: Record<Formation, string[]> = {
   '4-1-2-1-2': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'FW', 'FW'],
   '5-3-2': ['GK', 'DF', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'FW', 'FW'],
   '4-5-1': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'MF', 'FW'],
+  '4-1-4-1': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'MF', 'FW'],
+  '5-4-1': ['GK', 'DF', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'FW'],
+  '4-2-2-2': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'FW', 'FW'],
 };
 
 const $ = (id: string) => document.getElementById(id)!;
@@ -237,7 +242,7 @@ class Game {
   editorMode: 'standing' | 'match' = 'standing';
   squadSort: SquadSort | null = null;
   pendingOpp?: { id: string; handle: string; venue: 'home' | 'away' };
-  spFixture: { idx: number; oppClub: Club; oppName: string; oppStrength: number; venue: 'home' | 'away'; oppLineup: Lineup; comp?: 'league' | 'cont' | 'wc'; contRound?: number } | null = null; // the single-player fixture being played
+  spFixture: { idx: number; oppClub: Club; oppName: string; oppStrength: number; venue: 'home' | 'away'; oppLineup: Lineup; oppTactics: Tactics; comp?: 'league' | 'cont' | 'wc'; contRound?: number } | null = null; // the single-player fixture being played
   pendingCont: { myGoals: number; oppGoals: number; oppStrength: number } | null = null; // a continental tie awaiting resolution once the full-time card is dismissed
   pendingWc: { myGoals: number; oppGoals: number; oppName: string } | null = null; // a World-Finals knockout tie awaiting resolution
   draftPlan = new Set<string>();          // armed conditional match-plan rule ids (single-player)
@@ -878,9 +883,11 @@ class Game {
     if (!m.contElig || m.contOut || round >= 3) return;
     const tie = contOpponent(this.leagueSeed(), m.season, round as 0 | 1 | 2);
     const short = (tie.oppName.match(/[A-Z]/g) ?? ['C', 'O', 'N']).join('').slice(0, 3);
-    const oppClub = generateClub('cont-' + m.season + '-' + round, tie.oppName, short, 0x8844cc, tie.oppStrength, (this.leagueSeed() ^ (round * 131)) >>> 0);
+    const oppSeed = (this.leagueSeed() ^ (round * 131)) >>> 0;
+    const oppClub = generateClub('cont-' + m.season + '-' + round, tie.oppName, short, 0x8844cc, tie.oppStrength, oppSeed);
     const venue: 'home' | 'away' = tie.neutral ? 'home' : (round % 2 === 0 ? 'home' : 'away'); // final on neutral ground, else alternate
-    this.spFixture = { idx: -1, oppClub, oppName: tie.oppName, oppStrength: tie.oppStrength, venue, oppLineup: autoPickXI(oppClub, '4-4-2'), comp: 'cont', contRound: round };
+    const oppTactics = seededOpponentTactics(oppSeed);
+    this.spFixture = { idx: -1, oppClub, oppName: tie.oppName, oppStrength: tie.oppStrength, venue, oppLineup: autoPickXI(oppClub, oppTactics.formation), oppTactics, comp: 'cont', contRound: round };
     this.openLineup('match', { id: 'cont-opp', handle: tie.oppName, venue });
   }
   private simContinentalTie() {
@@ -974,9 +981,11 @@ class Game {
     const { path, nation } = this.wcData(m.wcEdition);
     const opp = this.wcStageOpp(path, stage);
     const short = (opp.opp.match(/[A-Z]/g) ?? ['N', 'A', 'T']).join('').slice(0, 3);
-    const oppClub = generateClub('wc-' + m.wcEdition + '-' + stage, opp.opp, short, 0x3a7bd5, opp.oppStrength, (this.leagueSeed() ^ ([...opp.opp].reduce((a, c) => a + c.charCodeAt(0), 0) * 131)) >>> 0);
+    const oppSeed = (this.leagueSeed() ^ ([...opp.opp].reduce((a, c) => a + c.charCodeAt(0), 0) * 131)) >>> 0;
+    const oppClub = generateClub('wc-' + m.wcEdition + '-' + stage, opp.opp, short, 0x3a7bd5, opp.oppStrength, oppSeed);
     void nation;
-    this.spFixture = { idx: -1, oppClub, oppName: opp.opp, oppStrength: opp.oppStrength, venue: 'home', oppLineup: autoPickXI(oppClub, '4-4-2'), comp: 'wc' }; // neutral ground → treat as home (no home edge applied in startSpMatchWith for wc? kept simple)
+    const oppTactics = seededOpponentTactics(oppSeed);
+    this.spFixture = { idx: -1, oppClub, oppName: opp.opp, oppStrength: opp.oppStrength, venue: 'home', oppLineup: autoPickXI(oppClub, oppTactics.formation), oppTactics, comp: 'wc' }; // neutral ground → treat as home (no home edge applied in startSpMatchWith for wc? kept simple)
     this.openLineup('match', { id: 'wc-opp', handle: opp.opp, venue: 'home' });
   }
   private playWorldCupTie() { const s = this.loadMgr().wcStage; if (s === 'qf' || s === 'sf' || s === 'final') this.wcTie(s); }
@@ -1151,7 +1160,8 @@ class Game {
     const short = (opp.name.match(/[A-Z]/g) ?? ['O', 'P', 'P']).join('').slice(0, 3);
     const oppClub = generateClub('sp-' + opp.seed, opp.name, short, 0xcc4444, opp.strength, opp.seed);
     const venue: 'home' | 'away' = f.venue === 'H' ? 'home' : 'away';
-    this.spFixture = { idx, oppClub, oppName: opp.name, oppStrength: opp.strength, venue, oppLineup: autoPickXI(oppClub, '4-4-2') };
+    const oppTactics = seededOpponentTactics(opp.seed);
+    this.spFixture = { idx, oppClub, oppName: opp.name, oppStrength: opp.strength, venue, oppLineup: autoPickXI(oppClub, oppTactics.formation), oppTactics };
     this.openLineup('match', { id: 'sp-opp', handle: opp.name, venue });
   }
 
@@ -1190,7 +1200,7 @@ class Game {
     if (staff.includes('attack')) myTeam.homeBoost = (myTeam.homeBoost ?? 1) * 1.03;
     if (staff.includes('assistant')) { myTeam.homeBoost = (myTeam.homeBoost ?? 1) * 1.02; myTeam.conditioning = (myTeam.conditioning ?? 1) * 0.98; }
     const oppTeam = buildXI(sp.oppClub, sp.oppLineup);
-    const oppTactics: Tactics = { formation: '4-4-2', mentality: 0, line: 0, press: 0, tempo: 0, width: 0 };
+    const oppTactics: Tactics = sp.oppTactics;
     const iAmHome = sp.venue === 'home';
     const me = { id: 'me', handle: this.club.name, team: myTeam, tactics: this.draftTactics };
     const them = { id: 'opp', handle: sp.oppName, team: oppTeam, tactics: oppTactics };
@@ -2212,6 +2222,13 @@ class Game {
     (Object.keys(LEVELS) as Array<keyof typeof LEVELS>).forEach((k) => {
       tac.push(`<label>${k[0].toUpperCase() + k.slice(1)}<select id="e-${k}">${LEVELS[k].map((lab, i) => `<option value="${i - 2}" ${i - 2 === this.draftTactics[k] ? 'selected' : ''}>${lab}</option>`).join('')}</select></label>`);
     });
+    // INSTRUCTION toggle (only bites with a high/very-high line): the back four steps up together on
+    // a through-ball, catching a receiver without a real pace edge — fewer clean breakaways conceded.
+    const lineHigh = this.draftTactics.line >= 1;
+    tac.push(`<label class="tac-toggle" title="${lineHigh ? 'Catches attackers without a real pace edge — needs a high/very-high line' : 'Only bites with a High or Very High defensive line'}"><span>Offside Trap${lineHigh ? '' : ' (needs high line)'}</span><input type="checkbox" id="e-offside" ${this.draftTactics.offsideTrap ? 'checked' : ''} /></label>`);
+    tac.push(`<label class="tac-toggle" title="When the keeper has the ball, always pick the safest short option — fewer risky giveaways right after a save, especially vs a high press"><span>Play Out From Back</span><input type="checkbox" id="e-playout" ${this.draftTactics.playOutOfDefence ? 'checked' : ''} /></label>`);
+    const focus = this.draftTactics.attackFocus ?? 'balanced';
+    tac.push(`<label title="Bias who the ball goes to — lean into (or correct) your formation's natural width">Attack Focus<select id="e-focus"><option value="balanced" ${focus === 'balanced' ? 'selected' : ''}>Balanced</option><option value="wide" ${focus === 'wide' ? 'selected' : ''}>Wing Focus</option><option value="central" ${focus === 'central' ? 'selected' : ''}>Central Focus</option></select></label>`);
     $('tac-row').innerHTML = tac.join('');
     ($('e-formation') as HTMLSelectElement).addEventListener('change', (ev) => {
       this.draftTactics.formation = (ev.target as HTMLSelectElement).value as Formation;
@@ -2220,7 +2237,24 @@ class Game {
       this.renderLineupEditor();
     });
     (Object.keys(LEVELS) as Array<keyof typeof LEVELS>).forEach((k) => {
-      ($(`e-${k}`) as HTMLSelectElement).addEventListener('change', (ev) => { this.draftTactics[k] = Number((ev.target as HTMLSelectElement).value); this.updateEditorInsight(); });
+      ($(`e-${k}`) as HTMLSelectElement).addEventListener('change', (ev) => {
+        this.draftTactics[k] = Number((ev.target as HTMLSelectElement).value);
+        if (k === 'line') this.renderLineupEditor(); // re-render so the trap's "needs high line" hint stays accurate
+        this.updateEditorInsight();
+      });
+    });
+    ($('e-offside') as HTMLInputElement).addEventListener('change', (ev) => {
+      this.draftTactics.offsideTrap = (ev.target as HTMLInputElement).checked;
+      this.updateEditorInsight();
+    });
+    ($('e-playout') as HTMLInputElement).addEventListener('change', (ev) => {
+      this.draftTactics.playOutOfDefence = (ev.target as HTMLInputElement).checked;
+      this.updateEditorInsight();
+    });
+    ($('e-focus') as HTMLSelectElement).addEventListener('change', (ev) => {
+      const v = (ev.target as HTMLSelectElement).value;
+      this.draftTactics.attackFocus = v === 'wide' || v === 'central' ? v : undefined;
+      this.updateEditorInsight();
     });
     this.renderMatchPlan();
 

@@ -339,6 +339,7 @@ export class MatchEngine {
         const a = this.baseAnchor(teamIdx, i);
         let tx = a.x;
         let ty = 34 + (a.y - 34) * mods.widthScale;
+        if (attacking) ty += (a.y - 34) * dm.hug; // wing-back etc.: stay/push wider as an auxiliary winger going forward
         if (p.role === 'DF') tx += dir * mods.lineShift;
         // on a counter, the winning side's forwards burst upfield into the space
         const counterPush = attacking && p.role === 'FW' && this.onCounter(teamIdx) ? 1.3 : 1;
@@ -524,6 +525,11 @@ export class MatchEngine {
     const defTeam = (1 - teamIdx) as 0 | 1;
     const cs = s.players[teamIdx][playerIdx];
     const myDistGoal = Math.hypot(goal.x - cs.x, goal.y - cs.y);
+    // PLAY-OUT-OF-DEFENCE instruction (off by default): when the KEEPER has the ball, a side with it
+    // armed insists on the safest short option regardless of the tempo slider — the trade-off is fewer
+    // risky giveaways right after a save/gather, at the cost of the counter-attacking speed a longer,
+    // more direct restart would have given. Only overrides directness for this one decision.
+    const directness = (playerIdx === 0 && this.tactics[teamIdx].playOutOfDefence) ? -1 : mods.directness;
     let best: { idx: number; through: boolean } | null = null;
     let bestScore = -Infinity;
     for (let i = 0; i < 11; i++) {
@@ -535,18 +541,24 @@ export class MatchEngine {
       if (dPass > 42 || dPass < 3) continue;
       const gain = myDistGoal - dGoal; // positive = progresses toward goal
       const pressure = this.pressureOn(defTeam, ts);
+      // ATTACK-FOCUS instruction (unset = neutral): bias the ball toward the widest or the most
+      // central available option, on top of everything else — a deliberate lean into (or away from)
+      // the shape's natural width, independent of any single duty's magnet.
+      const focus = this.tactics[teamIdx].attackFocus;
+      const focusBias = focus === 'wide' ? Math.abs(ts.y - 34) * 0.18 : focus === 'central' ? -Math.abs(ts.y - 34) * 0.18 : 0;
       // directness>0 rewards forward gain and tolerates longer passes; <0 rewards safe short options.
       // duty "magnet" makes playmakers/target-men more (and ball-winners less) sought as an out-ball.
-      const score = gain * (0.7 + 0.6 * (mods.directness + 1))
-        - dPass * (0.2 - mods.directness * 0.1)
+      const score = gain * (0.7 + 0.6 * (directness + 1))
+        - dPass * (0.2 - directness * 0.1)
         - pressure * 3
         + this.dm[teamIdx][i].magnet
+        + focusBias
         + this.rng() * 6;
       // a direct side, and especially one on the counter, slips more through-balls in behind;
       // the passer's creativity (and the Creative Maestro trait) unlocks more of them
       const counter = this.onCounter(teamIdx);
       const passer = this.teams[teamIdx].players[playerIdx];
-      const throughP = clamp(0.5 + 0.16 * mods.directness + (counter ? 0.14 : 0)
+      const throughP = clamp(0.5 + 0.16 * directness + (counter ? 0.14 : 0)
         + mAdd(passer.attrs.creativity, 0.12) + (hasTrait(passer, 'maestro') ? 0.05 : 0), 0.25, 0.9);
       const through = gain > (counter ? 14 : 16) && this.teams[teamIdx].players[i].role === 'FW' && this.rng() < throughP;
       if (gain > -6 && score > bestScore) { bestScore = score; best = { idx: i, through }; }
@@ -570,7 +582,14 @@ export class MatchEngine {
     const def = this.teams[defTeam].players[nearest];
     const ds = s.players[defTeam][nearest];
     const behind = dir === 1 ? recS.x > ds.x : recS.x < ds.x; // receiver already past that defender
-    const faster = norm(rec.attrs.pace) * fit(recS.fitness) > norm(def.attrs.pace) * fit(ds.fitness);
+    const paceGap = norm(rec.attrs.pace) * fit(recS.fitness) - norm(def.attrs.pace) * fit(ds.fitness);
+    // OFFSIDE TRAP instruction (off by default, and only meaningful with a high/very-high line): the
+    // back line steps up together the instant the ball is played, so a receiver needs a REAL pace
+    // edge to spring it clean — a marginal one just gets caught. Bounded to this one decision, so a
+    // side without a genuine outlet threat gets far fewer clear breakaways; a side with real pace
+    // (e.g. a poacher/pressing-forward with a big gap) still tears the trap open exactly as before.
+    const trap = !!this.tactics[defTeam].offsideTrap && this.tactics[defTeam].line >= 1;
+    const faster = paceGap > (trap ? 0.12 : 0);
     return behind && faster;
   }
 

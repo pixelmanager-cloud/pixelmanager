@@ -249,6 +249,104 @@ content bar (a new interacting/trade-off decision, not a reskin).
 14. Club finances — gate/sponsor income (facilities already have this) → reinvest coins into facilities/staff/youth.
 15. More competitions — super cup, continental, friendlies (fitness).
 
+### 🎮 ✅ SHIPPED (2026-08-27, match-engine/tactics agent) — beyond the core four
+- **Seeded opponent tactical profiles** — every single-player opponent (league/continental/World-Finals)
+  used to play flat `DEFAULT_TACTICS` 4-4-2 regardless of who they were. Now each opponent's club seed
+  deterministically picks one of the already-proven `TACTIC_PRESETS` (Gegenpress/Park the Bus/Tiki-Taka/
+  Route One/Counter/Balanced) as its stable identity for the whole save — same club always plays the
+  same way, but different clubs genuinely feel different. Zero new tactical math (reuses presets already
+  balanced by the anti-spam gate), so calibration is untouched by construction. `seededOpponentTactics()`
+  in `shared/src/tactics.ts`; wired into all 3 SP fixture-creation sites in `client/src/main.ts`. Proven
+  by a new `strategy_test.ts` assertion: 40 seeded opponents → 6 distinct profiles, fully deterministic.
+
+- **Offside trap** — a new off-by-default INSTRUCTION (`Tactics.offsideTrap`, only live with a high/very-high
+  line). The back line steps up together on a through-ball, so a receiver needs a real pace edge to spring
+  it clean — a marginal one gets caught. A real toggle in the lineup editor (hints "needs high line" until
+  the line slider is raised). Contained entirely to `beatsLastDefender()` in `shared/src/engine.ts`, so it
+  can't interact with the counter-attack/foul system; off by default means every existing preset/DEFAULT_TACTICS
+  match is bit-for-bit unchanged. Proven in `strategy_test.ts`: against an ordinary-pace direct attack, a high
+  line with the trap armed concedes ~34% fewer clear-cut breakaway chances than a plain high line (6579 → 4373
+  over the harness). (An earlier "tactical fouling" instruction tied to the counter-attack flag was tried and
+  reverted — the existing "committed high → counter" trigger fires far more often than a real fast break, so
+  widening the foul chance during it caused a runaway spike in cards and free-kick goals; offside trap avoids
+  that system entirely.)
+
+- **Wing-Back duty** — a new named DF duty (`shared/src/duties.ts`) alongside cover/stopper/ball-playing
+  defender/inverted full-back: a fullback who bombs forward as an auxiliary winger. Adds a new `hug` field
+  to `DutyMods` (stretches the player's lateral anchor offset outward while attacking instead of narrowing
+  it) so a duty can genuinely change a player's WIDTH on the pitch, not just push/press/shoot/magnet —
+  reusable by any future wide-role duty. Proven in `strategy_test.ts`: vs a narrow back four, wing-back
+  fullbacks edge possession above cover-duty fullbacks (45.4% vs 44.8% over the harness) — the extra flank
+  presence gives the side a genuine out-ball. (Team *shots* were tried first as the proof metric and didn't
+  hold — pushing fullbacks forward pulled some pass-attractiveness away from the strikers who actually
+  finish, netting fewer shots despite more presence; possession share is the honest, provable effect here.)
+
+- **New formation: 4-1-4-1** — a holding-mid shield + a lone striker, added to `shared/src/formations.ts`
+  (+ `SLOT_ROLES`/`FORMATIONS` in `client/src/main.ts`). A genuine trade-off, not a strict downgrade: one
+  fewer forward than a 2-up-top shape costs it head-to-head against orthodox two-striker formations
+  (loses to 4-4-2 and 4-5-1 in testing), but 3 of its 5 MF anchors sit centrally (vs 2 of 4 in 4-4-2),
+  which wins the central battle against an equally narrow rival — it beats the 4-1-2-1-2 diamond
+  head-to-head (28W-25L over the harness), proven as a new `strategy_test.ts` assertion. A "control the
+  middle, sacrifice a striker" pick for the formation menu.
+
+- **Two more conditional match-plan orders** — `blowout-lead` ("3+ up after 55′" → total shutdown: mentality/
+  tempo/press all −2) and `chase-ht-big` ("2+ down at half-time" → maximum push: mentality/line/tempo +2,
+  press +1), added to `MATCH_PLAN_RULES` in `client/src/main.ts`. Pure data alongside the existing 5 rules —
+  reuses the already-proven `setTactics`/clamp mechanism, so no engine change and no new calibration risk.
+  When both a milder and a more extreme rule's conditions hold at once (e.g. losing by exactly 2 at HT
+  matches both `chase-ht` and `chase-ht-big`), the later rule in the array wins since each computes its
+  shift from the fixed kickoff tactics — array order was chosen so the more drastic reaction overrides.
+
+### 🎮 ✅ SHIPPED (2026-08-27, batch 2) — more formations/roles/instructions
+- **Sweeper DF duty** — a new named DF duty: covers space and steps forward to intercept rather than
+  engaging in duels (lowest press of any DF duty, extra `come` to link the build-up as an auxiliary
+  passing outlet). Proven in `strategy_test.ts`: concedes fewer goals to a direct attack than both
+  stopper (1.30 vs 1.60/match) and the existing cover duty (1.30 vs 2.18/match) — discipline and
+  positioning beat both raw aggression and passive sitting-off.
+- **Anchor MF duty** — a new named MF duty: pure destroyer who never strays from screening the back four
+  (lowest push, highest press of any MF duty, and a negative magnet so play doesn't get funnelled through
+  him as an out-ball). Proven in `strategy_test.ts`: concedes fewer goals vs a direct attack than
+  ball-winner (1.78 vs 1.82), box-to-box (1.78 vs 2.02).
+- **Inverted-Winger FW duty** — a new named FW duty for a wide forward slot (3-4-3/4-3-3's wide FW):
+  cuts inside off the touchline (negative `hug`, reusing the width dimension added for wing-back) onto
+  a more central role instead of hugging the line. Proven in `strategy_test.ts`: edges team possession
+  up vs a wide poacher (52.4% vs 47.7% against a plain back four) — the extra central passing/creation
+  presence outweighs losing the out-and-out width. (Team shots/goals were tried first and didn't hold —
+  crowding the centre stole space from other central attackers rather than adding net chances;
+  possession is the honest, provable effect.)
+- **Play Out From The Back instruction** — a new off-by-default toggle, `Tactics.playOutOfDefence`: when
+  the keeper has the ball, always pick the safest short option regardless of the tempo slider. Contained
+  entirely to the one `pickPassTarget()` decision where `playerIdx === 0` (the keeper), so it can't touch
+  anything else. Proven in `strategy_test.ts`: (a) neutrality — `playOutOfDefence: false` reproduces the
+  *exact* goal tally of the field being absent entirely (bit-for-bit, not just "close"); (b) effect —
+  armed vs a high-press side, concedes fewer goals (0.92 vs 1.03/match) by avoiding risky giveaways right
+  off the keeper's distribution. A real toggle in the lineup editor.
+- **Attack-Focus instruction (wide/central)** — a new toggle, `Tactics.attackFocus: 'wide' | 'central'`
+  (unset = neutral, bit-for-bit unchanged — proven), biasing which teammate the ball gets played to.
+  Genuine rock-paper-scissors with the formation underneath it: a WIDE formation (3-4-3) already floods
+  the flanks, so doubling down with wing focus overshoots into areas too wide to shoot from — CENTRAL
+  focus consolidates it into more shots (23.7 vs 18.8/match, proven in `strategy_test.ts`). A NARROW
+  formation (4-1-2-1-2 diamond) has no width of its own, so WIDE focus finds space the shape doesn't
+  natively offer (23.5 vs 22.4/match) — the *opposite* correct answer for the *same* instruction,
+  depending on the shape it's paired with. Real 3-way selector in the lineup editor.
+- **Wide-Playmaker MF duty** — a new named MF duty for a wide midfield slot: hugs the touchline
+  (positive `hug`) but dictates play from out there (high magnet, moderate shoot, low press). Proven in
+  `strategy_test.ts`: generates more team shots than both box-to-box (38.3 vs 36.1) and ball-winner
+  (38.3 vs 36.8) in the same wide slot. (Possession share was tried first vs both rivals and came back
+  flat — a wide MF's press setting feeds back into how fast the *team* wins the ball back elsewhere,
+  which roughly cancels out any passing-magnet gain; shots is the metric that actually moves.)
+- **New formation: 4-2-2-2** — a back four behind a narrow double-pivot + double-ten box midfield and
+  two strikers. The tightest MF spread of any formation in the pool, so it loses width battles against
+  most shapes (an earlier attempt, 3-4-1-2, was tried and dropped — no formation in the pool could beat
+  it net, so it added no real strategic option; 4-2-2-2 at least has one clean edge). Proven in
+  `strategy_test.ts`: it beats 4-1-4-1's own narrow, lone-striker shape by fielding two strikers instead
+  of one (23W-20L). A situational, not all-purpose, pick.
+- **New formation: 5-4-1** — back five + one striker, added to `shared/src/formations.ts` + client
+  `FORMATIONS`/`SLOT_ROLES`. Unlike 4-1-4-1/4-5-1 (a repositioned midfielder pretending to be defensive),
+  this is a REAL extra defender, so it genuinely concedes fewer goals to a direct attack: proven in
+  `strategy_test.ts` — 5-4-1 concedes 1.70/match vs a direct (mentality+1/tempo+2) attacker, vs 1.82 for
+  4-4-2 and 2.62 for the lone-midfielder-heavy 4-5-1. Cost: a lone striker up top.
+
 **Guardrails (unchanged):** deterministic (no wall-clock/Math.random in shared/), `npm run verify` green with
 every engine-touching change (paste before/after calibration in the commit), one item per commit, fair not
 grindy, legible cause→effect. Sources: FM24 (Goal.com, Most Wanted Gamers), Goomba Stomp, gmgames.org.
