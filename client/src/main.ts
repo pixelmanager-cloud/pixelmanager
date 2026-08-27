@@ -646,7 +646,7 @@ class Game {
     $('me-name').textContent = this.club.name;
     $('me-rating').textContent = ''; // PvP ELO — hidden: the game is single-player (multiplayer removed, see direction.md)
     if (this.account.coins != null) {
-      $('me-coins').textContent = `💰 ${this.account.coins}`;
+      $('me-coins').innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${this.account.coins}`;
       $('hub-club-sub').textContent = `💰 ${this.account.coins.toLocaleString()} to invest — facilities, youth & scouting. Levels are permanent.`;
     }
     void this.refreshPrestige();
@@ -1348,7 +1348,7 @@ class Game {
 
   private renderFacilities(d: { coins: number; facilities: import('./api').Facility[] }) {
     this.account.coins = d.coins;
-    $('club-coins').textContent = `💰 ${d.coins}`;
+    $('club-coins').innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${d.coins}`;
     $('facilities-grid').innerHTML = d.facilities.map((f) => {
       const pips = Array.from({ length: f.maxLevel }, (_, i) => `<i class="${i < f.level ? 'on' : ''}"></i>`).join('');
       const maxed = f.level >= f.maxLevel;
@@ -1878,7 +1878,7 @@ class Game {
       this.account.coins = d.coins;
       $('trips-per').textContent = String(d.tripsPerSeason);
       $('trips-used').textContent = String(d.tripsUsed);
-      $('scout-coins').textContent = `💰 ${d.coins}`;
+      $('scout-coins').innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${d.coins}`;
       const haveTrips = d.tripsLeft > 0;
       $('scout-destinations').innerHTML = d.destinations.map((dest, i) => {
         const risk = Math.min(4, i); // 0 (parks) … 5 (wonderkid) → escalating frame (capped at 4)
