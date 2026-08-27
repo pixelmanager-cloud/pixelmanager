@@ -699,6 +699,7 @@ class Game {
     return this.squadStrength() + mod;
   }
   private ordinal(n: number): string { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]); }
+  private facLevels: Record<string, number> = {}; // cached club-facility levels — applied to single-player matches
   /** A player's retirement age varies with him: keepers last longest, pace-reliant forwards fade earliest;
    *  a strong, durable body plays on, a pacey one declines sooner; plus a small individual quirk. ~30–41. */
   private retireAgeFor(player: Player): number {
@@ -722,6 +723,7 @@ class Game {
   private showSeason() {
     this.spFixture = null;
     this.showScreen('season');
+    api.facilities().then((d) => { this.facLevels = Object.fromEntries(d.facilities.map((f) => [f.key, f.level])); }).catch(() => {}); // cache for the match edges
     const clubName = this.club.name, seed = this.leagueSeed();
     const fixtures = seasonFixtures(clubName, seed);
     const m = this.loadMgr(), played = m.results;
@@ -868,6 +870,10 @@ class Game {
     if (tone === 'fire') { myTeam.homeBoost = 1.08; myTeam.conditioning = 1.06; }       // more shots, tire faster
     else if (tone === 'calm') { myTeam.conditioning = 0.92; }                            // fresher legs, solidity
     else { myTeam.homeBoost = 1.04; }                                                    // a small balanced edge
+    // CLUB FACILITIES apply to the match: Training Ground → less fitness drain; Fan Zone → home attack edge.
+    const trainLvl = this.facLevels.training ?? 1, fanLvl = this.facLevels.fanzone ?? 1;
+    myTeam.conditioning = (myTeam.conditioning ?? 1) * (1 - (trainLvl - 1) * 0.05);
+    if (sp.venue === 'home') myTeam.homeBoost = (myTeam.homeBoost ?? 1) * (1 + (fanLvl - 1) * 0.02);
     const oppTeam = buildXI(sp.oppClub, sp.oppLineup);
     const oppTactics: Tactics = { formation: '4-4-2', mentality: 0, line: 0, press: 0, tempo: 0, width: 0 };
     const iAmHome = sp.venue === 'home';
