@@ -448,7 +448,15 @@ export function graduationEpilogue(ctx: EpilogueCtx): string {
     joker: 'He never took himself too seriously. Everyone else took him plenty seriously enough.',
   };
   const pers = ctx.personalityId && persLine[ctx.personalityId] ? ' ' + persLine[ctx.personalityId] : '';
-  const start = pickFrom(rng, ['It started on a park pitch with jumpers for goalposts.', 'Fifteen years ago he was the smallest kid on a muddy rec.', 'From a scatter of parents on a touchline to this.']);
-  const close = pickFrom(rng, [`${cast.gaffer} always said he’d make it. He was right.`, `${cap0(cast.mentor)} shook his hand and said little. He didn’t need to.`, `Somewhere, ${cast.rival} is watching, and wondering.`]);
+  const start = pickFrom(rng, [
+    'It started on a park pitch with jumpers for goalposts.', 'Fifteen years ago he was the smallest kid on a muddy rec.', 'From a scatter of parents on a touchline to this.',
+    'A school report once said he needed to concentrate less on football and more on his times tables.', 'He can still remember the exact colour of his first proper boots.',
+    'Somewhere there’s a photo of him, aged ten, grinning with a medal too big for a ten-year-old’s neck.',
+  ]);
+  const close = pickFrom(rng, [
+    `${cast.gaffer} always said he’d make it. He was right.`, `${cap0(cast.mentor)} shook his hand and said little. He didn’t need to.`, `Somewhere, ${cast.rival} is watching, and wondering.`,
+    `His family were there for every step of it — and they’re still there now.`, `${cast.captain} is already talking about a dressing room with him in it.`,
+    `Fifteen years of Sunday mornings and van journeys, and it was worth every single one.`,
+  ]);
   return `${start} At twenty-five, ${ctx.name} emerges as ${tier}.${pers} ${close}`;
 }

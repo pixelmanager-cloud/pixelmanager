@@ -276,6 +276,9 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
       { id: 'strong', test: (ch: any) => ch.success >= 0.68, target: Math.max(2, Math.round(band.turns * 0.35)), label: (n: number) => `Turn in ${n} strong displays this stage` },
       { id: 'big', test: (ch: any) => ch.stakes >= 2 && ch.success >= 0.6, target: 2, label: (n: number) => `Rise to the occasion in ${n} big-game moments` },
       { id: 'reads', test: (ch: any) => ch.fit >= ch.bestFit - 0.05, target: Math.max(3, Math.round(band.turns * 0.3)), label: (n: number) => `Read the game right ${n} times (perfect reads)` },
+      { id: 'flair', test: (ch: any) => (ch.tags ?? []).includes('flair') && ch.success >= 0.65, target: Math.max(2, Math.round(band.turns * 0.2)), label: (n: number) => `Produce ${n} moments of real quality (flair)` },
+      { id: 'leadership', test: (ch: any) => (ch.tags ?? []).includes('leadership') && ch.success >= 0.6, target: Math.max(2, Math.round(band.turns * 0.2)), label: (n: number) => `Lead by example ${n} times` },
+      { id: 'consistency', test: (ch: any) => ch.success >= 0.5, target: Math.max(4, Math.round(band.turns * 0.6)), label: (n: number) => `Never dip below a solid standard — ${n} respectable performances` },
     ].filter((o) => o.id !== 'big' || band.maxStakes >= 2); // big-game target only where big games happen
     const pick = OBJS[((((c as any).seed >>> 0) ^ Math.imul(bandIdx + 1, 2654435761)) >>> 0) % OBJS.length];
     const progress = Math.min(pick.target, bandLog.filter(pick.test).length);
@@ -347,7 +350,7 @@ export async function unavailableTokenIds(db: Store, ownerId: string, season: nu
 /** The retirement legacy card for a retired (or retiring) token. */
 export function legendCardOf(t: Token) {
   const ovr = overall(tokenToPlayer(t));
-  const card = legacyCard((t.role as any) ?? 'MF', ovr, Math.max(t.peak_overall, ovr), tokenAch(t));
+  const card = legacyCard((t.role as any) ?? 'MF', ovr, Math.max(t.peak_overall, ovr), tokenAch(t), t.career_seed ?? 0);
   const number = t.kit_json ? (JSON.parse(t.kit_json).number ?? null) : null; // squad number, if the manager set one — for number retirement
   return { ...card, number };
 }
