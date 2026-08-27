@@ -8,7 +8,7 @@ import {
   type Player, type Track, type PlayerAchievements, type Genes, type CareerPlayerAttrs,
 } from '@fm/shared';
 import type { Token, Store } from './store.js';
-import { clubSeason, squadRole, firstTeamReady } from './clubseason.js';
+import { clubSeason, squadRole, firstTeamReady } from '@fm/shared';
 
 export const SUPPLY_CAP = Number(process.env.SUPPLY_CAP ?? 10000); // fixed total NFTs in the economy
 // Lifecycle SINKS (coins now — the seam that becomes a PTEST spend later; see docs/economy-and-web3.md).

@@ -48,11 +48,12 @@ function hash32(...nums: number[]): number {
 }
 const nameSeed = (s: string) => [...s].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7);
 
-export interface LeagueClub { name: string; strength: number; mine: boolean }
+export interface LeagueClub { name: string; strength: number; seed: number; mine: boolean }
 export interface TableRow { name: string; mine: boolean; P: number; W: number; D: number; L: number; GF: number; GA: number; GD: number; Pts: number }
 
-/** Build the seeded 10-club league: Marlow (at `myStrength`) + 9 fixed-per-save fictional clubs. */
-export function seededLeague(myClub: string, myStrength: number, seed: number): LeagueClub[] {
+/** The 9 fictional opponents, stable per save — name + squad strength (1-20 quality) + a squad seed for
+ *  generateClub. Deterministic from the save seed. */
+export function seededOpponents(myClub: string, seed: number): LeagueClub[] {
   // exclude the club itself and any near-duplicate name (e.g. 'Marlow' vs 'Marlow Athletic')
   const pool = LEAGUE_POOL.filter((n) => n !== myClub && !n.includes(myClub) && !myClub.includes(n));
   const chosen = pool
@@ -60,8 +61,59 @@ export function seededLeague(myClub: string, myStrength: number, seed: number): 
     .sort((a, b) => a.k - b.k)
     .slice(0, LEAGUE_SIZE - 1)
     .map((x) => x.n);
-  const others = chosen.map((n) => ({ name: n, strength: 6 + (hash32(seed, nameSeed(n) * 2654435761 >>> 0) % 13), mine: false })); // 6..18
-  return [{ name: myClub, strength: Math.round(myStrength), mine: true }, ...others];
+  return chosen.map((n) => ({ name: n, strength: 6 + (hash32(seed, nameSeed(n) * 2654435761 >>> 0) % 13), seed: hash32(seed, nameSeed(n)) >>> 0, mine: false })); // 6..18
+}
+
+/** Build the seeded 10-club league: Marlow (at `myStrength`) + the 9 fictional clubs. */
+export function seededLeague(myClub: string, myStrength: number, seed: number): LeagueClub[] {
+  return [{ name: myClub, strength: Math.round(myStrength), seed: hash32(seed, 777) >>> 0, mine: true }, ...seededOpponents(myClub, seed)];
+}
+
+// Full double round-robin schedule (circle method): 2(n-1) rounds of n/2 matches [homeIdx, awayIdx].
+// Club 0 (Marlow) is fixed at position 0, so its round-r match is always rounds[r][0].
+function scheduleRounds(n: number): [number, number][][] {
+  const arr = Array.from({ length: n }, (_, i) => i);
+  const first: [number, number][][] = [];
+  for (let r = 0; r < n - 1; r++) {
+    const round: [number, number][] = [];
+    for (let i = 0; i < n / 2; i++) { const a = arr[i], b = arr[n - 1 - i]; round.push(r % 2 === 0 ? [a, b] : [b, a]); }
+    first.push(round);
+    arr.splice(1, 0, arr.pop()!); // rotate, keeping index 0 fixed
+  }
+  const second = first.map((rd) => rd.map(([h, a]) => [a, h] as [number, number]));
+  return [...first, ...second];
+}
+
+export interface Fixture { oppName: string; venue: 'H' | 'A' }
+/** Marlow's fixture per round across the 18-round double round-robin (derived from the shared schedule). */
+export function seasonFixtures(myClub: string, seed: number): Fixture[] {
+  const clubs = seededLeague(myClub, SQUAD_BASE, seed);
+  const rounds = scheduleRounds(clubs.length);
+  return rounds.map((rd) => { const [h, a] = rd.find(([x, y]) => x === 0 || y === 0)!; return h === 0 ? { oppName: clubs[a].name, venue: 'H' as const } : { oppName: clubs[h].name, venue: 'A' as const }; });
+}
+
+export interface PlayedResult { myGoals: number; oppGoals: number }
+/** LIVE league table after `played.length` rounds: every club has played that many games. Marlow's rounds
+ *  use his real results; every other match up to the current round is simulated. Fills in as you play. */
+export function liveTable(myClub: string, marlowStrength: number, share: number, seed: number, played: PlayedResult[]) {
+  const clubs = seededLeague(myClub, SQUAD_BASE + (marlowStrength - SQUAD_BASE) * share, seed);
+  const rounds = scheduleRounds(clubs.length);
+  const rows: TableRow[] = clubs.map((c) => ({ name: c.name, mine: c.mine, P: 0, W: 0, D: 0, L: 0, GF: 0, GA: 0, GD: 0, Pts: 0 }));
+  const add = (rh: TableRow, rj: TableRow, gh: number, ga: number) => {
+    rh.P++; rj.P++; rh.GF += gh; rh.GA += ga; rj.GF += ga; rj.GA += gh;
+    if (gh > ga) { rh.W++; rj.L++; rh.Pts += 3; } else if (gh < ga) { rj.W++; rh.L++; rj.Pts += 3; } else { rh.D++; rj.D++; rh.Pts++; rj.Pts++; }
+  };
+  const matchday = Math.min(played.length, rounds.length);
+  for (let r = 0; r < matchday; r++) for (const [hi, ai] of rounds[r]) {
+    let gh: number, ga: number;
+    if (hi === 0 || ai === 0) { const p = played[r]; if (hi === 0) { gh = p.myGoals; ga = p.oppGoals; } else { gh = p.oppGoals; ga = p.myGoals; } }
+    else [gh, ga] = simMatch(clubs[hi], clubs[ai], hash32(seed, r * 53 + hi * 7 + ai));
+    add(rows[hi], rows[ai], gh, ga);
+  }
+  for (const r of rows) r.GD = r.GF - r.GA;
+  rows.sort((a, b) => b.Pts - a.Pts || b.GD - a.GD || b.GF - a.GF || a.name.localeCompare(b.name));
+  const pos = rows.findIndex((r) => r.mine) + 1;
+  return { table: rows, pos, me: rows.find((r) => r.mine)!, size: rows.length, matchday, totalRounds: rounds.length };
 }
 
 /** Deterministic scoreline for one fixture (a hosts b), weighted by the strength gap + seeded noise. */
