@@ -507,13 +507,13 @@ export const HAND_SIZE = 4;
 export const START_AGE = 10, PRO_AGE = 25, RETIRE_AGE = 40;
 export interface AgeBand { name: string; from: number; to: number; turns: number; maxStakes: 1 | 2 | 3; demand: Tag[] }
 export const AGE_BANDS: AgeBand[] = [
-  { name: 'Grassroots',   from: 10, to: 12, turns: 12, maxStakes: 1, demand: ['flair', 'stamina', 'creativity', 'teamwork'] },
-  { name: 'Academy',      from: 13, to: 14, turns: 14, maxStakes: 1, demand: ['flair', 'stamina', 'creativity', 'teamwork', 'composure', 'aggression'] },
-  { name: 'Scholar',      from: 15, to: 16, turns: 16, maxStakes: 2, demand: OUTFIELD_TAGS },
-  { name: 'Youth Team',   from: 17, to: 18, turns: 18, maxStakes: 2, demand: OUTFIELD_TAGS },
-  { name: 'Breakthrough', from: 19, to: 20, turns: 18, maxStakes: 3, demand: OUTFIELD_TAGS },
-  { name: 'First Team',   from: 21, to: 22, turns: 18, maxStakes: 3, demand: OUTFIELD_TAGS },
-  { name: 'Establishing', from: 23, to: 25, turns: 16, maxStakes: 3, demand: OUTFIELD_TAGS },
+  { name: 'Grassroots',   from: 10, to: 12, turns: 22, maxStakes: 1, demand: ['flair', 'stamina', 'creativity', 'teamwork'] },
+  { name: 'Academy',      from: 13, to: 14, turns: 26, maxStakes: 1, demand: ['flair', 'stamina', 'creativity', 'teamwork', 'composure', 'aggression'] },
+  { name: 'Scholar',      from: 15, to: 16, turns: 30, maxStakes: 2, demand: OUTFIELD_TAGS },
+  { name: 'Youth Team',   from: 17, to: 18, turns: 32, maxStakes: 2, demand: OUTFIELD_TAGS },
+  { name: 'Breakthrough', from: 19, to: 20, turns: 32, maxStakes: 3, demand: OUTFIELD_TAGS },
+  { name: 'First Team',   from: 21, to: 22, turns: 32, maxStakes: 3, demand: OUTFIELD_TAGS },
+  { name: 'Establishing', from: 23, to: 25, turns: 28, maxStakes: 3, demand: OUTFIELD_TAGS },
 ];
 export const TOTAL_TURNS = AGE_BANDS.reduce((s, b) => s + b.turns, 0);
 
