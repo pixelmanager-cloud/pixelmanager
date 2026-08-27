@@ -4,6 +4,86 @@ Living report from the QA sim-fuzzing agent. Base commit: `b57aa88` (confirmed v
 after `git reset --hard main`; both `npm run verify` and `npx tsx shared/career_sim.ts` were GREEN before
 any QA work began).
 
+## UPDATE — 2026-08-28, batch 4 (base commit `b941184`)
+
+Synced clean off `main` (`git reset --hard main`; `git log --oneline -8` showed batch 3's qa commits —
+`qa: add 'npm run qa' full-sweep runner...` and `qa: add scout-trip/kit + dynasty-strategy fuzz
+harnesses` — plus the manager-content agent's board/press/staff systems and the narrate.ts register
+sweep). Zero game bugs found this batch. Note: batch 3 shipped two new harnesses
+(`qa_facade_scout_kit_fuzz.ts`, `qa_dynasty_strategy_fuzz.ts`) but never added its own dated section to
+this report — folding a summary of what it covers into "Harnesses added" below, retroactively.
+
+1. **New — `shared/qa_boardroom_deep_fuzz.ts`.** Batch 2's `qa_manager_content_fuzz.ts` already carries
+   basic no-throw/determinism/bounds coverage for the three newest manager modules (`board.ts`/
+   `press.ts`/`staff.ts`, added same commit as that coverage by the manager-content agent). This harness
+   goes a level deeper, purpose-built for the backlog's ask ("assert determinism, no blank/NaN/undefined
+   leaked text, bounded moods/scores, stable staff identity per seed"):
+   - `boardScore`/`boardStanding`: the returned `mood` label is checked against an **exact independent
+     re-derivation of the score-band thresholds** (not just "is it one of the 6 valid moods") across
+     4,000 random inputs — a threshold off-by-one would be invisible to a looser check. Also verifies
+     `score` is always an integer.
+   - Degenerate-input hardening: zero/negative/absurdly-large `position`/`total`/`matchesPlayed`/
+     `totalMatches` (including `totalMatches: 0` and `matchesPlayed: 1e9`) — never throws, score stays in
+     `[-100, 100]`, message never blank.
+   - **Monotonicity**: for fixed expectation/season-progress and positions kept clear of the relegation-
+     zone penalty cliff, a worse table position never produces a *better* score (800 seeds, paired
+     comparisons) — confirms `boardScore`'s `normalisedGap` term behaves as documented.
+   - `press.ts`: an **exhaustive** sweep of every `timing x competition x stakes x form x result`
+     combination (144 combos) x 5 seeds each — no throw, no blank line/tag; plus an explicit check that
+     `timing: 'post'` with `result: undefined` (the `input.result ?? 'draw'` fallback path in the source)
+     resolves cleanly instead of throwing.
+   - `staff.ts`: cross-role name-collision rate across 3,000 seeded rosters (0/3000 — the 24-surname x
+     20-first-name pool is wide enough relative to 4 slots per seed); an exhaustive `staffQuip` role x
+     moment sweep confirming every one of the 20 (role, moment) pools has ≥2 distinct lines reachable via
+     `salt`; and extreme-seed hardening (`0`, negative, `Number.MAX_SAFE_INTEGER`, non-integer) for
+     `staffRoster` determinism.
+   - Result: **zero issues found** — all thresholds, bounds, and determinism held. Kept as a separate
+     file rather than extending `qa_manager_content_fuzz.ts`, since the manager-content agent is
+     concurrently editing that file alongside the src modules it targets; this harness only reads
+     `shared/src`, so it can't collide with that work. Auto-picked up by `npm run qa`.
+2. **`npm run qa` full-sweep health check.** All **18** harnesses green (17 from batch 3 + this batch's
+   new one). Timings: `qa_calibration_baseline.ts` is by far the slowest at **140.4s** (next slowest,
+   `qa_career_fuzz.ts`, is 14.7s — a 10x gap) — it's doing a full match-engine calibration re-derivation,
+   not spinning; not flaky, just heavy. Everything else finishes in well under 15s. No flakiness observed
+   across 2 full `npm run qa` runs this batch.
+3. **Deeper long-run dynasty stability.** Batch 3's `qa_dynasty_strategy_fuzz.ts` already runs scripted
+   policies 50 generations deep; this batch additionally re-ran the general-purpose
+   `shared/qa_dynasty_fuzz.ts` at `QA_ROOTS=40 QA_GENS=50` (2,000 generation-lifecycles, up from the
+   default 30x12=360) — full career→pro→retire→reborn chain, attrs/economy bounds, determinism replay,
+   and snapshot/resume round-trip all held clean at this depth. No leaks, no unbounded growth, no
+   determinism breaks even 50 generations deep from a single root seed.
+4. **`npm run verify` stayed green throughout** (re-run after both the new-harness addition and the
+   sync), including the full offline-facade suite (savestore, scout/kit/trials, board-standing-adjacent
+   surfaces via the facade, setToken/me resume flow).
+5. **Lightweight-CI thoughts (documentation only, no `package.json` change):** the 18 `qa_*.ts` harnesses
+   under `npm run qa` are already exactly the shape a CI matrix would want — each is a standalone `tsx`
+   script with its own exit code and no shared mutable state, so they parallelize trivially (`node
+   scripts/run-qa.mjs` currently runs them serially; a CI job could instead fan the same glob out across
+   parallel workers/matrix jobs, cutting wall-clock from ~180s serial to roughly
+   `max(qa_calibration_baseline.ts) ≈ 140s` if calibration runs alone on its own lane and everything else
+   fans out behind it). The one caveat: none of these harnesses currently accept a `--seed`/`--n` CLI flag
+   uniformly (some read `QA_N`, some `QA_ROOTS`/`QA_GENS`, some have no override at all) — a future pass
+   standardizing on one env-var convention (e.g. always `QA_N` + `QA_DEPTH`) would make a CI matrix's
+   "quick smoke" vs "nightly deep" split trivial to wire up without touching each harness's internals.
+
+No crashes, NaN/Infinity/undefined leaks, negative economy values, softlocks, non-determinism, or
+unreachable content were found anywhere this batch.
+
+### REMAINING BACKLOG for batch 5
+
+- Standardize the QA env-var convention across all 18 harnesses (see point 5 above) so a future CI
+  matrix can uniformly dial fuzz depth per-lane without reading each file's source first.
+- `qa_calibration_baseline.ts`'s 140s runtime is the only real outlier in `npm run qa`; worth a look at
+  whether it can memoize/cache the reference derivation instead of recomputing from scratch, purely as a
+  CI wall-clock win (functionally it's fine — not flaky, not wrong).
+- The manager-content agent's `board.ts`/`press.ts`/`staff.ts`/`gaffersDiary.ts`/`intl.ts`/`clubseason.ts`
+  and the orchestrator's `client/src/main.ts` are still moving targets under concurrent edit — re-fuzz
+  whatever's new on `main` next batch (per this file's usual per-batch pattern) rather than assuming
+  batch 4's `qa_boardroom_deep_fuzz.ts` coverage stays current if those modules' logic shifts.
+- No unfixed bugs are outstanding — HIGH/MEDIUM/LOW sections below are all historical/resolved (see the
+  2026-08-27 update). Next batch's highest-value use of time is almost certainly re-fuzzing whatever
+  content the concurrent agents ship, same as this batch did for board/press/staff.
+
 ## UPDATE — 2026-08-28, batch 2 (base commit `4fafc59`)
 
 Synced clean off `main` (`git reset --hard main`, `git log --oneline -6` showed the prior batch's qa
