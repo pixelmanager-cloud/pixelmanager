@@ -24,8 +24,27 @@
 > - **Risky lifestyle (#6)** — an occasional **temptation** beat (card game / bribe / nightlife / bad investment);
 >   edgier players are courted more often. Moral-hazard flavour tied to the reputation axis.
 >
-> **Still open:** light attribute focus (#8 — the one engine-touching item; must re-check `career_sim`
-> diversity + determinism when built).
+> ## ✅ SHIPPED (2026-08-27, later same day) — "many more moments" pass
+> - **~1.8× more turns per age band** (112 → 202 total, `AGE_BANDS`) — a career now spans a few hundred
+>   moments, not 112. `deriveStats` averages success per turn rather than accumulating by turn count, so
+>   magnitude stayed in band with no re-tuning needed (verified via the 120-career average in `career_sim`).
+> - **Big deck expansion** — 36 more outfield + 12 more GK cards, spread across every tag, with fresh
+>   rare/epic signatures, so the longer career keeps drawing variety instead of repeating.
+> - **A 4th human-flavoured summer focus per age band** — first-coach bonding at Grassroots, peer rivalry
+>   at Academy, the release-day scare at Scholar, pushing for a loan at Youth Team, negotiating a first pro
+>   deal at Breakthrough, growing into a leader at First Team, thinking about legacy at Establishing.
+> - **Stage-aware season-event narration** — "new manager" / "transfer speculation" / "fan favourite" /
+>   "niggling knock" now read differently for a kid ("new coach his mum hears about at the school gates")
+>   vs a teen vs a pro — same ids, same mechanics, purely how it's told. Byte-identical `career_sim` output.
+> - **Lifestyle purchases with real trade-offs** — flashing the jewellery, a headline-making night out, and
+>   building an entourage all buy fame/loyalty at a direct cost to another relationship, not just perks.
+> - **Light attribute focus at milestones (#8)** — from Youth Team on, 2 identity-matching training picks
+>   per band (+ a GK-specific keeping one) nudge a stat family via a small, capped weight in `deriveStats`.
+>   Engine-touching; re-verified magnitude/diversity/determinism (see commit `467a9e4`).
+>
+> **Still open / next up:** deeper sponsorship variety, more coaches/agents/personalities/traits, more
+> objective/milestone/epilogue variety, and further human life-events with branching consequences beyond
+> the season-boundary system (e.g. a mid-chapter event, not just at chapter breaks).
 
 
 Curated from the be-a-pro genre — **New Star Soccer** (the model), **EA FC / Madden Superstar** (skill trees,
