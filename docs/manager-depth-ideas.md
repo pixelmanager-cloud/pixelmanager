@@ -22,6 +22,16 @@
 > which cover much of this), per-player training focus (1/3 — pre-season stat drift, re-verify calibration),
 > backroom staff hired with coins (3), mentoring (4), match plan / conditional orders, sponsorship/finance
 > levers. These each deserve their own careful, calibration-checked commit.
+>
+> ### 🌍 To-do — competitions beyond the league (added 2026-08-27)
+> - **International club cup** — a continental knockout the club qualifies for by a high league finish;
+>   run alongside the league season as extra fixtures + a trophy for the cabinet. Reuses the match engine +
+>   the fictional-league opponents (or a broader continental pool).
+> - **National-team call-up matches** — the *player-career* international caps arc becomes real matchday
+>   moments: once capped, he plays national-team fixtures (career-mode moments) between club stages.
+> - **World-Cup-style international tournament** — a periodic (every few seasons) national-team competition:
+>   group stage → knockouts, the player's aspirational peak. A headline achievement + a legacy multiplier
+>   for the bloodline. Deterministic bracket seeded from the save.
 
 
 > ## ⚠️ Framing correction (2026-08) — OWNER-MANAGER, not employed manager
