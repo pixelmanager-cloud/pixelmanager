@@ -165,6 +165,12 @@ function nftTier(ov: number): Tier {
   if (ov >= 12) return { key: 'silver', name: 'SILVER', icon: '🥈' };
   return { key: 'bronze', name: 'BRONZE', icon: '🥉' };
 }
+/** The legend tier gets the pixel crown at the two big collectible-card reveal moments (the
+ *  "TURNED PRO" flash and the tier badge) — bronze/silver/gold/diamond keep their plain emoji so
+ *  the escalating ladder still reads consistently. innerHTML-only: this returns raw SVG markup. */
+function tierIconHtml(tier: Tier): string {
+  return tier.key === 'legend' ? `<span class="ico-inline">${sprite('crown')}</span>` : tier.icon;
+}
 
 // Sort state for the full-squad-stats table. `null` = default role grouping.
 type SquadSort = { key: string; dir: 'asc' | 'desc' };
@@ -454,9 +460,9 @@ class Game {
     } else if (ci) {
       contractHtml = `<div class="pc-contract${ci.available ? '' : ' lapsed'}">`
         + `<div class="pc-crow"><span>Age ${ci.age}${ci.age >= 39 ? ' · nearing retirement' : ''}</span>`
-        + `<span>${ci.available ? `📜 ${ci.seasonsLeft} season${ci.seasonsLeft === 1 ? '' : 's'} left` : ci.staked === false ? '⭘ idle — not staked' : '⛔ contract lapsed — benched'}</span></div>`
+        + `<span>${ci.available ? `<span class="ico-inline ico-lg">${sprite('contract')}</span> ${ci.seasonsLeft} season${ci.seasonsLeft === 1 ? '' : 's'} left` : ci.staked === false ? '⭘ idle — not staked' : '⛔ contract lapsed — benched'}</span></div>`
         + (ci.morale != null ? `<div class="pc-morale"><i>morale</i><span class="pc-mbg"><b style="width:${ci.morale}%"></b></span><span>${ci.moraleLabel}</span></div>` : '')
-        + `<div class="pc-cactions"><button class="pc-extend" data-extend="${p.id}">${ci.available ? 'Re-sign' : 'Extend'} · ${ci.extendCost}c · ${ci.lengthSeasons}y</button>`
+        + `<div class="pc-cactions"><button class="pc-extend" data-extend="${p.id}"><span class="ico-inline ico-lg">${sprite('seal')}</span> ${ci.available ? 'Re-sign' : 'Extend'} · ${ci.extendCost}c · ${ci.lengthSeasons}y</button>`
         + `<span class="pc-sell">or sell ~${ci.sellValue}c</span></div>` + stakeHtml + `</div>`;
     }
     const el = document.createElement('div');
@@ -464,9 +470,9 @@ class Game {
     el.innerHTML =
       `<div class="pc-card tier-${tier.key}">`
       + ring + '<div class="pc-burst"></div>' + sparks
-      + (minted ? `<div class="pc-flash">${tier.icon} TURNED PRO · ${tier.name}</div>` : '')
+      + (minted ? `<div class="pc-flash">${tierIconHtml(tier)} TURNED PRO · ${tier.name}</div>` : '')
       + `<div class="pc-top"><div class="pc-ovr">${overall(p)}<span>OVR</span></div>`
-      + `<div class="pc-tier">${tier.icon}<span>${tier.name}</span></div></div>`
+      + `<div class="pc-tier">${tierIconHtml(tier)}<span>${tier.name}</span></div></div>`
       + `<div class="pc-crest role-${p.role}"><span class="pc-crest-role">${p.role}</span></div>`
       + `<div class="pc-name">${p.name}</div>`
       + `<div class="pc-role">${roleName[p.role] ?? p.role}</div>`
@@ -646,7 +652,7 @@ class Game {
     $('me-name').textContent = this.club.name;
     $('me-rating').textContent = ''; // PvP ELO — hidden: the game is single-player (multiplayer removed, see direction.md)
     if (this.account.coins != null) {
-      $('me-coins').textContent = `💰 ${this.account.coins}`;
+      $('me-coins').innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${this.account.coins}`;
       $('hub-club-sub').textContent = `💰 ${this.account.coins.toLocaleString()} to invest — facilities, youth & scouting. Levels are permanent.`;
     }
     void this.refreshPrestige();
@@ -1137,7 +1143,7 @@ class Game {
     const mentorLine = mentorship > 0 ? ` In his veteran years he took the youngsters under his wing — that wisdom passes to his heir.` : '';
     const honours = [titles ? `${titles} league title${titles === 1 ? '' : 's'}` : '', contTitles ? `${contTitles} continental cup${contTitles === 1 ? '' : 's'}` : '', (m.wcWins ?? 0) ? `${m.wcWins} World Finals title${(m.wcWins ?? 0) === 1 ? '' : 's'}` : ''].filter(Boolean);
     const honourLine = honours.length ? ` and ${honours.join(', ')}` : '';
-    $('academy-body').innerHTML = `<div class="cg-graduation"><div class="cg-grad-title">🎬 ${m.starName} hangs up his boots</div>`
+    $('academy-body').innerHTML = `<div class="cg-graduation"><div class="cg-grad-title"><span class="ico-inline ico-lg">${sprite('banner')}</span> ${m.starName} hangs up his boots</div>`
       + `<div class="cg-epilogue">After ${seasons} season${seasons === 1 ? '' : 's'} steering <b>${this.club?.name}</b>${honourLine}, ${m.starName} retires a club great.${mentorLine} But the <b>${surname}</b> name isn't done — his son is already coming through the youth ranks.</div>`
       + `<div class="cg-grad-windfall">🌳 The bloodline continues${mentorship > 0 ? ` · 🎓 mentored heir (+${Math.min(3, Math.ceil(mentorship / 2))} mentality)` : ''}</div>`
       + `<button id="cg-heir" class="primary">Bring through the heir →</button></div>`;
@@ -1348,7 +1354,7 @@ class Game {
 
   private renderFacilities(d: { coins: number; facilities: import('./api').Facility[] }) {
     this.account.coins = d.coins;
-    $('club-coins').textContent = `💰 ${d.coins}`;
+    $('club-coins').innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${d.coins}`;
     $('facilities-grid').innerHTML = d.facilities.map((f) => {
       const pips = Array.from({ length: f.maxLevel }, (_, i) => `<i class="${i < f.level ? 'on' : ''}"></i>`).join('');
       const maxed = f.level >= f.maxLevel;
@@ -1416,7 +1422,7 @@ class Game {
           + `<div class="pr-meta">${p.roleHint}${gen} · pedigree ${(p.pedigree * 100) | 0}% ${p.careerStarted ? '· in development' : '· age 10, ready to develop'}</div></div>${btn}</div>`;
       }).join('') : '<div class="muted">No prospects yet — scout one above to begin.</div>';
       const { legends } = await api.legends().catch(() => ({ legends: [] as any[] }));
-      const hall = legends.length ? `<h4 class="scout-h4" style="margin-top:22px;">🏅 HALL OF LEGENDS</h4>`
+      const hall = legends.length ? `<h4 class="scout-h4" style="margin-top:22px;"><span class="ico-inline ico-lg">${sprite('laurel')}</span> HALL OF LEGENDS</h4>`
         + `<div class="scout-sub">The great careers your bloodlines have had — one card per retirement.</div>`
         + `<div class="legends-grid">` + legends.map((l: any) => `<div class="legend-card"><div class="lc-top">${l.card.icon} <b>${l.card.tier}</b></div>`
           + `<div class="lc-name">${l.name}</div><div class="lc-meta">${l.card.role} · rating ${l.card.legendRating}</div>`
@@ -1454,7 +1460,7 @@ class Game {
       };
       const bloodlines = lines.length
         ? lines.map((chain) => `<div class="tr-line">` + chain.map((l, i) => genCard(l, i, chain.length)).join('') + `</div>`).join('')
-        : `<div class="tr-empty"><div class="tr-empty-art">${sprite('youth')}</div><div class="muted">No bloodlines yet — develop a player, field him for a career, and retire him to found a dynasty. Every generation after adds a link to the tree.</div></div>`;
+        : `<div class="tr-empty"><div class="tr-empty-art">${sprite('crown')}</div><div class="muted">No bloodlines yet — develop a player, field him for a career, and retire him to found a dynasty. Every generation after adds a link to the tree.</div></div>`;
       const retiredSection = retired.length
         ? `<h4 class="scout-h4" style="margin-top:24px;">🎽 RETIRED NUMBERS</h4><div class="scout-sub">Shirts hung up forever for the club's immortals — no future player wears these.</div>`
           + `<div class="tr-cabinet">` + retired.map((r) => `<div class="tr-trophy"><div class="tr-trophy-ico">#${r.n}</div><div class="tr-trophy-name">${r.name}</div><div class="tr-trophy-sub">retired</div></div>`).join('') + `</div>`
@@ -1496,7 +1502,7 @@ class Game {
       if (cur) { this.renderCareer(cur.state); return; }
       // not started → choose an agent first
       const { agents } = await api.careerAgents();
-      const opts = agents.map((a) => `<div class="cg-coach" data-agent="${a.id}"><div class="cg-cname">🤝 ${a.name}</div><div class="cg-cdesc">${a.desc}</div></div>`).join('');
+      const opts = agents.map((a) => `<div class="cg-coach" data-agent="${a.id}"><div class="cg-cname"><span class="ico-inline">${sprite('briefcase')}</span> ${a.name}</div><div class="cg-cdesc">${a.desc}</div></div>`).join('');
       $('academy-body').innerHTML = `<button id="acad-back2" style="margin-bottom:10px;">← Prospects</button>`
         + `<div class="cg-prompt">Sign an <b>agent</b> to represent this prospect — it shapes his whole career (exposure, opportunities, and how much he'll want to be paid).</div>` + opts;
       $('acad-back2').addEventListener('click', () => this.showAcademy());
@@ -1878,7 +1884,7 @@ class Game {
       this.account.coins = d.coins;
       $('trips-per').textContent = String(d.tripsPerSeason);
       $('trips-used').textContent = String(d.tripsUsed);
-      $('scout-coins').textContent = `💰 ${d.coins}`;
+      $('scout-coins').innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${d.coins}`;
       const haveTrips = d.tripsLeft > 0;
       $('scout-destinations').innerHTML = d.destinations.map((dest, i) => {
         const risk = Math.min(4, i); // 0 (parks) … 5 (wonderkid) → escalating frame (capped at 4)
@@ -2804,10 +2810,12 @@ class Game {
       case 'woodwork': cls = 'cm-post'; text = this.cpick([`🪵 OFF THE POST! ${p} rattles the woodwork — so close!`, `🪵 OFF THE BAR! ${p} is inches away!`, `🪵 It cannons back off the upright — ${p} can't believe it!`], idx, 13); break;
       case 'loose_ball': cls = 'cm-loose'; text = this.cpick([`The ball breaks loose ${zone}.`, `Cut out! ${p}'s pass is intercepted ${zone}.`, `Scrappy — it pinballs around ${zone}.`, `${p}'s ball is cut out ${zone}.`], idx, 8); break;
       case 'foul': cls = 'cm-foul'; text = this.cpick([`Foul by ${p} ${zone}. Free kick ${team === this.homeName ? this.awayName : this.homeName}.`, `${p} catches his man — referee blows for the foul ${zone}.`, `Cynical from ${p} — that’s a free kick ${zone}.`, `${p} gives it away with a clumsy challenge ${zone}.`], idx, 14); break;
-      case 'yellow_card': cls = 'cm-card yellow'; text = this.cpick([`🟨 Booked! ${p} goes into the book for that one.`, `🟨 Yellow card for ${p} — the ref had no choice.`, `🟨 ${p} is cautioned. He’ll have to be careful now.`], idx, 15); break;
-      case 'red_card': cls = 'cm-card red'; text = e.zone === 'mid'
-        ? this.cpick([`🟥 SECOND YELLOW — ${p} is OFF! ${team} down to ten!`, `🟥 Two yellows and gone! ${p} takes the long walk — ${team} a man light!`], idx, 16)
-        : this.cpick([`🟥 RED CARD! ${p} is sent off — ${team} down to ten men!`, `🟥 Straight red for ${p}! A moment of madness — ${team} are down to ten!`, `🟥 He’s off! ${p} sees red and ${team} must dig in with ten!`], idx, 16); break;
+      case 'yellow_card': { cls = 'cm-card yellow'; const yc = `<span class="ico-inline">${sprite('card')}</span>`;
+        text = this.cpick([`${yc} Booked! ${p} goes into the book for that one.`, `${yc} Yellow card for ${p} — the ref had no choice.`, `${yc} ${p} is cautioned. He’ll have to be careful now.`], idx, 15); break; }
+      case 'red_card': { cls = 'cm-card red'; const rc = `<span class="ico-inline">${sprite('card-red')}</span>`;
+        text = e.zone === 'mid'
+          ? this.cpick([`${rc} SECOND YELLOW — ${p} is OFF! ${team} down to ten!`, `${rc} Two yellows and gone! ${p} takes the long walk — ${team} a man light!`], idx, 16)
+          : this.cpick([`${rc} RED CARD! ${p} is sent off — ${team} down to ten men!`, `${rc} Straight red for ${p}! A moment of madness — ${team} are down to ten!`, `${rc} He’s off! ${p} sees red and ${team} must dig in with ten!`], idx, 16); break; }
       case 'free_kick': cls = 'cm-freekick'; text = this.cpick([`Dangerous free kick for ${team} — ${p} stands over it…`, `${p} lines up the free kick in a promising spot…`, `Chance from the set piece — ${p} to deliver for ${team}…`], idx, 17); break;
       case 'penalty': cls = 'cm-pen'; text = this.cpick([`⚠️ PENALTY to ${team}! ${p} will take it…`, `⚠️ The ref points to the spot — penalty ${team}! ${p} steps up…`, `⚠️ Spot kick for ${team}! It’s down to ${p}…`], idx, 18); break;
       case 'penalty_missed': cls = 'cm-miss'; text = this.cpick([`❌ MISSED! ${p} sends the penalty wide — what a let-off!`, `❌ Saved! The keeper guesses right and denies ${p} from the spot!`, `❌ ${p} blazes the penalty over! He’ll never forget that.`], idx, 19); break;
