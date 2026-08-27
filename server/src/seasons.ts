@@ -7,7 +7,7 @@ import { autoPickXI } from '@fm/shared';
 import type { Store, Season, PodRef } from './store.js';
 import { buildTable, runMatch, elo, validateLineup } from './game.js';
 import { seasonPlacementReward, WIN_COINS, DRAW_COINS, LOSS_COINS } from './market.js';
-import { trainingConditioning, stadiumIncome, fanIncomeMult, fanHomeBoost, sponsorIncome, squadMarketability } from './facilities.js';
+import { trainingConditioning, stadiumIncome, fanIncomeMult, fanHomeBoost, sponsorIncome, squadMarketability } from '@fm/shared';
 import { rollMatchInjuries } from './injuries.js';
 import { unavailableTokenIds, tokenToPlayer } from './tokens.js';
 import { advanceTokensAtRollover } from './lifecycle.js';

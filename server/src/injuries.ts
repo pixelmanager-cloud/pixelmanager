@@ -5,8 +5,7 @@
 // around) and recover a match at a time. Seeded from the match seed + player id, so it
 // replays identically and can never be Math.random. Injuries are AVAILABILITY only —
 // never a stat edit — so on-chain NFT stats are untouched.
-import type { Team } from '@fm/shared';
-import { injuryChanceMult, recoveryCut } from './facilities.js';
+import { type Team, injuryChanceMult, recoveryCut } from '@fm/shared';
 
 const BASE_INJURY = 0.03;             // ~one injury every 3-4 matches for a club (occasional)
 const norm = (v: number) => v / 20;

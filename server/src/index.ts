@@ -1,7 +1,12 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { randomUUID } from 'node:crypto';
-import { overall, managerPrestige, signContract, contractCost, contractLength, graduationEpilogue, gaffersDiaryEntry, clubInvestOf, type Lineup, type Tactics } from '@fm/shared';
+import {
+  overall, managerPrestige, signContract, contractCost, contractLength, graduationEpilogue, gaffersDiaryEntry, clubInvestOf,
+  FACILITY_KEYS, FACILITY_META, MAX_LEVEL, upgradeCost, effectAt, trainingConditioning, stadiumIncome,
+  youthPoolBonus, youthUpgradeChance, scoutHitMult, scoutCostDiscount, scoutExtraTrips, fanIncomeMult, fanHomeBoost,
+  type Lineup, type Tactics, type FacilityKey,
+} from '@fm/shared';
 import { mintGenesis, tokenToPlayer, tokenContract, tokenAch, legendCardOf, unavailableTokenIds, loadCareer, actWithNarration, careerState, graduatedFields, rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, ageOf, SUPPLY_CAP, GENESIS_COST, REBORN_COST, MARKET_FEE_PCT, type CareerAction } from './tokens.js';
 import { bumpApps, bumpMorale, advanceTokensAtRollover } from './lifecycle.js';
 import { recordMatchStats } from './matchstats.js';
@@ -20,10 +25,6 @@ import { makeClub, validateLineup, cleanDuties, runMatch, elo, buildTable, FORMA
 import { hashPassword, verifyPassword } from './auth.js';
 import { generatePool, trialistAt, LOANEE_CAP, OPP_REVEAL, describeIntel, type OppTier } from './scouting.js';
 import { DESTINATIONS, destinationById, rollMission, travelMs, previewOdds, TRIPS_PER_SEASON } from './missions.js';
-import {
-  FACILITY_KEYS, FACILITY_META, MAX_LEVEL, upgradeCost, effectAt, trainingConditioning, stadiumIncome,
-  youthPoolBonus, youthUpgradeChance, scoutHitMult, scoutCostDiscount, scoutExtraTrips, fanIncomeMult, fanHomeBoost, type FacilityKey,
-} from './facilities.js';
 import type { Player } from '@fm/shared';
 import { rollMatchInjuries } from './injuries.js';
 import { viewerTiers, scoutNftInfo } from './scoutnft.js';

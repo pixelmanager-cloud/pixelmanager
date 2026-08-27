@@ -14,3 +14,4 @@ export * from './gaffersDiary.js';
 export * from './clubseason.js';
 export * from './intl.js';
 export * from './offpitch.js';
+export * from './facilities.js';
