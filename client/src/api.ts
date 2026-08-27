@@ -39,7 +39,7 @@ export interface CareerState {
   offPitch?: {
     image: { score: number; tier: string };
     reputation: { score: number; label: string; edge: 'clean' | 'edgy' };
-    endorsements: { brand: string; category: string; tier: 'Local' | 'National' | 'Global'; payout: number; obligation: string }[];
+    endorsements: { brand: string; category: string; tier: 'Local' | 'National' | 'Global'; payout: number; obligation: string; strain?: string }[];
     boots: { owned: { id: string; name: string; edge: string; unlock: string }[]; next: { boot: { id: string; name: string; edge: string; unlock: string }; progress: number; target: number } | null };
     temptation: { kind: string; title: string; blurb: string } | null;
   } | null;

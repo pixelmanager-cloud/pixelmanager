@@ -12,7 +12,7 @@ function hash32(...nums: number[]): number {
 const frac = (h: number, n: number) => (((h >>> (n & 15)) ^ (h >>> ((n + 7) & 15))) % 1000) / 1000;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
-export interface Endorsement { brand: string; category: string; tier: 'Local' | 'National' | 'Global'; payout: number; obligation: string }
+export interface Endorsement { brand: string; category: string; tier: 'Local' | 'National' | 'Global'; payout: number; obligation: string; strain?: string }
 export interface SignatureBoot { id: string; name: string; edge: string; unlock: string }
 export interface OffPitch {
   image: { score: number; tier: string };
@@ -24,19 +24,29 @@ export interface OffPitch {
 
 // Brand pools split by image — a clean reputation courts wholesome family brands; an edgy one draws the
 // louder, higher-paying (and more demanding) labels. Deterministic flavour, not real companies.
-const CLEAN_BRANDS: { brand: string; category: string; obligation: string }[] = [
+const CLEAN_BRANDS: { brand: string; category: string; obligation: string; riskyCategory?: boolean }[] = [
   { brand: 'Meridian Sportswear', category: 'Kit & apparel', obligation: 'Wear the brand for every media day.' },
   { brand: 'Puravita', category: 'Energy drink', obligation: 'Keep your fitness meter respectable — they market your engine.' },
   { brand: 'Northbank', category: 'Bank', obligation: 'No controversy — a squeaky-clean image is the whole deal.' },
   { brand: 'Auroria Watches', category: 'Timepieces', obligation: 'Turn up on time, every time (they hate a late arrival).' },
   { brand: 'Homestead Foods', category: 'Groceries', obligation: 'Family-friendly appearances at community events.' },
+  { brand: 'Skyline Airlines', category: 'Airline', obligation: 'Fly their colours — literally — on every long-haul away trip.' },
+  { brand: 'Everclear Insurance', category: 'Insurance', obligation: 'A wholesome, risk-averse image — no reckless stunts, on or off the pitch.' },
+  { brand: 'Brightline Telecom', category: 'Telecom', obligation: 'A monthly video call-in with a competition winner — takes real time.' },
+  { brand: 'Oakfield Motors', category: 'Family cars', obligation: 'Drive the sponsored estate to training, no exceptions.' },
+  { brand: 'Steadfast Coffee', category: 'Coffee', obligation: 'An early-morning shoot before every home game — sleep be damned.' },
 ];
-const EDGY_BRANDS: { brand: string; category: string; obligation: string }[] = [
+const EDGY_BRANDS: { brand: string; category: string; obligation: string; riskyCategory?: boolean }[] = [
   { brand: 'Riot Energy', category: 'Energy drink', obligation: 'Stay in the headlines — they want noise, not silence.' },
   { brand: 'Vandal Streetwear', category: 'Fashion', obligation: 'Court the cameras; a little controversy is on-brand.' },
   { brand: 'Nitro Motors', category: 'Sports cars', obligation: 'Be seen living large — the flashier the better.' },
-  { brand: 'Kingpin Casino', category: 'Betting', obligation: 'A gambling tie-up — fans and press may not love it.' },
+  { brand: 'Kingpin Casino', category: 'Betting', obligation: 'A gambling tie-up — fans and press may not love it.', riskyCategory: true },
   { brand: 'Blaze Audio', category: 'Headphones', obligation: 'Loud launches, louder personality.' },
+  { brand: 'Voltage Gaming', category: 'Gambling-adjacent gaming', obligation: 'Livestreamed loot-box openings — the tabloids love a pop at this one.', riskyCategory: true },
+  { brand: 'Afterparty Spirits', category: 'Alcohol', obligation: 'A nightlife brand — every photo of you out is now free advertising, wanted or not.', riskyCategory: true },
+  { brand: 'Renegade Ink', category: 'Tattoo studio', obligation: 'Show off the work — the club’s image team is not thrilled.' },
+  { brand: 'Overdrive Crypto', category: 'Crypto exchange', obligation: 'Front a currency half the fanbase thinks is a scam.', riskyCategory: true },
+  { brand: 'Midnight Streaming', category: 'Streaming service', obligation: 'A late-night talk-show slot — the sort managers hate the week of a big game.' },
 ];
 
 // Signature boots — EARNED through play (never bought). Each carries a small OFF-PITCH perk (flavour /
@@ -66,8 +76,9 @@ export function computeOffPitch(input: {
   const repLabel = repScore >= 40 ? 'Model professional' : repScore >= 12 ? 'Respected pro' : repScore >= -8 ? 'Grounded' : repScore >= -40 ? 'Divisive figure' : 'Firebrand';
 
   // ENDORSEMENTS (item 5): count + tier scale with image; the pool matches his reputation; each carries an
-  // obligation/trade-off. Seeded pick, stable per career.
-  const count = imageScore >= 70 ? 3 : imageScore >= 45 ? 2 : imageScore >= 22 ? 1 : 0;
+  // obligation/trade-off. Seeded pick, stable per career. A true global icon lands a 4th deal — the
+  // portfolio a real superstar carries.
+  const count = imageScore >= 88 ? 4 : imageScore >= 70 ? 3 : imageScore >= 45 ? 2 : imageScore >= 22 ? 1 : 0;
   const pool = edge === 'edgy' ? EDGY_BRANDS : CLEAN_BRANDS;
   const tier: Endorsement['tier'] = imageScore >= 75 ? 'Global' : imageScore >= 45 ? 'National' : 'Local';
   const tierMult = tier === 'Global' ? 6 : tier === 'National' ? 3 : 1;
@@ -78,8 +89,20 @@ export function computeOffPitch(input: {
     while (used.has(pi) && used.size < pool.length) pi = (pi + 1) % pool.length;
     used.add(pi);
     const b = pool[pi];
-    const payout = Math.round((120 + (imageScore * 6)) * tierMult * (0.8 + frac(hash32(seed, 4200 + i), 1) * 0.5));
-    endorsements.push({ brand: b.brand, category: b.category, tier, payout, obligation: b.obligation });
+    let payout = Math.round((120 + (imageScore * 6)) * tierMult * (0.8 + frac(hash32(seed, 4200 + i), 1) * 0.5));
+    // OBLIGATIONS THAT BITE: a risky-category deal (betting, crypto, nightlife, gambling-adjacent gaming)
+    // has a real chance of a backlash — the deal's own value takes a hit, not just flavour text. Safer
+    // categories almost never backfire; risky ones do it often enough to make signing one a real gamble.
+    let strain: string | undefined;
+    const backlashRoll = frac(hash32(seed, 4300 + i), 1);
+    if (b.riskyCategory && backlashRoll < 0.4) {
+      payout = Math.round(payout * 0.6);
+      strain = `The ${b.category.toLowerCase()} tie-up drew real criticism — supporters' groups and pundits piled on, and the deal's value took a hit.`;
+    } else if (!b.riskyCategory && backlashRoll < 0.08) {
+      payout = Math.round(payout * 0.8);
+      strain = `A minor mis-step on a shoot for ${b.brand} made the rounds online — nothing serious, but it cost a little goodwill (and a little of the fee).`;
+    }
+    endorsements.push({ brand: b.brand, category: b.category, tier, payout, obligation: b.obligation, ...(strain ? { strain } : {}) });
   }
 
   // BOOTS (item 7): collectibles unlocked by milestones — owned = conditions met; next = the closest unmet.
