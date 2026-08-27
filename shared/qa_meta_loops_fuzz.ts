@@ -232,7 +232,8 @@ console.log('\n[qa-meta] computeOffPitch fuzz...');
       if (!finite(op.image.score) || op.image.score < 0 || op.image.score > 100) log(`computeOffPitch: image.score=${op.image.score} out of [0,100]  ${ctx}`);
       if (!finite(op.reputation.score)) log(`computeOffPitch: reputation.score non-finite  ${ctx}`);
       if (!['clean', 'edgy'].includes(op.reputation.edge)) log(`computeOffPitch: bad reputation.edge "${op.reputation.edge}"  ${ctx}`);
-      if (!Array.isArray(op.endorsements) || op.endorsements.length > 3) log(`computeOffPitch: endorsements length ${op.endorsements.length} out of [0,3]  ${ctx}`);
+      // count caps at 4: a true global icon (imageScore >= 88) lands a 4th deal by design (see offpitch.ts computeOffPitch)
+      if (!Array.isArray(op.endorsements) || op.endorsements.length > 4) log(`computeOffPitch: endorsements length ${op.endorsements.length} out of [0,4]  ${ctx}`);
       for (const e of op.endorsements) {
         if (!finite(e.payout) || e.payout < 0) log(`computeOffPitch: endorsement payout=${e.payout} invalid  ${ctx}`);
         if (!['Local', 'National', 'Global'].includes(e.tier)) log(`computeOffPitch: bad endorsement tier "${e.tier}"  ${ctx}`);
