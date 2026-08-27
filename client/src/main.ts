@@ -348,18 +348,21 @@ class Game {
 
   // ── settings + confirm dialogs ────────────────────────────────────────────────────────────────
   private static PREFS_KEY = 'fm_prefs';
-  private prefs: { reducedMotion: boolean; crt: boolean } = { reducedMotion: false, crt: true };
+  private prefs: { reducedMotion: boolean; crt: boolean; uiScale: number } = { reducedMotion: false, crt: true, uiScale: 100 };
   /** Load persisted prefs (defaulting reduced-motion to the OS setting) and apply them app-wide. */
   private loadPrefs() {
-    let saved: Partial<{ reducedMotion: boolean; crt: boolean }> = {};
+    let saved: Partial<{ reducedMotion: boolean; crt: boolean; uiScale: number }> = {};
     try { saved = JSON.parse(localStorage.getItem(Game.PREFS_KEY) || '{}'); } catch { /* defaults */ }
     const osReduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    this.prefs = { reducedMotion: saved.reducedMotion ?? osReduced, crt: saved.crt ?? true };
+    const scale = Math.max(80, Math.min(130, Number(saved.uiScale) || 100));
+    this.prefs = { reducedMotion: saved.reducedMotion ?? osReduced, crt: saved.crt ?? true, uiScale: scale };
     this.applyPrefs();
   }
   private applyPrefs() {
     document.body.classList.toggle('reduced-motion', this.prefs.reducedMotion);
     document.body.classList.toggle('no-crt', !this.prefs.crt);
+    // UI scale — zoom the whole document (supported in Chromium/WebView2/WKWebView, our Steam-wrapper targets)
+    try { (document.documentElement.style as any).zoom = String(this.prefs.uiScale / 100); } catch { /* ignore */ }
   }
   private savePrefs() { try { localStorage.setItem(Game.PREFS_KEY, JSON.stringify(this.prefs)); } catch { /* ignore */ } }
 
@@ -379,6 +382,9 @@ class Game {
       + `<div class="set-hint">Tone down animations and screen transitions (card flips, moving effects).</div></div>`
       + `<div class="set-row"><div class="set-lbl"><span>CRT screen effect</span>${sw(this.prefs.crt)}</div>`
       + `<div class="set-hint">The retro scanline + vignette overlay. Turn off for a flat, crisp picture.</div></div>`
+      + `<div class="set-row"><div class="set-lbl"><span>UI scale</span><span class="set-val" id="set-scaleval">${this.prefs.uiScale}%</span></div>`
+      + `<input type="range" id="set-scale" min="80" max="130" step="5" value="${this.prefs.uiScale}" aria-label="UI scale">`
+      + `<div class="set-hint">Make everything bigger or smaller — handy on small screens or from the couch.</div></div>`
       + `</div>`;
     document.body.appendChild(ov);
     const close = () => ov.remove();
@@ -387,6 +393,9 @@ class Game {
     // music volume — live
     const vol = ov.querySelector('#set-vol') as HTMLInputElement;
     vol.addEventListener('input', () => { const v = Number(vol.value) / 100; audio.setVolume(v); if (audio.isMuted() && v > 0) { audio.setMuted(false); this.syncMuteBtn(); (ov.querySelectorAll('.set-sw')[0] as HTMLElement).classList.add('on'); } $('set-volval').textContent = `${vol.value}%`; });
+    // UI scale — live
+    const scale = ov.querySelector('#set-scale') as HTMLInputElement;
+    scale.addEventListener('input', () => { this.prefs.uiScale = Number(scale.value); this.savePrefs(); this.applyPrefs(); $('set-scaleval').textContent = `${scale.value}%`; });
     // the three toggles, in DOM order: [0] mute music, [1] reduce motion, [2] CRT effect
     const [muteSw, motionSw, crtSw] = Array.from(ov.querySelectorAll('.set-sw')) as HTMLElement[];
     const flip = (el: HTMLElement, on: boolean) => { el.classList.toggle('on', on); el.setAttribute('aria-checked', String(on)); };
