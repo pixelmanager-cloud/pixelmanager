@@ -5,6 +5,19 @@ buyer feel it's unfinished or thin compared to what they already expect from the
 game code touched. Companion to `direction.md`, `launch-roadmap.md`, `growth-and-content-strategy.md`,
 `ui-ux-research.md`, `manager-depth-ideas.md`, `legacy-and-records-design.md`.
 
+> **Update 2026-08-28 — several gaps CLOSED since this report.** Shipped, all green:
+> - **Achievements (was P0 #3): ✅ done** — 20 milestones (`shared/src/achievements.ts`) from existing data,
+>   unlock toasts + chimes, an X/20 screen in the Trophy Room, stable ids for a future Steamworks mapping.
+> - **Bloodline Tree visual (was P0 #2): ✅ done** — the Trophy Room now renders each lineage as a titled
+>   family tree (crest + surname + connected generational spine + per-generation heirloom) — the screenshotable centrepiece.
+> - **Records / Hall of Fame (was P1 #7): ✅ already present** — Trophy Room + Hall of Legends cover it.
+> - **SFX reward chimes (was P1 #9): ✅ done** — chiptune Web-Audio synth on big beats only; separate SFX volume/mute in Settings.
+> - **Inheritance/will decision (was P1 #5, differentiator): ✅ done** — a named Craft/Name/Fortune choice at hand-off, each a real deterministic effect, shown in the tree.
+> - **Accessibility (was P1 #8): ◐ advanced** — reduce-motion, CRT toggle, **UI scale 80–130%**, switch a11y + keyboard toggles, default focus. Still open: colour-contrast/colourblind check, controller support.
+> - **Difficulty (was P0 #4): deferred by design** — kept out to preserve the owner-manager "dynasty, not survival" ethos (a deliberate choice, revisit later).
+>
+> **Still open (the real remaining launch gaps):** static pixel-art assets (P0 #1 — needs an artist/asset pipeline; procedural SVG only today) · Steamworks/Cloud/desktop wrapper (P0 #5, Phase 3) · deeper transfer/contract negotiation (P1 #6) · career↔manager seam playtest (P1 #11) · store-copy framing of the owner-manager choice (P1, copy-only).
+
 ---
 
 ## 1. Our current feature inventory (as of this build)
