@@ -129,6 +129,14 @@ function formationMatchupInsight(mine: Formation, opp: Formation): string {
   return `Evenly matched shapes (${mine} vs ${opp}) — no clean numbers edge either way; small margins will decide it.`;
 }
 
+// ── Team-talk personality nuance (research §4: Ferguson's hairdryer vs Ancelotti's quiet leadership) ──
+// Sensitive personalities wilt/backfire under a fiery talk and prefer calm; personalities who thrive on
+// the big occasion / drag others up respond well to being fired up. Everyone else is unmoved either way.
+// Deliberately SMALL bounded nudges layered on top of the existing bounded homeBoost/conditioning edge
+// (see startSpMatchWith()) — never a big swing, calibration stays untouched.
+const TALK_SENSITIVE = new Set(['fragile', 'hothead', 'perfectionist']);
+const TALK_FIERY = new Set(['biggame', 'leader', 'workhorse', 'maverick', 'showman']);
+
 const $ = (id: string) => document.getElementById(id)!;
 
 // Brief retro toast near top-centre; the CSS animation fades it out after ~2s.
@@ -1183,13 +1191,35 @@ class Game {
     this.openLineup('match', { id: 'sp-opp', handle: opp.name, venue });
   }
 
+  /** The managed STAR player (club owner's own NFT pro) — his personality colours how team talks land. */
+  private starPlayer(): Player | undefined {
+    const id = this.loadMgr().starId;
+    return id ? this.club.players.find((p) => p.id === id) : undefined;
+  }
+
   /** Pre-kickoff TEAM TALK — a real matchday decision. Each tone applies a small, bounded pre-kickoff edge
-   *  to your side (deterministic — baked into the match snapshot), then kicks off. */
+   *  to your side (deterministic — baked into the match snapshot), then kicks off. A fiery talk fires up
+   *  some personalities (Born Leader, Workhorse, Big-Game Player, Maverick, Showman) but is less effective
+   *  — or slightly backfires — for sensitive ones (Fragile, Hothead, Perfectionist), who respond better to
+   *  a calm talk instead (Ferguson's hairdryer vs Ancelotti's quiet leadership — research §4). Everyone else
+   *  is unmoved either way. The modulation stays a SMALL nudge on top of the existing bounded edge — see
+   *  startSpMatchWith(). */
+  private teamTalkNote(): string {
+    const star = this.starPlayer();
+    const pid = star && (star as any).personality as string | undefined;
+    if (!star || !pid) return '';
+    if (TALK_SENSITIVE.has(pid)) return `🧠 ${star.name} doesn't respond well to fire and brimstone — a calmer word gets more out of him.`;
+    if (TALK_FIERY.has(pid)) return `🧠 ${star.name} thrives on a rev-up before kickoff — a fiery talk lifts him.`;
+    return '';
+  }
+
   private kickOffSpMatch() {
     const sp = this.spFixture!;
+    const note = this.teamTalkNote();
     const el = document.createElement('div'); el.id = 'teamtalk-ov'; el.className = 'pc-overlay';
     el.innerHTML = `<div class="tt-card"><div class="tt-title">🗣️ TEAM TALK</div>`
       + `<div class="tt-sub">In the dressing room before ${sp.venue === 'away' ? 'the away trip to' : 'hosting'} <b>${sp.oppName}</b> — set the tone:</div>`
+      + (note ? `<div class="tt-note">${note}</div>` : '')
       + `<button class="tt-opt" data-tt="fire"><b>🔥 Go for the throat</b><span>Attack hard — sharper in front of goal, but the legs tire faster</span></button>`
       + `<button class="tt-opt" data-tt="calm"><b>🧊 Keep your shape</b><span>Stay compact and disciplined — fresher late on, harder to break down</span></button>`
       + `<button class="tt-opt" data-tt="focus"><b>🎯 Just play your game</b><span>A calm, balanced edge</span></button></div>`;
@@ -1205,9 +1235,18 @@ class Game {
     const sp = this.spFixture!;
     const myLineup: Lineup = { ...this.draftLineup, duties: [...this.draftDuties], ...this.draftRoles() };
     const myTeam = buildXI(this.availableClub(), myLineup);
-    if (tone === 'fire') { myTeam.homeBoost = 1.08; myTeam.conditioning = 1.06; }       // more shots, tire faster
-    else if (tone === 'calm') { myTeam.conditioning = 0.92; }                            // fresher legs, solidity
-    else { myTeam.homeBoost = 1.04; }                                                    // a small balanced edge
+    const starPid = (this.starPlayer() as any)?.personality as string | undefined;
+    if (tone === 'fire') {
+      // sensitive personalities get LESS out of the fiery talk (and tire a touch faster, keyed-up rather
+      // than sharp); the ones who thrive on the big rev-up get a touch more. Small, bounded either way.
+      const sensitive = starPid && TALK_SENSITIVE.has(starPid), fiery = starPid && TALK_FIERY.has(starPid);
+      myTeam.homeBoost = 1.08 + (fiery ? 0.02 : sensitive ? -0.03 : 0);
+      myTeam.conditioning = 1.06 + (sensitive ? 0.02 : 0);
+    } else if (tone === 'calm') {
+      // suits sensitive personalities best (extra composure); the fire-loving ones feel a bit flat under it.
+      const sensitive = starPid && TALK_SENSITIVE.has(starPid), fiery = starPid && TALK_FIERY.has(starPid);
+      myTeam.conditioning = 0.92 + (sensitive ? -0.02 : fiery ? 0.02 : 0);
+    } else { myTeam.homeBoost = 1.04; }                                                  // a small balanced edge, unmodulated
     // CLUB FACILITIES apply to the match: Training Ground → less fitness drain; Fan Zone → home attack edge.
     const trainLvl = this.facLevels.training ?? 1, fanLvl = this.facLevels.fanzone ?? 1;
     myTeam.conditioning = (myTeam.conditioning ?? 1) * (1 - (trainLvl - 1) * 0.05);
