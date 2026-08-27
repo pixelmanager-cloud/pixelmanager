@@ -1677,14 +1677,28 @@ class Game {
       const byLine = new Map<string, typeof legends>();
       for (const l of legends) { const arr = byLine.get(l.playerId) ?? []; arr.push(l); byLine.set(l.playerId, arr); }
       const lines = [...byLine.values()].map((chain) => chain.slice().sort((a, b) => a.retiredSeason - b.retiredSeason));
-      const genCard = (l: typeof legends[number], i: number, len: number) => {
+      // the family surname a bloodline carries (last name of its founder, falling back to the full name)
+      const familyName = (chain: typeof legends) => { const parts = (chain[0]?.name ?? '').trim().split(/\s+/); return parts.slice(1).join(' ') || parts[0] || 'the family'; };
+      // one generation as a node on the lineage spine
+      const treeNode = (l: typeof legends[number], gi: number) => {
         const num = l.card.number, numTag = num ? ` <span class="tr-gen-num">#${num}</span>` : '';
         const eligible = l.card.tier === TOP_TIER && num && !retiredNums.has(num);
         const retireBtn = eligible ? `<button class="tr-retire" data-num="${num}" data-name="${l.name.replace(/"/g, '&quot;')}">🎽 Retire #${num}</button>` : '';
-        return `<div class="tr-gen"><div class="tr-gen-badge">${l.card.icon} ${l.card.tier}${numTag}</div><div class="tr-gen-name">${l.name}</div><div class="tr-gen-meta">${l.card.role} · rating ${l.card.legendRating} · ${l.card.leagueTitles}🏅 ${l.card.cupTitles}🏆 · ${l.card.apps} apps</div>${retireBtn}</div>${i < len - 1 ? '<div class="tr-arrow">↓ next generation</div>' : ''}`;
+        return `<div class="bt-node"><div class="bt-dot">${l.card.icon}</div>`
+          + `<div class="bt-card"><div class="bt-genlbl">Generation ${gi + 1}</div>`
+          + `<div class="bt-badge">${l.card.tier}${numTag}</div><div class="bt-name">${l.name}</div>`
+          + `<div class="bt-meta">${l.card.role} · rating ${l.card.legendRating} · ${l.card.leagueTitles}🏅 ${l.card.cupTitles}🏆 · ${l.card.apps} apps · ${l.card.seasons} seasons</div>${retireBtn}</div></div>`;
+      };
+      // a whole bloodline as a vertical family tree: crest + surname header, then a connected generational spine
+      const bloodlineTree = (chain: typeof legends) => {
+        const gens = chain.length, majorHonours = chain.reduce((a, l) => a + l.card.leagueTitles + l.card.cupTitles, 0);
+        return `<div class="bloodtree"><div class="bt-head"><span class="bt-crest">${sprite('crown')}</span>`
+          + `<div><div class="bt-family">The ${familyName(chain)} Line</div>`
+          + `<div class="bt-summary">${gens} generation${gens === 1 ? '' : 's'} · ${majorHonours} major honour${majorHonours === 1 ? '' : 's'} across the bloodline</div></div></div>`
+          + `<div class="bt-spine">${chain.map((l, i) => treeNode(l, i)).join('')}</div></div>`;
       };
       const bloodlines = lines.length
-        ? lines.map((chain) => `<div class="tr-line">` + chain.map((l, i) => genCard(l, i, chain.length)).join('') + `</div>`).join('')
+        ? lines.map((chain) => bloodlineTree(chain)).join('')
         : `<div class="tr-empty"><div class="tr-empty-art">${sprite('crown')}</div><div class="muted">No bloodlines yet — develop a player, field him for a career, and retire him to found a dynasty. Every generation after adds a link to the tree.</div></div>`;
       const retiredSection = retired.length
         ? `<h4 class="scout-h4" style="margin-top:24px;">🎽 RETIRED NUMBERS</h4><div class="scout-sub">Shirts hung up forever for the club's immortals — no future player wears these.</div>`
