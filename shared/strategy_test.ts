@@ -173,6 +173,17 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
   assert(w > l, `a wide formation should beat a narrow one on the flanks (got ${w} vs ${l})`);
 }
 
+// ---- 8b. New formation 4-1-4-1: extra central mid should beat an equally narrow rival (the diamond) ----
+{
+  let w = 0, l = 0;
+  for (let i = 0; i < N; i++) {
+    const r = play(mk('a', 12, i * 7 + 1, '4-1-4-1'), mk('b', 12, i * 13 + 3, '4-1-2-1-2'), DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5);
+    if (r.score[0] > r.score[1]) w++; else if (r.score[1] > r.score[0]) l++;
+  }
+  console.log(`[shape]     4-1-4-1 vs 4-1-2-1-2 diamond: ${w}W-${l}L (want the extra central body to win the middle)`);
+  assert(w > l, `4-1-4-1's extra central midfielder should beat an equally narrow diamond (got ${w} vs ${l})`);
+}
+
 // ---- 9. Seeded opponent tactical profiles: stable per-seed identity, but varied across opponents ----
 // Every SP opponent used to play flat DEFAULT_TACTICS 4-4-2 regardless of who they were. Prove the
 // fix has real teeth: the same club seed always gets the same style (determinism), and a spread of

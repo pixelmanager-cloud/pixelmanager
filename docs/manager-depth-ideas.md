@@ -281,6 +281,14 @@ content bar (a new interacting/trade-off decision, not a reskin).
   hold — pushing fullbacks forward pulled some pass-attractiveness away from the strikers who actually
   finish, netting fewer shots despite more presence; possession share is the honest, provable effect here.)
 
+- **New formation: 4-1-4-1** — a holding-mid shield + a lone striker, added to `shared/src/formations.ts`
+  (+ `SLOT_ROLES`/`FORMATIONS` in `client/src/main.ts`). A genuine trade-off, not a strict downgrade: one
+  fewer forward than a 2-up-top shape costs it head-to-head against orthodox two-striker formations
+  (loses to 4-4-2 and 4-5-1 in testing), but 3 of its 5 MF anchors sit centrally (vs 2 of 4 in 4-4-2),
+  which wins the central battle against an equally narrow rival — it beats the 4-1-2-1-2 diamond
+  head-to-head (28W-25L over the harness), proven as a new `strategy_test.ts` assertion. A "control the
+  middle, sacrifice a striker" pick for the formation menu.
+
 **Guardrails (unchanged):** deterministic (no wall-clock/Math.random in shared/), `npm run verify` green with
 every engine-touching change (paste before/after calibration in the commit), one item per commit, fair not
 grindy, legible cause→effect. Sources: FM24 (Goal.com, Most Wanted Gamers), Goomba Stomp, gmgames.org.

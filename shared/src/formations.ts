@@ -1,6 +1,6 @@
 import type { Role } from './types.js';
 
-export type Formation = '4-4-2' | '4-3-3' | '3-5-2' | '4-2-3-1' | '3-4-3' | '4-1-2-1-2' | '5-3-2' | '4-5-1';
+export type Formation = '4-4-2' | '4-3-3' | '3-5-2' | '4-2-3-1' | '3-4-3' | '4-1-2-1-2' | '5-3-2' | '4-5-1' | '4-1-4-1';
 
 export interface Slot {
   role: Role;
@@ -65,6 +65,18 @@ export const FORMATIONS: Record<Formation, Slot[]> = {
     { role: 'GK', x: 5, y: 34 },
     { role: 'DF', x: 20, y: 10 }, { role: 'DF', x: 18, y: 26 }, { role: 'DF', x: 18, y: 42 }, { role: 'DF', x: 20, y: 58 },
     { role: 'MF', x: 44, y: 8 }, { role: 'MF', x: 40, y: 24 }, { role: 'MF', x: 38, y: 34 }, { role: 'MF', x: 40, y: 44 }, { role: 'MF', x: 44, y: 60 },
+    { role: 'FW', x: 72, y: 34 },
+  ],
+  // holding-mid shield + a lone striker: a real trade-off, not a strict downgrade — one fewer forward
+  // than a 2-up-top shape costs it head-to-head against orthodox two-striker formations, but the extra
+  // central body (3 of 5 MF anchors sit centrally, vs 2 of 4 in 4-4-2/4-5-1) wins the central battle
+  // against an equally narrow rival: it beats the 4-1-2-1-2 diamond head-to-head (proven in
+  // strategy_test.ts). A genuine "control the middle, sacrifice a striker" pick.
+  '4-1-4-1': [
+    { role: 'GK', x: 5, y: 34 },
+    { role: 'DF', x: 20, y: 10 }, { role: 'DF', x: 18, y: 26 }, { role: 'DF', x: 18, y: 42 }, { role: 'DF', x: 20, y: 58 },
+    { role: 'MF', x: 32, y: 34 },
+    { role: 'MF', x: 46, y: 10 }, { role: 'MF', x: 50, y: 27 }, { role: 'MF', x: 50, y: 41 }, { role: 'MF', x: 46, y: 58 },
     { role: 'FW', x: 72, y: 34 },
   ],
 };
