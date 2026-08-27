@@ -79,6 +79,35 @@
 > multi-turn arc that spans several scenarios), deeper club-legend/mentoring-youngsters content at
 > Establishing, and more milestone-specific epilogue branches (e.g. a distinct beat for a GK vs an outfield
 > retirement).
+>
+> ## ✅ SHIPPED (2026-08-27, fourth pass) — mechanics that make the content INTERACT
+> Genuinely new interacting systems on top of the now-large content base, not more of the same:
+> - **Card synergies / deck chemistry** — `SYNERGIES` (career.ts): 8 named tag-pairs (Playmaker: creativity+
+>   teamwork, Enforcer: aggression+leadership, Entertainer: flair+composure, Engine-Room: stamina+teamwork,
+>   General: aggression+composure, Talisman: leadership+creativity, Flanker: stamina+flair, Sweeper-Keeper:
+>   keeping+composure) that ACTIVATE once the final deck holds 3+ blend cards sharing both tags — a real
+>   deck-building strategy layer where WHICH cards you draft matters, not just how many. Feeds a small capped
+>   bonus into `deriveStats` via the attribute-focus channel; `Career.chemistry` surfaces live status.
+> - **Rivalry storyline arc** — `Scenario.rival` (career.ts): a slice of big-stage matches, from Youth Team
+>   on, become an explicit head-to-head vs the seeded academy rival, with its own bigger consequence
+>   (`RIVAL_CONSEQUENCE`) than a routine big game. `narrate.ts` gives it a proper story (`rivalMomentStory`,
+>   `narrateRivalMoment` — names the actual lead swing, "he's overtaken Turner…") plus a seeded `rivalNews`
+>   ticker about the rival's OWN career, worded per life stage. No longer just a comparative number.
+> - **Richer HUGE-moment sequences** — stakes-3 moments (cup finals, title deciders) get a genuine
+>   multi-beat TENSION → action → AFTERMATH sequence in `narratePlay`, so the rare career peaks actually
+>   read like standout occasions instead of the same-length beat as everything else.
+> - **Meter-gated lifestyle opportunities + trouble** — `LifestyleItem.minMeter`/`maxMeter`: 3 high-standing
+>   OPPORTUNITY items only appear once a relationship genuinely earns them (money can't buy a testimonial-
+>   committee seat without fans>=75); 3 low-standing TROUBLE items (crisis PR, cutting an agent loose,
+>   relationship counselling) only appear once things have gone badly wrong — a costly necessary
+>   intervention, not a treat. Relationships now gate real content, not just chapter-boundary flavour text.
+>
+> All re-verified: card-chemistry and rivalry are engine-touching (magnitude/diversity/determinism re-checked
+> — see commits `bf13692`, `e894cd1`); huge-moment sequences and lifestyle gating are presentational/opt-in
+> (career_sim byte-identical). This batch is intentionally the final one for this pass — flagged by the
+> coordinator to conserve tokens once the core "much more human depth" asks were delivered; remaining ideas
+> (multi-turn dilemma arcs, GK-specific retirement epilogues, deeper mentoring-youngsters content) are left
+> for a future session.
 
 
 Curated from the be-a-pro genre — **New Star Soccer** (the model), **EA FC / Madden Superstar** (skill trees,
