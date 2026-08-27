@@ -339,6 +339,7 @@ export class MatchEngine {
         const a = this.baseAnchor(teamIdx, i);
         let tx = a.x;
         let ty = 34 + (a.y - 34) * mods.widthScale;
+        if (attacking) ty += (a.y - 34) * dm.hug; // wing-back etc.: stay/push wider as an auxiliary winger going forward
         if (p.role === 'DF') tx += dir * mods.lineShift;
         // on a counter, the winning side's forwards burst upfield into the space
         const counterPush = attacking && p.role === 'FW' && this.onCounter(teamIdx) ? 1.3 : 1;

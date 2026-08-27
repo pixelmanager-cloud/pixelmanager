@@ -116,6 +116,21 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
   assert(shotsPoacher > shotsTarget, `poacher forwards should shoot more than target-men (got ${shotsPoacher} vs ${shotsTarget})`);
 }
 
+// ---- 6b. Wing-back duty: bombing fullbacks (extra flank presence) edge possession vs cover-duty fullbacks ----
+{
+  const withDefDuty = (t: Team, duty: Duty): Team =>
+    ({ ...t, players: t.players.map((p) => (p.role === 'DF' ? { ...p, duty } : p)) });
+  let possWingBack = 0, possCover = 0;
+  for (let i = 0; i < N; i++) {
+    const base = mk('atk', 14, i * 7 + 1, '4-4-2');
+    const opp = mk('def', 13, i * 11 + 3, '4-1-2-1-2'); // narrow opponent — most exposed to the extra flank presence
+    possWingBack += play(withDefDuty(base, 'wing-back'), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).poss[0];
+    possCover += play(withDefDuty(base, 'cover'), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).poss[0];
+  }
+  console.log(`[duty]      possession vs a narrow back four: WING-BACK fullbacks=${(possWingBack / N * 100).toFixed(1)}%  COVER fullbacks=${(possCover / N * 100).toFixed(1)}%`);
+  assert(possWingBack > possCover, `wing-back fullbacks should edge possession above cover-duty fullbacks vs a narrow opponent (got ${(possWingBack / N * 100).toFixed(1)}% vs ${(possCover / N * 100).toFixed(1)}%)`);
+}
+
 // ---- 7. Anti-spam: no single tactic may dominate the field (equal stats) ----
 // Guards against a globally-dominant "spam" strategy (Tiki-Taka used to win ~69% of the
 // field with no counter). Every viable tactic must have at least one losing matchup, and

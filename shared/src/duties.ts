@@ -11,7 +11,7 @@ import type { Duty, Player, Role } from './types.js';
 /** Duties a position can be assigned; first entry is the neutral default. */
 export const DUTIES_BY_ROLE: Record<Role, Duty[]> = {
   GK: ['keeper', 'sweeper-keeper'],
-  DF: ['cover', 'stopper', 'ball-playing-defender', 'inverted-fullback'],
+  DF: ['cover', 'stopper', 'ball-playing-defender', 'inverted-fullback', 'wing-back'],
   MF: ['box-to-box', 'playmaker', 'ball-winner', 'deep-lying-playmaker'],
   FW: ['poacher', 'target-man', 'pressing-forward', 'false-9'],
 };
@@ -24,6 +24,7 @@ export const DUTY_LABEL: Record<Duty, string> = {
   'stopper': 'Stopper',
   'ball-playing-defender': 'Ball-Playing DF',
   'inverted-fullback': 'Inverted FB',
+  'wing-back': 'Wing-Back',
   'box-to-box': 'Box-to-Box',
   'playmaker': 'Playmaker',
   'ball-winner': 'Ball-Winner',
@@ -47,9 +48,12 @@ export interface DutyMods {
   press: number;
   /** for a GK only: extra metres the keeper will advance off the line (sweeper-keeper). */
   gkStep: number;
+  /** while attacking, stretches (+) or narrows (-) the player's lateral anchor offset from the
+   *  centre — a wing-back hugs the touchline as an auxiliary winger instead of tucking infield. */
+  hug: number;
 }
 
-const NEUTRAL: DutyMods = { push: 1, come: 0, shoot: 1, magnet: 0, press: 0, gkStep: 0 };
+const NEUTRAL: DutyMods = { push: 1, come: 0, shoot: 1, magnet: 0, press: 0, gkStep: 0, hug: 0 };
 
 // Magnitudes are deliberately small — duties are nudges, not overrides, so the
 // engine's goals/possession calibration holds (see shared/strategy_test.ts).
@@ -66,6 +70,7 @@ const TABLE: Record<Duty, DutyMods> = {
   // ── FM-style named roles (still small nudges — calibration-safe) ──
   'ball-playing-defender': { ...NEUTRAL, push: 0.9, come: 0.05, shoot: 0.7, magnet: 3, press: -0.2 }, // brings it out, links play
   'inverted-fullback':     { ...NEUTRAL, push: 1.0, come: 0.08, magnet: 2, press: 0.1 },              // tucks into midfield
+  'wing-back':             { ...NEUTRAL, push: 1.4, come: 0.05, magnet: 1.5, press: -0.15, hug: 0.55 }, // bombs on as an auxiliary winger
   'deep-lying-playmaker':  { ...NEUTRAL, push: 0.7, come: 0.12, shoot: 0.6, magnet: 6, press: -0.2 }, // deep regista, sprays it
   'pressing-forward':      { ...NEUTRAL, push: 1.15, shoot: 1.0, magnet: 2, press: 0.7 },             // defends from the front
   'false-9':               { ...NEUTRAL, push: 0.9, come: 0.12, shoot: 0.9, magnet: 6 },              // drops deep to link

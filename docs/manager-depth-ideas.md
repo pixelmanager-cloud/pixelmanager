@@ -271,6 +271,16 @@ content bar (a new interacting/trade-off decision, not a reskin).
   widening the foul chance during it caused a runaway spike in cards and free-kick goals; offside trap avoids
   that system entirely.)
 
+- **Wing-Back duty** — a new named DF duty (`shared/src/duties.ts`) alongside cover/stopper/ball-playing
+  defender/inverted full-back: a fullback who bombs forward as an auxiliary winger. Adds a new `hug` field
+  to `DutyMods` (stretches the player's lateral anchor offset outward while attacking instead of narrowing
+  it) so a duty can genuinely change a player's WIDTH on the pitch, not just push/press/shoot/magnet —
+  reusable by any future wide-role duty. Proven in `strategy_test.ts`: vs a narrow back four, wing-back
+  fullbacks edge possession above cover-duty fullbacks (45.4% vs 44.8% over the harness) — the extra flank
+  presence gives the side a genuine out-ball. (Team *shots* were tried first as the proof metric and didn't
+  hold — pushing fullbacks forward pulled some pass-attractiveness away from the strikers who actually
+  finish, netting fewer shots despite more presence; possession share is the honest, provable effect here.)
+
 **Guardrails (unchanged):** deterministic (no wall-clock/Math.random in shared/), `npm run verify` green with
 every engine-touching change (paste before/after calibration in the commit), one item per commit, fair not
 grindy, legible cause→effect. Sources: FM24 (Goal.com, Most Wanted Gamers), Goomba Stomp, gmgames.org.
