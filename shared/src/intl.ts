@@ -17,7 +17,9 @@ const frac = (h: number, n: number) => (((h >>> (n & 15)) ^ (h >>> ((n + 7) & 15
 
 /** A seeded scoreline for a's home tie vs b, weighted by the strength gap. `neutral` drops the home edge
  *  (used for cup finals / tournaments on neutral ground). Bounded 0..6 like the club league. */
-export function tieScore(aStr: number, bStr: number, h: number, neutral = false): [number, number] {
+export function tieScore(aStrIn: number, bStrIn: number, h: number, neutral = false): [number, number] {
+  // guard a non-finite strength (bad upstream) from turning goal columns into NaN (QA M2); finite passes through
+  const aStr = Number.isFinite(aStrIn) ? aStrIn : 10, bStr = Number.isFinite(bStrIn) ? bStrIn : 10;
   const diff = (aStr - bStr) * 0.12 + (neutral ? 0 : 0.25);
   const gh = Math.min(6, Math.max(0, Math.round(1.2 + diff + (frac(h, 1) - 0.5) * 2.2)));
   const ga = Math.min(6, Math.max(0, Math.round(1.2 - diff + (frac(h, 2) - 0.5) * 2.2)));

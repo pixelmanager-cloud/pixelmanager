@@ -119,7 +119,9 @@ export function liveTable(myClub: string, marlowStrength: number, share: number,
 /** Deterministic scoreline for one fixture (a hosts b), weighted by the strength gap + seeded noise. */
 function simMatch(a: LeagueClub, b: LeagueClub, h: number): [number, number] {
   const rnd = (n: number) => (((h >>> (n & 15)) ^ (h >>> ((n + 7) & 15))) % 100) / 100;
-  const diff = (a.strength - b.strength) * 0.12 + 0.25; // small home edge
+  // guard a non-finite strength from corrupting goal columns into NaN (QA M2); finite passes through unchanged
+  const aStr = Number.isFinite(a.strength) ? a.strength : SQUAD_BASE, bStr = Number.isFinite(b.strength) ? b.strength : SQUAD_BASE;
+  const diff = (aStr - bStr) * 0.12 + 0.25; // small home edge
   const gh = Math.min(6, Math.max(0, Math.round(1.2 + diff + (rnd(1) - 0.5) * 2.2)));
   const ga = Math.min(6, Math.max(0, Math.round(1.2 - diff + (rnd(2) - 0.5) * 2.2)));
   return [gh, ga];

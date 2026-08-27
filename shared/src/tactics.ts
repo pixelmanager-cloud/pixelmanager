@@ -88,13 +88,17 @@ export function deriveMods(t: Tactics): TacticMods {
   // Tactical effects are deliberately BOUNDED: stats are the primary driver, and a
   // tactical edge is worth ~1.5 overall rating points at most — enough to swing a close
   // match, never a mismatch. (Magnitudes tuned against shared/strategy_test.ts.)
+  // Guard against a non-finite slider (save corruption / bad upstream computation) leaking a NaN
+  // into player positions — a finite value passes through unchanged, so calibration is untouched. (QA M1)
+  const fin = (v: number) => (Number.isFinite(v) ? v : 0);
+  const mentality = fin(t.mentality), line = fin(t.line), press = fin(t.press), tempo = fin(t.tempo), width = fin(t.width);
   return {
-    attackPush: 6 + t.mentality * 3.0,
-    lineShift: t.line * 4.5,
-    pressCount: t.press >= 2 ? 3 : t.press >= 0 ? 2 : 1,
-    pressIntensity: 1 + t.press * 0.24,
-    directness: t.tempo * 0.32,
-    widthScale: 1 + t.width * 0.10,
-    staminaDrain: 1 + Math.max(0, t.press) * 0.18 + Math.max(0, t.tempo) * 0.1 + Math.max(0, t.mentality) * 0.06,
+    attackPush: 6 + mentality * 3.0,
+    lineShift: line * 4.5,
+    pressCount: press >= 2 ? 3 : press >= 0 ? 2 : 1,
+    pressIntensity: 1 + press * 0.24,
+    directness: tempo * 0.32,
+    widthScale: 1 + width * 0.10,
+    staminaDrain: 1 + Math.max(0, press) * 0.18 + Math.max(0, tempo) * 0.1 + Math.max(0, mentality) * 0.06,
   };
 }

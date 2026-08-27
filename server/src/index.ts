@@ -620,11 +620,11 @@ app.post('/sp/hire-staff', { preHandler: requireAuth }, async (req, reply) => {
 app.post('/sp/season-reward', { preHandler: requireAuth }, async (req, reply) => {
   const ownerId = req.account!.id;
   const body = req.body as any;
-  const pos = Math.max(1, Math.min(20, Math.floor(Number(body?.pos) || 10)));
   const size = Math.max(2, Math.min(30, Math.floor(Number(body?.size) || 10)));
+  const pos = Math.max(1, Math.min(size, Math.floor(Number(body?.pos) || 10))); // pos ≤ size, so the prize can't go negative (QA M3)
   // prize by finishing position: champions banked handsomely, tapering to a small survival cheque
   const frac = (pos - 1) / (size - 1); // 0 = top, 1 = bottom
-  const prize = pos === 1 ? 800 : Math.round(120 + (1 - frac) * 480); // ~600 for 2nd → ~120 for last
+  const prize = Math.max(0, pos === 1 ? 800 : Math.round(120 + (1 - frac) * 480)); // ~600 for 2nd → ~120 for last
   // SPONSOR performance bonus — a 'performance' deal pays a big bonus for a top-3 finish (nothing otherwise)
   const sponsorBonus = String(body?.sponsor) === 'performance' && pos <= 3 ? (pos === 1 ? 700 : 400) : 0;
   await db.addCoins(ownerId, prize + sponsorBonus);

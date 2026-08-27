@@ -23,3 +23,4 @@ bots/bugs.jsonl
 
 # overnight code-agent session logs
 docs/agents/logs/
+.claude/worktrees/

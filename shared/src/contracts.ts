@@ -10,7 +10,7 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
  *  proven high-EARNER commands an established wage (a retention COST, not power — a bounded +0..40%). */
 export function contractCost(overall: number, age: number, greed: number, earnings = 0): number {
   const ageFactor = age <= 30 ? 1 : clamp(1 - (age - 30) * 0.06, 0.4, 1);
-  const greedFactor = 0.6 + 0.08 * greed;                          // greed 10 → 1.4x, 20 → 2.2x, 1 → 0.68x
+  const greedFactor = 0.6 + 0.08 * clamp(greed, 1, 20);            // greed clamped to its valid range so a bad input can't yield a negative wage (QA L1)
   const wageMult = 1 + clamp(earnings / 12000, 0, 0.4);            // established name → dearer to keep (cap +40%)
   return Math.round(overall * overall * 1.2 * ageFactor * greedFactor * wageMult);
 }
