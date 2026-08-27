@@ -2,7 +2,7 @@ import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, DUTY_LABEL, DUTIES_BY_ROLE, isDutyForRole,
   TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
-import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData, type MissionsData, type ContractInfo, type LeaderStat, type AwardRow } from './api';
+import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type Trialist, type MissionsData, type ContractInfo } from './api';
 import { sprite } from './sprites';
 
 /** Single-player manager-season state (per save, in localStorage). `starId` present ⇒ manager phase. */
@@ -130,22 +130,6 @@ function humanizeMs(ms: number): string {
   return `${m}m`;
 }
 
-const ORDINAL = (n: number): string => {
-  const s = ['th', 'st', 'nd', 'rd'], v = n % 100;
-  return n + (s[(v - 20) % 10] || s[v] || s[0]);
-};
-
-// League pyramid, bottom → top. Mirrors TIERS in server/seasons.ts; the INDEX (0-9)
-// drives how flashy a trophy looks — a Sunday-League cup is humble, a World-Class one gleams.
-const TIER_NAMES = [
-  'SUNDAY LEAGUE', 'COUNTY', 'REGIONAL', 'NATIONAL', 'LEAGUE TWO',
-  'LEAGUE ONE', 'CHAMPIONSHIP', 'PREMIER', 'CONTINENTAL', 'WORLD CLASS',
-];
-const tierIndexOf = (tier: string): number => Math.max(0, TIER_NAMES.indexOf(tier));
-// Five visual grades mapped across the 10 tiers (reuses the NFT tier feel).
-const TROPHY_GRADES = ['bronze', 'silver', 'gold', 'diamond', 'legend'] as const;
-const trophyGrade = (tierIdx: number): typeof TROPHY_GRADES[number] => TROPHY_GRADES[Math.min(4, Math.floor(tierIdx / 2))];
-
 function statColor(v: number): string {
   if (v >= 17) return '#3ad07a';
   if (v >= 14) return '#7bd88f';
@@ -248,7 +232,6 @@ class Game {
   draftTakers: { pen?: number; fk?: number; corner?: number } = {}; // set-piece taker slot indices
   editorMode: 'standing' | 'match' = 'standing';
   squadSort: SquadSort | null = null;
-  pendingOpp?: { id: string; handle: string; venue: 'home' | 'away' };
   spFixture: { idx: number; oppClub: Club; oppName: string; oppStrength: number; venue: 'home' | 'away'; oppLineup: Lineup; oppTactics: Tactics; comp?: 'league' | 'cont' | 'wc'; contRound?: number } | null = null; // the single-player fixture being played
   pendingCont: { myGoals: number; oppGoals: number; oppStrength: number } | null = null; // a continental tie awaiting resolution once the full-time card is dismissed
   pendingWc: { myGoals: number; oppGoals: number; oppName: string } | null = null; // a World-Finals knockout tie awaiting resolution
@@ -340,8 +323,8 @@ class Game {
     return healthy.length >= 11 ? { ...this.club, players: healthy } : this.club;
   }
 
-  private showScreen(s: 'login' | 'hub' | 'lineup' | 'match' | 'standings' | 'scouting' | 'market' | 'club' | 'academy' | 'trophies' | 'season') {
-    for (const id of ['login', 'hub', 'lineup', 'matchwrap', 'standings', 'scouting', 'market', 'club', 'academy', 'trophies', 'season']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
+  private showScreen(s: 'login' | 'hub' | 'lineup' | 'match' | 'scouting' | 'club' | 'academy' | 'trophies' | 'season') {
+    for (const id of ['login', 'hub', 'lineup', 'matchwrap', 'scouting', 'club', 'academy', 'trophies', 'season']) $(id).classList.toggle('hidden', id !== (s === 'match' ? 'matchwrap' : s));
     $('logout').classList.toggle('hidden', s === 'login');
     $('app-title').classList.toggle('hidden', s === 'login'); // menu shows the big title already — no duplicate brand
     $('app-title').classList.toggle('clickable', s !== 'login'); // title is "home" once you're in
@@ -377,9 +360,8 @@ class Game {
       else if (k === 's' || k === 'S') this.skipToEnd();
       else if (k === 'c' || k === 'C') $('toggle-density').click();
     });
-    // manager screens (standings/scouting/market/club) keep their own back→home handlers, but the
-    // forward entries are NOT wired from the home: the game is one linear life, not parallel menus.
-    $('standings-back').addEventListener('click', () => this.showHub());
+    // manager screens (scouting/club) keep their own back→home handlers, but the forward entries
+    // are NOT wired from the home: the game is one linear life, not parallel menus.
     $('scouting-back').addEventListener('click', () => this.showHub());
     $('view-trophies').addEventListener('click', () => this.showTrophyRoom());
     $('trophies-back').addEventListener('click', () => this.showHub());
@@ -390,25 +372,7 @@ class Game {
     ($('hub-season-dev') as any)?.addEventListener('click', () => this.showSeason()); // TEMP entry until the handoff wires it
     $('app-title').addEventListener('click', () => { if (hasToken()) void this.showHub(); });
     $('academy-back').addEventListener('click', () => this.showHub());
-    $('market-back').addEventListener('click', () => this.showHub());
     $('club-back').addEventListener('click', () => this.showHub());
-    $('sell-btn').addEventListener('click', () => this.sellPlayer());
-    const showTab = (tab: 'results' | 'leaders' | 'cup' | 'honours') => {
-      $('results-feed').classList.toggle('hidden', tab !== 'results');
-      $('leaders-feed').classList.toggle('hidden', tab !== 'leaders');
-      $('cup-feed').classList.toggle('hidden', tab !== 'cup');
-      $('honours-feed').classList.toggle('hidden', tab !== 'honours');
-      $('tab-results').classList.toggle('active', tab === 'results');
-      $('tab-leaders').classList.toggle('active', tab === 'leaders');
-      $('tab-cup').classList.toggle('active', tab === 'cup');
-      $('tab-honours').classList.toggle('active', tab === 'honours');
-      if (tab === 'cup') void this.loadCup();
-      if (tab === 'leaders') void this.loadLeaders();
-    };
-    $('tab-results').addEventListener('click', () => showTab('results'));
-    $('tab-leaders').addEventListener('click', () => showTab('leaders'));
-    $('tab-cup').addEventListener('click', () => showTab('cup'));
-    $('tab-honours').addEventListener('click', () => showTab('honours'));
     $('skip').addEventListener('click', () => this.skipToEnd());
     // ('set-team' lives in the manager layer, unlinked from the home for now — see linear-life note in showHub)
     $('autopick').addEventListener('click', () => { this.draftLineup = autoPickXI(this.availableClub(), this.draftTactics.formation); this.rebuildDuties(); this.renderLineupEditor(); });
@@ -1216,134 +1180,6 @@ class Game {
     this.startMatch({ matchId: 'sp', seed: (Math.random() * 2 ** 31) | 0, result: [0, 0], mySide: iAmHome ? 0 : 1, home: iAmHome ? me : them, away: iAmHome ? them : me });
   }
 
-  // ---- standings / results page ----
-  private async showStandings() {
-    this.showScreen('standings');
-    $('standings-table').innerHTML = SPINNER;
-    $('results-feed').innerHTML = '';
-    $('honours-feed').innerHTML = '';
-    try {
-      const [st, res, hon, aw] = await Promise.all([api.standings(), api.results(), api.honours(), api.awards()]);
-      $('season-banner').innerHTML = `<b>${st.tier}</b> · Pod ${st.pod + 1} · Season ${st.season.number} · ends in ${humanizeMs(st.season.endsAt - Date.now())}`;
-      $('standings-table').innerHTML = this.renderLeagueTable(st.table, { promote: st.promote, relegate: st.relegate });
-      $('results-feed').innerHTML = this.renderResults(res.results);
-      $('honours-feed').innerHTML = this.renderAwards(aw.awards) + this.renderHonours(hon.honours);
-    } catch {
-      $('season-banner').textContent = '';
-      $('standings-table').innerHTML = '<div class="muted">Could not load — is the server running?</div>';
-    }
-  }
-
-  private renderAwards(rows: AwardRow[]): string {
-    if (!rows.length) return '';
-    const META: Record<string, { icon: string; name: string; unit: string }> = {
-      golden_boot: { icon: '🥇', name: 'Golden Boot', unit: 'goals' },
-      playmaker: { icon: '🅰', name: 'Playmaker', unit: 'assists' },
-      league_best: { icon: '🏅', name: 'League Best Player', unit: '★ POTM' },
-    };
-    const cards = rows.map((a) => {
-      const m = META[a.kind] ?? { icon: '🏆', name: a.kind, unit: '' };
-      return `<div class="aw-card"><span class="aw-icon">${m.icon}</span><div class="aw-body">`
-        + `<div class="aw-name">${m.name}</div>`
-        + `<div class="aw-player">${a.player_name}</div>`
-        + `<div class="aw-meta">S${a.season_number} · ${a.tier} · ${a.value} ${m.unit}</div></div></div>`;
-    }).join('');
-    return `<div class="aw-title">★ Individual Awards</div><div class="aw-grid">${cards}</div>`;
-  }
-  private renderHonours(rows: HonourRow[]): string {
-    if (!rows.length) return '<div class="muted">No finished seasons yet — play on to make history.</div>';
-    const trophies = rows.filter((h) => h.title === 1);
-    const cabinet = this.renderTrophyCabinet(trophies);
-    // Full placement history below the cabinet (every archived finish, trophy or not).
-    const history = rows.map((h) => {
-      const champ = h.title === 1;
-      const isCup = h.kind === 'cup';
-      const prize = h.coin_reward ? `<span class="hr-prize">💰 ${h.coin_reward}</span>` : '';
-      const label = champ ? (isCup ? 'CUP WINNERS' : 'CHAMPIONS') : `${ORDINAL(h.final_pos)} place`;
-      const medal = champ ? (isCup ? '🏆' : '🥇') : ORDINAL(h.final_pos);
-      return `<div class="honour-row${champ ? ' champ' : ''}">`
-        + `<span class="hr-medal">${medal}</span>`
-        + `<span class="hr-main"><b>Season ${h.season_number}</b> · ${h.tier}${isCup ? ' · Cup' : ''}</span>`
-        + `<span class="hr-fin">${label}</span>${prize}</div>`;
-    }).join('');
-    return cabinet + `<div class="honour-history-title">Full record</div>` + history;
-  }
-
-  /** Trophy Cabinet — one gleaming trophy per championship (league title or cup win),
-   *  its shine escalating with the league tier it was won at. */
-  private renderTrophyCabinet(trophies: HonourRow[]): string {
-    if (!trophies.length) {
-      return '<div class="trophy-cabinet empty"><div class="tc-shelf"></div>'
-        + '<div class="muted tc-empty">Your cabinet is bare. Win your pod\'s league or lift the Pod Cup to fill these shelves — the higher the division, the more your silverware gleams.</div></div>';
-    }
-    // Grouped onto shelves of up to 4 trophies each (newest first).
-    const cards = trophies.map((h) => this.trophyCardHtml(h));
-    const shelves: string[] = [];
-    for (let i = 0; i < cards.length; i += 4) {
-      shelves.push(`<div class="tc-row">${cards.slice(i, i + 4).join('')}</div><div class="tc-shelf"></div>`);
-    }
-    const count = trophies.length;
-    return `<div class="trophy-cabinet"><div class="tc-header">🏆 Trophy Cabinet <span class="tc-count">${count} ${count === 1 ? 'trophy' : 'trophies'}</span></div>${shelves.join('')}</div>`;
-  }
-
-  private trophyCardHtml(h: HonourRow): string {
-    const idx = tierIndexOf(h.tier);
-    const grade = trophyGrade(idx);
-    const isCup = h.kind === 'cup';
-    const kindLabel = isCup ? 'Pod Cup' : 'League Title';
-    const sparkles = grade === 'legend' || grade === 'diamond'
-      ? '<span class="tc-spark s1">✦</span><span class="tc-spark s2">✧</span><span class="tc-spark s3">✦</span>' : '';
-    return `<div class="trophy-card grade-${grade} ${isCup ? 'cup' : 'league'}" title="${h.tier} ${kindLabel}, Season ${h.season_number}">`
-      + `<div class="tc-glow"></div>${sparkles}`
-      + `<div class="tc-cup">🏆</div>`
-      + `<div class="tc-kind">${kindLabel}</div>`
-      + `<div class="tc-tier">${h.tier}</div>`
-      + `<div class="tc-season">Season ${h.season_number}</div></div>`;
-  }
-
-  private async loadCup() {
-    $('cup-feed').innerHTML = SPINNER;
-    try { $('cup-feed').innerHTML = this.renderCup(await api.cup()); }
-    catch { $('cup-feed').innerHTML = '<div class="muted">Could not load the cup.</div>'; }
-  }
-
-  private async loadLeaders() {
-    $('leaders-feed').innerHTML = SPINNER;
-    try {
-      const l = await api.leaders();
-      const table = (title: string, rows: LeaderStat[], val: (r: LeaderStat) => string, unit: string) => {
-        if (!rows.length) return `<div class="lb-block"><div class="lb-title">${title}</div><div class="muted lb-empty">No ${unit} yet this season.</div></div>`;
-        const items = rows.map((r, i) => `<div class="lb-row"><span class="lb-rank">${i + 1}</span><span class="lb-name">${r.name}</span><span class="lb-club">${r.club}</span><span class="lb-val">${val(r)}</span></div>`).join('');
-        return `<div class="lb-block"><div class="lb-title">${title}</div>${items}</div>`;
-      };
-      $('leaders-feed').innerHTML =
-        `<div class="lb-note">This season, your pod (${l.tier} · Pod ${l.pod + 1}). Goals & assists build each player's permanent record — for NFT players it's banked on-chain-style into their career tally.</div>` +
-        table('🥇 Golden Boot — top scorers', l.scorers, (r) => `${r.goals}`, 'goals') +
-        table('🅰 Playmaker — top assists', l.assisters, (r) => `${r.assists}`, 'assists') +
-        table('★ Player-of-the-Match awards', l.potm, (r) => `${r.potm}`, 'awards');
-    } catch { $('leaders-feed').innerHTML = '<div class="muted">Could not load the leaderboards.</div>'; }
-  }
-
-  private renderCup(c: CupData): string {
-    if (!c.rounds.length) return '<div class="muted">The Pod Cup needs at least two clubs in your pod — as managers join, the bracket fills in.</div>';
-    const note = '<div class="cup-note">A knockout among your pod. Draws are settled by a penalty shootout — your best <b>set-piece</b> takers vs their keeper. The bracket firms up as managers set their teams; the champion is crowned at season\'s end.</div>';
-    const champ = c.championHandle ? `<div class="cup-champ">🏆 <span>Projected champion</span> <b>${c.championHandle}</b></div>` : '';
-    const rounds = c.rounds.map((r) => {
-      const ties = r.ties.map((t) => {
-        const homeWin = t.winnerId === t.homeId;
-        const score = t.pens ? `${t.homeScore}-${t.awayScore} <span class="ct-pens">(${t.pens[0]}-${t.pens[1]}p)</span>` : `${t.homeScore}-${t.awayScore}`;
-        const mine = t.homeId === c.me || t.awayId === c.me ? ' mine' : '';
-        return `<div class="cup-tie${mine}">`
-          + `<span class="ct-team home ${homeWin ? 'win' : ''}">${t.homeHandle}</span>`
-          + `<span class="ct-score">${score}</span>`
-          + `<span class="ct-team away ${!homeWin ? 'win' : ''}">${t.awayHandle}</span></div>`;
-      }).join('');
-      const byes = r.byes.length ? `<div class="cup-byes">Byes: ${r.byes.map((b) => b.handle).join(' · ')}</div>` : '';
-      return `<div class="cup-round"><div class="cup-round-name">${r.name}</div>${ties}${byes}</div>`;
-    }).join('');
-    return champ + note + `<div class="cup-bracket">${rounds}</div>`;
-  }
-
   // ---- club facilities ----
   private async showClub() {
     this.showScreen('club');
@@ -2032,116 +1868,11 @@ class Game {
     }
   }
 
-  // ── Transfer market ─────────────────────────────────────────────────────────
-  private async showMarket() {
-    this.showScreen('market');
-    $('market-list').innerHTML = SPINNER;
-    $('my-listings').innerHTML = '';
-    try {
-      const d = await api.market();
-      this.account.coins = d.coins;
-      $('market-coins').textContent = `💰 ${d.coins}`;
-      const reveal: Record<string, string> = {
-        base: 'ratings only', bronze: 'ratings + 2 key stats', silver: 'ratings + 5 stats', gold: 'the full stat sheet',
-      };
-      const tName: Record<string, string> = { base: 'Base', bronze: 'Bronze', silver: 'Silver', gold: 'Gold' };
-      $('market-scout').innerHTML = `🔎 Your <b>${tName[d.tier] ?? d.tier}</b> player scout reveals <b>${reveal[d.tier] ?? ''}</b> on each listing — 🔒 stats unlock with a higher scout.`;
-      // sell dropdown: squad players not already listed and not loanees
-      const listed = new Set(d.mine.map((l) => l.playerId));
-      const sellable = this.club.players.filter((p) => !p.id.startsWith('loan-') && !listed.has(p.id)).sort((a, b) => overall(b) - overall(a));
-      const sel = $('sell-player') as HTMLSelectElement;
-      sel.innerHTML = sellable.length
-        ? sellable.map((p) => `<option value="${p.id}">${p.name} (${p.role} ${overall(p)})</option>`).join('')
-        : '<option value="">No sellable players</option>';
-      // my active listings
-      $('my-listings').innerHTML = d.mine.length
-        ? d.mine.map((l) => `<div class="listing-mine"><span class="mkt-role role-${l.player.role}">${l.player.role}</span>`
-            + `<span class="lm-name">${l.player.name} (OVR ${l.player.overall})</span><span class="lm-price">💰 ${l.price}</span>`
-            + `<button data-cancel="${l.id}">Cancel</button></div>`).join('')
-        : '';
-      // the open market
-      $('market-list').innerHTML = d.listings.length
-        ? d.listings.map((l) => this.renderMarketCard(l, d.coins)).join('')
-        : '<div class="muted">Nothing for sale right now. List one of your players above, or check back later.</div>';
-      Array.from($('market-list').querySelectorAll('button[data-buy]')).forEach((b) =>
-        b.addEventListener('click', () => this.buyListing((b as HTMLElement).dataset.buy!)));
-      Array.from($('my-listings').querySelectorAll('button[data-cancel]')).forEach((b) =>
-        b.addEventListener('click', () => this.cancelListing((b as HTMLElement).dataset.cancel!)));
-    } catch {
-      $('market-list').innerHTML = '<div class="muted">Could not load — is the server running?</div>';
-    }
-  }
-
-  private renderMarketCard(l: MarketListing, coins: number): string {
-    const lab: Record<string, string> = { pace: 'PAC', strength: 'STR', passing: 'PAS', shooting: 'SHO', tackling: 'TAC', positioning: 'POS', workrate: 'WOR', keeping: 'GK', setPiece: 'SET', stamina: 'STA' };
-    const attrs = Object.entries(l.player.attrs).map(([k, v]) => `<span class="at">${lab[k] ?? k} <b>${v}</b></span>`).join('');
-    const locks = l.player.hidden > 0 ? `<span class="at locked">🔒 ${l.player.hidden} hidden</span>` : '';
-    const afford = coins >= l.price;
-    const buy = `<button data-buy="${l.id}" ${afford ? '' : 'disabled title="Not enough coins"'}>Buy ▶</button>`;
-    return `<div class="mkt ${l.player.overall >= 15 ? 'gem' : ''}">`
-      + `<div class="mkt-top"><span class="mkt-role role-${l.player.role}">${l.player.role}</span>`
-      + `<span class="mkt-name">${l.player.name}</span><span class="mkt-ovr">OVR ${l.player.overall}</span></div>`
-      + `<div class="mkt-attrs">${attrs}${locks}</div>`
-      + `<div class="mkt-bot"><span class="mkt-price">💰 ${l.price}</span><span class="mkt-seller">${l.sellerHandle}</span>${buy}</div></div>`;
-  }
-
-  private async sellPlayer() {
-    const playerId = ($('sell-player') as HTMLSelectElement).value;
-    const priceInput = $('sell-price') as HTMLInputElement;
-    const price = Number(priceInput.value);
-    if (!playerId) { toast('Pick a player to sell'); return; }
-    if (!price || price < 10) { toast('Set a price (min 10 coins)'); return; }
-    try { await api.listPlayer(playerId, price); toast('Listed for sale ✓'); priceInput.value = ''; await this.showMarket(); }
-    catch (e: any) { toast(e?.body?.error ?? 'Could not list'); }
-  }
-
-  private async buyListing(id: string) {
-    try {
-      const r = await api.buyListing(id);
-      toast(`Signed ${r.player.name} ✓`);
-      this.setMe(await api.me()); // refresh coins + squad
-      await this.showMarket();
-    } catch (e: any) { toast(e?.body?.error ?? 'Could not buy'); }
-  }
-
-  private async cancelListing(id: string) {
-    try { await api.cancelListing(id); toast('Listing withdrawn'); await this.showMarket(); }
-    catch { toast('Could not cancel'); }
-  }
-
-  private renderResults(rows: ResultRow[]): string {
-    if (!rows.length) return '<div class="muted">No matches played yet.</div>';
-    const name = (handle: string, id: string, win: boolean) =>
-      `<span class="rr-team${win ? ' win' : ''}${id === this.account.id ? ' you' : ''}">${handle}</span>`;
-    return rows.map((r) => {
-      const mine = r.home_id === this.account.id || r.away_id === this.account.id;
-      return `<div class="result-row${mine ? ' me' : ''}">`
-        + `<span class="rr-teams">${name(r.home_handle, r.home_id, r.home_score > r.away_score)}`
-        + `<span class="rr-vs">vs</span>${name(r.away_handle, r.away_id, r.away_score > r.home_score)}</span>`
-        + `<span class="rr-score">${r.home_score} - ${r.away_score}</span>`
-        + `<span class="rr-when">${timeAgo(r.created_at)}</span></div>`;
-    }).join('');
-  }
-
-  private renderLeagueTable(rows: TableRow[], zones?: { promote?: number; relegate?: number }): string {
-    const head = '<tr><th>#</th><th style="text-align:left">Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GF</th><th>GA</th><th>GD</th><th>Pts</th><th>Rtg</th></tr>';
-    const promote = zones?.promote ?? 0, relegate = zones?.relegate ?? 0;
-    // only mark a relegation zone when the pod is big enough to actually have one
-    const relegFrom = rows.length > promote + relegate ? rows.length - relegate : rows.length;
-    const body = rows.map((r, i) => {
-      const gd = r.GD > 0 ? `+${r.GD}` : `${r.GD}`;
-      const zone = i < promote ? ' promo' : i >= relegFrom ? ' releg' : '';
-      return `<tr class="${r.id === this.account.id ? 'me' : ''}${zone}"><td class="pos">${i + 1}</td><td class="club">${r.handle}</td><td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GF}</td><td>${r.GA}</td><td>${gd}</td><td class="pts">${r.Pts}</td><td>${r.rating}</td></tr>`;
-    }).join('');
-    return `<table class="league">${head}${body}</table>`;
-  }
-
   // ---- lineup editor (my standing orders) ----
   // Opens the pixel lineup editor either to save your standing orders, or to set a
   // one-off lineup + tactics for a specific match (prefilled from your standing orders).
   private openLineup(mode: 'standing' | 'match', opp?: { id: string; handle: string; venue: 'home' | 'away' }) {
     this.editorMode = mode;
-    this.pendingOpp = opp;
     this.draftPlan = this.loadPlan(); // armed conditional match-plan orders
     this.draftTactics = { ...this.standingOrders.tactics, formation: this.standingOrders.formation };
     // the saved XI can reference players no longer in the squad (e.g. an NFT star that's
@@ -2168,51 +1899,12 @@ class Game {
       const stars = '★'.repeat(Math.max(1, Math.round(this.spFixture.oppStrength / 4))) + '☆'.repeat(5 - Math.max(1, Math.round(this.spFixture.oppStrength / 4)));
       sc.classList.remove('hidden');
       sc.innerHTML = `<div class="scout-head">🔍 ${this.spFixture.oppName}</div><div class="scout-sub">${this.spFixture.venue === 'away' ? 'Away' : 'Home'} fixture · squad rating ~${this.spFixture.oppStrength} <span style="color:#e6c76a">${stars}</span></div>`;
-    } else if (mode === 'match' && opp) {
-      sc.classList.remove('hidden');
-      sc.innerHTML = '<div class="scout-head">🔍 Scouting…</div>';
-      api.scout(opp.id).then((s) => { if (this.pendingOpp?.id === opp.id) sc.innerHTML = this.renderScout(s); }).catch(() => sc.classList.add('hidden'));
-      // load the plan we last used vs this opponent (overrides the standing-orders default)
-      api.plan(opp.id).then((r) => {
-        if (!r.plan || this.pendingOpp?.id !== opp.id || this.editorMode !== 'match') return;
-        const owned = new Set(this.club.players.map((x) => x.id));
-        if (r.plan.playerIds.length !== 11 || !r.plan.playerIds.every((id) => owned.has(id))) return;
-        this.draftTactics = { ...r.plan.tactics, formation: r.plan.formation };
-        this.draftLineup = { formation: r.plan.formation, playerIds: [...r.plan.playerIds] };
-        this.draftDuties = this.draftLineup.playerIds.map((pid, i) => {
-          const pl = this.club.players.find((x) => x.id === pid)!;
-          const d = r.plan!.duties?.[i];
-          return d && isDutyForRole(pl.role, d) ? d : defaultDuty(pl);
-        });
-        this.renderLineupEditor();
-        toast(`Loaded your plan vs ${opp.handle}`);
-      }).catch(() => {});
     } else {
       sc.classList.add('hidden'); sc.innerHTML = '';
     }
     ($('save-team') as HTMLButtonElement).textContent = mode === 'standing' ? 'Save Team' : '▶ Kick Off';
     this.renderLineupEditor();
     this.showScreen('lineup');
-  }
-
-  private renderScout(s: Scout): string {
-    const roster = s.players
-      .map((p) => {
-        const rating = p.overall != null ? `<b>${p.overall}</b>` : `<b class="lk" title="Upgrade your opposition scout to reveal ratings">🔒</b>`;
-        return `<span class="sp ${p.likelyXI ? 'xi' : ''}"><span class="rl role-${p.role}">${p.role}</span><span class="nm">${p.name}</span>${rating}</span>`;
-      }).join('');
-    const tierBadge = `<span class="opp-tier tier-${s.tier}">SCOUT: ${s.tier.toUpperCase()}</span>`;
-    // note adapts to what this tier reveals, and teases what the next tier unlocks
-    const note = s.reveal.likelyXI
-      ? 'Their squad, best-rated first (highlighted = likely XI). Set your shape &amp; duties to counter them.'
-      : s.reveal.overalls
-        ? 'Their squad with ratings, best-rated first. 🔒 Likely XI is revealed at Silver scout.'
-        : '🔒 Base scout: roster &amp; shape only. Player ratings unlock at Bronze, likely XI at Silver, tactical intel at Gold.';
-    const intel = s.intel ? `<div class="scout-intel">🎯 ${s.intel}</div>` : '';
-    return `<div class="scout-head">🔍 SCOUTING <b>${s.clubName}</b> · likely <b>${s.formation}</b> · rating ${s.rating} ${tierBadge}</div>`
-      + `<div class="scout-note">${note}</div>`
-      + `<div class="scout-roster">${roster}</div>`
-      + intel;
   }
 
   /** The conditional match-plan panel — only for single-player fixtures (the client is authoritative there;
@@ -2395,30 +2087,14 @@ class Game {
   }
 
   // ---- match ----
-  // "Play" opens the lineup editor so you set a lineup + tactics for THIS match (home or away leg).
-  private play(opponentId: string, handle: string, venue: 'home' | 'away' = 'home') {
-    this.openLineup('match', { id: opponentId, handle, venue });
-  }
-
   /** The current captain + set-piece-taker designations, ready to attach to a lineup / standing orders. */
   private draftRoles(): { captainIdx?: number; takers?: { pen?: number; fk?: number; corner?: number } } {
     const t = this.draftTakers;
     const hasTakers = t.pen != null || t.fk != null || t.corner != null;
     return { ...(this.draftCaptain != null ? { captainIdx: this.draftCaptain } : {}), ...(hasTakers ? { takers: { ...t } } : {}) };
   }
-  private async kickOffMatch() {
-    if (this.spFixture) { this.kickOffSpMatch(); return; } // single-player fixture: build the match locally
-    if (!this.pendingOpp) return;
-    $('lineup-insight').innerHTML = '<span style="color:var(--cyan)">Playing…</span>';
-    try {
-      const lineup: Lineup = { ...this.draftLineup, duties: [...this.draftDuties], ...this.draftRoles() };
-      const payload = await api.createMatch(this.pendingOpp.id, lineup, this.draftTactics, this.pendingOpp.venue);
-      this.startMatch(payload);
-    } catch (e: any) {
-      if (e?.status === 429) toast('Daily match limit reached — come back tomorrow');
-      else if (e?.status === 409) toast('You already played this fixture this season');
-      await this.showHub();
-    }
+  private kickOffMatch() {
+    if (this.spFixture) this.kickOffSpMatch(); // single-player fixture: build the match locally
   }
 
   private lastGate = 0;

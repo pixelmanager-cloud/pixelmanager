@@ -5,9 +5,8 @@
 // verbatim as the new substrate allows — from the corresponding server/src/index.ts endpoint, with
 // `db.*` → the local store singleton and `req.account!.id` → the single local OWNER.
 //
-// Multiplayer (async-PvP) methods are UNREACHABLE from the hub already (see the big comment in
-// main.ts above `refreshHubPlayer`) — they're stubbed here to throw, kept only so main.ts's dead
-// references still type-check, and die for real in phase 4 along with the server.
+// Multiplayer (async-PvP) support was removed in phase 4 along with the server. `scoutTiers` is the
+// one exception kept below — it still backs the single-player youth-scouting network's tier display.
 import type { Club, Lineup, Tactics, Team, Player, StandingOrders } from '@fm/shared';
 export type { StandingOrders };
 import {
@@ -117,18 +116,6 @@ export interface CareerProfile {
 export interface ContractInfo { playerId: string; age: number; available: boolean; seasonsLeft: number; lengthSeasons: number; extendCost: number; sellValue: number; stakedSeasons: number; staked?: boolean; morale?: number; moraleLabel?: string; retired?: boolean; legend?: LegacyCard | null; rebornId?: string | null; careerGoals?: number; careerAssists?: number; careerPotm?: number; careerApps?: number }
 
 export interface Account { id: string; handle: string; rating: number; coins?: number }
-export interface MarketPlayer { name: string; role: string; overall: number; attrs: Record<string, number>; hidden: number }
-export interface MarketListing { id: string; playerId: string; price: number; sellerHandle: string; mine: boolean; player: MarketPlayer }
-export interface TableRow { id: string; handle: string; rating: number; P: number; W: number; D: number; L: number; GF: number; GA: number; GD: number; Pts: number }
-export interface ResultRow { id: string; home_id: string; away_id: string; home_handle: string; away_handle: string; home_score: number; away_score: number; created_at: number }
-export interface SeasonMeta { number: number; startsAt: number; endsAt: number; status: string; endsInMs: number }
-export interface Fixture { opponentId: string; handle: string; clubName: string; rating: number; venue: 'home' | 'away'; status: 'played' | 'pending'; result: { my: number; opp: number } | null }
-export interface ScoutPlayer { name: string; role: string; overall: number | null; likelyXI: boolean | null }
-export interface ScoutReveal { overalls: boolean; likelyXI: boolean; intel: boolean }
-export interface Scout {
-  handle: string; clubName: string; rating: number; formation: Lineup['formation'];
-  tier: 'base' | 'bronze' | 'silver' | 'gold'; reveal: ScoutReveal; intel: string | null; players: ScoutPlayer[];
-}
 export interface Trialist { index: number; id: string; name: string; role: string; overall: number; band: 'raw' | 'squad' | 'quality' | 'gem'; signed: boolean }
 export interface ScoutDestination { id: string; name: string; blurb: string; hitRate: number; upgradeChance: number; weights: Record<string, number>; travelMins: number; cost: number }
 export interface MissionProspect { id: string; name: string; role: string; overall: number; attrs: Record<string, number> }
@@ -141,11 +128,7 @@ export interface MissionsData {
   loaneeCap: number; loaneeCount: number; coins: number; destinations: ScoutDestination[]; missions: Mission[];
 }
 export interface HonourRow { season_number: number; tier: string; final_pos: number; title: number; ended_at: number; coin_reward?: number; kind?: string }
-export interface LeaderStat { name: string; club: string; goals: number; assists: number; apps: number; potm: number }
 export interface AwardRow { season_number: number; tier: string; pod: number; kind: string; player_name: string; value: number; awarded_at: number }
-export interface CupTie { homeId: string; awayId: string; homeHandle: string; awayHandle: string; homeScore: number; awayScore: number; pens: [number, number] | null; winnerId: string }
-export interface CupRound { name: string; ties: CupTie[]; byes: { id: string; handle: string }[] }
-export interface CupData { season: number; tier: string; pod: number; me: string; size: number; rounds: CupRound[]; championId: string | null; championHandle: string }
 export interface Facility {
   key: string; icon: string; name: string; blurb: string; level: number; maxLevel: number;
   effect: string; nextEffect: string | null; upgradeCost: number | null; canAfford: boolean;
@@ -490,16 +473,6 @@ export const api = {
     await localStore.saveStandingOrders(OWNER, clean);
     return { ok: true as const, standingOrders: clean };
   },
-  opponents: async (): Promise<{ opponents: Array<{ id: string; handle: string; rating: number; clubName: string }> }> => { throw apiErr('multiplayer removed', {}, 410); },
-  createMatch: async (_opponentId: string, _myLineup?: Lineup, _myTactics?: Tactics, _venue: 'home' | 'away' = 'home'): Promise<MatchPayload> => { throw apiErr('multiplayer removed', {}, 410); },
-  leaderboard: async (): Promise<{ leaderboard: Array<{ id: string; handle: string; rating: number }> }> => { throw apiErr('multiplayer removed', {}, 410); },
-  table: async (): Promise<{ table: TableRow[] }> => { throw apiErr('multiplayer removed', {}, 410); },
-  myMatches: async (): Promise<{ matches: Array<{ id: string; home_id: string; away_id: string; home_score: number; away_score: number; created_at: number }> }> => { throw apiErr('multiplayer removed', {}, 410); },
-  results: async (): Promise<{ results: ResultRow[] }> => { throw apiErr('multiplayer removed', {}, 410); },
-  season: async (): Promise<{ season: SeasonMeta }> => { throw apiErr('multiplayer removed', {}, 410); },
-  fixtures: async (): Promise<{ fixtures: Fixture[]; played: number; total: number; playedToday: number; dailyCap: number }> => { throw apiErr('multiplayer removed', {}, 410); },
-  scout: async (_opponentId: string): Promise<Scout> => { throw apiErr('multiplayer removed', {}, 410); },
-  plan: async (_opponentId: string): Promise<{ plan: StandingOrders | null }> => { throw apiErr('multiplayer removed', {}, 410); },
   trials: async () => {
     await ensureActive();
     const model = getActiveModel();
@@ -616,7 +589,6 @@ export const api = {
     await localStore.setMissionSigned(m.id);
     return { ok: true as const, player: { name: player.name, role: player.role }, signedCount: await localStore.countLoanees(OWNER, seasonId) };
   },
-  standings: async (): Promise<{ season: { number: number; endsAt: number }; tier: string; pod: number; promote: number; relegate: number; table: TableRow[] }> => { throw apiErr('multiplayer removed', {}, 410); },
   diary: async () => {
     await ensureActive();
     // The old diary was a running story over PvP pod matches; those no longer exist locally. A
@@ -628,11 +600,5 @@ export const api = {
   },
   honours: async () => { await ensureActive(); return { honours: await localStore.honoursFor(OWNER) }; },
   awards: async () => { await ensureActive(); return { awards: [] as AwardRow[] }; }, // season leaderboards were PvP-pod-scoped; no local equivalent (see final report)
-  cup: async (): Promise<CupData> => { throw apiErr('multiplayer removed', {}, 410); },
-  leaders: async (): Promise<{ season: { number: number; endsAt: number }; tier: string; pod: number; scorers: LeaderStat[]; assisters: LeaderStat[]; potm: LeaderStat[] }> => { throw apiErr('multiplayer removed', {}, 410); },
-  market: async (): Promise<{ coins: number; tier: string; listings: MarketListing[]; mine: MarketListing[] }> => { throw apiErr('multiplayer removed', {}, 410); },
-  listPlayer: async (_playerId: string, _price: number): Promise<{ ok: true; id: string }> => { throw apiErr('multiplayer removed', {}, 410); },
-  buyListing: async (_id: string): Promise<{ ok: true; player: { name: string; role: string }; coins: number }> => { throw apiErr('multiplayer removed', {}, 410); },
-  cancelListing: async (_id: string): Promise<{ ok: true }> => { throw apiErr('multiplayer removed', {}, 410); },
   scoutTiers: async () => ({ opp: TIER, player: TIER, nft: { address: '', chainId: 0, enabled: false } }),
 };

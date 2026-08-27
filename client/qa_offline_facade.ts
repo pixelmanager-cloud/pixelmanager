@@ -133,13 +133,6 @@ assert(typeof diary.entry === 'string' && diary.entry.length > 0, 'diary() retur
 const tiers = await api.scoutTiers();
 assert(tiers.opp === 'base' && tiers.player === 'base', 'scout tiers default to base off-chain');
 
-console.log('=== 15. multiplayer methods are stubbed, not wired ===');
-await assertThrows('opponents()', () => api.opponents());
-await assertThrows('createMatch()', () => api.createMatch('x'));
-await assertThrows('scout()', () => api.scout('x'));
-await assertThrows('standings()', () => api.standings());
-await assertThrows('market()', () => api.market());
-
 console.log('=== 16. setToken()+me() resumes a save the way loadSave() in main.ts does ===');
 const reg2 = await api.register('ignored', 'ignored', 'Second Club FC');
 setToken(reg.token); // switch back to the FIRST save purely via the token, like main.ts's loadSave()
