@@ -45,9 +45,13 @@ Work top to bottom, one item per commit. Tick `[x]` when done; add a one-line no
    history — a tier increase between consecutive seasons) and `winPct` to `ManagerRecord`/
    `Prestige` in `shared/src/prestige.ts`, folded promotions into `prestigeScore`, and surfaced
    both on the prestige card (`📈 N promotions`, `NN% win rate · N seasons managed`).
-5. [ ] **Rivalries / derby fixtures.** Deterministically designate a pod rival (repeat opponent /
+5. [x] **Rivalries / derby fixtures.** Deterministically designate a pod rival (repeat opponent /
    closest-rated club); flag those fixtures as "derby" in the fixture list and match report with a
-   small extra commentary flourish and a head-to-head record line. (M)
+   small extra commentary flourish and a head-to-head record line. (M) — `shared/src/rivalry.ts`
+   (`rivalOf`/`headToHead`/`derbyLine`, most-meetings-then-closest-rating tie-break, no persisted
+   state). Wired into `/fixtures` (`derby` flag per fixture, 🔥 DERBY badge) and `/matches` (a
+   `derby` object with a seeded flourish line + pre-match head-to-head, shown above the headline on
+   the match report).
 6. [ ] **More match-commentary phrasing variety.** Expand the text engine's per-event line pools
    (goals, saves, fouls, subs, fatigue) with more phrasings keyed by scoreline/minute/stakes so a
    repeat viewer sees fresher text — presentational only, must not touch probabilities. **CAL**

@@ -774,15 +774,16 @@ class Game {
       } else {
         $('opponents').innerHTML = fixtures.map((f) => {
           const vb = `<span class="venue ${f.venue}" title="${f.venue === 'home' ? 'Home' : 'Away'} fixture">${f.venue === 'home' ? 'HOME' : 'AWAY'}</span>`;
+          const derby = f.derby ? '<span class="derby-badge" title="Your pod rival — a derby fixture">🔥 DERBY</span>' : '';
           if (f.status === 'played' && f.result) {
             const { my, opp } = f.result;
             const cls = my > opp ? 'w' : my < opp ? 'l' : 'd';
-            return `<div class="fixture done">${vb} <span class="opp"><b>${f.clubName}</b></span><span class="pill ${cls}">${cls.toUpperCase()} ${my}-${opp}</span></div>`;
+            return `<div class="fixture done">${vb} <span class="opp"><b>${f.clubName}</b> ${derby}</span><span class="pill ${cls}">${cls.toUpperCase()} ${my}-${opp}</span></div>`;
           }
           const btn = capped
             ? '<button class="fx-play" disabled title="Daily limit reached — come back tomorrow">Play ▶</button>'
             : `<button class="fx-play" data-opp="${f.opponentId}" data-h="${f.handle}" data-venue="${f.venue}">Play ▶</button>`;
-          return `<div class="fixture">${vb} <span class="opp"><b>${f.clubName}</b> <span class="meta">rating ${f.rating}</span></span>${btn}</div>`;
+          return `<div class="fixture">${vb} <span class="opp"><b>${f.clubName}</b> ${derby} <span class="meta">rating ${f.rating}</span></span>${btn}</div>`;
         }).join('');
         Array.from($('opponents').querySelectorAll('button[data-opp]')).forEach((b) =>
           b.addEventListener('click', () => this.play((b as HTMLElement).dataset.opp!, (b as HTMLElement).dataset.h!, (b as HTMLElement).dataset.venue as 'home' | 'away')));
@@ -1803,11 +1804,13 @@ class Game {
   private lastGate = 0;
   private lastInjuries: Array<{ name: string; matches: number }> = [];
   private lastHeadline: string | null = null;
+  private lastDerby: MatchPayload['derby'] = null;
   private startMatch(payload: MatchPayload) {
     this.mySide = payload.mySide;
     this.lastGate = payload.gateIncome ?? 0;
     this.lastInjuries = payload.injuries ?? [];
     this.lastHeadline = payload.headline ?? null;
+    this.lastDerby = payload.derby ?? null;
     this.homeName = payload.home.handle;
     this.awayName = payload.away.handle;
     // guarantee the two kits clearly contrast on the pitch even if the clubs' colours are similar
@@ -1878,7 +1881,8 @@ class Game {
     const assists = new Map<string, number>();
     for (const e of events) if (e.type === 'goal' && e.playerName2) assists.set(e.playerName2, (assists.get(e.playerName2) ?? 0) + 1);
     const asLine = assists.size ? `<div class="scorers">🅰 Assists: ${[...assists.entries()].map(([n, c]) => c > 1 ? `${n} ×${c}` : n).join(' · ')}</div>` : '';
-    $('ft-report').innerHTML = `${lead}${redLine}<div class="scorers">${scLine}</div>${asLine}`;
+    const derbyLine = this.lastDerby ? `<div class="derby-line">${this.lastDerby.line}</div>` : '';
+    $('ft-report').innerHTML = `${derbyLine}${lead}${redLine}<div class="scorers">${scLine}</div>${asLine}`;
     // player of the match: most goals, tie broken toward the winning side
     const winSide: 0 | 1 | null = h > a ? 0 : a > h ? 1 : null;
     names.sort((x, y) => y[1].mins.length - x[1].mins.length || (Number(y[1].team === winSide) - Number(x[1].team === winSide)));

@@ -1,7 +1,7 @@
 import Fastify from 'fastify';
 import cors from '@fastify/cors';
 import { randomUUID } from 'node:crypto';
-import { overall, managerPrestige, signContract, contractCost, contractLength, graduationEpilogue, gaffersDiaryEntry, computeClubRecords, matchHeadline, computeFormGuide, runInCallout, type Lineup, type Tactics } from '@fm/shared';
+import { overall, managerPrestige, signContract, contractCost, contractLength, graduationEpilogue, gaffersDiaryEntry, computeClubRecords, matchHeadline, computeFormGuide, runInCallout, rivalOf, headToHead, derbyLine, type Lineup, type Tactics } from '@fm/shared';
 import { mintGenesis, tokenToPlayer, tokenContract, tokenAch, legendCardOf, unavailableTokenIds, loadCareer, actWithNarration, careerState, graduatedFields, rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, ageOf, syncOnchainTokens, SUPPLY_CAP, GENESIS_COST, REBORN_COST, MARKET_FEE_PCT, type CareerAction } from './tokens.js';
 import { lifecycleEnabled, lifecycleInfo, serverSignerEnabled, serverMintTo, serverReborn, ownedTokens, ownerOf, lineageOf } from './lifecyclenft.js';
 import { bumpApps, bumpMorale, advanceTokensAtRollover } from './lifecycle.js';
@@ -227,8 +227,13 @@ app.put('/standing-orders', { preHandler: requireAuth }, async (req, reply) => {
 async function computeFixtures(accountId: string) {
   const s = await ensureSeason(db, Date.now());
   const { tier, pod } = await ensurePod(db, s, accountId);
-  const members = (await db.podMembers(s.id, tier, pod)).filter((m) => m.id !== accountId);
+  const allMembers = await db.podMembers(s.id, tier, pod);
+  const members = allMembers.filter((m) => m.id !== accountId);
   const results = await db.seasonResults(s.id);
+  // pod rival: the pod-mate faced most often all-time (closest rating breaks ties) — a deterministic
+  // "derby" designation with no persisted state, so it never drifts when pods reshuffle. See rivalry.ts.
+  const me = allMembers.find((m) => m.id === accountId);
+  const rivalId = me ? rivalOf(accountId, me.rating, members, await db.allResults()) : null;
   // double round-robin: a HOME leg (home=me) and an AWAY leg (home=them) vs each pod-mate
   const homeLeg = new Map<string, { my: number; opp: number }>();
   const awayLeg = new Map<string, { my: number; opp: number }>();
@@ -241,8 +246,9 @@ async function computeFixtures(accountId: string) {
     const c = await db.getClub(m.id);
     const clubName = c?.club.name ?? m.handle;
     const h = homeLeg.get(m.id) ?? null, a = awayLeg.get(m.id) ?? null;
-    fixtures.push({ opponentId: m.id, handle: m.handle, clubName, rating: m.rating, venue: 'home', status: h ? 'played' : 'pending', result: h });
-    fixtures.push({ opponentId: m.id, handle: m.handle, clubName, rating: m.rating, venue: 'away', status: a ? 'played' : 'pending', result: a });
+    const derby = m.id === rivalId;
+    fixtures.push({ opponentId: m.id, handle: m.handle, clubName, rating: m.rating, venue: 'home', status: h ? 'played' : 'pending', result: h, derby });
+    fixtures.push({ opponentId: m.id, handle: m.handle, clubName, rating: m.rating, venue: 'away', status: a ? 'played' : 'pending', result: a, derby });
   }
   const playedToday = await db.matchesToday(accountId, s.id, startOfUtcDay(Date.now()));
   return { tier, pod, fixtures, playedToday, dailyCap: MATCHES_PER_DAY };
@@ -367,13 +373,23 @@ app.post('/matches', { preHandler: requireAuth }, async (req, reply) => {
     homeRank: rankOf(homeId), awayRank: rankOf(awayId), totalInPod: podMembers.length, relegateCount: RELEGATE,
   });
 
+  // derby flourish: is this opponent my pod rival? (pre-match head-to-head, from my perspective)
+  const meMember = podMembers.find((m) => m.id === meId);
+  const allTimeResults = await db.allResults();
+  const rivalId = meMember ? rivalOf(meId, meMember.rating, podMembers.filter((m) => m.id !== meId), allTimeResults) : null;
+  let derby: { rivalHandle: string; line: string; record: ReturnType<typeof headToHead> } | null = null;
+  if (rivalId === oppId) {
+    const record = headToHead(meId, oppId, allTimeResults);
+    derby = { rivalHandle: opp.handle, line: derbyLine(matchId, req.account!.handle, opp.handle, record), record };
+  }
+
   await db.saveMatch({
     id: matchId, homeId, awayId, homeTeam, awayTeam, homeTactics: hTactics, awayTactics: aTactics,
     seed, homeScore: result[0], awayScore: result[1], createdAt: Date.now(), seasonId: season.id, initiatorId: meId,
   });
 
   return {
-    matchId, seed, result, mySide: iAmHome ? 0 : 1, coinsEarned: myCoins, gateIncome: myGate, headline,
+    matchId, seed, result, mySide: iAmHome ? 0 : 1, coinsEarned: myCoins, gateIncome: myGate, headline, derby,
     injuries: myNew.map((n) => ({ name: n.playerName, matches: n.matches })),
     home: { id: homeId, handle: homeHandle, rating: nHome, team: homeTeam, tactics: hTactics },
     away: { id: awayId, handle: awayHandle, rating: nAway, team: awayTeam, tactics: aTactics },
