@@ -21,3 +21,4 @@ export * from './scouting.js';
 export * from './matchstats.js';
 export * from './market.js';
 export * from './game.js';
+export * from './lifecycle.js';
