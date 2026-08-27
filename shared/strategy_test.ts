@@ -202,6 +202,17 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
   assert(ga541 < ga451, `5-4-1 should concede fewer goals than the lone-striker 4-5-1 vs a direct attack (got ${ga541} vs ${ga451})`);
 }
 
+// ---- 8d. New formation 4-2-2-2: a very narrow box midfield beats the equally-narrow 4-1-4-1 ----
+{
+  let w = 0, l = 0;
+  for (let i = 0; i < N; i++) {
+    const r = play(mk('a', 12, i * 7 + 1, '4-2-2-2'), mk('b', 12, i * 13 + 3, '4-1-4-1'), DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5);
+    if (r.score[0] > r.score[1]) w++; else if (r.score[1] > r.score[0]) l++;
+  }
+  console.log(`[shape]     4-2-2-2 vs 4-1-4-1: ${w}W-${l}L (want two strikers to beat one, other things equal)`);
+  assert(w > l, `4-2-2-2's second striker should beat 4-1-4-1's lone-striker shape (got ${w} vs ${l})`);
+}
+
 // ---- 9. Seeded opponent tactical profiles: stable per-seed identity, but varied across opponents ----
 // Every SP opponent used to play flat DEFAULT_TACTICS 4-4-2 regardless of who they were. Prove the
 // fix has real teeth: the same club seed always gets the same style (determinism), and a spread of

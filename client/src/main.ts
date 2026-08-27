@@ -82,7 +82,7 @@ const MATCH_PLAN_RULES: PlanRule[] = [
 ];
 const clampTac = (v: number) => Math.max(-2, Math.min(2, v));
 
-const FORMATIONS: Formation[] = ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1', '3-4-3', '4-1-2-1-2', '5-3-2', '4-5-1', '4-1-4-1', '5-4-1'];
+const FORMATIONS: Formation[] = ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1', '3-4-3', '4-1-2-1-2', '5-3-2', '4-5-1', '4-1-4-1', '5-4-1', '4-2-2-2'];
 const SLOT_ROLES: Record<Formation, string[]> = {
   '4-4-2': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'FW', 'FW'],
   '4-3-3': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'FW', 'FW', 'FW'],
@@ -94,6 +94,7 @@ const SLOT_ROLES: Record<Formation, string[]> = {
   '4-5-1': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'MF', 'FW'],
   '4-1-4-1': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'MF', 'FW'],
   '5-4-1': ['GK', 'DF', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'FW'],
+  '4-2-2-2': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'FW', 'FW'],
 };
 
 const $ = (id: string) => document.getElementById(id)!;

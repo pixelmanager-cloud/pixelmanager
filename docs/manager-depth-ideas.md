@@ -298,6 +298,12 @@ content bar (a new interacting/trade-off decision, not a reskin).
   shift from the fixed kickoff tactics — array order was chosen so the more drastic reaction overrides.
 
 ### 🎮 ✅ SHIPPED (2026-08-27, batch 2) — more formations/roles/instructions
+- **New formation: 4-2-2-2** — a back four behind a narrow double-pivot + double-ten box midfield and
+  two strikers. The tightest MF spread of any formation in the pool, so it loses width battles against
+  most shapes (an earlier attempt, 3-4-1-2, was tried and dropped — no formation in the pool could beat
+  it net, so it added no real strategic option; 4-2-2-2 at least has one clean edge). Proven in
+  `strategy_test.ts`: it beats 4-1-4-1's own narrow, lone-striker shape by fielding two strikers instead
+  of one (23W-20L). A situational, not all-purpose, pick.
 - **New formation: 5-4-1** — back five + one striker, added to `shared/src/formations.ts` + client
   `FORMATIONS`/`SLOT_ROLES`. Unlike 4-1-4-1/4-5-1 (a repositioned midfielder pretending to be defensive),
   this is a REAL extra defender, so it genuinely concedes fewer goals to a direct attack: proven in
