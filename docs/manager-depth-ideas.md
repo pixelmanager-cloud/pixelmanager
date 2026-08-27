@@ -30,17 +30,21 @@
 > - **Sponsorship deals** — each season pick a Steady (flat cash) or Performance (top-3 bonus) shirt deal;
 >   `POST /sp/sponsor` + the bonus via `/sp/season-reward`.
 >
-> **Still open:** match plan / conditional orders; the international competitions in the to-do below.
+> **Still open:** match plan / conditional orders.
 >
-> ### 🌍 To-do — competitions beyond the league (added 2026-08-27)
-> - **International club cup** — a continental knockout the club qualifies for by a high league finish;
->   run alongside the league season as extra fixtures + a trophy for the cabinet. Reuses the match engine +
->   the fictional-league opponents (or a broader continental pool).
-> - **National-team call-up matches** — the *player-career* international caps arc becomes real matchday
->   moments: once capped, he plays national-team fixtures (career-mode moments) between club stages.
-> - **World-Cup-style international tournament** — a periodic (every few seasons) national-team competition:
->   group stage → knockouts, the player's aspirational peak. A headline achievement + a legacy multiplier
->   for the bloodline. Deterministic bracket seeded from the save.
+> ### 🌍 ✅ SHIPPED — competitions beyond the league (2026-08-27) — engine in `shared/src/intl.ts`
+> All three are deterministic (hash-seeded, no rng/wall-clock), so they replay identically from a save seed.
+> Names are deliberately generic to avoid real-competition trademarks.
+> - **✅ Continental Cup** — a top-3 league finish books a place in next season's continental knockout
+>   (QF → SF → Final, opponents from a stronger continental club pool, escalating strength, final on neutral
+>   ground). Ties are **playable** through the same match flow as league games, or sim-able. Winning it banks
+>   a continental prize + a trophy that shows in the retirement epilogue. `contOpponent()` + season-view panel.
+> - **✅ National-team call-ups** — once the *player-career* star is capped, `careerState.international` carries
+>   his fictional home nation (seeded from the surname) + his most recent call-up fixture (opponent, venue,
+>   friendly/qualifier, scoreline, whether he scored), surfaced as a career moment. `nationalFixture()`.
+> - **✅ The World Finals** — a national-team tournament staged every 4th manager season (8 nations, two groups
+>   of four → semis → final; the star's nation strength = his overall). Full seeded bracket with group tables,
+>   penalties, and the star's finish → a legacy multiplier + club payoff. `worldCup()` + a full report screen.
 
 
 > ## ⚠️ Framing correction (2026-08) — OWNER-MANAGER, not employed manager

@@ -8,7 +8,7 @@ import {
   type Player, type Track, type PlayerAchievements, type Genes, type CareerPlayerAttrs,
 } from '@fm/shared';
 import type { Token, Store } from './store.js';
-import { clubSeason, squadRole, firstTeamReady } from '@fm/shared';
+import { clubSeason, squadRole, firstTeamReady, homeNation, nationalFixture } from '@fm/shared';
 
 export const SUPPLY_CAP = Number(process.env.SUPPLY_CAP ?? 10000); // fixed total NFTs in the economy
 // Lifecycle SINKS (coins now — the seam that becomes a PTEST spend later; see docs/economy-and-web3.md).
@@ -257,12 +257,16 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
   const rival = { name: cast.rival, score: rivalScore, lead: careerScore - rivalScore };
   // INTERNATIONAL CALL-UP — perform well at the senior stages and you earn a national call-up + caps: an
   // aspirational ceiling to chase. Presentational, from overall × stage (only the good get capped).
-  let international: { capped: boolean; caps: number } | null = null;
+  let international: { capped: boolean; caps: number; nation?: string; lastCap?: ReturnType<typeof nationalFixture> } | null = null;
   if (bandIdx >= 4) {
     const ov = prof.currentOverall;
     const rate = ov >= 15 ? 0.4 : ov >= 13 ? 0.25 : ov >= 11 ? 0.12 : 0;
     const caps = Math.max(0, Math.round((c.turn - 60) * rate));
-    international = { capped: caps > 0, caps };
+    // the surname decides the fictional home nation; the most recent call-up is surfaced as a career moment
+    const surname = (t.name || '').trim().split(/\s+/).slice(1).join(' ') || t.name || 'Astoria';
+    const nation = homeNation(surname);
+    const lastCap = caps > 0 ? nationalFixture((c as any).seed >>> 0, caps, nation, ov) : undefined;
+    international = { capped: caps > 0, caps, nation, lastCap };
   }
   // SEASON OBJECTIVE — a per-stage target that gives each chapter direction + a reward beat. Seeded per
   // stage, progress read from this stage's log entries. Deterministic; presentational (no engine change).

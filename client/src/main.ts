@@ -1,12 +1,16 @@
 import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, DUTY_LABEL, DUTIES_BY_ROLE, isDutyForRole,
-  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult,
+  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult,
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type TableRow, type ResultRow, type HonourRow, type Scout, type Trialist, type MarketListing, type CupData, type MissionsData, type ContractInfo, type LeaderStat, type AwardRow } from './api';
 import { sprite } from './sprites';
 
 /** Single-player manager-season state (per save, in localStorage). `starId` present ⇒ manager phase. */
-interface MgrState { season: number; results: PlayedResult[]; starId?: string; starName?: string; starAge?: number; retireAge?: number; titles?: number; trainFocus?: string; staff?: string[]; sponsor?: string }
+interface MgrState { season: number; results: PlayedResult[]; starId?: string; starName?: string; starAge?: number; retireAge?: number; titles?: number; trainFocus?: string; staff?: string[]; sponsor?: string;
+  // international: continental club cup (qualified by a top-3 finish the previous season)
+  contElig?: boolean; contRound?: number; contOut?: boolean; contTitles?: number;
+  // World-Cup-style national tournament — the edition last followed (so it shows once per staging)
+  wcSeen?: number; wcWins?: number }
 const BACKROOM_STAFF = [
   { id: 'fitness', icon: '🏋️', name: 'Fitness Coach', cost: 350, desc: 'Sharper conditioning — your side fades less over 90.' },
   { id: 'attack', icon: '⚔️', name: 'Attacking Coach', cost: 350, desc: 'Drills the final third — a small finishing edge, home and away.' },
@@ -217,7 +221,8 @@ class Game {
   editorMode: 'standing' | 'match' = 'standing';
   squadSort: SquadSort | null = null;
   pendingOpp?: { id: string; handle: string; venue: 'home' | 'away' };
-  spFixture: { idx: number; oppClub: Club; oppName: string; oppStrength: number; venue: 'home' | 'away'; oppLineup: Lineup } | null = null; // the single-player fixture being played
+  spFixture: { idx: number; oppClub: Club; oppName: string; oppStrength: number; venue: 'home' | 'away'; oppLineup: Lineup; comp?: 'league' | 'cont'; contRound?: number } | null = null; // the single-player fixture being played
+  pendingCont: { myGoals: number; oppGoals: number; oppStrength: number } | null = null; // a continental tie awaiting resolution once the full-time card is dismissed
   mySide: 0 | 1 = 0;   // which team index (0 home / 1 away) is the player in the current match
   homeName = '';
   awayName = '';
@@ -766,8 +771,13 @@ class Game {
     $('season-body').innerHTML = header
       + `<div class="sf-gaffer">📔 ${this.gafferTake(played, t.pos, t.size, clubName)}</div>`
       + this.sponsorHtml()
+      + this.worldCupHtml()
+      + this.continentalHtml()
       + `<div class="season-cols"><div class="season-fixtures"><h4 class="scout-h4">FIXTURES</h4>${fxRows}${records}${focusSel}${simBtn}</div>`
       + `<div class="season-table-wrap"><h4 class="scout-h4">LEAGUE TABLE</h4>${this.spTableHtml(t)}${this.staffHtml()}</div></div>`;
+    $('sf-cont-play')?.addEventListener('click', () => this.playContinentalTie());
+    $('sf-cont-sim')?.addEventListener('click', () => this.simContinentalTie());
+    $('sf-wc-follow')?.addEventListener('click', () => this.followWorldCup());
     $('sf-play')?.addEventListener('click', () => this.playNextSpFixture());
     $('sf-sim')?.addEventListener('click', () => this.simRemainingFixtures());
     $('sf-next-season')?.addEventListener('click', () => this.nextSeason());
@@ -812,6 +822,117 @@ class Game {
       toast(`🧑‍🏫 Hired ${s.name} (−${r.cost.toLocaleString()}c)`);
       this.showSeason();
     } catch (e: any) { toast(e?.status === 409 ? 'Not enough coins' : 'Could not hire'); }
+  }
+
+  /** The bloodline star's current overall (drives his nation's World-Cup strength). */
+  private starOverall(): number {
+    const id = this.loadMgr().starId;
+    const p = this.club?.players.find((x) => x.id === id);
+    return p ? overall(p) : Math.round(this.squadStrength());
+  }
+  private starSurname(): string { const n = this.loadMgr().starName ?? ''; return n.trim().split(/\s+/).slice(1).join(' ') || n || 'the family'; }
+
+  // ── Continental club cup — qualified by a top-3 league finish; a 3-round knockout run alongside the season ──
+  private continentalHtml(): string {
+    const m = this.loadMgr();
+    if (!m.contElig) return '';
+    const round = m.contRound ?? 0;
+    if (m.contOut) return `<div class="sf-cont out"><span class="sf-cont-lbl">🌍 CONTINENTAL CUP</span> <span class="sf-cont-txt">Knocked out — the European run ends here. There's always next season.</span></div>`;
+    if (round >= 3) return `<div class="sf-cont won"><span class="sf-cont-lbl">🏆 CONTINENTAL CHAMPIONS</span> <span class="sf-cont-txt"><b>${this.club?.name}</b> are kings of the continent!</span></div>`;
+    const tie = contOpponent(this.leagueSeed(), m.season, round as 0 | 1 | 2);
+    const dots = CONT_ROUNDS.map((r, i) => `<span class="sf-cont-dot ${i < round ? 'won' : i === round ? 'now' : ''}">${['QF', 'SF', 'F'][i]}</span>`).join('');
+    return `<div class="sf-cont"><div class="sf-cont-head"><span class="sf-cont-lbl">🌍 CONTINENTAL CUP</span>${dots}</div>`
+      + `<div class="sf-cont-tie"><b>${tie.label}</b> ${tie.neutral ? '(neutral)' : ''} vs <b>${tie.oppName}</b> · rating ~${tie.oppStrength}</div>`
+      + `<div class="sf-cont-btns"><button class="primary" id="sf-cont-play">Play the tie ▶</button> <button id="sf-cont-sim">⏩ Sim it</button></div></div>`;
+  }
+  private playContinentalTie() {
+    const m = this.loadMgr(), round = m.contRound ?? 0;
+    if (!m.contElig || m.contOut || round >= 3) return;
+    const tie = contOpponent(this.leagueSeed(), m.season, round as 0 | 1 | 2);
+    const short = (tie.oppName.match(/[A-Z]/g) ?? ['C', 'O', 'N']).join('').slice(0, 3);
+    const oppClub = generateClub('cont-' + m.season + '-' + round, tie.oppName, short, 0x8844cc, tie.oppStrength, (this.leagueSeed() ^ (round * 131)) >>> 0);
+    const venue: 'home' | 'away' = tie.neutral ? 'home' : (round % 2 === 0 ? 'home' : 'away'); // final on neutral ground, else alternate
+    this.spFixture = { idx: -1, oppClub, oppName: tie.oppName, oppStrength: tie.oppStrength, venue, oppLineup: autoPickXI(oppClub, '4-4-2'), comp: 'cont', contRound: round };
+    this.openLineup('match', { id: 'cont-opp', handle: tie.oppName, venue });
+  }
+  private simContinentalTie() {
+    const m = this.loadMgr(), round = m.contRound ?? 0;
+    if (!m.contElig || m.contOut || round >= 3) return;
+    const tie = contOpponent(this.leagueSeed(), m.season, round as 0 | 1 | 2);
+    const r = this.simFixtureResult(this.clubLeagueStrength(), tie.oppStrength, ((this.leagueSeed() >>> 0) ^ ((m.season * 331 + round * 17) >>> 0)) >>> 0);
+    this.resolveContinental(r.myGoals, r.oppGoals, tie.oppStrength);
+  }
+  /** Apply a continental tie result: win → advance (or lift the cup); level → seeded shootout; loss → out. */
+  private resolveContinental(myGoals: number, oppGoals: number, oppStrength: number) {
+    const m = this.loadMgr(), round = m.contRound ?? 0;
+    let won = myGoals > oppGoals;
+    let pens = false;
+    if (myGoals === oppGoals) { pens = true; const h = ((this.leagueSeed() >>> 0) ^ ((m.season * 733 + round * 29) >>> 0)) >>> 0; won = ((h % 1000) / 1000) < (0.5 + (this.clubLeagueStrength() - oppStrength) * 0.03); }
+    const label = CONT_ROUNDS[round];
+    if (won) {
+      const nextRound = round + 1;
+      if (nextRound >= 3) {
+        const contTitles = (m.contTitles ?? 0) + 1;
+        this.saveMgr({ ...m, contRound: 3, contTitles });
+        toast(`🏆 CONTINENTAL CHAMPIONS! ${this.club?.name} win the cup${pens ? ' on penalties' : ''}`);
+        api.spSeasonReward({ pos: 1, size: 10, sponsor: undefined }).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; toast(`💰 Continental prize +${x.prize.toLocaleString()}c`); }).catch(() => {});
+      } else {
+        this.saveMgr({ ...m, contRound: nextRound });
+        toast(`✅ ${label} won ${myGoals}-${oppGoals}${pens ? ' (pens)' : ''} — into the ${CONT_ROUNDS[nextRound]}!`);
+      }
+    } else {
+      this.saveMgr({ ...m, contOut: true });
+      toast(`❌ Out of the cup — lost the ${label} ${myGoals}-${oppGoals}${pens ? ' on penalties' : ''}`);
+    }
+    this.showSeason();
+  }
+
+  // ── World-Cup-style national tournament — every 4 seasons, the bloodline star's nation competes ──
+  private wcEditionDue(): number | null {
+    const m = this.loadMgr();
+    if (m.season % 4 !== 0) return null;            // staged every 4th season
+    const edition = m.season / 4;                    // 1,2,3,…
+    return m.wcSeen === edition ? null : edition;    // once per staging
+  }
+  private worldCupHtml(): string {
+    const edition = this.wcEditionDue();
+    if (edition == null) return '';
+    const nation = homeNation(this.starSurname());
+    return `<div class="sf-wc"><div class="sf-wc-head">🌐 THE WORLD FINALS — Edition ${edition}</div>`
+      + `<div class="sf-wc-txt">The international summer is here. <b>${this.loadMgr().starName ?? 'Your star'}</b> is away with <b>${nation}</b>, chasing the game's greatest prize.</div>`
+      + `<button class="primary" id="sf-wc-follow">Follow the tournament 🌍</button></div>`;
+  }
+  private async followWorldCup() {
+    const edition = this.wcEditionDue(); if (edition == null) return;
+    const m = this.loadMgr();
+    const nation = homeNation(this.starSurname());
+    const wc = worldCup(this.leagueSeed(), edition, nation, this.starOverall());
+    this.saveMgr({ ...m, wcSeen: edition, wcWins: (m.wcWins ?? 0) + (wc.myFinish === 'Champions' ? 1 : 0) });
+    // legacy reward to the club, scaled by how far the nation went (aspirational peak = real payoff)
+    try { const r = await api.spSeasonReward({ pos: wc.myFinish === 'Champions' ? 1 : wc.myFinish === 'Runners-up' ? 2 : 4, size: 10, sponsor: undefined }); if (this.account?.coins != null) this.account.coins = r.coins; } catch { /* offline */ }
+    this.showWorldCup(wc);
+  }
+  private showWorldCup(wc: WCResult) {
+    this.showScreen('season');
+    const nation = wc.myNation;
+    const groupHtml = wc.groups.map((g, gi) => `<div class="wc-group"><h5>Group ${String.fromCharCode(65 + gi)}</h5>`
+      + `<table class="lt-table wc-gtable"><thead><tr><th>Nation</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>`
+      + g.rows.map((r, i) => `<tr class="${r.mine ? 'mine' : ''} ${i < 2 ? 'wc-qual' : ''}"><td class="lt-name">${r.nation}</td><td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GD > 0 ? '+' : ''}${r.GD}</td><td class="lt-pts">${r.Pts}</td></tr>`).join('')
+      + `</tbody></table></div>`).join('');
+    const semiHtml = wc.semis.map((s) => `<div class="wc-ko-tie ${s.a === nation || s.b === nation ? 'mine' : ''}"><b>${s.a}</b> ${s.gh}-${s.ga} <b>${s.b}</b>${s.pens ? ' (pens)' : ''} → <span class="wc-win">${s.winner}</span></div>`).join('');
+    const f = wc.final;
+    const finalHtml = `<div class="wc-final ${f.a === nation || f.b === nation ? 'mine' : ''}"><div class="wc-final-lbl">🏆 FINAL</div><b>${f.a}</b> ${f.gh}-${f.ga} <b>${f.b}</b>${f.pens ? ' (pens)' : ''}<div class="wc-champ">Champions: <b>${wc.champion}</b></div></div>`;
+    const badge = wc.myFinish === 'Champions' ? '🏆 WORLD CHAMPIONS' : wc.myFinish === 'Runners-up' ? '🥈 Runners-up' : wc.myFinish === 'Semi-finals' ? '🥉 Semi-finalists' : '⚽ Group stage';
+    const verdict = wc.myFinish === 'Champions' ? `${nation} are champions of the world — an immortal chapter for the ${this.starSurname()} name.`
+      : wc.myFinish === 'Runners-up' ? `So close — ${nation} fall at the final hurdle, but what a run.`
+      : wc.myFinish === 'Semi-finals' ? `${nation} reach the last four before bowing out — heads held high.`
+      : `${nation}'s tournament ends in the group stage. The dream lives on for next time.`;
+    $('season-body').innerHTML = `<div class="wc-report"><div class="wc-report-head">🌐 THE WORLD FINALS — Edition ${wc.edition}</div>`
+      + `<div class="wc-verdict ${wc.myFinish === 'Champions' ? 'champ' : ''}"><span class="wc-badge">${badge}</span> ${verdict}</div>`
+      + `<div class="wc-groups">${groupHtml}</div>`
+      + `<h4 class="scout-h4">SEMI-FINALS</h4>${semiHtml}${finalHtml}`
+      + `<div style="text-align:center;margin-top:16px;"><button class="primary" id="wc-back">Back to the season →</button></div></div>`;
+    $('wc-back')?.addEventListener('click', () => this.showSeason());
   }
 
   /** A seeded 'gaffer's take' on the season so far — composed from recent form + league position, so the
@@ -862,20 +983,24 @@ class Game {
     }
     const titles = (m.titles ?? 0) + (t.pos === 1 ? 1 : 0);
     const age = (m.starAge ?? 22) + 1;
-    if (age >= (m.retireAge ?? 34)) { this.retireStar(titles); return; } // his playing days are over — the heir comes through
-    this.saveMgr({ ...m, season: m.season + 1, results: [], starAge: age, titles, sponsor: undefined }); // new season → pick a fresh sponsor
+    if (age >= (m.retireAge ?? 34)) { this.retireStar(titles, m.contTitles ?? 0); return; } // his playing days are over — the heir comes through
+    const qualified = t.pos <= 3; // a top-3 finish books a place in next season's continental cup
+    if (qualified) toast('🌍 Top-3 finish — qualified for the Continental Cup!');
+    this.saveMgr({ ...m, season: m.season + 1, results: [], starAge: age, titles, sponsor: undefined, contElig: qualified, contRound: 0, contOut: false }); // new season → pick a fresh sponsor
     this.showSeason();
   }
 
-  private retireStar(titles: number) {
+  private retireStar(titles: number, contTitles = 0) {
     const m = this.loadMgr();
     const seasons = m.season;
     const mentorship = Math.max(0, (m.starAge ?? 30) - 30); // veteran years spent passing on the game to the next gen
     this.showScreen('academy');
     const surname = (m.starName ?? '').trim().split(/\s+/).slice(1).join(' ') || m.starName || 'the family';
     const mentorLine = mentorship > 0 ? ` In his veteran years he took the youngsters under his wing — that wisdom passes to his heir.` : '';
+    const honours = [titles ? `${titles} league title${titles === 1 ? '' : 's'}` : '', contTitles ? `${contTitles} continental cup${contTitles === 1 ? '' : 's'}` : '', (m.wcWins ?? 0) ? `${m.wcWins} World Finals title${(m.wcWins ?? 0) === 1 ? '' : 's'}` : ''].filter(Boolean);
+    const honourLine = honours.length ? ` and ${honours.join(', ')}` : '';
     $('academy-body').innerHTML = `<div class="cg-graduation"><div class="cg-grad-title">🎬 ${m.starName} hangs up his boots</div>`
-      + `<div class="cg-epilogue">After ${seasons} season${seasons === 1 ? '' : 's'} steering <b>${this.club?.name}</b>${titles ? ` and ${titles} league title${titles === 1 ? '' : 's'}` : ''}, ${m.starName} retires a club great.${mentorLine} But the <b>${surname}</b> name isn't done — his son is already coming through the youth ranks.</div>`
+      + `<div class="cg-epilogue">After ${seasons} season${seasons === 1 ? '' : 's'} steering <b>${this.club?.name}</b>${honourLine}, ${m.starName} retires a club great.${mentorLine} But the <b>${surname}</b> name isn't done — his son is already coming through the youth ranks.</div>`
       + `<div class="cg-grad-windfall">🌳 The bloodline continues${mentorship > 0 ? ` · 🎓 mentored heir (+${Math.min(3, Math.ceil(mentorship / 2))} mentality)` : ''}</div>`
       + `<button id="cg-heir" class="primary">Bring through the heir →</button></div>`;
     $('cg-heir').addEventListener('click', async () => {
@@ -1290,9 +1415,17 @@ class Game {
   /** International call-up — the aspirational ceiling. Uncapped at first; caps accrue once he's good enough. */
   private intlHtml(s: import('./api').CareerState): string {
     const i = s.international; if (!i) return '';
-    return i.capped
-      ? `<div class="cg-intl capped"><span class="cg-intl-lbl">🌍 INTERNATIONAL</span><span class="cg-intl-txt">Called up for his country — <b>${i.caps}</b> cap${i.caps === 1 ? '' : 's'}</span></div>`
-      : `<div class="cg-intl"><span class="cg-intl-lbl">🌍 INTERNATIONAL</span><span class="cg-intl-txt">Uncapped — keep impressing at this level to earn a national call-up.</span></div>`;
+    if (!i.capped) return `<div class="cg-intl"><span class="cg-intl-lbl">🌍 INTERNATIONAL</span><span class="cg-intl-txt">Uncapped — keep impressing at this level to earn a national call-up.</span></div>`;
+    const nat = i.nation ?? 'his country';
+    let capLine = '';
+    if (i.lastCap) {
+      const c = i.lastCap;
+      const venueTxt = c.venue === 'H' ? `home to ${c.oppNation}` : c.venue === 'A' ? `away in ${c.oppNation}` : `${nat} vs ${c.oppNation}`;
+      const res = c.ourGoals > c.forGoals ? 'w' : c.ourGoals < c.forGoals ? 'l' : 'd';
+      const goalTag = c.scored > 0 ? ` · ⚽ ${c.scored === 2 ? 'braced!' : 'scored!'}` : '';
+      capLine = `<div class="cg-intl-cap">📣 Latest call-up (${c.kind}): ${venueTxt} <span class="sf-res ${res}">${c.ourGoals}-${c.forGoals}</span>${goalTag}</div>`;
+    }
+    return `<div class="cg-intl capped"><div class="cg-intl-row"><span class="cg-intl-lbl">🌍 ${nat.toUpperCase()}</span><span class="cg-intl-txt">Called up for his country — <b>${i.caps}</b> cap${i.caps === 1 ? '' : 's'}</span></div>${capLine}</div>`;
   }
 
   /** The stage objective — a target the club/coach sets for this chapter, with a progress bar. Gives each
@@ -2109,8 +2242,15 @@ class Game {
     // SINGLE-PLAYER fixture: record the result into the club season and return to the season view (no server).
     if (this.spFixture) {
       const s = this.engine!.state;
+      const myGoals = s.score[this.mySide], oppGoals = s.score[1 - this.mySide];
+      if (this.spFixture.comp === 'cont') {
+        const oppStrength = this.spFixture.oppStrength;
+        this.showFullTimeCard();               // show the result card, then resolve the tie on dismiss
+        this.pendingCont = { myGoals, oppGoals, oppStrength };
+        return;
+      }
       const m = this.loadMgr();
-      m.results.push({ myGoals: s.score[this.mySide], oppGoals: s.score[1 - this.mySide] });
+      m.results.push({ myGoals, oppGoals });
       this.saveMgr(m);
       this.showFullTimeCard();
       return;
@@ -2204,6 +2344,7 @@ class Game {
       clearTimeout(timer);
       card.removeEventListener('click', dismiss);
       card.classList.add('hidden');
+      if (this.pendingCont) { const c = this.pendingCont; this.pendingCont = null; this.spFixture = null; this.resolveContinental(c.myGoals, c.oppGoals, c.oppStrength); return; } // continental tie → advance/out
       if (this.spFixture) this.showSeason(); else this.showHub(); // SP: back to the season fixture list
     };
     const timer = setTimeout(dismiss, 9000); // longer — there's a match report to read

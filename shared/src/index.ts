@@ -12,3 +12,4 @@ export * from './legacy.js';
 export * from './staking.js';
 export * from './gaffersDiary.js';
 export * from './clubseason.js';
+export * from './intl.js';

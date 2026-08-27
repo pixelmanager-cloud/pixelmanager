@@ -581,7 +581,7 @@
       .cg-rival-gap { font-family: var(--display); font-size: 11px; }
       .cg-rival-gap.up { color: var(--good); } .cg-rival-gap.down { color: var(--home); }
       .cg-intl { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 8px 14px; border-radius: 9px; background: rgba(255,255,255,0.03); border: 1px solid var(--line); font-size: 14px; }
-      .cg-intl.capped { background: color-mix(in srgb, var(--purple) 12%, transparent); border-color: color-mix(in srgb, var(--purple) 40%, transparent); }
+      .cg-intl.capped { background: color-mix(in srgb, var(--purple) 12%, transparent); border-color: color-mix(in srgb, var(--purple) 40%, transparent); flex-direction: column; align-items: stretch; gap: 0; }
       .cg-intl-lbl { font-family: var(--display); font-size: 10px; letter-spacing: 0.5px; color: var(--purple); }
       .cg-intl-txt { color: var(--muted); } .cg-intl.capped .cg-intl-txt { color: var(--text); } .cg-intl-txt b { color: var(--purple); }
       .cg-matchday { margin: -2px -2px 12px; padding: 12px 14px 13px; border-radius: 10px; background: linear-gradient(180deg, rgba(30,40,70,0.55), rgba(14,16,30,0.4));
@@ -656,6 +656,43 @@
       .sf-sponsor-opt:hover { border-color: var(--pink); }
       .sf-sponsor-opt b { display: block; font-family: var(--display); font-size: 12px; color: var(--text); margin-bottom: 3px; }
       .sf-sponsor-opt span { font-size: 12px; color: var(--muted); }
+      /* Continental cup panel */
+      .sf-cont { margin: 0 0 14px; padding: 10px 14px; border-radius: 9px; background: color-mix(in srgb, var(--purple) 10%, transparent); border: 1px solid color-mix(in srgb, var(--purple) 38%, transparent); }
+      .sf-cont.won { background: color-mix(in srgb, #e6c76a 14%, transparent); border-color: color-mix(in srgb, #e6c76a 50%, transparent); }
+      .sf-cont.out { background: rgba(255,255,255,0.03); border-color: var(--line); }
+      .sf-cont-head { display: flex; align-items: center; gap: 8px; margin-bottom: 7px; }
+      .sf-cont-lbl { font-family: var(--display); font-size: 10px; letter-spacing: 0.5px; color: var(--purple); }
+      .sf-cont.won .sf-cont-lbl { color: #e6c76a; }
+      .sf-cont-txt { color: var(--muted); font-size: 14px; }
+      .sf-cont-dot { font-family: var(--display); font-size: 9px; padding: 2px 5px; border-radius: 4px; background: rgba(255,255,255,0.05); color: var(--muted); border: 1px solid var(--line); }
+      .sf-cont-dot.won { background: color-mix(in srgb, var(--good) 25%, transparent); color: var(--good); border-color: transparent; }
+      .sf-cont-dot.now { background: color-mix(in srgb, var(--purple) 30%, transparent); color: #fff; border-color: transparent; }
+      .sf-cont-tie { font-size: 14px; color: var(--text); margin-bottom: 9px; }
+      .sf-cont-btns { display: flex; gap: 8px; }
+      .sf-cont-btns button { font-family: var(--display); font-size: 11px; padding: 7px 13px; }
+      /* World Cup panel + report */
+      .sf-wc { margin: 0 0 14px; padding: 12px 15px; border-radius: 10px; background: linear-gradient(150deg, color-mix(in srgb, var(--accent) 18%, transparent), color-mix(in srgb, var(--purple) 12%, transparent)); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); }
+      .sf-wc-head { font-family: var(--display); font-size: 13px; color: var(--accent); margin-bottom: 6px; }
+      .sf-wc-txt { font-size: 14px; color: var(--text); margin-bottom: 10px; }
+      .wc-report-head { font-family: var(--display); font-size: 16px; color: var(--accent); margin-bottom: 12px; }
+      .wc-verdict { font-size: 15px; color: var(--text); margin-bottom: 16px; padding: 10px 14px; border-radius: 9px; background: rgba(255,255,255,0.03); border-left: 3px solid var(--accent); }
+      .wc-verdict.champ { background: color-mix(in srgb, #e6c76a 14%, transparent); border-left-color: #e6c76a; }
+      .wc-badge { font-family: var(--display); font-size: 11px; padding: 3px 8px; border-radius: 5px; background: color-mix(in srgb, var(--accent) 25%, transparent); color: #fff; margin-right: 8px; }
+      .wc-verdict.champ .wc-badge { background: #e6c76a; color: #221a00; }
+      .wc-groups { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+      .wc-group { flex: 1; min-width: 240px; }
+      .wc-group h5 { font-family: var(--display); font-size: 11px; color: var(--muted); margin: 0 0 6px; }
+      .wc-gtable tr.wc-qual td { color: var(--good); }
+      .wc-gtable tr.mine td, .wc-gtable tr.mine .lt-name { color: var(--accent) !important; font-weight: 700; }
+      .wc-ko-tie { font-size: 14px; color: var(--muted); padding: 6px 10px; margin-bottom: 5px; border-radius: 7px; background: rgba(255,255,255,0.03); }
+      .wc-ko-tie.mine { background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--text); }
+      .wc-win { color: var(--good); font-weight: 700; }
+      .wc-final { margin-top: 10px; padding: 12px 15px; border-radius: 10px; text-align: center; font-size: 16px; background: color-mix(in srgb, #e6c76a 10%, transparent); border: 1px solid color-mix(in srgb, #e6c76a 40%, transparent); }
+      .wc-final.mine { border-color: var(--accent); }
+      .wc-final-lbl { font-family: var(--display); font-size: 12px; color: #e6c76a; margin-bottom: 6px; }
+      .wc-champ { margin-top: 8px; font-size: 14px; color: var(--text); }
+      .cg-intl-row { display: flex; align-items: center; gap: 10px; }
+      .cg-intl-cap { margin-top: 6px; font-size: 13px; color: var(--muted); }
       .sf-gaffer { font-size: 15px; color: #d8e0ea; font-style: italic; margin: 0 0 14px; padding: 10px 14px; border-radius: 9px; background: linear-gradient(160deg, rgba(80,90,130,0.14), rgba(40,45,70,0.1)); border-left: 3px solid var(--purple); }
       .ff { font-family: var(--display); font-size: 9px; padding: 1px 3px; border-radius: 3px; margin-left: 2px; }
       .ff-w { background: color-mix(in srgb, var(--good) 25%, transparent); color: var(--good); }
