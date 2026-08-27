@@ -1,5 +1,78 @@
 # Football Royalty — UI / Visual Audit & Fix List
 
+## 2026-08-27 overnight visual-agent pass — status update
+
+**P0 readability items R1–R4 below are already DONE** (fixed before this session, verified in the
+current shipped code at `b57aa88`): buttons/labels/tables now use VT323 not Press Start 2P; base
+font is 22px with roomier controls; `--muted:#c8c8e8` clears ~8:1 on `--panel`; the CRT overlay is
+already faint (scanline alpha 0.045, vignette 0.15). Left the R1–R4 write-ups below for context/history
+— don't re-do them.
+
+**Shipped this pass** (client/index.html theme + client/src/sprites.ts — my lane only):
+- `style(theme): global keyboard focus-visible ring` — every button/select/input/link/`[tabindex]`
+  now gets a visible cyan `:focus-visible` outline. There was previously *no* global focus ring
+  (a couple of inputs even set `outline:none` with no replacement), so keyboard-only nav had no way
+  to see where it was. Before: invisible. After: 3px cyan ring, offset 2px, keyboard-only (doesn't
+  show on mouse clicks).
+- `style(theme): app-wide prefers-reduced-motion support` — added a global
+  `@media (prefers-reduced-motion: reduce)` that collapses all animation/transition durations to
+  ~0 (via `!important`, deliberately, so it wins over every current and future per-component
+  animation without needing to chase each one down). Before: only `.pc-card` respected the OS
+  reduced-motion setting; the CRT scanlines aside, dozens of other keyframes (toasts, trophy glows,
+  pulses, shimmers, the pixel loader) did not. After: the whole app respects it.
+- `style(theme): fix FOOTBALL ROYALTY title overflow on narrow/mobile widths` — **real bug**,
+  found by screenshotting at 375px: `#mm-title` was a fixed `40px` Press Start 2P and clipped past
+  the right edge of the panel on any phone-width screen ("FOOTBALL" ran off-panel, uncontained).
+  Fixed with a `max-width:480px` query dropping it to `7.2vw`. Verify with a mobile-width screenshot
+  of the main menu if you touch this again.
+- `art(sprites): add medal, card, kit, flag, badge, crown, coin, whistle` (two commits) — expanded
+  the pixel-icon set in `sprites.ts` from 9 to 17 icons, all in the existing 16×16 grid + shared
+  `PAL` palette so they're visually consistent with the existing set. Rendered and eyeballed all of
+  them at 4–8× scale before committing (one first draft — `medal` — read as "mouse ears" on a coin
+  and was redrawn as a proper ribbon+disc). **None of these are wired into `main.ts` yet** — that's
+  intentionally left to whoever next touches the relevant screen, to avoid a main.ts collision:
+  - `crown` — thematic fit for the "Royalty"/bloodline moments (dynasty screen, retirement/legend
+    beats, the mode-select ROYALTY branding) — the game's namesake but currently has zero crown
+    imagery anywhere in the UI.
+  - `medal` — POTM / end-of-season individual awards (`#honours-feed .aw-icon` currently just uses
+    an emoji at 26px; swapping in `sprite('medal')` would match the rest of the pixel-icon language).
+  - `card` — bookings in match commentary/ticker (`.cm-card.yellow`/`.cm-card.red` currently pure
+    color text, no icon).
+  - `coin` — the earned-coin economy display (topbar balance, upgrade-cost pills) uses a 💰 emoji
+    everywhere; `sprite('coin')` would be more in-keeping once someone's ready to touch those call
+    sites.
+  - `kit` — kit/identity customizer tab header (screenshotted this pass — currently a plain 🎽 emoji
+    next to "KIT").
+  - `flag`, `badge`, `whistle` — held in reserve for competition markers, club-badge placeholders,
+    and a referee/match-official flourish respectively; no current call site identified yet.
+
+### Bug found, NOT fixed (out of lane — lives in the feature CSS block, not the global theme)
+- **`.cg-tut` (career-game tutorial banner, `client/index.html` ~line 844) breaks text reflow.**
+  Screenshotted mid-career (Academy → Now tab, first tutorial banner): the sentence "This is a
+  moment in his young career. Read what it needs (the tags), then play the card that fits best —
+  good fits develop him faster." renders as disjointed fragments on their own lines instead of
+  wrapping naturally. Root cause: `.cg-tut { display:flex; ... }` on a container whose direct
+  children are a mix of raw text nodes and inline `<b>` tags plus a trailing `<button>` — flex turns
+  each text run and each `<b>` into its own flex item (no `flex-wrap` set), so the sentence can't
+  reflow as normal text; each fragment breaks independently instead. **Proposed fix (CSS-only, no
+  main.ts change needed):** drop `display:flex` from `.cg-tut`, let it flow as a normal block
+  (text + inline `<b>`s reflow correctly), and absolutely-position `.cg-tut-x` (the "Got it ✕"
+  button) top-right with `padding-right` on the container to reserve space for it instead of using
+  flex to lay it out. This is in the feature CSS block at the bottom of the file (career-game
+  screens), so left for whoever owns that block / post-reconcile rather than touched directly here.
+
+### Presentation-direction update — M1–M6 below are likely OBSOLETE
+`docs/direction.md` (dated today) DECIDED to **drop the live 2D match engine + `pixelart.ts` sprite
+sim entirely** in favor of text-driven match commentary (already built) — "text-driven matches +
+gorgeous management UI + a stunning dynasty tree." I could not find `pixelart.ts` or any Phaser/2D
+match-sprite code in the current tree at all (only `sprites.ts`, the static pixel-icon system, which
+is unaffected and is what this pass worked on) — so this removal may already be done, or the M1–M6
+items below (kickoff cluster, shot volume, home/away bias, sprite polish, playback speed, movement
+interpolation) may simply no longer have a code path to fix. **Whoever picks up P1 match-engine
+items should first confirm whether a 2D match sprite view still exists before investing in M1–M6.**
+If it's gone, those items should be struck from this list; if some 2D fallback still exists, they
+still apply.
+
 A walkthrough of every screen (login, hub, lineup editor, match view, league/cup/honours,
 club facilities, scouting, market) plus the match engine, on desktop + mobile. Goal:
 **make the game easier to read and look at while keeping the retro-arcade identity**
