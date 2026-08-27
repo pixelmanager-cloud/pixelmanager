@@ -605,6 +605,9 @@ const TAG_FOCUS_BY_CHAPTER: Record<string, Array<{ id: string; icon: string; nam
   ],
 };
 const GK_TAG_FOCUS_BY_CHAPTER: Record<string, { id: string; icon: string; name: string; desc: string; tag: Tag }> = {
+  Grassroots:     { id: 'focus_keeping0a', icon: '🧤', name: 'Dive Around in the Back Garden', desc: 'Nobody asked you to go in goal — you just never wanted to come out again.', tag: 'keeping' },
+  Academy:        { id: 'focus_keeping0b', icon: '🧤', name: 'Learn Your Angles', desc: 'The goalkeeping coach keeps moving you six inches at a time until you start to see why.', tag: 'keeping' },
+  Scholar:        { id: 'focus_keeping0c', icon: '🧤', name: 'Catch, Don’t Punch', desc: 'A stubborn habit the coaches are slowly drilling out of you, cross by cross.', tag: 'keeping' },
   'Youth Team':   { id: 'focus_keeping1', icon: '🧤', name: 'Extra Hours on the Shot-Stopping Machine', desc: 'Ball after ball, low and hard — drill the reactions until they’re instinct.', tag: 'keeping' },
   Breakthrough:   { id: 'focus_keeping2', icon: '🧤', name: 'Master Commanding Your Box',              desc: 'Crosses, corners, one-on-ones — own every inch of your penalty area.', tag: 'keeping' },
   'First Team':   { id: 'focus_keeping3', icon: '🧤', name: 'Perfect Your Distribution',                desc: 'Turn every save into the first pass of a counter-attack.', tag: 'keeping' },
