@@ -169,6 +169,107 @@ export interface WCPlayerPath {
   final?: { opp: string; oppStrength: number };
   seededChampion: string;
 }
+// ── Narrative flavour (additive, presentational-only) ─────────────────────────────────────────────
+// Deterministic one-line "how it felt" text for continental ties and World-Finals runs — the
+// structural math above (tieScore/knockout/worldCup) only ever returns numbers; these functions turn
+// a result into a sentence, the same way gaffersDiary.ts does for the domestic league. Pure + seeded,
+// so the same tie/edition always reads the same way. Not yet called from client/src/main.ts (that's
+// a client-shell change, out of this lane) — ready for a future hookup.
+function pick<T>(h: number, arr: readonly T[]): T { return arr[h % arr.length]; }
+
+const CONT_WIN: string[] = [
+  'A statement result on the continental stage — the kind that gets the club noticed abroad.',
+  'Away from the bread and butter of the league, and the club delivers when it matters.',
+  'Continental nights like that are what a season is remembered for.',
+  'The kind of European result that lingers in the memory long after the final whistle.',
+  'A big scalp on the continental run, and belief is growing that this could go somewhere.',
+];
+const CONT_DRAW_PENS: string[] = [
+  'Settled on penalties — the cruellest way to go through, but a way through all the same.',
+  'Nerves shredded from twelve yards, but the club lives to fight another round.',
+  'A shootout decided it. Somebody had to blink first, and it wasn\'t us.',
+];
+const CONT_LOSS: string[] = [
+  'The continental run ends here. A step further than some feared, not as far as others hoped.',
+  'Outclassed on the night by a side with a bit more continental pedigree.',
+  'A tough exit, but a run worth being proud of all the same.',
+  'The dream ends, but nights like these are exactly why the club chases this competition.',
+];
+const CONT_FINAL_WIN: string[] = [
+  'Champions of the continent. Whatever else this season holds, that\'s forever in the record books.',
+  'A continental trophy for the cabinet — the biggest night in the club\'s history, some say.',
+  'The final delivered, and the whole club will remember exactly where they were for this one.',
+];
+const CONT_FINAL_LOSS: string[] = [
+  'So close to continental glory, and it slips away in the final itself. A bitter one.',
+  'Runners-up on the biggest stage the club has ever reached. Progress, even if it doesn\'t feel like it tonight.',
+  'A final lost is still a final reached. Small comfort tonight, real credit in time.',
+];
+
+/** A deterministic "how it felt" line for a continental-cup tie result. `won` null means a draw that
+ *  needs `pens` to resolve (knockout ties are always decided, so this covers the shootout framing). */
+export function contTieBlurb(seed: number, season: number, round: ContRound, aWon: boolean, pens: boolean): string {
+  const h = hash32(seed, season * 977 + 41, round * 131, 8801);
+  const isFinal = round === 2;
+  if (aWon) return pick(h, isFinal ? CONT_FINAL_WIN : pens ? CONT_DRAW_PENS : CONT_WIN);
+  return pick(h, isFinal ? CONT_FINAL_LOSS : pens ? CONT_DRAW_PENS : CONT_LOSS);
+}
+
+const CALLUP_DEBUT: string[] = [
+  'A first cap at last — pulling on the national shirt for the very first time.',
+  'International recognition arrives: a maiden call-up, and a proud day for the whole family.',
+  'From club football to the national stage — cap number one is in the books.',
+];
+const CALLUP_SCORED: string[] = [
+  'On the scoresheet on the international stage — a night to remember in a national shirt.',
+  'Delivers for the national team when it mattered, and the manager will have noticed.',
+  'A goal at international level. The kind of moment that gets talked about back home.',
+];
+const CALLUP_QUIET: string[] = [
+  'Another cap added to the collection — steady, if unspectacular, in national colours.',
+  'A quieter night in the national shirt, but every cap still counts toward the legacy.',
+  'Did a job for the national side without grabbing the headlines.',
+];
+/** A deterministic "how it felt" line for a national-team call-up. */
+export function callUpBlurb(seed: number, capNo: number, nation: string, scored: number): string {
+  const h = hash32(seed, capNo * 613 + 17, nameSeed(nation), 9101);
+  if (capNo === 1) return pick(h, CALLUP_DEBUT);
+  if (scored > 0) return pick(h, CALLUP_SCORED);
+  return pick(h, CALLUP_QUIET);
+}
+
+const WC_FINISH_BLURB: Record<WCResult['myFinish'], string[]> = {
+  'Champions': [
+    'World champions. The pinnacle of the international game, and it belongs to us.',
+    'Champions of the world — a moment that will be replayed for the rest of a career.',
+  ],
+  'Runners-up': [
+    'So close to the very top — runners-up at a World Finals is still a career-defining run.',
+    'A final reached and lost. Heartbreaking tonight, historic in the years to come.',
+  ],
+  'Semi-finals': [
+    'A semi-final exit at the World Finals — agonisingly close to the very biggest stage.',
+    'Fell at the semi-final. A superb tournament all the same.',
+  ],
+  'Quarter-finals': [
+    'A quarter-final finish at the World Finals — a run to be proud of, if it ended a round too soon.',
+    'Out at the last eight. The tournament stops here, this time.',
+  ],
+  'Group stage': [
+    'A group-stage exit from the World Finals. Plenty to learn from before the next one comes around.',
+    'The tournament ends early. A disappointing showing on the biggest stage of all.',
+  ],
+  'Did not qualify': [
+    'Watching the World Finals from home this time. A painful one to sit out.',
+    'No World Finals this time around — the next qualifying campaign starts the moment this one ends.',
+  ],
+};
+/** A deterministic "how it felt" line for a national-team tournament finish. */
+export function worldCupFinishBlurb(seed: number, edition: number, myNation: string, finish: WCResult['myFinish']): string {
+  const h = hash32(seed, edition * 7919 + 3, nameSeed(myNation), 9500);
+  return pick(h, WC_FINISH_BLURB[finish]);
+}
+
 export function playerPath(wc: WCResult): WCPlayerPath {
   const me = wc.myNation;
   const gi = wc.groups.findIndex((g) => g.rows.some((r) => r.mine));
