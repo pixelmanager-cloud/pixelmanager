@@ -2914,7 +2914,7 @@ class Game {
     const slots = this.draftLineup.playerIds;
     const benched = this.lapsed(); // NFTs unavailable via a lapsed contract or retirement — not selectable
     const usedElsewhere = (slotIdx: number) => new Set(slots.filter((_, j) => j !== slotIdx));
-    $('xi').innerHTML = slots.map((pid, i) => {
+    const xiHtml = slots.map((pid, i) => {
       const roleForSlot = SLOT_ROLES[this.draftTactics.formation][i];
       const used = usedElsewhere(i);
       const isLoan = (id: string) => id.startsWith('loan-');
@@ -2937,8 +2937,15 @@ class Game {
         + rb('fk', this.draftTakers.fk === i, 'F', 'Free-kick taker')
         + rb('corner', this.draftTakers.corner === i, 'C', 'Corner taker')
         + `</span>`;
-      return `<div class="slot role-${roleForSlot}"><span class="role role-${roleForSlot}">${roleForSlot}</span><select class="player-sel" data-i="${i}">${opts}</select><select class="duty-sel" data-i="${i}" title="${curDutyDesc}">${dutyOpts}</select>${tag}<span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span>${badges}</div>`;
+      const oop = cur.role !== roleForSlot; // player fielded out of his natural position (PT-85)
+      return `<div class="slot role-${roleForSlot}${oop ? ' slot-oop' : ''}"${oop ? ` title="Out of position — a ${cur.role} in a ${roleForSlot} slot"` : ''}><span class="role role-${roleForSlot}">${roleForSlot}</span><select class="player-sel" data-i="${i}">${opts}</select><select class="duty-sel" data-i="${i}" title="${curDutyDesc}">${dutyOpts}</select>${tag}<span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span>${oop ? '<span class="slot-oop-badge" title="Out of position">⚠</span>' : ''}${badges}</div>`;
     }).join('');
+    // validate the XI: warn (don't block) on no keeper / players out of position, so a naive manager gets a signal (PT-85)
+    const noGK = !slots.some((_, i) => this.playerAt(i).role === 'GK');
+    const oopCount = slots.filter((_, i) => this.playerAt(i).role !== SLOT_ROLES[this.draftTactics.formation][i]).length;
+    const warnMsgs = [noGK ? 'no goalkeeper' : '', oopCount ? `${oopCount} player${oopCount > 1 ? 's' : ''} out of position` : ''].filter(Boolean);
+    const warn = warnMsgs.length ? `<div class="xi-warn">⚠️ <b>Check your XI:</b> ${warnMsgs.join(' · ')} — they'll still play, but a player out of position underperforms.</div>` : '';
+    $('xi').innerHTML = warn + xiHtml;
     Array.from($('xi').querySelectorAll('button.rb')).forEach((b) => {
       b.addEventListener('click', () => {
         const el = b as HTMLElement; const i = Number(el.dataset.i); const role = el.dataset.role!;

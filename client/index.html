@@ -1150,6 +1150,9 @@
       .xi { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; }
       .slot { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 20px; padding: 3px 8px 3px 6px; border-left: 6px solid var(--line);
         border-radius: 0 6px 6px 0; } /* min-width:0 lets the slot shrink to its grid cell so a wide tier badge doesn't push the row out */
+      .slot.slot-oop { border-left-color: var(--warn); background: color-mix(in srgb, var(--warn) 8%, transparent); } /* out of position (PT-85) */
+      .slot .slot-oop-badge { color: var(--warn); font-size: 15px; }
+      .xi-warn { grid-column: 1 / -1; font-size: 14px; color: var(--warn); background: color-mix(in srgb, var(--warn) 10%, var(--panel)); border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--line)); border-radius: 8px; padding: 8px 11px; margin-bottom: 8px; }
       .slot .role { font-family: var(--body); font-size: 14px; width: 36px; text-align: center; color: #0a0a16; padding: 4px 0; }
       .slot select.player-sel { flex: 1; min-width: 0; }
       .slot select.duty-sel { flex: none; width: 118px; font-size: 17px; padding: 3px 20px 3px 6px; color: var(--cyan); background-position: right 6px center; }
