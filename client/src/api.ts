@@ -25,7 +25,7 @@ import {
   type FacilityKey, type MissionRow, type Token, type CareerAction,
 } from '@fm/shared';
 import {
-  localStore, getActiveModel, getActiveSlotId, newGame as newGameSlot, continueSave, setSaveBackend, type SaveBackend,
+  localStore, getActiveModel, getActiveSlotId, newGame as newGameSlot, continueSave, deleteSave as deleteSaveSlot, setSaveBackend, type SaveBackend,
 } from './save';
 
 void _makeClub; // silence unused-import — see comment above
@@ -215,6 +215,9 @@ export const api = {
   /** Scout board: `n` seeded 10-year-old candidates to choose from. Deliberately shows only what a scout
    *  could glimpse — a position, ONE physical trait, and a hedged note — never the true ceiling. The
    *  potential is a mystery that only emerges by developing him. Deterministic per save (no reroll). */
+  /** Permanently remove a save's MODEL from the backend (by its slot/token id). The caller also clears the
+   *  per-handle localStorage keys — together this makes "Delete forever" actually delete everything (PT-77). */
+  deleteSave: async (slotId: string) => { await deleteSaveSlot(slotId); return { ok: true as const }; },
   scoutProspects: async (n = 3) => {
     await ensureActive();
     const slot = getActiveSlotId() ?? 'x';

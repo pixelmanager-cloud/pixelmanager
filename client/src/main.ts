@@ -375,7 +375,11 @@ class Game {
 
   private deleteSave(id: string) {
     const save = this.loadSaves().find((s) => s.id === id);
-    this.openConfirm(`Delete <b>${save?.name ?? 'this save'}</b>? This bloodline is gone for good — there's no undo.`, 'Delete forever', () => {
+    this.openConfirm(`Delete <b>${save?.name ?? 'this save'}</b>? This bloodline is gone for good — there's no undo.`, 'Delete forever', async () => {
+      // "no undo" must mean it: remove the save MODEL from the backend, and sweep every per-handle localStorage
+      // key (fm_mgr_/fm_tier_/fm_plan_/fm_ach_/fm_bought_/fm_biddismiss_/onboarding) — not just the index (PT-77)
+      try { if (save?.token) await api.deleteSave(save.token); } catch { /* best-effort */ }
+      try { for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && k.includes(id)) localStorage.removeItem(k); } } catch { /* ignore */ }
       this.saveSaves(this.loadSaves().filter((s) => s.id !== id)); this.renderMainMenu(); toast('Save deleted');
     });
   }
