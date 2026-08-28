@@ -287,8 +287,11 @@ export const api = {
     const season = model.profile.season;
     const ci = tokenContract(t, season);
     const coins = model.profile.coins;
-    if (coins < ci.extendCost) throw apiErr('not enough coins', { need: ci.extendCost, have: coins });
-    await localStore.addCoins(OWNER, -ci.extendCost);
+    // NOTE: no live caller — extendPlayer routes through negotiateStar. Kept aligned to the wage × length cost
+    // model (NOT a flat one-season debit) so re-wiring this can't reintroduce the "length is free" exploit (PT-32/PT-127).
+    const dealCost = ci.extendCost * ci.lengthSeasons;
+    if (coins < dealCost) throw apiErr('not enough coins', { need: dealCost, have: coins });
+    await localStore.addCoins(OWNER, -dealCost);
     const fresh = signContract(season, t.greed ?? 10, t.personality ?? undefined);
     await localStore.updateToken(playerId, { signed_season: fresh.signedSeason, length_seasons: fresh.lengthSeasons });
     await bumpMoraleLocal(playerId, 'extended');

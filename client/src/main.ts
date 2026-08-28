@@ -757,8 +757,10 @@ class Game {
         + `<div class="pc-crow"><span>Age ${ci.age}${ci.age >= 39 ? ' · nearing retirement' : ''}</span>`
         + `<span>${ci.available ? `<span class="ico-inline ico-lg">${sprite('contract')}</span> ${ci.seasonsLeft} season${ci.seasonsLeft === 1 ? '' : 's'} left` : ci.staked === false ? '⭘ idle — not staked' : '⛔ contract lapsed — benched'}</span></div>`
         + (ci.morale != null ? `<div class="pc-morale"><i>morale</i><span class="pc-mbg"><b style="width:${ci.morale}%"></b></span><span>${ci.moraleLabel}</span></div>` : '')
-        + `<div class="pc-cactions"><button class="pc-extend" data-extend="${p.id}"><span class="ico-inline ico-lg">${sprite('seal')}</span> ${ci.available ? 'Re-sign' : 'Extend'} · ${ci.extendCost}c · ${ci.lengthSeasons}y</button>`
-        + `<span class="pc-sell">or sell ~${ci.sellValue}c</span></div>` + stakeHtml + `</div>`;
+        // show the TOTAL cost (wage × length), not one season's wage — talks charge the whole deal (PT-32/PT-124)
+        + `<div class="pc-cactions"><button class="pc-extend" data-extend="${p.id}"><span class="ico-inline ico-lg">${sprite('seal')}</span> ${ci.available ? 'Re-sign' : 'Extend'} · ~${(ci.extendCost * ci.lengthSeasons).toLocaleString()}c over ${ci.lengthSeasons}y</button>`
+        // the bloodline star has no release-clause sale path in single-player — he leaves only via a rival's bid (PT-125)
+        + (isNftId(p.id) ? `<span class="pc-sell">leaves only via a rival bid</span>` : `<span class="pc-sell">worth ~${ci.sellValue}c</span>`) + `</div>` + stakeHtml + `</div>`;
     }
     const el = document.createElement('div');
     el.id = 'player-card-ov';
@@ -825,7 +827,7 @@ class Game {
         : `<span class="ns-tag lapsed">lapsed</span>`;
       const dot = ci.morale != null ? `<span class="ns-mood" title="morale: ${ci.moraleLabel}" style="background:${ci.morale >= 75 ? '#6ad06a' : ci.morale >= 45 ? '#e0c14a' : '#d06a6a'}"></span>` : '';
       const act = ci.staked === false ? `<button class="ns-act" data-nstake="${ci.playerId}">Stake</button>`
-        : `<button class="ns-act" data-nextend="${ci.playerId}">${ci.available ? 'Re-sign' : 'Extend'} ${ci.extendCost}c</button>`;
+        : `<button class="ns-act" data-nextend="${ci.playerId}">${ci.available ? 'Re-sign' : 'Extend'} ~${(ci.extendCost * ci.lengthSeasons).toLocaleString()}c</button>`; // total deal cost (wage × length), not one season (PT-124)
       return `<div class="ns-row" data-open="${ci.playerId}"><span class="ns-name">${dot}${name}</span><span class="ns-age">${ci.age}y</span>${status}${act}</div>`;
     }).join('');
     return `<div class="nft-status"><div class="ns-head">⭐ YOUR STARS — lifecycle at a glance</div>${rows}</div>`;
@@ -1354,10 +1356,14 @@ class Game {
 
   private staffHtml(): string {
     const owned = this.loadMgr().staff ?? [];
+    const coins = this.account?.coins ?? 0; // gate unaffordable hires like the transfer market + facilities do (PT-126)
     const rows = BACKROOM_STAFF.map((s) => {
       const has = owned.includes(s.id);
+      const hireBtn = coins < s.cost
+        ? `<button class="sf-hire" disabled title="Not enough coins (need ${s.cost}c)">Hire · 💰${s.cost}</button>`
+        : `<button class="sf-hire" data-staff="${s.id}">Hire · 💰${s.cost}</button>`;
       return `<div class="sf-staff-row${has ? ' owned' : ''}"><span class="sf-staff-ico">${s.icon}</span><div class="sf-staff-body"><div class="sf-staff-name">${s.name}${has ? ' ✓' : ''}</div><div class="sf-staff-desc">${s.desc}</div></div>`
-        + (has ? '' : `<button class="sf-hire" data-staff="${s.id}">Hire · 💰${s.cost}</button>`) + `</div>`;
+        + (has ? '' : hireBtn) + `</div>`;
     }).join('');
     return `<h4 class="scout-h4" style="margin-top:18px;">🧑‍🏫 BACKROOM STAFF</h4>${rows}`;
   }
