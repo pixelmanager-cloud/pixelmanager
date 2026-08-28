@@ -33,6 +33,10 @@ PRIMARY = [(179,18,43),(14,42,94),(31,111,67),(20,20,31),(90,16,48),(184,134,11)
 ACCENT  = [(240,230,200),(255,210,74),(238,242,255),(127,199,255),(255,255,255),(226,178,54)]
 EMBLEM_LIGHT = [(255,255,255),(255,214,90),(240,230,200),(190,232,255)]
 OUTLINE = (11,11,24)
+# semantic colours for the iconographic emblems (steel swords, stone towers, green trees, orange flames…)
+STEEL, GOLD, STONE, LEAF, FLAME_O = (200,206,220), (240,196,70), (196,192,182), (74,168,86), (255,146,46)
+ICON_COL = {"sword": STEEL, "crossed_swords": STEEL, "hammer": STEEL, "anchor": STEEL,
+            "tower": STONE, "tree": LEAF, "flame": FLAME_O}
 
 PATTERNS = ["solid","vhalf","vstripe","hband","sash","quarters","cross_field","hoop"]
 # only the emblem families that read as authentic football crests: circles (disc/ring/target), stars
@@ -109,7 +113,7 @@ def _sword(d, col):
     d.rectangle([15,19,17,23], fill=col + (255,))                          # grip
     d.rectangle([14,23,18,25], fill=col + (255,))                          # pommel
 def _hammer(d, col):
-    d.rectangle([10,5,22,11], fill=col + (255,)); d.rectangle([15,11,17,26], fill=col + (255,))
+    d.rectangle([10,5,22,11], fill=col + (255,)); d.rectangle([15,11,17,26], fill=(120,80,45,255))  # steel head, wood haft
 def _anchor(d, col):
     d.ellipse([13,3,19,9], outline=col + (255,), width=2); d.rectangle([15,7,17,23], fill=col + (255,))
     d.rectangle([10,12,22,14], fill=col + (255,)); d.arc([8,13,24,27], 15, 165, fill=col + (255,), width=2)
@@ -128,13 +132,19 @@ def draw_emblem(base, kind, col):
     """Draw an emblem centred. Iconographic kinds are drawn then auto-outlined; geometric kinds get a fat
     dark outline via `outlined`."""
     if kind in ICON_EMB:
-        lay = Image.new("RGBA", base.size, (0, 0, 0, 0)); dd = ImageDraw.Draw(lay)
+        icol = ICON_COL[kind]                       # semantic colour, not the field accent
+        big = Image.new("RGBA", base.size, (0, 0, 0, 0)); dd = ImageDraw.Draw(big)
         if kind == "crossed_swords":
-            s = Image.new("RGBA", base.size, (0, 0, 0, 0)); _sword(ImageDraw.Draw(s), col)
-            lay.alpha_composite(s.rotate(35, resample=Image.NEAREST, center=(16, 16)))
-            lay.alpha_composite(s.rotate(-35, resample=Image.NEAREST, center=(16, 16)))
+            s = Image.new("RGBA", base.size, (0, 0, 0, 0)); _sword(ImageDraw.Draw(s), icol)
+            big.alpha_composite(s.rotate(35, resample=Image.NEAREST, center=(16, 16)))
+            big.alpha_composite(s.rotate(-35, resample=Image.NEAREST, center=(16, 16)))
         else:
-            {"sword": _sword, "hammer": _hammer, "anchor": _anchor, "tower": _tower, "tree": _tree, "flame": _flame}[kind](dd, col)
+            {"sword": _sword, "hammer": _hammer, "anchor": _anchor, "tower": _tower, "tree": _tree, "flame": _flame}[kind](dd, icol)
+        # shrink so the icon sits in the badge with breathing room (was filling it), then outline crisply
+        sc = 23
+        small = big.resize((sc, sc), Image.NEAREST)
+        lay = Image.new("RGBA", base.size, (0, 0, 0, 0))
+        lay.alpha_composite(small, ((32 - sc) // 2, (32 - sc) // 2))
         return auto_outline(lay)
     lay = Image.new("RGBA", base.size, (0, 0, 0, 0))
     d = ImageDraw.Draw(lay)
