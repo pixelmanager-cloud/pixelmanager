@@ -12,7 +12,7 @@ export type { StandingOrders };
 import {
   makeClub as _makeClub, // re-exported nowhere — freshSave() (save.ts) already calls this; kept for reference
   validateLineup, cleanDuties,
-  overall, managerPrestige, signContract, graduationEpilogue, clubInvestOf,
+  overall, managerPrestige, signContract, graduationEpilogue, clubInvestOf, TIERS,
   transferList, transferFee, sellValue, incomingBid, MIN_SQUAD, MAX_SQUAD,
   contractDemand, evaluateContractOffer, wageForLength,
   FACILITY_KEYS, FACILITY_META, MAX_LEVEL, upgradeCost, effectAt,
@@ -461,7 +461,7 @@ export const api = {
   // SP SEASON PRIZE — also where the local season counter advances (see docs note in save.ts's
   // profile.season) and where a league finish is banked as an honour (the old pod/wall-clock season
   // rollover that used to write honours is gone; this is the one call-per-season-end main.ts makes).
-  spSeasonReward: async (body: { pos: number; size: number; sponsor?: string; wins?: number; draws?: number; losses?: number }) => {
+  spSeasonReward: async (body: { pos: number; size: number; sponsor?: string; wins?: number; draws?: number; losses?: number; tier?: number; kind?: 'league' | 'continental' | 'world' }) => {
     await ensureActive();
     const model = getActiveModel();
     const size = Math.max(2, Math.min(30, Math.floor(Number(body?.size) || 10)));
@@ -476,8 +476,14 @@ export const api = {
     model.profile.wins = (model.profile.wins ?? 0) + clampN(body?.wins);
     model.profile.draws = (model.profile.draws ?? 0) + clampN(body?.draws);
     model.profile.losses = (model.profile.losses ?? 0) + clampN(body?.losses);
-    await localStore.addHonour(OWNER, String(season), season, 'Local', pos, pos === 1 ? 1 : 0, Date.now(), prize + sponsorBonus, 'league');
-    model.profile.season = season + 1; // local counter — advances once per season played
+    // store the pyramid TIER in the honour's `tier` field (was a 'Local' placeholder), so prestige can weight
+    // a top-flight title far above a Sunday-league one and credit the climb (PT-86).
+    const kind = body?.kind === 'continental' ? 'continental' : body?.kind === 'world' ? 'world' : 'league';
+    await localStore.addHonour(OWNER, String(season), season, String(body?.tier ?? ''), pos, pos === 1 ? 1 : 0, Date.now(), prize + sponsorBonus, kind);
+    // ONLY the league season roll advances the season counter — a cup (continental/world) banks coins + a
+    // distinctly-kinded honour but must not bump profile.season or it desyncs the ledger and files a phantom
+    // LEAGUE title mid-season (PT-94).
+    if (kind === 'league') model.profile.season = season + 1;
     await localStore.addCoins(OWNER, prize + sponsorBonus); // also schedules the persist that banks the season bump above
     return { ok: true as const, prize, sponsorBonus, coins: getActiveModel().profile.coins };
   },
@@ -614,8 +620,13 @@ export const api = {
     // in single-player, so highestTierIdx stays 0 (titles + wins + longevity carry the prestige).
     const model = getActiveModel();
     const honours = await localStore.honoursFor(OWNER, 9999);
-    const wins = model.profile.wins ?? 0, draws = model.profile.draws ?? 0, losses = model.profile.losses ?? 0, highestTierIdx = 0;
-    const honourLites = honours.map((h) => ({ tierIdx: 0, title: h.title, kind: (h.kind === 'cup' ? 'cup' : 'league') as 'cup' | 'league' }));
+    const wins = model.profile.wins ?? 0, draws = model.profile.draws ?? 0, losses = model.profile.losses ?? 0;
+    // tierIdx is 0 (bottom) .. TIERS-1 (top flight): a title won in a higher tier is worth far more prestige,
+    // and the highest tier ever reached is itself an achievement — so the pyramid climb finally registers (PT-86).
+    const tierIdxOf = (h: { tier: string }) => { const ct = Number(h.tier); return ct >= 1 && ct <= TIERS ? TIERS - ct : 0; };
+    const highestTierIdx = honours.reduce((m, h) => Math.max(m, tierIdxOf(h)), 0);
+    // continental/world cup wins count as CUP titles (not league championships) toward prestige (PT-94)
+    const honourLites = honours.map((h) => ({ tierIdx: tierIdxOf(h), title: h.title, kind: (h.kind === 'league' ? 'league' : 'cup') as 'cup' | 'league' }));
     const seasons = new Set(honours.map((h) => h.season_number)).size;
     return { prestige: managerPrestige({ wins, draws, losses, honours: honourLites, highestTierIdx, seasons }), record: { wins, draws, losses, seasons } };
   },

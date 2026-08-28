@@ -1254,7 +1254,7 @@ class Game {
       : '';
     const tier = this.clubTier();
     const header = done
-      ? `<div class="season-summary done"><span class="ss-crest">${crest(clubName, 20)}</span>✅ Season ${m.season} complete — <b>${clubName}</b> finished <b>${this.ordinal(t.pos)}</b> of ${t.size} in <b>${tierName(tier)}</b>${t.pos === 1 ? ' 🏆 CHAMPIONS!' : (t.pos <= 2 && tier > 1) ? ` ⬆️ PROMOTED to ${tierName(tier - 1)}!` : ''}. <button class="primary" id="sf-next-season">Next season →</button></div>`
+      ? `<div class="season-summary done"><span class="ss-crest">${crest(clubName, 20)}</span>✅ Season ${m.season} complete — <b>${clubName}</b> finished <b>${this.ordinal(t.pos)}</b> of ${t.size} in <b>${tierName(tier)}</b>${t.pos === 1 ? ' 🏆 CHAMPIONS!' : (t.pos <= 2 && tier > 1) ? ` ⬆️ PROMOTED to ${tierName(tier - 1)}!` : (t.pos >= t.size - 1 && tier < TIERS) ? ` ⬇️ RELEGATED to ${tierName(tier + 1)}` : ''}. <button class="primary" id="sf-next-season">Next season →</button></div>`
       : `<div class="season-summary"><span class="ss-crest">${crest(clubName, 20)}</span><b>${clubName}</b> · <b>${tierName(tier)}</b> · Season ${m.season} · MD ${nextIdx + 1}/${fixtures.length} · <b>${this.ordinal(t.pos)}</b>/${t.size}${formStrip}${starLine}</div>`;
     // INCOMING BID for the star — a rival's offer this season (deterministic); dismissed once per season
     const starP = m.starId ? this.club.players.find((p) => p.id === m.starId) : undefined;
@@ -1264,7 +1264,18 @@ class Game {
     const bidBanner = bid ? `<div class="sf-bid"><span class="sf-bid-txt"><b>🤝 ${bid.club}</b> have made a <b>${bid.fee.toLocaleString()}c</b> bid for ${m.starName}. Cash in and bring the heir through early — or keep your dynasty player?</span><span class="sf-bid-btns"><button id="sf-bid-accept" class="primary">Accept ${bid.fee.toLocaleString()}c</button> <button id="sf-bid-reject">Reject</button></span></div>` : '';
     // PROMOTION / RELEGATION reveal — shown at the start of the season after a move (from nextSeason)
     const tierMove = m.lastTierMove && !done && nextIdx <= 2
-      ? `<div class="sf-tiermove sf-tiermove-${m.lastTierMove}">${m.lastTierMove === 'promoted' ? '⬆️ PROMOTED' : '⬇️ RELEGATED'} — welcome to <b>${tierName(tier)}</b>. ${m.lastTierMove === 'promoted' ? 'The football gets harder from here — this is the reward for the climb.' : 'A setback for the club — but the climb starts again.'}</div>`
+      ? (() => {
+          // vary the reveal by season so a multi-season climb doesn't read word-for-word each time, and don't
+          // frame a RELEGATION as a celebratory "welcome to" (PT-88)
+          const promoted = m.lastTierMove === 'promoted';
+          const line = [
+            promoted ? 'The football gets harder from here — this is the reward for the climb.' : 'A bitter drop — but the rebuild, and the climb back, start now.',
+            promoted ? 'A division higher, a division tougher. The club has earned its place.' : 'Down a division. The badge is the same; the job is to bounce straight back.',
+            promoted ? 'Up among better sides now — savour it, then go again.' : 'A setback for the club. Regroup, and win it back.',
+            promoted ? 'The hard yards paid off. New level, new challenge.' : "Relegated, and it stings — this is where a club's character shows.",
+          ][((this.leagueSeed() ^ Math.imul(m.season + 1, 2654435761)) >>> 0) % 4];
+          return `<div class="sf-tiermove sf-tiermove-${m.lastTierMove}">${promoted ? `⬆️ PROMOTED — up to <b>${tierName(tier)}</b>.` : `⬇️ RELEGATED — down to <b>${tierName(tier)}</b>.`} ${line}</div>`;
+        })()
       : '';
     const simBtn = done ? '' : `<div style="text-align:center;margin-top:10px;"><button id="sf-sim" style="font-family:var(--display);font-size:11px;padding:7px 14px;">⏩ Sim the rest of the season</button></div>`;
     // TRAINING FOCUS — the stat your star works on this season (young grow it, veterans slow their decline)
@@ -1412,7 +1423,7 @@ class Game {
         this.checkAchievements(); // continental cup won
         audio.chime('triumph');
         toast(`🏆 CONTINENTAL CHAMPIONS! ${this.club?.name} win the cup${pens ? ' on penalties' : ''}`);
-        api.spSeasonReward({ pos: 1, size: 10, sponsor: undefined }).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; toast(`💰 Continental prize +${x.prize.toLocaleString()}c`); }).catch(() => {});
+        api.spSeasonReward({ pos: 1, size: 10, sponsor: undefined, kind: 'continental' }).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; toast(`💰 Continental prize +${x.prize.toLocaleString()}c`); }).catch(() => {}); // kind:'continental' — a cup, not a league title, and doesn't bump the season (PT-94)
       } else {
         this.saveMgr({ ...m, contRound: nextRound, contBlurb });
         toast(`✅ ${label} won ${myGoals}-${oppGoals}${pens ? ' (pens)' : ''} — into the ${CONT_ROUNDS[nextRound]}!`);
@@ -1472,7 +1483,7 @@ class Game {
     const { wc, path } = this.wcData(edition);
     if (!path.qualified) { // group-stage exit — nothing to play; show the full tournament and bank a small payoff
       this.saveMgr({ ...m, wcSeen: edition, wcStage: 'done' });
-      try { const r = await api.spSeasonReward({ pos: 6, size: 10, sponsor: undefined }); if (this.account?.coins != null) this.account.coins = r.coins; } catch { /* offline */ }
+      try { const r = await api.spSeasonReward({ pos: 6, size: 10, sponsor: undefined, kind: 'world' }); if (this.account?.coins != null) this.account.coins = r.coins; } catch { /* offline */ }
       this.showWorldCup(wc, 'Group stage'); return;
     }
     this.saveMgr({ ...m, wcEdition: edition, wcStage: 'qf', wcRun: [] }); // qualified → play the knockout run
@@ -1531,7 +1542,7 @@ class Game {
   /** After a played run ends, show the tournament with the star's ACTUAL result + bank the legacy payoff. */
   private async concludeWorldCup(finish: WCResult['myFinish'], finalFoe: string) {
     const m = this.loadMgr();
-    try { const r = await api.spSeasonReward({ pos: finish === 'Champions' ? 1 : finish === 'Runners-up' ? 2 : finish === 'Semi-finals' ? 3 : 4, size: 10, sponsor: undefined }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 World Finals payoff +${r.prize.toLocaleString()}c`); } catch { /* offline */ }
+    try { const r = await api.spSeasonReward({ pos: finish === 'Champions' ? 1 : finish === 'Runners-up' ? 2 : finish === 'Semi-finals' ? 3 : 4, size: 10, sponsor: undefined, kind: 'world' }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 World Finals payoff +${r.prize.toLocaleString()}c`); } catch { /* offline */ }
     const { wc } = this.wcData(m.wcEdition!);
     this.checkAchievements(); // World Finals final reached / won
     this.showWorldCup(wc, finish, finalFoe);
@@ -1637,7 +1648,7 @@ class Game {
     // this season's W/D/L (fed to the lifetime manager record that powers prestige)
     const rec = (m.results ?? []).reduce((a, r) => { r.myGoals > r.oppGoals ? a.wins++ : r.myGoals < r.oppGoals ? a.losses++ : a.draws++; return a; }, { wins: 0, draws: 0, losses: 0 });
     // bank the season prize money (coins → reinvest in facilities), closing the manager economy loop
-    try { const r = await api.spSeasonReward({ pos: t.pos, size: t.size, sponsor: m.sponsor, ...rec }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 Season prize: +${r.prize.toLocaleString()}c${r.sponsorBonus ? ` + 📣 ${r.sponsorBonus}c sponsor bonus` : ''}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ` · ${this.ordinal(t.pos)}`}`); } catch { /* offline: no prize */ }
+    try { const r = await api.spSeasonReward({ pos: t.pos, size: t.size, sponsor: m.sponsor, tier: this.clubTier(), ...rec }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 Season prize: +${r.prize.toLocaleString()}c${r.sponsorBonus ? ` + 📣 ${r.sponsorBonus}c sponsor bonus` : ''}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ` · ${this.ordinal(t.pos)}`}`); } catch { /* offline: no prize */ }
     // BOARD VERDICT — how the board judges this season vs what your prestige (and last season) earned you.
     // Stored on the save and surfaced atop next season's planning screen (see showSeason).
     let lastBoard: { message: string; mood: BoardMood; expectation: string } | undefined;
@@ -2013,8 +2024,15 @@ class Game {
         const k: TrophyKey = kind === 'continental' ? 'continental' : kind === 'cup' ? 'cup' : kind === 'worldfinals' || kind === 'world' ? 'worldfinals' : 'league';
         return trophyImg(k, 40);
       };
+      // a readable trophy name: the tier's league name (h.tier now holds the pyramid tier — PT-86), or the cup (PT-94)
+      const trophyName = (h: { kind?: string; tier?: string }): string => {
+        if (h.kind === 'continental') return 'Continental Cup';
+        if (h.kind === 'world' || h.kind === 'worldfinals') return 'World Finals';
+        const ct = Number(h.tier);
+        return ct >= 1 && ct <= TIERS ? `${tierName(ct)} title` : 'League title';
+      };
       const cabinet = titles.length
-        ? `<div class="tr-cabinet">` + titles.sort((a, b) => a.season_number - b.season_number).map((h) => `<div class="tr-trophy"><div class="tr-trophy-ico">${trophyFor(h.kind)}</div><div class="tr-trophy-name">${h.tier}</div><div class="tr-trophy-sub">Season ${h.season_number}${h.kind && h.kind !== 'league' ? ` · ${h.kind}` : ''}</div></div>`).join('') + `</div>`
+        ? `<div class="tr-cabinet">` + titles.sort((a, b) => a.season_number - b.season_number).map((h) => `<div class="tr-trophy"><div class="tr-trophy-ico">${trophyFor(h.kind)}</div><div class="tr-trophy-name">${trophyName(h)}</div><div class="tr-trophy-sub">Season ${h.season_number}</div></div>`).join('') + `</div>`
         : `<div class="tr-empty"><div class="tr-empty-art">${trophyImg('league', 64)}</div><div class="muted">No trophies yet — win your league to lift your first title.</div></div>`;
       // retired numbers (per-save honour for a top-tier 'Immortal' legend)
       const TOP_TIER = 'Immortal', rKey = 'fm_retired_' + (this.account?.handle ?? '');
