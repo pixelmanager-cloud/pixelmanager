@@ -37,7 +37,8 @@ OUTLINE = (11,11,24)
 PATTERNS = ["solid","vhalf","vstripe","hband","sash","quarters","cross_field","hoop"]
 # only the emblem families that read as authentic football crests: circles (disc/ring/target), stars
 # (single + a three-star arc), the cross, and a real soccer ball. (Dropped: saltire/chevron/diamond/crown/bars.)
-EMBLEMS  = ["disc","ring","target","star","star2","star3","star5","plus","ball"]
+EMBLEMS  = ["disc","ring","target","star","star2","star3","star5","plus","ball",
+            "sword","crossed_swords","hammer","anchor","tower","tree","flame"]
 
 def pattern_color(pat, x, y, prim, acc):
     if pat == "solid":       return prim
@@ -88,8 +89,53 @@ def bevel_and_rim(img, rim):
             elif edge_dn:    px[x, y] = darken(p) + (255,)       # bottom rim in shadow
             elif edge_side:  px[x, y] = rim + (255,)             # coloured side frame
 
+# ── iconographic emblems (swords, hammer, anchor, tower, tree, flame) — drawn then auto-outlined ──────
+ICON_EMB = {"sword", "crossed_swords", "hammer", "anchor", "tower", "tree", "flame"}
+
+def auto_outline(lay):
+    """Wrap every opaque pixel with a 1px dark outline — gives hand-drawn-looking icons a clean pixel edge."""
+    px = lay.load(); out = lay.copy(); o = out.load()
+    for y in range(32):
+        for x in range(32):
+            if px[x, y][3] == 0:
+                for nx, ny in ((x-1,y),(x+1,y),(x,y-1),(x,y+1),(x-1,y-1),(x+1,y+1),(x-1,y+1),(x+1,y-1)):
+                    if 0 <= nx < 32 and 0 <= ny < 32 and px[nx, ny][3] > 0:
+                        o[x, y] = OUTLINE + (255,); break
+    return out
+
+def _sword(d, col):
+    d.polygon([(16,3),(18,7),(18,17),(14,17),(14,7)], fill=col + (255,))   # blade
+    d.rectangle([11,17,21,19], fill=col + (255,))                          # cross-guard
+    d.rectangle([15,19,17,23], fill=col + (255,))                          # grip
+    d.rectangle([14,23,18,25], fill=col + (255,))                          # pommel
+def _hammer(d, col):
+    d.rectangle([10,5,22,11], fill=col + (255,)); d.rectangle([15,11,17,26], fill=col + (255,))
+def _anchor(d, col):
+    d.ellipse([13,3,19,9], outline=col + (255,), width=2); d.rectangle([15,7,17,23], fill=col + (255,))
+    d.rectangle([10,12,22,14], fill=col + (255,)); d.arc([8,13,24,27], 15, 165, fill=col + (255,), width=2)
+    d.polygon([(8,20),(12,23),(7,24)], fill=col + (255,)); d.polygon([(24,20),(20,23),(25,24)], fill=col + (255,))
+def _tower(d, col):
+    d.rectangle([10,12,22,26], fill=col + (255,))
+    for bx in (10,15,20): d.rectangle([bx,8,bx+2,12], fill=col + (255,))
+    d.rectangle([14,19,18,26], fill=OUTLINE + (255,))
+def _tree(d, col):
+    d.rectangle([15,18,17,26], fill=(96,64,38,255)); d.ellipse([9,5,23,20], fill=col + (255,))
+def _flame(d, col):
+    d.polygon([(16,3),(21,12),(20,20),(16,25),(12,20),(11,12)], fill=col + (255,))
+    d.polygon([(16,10),(18,15),(16,21),(14,15)], fill=lighten(col, 1.5) + (255,))
+
 def draw_emblem(base, kind, col):
-    """Draw a geometric emblem centred, with a 1px dark outline + a soft top highlight (2-tone)."""
+    """Draw an emblem centred. Iconographic kinds are drawn then auto-outlined; geometric kinds get a fat
+    dark outline via `outlined`."""
+    if kind in ICON_EMB:
+        lay = Image.new("RGBA", base.size, (0, 0, 0, 0)); dd = ImageDraw.Draw(lay)
+        if kind == "crossed_swords":
+            s = Image.new("RGBA", base.size, (0, 0, 0, 0)); _sword(ImageDraw.Draw(s), col)
+            lay.alpha_composite(s.rotate(35, resample=Image.NEAREST, center=(16, 16)))
+            lay.alpha_composite(s.rotate(-35, resample=Image.NEAREST, center=(16, 16)))
+        else:
+            {"sword": _sword, "hammer": _hammer, "anchor": _anchor, "tower": _tower, "tree": _tree, "flame": _flame}[kind](dd, col)
+        return auto_outline(lay)
     lay = Image.new("RGBA", base.size, (0, 0, 0, 0))
     d = ImageDraw.Draw(lay)
     cx, cy = 16, 16
@@ -101,13 +147,13 @@ def draw_emblem(base, kind, col):
     if kind == "star":
         outlined(lambda d,dx,dy,c: d.polygon(star_points(cx+dx, cy+dy, 8, 3.4), fill=c))
     elif kind in ("star2", "star3", "star5"):
-        # a row of small stars in a gentle arc (championship-style), count varies 2/3/5
+        # small stars in an arc across the TOP of the badge (championship-style), count varies 2/3/5
         n = int(kind[-1])
-        r = 2.6 if n <= 3 else 2.1                 # smaller than a single star, smaller still when many
-        span = min(20, (n - 1) * (7 if n <= 3 else 5))
+        r = 2.4 if n <= 3 else 2.0
+        span = min(22, (n - 1) * (7 if n <= 3 else 5))
         for i in range(n):
             sx = cx + (i - (n - 1) / 2) * (span / (n - 1) if n > 1 else 0)
-            sy = cy - (1.4 - abs(i - (n - 1) / 2) * 0.9)   # subtle arc: middle sits highest
+            sy = 6 + abs(i - (n - 1) / 2) * 0.8   # near the top, gentle downward arc at the edges
             outlined(lambda d,dx,dy,c,sx=sx,sy=sy,r=r: d.polygon(star_points(sx+dx, sy+dy, r, r*0.42), fill=c))
     elif kind == "ring":
         outlined(lambda d,dx,dy,c: d.ellipse([cx-7+dx, cy-7+dy, cx+7+dx, cy+7+dy], outline=c, width=3))
@@ -179,9 +225,9 @@ def make_badge(template, seed):
     bevel_and_rim(img, rim=acc)
     # 3) a roundel behind the emblem (most single emblems) — but not multi-star sets, which spread across
     #    the field like championship stars; a few plainer badges get decorative studs instead
-    multistar = emb in ("star2", "star3", "star5")
-    roundel = draw_roundel(img, seed, prim) if (seed % 3 != 0 and not multistar) else False
-    if not roundel and not multistar and seed % 2 == 0:
+    no_roundel = emb in ("star2", "star3", "star5") or emb in ICON_EMB  # these sit on the field, not a disc
+    roundel = draw_roundel(img, seed, prim) if (seed % 3 != 0 and not no_roundel) else False
+    if not roundel and not no_roundel and seed % 2 == 0:
         add_pips(img, seed, acc)
     # 4) the emblem on top
     img.alpha_composite(draw_emblem(img, emb, ecol))
