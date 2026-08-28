@@ -3134,14 +3134,26 @@ class Game {
     const winner = h > a ? home : a > h ? away : null;
     const loser = h > a ? away : a > h ? home : null;
     const margin = Math.abs(h - a), hi = Math.max(h, a), lo = Math.min(h, a);
-    let lead: string;
-    if (!winner) lead = this.cpick([`${home} and ${away} shared the points in a ${h}–${a} draw.`, `Honours even at ${h}–${a}.`, `Nothing to separate them — ${h}–${a}.`], h + a, 30);
-    else {
-      const verb = margin >= 3 ? this.cpick(['ran riot against', 'romped past', 'were rampant against'], margin, 31)
-        : margin === 2 ? this.cpick(['saw off', 'got the better of', 'had too much for'], margin, 31)
-        : this.cpick(['edged out', 'nicked it against', 'just got past'], margin, 31);
-      lead = `${winner} ${verb} ${loser}, ${hi}–${lo}.`;
+    // OCCASION prefix — a cup tie (and a FINAL above all) must read bigger than a Tuesday league game (PT-82).
+    const fx = this.spFixture;
+    let occasion = '';
+    if (fx?.comp === 'cont') {
+      const rn = ['the Quarter-Final', 'the Semi-Final', 'the Final'][fx.contRound ?? 0] ?? 'a continental tie';
+      occasion = fx.contRound === 2 ? '🏆 <b>THE CONTINENTAL CUP FINAL.</b> ' : `🌍 <b>Continental Cup — ${rn}.</b> `;
+    } else if (fx?.comp === 'wc') {
+      occasion = '🌐 <b>World Finals knockout.</b> ';
+    } else if (fx && fx.idx >= 0) {
+      occasion = fx.venue === 'home' ? '' : ''; // league: keep it plain; the venue already shows on the fixture card
     }
+    let lead: string;
+    if (!winner) lead = this.cpick([`${home} and ${away} shared the points in a ${h}–${a} draw.`, `Honours even at ${h}–${a}.`, `Nothing to separate them — ${h}–${a}.`, `A hard-fought ${h}–${a} stalemate.`, `${home} ${h}, ${away} ${a} — neither could find the winner.`], h + a, 30);
+    else {
+      const verb = margin >= 3 ? this.cpick(['ran riot against', 'romped past', 'were rampant against', 'tore', 'demolished'], margin, 31)
+        : margin === 2 ? this.cpick(['saw off', 'got the better of', 'had too much for', 'were worth their win over'], margin, 31)
+        : this.cpick(['edged out', 'nicked it against', 'just got past', 'squeezed past', 'held on to beat'], margin, 31);
+      lead = `${winner} ${verb === 'tore' ? `tore ${loser} apart` : `${verb} ${loser}`}, ${hi}–${lo}.`;
+    }
+    lead = occasion + lead;
     const reds = events.filter((e) => e.type === 'red_card').map((e) => e.playerName);
     const redLine = reds.length ? ` ${reds.join(' and ')} saw red.` : '';
     const names = [...goalsBy.entries()];
@@ -3149,21 +3161,30 @@ class Game {
     const assists = new Map<string, number>();
     for (const e of events) if (e.type === 'goal' && e.playerName2) assists.set(e.playerName2, (assists.get(e.playerName2) ?? 0) + 1);
     const asLine = assists.size ? `<div class="scorers">🅰 Assists: ${[...assists.entries()].map(([n, c]) => c > 1 ? `${n} ×${c}` : n).join(' · ')}</div>` : '';
-    // spotlight the bloodline star when HE features — his contribution was invisible in the report (PT-21)
+    // CONTRIBUTIONS: goals (×2) + assists (×1), with each player's side — so a playmaker's or a non-scoring
+    // game is visible, POTM can be an assister (0-0s + assist-only games get a POTM), and your OWN star isn't
+    // upstaged on his own report by the opponent's scorer (PT-74).
+    const contrib = new Map<string, { pts: number; team: 0 | 1; goals: number; assists: number }>();
+    const bump = (name: string, team: 0 | 1, dg: number, da: number) => { const e = contrib.get(name) ?? { pts: 0, team, goals: 0, assists: 0 }; e.goals += dg; e.assists += da; e.pts += dg * 2 + da; e.team = team; contrib.set(name, e); };
+    for (const e of events) if (e.type === 'goal') { if (e.playerName) bump(e.playerName, e.teamIdx, 1, 0); if (e.playerName2) bump(e.playerName2, e.teamIdx, 0, 1); }
+    // spotlight the bloodline star when HE features — goals AND assists (not goals only) (PT-21/PT-74)
     const starName = this.loadMgr().starName;
-    const starScored = starName ? names.find(([n]) => n === starName) : undefined;
-    const starLineFt = starScored ? `<div class="scorers ft-star">⭐ <b>${starName}</b> got on the scoresheet${starScored[1].mins.length >= 2 ? ` — ${starScored[1].mins.length} goals` : ''}</div>` : '';
+    const sc = starName ? contrib.get(starName) : undefined;
+    const starLineFt = sc && (sc.goals || sc.assists)
+      ? `<div class="scorers ft-star">⭐ <b>${starName}</b> ${sc.goals ? `got on the scoresheet${sc.goals >= 2 ? ` — ${sc.goals} goals` : ''}${sc.assists ? ` and set up ${sc.assists}` : ''}` : `set up ${sc.assists} goal${sc.assists > 1 ? 's' : ''}`}</div>`
+      : '';
     $('ft-report').innerHTML = `${lead}${redLine}<div class="scorers">${scLine}</div>${asLine}${starLineFt}`;
-    // player of the match: most goals, tie broken toward YOUR star first, then the winning side
+    // player of the match: most contribution points, tie broken toward YOUR star first, then the winning side
     const winSide: 0 | 1 | null = h > a ? 0 : a > h ? 1 : null;
-    names.sort((x, y) => y[1].mins.length - x[1].mins.length
+    const ranked = [...contrib.entries()].sort((x, y) => y[1].pts - x[1].pts
       || (Number(y[0] === starName) - Number(x[0] === starName))
       || (Number(y[1].team === winSide) - Number(x[1].team === winSide)));
     const potmEl = $('ft-potm');
-    if (names.length) {
-      const [n, g] = names[0];
+    if (ranked.length) {
+      const [n, c] = ranked[0];
+      const bits = [c.goals ? `${c.goals} goal${c.goals > 1 ? 's' : ''}` : '', c.assists ? `${c.assists} assist${c.assists > 1 ? 's' : ''}` : ''].filter(Boolean).join(', ');
       potmEl.classList.remove('hidden');
-      potmEl.innerHTML = `<span class="potm-lbl">★ PLAYER OF THE MATCH</span>${n}${g.mins.length >= 2 ? ` — ${g.mins.length} goals` : ''}`;
+      potmEl.innerHTML = `<span class="potm-lbl">★ PLAYER OF THE MATCH</span>${n}${bits ? ` — ${bits}` : ''}`;
     } else potmEl.classList.add('hidden');
   }
 
