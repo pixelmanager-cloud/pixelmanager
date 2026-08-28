@@ -39,6 +39,13 @@ const BACKROOM_STAFF = [
 const METER_ICON: Record<string, string> = { authority: '🧑‍🏫', peers: '👥', family: '🏠', school: '🎒', agent: '🤝', fans: '📣', sponsors: '📸', partner: '❤️' };
 // Readable names for the relationship-meter icons (tooltip + legend so the summer-focus icon-math is decodable — playtest PT-10).
 const METER_NAME: Record<string, string> = { authority: 'Coach', peers: 'Teammates', family: 'Family', school: 'School', agent: 'Agent', fans: 'Fans', sponsors: 'Sponsors', partner: 'Partner' };
+// Normalize a typed family name at the source: strip anything that isn't a letter/space/'/- (kills the
+// HTML-injection vector, PT-78), collapse whitespace, and title-case each word so "MESSI" / "de bruyne"
+// store + render as "Messi" / "De Bruyne" (PT-80). Since the cleaned name now flows into the club name, the
+// founder/heir surnames and every screen, sanitizing here keeps all of them safe + tidy.
+const cleanFamilyName = (raw: string): string =>
+  raw.replace(/[^\p{L}\s'-]/gu, '').replace(/\s+/g, ' ').trim()
+     .split(' ').map((w) => (w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w)).join(' ');
 // Readable full names for the stat abbreviations shown around the UI (tooltip on hover — playtest fix:
 // abbreviations like CMP/CRE/LDR/WRK were unexplained).
 const STAT_FULL: Record<string, string> = { pace: 'Pace', strength: 'Strength', passing: 'Passing', shooting: 'Shooting', tackling: 'Tackling', positioning: 'Positioning', workrate: 'Work rate', keeping: 'Goalkeeping', setPiece: 'Set pieces', stamina: 'Stamina', composure: 'Composure', creativity: 'Creativity', leadership: 'Leadership', teamwork: 'Teamwork', aggression: 'Aggression' };
@@ -467,7 +474,7 @@ class Game {
    *  order); quitting mid-match confirms first so progress isn't lost by accident. */
   private openPauseMenu() {
     document.getElementById('pause-ov')?.remove();
-    const ov = document.createElement('div'); ov.id = 'settings-ov'; // reuse the centred-overlay styling
+    const ov = document.createElement('div'); ov.id = 'pause-ov'; // id must match the remove() above so reopening replaces, not stacks (PT-79)
     ov.innerHTML = `<div class="tt-card"><div class="set-head"><div class="tt-title">⏸ PAUSED</div><button class="set-x" aria-label="Close">✕</button></div>`
       + `<button class="tt-opt" id="pm-resume"><b>▶ Resume</b><span>Back to the game</span></button>`
       + `<button class="tt-opt" id="pm-settings"><b>⚙ Settings</b><span>Music, motion, screen effects</span></button>`
@@ -492,9 +499,8 @@ class Game {
 
   /** New Game: silently create a local profile (no handle/password shown) and drop the player in. */
   private async startNewGame(rawName: string) {
-    const raw = rawName.trim();
-    if (!raw) { toast('Enter a family name to begin your bloodline'); try { ($('mm-name') as HTMLInputElement).focus(); } catch { /* */ } return; } // PT-39: don't silently found "My Club"
-    const name = raw.charAt(0).toUpperCase() + raw.slice(1); // PT-40: capitalise the family name (rossi → Rossi)
+    const name = cleanFamilyName(rawName); // PT-40/PT-78/PT-80: capitalise, title-case, strip injection chars
+    if (!name) { toast('Enter a family name to begin your bloodline'); try { ($('mm-name') as HTMLInputElement).focus(); } catch { /* */ } return; } // PT-39: don't silently found "My Club"
     const handle = ((name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12) || 'club') + '-' + Math.random().toString(36).slice(2, 6)).toLowerCase();
     const password = Math.random().toString(36).slice(2) + 'Aa1'; // random; the player never sees or types it
     $('login-error').textContent = 'Creating your club…';
@@ -643,8 +649,7 @@ class Game {
     });
     // live preview of the in-game club name + crest as you type (the club becomes "<name>'s Club")
     const updateNamePreview = () => {
-      const rawIn = ($('mm-name') as HTMLInputElement).value.trim();
-      const raw = rawIn ? rawIn.charAt(0).toUpperCase() + rawIn.slice(1) : ''; // preview capitalised, matching the saved name (PT-40)
+      const raw = cleanFamilyName(($('mm-name') as HTMLInputElement).value); // preview matches the saved name exactly (PT-40/PT-78/PT-80)
       $('mm-preview').innerHTML = raw
         ? `<span class="mp-hint">Your club:</span> ${crest(raw + "'s Club", 26)} <b>${raw}'s Club</b> <span class="mp-hint">· the ${raw} bloodline</span>`
         : `<span class="mp-hint">Enter a family name — your club becomes “&lt;name&gt;'s Club” and the name carries down the generations.</span>`;
@@ -919,7 +924,7 @@ class Game {
       if (r.coins != null && this.account) this.account.coins = r.coins;
       if (r.outcome === 'accept') {
         audio.chime('success');
-        toast(`✍️ ${r.note} · ${length}-season deal · −${wage.toLocaleString()}c`);
+        toast(`✍️ ${r.note} · ${length}-season deal · −${(wage * length).toLocaleString()}c`); // the total charged (wage × length), matching the modal — not the per-season wage (PT-61)
         this.setMe(await api.me()); close();
       } else {
         const res = document.getElementById('cn-result');
@@ -1078,7 +1083,9 @@ class Game {
    *  (or the weakest overall) so he's never silently benched — the "your man on the pitch" promise. (PT-20) */
   private starGuarded(lineup: Lineup): Lineup {
     const starId = this.loadMgr().starId;
-    if (!starId || !this.club || lineup.playerIds.includes(starId)) return lineup;
+    // don't force an INJURED star into the XI — availableClub() excludes him, so buildXI would find no player
+    // and splice in a nameless NaN-overall "ghost" (10 men + a phantom). When he's hurt, leave the healthy XI. (PT-73)
+    if (!starId || !this.club || lineup.playerIds.includes(starId) || this.injured.has(starId)) return lineup;
     const star = this.club.players.find((p) => p.id === starId);
     if (!star) return lineup; // star isn't in this squad (shouldn't happen mid-manager-phase)
     const starters = lineup.playerIds.map((id) => this.club!.players.find((p) => p.id === id)).filter(Boolean) as Player[];
@@ -1677,14 +1684,12 @@ class Game {
   };
   private acceptStarBid(bid: { club: string; fee: number }, m: MgrState) {
     const surname = (m.starName ?? '').trim().split(/\s+/).slice(1).join(' ') || 'the family';
-    this.openConfirm(`Sell <b>${m.starName}</b> to <b>${bid.club}</b> for <b>${bid.fee.toLocaleString()}c</b>? He leaves the club now — and his son comes through early to carry the <b>${surname}</b> name on.`, 'Sell the star', async () => {
-      try {
-        const r = await api.sellStar(bid.fee);
-        if (this.account) this.account.coins = r.coins;
-        audio.chime('triumph');
-        toast(`💰 ${m.starName} sold to ${bid.club} · +${bid.fee.toLocaleString()}c`);
-        this.retireStar(m.titles ?? 0, m.contTitles ?? 0, { fee: bid.fee, club: bid.club });
-      } catch { toast('The sale fell through'); }
+    this.openConfirm(`Sell <b>${m.starName}</b> to <b>${bid.club}</b> for <b>${bid.fee.toLocaleString()}c</b>? He leaves the club now — and his son comes through early to carry the <b>${surname}</b> name on.`, 'Sell the star', () => {
+      // The fee is NOT banked here — it lands only when the succession completes (bringThroughHeir → succeed),
+      // so abandoning the will screen can't keep the cash while the star stays in the squad (PT-60).
+      audio.chime('triumph');
+      toast(`🤝 ${bid.club} agree ${bid.fee.toLocaleString()}c for ${m.starName} — bring his heir through to seal it`);
+      this.retireStar(m.titles ?? 0, m.contTitles ?? 0, { fee: bid.fee, club: bid.club });
     });
   }
   private retireStar(titles: number, contTitles = 0, sold?: { fee: number; club: string }, finalMove?: { move: 'promoted' | 'relegated'; tier: string }) {
@@ -1726,27 +1731,28 @@ class Game {
         + `<div class="cg-prompt">What does ${m.starName} pass down to his heir?</div>`
         + `<div id="cg-will">${willCards}</div>`;
       document.querySelectorAll('#cg-will [data-will]').forEach((el) => el.addEventListener('click', () =>
-        this.bringThroughHeir(m, seasons, titles, appliedMentorship, (el as HTMLElement).dataset.will as 'craft' | 'name' | 'fortune')));
+        this.bringThroughHeir(m, seasons, titles, appliedMentorship, (el as HTMLElement).dataset.will as 'craft' | 'name' | 'fortune', sold?.fee ?? 0)));
     }));
   }
 
   /** Complete the succession: apply the chosen inheritance, record the heirloom for the Trophy Room, and
    *  reveal the heir. */
-  private async bringThroughHeir(m: MgrState, seasons: number, titles: number, mentorship: number, inheritance: 'craft' | 'name' | 'fortune') {
+  private async bringThroughHeir(m: MgrState, seasons: number, titles: number, mentorship: number, inheritance: 'craft' | 'name' | 'fortune', saleFee = 0) {
     const w = Game.WILL[inheritance];
     const will = $('cg-will');
     if (will) will.outerHTML = `<div class="cg-grad-windfall">${w.icon} The heir inherits <b>${w.label}</b></div><button id="cg-heir" class="primary" disabled>Raising the next generation…</button>`;
     try {
-      const r = await api.succeed(m.starId!, { seasons, titles, mentorship, inheritance });
+      const r = await api.succeed(m.starId!, { seasons, titles, mentorship, inheritance, saleFee });
+      if (this.account && typeof r.coins === 'number') this.account.coins = r.coins; // the sale fee + legacy are banked atomically inside succeed (PT-60)
       this.recordHeirloom(r.prospect.generation, `${w.icon} ${w.label}`); // remembered against the heir's generation
       this.clearMgr(); // back to player phase — the heir's card-career begins
       this.setMe(await api.me());
       this.checkAchievements(); // a legend retired → new generation / legends / rating milestones
-      toast(`${w.icon} The heir inherits ${w.label}${r.legacy ? ` · +${r.legacy.toLocaleString()}c legacy` : ''}`);
+      toast(`${w.icon} The heir inherits ${w.label}${r.saleFee ? ` · 💰 +${r.saleFee.toLocaleString()}c from the sale` : ''}${r.legacy ? ` · +${r.legacy.toLocaleString()}c legacy` : ''}`);
       this.showProspectCard(r.prospect, true); // reveal the heir → Develop him → play his career → hand off again
     } catch (e: any) {
       toast(e?.body?.error ?? 'Succession failed');
-      const b = $('cg-heir') as HTMLButtonElement | null; if (b) { b.disabled = false; b.textContent = 'Try again →'; b.addEventListener('click', () => this.bringThroughHeir(m, seasons, titles, mentorship, inheritance)); }
+      const b = $('cg-heir') as HTMLButtonElement | null; if (b) { b.disabled = false; b.textContent = 'Try again →'; b.addEventListener('click', () => this.bringThroughHeir(m, seasons, titles, mentorship, inheritance, saleFee)); }
     }
   }
   // heirlooms: which inheritance each generation was handed, shown in the bloodline tree (per save)

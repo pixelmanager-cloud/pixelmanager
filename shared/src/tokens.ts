@@ -28,7 +28,15 @@ function seedFrom(s: string): number { let h = 2166136261; for (let i = 0; i < s
 
 const FIRST = ['Leo', 'Sam', 'Rico', 'Milo', 'Kai', 'Noah', 'Enzo', 'Theo', 'Luca', 'Ravi', 'Omar', 'Nils', 'Jude', 'Cole', 'Dane', 'Yuki'];
 const LAST = ['Marsh', 'Oakes', 'Vance', 'Cruz', 'Reyes', 'Frost', 'Voss', 'Hale', 'Marin', 'Sato', 'Diaz', 'Kane', 'Wolfe', 'Boyd', 'Rossi', 'Ferro'];
-export const nameFor = (seed: number) => `${FIRST[(seed >>> 0) % FIRST.length]} ${LAST[(seed >>> 8) % LAST.length]}`;
+export const firstNameFor = (seed: number) => FIRST[(seed >>> 0) % FIRST.length];
+export const nameFor = (seed: number) => `${firstNameFor(seed)} ${LAST[(seed >>> 8) % LAST.length]}`;
+/** The founding prospect (and the scout candidates who could become him) carries the player's chosen FAMILY
+ *  name as surname, so club, founder and every heir share one bloodline surname (PT-55). A seeded first name
+ *  keeps each kid distinct; falls back to a random surname when no family name is set. */
+export const foundingNameFor = (seed: number, familyName?: string | null) => {
+  const fam = (familyName ?? '').trim();
+  return fam ? `${firstNameFor(seed)} ${fam}` : nameFor(seed);
+};
 export const roleHintOf = (t: Token): string => t.role ?? 'MF';
 export const trackFor = (roleHint: string): Track => (roleHint === 'GK' ? 'goalkeeper' : 'outfield');
 export const ageOf = (primeSeason: number, season: number) => Math.min(40, Math.max(25, 25 + (season - primeSeason)));

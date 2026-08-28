@@ -21,7 +21,7 @@ import {
   gaffersDiaryEntry,
   rollGenes, updateMorale,
   tokenToPlayer, tokenContract, legendCardOf, loadCareer, actWithNarration, careerState, graduatedFields, careerCast, fillArcText,
-  rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, nameFor,
+  rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, foundingNameFor,
   type FacilityKey, type MissionRow, type Token, type CareerAction,
 } from '@fm/shared';
 import {
@@ -176,7 +176,7 @@ async function mintGenesisLocal(): Promise<Token> {
   const id = `nft:${n}`;
   const seed = seedFrom(id + ':genesis');
   const genes = rollGenes(seed);
-  await localStore.createToken({ id, owner_id: OWNER, generation: 0, state: 'prospect', name: nameFor(seed), genes_json: JSON.stringify(genes), pedigree: 0, dev_bonus_json: '{}' });
+  await localStore.createToken({ id, owner_id: OWNER, generation: 0, state: 'prospect', name: foundingNameFor(seed, getActiveModel().profile.name), genes_json: JSON.stringify(genes), pedigree: 0, dev_bonus_json: '{}' });
   await localStore.updateToken(id, { role: seedFrom(id + ':gk') % 100 < 12 ? 'GK' : 'MF' });
   return (await localStore.getToken(id))!;
 }
@@ -238,7 +238,7 @@ export const api = {
       const top = ceils.sort((a, b) => b[1] - a[1])[0][0];
       const glimpse = TRAIT[top][seedFrom(`${slot}:g:${i}`) % TRAIT[top].length];
       const note = NOTES[seedFrom(`${slot}:n:${i}`) % NOTES.length];
-      cands.push({ seed, name: nameFor(seed), roleHint, glimpse, note });
+      cands.push({ seed, name: foundingNameFor(seed, getActiveModel().profile.name), roleHint, glimpse, note });
     }
     return { candidates: cands };
   },
@@ -250,7 +250,7 @@ export const api = {
     const id = `nft:${(await localStore.countTokens()) + 1}`;
     const genes = rollGenes(seed);
     const rh = seed % 100, roleHint = rh < 10 ? 'GK' : rh < 40 ? 'DF' : rh < 72 ? 'MF' : 'FW';
-    await localStore.createToken({ id, owner_id: OWNER, generation: 0, state: 'prospect', name: nameFor(seed), genes_json: JSON.stringify(genes), pedigree: 0, dev_bonus_json: '{}' });
+    await localStore.createToken({ id, owner_id: OWNER, generation: 0, state: 'prospect', name: foundingNameFor(seed, getActiveModel().profile.name), genes_json: JSON.stringify(genes), pedigree: 0, dev_bonus_json: '{}' });
     await localStore.updateToken(id, { role: roleHint });
     const t = (await localStore.getToken(id))!;
     return { ok: true as const, prospect: { id, name: t.name, roleHint, generation: 0, pedigree: 0, careerStarted: false, potentialStars: rebornPotential(t).stars, genes } };
@@ -360,11 +360,8 @@ export const api = {
   },
   /** Accept a transfer bid for the star: bank the fee (the succession to the heir is handled client-side,
    *  the same reborn mechanic as retirement — his son carries the bloodline on). */
-  sellStar: async (fee: number) => {
-    await ensureActive();
-    await localStore.addCoins(OWNER, Math.max(0, Math.round(fee)));
-    return { ok: true as const, coins: getActiveModel().profile.coins };
-  },
+  // (sellStar removed: the incoming-bid fee is now banked atomically inside succeed(), so an abandoned
+  //  succession can't keep the cash while the star stays owned — see PT-60.)
   /** A rival's incoming BID for the star this season (or null). Deterministic per (seed, season). */
   starBid: async (playerId: string, seed: number) => {
     await ensureActive();
@@ -417,7 +414,7 @@ export const api = {
     await localStore.updateToken(pid, { ...grad, prime_season: season, signed_season: deal.signedSeason, length_seasons: deal.lengthSeasons, staked_since: season });
     return { ok: true as const, player: tokenToPlayer((await localStore.getToken(pid))!) };
   },
-  succeed: async (pid: string, body: { seasons: number; titles: number; mentorship: number; inheritance?: 'craft' | 'fortune' | 'name' }) => {
+  succeed: async (pid: string, body: { seasons: number; titles: number; mentorship: number; inheritance?: 'craft' | 'fortune' | 'name'; saleFee?: number }) => {
     await ensureActive();
     const t = await localStore.getToken(pid);
     if (!t) throw apiErr('no such token', {}, 404);
@@ -440,6 +437,11 @@ export const api = {
     let legacy = Math.round((decorated.earnings ?? 0) * RETIREMENT_LEGACY_SHARE);
     if (inheritance === 'fortune') legacy = Math.round(legacy * 1.75) + 200;
     if (legacy > 0) await localStore.addCoins(OWNER, legacy);
+    // An incoming-bid sale banks its fee HERE — atomically with the star actually leaving the club — not up
+    // front. succeed() throws on an already-reborn (prospect) token, so this runs at most once per succession;
+    // abandoning the will screen credits nothing and leaves the star owned (no free-money loop) (PT-60).
+    const saleFee = Math.max(0, Math.round(Number(body?.saleFee) || 0));
+    if (saleFee > 0) await localStore.addCoins(OWNER, saleFee);
     const rf = rebornFields(decorated);
     const dev = JSON.parse(rf.dev_bonus_json ?? '{}');
     if (mentorship > 0) { const b = Math.min(3, Math.ceil(mentorship / 2)); dev.composure = (dev.composure ?? 0) + b; dev.leadership = (dev.leadership ?? 0) + b; }
@@ -451,7 +453,7 @@ export const api = {
     await localStore.updateToken(pid, rf);
     const fresh = (await localStore.getToken(pid))!;
     const pot = rebornPotential(fresh);
-    return { ok: true as const, legacy, inheritance: inheritance ?? null, prospect: { id: pid, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: fresh.pedigree, careerStarted: false, potentialStars: pot.stars, genes: JSON.parse(fresh.genes_json) } };
+    return { ok: true as const, legacy, saleFee, coins: getActiveModel().profile.coins, inheritance: inheritance ?? null, prospect: { id: pid, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: fresh.pedigree, careerStarted: false, potentialStars: pot.stars, genes: JSON.parse(fresh.genes_json) } };
   },
   // SP SEASON PRIZE — also where the local season counter advances (see docs note in save.ts's
   // profile.season) and where a league finish is banked as an honour (the old pod/wall-clock season
