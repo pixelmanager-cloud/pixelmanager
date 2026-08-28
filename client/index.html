@@ -12,7 +12,9 @@
       :root {
         /* Restraint pass (2026-08-28): strong indigo base kept; neons desaturated ~15–25% so full saturation
            reads as a deliberate emphasis, not the everyday state; cyan is the single hero accent. */
-        --bg:#0b0b17; --panel:#16162f; --panel-2:#202041; --line:#3b3b6e; --text:#eef0fb;
+        /* panels sit a clear step above the near-black base so boxes read as distinct surfaces, not the
+           background (#10). --line brightened for crisper edges. */
+        --bg:#0a0a15; --panel:#1b1b3a; --panel-2:#262652; --line:#454585; --text:#eef0fb;
         --muted:#b6b8d6; /* de-emphasized copy — one clear step below --text, still high-contrast on --panel */
         --home:#e5586a; --away:#5a8de0; --good:#43d38c; --warn:#ecbe4d;
         --pink:#e85c93; --cyan:#46cfe6; --purple:#8461e0; --accent:#6f8ad9;
@@ -503,7 +505,7 @@
       .cg-h-green { color: var(--good); } .cg-h-amber { color: var(--warn); }
       .cgp-forming { font-size: 11px; color: var(--muted); font-weight: 400; }
       .cg-reassure { display: block; margin-top: 5px; font-size: 14px; color: var(--muted); }
-      .cg-legend { font-size: 12px; color: var(--muted); margin: -4px 0 10px; display: flex; flex-wrap: wrap; gap: 4px 10px; }
+      .cg-legend { font-size: 14px; color: var(--muted); margin: -2px 0 12px; display: flex; flex-wrap: wrap; gap: 5px 12px; padding: 8px 11px; background: color-mix(in srgb, var(--panel-2) 70%, transparent); border: 1px solid var(--line); border-radius: 9px; }
       /* ── per-stage re-theme: backdrop + scene banner, accent driven by --cg-accent (set per chapter) ── */
       #academy { --cg-accent: #6ad06a; }
       #academy-body { background: var(--cg-bg, transparent); border-radius: 12px; transition: background .5s ease; }
@@ -550,7 +552,9 @@
       .cg-oc-pill.poor { color: #ff9a9a; background: color-mix(in srgb, #ff6a6a 15%, transparent); border-color: color-mix(in srgb, #ff6a6a 42%, transparent); }
       .cg-oc-grew { font-family: var(--body); font-size: 12px; color: var(--muted); display: inline-flex; align-items: center; gap: 5px; }
       .cg-prompt { font-size: 14px; color: var(--muted); margin: 6px 0 10px; }
-      .cg-scenario { text-align: center; padding: 12px; border-radius: 10px; margin-bottom: 14px; background: #16162a; border: 1px solid #33335a; }
+      .cg-scenario { text-align: center; padding: 14px 14px 13px; border-radius: 12px; margin-bottom: 14px;
+                     background: linear-gradient(168deg, var(--panel-2), var(--panel)); border: 1px solid var(--line);
+                     box-shadow: 0 6px 20px -10px rgba(0,0,0,.6), 0 0 0 1px rgba(255,255,255,.02) inset; }
       .cg-scenario .cg-label { font-family: var(--display); font-size: 17px; margin-bottom: 6px; }
       .cg-scenario .cg-story { font-size: 17px; line-height: 1.5; color: #e2e8f0; margin-bottom: 9px; }
       .cg-scenario.life { border-color: rgba(230,180,90,0.5); box-shadow: 0 0 0 1px rgba(230,180,90,0.25) inset; }
@@ -887,7 +891,9 @@
       .cg-foc:hover { border-color: var(--cg-accent, #6ad06a); transform: translateY(-2px); }
       .cg-foc .cg-cname { font-family: var(--display); font-size: 14px; margin-bottom: 5px; }
       .cg-foc .cg-cdescr { font-size: 13px; line-height: 1.4; color: #b8c0cc; margin-bottom: 7px; }
-      .cg-foc .cg-effs { font-size: 12px; color: #9c9; }
+      .cg-foc .cg-effs { font-size: 15px; color: #a9e0c0; display: flex; flex-wrap: wrap; align-items: center; gap: 4px 11px; margin-top: 3px; font-weight: 600; }
+      .cg-foc .cg-effs > span { display: inline-flex; align-items: center; gap: 2px; }
+      .cg-foc .cg-effs > span::first-letter { font-size: 17px; } /* the leading meter emoji reads bigger (#8) */
       .cg-foc.buy { background: linear-gradient(180deg, rgba(60,52,20,0.5), rgba(24,22,14,0.4)); border-color: rgba(210,180,90,0.35); }
       .cg-foc.buy:hover { border-color: #e6c76a; }
       .cg-foc.buy .cg-effs { color: #cbb26a; }

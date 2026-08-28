@@ -386,13 +386,13 @@ class Game {
 
   // ── settings + confirm dialogs ────────────────────────────────────────────────────────────────
   private static PREFS_KEY = 'fm_prefs';
-  private prefs: { reducedMotion: boolean; crt: boolean; uiScale: number } = { reducedMotion: false, crt: true, uiScale: 100 };
+  private prefs: { reducedMotion: boolean; crt: boolean; uiScale: number } = { reducedMotion: false, crt: true, uiScale: 110 }; // default a touch larger — text reads bigger out of the box (#1)
   /** Load persisted prefs (defaulting reduced-motion to the OS setting) and apply them app-wide. */
   private loadPrefs() {
     let saved: Partial<{ reducedMotion: boolean; crt: boolean; uiScale: number }> = {};
     try { saved = JSON.parse(localStorage.getItem(Game.PREFS_KEY) || '{}'); } catch { /* defaults */ }
     const osReduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const scale = Math.max(80, Math.min(130, Number(saved.uiScale) || 100));
+    const scale = Math.max(80, Math.min(140, Number(saved.uiScale) || 110)); // default 110%; allow up to 140% for a bigger-text preference (#1)
     this.prefs = { reducedMotion: saved.reducedMotion ?? osReduced, crt: saved.crt ?? true, uiScale: scale };
     this.applyPrefs();
   }
@@ -425,7 +425,7 @@ class Game {
       + `<div class="set-row"><div class="set-lbl"><span>CRT screen effect</span>${sw(this.prefs.crt, 'crt')}</div>`
       + `<div class="set-hint">The retro scanline + vignette overlay. Turn off for a flat, crisp picture.</div></div>`
       + `<div class="set-row"><div class="set-lbl"><span>UI scale</span><span class="set-val" id="set-scaleval">${this.prefs.uiScale}%</span></div>`
-      + `<input type="range" id="set-scale" min="80" max="130" step="5" value="${this.prefs.uiScale}" aria-label="UI scale">`
+      + `<input type="range" id="set-scale" min="80" max="140" step="5" value="${this.prefs.uiScale}" aria-label="UI scale">`
       + `<div class="set-hint">Make everything bigger or smaller — handy on small screens or from the couch.</div></div>`
       + `</div>`;
     document.body.appendChild(ov);
