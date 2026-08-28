@@ -631,8 +631,8 @@ class Game {
     const updateNamePreview = () => {
       const raw = ($('mm-name') as HTMLInputElement).value.trim();
       $('mm-preview').innerHTML = raw
-        ? `<span class="mp-hint">In game:</span> ${crest(raw + "'s Club", 26)} <b>${raw}'s Club</b>`
-        : `<span class="mp-hint">Your club will be named “&lt;your name&gt;'s Club”</span>`;
+        ? `<span class="mp-hint">Your club:</span> ${crest(raw + "'s Club", 26)} <b>${raw}'s Club</b> <span class="mp-hint">· the ${raw} bloodline</span>`
+        : `<span class="mp-hint">Enter a family name — your club becomes “&lt;name&gt;'s Club” and the name carries down the generations.</span>`;
     };
     $('mm-new').addEventListener('click', () => { $('mm-buttons').classList.add('hidden'); $('mm-saves').classList.add('hidden'); $('mm-newgame').classList.remove('hidden'); ($('mm-name') as HTMLInputElement).focus(); updateNamePreview(); });
     $('mm-cancel').addEventListener('click', () => { $('mm-saves').classList.remove('hidden'); this.renderMainMenu(); });
