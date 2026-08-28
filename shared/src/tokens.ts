@@ -206,10 +206,13 @@ function isAcademyScareTurn(c: Career, kind: string): boolean {
 export function careerState(t: Token, c: Career, clubName?: string | null, clubLevel = 0) {
   const st = c.current() as any;
   // STORY ARC beat — fill {RIVAL} with the career's seeded nemesis so the storyline feels personal + recurring.
+  // Do NOT early-return: like every other non-play phase (focus/coach/draft), the arc state must fall through
+  // to the common wrapper return so prospectId/name/turn/profile/rival are present. Early-returning the bare
+  // `st` stripped those, blanking the header AND leaving the client with no prospectId to dispatch the choice —
+  // which soft-locked the save the moment any arc fired (PT-52/PT-53).
   if (st.phase === 'arc' && st.arc) {
     const rivalName = careerCast((c as any).seed >>> 0).rival;
     st.arc = { ...st.arc, prompt: fillArcText(st.arc.prompt, rivalName), rivalName };
-    return st;
   }
   const recentForm = (() => { const r = c.log.slice(-6); return r.length ? r.reduce((s, e) => s + e.success, 0) / r.length : 0.5; })();
   // STORY MODE: describe the situation + what each card would do
