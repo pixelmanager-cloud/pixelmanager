@@ -319,7 +319,7 @@ class Game {
   draftTakers: { pen?: number; fk?: number; corner?: number } = {}; // set-piece taker slot indices
   editorMode: 'standing' | 'match' = 'standing';
   squadSort: SquadSort | null = null;
-  spFixture: { idx: number; oppClub: Club; oppName: string; oppStrength: number; venue: 'home' | 'away'; oppLineup: Lineup; oppTactics: Tactics; comp?: 'league' | 'cont' | 'wc'; contRound?: number } | null = null; // the single-player fixture being played
+  spFixture: { idx: number; oppClub: Club; oppName: string; oppStrength: number; venue: 'home' | 'away'; neutral?: boolean; oppLineup: Lineup; oppTactics: Tactics; comp?: 'league' | 'cont' | 'wc'; contRound?: number } | null = null; // the single-player fixture being played (neutral = a neutral-ground decider: no fan-zone home bonus, PT-130)
   pendingCont: { myGoals: number; oppGoals: number; oppStrength: number } | null = null; // a continental tie awaiting resolution once the full-time card is dismissed
   pendingWc: { myGoals: number; oppGoals: number; oppName: string } | null = null; // a World-Finals knockout tie awaiting resolution
   draftPlan = new Set<string>();          // armed conditional match-plan rule ids (single-player)
@@ -1411,14 +1411,17 @@ class Game {
     const oppClub = generateClub('cont-' + m.season + '-' + round, tie.oppName, short, 0x8844cc, tie.oppStrength, oppSeed);
     const venue: 'home' | 'away' = tie.neutral ? 'home' : (round % 2 === 0 ? 'home' : 'away'); // final on neutral ground, else alternate
     const oppTactics = seededOpponentTactics(oppSeed);
-    this.spFixture = { idx: -1, oppClub, oppName: tie.oppName, oppStrength: tie.oppStrength, venue, oppLineup: autoPickXI(oppClub, oppTactics.formation), oppTactics, comp: 'cont', contRound: round };
+    this.spFixture = { idx: -1, oppClub, oppName: tie.oppName, oppStrength: tie.oppStrength, venue, neutral: tie.neutral, oppLineup: autoPickXI(oppClub, oppTactics.formation), oppTactics, comp: 'cont', contRound: round }; // neutral final: no fan-zone home bonus (PT-130)
     this.openLineup('match', { id: 'cont-opp', handle: tie.oppName, venue });
   }
   private simContinentalTie() {
     const m = this.loadMgr(), round = m.contRound ?? 0;
     if (!m.contElig || m.contOut || round >= 3) return;
     const tie = contOpponent(this.leagueSeed(), m.season, round as 0 | 1 | 2);
-    const r = this.simFixtureResult(this.clubLeagueStrength(), tie.oppStrength, ((this.leagueSeed() >>> 0) ^ ((m.season * 331 + round * 17) >>> 0)) >>> 0);
+    // match the played tie's venue + club edges (PT-129): SF is away, final is neutral, both fold in facilities/staff
+    const atHome = !tie.neutral && round % 2 === 0;
+    const { strDelta, homeTerm } = this.simEdge(atHome ? 'home' : 'away');
+    const r = this.simFixtureResult(this.clubLeagueStrength() + strDelta, tie.oppStrength, ((this.leagueSeed() >>> 0) ^ ((m.season * 331 + round * 17) >>> 0)) >>> 0, homeTerm);
     this.resolveContinental(r.myGoals, r.oppGoals, tie.oppStrength);
   }
   /** Apply a continental tie result: win → advance (or lift the cup); level → seeded shootout; loss → out. */
@@ -1514,7 +1517,9 @@ class Game {
     const m = this.loadMgr();
     const { wc, path } = this.wcData(edition);
     if (!path.qualified) { // group-stage exit — nothing to play; show the full tournament and bank a small payoff
-      this.saveMgr({ ...m, wcSeen: edition, wcStage: 'done' });
+      // persist wcEdition (+ an empty run → deriveWcFinish reads 'Group stage') so the concluded report stays
+      // reviewable — the done-surface + review handler both gate on wcEdition != null (PT-128, extends PT-72)
+      this.saveMgr({ ...m, wcEdition: edition, wcRun: [], wcSeen: edition, wcStage: 'done' });
       try { const r = await api.spSeasonReward({ pos: 6, size: 10, sponsor: undefined, kind: 'world' }); if (this.account?.coins != null) this.account.coins = r.coins; } catch { /* offline */ }
       this.showWorldCup(wc, 'Group stage'); return;
     }
@@ -1530,7 +1535,7 @@ class Game {
     const oppClub = generateClub('wc-' + m.wcEdition + '-' + stage, opp.opp, short, 0x3a7bd5, opp.oppStrength, oppSeed);
     void nation;
     const oppTactics = seededOpponentTactics(oppSeed);
-    this.spFixture = { idx: -1, oppClub, oppName: opp.opp, oppStrength: opp.oppStrength, venue: 'home', oppLineup: autoPickXI(oppClub, oppTactics.formation), oppTactics, comp: 'wc' }; // neutral ground → treat as home (no home edge applied in startSpMatchWith for wc? kept simple)
+    this.spFixture = { idx: -1, oppClub, oppName: opp.opp, oppStrength: opp.oppStrength, venue: 'home', neutral: true, oppLineup: autoPickXI(oppClub, oppTactics.formation), oppTactics, comp: 'wc' }; // World-Finals ties are on neutral ground → no fan-zone home bonus (PT-130)
     this.openLineup('match', { id: 'wc-opp', handle: opp.opp, venue: 'home' });
   }
   private playWorldCupTie() { const s = this.loadMgr().wcStage; if (s === 'qf' || s === 'sf' || s === 'final') this.wcTie(s); }
@@ -1538,7 +1543,9 @@ class Game {
     const m = this.loadMgr(); const stage = m.wcStage; if (stage !== 'qf' && stage !== 'sf' && stage !== 'final' || m.wcEdition == null) return;
     const { path } = this.wcData(m.wcEdition);
     const opp = this.wcStageOpp(path, stage);
-    const r = this.simFixtureResult(this.starOverall(), opp.oppStrength, ((this.leagueSeed() >>> 0) ^ ((m.wcEdition * 977 + stage.length * 131) >>> 0)) >>> 0);
+    // World-Finals ties are neutral: no home term (was an unearned +0.25), but training/staff still count (PT-129/130)
+    const { strDelta } = this.simEdge('away');
+    const r = this.simFixtureResult(this.starOverall() + strDelta, opp.oppStrength, ((this.leagueSeed() >>> 0) ^ ((m.wcEdition * 977 + stage.length * 131) >>> 0)) >>> 0, 0);
     this.resolveWorldCup(r.myGoals, r.oppGoals, opp.opp);
   }
   /** Apply a knockout result: win → next round (or lift the trophy); level → seeded shootout; loss → out. */
@@ -1977,7 +1984,7 @@ class Game {
     // CLUB FACILITIES apply to the match: Training Ground → less fitness drain; Fan Zone → home attack edge.
     const trainLvl = this.facLevels.training ?? 1, fanLvl = this.facLevels.fanzone ?? 1;
     myTeam.conditioning = (myTeam.conditioning ?? 1) * (1 - (trainLvl - 1) * 0.05);
-    if (sp.venue === 'home') myTeam.homeBoost = (myTeam.homeBoost ?? 1) * (1 + (fanLvl - 1) * 0.02);
+    if (sp.venue === 'home' && !sp.neutral) myTeam.homeBoost = (myTeam.homeBoost ?? 1) * (1 + (fanLvl - 1) * 0.02); // fan-zone edge only at a true home game, never a neutral-ground decider (PT-130)
     // BACKROOM STAFF edges (apply home AND away)
     const staff = this.loadMgr().staff ?? [];
     if (staff.includes('fitness')) myTeam.conditioning = (myTeam.conditioning ?? 1) * 0.95;
