@@ -74,6 +74,9 @@ export const TIER_NAMES: readonly string[] = [
   'the Regional Premier', 'the Regional North/South', 'the County Premier', 'the District League', 'the Sunday League',
 ];
 export const tierName = (tier: number) => TIER_NAMES[clamp(Math.round(tier), 1, TIERS)];
+// a deterministic, non-alphabetical final tiebreak (only reached when points, GD AND GF are all level — very
+// rare): a stable hash of the club name, so a level split doesn't read as "A beats Z" alphabetical order (PT-83).
+const nameTiebreak = (name: string): number => { let h = 0; for (let i = 0; i < name.length; i++) h = (Math.imul(h, 31) + name.charCodeAt(i)) | 0; return h; };
 /** Baseline opponent quality at a tier — elite at the top (18), pub-team weak at the bottom (6). The
  *  bloodline player's club has a FIXED strength (his ability + facilities), so he climbs when he outgrows a
  *  tier and slips when he's outmatched — the pyramid is the growth arc. */
@@ -165,7 +168,7 @@ export function liveTable(myClub: string, marlowStrength: number, share: number,
     add(rows[hi], rows[ai], gh, ga);
   }
   for (const r of rows) r.GD = r.GF - r.GA;
-  rows.sort((a, b) => b.Pts - a.Pts || b.GD - a.GD || b.GF - a.GF || a.name.localeCompare(b.name));
+  rows.sort((a, b) => b.Pts - a.Pts || b.GD - a.GD || b.GF - a.GF || (nameTiebreak(a.name) - nameTiebreak(b.name)));
   const pos = rows.findIndex((r) => r.mine) + 1;
   return { table: rows, pos, me: rows.find((r) => r.mine)!, size: rows.length, matchday, totalRounds: rounds.length };
 }
@@ -197,7 +200,7 @@ export function seasonTable(clubs: LeagueClub[], seed: number): TableRow[] {
     }
   }
   for (const r of rows) r.GD = r.GF - r.GA;
-  rows.sort((a, b) => b.Pts - a.Pts || b.GD - a.GD || b.GF - a.GF || a.name.localeCompare(b.name));
+  rows.sort((a, b) => b.Pts - a.Pts || b.GD - a.GD || b.GF - a.GF || (nameTiebreak(a.name) - nameTiebreak(b.name)));
   return rows;
 }
 

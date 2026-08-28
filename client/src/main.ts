@@ -1144,11 +1144,11 @@ class Game {
     const zone = (i: number) => i === 0 ? 'champ'
       : (tier > 1 && i <= 1) || (tier === 1 && i <= 2) ? 'promo'
       : tier < TIERS && i >= t.size - 2 ? 'releg' : '';
-    const rows = t.table.map((r, i) => `<tr class="lt-row ${r.mine ? 'mine' : ''} ${zone(i)}"><td class="lt-pos">${i + 1}</td><td class="lt-name"><span class="lt-crest">${crest(r.name, 16)}</span>${r.name}</td><td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GD > 0 ? '+' : ''}${r.GD}</td><td class="lt-pts">${r.Pts}</td></tr>`).join('');
+    const rows = t.table.map((r, i) => `<tr class="lt-row ${r.mine ? 'mine' : ''} ${zone(i)}"><td class="lt-pos">${i + 1}</td><td class="lt-name"><span class="lt-crest">${crest(r.name, 16)}</span>${r.name}</td><td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GF}</td><td>${r.GD > 0 ? '+' : ''}${r.GD}</td><td class="lt-pts">${r.Pts}</td></tr>`).join('');
     const key = tier === 1 ? '<span class="lt-key"><span class="lt-k promo">■</span> continental · <span class="lt-k releg">■</span> relegation</span>'
       : tier === TIERS ? '<span class="lt-key"><span class="lt-k promo">■</span> promotion</span>'
       : '<span class="lt-key"><span class="lt-k promo">■</span> promotion · <span class="lt-k releg">■</span> relegation</span>';
-    return `<table class="lt-table"><thead><tr><th></th><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>${rows}</tbody></table>${key}`;
+    return `<table class="lt-table"><thead><tr><th></th><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th title="Goals for — the tiebreak after points and goal difference">GF</th><th>GD</th><th>Pts</th></tr></thead><tbody>${rows}</tbody></table>${key}`;
   }
 
   // ── transfer market: buy/sell fictional players (strengthen the squad → climb the pyramid) ──────────
@@ -2878,8 +2878,10 @@ class Game {
     $('tac-row').innerHTML = tac.join('');
     ($('e-formation') as HTMLSelectElement).addEventListener('change', (ev) => {
       this.draftTactics.formation = (ev.target as HTMLSelectElement).value as Formation;
+      const prevDuties = new Map<string, Duty>(); // snapshot player→duty BEFORE the re-pick so it can be preserved (PT-84)
+      this.draftLineup.playerIds.forEach((pid, i) => { const d = this.draftDuties[i]; if (d != null) prevDuties.set(pid, d); });
       this.draftLineup = this.starGuarded(autoPickXI(this.availableClub(), this.draftTactics.formation));
-      this.rebuildDuties();
+      this.rebuildDuties(prevDuties);
       this.renderLineupEditor();
       const mu = document.getElementById('scout-matchup');
       if (mu && this.spFixture) mu.innerHTML = `📐 ${formationMatchupInsight(this.draftTactics.formation, this.spFixture.oppTactics.formation)}`;
@@ -2980,7 +2982,15 @@ class Game {
 
   private playerAt(i: number): Player { return this.club.players.find((p) => p.id === this.draftLineup.playerIds[i])!; }
   /** Reset every slot's duty to its player's auto default (after a formation change / auto-pick). */
-  private rebuildDuties() { this.draftDuties = this.draftLineup.playerIds.map((_, i) => defaultDuty(this.playerAt(i))); }
+  private rebuildDuties(preserve?: Map<string, Duty>) {
+    // keep each RETAINED player's hand-set duty across a re-pick (only reset a new player or a duty that's no
+    // longer valid for its role) — a formation tweak shouldn't silently wipe the whole setup (PT-84).
+    this.draftDuties = this.draftLineup.playerIds.map((pid, i) => {
+      const p = this.playerAt(i);
+      const kept = preserve?.get(pid);
+      return kept != null && isDutyForRole(p.role, kept) ? kept : defaultDuty(p);
+    });
+  }
 
   private renderSquadPanel() {
     const panel = $('squad-panel');
