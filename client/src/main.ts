@@ -1313,6 +1313,7 @@ class Game {
     $('sf-cont-play')?.addEventListener('click', () => this.playContinentalTie());
     $('sf-cont-sim')?.addEventListener('click', () => this.simContinentalTie());
     $('sf-wc-follow')?.addEventListener('click', () => this.followWorldCup());
+    document.getElementById('sf-wc-review')?.addEventListener('click', () => { const mm = this.loadMgr(); if (mm.wcEdition != null) this.showWorldCup(this.wcData(mm.wcEdition).wc, this.deriveWcFinish(mm.wcRun ?? [])); }); // re-open the concluded report (PT-72)
     $('sf-wc-play')?.addEventListener('click', () => this.playWorldCupTie());
     $('sf-wc-sim')?.addEventListener('click', () => this.simWorldCupTie());
     $('sf-play')?.addEventListener('click', () => this.playNextSpFixture());
@@ -1470,10 +1471,23 @@ class Game {
   private wcStageLabel(stage: string): string { return stage === 'qf' ? 'Quarter-final' : stage === 'sf' ? 'Semi-final' : 'Final'; }
 
   /** The World-Finals block in the season view: a teaser before it's followed, then the live knockout run. */
+  /** Derive the star's World-Finals finish from his stored knockout run (for re-viewing a concluded report). */
+  private deriveWcFinish(run: NonNullable<MgrState['wcRun']>): WCResult['myFinish'] {
+    const last = run[run.length - 1];
+    if (!last) return 'Group stage';
+    if (last.round === 'F') return last.won ? 'Champions' : 'Runners-up';
+    if (last.round === 'SF') return 'Semi-finals';
+    return 'Quarter-finals';
+  }
   private worldCupHtml(): string {
     const m = this.loadMgr();
     // an in-progress knockout run takes priority over the teaser
     if (m.wcStage && m.wcStage !== 'done' && m.wcEdition != null) return this.wcRunHtml();
+    // a CONCLUDED World Finals stays reachable that season — the report used to vanish after one viewing (PT-72)
+    if (m.wcStage === 'done' && m.wcEdition != null) {
+      const fin = this.deriveWcFinish(m.wcRun ?? []);
+      return `<div class="sf-wc sf-wc-done"><div class="sf-wc-txt">🌐 <b>World Finals — Edition ${m.wcEdition}</b> · ${fin}.</div><button class="primary" id="sf-wc-review">View the tournament report →</button></div>`;
+    }
     const edition = this.wcEditionDue();
     if (edition == null) return '';
     const nation = homeNation(this.starSurname());
