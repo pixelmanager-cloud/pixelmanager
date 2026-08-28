@@ -117,6 +117,7 @@ export function actWithNarration(c: Career, a: CareerAction): string | null {
     const rivalMoment = c.scenario.rival;
     const callupMoment = c.scenario.callup;
     const academyScare = !lifeKind && isAcademyScareTurn(c, c.scenario.kind); // presentational — see isAcademyScareTurn
+    const kindBefore = c.scenario.kind; // 'social' moments render as off-pitch ("how does he handle it?") — narrate them off-pitch too, not with matchday prose (PT-43)
     const turnBefore = c.turn;
     const csBefore = careerScoreOf(c);
     applyAction(c, a);
@@ -129,6 +130,7 @@ export function actWithNarration(c: Career, a: CareerAction): string | null {
     }
     if (callupMoment) return narrateCallupMoment(cardName(a.cardId), choice.success, ctx);
     if (academyScare) return narrateAcademyScare(cardName(a.cardId), choice.success, ctx);
+    if (kindBefore === 'social' && !rivalMoment && !callupMoment) return narrateLifeEvent('social', cardName(a.cardId), choice.success, ctx, undefined, cardTags(a.cardId), a.cardId);
     return narratePlay(cardName(a.cardId), choice.tags, choice.success, ctx);
   }
   // coach / draft / offer — read the chosen item from the current phase BEFORE applying

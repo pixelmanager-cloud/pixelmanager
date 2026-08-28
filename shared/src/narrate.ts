@@ -456,6 +456,11 @@ const LIFE_RESOLUTION: Record<string, { good: string[]; bad: string[] }> = {
     good: ['and the response silences the doubters faster than anyone expected.', 'and he answers the only way that matters — with performance.', 'and the story quietly dies a day later.'],
     bad: ['and the mistake follows him round for weeks.', 'and the response only adds fuel to the story.', 'and confidence takes another knock right when he needed it least.'],
   },
+  // off-pitch CHARACTER moments (the 'social' scenario kind) — resolved on who he is, not a scoreline
+  social: {
+    good: ['and he comes out of it with a little more respect than he went in.', 'and the right people quietly clock it — that sort of thing sticks.', 'and it says more about the man he’s becoming than any goal could.', 'and the group notices, even if nobody says a word about it.'],
+    bad: ['and it doesn’t quite land — one of those the room quietly files away.', 'and he gets it wrong, and knows it the second the words are out.', 'and it leaves a slightly sour note that hangs around longer than it should.', 'and he fumbles it, the kind of small misstep people remember.'],
+  },
   media: {
     good: ['and he handles the cameras like he’s done it for years.', 'and the story fizzles out, exactly as he hoped.', 'and even the press pack seem to respect how he took it.'],
     bad: ['and one clumsy line becomes the only thing anyone remembers.', 'and the story runs longer than it ever should have.', 'and he comes off looking worse than the situation deserved.'],
