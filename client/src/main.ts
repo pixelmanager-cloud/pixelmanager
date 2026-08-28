@@ -1,7 +1,7 @@
 import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
   TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry, tierName, TIERS,
-  FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, deriveExpectation, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition, contTieBlurb, wcGroupDramaBlurb, wcKnockoutDramaBlurb,
+  FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, deriveExpectation, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition, contTieBlurb, wcGroupDramaBlurb, wcKnockoutDramaBlurb, worldCupFinishBlurb,
   transferList, wageForLength, sellValue, incomingBid, MIN_SQUAD, MAX_SQUAD, type Listing,
   ACHIEVEMENTS, evaluateAchievements, achievementById, type AchSnapshot, lifeAction,
   type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
@@ -1495,7 +1495,12 @@ class Game {
   private resolveWorldCup(myGoals: number, oppGoals: number, oppName: string) {
     const m = this.loadMgr(); const stage = m.wcStage as 'qf' | 'sf' | 'final'; if (m.wcEdition == null) return;
     let won = myGoals > oppGoals, pens = false;
-    if (myGoals === oppGoals) { pens = true; const h = ((this.leagueSeed() >>> 0) ^ ((m.wcEdition * 733 + stage.length * 29) >>> 0)) >>> 0; won = ((h % 1000) / 1000) < 0.5; }
+    if (myGoals === oppGoals) { // seeded shootout — lean to the stronger side, like the continental cup + the seeded bracket, not a flat coin-flip (PT-69)
+      pens = true;
+      const oppStrength = this.wcStageOpp(this.wcData(m.wcEdition).path, stage).oppStrength;
+      const h = ((this.leagueSeed() >>> 0) ^ ((m.wcEdition * 733 + stage.length * 29) >>> 0)) >>> 0;
+      won = ((h % 1000) / 1000) < (0.5 + (this.starOverall() - oppStrength) * 0.03);
+    }
     const label = this.wcStageLabel(stage);
     const shortRound = stage === 'qf' ? 'QF' : stage === 'sf' ? 'SF' : 'F';
     const run = [...(m.wcRun ?? []), { round: shortRound, my: myGoals, opp: oppGoals, oppName, won }];
@@ -1560,16 +1565,18 @@ class Game {
         + `<div class="wc-final ${f.mine ? 'mine' : ''}"><div class="wc-final-lbl">🏆 FINAL</div>${flagImg(f.a, 16)} <b>${f.a}</b> ${f.gh}-${f.ga} ${flagImg(f.b, 16)} <b>${f.b}</b>${f.pens ? ' (pens)' : ''}<div class="wc-champ">Champions: ${flagImg(wc.champion, 16)} <b>${wc.champion}</b></div></div>`;
     }
     const badge = finish === 'Champions' ? '🏆 WORLD CHAMPIONS' : finish === 'Runners-up' ? '🥈 Runners-up' : finish === 'Semi-finals' ? '🥉 Semi-finalists' : finish === 'Quarter-finals' ? '🎯 Quarter-finalists' : '⚽ Group stage';
-    const verdict = finish === 'Champions' ? `${nation} are champions of the world — an immortal chapter for the ${this.starSurname()} name.`
-      : finish === 'Runners-up' ? `So close — ${nation} fall at the final hurdle, but what a run.`
-      : finish === 'Semi-finals' ? `${nation} reach the last four before bowing out — heads held high.`
-      : finish === 'Quarter-finals' ? `${nation} make the last eight before their run is ended.`
-      : `${nation}'s tournament ends in the group stage. The dream lives on for next time.`;
-    // a deterministic "tournament story" — how the star's group went + how the final played out (from intl.ts)
     const wcSeed = this.leagueSeed();
+    // seeded, edition-varying verdict (2 variants per finish) instead of one hardcoded line per finish (PT-71);
+    // keep the surname flourish for the very top moment.
+    const verdict = worldCupFinishBlurb(wcSeed, wc.edition, nation, finish)
+      + (finish === 'Champions' ? ` An immortal chapter for the ${this.starSurname()} name.` : '');
+    // a deterministic "tournament story" — how the star's group went + how the final played out (from intl.ts)
     const myGi = wc.groups.findIndex((g) => g.rows.some((r) => r.mine));
     const groupDrama = myGi >= 0 ? wcGroupDramaBlurb(wcSeed, wc.edition, myGi, wc.groups[myGi].rows) : '';
-    const finalDrama = wcKnockoutDramaBlurb(wcSeed, wc.edition, wc.final);
+    // the seeded final is only the STAR's match when he actually reached it — otherwise this narrated a game he
+    // was never in (a QF exit "described" the tournament final). Only show it for a final he played (PT-68).
+    const reachedFinal = finish === 'Champions' || finish === 'Runners-up';
+    const finalDrama = (!played || reachedFinal) ? wcKnockoutDramaBlurb(wcSeed, wc.edition, wc.final) : '';
     const dramaLine = (groupDrama || finalDrama) ? `<div class="wc-drama">📖 ${[groupDrama, finalDrama].filter(Boolean).join(' ')}</div>` : '';
     $('season-body').innerHTML = `<div class="wc-report"><div class="wc-report-head">🌐 THE WORLD FINALS — Edition ${wc.edition}</div>`
       + `<div class="wc-verdict ${finish === 'Champions' ? 'champ' : ''}"><span class="wc-badge">${badge}</span> ${verdict}</div>`

@@ -117,7 +117,8 @@ export function worldCup(seed: number, edition: number, myNation: string, myStre
 
   // snake the seeded field into four groups of four
   const groupsN: string[][] = Array.from({ length: WC_GROUPS }, () => []);
-  field.forEach((n, i) => groupsN[i % WC_GROUPS].push(n));
+  // offset by edition so the star's nation (field index 0) doesn't land in Group A every single tournament (PT-70)
+  field.forEach((n, i) => groupsN[(i + edition) % WC_GROUPS].push(n));
 
   const runGroup = (nations: string[], gi: number): { rows: WCGroupRow[] } => {
     const rows: WCGroupRow[] = nations.map((n) => ({ nation: n, P: 0, W: 0, D: 0, L: 0, GF: 0, GA: 0, GD: 0, Pts: 0, mine: n === myNation }));
