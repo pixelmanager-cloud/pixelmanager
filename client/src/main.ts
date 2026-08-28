@@ -44,8 +44,10 @@ const METER_NAME: Record<string, string> = { authority: 'Coach', peers: 'Teammat
 // store + render as "Messi" / "De Bruyne" (PT-80). Since the cleaned name now flows into the club name, the
 // founder/heir surnames and every screen, sanitizing here keeps all of them safe + tidy.
 const cleanFamilyName = (raw: string): string =>
-  raw.replace(/[^\p{L}\s'-]/gu, '').replace(/\s+/g, ' ').trim()
-     .split(' ').map((w) => (w ? w[0].toUpperCase() + w.slice(1).toLowerCase() : w)).join(' ');
+  raw.replace(/[^\p{L}\s'-]/gu, '').replace(/\s+/g, ' ').trim().toLowerCase()
+     // capitalise the first letter of each name-part — after a space, apostrophe OR hyphen too, so
+     // "o'brien-smith" → "O'Brien-Smith" and "d'angelo" → "D'Angelo", not just space-separated words (PT-100)
+     .replace(/(^|[\s'-])(\p{L})/gu, (_, sep, ch) => sep + ch.toUpperCase());
 // Readable full names for the stat abbreviations shown around the UI (tooltip on hover — playtest fix:
 // abbreviations like CMP/CRE/LDR/WRK were unexplained).
 const STAT_FULL: Record<string, string> = { pace: 'Pace', strength: 'Strength', passing: 'Passing', shooting: 'Shooting', tackling: 'Tackling', positioning: 'Positioning', workrate: 'Work rate', keeping: 'Goalkeeping', setPiece: 'Set pieces', stamina: 'Stamina', composure: 'Composure', creativity: 'Creativity', leadership: 'Leadership', teamwork: 'Teamwork', aggression: 'Aggression' };
@@ -355,13 +357,13 @@ class Game {
     $('login-error').textContent = '';
     // the save list is a SWITCHER (only meaningful with 2+ saves); with one save it's just an info row + delete
     $('mm-saves').innerHTML = saves.length
-      ? `<div class="mm-saves-lbl">${multi ? 'Switch save' : 'Your save'}</div>` + saves.map((s) => `<div class="mm-save${multi ? ' load' : ''}" data-id="${s.id}"><span class="mm-save-name">${s.name}</span><span class="mm-save-meta">${new Date(s.lastPlayed).toLocaleDateString()}</span><button class="mm-save-del" data-del="${s.id}" title="Delete save">✕</button></div>`).join('')
+      ? `<div class="mm-saves-lbl">${multi ? 'Switch save' : 'Your save'}</div>` + saves.map((s) => `<div class="mm-save${multi ? ' load' : ''}" data-id="${s.id}"><span class="mm-save-name">${s.name}</span><span class="mm-save-meta">${new Date(s.lastPlayed).toLocaleDateString()} ${new Date(s.lastPlayed).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span><button class="mm-save-del" data-del="${s.id}" title="Delete save">✕</button></div>`).join('')
       : '';
     if (multi) $('mm-saves').querySelectorAll('.mm-save').forEach((el) => el.addEventListener('click', (e) => { if ((e.target as HTMLElement).dataset.del) return; this.loadSave((el as HTMLElement).dataset.id!); }));
     $('mm-saves').querySelectorAll('.mm-save-del').forEach((el) => el.addEventListener('click', (e) => { e.stopPropagation(); this.deleteSave((el as HTMLElement).dataset.del!); }));
     // pre-focus the most-used action (Continue if a save exists, else New Game) so Enter/Space just works
     const focusBtn = saves.length ? cont : $('mm-new');
-    try { (focusBtn as HTMLElement).focus(); } catch { /* not focusable yet */ }
+    try { (focusBtn as HTMLElement).focus({ preventScroll: true }); } catch { /* not focusable yet */ } // don't auto-scroll the logo off the top of the title screen (PT-98)
   }
 
   private continueGame() { const s = this.loadSaves().sort((a, b) => b.lastPlayed - a.lastPlayed)[0]; if (s) this.loadSave(s.id); }
