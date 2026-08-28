@@ -25,7 +25,12 @@ export interface Listing { player: Player; fee: number; age: number; ov: number 
 /** The fictional players available to BUY this season — quality scaled to the club's tier (shop at your
  *  level), across all four positions, deterministic per (seed, season, tier). */
 export function transferList(seed: number, season: number, tier: number, size = TRANSFER_LIST_SIZE): Listing[] {
-  const quality = clamp(tierStrength(tier) + 1, 4, 18);   // market is a touch above the tier baseline
+  // Market quality sits above the tier baseline — and at the TOP tiers it opens up to genuine title-contender
+  // signings (+3) so a dynasty that INVESTS can build a squad that exceeds the league and actually wins the
+  // top flight (fees scale with ov², so it's a real, coin-gated reward — not a freebie). Lower tiers keep the
+  // tight +1 that made the pyramid climb feel earned. Fixes the "top flight is unwinnable at ~5%" balance flag.
+  const headroom = tier <= 2 ? 3 : 1;
+  const quality = clamp(tierStrength(tier) + headroom, 4, 18);
   // generate a couple of squads' worth at this quality, then take a spread across positions
   const club = generateClub(`market-${season}-${tier}`, 'Free Agents', 'FA', 0x888888, quality, hash32(seed, season * 7919, tier * 131));
   const pool = club.players.slice();

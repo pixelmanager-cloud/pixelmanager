@@ -14,11 +14,12 @@ const SEASONS = Number(process.argv[3] ?? 15);
 const finish = (strength: number, tier: number, seed: number): number =>
   seasonTable(seededLeague('Bloodline FC', strength, seed, tier), seed).findIndex((r) => r.mine) + 1;
 
-// a plausible club-strength arc across a manager's career: a fresh club grows as the bloodline star develops
-// and facilities improve — ramping from weak (~7) to a peak (~15) by mid-career, then easing slightly.
+// a plausible club-strength arc for a dynasty that INVESTS its coins: a fresh club grows as the bloodline
+// star develops, facilities improve, and (at the top tiers) title-contender signings become available —
+// ramping from weak (~7) to a peak (~16) by late career. A club that doesn't invest peaks lower (~15).
 const strengthAt = (season: number): number => {
-  const ramp = 7 + season * 1.1;      // steady growth from facilities + the maturing star
-  return Math.max(5, Math.min(15, Math.round(ramp)));
+  const ramp = 7 + season * 1.15;     // growth from facilities + the maturing star + top-tier signings
+  return Math.max(5, Math.min(16, Math.round(ramp)));
 };
 
 let reachedTop = 0, titles = 0, topFlightSeasons = 0, stuck = 0;

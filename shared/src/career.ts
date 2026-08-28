@@ -991,6 +991,7 @@ export class Career {
     this.drawPile = this.shuffle([...this.deck]);
     this.refillHand();
     this.scenario = makeScenario(this.rng, this.turn, track, null, bandAt(0).band, this.exposure, this.seed);
+    this.ensurePlayableHand();
   }
   private get exposure() { return this.agent?.exposure ?? 1; }
 
@@ -1174,7 +1175,7 @@ export class Career {
     // at an age-chapter boundary: relationships pay off (or bite), a narrative EVENT fires, then you
     // choose a summer FOCUS, take a financial offer, appoint a coach and draft.
     if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.earnings += 40 + this.turn * 12; this.pendingFocus = rollFocus(this.chapter, this.standing, this.track); }
-    else { this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure, this.seed); }
+    else { this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure, this.seed); this.ensurePlayableHand(); }
     return choice;
   }
 
@@ -1350,9 +1351,28 @@ export class Career {
   private startNextChapter() {
     this.refillHand();
     this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure, this.seed);
+    this.ensurePlayableHand();
   }
 
   private refillHand() { while (this.hand.length < HAND_SIZE) this.hand.push(this.drawOne()); }
+  /** After a scenario is set, make sure the hand holds at least ONE fair-fit option for it — if a better
+   *  card exists anywhere in the deck (draw pile or discard), swap it in for the hand's worst card. This
+   *  removes "dead" hands caused purely by draw luck; a genuinely unanswerable hand now only happens when
+   *  the DECK itself can't address the moment (a deck-building signal, not random punishment). */
+  private ensurePlayableHand(): void {
+    const FAIR = 0.45;
+    const fitOf = (c: Card) => fit(c, this.scenario);
+    if (this.hand.length === 0 || Math.max(...this.hand.map(fitOf)) >= FAIR) return;
+    let bestFit = Math.max(...this.hand.map(fitOf), 0), pick: { pool: Card[]; i: number } | null = null;
+    for (const pool of [this.drawPile, this.discard]) {
+      for (let i = 0; i < pool.length; i++) { const f = fitOf(pool[i]); if (f > bestFit) { bestFit = f; pick = { pool, i }; } }
+    }
+    if (!pick) return; // nowhere in the deck fits — leave it (the deck can't answer this moment)
+    const worst = this.hand.reduce((w, c, i, arr) => (fitOf(c) < fitOf(arr[w]) ? i : w), 0);
+    const incoming = pick.pool.splice(pick.i, 1)[0];
+    this.discard.push(this.hand[worst]); // the displaced card returns to the rotation
+    this.hand[worst] = incoming;
+  }
   private drawOne(): Card {
     if (this.drawPile.length === 0) { this.drawPile = this.shuffle(this.discard); this.discard = []; }
     return this.drawPile.pop()!;
