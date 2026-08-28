@@ -840,15 +840,39 @@
       .cg-kit-save { margin-top: 4px; font-family: var(--display); font-size: 13px; padding: 11px 20px; border-radius: 9px; border: none;
         background: var(--cg-accent, #6ad06a); color: #10121a; cursor: pointer; }
       .cg-kit-save:hover { filter: brightness(1.1); }
-      .cg-tag { font-size: 12px; padding: 2px 7px; border-radius: 10px; background: #2a2a48; color: #ced6ef; }
-      .cg-cards { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
-      .cg-card { width: 168px; padding: 12px; border-radius: 10px; background: linear-gradient(160deg,#20203a,#181830); border: 1px solid #34345c; cursor: pointer; transition: transform .08s, border-color .1s; display: flex; flex-direction: column; }
-      .cg-card:hover { transform: translateY(-3px); border-color: var(--cg-accent, #6ad06a); }
-      .cg-card.rare { border-color: #5aa9e6; } .cg-card.epic { border-color: #c77dff; box-shadow: 0 0 12px rgba(199,125,255,0.3); }
-      .cg-card .cg-cname { font-family: var(--body); font-size: 17px; margin-bottom: 6px; line-height: 1.3; }
-      .cg-card .cg-cdescr { font-size: 13px; line-height: 1.4; color: #b8c0cc; margin-bottom: 8px; flex: 1; }
-      .cg-card .cg-ctags { display: flex; gap: 4px; flex-wrap: wrap; }
-      .cg-card .cg-rarity { float: right; font-size: 11px; color: #b3b3d4; text-transform: uppercase; }
+      /* ── per-tag identity colour: the card takes its PRIMARY tag's colour, every pill takes its own ── */
+      .cg-card[data-tag="composure"], .tag-composure { --tc: #46cfe6; }
+      .cg-card[data-tag="aggression"], .tag-aggression { --tc: #e5604d; }
+      .cg-card[data-tag="creativity"], .tag-creativity { --tc: #9a78f0; }
+      .cg-card[data-tag="teamwork"], .tag-teamwork { --tc: #43d38c; }
+      .cg-card[data-tag="leadership"], .tag-leadership { --tc: #ecbe4d; }
+      .cg-card[data-tag="stamina"], .tag-stamina { --tc: #e8894d; }
+      .cg-card[data-tag="flair"], .tag-flair { --tc: #e85c93; }
+      .cg-card[data-tag="keeping"], .tag-keeping { --tc: #6f8ad9; }
+      .cg-tag { display: inline-flex; align-items: center; gap: 3px; font-size: 11.5px; font-weight: 600; letter-spacing: .2px; padding: 2px 8px; border-radius: 999px; text-transform: capitalize;
+                color: color-mix(in srgb, var(--tc, #ced6ef) 82%, white);
+                background: color-mix(in srgb, var(--tc, #3a3a5c) 16%, #14142a);
+                border: 1px solid color-mix(in srgb, var(--tc, #34345c) 34%, transparent); }
+      .cg-cards { display: flex; gap: 11px; flex-wrap: wrap; justify-content: center; }
+      .cg-card { position: relative; overflow: hidden; width: 172px; padding: 13px 13px 12px; border-radius: 13px;
+                 background: linear-gradient(162deg, #222240, #16162c 78%);
+                 border: 1px solid color-mix(in srgb, var(--tc, #34345c) 30%, #2a2a48); cursor: pointer;
+                 transition: transform .12s ease, border-color .15s, box-shadow .15s; display: flex; flex-direction: column; }
+      /* a coloured spine down the left edge + a soft top sheen give each card its primary-tag identity */
+      .cg-card::before { content: ''; position: absolute; top: 0; left: 0; bottom: 0; width: 4px; background: var(--tc, #6ad06a); opacity: .95; box-shadow: 0 0 10px -1px color-mix(in srgb, var(--tc, #000) 60%, transparent); }
+      .cg-card::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(120% 60% at 15% 0%, color-mix(in srgb, var(--tc, #fff) 12%, transparent), transparent 60%); }
+      .cg-card > * { position: relative; z-index: 1; }
+      .cg-card:hover { transform: translateY(-4px); border-color: var(--tc, #6ad06a);
+                       box-shadow: 0 10px 22px -10px color-mix(in srgb, var(--tc, #000) 65%, transparent), 0 0 0 1px color-mix(in srgb, var(--tc, #000) 30%, transparent) inset; }
+      .cg-card.rare { border-color: color-mix(in srgb, var(--tc, #5aa9e6) 55%, #5aa9e6); }
+      .cg-card.epic { border-color: #c77dff; box-shadow: 0 0 16px -2px rgba(199,125,255,0.4); }
+      .cg-card.epic::after { background: radial-gradient(120% 70% at 15% 0%, rgba(199,125,255,0.16), transparent 62%), linear-gradient(115deg, transparent 40%, rgba(255,255,255,0.06) 50%, transparent 60%); }
+      .cg-card .cg-cname { font-family: var(--body); font-weight: 700; font-size: 16px; margin-bottom: 6px; line-height: 1.28; padding-left: 4px; }
+      .cg-card .cg-cdescr { font-size: 12.5px; line-height: 1.42; color: #b3bcd0; margin-bottom: 9px; flex: 1; padding-left: 4px; }
+      .cg-card .cg-ctags { display: flex; gap: 5px; flex-wrap: wrap; padding-left: 4px; }
+      .cg-card .cg-rarity { position: absolute; top: 9px; right: 10px; z-index: 2; font-size: 9.5px; font-weight: 800; letter-spacing: .6px; padding: 1px 6px; border-radius: 5px; text-transform: uppercase;
+                            color: #14121a; background: var(--tc, #b3b3d4); box-shadow: 0 1px 4px -1px rgba(0,0,0,.5); }
+      .cg-card.epic .cg-rarity { background: linear-gradient(120deg, #c77dff, #ffd76a); }
       .cg-coach, .cg-offer { text-align: left; padding: 11px 13px; border-radius: 9px; background: #1b1b30; border: 1px solid #34345c; cursor: pointer; margin: 8px 0; }
       .cg-coach:hover, .cg-offer:hover { border-color: var(--cg-accent, #6ad06a); }
       .cg-coach .cg-cname, .cg-offer .cg-cname { font-family: var(--display); font-size: 14px; }

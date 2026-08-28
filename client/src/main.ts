@@ -2419,7 +2419,10 @@ class Game {
 
   private cardHtml(c: import('./api').CareerCard, act: string, life = false, usedLifeNames?: Set<string>): string {
     const rar = c.rarity && c.rarity !== 'common' ? c.rarity : '';
-    const tags = c.tags.map((t) => `<span class="cg-tag">${t}</span>`).join('');
+    // each tag pill carries its own icon + colour class; the card takes the colour of its PRIMARY tag (data-tag)
+    // so a hand reads as a scannable spread of identities and matching the demand becomes a visual cue.
+    const tags = c.tags.map((t) => `<span class="cg-tag tag-${t}">${TAG_ICON[t] ?? ''} ${t}</span>`).join('');
+    const primaryTag = c.tags[0] ?? '';
     // At an off-pitch LIFE EVENT the same card is reframed by the quality it draws on, so "how does he
     // handle it?" gets an off-pitch answer, not an on-pitch move name like "stepover" (PT-43). `usedLifeNames`
     // keeps a whole hand's labels distinct when two cards share a dominant tag (PT-49).
@@ -2427,7 +2430,7 @@ class Game {
     if (la && usedLifeNames) usedLifeNames.add(la.name);
     const name = la ? la.name : c.name;
     const desc = la ? la.desc : c.desc;
-    return `<div class="cg-card ${rar}" data-act="${act}" data-id="${c.id}">${rar ? `<span class="cg-rarity">${rar}</span>` : ''}<div class="cg-cname">${name}</div>`
+    return `<div class="cg-card ${rar}" data-tag="${primaryTag}" data-act="${act}" data-id="${c.id}">${rar ? `<span class="cg-rarity">${rar}</span>` : ''}<div class="cg-cname">${name}</div>`
       + (desc ? `<div class="cg-cdescr">${desc}</div>` : '') + `<div class="cg-ctags">${tags}</div></div>`;
   }
 
