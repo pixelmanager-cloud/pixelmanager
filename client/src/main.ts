@@ -386,14 +386,14 @@ class Game {
 
   // ── settings + confirm dialogs ────────────────────────────────────────────────────────────────
   private static PREFS_KEY = 'fm_prefs';
-  private prefs: { reducedMotion: boolean; crt: boolean; uiScale: number } = { reducedMotion: false, crt: true, uiScale: 110 }; // default a touch larger — text reads bigger out of the box (#1)
+  private prefs: { reducedMotion: boolean; crt: boolean; uiScale: number; hideCardStats: boolean } = { reducedMotion: false, crt: true, uiScale: 110, hideCardStats: false }; // default a touch larger — text reads bigger out of the box (#1)
   /** Load persisted prefs (defaulting reduced-motion to the OS setting) and apply them app-wide. */
   private loadPrefs() {
-    let saved: Partial<{ reducedMotion: boolean; crt: boolean; uiScale: number }> = {};
+    let saved: Partial<{ reducedMotion: boolean; crt: boolean; uiScale: number; hideCardStats: boolean }> = {};
     try { saved = JSON.parse(localStorage.getItem(Game.PREFS_KEY) || '{}'); } catch { /* defaults */ }
     const osReduced = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
     const scale = Math.max(80, Math.min(140, Number(saved.uiScale) || 110)); // default 110%; allow up to 140% for a bigger-text preference (#1)
-    this.prefs = { reducedMotion: saved.reducedMotion ?? osReduced, crt: saved.crt ?? true, uiScale: scale };
+    this.prefs = { reducedMotion: saved.reducedMotion ?? osReduced, crt: saved.crt ?? true, uiScale: scale, hideCardStats: saved.hideCardStats ?? false };
     this.applyPrefs();
   }
   private applyPrefs() {
@@ -427,6 +427,8 @@ class Game {
       + `<div class="set-row"><div class="set-lbl"><span>UI scale</span><span class="set-val" id="set-scaleval">${this.prefs.uiScale}%</span></div>`
       + `<input type="range" id="set-scale" min="80" max="140" step="5" value="${this.prefs.uiScale}" aria-label="UI scale">`
       + `<div class="set-hint">Make everything bigger or smaller — handy on small screens or from the couch.</div></div>`
+      + `<div class="set-row"><div class="set-lbl"><span>Challenge: hide card stats</span>${sw(this.prefs.hideCardStats, 'hidestats')}</div>`
+      + `<div class="set-hint">Mask the stat pills on your choice cards each turn — read the action and work out what it trains. Harder and more immersive; “🎯 This calls for” stays visible.</div></div>`
       + `</div>`;
     document.body.appendChild(ov);
     const close = () => ov.remove();
@@ -454,6 +456,7 @@ class Game {
     wireSw(byKey('sfx'), () => { const m = audio.toggleSfxMuted(); flip(byKey('sfx'), m); if (!m) audio.chime('confirm'); });
     wireSw(byKey('motion'), () => { this.prefs.reducedMotion = !this.prefs.reducedMotion; this.savePrefs(); this.applyPrefs(); flip(byKey('motion'), this.prefs.reducedMotion); });
     wireSw(byKey('crt'), () => { this.prefs.crt = !this.prefs.crt; this.savePrefs(); this.applyPrefs(); flip(byKey('crt'), this.prefs.crt); });
+    wireSw(byKey('hidestats'), () => { this.prefs.hideCardStats = !this.prefs.hideCardStats; this.savePrefs(); flip(byKey('hidestats'), this.prefs.hideCardStats); if (this.lastCareerState) this.renderCareer(this.lastCareerState); }); // re-render so the current hand masks/unmasks live (#3)
     const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); } };
     document.addEventListener('keydown', onEsc);
   }
@@ -2430,8 +2433,12 @@ class Game {
     if (la && usedLifeNames) usedLifeNames.add(la.name);
     const name = la ? la.name : c.name;
     const desc = la ? la.desc : c.desc;
+    // CHALLENGE MODE (#3): when "hide card stats" is on, the boosted-stat pills are masked on the PLAY choice
+    // cards, so you infer the stat from the action itself (the action always thematically matches its stat).
+    // Draft/deck cards keep their tags so you can still build a deck knowingly.
+    const showTags = !(act === 'play' && this.prefs.hideCardStats);
     return `<div class="cg-card ${rar}" data-tag="${primaryTag}" data-act="${act}" data-id="${c.id}">${rar ? `<span class="cg-rarity">${rar}</span>` : ''}<div class="cg-cname">${name}</div>`
-      + (desc ? `<div class="cg-cdescr">${desc}</div>` : '') + `<div class="cg-ctags">${tags}</div></div>`;
+      + (desc ? `<div class="cg-cdescr">${desc}</div>` : '') + (showTags ? `<div class="cg-ctags">${tags}</div>` : '<div class="cg-ctags cg-ctags-masked" title="Challenge mode — infer the quality from the action (toggle in Settings)">🎲</div>') + `</div>`;
   }
 
   private lastNarration = '';
