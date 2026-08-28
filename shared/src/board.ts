@@ -176,9 +176,13 @@ function baselineFromPrestige(prestigeLevelIdx: number): BoardExpectation {
 export function deriveExpectation(input: ExpectationInput): BoardExpectation {
   let idx = EXPECTATION_ORDER.indexOf(baselineFromPrestige(input.prestigeLevelIdx));
   switch (input.priorFinish) {
-    case 'title':
-    case 'promotion': idx += 1; break;
-    case 'relegated': idx -= 2; break;
+    case 'title': idx += 1; break;      // won the league and stayed up (top flight) → the bar rises
+    // TIER MOVES temper rather than amplify the difficulty change (PT-122): a just-PROMOTED club is a newcomer
+    // in a tougher division, so the board wants consolidation, not more — nudge DOWN; a just-RELEGATED club is
+    // now among the division's strongest and is expected to bounce straight back — keep the bar UP. The old
+    // code did the opposite (promotion +1 / relegation -2), compounding the difficulty swing.
+    case 'promotion': idx -= 1; break;
+    case 'relegated': idx += 1; break;
     case 'survival': idx -= 1; break;
     case 'playoffs':
     case 'midtable':

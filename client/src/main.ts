@@ -594,6 +594,9 @@ class Game {
       legends: legends.length,
       topLegendRating,
       graduated: (m.starId ? 1 : 0) + legends.length,
+      // best division reached: the honours-derived high (lags a season) OR the live tier, so a promotion
+      // registers the moment the club goes up (TIERS - clubTier maps tier 1→top idx, tier 10→0) (PT-121)
+      topTier: Math.max(pr?.highestTierIdx ?? 0, TIERS - this.clubTier()),
     };
   }
   /** Re-evaluate achievements after a progress event; toast (and chime) anything newly earned. Idempotent. */
@@ -955,7 +958,8 @@ class Game {
         const results = m.results ?? [];
         const t = liveTable(this.club.name, this.clubLeagueStrength(), 1, this.leagueSeed(), results, this.clubTier(), this.seasonResultSeed());
         const matches = results.map((r, i) => ({ id: `s${m.season}-m${i}`, myScore: r.myGoals, oppScore: r.oppGoals, oppId: '', oppHandle: '', createdAt: i }));
-        const table = { position: t.pos, total: t.size, promote: 3, relegate: 2, points: t.me.Pts }; // top-3 = continental zone, bottom-2 = relegation (matches spTableHtml)
+        const dtier = this.clubTier(); // tier-aware promotion/relegation spots so the diary matches spTableHtml's zones + the real rule, not a tier-blind top-3/bottom-2 (PT-120)
+        const table = { position: t.pos, total: t.size, promote: dtier === 1 ? 3 : 2, relegate: dtier < TIERS ? 2 : 0, points: t.me.Pts };
         entry = gaffersDiaryEntry({ seasonNumber: m.season, matches, table });
       } else {
         entry = (await api.diary()).entry; // player-career phase: the generic blank-page line
@@ -1697,7 +1701,7 @@ class Game {
       const expectation = deriveExpectation({ prestigeLevelIdx: prestige.levelIdx, priorFinish: this.finishOf(t.pos, t.size, this.clubTier()) });
       const gp = Math.max(1, rec.wins + rec.draws + rec.losses);
       const st = boardStanding((this.leagueSeed() ^ (m.season * 0x9e3779b1)) >>> 0, {
-        position: t.pos, total: t.size, promote: 2, relegate: 2, // match the real rule: top-2 up / bottom-2 down (PT-28)
+        position: t.pos, total: t.size, promote: 2, relegate: this.clubTier() < TIERS ? 2 : 0, // top-2 up / bottom-2 down (PT-28); no relegation in the basement, so the drop-zone penalty can't fire there (PT-123)
         points: rec.wins * 3 + rec.draws, matchesPlayed: gp, totalMatches: gp, expectation,
       });
       lastBoard = { message: st.message, mood: st.mood, expectation };

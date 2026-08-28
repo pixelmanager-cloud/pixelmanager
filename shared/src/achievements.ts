@@ -18,6 +18,7 @@ export interface AchSnapshot {
   legends: number;        // legends in the Hall (one per retirement)
   topLegendRating: number;// best single legend rating earned
   graduated: number;      // prospects developed all the way to a graduated pro
+  topTier: number;        // highest division index reached (0 = the basement … TIERS-1 = the top flight)
 }
 
 export interface Achievement {
@@ -39,6 +40,10 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   { id: 'first_title',      name: 'Champions',             desc: 'Win your first domestic league title.',                        icon: '🏅', test: (s) => s.leagueTitles >= 1 },
   { id: 'title_treble',     name: 'A Dynasty Forms',       desc: 'Win 3 domestic league titles.',                                icon: '🏅', test: (s) => s.leagueTitles >= 3 },
   { id: 'title_dynasty',    name: 'Kings of the League',   desc: 'Win 10 domestic league titles.',                               icon: '👑', test: (s) => s.leagueTitles >= 10 },
+  // — the pyramid climb (every bloodline starts in the basement) —
+  { id: 'first_promotion',  name: 'Up We Go',              desc: 'Win promotion out of your starting division.',                 icon: '⬆️', test: (s) => s.topTier >= 1 },
+  { id: 'climb_half',       name: 'Climbing the Pyramid',  desc: 'Reach the middle tiers of the football pyramid.',               icon: '⛰️', test: (s) => s.topTier >= 5 },
+  { id: 'top_flight',       name: 'The Big Time',          desc: 'Take the club all the way to the top flight.',                  icon: '🏟️', test: (s) => s.topTier >= 9 },
   // — continental —
   { id: 'cont_win',         name: 'Kings of the Continent',desc: 'Win the Continental Cup.',                                     icon: '🌍', test: (s) => s.contTitles >= 1 },
   { id: 'cont_treble',      name: 'Continental Force',     desc: 'Win the Continental Cup 3 times.',                             icon: '🌍', test: (s) => s.contTitles >= 3 },

@@ -637,7 +637,7 @@ export const api = {
     // continental/world cup wins count as CUP titles (not league championships) toward prestige (PT-94)
     const honourLites = honours.map((h) => ({ tierIdx: tierIdxOf(h), title: h.title, kind: (h.kind === 'league' ? 'league' : 'cup') as 'cup' | 'league' }));
     const seasons = new Set(honours.map((h) => h.season_number)).size;
-    return { prestige: managerPrestige({ wins, draws, losses, honours: honourLites, highestTierIdx, seasons }), record: { wins, draws, losses, seasons } };
+    return { prestige: managerPrestige({ wins, draws, losses, honours: honourLites, highestTierIdx, seasons }), record: { wins, draws, losses, seasons }, highestTierIdx }; // highestTierIdx also surfaced for the climb achievements (PT-121)
   },
   setStandingOrders: async (so: StandingOrders) => {
     await ensureActive();
