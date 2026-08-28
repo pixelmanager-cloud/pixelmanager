@@ -273,7 +273,7 @@ function statsTableHTML(players: Player[], highlight?: Set<string>, sort?: Squad
     const cells = cols.map(([, k]) => `<td class="stat" style="background:${statColor(p.attrs[k] ?? 0)}">${Math.round(p.attrs[k] ?? 0)}</td>`).join('');
     const mark = on ? '<td class="inxi-mark">●</td>' : '<td></td>';
     const nameCell = tier
-      ? `<td class="name nft-name tier-${tier.key}" data-card="${p.id}" title="Owned NFT · ${tier.name} — click to view card">${tier.icon} ${p.name}</td>`
+      ? `<td class="name nft-name tier-${tier.key}" data-card="${p.id}" title="Your star · ${tier.name} — click to view card">${tier.icon} ${p.name}</td>`
       : `<td class="name">${p.name}</td>`;
     return `<tr class="${on ? 'inxi' : ''}${nft ? ' nft-row' : ''}">${mark}<td class="pos role-${p.role}">${p.role}</td>${nameCell}<td class="stat" style="background:${statColor(overall(p))}">${overall(p)}</td>${cells}</tr>`;
   }).join('');
@@ -681,7 +681,7 @@ class Game {
     $('club-back').addEventListener('click', () => this.showHub());
     $('skip').addEventListener('click', () => this.skipToEnd());
     // ('set-team' lives in the manager layer, unlinked from the home for now — see linear-life note in showHub)
-    $('autopick').addEventListener('click', () => { this.draftLineup = autoPickXI(this.availableClub(), this.draftTactics.formation); this.rebuildDuties(); this.renderLineupEditor(); });
+    $('autopick').addEventListener('click', () => { this.draftLineup = this.starGuarded(autoPickXI(this.availableClub(), this.draftTactics.formation)); this.rebuildDuties(); this.renderLineupEditor(); });
     $('save-team').addEventListener('click', () => (this.editorMode === 'standing' ? this.saveTeam() : this.kickOffMatch()));
     $('lineup-back').addEventListener('click', () => this.showHub());
     $('toggle-squad').addEventListener('click', () => {
@@ -1060,6 +1060,21 @@ class Game {
   private clearMgr() { try { localStorage.removeItem(this.mgrKey()); } catch { /* ignore */ } }
   /** manager phase = you've handed off and are now managing the club with a bloodline star on the pitch */
   private isManagerPhase(): boolean { return !!this.loadMgr().starId; }
+  /** Guarantee the bloodline star starts (manager phase). autoPickXI is generic and can drop him on a
+   *  formation change / auto-pick / stale standing orders; this swaps him into the weakest same-role slot
+   *  (or the weakest overall) so he's never silently benched — the "your man on the pitch" promise. (PT-20) */
+  private starGuarded(lineup: Lineup): Lineup {
+    const starId = this.loadMgr().starId;
+    if (!starId || !this.club || lineup.playerIds.includes(starId)) return lineup;
+    const star = this.club.players.find((p) => p.id === starId);
+    if (!star) return lineup; // star isn't in this squad (shouldn't happen mid-manager-phase)
+    const starters = lineup.playerIds.map((id) => this.club!.players.find((p) => p.id === id)).filter(Boolean) as Player[];
+    const sameRole = starters.filter((p) => p.role === star.role);
+    const worst = (sameRole.length ? sameRole : starters).slice().sort((a, b) => overall(a) - overall(b))[0];
+    if (!worst) return lineup;
+    const ids = [...lineup.playerIds]; ids[ids.indexOf(worst.id)] = starId; // swap into his slot (keeps position sensible)
+    return { ...lineup, playerIds: ids };
+  }
   private leagueSeed(): number { const h = this.account?.handle ?? 'x'; return [...h].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) >>> 0; }
   // the club's current pyramid TIER (1 = top flight … 10 = bottom). A club property that survives the
   // bloodline hand-off (stored apart from the per-generation manager save), so the dynasty climbs one pyramid.
@@ -2589,9 +2604,9 @@ class Game {
     const avail = this.availableClub();
     const owned = new Set(avail.players.map((x) => x.id)); // injured players are unavailable
     const soValid = this.standingOrders.playerIds.length === 11 && this.standingOrders.playerIds.every((id) => owned.has(id));
-    this.draftLineup = soValid
+    this.draftLineup = this.starGuarded(soValid
       ? { formation: this.standingOrders.formation, playerIds: [...this.standingOrders.playerIds] }
-      : autoPickXI(avail, this.standingOrders.formation);
+      : autoPickXI(avail, this.standingOrders.formation));
     this.draftDuties = this.draftLineup.playerIds.map((pid, i) => {
       const p = this.club.players.find((x) => x.id === pid)!;
       const saved = soValid ? this.standingOrders.duties?.[i] : undefined;
@@ -2659,7 +2674,7 @@ class Game {
     $('tac-row').innerHTML = tac.join('');
     ($('e-formation') as HTMLSelectElement).addEventListener('change', (ev) => {
       this.draftTactics.formation = (ev.target as HTMLSelectElement).value as Formation;
-      this.draftLineup = autoPickXI(this.availableClub(), this.draftTactics.formation);
+      this.draftLineup = this.starGuarded(autoPickXI(this.availableClub(), this.draftTactics.formation));
       this.rebuildDuties();
       this.renderLineupEditor();
       const mu = document.getElementById('scout-matchup');
@@ -2702,7 +2717,7 @@ class Game {
       const cur = this.club.players.find((p) => p.id === pid)!;
       const curTier = nftTier(overall(cur));
       const tag = isLoan(cur.id) ? `<span class="loan" title="Loanee — plays this season only, then leaves">LOAN</span>`
-        : isNftId(cur.id) ? `<span class="nft tier-${curTier.key}" data-card="${cur.id}" title="NFT star · ${curTier.name} tier — click to view card">${curTier.icon} ${curTier.name}</span>` : '';
+        : isNftId(cur.id) ? `<span class="nft tier-${curTier.key}" data-card="${cur.id}" title="Bloodline star · ${curTier.name} tier — click to view card">${curTier.icon} ${curTier.name}</span>` : '';
       const dutyOpts = DUTIES_BY_ROLE[cur.role]
         .map((d) => `<option value="${d}" title="${DUTY_DESC[d]}" ${d === this.draftDuties[i] ? 'selected' : ''}>${DUTY_LABEL[d]}</option>`).join('');
       const curDutyDesc = DUTY_DESC[this.draftDuties[i]] ?? '';
@@ -2747,7 +2762,7 @@ class Game {
     const injuredHtml = hurt.length ? `<div class="bench-injured"><b>🤕 Injured:</b> ` + hurt.map((p) => `<span class="inj">${p.name} (${p.role} ${overall(p)}) · ${this.injured.get(p.id)}m</span>`).join(' · ') + '</div>' : '';
     $('bench').innerHTML = `<b>Bench:</b> ` + bench.map((p) => {
       const t = isNftId(p.id) ? nftTier(overall(p)) : null;
-      return t ? `<span class="bench-nft tier-${t.key}" data-card="${p.id}" title="Owned NFT · ${t.name} — click to view card">${t.icon} ${p.name} (${p.role} ${overall(p)})</span>`
+      return t ? `<span class="bench-nft tier-${t.key}" data-card="${p.id}" title="Your star · ${t.name} — click to view card">${t.icon} ${p.name} (${p.role} ${overall(p)})</span>`
         : `${p.name} (${p.role} ${overall(p)})`;
     }).join(' · ') + injuredHtml;
     // NFT badges/names open the collectible card
