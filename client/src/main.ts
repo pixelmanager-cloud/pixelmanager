@@ -2,7 +2,7 @@ import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
   TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry, tierName, TIERS,
   FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, deriveExpectation, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition, contTieBlurb, wcGroupDramaBlurb, wcKnockoutDramaBlurb,
-  transferList, wageForLength, sellValue, type Listing,
+  transferList, wageForLength, sellValue, incomingBid, type Listing,
   ACHIEVEMENTS, evaluateAchievements, achievementById, type AchSnapshot,
   type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
@@ -1144,6 +1144,12 @@ class Game {
     const header = done
       ? `<div class="season-summary done"><span class="ss-crest">${crest(clubName, 20)}</span>✅ Season ${m.season} complete — <b>${clubName}</b> finished <b>${this.ordinal(t.pos)}</b> of ${t.size} in <b>${tierName(tier)}</b>${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ''}. <button class="primary" id="sf-next-season">Next season →</button></div>`
       : `<div class="season-summary"><span class="ss-crest">${crest(clubName, 20)}</span><b>${clubName}</b> · <b>${tierName(tier)}</b> · Season ${m.season} · MD ${nextIdx + 1}/${fixtures.length} · <b>${this.ordinal(t.pos)}</b>/${t.size}${formStrip}${starLine}</div>`;
+    // INCOMING BID for the star — a rival's offer this season (deterministic); dismissed once per season
+    const starP = m.starId ? this.club.players.find((p) => p.id === m.starId) : undefined;
+    const bidKey = 'fm_biddismiss_' + (this.account?.handle ?? 'x') + '_' + m.season;
+    const bidGone = (() => { try { return localStorage.getItem(bidKey) === '1'; } catch { return false; } })();
+    const bid = (starP && m.starAge && !bidGone && !done) ? incomingBid(this.leagueSeed(), m.season, overall(starP), m.starAge) : null;
+    const bidBanner = bid ? `<div class="sf-bid"><span class="sf-bid-txt"><b>🤝 ${bid.club}</b> have made a <b>${bid.fee.toLocaleString()}c</b> bid for ${m.starName}. Cash in and bring the heir through early — or keep your dynasty player?</span><span class="sf-bid-btns"><button id="sf-bid-accept" class="primary">Accept ${bid.fee.toLocaleString()}c</button> <button id="sf-bid-reject">Reject</button></span></div>` : '';
     // PROMOTION / RELEGATION reveal — shown at the start of the season after a move (from nextSeason)
     const tierMove = m.lastTierMove && !done && nextIdx <= 2
       ? `<div class="sf-tiermove sf-tiermove-${m.lastTierMove}">${m.lastTierMove === 'promoted' ? '⬆️ PROMOTED' : '⬇️ RELEGATED'} — welcome to <b>${tierName(tier)}</b>. ${m.lastTierMove === 'promoted' ? 'The football gets harder from here — this is the reward for the climb.' : 'A setback for the club — but the climb starts again.'}</div>`
@@ -1159,6 +1165,7 @@ class Game {
       ? `<div class="sf-board sf-board-${lb.mood}">🪑 <b>The board</b> — on last season: “${lb.message}” <span class="sf-board-exp">This season they expect: ${lb.expectation}.</span></div>`
       : '';
     $('season-body').innerHTML = header
+      + bidBanner
       + tierMove
       + boardLine
       + `<div class="sf-gaffer">📔 ${this.gafferTake(played, t.pos, t.size, clubName)}</div>`
@@ -1175,6 +1182,10 @@ class Game {
     $('sf-wc-sim')?.addEventListener('click', () => this.simWorldCupTie());
     $('sf-play')?.addEventListener('click', () => this.playNextSpFixture());
     $('sf-transfers')?.addEventListener('click', () => this.openTransferMarket());
+    if (bid) {
+      $('sf-bid-accept')?.addEventListener('click', () => this.acceptStarBid(bid, m));
+      $('sf-bid-reject')?.addEventListener('click', () => { try { localStorage.setItem(bidKey, '1'); } catch { /* ignore */ } toast('Bid rejected — he stays.'); this.showSeason(); });
+    }
     $('sf-sim')?.addEventListener('click', () => this.simRemainingFixtures());
     $('sf-next-season')?.addEventListener('click', () => this.nextSeason());
     ($('sf-focus') as any)?.addEventListener('change', (e: Event) => { const mm = this.loadMgr(); this.saveMgr({ ...mm, trainFocus: (e.target as HTMLSelectElement).value }); });
@@ -1555,7 +1566,19 @@ class Game {
     name:    { icon: '👑', label: 'The Name',    blurb: 'The family renown — the heir starts with more pedigree, more doors open.' },
     fortune: { icon: '💰', label: 'The Fortune', blurb: 'The family wealth — a larger inheritance banked for the club.' },
   };
-  private retireStar(titles: number, contTitles = 0) {
+  private acceptStarBid(bid: { club: string; fee: number }, m: MgrState) {
+    const surname = (m.starName ?? '').trim().split(/\s+/).slice(1).join(' ') || 'the family';
+    this.openConfirm(`Sell <b>${m.starName}</b> to <b>${bid.club}</b> for <b>${bid.fee.toLocaleString()}c</b>? He leaves the club now — and his son comes through early to carry the <b>${surname}</b> name on.`, 'Sell the star', async () => {
+      try {
+        const r = await api.sellStar(bid.fee);
+        if (this.account) this.account.coins = r.coins;
+        audio.chime('triumph');
+        toast(`💰 ${m.starName} sold to ${bid.club} · +${bid.fee.toLocaleString()}c`);
+        this.retireStar(m.titles ?? 0, m.contTitles ?? 0, { fee: bid.fee, club: bid.club });
+      } catch { toast('The sale fell through'); }
+    });
+  }
+  private retireStar(titles: number, contTitles = 0, sold?: { fee: number; club: string }) {
     const m = this.loadMgr();
     const seasons = m.season;
     const mentorship = Math.max(0, (m.starAge ?? 30) - 30); // veteran years spent passing on the game to the next gen — only banked if he chooses to mentor
@@ -1567,8 +1590,12 @@ class Game {
     // THE HEADLINES STOP: real retired pros describe the abruptness of the press/media drop-off — front
     // pages one day, silence the next, the game already moved on (research §11, Joe Thompson's own words).
     const headlinesLine = ` The back pages carried him for one last day. By the morning after, the game had already moved on to someone else’s story.`;
-    $('academy-body').innerHTML = `<div class="cg-graduation"><div class="cg-grad-title"><span class="ico-inline ico-lg">${sprite('banner')}</span> ${m.starName} hangs up his boots</div>`
-      + `<div class="cg-epilogue">After ${seasons} season${seasons === 1 ? '' : 's'} steering <b>${this.club?.name}</b>${honourLine}, ${m.starName} retires a club great.${headlinesLine} But the <b>${surname}</b> name isn't done — his son is already coming through the youth ranks.</div>`
+    const titleLine = sold ? `${m.starName} is sold to ${sold.club}` : `${m.starName} hangs up his boots`;
+    const storyLine = sold
+      ? `After ${seasons} season${seasons === 1 ? '' : 's'} at <b>${this.club?.name}</b>${honourLine}, ${m.starName} leaves for <b>${sold.club}</b> in a <b>${sold.fee.toLocaleString()}c</b> deal — a wrench for the fans, but the money reshapes the club’s future.`
+      : `After ${seasons} season${seasons === 1 ? '' : 's'} steering <b>${this.club?.name}</b>${honourLine}, ${m.starName} retires a club great.${headlinesLine}`;
+    $('academy-body').innerHTML = `<div class="cg-graduation"><div class="cg-grad-title"><span class="ico-inline ico-lg">${sprite('banner')}</span> ${titleLine}</div>`
+      + `<div class="cg-epilogue">${storyLine} But the <b>${surname}</b> name isn't done — his son is already coming through the youth ranks.</div>`
       + `<div class="cg-prompt">What does ${m.starName} do next?</div>`
       + `<div id="cg-nextlife">` + (Object.keys(Game.NEXT_LIFE) as Array<'coaching' | 'media' | 'mentoring'>).map((k) => {
         const nl = Game.NEXT_LIFE[k];

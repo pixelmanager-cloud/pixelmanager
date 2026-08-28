@@ -354,6 +354,13 @@ export const api = {
     await bumpMoraleLocal(playerId, 'extended');
     return { outcome: 'accept' as const, askWage: result.askWage, note: result.note, coins: getActiveModel().profile.coins, lengthSeasons: Math.max(2, Math.min(6, Math.round(length))) };
   },
+  /** Accept a transfer bid for the star: bank the fee (the succession to the heir is handled client-side,
+   *  the same reborn mechanic as retirement — his son carries the bloodline on). */
+  sellStar: async (fee: number) => {
+    await ensureActive();
+    await localStore.addCoins(OWNER, Math.max(0, Math.round(fee)));
+    return { ok: true as const, coins: getActiveModel().profile.coins };
+  },
   /** A rival's incoming BID for the star this season (or null). Deterministic per (seed, season). */
   starBid: async (playerId: string, seed: number) => {
     await ensureActive();
