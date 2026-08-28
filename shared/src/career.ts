@@ -1122,7 +1122,9 @@ export class Career {
     const meterGatesPass = (it: LifestyleItem) =>
       (!it.minMeter || Object.entries(it.minMeter).every(([k, v]) => this.standing[k as MeterKey] >= (v ?? 0))) &&
       (!it.maxMeter || Object.entries(it.maxMeter).every(([k, v]) => this.standing[k as MeterKey] <= (v ?? 100)));
-    return LIFESTYLE.filter((it) => !this.ownedLifestyle.includes(it.id) && chapterIdx >= it.minChapterIdx && (it.maxChapterIdx == null || chapterIdx <= it.maxChapterIdx) && this.earnings >= it.cost && meterGatesPass(it));
+    // include items he can't yet AFFORD (the client shows them locked/greyed, not hidden — #7); still gated by
+    // chapter + meter so only currently-relevant options appear. buyLifestyle re-checks the cost on purchase.
+    return LIFESTYLE.filter((it) => !this.ownedLifestyle.includes(it.id) && chapterIdx >= it.minChapterIdx && (it.maxChapterIdx == null || chapterIdx <= it.maxChapterIdx) && meterGatesPass(it));
   }
   /** BUY a lifestyle upgrade with career earnings — a permanent perk. Does NOT advance the phase (you can
    *  buy several at a break, then choose your summer focus). Deterministic, no rng. */

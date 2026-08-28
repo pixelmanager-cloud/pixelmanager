@@ -2354,25 +2354,36 @@ class Game {
       for (const li of s.lifestyle ?? []) for (const k of Object.keys(li.perks ?? {})) if (METER_ICON[k]) legendPairs.set(METER_ICON[k], METER_NAME[k] ?? k);
       for (const m of s.meters ?? []) legendPairs.set(m.icon, m.label);
       const legend = `<div class="cg-legend">${[...legendPairs].map(([i, l]) => `${i} ${l}`).join(' · ')}</div>`;
-      // SPEND tiles are repeatable purchases; the FOCUS pick COMMITS and ends the summer. Show the shop FIRST
-      // and label the focus pick as the finishing move, so nobody strands their coins by picking a focus early (PT-47).
-      const shop = (!s.side && s.lifestyle && s.lifestyle.length)
-        ? `<div class="cg-prompt cg-shop-h">💷 <b>First — treat yourself, or back the club</b> — spend earnings (you have <b>${(s.earnings ?? 0).toLocaleString()}c</b>) on your life off the pitch, or invest in the club. Buy as many as you like; this doesn't end the summer:</div>`
-          + `<div class="cg-focus">` + s.lifestyle.map((li) => {
-            const effs = li.clubInvest
-              ? `<span class="cg-cost">💷 ${li.cost.toLocaleString()}c</span> · <span class="cg-invest-eff">🏛️ +${li.clubInvest.toLocaleString()}c to the club</span>`
-              : `<span class="cg-cost">💷 ${li.cost.toLocaleString()}c</span> ${li.recovery ? `· ⚡rec+${li.recovery} ` : ''}${li.market ? `· ⭐fame+${li.market} ` : ''}${perkLabel(li.perks)}`;
-            return `<div class="cg-foc buy${li.clubInvest ? ' invest' : ''}" data-act="lifestyle" data-id="${li.id}"><div class="cg-cname">💷 ${li.icon} ${li.name}</div><div class="cg-cdescr">${li.blurb}</div><div class="cg-effs">${effs}</div></div>`;
-          }).join('') + `</div>`
-        : '';
-      const focusPrompt = s.side
-        ? '🤝 <b>One more thing</b> before pre-season — a smaller side activity, if you fancy it:'
-        : shop
-          ? '🌅 <b>Then — pick ONE summer focus to finish.</b> <span class="cg-focus-warn">⚠️ Choosing an activity ends the summer, so spend your coins above first.</span>'
-          : '🌅 <b>Between seasons</b> — pick ONE way to spend the summer. This ends pre-season and starts the next chapter.';
-      body = shop + `<div class="cg-prompt">${focusPrompt}</div>` + legend
-        + `<div class="cg-focus">` + s.focus.map((f) => `<div class="cg-foc commit" data-act="focus" data-id="${f.id}"><div class="cg-cname">${f.icon} ${f.name}</div><div class="cg-cdescr">${f.desc}</div>`
-          + `<div class="cg-effs">${f.energy ? `⚡${f.energy > 0 ? '+' : ''}${f.energy} ` : ''}${effLabel(f.effects)}${f.tag ? `${TAG_ICON[f.tag] ?? ''} train ${f.tag}` : ''}</div></div>`).join('') + `</div>`;
+      // #5: the summer is TWO explicit steps — spend first (a Continue button moves on), then choose the focus.
+      // reset the step whenever a NEW summer screen appears (different turn), so it always starts on spending.
+      if (s.turn !== this.summerStepTurn) { this.summerStep = 'spend'; this.summerStepTurn = s.turn ?? -1; }
+      const hasShop = !s.side && !!s.lifestyle && s.lifestyle.length > 0;
+      const budget = s.earnings ?? 0;
+      // #7: unaffordable items are shown LOCKED (greyed, unclickable) rather than hidden, with how much more is needed.
+      const shopTiles = hasShop ? s.lifestyle!.map((li) => {
+        const locked = !li.clubInvest && li.cost > budget;
+        const effs = li.clubInvest
+          ? `<span class="cg-cost">💷 ${li.cost.toLocaleString()}c</span> · <span class="cg-invest-eff">🏛️ +${li.clubInvest.toLocaleString()}c to the club</span>`
+          : `<span class="cg-cost">💷 ${li.cost.toLocaleString()}c</span> ${li.recovery ? `· ⚡rec+${li.recovery} ` : ''}${li.market ? `· ⭐fame+${li.market} ` : ''}${perkLabel(li.perks)}`;
+        const lock = locked ? `<div class="cg-lock">🔒 need ${(li.cost - budget).toLocaleString()}c more</div>` : '';
+        return `<div class="cg-foc buy${li.clubInvest ? ' invest' : ''}${locked ? ' locked' : ''}"${locked ? '' : ` data-act="lifestyle" data-id="${li.id}"`}><div class="cg-cname">💷 ${li.icon} ${li.name}</div><div class="cg-cdescr">${li.blurb}</div><div class="cg-effs">${effs}</div>${lock}</div>`;
+      }).join('') : '';
+      const budgetBar = hasShop ? `<div class="cg-budget">💷 <b>${budget.toLocaleString()}c</b> left to spend</div>` : '';
+      const focusTiles = `<div class="cg-focus">` + s.focus.map((f) => `<div class="cg-foc commit" data-act="focus" data-id="${f.id}"><div class="cg-cname">${f.icon} ${f.name}</div><div class="cg-cdescr">${f.desc}</div>`
+        + `<div class="cg-effs">${f.energy ? `⚡${f.energy > 0 ? '+' : ''}${f.energy} ` : ''}${effLabel(f.effects)}${f.tag ? `${TAG_ICON[f.tag] ?? ''} train ${f.tag}` : ''}</div></div>`).join('') + `</div>`;
+      if (hasShop && this.summerStep === 'spend') {
+        // STEP 1 — spending only, with an explicit Continue to move on (#5)
+        body = `<div class="cg-prompt cg-shop-h">💷 <b>Spend your earnings</b> — treat yourself, or back the club. Buy as many as you like, then move on to your summer.</div>`
+          + budgetBar + `<div class="cg-focus">` + shopTiles + `</div>`
+          + `<div class="cg-summer-next-wrap"><button id="cg-summer-next" class="primary">Done spending — choose your summer →</button></div>`;
+      } else {
+        // STEP 2 — the summer focus (or the side activity, or a chapter with no shop)
+        const focusPrompt = s.side
+          ? '🤝 <b>One more thing</b> before pre-season — a smaller side activity, if you fancy it:'
+          : '🌅 <b>Choose ONE summer focus</b> — this <b>ends pre-season</b> and starts the next chapter.';
+        const backLink = hasShop ? `<button id="cg-summer-back" class="cg-linkbtn">← back to spending (💷 ${budget.toLocaleString()}c left)</button>` : '';
+        body = `<div class="cg-prompt">${focusPrompt}</div>` + backLink + legend + focusTiles;
+      }
     }
     this.lastCareerState = s;
     // TABS declutter the view: NOW (the current decision + your life dashboard), PLAYER (full identity +
@@ -2401,6 +2412,9 @@ class Game {
     $('academy-body').querySelectorAll('.cg-tab').forEach((el) => el.addEventListener('click', () => { this.careerTab = (el as HTMLElement).dataset.tab as any; this.renderCareer(s); }));
     $('academy-body').querySelectorAll('[data-act]').forEach((el) => el.addEventListener('click', () => this.doCareerAct(s.prospectId, { type: (el as HTMLElement).dataset.act!, cardId: (el as HTMLElement).dataset.id! })));
     this.makeActivatable($('academy-body').querySelectorAll('[data-act]')); // keyboard a11y: Tab to a card, Enter/Space to play
+    // #5: the summer two-step — Continue moves from spending to the focus choice; Back returns to spending
+    document.getElementById('cg-summer-next')?.addEventListener('click', () => { this.summerStep = 'activities'; this.renderCareer(s); });
+    document.getElementById('cg-summer-back')?.addEventListener('click', () => { this.summerStep = 'spend'; this.renderCareer(s); });
     if (this.careerTab === 'kit') this.wireKitTab(s);
   }
 
@@ -2444,6 +2458,8 @@ class Game {
   private lastNarration = '';
   private lastOutcome?: import('./api').CareerOutcome | null;
   private careerTab: 'now' | 'player' | 'kit' | 'league' | 'life' = 'now';
+  private summerStep: 'spend' | 'activities' = 'spend'; // #5: the summer screen is two steps — spend, then choose a focus
+  private summerStepTurn = -1;                            // which summer screen the step applies to (reset on a new one)
 
   /** The club's league table for the season — the small simulated league the bloodline player's club
    *  competes in once he reaches the senior stages. His form + overall drive where the club finishes. */

@@ -907,6 +907,15 @@
       .cg-foc.commit { border-color: color-mix(in srgb, var(--good) 45%, transparent); box-shadow: inset 3px 0 0 var(--good); }
       .cg-foc.commit:hover { border-color: var(--good); }
       .cg-focus-warn { display: inline-block; margin-top: 4px; font-size: 12px; color: var(--warn); font-weight: 700; }
+      /* #7: locked (unaffordable) spend tiles are shown, greyed + unclickable, with the shortfall */
+      .cg-foc.locked { opacity: .5; cursor: not-allowed; filter: grayscale(.5); }
+      .cg-foc.locked:hover { transform: none; border-color: rgba(210,180,90,0.35); }
+      .cg-foc .cg-lock { margin-top: 5px; font-size: 12px; font-weight: 700; color: var(--warn); }
+      /* #7: the remaining-budget bar, prominent above the spend tiles */
+      .cg-budget { font-family: var(--display); font-size: 13px; color: #ffd75e; background: color-mix(in srgb, var(--warn) 12%, var(--panel)); border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--line)); border-radius: 9px; padding: 8px 12px; margin: 2px 0 12px; display: inline-block; }
+      /* #5: the two-step summer flow — Continue button + a back link */
+      .cg-summer-next-wrap { margin-top: 16px; display: flex; justify-content: center; }
+      .cg-linkbtn { background: none; border: none; color: var(--cyan); font-family: var(--body); font-size: 15px; cursor: pointer; padding: 4px 0; margin-bottom: 8px; text-decoration: underline; }
       .legends-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin-top: 8px; }
       .legend-card { padding: 11px 13px; border-radius: 10px; background: linear-gradient(160deg, rgba(150,120,40,0.14), rgba(90,70,20,0.1)); border: 1px solid rgba(220,190,90,0.34); }
       .legend-card .lc-top { font-size: 13px; color: #e8d9a0; margin-bottom: 5px; }
