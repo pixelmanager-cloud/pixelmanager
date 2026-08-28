@@ -490,6 +490,8 @@
       .cg-agent-eff { display: inline-block; font-size: 12px; color: var(--text); background: rgba(255,255,255,0.05); border: 1px solid var(--line); border-radius: 8px; padding: 2px 7px; margin: 4px 4px 0 0; }
       /* the action sits up top; supporting context drops below a divider (playtest fix: cards were below the fold) */
       .cg-context { margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--line); }
+      /* keyboard focus ring for the click-only choice cards/coaches/agents (Steam a11y) */
+      [data-act]:focus-visible, [data-agent]:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
       /* ── per-stage re-theme: backdrop + scene banner, accent driven by --cg-accent (set per chapter) ── */
       #academy { --cg-accent: #6ad06a; }
       #academy-body { background: var(--cg-bg, transparent); border-radius: 12px; transition: background .5s ease; }

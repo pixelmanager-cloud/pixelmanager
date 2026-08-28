@@ -37,6 +37,9 @@ const BACKROOM_STAFF = [
 
 // icons for the stage-aware life meters (keyed by underlying relationship) — used in focus effect labels
 const METER_ICON: Record<string, string> = { authority: '🧑‍🏫', peers: '👥', family: '🏠', school: '🎒', agent: '🤝', fans: '📣', sponsors: '📸', partner: '❤️' };
+// Readable full names for the stat abbreviations shown around the UI (tooltip on hover — playtest fix:
+// abbreviations like CMP/CRE/LDR/WRK were unexplained).
+const STAT_FULL: Record<string, string> = { pace: 'Pace', strength: 'Strength', passing: 'Passing', shooting: 'Shooting', tackling: 'Tackling', positioning: 'Positioning', workrate: 'Work rate', keeping: 'Goalkeeping', setPiece: 'Set pieces', stamina: 'Stamina', composure: 'Composure', creativity: 'Creativity', leadership: 'Leadership', teamwork: 'Teamwork', aggression: 'Aggression' };
 const TAG_ICON: Record<string, string> = { composure: '🧊', aggression: '⚔️', creativity: '🎨', teamwork: '🧩', leadership: '🎖️', stamina: '🏃', flair: '✨', keeping: '🧤' };
 
 // KIT customization options (cosmetic identity for the career player, carried to the pro)
@@ -251,9 +254,9 @@ function statsTableHTML(players: Player[], highlight?: Set<string>, sort?: Squad
     sorted = [...players].sort((a, b) => (ROLE_ORDER[a.role] - ROLE_ORDER[b.role]) || (overall(b) - overall(a)));
   }
   const arrow = (key: string) => (sort?.key === key ? (sort.dir === 'asc' ? ' ▲' : ' ▼') : '');
-  const th = (label: string, key: string, style = '') =>
-    `<th class="sortable" data-sort="${key}"${style ? ` style="${style}"` : ''}>${label}${arrow(key)}</th>`;
-  const head = `<tr><th></th>${th('Pos', 'pos')}${th('Name', 'name', 'text-align:left')}${th('OVR', 'ovr')}${cols.map(([l, k]) => th(l, k)).join('')}</tr>`;
+  const th = (label: string, key: string, style = '', title = '') =>
+    `<th class="sortable" data-sort="${key}"${title ? ` title="${title}"` : ''}${style ? ` style="${style}"` : ''}>${label}${arrow(key)}</th>`;
+  const head = `<tr><th></th>${th('Pos', 'pos', '', 'Position')}${th('Name', 'name', 'text-align:left')}${th('OVR', 'ovr', '', 'Overall rating')}${cols.map(([l, k]) => th(l, k, '', STAT_FULL[k] ?? String(k))).join('')}</tr>`;
   const rows = sorted.map((p) => {
     const on = !!highlight?.has(p.id);
     const nft = isNftId(p.id);
@@ -693,7 +696,7 @@ class Game {
       ['tackling', 'TAC'], ['strength', 'STR'], ['workrate', 'WRK'], ['keeping', 'KEE'],
       ['setPiece', 'SET'], ['stamina', 'STA'],
     ];
-    const stats = order.map(([k, l]) => `<div class="pc-stat"><span>${l}</span><b style="color:${statColor(p.attrs[k] ?? 0)}">${Math.round(p.attrs[k] ?? 0)}</b></div>`).join('');
+    const stats = order.map(([k, l]) => `<div class="pc-stat" title="${STAT_FULL[k] ?? k}"><span>${l}</span><b style="color:${statColor(p.attrs[k] ?? 0)}">${Math.round(p.attrs[k] ?? 0)}</b></div>`).join('');
     // FX escalate with tier: sheen from Silver, rotating glow ring + sparkles from Gold up.
     const sparkCount = { bronze: 0, silver: 3, gold: 6, diamond: 10, legend: 16 }[tier.key] ?? 0;
     const sparks = Array.from({ length: sparkCount }, () => {
@@ -1977,6 +1980,7 @@ class Game {
       $('academy-body').innerHTML = `<button id="acad-back2" style="margin-bottom:10px;">← Prospects</button>`
         + `<div class="cg-prompt">Sign an <b>agent</b> to represent this prospect — it shapes his whole career (exposure, opportunities, and how much he'll want to be paid).</div>` + opts;
       $('acad-back2').addEventListener('click', () => this.showAcademy());
+      this.makeActivatable($('academy-body').querySelectorAll('[data-agent]')); // keyboard a11y for the agent picks
       $('academy-body').querySelectorAll('[data-agent]').forEach((b) => b.addEventListener('click', async () => {
         $('academy-body').innerHTML = SPINNER;
         const r = await api.startCareer(prospectId, (b as HTMLElement).dataset.agent!);
@@ -2229,6 +2233,7 @@ class Game {
     $('cg-back').addEventListener('click', () => this.showAcademy());
     $('academy-body').querySelectorAll('.cg-tab').forEach((el) => el.addEventListener('click', () => { this.careerTab = (el as HTMLElement).dataset.tab as any; this.renderCareer(s); }));
     $('academy-body').querySelectorAll('[data-act]').forEach((el) => el.addEventListener('click', () => this.doCareerAct(s.prospectId, { type: (el as HTMLElement).dataset.act!, cardId: (el as HTMLElement).dataset.id! })));
+    this.makeActivatable($('academy-body').querySelectorAll('[data-act]')); // keyboard a11y: Tab to a card, Enter/Space to play
     if (this.careerTab === 'kit') this.wireKitTab(s);
   }
 
@@ -2236,7 +2241,7 @@ class Game {
   private careerProfileHtml(p: import('./api').CareerProfile): string {
     const stars = '★'.repeat(p.stars) + '☆'.repeat(5 - p.stars);
     const key: Array<[string, string]> = [['pace', 'PAC'], ['shooting', 'SHO'], ['passing', 'PAS'], ['tackling', 'TAC'], ['strength', 'STR'], ['composure', 'CMP'], ['creativity', 'CRE'], ['leadership', 'LDR']];
-    const stat = (k: string) => `<span class="cgp-stat"><b>${key.find((x) => x[0] === k)?.[1]}</b> ${p.attrs[k] ?? 0}</span>`;
+    const stat = (k: string) => `<span class="cgp-stat" title="${STAT_FULL[k] ?? k}"><b>${key.find((x) => x[0] === k)?.[1]}</b> ${p.attrs[k] ?? 0}</span>`;
     const traits = p.traitsForming.length ? `<div class="cgp-traits">forming: ${p.traitsForming.map((t) => `<span class="cg-tag">${t}</span>`).join(' ')}</div>` : '';
     return `<div class="cg-profile"><div class="cgp-top">`
       + `<span class="cgp-role role-${p.role}">${p.role}</span>`
@@ -2341,6 +2346,16 @@ class Game {
       };
       try { const r = await api.saveKit(s.prospectId, kit); if (this.lastCareerState) this.lastCareerState.kit = r.kit; s.kit = r.kit; toast('Saved ✓'); }
       catch (e: any) { toast(e?.body?.error ?? 'Could not save'); }
+    });
+  }
+
+  /** Make click-only divs keyboard-operable (Steam a11y): focusable + Enter/Space triggers the click. */
+  private makeActivatable(els: NodeListOf<Element> | Element[]): void {
+    els.forEach((el) => {
+      const h = el as HTMLElement;
+      if (h.getAttribute('role') === 'button') return; // already done
+      h.setAttribute('role', 'button'); h.setAttribute('tabindex', '0');
+      h.addEventListener('keydown', (e) => { const k = (e as KeyboardEvent).key; if (k === 'Enter' || k === ' ') { e.preventDefault(); h.click(); } });
     });
   }
 
