@@ -2297,23 +2297,32 @@ class Game {
     } else if (s.phase === 'focus' && s.focus) {
       const effLabel = (e: Record<string, number>) => Object.entries(e).map(([k, v]) => `<span title="${METER_NAME[k] ?? k}">${METER_ICON[k] ?? ''}${v > 0 ? '+' : ''}${v}</span>`).join(' · ');
       const perkLabel = (p?: Record<string, number>) => p ? Object.entries(p).map(([k, v]) => `<span title="${METER_NAME[k] ?? k}">${METER_ICON[k] ?? ''}${v > 0 ? '+' : ''}${v}</span>`).join(' ') : '';
-      // legend so the icon-math on each tile is decodable at a glance (⚡ energy + the relationship meters in play)
-      const legend = `<div class="cg-legend">⚡ energy${(s.meters ?? []).length ? ' · ' + (s.meters ?? []).map((m) => `${m.icon} ${m.label}`).join(' · ') : ''}</div>`;
+      // legend built from the icons ACTUALLY shown on this screen's tiles (focus effects + lifestyle perks),
+      // union'd with the dashboard meters — so a tile can never show a 🏠/❤️ the legend doesn't decode (PT-48).
+      const legendPairs = new Map<string, string>([['⚡', 'energy']]);
+      for (const f of s.focus) for (const k of Object.keys(f.effects ?? {})) if (METER_ICON[k]) legendPairs.set(METER_ICON[k], METER_NAME[k] ?? k);
+      for (const li of s.lifestyle ?? []) for (const k of Object.keys(li.perks ?? {})) if (METER_ICON[k]) legendPairs.set(METER_ICON[k], METER_NAME[k] ?? k);
+      for (const m of s.meters ?? []) legendPairs.set(m.icon, m.label);
+      const legend = `<div class="cg-legend">${[...legendPairs].map(([i, l]) => `${i} ${l}`).join(' · ')}</div>`;
+      // SPEND tiles are repeatable purchases; the FOCUS pick COMMITS and ends the summer. Show the shop FIRST
+      // and label the focus pick as the finishing move, so nobody strands their coins by picking a focus early (PT-47).
       const shop = (!s.side && s.lifestyle && s.lifestyle.length)
-        ? `<div class="cg-prompt cg-shop-h">💷 <b>Treat yourself — or back the club</b> — spend earnings (you have <b>${(s.earnings ?? 0).toLocaleString()}c</b>) on your life off the pitch, or invest them in the club's future:</div>`
+        ? `<div class="cg-prompt cg-shop-h">💷 <b>First — treat yourself, or back the club</b> — spend earnings (you have <b>${(s.earnings ?? 0).toLocaleString()}c</b>) on your life off the pitch, or invest in the club. Buy as many as you like; this doesn't end the summer:</div>`
           + `<div class="cg-focus">` + s.lifestyle.map((li) => {
             const effs = li.clubInvest
               ? `<span class="cg-cost">💷 ${li.cost.toLocaleString()}c</span> · <span class="cg-invest-eff">🏛️ +${li.clubInvest.toLocaleString()}c to the club</span>`
               : `<span class="cg-cost">💷 ${li.cost.toLocaleString()}c</span> ${li.recovery ? `· ⚡rec+${li.recovery} ` : ''}${li.market ? `· ⭐fame+${li.market} ` : ''}${perkLabel(li.perks)}`;
-            return `<div class="cg-foc buy${li.clubInvest ? ' invest' : ''}" data-act="lifestyle" data-id="${li.id}"><div class="cg-cname">${li.icon} ${li.name}</div><div class="cg-cdescr">${li.blurb}</div><div class="cg-effs">${effs}</div></div>`;
+            return `<div class="cg-foc buy${li.clubInvest ? ' invest' : ''}" data-act="lifestyle" data-id="${li.id}"><div class="cg-cname">💷 ${li.icon} ${li.name}</div><div class="cg-cdescr">${li.blurb}</div><div class="cg-effs">${effs}</div></div>`;
           }).join('') + `</div>`
         : '';
       const focusPrompt = s.side
         ? '🤝 <b>One more thing</b> before pre-season — a smaller side activity, if you fancy it:'
-        : '🌅 <b>Between seasons</b> — how do you spend the summer? Steer your relationships before the next chapter.';
-      body = `<div class="cg-prompt">${focusPrompt}</div>` + legend
-        + `<div class="cg-focus">` + s.focus.map((f) => `<div class="cg-foc" data-act="focus" data-id="${f.id}"><div class="cg-cname">${f.icon} ${f.name}</div><div class="cg-cdescr">${f.desc}</div>`
-          + `<div class="cg-effs">${f.energy ? `⚡${f.energy > 0 ? '+' : ''}${f.energy} ` : ''}${effLabel(f.effects)}${f.tag ? `${TAG_ICON[f.tag] ?? ''} train ${f.tag}` : ''}</div></div>`).join('') + `</div>` + shop;
+        : shop
+          ? '🌅 <b>Then — pick ONE summer focus to finish.</b> <span class="cg-focus-warn">⚠️ Choosing an activity ends the summer, so spend your coins above first.</span>'
+          : '🌅 <b>Between seasons</b> — pick ONE way to spend the summer. This ends pre-season and starts the next chapter.';
+      body = shop + `<div class="cg-prompt">${focusPrompt}</div>` + legend
+        + `<div class="cg-focus">` + s.focus.map((f) => `<div class="cg-foc commit" data-act="focus" data-id="${f.id}"><div class="cg-cname">${f.icon} ${f.name}</div><div class="cg-cdescr">${f.desc}</div>`
+          + `<div class="cg-effs">${f.energy ? `⚡${f.energy > 0 ? '+' : ''}${f.energy} ` : ''}${effLabel(f.effects)}${f.tag ? `${TAG_ICON[f.tag] ?? ''} train ${f.tag}` : ''}</div></div>`).join('') + `</div>`;
     }
     this.lastCareerState = s;
     // TABS declutter the view: NOW (the current decision + your life dashboard), PLAYER (full identity +
