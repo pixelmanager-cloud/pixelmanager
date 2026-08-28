@@ -38,6 +38,25 @@ COLORS = ["navy blue and gold", "crimson red and white", "forest green and cream
     "orange and black"]
 SHAPES = ["shield", "round badge", "crest"]
 
+# Fresh distinct subjects (none overlap the 40 base MOTIFS) — used to give every badge in the set its
+# own motif so no two crests share a family. Plenty of headroom (>80 needed for full de-duplication).
+EXTRA_MOTIFS = ["panther head", "leopard head", "tiger head", "lynx head", "bison head", "rhinoceros head",
+    "buffalo skull", "raven", "osprey", "kestrel", "swan", "heron", "crane bird", "rooster", "magpie",
+    "kingfisher", "pelican", "coiled viper", "python", "scorpion", "spider", "hornet", "bee", "dragonfly",
+    "crab", "lobster", "seahorse", "leaping dolphin", "shark", "whale tail", "octopus", "sea serpent",
+    "stag beetle", "salamander", "unicorn head", "pegasus", "hydra", "kraken", "minotaur", "centaur",
+    "wyvern", "basilisk", "chimera", "sphinx", "gargoyle", "thunderbird", "iron gauntlet", "battle axe",
+    "crossed arrows", "crossed keys", "crossed spears", "halberd", "spiked mace", "longbow and arrow",
+    "flaming sword", "upright broadsword", "kite shield", "spartan helmet", "viking helmet", "crested war helm",
+    "heater shield", "portcullis", "watchtower", "windmill", "water wheel", "forge anvil", "blacksmith tongs",
+    "miner lantern", "crossed pickaxes", "ship wheel", "life ring buoy", "harpoon", "fishing net", "pine tree",
+    "great redwood", "laurel wreath", "olive branch", "acorn", "thistle", "clover leaf", "tulip", "sunflower",
+    "maple leaf", "crossed torches", "rising sun", "crescent moon", "shooting star", "volcano", "waterfall",
+    "cresting wave"]
+
+def prompt_from(m, c, s):
+    return f"a football club {s} emblem, a {m}, {c}, bold clean centered symmetrical, thick dark outline, flat colors"
+
 def prompt_for(i):
     m = MOTIFS[i % len(MOTIFS)]; c = COLORS[(i // 3) % len(COLORS)]; s = SHAPES[i % len(SHAPES)]
     # RD does the pixel-art part from prompt_style — describe only the subject
@@ -76,6 +95,34 @@ def main():
     key = api_key()
     os.makedirs(OUT, exist_ok=True)
     import glob
+    if os.environ.get("RD_UNIQUE"):  # de-duplicate motifs: give every badge its own distinct family
+        total = len(glob.glob(os.path.join(OUT, "badge-*.png")))
+        # reconstruct the motif each existing badge was generated with (see prompt_for / regen offsets)
+        batchA = ["3","6","15","40","43","50","58","65","81","83","93","94","105","108","115"]
+        batchB = ["15","39","64","105"]
+        def cur_off(n):
+            if str(n) in batchB: return 300 + n*3 + batchB.index(str(n))
+            if str(n) in batchA: return 300 + n*3 + batchA.index(str(n))
+            return (n-1) + 200
+        keep, regen_ns, seen = {}, [], set()
+        for n in range(1, total+1):
+            m = MOTIFS[cur_off(n) % len(MOTIFS)]
+            if m in seen: regen_ns.append(n)      # a later copy of an already-kept motif -> reassign
+            else: seen.add(m); keep[n] = m         # first sighting of this motif -> keep the art as-is
+        print(f"{total} badges: keeping {len(keep)} (one per motif), regenerating {len(regen_ns)} with fresh unique motifs")
+        for k, n in enumerate(regen_ns):
+            m = EXTRA_MOTIFS[k % len(EXTRA_MOTIFS)]
+            c = COLORS[(k*7 + 3) % len(COLORS)]; s = SHAPES[(k*2 + 1) % len(SHAPES)]
+            seed = 7000 + n*31 + k             # unique per badge so no two seeds collide
+            try:
+                res = request(key, prompt_from(m, c, s), seed)
+                im = Image.open(io.BytesIO(base64.b64decode(res["base64_images"][0])))
+                pixelate(im).save(os.path.join(OUT, f"badge-{n}.png"))
+                print(f"  badge-{n}: {m} / {c} / {s}  (balance {res.get('remaining_balance')})")
+            except Exception as e:
+                print(f"  badge-{n} error (kept old):", e)
+        os.system(f'cd "{ROOT}" && python3 tools/reindex_badges.py')
+        return
     regen = os.environ.get("RD_REGEN", "").strip()
     if regen:  # regenerate specific badge numbers in place with fresh art
         nums = [int(x) for x in regen.replace(" ", "").split(",") if x]
