@@ -6,6 +6,7 @@
 // this is about the WIRING: does every reachable api.ts call run in-process end to end.
 import { api, __setBackendForTests, setToken } from './src/api.js';
 import { createInMemoryBackend } from './src/save.js';
+import { transferList, wageForLength } from '@fm/shared';
 
 __setBackendForTests(createInMemoryBackend());
 
@@ -101,6 +102,31 @@ assert(meAfterReward.season === 1, 'spSeasonReward advances the local season cou
 
 const staffRes = await api.hireStaff('fitness');
 assert(staffRes.cost === 350, 'fitness coach costs 350');
+
+console.log('=== 8b. transfer market: buy / sell / negotiate (money safety) ===');
+const tmList = transferList(123456, 5, 10).sort((a, b) => a.fee - b.fee); // bottom tier → cheap low-OV players
+assert(tmList.length > 0, 'transfer market lists players to buy');
+const meTM0 = await api.me();
+const coinsTM0 = meTM0.account.coins;
+const cheap = tmList[0];
+assert(coinsTM0 >= cheap.fee, `an affordable listing is available (cheapest ${cheap.fee} <= ${coinsTM0} coins)`);
+const buy = await api.buyPlayer(cheap.player, cheap.fee);
+assert(buy.coins === coinsTM0 - cheap.fee, 'buying debits exactly the fee');
+await assertThrows('buying beyond budget throws (no negative coins)', () => api.buyPlayer(cheap.player, 10_000_000));
+const bought = (await api.me()).club.players.find((p) => p.id.startsWith('bought'))!;
+assert(!!bought, 'the bought player joins the squad');
+const coinsBeforeSell = (await api.me()).account.coins;
+const sell = await api.sellPlayer(bought.id);
+assert(sell.coins > coinsBeforeSell && sell.value > 0, 'selling credits coins');
+assert(sell.squadSize === buy.squadSize - 1, 'the sold player leaves the squad');
+await assertThrows('cannot sell the bloodline star via the market', () => api.sellPlayer(prospectId));
+const info = await api.starContractInfo(prospectId);
+assert(info.baseWage > 0 && info.prefLength >= 2, 'star contract info is sane');
+const low = await api.negotiateStar(prospectId, Math.round(wageForLength(info, info.prefLength) * 0.5), info.prefLength);
+assert(low.outcome === 'reject', 'a lowball contract offer is rejected');
+assert(low.coins === (await api.me()).account.coins, 'a rejected offer does NOT charge coins');
+const fair = await api.negotiateStar(prospectId, wageForLength(info, info.prefLength), info.prefLength);
+assert(fair.outcome === 'accept', 'meeting his ask re-signs him');
 
 console.log('=== 9. honours recorded a title for the champion finish ===');
 const { honours } = await api.honours();
