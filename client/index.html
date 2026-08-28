@@ -486,6 +486,10 @@
       .cg-help-list b { color: #fff; }
       /* dim + block the choice grid while a move resolves (playtest fix K7: no stale/double "card not in hand") */
       #academy-body.cg-acting .cg-cards, #academy-body.cg-acting .cg-focus, #academy-body.cg-acting .cg-coach, #academy-body.cg-acting .cg-offer { opacity: 0.55; pointer-events: none; }
+      /* agent-choice effect pills (playtest fix: agents had flavour but no stated mechanics) */
+      .cg-agent-eff { display: inline-block; font-size: 12px; color: var(--text); background: rgba(255,255,255,0.05); border: 1px solid var(--line); border-radius: 8px; padding: 2px 7px; margin: 4px 4px 0 0; }
+      /* the action sits up top; supporting context drops below a divider (playtest fix: cards were below the fold) */
+      .cg-context { margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--line); }
       /* ── per-stage re-theme: backdrop + scene banner, accent driven by --cg-accent (set per chapter) ── */
       #academy { --cg-accent: #6ad06a; }
       #academy-body { background: var(--cg-bg, transparent); border-radius: 12px; transition: background .5s ease; }
@@ -861,6 +865,7 @@
       .cgp-stat b { font-family: var(--body); font-size: 14px; color: var(--muted); margin-right: 3px; }
       .cgp-traits { margin-top: 7px; font-size: 12px; color: #9aa; }
       .scout-sub { font-size: 19px; color: var(--muted); margin-bottom: 14px; } .scout-sub b { color: var(--good); }
+      .scout-note { display: block; margin-top: 6px; font-size: 15px; color: var(--muted); opacity: 0.85; } .scout-note b { color: var(--warn); }
       .onboard-welcome { font-size: 18px; line-height: 1.55; color: #e2e8f0; padding: 14px 16px; margin-bottom: 16px; border-radius: 10px;
         background: color-mix(in srgb, var(--accent) 12%, transparent); border: 1px solid color-mix(in srgb, var(--accent) 42%, transparent); }
       .onboard-welcome b { color: var(--accent); }

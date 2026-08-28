@@ -32,7 +32,16 @@ export const roleHintOf = (t: Token): string => t.role ?? 'MF';
 export const trackFor = (roleHint: string): Track => (roleHint === 'GK' ? 'goalkeeper' : 'outfield');
 export const ageOf = (primeSeason: number, season: number) => Math.min(40, Math.max(25, 25 + (season - primeSeason)));
 export const careerSeedFor = (id: string, gen: number) => seedFrom(`${id}:career:g${gen}`);
-export const agentsList = () => AGENTS.map((a) => ({ id: a.id, name: a.name, desc: a.desc }));
+// Include READABLE effect labels so the player can see what an agent actually DOES, not just flavour text.
+export const agentsList = () => AGENTS.map((a) => ({
+  id: a.id, name: a.name, desc: a.desc,
+  effects: [
+    a.exposure >= 1.3 ? '⭐ more big-stage moments' : a.exposure <= 0.9 ? '🛡️ steadier, fewer big stages' : '⚖️ balanced exposure',
+    a.draftLuck >= 1.25 ? '🃏 better card options at drafts' : a.draftLuck <= 1.0 ? '🃏 standard draft luck' : '🃏 slightly better drafts',
+    a.greed >= 3 ? '💷 will want big wages' : a.greed <= -3 ? '🤝 modest wages, loyal' : '💷 fair wage demands',
+    a.valueMod >= 1.15 ? '📈 higher transfer value' : a.valueMod <= 0.95 ? '📉 lower fees' : '📊 standard value',
+  ] as string[],
+}));
 
 // ── conversions ──
 export function tokenToPlayer(t: Token): Player {

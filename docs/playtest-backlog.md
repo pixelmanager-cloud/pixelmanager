@@ -26,20 +26,17 @@ at a time, not truly parallel. True survive-the-Mac-sleeping 24/7 = run the head
 
 ## Open findings
 
-_(both launch-pass balance flags fixed 2026-08-28 — see below)_
-
-- [x] **PT-2 (manager balance): top-flight titles are too rare (~5%/season).** FIXED — top-tier transfer market now offers title-contender signings (headroom +3 at tiers 1–2) so an investing dynasty can build a squad that exceeds the league. Probe: title rate 5% → **18%**. A peak club that has climbed to
-  tier 1 wins the league only ~5% of seasons — climbing is achievable (94%) but *winning* the top flight is a
-  grind. Target 12–25%. Likely the peak club-strength arc is too low vs `tierStrength(1)`, or the top tier's
-  spread is too tight. Source: `analyze_manager_career.ts`. `shared/src/clubseason.ts`.
-- [x] **PT-1 (player content): ~24% of turns are a "bad hand"** FIXED — `ensurePlayableHand()` swaps in a fair-fit card from the deck when the draw is dead. Probe: bad-hand 24% → **2%**, skilled Solid+ 71% → **94%**. — no card in the drawn hand gets even a fair
-  fit for the demand, forcing a weak play with no acknowledgement. Under the 25% flag threshold but worth
-  improving: guarantee a fair-fit card in the draw, or have the narration acknowledge "nothing in his locker
-  fit this" instead of implying the player misplayed. Source: `analyze_player_career.ts`. `shared/src/career.ts` refillHand.
+_None from the harness right now — the two launch-pass balance flags are fixed. New findings land here from the rotating cron passes (browser UX agent + probes)._
 
 ## Fixed (validated by the harness)
 
-- [x] Core card loop: skilled play now rewarded (Solid+ **71%** vs random 27%) after demand normalized by max
-  not sum + variance cut. (was: perfect play routinely graded "Poor")
-- [x] Rival now beatable by good play (**100%** of skilled careers vs 9% random) after rate 6–9 → 3–5/turn.
-  (was: mathematically impossible to keep pace)
+- [x] **PT-2 — top-flight titles too rare (~5%/season).** Top-tier transfer market now offers title-contender
+  signings (headroom +3 at tiers 1–2) so an investing dynasty can build a squad that exceeds the league — an
+  earned, coin-gated reward. Probe: title rate **5% → 18%**. `shared/src/transfermarket.ts`.
+- [x] **PT-1 — ~24% of turns were a "bad hand"** (no fair-fit card, forced weak play). `ensurePlayableHand()`
+  now swaps in a fair-fit card from the deck when the draw is dead; a dead hand only remains when the DECK
+  itself can't answer (a deck-building signal). Probe: bad-hand **24% → 2%**, skilled Solid+ **71% → 94%**.
+  `shared/src/career.ts`.
+- [x] Core card loop: skilled play rewarded (Solid+ 71→94% vs random ~33%) — demand normalized by max not
+  sum + variance cut. (was: perfect play routinely graded "Poor")
+- [x] Rival beatable by good play (100% of skilled careers) after rate 6–9 → 3–5/turn. (was: impossible)

@@ -1847,7 +1847,7 @@ class Game {
         ? `<div class="onboard-welcome"><b>Welcome to ${this.club.name}.</b> Every legend starts as a kid. Here's your first prospect — <b>develop him</b> through his career (age 10→25), graduate him into your squad, and one day his bloodline carries on. Hit <b>Develop →</b> to begin.</div>`
         : '';
       this.onboarding = false;
-      const intro = `<div class="scout-sub">Your <b>academy</b> — young players to <b>develop</b> through a full career (age 10→25): play to each chapter's demands, appoint coaches, make the big calls. At 25 they graduate into a pro for your squad — and when they retire, their <b>bloodline</b> lives on through the next generation.</div>`
+      const intro = `<div class="scout-sub">Your <b>academy</b> — young players to <b>develop</b> through a full career (age 10→25): play to each chapter's demands, appoint coaches, make the big calls. At 25 they graduate into a pro for your squad — and when they retire, their <b>bloodline</b> lives on through the next generation. <span class="scout-note">A prospect's <b>pedigree %</b> is the quality his bloodline passes down — a higher pedigree means a stronger natural ceiling to develop toward.</span></div>`
         + `<div style="margin:10px 0 14px;"><button id="mint-genesis" class="primary">🔎 Scout a new prospect · 300c</button>`
         + `<div class="scout-sub" style="margin:6px 0 0;">Bring another 10-year-old into your academy to develop alongside your bloodline. The <b>300c</b> is <b>coins</b> — the currency you earn from running your club — so this is you choosing to invest in extra youth.</div></div>`;
       const rows = prospects.length ? prospects.map((p) => {
@@ -1970,7 +1970,10 @@ class Game {
       if (cur) { this.renderCareer(cur.state); return; }
       // not started → choose an agent first
       const { agents } = await api.careerAgents();
-      const opts = agents.map((a) => `<div class="cg-coach" data-agent="${a.id}"><div class="cg-cname"><span class="ico-inline">${sprite('briefcase')}</span> ${a.name}</div><div class="cg-cdesc">${a.desc}</div></div>`).join('');
+      const opts = agents.map((a) => {
+        const effs = (a as any).effects?.length ? `<div class="cg-effs">${((a as any).effects as string[]).map((e) => `<span class="cg-agent-eff">${e}</span>`).join('')}</div>` : '';
+        return `<div class="cg-coach" data-agent="${a.id}"><div class="cg-cname"><span class="ico-inline">${sprite('briefcase')}</span> ${a.name}</div><div class="cg-cdesc">${a.desc}</div>${effs}</div>`;
+      }).join('');
       $('academy-body').innerHTML = `<button id="acad-back2" style="margin-bottom:10px;">← Prospects</button>`
         + `<div class="cg-prompt">Sign an <b>agent</b> to represent this prospect — it shapes his whole career (exposure, opportunities, and how much he'll want to be paid).</div>` + opts;
       $('acad-back2').addEventListener('click', () => this.showAcademy());
@@ -2214,7 +2217,10 @@ class Game {
     else if (this.careerTab === 'kit') content = this.kitTabHtml(s);
     else if (this.careerTab === 'life') content = this.offPitchHtml(s);
     else if (this.careerTab === 'league') content = this.leagueTableHtml(s);
-    else content = this.objectiveHtml(s) + this.rivalHtml(s) + this.intlHtml(s) + this.lifeDashHtml(s) + narr + recap + lifeOutcome + conseq + evt + body;
+    // ACTION FIRST: the moment + its choice cards sit at the TOP (last turn's outcome just above the new
+    // scenario), then the supporting context (objective / rival / dashboard / recap) below — so the one thing
+    // you must do is never below the fold. (playtest finding: choice cards were pushed off-screen every turn.)
+    else content = narr + evt + body + `<div class="cg-context">` + this.objectiveHtml(s) + this.rivalHtml(s) + this.intlHtml(s) + this.lifeDashHtml(s) + lifeOutcome + conseq + recap + `</div>`;
     const help = this.careerTab === 'now' ? this.careerHelpCard(s) : '';
     const tut = this.careerTab === 'now' ? this.tutorialHint(s) : '';
     $('academy-body').innerHTML = head + scene + help + tut + tabBar + content;
