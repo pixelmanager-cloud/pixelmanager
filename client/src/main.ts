@@ -1166,6 +1166,19 @@ class Game {
     });
   }
 
+  /** One-time, dismissible first-manager explainer — the jump from "pick 1 of 4 cards" to a full tactics
+   *  suite needs a hand (PT-23). Per-save so a new bloodline sees it again. */
+  private managerHelpCard(): string {
+    if (localStorage.getItem(this.onbKey('fm_mgr_help_done'))) return '';
+    const m = this.loadMgr();
+    return `<div class="cg-help" id="mgr-help"><div class="cg-help-head">📋 YOU'RE THE MANAGER NOW <button class="cg-help-x" id="mgr-help-x">Got it ✕</button></div>`
+      + `<ul class="cg-help-list">`
+      + `<li><b>Each matchday:</b> set your <b>XI + tactics</b> (or hit Auto-pick), then <b>Play</b> the match — or <b>⏩ Sim</b> to jump ahead.</li>`
+      + `<li><b>Win games to climb the table.</b> Finish top to win the league or earn promotion; finish bottom and you go down.</li>`
+      + `<li><b>${m.starName ?? 'Your bloodline star'} is your key player</b> — his rating drives the whole squad's strength, so keep developing him and always start him.</li>`
+      + `<li><b>Spend coins</b> on the Transfer Market and club facilities to strengthen the side over the seasons.</li>`
+      + `</ul></div>`;
+  }
   private showSeason() {
     this.spFixture = null;
     this.showScreen('season');
@@ -1195,7 +1208,11 @@ class Game {
     let biggest: { gd: number; sc: string } | null = null, run = 0, bestRun = 0;
     for (const r of played) { const gd = r.myGoals - r.oppGoals; if (gd > 0 && (!biggest || gd > biggest.gd)) biggest = { gd, sc: `${r.myGoals}-${r.oppGoals}` }; if (gd >= 0) { run++; bestRun = Math.max(bestRun, run); } else run = 0; }
     const records = played.length ? `<div class="sf-records">📋 ${biggest ? `Biggest win ${biggest.sc}` : 'No win yet'} · Longest unbeaten ${bestRun}</div>` : '';
-    const starLine = m.starName && m.starAge ? ` · ★ ${m.starName} (age ${m.starAge}${m.retireAge ? `, likely retires ~${m.retireAge}` : ''})` : '';
+    // surface the star's rating + make the star→club link explicit (PT-21: his contribution was invisible)
+    const starP0 = m.starId ? this.club.players.find((p) => p.id === m.starId) : undefined;
+    const starLine = m.starName && m.starAge
+      ? ` · <span title="Your bloodline player is the club's talisman — his rating feeds the whole squad's strength, so the sharper he is, the higher ${clubName} finishes.">★ ${m.starName} · OVR ${starP0 ? overall(starP0) : '—'} · age ${m.starAge}${m.retireAge ? `, ~retires ${m.retireAge}` : ''}</span>`
+      : '';
     const tier = this.clubTier();
     const header = done
       ? `<div class="season-summary done"><span class="ss-crest">${crest(clubName, 20)}</span>✅ Season ${m.season} complete — <b>${clubName}</b> finished <b>${this.ordinal(t.pos)}</b> of ${t.size} in <b>${tierName(tier)}</b>${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ''}. <button class="primary" id="sf-next-season">Next season →</button></div>`
@@ -1220,7 +1237,8 @@ class Game {
     const boardLine = lb && !done && nextIdx <= 3
       ? `<div class="sf-board sf-board-${lb.mood}">🪑 <b>The board</b> — on last season: “${lb.message}” <span class="sf-board-exp">This season they expect: ${lb.expectation}.</span></div>`
       : '';
-    $('season-body').innerHTML = header
+    $('season-body').innerHTML = this.managerHelpCard()
+      + header
       + bidBanner
       + tierMove
       + boardLine
@@ -1231,6 +1249,7 @@ class Game {
       + (m.starName ? `<div class="sf-tm"><button id="sf-transfers">💰 Transfer Market</button> <span class="sf-tm-hint">buy/sell players to strengthen the squad</span></div>` : '')
       + `<div class="season-cols"><div class="season-fixtures"><h4 class="scout-h4">FIXTURES</h4>${fxRows}${records}${focusSel}${simBtn}</div>`
       + `<div class="season-table-wrap"><h4 class="scout-h4">LEAGUE TABLE — ${tierName(tier).toUpperCase()}</h4>${this.spTableHtml(t, tier)}${this.staffHtml()}</div></div>`;
+    ($('mgr-help-x') as any)?.addEventListener('click', () => { localStorage.setItem(this.onbKey('fm_mgr_help_done'), '1'); ($('mgr-help') as any)?.remove(); });
     $('sf-cont-play')?.addEventListener('click', () => this.playContinentalTie());
     $('sf-cont-sim')?.addEventListener('click', () => this.simContinentalTie());
     $('sf-wc-follow')?.addEventListener('click', () => this.followWorldCup());
@@ -2932,10 +2951,16 @@ class Game {
     const assists = new Map<string, number>();
     for (const e of events) if (e.type === 'goal' && e.playerName2) assists.set(e.playerName2, (assists.get(e.playerName2) ?? 0) + 1);
     const asLine = assists.size ? `<div class="scorers">🅰 Assists: ${[...assists.entries()].map(([n, c]) => c > 1 ? `${n} ×${c}` : n).join(' · ')}</div>` : '';
-    $('ft-report').innerHTML = `${lead}${redLine}<div class="scorers">${scLine}</div>${asLine}`;
-    // player of the match: most goals, tie broken toward the winning side
+    // spotlight the bloodline star when HE features — his contribution was invisible in the report (PT-21)
+    const starName = this.loadMgr().starName;
+    const starScored = starName ? names.find(([n]) => n === starName) : undefined;
+    const starLineFt = starScored ? `<div class="scorers ft-star">⭐ <b>${starName}</b> got on the scoresheet${starScored[1].mins.length >= 2 ? ` — ${starScored[1].mins.length} goals` : ''}</div>` : '';
+    $('ft-report').innerHTML = `${lead}${redLine}<div class="scorers">${scLine}</div>${asLine}${starLineFt}`;
+    // player of the match: most goals, tie broken toward YOUR star first, then the winning side
     const winSide: 0 | 1 | null = h > a ? 0 : a > h ? 1 : null;
-    names.sort((x, y) => y[1].mins.length - x[1].mins.length || (Number(y[1].team === winSide) - Number(x[1].team === winSide)));
+    names.sort((x, y) => y[1].mins.length - x[1].mins.length
+      || (Number(y[0] === starName) - Number(x[0] === starName))
+      || (Number(y[1].team === winSide) - Number(x[1].team === winSide)));
     const potmEl = $('ft-potm');
     if (names.length) {
       const [n, g] = names[0];
