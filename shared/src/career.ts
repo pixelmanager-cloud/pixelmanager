@@ -768,8 +768,13 @@ const KIND_BIAS: Record<Scenario['kind'], Tag[]> = {
 const KIND_POOL: Scenario['kind'][] = ['match', 'match', 'match', 'social', 'training'];
 // goalkeeper moments demand keeping heavily, plus the calm/commanding traits that suit a keeper
 const GK_BIAS: Tag[] = ['keeping', 'keeping', 'keeping', 'composure', 'leadership', 'creativity'];
+// SENIOR big-game occasions (Breakthrough onward). "Boxing Day Away Day" had a venue baked in that contradicted
+// a home fixture (PT-107) — now venue-neutral. Senior-club framings stay out of the youth bank below.
 const BIG_MOMENTS = ['Derby Day', 'Cup Quarter-Final', 'Relegation Six-Pointer', 'Live on TV', 'Top-of-the-Table Clash', 'The Return to a Former Club', 'A Scout-Packed Showcase', 'Local Bragging Rights',
-  'Boxing Day Away Day', 'A New Manager\'s First Big Test', 'A Point to Prove to the Doubters', 'The Fixture the Fans Circle', 'A Testimonial for a Club Legend', 'Under the Lights, First Time on This Stage'];
+  'The Boxing Day Fixture', 'A New Manager\'s First Big Test', 'A Point to Prove to the Doubters', 'The Fixture the Fans Circle', 'A Testimonial for a Club Legend', 'Under the Lights, First Time on This Stage'];
+// YOUTH big-game occasions (Grassroots..Youth Team) — no relegation six-pointers, testimonials, TV or new-manager
+// framings that a 15–18-year-old on the academy circuit would never face (PT-107).
+const YOUTH_BIG_MOMENTS = ['Derby Day', 'The Youth-Cup Quarter-Final', 'A Scout-Packed Showcase', 'Local Bragging Rights', 'A Point to Prove', 'The Big Trial Against a Bigger Club', 'The Game the Coaches Are Watching', 'First Time Under the Floodlights', 'The Grudge Match With the School Down the Road', 'The Fixture the Academy Circles'];
 const HUGE_MOMENTS = ['CUP FINAL', 'Title Decider', 'Promotion Play-Off Final', 'The Last Day of the Season', 'A Cup Semi Under the Lights', 'The Biggest Game in the Club’s History',
   'A Continental Final', 'The Match That Decides Who Goes Down', 'A Derby With the Title on the Line', 'A Comeback From the Brink', 'The Game Your Whole Career Gets Judged On'];
 
@@ -808,8 +813,11 @@ export function makeScenario(rng: () => number, i: number, track: Track = 'outfi
   }
   // draw the moment pick unconditionally (keeps the rng stream stable) but only USE a match-flavoured moment
   // name for MATCH scenarios — "Derby Day"/"Cup Final" was bleeding onto training/life moments (PT-15).
+  // youth chapters (Grassroots..Youth Team) draw age-appropriate big-game names, not senior-club ones (PT-107).
+  // One rng() draw either way, so the stream — and determinism — is unchanged; only the chosen string differs.
+  const bigPool = band && AGE_BANDS.indexOf(band) <= 3 ? YOUTH_BIG_MOMENTS : BIG_MOMENTS;
   const momentPick = stakes === 3 ? HUGE_MOMENTS[Math.floor(rng() * HUGE_MOMENTS.length)]
-    : stakes === 2 ? BIG_MOMENTS[Math.floor(rng() * BIG_MOMENTS.length)] : null;
+    : stakes === 2 ? bigPool[Math.floor(rng() * bigPool.length)] : null;
   const moment = kind === 'match' ? momentPick : null;
   // LIFE EVENT: a slice of low-stakes social moments, from Scholar onward, become an off-pitch dilemma
   // instead of a generic dressing-room beat. A pure hash of (seed, turn) — costs no rng() draws, so it
@@ -1228,6 +1236,10 @@ export class Career {
     if (this.pendingOffer) throw new Error('resolve the financial offer first');
     if (this.pendingCoaches) throw new Error('appoint a coach first');
     if (this.pendingDraft) throw new Error('resolve the draft first');
+    // a life-event's "how it went" line is a one-turn aftermath beat — clear the PREVIOUS one here so it can't
+    // stay pinned across the following turns (it was never cleared, so it lingered until another fired) (PT-108).
+    // Presentational only (no stat impact), so determinism is unaffected. This turn's event re-sets it below.
+    this.lastLifeEvent = null;
     let idx = this.hand.findIndex((c) => c.id === cardId);
     if (idx < 0) {
       if (!tolerant || this.hand.length === 0) throw new Error('card not in hand');

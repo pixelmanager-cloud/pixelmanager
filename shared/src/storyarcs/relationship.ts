@@ -76,7 +76,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 3 — BECOMING A FATHER
   {
     id: 'rel-becoming-father', title: 'The Smallest Signing', icon: '👶', category: 'relationship',
-    minTurn: 70, maxTurn: 180, weight: 2, first: 'news',
+    minTurn: 95, maxTurn: 180, weight: 2, first: 'news',
     beats: {
       news: {
         id: 'news',
@@ -148,7 +148,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 6 — a RIFT WITH HIS AGENT
   {
     id: 'rel-agent-rift', title: 'The Man Who Takes His Cut', icon: '📉', category: 'relationship',
-    minTurn: 60, maxTurn: 175, weight: 2, first: 'discovery',
+    minTurn: 130, maxTurn: 195, weight: 2, first: 'discovery',
     beats: {
       discovery: {
         id: 'discovery',
@@ -220,7 +220,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 9 — a MARRIAGE strained by relocation and transfers
   {
     id: 'rel-marriage-relocation', title: 'The Fourth City in Six Years', icon: '📦', category: 'relationship',
-    minTurn: 80, maxTurn: 190, weight: 3, first: 'boxes',
+    minTurn: 110, maxTurn: 190, weight: 3, first: 'boxes',
     beats: {
       boxes: {
         id: 'boxes',
@@ -412,7 +412,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 17 — a PARTNER with their own big career (two-body problem)
   {
     id: 'rel-two-body', title: 'Two Careers, One Calendar', icon: '📅', category: 'relationship',
-    minTurn: 70, maxTurn: 185, weight: 3, first: 'clash',
+    minTurn: 120, maxTurn: 195, weight: 3, first: 'clash',
     beats: {
       clash: {
         id: 'clash',
@@ -580,7 +580,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 24 — a SECOND CHILD arriving in the middle of a title run
   {
     id: 'rel-second-child', title: 'Two Under Three, Top of the League', icon: '🍼', category: 'relationship',
-    minTurn: 78, maxTurn: 185, weight: 3, first: 'due',
+    minTurn: 120, maxTurn: 185, weight: 3, first: 'due',
     beats: {
       due: {
         id: 'due',
@@ -604,7 +604,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 25 — a SEPARATION and co-parenting from the road
   {
     id: 'rel-coparenting', title: 'Every Other Weekend, A Different City', icon: '🧳', category: 'relationship',
-    minTurn: 90, maxTurn: 200, weight: 3, first: 'split',
+    minTurn: 115, maxTurn: 200, weight: 3, first: 'split',
     beats: {
       split: {
         id: 'split',

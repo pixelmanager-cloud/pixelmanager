@@ -249,7 +249,10 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
   if (st.phase === 'play' && st.scenario) {
     const demand = st.scenario.demand as Record<string, number>;
     const topTag = Object.keys(demand).sort((a, b) => (demand[b] ?? 0) - (demand[a] ?? 0))[0] ?? 'teamwork';
-    let moment = st.scenario.stakes >= 2 ? String(st.scenario.label).replace(/^★\s*/, '') : null;
+    // only a REAL match moment (a ★-prefixed label like "★ Derby Day") is used as the scenario "moment" — a
+    // big-stakes TRAINING/SOCIAL scenario's label is the raw "training: aggression / composure" fallback, which
+    // must NOT surface as "It's training: aggression" (PT-106). Non-★ labels → generate proper prose from the kind.
+    let moment = st.scenario.stakes >= 2 && String(st.scenario.label).startsWith('★') ? String(st.scenario.label).replace(/^★\s*/, '') : null;
     let kind = String(st.scenario.kind);
     // LEGACY PRESSURE (checked first): a struggling heir of a legend faces the weight of the name.
     const surname = t.name.trim().split(/\s+/).slice(1).join(' ') || t.name;
