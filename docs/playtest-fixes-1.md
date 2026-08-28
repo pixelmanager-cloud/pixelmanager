@@ -24,11 +24,11 @@ Source: user's annotated PDF "1st edit (Up until academy)", 2026-08-28. Status: 
 ## Career card game (Grassroots)
 - [x] G1 — cramped/unclear cluster top-right (0/202 · ★ · coin) next to Back-to-Hub
 - [x] G2 — "Rival" feature unexplained (why do I already have a rival?) → needs an explainer/tutorial
-- [ ] G3 — attribute tags are tiny; card game = "pick the matching attribute" — needs depth/interest
-- [ ] G4 — card explanation should fit the scenario better
-- [ ] G5 — card doesn't match the scenario (again)
+- [x] G3 — attribute tags are tiny; card game = "pick the matching attribute" — needs depth/interest
+- [x] G4 — card explanation should fit the scenario better
+- [x] G5 — card doesn't match the scenario (again)
 - [ ] G6 — same scenario repeats → feels repetitive
-- [ ] G7 — card game boring: we never see how the played card affects the player we control
+- [x] G7 — card game boring: we never see how the played card affects the player we control
 - [x] G8 — "Energy" in academy is unexplained/useless
 
 ## Academy / Kit

@@ -93,7 +93,10 @@ function careerMilestone(c: Career): string | null {
 // Shared formulas for the CAREER SCORE / RIVAL headline (see careerState below) — factored out so the
 // rivalry-moment narration (actWithNarration) computes the exact same numbers, not a drifted duplicate.
 function careerScoreOf(c: Career): number { return Math.round(c.log.reduce((s, ch) => s + ch.success * 8 * (ch.stakes ?? 1), 0)); }
-function rivalRateOf(seed: number): number { return 6 + ((seed >>> 3) % 4); } // 6..9 points/turn — competitive
+// Rival banks a flat rate per turn; the player earns success*8*stakes. Set so CONSISTENT GOOD play pulls
+// ahead (a solid ~0.6 turn = ~4.8, a brilliant/big turn more) while mediocre play falls behind — the rival
+// is a beatable benchmark, not an inevitable loss. (Was 6..9, which out-ran even perfect play every turn.)
+function rivalRateOf(seed: number): number { return 3 + ((seed >>> 3) % 3); } // 3..5 points/turn
 /** Apply an action and return an immersive narration of the moment (play, or a coach/draft/offer choice). */
 export function actWithNarration(c: Career, a: CareerAction): string | null {
   const baseCtx = { age: c.age, chapter: c.chapter, stakes: 1 as 1 | 2 | 3, personalityId: c.personality.id, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0, milestone: null as string | null, seed: (((c as any).seed >>> 0) + c.turn * 2654435761) >>> 0 };

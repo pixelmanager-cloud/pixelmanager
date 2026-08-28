@@ -759,8 +759,12 @@ export function makeScenario(rng: () => number, i: number, track: Track = 'outfi
   const demand: Partial<Record<Tag, number>> = {};
   pool.forEach((t, k) => { demand[t] = raw[k]; });
   if (demandBias) demand[demandBias] = (demand[demandBias] ?? 0) + 0.6;  // the gaffer wants more of this
-  const sum = Object.values(demand).reduce((a, b) => a + (b ?? 0), 0) || 1;
-  for (const t of Object.keys(demand) as Tag[]) demand[t] = (demand[t] ?? 0) / sum;
+  // Normalise so the TOP-demanded tag = 1.0 (was sum=1, which diluted multi-tag demands so a card matching
+  // the main need still scored a low fit → skilled play felt random). Now a card that addresses the biggest
+  // need reads as a strong fit; extra matched tags still add (fit sums, clamped at 1) so covering more is
+  // better, and a card that matches nothing important stays low. This is the core "good play feels good" fix.
+  const mx = Math.max(...(Object.values(demand) as number[]), 0.001);
+  for (const t of Object.keys(demand) as Tag[]) demand[t] = (demand[t] ?? 0) / mx;
   const maxStakes = band ? band.maxStakes : 3;
   const r = rng();
   const stakes: 1 | 2 | 3 = maxStakes >= 3 && r < 0.05 * exposure ? 3 : maxStakes >= 2 && r < 0.22 * exposure ? 2 : 1; // an agent's exposure = more big stages
@@ -1147,7 +1151,9 @@ export class Career {
     const f = fit(card, this.scenario);
     // stakes add variance (nerves), scaled by temperament; personality lifts/sinks big moments and
     // dampens slumps; form (season event) nudges success.
-    const variance = (0.3 + 0.15 * (this.scenario.stakes - 1)) * this.personality.variance;
+    // variance = nerves. Kept modest at low stakes so SKILL (fit) dominates the outcome — a strong fit should
+    // reliably read well — while big games still swing more. (Was 0.3 base, which drowned out good play.)
+    const variance = (0.18 + 0.14 * (this.scenario.stakes - 1)) * this.personality.variance;
     const bigGame = this.scenario.stakes >= 2 ? this.personality.bigGame : 0;
     const form = this.formBonus < 0 ? this.formBonus * this.personality.resilience : this.formBonus;
     // your coach lifts success when you play to their specialty (good coaching → that development compounds)

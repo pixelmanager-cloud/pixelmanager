@@ -2276,21 +2276,24 @@ class Game {
   private outcomeChipHtml(): string {
     const o = this.lastOutcome;
     if (!o) return '';
-    // FIT READ — did you pick the card the moment was asking for?
+    // Two separate things, labelled so they never read as a contradiction:
+    // CHOICE — did you pick the card the moment asked for? (about your decision)
     const read = o.answeredAsk
-      ? { cls: 'great', label: '🎯 Perfect read' }
+      ? { cls: 'great', label: '🎯 Right card' }
       : o.fit >= o.bestFit - 0.18
-        ? { cls: 'good', label: '◑ Good read' }
-        : { cls: 'poor', label: '✗ Against his game' };
-    // PERFORMANCE — how the moment actually went (fit + nerve + coaching − fatigue).
+        ? { cls: 'good', label: '◑ Fair choice' }
+        : { cls: 'poor', label: '✗ Wrong card' };
+    // RESULT — how the moment actually went (fit + nerve + coaching − fatigue). When the CHOICE was right
+    // but the result still dipped, frame it as bad luck on the day, not bad play (reconciles the two pills).
+    const unlucky = o.answeredAsk && o.success < 0.58;
     const perf = o.success >= 0.78 ? { cls: 'great', label: '⭐ Brilliant' }
       : o.success >= 0.58 ? { cls: 'good', label: '✓ Solid' }
-        : o.success >= 0.38 ? { cls: 'mid', label: '◦ Scrappy' }
-          : { cls: 'poor', label: '✗ Poor' };
+        : o.success >= 0.38 ? { cls: 'mid', label: unlucky ? '◦ Unlucky' : '◦ Scrappy' }
+          : { cls: 'poor', label: unlucky ? '✗ Unlucky' : '✗ Poor' };
     const grew = o.tags.length
       ? `<span class="cg-oc-grew">developed ${o.tags.map((t) => `<span class="cg-tag">${t}</span>`).join(' ')}</span>` : '';
-    return `<div class="cg-outcome"><span class="cg-oc-pill ${read.cls}">${read.label}</span>`
-      + `<span class="cg-oc-pill ${perf.cls}">${perf.label}</span>${grew}</div>`;
+    return `<div class="cg-outcome"><span class="cg-oc-pill ${read.cls}" title="Your card choice">${read.label}</span>`
+      + `<span class="cg-oc-pill ${perf.cls}" title="How the moment went">${perf.label}</span>${grew}</div>`;
   }
 
   /** PLAYER tab: the full deck (identity cards) grouped visually. */
