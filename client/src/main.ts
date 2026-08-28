@@ -2283,7 +2283,7 @@ class Game {
       }
       body = `<div class="cg-scenario stakes-${s.scenario.stakes} ${mk}">${header}<div class="cg-story">${s.story ?? s.scenario.label}</div><div class="cg-demand"><span class="cg-demand-lbl">🎯 This calls for:</span> ${tags}<span class="cg-demand-hint">${demandHint}</span></div></div>`
         + `<div class="cg-prompt">${prompt}${s.coach ? ` · <b>${s.coach.name}</b> is coaching him` : ''}</div>`
-        + `<div class="cg-cards">` + (s.hand ?? []).map((c) => this.cardHtml(c, 'play', mk === 'life')).join('') + `</div>`;
+        + `<div class="cg-cards">` + (() => { const used = new Set<string>(); return (s.hand ?? []).map((c) => this.cardHtml(c, 'play', mk === 'life', used)).join(''); })() + `</div>`;
     } else if (s.phase === 'coach' && s.coaches) {
       body = `<div class="cg-prompt">Appoint a mentor or coach for the coming chapter — they sharpen the work you do in their specialty:</div>`
         + s.coaches.map((c) => `<div class="cg-coach" data-act="coach" data-id="${c.id}"><div class="cg-cname">${c.kind === 'mentor' ? '🧭' : '📋'} ${c.name}</div><div class="cg-cdesc">${c.desc} · <i>${c.specialty.join(', ')}</i></div></div>`).join('');
@@ -2361,12 +2361,14 @@ class Game {
       + `<div class="cgp-stats">${key.map(([k]) => stat(k)).join('')}</div>${traits}</div>`;
   }
 
-  private cardHtml(c: import('./api').CareerCard, act: string, life = false): string {
+  private cardHtml(c: import('./api').CareerCard, act: string, life = false, usedLifeNames?: Set<string>): string {
     const rar = c.rarity && c.rarity !== 'common' ? c.rarity : '';
     const tags = c.tags.map((t) => `<span class="cg-tag">${t}</span>`).join('');
     // At an off-pitch LIFE EVENT the same card is reframed by the quality it draws on, so "how does he
-    // handle it?" gets an off-pitch answer, not an on-pitch move name like "stepover" (PT-43).
-    const la = life ? lifeAction(c.tags, c.id) : null;
+    // handle it?" gets an off-pitch answer, not an on-pitch move name like "stepover" (PT-43). `usedLifeNames`
+    // keeps a whole hand's labels distinct when two cards share a dominant tag (PT-49).
+    const la = life ? lifeAction(c.tags, c.id, usedLifeNames) : null;
+    if (la && usedLifeNames) usedLifeNames.add(la.name);
     const name = la ? la.name : c.name;
     const desc = la ? la.desc : c.desc;
     return `<div class="cg-card ${rar}" data-act="${act}" data-id="${c.id}">${rar ? `<span class="cg-rarity">${rar}</span>` : ''}<div class="cg-cname">${name}</div>`

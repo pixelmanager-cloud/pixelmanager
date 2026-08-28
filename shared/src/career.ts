@@ -557,7 +557,7 @@ const FOCUS_BY_CHAPTER: Record<string, FocusOption[]> = {
     { id: 'impress', icon: '🧑‍🏫', name: 'Impress the Coach', desc: 'Extra sessions, first to arrive. Staff love a grafter.', energy: -10, effects: { authority: +16, peers: -3 } },
     { id: 'mates',   icon: '🧒', name: 'Team Bonding',    desc: 'Tight with the lads — a dressing room that fights for you.', energy: +4, effects: { peers: +15, school: -4 } },
     { id: 'rivalry', icon: '🔥', name: 'Chase Your Best Mate', desc: 'You and your closest friend push each other every single session — it sharpens you both, but it stings when he pips you to a place.', energy: -6, effects: { peers: +8, authority: +8 } },
-    { id: 'video', icon: '📹', name: 'Study the Pros on VHS', desc: 'Rewinding the same clip over and over, trying to steal a touch you saw on the telly.', energy: -4, effects: { authority: +10, peers: +2 } },
+    { id: 'video', icon: '📹', name: 'Study the Pros on VHS', desc: 'Rewinding the same clip over and over, trying to steal a touch you saw on the telly.', energy: -4, effects: { peers: +2 }, tag: 'creativity' },
   ],
   Scholar: [
     { id: 'agent',   icon: '🤝', name: 'Sign With an Agent', desc: 'Someone to fight your corner as the offers start to whisper.', energy: -6, effects: { agent: +20 } },
@@ -1094,6 +1094,14 @@ export class Career {
     this.energy = clamp(this.energy + opt.energy, 0, 100);
     for (const [k, d] of Object.entries(opt.effects)) this.standing[k as MeterKey] = clamp(this.standing[k as MeterKey] + (d ?? 0), 0, 100);
     if (opt.tag) this.attrFocus[opt.tag] = (this.attrFocus[opt.tag] ?? 0) + 1; // the soft skill-tree lean
+    // A proper summer off clears a lingering DIP: it lifts most of a negative form bonus and retires a
+    // slump/knock banner, so a Rest & Recharge visibly resets confidence rather than carrying it over (PT-51).
+    if (opt.id === 'rest' && this.formBonus < 0) {
+      this.formBonus = Math.min(0, this.formBonus + 0.12);
+      if (this.formBonus >= -0.01 && this.seasonEvent && ['slump', 'knock', 'transfer-links'].includes(this.seasonEvent.id)) {
+        this.seasonEvent = { id: 'form-back', name: 'Back to Form', desc: 'A summer to reset — he comes back with his head clear and his confidence back.' };
+      }
+    }
     this.actions.push({ type: 'focus', cardId: focusId });
     this.pendingFocus = null;
     // Breakthrough onward: a second, smaller SIDE focus round follows the main pick (once per chapter).
@@ -1249,7 +1257,10 @@ export class Career {
     // purple patch cools if results dip — so "Loss of Form" no longer brands every scenario for ~40 turns
     // regardless of how he plays. Once a negative event's form has recovered, retire its banner. (PT-14)
     if (this.formBonus < 0 && success >= 0.55) {
-      this.formBonus = Math.min(0, this.formBonus + 0.03);
+      // recover faster so sustained good play VISIBLY lifts a dip within a few turns — at +0.03 a -0.12 slump
+      // dragged its "Low on confidence" banner across ~an in-game year of brilliant turns (PT-51). +0.06 clears
+      // a typical dip in ~2-3 strong games; a standout (Brilliant, ≥0.78) lifts it faster still.
+      this.formBonus = Math.min(0, this.formBonus + (success >= 0.78 ? 0.09 : 0.06));
       if (this.formBonus >= -0.01 && this.seasonEvent && ['slump', 'knock', 'transfer-links', 'serious-injury'].includes(this.seasonEvent.id)) {
         this.seasonEvent = { id: 'form-back', name: 'Back to Form', desc: 'He’s battled through the dip — confidence restored.' };
       }
@@ -1404,7 +1415,9 @@ export class Career {
       else if (r < 0.40) { const pool = this.track === 'goalkeeper' ? (['keeping', 'composure', 'leadership'] as Tag[]) : OUTFIELD_TAGS; this.demandBias = pool[Math.floor(this.rng() * pool.length)]; this.seasonEvent = { id: 'new-gaffer', name: 'New Manager', desc: `The new gaffer wants more ${this.demandBias} out of you.` }; }
       else if (r < 0.52) { form = 0.12; this.seasonEvent = { id: 'hot-streak', name: 'Purple Patch', desc: "You're in the form of your life — everything comes off." }; }
       else if (r < 0.60) { form = 0.08; this.seasonEvent = { id: 'cup-run', name: 'Cup Run', desc: 'A thrilling cup run has the whole club buzzing — he’s riding the wave.' }; }
-      else if (r < 0.72) { form = -0.12; this.seasonEvent = { id: 'slump', name: 'Loss of Form', desc: 'A dip in confidence to battle through.' }; }
+      // a LOSS OF FORM only befalls a player who was NOT flying — you don't suddenly slump off the back of a
+      // brilliant chapter (PT-51). Played the last chapter well? this rolls a steady season instead of a dip.
+      else if (r < 0.72) { if (playedWell) { this.seasonEvent = { id: 'steady', name: 'Steady Progress', desc: 'A solid, unremarkable season of graft.' }; } else { form = -0.12; this.seasonEvent = { id: 'slump', name: 'Loss of Form', desc: 'A dip in confidence to battle through.' }; } }
       else if (r < 0.80) { form = -0.05; this.seasonEvent = { id: 'transfer-links', name: 'Transfer Speculation', desc: 'His name is in the papers — a distraction he could do without.' }; }
       else if (r < 0.88) { form = -0.06; this.seasonEvent = { id: 'knock', name: 'Niggling Injury', desc: 'A knock to manage — not quite at your sharpest.' }; }
       else if (r < 0.94) { form = 0.06; this.seasonEvent = { id: 'fan-favourite', name: 'Fan Favourite', desc: 'The supporters have taken to him — he feeds off their energy.' }; }

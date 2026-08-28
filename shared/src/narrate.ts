@@ -185,41 +185,56 @@ const LIFE_ACTION: Record<string, LifeAction[]> = {
   composure: [
     { name: 'Keep a cool head', desc: 'Stay calm and deal with it, no drama', noun: 'his cool head' },
     { name: 'Take it in his stride', desc: 'Not let it rattle him', noun: 'an unflappable calm' },
+    { name: 'Ride it out calmly', desc: 'Let the storm pass without reacting', noun: 'a level head' },
   ],
   aggression: [
     { name: 'Stand his ground', desc: 'Meet it head-on and refuse to back down', noun: 'his stubborn streak' },
     { name: 'Front up to it', desc: 'Square up to the problem, no flinching', noun: 'a refusal to be pushed around' },
+    { name: 'Dig his heels in', desc: 'Hold firm and make his point', noun: 'a bloody-minded streak' },
   ],
   creativity: [
     { name: 'Find another way', desc: 'Think around the problem', noun: 'his knack for a solution nobody else sees' },
     { name: 'Talk his way through', desc: 'A clever answer to a tricky spot', noun: 'quick thinking' },
+    { name: 'Improvise a fix', desc: 'Come at it from an angle no one expects', noun: 'a bit of improvisation' },
   ],
   teamwork: [
     { name: 'Lean on the people around him', desc: 'Not try to carry it alone', noun: 'the people around him' },
     { name: 'Share the load', desc: 'Bring others in rather than bottle it up', noun: 'his instinct to share the load' },
+    { name: 'Talk it through with the group', desc: 'Sort it together, not on his own', noun: 'the trust of the dressing room' },
   ],
   leadership: [
     { name: 'Take charge of it', desc: 'Front up and own the situation', noun: 'his instinct to take charge' },
     { name: 'Set the example', desc: 'Handle it the way he’d want others to', noun: 'a quiet authority' },
+    { name: 'Lead from the front', desc: 'Show everyone how it’s done', noun: 'his sense of responsibility' },
   ],
   stamina: [
     { name: 'Grind through it', desc: 'Head down, outlast the hard part', noun: 'sheer persistence' },
     { name: 'Keep going', desc: 'Refuse to let it wear him down', noun: 'a refusal to be worn down' },
+    { name: 'Tough it out', desc: 'Put in the graft nobody sees', noun: 'a bottomless work ethic' },
   ],
   flair: [
     { name: 'Front it out', desc: 'Carry it off with easy confidence', noun: 'an easy confidence' },
     { name: 'Charm his way through', desc: 'Disarm it with a bit of personality', noun: 'his natural charm' },
+    { name: 'Style it out', desc: 'Wave it off like it’s nothing', noun: 'an unshakeable swagger' },
   ],
   keeping: [
     { name: 'Hold the line', desc: 'Be the steady, dependable one', noun: 'a steady, dependable streak' },
     { name: 'Stay solid', desc: 'Keep it together and see it out', noun: 'his composure under pressure' },
+    { name: 'Be the safe pair of hands', desc: 'The one everyone can rely on', noun: 'a reassuring dependability' },
   ],
 };
 const strHash = (s: string): number => { let h = 2166136261 >>> 0; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h >>> 0; };
-/** Reframe a football card as an off-pitch response, keyed on its dominant tag and stable per card id. */
-export function lifeAction(tags: string[], id: string): LifeAction {
+/** Reframe a football card as an off-pitch response, keyed on its dominant tag and stable per card id.
+ *  `avoid` (names already used by other cards in the same hand) lets the caller keep a hand's off-pitch
+ *  labels DISTINCT even when two cards share a dominant tag (PT-49). */
+export function lifeAction(tags: string[], id: string, avoid?: ReadonlySet<string>): LifeAction {
   const pool = LIFE_ACTION[tags[0]] ?? LIFE_ACTION.composure;
-  return pool[strHash(id) % pool.length];
+  const start = strHash(id) % pool.length;
+  for (let i = 0; i < pool.length; i++) {
+    const cand = pool[(start + i) % pool.length];
+    if (!avoid || !avoid.has(cand.name)) return cand;
+  }
+  return pool[start]; // every variant already taken (hand bigger than the pool) — fall back to the stable pick
 }
 
 // Deterministic, no-near-repeat pick: with `stride` coprime to the pool length, consecutive turns walk
