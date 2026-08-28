@@ -9,7 +9,7 @@ function mulberry32(seed: number): () => number {
 }
 
 export interface NarrateCtx {
-  age: number; chapter: string; stakes: 1 | 2 | 3; personalityId: string;
+  age: number; chapter: string; stakes: 1 | 2 | 3; personalityId: string; turn?: number;
   seasonEventId?: string | null; seed: number; careerSeed?: number;
   /** a milestone this beat represents (first goal, debut, cup-final delivery…) — special-cased */
   milestone?: string | null;
@@ -83,6 +83,15 @@ const REACTIONS: Record<string, string[]> = {
   mixed: ['Something to work on.', 'Raw, but there.', 'Room to grow.', 'A shrug from the bench.', 'Half a mark.', "There's a player in there.", 'The talent is obvious; the polish isn’t — yet.', 'Filed under needs-work, not panic.', 'Promising, if unpolished.', 'The intent was right, at least.', 'One for the review room.', 'Better than it looked, maybe.'],
   poor: ['The gaffer frowned.', 'A lesson, that.', 'Back to the training ground.', 'He knew it, too.', 'Words at half-time, surely.', 'File under learning.', 'A teachable moment.', 'Not the end of the world. Doesn’t feel like that right now, though.', 'Chalk it up and move on.', 'A wince from the touchline.', 'He’ll stew on that one.', 'Learn it now, not later.'],
   dismal: ['Heads dropped.', 'One to bury and move on from.', 'The bench winced.', 'A long walk back to the halfway line.', 'The gaffer looked away.', 'Best forgotten.', 'He’ll want the ground to swallow him.', 'Somewhere, someone is already making a joke of it.', 'You could hear a pin drop on the bench.', 'A moment he’ll want deleted.', 'The gaffer’s jaw tightened.', 'File it under never again.'],
+};
+// park/school-football reactions for the youngest chapters — no stadiums, benches, scouts or "the ground"
+// (that senior-crowd vocabulary jars against jumpers-for-goalposts) (PT-103)
+const CHILD_REACTIONS: Record<string, string[]> = {
+  triumph: ['The parents on the touchline cheered.', 'His mates mobbed him.', 'The coach grinned and clapped.', 'One the whole school will hear about on Monday.', 'A dad on the sideline actually gasped.', 'The kind of goal you dream about in the back garden.', 'His best mate couldn’t believe it.', 'He’ll be buzzing about it all week.'],
+  good: ['A thumbs-up from the coach.', 'His mum smiled from the sideline.', 'Good, solid stuff for his age.', 'The coach nodded — he liked that.', 'Exactly what was asked of him.', 'Quietly getting the hang of it.'],
+  mixed: ['Something to practise in the garden.', 'Raw, but the spark is there.', 'A “keep at it” from the coach.', 'Getting there, slowly.', 'The idea was right, at least.', 'One to work on at training.'],
+  poor: ['The coach called him over for a quiet word.', 'A lesson for a young lad.', 'Back to practising at the park.', 'He knew it straight away.', 'Nothing a bit of practice won’t fix.', 'Chin up — he’s still learning.'],
+  dismal: ['His head dropped.', 'One to shake off — he’s only a kid.', 'A long trudge back for the restart.', 'He’ll want to forget that one.', 'His mates will remind him for weeks.', 'Not his finest hour on the park.'],
 };
 // per-personality VOICE: colours the beat throughout. Multiple OUTCOME-NEUTRAL variants per temperament so
 // it doesn't recycle one line every game, and reads fine on a win OR a loss (observations about the player,
@@ -422,11 +431,18 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
   const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
   const b = band(success);
   const tag = domTag(cardTags);
-  const setting = ctx.stakes === 3 ? pick(HUGE_SETTINGS) : ctx.stakes === 2 ? pick(BIG_SETTINGS) : pick(SETTINGS[ctx.chapter] ?? SETTINGS.Academy);
+  // turn-strided selection for the repeating flavour surfaces (setting / result / reaction) so consecutive
+  // turns walk each pool instead of colliding on the same line a few turns apart (PT-101). salt from the
+  // career seed keeps two careers distinct; different strides keep the three surfaces out of lockstep.
+  const salt = (ctx.careerSeed ?? ctx.seed) >>> 0;
+  const turn = ctx.turn ?? 0;
+  const setting = ctx.stakes === 3 ? pickByTurn(HUGE_SETTINGS, turn, 7, salt) : ctx.stakes === 2 ? pickByTurn(BIG_SETTINGS, turn, 7, salt) : pickByTurn(SETTINGS[ctx.chapter] ?? SETTINGS.Academy, turn, 7, salt);
   const verb = pick(VERBS[tag]);
   // per-tag result colour on a big success; otherwise the generic band result
-  const result = b === 'triumph' && TAG_TRIUMPH[tag] && rng() < 0.55 ? pick(TAG_TRIUMPH[tag]) : pick(RESULTS[b]);
-  const reaction = pick(REACTIONS[b]);
+  const result = b === 'triumph' && TAG_TRIUMPH[tag] && rng() < 0.55 ? pickByTurn(TAG_TRIUMPH[tag], turn, 11, salt) : pickByTurn(RESULTS[b], turn, 11, salt);
+  // the youngest chapters get park/school reactions, not stadium/scout/bench vocabulary (PT-103)
+  const reactionPool = CHILD_CHAPTERS.has(ctx.chapter) && CHILD_REACTIONS[b] ? CHILD_REACTIONS[b] : REACTIONS[b];
+  const reaction = pickByTurn(reactionPool, turn, 13, salt);
   // the outcome carries the season-event colour only sometimes — the scenario prompt already shows it, so
   // stamping it on every outcome too doubled the repetition across the two surfaces (PT-54)
   const prefix = ctx.seasonEventId && EVENT_PREFIX[ctx.seasonEventId] && rng() < 0.4 ? pick(EVENT_PREFIX[ctx.seasonEventId]) : '';
@@ -434,7 +450,10 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
   const lead = prefix ? prefix + setting : cap(setting);
   // personality VOICE: an adverbial colour before the verb (felt throughout), plus the rare stated clause
   const adv = PERSONALITY_ADV[ctx.personalityId] && rng() < 0.5 ? pick(PERSONALITY_ADV[ctx.personalityId]) + ' ' : '';
-  const flavor = (b === 'triumph' || b === 'dismal') && rng() < 0.6 && PERSONALITY[ctx.personalityId] ? ' ' + pick(PERSONALITY[ctx.personalityId]) : '';
+  // the personality closer is a positive-leaning observation, so only append it on a GOOD outcome — on a
+  // failed one it read as praise for the moment that just went wrong (e.g. "the engine doesn't cut out"
+  // right after "it fell apart completely") (PT-102). The temperament is still felt via the adverb above.
+  const flavor = (b === 'triumph' || b === 'good') && rng() < 0.6 && PERSONALITY[ctx.personalityId] ? ' ' + pick(PERSONALITY[ctx.personalityId]) : '';
   // a recurring character sometimes reacts
   const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed) : null;
   const castReact = cast && rng() < 0.25

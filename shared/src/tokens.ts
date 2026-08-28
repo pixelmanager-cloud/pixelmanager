@@ -140,7 +140,7 @@ function careerScoreOf(c: Career): number { return Math.round(c.log.reduce((s, c
 function rivalRateOf(seed: number): number { return 3 + ((seed >>> 3) % 3); } // 3..5 points/turn
 /** Apply an action and return an immersive narration of the moment (play, or a coach/draft/offer choice). */
 export function actWithNarration(c: Career, a: CareerAction): string | null {
-  const baseCtx = { age: c.age, chapter: c.chapter, stakes: 1 as 1 | 2 | 3, personalityId: c.personality.id, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0, milestone: null as string | null, seed: (((c as any).seed >>> 0) + c.turn * 2654435761) >>> 0 };
+  const baseCtx = { age: c.age, chapter: c.chapter, stakes: 1 as 1 | 2 | 3, personalityId: c.personality.id, turn: c.turn, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0, milestone: null as string | null, seed: (((c as any).seed >>> 0) + c.turn * 2654435761) >>> 0 };
   if (a.type === 'play') {
     const ctx = { ...baseCtx, stakes: c.scenario.stakes, milestone: careerMilestone(c) };
     const lifeKind = c.scenario.life; // capture BEFORE applying — play() advances to the NEXT scenario
