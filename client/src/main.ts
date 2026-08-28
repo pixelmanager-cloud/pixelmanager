@@ -1924,7 +1924,15 @@ class Game {
   }
   private startSpMatchWith(tone: string) {
     const sp = this.spFixture!;
-    const myLineup: Lineup = { ...this.draftLineup, duties: [...this.draftDuties], ...this.draftRoles() };
+    // ENFORCE THE INVARIANT AT KICKOFF (PT-20): the bloodline star must actually start. The editor re-forces
+    // him on every open + formation change, but a manual per-slot swap could drop him with no re-guard before
+    // play. Re-apply starGuarded at the one point it matters (a no-op in the normal case where he's already in),
+    // and realign duties so the slot he's swapped into gets a sane default rather than the ejected player's duty.
+    const guarded = this.starGuarded(this.draftLineup);
+    const duties = guarded.playerIds.map((pid, i) => pid === this.draftLineup.playerIds[i]
+      ? this.draftDuties[i]
+      : defaultDuty(this.club.players.find((p) => p.id === pid)!));
+    const myLineup: Lineup = { ...guarded, duties, ...this.draftRoles() };
     const myTeam = buildXI(this.availableClub(), myLineup);
     const starPid = (this.starPlayer() as any)?.personality as string | undefined;
     if (tone === 'fire') {
