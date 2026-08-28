@@ -272,7 +272,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-contract-standoff', title: 'Down to the Wire', icon: '📝', category: 'crisis',
-    minTurn: 100, maxTurn: 190, weight: 2, first: 'open',
+    minTurn: 150, maxTurn: 190, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -294,7 +294,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-refusal-freeze', title: 'The Pen He Wouldn’t Lift', icon: '🧊', category: 'crisis',
-    minTurn: 95, maxTurn: 190, weight: 2, first: 'open',
+    minTurn: 150, maxTurn: 190, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',

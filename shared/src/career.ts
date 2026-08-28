@@ -760,6 +760,16 @@ const LIFE_CONSEQUENCE: Record<LifeKind, { good: Partial<Record<MeterKey, number
 };
 /** Pure deterministic hash → [0,1), independent of the career's rng() stream (never consumes it). */
 function pureHash01(seed: number, turn: number, salt: number): number { return mulberry32(((seed ^ Math.imul(turn + 1, 2654435761)) ^ salt) >>> 0)(); }
+// turn-strided index: walks a pool with a stride made coprime to its length, so successive turns land on
+// non-adjacent, non-repeating entries instead of birthday-clustering the way a fresh random draw does.
+// Used to stop the same big-game occasion label recurring within one chapter (PT-111).
+function stridedIdx(len: number, turn: number, salt: number, baseStride: number): number {
+  if (len <= 1) return 0;
+  const gcd = (a: number, b: number): number => { while (b) { [a, b] = [b, a % b]; } return a; };
+  let s = (((baseStride % len) + len) % len) || 1;
+  while (gcd(s, len) !== 1) s = (s % len) + 1;
+  return (((turn * s + salt) % len) + len) % len;
+}
 const KIND_BIAS: Record<Scenario['kind'], Tag[]> = {
   match: TAGS,                                                   // anything can come up in a match
   social: ['leadership', 'composure', 'teamwork'],              // dressing room / media
@@ -797,7 +807,7 @@ export function makeScenario(rng: () => number, i: number, track: Track = 'outfi
   for (const t of Object.keys(demand) as Tag[]) demand[t] = (demand[t] ?? 0) / mx;
   const maxStakes = band ? band.maxStakes : 3;
   const r = rng();
-  const stakes: 1 | 2 | 3 = maxStakes >= 3 && r < 0.05 * exposure ? 3 : maxStakes >= 2 && r < 0.22 * exposure ? 2 : 1; // an agent's exposure = more big stages
+  const stakes: 1 | 2 | 3 = maxStakes >= 3 && r < 0.05 * exposure ? 3 : maxStakes >= 2 && r < 0.17 * exposure ? 2 : 1; // an agent's exposure = more big stages; big games kept scarcer so they land as occasions (PT-111)
   // BIG GAMES demand more: a high-stakes moment gets at least two things asked of it (and a huge one, three),
   // so it genuinely tests the deck rather than being a single-tag gimme behind a dramatic header (PT-12).
   // Pure hash of (seed, turn) → no rng draw, so it never perturbs older careers that predate this.
@@ -816,8 +826,9 @@ export function makeScenario(rng: () => number, i: number, track: Track = 'outfi
   // youth chapters (Grassroots..Youth Team) draw age-appropriate big-game names, not senior-club ones (PT-107).
   // One rng() draw either way, so the stream — and determinism — is unchanged; only the chosen string differs.
   const bigPool = band && AGE_BANDS.indexOf(band) <= 3 ? YOUTH_BIG_MOMENTS : BIG_MOMENTS;
+  const bigRoll = Math.floor(rng() * bigPool.length); void bigRoll; // consume the rng draw to keep the stream stable...
   const momentPick = stakes === 3 ? HUGE_MOMENTS[Math.floor(rng() * HUGE_MOMENTS.length)]
-    : stakes === 2 ? bigPool[Math.floor(rng() * bigPool.length)] : null;
+    : stakes === 2 ? bigPool[stridedIdx(bigPool.length, i, (seed ?? 0) >>> 0, 7)] : null; // ...but pick the label by a turn-strided walk so it doesn't repeat within a chapter (PT-111)
   const moment = kind === 'match' ? momentPick : null;
   // LIFE EVENT: a slice of low-stakes social moments, from Scholar onward, become an off-pitch dilemma
   // instead of a generic dressing-room beat. A pure hash of (seed, turn) — costs no rng() draws, so it

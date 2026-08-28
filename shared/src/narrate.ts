@@ -97,16 +97,16 @@ const CHILD_REACTIONS: Record<string, string[]> = {
 // it doesn't recycle one line every game, and reads fine on a win OR a loss (observations about the player,
 // never praise for a poor result). Playtest fix PT-3.
 const PERSONALITY: Record<string, string[]> = {
-  maverick: ['He never does it the easy way.', 'Always the unexpected with him.', 'He’d find a hard way through an open door.', 'Predictable is the one thing he’ll never be.'],
-  fragile: ['The nerves were written all over him.', 'You could see the doubt flicker.', 'He carries the weight visibly.', 'Confidence comes and goes with this one.'],
-  leader: ['The armband would suit him.', 'Others look to him without thinking.', 'He sets the tone, good day or bad.', 'A voice the dressing room follows.'],
-  biggame: ['He lives for these.', 'The bigger the stage, the more he shows up.', 'Occasions like this find him.', 'He’s built for the spotlight.'],
-  workhorse: ['He never stopped running.', 'Covered every blade of grass, that lad.', 'Effort is never the question with him.', 'The engine simply doesn’t cut out.'],
-  mercurial: ["You never quite know which version you'll get.", 'Brilliance and frustration in the same breath.', 'A riddle, this one.', 'Two players in one shirt.'],
-  pro: ['Consummate, as ever.', 'Nothing left to chance with him.', 'Professional to his boots.', 'He does the simple things right.'],
-  latebloom: ['Better every single week, this lad.', 'Still growing into himself.', 'The best of him is ahead.', 'A work in progress, and improving.'],
-  showman: ['He plays with a grin and one eye on the crowd.', 'Never happier than with an audience.', 'A touch of theatre in everything he does.', 'He wants to entertain as much as win.'],
-  stoic: ['Nothing about his face ever gives it away.', 'Unreadable, as always.', 'The same expression, whatever happens.', 'Calm as still water, this one.'],
+  maverick: ['He never does it the easy way.', 'Always the unexpected with him.', 'He’d find a hard way through an open door.', 'Predictable is the one thing he’ll never be.', 'The coaching manual doesn’t have a page for him.', 'He sees a pass nobody else is even looking for.', 'Method to the madness, usually.', 'You don’t coach that out of a player — you just hope he aims it well.'],
+  fragile: ['The nerves were written all over him.', 'You could see the doubt flicker.', 'He carries the weight visibly.', 'Confidence comes and goes with this one.', 'One kind word away from his best, one harsh one from his worst.', 'The talent has never been the question with him.', 'He feels every moment twice as hard as most.', 'A settled head would unlock so much more.'],
+  leader: ['The armband would suit him.', 'Others look to him without thinking.', 'He sets the tone, good day or bad.', 'A voice the dressing room follows.', 'He drags the players around him up a level.', 'The kind who’s loudest when it’s quietest.', 'Responsibility seems to make him bigger, not smaller.', 'You can build a team around a head like his.'],
+  biggame: ['He lives for these.', 'The bigger the stage, the more he shows up.', 'Occasions like this find him.', 'He’s built for the spotlight.', 'The nerves that shrink others seem to feed him.', 'Give him a crowd and a cause and watch.', 'The routine games bore him; the huge ones wake him.', 'He saves his best for when it’s watched.'],
+  workhorse: ['He never stopped running.', 'Covered every blade of grass, that lad.', 'Effort is never the question with him.', 'The engine simply doesn’t cut out.', 'First to press, last to stop.', 'He does the unseen work all afternoon.', 'You could set a clock by his work rate.', 'The legs of two players in one shirt.'],
+  mercurial: ["You never quite know which version you'll get.", 'Brilliance and frustration in the same breath.', 'A riddle, this one.', 'Two players in one shirt.', 'Genius and maddening, ten minutes apart.', 'The highs are higher and the lows are lower with him.', 'A coin-flip of a footballer — but what a coin.', 'When it clicks, nobody’s better; when it doesn’t…'],
+  pro: ['Consummate, as ever.', 'Nothing left to chance with him.', 'Professional to his boots.', 'He does the simple things right.', 'Prepared, every single time.', 'No fuss, no drama, just the job done.', 'The staff never have to think about him twice.', 'A model for the younger lads to copy.'],
+  latebloom: ['Better every single week, this lad.', 'Still growing into himself.', 'The best of him is ahead.', 'A work in progress, and improving.', 'The penny is dropping, a bit more each game.', 'He’s catching up to his own potential in real time.', 'Whatever they’re doing with him, it’s working.', 'A slow burn, but the flame is climbing.'],
+  showman: ['He plays with a grin and one eye on the crowd.', 'Never happier than with an audience.', 'A touch of theatre in everything he does.', 'He wants to entertain as much as win.', 'The flick was on before the simple pass ever occurred to him.', 'He’d rather do it with style than without.', 'Half footballer, half performer.', 'The crowd is his co-star, and he knows it.'],
+  stoic: ['Nothing about his face ever gives it away.', 'Unreadable, as always.', 'The same expression, whatever happens.', 'Calm as still water, this one.', 'You’d never know from him whether it was a final or a friendly.', 'Not a flicker, win or lose.', 'The pulse never seems to climb.', 'Ice where others carry nerves.'],
   hothead: ['It could go off at any second, and everyone knows it.', 'The fuse is always short.', 'Passion and trouble, forever close.', 'One decision from brilliance or the book.'],
   perfectionist: ['He’ll pick holes in it later, whatever anyone says.', 'Never satisfied, this one.', 'His own harshest critic.', 'By his own standard, there’s always more.'],
   joker: ['Somewhere in the huddle, he’s already found something to laugh about.', 'A grin is never far away.', 'He keeps it light, whatever the score.', 'The dressing room’s favourite.'],
@@ -468,8 +468,10 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
   // HUGE moments (stakes 3) get a genuine multi-beat sequence: tension build-up before, a remembered-by
   // aftermath after — the standout peaks a long career should have only a handful of.
   const tension = ctx.stakes === 3 ? pick(HUGE_TENSION) + ' ' : '';
+  // a stakes-3 match is a career-defining occasion — it must NEVER collapse to one flat sentence, so EVERY
+  // grade (incl. the 'mixed' band that used to fall through to '') gets a remembered-by aftermath beat (PT-109).
   const aftermath = ctx.stakes === 3
-    ? ' ' + (b === 'triumph' ? pick(HUGE_AFTERMATH.triumph) : b === 'good' ? pick(HUGE_AFTERMATH.good) : b === 'poor' || b === 'dismal' ? pick(HUGE_AFTERMATH_BAD) : '')
+    ? ' ' + (b === 'triumph' ? pick(HUGE_AFTERMATH.triumph) : b === 'good' || b === 'mixed' ? pick(HUGE_AFTERMATH.good) : pick(HUGE_AFTERMATH_BAD))
     : '';
   // DEBUT EUPHORIA / "a rough debut isn't the end": a distinct flourish on the career-first beat, coloured
   // by how it actually went — real debut anecdotes read either as euphoric or as a night to shrug off.
@@ -478,7 +480,7 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
     : '';
   // BIG GAME (stakes 2) occasion-beat — bigger than routine, lighter than the HUGE stakes-3 sequence.
   const bigBeat = ctx.stakes === 2 && rng() < 0.7
-    ? ' ' + (b === 'triumph' ? pick(BIG_BEAT.triumph) : b === 'good' ? pick(BIG_BEAT.good) : (b === 'poor' || b === 'dismal') ? pick(BIG_BEAT.bad) : '')
+    ? ' ' + (b === 'triumph' ? pick(BIG_BEAT.triumph) : b === 'good' || b === 'mixed' ? pick(BIG_BEAT.good) : pick(BIG_BEAT.bad)) // 'mixed' no longer falls through to nothing (PT-109)
     : '';
   return `${tension}${milestone}${cap(lead)}, ${action} ${cardName} ${result}. ${reaction}${flavor}${castReact}${aftermath}${bigBeat}${debutFlourish}`;
 }
