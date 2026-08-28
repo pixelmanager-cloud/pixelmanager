@@ -492,7 +492,9 @@ class Game {
 
   /** New Game: silently create a local profile (no handle/password shown) and drop the player in. */
   private async startNewGame(rawName: string) {
-    const name = rawName.trim() || 'My Club';
+    const raw = rawName.trim();
+    if (!raw) { toast('Enter a family name to begin your bloodline'); try { ($('mm-name') as HTMLInputElement).focus(); } catch { /* */ } return; } // PT-39: don't silently found "My Club"
+    const name = raw.charAt(0).toUpperCase() + raw.slice(1); // PT-40: capitalise the family name (rossi → Rossi)
     const handle = ((name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12) || 'club') + '-' + Math.random().toString(36).slice(2, 6)).toLowerCase();
     const password = Math.random().toString(36).slice(2) + 'Aa1'; // random; the player never sees or types it
     $('login-error').textContent = 'Creating your club…';
@@ -641,7 +643,8 @@ class Game {
     });
     // live preview of the in-game club name + crest as you type (the club becomes "<name>'s Club")
     const updateNamePreview = () => {
-      const raw = ($('mm-name') as HTMLInputElement).value.trim();
+      const rawIn = ($('mm-name') as HTMLInputElement).value.trim();
+      const raw = rawIn ? rawIn.charAt(0).toUpperCase() + rawIn.slice(1) : ''; // preview capitalised, matching the saved name (PT-40)
       $('mm-preview').innerHTML = raw
         ? `<span class="mp-hint">Your club:</span> ${crest(raw + "'s Club", 26)} <b>${raw}'s Club</b> <span class="mp-hint">· the ${raw} bloodline</span>`
         : `<span class="mp-hint">Enter a family name — your club becomes “&lt;name&gt;'s Club” and the name carries down the generations.</span>`;
