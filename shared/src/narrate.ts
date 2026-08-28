@@ -84,21 +84,23 @@ const REACTIONS: Record<string, string[]> = {
   poor: ['The gaffer frowned.', 'A lesson, that.', 'Back to the training ground.', 'He knew it, too.', 'Words at half-time, surely.', 'File under learning.', 'A teachable moment.', 'Not the end of the world. Doesn’t feel like that right now, though.'],
   dismal: ['Heads dropped.', 'One to bury and move on from.', 'The bench winced.', 'A long walk back to the halfway line.', 'The gaffer looked away.', 'Best forgotten.', 'He’ll want the ground to swallow him.', 'Somewhere, someone is already making a joke of it.'],
 };
-// per-personality VOICE: colours the beat throughout (not just a rare tag-on clause)
-const PERSONALITY: Record<string, string> = {
-  maverick: 'He never does it the easy way.',
-  fragile: 'The nerves were written all over him.',
-  leader: 'The armband would suit him.',
-  biggame: 'He lives for these.',
-  workhorse: 'No one on that pitch worked harder.',
-  mercurial: "You never quite know which version you'll get.",
-  pro: 'Consummate, as ever.',
-  latebloom: 'Better every single week, this lad.',
-  showman: 'He plays with a grin and one eye on the crowd.',
-  stoic: 'Nothing about his face ever gives it away.',
-  hothead: 'It could go off at any second, and everyone knows it.',
-  perfectionist: 'Even that wasn’t quite good enough, by his own standard.',
-  joker: 'Somewhere in the huddle, he’s already found something to laugh about.',
+// per-personality VOICE: colours the beat throughout. Multiple OUTCOME-NEUTRAL variants per temperament so
+// it doesn't recycle one line every game, and reads fine on a win OR a loss (observations about the player,
+// never praise for a poor result). Playtest fix PT-3.
+const PERSONALITY: Record<string, string[]> = {
+  maverick: ['He never does it the easy way.', 'Always the unexpected with him.', 'He’d find a hard way through an open door.', 'Predictable is the one thing he’ll never be.'],
+  fragile: ['The nerves were written all over him.', 'You could see the doubt flicker.', 'He carries the weight visibly.', 'Confidence comes and goes with this one.'],
+  leader: ['The armband would suit him.', 'Others look to him without thinking.', 'He sets the tone, good day or bad.', 'A voice the dressing room follows.'],
+  biggame: ['He lives for these.', 'The bigger the stage, the more he shows up.', 'Occasions like this find him.', 'He’s built for the spotlight.'],
+  workhorse: ['He never stopped running.', 'Covered every blade of grass, that lad.', 'Effort is never the question with him.', 'The engine simply doesn’t cut out.'],
+  mercurial: ["You never quite know which version you'll get.", 'Brilliance and frustration in the same breath.', 'A riddle, this one.', 'Two players in one shirt.'],
+  pro: ['Consummate, as ever.', 'Nothing left to chance with him.', 'Professional to his boots.', 'He does the simple things right.'],
+  latebloom: ['Better every single week, this lad.', 'Still growing into himself.', 'The best of him is ahead.', 'A work in progress, and improving.'],
+  showman: ['He plays with a grin and one eye on the crowd.', 'Never happier than with an audience.', 'A touch of theatre in everything he does.', 'He wants to entertain as much as win.'],
+  stoic: ['Nothing about his face ever gives it away.', 'Unreadable, as always.', 'The same expression, whatever happens.', 'Calm as still water, this one.'],
+  hothead: ['It could go off at any second, and everyone knows it.', 'The fuse is always short.', 'Passion and trouble, forever close.', 'One decision from brilliance or the book.'],
+  perfectionist: ['He’ll pick holes in it later, whatever anyone says.', 'Never satisfied, this one.', 'His own harshest critic.', 'By his own standard, there’s always more.'],
+  joker: ['Somewhere in the huddle, he’s already found something to laugh about.', 'A grin is never far away.', 'He keeps it light, whatever the score.', 'The dressing room’s favourite.'],
 };
 // personality-flavoured verbs woven in occasionally so the temperament is felt, not just stated
 const PERSONALITY_ADV: Record<string, string[]> = {
@@ -318,7 +320,7 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
   const lead = prefix ? prefix + setting : cap(setting);
   // personality VOICE: an adverbial colour before the verb (felt throughout), plus the rare stated clause
   const adv = PERSONALITY_ADV[ctx.personalityId] && rng() < 0.5 ? pick(PERSONALITY_ADV[ctx.personalityId]) + ' ' : '';
-  const flavor = (b === 'triumph' || b === 'dismal') && rng() < 0.6 && PERSONALITY[ctx.personalityId] ? ' ' + PERSONALITY[ctx.personalityId] : '';
+  const flavor = (b === 'triumph' || b === 'dismal') && rng() < 0.6 && PERSONALITY[ctx.personalityId] ? ' ' + pick(PERSONALITY[ctx.personalityId]) : '';
   // a recurring character sometimes reacts
   const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed) : null;
   const castReact = cast && rng() < 0.25

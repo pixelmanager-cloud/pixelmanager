@@ -40,6 +40,13 @@ const METER_ICON: Record<string, string> = { authority: '🧑‍🏫', peers: '�
 // Readable full names for the stat abbreviations shown around the UI (tooltip on hover — playtest fix:
 // abbreviations like CMP/CRE/LDR/WRK were unexplained).
 const STAT_FULL: Record<string, string> = { pace: 'Pace', strength: 'Strength', passing: 'Passing', shooting: 'Shooting', tackling: 'Tackling', positioning: 'Positioning', workrate: 'Work rate', keeping: 'Goalkeeping', setPiece: 'Set pieces', stamina: 'Stamina', composure: 'Composure', creativity: 'Creativity', leadership: 'Leadership', teamwork: 'Teamwork', aggression: 'Aggression' };
+// Pedigree readout — a founding prospect legitimately has 0% (nothing inherited yet), which reads as
+// "worthless" next to his potential stars. Signpost it instead of showing a bare "0%". Playtest fix PT-4.
+function pedigreeText(pedigree: number, generation?: number): string {
+  const pctv = (pedigree * 100) | 0;
+  if ((generation ?? 0) === 0 && pctv === 0) return 'first of the line · his heirs will inherit his pedigree';
+  return `pedigree ${pctv}%`;
+}
 const TAG_ICON: Record<string, string> = { composure: '🧊', aggression: '⚔️', creativity: '🎨', teamwork: '🧩', leadership: '🎖️', stamina: '🏃', flair: '✨', keeping: '🧤' };
 
 // KIT customization options (cosmetic identity for the career player, carried to the pro)
@@ -780,7 +787,7 @@ class Game {
       + `<div class="pc-crest role-${p.roleHint}">${portraitImg(p.name, 'youth', 84)}<span class="pc-crest-role">${p.roleHint}</span></div>`
       + `<div class="pc-name">${p.name}</div><div class="pc-role">Youth Prospect${gen ? ` · gen ${gen}` : ''}</div>`
       + (born ? `<div class="pc-flash">${isGenesis ? '🌱 A NEW BLOODLINE BEGINS' : `🌳 THE ${surname.toUpperCase()} NAME LIVES ON`}</div>` : '')
-      + `<div class="pc-contract retired"><div class="pc-legend">Potential ${stars} · pedigree ${(p.pedigree * 100 | 0)}%</div>`
+      + `<div class="pc-contract retired"><div class="pc-legend">Potential ${stars} · ${pedigreeText(p.pedigree, gen)}</div>`
       + (gen ? `<div class="pc-stake">Generation ${gen} of the bloodline — a fresh 10-year-old carrying the family name into a whole new career.</div>` : '')
       + (p.note ? `<div class="pc-stake">${p.note}</div>` : '')
       + `</div>`
@@ -1015,7 +1022,7 @@ class Game {
       const gen = active.generation ? ` · gen ${active.generation}` : '';
       const more = prospects.length > 1 ? `<div class="hp-meta" style="margin-top:6px;">+${prospects.length - 1} more in the academy</div>` : '';
       el.innerHTML = `<div class="hub-prow"><div class="hp-main"><div class="hp-name">🌱 ${active.name} <span class="hp-stars">${stars}</span></div>`
-        + `<div class="hp-meta">${active.roleHint}${gen} · pedigree ${(active.pedigree * 100) | 0}% ${active.careerStarted ? '· in development' : '· age 10, ready to develop'}</div>${more}</div>`
+        + `<div class="hp-meta">${active.roleHint}${gen} · ${pedigreeText(active.pedigree, active.generation)} ${active.careerStarted ? '· in development' : '· age 10, ready to develop'}</div>${more}</div>`
         + `<button class="primary hp-go" data-dev="${active.id}">${active.careerStarted ? 'Continue his story' : 'Develop'} →</button></div>`;
       el.querySelector('[data-dev]')!.addEventListener('click', () => this.openCareer(active.id));
     } catch { el.innerHTML = '<div class="muted">Could not load your player — is the server running?</div>'; }
@@ -1857,8 +1864,8 @@ class Game {
         const stars = '★'.repeat(p.potentialStars) + '☆'.repeat(5 - p.potentialStars);
         const gen = p.generation ? ` · gen ${p.generation}` : '';
         const btn = `<button class="primary" data-dev="${p.id}">${p.careerStarted ? 'Continue' : 'Develop'} →</button>`;
-        return `<div class="prospect-row"><span class="pr-sprite">${sprite('youth')}</span><div><div class="pr-name">${p.name} <span class="pr-stars">${stars}</span></div>`
-          + `<div class="pr-meta">${p.roleHint}${gen} · pedigree ${(p.pedigree * 100) | 0}% ${p.careerStarted ? '· in development' : '· age 10, ready to develop'}</div></div>${btn}</div>`;
+        return `<div class="prospect-row"><span class="pr-sprite">${sprite('youth')}</span><div><div class="pr-name">${p.name} <span class="pr-stars" title="His potential — how high he could develop with the right career">${stars}</span></div>`
+          + `<div class="pr-meta">${p.roleHint}${gen} · ${pedigreeText(p.pedigree, p.generation)} ${p.careerStarted ? '· in development' : '· age 10, ready to develop'}</div></div>${btn}</div>`;
       }).join('') : '<div class="muted">No prospects yet — scout one above to begin.</div>';
       const { legends } = await api.legends().catch(() => ({ legends: [] as any[] }));
       const hall = legends.length ? `<h4 class="scout-h4" style="margin-top:22px;"><span class="ico-inline ico-lg">${sprite('laurel')}</span> HALL OF LEGENDS</h4>`
@@ -1978,7 +1985,7 @@ class Game {
         return `<div class="cg-coach" data-agent="${a.id}"><div class="cg-cname"><span class="ico-inline">${sprite('briefcase')}</span> ${a.name}</div><div class="cg-cdesc">${a.desc}</div>${effs}</div>`;
       }).join('');
       $('academy-body').innerHTML = `<button id="acad-back2" style="margin-bottom:10px;">← Prospects</button>`
-        + `<div class="cg-prompt">Sign an <b>agent</b> to represent this prospect — it shapes his whole career (exposure, opportunities, and how much he'll want to be paid).</div>` + opts;
+        + `<div class="cg-prompt">Sign an <b>agent</b> to represent this prospect — it flavours his whole career. <span class="cg-reassure">No wrong pick here: the tags below (big-stage moments, draft luck, wages, transfer value) play out slowly over the years — a first-timer can happily go with whoever fits the story you want.</span></div>` + opts;
       $('acad-back2').addEventListener('click', () => this.showAcademy());
       this.makeActivatable($('academy-body').querySelectorAll('[data-agent]')); // keyboard a11y for the agent picks
       $('academy-body').querySelectorAll('[data-agent]').forEach((b) => b.addEventListener('click', async () => {
@@ -2144,7 +2151,9 @@ class Game {
       : '';
     let body = '';
     if (s.phase === 'play' && s.scenario) {
-      const tags = Object.entries(s.scenario.demand).sort((a, b) => b[1] - a[1]).map(([t]) => `<span class="cg-tag">${t}</span>`).join('');
+      // the demand — what the moment is asking for. The top tag (biggest weight) is the primary thing to
+      // match; render as distinct highlighted pills, labelled, so it never reads like just another card tag.
+      const tags = Object.entries(s.scenario.demand).sort((a, b) => b[1] - a[1]).map(([t], i) => `<span class="cg-dtag${i === 0 ? ' primary' : ''}">${t}</span>`).join('');
       // distinct presentation per moment type — a matchday scoreboard, the training ground, or life off the pitch
       const mk = s.momentKind ?? (s.lifeEvent ? 'life' : 'training');
       let header: string; let prompt: string;
@@ -2175,7 +2184,7 @@ class Game {
         header = `<div class="cg-mtype training">🏋️ TRAINING GROUND</div>`;
         prompt = 'How does he approach the session?';
       }
-      body = `<div class="cg-scenario stakes-${s.scenario.stakes} ${mk}">${header}<div class="cg-story">${s.story ?? s.scenario.label}</div><div class="cg-demand">${tags}</div></div>`
+      body = `<div class="cg-scenario stakes-${s.scenario.stakes} ${mk}">${header}<div class="cg-story">${s.story ?? s.scenario.label}</div><div class="cg-demand"><span class="cg-demand-lbl">🎯 This calls for:</span> ${tags}<span class="cg-demand-hint">— play a card that matches</span></div></div>`
         + `<div class="cg-prompt">${prompt}${s.coach ? ` · <b>${s.coach.name}</b> is coaching him` : ''}</div>`
         + `<div class="cg-cards">` + (s.hand ?? []).map((c) => this.cardHtml(c, 'play')).join('') + `</div>`;
     } else if (s.phase === 'coach' && s.coaches) {
@@ -2244,7 +2253,7 @@ class Game {
     const stat = (k: string) => `<span class="cgp-stat" title="${STAT_FULL[k] ?? k}"><b>${key.find((x) => x[0] === k)?.[1]}</b> ${p.attrs[k] ?? 0}</span>`;
     const traits = p.traitsForming.length ? `<div class="cgp-traits">forming: ${p.traitsForming.map((t) => `<span class="cg-tag">${t}</span>`).join(' ')}</div>` : '';
     return `<div class="cg-profile"><div class="cgp-top">`
-      + `<span class="cgp-role role-${p.role}">${p.role}</span>`
+      + `<span class="cgp-role role-${p.role}" title="His position emerges from HOW you develop him — the cards you play and stats you grow. The academy scout only glimpsed a hint; this is what he's becoming.">${p.role}${p.traitsForming.length ? ' <span class="cgp-forming">· forming</span>' : ''}</span>`
       + `<span class="cgp-ovr">OVR ${p.currentOverall} <i>→ ${p.potential} pot ${stars}</i></span>`
       + `<span class="cgp-pers" title="${p.personality.desc}">🧠 ${p.personality.name}</span>`
       + (p.agent ? `<span class="cgp-meta">🤝 ${p.agent}</span>` : '')

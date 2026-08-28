@@ -492,6 +492,14 @@
       .cg-context { margin-top: 18px; padding-top: 14px; border-top: 1px dashed var(--line); }
       /* keyboard focus ring for the click-only choice cards/coaches/agents (Steam a11y) */
       [data-act]:focus-visible, [data-agent]:focus-visible { outline: 3px solid var(--cyan); outline-offset: 2px; }
+      /* the scenario DEMAND — labelled + distinct from card tags so "match this" is obvious (playtest PT-6) */
+      .cg-demand { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+      .cg-demand-lbl { font-family: var(--display); font-size: 12px; letter-spacing: 0.5px; color: var(--warn); }
+      .cg-demand-hint { font-size: 12px; color: var(--muted); }
+      .cg-dtag { font-size: 13px; font-weight: 700; color: #10121a; background: var(--warn); border-radius: 8px; padding: 2px 9px; }
+      .cg-dtag.primary { background: var(--good); box-shadow: 0 0 0 2px rgba(255,255,255,0.15) inset; }
+      .cgp-forming { font-size: 11px; color: var(--muted); font-weight: 400; }
+      .cg-reassure { display: block; margin-top: 5px; font-size: 14px; color: var(--muted); }
       /* ── per-stage re-theme: backdrop + scene banner, accent driven by --cg-accent (set per chapter) ── */
       #academy { --cg-accent: #6ad06a; }
       #academy-body { background: var(--cg-bg, transparent); border-radius: 12px; transition: background .5s ease; }
