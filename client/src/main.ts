@@ -2563,7 +2563,13 @@ class Game {
         this.renderCareer(r.state);
         if (r.clubGain && r.clubGain > 0) toast(`🏟️ +${r.clubGain}c to the club`);
       }
-    } catch (e: any) { toast(e?.body?.error ?? 'Move failed'); }
+    } catch (e: any) {
+      toast(e?.body?.error ?? 'Move failed');
+      // an action can fail if the client's view drifted from the engine's true phase (e.g. a save that
+      // straddled an engine change). Re-fetch the real state and re-render so the UI resyncs instead of
+      // getting stuck showing a phase the engine has already left (#11 draft soft-lock safety net).
+      try { const cur = await api.getCareer(prospectId); if (cur?.state) this.renderCareer(cur.state); } catch { /* leave the view as-is */ }
+    }
     finally { this.actInFlight = false; $('academy-body').classList.remove('cg-acting'); }
   }
 

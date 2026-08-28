@@ -90,17 +90,39 @@ export function applyAction(c: Career, a: CareerAction, tolerant = false) {
   else if (a.type === 'arc') c.resolveArc(a.cardId);
   else c.play(a.cardId, tolerant);
 }
+/** Resolve whatever between-turn decision is currently pending, with a safe default — used to un-stick a
+ *  replay when a save straddles an engine change (e.g. a patch makes a draft need one more pick than the save
+ *  recorded, so a later stored 'play' can't apply until that draft is finished). Picks the first option for
+ *  each pending phase; a fallback for a desynced save, so it self-heals instead of bricking (the #11 draft
+ *  soft-lock). No-op when nothing is pending. */
+function drainPending(c: Career): boolean {
+  const st = c.current() as any;
+  if (st.phase === 'arc') { c.resolveArc(st.arc.choices[0].id); return true; }
+  if (st.phase === 'focus') { c.chooseFocus(st.focus[0].id, true); return true; }
+  if (st.phase === 'offer') { c.resolveOffer(st.offers[0].id); return true; }
+  if (st.phase === 'coach') { c.appointCoach(st.coaches[0].id, true); return true; }
+  if (st.phase === 'draft') { let g = 0; while ((c.current() as any).phase === 'draft' && g++ < 12) c.draft((c.current() as any).options[0].id, true); return true; }
+  return false;
+}
+
 export function loadCareer(t: Token): Career {
   const c = new Career(t.career_seed!, (t.track as Track) ?? 'outfield', t.agent_id ?? undefined);
   // REPLAY is tolerant: content added since a career started can't brick it (a drifted card/coach
   // degrades to a best-fit fallback). A structural change (e.g. new age stages that move the chapter
-  // boundaries) can still desync an action from its phase — rather than 500, stop replaying at that
-  // point and resume from the last consistent state.
+  // boundaries) can still desync an action from its phase — when that happens, auto-resolve the pending
+  // between-turn decision with a default and retry the action once, so a save that straddles an engine
+  // change self-heals rather than getting stuck at a boundary (#11). Only if it still can't apply do we
+  // stop and resume from the last consistent state.
   const actions = JSON.parse(t.career_actions ?? '[]') as CareerAction[];
   for (const a of actions) {
     try { applyAction(c, a, true); }
-    catch { break; }
+    catch {
+      try { if (drainPending(c)) applyAction(c, a, true); else break; }
+      catch { break; }
+    }
   }
+  // if the final stored action left a pending phase that later engine logic expanded (e.g. an extra draft
+  // pick), leave it pending so the UI surfaces it — but never leave a phase the UI can't act on.
   return c;
 }
 /** Milestone this beat represents, detected from career state BEFORE the play is applied. */
