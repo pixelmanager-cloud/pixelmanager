@@ -158,6 +158,11 @@ const meAfterSucceed = await api.me();
 assert(!meAfterSucceed.contracts[prospectId] || meAfterSucceed.contracts[prospectId].retired == null, 'the token is a prospect again, not a contracted pro');
 const afterProspects = await api.prospects();
 assert(afterProspects.prospects.some((p) => p.id === prospectId && p.generation === 1), 'the reborn generation-1 prospect is back in the academy');
+// succeed() must SNAPSHOT the retiring pro as a legend so the Bloodline Tree / Hall of Legends populates
+// (regression guard for PT-18 — saveLegacy was defined but never called, leaving the signature tree empty).
+const legendsAfter = await api.legends();
+assert(legendsAfter.legends.length >= 1, 'succeed() records a legend — the bloodline tree / legends now populate');
+assert(legendsAfter.legends.some((l) => l.playerId === prospectId && !!l.card), 'the recorded legend is this bloodline, with a legend card');
 
 console.log('=== 13. missions + trials wiring ===');
 const missions = await api.missions();

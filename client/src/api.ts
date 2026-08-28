@@ -424,6 +424,14 @@ export const api = {
     const inheritance = body?.inheritance; // the will/heirloom decision (see client's showWillDecision)
     await localStore.updateToken(pid, { ach_seasons: (t.ach_seasons ?? 0) + seasons, ach_apps: (t.ach_apps ?? 0) + seasons * 18, ach_league: (t.ach_league ?? 0) + titles });
     const decorated = (await localStore.getToken(pid))!;
+    // SNAPSHOT THE LEGEND before the token is reborn — this is what populates the Bloodline Tree / Hall of
+    // Legends. Keyed with a :g<gen> suffix so every generation is a distinct node (legends() groups by the
+    // base id, splitting on ':g'). Without this the game's signature generational chain never fills (PT-18).
+    try {
+      const card = legendCardOf(decorated);
+      const retiredSeason = getActiveModel().profile.season ?? (decorated.generation ?? 0);
+      await localStore.saveLegacy(`${pid}:g${decorated.generation ?? 0}`, OWNER, decorated.name, JSON.stringify(card), retiredSeason);
+    } catch { /* legend snapshot is best-effort — never block the succession itself */ }
     // THE FORTUNE — the family wealth passes down: a larger cash inheritance to the club.
     let legacy = Math.round((decorated.earnings ?? 0) * RETIREMENT_LEGACY_SHARE);
     if (inheritance === 'fortune') legacy = Math.round(legacy * 1.75) + 200;
