@@ -43,13 +43,23 @@ def prompt_for(i):
     # RD does the pixel-art part from prompt_style — describe only the subject
     return f"a football club {s} emblem, a {m}, {c}, bold clean centered symmetrical, thick dark outline, flat colors"
 
-def request(key, prompt, seed):
+def request(key, prompt, seed, retries=4):
     body = json.dumps({"prompt": prompt, "prompt_style": STYLE, "width": GEN, "height": GEN,
                        "num_images": 1, "seed": seed, "remove_bg": True}).encode()
-    req = urllib.request.Request(ENDPOINT, data=body, method="POST",
-                                 headers={"X-RD-Token": key, "Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=120) as r:
-        return json.loads(r.read())
+    last = None
+    for attempt in range(retries):
+        try:
+            req = urllib.request.Request(ENDPOINT, data=body, method="POST",
+                                         headers={"X-RD-Token": key, "Content-Type": "application/json"})
+            with urllib.request.urlopen(req, timeout=120) as r:
+                res = json.loads(r.read())
+            if res.get("base64_images"):
+                return res
+            last = res.get("error", res)
+        except Exception as e:
+            last = e
+        time.sleep(2 + attempt * 2)   # back off on rate-limits / hiccups, then retry
+    raise RuntimeError(f"failed after {retries} attempts: {last}")
 
 def pixelate(im):
     im = im.convert("RGBA")
