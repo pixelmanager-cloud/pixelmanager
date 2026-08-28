@@ -12,8 +12,7 @@ const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v
 function hash32(...nums: number[]): number { let h = 2166136261 >>> 0; for (const n of nums) { h ^= (n >>> 0); h = Math.imul(h, 16777619); } return h >>> 0; }
 
 export const TRANSFER_LIST_SIZE = 12;   // fictional players offered for sale each season
-export const MIN_SQUAD = 14;            // can't sell below this
-export const MAX_SQUAD = 26;            // can't buy above this
+// squad bounds (MIN_SQUAD/MAX_SQUAD) live in market.ts — reused by the buy/sell facade
 
 /** Transfer FEE (coins) to buy a player — ability-driven, tuned to the season-prize economy so a couple of
  *  buys a season is realistic. A rising fee is the cost of climbing the pyramid. */

@@ -13,6 +13,8 @@ import {
   makeClub as _makeClub, // re-exported nowhere — freshSave() (save.ts) already calls this; kept for reference
   validateLineup, cleanDuties,
   overall, managerPrestige, signContract, graduationEpilogue, clubInvestOf,
+  transferList, transferFee, sellValue, incomingBid, MIN_SQUAD, MAX_SQUAD,
+  contractDemand, evaluateContractOffer, wageForLength,
   FACILITY_KEYS, FACILITY_META, MAX_LEVEL, upgradeCost, effectAt,
   youthPoolBonus, youthUpgradeChance, scoutHitMult, scoutCostDiscount, scoutExtraTrips,
   generatePool, trialistAt, LOANEE_CAP, DESTINATIONS, destinationById, rollMission, travelMs as travelMsPure, previewOdds,
@@ -288,6 +290,79 @@ export const api = {
     await bumpMoraleLocal(playerId, 'extended');
     const updated = (await localStore.getToken(playerId))!;
     return { ok: true as const, coins: getActiveModel().profile.coins, contract: { playerId, ...tokenContract(updated, season) } };
+  },
+  // ── transfer market: buy/sell fictional squad players (coin-based; strengthens the squad → climb) ──
+  buyPlayer: async (player: Player, fee: number) => {
+    await ensureActive();
+    const f = Math.max(0, Math.round(fee));
+    const c = await localStore.getClub(OWNER);
+    if (!c) throw apiErr('club not found', {}, 404);
+    if (c.club.players.length >= MAX_SQUAD) throw apiErr(`your squad is full (max ${MAX_SQUAD})`, {}, 409);
+    if (getActiveModel().profile.coins < f) throw apiErr('not enough coins', { need: f }, 402);
+    await localStore.addCoins(OWNER, -f);
+    const uid = `bought-${c.club.players.length}-${String(player.id || 'p').replace(/[^a-z0-9]/gi, '')}`;
+    c.club.players.push({ ...player, id: uid });
+    await localStore.saveClub(OWNER, c.club, c.standingOrders);
+    return { ok: true as const, coins: getActiveModel().profile.coins, squadSize: c.club.players.length };
+  },
+  sellPlayer: async (playerId: string) => {
+    await ensureActive();
+    const c = await localStore.getClub(OWNER);
+    if (!c) throw apiErr('club not found', {}, 404);
+    if (c.club.players.length <= MIN_SQUAD) throw apiErr(`you can't sell below ${MIN_SQUAD} players`, {}, 409);
+    const p = c.club.players.find((x) => x.id === playerId);
+    if (!p) throw apiErr('no such player', {}, 404);
+    if (await localStore.getToken(playerId)) throw apiErr('the bloodline star can only leave via a transfer offer', {}, 409);
+    const value = sellValue(overall(p));
+    await localStore.addCoins(OWNER, value);
+    c.club.players = c.club.players.filter((x) => x.id !== playerId);
+    await localStore.saveClub(OWNER, c.club, c.standingOrders);
+    return { ok: true as const, coins: getActiveModel().profile.coins, value, squadSize: c.club.players.length };
+  },
+  /** The bloodline star's contract-demand shape (for the negotiation UI). baseWage = the loyalty-adjusted
+   *  re-sign cost (== the old extendCost); prefLength = the length he'd sign happily. */
+  starContractInfo: async (playerId: string) => {
+    await ensureActive();
+    const model = getActiveModel();
+    const t = await localStore.getToken(playerId);
+    if (!t) throw apiErr('no such token', {}, 404);
+    if (t.state !== 'pro') throw apiErr('not a pro under contract');
+    const ci = tokenContract(t, model.profile.season);
+    const p = t.personality ?? undefined;
+    const lengthPremium = (p === 'maverick' || p === 'mercurial') ? 0.14 : (p === 'leader' || p === 'workhorse') ? -0.07 : 0.05;
+    return { baseWage: ci.extendCost, prefLength: ci.lengthSeasons, minLength: 2, maxLength: 6, lengthPremium, seasonsLeft: ci.seasonsLeft, coins: model.profile.coins };
+  },
+  /** Make a contract OFFER (wage × length) to the star — he accepts / counters / rejects. On accept the
+   *  wage is banked as the re-sign cost and a fresh deal of that length is signed. */
+  negotiateStar: async (playerId: string, wage: number, length: number) => {
+    await ensureActive();
+    const model = getActiveModel();
+    const t = await localStore.getToken(playerId);
+    if (!t) throw apiErr('no such token', {}, 404);
+    if (t.state !== 'pro') throw apiErr('not a pro under contract');
+    const season = model.profile.season;
+    const ci = tokenContract(t, season);
+    const p = t.personality ?? undefined;
+    const lengthPremium = (p === 'maverick' || p === 'mercurial') ? 0.14 : (p === 'leader' || p === 'workhorse') ? -0.07 : 0.05;
+    const demand = { baseWage: ci.extendCost, prefLength: ci.lengthSeasons, minLength: 2, maxLength: 6, lengthPremium };
+    const result = evaluateContractOffer(demand, Math.round(wage), Math.round(length));
+    if (result.outcome !== 'accept') return { outcome: result.outcome, askWage: result.askWage, note: result.note, coins: model.profile.coins };
+    const cost = Math.max(0, Math.round(wage));
+    if (model.profile.coins < cost) throw apiErr('not enough coins', { need: cost }, 402);
+    await localStore.addCoins(OWNER, -cost);
+    await localStore.updateToken(playerId, { signed_season: season, length_seasons: Math.max(2, Math.min(6, Math.round(length))) });
+    await bumpMoraleLocal(playerId, 'extended');
+    return { outcome: 'accept' as const, askWage: result.askWage, note: result.note, coins: getActiveModel().profile.coins, lengthSeasons: Math.max(2, Math.min(6, Math.round(length))) };
+  },
+  /** A rival's incoming BID for the star this season (or null). Deterministic per (seed, season). */
+  starBid: async (playerId: string, seed: number) => {
+    await ensureActive();
+    const model = getActiveModel();
+    const t = await localStore.getToken(playerId);
+    if (!t || t.state !== 'pro') return { bid: null };
+    const ov = overall(tokenToPlayer(t));
+    const age = (t as any).age ?? 26;
+    return { bid: incomingBid(seed >>> 0, model.profile.season, ov, age) };
   },
   stake: async (playerId: string, on: boolean) => {
     await ensureActive();
