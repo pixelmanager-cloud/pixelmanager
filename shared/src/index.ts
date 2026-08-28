@@ -12,6 +12,7 @@ export * from './legacy.js';
 export * from './staking.js';
 export * from './gaffersDiary.js';
 export * from './clubseason.js';
+export * from './transfermarket.js';
 export * from './intl.js';
 export * from './board.js';
 export * from './press.js';

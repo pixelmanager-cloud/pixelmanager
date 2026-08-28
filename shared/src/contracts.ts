@@ -66,3 +66,39 @@ export function contractView(
     sellValue: releaseClause(overall, marketability, greed),
   };
 }
+
+// ── contract NEGOTIATION — an offer builder (length × wage) the player accepts / counters / rejects ────
+// Replaces the take-it-or-leave-it re-sign with a real haggle: a longer deal costs a higher wage (a mercenary
+// demands more for the commitment; a loyal one discounts for the security), and lowballing risks him walking.
+// Pure + deterministic — the player is a rational agent with clear thresholds (learnable, not random).
+export interface ContractDemand {
+  baseWage: number;   // his fair per-season wage at his PREFERRED length
+  prefLength: number; // the deal length he'd sign happily
+  minLength: number; maxLength: number;
+  lengthPremium: number; // wage change per season away from pref (+mercenary demands more, −loyal discounts)
+}
+export function contractDemand(overall: number, age: number, greed = 10, personality?: string, earnings = 0, seasonsStaked = 0): ContractDemand {
+  const loyalty = clamp(1 - Math.max(0, seasonsStaked) * 0.04, 0.75, 1);
+  const baseWage = Math.round(contractCost(overall, age, greed, earnings) * loyalty);
+  const loyal = personality === 'leader' || personality === 'workhorse';
+  const merc = personality === 'maverick' || personality === 'mercurial';
+  return { baseWage, prefLength: contractLength(greed, personality), minLength: 2, maxLength: 6, lengthPremium: merc ? 0.14 : loyal ? -0.07 : 0.05 };
+}
+/** The wage he asks for a deal of `length` seasons (his base, adjusted by the length premium). */
+export function wageForLength(d: ContractDemand, length: number): number {
+  const L = clamp(Math.round(length), d.minLength, d.maxLength);
+  return Math.max(1, Math.round(d.baseWage * (1 + (L - d.prefLength) * d.lengthPremium)));
+}
+export type OfferOutcome = 'accept' | 'counter' | 'reject';
+export interface ContractOfferResult { outcome: OfferOutcome; askWage: number; note: string; moraleDelta: number }
+/** Evaluate an offer of `offerWage` over `length` seasons against his demand. */
+export function evaluateContractOffer(d: ContractDemand, offerWage: number, length: number): ContractOfferResult {
+  const ask = wageForLength(d, length);
+  const ratio = offerWage / Math.max(1, ask);
+  if (ratio >= 1) {
+    const generous = ratio >= 1.15;
+    return { outcome: 'accept', askWage: ask, note: generous ? 'He’s delighted with the terms — signs on the spot.' : 'He’s happy with that — deal done.', moraleDelta: generous ? 6 : 3 };
+  }
+  if (ratio >= 0.9) return { outcome: 'counter', askWage: ask, note: `Close, but he’s holding out for his number.`, moraleDelta: 0 };
+  return { outcome: 'reject', askWage: ask, note: 'He’s insulted by the offer and walks away from the table.', moraleDelta: -6 };
+}
