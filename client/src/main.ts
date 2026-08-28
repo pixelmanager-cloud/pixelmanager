@@ -7,6 +7,7 @@ import {
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type Trialist, type MissionsData, type ContractInfo } from './api';
 import { sprite } from './sprites';
+import { crest } from './crest';
 import { audio } from './audio';
 
 /** Single-player manager-season state (per save, in localStorage). `starId` present ⇒ manager phase. */
@@ -896,7 +897,7 @@ class Game {
     this.showScreen('hub');
     ($('hub-club').querySelector('.legacy-ico') as HTMLElement).innerHTML = sprite('stadium');
     ($('hub-legacy').querySelector('.legacy-ico') as HTMLElement).innerHTML = sprite('trophy');
-    $('me-name').textContent = this.club.name;
+    $('me-name').innerHTML = `<span class="me-crest">${crest(this.club.name, 22)}</span>${this.club.name}`;
     $('me-rating').textContent = ''; // PvP ELO — hidden: the game is single-player (multiplayer removed, see direction.md)
     if (this.account.coins != null) {
       $('me-coins').innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${this.account.coins}`;
@@ -1013,7 +1014,7 @@ class Game {
 
   private spTableHtml(t: ReturnType<typeof liveTable>): string {
     const zone = (i: number) => i === 0 ? 'champ' : i <= 2 ? 'promo' : i >= t.size - 2 ? 'releg' : '';
-    const rows = t.table.map((r, i) => `<tr class="lt-row ${r.mine ? 'mine' : ''} ${zone(i)}"><td class="lt-pos">${i + 1}</td><td class="lt-name">${r.name}</td><td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GD > 0 ? '+' : ''}${r.GD}</td><td class="lt-pts">${r.Pts}</td></tr>`).join('');
+    const rows = t.table.map((r, i) => `<tr class="lt-row ${r.mine ? 'mine' : ''} ${zone(i)}"><td class="lt-pos">${i + 1}</td><td class="lt-name"><span class="lt-crest">${crest(r.name, 16)}</span>${r.name}</td><td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GD > 0 ? '+' : ''}${r.GD}</td><td class="lt-pts">${r.Pts}</td></tr>`).join('');
     return `<table class="lt-table"><thead><tr><th></th><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>${rows}</tbody></table>`;
   }
 
@@ -1032,7 +1033,7 @@ class Game {
     const fxRows = fixtures.map((f, i) => {
       const derby = f.oppName === rivalName;
       const vTag = `<span class="sf-v ${f.venue === 'H' ? 'home' : 'away'}">${f.venue}</span>`;
-      const oppTag = `<span class="sf-opp">${f.oppName}${derby ? ' <span class="sf-derby">🔥 DERBY</span>' : ''}</span>`;
+      const oppTag = `<span class="sf-opp"><span class="sf-opp-crest">${crest(f.oppName, 15)}</span>${f.oppName}${derby ? ' <span class="sf-derby">🔥 DERBY</span>' : ''}</span>`;
       if (i < played.length) {
         const r = played[i], cls = r.myGoals > r.oppGoals ? 'w' : r.myGoals < r.oppGoals ? 'l' : 'd';
         return `<div class="sf-fx done${derby ? ' derby' : ''}"><span class="sf-md">${i + 1}</span>${vTag}${oppTag}<span class="sf-res ${cls}">${r.myGoals}-${r.oppGoals}</span></div>`;
@@ -1048,8 +1049,8 @@ class Game {
     const records = played.length ? `<div class="sf-records">📋 ${biggest ? `Biggest win ${biggest.sc}` : 'No win yet'} · Longest unbeaten ${bestRun}</div>` : '';
     const starLine = m.starName && m.starAge ? ` · ★ ${m.starName} (age ${m.starAge}${m.retireAge ? `, likely retires ~${m.retireAge}` : ''})` : '';
     const header = done
-      ? `<div class="season-summary done">✅ Season ${m.season} complete — <b>${clubName}</b> finished <b>${this.ordinal(t.pos)}</b> of ${t.size}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ''}. <button class="primary" id="sf-next-season">Next season →</button></div>`
-      : `<div class="season-summary"><b>${clubName}</b> · Season ${m.season} · Matchday ${nextIdx + 1}/${fixtures.length} · <b>${this.ordinal(t.pos)}</b> of ${t.size}${formStrip}${starLine}</div>`;
+      ? `<div class="season-summary done"><span class="ss-crest">${crest(clubName, 20)}</span>✅ Season ${m.season} complete — <b>${clubName}</b> finished <b>${this.ordinal(t.pos)}</b> of ${t.size}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ''}. <button class="primary" id="sf-next-season">Next season →</button></div>`
+      : `<div class="season-summary"><span class="ss-crest">${crest(clubName, 20)}</span><b>${clubName}</b> · Season ${m.season} · Matchday ${nextIdx + 1}/${fixtures.length} · <b>${this.ordinal(t.pos)}</b> of ${t.size}${formStrip}${starLine}</div>`;
     const simBtn = done ? '' : `<div style="text-align:center;margin-top:10px;"><button id="sf-sim" style="font-family:var(--display);font-size:11px;padding:7px 14px;">⏩ Sim the rest of the season</button></div>`;
     // TRAINING FOCUS — the stat your star works on this season (young grow it, veterans slow their decline)
     const FOCI = ['pace', 'shooting', 'passing', 'tackling', 'strength', 'positioning', 'stamina'];
@@ -1139,7 +1140,7 @@ class Game {
     const dots = CONT_ROUNDS.map((r, i) => `<span class="sf-cont-dot ${i < round ? 'won' : i === round ? 'now' : ''}">${['QF', 'SF', 'F'][i]}</span>`).join('');
     return `<div class="sf-cont"><div class="sf-cont-head"><span class="sf-cont-lbl">🌍 CONTINENTAL CUP</span>${dots}</div>`
       + (m.contBlurb ? `<div class="sf-cont-blurb">${m.contBlurb}</div>` : '')
-      + `<div class="sf-cont-tie"><b>${tie.label}</b> ${tie.neutral ? '(neutral)' : ''} vs <b>${tie.oppName}</b> · rating ~${tie.oppStrength}</div>`
+      + `<div class="sf-cont-tie"><b>${tie.label}</b> ${tie.neutral ? '(neutral)' : ''} vs <span class="sf-opp-crest">${crest(tie.oppName, 15)}</span><b>${tie.oppName}</b> · rating ~${tie.oppStrength}</div>`
       + `<div class="sf-cont-btns"><button class="primary" id="sf-cont-play">Play the tie ▶</button> <button id="sf-cont-sim">⏩ Sim it</button></div></div>`;
   }
   private playContinentalTie() {
@@ -2698,8 +2699,8 @@ class Game {
     const onTarget: [number, number] = [0, 0];
     for (const e of s.events) if (e.type === 'goal' || e.type === 'shot_saved') onTarget[e.teamIdx]++;
 
-    $('ft-home-name').textContent = this.homeName;
-    $('ft-away-name').textContent = this.awayName;
+    $('ft-home-name').innerHTML = `<span class="ft-crest">${crest(this.homeName, 20)}</span>${this.homeName}`;
+    $('ft-away-name').innerHTML = `<span class="ft-crest">${crest(this.awayName, 20)}</span>${this.awayName}`;
     $('ft-score').textContent = `${s.score[0]} - ${s.score[1]}`;
     $('ft-home-poss').textContent = `${hp}%`;
     $('ft-away-poss').textContent = `${100 - hp}%`;
