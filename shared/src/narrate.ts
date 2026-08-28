@@ -657,14 +657,16 @@ const CALLUP_SETUP = [
   'A late fitness test has failed. No time to think about it — he’s starting.', 'Suspension, a red card review, a withdrawal — whatever the reason, the sheet has his name on it tonight.',
   'The kit man is already laying his shirt out in the home dressing room. Nobody warned him this morning.', 'One phone call and his whole week changed — he’s starting, and there’s no time left to be nervous about it.',
 ];
+// age-neutral: this reskin fires from Breakthrough (19) through Establishing (23-25), so no line may cast him as
+// a "kid" making his "debut" — a settled 25-year-old thrust in at short notice is not a debutant (PT-135).
 const CALLUP_RESOLUTION = {
   good: [
-    'and he looks like he’s been starting there for years.', 'and the shock call-up becomes the best story of his career so far.',
-    'and nobody in that stadium would ever guess he found out four hours ago.', 'and it’s the kind of debut managers dream of handing a kid.',
+    'and he looks like he’s been starting there for years.', 'and the shock call-up becomes the best story of his season.',
+    'and nobody in that stadium would ever guess he found out four hours ago.', 'and it’s the kind of last-minute start managers dream of handing out.',
   ],
   bad: [
-    'and the nerves get the better of him.', 'and it’s a chastening first taste of it, the kind you learn from.',
-    'and the step up shows, painfully, just how big it is.', 'and he looks every inch a boy thrown in before he was ready.',
+    'and the nerves get the better of him.', 'and it’s a chastening night, the kind you learn from.',
+    'and the step up shows, painfully, just how big it is.', 'and he looks every inch a man caught cold, undercooked for the occasion.',
   ],
 };
 /** The SITUATION for a shock call-up — call before the card is played. */
