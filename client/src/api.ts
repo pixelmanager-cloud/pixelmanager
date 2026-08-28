@@ -461,6 +461,8 @@ export const api = {
   // SP SEASON PRIZE — also where the local season counter advances (see docs note in save.ts's
   // profile.season) and where a league finish is banked as an honour (the old pod/wall-clock season
   // rollover that used to write honours is gone; this is the one call-per-season-end main.ts makes).
+  /** A coin-only prize (no honour, no season bump) — for escalating cup-round rewards (PT-96). */
+  cupPrize: async (amount: number) => { await ensureActive(); const a = Math.max(0, Math.round(Number(amount) || 0)); await localStore.addCoins(OWNER, a); return { ok: true as const, coins: getActiveModel().profile.coins, prize: a }; },
   spSeasonReward: async (body: { pos: number; size: number; sponsor?: string; wins?: number; draws?: number; losses?: number; tier?: number; kind?: 'league' | 'continental' | 'world' }) => {
     await ensureActive();
     const model = getActiveModel();

@@ -221,8 +221,10 @@ const CONT_FINAL_LOSS: string[] = [
 
 /** A deterministic "how it felt" line for a continental-cup tie result. `won` null means a draw that
  *  needs `pens` to resolve (knockout ties are always decided, so this covers the shootout framing). */
-export function contTieBlurb(seed: number, season: number, round: ContRound, aWon: boolean, pens: boolean): string {
-  const h = hash32(seed, season * 977 + 41, round * 131, 8801);
+export function contTieBlurb(seed: number, season: number, round: ContRound, aWon: boolean, pens: boolean, margin = 0): string {
+  // fold the scoreline MARGIN into the seed so a 4-0 rout and a 1-0 squeak in the same season/round don't draw
+  // the identical line (PT-97) — a blowout, a narrow win and a shootout each read differently.
+  const h = hash32(seed, season * 977 + 41, round * 131, 8801, Math.abs(margin) * 31 + (aWon ? 1 : 0));
   const isFinal = round === 2;
   if (aWon) return pick(h, isFinal ? CONT_FINAL_WIN : pens ? CONT_WIN_PENS : CONT_WIN);
   return pick(h, isFinal ? CONT_FINAL_LOSS : pens ? CONT_LOSS_PENS : CONT_LOSS);

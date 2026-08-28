@@ -1090,9 +1090,10 @@ class Game {
    *  (or the weakest overall) so he's never silently benched — the "your man on the pitch" promise. (PT-20) */
   private starGuarded(lineup: Lineup): Lineup {
     const starId = this.loadMgr().starId;
-    // don't force an INJURED star into the XI — availableClub() excludes him, so buildXI would find no player
-    // and splice in a nameless NaN-overall "ghost" (10 men + a phantom). When he's hurt, leave the healthy XI. (PT-73)
-    if (!starId || !this.club || lineup.playerIds.includes(starId) || this.injured.has(starId)) return lineup;
+    // don't force an INJURED or contract-LAPSED star into the XI — availableClub() excludes both, so buildXI
+    // would find no player and splice in a nameless NaN-overall "ghost" (PT-73). And if his contract has lapsed,
+    // the "benched until re-signed" rule must actually bench him, or re-signing has no teeth (PT-91).
+    if (!starId || !this.club || lineup.playerIds.includes(starId) || this.injured.has(starId) || this.lapsed().has(starId)) return lineup;
     const star = this.club.players.find((p) => p.id === starId);
     if (!star) return lineup; // star isn't in this squad (shouldn't happen mid-manager-phase)
     const starters = lineup.playerIds.map((id) => this.club!.players.find((p) => p.id === id)).filter(Boolean) as Player[];
@@ -1185,7 +1186,7 @@ class Game {
   }
   private buyPlayerFlow(l: Listing, boughtKey: string) {
     // confirm the SPEND — buying is the costlier, irreversible action, so it deserves the same guard as sell (PT-30)
-    this.openConfirm(`Sign <b>${l.player.name}</b> (${l.player.role}, OV ${l.ov}) for <b>${l.fee.toLocaleString()}c</b>?`, 'Sign him', () => this.doBuyPlayer(l, boughtKey));
+    this.openConfirm(`Sign <b>${l.player.name}</b> (${l.player.role}, OV ${l.ov}) for a one-off <b>${l.fee.toLocaleString()}c</b> transfer fee <span class="cg-hint-inline">(no wage — he's yours outright)</span>?`, 'Sign him', () => this.doBuyPlayer(l, boughtKey)); // PT-93: it's a one-off fee, not a wage
   }
   private async doBuyPlayer(l: Listing, boughtKey: string) {
     try {
@@ -1193,7 +1194,7 @@ class Game {
       if (this.account) this.account.coins = r.coins;
       try { const b = JSON.parse(localStorage.getItem(boughtKey) || '[]'); b.push(l.player.id); localStorage.setItem(boughtKey, JSON.stringify(b)); } catch { /* ignore */ }
       this.setMe(await api.me()); audio.chime('confirm');
-      toast(`✍️ Signed ${l.player.name} (OV ${l.ov}) · −${l.fee.toLocaleString()}c`);
+      toast(`✍️ Signed ${l.player.name} (OV ${l.ov}) · −${l.fee.toLocaleString()}c transfer fee, no wage`);
       this.renderTransferMarket();
     } catch (e: any) { toast(e?.body?.error ?? 'Could not sign him'); }
   }
@@ -1261,7 +1262,13 @@ class Game {
     const bidKey = 'fm_biddismiss_' + (this.account?.handle ?? 'x') + '_' + m.season;
     const bidGone = (() => { try { return localStorage.getItem(bidKey) === '1'; } catch { return false; } })();
     const bid = (starP && m.starAge && !bidGone && !done) ? incomingBid(this.leagueSeed(), m.season, overall(starP), m.starAge) : null;
-    const bidBanner = bid ? `<div class="sf-bid"><span class="sf-bid-txt"><b>🤝 ${bid.club}</b> have made a <b>${bid.fee.toLocaleString()}c</b> bid for ${m.starName}. Cash in and bring the heir through early — or keep your dynasty player?</span><span class="sf-bid-btns"><button id="sf-bid-accept" class="primary">Accept ${bid.fee.toLocaleString()}c</button> <button id="sf-bid-reject">Reject</button></span></div>` : '';
+    const bidLead = bid ? [
+      `<b>🤝 ${bid.club}</b> have tabled a <b>${bid.fee.toLocaleString()}c</b> bid for ${m.starName}.`,
+      `<b>🤝 ${bid.club}</b> come calling with <b>${bid.fee.toLocaleString()}c</b> for ${m.starName}.`,
+      `<b>🤝 ${bid.club}</b> want ${m.starName} badly — <b>${bid.fee.toLocaleString()}c</b> on the table.`,
+      `<b>🤝 ${bid.club}</b> test your resolve with <b>${bid.fee.toLocaleString()}c</b> for ${m.starName}.`,
+    ][((this.leagueSeed() ^ Math.imul(m.season + 1, 40503)) >>> 0) % 4] : '';
+    const bidBanner = bid ? `<div class="sf-bid"><span class="sf-bid-txt">${bidLead} Cash in and bring the heir through early — or keep your dynasty player?</span><span class="sf-bid-btns"><button id="sf-bid-accept" class="primary">Accept ${bid.fee.toLocaleString()}c</button> <button id="sf-bid-reject">Reject</button></span></div>` : '';
     // PROMOTION / RELEGATION reveal — shown at the start of the season after a move (from nextSeason)
     const tierMove = m.lastTierMove && !done && nextIdx <= 2
       ? (() => {
@@ -1313,11 +1320,14 @@ class Game {
     }
     $('sf-sim')?.addEventListener('click', () => this.simRemainingFixtures());
     $('sf-next-season')?.addEventListener('click', () => {
-      // don't silently bin an unfinished European run when the league fixtures are done first (PT-75)
+      // don't silently bin an unfinished European run OR an in-progress World Finals when the league fixtures
+      // finish first (PT-75 covered the continental strand; PT-95 adds the World Finals).
       const mm = this.loadMgr();
-      if (mm.contElig && !mm.contOut && (mm.contRound ?? 0) < 3) {
-        const roundName = ['the Quarter-Final', 'the Semi-Final', 'the Final'][mm.contRound ?? 0] ?? 'a continental tie';
-        this.openConfirm(`You still have <b>${roundName}</b> of the Continental Cup to play. Rolling into next season forfeits the European run. Continue anyway?`, 'Forfeit & continue', () => this.nextSeason());
+      const contPending = mm.contElig && !mm.contOut && (mm.contRound ?? 0) < 3;
+      const wcPending = mm.wcStage != null && mm.wcStage !== 'done';
+      if (contPending || wcPending) {
+        const what = wcPending && contPending ? 'your Continental Cup run and your World Finals' : wcPending ? 'your World Finals' : `<b>${['the Quarter-Final', 'the Semi-Final', 'the Final'][mm.contRound ?? 0] ?? 'a continental tie'}</b> of the Continental Cup`;
+        this.openConfirm(`You still have ${what} to play. Rolling into next season forfeits ${wcPending && contPending ? 'them' : 'it'}. Continue anyway?`, 'Forfeit & continue', () => this.nextSeason());
       } else this.nextSeason();
     });
     ($('sf-focus') as any)?.addEventListener('change', (e: Event) => { const mm = this.loadMgr(); this.saveMgr({ ...mm, trainFocus: (e.target as HTMLSelectElement).value }); });
@@ -1414,7 +1424,7 @@ class Game {
     if (myGoals === oppGoals) { pens = true; const h = ((this.leagueSeed() >>> 0) ^ ((m.season * 733 + round * 29) >>> 0)) >>> 0; won = ((h % 1000) / 1000) < (0.5 + (this.clubLeagueStrength() - oppStrength) * 0.03); }
     const label = CONT_ROUNDS[round];
     // a "how the tie felt" line for the continental card (from @fm/shared intl.ts)
-    const contBlurb = contTieBlurb(this.leagueSeed(), m.season, round as 0 | 1 | 2, won, pens);
+    const contBlurb = contTieBlurb(this.leagueSeed(), m.season, round as 0 | 1 | 2, won, pens, myGoals - oppGoals);
     if (won) {
       const nextRound = round + 1;
       if (nextRound >= 3) {
@@ -1423,10 +1433,14 @@ class Game {
         this.checkAchievements(); // continental cup won
         audio.chime('triumph');
         toast(`🏆 CONTINENTAL CHAMPIONS! ${this.club?.name} win the cup${pens ? ' on penalties' : ''}`);
-        api.spSeasonReward({ pos: 1, size: 10, sponsor: undefined, kind: 'continental' }).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; toast(`💰 Continental prize +${x.prize.toLocaleString()}c`); }).catch(() => {}); // kind:'continental' — a cup, not a league title, and doesn't bump the season (PT-94)
+        // the flagship cup pays a clear PREMIUM over a league title: the honour (800c) + a 1000c winners' bonus (PT-96)
+        api.spSeasonReward({ pos: 1, size: 10, sponsor: undefined, kind: 'continental' }).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; }).catch(() => {}); // kind:'continental' — a cup, not a league title, and doesn't bump the season (PT-94)
+        api.cupPrize(1000).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; toast(`💰 Continental winners' prize +1,800c`); }).catch(() => {});
       } else {
         this.saveMgr({ ...m, contRound: nextRound, contBlurb });
-        toast(`✅ ${label} won ${myGoals}-${oppGoals}${pens ? ' (pens)' : ''} — into the ${CONT_ROUNDS[nextRound]}!`);
+        const roundPrize = nextRound === 1 ? 250 : 500; // QF win → 250c, SF win → 500c (no longer 0 — PT-96)
+        api.cupPrize(roundPrize).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; }).catch(() => {});
+        toast(`✅ ${label} won ${myGoals}-${oppGoals}${pens ? ' (pens)' : ''} — into the ${CONT_ROUNDS[nextRound]}! 💰 +${roundPrize}c`);
       }
     } else {
       this.saveMgr({ ...m, contOut: true, contBlurb });
