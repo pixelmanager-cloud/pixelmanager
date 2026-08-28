@@ -727,6 +727,12 @@ export type LifeKind = 'contract' | 'loan' | 'setback' | 'media' | 'loyalty' | '
   | 'injury_comeback' | 'transfer_rumour' | 'manager_fallout' | 'charity' | 'social_storm' | 'family_illness' | 'romance'
   | 'mentor_crossroads' | 'friend_rivalry' | 'new_money' | 'move_abroad';
 export const LIFE_KINDS: LifeKind[] = ['contract', 'loan', 'setback', 'media', 'loyalty', 'role', 'fallout', 'injury_comeback', 'transfer_rumour', 'manager_fallout', 'charity', 'social_storm', 'family_illness', 'romance', 'mentor_crossroads', 'friend_rivalry', 'new_money', 'move_abroad'];
+// SENIOR-only life milestones — a senior contract standoff, a release-clause transfer, a marriage/settling-down,
+// a first big payday, an international move — must not land on a 15-16-year-old scholar (FIFA even bans a minor's
+// foreign transfer). These fire only from Breakthrough (bandIdx >= 4, age ~19+); younger bands draw from the
+// age-appropriate YOUTH_LIFE_KINDS instead. Pure-hash indexed (no rng draw), so this shifts no rng-draw count (PT-134).
+export const SENIOR_LIFE_KINDS: LifeKind[] = ['contract', 'transfer_rumour', 'romance', 'new_money', 'move_abroad'];
+export const YOUTH_LIFE_KINDS: LifeKind[] = LIFE_KINDS.filter((k) => !SENIOR_LIFE_KINDS.includes(k));
 export const LIFE_LABEL: Record<LifeKind, string> = {
   contract: 'a contract standoff', loan: 'a loan-move decision', setback: 'bouncing back from a public mistake',
   media: 'a media storm', loyalty: 'a boyhood-club approach', role: 'a squad-role ultimatum', fallout: 'a public falling-out with a teammate',
@@ -834,8 +840,9 @@ export function makeScenario(rng: () => number, i: number, track: Track = 'outfi
   // instead of a generic dressing-room beat. A pure hash of (seed, turn) — costs no rng() draws, so it
   // never perturbs demand/stakes/moment above for careers that predate this feature or don't hit the gate.
   const bandIdx = band ? AGE_BANDS.indexOf(band) : -1;
+  const lifePool = bandIdx >= 4 ? LIFE_KINDS : YOUTH_LIFE_KINDS; // Scholar/Youth-Team (bandIdx 2-3) get only age-appropriate milestones (PT-134)
   const life: LifeKind | null = seed != null && kind === 'social' && stakes === 1 && bandIdx >= 2 && pureHash01(seed, i, 0x5a17e) < 0.22
-    ? LIFE_KINDS[Math.floor(pureHash01(seed, i, 0x1123bc) * LIFE_KINDS.length)]
+    ? lifePool[Math.floor(pureHash01(seed, i, 0x1123bc) * lifePool.length)]
     : null;
   // RIVALRY MOMENT: a slice of big-stage MATCH scenarios, from Youth Team on, become an explicit
   // head-to-head against the seeded academy rival — same pure-hash technique as `life`, no extra rng()
