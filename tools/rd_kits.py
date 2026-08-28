@@ -31,6 +31,14 @@ KITS = {
     "quarters": "a football jersey shirt in a quartered white and black pattern",
     "pinstripe": "a white football jersey shirt with thin black pinstripes",
     "chevron": "a white football jersey shirt with a bold black chevron V across the chest",
+    "sleeves": "a white football jersey shirt with solid black sleeves",
+    "chestband": "a white football jersey shirt with a single bold black horizontal chest band",
+    "yoke": "a white football jersey shirt with a black shoulder yoke panel",
+    "placket": "a white football jersey shirt with a bold vertical black stripe down the centre front",
+    "twinstripe": "a white football jersey shirt with two thin black vertical stripes on the chest",
+    "checkerboard": "a white and black checkerboard pattern football jersey shirt",
+    "splithoop": "a white football jersey shirt with one thick black horizontal band across the middle",
+    "sidepanels": "a white football jersey shirt with black side panels down the flanks",
 }
 
 def prompt_for(desc):
