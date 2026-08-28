@@ -57,8 +57,10 @@ export function incomingBid(seed: number, season: number, starOverall: number, s
   const h = hash32(seed, season * 104729, Math.round(starOverall));
   if (h % 3 !== 0) return null;                                   // ~1 season in 3
   const club = BIDDER_CLUBS[h % BIDDER_CLUBS.length];
-  // a strong offer — above the plain sell value, scaled by how good he is (youth premium too)
-  const premium = starAge <= 24 ? 1.6 : starAge <= 28 ? 1.3 : 1.05;
-  const fee = Math.round(sellValue(starOverall) * premium * (1 + (h % 40) / 100)); // + up to ~40% variance
+  // a MARQUEE offer for your dynasty star — priced off the BUY fee (a release-clause premium over what he'd
+  // cost to sign), not the offload-haircut sell value, so cashing in is genuinely franchise-sized money and
+  // the "sell vs keep" beat has real weight (PT-62). Younger = pricier; up to ~40% variance.
+  const premium = starAge <= 24 ? 2.2 : starAge <= 28 ? 1.8 : 1.4;
+  const fee = Math.round(transferFee(starOverall) * premium * (1 + (h % 40) / 100));
   return { club, fee };
 }

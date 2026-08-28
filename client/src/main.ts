@@ -431,7 +431,7 @@ class Game {
       + `<div class="set-hint">Mask the stat pills on your choice cards each turn — read the action and work out what it trains. Harder and more immersive; “🎯 This calls for” stays visible.</div></div>`
       + `</div>`;
     document.body.appendChild(ov);
-    const close = () => ov.remove();
+    const close = () => { ov.remove(); document.removeEventListener('keydown', onEsc); }; // clean up the ESC listener on EVERY close path (PT-81)
     ov.addEventListener('click', (e) => { if (e.target === ov) close(); }); // click backdrop to dismiss
     ov.querySelector('.set-x')!.addEventListener('click', close);
     // music volume — live (mute stays a separate, authoritative switch: dragging volume never un-mutes)
@@ -487,7 +487,7 @@ class Game {
       + `<button class="tt-opt" id="pm-settings"><b>⚙ Settings</b><span>Music, motion, screen effects</span></button>`
       + `<button class="tt-opt" id="pm-quit"><b>≡ Quit to menu</b><span>Your progress is saved</span></button></div>`;
     document.body.appendChild(ov);
-    const close = () => ov.remove();
+    const close = () => { ov.remove(); document.removeEventListener('keydown', onEsc); }; // clean up the ESC listener on every close path (PT-81)
     ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
     ov.querySelector('.set-x')!.addEventListener('click', close);
     ov.querySelector('#pm-resume')!.addEventListener('click', close);
@@ -1157,7 +1157,7 @@ class Game {
     const ov = document.createElement('div'); ov.id = 'settings-ov'; // reuse the centred-overlay styling
     ov.innerHTML = `<div class="tt-card tm-card"><div class="set-head"><div class="tt-title">💰 TRANSFER MARKET</div><button class="set-x" aria-label="Close">✕</button></div><div id="tm-body">${SPINNER}</div></div>`;
     document.body.appendChild(ov);
-    const close = () => ov.remove();
+    const close = () => { ov.remove(); document.removeEventListener('keydown', onEsc); }; // clean up the ESC listener on every close path (PT-81)
     ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
     ov.querySelector('.set-x')!.addEventListener('click', close);
     const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); } };
