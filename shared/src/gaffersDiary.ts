@@ -21,7 +21,7 @@ function hashStr(s: string): number {
 function pickFrom<T>(rng: () => number, arr: readonly T[]): T { return arr[Math.floor(rng() * arr.length)]; }
 
 export interface DiaryMatch { id: string; myScore: number; oppScore: number; oppId: string; oppHandle: string; createdAt: number }
-export interface DiaryTable { position: number; total: number; promote: number; relegate: number; points: number }
+export interface DiaryTable { position: number; total: number; promote: number; relegate: number; points: number; topFlight?: boolean }
 /** `boardMood` is OPTIONAL and additive — existing callers that don't pass it behave exactly as before.
  *  When present, it lets a notable board-mood swing (delighted / furious, etc.) compete as its own
  *  diary candidate alongside the table/streak storylines, for cohesion between the two systems. */
@@ -77,6 +77,25 @@ const PLAYOFF_HUNT: Phrase[] = [
   () => `Not quite top of the pile, but a squad that could easily go on a run from here.`,
   (pos) => `Mid-table's not the story any more — ${pos}${ord(pos)} puts us firmly in the promotion conversation.`,
   () => `The kind of position where a good six weeks changes everything.`,
+];
+// TOP-FLIGHT variants: there's no promotion out of the top division, so the same table zones read as the title
+// race + continental qualification, not "promotion" (PT-138 — matches spTableHtml's tier-1 "continental" key).
+const CONTINENTAL_PLACES: Phrase[] = [
+  (pos) => `${pos}${ord(pos)} in the top flight — right in the continental places.`,
+  () => `In a European spot as it stands, and in the title conversation with it — the job now is not to blink.`,
+  (pos) => `${pos}${ord(pos)} and chasing continental football, up at the sharp end of the division.`,
+  () => `This is the company the club wants to keep — among the elite. Don't get comfortable.`,
+  (pos) => `Up in ${pos}${ord(pos)}, and the belief that this squad belongs at the top is growing.`,
+];
+const CONTINENTAL_HUNT: Phrase[] = [
+  (gap) => `Just ${gap} place${gap === 1 ? '' : 's'} off the continental spots — every point counts now.`,
+  () => `Right on the shoulder of the European places — nerve as much as quality from here.`,
+  (gap) => `${gap} place${gap === 1 ? '' : 's'} shy of a continental berth. Fixable, but no room for slip-ups.`,
+];
+const EUROPEAN_PUSH: Phrase[] = [
+  (pos) => `${pos}${ord(pos)} — outside the European spots, but well capable of a late push for them.`,
+  () => `Not quite among the elite yet, but a squad that could go on a run from here.`,
+  (pos) => `${pos}${ord(pos)} in the top flight — a good six weeks and continental football is back in the conversation.`,
 ];
 const WIN_STREAK: Phrase[] = [
   (n) => `${n} wins on the bounce now — the dressing room is buzzing.`,
@@ -301,9 +320,9 @@ export function gaffersDiaryEntry(input: DiaryInput): string {
   if (t) {
     if (t.total > t.promote + t.relegate) {
       if (t.position > t.total - t.relegate) add(35, RELEGATION_WATCH, t.position);
-      else if (t.position <= t.promote) add(35, PROMOTION_PLACES, t.position);
-      else if (t.position <= t.promote + 2) add(25, PROMOTION_HUNT, t.position - t.promote);
-      else if (t.position <= t.promote + 6) add(15, PLAYOFF_HUNT, t.position);
+      else if (t.position <= t.promote) add(35, t.topFlight ? CONTINENTAL_PLACES : PROMOTION_PLACES, t.position);
+      else if (t.position <= t.promote + 2) add(25, t.topFlight ? CONTINENTAL_HUNT : PROMOTION_HUNT, t.position - t.promote);
+      else if (t.position <= t.promote + 6) add(15, t.topFlight ? EUROPEAN_PUSH : PLAYOFF_HUNT, t.position);
     }
   }
 

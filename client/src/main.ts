@@ -964,7 +964,7 @@ class Game {
         const t = liveTable(this.club.name, this.clubLeagueStrength(), 1, this.leagueSeed(), results, this.clubTier(), this.seasonResultSeed());
         const matches = results.map((r, i) => ({ id: `s${m.season}-m${i}`, myScore: r.myGoals, oppScore: r.oppGoals, oppId: '', oppHandle: '', createdAt: i }));
         const dtier = this.clubTier(); // tier-aware promotion/relegation spots so the diary matches spTableHtml's zones + the real rule, not a tier-blind top-3/bottom-2 (PT-120)
-        const table = { position: t.pos, total: t.size, promote: dtier === 1 ? 3 : 2, relegate: dtier < TIERS ? 2 : 0, points: t.me.Pts };
+        const table = { position: t.pos, total: t.size, promote: dtier === 1 ? 3 : 2, relegate: dtier < TIERS ? 2 : 0, points: t.me.Pts, topFlight: dtier === 1 }; // top flight → continental/title wording, not "promotion" (PT-138)
         entry = gaffersDiaryEntry({ seasonNumber: m.season, matches, table });
       } else {
         entry = (await api.diary()).entry; // player-career phase: the generic blank-page line
