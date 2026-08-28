@@ -107,6 +107,8 @@ function drainPending(c: Career): boolean {
 
 export function loadCareer(t: Token): Career {
   const c = new Career(t.career_seed!, (t.track as Track) ?? 'outfield', t.agent_id ?? undefined);
+  // the family surname (last token in the name) — so the recurring cast avoids the bloodline's own name (PT-141)
+  { const parts = (t.name ?? '').trim().split(/\s+/); c.familyName = parts.length > 1 ? parts[parts.length - 1] : (parts[0] ?? ''); }
   // REPLAY is tolerant: content added since a career started can't brick it (a drifted card/coach
   // degrades to a best-fit fallback). A structural change (e.g. new age stages that move the chapter
   // boundaries) can still desync an action from its phase — when that happens, auto-resolve the pending
@@ -140,7 +142,7 @@ function careerScoreOf(c: Career): number { return Math.round(c.log.reduce((s, c
 function rivalRateOf(seed: number): number { return 3 + ((seed >>> 3) % 3); } // 3..5 points/turn
 /** Apply an action and return an immersive narration of the moment (play, or a coach/draft/offer choice). */
 export function actWithNarration(c: Career, a: CareerAction): string | null {
-  const baseCtx = { age: c.age, chapter: c.chapter, stakes: 1 as 1 | 2 | 3, personalityId: c.personality.id, turn: c.turn, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0, milestone: null as string | null, seed: (((c as any).seed >>> 0) + c.turn * 2654435761) >>> 0 };
+  const baseCtx = { age: c.age, chapter: c.chapter, stakes: 1 as 1 | 2 | 3, personalityId: c.personality.id, turn: c.turn, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0, castAvoid: c.familyName, milestone: null as string | null, seed: (((c as any).seed >>> 0) + c.turn * 2654435761) >>> 0 };
   if (a.type === 'play') {
     const ctx = { ...baseCtx, stakes: c.scenario.stakes, milestone: careerMilestone(c) };
     const lifeKind = c.scenario.life; // capture BEFORE applying — play() advances to the NEXT scenario
@@ -155,7 +157,7 @@ export function actWithNarration(c: Career, a: CareerAction): string | null {
     if (lifeKind) return narrateLifeEvent(lifeKind, cardName(a.cardId), choice.success, ctx, (c as any).lastLifeEvent?.approach, cardTags(a.cardId), a.cardId);
     if (rivalMoment) {
       const rate = rivalRateOf((c as any).seed >>> 0);
-      const payoff = { rivalName: careerCast((c as any).seed >>> 0).rival, leadBefore: csBefore - Math.round(turnBefore * rate), leadAfter: careerScoreOf(c) - Math.round(c.turn * rate) };
+      const payoff = { rivalName: careerCast((c as any).seed >>> 0, c.familyName).rival, leadBefore: csBefore - Math.round(turnBefore * rate), leadAfter: careerScoreOf(c) - Math.round(c.turn * rate) };
       return narrateRivalMoment(cardName(a.cardId), choice.success, ctx, payoff);
     }
     if (callupMoment) return narrateCallupMoment(cardName(a.cardId), choice.success, ctx);
@@ -241,7 +243,7 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
   // `st` stripped those, blanking the header AND leaving the client with no prospectId to dispatch the choice —
   // which soft-locked the save the moment any arc fired (PT-52/PT-53).
   if (st.phase === 'arc' && st.arc) {
-    const rivalName = careerCast((c as any).seed >>> 0).rival;
+    const rivalName = careerCast((c as any).seed >>> 0, c.familyName).rival;
     st.arc = { ...st.arc, prompt: fillArcText(st.arc.prompt, rivalName), rivalName };
   }
   const recentForm = (() => { const r = c.log.slice(-6); return r.length ? r.reduce((s, e) => s + e.success, 0) / r.length : 0.5; })();
@@ -281,7 +283,7 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
     // framed as a head-to-head against the seeded academy rival, with its own consequence (see
     // applyRivalConsequence). Here we just surface it: the situation text names him directly.
     if (!legacyPressure && !lifeKind && st.scenario.rival) {
-      st.story = rivalMomentStory(careerCast((c as any).seed >>> 0).rival, moment, { seed: (((c as any).seed >>> 0) + c.turn * 40503) >>> 0 });
+      st.story = rivalMomentStory(careerCast((c as any).seed >>> 0, c.familyName).rival, moment, { seed: (((c as any).seed >>> 0) + c.turn * 40503) >>> 0 });
       st.momentKind = 'match';
       st.rivalMoment = true;
       if (kind === 'match') st.matchCtx = matchContext((c as any).seed >>> 0, c.turn, st.scenario.stakes, moment, clubName);
@@ -299,7 +301,7 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
       st.lifeEvent = 'keep_or_cut';
       st.momentKind = 'life';
     } else if (!legacyPressure) {
-      st.story = scenarioStory(kind, topTag, moment, { seed: (((c as any).seed >>> 0) + c.turn * 40503) >>> 0, age: c.age, chapter: c.chapter, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0, turn: c.turn });
+      st.story = scenarioStory(kind, topTag, moment, { seed: (((c as any).seed >>> 0) + c.turn * 40503) >>> 0, age: c.age, chapter: c.chapter, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0, turn: c.turn, castAvoid: c.familyName });
       st.momentKind = kind === 'match' ? 'match' : (st.lifeEvent || kind === 'social') ? 'life' : 'training';
       if (kind === 'match') st.matchCtx = matchContext((c as any).seed >>> 0, c.turn, st.scenario.stakes, moment, clubName);
       // INJURY COMEBACK CHOICE: spell out the real trade-off — which card he leans on decides "rush back"
@@ -344,7 +346,7 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
   // head-to-head storyline now (see Scenario.rival / applyRivalConsequence in career.ts) rather than just
   // a comparative number: occasional big matches are framed as a straight duel with him, and his OWN
   // career surfaces as a small seeded news beat appropriate to the current life stage.
-  const cast = careerCast((c as any).seed >>> 0);
+  const cast = careerCast((c as any).seed >>> 0, c.familyName);
   const rivalRate = rivalRateOf((c as any).seed >>> 0);
   const rivalScore = Math.round(c.turn * rivalRate);
   const rival = { name: cast.rival, score: rivalScore, lead: careerScore - rivalScore, news: rivalNews((c as any).seed >>> 0, c.chapter, c.turn) };

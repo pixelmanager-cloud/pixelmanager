@@ -11,11 +11,13 @@ function mulberry32(seed: number): () => number {
 export interface NarrateCtx {
   age: number; chapter: string; stakes: 1 | 2 | 3; personalityId: string; turn?: number;
   seasonEventId?: string | null; seed: number; careerSeed?: number;
+  /** the player's family surname — cast names avoid colliding with it (PT-141) */
+  castAvoid?: string;
   /** a milestone this beat represents (first goal, debut, cup-final delivery…) — special-cased */
   milestone?: string | null;
 }
 export interface ScenarioCtx {
-  seed: number; age?: number; chapter?: string; seasonEventId?: string | null; careerSeed?: number; turn?: number;
+  seed: number; age?: number; chapter?: string; seasonEventId?: string | null; careerSeed?: number; turn?: number; castAvoid?: string;
 }
 
 // ── RECURRING CHARACTERS: a small seeded cast, stable across a whole career (derived from careerSeed) ──
@@ -24,9 +26,18 @@ const RIVAL_NAMES = ['Turner', 'Bianchi', 'Novak', 'Halvorsen', 'De Groot', 'Ade
 const MENTOR_NAMES = ['old Franny', 'the veteran Delgado', 'club legend Pearce', 'wily old Ivanov', 'the skipper-emeritus Blake', 'grizzled Marcus Reid'];
 const CAPTAIN_NAMES = ['skipper Voss', 'captain Ellery', 'the armband-wearer Sokol', 'skipper Da Silva', 'club captain Hendricks'];
 export interface CareerCast { gaffer: string; rival: string; mentor: string; captain: string }
-export function careerCast(careerSeed: number): CareerCast {
+/** The seeded recurring cast. `avoid` (the player's family surname) is skipped so the coach/rival/mentor/captain
+ *  never share the bloodline's own name — "Coach Okonkwo" for the Okonkwo family reads as a bug (PT-141). This
+ *  rng is careerCast-local (seeded only from careerSeed, not the career's main stream), so the collision-skip
+ *  never perturbs career replay. */
+export function careerCast(careerSeed: number, avoid?: string): CareerCast {
   const rng = mulberry32((careerSeed >>> 0) ^ 0x9e3779b9);
-  const pick = <T,>(a: readonly T[]): T => a[Math.floor(rng() * a.length)];
+  const av = (avoid ?? '').trim().toLowerCase();
+  const pick = (a: readonly string[]): string => {
+    let i = Math.floor(rng() * a.length);
+    for (let guard = 0; av && a[i].toLowerCase().includes(av) && guard < a.length; guard++) i = (i + 1) % a.length;
+    return a[i];
+  };
   return { gaffer: pick(GAFFER_NAMES), rival: pick(RIVAL_NAMES), mentor: pick(MENTOR_NAMES), captain: pick(CAPTAIN_NAMES) };
 }
 
@@ -266,7 +277,7 @@ function pickByTurn<T>(arr: readonly T[], turn: number, stride: number, salt: nu
 // the analyst pulled up clips" vocabulary (PT-46). Same three kinds, re-voiced for school & park football.
 const CHILD_SETUP: Record<string, string[]> = {
   match: [
-    'The park pitch is churned to mud and both sets of parents are roaring from the touchline.', 'It’s the last kick of a break-time match and pride is on the line.', 'Jumpers for goalposts, no ref, and an argument brewing about whether the last one was over the line.', 'The school-team game is level and the PE teacher keeps glancing at the clock.', 'Bigger, older lads have wandered onto the pitch and the game just got a lot more physical.', 'A cup game for the district side, and a few grown-ups with clipboards are watching from the fence.', 'The ball’s gone into the nettles again, and everyone’s waiting to see who dares fetch it.', 'It’s freezing, half the team want to go home, and the game is still there to be won.', 'A rival from the school down the road has been talking all week — now the whistle’s gone.', 'Two-nil down at half-time with oranges to eat and a team-talk from a dad who means well.', 'The five-a-side cage after school, where reputations are made and lost in an afternoon.', 'A proper pitch with real nets for once, and it makes the whole thing feel enormous.',
+    'The park pitch is churned to mud and both sets of parents are roaring from the touchline.', 'It’s the last kick of a break-time match and pride is on the line.', 'Jumpers for goalposts, no ref, and an argument brewing about whether the last one was over the line.', 'The school-team game is on a knife-edge and the PE teacher keeps glancing at the clock.', 'Bigger, older lads have wandered onto the pitch and the game just got a lot more physical.', 'A cup game for the district side, and a few grown-ups with clipboards are watching from the fence.', 'The ball’s gone into the nettles again, and everyone’s waiting to see who dares fetch it.', 'It’s freezing, half the team want to go home, and the game is still there to be won.', 'A rival from the school down the road has been talking all week — now the whistle’s gone.', 'Oranges at the break and a team-talk from a dad who means well, with it all still to play for.', 'The five-a-side cage after school, where reputations are made and lost in an afternoon.', 'A proper pitch with real nets for once, and it makes the whole thing feel enormous.',
   ],
   training: [
     'At training the coach has set out cones and wants to see who’s been practising.', 'A skills drill in the school hall, trainers squeaking on the wood.', 'The Saturday-morning session, half the squad still half-asleep.', 'Keepy-uppie contest before the coach arrives, and everyone’s counting out loud.', 'A shooting drill where the whole queue watches every effort.', 'The coach has split them into teams for a small-sided game and is keeping score.', 'Cold hands, a heavy leather-feeling ball, and a passing drill that has to click.', 'The academy taster session, surrounded by kids who all look a bit better than him.', 'A dribbling course of cones, timed, with the fastest getting to pick teams.', 'Wet bibs, a muddy field behind the school, and a coach who believes in him.', 'A one-touch drill where one mistake sends the whole group back to the start.', 'The end-of-session match everyone actually turns up for.',
@@ -358,7 +369,7 @@ export function scenarioStory(kind: string, topTag: string, moment: string | nul
   // the rest — the event still recurs, the prose stays varied.
   const eventTint = c.seasonEventId && EVENT_PREFIX[c.seasonEventId] && strHash(salt + ':evt:' + turn) % 2 === 0
     ? pickByTurn(EVENT_PREFIX[c.seasonEventId], turn, 7, salt) : '';
-  const cast = c.careerSeed != null ? careerCast(c.careerSeed) : null;
+  const cast = c.careerSeed != null ? careerCast(c.careerSeed, c.castAvoid) : null;
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   // occasionally attribute the situation to a recurring character (its own sentence — follows a full stop)
   // a child on a park pitch has a coach, parents on the touchline and rival kids — never a club captain or a
@@ -463,7 +474,7 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
   // right after "it fell apart completely") (PT-102). The temperament is still felt via the adverb above.
   const flavor = (b === 'triumph' || b === 'good') && rng() < 0.6 && PERSONALITY[ctx.personalityId] ? ' ' + pickByTurn(PERSONALITY[ctx.personalityId], turn, 3, salt) : ''; // strided so the small persona bank doesn't recycle one line (PT-104)
   // a recurring character sometimes reacts
-  const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed) : null;
+  const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed, ctx.castAvoid) : null;
   const castReact = cast && rng() < 0.25
     ? ' ' + (CHILD_CHAPTERS.has(ctx.chapter)
         ? pick([`Coach ${cast.gaffer} gave him a nod.`, `His dad cheered louder than anyone.`, `His teammates mobbed him.`, `One in the eye for ${cast.rival}.`]) // park-football cast, no senior captain/mentor (PT-133)
@@ -595,7 +606,7 @@ export function narrateLifeEvent(kind: string, cardName: string, success: number
   const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
   const good = band(success) === 'triumph' || band(success) === 'good';
   const table = LIFE_RESOLUTION[kind] ?? LIFE_RESOLUTION.setback;
-  const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed) : null;
+  const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed, ctx.castAvoid) : null;
   let resline = pick(good ? table.good : table.bad);
   // same recurring-character payoff as scenarioStory above — the resolution names the SAME rival/mentor
   if (resline.includes('{rival}')) resline = resline.replace(/\{rival\}/g, cast ? cast.rival : 'his old mate');
@@ -604,8 +615,11 @@ export function narrateLifeEvent(kind: string, cardName: string, success: number
     ? ' ' + pick(good ? INJURY_APPROACH_LINE[approach].good : INJURY_APPROACH_LINE[approach].bad)
     : '';
   const lead = pick(LIFE_APPROACH);
+  // a child at Grassroots/Academy has no agent — use park-appropriate reactions, mirroring PT-133 (PT-143)
   const castReact = cast && rng() < 0.3 && good
-    ? ' ' + pick([`${cast.gaffer} appreciates how he handled it.`, `Even ${cast.rival} would admit that was well played.`, `His agent breathes a quiet sigh of relief.`])
+    ? ' ' + (CHILD_CHAPTERS.has(ctx.chapter)
+        ? pick([`Coach ${cast.gaffer} appreciates how he handled it.`, `Even ${cast.rival} would admit that was well played.`, `His mates are impressed.`])
+        : pick([`${cast.gaffer} appreciates how he handled it.`, `Even ${cast.rival} would admit that was well played.`, `His agent breathes a quiet sigh of relief.`]))
     : '';
   // Splice a tag-derived quality ("his cool head"), NOT the on-pitch card name — an off-pitch moment isn't
   // resolved by "a defence-splitting pass" (PT-43). Fall back to the raw name only if tags weren't supplied.
@@ -681,7 +695,7 @@ export function narrateCallupMoment(cardName: string, success: number, ctx: Narr
   const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
   const good = band(success) === 'triumph' || band(success) === 'good';
   const resline = pick(good ? CALLUP_RESOLUTION.good : CALLUP_RESOLUTION.bad);
-  const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed) : null;
+  const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed, ctx.castAvoid) : null;
   const reax = cast && rng() < 0.3
     ? ' ' + (good ? `${cast.gaffer} could not have asked for more.` : `${cast.gaffer} will give him another chance — everyone gets one bad night.`)
     : '';
@@ -758,7 +772,7 @@ export function narrateCoach(name: string, kind: string, specialty: string[], ct
   const rng = mulberry32(ctx.seed >>> 0);
   const role = kind === 'mentor' ? 'mentor' : 'coach';
   const spec = specialty.slice(0, 2).join(' and ') || 'his all-round game';
-  const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed) : null;
+  const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed, ctx.castAvoid) : null;
   const nod = cast && rng() < 0.35 ? ` ${cast.gaffer} approves of the appointment.` : '';
   return pickFrom(rng, [
     `He’s put himself under ${name}, a ${role} who’ll sharpen his ${spec}.`,
@@ -778,7 +792,7 @@ export function narrateDraft(cardName: string, _tags: string[], ctx: NarrateCtx)
 }
 export function narrateOffer(name: string, effs: { earn: number; greed: number; market: number; form: number }, ctx: NarrateCtx): string {
   const rng = mulberry32(ctx.seed >>> 0);
-  const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed) : null;
+  const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed, ctx.castAvoid) : null;
   const money = effs.earn > 0, dev = effs.form > 0;
   if (money && !dev) return pickFrom(rng, [`He took the money — ${name}. The bank balance swells; the purists wince.`, `${name}: he cashed in. Who could blame a young man from where he started?`, `The chequebook won out. ${name}, signed.`]);
   if (dev && !money) return pickFrom(rng, [`He turned down the payday to keep growing — ${name}. The long game.`, `${name}: development over dollars. ${cast ? cast.gaffer + ' nodded.' : 'The staff nodded.'}`, `Patience over pounds — ${name}. A mature head on young shoulders.`]);
@@ -790,7 +804,7 @@ export interface RecapCtx { chapter: string; nextChapter?: string | null; age: n
 /** A short "the story so far" passage shown at an age-chapter boundary. */
 export function chapterRecap(ctx: RecapCtx): string {
   const rng = mulberry32(((ctx.careerSeed >>> 0) ^ Math.imul(ctx.age, 2654435761)) >>> 0);
-  const cast = careerCast(ctx.careerSeed);
+  const cast = careerCast(ctx.careerSeed, ctx.castAvoid);
   const openers: Record<string, string[]> = {
     Grassroots: ['The park-pitch years are behind him now.', 'It began, as these things do, on a cold Sunday morning.', 'Muddy knees and orange segments at half-time — that was the start of it.', 'Nobody scouted him then. Nobody needed to.'],
     Academy: ['The academy has shaped him.', 'Two seasons of drills, van journeys and hard lessons.', 'Cones, ladders, video sessions — the academy grind, day after day.', 'He learned the game properly here, whether he liked it or not.'],
@@ -813,7 +827,7 @@ export interface EpilogueCtx { name: string; careerSeed: number; personalityId?:
 /** An evocative summary of the whole 10→25 journey, shown at graduation before the pro reveal. */
 export function graduationEpilogue(ctx: EpilogueCtx): string {
   const rng = mulberry32(((ctx.careerSeed >>> 0) ^ 0x5f3759df) >>> 0);
-  const cast = careerCast(ctx.careerSeed);
+  const cast = careerCast(ctx.careerSeed, ctx.castAvoid);
   const tier = ctx.overall >= 17 ? 'a genuine star in the making' : ctx.overall >= 14 ? 'a real player, ready for the step up' : ctx.overall >= 11 ? 'a dependable pro with more to give' : 'a grafter who has earned his shot';
   const persLine: Record<string, string> = {
     maverick: 'They never could tame the flair in him — and stopped trying.',

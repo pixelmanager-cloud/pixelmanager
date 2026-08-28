@@ -1053,6 +1053,9 @@ export class Career {
 
   readonly personality: Personality;
   readonly agent: Agent | null;            // the sports agent signed at career start — shapes exposure, opportunities, greed, value
+  /** The player's family surname — narration-only, set by loadCareer from the token name so the recurring cast
+   *  never collides with the bloodline's own name (PT-141). Not part of the seed/replay; unset in pure sims. */
+  familyName = '';
   constructor(readonly seed: number, readonly track: Track = 'outfield', agentId?: string) {
     this.rng = mulberry32(seed);
     this.personality = rollPersonality(seed);   // innate temperament shapes how big moments / slumps play out
