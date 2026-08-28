@@ -33,7 +33,7 @@ for (let i = 0; i < N; i++) {
     // inputs here so we measure the real text, not the "match: flair" label fallback).
     const topTag = (Object.entries(sc.demand).sort((a, b) => (b[1] as number) - (a[1] as number))[0]?.[0]) ?? 'teamwork';
     const sd = (c as any).seed >>> 0;
-    const pStory = scenarioStory((sc as any).kind, topTag, null, { seed: (sd + c.turn * 40503) >>> 0, age: c.age, chapter: c.chapter, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: sd });
+    const pStory = scenarioStory((sc as any).kind, topTag, null, { seed: (sd + c.turn * 40503) >>> 0, age: c.age, chapter: c.chapter, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: sd, turn: c.turn });
     const pick = hand.reduce((b, x) => (fit(x, sc) > fit(b, sc) ? x : b), hand[0]);
     const narr = actWithNarration(c, { type: 'play', cardId: pick.id }) ?? ''; // applies + returns the outcome prose
     turns++;

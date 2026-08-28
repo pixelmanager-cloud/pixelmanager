@@ -15,7 +15,7 @@ export interface NarrateCtx {
   milestone?: string | null;
 }
 export interface ScenarioCtx {
-  seed: number; age?: number; chapter?: string; seasonEventId?: string | null; careerSeed?: number;
+  seed: number; age?: number; chapter?: string; seasonEventId?: string | null; careerSeed?: number; turn?: number;
 }
 
 // ── RECURRING CHARACTERS: a small seeded cast, stable across a whole career (derived from careerSeed) ──
@@ -119,17 +119,20 @@ const PERSONALITY_ADV: Record<string, string[]> = {
   joker: ['with a wink,', 'cracking a smile,', 'enjoying himself far too much,'],
 };
 // season-event prefixes (weave the chapter's story into the beat)
-const EVENT_PREFIX: Record<string, string> = {
-  'serious-injury': 'Still fighting his way back from a bad injury, ',
-  'hot-streak': 'In the form of his life, ',
-  slump: 'Low on confidence, ',
-  'new-gaffer': 'Desperate to catch the new gaffer’s eye, ',
-  knock: 'Carrying a knock he wouldn’t admit to, ',
-  breakthrough: 'Riding the wave of a breakout season, ',
-  'cup-run': 'Buzzing off a thrilling cup run, ',
-  'transfer-links': 'Trying to tune out the transfer talk, ',
-  'fan-favourite': 'Roared on by supporters who adore him, ',
-  'international-honour': 'Still pinching himself over the international honour, ',
+// A season-long event colours EVERY scenario while it runs, so each needs a small pool of lead-ins —
+// otherwise one line ("Riding the wave of a breakout season") opens every prompt for a whole season and
+// dominates the text (PT-9/PT-42). Turn-strided selection walks the pool so it varies turn to turn.
+const EVENT_PREFIX: Record<string, string[]> = {
+  'serious-injury': ['Still fighting his way back from a bad injury, ', 'Body not yet all the way healed, ', 'Every stride still a question after the injury, '],
+  'hot-streak': ['In the form of his life, ', 'Riding a hot streak he daren’t question, ', 'Everything he touches turning to gold lately, '],
+  slump: ['Low on confidence, ', 'Stuck in a rut he can’t explain, ', 'Goals and form having dried up, '],
+  'new-gaffer': ['Desperate to catch the new gaffer’s eye, ', 'With a new manager still making his mind up on him, ', 'Everything to prove to a boss who didn’t sign him, '],
+  knock: ['Carrying a knock he wouldn’t admit to, ', 'Strapped up and playing through the pain, ', 'One bad tackle from the treatment table, '],
+  breakthrough: ['Riding the wave of a breakout season, ', 'The breakout year rolling on beneath him, ', 'Suddenly the name on everyone’s lips, '],
+  'cup-run': ['Buzzing off a thrilling cup run, ', 'Swept up in a cup run nobody saw coming, ', 'The whole town dreaming of a cup upset, '],
+  'transfer-links': ['Trying to tune out the transfer talk, ', 'His name in the transfer pages again, ', 'With bigger clubs reportedly circling, '],
+  'fan-favourite': ['Roared on by supporters who adore him, ', 'A terrace song already sung in his name, ', 'The crowd firmly on his side these days, '],
+  'international-honour': ['Still pinching himself over the international honour, ', 'The national-team call-up still sinking in, ', 'A country’s expectation newly on his shoulders, '],
 };
 
 // ── SCENARIO STORY: describe the SITUATION the player faces this turn (before he chooses) ──
@@ -171,6 +174,33 @@ const DEMAND: Record<string, string[]> = {
   keeping: ['It’s down to him to keep them out.', 'It’s a test of his hands and his nerve.', 'They need him to be the wall behind them.', 'It calls for a shot-stopper’s stubbornness.', 'The moment needs a clean take and no fuss.', 'They want to see him command the space that’s his.'],
 };
 const pickFrom = <T,>(rng: () => number, arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
+
+// Deterministic, no-near-repeat pick: with `stride` coprime to the pool length, consecutive turns walk
+// the WHOLE pool before any entry repeats, so scenario fragments can't recombine verbatim a few turns
+// apart (PT-9/PT-42). `salt` (from the career seed) rotates each career's starting point so two careers
+// don't read identically. Strides 7/11/13 are coprime to every pool length in this file.
+function pickByTurn<T>(arr: readonly T[], turn: number, stride: number, salt: number): T {
+  const n = arr.length;
+  if (n <= 1) return arr[0];
+  const idx = (((turn * stride + salt) % n) + n) % n;
+  return arr[idx];
+}
+
+// ── CHILD/PARK-FOOTBALL SETUP BANKS: the youngest chapters (age ~10–15) are jumpers-for-goalposts and
+// academy trials, so they must NOT borrow the senior pools' "reserve-team hardman / dropped for Saturday /
+// the analyst pulled up clips" vocabulary (PT-46). Same three kinds, re-voiced for school & park football.
+const CHILD_SETUP: Record<string, string[]> = {
+  match: [
+    'The park pitch is churned to mud and both sets of parents are roaring from the touchline.', 'It’s the last kick of a break-time match and pride is on the line.', 'Jumpers for goalposts, no ref, and an argument brewing about whether the last one was over the line.', 'The school-team game is level and the PE teacher keeps glancing at the clock.', 'Bigger, older lads have wandered onto the pitch and the game just got a lot more physical.', 'A cup game for the district side, and a few grown-ups with clipboards are watching from the fence.', 'The ball’s gone into the nettles again, and everyone’s waiting to see who dares fetch it.', 'It’s freezing, half the team want to go home, and the game is still there to be won.', 'A rival from the school down the road has been talking all week — now the whistle’s gone.', 'Two-nil down at half-time with oranges to eat and a team-talk from a dad who means well.', 'The five-a-side cage after school, where reputations are made and lost in an afternoon.', 'A proper pitch with real nets for once, and it makes the whole thing feel enormous.',
+  ],
+  training: [
+    'At training the coach has set out cones and wants to see who’s been practising.', 'A skills drill in the school hall, trainers squeaking on the wood.', 'The Saturday-morning session, half the squad still half-asleep.', 'Keepy-uppie contest before the coach arrives, and everyone’s counting out loud.', 'A shooting drill where the whole queue watches every effort.', 'The coach has split them into teams for a small-sided game and is keeping score.', 'Cold hands, a heavy leather-feeling ball, and a passing drill that has to click.', 'The academy taster session, surrounded by kids who all look a bit better than him.', 'A dribbling course of cones, timed, with the fastest getting to pick teams.', 'Wet bibs, a muddy field behind the school, and a coach who believes in him.', 'A one-touch drill where one mistake sends the whole group back to the start.', 'The end-of-session match everyone actually turns up for.',
+  ],
+  social: [
+    'On the walk home from the match, the other kids are deciding who was best.', 'A team-mate’s in tears after a mistake and nobody quite knows what to say.', 'Picking teams in the playground, and who he chooses says a lot.', 'Mum’s waiting in the car and the coach wants a quiet word first.', 'A squabble over who takes the free-kicks has split the whole team.', 'The new kid doesn’t know anyone yet and is standing on his own.', 'A birthday party clashes with the big game, and he has to choose.', 'The group chat is buzzing after training and he’s not sure what to type.', 'A smaller lad is getting picked on for a bad miss, and everyone’s watching.', 'Sharing the last space in the car home, and who gets left is up to him.', 'His best mate has been dropped and is putting on a brave face.', 'The coach asks who’ll captain the side on Saturday, and heads turn.',
+  ],
+};
+const CHILD_CHAPTERS = new Set(['Grassroots', 'Academy']);
 
 // ── LIFE-STAGE FRAMING: a much wider bank of human, specific texture per age band — the stuff of an
 // actual childhood/adolescence/career, not just a generic "he's young" clause. Keyed on the CHAPTER
@@ -228,15 +258,16 @@ const FRAME_BY_CHAPTER: Record<string, string[]> = {
     'Reputation now precedes him into every room he walks into, ', 'He’s become the answer to the question a young pro used to ask about him, ',
   ],
 };
-/** Weave the age/chapter into the situation so a 12-year-old on a park pitch reads unlike a 23-year-old. */
-function ageFraming(rng: () => number, age?: number, chapter?: string): string {
-  if (chapter && FRAME_BY_CHAPTER[chapter]) return pickFrom(rng, FRAME_BY_CHAPTER[chapter]);
+/** Weave the age/chapter into the situation so a 12-year-old on a park pitch reads unlike a 23-year-old.
+ *  Turn-strided (not random) so the frame walks the whole bank before repeating within a chapter (PT-9). */
+function ageFraming(turn: number, salt: number, age?: number, chapter?: string): string {
+  if (chapter && FRAME_BY_CHAPTER[chapter]) return pickByTurn(FRAME_BY_CHAPTER[chapter], turn, 7, salt);
   if (age == null) return '';
-  if (age <= 12) return pickFrom(rng, ['Barely up to the crossbar, ', 'A boy among boys, ', 'Still finding his feet in the game, ']);
-  if (age <= 15) return pickFrom(rng, ['A gangly teenager with a lot to prove, ', 'Growing into his frame, ', 'Hungry and a little raw, ']);
-  if (age <= 18) return pickFrom(rng, ['On the cusp of the first team, ', 'A prospect the club is watching carefully, ', 'With the academy behind him and the real thing ahead, ']);
-  if (age <= 21) return pickFrom(rng, ['Establishing himself now, ', 'No longer a kid, expectations rising, ', 'A young man with a reputation to build, ']);
-  return pickFrom(rng, ['A senior figure in the making, ', 'In his pomp, ', 'With the experience to know exactly what this is, ']);
+  if (age <= 12) return pickByTurn(['Barely up to the crossbar, ', 'A boy among boys, ', 'Still finding his feet in the game, '], turn, 7, salt);
+  if (age <= 15) return pickByTurn(['A gangly teenager with a lot to prove, ', 'Growing into his frame, ', 'Hungry and a little raw, '], turn, 7, salt);
+  if (age <= 18) return pickByTurn(['On the cusp of the first team, ', 'A prospect the club is watching carefully, ', 'With the academy behind him and the real thing ahead, '], turn, 7, salt);
+  if (age <= 21) return pickByTurn(['Establishing himself now, ', 'No longer a kid, expectations rising, ', 'A young man with a reputation to build, '], turn, 7, salt);
+  return pickByTurn(['A senior figure in the making, ', 'In his pomp, ', 'With the experience to know exactly what this is, '], turn, 7, salt);
 }
 
 /** A narrative description of the moment the player is living through, from the scenario. */
@@ -244,26 +275,34 @@ export function scenarioStory(kind: string, topTag: string, moment: string | nul
   // back-compat: a bare seed number still works
   const c: ScenarioCtx = typeof ctx === 'number' ? { seed: ctx } : ctx;
   const rng = mulberry32(c.seed >>> 0);
-  const demand = pickFrom(rng, DEMAND[topTag] ?? DEMAND.teamwork);
-  const eventTint = c.seasonEventId && EVENT_PREFIX[c.seasonEventId] ? EVENT_PREFIX[c.seasonEventId] : '';
+  const salt = (c.careerSeed ?? c.seed) >>> 0;
+  const turn = c.turn ?? 0;
+  const demand = pickByTurn(DEMAND[topTag] ?? DEMAND.teamwork, turn, 13, salt);
+  const eventTint = c.seasonEventId && EVENT_PREFIX[c.seasonEventId] ? pickByTurn(EVENT_PREFIX[c.seasonEventId], turn, 7, salt) : '';
   const cast = c.careerSeed != null ? careerCast(c.careerSeed) : null;
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
-  // occasionally attribute the situation to a recurring character (capitalised — it follows a full stop)
+  // occasionally attribute the situation to a recurring character (its own sentence — follows a full stop)
   const charRaw = cast && rng() < 0.4
-    ? pickFrom(rng, [`${cap(cast.mentor)} reckons this is the making of him.`, `${cast.gaffer} wants to see how he handles it.`, `${cap(cast.captain)} is looking his way.`, `Beat ${cast.rival} to it and the point is made.`])
+    ? pickByTurn([`${cap(cast.mentor)} reckons this is the making of him.`, `${cast.gaffer} wants to see how he handles it.`, `${cap(cast.captain)} is looking his way.`, `Beat ${cast.rival} to it and the point is made.`], turn, 5, salt)
     : '';
   const charline = charRaw ? ' ' + charRaw : '';
+  // The frame ("Terrified of being dropped, ") describes HIM; the setup describes the SITUATION — splicing
+  // them with a comma dangles and reads broken (PT-42). Instead render the frame as its own opening sentence
+  // (trailing ", " → ". ") and let the setup stand as the next sentence: clean, grammatical, multi-beat.
+  const asSentence = (f: string) => cap(f).replace(/,\s*$/, '.');
+  const frameRaw = eventTint || ageFraming(turn, salt, c.age, c.chapter);
+  const frameSentence = frameRaw ? asSentence(frameRaw) + ' ' : '';
   if (moment) {
-    const frame = eventTint || ageFraming(rng, c.age, c.chapter);
-    return `${frame ? cap(frame) + `it’s ${moment}.` : `It’s ${moment}.`} ${demand}${charline}`;
+    return `${frameSentence}It’s ${moment}. ${demand}${charline}`.trim();
   }
-  let setup = pickFrom(rng, KIND_SETUP[kind] ?? KIND_SETUP.match);
+  // youngest chapters draw park/school-football language, not the senior reserve-team banks (PT-46)
+  const pool = c.chapter && CHILD_CHAPTERS.has(c.chapter) && CHILD_SETUP[kind] ? CHILD_SETUP[kind] : KIND_SETUP[kind] ?? KIND_SETUP.match;
+  let setup = pickByTurn(pool, turn, 11, salt);
   // recurring-character payoff: friend_rivalry / mentor_crossroads name the SAME seeded rival/mentor
   // across the whole career, so the callback lands rather than reading as a random stranger each time.
   if (setup.includes('{rival}')) setup = setup.replace(/\{rival\}/g, cast ? cast.rival : 'his old mate');
   if (setup.includes('{mentor}')) setup = setup.replace(/\{mentor\}/g, cast ? cast.mentor : 'his old mentor');
-  const frame = eventTint || ageFraming(rng, c.age, c.chapter);
-  return `${frame ? cap(frame) + setup.charAt(0).toLowerCase() + setup.slice(1) : setup} ${demand}${charline}`;
+  return `${frameSentence}${setup} ${demand}${charline}`.trim();
 }
 
 const band = (success: number) => (success >= 0.8 ? 'triumph' : success >= 0.62 ? 'good' : success >= 0.42 ? 'mixed' : success >= 0.24 ? 'poor' : 'dismal');
@@ -322,7 +361,7 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
   // per-tag result colour on a big success; otherwise the generic band result
   const result = b === 'triumph' && TAG_TRIUMPH[tag] && rng() < 0.55 ? pick(TAG_TRIUMPH[tag]) : pick(RESULTS[b]);
   const reaction = pick(REACTIONS[b]);
-  const prefix = ctx.seasonEventId && EVENT_PREFIX[ctx.seasonEventId] ? EVENT_PREFIX[ctx.seasonEventId] : '';
+  const prefix = ctx.seasonEventId && EVENT_PREFIX[ctx.seasonEventId] ? pick(EVENT_PREFIX[ctx.seasonEventId]) : '';
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   const lead = prefix ? prefix + setting : cap(setting);
   // personality VOICE: an adverbial colour before the verb (felt throughout), plus the rare stated clause

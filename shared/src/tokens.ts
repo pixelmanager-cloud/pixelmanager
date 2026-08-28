@@ -261,7 +261,7 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
       st.lifeEvent = 'keep_or_cut';
       st.momentKind = 'life';
     } else if (!legacyPressure) {
-      st.story = scenarioStory(kind, topTag, moment, { seed: (((c as any).seed >>> 0) + c.turn * 40503) >>> 0, age: c.age, chapter: c.chapter, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0 });
+      st.story = scenarioStory(kind, topTag, moment, { seed: (((c as any).seed >>> 0) + c.turn * 40503) >>> 0, age: c.age, chapter: c.chapter, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0, turn: c.turn });
       st.momentKind = kind === 'match' ? 'match' : (st.lifeEvent || kind === 'social') ? 'life' : 'training';
       if (kind === 'match') st.matchCtx = matchContext((c as any).seed >>> 0, c.turn, st.scenario.stakes, moment, clubName);
       // INJURY COMEBACK CHOICE: spell out the real trade-off — which card he leans on decides "rush back"
