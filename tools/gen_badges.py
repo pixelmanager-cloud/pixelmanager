@@ -37,7 +37,7 @@ OUTLINE = (11,11,24)
 PATTERNS = ["solid","vhalf","vstripe","hband","sash","quarters","cross_field","hoop"]
 # only the emblem families that read as authentic football crests: circles (disc/ring/target), stars
 # (single + a three-star arc), the cross, and a real soccer ball. (Dropped: saltire/chevron/diamond/crown/bars.)
-EMBLEMS  = ["disc","ring","target","star","star3","plus","ball"]
+EMBLEMS  = ["disc","ring","target","star","star2","star3","star5","plus","ball"]
 
 def pattern_color(pat, x, y, prim, acc):
     if pat == "solid":       return prim
@@ -100,9 +100,14 @@ def draw_emblem(base, kind, col):
         fn(d, 0, 0, col)
     if kind == "star":
         outlined(lambda d,dx,dy,c: d.polygon(star_points(cx+dx, cy+dy, 8, 3.4), fill=c))
-    elif kind == "star3":
-        # three stars in a gentle arc (championship-style)
-        for (sx, sy, r) in [(cx-7, cy+1, 4.0), (cx, cy-2, 4.6), (cx+7, cy+1, 4.0)]:
+    elif kind in ("star2", "star3", "star5"):
+        # a row of small stars in a gentle arc (championship-style), count varies 2/3/5
+        n = int(kind[-1])
+        r = 2.6 if n <= 3 else 2.1                 # smaller than a single star, smaller still when many
+        span = min(20, (n - 1) * (7 if n <= 3 else 5))
+        for i in range(n):
+            sx = cx + (i - (n - 1) / 2) * (span / (n - 1) if n > 1 else 0)
+            sy = cy - (1.4 - abs(i - (n - 1) / 2) * 0.9)   # subtle arc: middle sits highest
             outlined(lambda d,dx,dy,c,sx=sx,sy=sy,r=r: d.polygon(star_points(sx+dx, sy+dy, r, r*0.42), fill=c))
     elif kind == "ring":
         outlined(lambda d,dx,dy,c: d.ellipse([cx-7+dx, cy-7+dy, cx+7+dx, cy+7+dy], outline=c, width=3))
@@ -172,9 +177,11 @@ def make_badge(template, seed):
                 px[x, y] = pattern_color(pat, x, y, prim, acc) + (255,)
     # 2) bevel: top highlight / bottom shadow / coloured side rim → a raised, framed badge
     bevel_and_rim(img, rim=acc)
-    # 3) a roundel behind the emblem (most badges) + optional pips (plainer ones)
-    roundel = draw_roundel(img, seed, prim) if seed % 3 != 0 else False
-    if not roundel and seed % 2 == 0:
+    # 3) a roundel behind the emblem (most single emblems) — but not multi-star sets, which spread across
+    #    the field like championship stars; a few plainer badges get decorative studs instead
+    multistar = emb in ("star2", "star3", "star5")
+    roundel = draw_roundel(img, seed, prim) if (seed % 3 != 0 and not multistar) else False
+    if not roundel and not multistar and seed % 2 == 0:
         add_pips(img, seed, acc)
     # 4) the emblem on top
     img.alpha_composite(draw_emblem(img, emb, ecol))
