@@ -1644,11 +1644,26 @@ class Game {
     return `Honours even, but every point counts in ${club}'s season.`;
   }
 
-  /** A deterministic scoreline for a simulated (not played-live) fixture, by squad strength. */
-  private simFixtureResult(myStr: number, oppStr: number, seed: number): PlayedResult {
+  /** A deterministic scoreline for a simulated (not played-live) fixture, by squad strength. `homeTerm` is the
+   *  venue edge (default 0.25 for neutral/knockout callers); a league sim passes it per-fixture so an AWAY game
+   *  doesn't get an unearned home bias (PT-118). */
+  private simFixtureResult(myStr: number, oppStr: number, seed: number, homeTerm = 0.25): PlayedResult {
     const rnd = (n: number) => (((seed >>> (n & 15)) ^ (seed >>> ((n + 7) & 15))) % 100) / 100;
-    const diff = (myStr - oppStr) * 0.12 + 0.25;
+    const diff = (myStr - oppStr) * 0.12 + homeTerm;
     return { myGoals: Math.min(6, Math.max(0, Math.round(1.2 + diff + (rnd(1) - 0.5) * 2.2))), oppGoals: Math.min(6, Math.max(0, Math.round(1.2 - diff + (rnd(2) - 0.5) * 2.2))) };
+  }
+  /** The club-building edge a SIMMED league fixture should carry — the sim otherwise ignores everything a played
+   *  match layers on (facilities, staff, venue), making that investment worthless the moment you sim (PT-118).
+   *  Mirrors startSpMatchWith: training-ground + backroom staff help home AND away; fan zone + venue are home-only. */
+  private simEdge(venue: 'home' | 'away'): { strDelta: number; homeTerm: number } {
+    const trainLvl = this.facLevels.training ?? 1, fanLvl = this.facLevels.fanzone ?? 1;
+    const staff = this.loadMgr().staff ?? [];
+    let strDelta = (trainLvl - 1) * 0.4;                          // training-ground conditioning — both venues
+    if (staff.includes('fitness')) strDelta += 0.4;
+    if (staff.includes('attack')) strDelta += 0.4;
+    if (staff.includes('assistant')) strDelta += 0.4;
+    const homeTerm = venue === 'home' ? 0.25 + (fanLvl - 1) * 0.06 : 0; // venue + fan-zone edge apply at home only
+    return { strDelta, homeTerm };
   }
   private simRemainingFixtures() {
     const seed = this.leagueSeed(), clubName = this.club.name;
@@ -1656,7 +1671,8 @@ class Game {
     const m = this.loadMgr(), myStr = this.clubLeagueStrength();
     for (let i = m.results.length; i < fixtures.length; i++) {
       const opp = opps.find((o) => o.name === fixtures[i].oppName)!;
-      m.results.push(this.simFixtureResult(myStr, opp.strength, ((seed >>> 0) ^ ((m.season * 131 + i) >>> 0)) >>> 0));
+      const { strDelta, homeTerm } = this.simEdge(fixtures[i].venue === 'H' ? 'home' : 'away'); // fold in facilities/staff + the correct venue edge
+      m.results.push(this.simFixtureResult(myStr + strDelta, opp.strength, ((seed >>> 0) ^ ((m.season * 131 + i) >>> 0)) >>> 0, homeTerm));
     }
     this.saveMgr(m);
     this.showSeason();
@@ -1877,6 +1893,18 @@ class Game {
     const id = this.loadMgr().starId;
     return id ? this.club.players.find((p) => p.id === id) : undefined;
   }
+  /** Who the pre-kickoff team talk is pitched at: the bloodline star when he's actually in the XI, otherwise
+   *  the on-pitch captain (or the best available starter). starGuarded benches an injured/lapsed star, so a
+   *  talk keyed unconditionally to the star would praise — and take a mechanical edge from — a man on the
+   *  treatment table (PT-119). Uses the same injured/lapsed guard starGuarded computes. */
+  private talkFocus(): Player | undefined {
+    const sid = this.loadMgr().starId;
+    const ids = this.draftLineup?.playerIds ?? [];
+    const byId = (id?: string) => (id ? this.club.players.find((p) => p.id === id) : undefined);
+    if (sid && ids.includes(sid) && !this.injured.has(sid) && !this.lapsed().has(sid)) return byId(sid); // star is on the pitch
+    const capId = this.draftCaptain != null ? ids[this.draftCaptain] : undefined;
+    return byId(capId) ?? ids.map((id) => byId(id)).filter(Boolean).sort((x, y) => overall(y!) - overall(x!))[0];
+  }
 
   /** Pre-kickoff TEAM TALK — a real matchday decision. Each tone applies a small, bounded pre-kickoff edge
    *  to your side (deterministic — baked into the match snapshot), then kicks off. A fiery talk fires up
@@ -1886,11 +1914,11 @@ class Game {
    *  is unmoved either way. The modulation stays a SMALL nudge on top of the existing bounded edge — see
    *  startSpMatchWith(). */
   private teamTalkNote(): string {
-    const star = this.starPlayer();
-    const pid = star && (star as any).personality as string | undefined;
-    if (!star || !pid) return '';
-    if (TALK_SENSITIVE.has(pid)) return `🧠 ${star.name} doesn't respond well to fire and brimstone — a calmer word gets more out of him.`;
-    if (TALK_FIERY.has(pid)) return `🧠 ${star.name} thrives on a rev-up before kickoff — a fiery talk lifts him.`;
+    const focus = this.talkFocus();
+    const pid = focus && (focus as any).personality as string | undefined;
+    if (!focus || !pid) return '';
+    if (TALK_SENSITIVE.has(pid)) return `🧠 ${focus.name} doesn't respond well to fire and brimstone — a calmer word gets more out of him.`;
+    if (TALK_FIERY.has(pid)) return `🧠 ${focus.name} thrives on a rev-up before kickoff — a fiery talk lifts him.`;
     return '';
   }
 
@@ -1924,7 +1952,7 @@ class Game {
       : defaultDuty(this.club.players.find((p) => p.id === pid)!));
     const myLineup: Lineup = { ...guarded, duties, ...this.draftRoles() };
     const myTeam = buildXI(this.availableClub(), myLineup);
-    const starPid = (this.starPlayer() as any)?.personality as string | undefined;
+    const starPid = (this.talkFocus() as any)?.personality as string | undefined; // the talk lands on the on-pitch leader when the star is out (PT-119)
     if (tone === 'fire') {
       // sensitive personalities get LESS out of the fiery talk (and tire a touch faster, keyed-up rather
       // than sharp); the ones who thrive on the big rev-up get a touch more. Small, bounded either way.
@@ -3153,10 +3181,14 @@ class Game {
   private renderMatchReport(events: MatchEvent[], score: [number, number]) {
     const [h, a] = score;
     const home = this.homeName, away = this.awayName;
-    const goalsBy = new Map<string, { team: 0 | 1; mins: number[] }>();
+    // Key everyone by teamIdx+name, NOT name alone — both squads draw from the same 18×18 name pool, so a
+    // namesake across the two sides would otherwise merge into one scorer/assister/POTM on the wrong team (PT-117).
+    const nkey = (team: 0 | 1, name: string) => `${team}|${name}`;
+    const goalsBy = new Map<string, { team: 0 | 1; name: string; mins: number[] }>();
     for (const e of events) if (e.type === 'goal' && e.playerName) {
-      const g = goalsBy.get(e.playerName) ?? { team: e.teamIdx, mins: [] };
-      g.mins.push(e.minute); goalsBy.set(e.playerName, g);
+      const k = nkey(e.teamIdx, e.playerName);
+      const g = goalsBy.get(k) ?? { team: e.teamIdx, name: e.playerName, mins: [] };
+      g.mins.push(e.minute); goalsBy.set(k, g);
     }
     const winner = h > a ? home : a > h ? away : null;
     const loser = h > a ? away : a > h ? home : null;
@@ -3183,20 +3215,23 @@ class Game {
     lead = occasion + lead;
     const reds = events.filter((e) => e.type === 'red_card').map((e) => e.playerName);
     const redLine = reds.length ? ` ${reds.join(' and ')} saw red.` : '';
-    const names = [...goalsBy.entries()];
-    const scLine = names.length ? 'Scorers: ' + names.map(([n, g]) => `${n} (${g.mins.map((m) => m + "'").join(', ')})`).join(' · ') : 'A goalless stalemate.';
-    const assists = new Map<string, number>();
-    for (const e of events) if (e.type === 'goal' && e.playerName2) assists.set(e.playerName2, (assists.get(e.playerName2) ?? 0) + 1);
-    const asLine = assists.size ? `<div class="scorers">🅰 Assists: ${[...assists.entries()].map(([n, c]) => c > 1 ? `${n} ×${c}` : n).join(' · ')}</div>` : '';
+    const names = [...goalsBy.values()];
+    const scLine = names.length ? 'Scorers: ' + names.map((g) => `${g.name} (${g.mins.map((m) => m + "'").join(', ')})`).join(' · ') : 'A goalless stalemate.';
+    const assists = new Map<string, { name: string; count: number }>();
+    for (const e of events) if (e.type === 'goal' && e.playerName2) { const k = nkey(e.teamIdx, e.playerName2); const a2 = assists.get(k) ?? { name: e.playerName2, count: 0 }; a2.count++; assists.set(k, a2); }
+    const asLine = assists.size ? `<div class="scorers">🅰 Assists: ${[...assists.values()].map((a2) => a2.count > 1 ? `${a2.name} ×${a2.count}` : a2.name).join(' · ')}</div>` : '';
     // CONTRIBUTIONS: goals (×2) + assists (×1), with each player's side — so a playmaker's or a non-scoring
     // game is visible, POTM can be an assister (0-0s + assist-only games get a POTM), and your OWN star isn't
-    // upstaged on his own report by the opponent's scorer (PT-74).
-    const contrib = new Map<string, { pts: number; team: 0 | 1; goals: number; assists: number }>();
-    const bump = (name: string, team: 0 | 1, dg: number, da: number) => { const e = contrib.get(name) ?? { pts: 0, team, goals: 0, assists: 0 }; e.goals += dg; e.assists += da; e.pts += dg * 2 + da; e.team = team; contrib.set(name, e); };
+    // upstaged on his own report by the opponent's scorer (PT-74). Keyed by teamIdx+name so namesakes don't merge (PT-117).
+    const contrib = new Map<string, { pts: number; team: 0 | 1; name: string; goals: number; assists: number }>();
+    const bump = (name: string, team: 0 | 1, dg: number, da: number) => { const k = nkey(team, name); const e = contrib.get(k) ?? { pts: 0, team, name, goals: 0, assists: 0 }; e.goals += dg; e.assists += da; e.pts += dg * 2 + da; contrib.set(k, e); };
     for (const e of events) if (e.type === 'goal') { if (e.playerName) bump(e.playerName, e.teamIdx, 1, 0); if (e.playerName2) bump(e.playerName2, e.teamIdx, 0, 1); }
-    // spotlight the bloodline star when HE features — goals AND assists (not goals only) (PT-21/PT-74)
+    // spotlight the bloodline star when HE features — goals AND assists (not goals only) (PT-21/PT-74). The star
+    // is on the manager's side, which is home (teamIdx 0) at home and away (teamIdx 1) away — see mySide in startMatch.
     const starName = this.loadMgr().starName;
-    const sc = starName ? contrib.get(starName) : undefined;
+    const myTeamIdx: 0 | 1 = this.spFixture?.venue === 'home' ? 0 : 1;
+    const starKey = starName ? nkey(myTeamIdx, starName) : undefined;
+    const sc = starKey ? contrib.get(starKey) : undefined;
     const starLineFt = sc && (sc.goals || sc.assists)
       ? `<div class="scorers ft-star">⭐ <b>${starName}</b> ${sc.goals ? `got on the scoresheet${sc.goals >= 2 ? ` — ${sc.goals} goals` : ''}${sc.assists ? ` and set up ${sc.assists}` : ''}` : `set up ${sc.assists} goal${sc.assists > 1 ? 's' : ''}`}</div>`
       : '';
@@ -3204,14 +3239,14 @@ class Game {
     // player of the match: most contribution points, tie broken toward YOUR star first, then the winning side
     const winSide: 0 | 1 | null = h > a ? 0 : a > h ? 1 : null;
     const ranked = [...contrib.entries()].sort((x, y) => y[1].pts - x[1].pts
-      || (Number(y[0] === starName) - Number(x[0] === starName))
+      || (Number(y[0] === starKey) - Number(x[0] === starKey))
       || (Number(y[1].team === winSide) - Number(x[1].team === winSide)));
     const potmEl = $('ft-potm');
     if (ranked.length) {
-      const [n, c] = ranked[0];
+      const [, c] = ranked[0];
       const bits = [c.goals ? `${c.goals} goal${c.goals > 1 ? 's' : ''}` : '', c.assists ? `${c.assists} assist${c.assists > 1 ? 's' : ''}` : ''].filter(Boolean).join(', ');
       potmEl.classList.remove('hidden');
-      potmEl.innerHTML = `<span class="potm-lbl">★ PLAYER OF THE MATCH</span>${n}${bits ? ` — ${bits}` : ''}`;
+      potmEl.innerHTML = `<span class="potm-lbl">★ PLAYER OF THE MATCH</span>${c.name}${bits ? ` — ${bits}` : ''}`;
     } else potmEl.classList.add('hidden');
   }
 
