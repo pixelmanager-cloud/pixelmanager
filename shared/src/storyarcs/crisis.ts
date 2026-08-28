@@ -556,4 +556,202 @@ export const CRISIS_ARCS: StoryArc[] = [
       },
     },
   },
+  {
+    id: 'crisis-chronic-injury', title: 'The Body That Won’t Hold', icon: '🦴', category: 'crisis',
+    minTurn: 120, maxTurn: 200, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'It has gone again — the same joint, the third time in two seasons, the scan showing wear where there should be cartilage. The specialist doesn’t use the word retirement, but it hangs in the room like smoke. Every sprint from here is a negotiation with a body that keeps handing in its notice.',
+        choices: [
+          { id: 'specialist', label: 'Chase a radical fix abroad', desc: 'See the surgeon everyone whispers about, whatever it costs', outcome: 'He flies out to the clinic that patched up half a generation of broken athletes, and bets his savings on a scalpel and a second chance.', effect: { earnings: -6, energy: -8, attr: { composure: 1 }, tag: 'patched-up' }, next: 'verdict' },
+          { id: 'remould', label: 'Rebuild his game around the fragility', desc: 'Less running, more brain — reinvent himself to survive', outcome: 'He accepts the joint will never be whole and remoulds his whole game to spare it, trading yards for cunning and position.', effect: { attr: { creativity: 2, composure: 1 }, meters: { authority: 4 }, tag: 'reinvented' }, next: 'verdict' },
+        ],
+      },
+      verdict: {
+        id: 'verdict',
+        prompt: 'A huge game, and by the hour mark the old ache is screaming its familiar warning — one more explosive turn and it could be the tear that finishes him for good. The bench is glancing over. Nobody can make this call but him, and the rest of a career rides on it.',
+        choices: [
+          { id: 'protect', label: 'Signal to come off and live to fight on', desc: 'A career is longer than a fixture — protect what’s left', outcome: 'He raises his hand and walks off on his own two feet, unbeaten by the day, refusing to gamble the years he has left on ninety minutes.', effect: { attr: { composure: 2 }, form: 0.04, meters: { family: 8, authority: 5 } } },
+          { id: 'defy', label: 'Push through for one last surge', desc: 'The team needs him now — the body can complain later', outcome: 'He drives on through the warning and drags the side over the line, but the joint pays the bill and the fragility deepens for good.', effect: { injury: true, form: -0.06, attr: { aggression: 1 }, meters: { fans: 10, authority: 6 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'crisis-referee-war', title: 'A Word Too Many', icon: '🗣️', category: 'crisis',
+    minTurn: 85, maxTurn: 190, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'A decision goes against him and he loses it — nose to nose with the referee, a finger jabbed, a mouthful the lip-readers gleefully translate for the nation. It’s a two-game ban for dissent and a misconduct charge, and overnight the pundits have rebranded him a serial moaner who can’t take a call.',
+        choices: [
+          { id: 'apologise', label: 'Apologise to the official personally', desc: 'A private letter to the ref, no cameras, no spin', outcome: 'He writes to the referee and the referees’ body admitting he crossed the line, owning it where no one can see him grandstand.', effect: { attr: { composure: 2 }, meters: { authority: 7, fans: 4 }, tag: 'contrite-ref' }, next: 'return' },
+          { id: 'crusade', label: 'Turn it into a crusade on standards', desc: 'Argue the officiating is the real scandal here', outcome: 'He doubles down that the refereeing has been a disgrace all season, and a section of the game cheers while the authorities bristle.', effect: { attr: { aggression: 1 }, meters: { fans: 6, authority: -6 }, tag: 'ref-crusader' }, next: 'return' },
+        ],
+      },
+      return: {
+        id: 'return',
+        prompt: 'Ban served, first match back, and inside ten minutes a stonewall penalty is waved away right in front of him with {RIVAL} sniggering nearby. The referee is already glancing over, half-expecting the eruption. Every camera in the ground is trained on his face, waiting.',
+        choices: [
+          { id: 'bite-tongue', label: 'Swallow it and jog away', desc: 'Not a flicker — deny them the reaction entirely', outcome: 'He turns his back without a word and simply gets on with the game, and the maturity of it silences every waiting critic.', effect: { form: 0.09, attr: { composure: 2 }, meters: { authority: 8, fans: 8 } } },
+          { id: 'answer-goal', label: 'Answer the injustice with a goal', desc: 'Let the football, not the mouth, do the arguing', outcome: 'He channels the fury into the next attack and buries it, wheeling away with a finger to his lips — the perfect, wordless riposte.', effect: { form: 0.11, attr: { flair: 1, composure: 1 }, meters: { fans: 12, authority: 5 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'crisis-drink-spiral', title: 'Last Orders', icon: '🍺', category: 'crisis',
+    minTurn: 80, maxTurn: 180, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The odd unwind after a win became a Wednesday, then a habit, then a grainy phone clip of him being poured out of a bar at four in the morning midweek. The manager has seen it. The physios have seen the numbers. What used to steady the nerves is starting to run the show.',
+        choices: [
+          { id: 'dry-out', label: 'Go dry and front it with the club', desc: 'Admit it’s a problem, get the welfare team involved', outcome: 'He walks into the club doctor’s office, admits the drink has hold of him, and signs up for the hard, unglamorous work of stopping.', effect: { attr: { composure: 2 }, energy: 6, meters: { family: 8, partner: 6 }, tag: 'on-the-wagon' }, next: 'crossroads' },
+          { id: 'deny-drink', label: 'Insist it’s just letting off steam', desc: 'Everyone has a night out — this is overblown nonsense', outcome: 'He waves it away as harmless high spirits and carries on as before, the mask of a man in control slipping a little further each week.', effect: { energy: -8, form: -0.07, meters: { partner: -6, authority: -5 }, tag: 'in-denial' }, next: 'crossroads' },
+        ],
+      },
+      crossroads: {
+        id: 'crossroads',
+        prompt: 'The night before the biggest game of the season, the old crew are texting about a session, the pull of it as strong as it has ever been. His whole reputation — and maybe his place at the club — turns on which door he walks through tonight.',
+        choices: [
+          { id: 'stay-in', label: 'Turn the phone off and prepare right', desc: 'Early night, clear head — be the professional he can be', outcome: 'He silences the phone, sleeps like a pro, and tears into the match fresh, proving the man who wants it more than the drink is still in there.', effect: { form: 0.11, attr: { composure: 1, stamina: 1 }, meters: { authority: 8, family: 6 } } },
+          { id: 'relapse', label: 'Tell himself one won’t hurt', desc: 'Just a couple, just to take the edge off — he can handle it', outcome: 'One becomes six and he plays the biggest game half a yard slow and grey-faced, the whole ground able to see something is badly wrong.', effect: { form: -0.12, energy: -10, meters: { fans: -8, authority: -6, partner: -5 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'crisis-family-illness', title: 'The Call at Half-Time', icon: '🏥', category: 'crisis',
+    minTurn: 90, maxTurn: 195, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'A parent is gravely ill back home, the prognosis frightening, and suddenly the game he has given his life to feels very small. His head is in a hospital ward while his body goes through the motions on the training pitch. The manager notices the light has gone out of him.',
+        choices: [
+          { id: 'compartment', label: 'Keep playing and dedicate it to them', desc: 'Football as the one place the fear can’t follow — for now', outcome: 'He chooses to keep playing, telling the gaffer the pitch is the only ninety minutes the dread lets him go, and vows every game is for the ward.', effect: { attr: { composure: 1 }, meters: { family: 8, authority: 4 }, tag: 'carrying-it' }, next: 'return' },
+          { id: 'leave', label: 'Take compassionate leave to be there', desc: 'Some things are bigger than any team — go home', outcome: 'He asks for time away and drives to the bedside, choosing the people over the plan and trusting the club to understand.', effect: { form: -0.05, meters: { family: 14, partner: 8, authority: 3 }, tag: 'went-home' }, next: 'return' },
+        ],
+      },
+      return: {
+        id: 'return',
+        prompt: 'The worst has passed — a fragile recovery, a corner turned — and he comes back to a full house that somehow knows what he has been through. The first game feels heavy with everything unsaid. He wants to give the people he loves something to smile about from a hospital chair.',
+        choices: [
+          { id: 'pour-in', label: 'Pour every ounce of it into the game', desc: 'Let the love and the fear come out through the football', outcome: 'He plays with tears close and a heart wide open, scores, and points both hands to the sky in a moment the whole ground feels in its chest.', effect: { form: 0.12, attr: { leadership: 1, composure: 1 }, meters: { family: 10, fans: 12 } } },
+          { id: 'gentle', label: 'Just get through it and be grateful', desc: 'No grand statement — simply be present and whole again', outcome: 'He asks nothing spectacular of himself, just steadies through the ninety, grateful to be a footballer with a family still intact.', effect: { form: 0.05, attr: { composure: 2 }, meters: { family: 12, partner: 6 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'crisis-final-blunder', title: 'The Final He Threw Away', icon: '🏆', category: 'crisis',
+    minTurn: 100, maxTurn: 198, weight: 3, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The biggest day of the season, the cup final, level and heading for extra time — and his loose touch on the edge of his own box is pounced on and lashed into the corner for the winner. His mistake, his trophy handed over, in front of ninety thousand and a global audience. The medal they hang on him is the wrong colour and it burns.',
+        choices: [
+          { id: 'front-up', label: 'Front the cameras and take it all', desc: 'Stand in the mixed zone and own the defeat entirely', outcome: 'He refuses to slip out the back, stands before the world red-eyed, and takes the blame squarely so no teammate has to.', effect: { attr: { leadership: 2, composure: 1 }, meters: { peers: 10, fans: 6 }, tag: 'owned-final' }, next: 'redemption' },
+          { id: 'shatter', label: 'Let it break something in him', desc: 'Slip away, phone off, the error playing on a loop', outcome: 'He hides from everyone for days, the moment replaying behind his eyes every time he closes them, the doubt sinking deep roots.', effect: { form: -0.1, meters: { fans: -4, partner: -5 }, tag: 'final-scarred' }, next: 'redemption' },
+        ],
+      },
+      redemption: {
+        id: 'redemption',
+        prompt: 'A year of carrying it, and the draw is cruel and kind at once — the same competition, another final, the ghost of last time standing on the touchline in a suit. Late, tied, the ball drops to him in a near-identical spot. The whole story loops back to this single decision.',
+        choices: [
+          { id: 'exorcise', label: 'Trust himself and settle it for good', desc: 'This time the touch is sure — write the ending himself', outcome: 'He kills it dead, drives forward, and buries the winner in the exact competition that broke him, roaring a year of pain out of his lungs.', effect: { form: 0.14, attr: { composure: 2, flair: 1 }, meters: { fans: 16, authority: 9 } } },
+          { id: 'safe-final', label: 'Do the simple, safe thing this time', desc: 'No repeat of the flourish that cost him — clear it, no risk', outcome: 'He takes no chances, hammers it to safety, and lets others chase glory while he simply makes sure the nightmare never repeats.', effect: { form: 0.06, attr: { composure: 2 }, meters: { authority: 5 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'crisis-doping-scare', title: 'The Sample', icon: '🧪', category: 'crisis',
+    minTurn: 95, maxTurn: 192, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'A routine test comes back positive for a substance he has never knowingly touched, and the machine does not care about his innocence. A provisional suspension, "DRUG CHEAT" across the back pages, sponsors freezing his deals overnight — a clean career poisoned by a word that sticks whatever the truth turns out to be.',
+        choices: [
+          { id: 'trace', label: 'Hunt down the contaminated source', desc: 'Test every supplement, build the scientific case coldly', outcome: 'He and his team tear apart every tub and sachet he has swallowed, chasing the tainted batch that can prove he was never a cheat.', effect: { attr: { composure: 2 }, meters: { agent: 8, sponsors: -4 }, tag: 'tracing-it' }, next: 'cleared' },
+          { id: 'plead-innocence', label: 'Beg the public to believe him', desc: 'An emotional appeal — swear he’d never dope, ever', outcome: 'He goes on camera swearing on everything he loves that he would never cheat, and the nation splits between belief and suspicion.', effect: { form: -0.05, meters: { fans: 6, sponsors: -5 }, tag: 'protesting' }, next: 'cleared' },
+        ],
+      },
+      cleared: {
+        id: 'cleared',
+        prompt: 'The lab traces it to a contaminated supplement and the ban is lifted — fully, formally exonerated. But months of "no smoke without fire" left a stain, and the first away trip greets him with a chant calling him a cheat regardless of what any tribunal found.',
+        choices: [
+          { id: 'burn-it', label: 'Answer the slur with a masterclass', desc: 'Take the anger of the injustice and win the game single-handed', outcome: 'He plays with a cold fire all afternoon, runs the show, and stares down the away end that branded him, the record set straight in studs.', effect: { form: 0.12, attr: { aggression: 1, composure: 1 }, meters: { fans: 11, authority: 7 } } },
+          { id: 'rebuild-quiet', label: 'Quietly rebuild what was taken', desc: 'No revenge mission — just clean, honest football again', outcome: 'He lets the chants wash over him and simply gets back to playing, trusting time and clean displays to scrub away the stain.', effect: { form: 0.06, attr: { composure: 2 }, meters: { sponsors: 5, family: 6 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'crisis-dressing-mutiny', title: 'The Revolt', icon: '🪧', category: 'crisis',
+    minTurn: 105, maxTurn: 195, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The senior players have had enough of the manager — the methods, the mind games, the freezing out of favourites — and they want to march to the board as one and demand his head. As one of the biggest voices in the room, they need his name on the revolt to give it weight. All eyes turn to him.',
+        choices: [
+          { id: 'loyal', label: 'Refuse to join and back the boss', desc: 'Mutiny isn’t leadership — tell them to look in the mirror', outcome: 'He declines to sign up, tells the ringleaders the answer is on the training pitch not in the boardroom, and stands alone against the tide.', effect: { attr: { leadership: 2, composure: 1 }, meters: { authority: 8, peers: -5 }, tag: 'stood-by-boss' }, next: 'aftermath' },
+          { id: 'join-revolt', label: 'Lead the delegation to the board', desc: 'The room has spoken — better to lead it than let it fester', outcome: 'He puts himself at the head of the group and lays the players’ case before the directors, staking his standing on a coup.', effect: { attr: { leadership: 1, aggression: 1 }, meters: { peers: 9, authority: -6 }, tag: 'ringleader' }, next: 'aftermath' },
+        ],
+      },
+      aftermath: {
+        id: 'aftermath',
+        prompt: 'The board backs the manager and the revolt collapses, leaving a fractured squad, a wounded gaffer, and a dressing room that knows exactly who stood where. The next match is a mess waiting to happen, and how he carries himself now will decide whether the group heals or rots.',
+        choices: [
+          { id: 'unify', label: 'Drag the fractured room back together', desc: 'Whatever side he took, now be the glue that mends it', outcome: 'He calls a players-only meeting, buries the grievances, and demands they play for each other, forcing unity out of the wreckage.', effect: { form: 0.1, attr: { leadership: 2, teamwork: 1 }, meters: { peers: 10, authority: 7 } } },
+          { id: 'coast-out', label: 'Keep his head down and ride it out', desc: 'Say nothing, do his job, let the poison dilute itself', outcome: 'He avoids the politics entirely and just plays, letting the fault lines slowly close over on their own without his fingerprints.', effect: { form: 0.04, attr: { composure: 1 }, meters: { authority: 3 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'crisis-keeper-howler', title: 'The Ball Through His Hands', icon: '🧤', category: 'crisis',
+    minTurn: 95, maxTurn: 196, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'A tame shot, a routine gather, and somehow it squirms through his gloves and trickles over the line — the goal that loses the final, the softest, most humiliating error a keeper can make, on the one day the world is watching. The montage of it will outlive everything else he ever did between the sticks.',
+        choices: [
+          { id: 'stay-big', label: 'Stand tall and demand the next one', desc: 'A keeper lives with mistakes — get straight back up big and loud', outcome: 'He refuses to shrink into his six-yard box, barking orders louder than ever, determined the next cross will find him certain and commanding.', effect: { attr: { keeping: 1, leadership: 1, composure: 1 }, meters: { peers: 7, authority: 5 }, tag: 'unshaken-keeper' }, next: 'shootout' },
+          { id: 'flinch', label: 'Let the doubt into his gloves', desc: 'The hands start to shake, every catch suddenly a threat', outcome: 'The error crawls inside his head; he starts punching what he should catch and flapping at what he should claim, the trust draining away.', effect: { form: -0.1, attr: { keeping: -1 }, meters: { fans: -6 }, tag: 'shaken-keeper' }, next: 'shootout' },
+        ],
+      },
+      shootout: {
+        id: 'shootout',
+        prompt: 'Weeks on, another knockout tie, and it goes all the way to penalties — the exact stage where a keeper becomes hero or ghost. He stands on his line, the howler still fresh in every mind in the ground, {RIVAL} stepping up first with a smirk that says he remembers.',
+        choices: [
+          { id: 'hero-save', label: 'Own the spotlight and save the day', desc: 'Read it, spring, and turn the villain’s tale on its head', outcome: 'He guesses right, flies, and claws {RIVAL}’s penalty out of the top corner, then keeps out another — the goat reborn as the hero.', effect: { form: 0.13, attr: { keeping: 2, composure: 1 }, meters: { fans: 15, authority: 8 } } },
+          { id: 'solid-keeper', label: 'Just be steady and let the takers miss', desc: 'No showboating — sound positioning, force the error', outcome: 'He makes himself big and calm, saves nothing spectacular but rattles the takers into missing, and comes through it quietly redeemed.', effect: { form: 0.08, attr: { keeping: 1, composure: 2 }, meters: { authority: 6 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'crisis-fan-tragedy', title: 'A Minute’s Silence', icon: '🕊️', category: 'crisis',
+    minTurn: 90, maxTurn: 195, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'A coachload of supporters never made it to the away game — a crash on the motorway, families of the club shattered in an instant. The result feels obscene to even think about. The whole city is in mourning, and the players are asked to carry a grief far heavier than any relegation battle onto the pitch.',
+        choices: [
+          { id: 'lead-tribute', label: 'Lead the club’s tributes with dignity', desc: 'Speak for the squad, visit the families, wear the grief right', outcome: 'He becomes the voice of the dressing room, lays a wreath at the gates, and sits with the bereaved, carrying the club’s sorrow with real grace.', effect: { attr: { leadership: 2, composure: 1 }, meters: { fans: 10, authority: 6 }, tag: 'mourning-leader' }, next: 'match' },
+          { id: 'struggle-focus', label: 'Struggle to find the game inside the grief', desc: 'It feels wrong to care about football at all right now', outcome: 'He can’t reconcile a scoreline with coffins, and drifts through the week hollow, unsure how anyone is meant to just play on.', effect: { form: -0.06, meters: { family: 5, partner: 4 }, tag: 'grieving' }, next: 'match' },
+        ],
+      },
+      match: {
+        id: 'match',
+        prompt: 'The first game after, the ground a sea of scarves and silence broken only by the names being sung, an empty section left bare for those who never arrived. The players wear black armbands into a wall of raw emotion. Whatever happens now, it has to be for them.',
+        choices: [
+          { id: 'for-them', label: 'Win it and give the grief somewhere to go', desc: 'Pour the sorrow into a performance the lost would be proud of', outcome: 'He plays as if the missing are watching, scores, and lifts his shirt to the empty seats, giving a broken support one pure moment to hold onto.', effect: { form: 0.12, attr: { leadership: 1, composure: 1 }, meters: { fans: 16, authority: 6 } } },
+          { id: 'honour-quiet', label: 'Honour them with quiet, honest effort', desc: 'No theatrics — just heart, sweat, and respect for the day', outcome: 'He asks for nothing showy of himself, only that every man leaves everything out there, and applauds the bereaved long after the whistle.', effect: { form: 0.06, attr: { teamwork: 2 }, meters: { fans: 10, peers: 6 } } },
+        ],
+      },
+    },
+  },
 ];

@@ -530,4 +530,202 @@ export const TRIUMPH_ARCS: StoryArc[] = [
       },
     },
   },
+  {
+    id: 'tri-world-crown', title: 'On Top of the World', icon: '🌐', category: 'triumph',
+    minTurn: 140, maxTurn: 200, weight: 3, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The World Cup final, the whole planet watching, and after a summer that will never come again his country are champions of the world. There is no bigger stage than the one he has just conquered. As the ticker tape falls, what fills him first?',
+        choices: [
+          { id: 'disbelief', label: 'Let it sink in slowly', desc: 'Stand still and try to believe it is real', outcome: 'He stands rooted amid the bedlam, staring at the sky, unable to make the enormity feel true. The greatest moment of his life, and he wants it to last.', effect: { attr: { composure: 1 }, meters: { fans: 20, family: 8 }, tag: 'world-champ' }, next: 'trophy' },
+          { id: 'nation', label: 'Turn to the travelling fans', desc: 'Sprint to the supporters who crossed the world', outcome: 'He tears straight to the wall of his own people, arms flung wide, and roars with them until nothing is left. This crown is theirs too.', effect: { form: 0.08, attr: { leadership: 1 }, meters: { fans: 22, sponsors: 6 }, tag: 'world-champ' }, next: 'trophy' },
+        ],
+      },
+      trophy: {
+        id: 'trophy',
+        prompt: 'The golden trophy comes down the line of medalled men, and now it is in his hands, heavier and more real than any dream of it. A lifetime of Sundays on frozen parks led here. How does he hold the moment?',
+        choices: [
+          { id: 'kiss', label: 'Kiss it and pass it on', desc: 'Honour the badge, then share it round', outcome: 'He presses his lips to the gold, lifts it once to the heavens, then hands it straight to the youngest debutant. A champion of the world, and still a servant of the team.', effect: { form: 0.12, attr: { teamwork: 1, leadership: 1 }, meters: { peers: 16, authority: 8 } } },
+          { id: 'immortal', label: 'Raise it for the ages', desc: 'Lift it alone and roar it into history', outcome: 'He thrusts it skyward and bellows until his voice cracks, the image beamed into a billion homes. A photograph that will outlive everyone in the stadium.', effect: { form: 0.14, market: 6, attr: { aggression: 1 }, meters: { fans: 24, sponsors: 10 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'tri-treble', title: 'The Clean Sweep', icon: '🧹', category: 'triumph',
+    minTurn: 135, maxTurn: 200, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'League, cup and the big one — three trophies in a single season, a treble that only a handful of sides in history have ever managed. The last of the three is secured, and the achievement is almost too large to hold. How does he frame a campaign like no other?',
+        choices: [
+          { id: 'sacrifice', label: 'Name the price paid', desc: 'Speak of the games no body should survive', outcome: 'He talks of the sixty matches, the ice baths and the weddings missed, and says a treble is bought in flesh. The dressing room nods, drained and immortal.', effect: { attr: { stamina: 1, teamwork: 1 }, meters: { peers: 14, authority: 8 }, tag: 'treble-winner' }, next: 'legacy' },
+          { id: 'history', label: 'Claim the place in history', desc: 'Say it plainly — few ever do this', outcome: 'He looks down the cameras and says only a handful of teams ever complete the sweep, and now theirs is one. Not arrogance; simple, staggering fact.', effect: { form: 0.09, market: 4, meters: { fans: 16, sponsors: 8 }, tag: 'treble-winner' }, next: 'legacy' },
+        ],
+      },
+      legacy: {
+        id: 'legacy',
+        prompt: 'Three trophies gleam on the table before the exhausted, jubilant squad, and someone asks the question that always follows a mountain conquered: where does a team possibly go from here? How does he answer for them all?',
+        choices: [
+          { id: 'savour', label: 'Refuse to look past it', desc: 'Insist on savouring a feat this rare', outcome: 'He says a night like this must be lived, not spent already planning the next, and orders the champagne opened. Some peaks are for standing on a while.', effect: { form: 0.08, attr: { composure: 1 }, meters: { peers: 12, fans: 8 } } },
+          { id: 'quadruple', label: 'Point even higher', desc: 'Wonder aloud what a fourth would feel like', outcome: 'He grins and asks why a team that took three could not chase everything going. The manager laughs, but the fire in the room does not dim.', effect: { form: 0.1, market: 4, attr: { aggression: 1 }, meters: { fans: 12, sponsors: 6 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'tri-final-motm', title: 'Man of the Match', icon: '🎬', category: 'triumph',
+    minTurn: 120, maxTurn: 200, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The showpiece final is won, and when they read out the man of the match it is his name that echoes round the great stadium — the best player on the grandest day, chosen above every star on the pitch, {RIVAL} among them. How does he wear the individual honour?',
+        choices: [
+          { id: 'deflect', label: 'Hand it to the team', desc: 'Insist eleven men earned this, not one', outcome: 'He accepts the small trophy and immediately names the defender who ran himself into the ground, saying the award should be cut in pieces. Class on the biggest stage.', effect: { attr: { teamwork: 1, composure: 1 }, meters: { peers: 12, authority: 6 }, tag: 'final-motm' }, next: 'stage' },
+          { id: 'own', label: 'Own the performance', desc: 'Accept that today he was simply the best', outcome: 'He allows himself a rare admission that on the day that mattered most, he delivered — and glances, just once, toward {RIVAL}. Quiet, earned pride.', effect: { form: 0.09, market: 3, attr: { flair: 1 }, meters: { fans: 14, sponsors: 6 }, tag: 'final-motm' }, next: 'stage' },
+        ],
+      },
+      stage: {
+        id: 'stage',
+        prompt: 'The cameras swarm him afterwards, the pundits already calling it the defining performance of the final, the clip looping on every screen. This is the biggest platform his career has offered. What does he do with the microphone?',
+        choices: [
+          { id: 'gracious', label: 'Praise the beaten', desc: 'Salute the opponents who pushed them all the way', outcome: 'He spends his airtime honouring the side they defeated, saying finals need two great teams. The neutral watching warms to him at once.', effect: { form: 0.08, attr: { leadership: 1, composure: 1 }, meters: { authority: 8, fans: 10 } } },
+          { id: 'promise', label: 'Promise the next one', desc: 'Tell the world this is a habit, not a one-off', outcome: 'He looks into the lens and vows the next final will end the same way. Bold, box-office, and the sponsors are already circling.', effect: { form: 0.07, market: 4, attr: { aggression: 1 }, meters: { fans: 12, sponsors: 10 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'tri-hat-trick', title: 'The Match Ball', icon: '🎩', category: 'triumph',
+    minTurn: 90, maxTurn: 175, weight: 3, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'Two goals to his name already, and now a third chance falls at his feet — the first hat-trick of his career one clean strike away, the crowd on their feet begging for it. The keeper stands between him and the match ball he will keep forever. How does he take it on?',
+        choices: [
+          { id: 'cool', label: 'Pick his spot', desc: 'Slow the heartbeat, place it with precision', outcome: 'He takes a breath the whole ground can feel, then rolls it calmly inside the far post. His first hat-trick, sealed with ice in the veins.', effect: { attr: { composure: 2 }, meters: { fans: 12, peers: 6 }, tag: 'hat-trick' }, next: 'ball' },
+          { id: 'venom', label: 'Smash it home', desc: 'No holding back — leather it into the roof', outcome: 'He throws everything into it and the net nearly rips from the frame. Three goals, and the loudest roar of his young life crashing over him.', effect: { form: 0.08, attr: { aggression: 1, flair: 1 }, meters: { fans: 14 }, tag: 'hat-trick' }, next: 'ball' },
+        ],
+      },
+      ball: {
+        id: 'ball',
+        prompt: 'The referee tucks the match ball under his arm and hands it over at the whistle, teammates queueing to sign it. His first hat-trick ball, a keepsake for a lifetime. What does he do with the treasure?',
+        choices: [
+          { id: 'home', label: 'Take it to his family', desc: 'Carry it straight to the people who believed', outcome: 'He drives it home that night and sets it on the mantelpiece beside old boyhood trophies. The ones who ferried him to training get the first look.', effect: { form: 0.07, attr: { composure: 1 }, meters: { family: 14, fans: 6 } } },
+          { id: 'giveaway', label: 'Toss it to the terrace', desc: 'Fling the ball into the delirious stand', outcome: 'On impulse he hurls it into the arms of the singing supporters, deciding the memory is enough. The gesture makes him theirs for good.', effect: { form: 0.06, market: 2, attr: { flair: 1 }, meters: { fans: 14, sponsors: 4 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'tri-invincibles', title: 'Unbeaten', icon: '🛡️', category: 'triumph',
+    minTurn: 130, maxTurn: 200, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The final whistle of the final match, and the record stands unblemished: a whole season played, not a single game lost. Invincible. Only a rare few sides in the game\'s long history have ever gone a campaign untouched. How does he grasp what they have built?',
+        choices: [
+          { id: 'perfection', label: 'Marvel at the standard', desc: 'Reflect on a discipline sustained for a year', outcome: 'He speaks of the concentration it takes to never once slip in ten long months, and says the achievement is about relentlessness, not flair. Awe, quietly earned.', effect: { attr: { composure: 1, stamina: 1 }, meters: { peers: 14, authority: 8 }, tag: 'invincible' }, next: 'record' },
+          { id: 'defiant', label: 'Throw it at the doubters', desc: 'Remind everyone they were written off in August', outcome: 'He recalls the pundits who tipped them for mid-table and asks how the unbeaten side looks now. Defiant, and the terraces roar their agreement.', effect: { form: 0.09, attr: { aggression: 1 }, meters: { fans: 16, sponsors: 4 }, tag: 'invincible' }, next: 'record' },
+        ],
+      },
+      record: {
+        id: 'record',
+        prompt: 'The pundits are already asking whether the unbeaten run can stretch into next season, whether the invincibles can become something without end. He knows how fragile perfection is. What does he say about carrying the streak on?',
+        choices: [
+          { id: 'guard', label: 'Vow to protect it', desc: 'Treat every future game as a record to defend', outcome: 'He says the streak is a thing to be guarded with their lives now, and swears they will fight for every point. The steel in his voice is unmistakable.', effect: { form: 0.08, attr: { leadership: 1, composure: 1 }, meters: { authority: 6, peers: 10 } } },
+          { id: 'humble', label: 'Refuse to jinx it', desc: 'Play down the streak, keep feet on the floor', outcome: 'He laughs off the questions and says one unbeaten season is a gift you never demand twice. Wise, and the dressing room stays hungry rather than smug.', effect: { form: 0.07, attr: { teamwork: 1 }, meters: { peers: 12, fans: 6 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'tri-knighthood', title: 'The Honour', icon: '🎗', category: 'triumph',
+    minTurn: 175, maxTurn: 205, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'A letter arrives bearing a crest more ancient than any club\'s: the nation wishes to honour him formally for his services to the game, a distinction reserved for the very few. The boy from nowhere is to be recognised by the country itself. How does he receive the news?',
+        choices: [
+          { id: 'humbled', label: 'Feel unworthy of it', desc: 'Struggle to believe the honour is meant for him', outcome: 'He reads the letter three times, certain there is a mistake, and thinks of the lads he came up with who never got the breaks. Humbled to his core.', effect: { attr: { composure: 1 }, meters: { family: 12, fans: 8 }, tag: 'honoured' }, next: 'ceremony' },
+          { id: 'dedicate', label: 'Accept it for others', desc: 'Decide at once whose name it truly belongs to', outcome: 'He resolves on the spot that the honour is for his old coaches and his parents, not himself, and says so before anyone can ask. Grace, immediate and genuine.', effect: { form: 0.06, attr: { leadership: 1, teamwork: 1 }, meters: { family: 14, authority: 6 }, tag: 'honoured' }, next: 'ceremony' },
+        ],
+      },
+      ceremony: {
+        id: 'ceremony',
+        prompt: 'The day of the ceremony arrives, all pomp and marble and cameras, his family in their finest beside him. It is a world away from the muddy touchlines that made him. How does he carry himself through the grandeur?',
+        choices: [
+          { id: 'roots', label: 'Stay the same man', desc: 'Wear the honour without changing a thing', outcome: 'He shakes every hand exactly as he would at the training ground, and takes his family for chips afterwards. The honour changes his title, not his heart.', effect: { form: 0.07, attr: { composure: 1 }, meters: { family: 12, fans: 10 } } },
+          { id: 'platform', label: 'Use the moment', desc: 'Speak up for the grassroots game that raised him', outcome: 'He turns his few words to the crumbling parks and volunteer coaches who need help, and the plea makes every front page. An honour turned to purpose.', effect: { form: 0.06, market: 2, attr: { leadership: 1 }, meters: { fans: 12, authority: 8 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'tri-young-player', title: 'The Bright Young Thing', icon: '🌱', category: 'triumph',
+    minTurn: 60, maxTurn: 130, weight: 3, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'Barely out of his teens and already the game has noticed: he is named the division\'s Young Player of the Year, the brightest of a new generation, his face suddenly on every back page and every scout\'s list. How does a boy handle a spotlight this sudden?',
+        choices: [
+          { id: 'grounded', label: 'Keep his feet planted', desc: 'Treat the award as a starting line, not a summit', outcome: 'He tells the cameras that young player awards are a promise to keep, not a prize to enjoy, and drives back to his digs. Old head on young shoulders.', effect: { attr: { composure: 1 }, meters: { authority: 6, family: 8 }, tag: 'wonderkid' }, next: 'hype' },
+          { id: 'ambition', label: 'Aim past the age brackets', desc: 'Declare he wants the seniors\' awards next', outcome: 'He says respectfully that young player is nice, but he is coming for the real thing soon. The bravado makes headlines and marks him as one to watch.', effect: { form: 0.07, market: 3, attr: { aggression: 1 }, meters: { fans: 12, sponsors: 6 }, tag: 'wonderkid' }, next: 'hype' },
+        ],
+      },
+      hype: {
+        id: 'hype',
+        prompt: 'The award opens a floodgate: agents, boot deals, glossy magazines, a bigger club sniffing already. It is a lot for a young man who was in academy digs a year ago. Which way does he lean as the noise swells?',
+        choices: [
+          { id: 'work', label: 'Bury himself in the work', desc: 'Ignore the circus, live on the training pitch', outcome: 'He switches the phone off and stays behind for extra finishing every evening, letting his football answer the hype. The coaches quietly adore him for it.', effect: { form: 0.08, attr: { stamina: 1, composure: 1 }, meters: { authority: 6, peers: 6 } } },
+          { id: 'brand', label: 'Build the profile', desc: 'Let the agent turn the buzz into deals', outcome: 'He signs the boot contract and the magazine covers, cashing in while the light shines brightest. Lucrative and dazzling, if a touch dizzying for one so young.', effect: { earnings: 4, market: 4, attr: { flair: 1 }, meters: { sponsors: 12, agent: 8 }, form: -0.03 } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'tri-pass-legend', title: 'Past the Legend', icon: '🪜', category: 'triumph',
+    minTurn: 150, maxTurn: 205, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'One more and he passes a name that has sat untouched at the top of the all-time list for a generation — a giant of the game, a face on the stand outside, a legend he grew up worshipping. To overtake him feels almost like trespass. How does he approach it?',
+        choices: [
+          { id: 'reverent', label: 'Honour the legend first', desc: 'Seek the great man out before he passes him', outcome: 'He visits the ageing icon and tells him no record erases what he was. The old man smiles and says records are meant to be broken by the right sort. Blessing given.', effect: { attr: { composure: 1, leadership: 1 }, meters: { authority: 8, fans: 10 }, tag: 'passed-legend' }, next: 'moment' },
+          { id: 'driven', label: 'Let the number pull him', desc: 'Fix on the milestone and hunt it clean', outcome: 'He says nothing to anyone and simply keeps scoring, the tally creeping toward a name spoken in hushed tones. The football does all the talking.', effect: { form: 0.06, attr: { aggression: 1 }, meters: { peers: 6 }, tag: 'passed-legend' }, next: 'moment' },
+        ],
+      },
+      moment: {
+        id: 'moment',
+        prompt: 'It is done — his name now stands alone at the summit, above the idol of his childhood, a figure children will one day chase the way he chased another. The record is his. How does he mark stepping past a hero?',
+        choices: [
+          { id: 'humble', label: 'Bow to the man he passed', desc: 'Point to the legend\'s name on the stand', outcome: 'He gestures to the great one\'s name high on the stadium wall and mouths a thank you. Even at the summit, he never forgets who lit the path.', effect: { form: 0.08, attr: { teamwork: 1, composure: 1 }, meters: { fans: 14, authority: 6 } } },
+          { id: 'era', label: 'Claim the era', desc: 'Declare the top of the list his own now', outcome: 'He allows himself to say the record is his and he means to push it out of reach for decades. Ambition befitting a man who just made history.', effect: { form: 0.09, market: 4, attr: { aggression: 1 }, meters: { fans: 12, sponsors: 6 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'tri-farewell-trophy', title: 'The Last Dance', icon: '🎭', category: 'triumph',
+    minTurn: 185, maxTurn: 205, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'His retirement is announced, the boots hung up at the final whistle of this very match — and by some perfect twist of fate, that last match is a final his side can win. To bow out lifting silverware is a script no player dares write. How does he go into his last ninety minutes?',
+        choices: [
+          { id: 'empty', label: 'Leave nothing behind', desc: 'Empty the tank one final, glorious time', outcome: 'He resolves to give every last drop, to be carried off with nothing left to spend. Whatever the body has hidden away, today it all comes out.', effect: { attr: { stamina: 1, aggression: 1 }, meters: { peers: 12, authority: 6 }, tag: 'farewell' }, next: 'whistle' },
+          { id: 'savour', label: 'Drink in every second', desc: 'Play the last game slowly, memorise it all', outcome: 'He decides to notice everything — the grass, the noise, the faces — so no moment of the last dance is lost. He plays with a strange, luminous calm.', effect: { form: 0.06, attr: { composure: 2 }, meters: { fans: 12, family: 8 }, tag: 'farewell' }, next: 'whistle' },
+        ],
+      },
+      whistle: {
+        id: 'whistle',
+        prompt: 'The impossible ending holds: they win it, and his final act as a footballer is to lift a trophy, medal cold against his chest, a career closing on the highest note there is. As the celebrations begin, how does he say goodbye?',
+        choices: [
+          { id: 'family', label: 'Walk off with his family', desc: 'Take his children onto the pitch for the last time', outcome: 'He gathers his kids and walks the lap with them on his shoulders, the crowd chanting his name into the night. The game gave him this, and now he gives it back to them.', effect: { form: 0.1, meters: { family: 16, fans: 12 }, attr: { composure: 1 } } },
+          { id: 'boots', label: 'Leave his boots on the spot', desc: 'Set the boots on the centre circle and walk', outcome: 'He unlaces them, places them gently on the centre spot, and walks off barefoot to a standing ovation that does not stop. An exit the club will speak of forever.', effect: { form: 0.11, market: 3, attr: { leadership: 1 }, meters: { fans: 18, authority: 8 } } },
+        ],
+      },
+    },
+  },
 ];

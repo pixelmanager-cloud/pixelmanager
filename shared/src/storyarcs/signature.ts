@@ -352,4 +352,130 @@ export const SIGNATURE_ARCS: StoryArc[] = [
       },
     },
   },
+  {
+    id: 'sig-scorpion-kick', title: 'The Scorpion', icon: '🦂', category: 'signature',
+    minTurn: 110, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The {RIVAL} shot skids in behind him at an angle no boot could ever reach, already past him and heading goalward — unless a man were mad enough to dive forward and flick his heels up over his own back to meet it.',
+        choices: [
+          { id: 'flick', label: 'Throw the scorpion at it', desc: 'Dive forward, heels to the sky — insanity or immortality', outcome: 'He pitches himself face-first at the turf and whips both heels up over his spine, the studs meeting the ball behind his own head and clawing it up and clear of the line. A scorpion so outrageous the fourth official forgets to raise his flag — a clearance no human should attempt, let alone pull off.', effect: { form: 0.13, market: 5, attr: { flair: 3, aggression: 1 }, meters: { fans: 24, peers: 10 } } },
+          { id: 'block', label: 'Block it flat and safe', desc: 'Get a solid body behind it, no theatrics', outcome: 'He abandons the acrobatics, plants himself square in the flight, and lets the ball thud harmlessly into his chest before shepherding it away. No highlight reel, but a defender reading danger and killing it with cold, unfussy certainty. The bench exhales as one.', effect: { form: 0.09, attr: { composure: 2, teamwork: 1 }, meters: { peers: 12, fans: 8 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'sig-chest-volley-turn', title: 'On The Turn', icon: '🌪️', category: 'signature',
+    minTurn: 105, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The pass arrives chest-high with his back to goal and a {RIVAL} centre-half breathing down his neck, no space to turn and no time to bring it down. The orthodox play is to lay it off. His instinct is telling him something far ruder.',
+        choices: [
+          { id: 'spinvolley', label: 'Chest it, spin, and volley in one motion', desc: 'Trap on the breastbone, whip round, hit it before it lands', outcome: 'He cushions it off his chest, spins a full half-turn away from his marker, and lashes the dropping ball on the volley before it can touch the grass — all in one impossible, flowing movement. The keeper never even set himself. A goal of breathtaking invention on the turn, conjured out of nothing.', effect: { form: 0.14, market: 6, attr: { flair: 2, creativity: 2 }, meters: { fans: 24, sponsors: 6 } } },
+          { id: 'layoff', label: 'Lay it and spin onto the return', desc: 'Bounce it off a teammate, take the wall pass, finish clean', outcome: 'He nudges it into a runner, spins his marker on the blind side, and collects the one-two in his stride to slot home calmly. Less circus than the swivel-volley, but a piece of quick, intelligent combination play that leaves the defender chasing shadows. Textbook.', effect: { form: 0.1, attr: { creativity: 1, teamwork: 2 }, meters: { peers: 14, fans: 10 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'sig-fingertip-bar', title: 'Onto The Bar', icon: '🖐️', category: 'signature',
+    minTurn: 105, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The {RIVAL} striker connects flush from the edge of the area and the ball flies, arrowing for the top corner with the winner written all over it. He is already diving the wrong way and there is one desperate, outstretched hand between glory and ruin.',
+        choices: [
+          { id: 'tip', label: 'Fling out a single fingertip', desc: 'Full extension, one hand, claw it onto the woodwork', outcome: 'He arches backward at full horizontal stretch and gets the faintest brush of one fingertip on it, just enough to lift the ball onto the crossbar and away to safety. A save so improbable the striker sinks to his knees clutching his head — a fingertip onto the bar that they will replay until the pixels fade.', effect: { form: 0.13, market: 5, attr: { keeping: 3, composure: 1 }, meters: { fans: 24, peers: 12 } } },
+          { id: 'strong', label: 'Get a strong palm behind it', desc: 'Trust the reach, punch it down and smother the rebound', outcome: 'He throws a firm palm at it and beats it straight down, then scrambles across to swallow the loose ball before anyone can pounce. Not the balletic tip, but a keeper trusting his positioning and hands to snuff out the danger twice over. Ruthlessly efficient.', effect: { form: 0.1, attr: { keeping: 2, composure: 1 }, meters: { fans: 16, peers: 8 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'sig-double-save', title: 'The Double Save', icon: '🧤', category: 'signature',
+    minTurn: 110, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The {RIVAL} striker is through and shoots low and hard, and he blocks it — but the rebound spins straight to a second attacker with the whole goal yawning open and him flat on the floor, half a second to somehow be a hero twice.',
+        choices: [
+          { id: 'scramble', label: 'Spring up and fly at the second', desc: 'No time to set — throw everything at the follow-up', outcome: 'He blocks the first with his legs, claws himself off the deck in a heartbeat, and hurls his whole body across the line to somehow smother the point-blank rebound too. A double save in one frantic passage of play that defies belief — the goalmouth erupts and the strikers stare at each other, ashen. Twice denied.', effect: { form: 0.14, market: 5, attr: { keeping: 3, stamina: 1 }, meters: { fans: 24, peers: 14 } } },
+          { id: 'spread', label: 'Stay big and make himself a wall', desc: 'Read the rebound early, spread and let it hit him', outcome: 'Sensing the follow-up before it comes, he refuses to commit to ground and instead makes himself enormous, and the second shot cannons off his sprawled frame to safety. No flailing, just a keeper who read the whole sequence a beat ahead of everyone. Positional genius under siege.', effect: { form: 0.11, attr: { keeping: 2, composure: 1 }, meters: { fans: 16, peers: 10 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'sig-last-man-tackle', title: 'The Last Man', icon: '🛡️', category: 'signature',
+    minTurn: 105, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'A slip in midfield sends the {RIVAL} forward clean through with only open grass ahead, and he is ten yards adrift and the last hope, lungs already screaming. The certain goal is being scored in real time unless he can somehow catch a man with a flying start.',
+        choices: [
+          { id: 'slide', label: 'Sprint him down and slide the tackle', desc: 'Chase the impossible, then a perfect toe-poke at full stretch', outcome: 'He devours the ten-yard gap with a recovery sprint that seems to bend physics, times his slide to the last inch, and pokes the ball clean off the striker’s toe as the shot loads. A saving tackle so perfectly judged the crowd roars as though a goal had gone in the other end. The last man, and he did not miss.', effect: { form: 0.13, market: 4, attr: { stamina: 2, aggression: 1 }, meters: { fans: 22, peers: 14 } } },
+          { id: 'shepherd', label: 'Shepherd him wide and force the error', desc: 'Catch up, stay on his feet, angle him off the goal', outcome: 'Rather than gamble on the tackle, he claws his way alongside and calmly ushers the striker away from goal and toward the byline, closing the angle until the shot dribbles wide. No dramatics, just a defender who ran his heart out and then kept his head. Danger strangled at the death.', effect: { form: 0.1, attr: { stamina: 1, composure: 2 }, meters: { peers: 12, fans: 10 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'sig-scrappy-equaliser', title: 'The Scramble', icon: '🧨', category: 'signature',
+    minTurn: 110, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'Ninety-seven minutes gone, a goal down to {RIVAL}, and the last hopeful punt pinballs around a packed six-yard box — off a shin, off the bar, off a defender — the ball squirting loose in a scrum of bodies with the whistle about to blow on defeat.',
+        choices: [
+          { id: 'bundle', label: 'Bundle it over the line any way he can', desc: 'Shin, knee, hip — just get a touch and force it in', outcome: 'He throws himself into the melee and forces it over the line off his hip as three defenders lunge and the keeper claws at air. Ugly as sin, no idea which part of him it hit, and utterly priceless — a scrappy ninety-seventh-minute equaliser that saves a point and sends the whole bench sprinting onto the pitch. Not pretty. Never forgotten.', effect: { form: 0.12, market: 3, attr: { aggression: 2, teamwork: 1 }, meters: { fans: 22, peers: 12 } } },
+          { id: 'compose', label: 'Set his feet and sweep it clean', desc: 'Find a half-yard in the chaos, strike it properly', outcome: 'Amid the pandemonium he somehow finds a clear sight of it, sets his body in a fraction of space, and sweeps a clean side-foot inside the post. A moment of order carved out of total mayhem — the calmest man in a box full of flailing limbs snatches the equaliser at the death.', effect: { form: 0.11, attr: { composure: 2, aggression: 1 }, meters: { fans: 18, peers: 8 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'sig-clearance-goal', title: 'The Hoof', icon: '🥾', category: 'signature',
+    minTurn: 105, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'Under siege on the edge of his own box, he swings a boot at a dropping ball with one thought — get it as far away as humanly possible. It leaves his laces like a cannon shot, and only then does he notice the {RIVAL} keeper wandering yards off his line downfield.',
+        choices: [
+          { id: 'let-it-fly', label: 'Watch it sail and dare to dream', desc: 'Half-clearance, half-shot — let the monstrous strike carry', outcome: 'The booming volley never stops climbing then dips wickedly out of the sky, the horrified keeper scrambling back too late as it drops under his own bar from inside his own half. A clearance that became the goal of the season by glorious accident — he wheels away shrugging, arms wide, as bewildered as the eighty thousand watching.', effect: { form: 0.14, market: 6, attr: { aggression: 1, flair: 2 }, meters: { fans: 26, sponsors: 8 } } },
+          { id: 'chase', label: 'Sprint upfield to make it count', desc: 'Trust the flight, gallop after it, be there for the follow-up', outcome: 'He hares after his own wild clearance, and when the keeper only half-claws it down he is first to the loose ball to roll it into the empty net. Less the freak worldie, more the reward for never stopping running — an opportunist’s goal born from a defender’s panic. Relentless.', effect: { form: 0.11, market: 3, attr: { stamina: 2, composure: 1 }, meters: { fans: 18, peers: 8 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'sig-stepover-assist', title: 'The Stepover', icon: '🕺', category: 'signature',
+    minTurn: 105, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The winner is there to be made in the dying embers, but two {RIVAL} defenders have funnelled across to shut the door, standing him up on the touchline with a runner unmarked and howling in the middle. It is one against two, and his feet are already twitching.',
+        choices: [
+          { id: 'burst', label: 'Stepover both of them and square it', desc: 'Trademark shimmy, burst the gap, lay the winner on a plate', outcome: 'He rolls out his trademark stepover, sells the first defender a dummy so complete the man nearly falls over, bursts clean through the gap the second leaves, and rolls the simplest of squares for the winner into an unguarded net. Two men beaten with a flick of the hips and the game won — the assist of an artist at the death.', effect: { form: 0.13, market: 5, attr: { flair: 3 }, meters: { fans: 22, peers: 12 } } },
+          { id: 'clip', label: 'Disguise a clip over the top instead', desc: 'Freeze them with the shimmy, then chip the pass early', outcome: 'He feints the stepover just enough to root both defenders, then clips a disguised ball over the top before they recover, dropping it perfectly for the runner to steer home the winner. No mazy burst, just a moment of guile that unpicks two men with a single deft touch. The cleverest pass on the pitch.', effect: { form: 0.11, attr: { creativity: 2, teamwork: 1 }, meters: { peers: 14, fans: 10 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'sig-rain-solo', title: 'The Deluge', icon: '🌧️', category: 'signature',
+    minTurn: 110, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The rain is coming down in biblical sheets and the pitch is a lake, the ball sticking and skidding in the puddles, every touch a lottery. He picks it up near halfway in the storm with the {RIVAL} defence wading toward him, and decides the water is his friend.',
+        choices: [
+          { id: 'slalom', label: 'Slalom through the storm', desc: 'Ride the puddles, dance through the flood, defy the elements', outcome: 'He glides across the surface water where everyone else is bogged down, slaloming past four floundering, aquaplaning defenders before sliding it home through the spray. A solo goal conjured out of a monsoon that the highlight cameras can barely make out — genius that treated a swamp like a dry training pitch. Unforgettable, and unrepeatable.', effect: { form: 0.14, market: 6, attr: { flair: 2, stamina: 2 }, meters: { fans: 24, sponsors: 6 } } },
+          { id: 'skim', label: 'Use the water and skim a low finish', desc: 'Keep it simple, drive it hard and flat across the wet surface', outcome: 'He carries it a few strides then drills a low, skidding shot that the surface water only speeds up, the ball aquaplaning under the keeper’s despairing hands. Not the slalom the crowd wanted through the deluge, but a cannily judged finish that turned the flooded pitch into a weapon. Clever in the chaos.', effect: { form: 0.1, market: 3, attr: { composure: 1, stamina: 1 }, meters: { fans: 16 } } },
+        ],
+      },
+    },
+  },
 ];

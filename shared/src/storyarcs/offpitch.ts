@@ -537,4 +537,211 @@ export const OFFPITCH_ARCS: StoryArc[] = [
       },
     },
   },
+  {
+    id: 'off-streaming-channel', title: 'Going Live', icon: '🔴', category: 'offpitch',
+    minTurn: 105, maxTurn: 190, weight: 3, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'A mate with a ring light and a business plan reckons he should launch his own channel — gaming streams, vlogs from the car park, unfiltered chat straight to a million subscribers. No press officer, no filter, no net.',
+        choices: [
+          { id: 'go-live', label: 'Build the channel', desc: 'Cameras on, unfiltered, own the audience', outcome: 'He starts streaming late-night gaming sessions and the numbers explode, but the schedule bleeds into his sleep and the club’s comms man twitches.', effect: { earnings: 300, market: 4, greed: 2, form: -0.1, energy: -5, meters: { fans: 8, sponsors: 4, authority: -3 }, tag: 'goes-live' }, next: 'hot-mic' },
+          { id: 'ghost-team', label: 'Hire a team to run it', desc: 'Curated content, editors, safe hands', outcome: 'He lets a proper production crew shape the output so nothing goes out raw. Slicker, safer, and a touch less him.', effect: { earnings: 150, market: 2, meters: { fans: 4, agent: 3 } } },
+          { id: 'no-channel', label: 'Keep his life off camera', desc: 'His downtime isn’t a broadcast', outcome: 'He decides the last thing he needs is a red dot watching him relax and passes on the whole idea.', effect: { greed: -1, form: 0.05, meters: { partner: 4, authority: 3 } } },
+        ],
+      },
+      'hot-mic': {
+        id: 'hot-mic',
+        prompt: 'Mid-stream, deep in a game and forgetting the chat is watching, he mutters something sharp about the manager’s tactics. The clip is scissored out and doing the rounds before he’s even logged off.',
+        choices: [
+          { id: 'apologise-clip', label: 'Own it before it grows', desc: 'Address it straight, ring the gaffer', outcome: 'He pauses the stream, posts a plain apology, and speaks to the manager face to face before training. Handled fast, defused clean.', effect: { form: 0.05, meters: { authority: 4, fans: 3 }, attr: { composure: 1 } } },
+          { id: 'lean-content', label: 'Milk it for content', desc: 'Do a whole video reacting to the drama', outcome: 'He turns the leak into its own episode and the views soar, but the dressing room decides he’ll say anything for a click.', effect: { earnings: 100, market: 3, greed: 2, form: -0.1, meters: { peers: -6, authority: -5, fans: 4 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'off-esports', title: 'The Roster', icon: '🕹️', category: 'offpitch',
+    minTurn: 115, maxTurn: 195, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'An esports outfit wants his name and his money on their org — a founding stake in a competitive gaming team, jerseys with his badge, a bootcamp house full of teenagers who’ve never kicked a ball. His agent smells the next big media vertical; his accountant smells burning cash.',
+        choices: [
+          { id: 'co-own', label: 'Take a founding stake', desc: 'Buy in big, name on the org, all in', outcome: 'He sinks a serious sum into the roster and turns up to their first LAN like a proud chairman. A whole new world, and a whole new drain on his attention.', effect: { earnings: -300, market: 3, greed: 1, form: -0.05, meters: { fans: 6, sponsors: 4 }, tag: 'esports-owner' }, next: 'grand-final' },
+          { id: 'small-angel', label: 'Be a small angel investor', desc: 'A modest cheque, no operational say', outcome: 'He puts a token amount in and lets the actual gamers run it. Skin in the game, none of the headaches.', effect: { earnings: -100, market: 1, meters: { sponsors: 2 } } },
+          { id: 'pass-esports', label: 'Stick to the grass', desc: 'One sport at a time is plenty', outcome: 'He decides he barely understands the football calendar as it is and leaves the joysticks to someone else.', effect: { greed: -1, form: 0.05, meters: { authority: 3 } } },
+        ],
+      },
+      'grand-final': {
+        id: 'grand-final',
+        prompt: 'His roster reaches a grand final that clashes with a crucial match week. The org begs him to fly out and sit in the crowd for the cameras; the manager has already noticed his head is somewhere near a games console.',
+        choices: [
+          { id: 'stay-focused', label: 'Watch from home', desc: 'Send support, stay with the squad', outcome: 'He sends the lads a video message and stays glued to his own preparation instead. The org sulks; his gaffer nods.', effect: { form: 0.05, meters: { authority: 4, peers: 2 } } },
+          { id: 'fly-out', label: 'Fly out for the final', desc: 'Be there in the arena, damn the fixture', outcome: 'He jets across for the spectacle, arrives back jet-lagged the day before kick-off, and plays like a man who slept on a plane.', effect: { earnings: 50, market: 2, greed: 1, form: -0.15, energy: -6, meters: { fans: 4, authority: -5 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'off-biopic', title: 'The Silver Screen', icon: '🎞️', category: 'offpitch',
+    minTurn: 130, maxTurn: 205, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'A film director with awards on his shelf wants him for a cameo in a big-budget sports drama — one scene, a few lines, his face on a cinema poster the size of a house. It’s glamorous, flattering, and a fortnight of his in-season time.',
+        choices: [
+          { id: 'take-role', label: 'Take the cameo', desc: 'Learn the lines, hit the red carpet', outcome: 'He spends two weeks on set discovering acting is harder than it looks, and his scene actually lands. Hollywood comes calling; his touch goes quiet for a bit.', effect: { earnings: 400, market: 4, greed: 1, form: -0.1, meters: { fans: 6, sponsors: 5 }, tag: 'screen-tested' }, next: 'premiere' },
+          { id: 'consult-only', label: 'Consult, don’t act', desc: 'Advise on the football, skip the camera', outcome: 'He offers to make the football look real without stepping in front of the lens himself. Useful, uncredited, undistracting.', effect: { earnings: 100, market: 1, meters: { authority: 3 } } },
+          { id: 'decline-role', label: 'Leave acting to actors', desc: 'His stage has grass on it', outcome: 'He tells the director he’d only embarrass himself and stays exactly where he belongs.', effect: { greed: -1, form: 0.05, meters: { authority: 3, peers: 2 } } },
+        ],
+      },
+      premiere: {
+        id: 'premiere',
+        prompt: 'The premiere lands the night before a fixture, black tie and flashbulbs and an afterparty that runs till dawn. The studio expects their new face; the manager expects him fresh.',
+        choices: [
+          { id: 'walk-carpet-leave', label: 'Walk the carpet, then vanish', desc: 'Do the photos, skip the party, home early', outcome: 'He does twenty minutes of poses, ducks the champagne, and is asleep before midnight. Professional to the last flashbulb.', effect: { market: 2, meters: { authority: 4, sponsors: 3 }, attr: { composure: 1 } } },
+          { id: 'full-hollywood', label: 'Live the Hollywood night', desc: 'Afterparty, the lot, sleep is for civilians', outcome: 'He drinks in the whole glittering night and rolls into training on fumes and a hangover. The photos are stunning; the legs are lead.', effect: { earnings: 50, market: 3, greed: 2, form: -0.15, energy: -7, meters: { fans: 3, authority: -6, partner: -3 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'off-fragrance', title: 'The Scent', icon: '🧴', category: 'offpitch',
+    minTurn: 120, maxTurn: 195, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'A luxury house wants to bottle him — a signature fragrance and grooming range, his bare torso on a department-store column, a name whispered in an advert that cost more than a striker. Vanity, aftershave, and an awful lot of money.',
+        choices: [
+          { id: 'launch-scent', label: 'Bottle the brand', desc: 'Torso on the billboard, name on the bottle', outcome: 'He poses oiled and brooding for a campaign that plasters him across every perfume hall, and the range shifts by the crate. Peak vanity, peak profile.', effect: { earnings: 500, market: 4, greed: 2, meters: { sponsors: 8, fans: 4 }, tag: 'fragrance-face' }, next: 'sniff-test' },
+          { id: 'grooming-only', label: 'Just the grooming line', desc: 'Practical products, keep the shirt on', outcome: 'He does a low-key range of razors and balms and refuses the topless column. Tasteful, tidy, and rather more him.', effect: { earnings: 250, market: 2, meters: { sponsors: 4, partner: 2 } } },
+          { id: 'no-scent', label: 'He won’t be a mannequin', desc: 'Not selling himself by the bottle', outcome: 'He decides a footballer oiled up in a shop window isn’t a look he needs and walks away from the lot.', effect: { greed: -1, form: 0.05, meters: { authority: 3, partner: 3 } } },
+        ],
+      },
+      'sniff-test': {
+        id: 'sniff-test',
+        prompt: 'The topless billboard goes up right by the training ground, and the dressing room is merciless — the nickname writes itself and follows him to every corner and free kick. The banter is affectionate, mostly, but relentless.',
+        choices: [
+          { id: 'laugh-along', label: 'Laugh along with the lads', desc: 'Bring bottles in, take the ribbing', outcome: 'He hands out samples in the changing room and cops the jokes with a grin. The nickname sticks but so does the goodwill.', effect: { market: 1, meters: { peers: 5, fans: 3 }, attr: { teamwork: 1 } } },
+          { id: 'get-precious', label: 'Get precious about it', desc: 'Bristle at the mockery, sulk in the corner', outcome: 'He takes the ribbing badly and snaps at a teammate over it, and suddenly the joke has teeth. A silly billboard souring a good room.', effect: { form: -0.05, meters: { peers: -5, authority: -2 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'off-paparazzi', title: 'The Long Lens', icon: '📸', category: 'offpitch',
+    minTurn: 105, maxTurn: 190, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'A photographer with a lens like a drainpipe has been parked outside his house for a week, papping his partner on the school run and his kids in the garden. The pictures aren’t scandalous — they’re just his family, sold by the frame, and he’s had enough.',
+        choices: [
+          { id: 'confront', label: 'Confront him at the gate', desc: 'Words on the doorstep, tell him to move', outcome: 'He marches out and has it out with the snapper, and of course a second lens catches him red-faced and jabbing a finger. The row becomes the story.', effect: { market: 2, form: -0.05, meters: { partner: 4, fans: -2, authority: -3 }, tag: 'lost-rag' }, next: 'front-page' },
+          { id: 'legal-route', label: 'Go the legal route', desc: 'Privacy lawyers, harassment order, calmly', outcome: 'He says nothing and lets solicitors slap a harassment notice on the man. Slower, costlier, and it holds up.', effect: { earnings: -100, meters: { partner: 6, family: 5 }, attr: { composure: 1 } } },
+          { id: 'grin-bear', label: 'Grin and bear it', desc: 'It comes with the territory — ignore him', outcome: 'He tells his partner to keep her head down and treats the lens as furniture. It works, but the resentment simmers at home.', effect: { meters: { partner: -3, fans: 1 } } },
+        ],
+      },
+      'front-page': {
+        id: 'front-page',
+        prompt: 'The finger-jabbing photo runs on the front page under a headline calling him a hot-headed hypocrite. A charity for press freedom wants a word; his partner just wants the whole thing to stop.',
+        choices: [
+          { id: 'turn-story', label: 'Turn it into a cause', desc: 'Speak up for family privacy, calmly and well', outcome: 'He gives one measured interview about kids and long lenses, and public sympathy swings hard his way. A bad photo turned into a fair point.', effect: { market: 1, meters: { fans: 6, family: 5, partner: 4 }, attr: { leadership: 1 } } },
+          { id: 'feud-on', label: 'Keep the feud burning', desc: 'Trade barbs with the paper for a fortnight', outcome: 'He keeps sparring publicly with the tabloid and it keeps the pictures selling. The war entertains everyone but the people in his house.', effect: { market: 2, greed: 1, form: -0.05, meters: { partner: -6, fans: -2 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'off-supercars', title: 'The Garage', icon: '🏎️', category: 'offpitch',
+    minTurn: 115, maxTurn: 195, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The first big cheque cleared and now there’s a dealer on the phone every week — a matte-black hypercar, a limited run, delivered on a flatbed with a bow. The garage could become a gallery. The fans on the food-bank end of town might not see it that way.',
+        choices: [
+          { id: 'collect', label: 'Build the collection', desc: 'One of everything, engines and all', outcome: 'He fills a warehouse with growling metal and posts the walk-round, and the timeline splits between envy and eye-rolls. Beautiful machines, tricky optics.', effect: { earnings: -400, market: 3, greed: 3, meters: { fans: -4, peers: 3 }, tag: 'petrolhead' }, next: 'speeding' },
+          { id: 'one-toy', label: 'Just the one dream car', desc: 'A single indulgence, kept sensible', outcome: 'He buys the one car he genuinely loves and stops there, garaging it more than he drives it. A treat, not a habit.', effect: { earnings: -150, market: 1, greed: 1, meters: { partner: 2 } } },
+          { id: 'sensible-car', label: 'Keep driving the sensible one', desc: 'Money in the bank, not on the drive', outcome: 'He keeps the same understated motor and quietly invests the rest. Nobody films a man in a five-year-old estate.', effect: { greed: -2, form: 0.05, meters: { family: 4, authority: 3 }, tag: 'sound-money' } },
+        ],
+      },
+      speeding: {
+        id: 'speeding',
+        prompt: 'Inevitably, a speed camera catches one of them doing a frankly heroic number on a dual carriageway, and the story writes itself alongside a photo of the whole gleaming fleet. Points, a fine, and a lecture from the club’s image people.',
+        choices: [
+          { id: 'contrite', label: 'Take it on the chin', desc: 'Plead guilty, apologise, sell a car for charity', outcome: 'He pays the fine, does the driving-awareness course without complaint, and auctions one motor for a road-safety charity. Contrition well spent.', effect: { earnings: 100, greed: -2, market: 1, meters: { fans: 5, authority: 3 }, attr: { composure: 1 } } },
+          { id: 'no-lesson', label: 'Shrug it off', desc: 'Pay the fine, keep the foot heavy', outcome: 'He treats the fine as a rounding error and is snapped speeding again within the month. The club’s patience thins visibly.', effect: { market: 1, greed: 1, form: -0.05, meters: { authority: -5, fans: -3 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'off-political-endorsement', title: 'The Rosette', icon: '🗳️', category: 'offpitch',
+    minTurn: 130, maxTurn: 200, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'An election is looming and a party’s people come courting hard — they want him on a platform, a photo with the candidate, that famous face lending them a bit of the terrace. Half his fans vote one way, half the other, and every one of them is watching.',
+        choices: [
+          { id: 'endorse', label: 'Pin on the rosette', desc: 'Back the candidate, share a stage', outcome: 'He stands on the platform and says the words, and instantly he’s a hero to one half of the ground and a traitor to the other. Football just got political.', effect: { market: 3, greed: 1, form: -0.05, meters: { fans: -4, sponsors: -3, authority: 2 }, tag: 'took-a-side' }, next: 'fallout' },
+          { id: 'issue-not-party', label: 'Back a cause, not a party', desc: 'Champion the issue, skip the rosette', outcome: 'He declines the party but throws his weight behind the actual issue they were fighting over. Principled, and much harder to weaponise.', effect: { market: 1, meters: { fans: 4, authority: 4 }, attr: { leadership: 1 } } },
+          { id: 'stay-neutral', label: 'Stay out of it', desc: 'His job is football, not politics', outcome: 'He tells them politely that he’ll not tell anyone how to vote and keeps the dressing room a neutral country.', effect: { greed: -1, form: 0.05, meters: { peers: 4, authority: 3 } } },
+        ],
+      },
+      fallout: {
+        id: 'fallout',
+        prompt: 'The candidate he backed gets caught saying something ugly on a hot mic, and now his own smiling face is stapled to it in every share and screenshot. His people are asking whether he stands by the man or cuts him loose.',
+        choices: [
+          { id: 'distance', label: 'Condemn and distance', desc: 'Denounce the remark, step well back', outcome: 'He puts out a firm statement disowning the comment and makes clear it isn’t what he signed up for. The damage scabs over.', effect: { market: 1, meters: { fans: 3, authority: 3 }, attr: { composure: 1 } } },
+          { id: 'loyal-error', label: 'Stand by him regardless', desc: 'Loyalty over the storm, ride it out', outcome: 'He defends the candidate out of stubborn loyalty and the association hardens around him. A costly lesson in whose hand you shake.', effect: { market: 2, greed: 1, form: -0.1, meters: { fans: -6, sponsors: -4 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'off-mansion-build', title: 'Planning Permission', icon: '🏗️', category: 'offpitch',
+    minTurn: 135, maxTurn: 205, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'He’s bought a slab of green-belt land and drawn up plans for a dream home — pool, cinema, a five-a-side barn out back. Then the parish council digs in, the neighbours form a residents’ association, and the local paper decides a footballer’s mansion is front-page news.',
+        choices: [
+          { id: 'fight-plan', label: 'Fight the objections', desc: 'Barristers, appeals, build it as drawn', outcome: 'He lawyers the plans through appeal after appeal and eventually wins, but the village now hates the sight of him and the saga drags for a year.', effect: { earnings: -300, market: 2, greed: 2, form: -0.05, meters: { fans: -3, family: -2, authority: -2 }, tag: 'planning-war' }, next: 'neighbours' },
+          { id: 'compromise', label: 'Work with the council', desc: 'Scale it back, plant trees, win them round', outcome: 'He trims the design, hires a local architect, and takes the neighbours a scale model over tea. Slower, cheaper on goodwill, and it gets built.', effect: { earnings: -150, meters: { family: 4, authority: 3 }, attr: { composure: 1 } } },
+          { id: 'buy-elsewhere', label: 'Buy something already built', desc: 'Skip the war, buy a finished house', outcome: 'He decides the fight isn’t worth a decade of grudges and buys a done-up place across the county instead.', effect: { earnings: -200, greed: -1, form: 0.05, meters: { partner: 4 } } },
+        ],
+      },
+      neighbours: {
+        id: 'neighbours',
+        prompt: 'Construction traffic churns the lane to mud, a protest banner goes up on the church railings, and a viral clip shows a pensioner in wellies calling him a wrecker of the countryside. The club’s community team would rather he weren’t a villain in his own village.',
+        choices: [
+          { id: 'mend-fences', label: 'Mend fences literally', desc: 'Fix the lane, fund the village hall roof', outcome: 'He resurfaces the churned lane at his own cost and quietly pays for the village hall roof, and the banners come down. Bridges rebuilt with tarmac.', effect: { earnings: -100, greed: -1, market: 1, meters: { fans: 5, family: 4 }, attr: { leadership: 1 } } },
+          { id: 'wall-up', label: 'Build the wall higher', desc: 'Gates, hedges, shut the village out', outcome: 'He answers the protest with taller gates and denser hedging and simply stops speaking to the place. Peace of a cold, resented kind.', effect: { earnings: -150, greed: 1, meters: { fans: -3, family: -2 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'off-dressing-room-dance', title: 'The Trend', icon: '💃', category: 'offpitch',
+    minTurn: 100, maxTurn: 185, weight: 3, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The squad’s youngest lads have a little dressing-room dance they film after every win, and this week they’ve dragged him into the middle of it, phone already rolling. It’s daft, it’s harmless, and it’s about to be seen by ten million people if he lets it post.',
+        choices: [
+          { id: 'go-viral', label: 'Nail the dance', desc: 'Commit, learn the steps, let it fly', outcome: 'He throws himself into the routine with unexpected rhythm and the clip detonates online overnight. Suddenly the veteran is the most relatable man in the league.', effect: { market: 4, greed: 1, meters: { fans: 8, peers: 6 }, attr: { flair: 1 }, tag: 'dance-viral' }, next: 'brand-calls' },
+          { id: 'awkward-cameo', label: 'Do it, badly, on purpose', desc: 'Shuffle through it, laugh it off', outcome: 'He plants himself and does a deliberately hopeless dad-dance, and the wholesome awkwardness of it charms everyone anyway.', effect: { market: 2, meters: { fans: 4, peers: 4 } } },
+          { id: 'wave-off', label: 'Wave the camera away', desc: 'Leave the dancing to the kids', outcome: 'He grins, ruffles a young lad’s hair, and ducks out of frame. No clip, no fuss, dignity fully intact.', effect: { form: 0.05, meters: { peers: 3, authority: 2 } } },
+        ],
+      },
+      'brand-calls': {
+        id: 'brand-calls',
+        prompt: 'Off the back of the viral clip, brands are queuing up to have him do the dance in their adverts, and a chat show wants it live. It’s a lot of money for a jig, but a captain doing sponsored TikToks all week is a certain kind of look.',
+        choices: [
+          { id: 'keep-it-pure', label: 'Keep it just for the lads', desc: 'Turn the brands down, keep it dressing-room only', outcome: 'He tells the sponsors the dance belongs to the squad, not a soft-drink account, and the fans respect him twice as hard for it.', effect: { market: 1, greed: -1, meters: { fans: 6, peers: 5, authority: 3 } } },
+          { id: 'cash-the-dance', label: 'Cash in on the moment', desc: 'Monetise every wiggle while it’s hot', outcome: 'He flogs the routine to three brands in a week and films sponsored versions between sessions. The money’s quick; the shine wears off just as fast.', effect: { earnings: 250, market: 2, greed: 3, form: -0.1, meters: { peers: -3, authority: -3, sponsors: 5 } } },
+        ],
+      },
+    },
+  },
 ];

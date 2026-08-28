@@ -576,4 +576,220 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
       },
     },
   },
+
+  // 24 — a SECOND CHILD arriving in the middle of a title run
+  {
+    id: 'rel-second-child', title: 'Two Under Three, Top of the League', icon: '🍼', category: 'relationship',
+    minTurn: 78, maxTurn: 185, weight: 3, first: 'due',
+    beats: {
+      due: {
+        id: 'due',
+        prompt: 'The second one is due any week now, and the toddler at home has only just learned to say his name off the telly. The club is three points clear with a run-in that could define a career, and the manager has quietly told the squad there are no days off between now and May. She holds her belly and asks, not unkindly, whether he can actually be a dad twice over and a footballer chasing a medal all at once.',
+        choices: [
+          { id: 'carve-time', label: 'Ring-fence the family time', desc: 'Bath and bedtime are sacred, medal or no medal', outcome: 'He tells the gaffer he’ll be there for every session and gone the second it ends, and he keeps to it. Home stays a home, and he plays lighter for knowing it.', effect: { meters: { partner: 16, family: 12 }, attr: { composure: 2, teamwork: 1 }, form: 0.05, tag: 'two-kids' }, next: 'sleepless' },
+          { id: 'all-in-title', label: 'Throw everything at the title', desc: 'Win it now — make it up to them all summer', outcome: 'He promises her the whole close-season and buries himself in the run-in, missing the scan and the first kicks against her ribs. The lead holds; the guilt grows heavier than the trophy will be.', effect: { meters: { partner: -8, family: 2 }, attr: { aggression: 1, stamina: 1 }, form: 0.06, tag: 'two-kids' }, next: 'sleepless' },
+        ],
+      },
+      sleepless: {
+        id: 'sleepless',
+        prompt: 'The baby comes on a Wednesday and by Saturday he’s running on ninety minutes of sleep with a title decider in front of forty thousand people. His head is full of nappies and injury time, and the toddler has decided, of course, that this is the week to stop sleeping too.',
+        choices: [
+          { id: 'lean-on-her', label: 'Ask her to carry the nights', desc: 'Beg the sleep he needs, promise to repay it', outcome: 'She takes the 3am shifts so he can play, and he wins the decider on fumes and dedicates it to a woman who never gets the credit. He spends June paying the debt back in full.', effect: { meters: { partner: 10, family: 8, fans: 4 }, attr: { composure: 1 }, form: 0.05 } },
+          { id: 'share-load', label: 'Split every night down the middle', desc: 'Half the feeds are his, decider or not', outcome: 'He refuses to be the dad who only shows up for the easy bits, taking his turn on the feeds and going into the biggest game half-empty. He’s worse for it on the day — and a better man off it.', effect: { meters: { partner: 18, family: 14 }, attr: { teamwork: 2, leadership: 1 }, form: -0.05 } },
+        ],
+      },
+    },
+  },
+
+  // 25 — a SEPARATION and co-parenting from the road
+  {
+    id: 'rel-coparenting', title: 'Every Other Weekend, A Different City', icon: '🧳', category: 'relationship',
+    minTurn: 90, maxTurn: 200, weight: 3, first: 'split',
+    beats: {
+      split: {
+        id: 'split',
+        prompt: 'The marriage has finally, quietly ended — no scandal, no headlines, just two tired people who ran out of road. What guts him isn’t the papers, it’s the calendar: away games, training camps, a life that was never built for a dad who now only gets his daughter every other weekend. She proposes they keep it civil, for the little one. He has to decide what kind of separated father he’s going to be.',
+        choices: [
+          { id: 'build-around-her', label: 'Rebuild his life around the access days', desc: 'Structure the whole season so he never misses one', outcome: 'He hands his agent a hard rule — no move, no camp, no commitment that eats a weekend with his girl — and reorders a career around a six-year-old’s diary. It costs him options; it saves him his daughter.', effect: { meters: { family: 18, partner: 6, agent: -6 }, attr: { leadership: 2, composure: 1 }, tag: 'coparenting' }, next: 'handover' },
+          { id: 'money-not-time', label: 'Provide from a distance', desc: 'Pay for everything, see her when football allows', outcome: 'He tells himself the best thing he can do is earn, and lets the maintenance stand in for the mornings. The bank balance grows; the little voice on the phone gets a fraction more distant each week.', effect: { meters: { family: -6 }, earnings: 12, attr: { aggression: 1 }, tag: 'coparenting' }, next: 'handover' },
+        ],
+      },
+      handover: {
+        id: 'handover',
+        prompt: 'A year in, the handovers have found a rhythm — until his ex meets someone, a decent bloke the girl has started to like, and mentions moving an hour further away for his job. Suddenly the fragile arithmetic of weekends is under threat, and the old jealousy rises hot in his chest.',
+        choices: [
+          { id: 'be-bigger', label: 'Put his daughter above his pride', desc: 'Welcome the new bloke, make the distance work', outcome: 'He swallows the jealousy, shakes the man’s hand, and works out a longer drive rather than a shorter temper. His girl gets two homes that don’t hate each other — the greatest gift he can still give her.', effect: { meters: { family: 16, partner: 10 }, attr: { composure: 2, leadership: 1 }, form: 0.05 } },
+          { id: 'dig-in', label: 'Fight to keep her close', desc: 'Lawyers, letters, hold the line on the arrangement', outcome: 'He digs in and makes the move a battle, and wins the miles back — but the handovers go cold and his daughter learns to read the frost in the driveway. A victory that doesn’t feel like one.', effect: { meters: { family: 4, partner: -10 }, attr: { aggression: 2 }, earnings: -8 } },
+        ],
+      },
+    },
+  },
+
+  // 26 — the GRANDPARENT who raised him, now ageing
+  {
+    id: 'rel-grandparent', title: 'The Nan Who Raised Him', icon: '🫖', category: 'relationship',
+    minTurn: 44, maxTurn: 170, weight: 3, first: 'fading',
+    beats: {
+      fading: {
+        id: 'fading',
+        prompt: 'His nan raised him single-handed after his parents couldn’t — sold her wedding ring for his first proper boots, stood on frozen touchlines for a decade. Now she’s eighty-one and starting to muddle his name with his grandad’s, and the doctors use the word he’s been dreading. She still won’t hear of leaving the terraced house she’s lived in for fifty years.',
+        choices: [
+          { id: 'move-her-close', label: 'Move her near him', desc: 'A place round the corner, carers, whatever it takes', outcome: 'He gently talks her out of the old house and into a bright flat two streets from the ground, and starts calling in every single day. She grumbles about the fuss and secretly loves every minute.', effect: { meters: { family: 18, authority: -2 }, earnings: -10, attr: { leadership: 1, composure: 1 }, tag: 'nan-close' }, next: 'goodbye' },
+          { id: 'honour-wishes', label: 'Let her keep her home', desc: 'Bring the care to her, respect her stubborn pride', outcome: 'He can’t bring himself to uproot the woman who never uprooted him, so he wires the old house with help and drives the long road to her instead. Her dignity stays intact; his diary does not.', effect: { meters: { family: 14 }, attr: { composure: 2, teamwork: 1 }, tag: 'nan-home' }, next: 'goodbye' },
+        ],
+      },
+      goodbye: {
+        id: 'goodbye',
+        prompt: 'On one of her clearer afternoons she takes his hand across the kitchen table, calls him by his right name, and tells him she doesn’t need to see him lift another cup — she just wants to know he’ll be kind, and that he remembers where he came from. There’s a match that night the whole country is watching.',
+        choices: [
+          { id: 'stay-with-her', label: 'Stay the afternoon', desc: 'Let the game wait — she comes first', outcome: 'He rings the club, takes the fine, and sits with her till the light goes, listening to the old stories one more time. He’ll never regret the game he missed for the hour he kept.', effect: { meters: { family: 20, authority: -6 }, attr: { composure: 2, leadership: 1 } } },
+          { id: 'play-for-her', label: 'Play it as her tribute', desc: 'Go and play the way she taught him to', outcome: 'She shoos him out the door, so he plays with her voice in his head and points to the sky at the whistle. She watches from her chair, prouder than the boots she once sold could ever have told her.', effect: { meters: { family: 12, fans: 8 }, attr: { leadership: 1, composure: 1 }, form: 0.06 } },
+        ],
+      },
+    },
+  },
+
+  // 27 — managing a SUPERSTAR TEAMMATE'S ego as captain
+  {
+    id: 'rel-superstar-ego', title: 'The Galáctico in the Corner', icon: '👑', category: 'relationship',
+    minTurn: 110, maxTurn: 200, weight: 2, first: 'signing',
+    beats: {
+      signing: {
+        id: 'signing',
+        prompt: 'He’s the captain now, and the club has just spent a national debt on the best player on the planet — a man who arrives with three publicists, his own chef, and a habit of skipping the warm-down while the rest run. The dressing room is watching to see whether the armband means anything against a hundred-million-pound ego.',
+        choices: [
+          { id: 'set-standard', label: 'Hold him to the same line', desc: 'Same rules for the star as the kids — quietly, firmly', outcome: 'He pulls the superstar aside and lays it out man to man: greatness earns respect, it doesn’t buy a pass on the graft. The star bristles, then stays for the warm-down, and the room exhales.', effect: { meters: { authority: 8, peers: 12 }, attr: { leadership: 2, composure: 1 }, tag: 'captain-line' }, next: 'clash' },
+          { id: 'let-him-be', label: 'Let the genius be a genius', desc: 'Different rules for a different animal — pick battles', outcome: 'He decides a talent like that runs on its own rails and lets the small stuff slide to keep him sweet. The magic flows on Saturdays — and a few of the younger lads quietly wonder what the rules are actually for.', effect: { meters: { peers: -4, authority: -2 }, attr: { composure: 1 }, form: 0.05, tag: 'captain-soft' }, next: 'clash' },
+        ],
+      },
+      clash: {
+        id: 'clash',
+        prompt: 'It comes to a head in a title six-pointer: the star ignores a teammate clean through to shoot for his own hat-trick, and it costs a goal and nearly the game. In the tunnel afterward the young lad is in tears and the superstar is shrugging. Every eye in the room turns to the captain.',
+        choices: [
+          { id: 'call-out', label: 'Check him in front of everyone', desc: 'The team is bigger than any name — say it out loud', outcome: 'He tells the star, in front of the room, that the badge doesn’t bend for anyone, and backs the wounded youngster to his face. The superstar sulks for a week, then plays the most selfless month of his career.', effect: { meters: { peers: 16, authority: 6 }, attr: { leadership: 2, aggression: 1 }, form: 0.06 } },
+          { id: 'protect-star', label: 'Manage him behind closed doors', desc: 'Keep the peace publicly, have the word privately', outcome: 'He shields the star from the room and takes it up with him alone, keeping the machine running smoothly. It works, mostly — but the young lad learns that some names get protected and files it away.', effect: { meters: { peers: 4, authority: 8 }, attr: { composure: 2, leadership: 1 } } },
+        ],
+      },
+    },
+  },
+
+  // 28 — the LOYAL KITMAN who's been there since he was a boy
+  {
+    id: 'rel-kitman', title: 'The Man Who Washes the Shirts', icon: '🧺', category: 'relationship',
+    minTurn: 60, maxTurn: 195, weight: 2, first: 'pushed-out',
+    beats: {
+      'pushed-out': {
+        id: 'pushed-out',
+        prompt: 'Old Terry has laid out his kit since he was a trembling twelve-year-old on trial — knows his boot size, his superstitions, which peg he likes. Now a slick new sporting director is “modernising” the backroom and Terry, at sixty-three with no qualifications and forty years of service, is on the list to be quietly let go. Terry doesn’t know yet.',
+        choices: [
+          { id: 'fight-for-terry', label: 'Go to the board for him', desc: 'Spend his own capital to save the old man’s job', outcome: 'He walks into the director’s office and makes Terry’s job the hill he’ll die on, reminding them what loyalty actually costs to replace. It ruffles feathers he needs unruffled — and Terry keeps his pegs.', effect: { meters: { authority: -6, peers: 10, fans: 4 }, attr: { leadership: 2, composure: 1 }, tag: 'saved-terry' }, next: 'testimonial' },
+          { id: 'soft-landing', label: 'Arrange a soft landing', desc: 'Can’t save the job — sort the man out instead', outcome: 'He can’t stop the modernising machine, so he quietly tops up Terry’s pension and throws him a send-off the players actually turn up to. Not the win he wanted — but the old man leaves with his head high.', effect: { meters: { peers: 8, family: 2 }, earnings: -6, attr: { composure: 2 }, tag: 'terry-retired' }, next: 'testimonial' },
+        ],
+      },
+      testimonial: {
+        id: 'testimonial',
+        prompt: 'However it fell, the club throws a testimonial for the old servant, and the sporting director wants a glossy corporate do with sponsors in the boxes. Terry, cornered by a reporter, mumbles that he’d honestly just like a cup of tea with the lads he’s known. They ask the club’s biggest name which way it goes.',
+        choices: [
+          { id: 'his-day', label: 'Make it Terry’s kind of day', desc: 'Bin the corporate gloss — tea, lads, laughs', outcome: 'He overrules the flash and fills the players’ lounge with three generations of lads Terry kitted out, and the old man weeps into a proper mug of tea. Some send-offs aren’t for selling.', effect: { meters: { peers: 14, fans: 8, sponsors: -4 }, attr: { leadership: 2, composure: 1 } } },
+          { id: 'big-send-off', label: 'Give him the grand send-off', desc: 'A packed stadium roaring for the kitman', outcome: 'He lets the club go big and gets the whole ground to sing the name of the man who never got his name sung. It’s more than Terry asked for — and the old boy floats for the rest of his days on it.', effect: { meters: { fans: 12, sponsors: 6, peers: 6 }, attr: { leadership: 1 }, form: 0.05 } },
+        ],
+      },
+    },
+  },
+
+  // 29 — mentoring a FOREIGN SIGNING through culture shock
+  {
+    id: 'rel-foreign-signing', title: 'The New Boy Who Can’t Read the Menu', icon: '🌍', category: 'relationship',
+    minTurn: 70, maxTurn: 190, weight: 3, first: 'lost',
+    beats: {
+      lost: {
+        id: 'lost',
+        prompt: 'The club’s record signing is a shy nineteen-year-old from the other side of the world who’s never left home, can’t order a coffee in English, and eats alone in a hotel because he doesn’t know how anything works. His feet are magic and his head is a thousand miles away, and the dressing room’s banter is only making it worse. He’s already the senior pro the boy watches for a cue.',
+        choices: [
+          { id: 'take-him-in', label: 'Take him in properly', desc: 'Dinners at his, help with the flat, teach him the ropes', outcome: 'He starts having the kid round for meals and drives him to viewings and the bank, translating a whole strange country a day at a time. The boy blossoms, and the club’s golden asset finally starts to smile.', effect: { meters: { peers: 14, authority: 6 }, attr: { teamwork: 2, leadership: 1 }, tag: 'settling-newboy' }, next: 'homesick' },
+          { id: 'shield-banter', label: 'Just shield him from the sharks', desc: 'Keep the worst wind-ups off him, let him find his feet', outcome: 'He can’t adopt the lad, but he sits between him and the crueller jokers and gives him a nod when he’s doing right. A smaller kindness — but the boy stops flinching every time the room laughs.', effect: { meters: { peers: 8 }, attr: { leadership: 1, composure: 1 }, tag: 'shielded-newboy' }, next: 'homesick' },
+        ],
+      },
+      homesick: {
+        id: 'homesick',
+        prompt: 'Three months in, the boy knocks on his door at midnight, bag half-packed, homesickness and a couple of bad games convincing him he wants to hand it all back and fly home. His family have his ticket booked. He’s asking, in broken sentences, whether he made a terrible mistake.',
+        choices: [
+          { id: 'talk-him-round', label: 'Talk him off the ledge', desc: 'Sit up all night, share his own first-move fear', outcome: 'He tells the boy about his own homesick first move and the wall everyone hits at three months, and makes tea until the panic passes. The ticket goes unused, and a career the club paid a fortune for is quietly saved.', effect: { meters: { peers: 16, authority: 6, sponsors: 4 }, attr: { leadership: 2, composure: 1 }, form: 0.05 } },
+          { id: 'let-him-choose', label: 'Tell him the door’s open', desc: 'No pressure — home is allowed to win', outcome: 'He refuses to guilt the kid into staying and tells him plainly that going home isn’t failure if it’s where his heart is. The boy sleeps on it, and chooses to stay — because for once nobody made him.', effect: { meters: { peers: 12, family: 2 }, attr: { composure: 2, leadership: 1 } } },
+        ],
+      },
+    },
+  },
+
+  // 30 — the CHAIRMAN who treats him like a son (or a pawn)
+  {
+    id: 'rel-chairman', title: 'The Owner’s Favourite Son', icon: '🎩', category: 'relationship',
+    minTurn: 85, maxTurn: 200, weight: 2, first: 'anointed',
+    beats: {
+      anointed: {
+        id: 'anointed',
+        prompt: 'The billionaire owner has taken a shine to him — dinners on the yacht, an arm round the shoulder, talk of “you’re the son I never had” and a future on the board when the boots come off. It’s flattering and warm and just a little too tight, and the rest of the dressing room has started calling him the teacher’s pet. He can feel a leash being fitted, velvet-lined but a leash all the same.',
+        choices: [
+          { id: 'keep-distance', label: 'Keep a respectful distance', desc: 'Grateful, loyal — but his own man, not a mascot', outcome: 'He thanks the owner warmly and then quietly declines the third yacht weekend, making sure the lads see him graft like one of them. The chairman is faintly wounded; the dressing room quietly welcomes him back.', effect: { meters: { authority: 4, peers: 10 }, attr: { composure: 2, leadership: 1 }, tag: 'own-man' }, next: 'ask' },
+          { id: 'embrace-favour', label: 'Embrace the patronage', desc: 'Take the ear of power — use it for good, he tells himself', outcome: 'He leans into the friendship, enjoying the access and the whispered promises of a boardroom seat. The privileges pile up, and so does the quiet distance between him and the men he shares a bench with.', effect: { meters: { authority: 12, peers: -6, sponsors: 6 }, attr: { leadership: 1 }, tag: 'chairmans-man' }, next: 'ask' },
+        ],
+      },
+      ask: {
+        id: 'ask',
+        prompt: 'The bill for the favour finally lands. The owner asks him, son to father, to front the cameras and back a deeply unpopular decision — a ticket-price hike, or selling a beloved teammate — knowing the fans will believe it from him. The warmth in the room suddenly has a price tag on it.',
+        choices: [
+          { id: 'refuse', label: 'Refuse to be his mouthpiece', desc: 'Loyalty isn’t a blank cheque — say no', outcome: 'He tells the owner, gently but plainly, that he won’t lie to the people in the stands for anyone. The “son” talk cools overnight and the yacht invites dry up — and he sleeps like a man who still owns himself.', effect: { meters: { authority: -8, fans: 14, peers: 8 }, attr: { leadership: 2, composure: 1 } } },
+          { id: 'do-his-bidding', label: 'Do as the old man asks', desc: 'Protect the relationship, take the fans’ heat', outcome: 'He stands at the podium and sells the unpopular line, and the owner’s hand stays warm on his shoulder. The board seat edges closer; a section of the terraces that once adored him never quite sounds the same again.', effect: { meters: { authority: 12, fans: -12 }, earnings: 10, attr: { composure: 1 } } },
+        ],
+      },
+    },
+  },
+
+  // 31 — a JEALOUS FRIEND from home who resents his success
+  {
+    id: 'rel-hometown-friend', title: 'The Mate Who Stayed Behind', icon: '🍺', category: 'relationship',
+    minTurn: 50, maxTurn: 180, weight: 3, first: 'resentment',
+    beats: {
+      resentment: {
+        id: 'resentment',
+        prompt: 'His oldest mate from the estate — best man material, the one who was there before any of it — has curdled. Every visit home now comes with a barb: the flash car, the “forgetting where you’re from,” a photo flogged to a paper that could only have come from him. Underneath the digs is a man watching his best friend live the life he thought would be his too.',
+        choices: [
+          { id: 'confront-gently', label: 'Have it out, honestly', desc: 'Name the jealousy, offer a hand not a fist', outcome: 'He sits his mate down and says the quiet thing out loud — that he misses him and the resentment is eating them both. The lad breaks, admits he’s been drowning in envy, and something twenty years old gets a chance to mend.', effect: { meters: { peers: 12, family: 4 }, attr: { composure: 2, leadership: 1 }, tag: 'mate-confronted' }, next: 'test' },
+          { id: 'buy-peace', label: 'Try to smooth it with generosity', desc: 'Sort him a job, a loan, make the gap go away', outcome: 'He tries to fix the friendship with his wallet — a job for the lad, a hand with the rent — hoping money can close a wound that money opened. It quiets the digs for now, but it doesn’t touch what’s underneath.', effect: { meters: { peers: 4 }, earnings: -8, attr: { composure: 1 }, tag: 'mate-bought' }, next: 'test' },
+        ],
+      },
+      test: {
+        id: 'test',
+        prompt: 'The friendship gets its real test when the mate lands in genuine trouble — money owed to the wrong people, or a story he could sell about the old days that would cash in for years. He turns up at the door, ashamed, needing help and holding, whether he means to or not, a knife to the friendship’s throat.',
+        choices: [
+          { id: 'stand-by-him', label: 'Stand by him anyway', desc: 'Bail him out, trust the boy he grew up with', outcome: 'He clears the debt and looks his mate dead in the eye, choosing the twelve-year-old he kicked a ball with over the bitter man in front of him. The lad weeps, tears up the number of the journalist, and comes home to himself.', effect: { meters: { peers: 16, family: 6 }, earnings: -10, attr: { leadership: 2, composure: 1 }, form: 0.05 } },
+          { id: 'cut-cord', label: 'Finally let him go', desc: 'Some friendships can’t survive the envy — walk away', outcome: 'He decides he can’t keep bleeding for a man who resents him for surviving, and quietly closes the door for good. It aches like losing a limb — but he stops flinching every time his phone lights up.', effect: { meters: { peers: -6, family: 2 }, attr: { composure: 2, aggression: 1 } } },
+        ],
+      },
+    },
+  },
+
+  // 32 — a young ACADEMY KEEPER he takes under his wing
+  {
+    id: 'rel-academy-keeper', title: 'The Kid Between the Sticks', icon: '🧤', category: 'relationship',
+    minTurn: 100, maxTurn: 195, weight: 2, first: 'howler',
+    beats: {
+      howler: {
+        id: 'howler',
+        prompt: 'The academy’s teenage goalkeeper — all limbs and nerves and freakish reach — has just gifted the reserves a howler that’s doing the rounds online, and the poor lad looks like he wants the turf to swallow him whole. Keepers live and die alone out there, and this one has nobody in his corner. As the senior man, a word from him would carry.',
+        choices: [
+          { id: 'pick-him-up', label: 'Pick the boy up', desc: 'Extra sessions, drill the demons out, rebuild his head', outcome: 'He starts staying behind to fire shots at the kid long after everyone’s gone, teaching him that the great ones are the ones who forget the last mistake fastest. Slowly, the flinch leaves the boy’s hands.', effect: { meters: { peers: 10, authority: 6 }, attr: { keeping: 2, leadership: 1 }, tag: 'keeper-mentor' }, next: 'debut' },
+          { id: 'toughen-up', label: 'Tell him to grow a skin', desc: 'The internet’s cruel — learn to not care, fast', outcome: 'He tells the lad bluntly that keepers get remembered for their worst day and he’d better get used to it, then leaves him to it. It’s a hard lesson honestly given — and the boy either hardens or hides.', effect: { meters: { peers: 2, authority: 4 }, attr: { keeping: 1, aggression: 1 }, tag: 'keeper-warned' }, next: 'debut' },
+        ],
+      },
+      debut: {
+        id: 'debut',
+        prompt: 'Two seasons on the boy is the emergency call-up for a cup tie, thrown in at eighteen with the first team’s number one crocked. He’s green in the tunnel, hunting for the one senior face he trusts. Late in the game the same shot that haunted him is coming again — and this time the whole ground is watching.',
+        choices: [
+          { id: 'steady-him', label: 'Settle the young keeper', desc: 'A word before kickoff, a shout in the storm', outcome: 'He gets in the boy’s ear at kickoff and organises the wall in front of him all night, and when the shot comes the kid catches it clean and roars. Everything he drilled into those young hands holds firm on the biggest stage.', effect: { meters: { peers: 12, authority: 8, fans: 6 }, attr: { keeping: 1, leadership: 2 }, form: 0.06 } },
+          { id: 'trust-work', label: 'Trust the work and step back', desc: 'Say nothing — let the boy own the moment', outcome: 'He decides the lad needs to feel it alone and gives him only a nod, trusting the hours to do the talking. The keeper wobbles early, then makes the save of his young life on his own terms — and grows a foot taller for it.', effect: { meters: { peers: 8, authority: 4 }, attr: { keeping: 1, leadership: 1 } } },
+        ],
+      },
+    },
+  },
 ];
