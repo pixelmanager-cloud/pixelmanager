@@ -246,14 +246,18 @@ export function lifeAction(tags: string[], id: string, avoid?: ReadonlySet<strin
   return pool[start]; // every variant already taken (hand bigger than the pool) — fall back to the stable pick
 }
 
-// Deterministic, no-near-repeat pick: with `stride` coprime to the pool length, consecutive turns walk
-// the WHOLE pool before any entry repeats, so scenario fragments can't recombine verbatim a few turns
-// apart (PT-9/PT-42). `salt` (from the career seed) rotates each career's starting point so two careers
-// don't read identically. Strides 7/11/13 are coprime to every pool length in this file.
+const gcd = (a: number, b: number): number => { while (b) { [a, b] = [b, a % b]; } return a; };
+// Deterministic, no-near-repeat pick: consecutive turns walk the WHOLE pool before any entry repeats, so
+// flavour lines can't recycle a few turns apart (PT-9/PT-42/PT-101). `salt` (from the career seed) rotates
+// each career's start so two careers don't read identically. The effective stride is forced COPRIME to the
+// pool length — otherwise a stride that shares a factor with n (e.g. stride 13 on a 13-line bank) degenerates
+// to a constant index and the same line prints every turn (the PT-104 regression).
 function pickByTurn<T>(arr: readonly T[], turn: number, stride: number, salt: number): T {
   const n = arr.length;
   if (n <= 1) return arr[0];
-  const idx = (((turn * stride + salt) % n) + n) % n;
+  let s = (((stride % n) + n) % n) || 1;
+  while (gcd(s, n) !== 1) s = (s % n) + 1; // bump to the nearest stride coprime to n (always terminates: gcd(1,n)=1)
+  const idx = (((turn * s + salt) % n) + n) % n;
   return arr[idx];
 }
 
@@ -453,7 +457,7 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
   // the personality closer is a positive-leaning observation, so only append it on a GOOD outcome — on a
   // failed one it read as praise for the moment that just went wrong (e.g. "the engine doesn't cut out"
   // right after "it fell apart completely") (PT-102). The temperament is still felt via the adverb above.
-  const flavor = (b === 'triumph' || b === 'good') && rng() < 0.6 && PERSONALITY[ctx.personalityId] ? ' ' + pick(PERSONALITY[ctx.personalityId]) : '';
+  const flavor = (b === 'triumph' || b === 'good') && rng() < 0.6 && PERSONALITY[ctx.personalityId] ? ' ' + pickByTurn(PERSONALITY[ctx.personalityId], turn, 3, salt) : ''; // strided so the small persona bank doesn't recycle one line (PT-104)
   // a recurring character sometimes reacts
   const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed) : null;
   const castReact = cast && rng() < 0.25
