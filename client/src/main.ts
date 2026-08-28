@@ -743,18 +743,13 @@ class Game {
     const ring = tier.key === 'gold' || tier.key === 'diamond' || tier.key === 'legend' ? '<div class="pc-ring"></div>' : '';
     // contract situation (NFT players only): age, deal status, extend/sell — the NFT stays owned either way
     const ci = this.contracts[p.id];
-    const stakeHtml = ci && !ci.retired ? (ci.staked
+    const stakeHtml = ci ? (ci.staked
       ? `<div class="pc-stake">🔒 staked ${ci.stakedSeasons} season${ci.stakedSeasons === 1 ? '' : 's'} — loyalty discount · <a class="pc-link" data-stake="off" data-pid="${p.id}">unstake</a></div>`
       : `<div class="pc-stake">⭘ not staked — <a class="pc-link" data-stake="on" data-pid="${p.id}">stake to make eligible</a></div>`) : '';
     let contractHtml = '';
-    if (ci && ci.retired) { // retired → a legacy keepsake + the chance to breed the next generation
-      const lg = ci.legend;
-      contractHtml = `<div class="pc-contract retired">`
-        + `<div class="pc-crow"><span>Age ${ci.age} · Retired</span><span>${lg?.icon ?? '🏅'} ${lg?.tier ?? 'Legend'}</span></div>`
-        + (lg ? `<div class="pc-legend">Legend rating ${lg.legendRating} · ${lg.leagueTitles}🏅 ${lg.cupTitles}🏆 · ${lg.apps} apps · ${lg.seasons} seasons</div>` : '')
-        + `<div class="pc-cactions">${ci.rebornId ? '<span class="pc-sell">bloodline continued ✓</span>' : `<button class="pc-reborn" data-reborn="${p.id}">✦ Reborn — breed the next generation · 150c</button>`}</div>`
-        + (lg?.note ? `<div class="pc-stake">${lg.note}</div>` : '') + `</div>`;
-    } else if (ci) {
+    // NOTE: single-player has no 'retired' token state — succession goes pro→prospect directly via rebornFields,
+    // so the old NFT-era "retired keepsake + Reborn" card branch was unreachable and has been removed (PT-115).
+    if (ci) {
       contractHtml = `<div class="pc-contract${ci.available ? '' : ' lapsed'}">`
         + `<div class="pc-crow"><span>Age ${ci.age}${ci.age >= 39 ? ' · nearing retirement' : ''}</span>`
         + `<span>${ci.available ? `<span class="ico-inline ico-lg">${sprite('contract')}</span> ${ci.seasonsLeft} season${ci.seasonsLeft === 1 ? '' : 's'} left` : ci.staked === false ? '⭘ idle — not staked' : '⛔ contract lapsed — benched'}</span></div>`
@@ -782,24 +777,10 @@ class Game {
     el.addEventListener('click', async (e) => {
       const t = e.target as HTMLElement;
       if (t.dataset.extend) { await this.extendPlayer(t.dataset.extend); el.remove(); return; }
-      if (t.dataset.reborn) { el.remove(); await this.rebornPlayer(t.dataset.reborn); return; }
       if (t.dataset.stake) { el.remove(); await this.stakePlayer(t.dataset.pid!, t.dataset.stake === 'on'); return; }
       if (t === el || t.classList.contains('pc-close')) el.remove();
     });
     document.body.appendChild(el);
-  }
-
-  /** Breed a retired legend's next generation — a 10-year-old PROSPECT that re-enters the Career game. */
-  private async rebornPlayer(playerId: string) {
-    try {
-      const r = await api.reborn(playerId);
-      this.setMe(await api.me());
-      await this.showHub();
-      toast(r.legacy && r.legacy > 0 ? `✦ Heir born · 🏟️ +${r.legacy.toLocaleString()}c legacy bequeathed to the club` : `✦ Next generation bred (−${r.cost}c)`);
-      this.showProspectCard(r.prospect, true);
-    } catch (err: any) {
-      toast(err?.body?.error === 'already reborn' ? 'Bloodline already continued' : err?.body?.error === 'not enough coins' ? `Not enough coins (need ${err.body.need})` : (err?.body?.error ?? 'Reborn failed'));
-    }
   }
 
   /** A prospect card — a 10-year-old about to live his career. For an heir (gen > 0) this is the payoff
@@ -836,13 +817,11 @@ class Game {
     if (!nfts.length) return '';
     const rows = nfts.map((ci) => {
       const name = this.club.players.find((x) => x.id === ci.playerId)?.name ?? ci.playerId;
-      const status = ci.retired ? `<span class="ns-tag retired">retired</span>`
-        : ci.staked === false ? `<span class="ns-tag idle">idle</span>`
+      const status = ci.staked === false ? `<span class="ns-tag idle">idle</span>`
         : ci.available ? `<span class="ns-tag ${ci.seasonsLeft <= 1 ? 'warn' : 'ok'}">${ci.seasonsLeft}y left</span>`
         : `<span class="ns-tag lapsed">lapsed</span>`;
       const dot = ci.morale != null ? `<span class="ns-mood" title="morale: ${ci.moraleLabel}" style="background:${ci.morale >= 75 ? '#6ad06a' : ci.morale >= 45 ? '#e0c14a' : '#d06a6a'}"></span>` : '';
-      const act = ci.retired ? `<button class="ns-act" data-nreborn="${ci.playerId}">Reborn 150c</button>`
-        : ci.staked === false ? `<button class="ns-act" data-nstake="${ci.playerId}">Stake</button>`
+      const act = ci.staked === false ? `<button class="ns-act" data-nstake="${ci.playerId}">Stake</button>`
         : `<button class="ns-act" data-nextend="${ci.playerId}">${ci.available ? 'Re-sign' : 'Extend'} ${ci.extendCost}c</button>`;
       return `<div class="ns-row" data-open="${ci.playerId}"><span class="ns-name">${dot}${name}</span><span class="ns-age">${ci.age}y</span>${status}${act}</div>`;
     }).join('');
@@ -3052,7 +3031,6 @@ class Game {
     panel.querySelectorAll<HTMLElement>('.ns-act').forEach((b) => b.addEventListener('click', async (e) => {
       e.stopPropagation();
       if (b.dataset.nextend) await this.extendPlayer(b.dataset.nextend);
-      else if (b.dataset.nreborn) await this.rebornPlayer(b.dataset.nreborn);
       else if (b.dataset.nstake) await this.stakePlayer(b.dataset.nstake, true);
     }));
     panel.querySelectorAll<HTMLElement>('.ns-row').forEach((r) => r.addEventListener('click', () => { const p = this.club.players.find((x) => x.id === r.dataset.open); if (p) this.showPlayerCard(p); }));
