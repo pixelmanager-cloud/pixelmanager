@@ -37,6 +37,8 @@ const BACKROOM_STAFF = [
 
 // icons for the stage-aware life meters (keyed by underlying relationship) — used in focus effect labels
 const METER_ICON: Record<string, string> = { authority: '🧑‍🏫', peers: '👥', family: '🏠', school: '🎒', agent: '🤝', fans: '📣', sponsors: '📸', partner: '❤️' };
+// Readable names for the relationship-meter icons (tooltip + legend so the summer-focus icon-math is decodable — playtest PT-10).
+const METER_NAME: Record<string, string> = { authority: 'Coach', peers: 'Teammates', family: 'Family', school: 'School', agent: 'Agent', fans: 'Fans', sponsors: 'Sponsors', partner: 'Partner' };
 // Readable full names for the stat abbreviations shown around the UI (tooltip on hover — playtest fix:
 // abbreviations like CMP/CRE/LDR/WRK were unexplained).
 const STAT_FULL: Record<string, string> = { pace: 'Pace', strength: 'Strength', passing: 'Passing', shooting: 'Shooting', tackling: 'Tackling', positioning: 'Positioning', workrate: 'Work rate', keeping: 'Goalkeeping', setPiece: 'Set pieces', stamina: 'Stamina', composure: 'Composure', creativity: 'Creativity', leadership: 'Leadership', teamwork: 'Teamwork', aggression: 'Aggression' };
@@ -2013,10 +2015,13 @@ class Game {
     const money = s.earnings != null ? `<div class="cg-money">💷 ${s.earnings.toLocaleString()}</div>` : '';
     return `<div class="cg-dash">${energy}${money}<div class="cg-meters">${meters}</div></div>`;
   }
+  /** Per-SAVE onboarding flag key — so a brand-new bloodline (New Game) gets the onboarding again, instead
+   *  of a global flag suppressing it forever after the first-ever career (playtest fix PT-11). */
+  private onbKey(base: string): string { return `${base}_${this.account?.handle ?? 'x'}`; }
   /** First-career coach-marks: contextual, dismissible hints during chapter 1 of a gen-0 career. */
   private tutorialHint(s: import('./api').CareerState): string {
-    if (localStorage.getItem('fm_tut_done')) return '';
-    if ((s as any).generation > 0) { localStorage.setItem('fm_tut_done', '1'); return ''; } // tutorial only on the very first (gen-0) career
+    if (localStorage.getItem(this.onbKey('fm_tut_done'))) return '';
+    if ((s as any).generation > 0) { localStorage.setItem(this.onbKey('fm_tut_done'), '1'); return ''; } // tutorial only on the very first (gen-0) career
     const turn = s.turn ?? 0;
     let hint = '';
     if (s.phase === 'play' && turn < 12) {
@@ -2027,14 +2032,14 @@ class Game {
     } else if (s.phase === 'focus') hint = '🌅 <b>Between seasons</b> — choose how he spends the summer to steer his relationships before the next chapter.';
     else if (s.phase === 'draft') hint = '🃏 <b>Draft cards</b> to build his identity — these are the moves he’ll bring to future moments.';
     else if (s.phase === 'coach') hint = '🧑‍🏫 <b>Appoint a coach</b> — they sharpen the work you do in their specialty, compounding his growth.';
-    if (turn >= 11) localStorage.setItem('fm_tut_done', '1'); // graduate the tutorial after chapter 1
+    if (turn >= 11) localStorage.setItem(this.onbKey('fm_tut_done'), '1'); // graduate the tutorial after chapter 1
     return hint ? `<div class="cg-tut" id="cg-tut">${hint} <button class="cg-tut-x" id="cg-tut-x">Got it ✕</button></div>` : '';
   }
 
   /** A one-time, dismissible explainer of the whole career dashboard — shown until the player dismisses it.
    *  Answers the "what is all this / why is it here?" questions (energy, money, relationships, the rival). */
   private careerHelpCard(s: import('./api').CareerState): string {
-    if (localStorage.getItem('fm_career_help_done')) return '';
+    if (localStorage.getItem(this.onbKey('fm_career_help_done'))) return '';
     const rows: string[] = [
       `<b>🃏 Moments & cards.</b> Each turn is a moment. Read what it <b>needs</b> (the tags), then play the card that <b>fits best</b> — good fits develop him faster and go better.`,
     ];
@@ -2191,15 +2196,17 @@ class Game {
       body = `<div class="cg-prompt">Appoint a mentor or coach for the coming chapter — they sharpen the work you do in their specialty:</div>`
         + s.coaches.map((c) => `<div class="cg-coach" data-act="coach" data-id="${c.id}"><div class="cg-cname">${c.kind === 'mentor' ? '🧭' : '📋'} ${c.name}</div><div class="cg-cdesc">${c.desc} · <i>${c.specialty.join(', ')}</i></div></div>`).join('');
     } else if (s.phase === 'draft' && s.options) {
-      body = `<div class="cg-prompt">Draft <b>${s.picksLeft}</b> card${s.picksLeft === 1 ? '' : 's'} to add to your deck — this is how you build your identity:</div>`
+      body = `<div class="cg-prompt">Draft <b>${s.picksLeft}</b> card${s.picksLeft === 1 ? '' : 's'} into his deck — the cards you keep decide which moments he can answer well, so they shape the player he becomes. <span class="cg-reassure">Rarity = power: <b>rare</b> and <b>epic</b> cards develop him more when they fit the moment. Cards you don't pick are discarded.</span></div>`
         + `<div class="cg-cards">` + s.options.map((c) => this.cardHtml(c, 'draft')).join('') + `</div>`;
     } else if (s.phase === 'offer' && s.offers) {
       body = `<div class="cg-prompt">A decision off the pitch — money now, or development?</div>`
         + s.offers.map((o) => `<div class="cg-offer" data-act="offer" data-id="${o.id}"><div class="cg-cname">💷 ${o.name}</div><div class="cg-cdesc">${o.desc}</div>`
           + `<div class="cg-effs">${o.earn > 0 ? `+${o.earn}c ` : ''}${o.greed > 0 ? '· greedier ' : o.greed < 0 ? '· more loyal ' : ''}${o.market > 0 ? '· more famous ' : ''}${o.form > 0 ? '· sharper' : o.form < 0 ? '· distracted' : ''}</div></div>`).join('');
     } else if (s.phase === 'focus' && s.focus) {
-      const effLabel = (e: Record<string, number>) => Object.entries(e).map(([k, v]) => `${METER_ICON[k] ?? ''}${v > 0 ? '+' : ''}${v}`).join(' · ');
-      const perkLabel = (p?: Record<string, number>) => p ? Object.entries(p).map(([k, v]) => `${METER_ICON[k] ?? ''}${v > 0 ? '+' : ''}${v}`).join(' ') : '';
+      const effLabel = (e: Record<string, number>) => Object.entries(e).map(([k, v]) => `<span title="${METER_NAME[k] ?? k}">${METER_ICON[k] ?? ''}${v > 0 ? '+' : ''}${v}</span>`).join(' · ');
+      const perkLabel = (p?: Record<string, number>) => p ? Object.entries(p).map(([k, v]) => `<span title="${METER_NAME[k] ?? k}">${METER_ICON[k] ?? ''}${v > 0 ? '+' : ''}${v}</span>`).join(' ') : '';
+      // legend so the icon-math on each tile is decodable at a glance (⚡ energy + the relationship meters in play)
+      const legend = `<div class="cg-legend">⚡ energy${(s.meters ?? []).length ? ' · ' + (s.meters ?? []).map((m) => `${m.icon} ${m.label}`).join(' · ') : ''}</div>`;
       const shop = (!s.side && s.lifestyle && s.lifestyle.length)
         ? `<div class="cg-prompt cg-shop-h">💷 <b>Treat yourself — or back the club</b> — spend earnings (you have <b>${(s.earnings ?? 0).toLocaleString()}c</b>) on your life off the pitch, or invest them in the club's future:</div>`
           + `<div class="cg-focus">` + s.lifestyle.map((li) => {
@@ -2212,7 +2219,7 @@ class Game {
       const focusPrompt = s.side
         ? '🤝 <b>One more thing</b> before pre-season — a smaller side activity, if you fancy it:'
         : '🌅 <b>Between seasons</b> — how do you spend the summer? Steer your relationships before the next chapter.';
-      body = `<div class="cg-prompt">${focusPrompt}</div>`
+      body = `<div class="cg-prompt">${focusPrompt}</div>` + legend
         + `<div class="cg-focus">` + s.focus.map((f) => `<div class="cg-foc" data-act="focus" data-id="${f.id}"><div class="cg-cname">${f.icon} ${f.name}</div><div class="cg-cdescr">${f.desc}</div>`
           + `<div class="cg-effs">${f.energy ? `⚡${f.energy > 0 ? '+' : ''}${f.energy} ` : ''}${effLabel(f.effects)}${f.tag ? `${TAG_ICON[f.tag] ?? ''} train ${f.tag}` : ''}</div></div>`).join('') + `</div>` + shop;
     }
@@ -2237,8 +2244,8 @@ class Game {
     const help = this.careerTab === 'now' ? this.careerHelpCard(s) : '';
     const tut = this.careerTab === 'now' ? this.tutorialHint(s) : '';
     $('academy-body').innerHTML = head + scene + help + tut + tabBar + content;
-    ($('cg-help-x') as any)?.addEventListener('click', () => { localStorage.setItem('fm_career_help_done', '1'); ($('cg-help') as any)?.remove(); });
-    ($('cg-tut-x') as any)?.addEventListener('click', () => { localStorage.setItem('fm_tut_done', '1'); ($('cg-tut') as any)?.remove(); });
+    ($('cg-help-x') as any)?.addEventListener('click', () => { localStorage.setItem(this.onbKey('fm_career_help_done'), '1'); ($('cg-help') as any)?.remove(); });
+    ($('cg-tut-x') as any)?.addEventListener('click', () => { localStorage.setItem(this.onbKey('fm_tut_done'), '1'); ($('cg-tut') as any)?.remove(); });
     $('cg-back').addEventListener('click', () => this.showAcademy());
     $('academy-body').querySelectorAll('.cg-tab').forEach((el) => el.addEventListener('click', () => { this.careerTab = (el as HTMLElement).dataset.tab as any; this.renderCareer(s); }));
     $('academy-body').querySelectorAll('[data-act]').forEach((el) => el.addEventListener('click', () => this.doCareerAct(s.prospectId, { type: (el as HTMLElement).dataset.act!, cardId: (el as HTMLElement).dataset.id! })));
