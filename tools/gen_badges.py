@@ -35,7 +35,9 @@ EMBLEM_LIGHT = [(255,255,255),(255,214,90),(240,230,200),(190,232,255)]
 OUTLINE = (11,11,24)
 
 PATTERNS = ["solid","vhalf","vstripe","hband","sash","quarters","cross_field","hoop"]
-EMBLEMS  = ["star","ring","disc","plus","saltire","chevron","diamond","crown","bars","ball"]
+# only the emblem families that read as authentic football crests: circles (disc/ring/target), stars
+# (single + a three-star arc), the cross, and a real soccer ball. (Dropped: saltire/chevron/diamond/crown/bars.)
+EMBLEMS  = ["disc","ring","target","star","star3","plus","ball"]
 
 def pattern_color(pat, x, y, prim, acc):
     if pat == "solid":       return prim
@@ -55,6 +57,9 @@ def star_points(cx, cy, r_out, r_in, n=5, rot=-math.pi/2):
         a = rot + i * math.pi / n
         pts.append((cx + r * math.cos(a), cy + r * math.sin(a)))
     return pts
+
+def poly_points(cx, cy, r, n=5, rot=-math.pi/2):
+    return [(cx + r * math.cos(rot + i * 2 * math.pi / n), cy + r * math.sin(rot + i * 2 * math.pi / n)) for i in range(n)]
 
 def lighten(c, f=1.32): return tuple(min(255, int(v * f)) for v in c[:3])
 def darken(c, f=0.62):  return tuple(max(0, int(v * f)) for v in c[:3])
@@ -95,32 +100,29 @@ def draw_emblem(base, kind, col):
         fn(d, 0, 0, col)
     if kind == "star":
         outlined(lambda d,dx,dy,c: d.polygon(star_points(cx+dx, cy+dy, 8, 3.4), fill=c))
+    elif kind == "star3":
+        # three stars in a gentle arc (championship-style)
+        for (sx, sy, r) in [(cx-7, cy+1, 4.0), (cx, cy-2, 4.6), (cx+7, cy+1, 4.0)]:
+            outlined(lambda d,dx,dy,c,sx=sx,sy=sy,r=r: d.polygon(star_points(sx+dx, sy+dy, r, r*0.42), fill=c))
     elif kind == "ring":
         outlined(lambda d,dx,dy,c: d.ellipse([cx-7+dx, cy-7+dy, cx+7+dx, cy+7+dy], outline=c, width=3))
     elif kind == "disc":
         outlined(lambda d,dx,dy,c: d.ellipse([cx-6+dx, cy-6+dy, cx+6+dx, cy+6+dy], fill=c))
+    elif kind == "target":
+        # concentric rings — an outer ring + a solid centre (reads as a clean roundel)
+        outlined(lambda d,dx,dy,c: (d.ellipse([cx-7+dx, cy-7+dy, cx+7+dx, cy+7+dy], outline=c, width=2),
+                                    d.ellipse([cx-2+dx, cy-2+dy, cx+2+dx, cy+2+dy], fill=c)))
     elif kind == "plus":
         outlined(lambda d,dx,dy,c: (d.rectangle([cx-2+dx, cy-8+dy, cx+2+dx, cy+8+dy], fill=c),
                                     d.rectangle([cx-8+dx, cy-2+dy, cx+8+dx, cy+2+dy], fill=c)))
-    elif kind == "saltire":
-        outlined(lambda d,dx,dy,c: (d.line([cx-8+dx, cy-8+dy, cx+8+dx, cy+8+dy], fill=c, width=3),
-                                    d.line([cx-8+dx, cy+8+dy, cx+8+dx, cy-8+dy], fill=c, width=3)))
-    elif kind == "chevron":
-        outlined(lambda d,dx,dy,c: (d.line([cx-8+dx, cy+2+dy, cx+dx, cy-6+dy], fill=c, width=3),
-                                    d.line([cx+dx, cy-6+dy, cx+8+dx, cy+2+dy], fill=c, width=3),
-                                    d.line([cx-8+dx, cy+8+dy, cx+dx, cy+dy], fill=c, width=3),
-                                    d.line([cx+dx, cy+dy, cx+8+dx, cy+8+dy], fill=c, width=3)))
-    elif kind == "diamond":
-        outlined(lambda d,dx,dy,c: d.polygon([(cx+dx,cy-8+dy),(cx+8+dx,cy+dy),(cx+dx,cy+8+dy),(cx-8+dx,cy+dy)], fill=c))
-    elif kind == "crown":
-        outlined(lambda d,dx,dy,c: (d.polygon([(cx-8+dx,cy+6+dy),(cx-8+dx,cy-4+dy),(cx-4+dx,cy+dy),(cx+dx,cy-6+dy),
-                                               (cx+4+dx,cy+dy),(cx+8+dx,cy-4+dy),(cx+8+dx,cy+6+dy)], fill=c),
-                                    d.rectangle([cx-8+dx, cy+5+dy, cx+8+dx, cy+8+dy], fill=c)))
-    elif kind == "bars":
-        outlined(lambda d,dx,dy,c: [d.rectangle([cx-8+dx, cy-7+2+i*5+dy, cx+8+dx, cy-4+2+i*5+dy], fill=c) for i in range(3)])
     elif kind == "ball":
-        outlined(lambda d,dx,dy,c: d.ellipse([cx-7+dx, cy-7+dy, cx+7+dx, cy+7+dy], outline=c, width=2))
-        d.polygon(star_points(cx, cy, 4.2, 2.1, n=5), fill=OUTLINE)  # a pentagon-ish centre spot
+        # a real soccer ball: white sphere + dark pentagon + seams (always white, not the accent colour)
+        d.ellipse([cx-8, cy-8, cx+8, cy+8], fill=OUTLINE)
+        d.ellipse([cx-7, cy-7, cx+7, cy+7], fill=(245, 246, 250))
+        pent = poly_points(cx, cy, 3.4, 5, rot=-math.pi/2)
+        for (px_, py_) in pent:  # seams from each pentagon vertex out to the rim
+            d.line([cx + (px_-cx)*2.0, cy + (py_-cy)*2.0, px_, py_], fill=(40, 42, 55), width=1)
+        d.polygon(pent, fill=(30, 32, 44))
     return lay
 
 def draw_roundel(img, seed, prim):
