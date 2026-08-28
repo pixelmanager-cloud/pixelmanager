@@ -47,6 +47,7 @@ class AudioManager {
   private pending: MusicContext | null = null; // context requested before unlock
   private current: MusicContext | null = null;
   private deck: HTMLAudioElement | null = null;      // the playing loop
+  private tracked: HTMLAudioElement[] = [];          // every element we've started (so none can linger/overlap)
   private fadeTimer: number | null = null;
   private actx: AudioContext | null = null;          // lazily-created, shared by all chimes
 
@@ -111,23 +112,25 @@ class AudioManager {
     next.loop = true;
     next.preload = 'auto';
     next.volume = 0; // fade in
+    this.tracked.push(next);
     // if the file is missing / fails to load, silently give up (keeps the game running audio-less)
-    next.play().then(() => this.crossfadeTo(next)).catch(() => { /* no track or autoplay blocked — silent */ });
+    next.play().then(() => this.crossfadeTo(next)).catch(() => { this.tracked = this.tracked.filter((a) => a !== next); /* no track or autoplay blocked — silent */ });
   }
 
-  /** Fade the old deck out and the new one in to the effective volume. */
+  /** Fade the new deck in and EVERY other tracked element out — so rapid screen changes can never leave two
+   *  tracks overlapping (only `next` survives the fade; all others are paused + dropped). */
   private crossfadeTo(next: HTMLAudioElement): void {
-    const old = this.deck;
     this.deck = next;
+    const others = this.tracked.filter((a) => a !== next).map((a) => ({ a, from: a.volume }));
     const target = this.effectiveVolume();
     const start = performance_now();
     if (this.fadeTimer != null) cancelAnimationFrame(this.fadeTimer);
     const step = () => {
       const t = Math.min(1, (performance_now() - start) / FADE_MS);
       try { next.volume = clamp01(target * t); } catch { /* detached */ }
-      if (old) { try { old.volume = clamp01(target * (1 - t)); } catch { /* detached */ } }
+      for (const o of others) { try { o.a.volume = clamp01(o.from * (1 - t)); } catch { /* detached */ } }
       if (t < 1) { this.fadeTimer = requestAnimationFrame(step); }
-      else { if (old) { try { old.pause(); } catch { /* ignore */ } } this.fadeTimer = null; }
+      else { for (const o of others) { try { o.a.pause(); o.a.currentTime = 0; } catch { /* ignore */ } } this.tracked = [next]; this.fadeTimer = null; }
     };
     this.fadeTimer = requestAnimationFrame(step);
   }
@@ -135,10 +138,10 @@ class AudioManager {
   /** Stop all music (fade out). */
   stop(): void {
     this.current = null;
-    const d = this.deck; this.deck = null;
-    if (!d) return;
-    const from = d.volume, start = performance_now();
-    const step = () => { const t = Math.min(1, (performance_now() - start) / FADE_MS); try { d.volume = clamp01(from * (1 - t)); } catch { /* ignore */ } if (t < 1) requestAnimationFrame(step); else { try { d.pause(); } catch { /* ignore */ } } };
+    const all = this.tracked.slice(); this.tracked = []; this.deck = null;
+    if (!all.length) return;
+    const froms = all.map((a) => a.volume), start = performance_now();
+    const step = () => { const t = Math.min(1, (performance_now() - start) / FADE_MS); all.forEach((d, i) => { try { d.volume = clamp01(froms[i] * (1 - t)); } catch { /* ignore */ } }); if (t < 1) requestAnimationFrame(step); else all.forEach((d) => { try { d.pause(); d.currentTime = 0; } catch { /* ignore */ } }); };
     requestAnimationFrame(step);
   }
 

@@ -15,6 +15,10 @@ import { trophyImg, type TrophyKey } from './trophy';
 import { kitTemplate, recolorKit } from './kit';
 import { audio } from './audio';
 
+// Topbar speaker icons — same 24×24 viewBox for both states so the button never changes shape on toggle.
+const ICON_SPEAKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3.5l4.5-3.5v13L7.5 15H4z"/><path d="M16 9.2a4 4 0 0 1 0 5.6M18.6 6.6a7.5 7.5 0 0 1 0 10.8"/></svg>';
+const ICON_MUTED = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3.5l4.5-3.5v13L7.5 15H4z"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5"/></svg>';
+
 /** Single-player manager-season state (per save, in localStorage). `starId` present ⇒ manager phase. */
 interface MgrState { season: number; results: PlayedResult[]; starId?: string; starName?: string; starAge?: number; retireAge?: number; titles?: number; trainFocus?: string; staff?: string[]; sponsor?: string;
   // board verdict on the season just gone + that finishing position (feeds next season's expectation)
@@ -321,7 +325,7 @@ class Game {
   private saveSaves(s: Array<{ id: string; token: string; name: string; lastPlayed: number }>) { localStorage.setItem('fm_saves', JSON.stringify(s)); }
 
   private renderMainMenu() {
-    $('mm-emblem').innerHTML = sprite('ball');
+    $('mm-emblem').innerHTML = `<span class="mm-crown">${sprite('crown')}</span><span class="mm-ball">${sprite('ball')}</span>`;
     const saves = this.loadSaves().sort((a, b) => b.lastPlayed - a.lastPlayed);
     const multi = saves.length > 1; // with one save, Continue already loads it — the list would just duplicate that
     $('mm-buttons').classList.remove('hidden');
@@ -405,13 +409,13 @@ class Game {
     const close = () => ov.remove();
     ov.addEventListener('click', (e) => { if (e.target === ov) close(); }); // click backdrop to dismiss
     ov.querySelector('.set-x')!.addEventListener('click', close);
-    // music volume — live
+    // music volume — live (mute stays a separate, authoritative switch: dragging volume never un-mutes)
     const vol = ov.querySelector('#set-vol') as HTMLInputElement;
-    vol.addEventListener('input', () => { const v = Number(vol.value) / 100; audio.setVolume(v); if (audio.isMuted() && v > 0) { audio.setMuted(false); this.syncMuteBtn(); (ov.querySelector('[data-sw="music"]') as HTMLElement)?.classList.add('on'); } $('set-volval').textContent = `${vol.value}%`; });
-    // SFX volume — live, with a sample chime so the level is audible while dragging
+    vol.addEventListener('input', () => { audio.setVolume(Number(vol.value) / 100); $('set-volval').textContent = `${vol.value}%`; });
+    // SFX volume — live; preview chime on release only when SFX isn't muted (so "mute SFX" is truly silent)
     const sfx = ov.querySelector('#set-sfx') as HTMLInputElement;
-    sfx.addEventListener('input', () => { audio.setSfxVolume(Number(sfx.value) / 100); if (audio.isSfxMuted() && Number(sfx.value) > 0) { audio.setSfxMuted(false); (ov.querySelector('[data-sw="sfx"]') as HTMLElement)?.classList.add('on'); } $('set-sfxval').textContent = `${sfx.value}%`; });
-    sfx.addEventListener('change', () => audio.chime('confirm')); // preview once on release
+    sfx.addEventListener('input', () => { audio.setSfxVolume(Number(sfx.value) / 100); $('set-sfxval').textContent = `${sfx.value}%`; });
+    sfx.addEventListener('change', () => { if (!audio.isSfxMuted()) audio.chime('confirm'); }); // preview once on release
     // UI scale — live
     const scale = ov.querySelector('#set-scale') as HTMLInputElement;
     scale.addEventListener('input', () => { this.prefs.uiScale = Number(scale.value); this.savePrefs(); this.applyPrefs(); $('set-scaleval').textContent = `${scale.value}%`; });
@@ -431,7 +435,7 @@ class Game {
     document.addEventListener('keydown', onEsc);
   }
 
-  private syncMuteBtn() { const at = $('audio-toggle'); at.textContent = audio.isMuted() ? '🔇' : '🔊'; at.classList.toggle('muted', audio.isMuted()); }
+  private syncMuteBtn() { const at = $('audio-toggle'); at.innerHTML = audio.isMuted() ? ICON_MUTED : ICON_SPEAKER; at.classList.toggle('muted', audio.isMuted()); }
 
   /** A generic yes/cancel confirm overlay (used for destructive actions like deleting a save). */
   private openConfirm(message: string, confirmLabel: string, onYes: () => void) {
@@ -610,7 +614,7 @@ class Game {
   private wireStaticButtons() {
     // MUSIC mute toggle (persists via audio.ts; icon reflects state)
     const at = $('audio-toggle');
-    const syncAudio = () => { at.textContent = audio.isMuted() ? '🔇' : '🔊'; at.classList.toggle('muted', audio.isMuted()); };
+    const syncAudio = () => { at.innerHTML = audio.isMuted() ? ICON_MUTED : ICON_SPEAKER; at.classList.toggle('muted', audio.isMuted()); };
     syncAudio();
     at.addEventListener('click', () => { audio.toggleMuted(); syncAudio(); });
     $('settings-btn').addEventListener('click', () => this.openSettings());
@@ -623,8 +627,16 @@ class Game {
       $('toggle-density').textContent = this.commentaryMode === 'full' ? '🎙️ Full' : '🎙️ Key';
       $('toggle-density').classList.toggle('on', this.commentaryMode === 'key');
     });
-    $('mm-new').addEventListener('click', () => { $('mm-buttons').classList.add('hidden'); $('mm-saves').classList.add('hidden'); $('mm-newgame').classList.remove('hidden'); ($('mm-name') as HTMLInputElement).focus(); });
+    // live preview of the in-game club name + crest as you type (the club becomes "<name>'s Club")
+    const updateNamePreview = () => {
+      const raw = ($('mm-name') as HTMLInputElement).value.trim();
+      $('mm-preview').innerHTML = raw
+        ? `<span class="mp-hint">In game:</span> ${crest(raw + "'s Club", 26)} <b>${raw}'s Club</b>`
+        : `<span class="mp-hint">Your club will be named “&lt;your name&gt;'s Club”</span>`;
+    };
+    $('mm-new').addEventListener('click', () => { $('mm-buttons').classList.add('hidden'); $('mm-saves').classList.add('hidden'); $('mm-newgame').classList.remove('hidden'); ($('mm-name') as HTMLInputElement).focus(); updateNamePreview(); });
     $('mm-cancel').addEventListener('click', () => { $('mm-saves').classList.remove('hidden'); this.renderMainMenu(); });
+    $('mm-name').addEventListener('input', updateNamePreview);
     $('mm-start').addEventListener('click', () => this.startNewGame(($('mm-name') as HTMLInputElement).value));
     $('mm-name').addEventListener('keydown', (e) => { if ((e as KeyboardEvent).key === 'Enter') this.startNewGame(($('mm-name') as HTMLInputElement).value); });
     $('mm-continue').addEventListener('click', () => this.continueGame());
