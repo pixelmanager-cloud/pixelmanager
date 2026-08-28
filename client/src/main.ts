@@ -2140,6 +2140,9 @@ class Game {
   /** First-career coach-marks: contextual, dismissible hints during chapter 1 of a gen-0 career. */
   private tutorialHint(s: import('./api').CareerState): string {
     if (localStorage.getItem(this.onbKey('fm_tut_done'))) return '';
+    // one onboarding box at a time: the contextual hints wait until the big "HOW HIS CAREER WORKS" explainer
+    // is dismissed, so Grassroots never shows two different "Got it" boxes at once (#2).
+    if (!localStorage.getItem(this.onbKey('fm_career_help_done'))) return '';
     if ((s as any).generation > 0) { localStorage.setItem(this.onbKey('fm_tut_done'), '1'); return ''; } // tutorial only on the very first (gen-0) career
     const turn = s.turn ?? 0;
     let hint = '';
@@ -2163,8 +2166,8 @@ class Game {
       `<b>🃏 Moments & cards.</b> Each turn is a moment. Read what it <b>needs</b> (the tags), then play the card that <b>fits best</b> — good fits develop him faster and go better.`,
     ];
     if (s.energy != null) rows.push(`<b>⚡ Energy.</b> Big efforts tire him, and tired moments go worse. It <b>recovers between seasons</b> (the summer screen) — and you can spend a summer choice to <b>Rest</b> and refill it.`);
-    if (s.earnings != null) rows.push(`<b>💷 Money.</b> Coins he earns from playing. Between seasons you can spend them on <b>his life</b> — or <b>invest them back into your club</b>. It's your call where the money goes.`);
-    if (s.meters?.length) rows.push(`<b>🤝 Relationships (the meters).</b> Coach, family, teammates, school… keep them healthy for better moments; neglect one and he can regress. Steer them on the summer screen.`);
+    if (s.earnings != null) rows.push(`<b>💷 Money & the club's cut.</b> Coins he earns from playing. He's <b>your academy's own</b> — raised in your facilities, wearing your badge — so the club takes a small <b>development cut</b> of everything he earns (you'll see “🏟️ +Xc to the club”), reinvested into the academy that raises the next of the line. The rest is his: between seasons spend it on <b>his life</b>, or <b>invest more back into the club</b>.`);
+    if (s.meters?.length) rows.push(`<b>🤝 Relationships (the meters).</b> Coach, family, teammates, school, agent — these aren't just flavour. A <b>strong</b> meter unlocks better summer opportunities and steadies his form; a <b>neglected</b> one (near empty) drags his development and can spark off-pitch trouble. Every moment you play nudges the meters involved — steer them deliberately on the summer screen.`);
     if (s.rival) rows.push(`<b>🆚 Rival.</b> A fellow academy kid living his <i>own</i> career in parallel — you're measured against him. Out-develop him to pull ahead. He's here to give your progress something to chase.`);
     return `<div class="cg-help" id="cg-help"><div class="cg-help-head">📖 HOW HIS CAREER WORKS <button class="cg-help-x" id="cg-help-x">Got it ✕</button></div>`
       + `<ul class="cg-help-list">` + rows.map((r) => `<li>${r}</li>`).join('') + `</ul></div>`;
@@ -2406,7 +2409,7 @@ class Game {
     const help = this.careerTab === 'now' ? this.careerHelpCard(s) : '';
     const tut = this.careerTab === 'now' ? this.tutorialHint(s) : '';
     $('academy-body').innerHTML = head + scene + help + tut + tabBar + content;
-    ($('cg-help-x') as any)?.addEventListener('click', () => { localStorage.setItem(this.onbKey('fm_career_help_done'), '1'); ($('cg-help') as any)?.remove(); });
+    ($('cg-help-x') as any)?.addEventListener('click', () => { localStorage.setItem(this.onbKey('fm_career_help_done'), '1'); if (this.lastCareerState) this.renderCareer(this.lastCareerState); else ($('cg-help') as any)?.remove(); }); // re-render so the contextual hint takes its place (#2)
     ($('cg-tut-x') as any)?.addEventListener('click', () => { localStorage.setItem(this.onbKey('fm_tut_done'), '1'); ($('cg-tut') as any)?.remove(); });
     $('cg-back').addEventListener('click', () => this.showAcademy());
     $('academy-body').querySelectorAll('.cg-tab').forEach((el) => el.addEventListener('click', () => { this.careerTab = (el as HTMLElement).dataset.tab as any; this.renderCareer(s); }));
@@ -2575,7 +2578,7 @@ class Game {
         this.checkAchievements(); // first graduate milestone
         audio.chime('success'); // graduation — a real milestone beat
         const player = r.player;
-        const windfallLine = r.windfall && r.windfall > 0 ? `<div class="cg-grad-windfall">🏟️ +${r.windfall.toLocaleString()}c invested in the club as he signs pro</div>` : '';
+        const windfallLine = r.windfall && r.windfall > 0 ? `<div class="cg-grad-windfall">🏟️ +${r.windfall.toLocaleString()}c to the club — its share of his signing as he turns pro (it funded his rise)</div>` : '';
         // an evocative epilogue of the whole journey, then the pro reveal
         $('academy-body').innerHTML = `<div class="cg-graduation">`
           + `<div class="cg-grad-title">🎓 ${player.name} — the journey's end</div>`
@@ -2584,7 +2587,7 @@ class Game {
         $('cg-reveal').addEventListener('click', () => { this.showPlayerCard(player, true); this.showAcademy(); });
       } else if (r.state) {
         this.renderCareer(r.state);
-        if (r.clubGain && r.clubGain > 0) toast(`🏟️ +${r.clubGain}c to the club`);
+        if (r.clubGain && r.clubGain > 0) toast(`🏟️ +${r.clubGain}c to the club — its development cut of what he earned`);
       }
     } catch (e: any) {
       toast(e?.body?.error ?? 'Move failed');
