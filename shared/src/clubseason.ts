@@ -78,7 +78,9 @@ export const tierName = (tier: number) => TIER_NAMES[clamp(Math.round(tier), 1, 
  *  bloodline player's club has a FIXED strength (his ability + facilities), so he climbs when he outgrows a
  *  tier and slips when he's outmatched — the pyramid is the growth arc. */
 export function tierStrength(tier: number): number {
-  return Math.round(18 - (clamp(Math.round(tier), 1, TIERS) - 1) * (12 / (TIERS - 1)));
+  // calibrated to the club's real strength range (~9 fresh graduate … ~15 peak squad): tier 10 baseline 5
+  // (a graduate dominates → promotes), tier 1 baseline 14 (only a peak squad wins the top flight).
+  return 15 - clamp(Math.round(tier), 1, TIERS);
 }
 
 function hash32(...nums: number[]): number {
