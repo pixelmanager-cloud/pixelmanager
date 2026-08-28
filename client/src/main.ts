@@ -1247,7 +1247,7 @@ class Game {
       : '';
     const tier = this.clubTier();
     const header = done
-      ? `<div class="season-summary done"><span class="ss-crest">${crest(clubName, 20)}</span>✅ Season ${m.season} complete — <b>${clubName}</b> finished <b>${this.ordinal(t.pos)}</b> of ${t.size} in <b>${tierName(tier)}</b>${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ''}. <button class="primary" id="sf-next-season">Next season →</button></div>`
+      ? `<div class="season-summary done"><span class="ss-crest">${crest(clubName, 20)}</span>✅ Season ${m.season} complete — <b>${clubName}</b> finished <b>${this.ordinal(t.pos)}</b> of ${t.size} in <b>${tierName(tier)}</b>${t.pos === 1 ? ' 🏆 CHAMPIONS!' : (t.pos <= 2 && tier > 1) ? ` ⬆️ PROMOTED to ${tierName(tier - 1)}!` : ''}. <button class="primary" id="sf-next-season">Next season →</button></div>`
       : `<div class="season-summary"><span class="ss-crest">${crest(clubName, 20)}</span><b>${clubName}</b> · <b>${tierName(tier)}</b> · Season ${m.season} · MD ${nextIdx + 1}/${fixtures.length} · <b>${this.ordinal(t.pos)}</b>/${t.size}${formStrip}${starLine}</div>`;
     // INCOMING BID for the star — a rival's offer this season (deterministic); dismissed once per season
     const starP = m.starId ? this.club.players.find((p) => p.id === m.starId) : undefined;
@@ -1267,7 +1267,7 @@ class Game {
     // the board's verdict on LAST season (set in nextSeason) — shown while the new season is still young
     const lb = m.lastBoard;
     const boardLine = lb && !done && nextIdx <= 3
-      ? `<div class="sf-board sf-board-${lb.mood}">🪑 <b>The board</b> — on last season: “${lb.message}” <span class="sf-board-exp">This season they expect: ${lb.expectation}.</span></div>`
+      ? `<div class="sf-board sf-board-${lb.mood}">🪑 <b>The board</b> — on last season: “${lb.message}” <span class="sf-board-exp">This season they expect ${this.expectationLabel(lb.expectation, tier)}.</span></div>`
       : '';
     $('season-body').innerHTML = this.managerHelpCard()
       + header
@@ -1294,7 +1294,14 @@ class Game {
       $('sf-bid-reject')?.addEventListener('click', () => { try { localStorage.setItem(bidKey, '1'); } catch { /* ignore */ } toast('Bid rejected — he stays.'); this.showSeason(); });
     }
     $('sf-sim')?.addEventListener('click', () => this.simRemainingFixtures());
-    $('sf-next-season')?.addEventListener('click', () => this.nextSeason());
+    $('sf-next-season')?.addEventListener('click', () => {
+      // don't silently bin an unfinished European run when the league fixtures are done first (PT-75)
+      const mm = this.loadMgr();
+      if (mm.contElig && !mm.contOut && (mm.contRound ?? 0) < 3) {
+        const roundName = ['the Quarter-Final', 'the Semi-Final', 'the Final'][mm.contRound ?? 0] ?? 'a continental tie';
+        this.openConfirm(`You still have <b>${roundName}</b> of the Continental Cup to play. Rolling into next season forfeits the European run. Continue anyway?`, 'Forfeit & continue', () => this.nextSeason());
+      } else this.nextSeason();
+    });
     ($('sf-focus') as any)?.addEventListener('change', (e: Event) => { const mm = this.loadMgr(); this.saveMgr({ ...mm, trainFocus: (e.target as HTMLSelectElement).value }); });
     $('season-body').querySelectorAll('[data-staff]').forEach((b) => b.addEventListener('click', () => this.hireStaff((b as HTMLElement).dataset.staff!)));
     $('season-body').querySelectorAll('[data-sponsor]').forEach((b) => b.addEventListener('click', () => this.chooseSponsor((b as HTMLElement).dataset.sponsor!)));
@@ -1622,7 +1629,9 @@ class Game {
     let lastBoard: { message: string; mood: BoardMood; expectation: string } | undefined;
     try {
       const { prestige } = await api.prestige();
-      const expectation = deriveExpectation({ prestigeLevelIdx: prestige.levelIdx, priorFinish: this.finishOf(m.lastFinishPos, t.size) });
+      // derive the COMING season's expectation from the season JUST ended (t.pos), incl. its tier move — not
+      // from m.lastFinishPos (the season before that), which lagged the board a year behind reality (PT-64/66)
+      const expectation = deriveExpectation({ prestigeLevelIdx: prestige.levelIdx, priorFinish: this.finishOf(t.pos, t.size, this.clubTier()) });
       const gp = Math.max(1, rec.wins + rec.draws + rec.losses);
       const st = boardStanding((this.leagueSeed() ^ (m.season * 0x9e3779b1)) >>> 0, {
         position: t.pos, total: t.size, promote: 2, relegate: 2, // match the real rule: top-2 up / bottom-2 down (PT-28)
@@ -1658,12 +1667,33 @@ class Game {
 
   /** Map a final league position → the board's shorthand for how that season went, feeding
    *  deriveExpectation()'s momentum nudge. Undefined position (first season) → null (no prior). */
-  private finishOf(pos: number | undefined, size: number): PriorFinish {
+  private finishOf(pos: number | undefined, size: number, tier?: number): PriorFinish {
     if (pos == null) return null;
+    // a TIER MOVE is the season's headline — feed it to deriveExpectation so the board's standard reacts to
+    // the promotion/relegation itself (its `promotion`/`relegated` nudges were dead before, PT-66)
+    if (tier != null) {
+      if (pos <= 2 && tier > 1) return 'promotion';
+      if (pos >= size - 1 && tier < TIERS) return 'relegated';
+    }
     if (pos === 1) return 'title';
     if (pos <= 3) return 'playoffs';           // top-3 books continental football
     if (pos > size - 3) return 'survival';     // scrapping near the bottom
     return 'midtable';
+  }
+
+  /** Turn a raw board-expectation enum into player-facing English, clamped to what THIS tier can deliver —
+   *  the pyramid has no playoffs (top-2 auto-promote), and the top flight can't be promoted / the basement
+   *  can't be relegated, so those targets are rephrased instead of demanding an impossible finish (PT-65/67). */
+  private expectationLabel(exp: string, tier: number): string {
+    if (tier <= 1) { // top flight — no promotion above it
+      if (exp === 'title') return 'the title';
+      if (exp === 'promotion' || exp === 'playoffs') return 'a top-half finish and a real title push';
+      if (exp === 'survival') return 'to stay up';
+      return 'a solid top-flight season';
+    }
+    if (tier >= TIERS && exp === 'survival') return 'steady progress'; // basement — can't drop
+    const MAP: Record<string, string> = { title: 'to win the league', promotion: 'promotion', playoffs: 'a promotion push', midtable: 'a solid mid-table season', survival: 'to avoid the drop' };
+    return MAP[exp] ?? exp;
   }
 
   /** What the retiring star does NEXT — a mostly-narrative choice that colours the epilogue and decides
