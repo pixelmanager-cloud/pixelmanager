@@ -1838,6 +1838,7 @@ class Game {
   // ── ACADEMY: the Career game (Layer 1) — develop 10yo prospects into pro players ──
   private async showAcademy() {
     this.showScreen('academy');
+    $('academy-head').style.display = ''; // restore the academy board header (hidden during career play)
     audio.play('scout'); // the academy scouting board — scout/pick a prospect (career play switches to 'career' in renderCareer)
     $('academy-body').innerHTML = SPINNER;
     try {
@@ -1847,7 +1848,8 @@ class Game {
         : '';
       this.onboarding = false;
       const intro = `<div class="scout-sub">Your <b>academy</b> — young players to <b>develop</b> through a full career (age 10→25): play to each chapter's demands, appoint coaches, make the big calls. At 25 they graduate into a pro for your squad — and when they retire, their <b>bloodline</b> lives on through the next generation.</div>`
-        + `<div style="margin:10px 0 14px;"><button id="mint-genesis" class="primary">🔎 Scout a new prospect · 300c</button></div>`;
+        + `<div style="margin:10px 0 14px;"><button id="mint-genesis" class="primary">🔎 Scout a new prospect · 300c</button>`
+        + `<div class="scout-sub" style="margin:6px 0 0;">Bring another 10-year-old into your academy to develop alongside your bloodline. The <b>300c</b> is <b>coins</b> — the currency you earn from running your club — so this is you choosing to invest in extra youth.</div></div>`;
       const rows = prospects.length ? prospects.map((p) => {
         const stars = '★'.repeat(p.potentialStars) + '☆'.repeat(5 - p.potentialStars);
         const gen = p.generation ? ` · gen ${p.generation}` : '';
@@ -2015,6 +2017,21 @@ class Game {
     return hint ? `<div class="cg-tut" id="cg-tut">${hint} <button class="cg-tut-x" id="cg-tut-x">Got it ✕</button></div>` : '';
   }
 
+  /** A one-time, dismissible explainer of the whole career dashboard — shown until the player dismisses it.
+   *  Answers the "what is all this / why is it here?" questions (energy, money, relationships, the rival). */
+  private careerHelpCard(s: import('./api').CareerState): string {
+    if (localStorage.getItem('fm_career_help_done')) return '';
+    const rows: string[] = [
+      `<b>🃏 Moments & cards.</b> Each turn is a moment. Read what it <b>needs</b> (the tags), then play the card that <b>fits best</b> — good fits develop him faster and go better.`,
+    ];
+    if (s.energy != null) rows.push(`<b>⚡ Energy.</b> Big efforts tire him, and tired moments go worse. It <b>recovers between seasons</b> (the summer screen) — and you can spend a summer choice to <b>Rest</b> and refill it.`);
+    if (s.earnings != null) rows.push(`<b>💷 Money.</b> Coins he earns from playing. Between seasons you can spend them on <b>his life</b> — or <b>invest them back into your club</b>. It's your call where the money goes.`);
+    if (s.meters?.length) rows.push(`<b>🤝 Relationships (the meters).</b> Coach, family, teammates, school… keep them healthy for better moments; neglect one and he can regress. Steer them on the summer screen.`);
+    if (s.rival) rows.push(`<b>🆚 Rival.</b> A fellow academy kid living his <i>own</i> career in parallel — you're measured against him. Out-develop him to pull ahead. He's here to give your progress something to chase.`);
+    return `<div class="cg-help" id="cg-help"><div class="cg-help-head">📖 HOW HIS CAREER WORKS <button class="cg-help-x" id="cg-help-x">Got it ✕</button></div>`
+      + `<ul class="cg-help-list">` + rows.map((r) => `<li>${r}</li>`).join('') + `</ul></div>`;
+  }
+
   /** The rival to chase — a named academy contemporary running his own career; you're measured against him. */
   private rivalHtml(s: import('./api').CareerState): string {
     const r = s.rival; if (!r) return '';
@@ -2093,6 +2110,9 @@ class Game {
   }
 
   private renderCareer(s: import('./api').CareerState) {
+    // the career view has its own in-context header (cg-head, with a ← back to the academy board), so hide
+    // the outer "🎓 ACADEMY / Back to hub" bar while playing a career — it was redundant + cramped (H2/G1).
+    $('academy-head').style.display = 'none';
     // HANDOFF: he's established himself as a first-team regular — take the reins as manager.
     if (s.handoff) { this.renderHandoff(s); return; }
     // MUSIC follows the moment: a shock call-up gets tension, a life-event gets drama, else the career loop.
@@ -2195,8 +2215,10 @@ class Game {
     else if (this.careerTab === 'life') content = this.offPitchHtml(s);
     else if (this.careerTab === 'league') content = this.leagueTableHtml(s);
     else content = this.objectiveHtml(s) + this.rivalHtml(s) + this.intlHtml(s) + this.lifeDashHtml(s) + narr + recap + lifeOutcome + conseq + evt + body;
+    const help = this.careerTab === 'now' ? this.careerHelpCard(s) : '';
     const tut = this.careerTab === 'now' ? this.tutorialHint(s) : '';
-    $('academy-body').innerHTML = head + scene + tut + tabBar + content;
+    $('academy-body').innerHTML = head + scene + help + tut + tabBar + content;
+    ($('cg-help-x') as any)?.addEventListener('click', () => { localStorage.setItem('fm_career_help_done', '1'); ($('cg-help') as any)?.remove(); });
     ($('cg-tut-x') as any)?.addEventListener('click', () => { localStorage.setItem('fm_tut_done', '1'); ($('cg-tut') as any)?.remove(); });
     $('cg-back').addEventListener('click', () => this.showAcademy());
     $('academy-body').querySelectorAll('.cg-tab').forEach((el) => el.addEventListener('click', () => { this.careerTab = (el as HTMLElement).dataset.tab as any; this.renderCareer(s); }));
@@ -2287,44 +2309,38 @@ class Game {
   /** KIT tab: cosmetic identity — squad number, boot colour, celebration, nickname (carries to the pro). */
   private kitTabHtml(s: import('./api').CareerState): string {
     const k = s.kit ?? { number: 10, boots: 'white', celebration: 'kneeslide', nickname: '', hairstyle: 'buzz', accessory: 'none' };
-    const boots = BOOT_COLOURS.map((b) => `<button type="button" class="cg-swatch${k.boots === b.id ? ' on' : ''}" data-boot="${b.id}" title="${b.name}" style="background:${b.hex}"></button>`).join('');
-    const cels = CELEBRATIONS.map((c) => `<option value="${c.id}"${k.celebration === c.id ? ' selected' : ''}>${c.name}</option>`).join('');
-    const hairs = HAIRSTYLES.map((h) => `<option value="${h.id}"${(k.hairstyle ?? 'buzz') === h.id ? ' selected' : ''}>${h.name}</option>`).join('');
-    const accs = ACCESSORIES.map((a) => `<option value="${a.id}"${(k.accessory ?? 'none') === a.id ? ' selected' : ''}>${a.name}</option>`).join('');
+    // Text engine: we only surface identity that actually appears in his STORY. Squad number is real (it's
+    // retired in his honour if he becomes a legend); the nickname is what the crowd/commentary calls him.
+    // Purely-visual choices (boots colour, hairstyle, accessory, celebration) were cut — nothing renders them.
     return `<div class="cg-kit">`
-      + `<div class="cg-prompt">🎽 <b>Kit & identity</b> — make him unmistakably yours. Purely cosmetic, and it carries into the pro.</div>`
-      + `<div class="cg-kit-row"><label>Squad number</label><input id="kit-number" type="number" min="1" max="99" value="${k.number}"></div>`
-      + `<div class="cg-kit-row"><label>Nickname <span class="cg-kit-hint">(what the crowd calls him)</span></label><input id="kit-nick" type="text" maxlength="20" placeholder="e.g. The Wolf" value="${(k.nickname ?? '').replace(/"/g, '&quot;')}"></div>`
-      + `<div class="cg-kit-row"><label>Boots</label><div class="cg-swatches">${boots}</div></div>`
-      + `<div class="cg-kit-row"><label>Signature celebration</label><select id="kit-cel">${cels}</select></div>`
-      + `<div class="cg-kit-row"><label>Hairstyle</label><select id="kit-hair">${hairs}</select></div>`
-      + `<div class="cg-kit-row"><label>Accessory</label><select id="kit-acc">${accs}</select></div>`
-      + `<button id="kit-save" class="cg-kit-save">Save kit</button>`
+      + `<div class="cg-prompt">🎽 <b>Identity</b> — this is a text game, so we keep it to the two details that actually show up in his story.</div>`
+      + `<div class="cg-kit-row"><label>Squad number <span class="cg-kit-hint">(his for life — retired in his honour if he becomes a club legend)</span></label><input id="kit-number" type="number" min="1" max="99" value="${k.number}"></div>`
+      + `<div class="cg-kit-row"><label>Nickname <span class="cg-kit-hint">(what the crowd and the commentary call him)</span></label><input id="kit-nick" type="text" maxlength="20" placeholder="e.g. The Wolf" value="${(k.nickname ?? '').replace(/"/g, '&quot;')}"></div>`
+      + `<button id="kit-save" class="cg-kit-save">Save</button>`
       + `</div>`;
   }
   private wireKitTab(s: import('./api').CareerState) {
-    let boot = (s.kit?.boots) ?? 'white';
-    $('academy-body').querySelectorAll('.cg-swatch').forEach((el) => el.addEventListener('click', () => {
-      boot = (el as HTMLElement).dataset.boot!;
-      $('academy-body').querySelectorAll('.cg-swatch').forEach((x) => x.classList.remove('on'));
-      el.classList.add('on');
-    }));
     $('kit-save').addEventListener('click', async () => {
+      const prev = s.kit ?? {} as any; // preserve legacy cosmetic fields the UI no longer exposes
       const kit = {
         number: Math.max(1, Math.min(99, parseInt(($('kit-number') as HTMLInputElement).value) || 10)),
-        boots: boot,
-        celebration: ($('kit-cel') as HTMLSelectElement).value,
+        boots: prev.boots ?? 'white',
+        celebration: prev.celebration ?? 'kneeslide',
         nickname: ($('kit-nick') as HTMLInputElement).value.trim(),
-        hairstyle: ($('kit-hair') as HTMLSelectElement).value,
-        accessory: ($('kit-acc') as HTMLSelectElement).value,
+        hairstyle: prev.hairstyle ?? 'buzz',
+        accessory: prev.accessory ?? 'none',
       };
-      try { const r = await api.saveKit(s.prospectId, kit); if (this.lastCareerState) this.lastCareerState.kit = r.kit; s.kit = r.kit; toast('Kit saved ✓'); }
-      catch (e: any) { toast(e?.body?.error ?? 'Could not save kit'); }
+      try { const r = await api.saveKit(s.prospectId, kit); if (this.lastCareerState) this.lastCareerState.kit = r.kit; s.kit = r.kit; toast('Saved ✓'); }
+      catch (e: any) { toast(e?.body?.error ?? 'Could not save'); }
     });
   }
 
+  private actInFlight = false; // guard: one career action resolves at a time (prevents "card not in hand" on a double/stale click)
   private async doCareerAct(prospectId: string, action: { type: string; cardId: string }) {
     if (!['play', 'draft', 'coach', 'offer', 'focus', 'lifestyle'].includes(action.type)) return; // ignore view-only (deck) cards
+    if (this.actInFlight) return; // a move is already resolving — ignore the extra click (the hand may have changed)
+    this.actInFlight = true;
+    $('academy-body').classList.add('cg-acting'); // dim + block the card grid while the move resolves
     if (action.type !== 'lifestyle') this.careerTab = 'now'; // after acting, return to the action view (but stay put while shopping)
     try {
       const r = await api.careerAct(prospectId, action);
@@ -2348,6 +2364,7 @@ class Game {
         if (r.clubGain && r.clubGain > 0) toast(`🏟️ +${r.clubGain}c to the club`);
       }
     } catch (e: any) { toast(e?.body?.error ?? 'Move failed'); }
+    finally { this.actInFlight = false; $('academy-body').classList.remove('cg-acting'); }
   }
 
   // ── Scouting Network: destinations + dispatched trips (sealed → travel → reveal) ──

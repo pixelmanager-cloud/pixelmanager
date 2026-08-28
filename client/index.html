@@ -475,6 +475,17 @@
       .cg-chapter { font-size: 14px; color: var(--cg-accent, #7cf); font-family: var(--display); }
       .cg-bar { flex: 1 1 160px; height: 8px; background: #222238; border-radius: 5px; overflow: hidden; min-width: 120px; }
       .cg-bar > i { display: block; height: 100%; background: var(--cg-accent, linear-gradient(90deg,#6ad06a,#e6c76a)); transition: width .4s ease; }
+      .cg-head .pr-meta { font-size: 13px; color: var(--muted); white-space: nowrap; } /* turn/total — keep it compact so the HUD never crowds */
+      .cg-head .cg-score { font-family: var(--display); font-size: 12px; color: var(--warn); white-space: nowrap; margin-left: auto; }
+      /* one-time career explainer (playtest fix: too much was unexplained — energy/money/relationships/rival) */
+      .cg-help { background: color-mix(in srgb, var(--cg-accent, #6ad06a) 12%, var(--panel)); border: 1px solid var(--cg-accent, var(--line)); border-radius: 10px; padding: 12px 14px; margin-bottom: 12px; }
+      .cg-help-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-family: var(--display); font-size: 13px; letter-spacing: 0.5px; color: var(--cg-accent, var(--good)); margin-bottom: 8px; }
+      .cg-help-x { font-size: 12px; padding: 4px 10px; }
+      .cg-help-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 7px; }
+      .cg-help-list li { font-family: var(--body); font-size: 15px; line-height: 1.45; color: var(--text); }
+      .cg-help-list b { color: #fff; }
+      /* dim + block the choice grid while a move resolves (playtest fix K7: no stale/double "card not in hand") */
+      #academy-body.cg-acting .cg-cards, #academy-body.cg-acting .cg-focus, #academy-body.cg-acting .cg-coach, #academy-body.cg-acting .cg-offer { opacity: 0.55; pointer-events: none; }
       /* ── per-stage re-theme: backdrop + scene banner, accent driven by --cg-accent (set per chapter) ── */
       #academy { --cg-accent: #6ad06a; }
       #academy-body { background: var(--cg-bg, transparent); border-radius: 12px; transition: background .5s ease; }
