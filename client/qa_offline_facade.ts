@@ -60,10 +60,20 @@ let state = started.state;
 let graduated = false;
 let player: any = null;
 let guard = 0;
+let sawArc = false;
 while (!graduated && guard++ < 2000) {
   const phase = state.phase;
   let action: { type: string; cardId: string };
-  if (phase === 'arc') action = { type: 'arc', cardId: (state as any).arc.choices[0].id };
+  if (phase === 'arc') {
+    // REGRESSION GUARD (PT-52/PT-53): an arc-phase state must still carry the full career wrapper —
+    // prospectId/name/turn — or the client can't render the header or dispatch the choice (soft-lock).
+    // careerState's arc branch once early-returned the bare state, stripping these; never again.
+    sawArc = true;
+    assert((state as any).prospectId === prospectId, 'arc-phase state keeps prospectId (else the client cannot dispatch the choice → soft-lock)');
+    assert(typeof (state as any).name === 'string' && (state as any).name.length > 0, 'arc-phase state keeps the player name (else header reads "undefined")');
+    assert(typeof state.turn === 'number', 'arc-phase state keeps the turn counter');
+    action = { type: 'arc', cardId: (state as any).arc.choices[0].id };
+  }
   else if (phase === 'focus') action = { type: 'focus', cardId: state.focus![0].id };
   else if (phase === 'offer') action = { type: 'offer', cardId: state.offers![0].id };
   else if (phase === 'coach') action = { type: 'coach', cardId: state.coaches![0].id };
@@ -74,6 +84,7 @@ while (!graduated && guard++ < 2000) {
   state = r.state!;
 }
 assert(graduated, `career reached graduation within the turn budget (${guard} actions)`);
+assert(sawArc, 'the career hit at least one story-arc beat (so the arc-wrapper regression guard above actually ran)');
 assert(!!player && !!player.role, 'the graduated pro has a role');
 
 console.log('=== 6. the graduated token is now a fieldable pro ===');
