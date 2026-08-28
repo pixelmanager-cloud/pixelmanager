@@ -303,6 +303,13 @@ const HUGE_AFTERMATH: Record<'triumph' | 'good', string[]> = {
   good: ['It won’t make the front pages, but everyone inside the stadium knows what it meant.', 'Not the headline act, but exactly the moment the team needed from him.', 'A quiet, vital contribution on the biggest of stages.'],
 };
 const HUGE_AFTERMATH_BAD = ['It’s the kind of moment that follows a player around for a long time.', 'The biggest stage has a way of finding a player’s weakest moment — and it just did.', 'He will replay this one in his head for longer than he’d like.', 'Not every big-stage story has a happy ending, and this is one of them.'];
+// BIG GAMES (stakes 2) get a lighter occasion-beat than the rare HUGE (stakes 3) moments — enough that a
+// big night reads bigger than a Tuesday session, without stealing the peak reserved for the huge ones (PT-12).
+const BIG_BEAT: Record<'triumph' | 'good' | 'bad', string[]> = {
+  triumph: ['On a big night, he stood up.', 'The occasion asked the question; he answered it.', 'When the game got big, so did he.', 'A performance the big games are made for.'],
+  good: ['A steady head when the occasion swelled.', 'He didn’t shrink from the moment.', 'Composed, with the stakes raised.'],
+  bad: ['The occasion got the better of him this time.', 'On the big night, the moment passed him by.', 'The stakes climbed and he couldn’t quite go with them.'],
+};
 
 /** One immersive sentence (or two) for a card played this turn. */
 export function narratePlay(cardName: string, cardTags: string[], success: number, ctx: NarrateCtx): string {
@@ -339,7 +346,11 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
   const debutFlourish = ctx.milestone === 'debut'
     ? ' ' + (b === 'triumph' || b === 'good' ? pick(DEBUT_EUPHORIA) : b === 'poor' || b === 'dismal' ? pick(DEBUT_ROUGH) : '')
     : '';
-  return `${tension}${milestone}${cap(lead)}, ${action} ${cardName} ${result}. ${reaction}${flavor}${castReact}${aftermath}${debutFlourish}`;
+  // BIG GAME (stakes 2) occasion-beat — bigger than routine, lighter than the HUGE stakes-3 sequence.
+  const bigBeat = ctx.stakes === 2 && rng() < 0.7
+    ? ' ' + (b === 'triumph' ? pick(BIG_BEAT.triumph) : b === 'good' ? pick(BIG_BEAT.good) : (b === 'poor' || b === 'dismal') ? pick(BIG_BEAT.bad) : '')
+    : '';
+  return `${tension}${milestone}${cap(lead)}, ${action} ${cardName} ${result}. ${reaction}${flavor}${castReact}${aftermath}${bigBeat}${debutFlourish}`;
 }
 
 // ── LIFE EVENTS: the resolution beat for a mid-chapter dilemma (see career.ts Scenario.life /

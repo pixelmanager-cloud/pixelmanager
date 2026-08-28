@@ -504,14 +504,35 @@ export { contractCost, contractLength, releaseClause, breederRevenue, contractEx
 // unsettled season); stay grounded and you develop keenly, stay cheap, but never cash in. `earn` is a
 // coin figure (a signing/deal), `form` a one-chapter success nudge, the rest permanent temperament.
 export interface Offer { id: string; name: string; desc: string; earn: number; greed: number; market: number; form: number }
-export const OFFERS: Offer[] = [
-  { id: 'money',   name: 'Big-Money Move',   desc: 'A rich club abroad triples your wages — but it means uprooting and settling in all over again', earn: 900, greed: 2,  market: 2, form: -0.08 },
-  { id: 'brand',   name: 'Boot & Kit Deal',  desc: 'A lucrative sponsorship and a rising profile — and the distractions that come with fame',       earn: 500, greed: 1,  market: 3, form: -0.05 },
-  { id: 'develop', name: 'Stay & Develop',   desc: 'Turn the money down, knuckle down at your club — you develop keenly and the fans adore you',    earn: 120, greed: -2, market: 0, form:  0.06 },
+// Three ARCHETYPES (stable ids for replay safety), each with several concrete offers so the between-season
+// money decision isn't the identical screen every year (PT-16). The character is constant per id — 'money'
+// = big cash + greed − form, 'brand' = fame, 'develop' = turn it down and grow — only the specifics vary.
+const MONEY_OFFERS: Offer[] = [
+  { id: 'money', name: 'Big-Money Move',    desc: 'A rich club abroad triples your wages — but it means uprooting and settling in all over again', earn: 900, greed: 2, market: 2, form: -0.08 },
+  { id: 'money', name: 'The Release Clause', desc: 'A rival triggers your buyout — a life-changing payday, but you leave the badge that made you', earn: 1100, greed: 3, market: 2, form: -0.09 },
+  { id: 'money', name: 'A Gulf Fortune',     desc: 'An offer from abroad that makes no sporting sense and every financial one — chase the cheque?', earn: 1400, greed: 4, market: 1, form: -0.11 },
+  { id: 'money', name: 'The Loyalty Bonus',  desc: 'A fat renewal to stay put — the money without the move, but the wage packet goes to his head', earn: 700, greed: 2, market: 1, form: -0.05 },
 ];
+const BRAND_OFFERS: Offer[] = [
+  { id: 'brand', name: 'Boot & Kit Deal',    desc: 'A lucrative sponsorship and a rising profile — and the distractions that come with fame',    earn: 500, greed: 1, market: 3, form: -0.05 },
+  { id: 'brand', name: 'A Magazine Cover',   desc: 'A glossy shoot and a fashion tie-in — his face is everywhere now, for better and worse',      earn: 420, greed: 1, market: 4, form: -0.06 },
+  { id: 'brand', name: 'The Boot Launch',    desc: 'His own signature boot drops this summer — huge exposure, and eyes that are no longer all on the pitch', earn: 620, greed: 1, market: 3, form: -0.05 },
+  { id: 'brand', name: 'Docu-series Deal',   desc: 'Cameras follow him for a season — the fame spikes, the focus wobbles',                       earn: 540, greed: 2, market: 4, form: -0.07 },
+];
+const DEVELOP_OFFERS: Offer[] = [
+  { id: 'develop', name: 'Stay & Develop',   desc: 'Turn the money down, knuckle down at your club — you develop keenly and the fans adore you',   earn: 120, greed: -2, market: 0, form: 0.06 },
+  { id: 'develop', name: 'Back the Project', desc: 'Reject the interest and commit to the club’s plan — quieter, but he grows and the terraces sing his name', earn: 100, greed: -2, market: 1, form: 0.07 },
+  { id: 'develop', name: 'Head Down, Work',  desc: 'No deals, no distractions — a pure season of graft that sharpens every edge of his game',     earn: 90, greed: -3, market: 0, form: 0.08 },
+  { id: 'develop', name: 'The One-Club Man', desc: 'Publicly pledge his future here — the fans adore him, the money waits, the football gets better', earn: 140, greed: -3, market: 1, form: 0.06 },
+];
+export const OFFERS: Offer[] = [MONEY_OFFERS[0], BRAND_OFFERS[0], DEVELOP_OFFERS[0]]; // canonical set (kept for any external ref)
 export const OFFER_CHOICES = 3;
-/** Deterministic financial offer set for a chapter (all three archetypes; the player picks their path). */
-export function rollOffer(_rng: () => number, _turn: number): Offer[] { return OFFERS; }
+/** Deterministic financial offer set for a chapter — one variant of each archetype, indexed by turn so the
+ *  specific offers differ season to season while the money/fame/develop choice (and ids) stay stable. */
+export function rollOffer(_rng: () => number, turn: number): Offer[] {
+  const at = (arr: Offer[], salt: number) => arr[Math.abs(Math.imul(turn + 1, salt) >>> 0) % arr.length];
+  return [at(MONEY_OFFERS, 2654435761), at(BRAND_OFFERS, 40503), at(DEVELOP_OFFERS, 2246822519)];
+}
 
 // ── FOCUS: between each chapter you decide how to spend the summer. Deterministic + development-neutral
 // (moves energy + relationships only, no rng), so it steers which meters you carry into the next chapter
@@ -768,6 +789,19 @@ export function makeScenario(rng: () => number, i: number, track: Track = 'outfi
   const maxStakes = band ? band.maxStakes : 3;
   const r = rng();
   const stakes: 1 | 2 | 3 = maxStakes >= 3 && r < 0.05 * exposure ? 3 : maxStakes >= 2 && r < 0.22 * exposure ? 2 : 1; // an agent's exposure = more big stages
+  // BIG GAMES demand more: a high-stakes moment gets at least two things asked of it (and a huge one, three),
+  // so it genuinely tests the deck rather than being a single-tag gimme behind a dramatic header (PT-12).
+  // Pure hash of (seed, turn) → no rng draw, so it never perturbs older careers that predate this.
+  if (stakes >= 2 && seed != null) {
+    const want = stakes >= 3 ? 3 : 2;
+    let guard = 0;
+    while (Object.keys(demand).length < want && guard < 8) {
+      const extras = bias.filter((t) => !(t in demand));
+      if (!extras.length) break;
+      demand[extras[Math.floor(pureHash01(seed, i, 0x71b12 + guard) * extras.length)]] = 0.6 - guard * 0.08;
+      guard++;
+    }
+  }
   // draw the moment pick unconditionally (keeps the rng stream stable) but only USE a match-flavoured moment
   // name for MATCH scenarios — "Derby Day"/"Cup Final" was bleeding onto training/life moments (PT-15).
   const momentPick = stakes === 3 ? HUGE_MOMENTS[Math.floor(rng() * HUGE_MOMENTS.length)]
