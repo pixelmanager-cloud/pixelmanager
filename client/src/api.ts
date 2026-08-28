@@ -20,7 +20,7 @@ import {
   generatePool, trialistAt, LOANEE_CAP, DESTINATIONS, destinationById, rollMission, travelMs as travelMsPure, previewOdds,
   gaffersDiaryEntry,
   rollGenes, updateMorale,
-  tokenToPlayer, tokenContract, legendCardOf, loadCareer, actWithNarration, careerState, graduatedFields,
+  tokenToPlayer, tokenContract, legendCardOf, loadCareer, actWithNarration, careerState, graduatedFields, careerCast, fillArcText,
   rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, nameFor,
   type FacilityKey, type MissionRow, type Token, type CareerAction,
 } from '@fm/shared';
@@ -76,7 +76,8 @@ export interface Kit { number: number; boots: string; celebration: string; nickn
 export interface CareerOutcome { fit: number; bestFit: number; success: number; tags: string[]; answeredAsk: boolean }
 export interface LeagueRow { name: string; mine: boolean; P: number; W: number; D: number; L: number; GF: number; GA: number; GD: number; Pts: number }
 export interface CareerState {
-  prospectId: string; name: string; pedigree: number; agentId?: string | null; phase: 'play' | 'coach' | 'draft' | 'offer' | 'focus';
+  prospectId: string; name: string; pedigree: number; agentId?: string | null; phase: 'play' | 'coach' | 'draft' | 'offer' | 'focus' | 'arc';
+  arc?: { id: string; title: string; icon: string; category: string; prompt: string; rivalName?: string; choices: Array<{ id: string; label: string; desc: string }> };
   age: number; chapter: string; turn: number; totalTurns: number; finished: boolean;
   seasonEvent?: { id: string; name: string; desc: string } | null; earnings?: number; deck?: CareerCard[];
   chemistry?: { id: string; name: string; tags: string[]; desc: string }[];
@@ -552,7 +553,10 @@ export const api = {
     const c = loadCareer(t);
     const earningsBefore = c.earnings;
     let narration: string | null = null;
-    try { narration = actWithNarration(c, action as CareerAction); } catch (e: any) { throw apiErr(e?.message ?? 'illegal move'); }
+    try {
+      if (action.type === 'arc') { narration = fillArcText(c.resolveArc(action.cardId), careerCast((c as any).seed >>> 0).rival); } // story-arc branch: apply + fill {RIVAL}
+      else narration = actWithNarration(c, action as CareerAction);
+    } catch (e: any) { throw apiErr(e?.message ?? 'illegal move'); }
     let clubGain = Math.round(Math.max(0, c.earnings - earningsBefore) * CLUB_WAGE_CUT);
     if (action.type === 'lifestyle') clubGain += clubInvestOf(action.cardId);
     let outcome: CareerOutcome | null = null;

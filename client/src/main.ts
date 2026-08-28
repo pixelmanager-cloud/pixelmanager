@@ -2238,7 +2238,13 @@ class Game {
         + s.consequences.map((n) => `<div class="cg-conseq-row">${n}</div>`).join('') + `</div>`
       : '';
     let body = '';
-    if (s.phase === 'play' && s.scenario) {
+    if (s.phase === 'arc' && (s as any).arc) {
+      // STORY ARC beat — a branching storyline moment. Rendered as a distinct, weightier decision.
+      const a = (s as any).arc;
+      body = `<div class="cg-scenario cg-arc arc-${a.category}"><div class="cg-mtype arc">${a.icon} ${a.title.toUpperCase()}</div><div class="cg-story cg-arc-story">${a.prompt}</div></div>`
+        + `<div class="cg-prompt">A moment that could shape his story — what does he do?</div>`
+        + `<div class="cg-cards cg-arc-choices">` + a.choices.map((ch: any) => `<div class="cg-card arc-choice" data-act="arc" data-id="${ch.id}"><div class="cg-cname">${ch.label}</div><div class="cg-cdescr">${ch.desc}</div></div>`).join('') + `</div>`;
+    } else if (s.phase === 'play' && s.scenario) {
       // the demand — what the moment is asking for. The top tag (biggest weight) is the primary thing to
       // match; render as distinct highlighted pills, labelled, so it never reads like just another card tag.
       const tags = Object.entries(s.scenario.demand).sort((a, b) => b[1] - a[1]).map(([t], i) => `<span class="cg-dtag${i === 0 ? ' primary' : ''}">${t}</span>`).join('');
@@ -2460,7 +2466,7 @@ class Game {
 
   private actInFlight = false; // guard: one career action resolves at a time (prevents "card not in hand" on a double/stale click)
   private async doCareerAct(prospectId: string, action: { type: string; cardId: string }) {
-    if (!['play', 'draft', 'coach', 'offer', 'focus', 'lifestyle'].includes(action.type)) return; // ignore view-only (deck) cards
+    if (!['play', 'draft', 'coach', 'offer', 'focus', 'lifestyle', 'arc'].includes(action.type)) return; // ignore view-only (deck) cards
     if (this.actInFlight) return; // a move is already resolving — ignore the extra click (the hand may have changed)
     this.actInFlight = true;
     $('academy-body').classList.add('cg-acting'); // dim + block the card grid while the move resolves

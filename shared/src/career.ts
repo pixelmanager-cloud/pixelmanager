@@ -4,6 +4,7 @@
 // player's stat SHAPE (playstyle); how WELL you played becomes the MAGNITUDE. Fully deterministic
 // (seeded, no Date.now/Math.random) so a career is a pure function of (seed, choices) — replayable
 // and verifiable on-chain later. See docs/two-layer-architecture.md.
+import { arcByIdOf, pickArcStart, type ArcEffect } from './storyarc.js';
 
 // ── deterministic RNG (mulberry32) ──
 export function mulberry32(seed: number): () => number {
@@ -26,7 +27,7 @@ const OUTFIELD_TAGS: Tag[] = ['composure', 'aggression', 'creativity', 'teamwork
 export type Track = 'outfield' | 'goalkeeper';
 export interface SeasonEvent { id: string; name: string; desc: string }
 /** One recorded development decision. A career is fully reconstructable from (seed, track, actions). */
-export interface Action { type: 'play' | 'draft' | 'coach' | 'offer' | 'focus' | 'lifestyle'; cardId: string }
+export interface Action { type: 'play' | 'draft' | 'coach' | 'offer' | 'focus' | 'lifestyle' | 'arc'; cardId: string }
 /** Everything needed to persist/trade an in-progress prospect (stored off-chain, keyed by tokenId).
  *  Deterministic → the current stats can be re-derived + verified by replaying it. */
 export interface CareerSnapshot { seed: number; track: Track; agentId?: string; actions: Action[] }
@@ -980,6 +981,10 @@ export class Career {
   coach: Coach | null = null;              // the staff member active this chapter (boosts their specialty)
   /** When set, a FINANCIAL OFFER is on the table (choose your path) before appointing a coach. */
   pendingOffer: Offer[] | null = null;
+  /** When set, a STORY-ARC beat is on the table — a branching, multi-turn storyline decision that interjects
+   *  between routine moments and leaves lasting marks (see storyarc.ts). Purely additive to the turn flow. */
+  pendingArc: { arcId: string; beatId: string } | null = null;
+  private firedArcs = new Set<string>();   // arcs already lived this career (no repeats)
   /** When set, the career pauses at a chapter break for a FOCUS choice: how to spend the summer. */
   pendingFocus: FocusOption[] | null = null;
   /** The chapter whose smaller SIDE focus round is currently on offer (Breakthrough onward, once per chapter). */
@@ -1055,12 +1060,19 @@ export class Career {
    *  buyer resumes development from precisely where the seller left off. */
   static resume(snap: CareerSnapshot): Career {
     const c = new Career(snap.seed, snap.track, snap.agentId);
-    for (const a of snap.actions) { if (a.type === 'draft') c.draft(a.cardId, true); else if (a.type === 'coach') c.appointCoach(a.cardId, true); else if (a.type === 'offer') c.resolveOffer(a.cardId); else if (a.type === 'focus') c.chooseFocus(a.cardId, true); else if (a.type === 'lifestyle') c.buyLifestyle(a.cardId, true); else c.play(a.cardId, true); }
+    for (const a of snap.actions) { if (a.type === 'draft') c.draft(a.cardId, true); else if (a.type === 'coach') c.appointCoach(a.cardId, true); else if (a.type === 'offer') c.resolveOffer(a.cardId); else if (a.type === 'focus') c.chooseFocus(a.cardId, true); else if (a.type === 'lifestyle') c.buyLifestyle(a.cardId, true); else if (a.type === 'arc') c.resolveArc(a.cardId); else c.play(a.cardId, true); }
     return c;
   }
 
   /** Current state: a 'coach' phase (appoint staff), a 'draft' phase (add a card), or a 'play' phase. */
   current() {
+    if (this.pendingArc) {
+      const arc = arcByIdOf(this.pendingArc.arcId), beat = arc?.beats[this.pendingArc.beatId];
+      if (arc && beat) return { phase: 'arc' as const, age: this.age, chapter: this.chapter, deck: this.deck, energy: this.energy, finished: this.finished,
+        arc: { id: arc.id, title: arc.title, icon: arc.icon, category: arc.category, prompt: beat.prompt, // {RIVAL} filled in careerState (has the seeded rival name)
+          choices: beat.choices.map((c) => ({ id: c.id, label: c.label, desc: c.desc })) } };
+      this.pendingArc = null; // corrupt reference → drop the arc, fall through
+    }
     if (this.pendingFocus) return { phase: 'focus' as const, age: this.age, chapter: this.chapter, focus: this.pendingFocus, side: this.sideFocusFor === this.chapter, lifestyle: this.lifestyleOffer, earnings: this.earnings, seasonEvent: this.seasonEvent, consequences: this.chapterConsequences, energy: this.energy, deck: this.deck, finished: this.finished };
     if (this.pendingOffer) return { phase: 'offer' as const, age: this.age, chapter: this.chapter, offers: this.pendingOffer, earnings: this.earnings, deck: this.deck, finished: this.finished };
     if (this.pendingCoaches) return { phase: 'coach' as const, age: this.age, chapter: this.chapter, coaches: this.pendingCoaches, deck: this.deck, finished: this.finished };
@@ -1139,6 +1151,30 @@ export class Career {
     this.pendingOffer = null;
     this.pendingCoaches = rollCoaches(this.rng, this.track);
   }
+  /** Resolve the current STORY-ARC beat: apply the chosen branch's effects, advance to the next beat (or end
+   *  the arc), record the choice. Returns the outcome prose ({RIVAL} still to be filled by the caller). */
+  resolveArc(choiceId: string): string {
+    if (!this.pendingArc) throw new Error('no arc beat pending');
+    const arc = arcByIdOf(this.pendingArc.arcId), beat = arc?.beats[this.pendingArc.beatId];
+    if (!arc || !beat) { this.pendingArc = null; throw new Error('arc beat missing'); }
+    const choice = beat.choices.find((c) => c.id === choiceId) ?? beat.choices[0];
+    this.applyArcEffect(choice.effect);
+    this.actions.push({ type: 'arc', cardId: choice.id });
+    if (choice.next && arc.beats[choice.next]) this.pendingArc = { arcId: arc.id, beatId: choice.next };
+    else { this.firedArcs.add(arc.id); this.pendingArc = null; }
+    return choice.outcome;
+  }
+  private applyArcEffect(e?: ArcEffect): void {
+    if (!e) return;
+    if (e.form) this.formBonus += e.form;
+    if (e.earnings) this.earnings += e.earnings;
+    if (e.market) this.marketBonus += e.market;
+    if (e.greed) this.greedBonus += e.greed;
+    if (e.energy) this.energy = clamp(this.energy + e.energy, 0, 100);
+    if (e.injury) this.seriousInjuries++;
+    if (e.meters) for (const [k, v] of Object.entries(e.meters)) this.life(k as MeterKey, v ?? 0);
+    if (e.attr) for (const [t, v] of Object.entries(e.attr)) this.attrFocus[t as Tag] = (this.attrFocus[t as Tag] ?? 0) + (v ?? 0);
+  }
 
   /** APPOINT a mentor/coach for the coming chapter; then proceed to the card draft. */
   appointCoach(coachId: string, tolerant = false) {
@@ -1174,6 +1210,7 @@ export class Career {
    *  best-fit card so an old career never bricks — live play keeps validating. */
   play(cardId: string, tolerant = false): Choice {
     if (this.finished) throw new Error('career finished');
+    if (this.pendingArc) throw new Error('resolve the story beat first');
     if (this.pendingFocus) throw new Error('choose a focus first');
     if (this.pendingOffer) throw new Error('resolve the financial offer first');
     if (this.pendingCoaches) throw new Error('appoint a coach first');
@@ -1223,7 +1260,12 @@ export class Career {
     // at an age-chapter boundary: relationships pay off (or bite), a narrative EVENT fires, then you
     // choose a summer FOCUS, take a financial offer, appoint a coach and draft.
     if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.earnings += 40 + this.turn * 12; this.pendingFocus = rollFocus(this.chapter, this.standing, this.track); }
-    else { this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure, this.seed); this.ensurePlayableHand(); }
+    else {
+      this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure, this.seed); this.ensurePlayableHand();
+      // STORY ARC: a branching storyline may interject before the next routine moment (deterministic, no rng
+      // draw — so it never perturbs the scenario/draw stream). The arc's beats then play out before this scenario.
+      if (!this.pendingArc) { const arcId = pickArcStart(this.seed, this.turn, this.firedArcs); if (arcId) { const a = arcByIdOf(arcId); if (a) this.pendingArc = { arcId, beatId: a.first }; } }
+    }
     return choice;
   }
 
@@ -1746,6 +1788,7 @@ export function simCareer(seed: number, style: Style, genes: Genes = rollGenes(s
   const prefScore = (c: Card) => c.tags.reduce((s, t) => s + (style.pref[t] ?? 0), 0);
   while (!career.finished) {
     const st = career.current();
+    if (st.phase === 'arc') { career.resolveArc((st as any).arc.choices[Math.floor(rng() * (st as any).arc.choices.length)].id); continue; } // a story-arc beat — pick a branch (style-neutral here)
     if (st.phase === 'focus') {
       // summer focus: an identity-matching attribute-focus pick (the soft skill-tree) beats a relationship
       // top-up beats a plain rest — a style-consistent career leans into its own strengths when it can.

@@ -73,7 +73,7 @@ console.log('\n=== reborn — team-achievement pedigree carries into the next ge
     const sonGenes = inheritGenes(dad, seedFrom('heir'), 0.6, b.ceilingLift);   // pedigree lifts physical ceilings
     // identical development (same seed + policy) so the ONLY difference is the inherited pedigree
     const c = new Career(seedFrom('heir-career'), 'outfield', 'loyal');
-    while (!c.finished) { const st = c.current(); st.phase === 'focus' ? c.chooseFocus(st.focus[0].id) : st.phase === 'offer' ? c.resolveOffer(st.offers[0].id) : st.phase === 'coach' ? c.appointCoach(st.coaches[0].id) : st.phase === 'draft' ? c.draft(st.options[0].id) : c.play(st.hand[0].id); }
+    while (!c.finished) { const st = c.current(); st.phase === 'arc' ? c.resolveArc((st as any).arc.choices[0].id) : st.phase === 'focus' ? c.chooseFocus(st.focus[0].id) : st.phase === 'offer' ? c.resolveOffer(st.offers[0].id) : st.phase === 'coach' ? c.appointCoach(st.coaches[0].id) : st.phase === 'draft' ? c.draft(st.options[0].id) : c.play(st.hand[0].id); }
     const p = graduate(c.log, seedFrom('heir-career'), sonGenes, undefined, { ...c.finContext(), legacyBonus: b.devBonus });
     return { b, p };
   };
@@ -139,7 +139,7 @@ console.log('\n=== deck-building — drafts grow your deck (pick first offer for
   const coaches: string[] = [];
   while (!dc.finished) {
     const st = dc.current();
-    if (st.phase === 'focus') { dc.chooseFocus(st.focus[0].id); continue; }
+    if (st.phase === 'arc') { dc.resolveArc((st as any).arc.choices[0].id); continue; } if (st.phase === 'focus') { dc.chooseFocus(st.focus[0].id); continue; }
     if (st.phase === 'offer') { dc.resolveOffer(st.offers[0].id); continue; }
     if (st.phase === 'coach') { coaches.push(st.coaches[0].name); dc.appointCoach(st.coaches[0].id); }
     else if (st.phase === 'draft') { offers.push(st.options.map((o) => `${o.name}${o.rarity && o.rarity !== 'common' ? ` (${o.rarity})` : ''}`)); dc.draft(st.options[0].id); }
@@ -161,7 +161,7 @@ console.log('\n=== a development life (age 10→25, seed arc) ===');
   let big = 0, huge = 0, bigWins = 0, lastChapter = '';
   while (!c.finished) {
     const st = c.current();
-    if (st.phase === 'focus') { c.chooseFocus(st.focus[0].id); continue; }
+    if (st.phase === 'arc') { c.resolveArc((st as any).arc.choices[0].id); continue; } if (st.phase === 'focus') { c.chooseFocus(st.focus[0].id); continue; }
     if (st.phase === 'offer') { c.resolveOffer(st.offers[0].id); continue; } if (st.phase === 'coach') { c.appointCoach(st.coaches[0].id); continue; }
     if (st.phase === 'draft') { c.draft(st.options[0].id); continue; }
     if (st.chapter !== lastChapter) { lastChapter = st.chapter; chapters.push(`age ${st.age} — ${st.chapter}${c.coach ? ` · coach: ${c.coach.name}` : ''}${c.seasonEvent ? `  ·  ${c.seasonEvent.name}` : ''}`); }
@@ -190,7 +190,7 @@ console.log('\n=== personality — same big moments, different temperament ===')
     for (let i = 0; found < 40 && i < 20000; i++) {
       const c = new Career(seedFrom('pers', i));
       if (c.personality.id !== persId) continue; found++;
-      while (!c.finished) { const st = c.current(); if (st.phase === 'focus') { c.chooseFocus(st.focus[0].id); continue; } if (st.phase === 'offer') { c.resolveOffer(st.offers[0].id); continue; } if (st.phase === 'coach') { c.appointCoach(st.coaches[0].id); continue; } if (st.phase === 'draft') { c.draft(st.options[0].id); continue; } c.play(st.hand[0].id); }
+      while (!c.finished) { const st = c.current(); if (st.phase === 'arc') { c.resolveArc((st as any).arc.choices[0].id); continue; } if (st.phase === 'focus') { c.chooseFocus(st.focus[0].id); continue; } if (st.phase === 'offer') { c.resolveOffer(st.offers[0].id); continue; } if (st.phase === 'coach') { c.appointCoach(st.coaches[0].id); continue; } if (st.phase === 'draft') { c.draft(st.options[0].id); continue; } c.play(st.hand[0].id); }
       for (const ch of c.log) if (ch.stakes >= 2) { sum += ch.success; n++; }
     }
     return n ? (sum / n).toFixed(2) : 'n/a';
@@ -207,7 +207,7 @@ console.log('\n=== sports agents — the agent you sign shapes a whole career ==
   const style: Style = { name: 'Talent', pref: { creativity: 1, flair: 0.8, composure: 0.5 }, skill: 0.85 };
   const bigMoments = (seed: number, agentId?: string) => {
     const c = new Career(seed, 'outfield', agentId);
-    while (!c.finished) { const st = c.current(); st.phase === 'focus' ? c.chooseFocus(st.focus[0].id) : st.phase === 'offer' ? c.resolveOffer(st.offers[0].id) : st.phase === 'coach' ? c.appointCoach(st.coaches[0].id) : st.phase === 'draft' ? c.draft(st.options[0].id) : c.play(st.hand[0].id); }
+    while (!c.finished) { const st = c.current(); st.phase === 'arc' ? c.resolveArc((st as any).arc.choices[0].id) : st.phase === 'focus' ? c.chooseFocus(st.focus[0].id) : st.phase === 'offer' ? c.resolveOffer(st.offers[0].id) : st.phase === 'coach' ? c.appointCoach(st.coaches[0].id) : st.phase === 'draft' ? c.draft(st.options[0].id) : c.play(st.hand[0].id); }
     return c.log.filter((ch) => ch.stakes >= 2).length;
   };
   // average big-stage moments each agent's exposure produces (over many careers)
@@ -233,7 +233,7 @@ console.log('\n=== financial decisions — the money fork (same player, differen
     const c = new Career(seed, 'outfield', 'ambitious');
     while (!c.finished) {
       const st = c.current();
-      if (st.phase === 'focus') { c.chooseFocus(st.focus[0].id); continue; }
+      if (st.phase === 'arc') { c.resolveArc((st as any).arc.choices[0].id); continue; } if (st.phase === 'focus') { c.chooseFocus(st.focus[0].id); continue; }
       if (st.phase === 'offer') { c.resolveOffer(st.offers.find((o) => o.id === offerId)?.id ?? st.offers[0].id); continue; }
       if (st.phase === 'coach') { c.appointCoach(st.coaches[0].id); continue; }
       if (st.phase === 'draft') { const best = st.options.reduce((b, o) => cardPower(o) > cardPower(b) ? o : b, st.options[0]); c.draft(best.id); continue; }
@@ -281,17 +281,17 @@ console.log('\n=== prospect market — trade an in-development player ===');
   const genes = rollGenes(seedFrom('prospect'));
   // develop a player halfway (a promising teenager), then a buyer resumes from the snapshot
   const seller = new Career(seedFrom('prospect'));
-  while (seller.age < 19 && !seller.finished) { const st = seller.current(); st.phase === 'focus' ? seller.chooseFocus(st.focus[0].id) : st.phase === 'offer' ? seller.resolveOffer(st.offers[0].id) : st.phase === 'coach' ? seller.appointCoach(st.coaches[0].id) : st.phase === 'draft' ? seller.draft(st.options[0].id) : seller.play(st.hand[0].id); }
+  while (seller.age < 19 && !seller.finished) { const st = seller.current(); st.phase === 'arc' ? seller.resolveArc((st as any).arc.choices[0].id) : st.phase === 'focus' ? seller.chooseFocus(st.focus[0].id) : st.phase === 'offer' ? seller.resolveOffer(st.offers[0].id) : st.phase === 'coach' ? seller.appointCoach(st.coaches[0].id) : st.phase === 'draft' ? seller.draft(st.options[0].id) : seller.play(st.hand[0].id); }
   const snap = seller.snapshot();
   const val = prospectValuation(seller, genes);
   console.log(`  FOR SALE — age ${val.age} (${val.chapter}), ${val.role}: current ovr ${val.currentOverall}, potential ${val.potential}, physical ceiling ${val.physicalCeiling}, ${'★'.repeat(val.stars)}${'☆'.repeat(5 - val.stars)}`);
   console.log(`  snapshot: ${snap.actions.length} actions (seed+track+actions — tiny, verifiable off-chain)`);
   // buyer resumes and finishes the career from exactly where the seller stopped
   const buyer = Career.resume(snap);
-  while (!buyer.finished) { const st = buyer.current(); st.phase === 'focus' ? buyer.chooseFocus(st.focus[0].id) : st.phase === 'offer' ? buyer.resolveOffer(st.offers[0].id) : st.phase === 'coach' ? buyer.appointCoach(st.coaches[0].id) : st.phase === 'draft' ? buyer.draft(st.options[0].id) : buyer.play(st.hand[0].id); }
+  while (!buyer.finished) { const st = buyer.current(); st.phase === 'arc' ? buyer.resolveArc((st as any).arc.choices[0].id) : st.phase === 'focus' ? buyer.chooseFocus(st.focus[0].id) : st.phase === 'offer' ? buyer.resolveOffer(st.offers[0].id) : st.phase === 'coach' ? buyer.appointCoach(st.coaches[0].id) : st.phase === 'draft' ? buyer.draft(st.options[0].id) : buyer.play(st.hand[0].id); }
   // verify: resume+continue is identical to developing straight through the same choices
   const straight = new Career(seedFrom('prospect'));
-  while (!straight.finished) { const st = straight.current(); st.phase === 'focus' ? straight.chooseFocus(st.focus[0].id) : st.phase === 'offer' ? straight.resolveOffer(st.offers[0].id) : st.phase === 'coach' ? straight.appointCoach(st.coaches[0].id) : st.phase === 'draft' ? straight.draft(st.options[0].id) : straight.play(st.hand[0].id); }
+  while (!straight.finished) { const st = straight.current(); st.phase === 'arc' ? straight.resolveArc((st as any).arc.choices[0].id) : st.phase === 'focus' ? straight.chooseFocus(st.focus[0].id) : st.phase === 'offer' ? straight.resolveOffer(st.offers[0].id) : st.phase === 'coach' ? straight.appointCoach(st.coaches[0].id) : st.phase === 'draft' ? straight.draft(st.options[0].id) : straight.play(st.hand[0].id); }
   const same = JSON.stringify(graduate(buyer.log, seedFrom('prospect'), genes, undefined, buyer.finContext())) === JSON.stringify(graduate(straight.log, seedFrom('prospect'), genes, undefined, straight.finContext()));
   console.log(`  buyer resumes → graduates the SAME player as continuous development: ${same}`);
 }
@@ -300,7 +300,7 @@ console.log('\n=== prospect market — trade an in-development player ===');
 console.log('\n=== determinism check ===');
 const replay = (seed: number) => {
   const c = new Career(seed); const ids: string[] = [];
-  while (!c.finished) { const st = c.current(); if (st.phase === 'focus') { ids.push('F:' + st.focus[0].id); c.chooseFocus(st.focus[0].id); } else if (st.phase === 'offer') { ids.push('O:' + st.offers[0].id); c.resolveOffer(st.offers[0].id); } else if (st.phase === 'coach') { ids.push('C:' + st.coaches[0].id); c.appointCoach(st.coaches[0].id); } else if (st.phase === 'draft') { ids.push('D:' + st.options[0].id); c.draft(st.options[0].id); } else { ids.push(st.hand[0].id); c.play(st.hand[0].id); } }
+  while (!c.finished) { const st = c.current(); if (st.phase === 'arc') { const ch=(st as any).arc.choices[0]; ids.push('A:'+ch.id); c.resolveArc(ch.id); } else if (st.phase === 'focus') { ids.push('F:' + st.focus[0].id); c.chooseFocus(st.focus[0].id); } else if (st.phase === 'offer') { ids.push('O:' + st.offers[0].id); c.resolveOffer(st.offers[0].id); } else if (st.phase === 'coach') { ids.push('C:' + st.coaches[0].id); c.appointCoach(st.coaches[0].id); } else if (st.phase === 'draft') { ids.push('D:' + st.options[0].id); c.draft(st.options[0].id); } else { ids.push(st.hand[0].id); c.play(st.hand[0].id); } }
   return { player: graduate(c.log, seed), ids };
 };
 const r1 = replay(999), r2 = replay(999);

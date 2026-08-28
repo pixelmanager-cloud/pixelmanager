@@ -23,6 +23,7 @@ for (let i = 0; i < N; i++) {
   let lastO = '', lastP = ''; let guard = 0;
   while (!c.finished && guard++ < 3000) {
     const st = c.current();
+    if (st.phase === 'arc') { c.resolveArc((st as any).arc.choices[0].id); continue; }
     if (st.phase === 'focus') { c.chooseFocus(st.focus![0].id); continue; }
     if (st.phase === 'offer') { c.resolveOffer(st.offers![0].id); continue; }
     if (st.phase === 'coach') { c.appointCoach(st.coaches![0].id); continue; }

@@ -17,6 +17,7 @@ import {
   narratePlay, narrateLifeEvent, scenarioStory, chapterRecap, narrateCoach, narrateDraft, narrateOffer, careerCast, rivalMomentStory, narrateRivalMoment, rivalNews,
   callupMomentStory, narrateCallupMoment, academyScareStory, narrateAcademyScare,
 } from './narrate.js';
+import { fillArcText } from './storyarc.js';
 import { clubSeason, squadRole, firstTeamReady } from './clubseason.js';
 import { computeOffPitch } from './offpitch.js';
 import type { Player } from './types.js';
@@ -78,6 +79,7 @@ export function applyAction(c: Career, a: CareerAction, tolerant = false) {
   else if (a.type === 'offer') c.resolveOffer(a.cardId);
   else if (a.type === 'focus') c.chooseFocus(a.cardId, tolerant);
   else if (a.type === 'lifestyle') c.buyLifestyle(a.cardId, tolerant);
+  else if (a.type === 'arc') c.resolveArc(a.cardId);
   else c.play(a.cardId, tolerant);
 }
 export function loadCareer(t: Token): Career {
@@ -201,6 +203,12 @@ function isAcademyScareTurn(c: Career, kind: string): boolean {
 
 export function careerState(t: Token, c: Career, clubName?: string | null, clubLevel = 0) {
   const st = c.current() as any;
+  // STORY ARC beat — fill {RIVAL} with the career's seeded nemesis so the storyline feels personal + recurring.
+  if (st.phase === 'arc' && st.arc) {
+    const rivalName = careerCast((c as any).seed >>> 0).rival;
+    st.arc = { ...st.arc, prompt: fillArcText(st.arc.prompt, rivalName), rivalName };
+    return st;
+  }
   const recentForm = (() => { const r = c.log.slice(-6); return r.length ? r.reduce((s, e) => s + e.success, 0) / r.length : 0.5; })();
   // STORY MODE: describe the situation + what each card would do
   if (st.phase === 'play' && st.scenario) {

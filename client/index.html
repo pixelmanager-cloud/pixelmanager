@@ -558,6 +558,12 @@
       .cg-demand { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
       /* moment-type presentation: a matchday scoreboard vs a lighter training / life badge */
       .cg-mtype { font-family: var(--display); font-size: 11px; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 9px; }
+      /* STORY ARC beats — a weightier, distinct storyline moment */
+      .cg-mtype.arc { color: var(--warn); }
+      .cg-scenario.cg-arc { border: 1px solid color-mix(in srgb, var(--warn) 55%, var(--line)); background: color-mix(in srgb, var(--warn) 8%, var(--panel-2)); box-shadow: 0 0 22px color-mix(in srgb, var(--warn) 14%, transparent); }
+      .cg-arc-story { font-size: 16px; line-height: 1.5; }
+      .cg-arc-choices .arc-choice { border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); }
+      .cg-arc-choices .arc-choice:hover { border-color: var(--warn); box-shadow: 0 4px 16px color-mix(in srgb, var(--warn) 18%, transparent); }
       .cg-mtype.training { color: #7fd4a0; } .cg-mtype.life { color: #e6b45a; } .cg-mtype.social { color: #8fb8ff; }
       .cg-mtype.pressure { color: #ff7aa8; font-size: 12px; text-shadow: 0 0 8px rgba(255,90,140,0.4); }
       .cg-score { font-family: var(--display); font-size: 11px; color: #f0d98a; margin-left: 8px; }

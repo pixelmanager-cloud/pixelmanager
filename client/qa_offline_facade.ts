@@ -63,7 +63,8 @@ let guard = 0;
 while (!graduated && guard++ < 2000) {
   const phase = state.phase;
   let action: { type: string; cardId: string };
-  if (phase === 'focus') action = { type: 'focus', cardId: state.focus![0].id };
+  if (phase === 'arc') action = { type: 'arc', cardId: (state as any).arc.choices[0].id };
+  else if (phase === 'focus') action = { type: 'focus', cardId: state.focus![0].id };
   else if (phase === 'offer') action = { type: 'offer', cardId: state.offers![0].id };
   else if (phase === 'coach') action = { type: 'coach', cardId: state.coaches![0].id };
   else if (phase === 'draft') action = { type: 'draft', cardId: state.options![0].id };
