@@ -9,7 +9,7 @@ import { legacyCard } from './legacy.js';
 import { moraleEffects } from './morale.js';
 import { homeNation, nationalFixture } from './intl.js';
 import {
-  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, AGE_BANDS, bandAt, cardName, CARD_DESC, LIFE_LABEL,
+  Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, AGE_BANDS, bandAt, cardName, cardTags, CARD_DESC, LIFE_LABEL,
   legacyBoost, inheritGenes, rollGenes, graduate,
   type Track, type Genes, type CareerPlayerAttrs, type LifeKind, type PlayerAchievements,
 } from './career.js';
@@ -121,7 +121,7 @@ export function actWithNarration(c: Career, a: CareerAction): string | null {
     const csBefore = careerScoreOf(c);
     applyAction(c, a);
     const choice = c.log[c.log.length - 1];
-    if (lifeKind) return narrateLifeEvent(lifeKind, cardName(a.cardId), choice.success, ctx, (c as any).lastLifeEvent?.approach);
+    if (lifeKind) return narrateLifeEvent(lifeKind, cardName(a.cardId), choice.success, ctx, (c as any).lastLifeEvent?.approach, cardTags(a.cardId), a.cardId);
     if (rivalMoment) {
       const rate = rivalRateOf((c as any).seed >>> 0);
       const payoff = { rivalName: careerCast((c as any).seed >>> 0).rival, leadBefore: csBefore - Math.round(turnBefore * rate), leadAfter: careerScoreOf(c) - Math.round(c.turn * rate) };
@@ -309,7 +309,7 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
   const cast = careerCast((c as any).seed >>> 0);
   const rivalRate = rivalRateOf((c as any).seed >>> 0);
   const rivalScore = Math.round(c.turn * rivalRate);
-  const rival = { name: cast.rival, score: rivalScore, lead: careerScore - rivalScore, news: rivalNews((c as any).seed >>> 0, c.chapter) };
+  const rival = { name: cast.rival, score: rivalScore, lead: careerScore - rivalScore, news: rivalNews((c as any).seed >>> 0, c.chapter, c.turn) };
   // INTERNATIONAL CALL-UP — perform well at the senior stages and you earn a national call-up + caps: an
   // aspirational ceiling to chase. Presentational, from overall × stage (only the good get capped).
   let international: { capped: boolean; caps: number; nation?: string; lastCap?: ReturnType<typeof nationalFixture> } | null = null;

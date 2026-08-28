@@ -276,6 +276,9 @@ const GK_STARTER: Card[] = GK_DECK.filter((c) => GK_STARTER_IDS.includes(c.id));
 const GK_DRAFT_POOL: Card[] = GK_DECK.filter((c) => !GK_STARTER_IDS.includes(c.id));
 /** A card's display name by id (across both decks) — for narration/UI. */
 export const cardName = (id: string): string => [...DECK, ...GK_DECK].find((c) => c.id === id)?.name ?? id;
+/** A card's tags by id (across both decks) — lets off-pitch life events reframe a football card by what
+ *  quality it draws on, instead of showing its on-pitch move name where it makes no sense (PT-43). */
+export const cardTags = (id: string): string[] => [...DECK, ...GK_DECK].find((c) => c.id === id)?.tags ?? [];
 
 /** What the player actually DOES when a card is played — the story-mode "meaning" of each choice. */
 export const CARD_DESC: Record<string, string> = {

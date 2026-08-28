@@ -175,6 +175,53 @@ const DEMAND: Record<string, string[]> = {
 };
 const pickFrom = <T,>(rng: () => number, arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
 
+// ── OFF-PITCH RESPONSES (PT-43): at a LIFE EVENT the player still plays a football card, but showing its
+// on-pitch move name ("Take your man on with a stepover") as the way to handle homework or a family scare
+// reads as a content bug. Reframe each card by the QUALITY it draws on (its dominant tag) into an off-pitch
+// choice — a title + subtitle for the card UI, and a noun phrase that splices into the resolution prose
+// ("He falls back on <noun> and …"). Stable per card id so the same card always reads the same way.
+type LifeAction = { name: string; desc: string; noun: string };
+const LIFE_ACTION: Record<string, LifeAction[]> = {
+  composure: [
+    { name: 'Keep a cool head', desc: 'Stay calm and deal with it, no drama', noun: 'his cool head' },
+    { name: 'Take it in his stride', desc: 'Not let it rattle him', noun: 'an unflappable calm' },
+  ],
+  aggression: [
+    { name: 'Stand his ground', desc: 'Meet it head-on and refuse to back down', noun: 'his stubborn streak' },
+    { name: 'Front up to it', desc: 'Square up to the problem, no flinching', noun: 'a refusal to be pushed around' },
+  ],
+  creativity: [
+    { name: 'Find another way', desc: 'Think around the problem', noun: 'his knack for a solution nobody else sees' },
+    { name: 'Talk his way through', desc: 'A clever answer to a tricky spot', noun: 'quick thinking' },
+  ],
+  teamwork: [
+    { name: 'Lean on the people around him', desc: 'Not try to carry it alone', noun: 'the people around him' },
+    { name: 'Share the load', desc: 'Bring others in rather than bottle it up', noun: 'his instinct to share the load' },
+  ],
+  leadership: [
+    { name: 'Take charge of it', desc: 'Front up and own the situation', noun: 'his instinct to take charge' },
+    { name: 'Set the example', desc: 'Handle it the way he’d want others to', noun: 'a quiet authority' },
+  ],
+  stamina: [
+    { name: 'Grind through it', desc: 'Head down, outlast the hard part', noun: 'sheer persistence' },
+    { name: 'Keep going', desc: 'Refuse to let it wear him down', noun: 'a refusal to be worn down' },
+  ],
+  flair: [
+    { name: 'Front it out', desc: 'Carry it off with easy confidence', noun: 'an easy confidence' },
+    { name: 'Charm his way through', desc: 'Disarm it with a bit of personality', noun: 'his natural charm' },
+  ],
+  keeping: [
+    { name: 'Hold the line', desc: 'Be the steady, dependable one', noun: 'a steady, dependable streak' },
+    { name: 'Stay solid', desc: 'Keep it together and see it out', noun: 'his composure under pressure' },
+  ],
+};
+const strHash = (s: string): number => { let h = 2166136261 >>> 0; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h >>> 0; };
+/** Reframe a football card as an off-pitch response, keyed on its dominant tag and stable per card id. */
+export function lifeAction(tags: string[], id: string): LifeAction {
+  const pool = LIFE_ACTION[tags[0]] ?? LIFE_ACTION.composure;
+  return pool[strHash(id) % pool.length];
+}
+
 // Deterministic, no-near-repeat pick: with `stride` coprime to the pool length, consecutive turns walk
 // the WHOLE pool before any entry repeats, so scenario fragments can't recombine verbatim a few turns
 // apart (PT-9/PT-42). `salt` (from the career seed) rotates each career's starting point so two careers
@@ -486,7 +533,7 @@ const INJURY_APPROACH_LINE: Record<'rush' | 'patient', { good: string[]; bad: st
 /** The resolution beat for a mid-chapter LIFE EVENT (contract standoff, loan call, media storm, etc.) —
  *  distinct from narratePlay: this reads like an off-pitch moment resolving, using the same success band.
  *  `approach` ('rush'/'patient') only ever arrives for injury_comeback (see career.ts's lastLifeEvent). */
-export function narrateLifeEvent(kind: string, cardName: string, success: number, ctx: NarrateCtx, approach?: 'rush' | 'patient'): string {
+export function narrateLifeEvent(kind: string, cardName: string, success: number, ctx: NarrateCtx, approach?: 'rush' | 'patient', cardTags?: string[], cardId?: string): string {
   const rng = mulberry32(ctx.seed >>> 0);
   const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
   const good = band(success) === 'triumph' || band(success) === 'good';
@@ -503,7 +550,10 @@ export function narrateLifeEvent(kind: string, cardName: string, success: number
   const castReact = cast && rng() < 0.3 && good
     ? ' ' + pick([`${cast.gaffer} appreciates how he handled it.`, `Even ${cast.rival} would admit that was well played.`, `His agent breathes a quiet sigh of relief.`])
     : '';
-  return `${lead} ${cardName} ${resline}${approachLine}${castReact}`;
+  // Splice a tag-derived quality ("his cool head"), NOT the on-pitch card name — an off-pitch moment isn't
+  // resolved by "a defence-splitting pass" (PT-43). Fall back to the raw name only if tags weren't supplied.
+  const token = cardTags && cardId ? lifeAction(cardTags, cardId).noun : cardName;
+  return `${lead} ${token} ${resline}${approachLine}${castReact}`;
 }
 
 // ── RIVALRY STORYLINE: the seeded academy rival isn't just a number to chase — a slice of big-stage MATCH
@@ -629,19 +679,19 @@ export function narrateAcademyScare(cardName: string, success: number, ctx: Narr
 // Deterministic "news" about the rival's own career — surfaced as a small ticker alongside the score, so
 // he feels like a real career unfolding in parallel, not just a number that climbs on a fixed schedule.
 const RIVAL_NEWS: Record<string, string[]> = {
-  Grassroots: ['is turning heads in the district league too.', 'has just been picked up by a bigger local side.', 'scored a hat-trick at the weekend — word travels fast.'],
-  Academy: ['has been fast-tracked up an age group.', 'picked up an injury that will keep him out for a spell.', 'is the other name scouts keep mentioning in the same breath.'],
-  Scholar: ['has signed his own scholarship forms at a rival academy.', 'is being talked about as the standout of his year group.', 'had a quiet trial and it showed.'],
-  'Youth Team': ['has broken into a reserve side of his own.', 'is on the fringes of a first-team squad now.', 'picked up his first taste of first-team training this month.'],
-  Breakthrough: ['has made his own first-team debut.', 'is being linked with a move across the city.', 'scored the winner in a game that made the papers.'],
-  'First Team': ['has just signed a new long-term contract.', 'was named in a team of the season shortlist.', 'is dealing with a loss of form of his own.'],
-  Establishing: ['has been given the captain’s armband at his club.', 'is being talked about for a testimonial of his own.', 'is closing in on a personal milestone.'],
+  Grassroots: ['is turning heads in the district league too.', 'has just been picked up by a bigger local side.', 'scored a hat-trick at the weekend — word travels fast.', 'got a mention in the local paper’s youth round-up.', 'has a dad who tells anyone who’ll listen how good he is.', 'was the talk of the school tournament last week.'],
+  Academy: ['has been fast-tracked up an age group.', 'picked up an injury that will keep him out for a spell.', 'is the other name scouts keep mentioning in the same breath.', 'has been handed a longer academy deal.', 'captained his age group at the weekend.', 'went cold in front of goal this month, by all accounts.'],
+  Scholar: ['has signed his own scholarship forms at a rival academy.', 'is being talked about as the standout of his year group.', 'had a quiet trial and it showed.', 'is said to have caught the eye of a bigger club’s scouts.', 'is struggling with the step up, whisper the coaches.', 'earned a call to a regional select side.'],
+  'Youth Team': ['has broken into a reserve side of his own.', 'is on the fringes of a first-team squad now.', 'picked up his first taste of first-team training this month.', 'has gone out on loan to get some minutes.', 'is reportedly unhappy with his game time.', 'bagged a brace for the reserves at the weekend.'],
+  Breakthrough: ['has made his own first-team debut.', 'is being linked with a move across the city.', 'scored the winner in a game that made the papers.', 'has been named on a young-player-to-watch list.', 'is nursing a knock that’s cost him his place.', 'signed his first professional contract this week.'],
+  'First Team': ['has just signed a new long-term contract.', 'was named in a team-of-the-season shortlist.', 'is dealing with a loss of form of his own.', 'has been linked with a big-money move abroad.', 'earned a first international call-up.', 'is captaining his side more often these days.'],
+  Establishing: ['has been given the captain’s armband at his club.', 'is being talked about for a testimonial of his own.', 'is closing in on a personal milestone.', 'has hinted he might retire within a couple of seasons.', 'moved into coaching badges alongside playing.', 'broke a long-standing club record last month.'],
 };
-/** A small seeded "news" beat about the rival's own career, appropriate to the current life stage. */
-export function rivalNews(seed: number, chapter: string): string {
+/** A small seeded "news" beat about the rival's own career, appropriate to the current life stage.
+ *  Turn-strided so his parallel story moves on turn to turn instead of freezing on one headline (PT-45). */
+export function rivalNews(seed: number, chapter: string, turn = 0): string {
   const bank = RIVAL_NEWS[chapter] ?? RIVAL_NEWS.Establishing;
-  const rng = mulberry32((seed ^ 0x1a2b3c) >>> 0);
-  return pickFrom(rng, bank);
+  return pickByTurn(bank, turn, 7, (seed ^ 0x1a2b3c) >>> 0);
 }
 
 // ── NON-PLAY CHOICES: a flavour beat when he appoints a coach, drafts a card, or takes an offer ──

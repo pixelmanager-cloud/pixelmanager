@@ -15,7 +15,7 @@ export { prospectValuation, deriveStats, eligibleTraits, cardName, CARD_DESC, cl
 export { LIFE_KINDS, LIFE_LABEL, type LifeKind } from './career.js';
 export { SYNERGIES, activeSynergies, type Synergy } from './career.js';
 export { narratePlay, narrateLifeEvent, scenarioStory, chapterRecap, graduationEpilogue, careerCast, narrateCoach, narrateDraft, narrateOffer, type NarrateCtx, type ScenarioCtx, type RecapCtx, type EpilogueCtx, type CareerCast } from './narrate.js';
-export { rivalMomentStory, narrateRivalMoment, rivalNews, type RivalPayoff } from './narrate.js';
+export { rivalMomentStory, narrateRivalMoment, rivalNews, lifeAction, type RivalPayoff } from './narrate.js';
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
