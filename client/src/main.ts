@@ -1634,7 +1634,7 @@ class Game {
     const titleLine = sold ? `${m.starName} is sold to ${sold.club}` : `${m.starName} hangs up his boots`;
     const storyLine = sold
       ? `After ${seasons} season${seasons === 1 ? '' : 's'} at <b>${this.club?.name}</b>${honourLine}, ${m.starName} leaves for <b>${sold.club}</b> in a <b>${sold.fee.toLocaleString()}c</b> deal — a wrench for the fans, but the money reshapes the club’s future.`
-      : `After ${seasons} season${seasons === 1 ? '' : 's'} steering <b>${this.club?.name}</b>${honourLine}, ${m.starName} retires a club great.${headlinesLine}`;
+      : `${m.starName} — once the heartbeat of this side on the pitch, latterly the man in the dugout — retires a club great after ${seasons} season${seasons === 1 ? '' : 's'} steering <b>${this.club?.name}</b>${honourLine}. Two careers in the same shirt, one bloodline throughout.${headlinesLine}`;
     $('academy-body').innerHTML = `<div class="cg-graduation"><div class="cg-grad-title"><span class="ico-inline ico-lg">${sprite('banner')}</span> ${titleLine}</div>`
       + `<div class="cg-epilogue">${storyLine} But the <b>${surname}</b> name isn't done — his son is already coming through the youth ranks.</div>`
       + `<div class="cg-prompt">What does ${m.starName} do next?</div>`
@@ -2122,6 +2122,18 @@ class Game {
         ($('cg-takereins') as HTMLButtonElement).textContent = 'Signing the contracts…';
         const { player } = await api.careerHandoff(s.prospectId);
         this.setMe(await api.me());
+        // Make sure the bloodline star actually STARTS — the old base-squad XI benched him. Auto-pick a fresh
+        // XI from the merged squad (he's one of the best now) and force him in if anything left him out (PT-17).
+        try {
+          let ids = autoPickXI(this.club!, this.standingOrders.formation).playerIds;
+          if (!ids.includes(s.prospectId) && this.club!.players.some((p) => p.id === s.prospectId)) {
+            const starters = ids.map((id) => this.club!.players.find((p) => p.id === id)).filter(Boolean) as Player[];
+            const worst = starters.slice().sort((a, b) => overall(a) - overall(b))[0];
+            if (worst) ids = [...ids.filter((id) => id !== worst.id), s.prospectId];
+          }
+          await api.setStandingOrders({ ...this.standingOrders, playerIds: ids });
+          this.setMe(await api.me());
+        } catch { /* keep the default XI if the auto-pick fails */ }
         const retireAge = this.retireAgeFor(player);
         this.saveMgr({ season: 1, results: [], starId: s.prospectId, starName: s.name, starAge: s.age, retireAge }); // enter manager phase
         toast(`🧢 You're the manager now — ${s.name} is in your squad`);
