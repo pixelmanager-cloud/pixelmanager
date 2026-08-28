@@ -1793,9 +1793,16 @@ class Game {
     $('academy-body').innerHTML = `<div class="cg-graduation"><div class="cg-grad-title"><span class="ico-inline ico-lg">${sprite('banner')}</span> ${titleLine}</div>`
       + `<div class="cg-epilogue">${storyLine} But the <b>${surname}</b> name isn't done — the next of the line is about to kick a ball for the very first time.</div>`
       + `<div class="cg-prompt">What does ${m.starName} do next?</div>`
+      + `<div class="cg-prompt cg-hint-sub">Only <b>mentoring</b> passes something to the heir — the others are his own next chapter. Your call (#56).</div>`
       + `<div id="cg-nextlife">` + (Object.keys(Game.NEXT_LIFE) as Array<'coaching' | 'media' | 'mentoring'>).map((k) => {
         const nl = Game.NEXT_LIFE[k];
-        return `<div class="cg-coach" data-nextlife="${k}"><div class="cg-cname">${nl.icon} ${nl.label}</div></div>`;
+        // disclose the blurb + effect BEFORE committing (was a blind, hidden fake-choice) so the heir bonus is
+        // explicit and the trade-off is honest (PT-56)
+        const heirBonus = k === 'mentoring' ? Math.min(3, Math.ceil(mentorship / 2)) : 0;
+        const eff = k === 'mentoring'
+          ? `<div class="cg-effs">🎓 ${heirBonus > 0 ? `gives the heir a <b>+${heirBonus} mentality</b> head-start (composure + leadership)` : 'stays in the heir’s corner'}</div>`
+          : `<div class="cg-effs cg-eff-mute">a new chapter for him — no direct effect on the heir</div>`;
+        return `<div class="cg-coach" data-nextlife="${k}"><div class="cg-cname">${nl.icon} ${nl.label}</div><div class="cg-cdesc">${nl.blurb}</div>${eff}</div>`;
       }).join('') + `</div></div>`;
     document.querySelectorAll('#cg-nextlife [data-nextlife]').forEach((el) => el.addEventListener('click', () => {
       const choice = (el as HTMLElement).dataset.nextlife as 'coaching' | 'media' | 'mentoring';
