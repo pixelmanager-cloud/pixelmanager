@@ -146,7 +146,10 @@ export function seasonFixtures(myClub: string, seed: number, tier = 1): Fixture[
 export interface PlayedResult { myGoals: number; oppGoals: number }
 /** LIVE league table after `played.length` rounds: every club has played that many games. Marlow's rounds
  *  use his real results; every other match up to the current round is simulated. Fills in as you play. */
-export function liveTable(myClub: string, marlowStrength: number, share: number, seed: number, played: PlayedResult[], tier = 1) {
+// `resultSeed` (defaults to `seed`, so existing callers are byte-identical) varies the OTHER clubs' match
+// results per season while the roster stays fixed to `seed` — so your division's clubs are stable year to
+// year, but the league plays out differently each season instead of repeating byte-for-byte (PT-24).
+export function liveTable(myClub: string, marlowStrength: number, share: number, seed: number, played: PlayedResult[], tier = 1, resultSeed = seed) {
   const clubs = seededLeague(myClub, SQUAD_BASE + (marlowStrength - SQUAD_BASE) * share, seed, tier);
   const rounds = scheduleRounds(clubs.length);
   const rows: TableRow[] = clubs.map((c) => ({ name: c.name, mine: c.mine, P: 0, W: 0, D: 0, L: 0, GF: 0, GA: 0, GD: 0, Pts: 0 }));
@@ -158,7 +161,7 @@ export function liveTable(myClub: string, marlowStrength: number, share: number,
   for (let r = 0; r < matchday; r++) for (const [hi, ai] of rounds[r]) {
     let gh: number, ga: number;
     if (hi === 0 || ai === 0) { const p = played[r]; if (hi === 0) { gh = p.myGoals; ga = p.oppGoals; } else { gh = p.oppGoals; ga = p.myGoals; } }
-    else [gh, ga] = simMatch(clubs[hi], clubs[ai], hash32(seed, r * 53 + hi * 7 + ai));
+    else [gh, ga] = simMatch(clubs[hi], clubs[ai], hash32(resultSeed, r * 53 + hi * 7 + ai));
     add(rows[hi], rows[ai], gh, ga);
   }
   for (const r of rows) r.GD = r.GF - r.GA;

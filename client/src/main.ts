@@ -934,7 +934,7 @@ class Game {
         // MANAGER PHASE: feed the diary the REAL local season — results + live table — so it narrates
         // form, win streaks, promotion/relegation watch etc. (rebuilt offline; the old PvP feed is gone).
         const results = m.results ?? [];
-        const t = liveTable(this.club.name, this.clubLeagueStrength(), 1, this.leagueSeed(), results, this.clubTier());
+        const t = liveTable(this.club.name, this.clubLeagueStrength(), 1, this.leagueSeed(), results, this.clubTier(), this.seasonResultSeed());
         const matches = results.map((r, i) => ({ id: `s${m.season}-m${i}`, myScore: r.myGoals, oppScore: r.oppGoals, oppId: '', oppHandle: '', createdAt: i }));
         const table = { position: t.pos, total: t.size, promote: 3, relegate: 2, points: t.me.Pts }; // top-3 = continental zone, bottom-2 = relegation (matches spTableHtml)
         entry = gaffersDiaryEntry({ seasonNumber: m.season, matches, table });
@@ -1076,6 +1076,9 @@ class Game {
     return { ...lineup, playerIds: ids };
   }
   private leagueSeed(): number { const h = this.account?.handle ?? 'x'; return [...h].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) >>> 0; }
+  /** Per-SEASON seed for the OTHER clubs' league results — same division (leagueSeed), different table each
+   *  season, so seasons don't replay byte-for-byte (PT-24). Stable within a season, changes at rollover. */
+  private seasonResultSeed(): number { return (this.leagueSeed() ^ Math.imul((this.loadMgr().season ?? 1) + 1, 0x9e3779b1)) >>> 0; }
   // the club's current pyramid TIER (1 = top flight … 10 = bottom). A club property that survives the
   // bloodline hand-off (stored apart from the per-generation manager save), so the dynasty climbs one pyramid.
   private clubTier(): number { try { const t = Number(localStorage.getItem('fm_tier_' + (this.account?.handle ?? 'x'))); return t >= 1 && t <= TIERS ? Math.round(t) : TIERS; } catch { return TIERS; } }
@@ -1186,7 +1189,7 @@ class Game {
     const clubName = this.club.name, seed = this.leagueSeed();
     const fixtures = seasonFixtures(clubName, seed, this.clubTier());
     const m = this.loadMgr(), played = m.results;
-    const t = liveTable(clubName, this.clubLeagueStrength(), 1, seed, played, this.clubTier());
+    const t = liveTable(clubName, this.clubLeagueStrength(), 1, seed, played, this.clubTier(), this.seasonResultSeed());
     const nextIdx = played.length, done = nextIdx >= fixtures.length;
     // your seeded RIVAL club — those fixtures are derbies
     const opps = seededOpponents(clubName, seed, this.clubTier());
@@ -1573,7 +1576,7 @@ class Game {
    *  reaches the end of his career — trigger his retirement and the succession to the heir. */
   private async nextSeason() {
     const m = this.loadMgr();
-    const t = liveTable(this.club.name, this.clubLeagueStrength(), 1, this.leagueSeed(), m.results, this.clubTier());
+    const t = liveTable(this.club.name, this.clubLeagueStrength(), 1, this.leagueSeed(), m.results, this.clubTier(), this.seasonResultSeed());
     // this season's W/D/L (fed to the lifetime manager record that powers prestige)
     const rec = (m.results ?? []).reduce((a, r) => { r.myGoals > r.oppGoals ? a.wins++ : r.myGoals < r.oppGoals ? a.losses++ : a.draws++; return a; }, { wins: 0, draws: 0, losses: 0 });
     // bank the season prize money (coins → reinvest in facilities), closing the manager economy loop
@@ -1586,7 +1589,7 @@ class Game {
       const expectation = deriveExpectation({ prestigeLevelIdx: prestige.levelIdx, priorFinish: this.finishOf(m.lastFinishPos, t.size) });
       const gp = Math.max(1, rec.wins + rec.draws + rec.losses);
       const st = boardStanding((this.leagueSeed() ^ (m.season * 0x9e3779b1)) >>> 0, {
-        position: t.pos, total: t.size, promote: 3, relegate: 3,
+        position: t.pos, total: t.size, promote: 2, relegate: 2, // match the real rule: top-2 up / bottom-2 down (PT-28)
         points: rec.wins * 3 + rec.draws, matchesPlayed: gp, totalMatches: gp, expectation,
       });
       lastBoard = { message: st.message, mood: st.mood, expectation };
@@ -1606,7 +1609,9 @@ class Game {
     else if (relegated) toast(`⬇️ Relegated to ${tierName(newTier)}.`);
     const titles = (m.titles ?? 0) + (t.pos === 1 ? 1 : 0);
     const age = (m.starAge ?? 22) + 1;
-    if (age >= (m.retireAge ?? 34)) { this.retireStar(titles, m.contTitles ?? 0); return; } // his playing days are over — the heir comes through
+    // his playing days are over — the heir comes through. Carry any final-season promotion/relegation into
+    // the send-off so it's acknowledged (the reveal banner would be stale for the heir a generation later, PT-27).
+    if (age >= (m.retireAge ?? 34)) { this.retireStar(titles, m.contTitles ?? 0, undefined, (promoted || relegated) ? { move: promoted ? 'promoted' : 'relegated', tier: tierName(newTier) } : undefined); return; }
     const qualified = tier === 1 && t.pos <= 3; // only the TOP flight's top-3 book a Continental Cup place
     if (qualified) toast('🌍 Top-3 in the top flight — qualified for the Continental Cup!');
     // new season → fresh sponsor; drop any unfinished World-Finals run (it belongs to its staging season)
@@ -1653,7 +1658,7 @@ class Game {
       } catch { toast('The sale fell through'); }
     });
   }
-  private retireStar(titles: number, contTitles = 0, sold?: { fee: number; club: string }) {
+  private retireStar(titles: number, contTitles = 0, sold?: { fee: number; club: string }, finalMove?: { move: 'promoted' | 'relegated'; tier: string }) {
     const m = this.loadMgr();
     const seasons = m.season;
     const mentorship = Math.max(0, (m.starAge ?? 30) - 30); // veteran years spent passing on the game to the next gen — only banked if he chooses to mentor
@@ -1665,10 +1670,11 @@ class Game {
     // THE HEADLINES STOP: real retired pros describe the abruptness of the press/media drop-off — front
     // pages one day, silence the next, the game already moved on (research §11, Joe Thompson's own words).
     const headlinesLine = ` The back pages carried him for one last day. By the morning after, the game had already moved on to someone else’s story.`;
+    const finalMoveLine = finalMove ? ` In his very last season he ${finalMove.move === 'promoted' ? 'took the club up to' : 'saw the club drop to'} <b>${finalMove.tier}</b> — a parting ${finalMove.move === 'promoted' ? 'gift to the fans' : 'blow for the heir to put right'}.` : '';
     const titleLine = sold ? `${m.starName} is sold to ${sold.club}` : `${m.starName} hangs up his boots`;
     const storyLine = sold
       ? `After ${seasons} season${seasons === 1 ? '' : 's'} at <b>${this.club?.name}</b>${honourLine}, ${m.starName} leaves for <b>${sold.club}</b> in a <b>${sold.fee.toLocaleString()}c</b> deal — a wrench for the fans, but the money reshapes the club’s future.`
-      : `${m.starName} — once the heartbeat of this side on the pitch, latterly the man in the dugout — retires a club great after ${seasons} season${seasons === 1 ? '' : 's'} steering <b>${this.club?.name}</b>${honourLine}. Two careers in the same shirt, one bloodline throughout.${headlinesLine}`;
+      : `${m.starName} — once the heartbeat of this side on the pitch, latterly the man in the dugout — retires a club great after ${seasons} season${seasons === 1 ? '' : 's'} steering <b>${this.club?.name}</b>${honourLine}. Two careers in the same shirt, one bloodline throughout.${finalMoveLine}${headlinesLine}`;
     $('academy-body').innerHTML = `<div class="cg-graduation"><div class="cg-grad-title"><span class="ico-inline ico-lg">${sprite('banner')}</span> ${titleLine}</div>`
       + `<div class="cg-epilogue">${storyLine} But the <b>${surname}</b> name isn't done — his son is already coming through the youth ranks.</div>`
       + `<div class="cg-prompt">What does ${m.starName} do next?</div>`
