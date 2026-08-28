@@ -361,8 +361,12 @@ export function scenarioStory(kind: string, topTag: string, moment: string | nul
   const cast = c.careerSeed != null ? careerCast(c.careerSeed) : null;
   const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   // occasionally attribute the situation to a recurring character (its own sentence — follows a full stop)
+  // a child on a park pitch has a coach, parents on the touchline and rival kids — never a club captain or a
+  // veteran mentor, so Grassroots/Academy get their own park-appropriate cast framings (PT-133, cf PT-46/103)
   const charRaw = cast && rng() < 0.4
-    ? pickByTurn([`${cap(cast.mentor)} reckons this is the making of him.`, `${cast.gaffer} wants to see how he handles it.`, `${cap(cast.captain)} is looking his way.`, `Beat ${cast.rival} to it and the point is made.`], turn, 5, salt)
+    ? (c.chapter && CHILD_CHAPTERS.has(c.chapter)
+        ? pickByTurn([`Coach ${cast.gaffer} wants to see how he handles it.`, `Beat ${cast.rival} to it and he'll never hear the end of it.`, `His mum's watching from the touchline.`, `The whole team is buzzing about it.`], turn, 5, salt)
+        : pickByTurn([`${cap(cast.mentor)} reckons this is the making of him.`, `${cast.gaffer} wants to see how he handles it.`, `${cap(cast.captain)} is looking his way.`, `Beat ${cast.rival} to it and the point is made.`], turn, 5, salt))
     : '';
   const charline = charRaw ? ' ' + charRaw : '';
   // The frame ("Terrified of being dropped, ") describes HIM; the setup describes the SITUATION — splicing
@@ -461,7 +465,9 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
   // a recurring character sometimes reacts
   const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed) : null;
   const castReact = cast && rng() < 0.25
-    ? ' ' + pick([`${cast.gaffer} said nothing, but noted it.`, `${cap(cast.mentor)} allowed himself a smile.`, `${cast.captain} clapped him on the back.`, `One in the eye for ${cast.rival}.`])
+    ? ' ' + (CHILD_CHAPTERS.has(ctx.chapter)
+        ? pick([`Coach ${cast.gaffer} gave him a nod.`, `His dad cheered louder than anyone.`, `His teammates mobbed him.`, `One in the eye for ${cast.rival}.`]) // park-football cast, no senior captain/mentor (PT-133)
+        : pick([`${cast.gaffer} said nothing, but noted it.`, `${cap(cast.mentor)} allowed himself a smile.`, `${cast.captain} clapped him on the back.`, `One in the eye for ${cast.rival}.`]))
     : '';
   const milestone = ctx.milestone && MILESTONE[ctx.milestone] ? MILESTONE[ctx.milestone] : '';
   const action = adv ? `he, ${adv}${verb}` : `he ${verb}`; // "he, grinning, flew into …"
