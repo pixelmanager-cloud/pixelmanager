@@ -76,6 +76,7 @@ console.log('=== 3. full token lifecycle: prospect -> pro -> retired -> reborn =
     else if (st.phase === 'offer') a = { type: 'offer', cardId: st.offers[0].id };
     else if (st.phase === 'coach') a = { type: 'coach', cardId: st.coaches[0].id };
     else if (st.phase === 'draft') a = { type: 'draft', cardId: st.options[0].id };
+    else if (st.phase === 'arc') a = { type: 'arc', cardId: st.arc.choices[0].id };
     else a = { type: 'play', cardId: st.hand[0].id };
     applyAction(career, a, true);
     actions.push(a);

@@ -6,6 +6,7 @@ import { ARCS } from '../../shared/src/storyarc.js';
 const TAGS = new Set(['composure', 'aggression', 'creativity', 'teamwork', 'leadership', 'stamina', 'flair', 'keeping']);
 const METERS = new Set(['authority', 'peers', 'family', 'school', 'agent', 'fans', 'sponsors', 'partner']);
 const CATEGORIES = new Set(['saga', 'crisis', 'triumph', 'relationship', 'signature', 'offpitch']);
+const EFFECT_KEYS = new Set(['energy', 'form', 'earnings', 'market', 'greed', 'meters', 'attr', 'injury', 'tag']);
 
 let errors = 0;
 const err = (arc: string, msg: string) => { console.log(`  FAIL [${arc}] ${msg}`); errors++; };
@@ -34,6 +35,7 @@ for (const a of ARCS) {
       if (ch.outcome && ch.outcome.length < 15) err(A, `beat "${bid}" choice "${ch.id}" outcome too short`);
       if (ch.next && !beatIds.has(ch.next)) err(A, `beat "${bid}" choice "${ch.id}" → "${ch.next}" is a dangling reference`);
       const e = ch.effect;
+      if (e) for (const k of Object.keys(e)) if (!EFFECT_KEYS.has(k)) err(A, `beat "${bid}" choice "${ch.id}" unknown effect key "${k}" (a stat like stamina/flair belongs inside attr:{}, a relationship inside meters:{})`);
       if (e?.attr) for (const t of Object.keys(e.attr)) if (!TAGS.has(t)) err(A, `beat "${bid}" choice "${ch.id}" invalid attr tag "${t}" (valid: ${[...TAGS].join('/')})`);
       if (e?.meters) for (const m of Object.keys(e.meters)) if (!METERS.has(m)) err(A, `beat "${bid}" choice "${ch.id}" invalid meter "${m}" (valid: ${[...METERS].join('/')})`);
       if (e?.form != null && Math.abs(e.form) > 0.2) err(A, `beat "${bid}" choice "${ch.id}" form ${e.form} out of sane range (±0.2)`);
