@@ -906,13 +906,16 @@ class Game {
       // buttons pass the per-SEASON wage (that's what he judges), but show the TOTAL cost (wage × length) so
       // a longer deal visibly costs more (PT-32). Multipliers span all outcomes (PT-33): 0.8 insults him
       // (reject), 0.92 makes him counter, 1.0 he accepts, 1.18 delights him (accept + bigger morale/loyalty).
+      const coins = this.account?.coins ?? 0;
       const offer = (label: string, mult: number, hint: string, cls = '') => {
         const w = Math.round(ask * mult);
-        return `<button class="cn-offer ${cls}" data-wage="${w}"><span class="cn-o-lbl">${label}</span><span class="cn-o-tot">${(w * length).toLocaleString()}c total</span><span class="cn-o-hint">${hint}</span></button>`;
+        const total = w * length;
+        const afford = total <= coins; // disable an offer you can't pay the total for, up front (PT-63)
+        return `<button class="cn-offer ${cls}${afford ? '' : ' cn-locked'}"${afford ? ` data-wage="${w}"` : ' disabled'}><span class="cn-o-lbl">${label}</span><span class="cn-o-tot">${total.toLocaleString()}c total</span><span class="cn-o-hint">${afford ? hint : `🔒 need ${(total - coins).toLocaleString()}c more`}</span></button>`;
       };
       body.innerHTML = `<div class="cn-sub">He’d prefer a <b>${demand.prefLength}-season</b> deal — a longer one asks ${demand.lengthPremium >= 0 ? 'a <b>higher</b> wage per season (he wants paid for the commitment)' : 'a <b>lower</b> wage per season (he values the security)'}, and every extra season adds to the <b>total</b> you pay now.</div>`
         + `<div class="cn-row"><span class="cn-lbl">Deal length</span><div class="cn-len">${[2, 3, 4, 5, 6].map((L) => `<button class="cn-l ${L === length ? 'active' : ''}" data-len="${L}">${L}y</button>`).join('')}</div></div>`
-        + `<div class="cn-ask">He’s asking <b>${ask.toLocaleString()}c/season</b> — <b>${(ask * length).toLocaleString()}c</b> over ${length} seasons.</div>`
+        + `<div class="cn-ask">He’s asking <b>${ask.toLocaleString()}c/season</b> — <b>${(ask * length).toLocaleString()}c</b> over ${length} seasons. <span class="cn-coins">💷 you have ${coins.toLocaleString()}c</span></div>`
         + `<div class="cn-offers">`
         + offer('Lowball', 0.8, 'he may walk')
         + offer('Haggle', 0.92, 'he’ll push back')
