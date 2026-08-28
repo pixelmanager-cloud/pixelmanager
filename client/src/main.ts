@@ -381,7 +381,10 @@ class Game {
       // "no undo" must mean it: remove the save MODEL from the backend, and sweep every per-handle localStorage
       // key (fm_mgr_/fm_tier_/fm_plan_/fm_ach_/fm_bought_/fm_biddismiss_/onboarding) — not just the index (PT-77)
       try { if (save?.token) await api.deleteSave(save.token); } catch { /* best-effort */ }
-      try { for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && k.includes(id)) localStorage.removeItem(k); } } catch { /* ignore */ }
+      // sweep per-handle keys by the save's TOKEN, not its list id: every per-save key is suffixed with
+      // account.handle, which equals the save's UUID token (api.register/me), NOT the name-derived list id —
+      // so matching on `id` removed nothing and orphaned every fm_mgr_/tier/ach/heir/… key (PT-131, PT-77 regression)
+      try { const suffix = save?.token; if (suffix) for (let i = localStorage.length - 1; i >= 0; i--) { const k = localStorage.key(i); if (k && k.includes(suffix)) localStorage.removeItem(k); } } catch { /* ignore */ }
       this.saveSaves(this.loadSaves().filter((s) => s.id !== id)); this.renderMainMenu(); toast('Save deleted');
     });
   }
