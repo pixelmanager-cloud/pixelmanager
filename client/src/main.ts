@@ -1,6 +1,6 @@
 import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
-  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry,
+  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry, tierName, TIERS,
   FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, deriveExpectation, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition, contTieBlurb, wcGroupDramaBlurb, wcKnockoutDramaBlurb,
   ACHIEVEMENTS, evaluateAchievements, achievementById, type AchSnapshot,
   type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
@@ -14,6 +14,7 @@ import { audio } from './audio';
 interface MgrState { season: number; results: PlayedResult[]; starId?: string; starName?: string; starAge?: number; retireAge?: number; titles?: number; trainFocus?: string; staff?: string[]; sponsor?: string;
   // board verdict on the season just gone + that finishing position (feeds next season's expectation)
   lastBoard?: { message: string; mood: BoardMood; expectation: string }; lastFinishPos?: number;
+  lastTierMove?: 'promoted' | 'relegated'; // set the season after a promotion/relegation, for the reveal banner
   // international: continental club cup (qualified by a top-3 finish the previous season)
   contElig?: boolean; contRound?: number; contOut?: boolean; contTitles?: number; contBlurb?: string;
   // World-Finals national tournament — the star's nation's knockout run is playable
@@ -866,7 +867,7 @@ class Game {
         // MANAGER PHASE: feed the diary the REAL local season — results + live table — so it narrates
         // form, win streaks, promotion/relegation watch etc. (rebuilt offline; the old PvP feed is gone).
         const results = m.results ?? [];
-        const t = liveTable(this.club.name, this.clubLeagueStrength(), 1, this.leagueSeed(), results);
+        const t = liveTable(this.club.name, this.clubLeagueStrength(), 1, this.leagueSeed(), results, this.clubTier());
         const matches = results.map((r, i) => ({ id: `s${m.season}-m${i}`, myScore: r.myGoals, oppScore: r.oppGoals, oppId: '', oppHandle: '', createdAt: i }));
         const table = { position: t.pos, total: t.size, promote: 3, relegate: 2, points: t.me.Pts }; // top-3 = continental zone, bottom-2 = relegation (matches spTableHtml)
         entry = gaffersDiaryEntry({ seasonNumber: m.season, matches, table });
@@ -923,7 +924,7 @@ class Game {
     const mgr = this.loadMgr();
     if (mgr.starId) {
       const seed = this.leagueSeed();
-      const total = seasonFixtures(this.club?.name ?? 'club', seed).length;
+      const total = seasonFixtures(this.club?.name ?? "club", seed, this.clubTier()).length;
       const md = Math.min(mgr.results.length, total);
       el.innerHTML = `<div class="hub-prow"><div class="hp-main"><div class="hp-name">🧢 Managing ${this.club?.name ?? 'your club'} <span class="hp-stars">★ ${mgr.starName} on the pitch</span></div>`
         + `<div class="hp-meta">Season ${mgr.season} · Matchday ${Math.min(md + 1, total)}/${total}${mgr.starAge ? ` · ${mgr.starName} is ${mgr.starAge}` : ''}</div></div>`
@@ -984,6 +985,10 @@ class Game {
   /** manager phase = you've handed off and are now managing the club with a bloodline star on the pitch */
   private isManagerPhase(): boolean { return !!this.loadMgr().starId; }
   private leagueSeed(): number { const h = this.account?.handle ?? 'x'; return [...h].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) >>> 0; }
+  // the club's current pyramid TIER (1 = top flight … 10 = bottom). A club property that survives the
+  // bloodline hand-off (stored apart from the per-generation manager save), so the dynasty climbs one pyramid.
+  private clubTier(): number { try { const t = Number(localStorage.getItem('fm_tier_' + (this.account?.handle ?? 'x'))); return t >= 1 && t <= TIERS ? Math.round(t) : TIERS; } catch { return TIERS; } }
+  private setClubTier(t: number): void { try { localStorage.setItem('fm_tier_' + (this.account?.handle ?? 'x'), String(Math.max(1, Math.min(TIERS, Math.round(t))))); } catch { /* ignore */ } }
   /** the club's raw squad strength = average overall of the best XI (1-20 scale) */
   private squadStrength(): number {
     const ovrs = this.club.players.map((p) => overall(p)).sort((a, b) => b - a).slice(0, 11);
@@ -1012,10 +1017,16 @@ class Game {
     return Math.max(32, Math.min(41, Math.round(base)));
   }
 
-  private spTableHtml(t: ReturnType<typeof liveTable>): string {
-    const zone = (i: number) => i === 0 ? 'champ' : i <= 2 ? 'promo' : i >= t.size - 2 ? 'releg' : '';
+  private spTableHtml(t: ReturnType<typeof liveTable>, tier = 1): string {
+    // top-2 promoted (or top-3 = continental spots in the top flight); bottom-2 relegated (except the basement)
+    const zone = (i: number) => i === 0 ? 'champ'
+      : (tier > 1 && i <= 1) || (tier === 1 && i <= 2) ? 'promo'
+      : tier < TIERS && i >= t.size - 2 ? 'releg' : '';
     const rows = t.table.map((r, i) => `<tr class="lt-row ${r.mine ? 'mine' : ''} ${zone(i)}"><td class="lt-pos">${i + 1}</td><td class="lt-name"><span class="lt-crest">${crest(r.name, 16)}</span>${r.name}</td><td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GD > 0 ? '+' : ''}${r.GD}</td><td class="lt-pts">${r.Pts}</td></tr>`).join('');
-    return `<table class="lt-table"><thead><tr><th></th><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>${rows}</tbody></table>`;
+    const key = tier === 1 ? '<span class="lt-key"><span class="lt-k promo">■</span> continental · <span class="lt-k releg">■</span> relegation</span>'
+      : tier === TIERS ? '<span class="lt-key"><span class="lt-k promo">■</span> promotion</span>'
+      : '<span class="lt-key"><span class="lt-k promo">■</span> promotion · <span class="lt-k releg">■</span> relegation</span>';
+    return `<table class="lt-table"><thead><tr><th></th><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>${rows}</tbody></table>${key}`;
   }
 
   private showSeason() {
@@ -1023,12 +1034,12 @@ class Game {
     this.showScreen('season');
     api.facilities().then((d) => { this.facLevels = Object.fromEntries(d.facilities.map((f) => [f.key, f.level])); }).catch(() => {}); // cache for the match edges
     const clubName = this.club.name, seed = this.leagueSeed();
-    const fixtures = seasonFixtures(clubName, seed);
+    const fixtures = seasonFixtures(clubName, seed, this.clubTier());
     const m = this.loadMgr(), played = m.results;
-    const t = liveTable(clubName, this.clubLeagueStrength(), 1, seed, played);
+    const t = liveTable(clubName, this.clubLeagueStrength(), 1, seed, played, this.clubTier());
     const nextIdx = played.length, done = nextIdx >= fixtures.length;
     // your seeded RIVAL club — those fixtures are derbies
-    const opps = seededOpponents(clubName, seed);
+    const opps = seededOpponents(clubName, seed, this.clubTier());
     const rivalName = opps.length ? opps[seed % opps.length].name : null;
     const fxRows = fixtures.map((f, i) => {
       const derby = f.oppName === rivalName;
@@ -1048,9 +1059,14 @@ class Game {
     for (const r of played) { const gd = r.myGoals - r.oppGoals; if (gd > 0 && (!biggest || gd > biggest.gd)) biggest = { gd, sc: `${r.myGoals}-${r.oppGoals}` }; if (gd >= 0) { run++; bestRun = Math.max(bestRun, run); } else run = 0; }
     const records = played.length ? `<div class="sf-records">📋 ${biggest ? `Biggest win ${biggest.sc}` : 'No win yet'} · Longest unbeaten ${bestRun}</div>` : '';
     const starLine = m.starName && m.starAge ? ` · ★ ${m.starName} (age ${m.starAge}${m.retireAge ? `, likely retires ~${m.retireAge}` : ''})` : '';
+    const tier = this.clubTier();
     const header = done
-      ? `<div class="season-summary done"><span class="ss-crest">${crest(clubName, 20)}</span>✅ Season ${m.season} complete — <b>${clubName}</b> finished <b>${this.ordinal(t.pos)}</b> of ${t.size}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ''}. <button class="primary" id="sf-next-season">Next season →</button></div>`
-      : `<div class="season-summary"><span class="ss-crest">${crest(clubName, 20)}</span><b>${clubName}</b> · Season ${m.season} · Matchday ${nextIdx + 1}/${fixtures.length} · <b>${this.ordinal(t.pos)}</b> of ${t.size}${formStrip}${starLine}</div>`;
+      ? `<div class="season-summary done"><span class="ss-crest">${crest(clubName, 20)}</span>✅ Season ${m.season} complete — <b>${clubName}</b> finished <b>${this.ordinal(t.pos)}</b> of ${t.size} in <b>${tierName(tier)}</b>${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ''}. <button class="primary" id="sf-next-season">Next season →</button></div>`
+      : `<div class="season-summary"><span class="ss-crest">${crest(clubName, 20)}</span><b>${clubName}</b> · <b>${tierName(tier)}</b> · Season ${m.season} · MD ${nextIdx + 1}/${fixtures.length} · <b>${this.ordinal(t.pos)}</b>/${t.size}${formStrip}${starLine}</div>`;
+    // PROMOTION / RELEGATION reveal — shown at the start of the season after a move (from nextSeason)
+    const tierMove = m.lastTierMove && !done && nextIdx <= 2
+      ? `<div class="sf-tiermove sf-tiermove-${m.lastTierMove}">${m.lastTierMove === 'promoted' ? '⬆️ PROMOTED' : '⬇️ RELEGATED'} — welcome to <b>${tierName(tier)}</b>. ${m.lastTierMove === 'promoted' ? 'The football gets harder from here — this is the reward for the climb.' : 'A setback for the club — but the climb starts again.'}</div>`
+      : '';
     const simBtn = done ? '' : `<div style="text-align:center;margin-top:10px;"><button id="sf-sim" style="font-family:var(--display);font-size:11px;padding:7px 14px;">⏩ Sim the rest of the season</button></div>`;
     // TRAINING FOCUS — the stat your star works on this season (young grow it, veterans slow their decline)
     const FOCI = ['pace', 'shooting', 'passing', 'tackling', 'strength', 'positioning', 'stamina'];
@@ -1062,13 +1078,14 @@ class Game {
       ? `<div class="sf-board sf-board-${lb.mood}">🪑 <b>The board</b> — on last season: “${lb.message}” <span class="sf-board-exp">This season they expect: ${lb.expectation}.</span></div>`
       : '';
     $('season-body').innerHTML = header
+      + tierMove
       + boardLine
       + `<div class="sf-gaffer">📔 ${this.gafferTake(played, t.pos, t.size, clubName)}</div>`
       + this.sponsorHtml()
       + this.worldCupHtml()
       + this.continentalHtml()
       + `<div class="season-cols"><div class="season-fixtures"><h4 class="scout-h4">FIXTURES</h4>${fxRows}${records}${focusSel}${simBtn}</div>`
-      + `<div class="season-table-wrap"><h4 class="scout-h4">LEAGUE TABLE</h4>${this.spTableHtml(t)}${this.staffHtml()}</div></div>`;
+      + `<div class="season-table-wrap"><h4 class="scout-h4">LEAGUE TABLE — ${tierName(tier).toUpperCase()}</h4>${this.spTableHtml(t, tier)}${this.staffHtml()}</div></div>`;
     $('sf-cont-play')?.addEventListener('click', () => this.playContinentalTie());
     $('sf-cont-sim')?.addEventListener('click', () => this.simContinentalTie());
     $('sf-wc-follow')?.addEventListener('click', () => this.followWorldCup());
@@ -1373,7 +1390,7 @@ class Game {
   }
   private simRemainingFixtures() {
     const seed = this.leagueSeed(), clubName = this.club.name;
-    const fixtures = seasonFixtures(clubName, seed), opps = seededOpponents(clubName, seed);
+    const fixtures = seasonFixtures(clubName, seed, this.clubTier()), opps = seededOpponents(clubName, seed, this.clubTier());
     const m = this.loadMgr(), myStr = this.clubLeagueStrength();
     for (let i = m.results.length; i < fixtures.length; i++) {
       const opp = opps.find((o) => o.name === fixtures[i].oppName)!;
@@ -1387,7 +1404,7 @@ class Game {
    *  reaches the end of his career — trigger his retirement and the succession to the heir. */
   private async nextSeason() {
     const m = this.loadMgr();
-    const t = liveTable(this.club.name, this.clubLeagueStrength(), 1, this.leagueSeed(), m.results);
+    const t = liveTable(this.club.name, this.clubLeagueStrength(), 1, this.leagueSeed(), m.results, this.clubTier());
     // this season's W/D/L (fed to the lifetime manager record that powers prestige)
     const rec = (m.results ?? []).reduce((a, r) => { r.myGoals > r.oppGoals ? a.wins++ : r.myGoals < r.oppGoals ? a.losses++ : a.draws++; return a; }, { wins: 0, draws: 0, losses: 0 });
     // bank the season prize money (coins → reinvest in facilities), closing the manager economy loop
@@ -1410,13 +1427,21 @@ class Game {
       try { const d = await api.developPlayer(m.starId, { focus: m.trainFocus ?? 'passing', age: m.starAge ?? 27 }); this.setMe(await api.me()); toast(`🏋️ ${m.starName} — off-season training (OVR now ${d.overall})`); } catch { /* offline */ }
     }
     if (t.pos === 1) { audio.play('triumph'); audio.chime('triumph'); } // league champions — the victory cue
+    // PROMOTION / RELEGATION — the pyramid climb: top-2 go up, bottom-2 go down (club property, survives the heir)
+    const tier = this.clubTier();
+    const promoted = t.pos <= 2 && tier > 1;
+    const relegated = t.pos >= t.size - 1 && tier < TIERS;
+    const newTier = promoted ? tier - 1 : relegated ? tier + 1 : tier;
+    if (newTier !== tier) this.setClubTier(newTier);
+    if (promoted) { toast(`⬆️ PROMOTED to ${tierName(newTier)}!`); audio.chime('triumph'); }
+    else if (relegated) toast(`⬇️ Relegated to ${tierName(newTier)}.`);
     const titles = (m.titles ?? 0) + (t.pos === 1 ? 1 : 0);
     const age = (m.starAge ?? 22) + 1;
     if (age >= (m.retireAge ?? 34)) { this.retireStar(titles, m.contTitles ?? 0); return; } // his playing days are over — the heir comes through
-    const qualified = t.pos <= 3; // a top-3 finish books a place in next season's continental cup
-    if (qualified) toast('🌍 Top-3 finish — qualified for the Continental Cup!');
+    const qualified = tier === 1 && t.pos <= 3; // only the TOP flight's top-3 book a Continental Cup place
+    if (qualified) toast('🌍 Top-3 in the top flight — qualified for the Continental Cup!');
     // new season → fresh sponsor; drop any unfinished World-Finals run (it belongs to its staging season)
-    this.saveMgr({ ...m, season: m.season + 1, results: [], starAge: age, titles, sponsor: undefined, contElig: qualified, contRound: 0, contOut: false, contBlurb: undefined, wcStage: undefined, wcEdition: undefined, wcRun: undefined, lastBoard, lastFinishPos: t.pos });
+    this.saveMgr({ ...m, season: m.season + 1, results: [], starAge: age, titles, sponsor: undefined, contElig: qualified, contRound: 0, contOut: false, contBlurb: undefined, wcStage: undefined, wcEdition: undefined, wcRun: undefined, lastBoard, lastFinishPos: t.pos, lastTierMove: promoted ? 'promoted' : relegated ? 'relegated' : undefined });
     this.checkAchievements(); // titles / seasons / prestige milestones
     this.showSeason();
   }
@@ -1514,11 +1539,11 @@ class Game {
 
   private playNextSpFixture() {
     const seed = this.leagueSeed(), clubName = this.club.name;
-    const fixtures = seasonFixtures(clubName, seed);
+    const fixtures = seasonFixtures(clubName, seed, this.clubTier());
     const idx = this.loadMgr().results.length;
     if (idx >= fixtures.length) return;
     const f = fixtures[idx];
-    const opp = seededOpponents(clubName, seed).find((o) => o.name === f.oppName)!;
+    const opp = seededOpponents(clubName, seed, this.clubTier()).find((o) => o.name === f.oppName)!;
     const short = (opp.name.match(/[A-Z]/g) ?? ['O', 'P', 'P']).join('').slice(0, 3);
     const oppClub = generateClub('sp-' + opp.seed, opp.name, short, 0xcc4444, opp.strength, opp.seed);
     const venue: 'home' | 'away' = f.venue === 'H' ? 'home' : 'away';
@@ -2725,7 +2750,7 @@ class Game {
       const wl = recent.reduce((a, r) => a + (r.myGoals > r.oppGoals ? 1 : r.myGoals < r.oppGoals ? -1 : 0), 0);
       const form: PressForm = wl >= 2 ? 'hot' : wl <= -2 ? 'cold' : 'level';
       const competition: PressCompetition = this.spFixture.comp === 'cont' ? 'continental' : this.spFixture.comp === 'wc' ? 'international' : 'league';
-      const rivals = seededOpponents(this.club.name, this.leagueSeed());
+      const rivals = seededOpponents(this.club.name, this.leagueSeed(), this.clubTier());
       const rivalName = rivals.length ? rivals[this.leagueSeed() % rivals.length].name : null;
       const stakes: 1 | 2 | 3 = this.spFixture.comp === 'wc' || this.spFixture.comp === 'cont' ? 3 : this.spFixture.oppName === rivalName ? 2 : 1;
       const salt = (this.loadMgr().season * 97 + (this.loadMgr().results?.length ?? 0)) >>> 0;

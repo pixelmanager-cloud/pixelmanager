@@ -38,6 +38,7 @@ export function squadRole(bandIdx: number, overall: number) {
 // Widened from the original 16 (audit finding: with only 9 opponents drawn per save, 16 names meant
 // two saves sharing a seed range could see heavy overlap in their league). 32 names roughly doubles
 // the per-save variety without touching seededOpponents/seededLeague's selection logic at all.
+// A big pool of fictional clubs so the 10-tier pyramid can field mostly-distinct opponents at every level.
 const LEAGUE_POOL = [
   'Riverside Rovers', 'Ashcombe Town', 'Kingsford United', 'Dockside FC', 'Hallby City',
   'Fenwick Rangers', 'Stonebridge', 'Portland Vale', 'Oakfield United', 'Brightmoor',
@@ -46,7 +47,39 @@ const LEAGUE_POOL = [
   'Foxleigh United', 'Gladewick Town', 'Harrowgate FC', 'Ironmoor Rovers', 'Juniper Vale',
   'Kettlebrook', 'Larkspur United', 'Moorside Wanderers', 'Northgate Athletic', 'Ottersby Town',
   'Pemberton FC', 'Quarrymoor United',
+  'Ravenscar City', 'Selby Rovers', 'Thornbury Town', 'Underhill United', 'Vexford FC',
+  'Westmere Athletic', 'Yarrow Wanderers', 'Alderton Borough', 'Bexley Vale', 'Caldwell United',
+  'Denholm Town', 'Edenbrook City', 'Farnworth Rovers', 'Grimsden FC', 'Hartcliffe United',
+  'Inglewood Town', 'Jarrow Athletic', 'Kelmscott Rangers', 'Lanmoor City', 'Maplewood United',
+  'Netherby Town', 'Oldcastle FC', 'Pinehurst Rovers', 'Queensmere United', 'Rosewick Athletic',
+  'Stanmore City', 'Tarnwell Town', 'Uppingham FC', 'Vale Ferrers', 'Wexham United',
+  'Ashby Cross', 'Boldmere Rangers', 'Cheswick Town', 'Draymoor United', 'Emberton City',
+  'Foxhollow FC', 'Glenwick Athletic', 'Havenport Town', 'Ilfordby United', 'Jestwick Rovers',
+  'Kirkfell City', 'Lyndhurst Town', 'Merebrook FC', 'Norwood Rangers', 'Overton United',
+  'Prestbury Athletic', 'Quinton Town', 'Ryedale City', 'Sandmere United', 'Templeford FC',
+  'Uxendon Rovers', 'Varley Town', 'Wollaton United', 'Ayleford City', 'Brackenhall Town',
+  'Cliffside United', 'Dartmoor FC', 'Ellingham Rovers', 'Fallowfield Town', 'Greystoke City',
+  'Holbeck United', 'Ingerthorpe FC', 'Kestrel Vale', 'Longmoor Rangers', 'Middlewych Town',
+  'Newlyn United', 'Orsett Athletic', 'Padgate City', 'Rushmere Town', 'Saltby United',
+  'Thurloe FC', 'Westover Rovers', 'Wyndham City', 'Ansley Town', 'Broughmoor United',
 ];
+
+// ── 10-tier league pyramid ──────────────────────────────────────────────────────────────────────
+const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
+export const TIERS = 10; // 1 = top flight, 10 = the bottom of the football pyramid
+/** Flavour names for each tier (1..10), so the season reads as a real climb. */
+export const TIER_NAMES: readonly string[] = [
+  '', // (1-indexed; slot 0 unused)
+  'the Premier Division', 'the Championship', 'League One', 'League Two', 'the National League',
+  'the Regional Premier', 'the Regional North/South', 'the County Premier', 'the District League', 'the Sunday League',
+];
+export const tierName = (tier: number) => TIER_NAMES[clamp(Math.round(tier), 1, TIERS)];
+/** Baseline opponent quality at a tier — elite at the top (18), pub-team weak at the bottom (6). The
+ *  bloodline player's club has a FIXED strength (his ability + facilities), so he climbs when he outgrows a
+ *  tier and slips when he's outmatched — the pyramid is the growth arc. */
+export function tierStrength(tier: number): number {
+  return Math.round(18 - (clamp(Math.round(tier), 1, TIERS) - 1) * (12 / (TIERS - 1)));
+}
 
 function hash32(...nums: number[]): number {
   let h = 2166136261 >>> 0;
@@ -58,22 +91,31 @@ const nameSeed = (s: string) => [...s].reduce((a, c) => (a * 31 + c.charCodeAt(0
 export interface LeagueClub { name: string; strength: number; seed: number; mine: boolean }
 export interface TableRow { name: string; mine: boolean; P: number; W: number; D: number; L: number; GF: number; GA: number; GD: number; Pts: number }
 
-/** The 9 fictional opponents, stable per save — name + squad strength (1-20 quality) + a squad seed for
- *  generateClub. Deterministic from the save seed. */
-export function seededOpponents(myClub: string, seed: number): LeagueClub[] {
+/** The 9 fictional opponents for a season — name + squad strength (1-20 quality) + a squad seed for
+ *  generateClub. Deterministic from the save seed AND the `tier`: each tier draws a mostly-distinct set of
+ *  clubs, and their strength is scaled to that tier's baseline (weak at the bottom, elite at the top). */
+export function seededOpponents(myClub: string, seed: number, tier?: number): LeagueClub[] {
   // exclude the club itself and any near-duplicate name (e.g. 'Marlow' vs 'Marlow Athletic')
   const pool = LEAGUE_POOL.filter((n) => n !== myClub && !n.includes(myClub) && !myClub.includes(n));
+  // no tier → the exact legacy hashes (preserves career-mode / existing sim determinism); tier → a
+  // per-division draw + tier-scaled strength.
   const chosen = pool
-    .map((n) => ({ n, k: hash32(seed, nameSeed(n)) }))
+    .map((n) => ({ n, k: tier != null ? hash32(seed, tier * 100003, nameSeed(n)) : hash32(seed, nameSeed(n)) }))
     .sort((a, b) => a.k - b.k)
     .slice(0, LEAGUE_SIZE - 1)
     .map((x) => x.n);
-  return chosen.map((n) => ({ name: n, strength: 6 + (hash32(seed, nameSeed(n) * 2654435761 >>> 0) % 13), seed: hash32(seed, nameSeed(n)) >>> 0, mine: false })); // 6..18
+  return chosen.map((n) => {
+    const strength = tier != null
+      ? clamp(Math.round(tierStrength(tier) + (hash32(seed, tier, (nameSeed(n) * 2654435761) >>> 0) % 7) - 3), 3, 20)
+      : 6 + (hash32(seed, (nameSeed(n) * 2654435761) >>> 0) % 13);
+    const sdSeed = tier != null ? hash32(seed, tier, nameSeed(n)) >>> 0 : hash32(seed, nameSeed(n)) >>> 0;
+    return { name: n, strength, seed: sdSeed, mine: false };
+  });
 }
 
-/** Build the seeded 10-club league: Marlow (at `myStrength`) + the 9 fictional clubs. */
-export function seededLeague(myClub: string, myStrength: number, seed: number): LeagueClub[] {
-  return [{ name: myClub, strength: Math.round(myStrength), seed: hash32(seed, 777) >>> 0, mine: true }, ...seededOpponents(myClub, seed)];
+/** Build the seeded 10-club league at `tier`: Marlow (at `myStrength`) + the 9 tier opponents. */
+export function seededLeague(myClub: string, myStrength: number, seed: number, tier?: number): LeagueClub[] {
+  return [{ name: myClub, strength: Math.round(myStrength), seed: hash32(seed, 777) >>> 0, mine: true }, ...seededOpponents(myClub, seed, tier)];
 }
 
 // Full double round-robin schedule (circle method): 2(n-1) rounds of n/2 matches [homeIdx, awayIdx].
@@ -93,8 +135,8 @@ function scheduleRounds(n: number): [number, number][][] {
 
 export interface Fixture { oppName: string; venue: 'H' | 'A' }
 /** Marlow's fixture per round across the 18-round double round-robin (derived from the shared schedule). */
-export function seasonFixtures(myClub: string, seed: number): Fixture[] {
-  const clubs = seededLeague(myClub, SQUAD_BASE, seed);
+export function seasonFixtures(myClub: string, seed: number, tier = 1): Fixture[] {
+  const clubs = seededLeague(myClub, SQUAD_BASE, seed, tier);
   const rounds = scheduleRounds(clubs.length);
   return rounds.map((rd) => { const [h, a] = rd.find(([x, y]) => x === 0 || y === 0)!; return h === 0 ? { oppName: clubs[a].name, venue: 'H' as const } : { oppName: clubs[h].name, venue: 'A' as const }; });
 }
@@ -102,8 +144,8 @@ export function seasonFixtures(myClub: string, seed: number): Fixture[] {
 export interface PlayedResult { myGoals: number; oppGoals: number }
 /** LIVE league table after `played.length` rounds: every club has played that many games. Marlow's rounds
  *  use his real results; every other match up to the current round is simulated. Fills in as you play. */
-export function liveTable(myClub: string, marlowStrength: number, share: number, seed: number, played: PlayedResult[]) {
-  const clubs = seededLeague(myClub, SQUAD_BASE + (marlowStrength - SQUAD_BASE) * share, seed);
+export function liveTable(myClub: string, marlowStrength: number, share: number, seed: number, played: PlayedResult[], tier = 1) {
+  const clubs = seededLeague(myClub, SQUAD_BASE + (marlowStrength - SQUAD_BASE) * share, seed, tier);
   const rounds = scheduleRounds(clubs.length);
   const rows: TableRow[] = clubs.map((c) => ({ name: c.name, mine: c.mine, P: 0, W: 0, D: 0, L: 0, GF: 0, GA: 0, GD: 0, Pts: 0 }));
   const add = (rh: TableRow, rj: TableRow, gh: number, ga: number) => {

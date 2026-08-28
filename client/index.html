@@ -570,6 +570,16 @@
       .lt-row.champ .lt-pos { color: #ffd75e; }
       .lt-row.promo .lt-pos { color: var(--good); }
       .lt-row.releg .lt-pos { color: var(--home); }
+      .lt-row.promo { background: color-mix(in srgb, var(--good) 7%, transparent); }
+      .lt-row.releg { background: color-mix(in srgb, var(--home) 7%, transparent); }
+      .lt-key { display: block; font-size: 11px; color: var(--muted); margin-top: 6px; text-align: center; }
+      .lt-key .lt-k { font-size: 9px; vertical-align: middle; }
+      .lt-key .lt-k.promo { color: var(--good); } .lt-key .lt-k.releg { color: var(--home); }
+      /* promotion / relegation reveal banner (season screen) */
+      .sf-tiermove { font-size: 14px; margin: 0 0 12px; padding: 11px 14px; border-radius: 9px; font-family: var(--body); }
+      .sf-tiermove b { color: #fff; }
+      .sf-tiermove-promoted { background: color-mix(in srgb, var(--good) 15%, transparent); border-left: 3px solid var(--good); color: var(--good); }
+      .sf-tiermove-relegated { background: color-mix(in srgb, var(--home) 15%, transparent); border-left: 3px solid var(--home); color: var(--home); }
       #season-head { display: flex; align-items: center; gap: 12px; } #season-head h3 { margin: 0; } #season-back { margin-left: auto; }
       .season-summary { font-size: 17px; color: var(--text); margin: 4px 0 14px; padding: 10px 14px; background: color-mix(in srgb, var(--cyan) 8%, transparent); border: 1px solid var(--line); border-radius: 9px; }
       .season-summary b { color: var(--cyan); }
