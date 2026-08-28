@@ -2055,8 +2055,10 @@ class Game {
   private rivalHtml(s: import('./api').CareerState): string {
     const r = s.rival; if (!r) return '';
     const ahead = r.lead >= 0;
-    return `<div class="cg-rival"><span class="cg-rival-lbl">🆚 RIVAL</span><span class="cg-rival-name">${r.name}</span>`
-      + `<span class="cg-rival-gap ${ahead ? 'up' : 'down'}">${ahead ? `▲ ${r.lead} ahead` : `▼ ${Math.abs(r.lead)} behind`}</span>`
+    // "you're ahead/behind" — the gap is YOUR career score minus his, so make it unambiguous who leads
+    // (placing "▲ ahead" right after his name read as HIM being ahead — playtest fix PT-13).
+    return `<div class="cg-rival"><span class="cg-rival-lbl">🆚 RIVAL · ${r.name}</span>`
+      + `<span class="cg-rival-gap ${ahead ? 'up' : 'down'}" title="Your career score vs his — out-develop him to stay clear">${ahead ? `you're ▲ ${r.lead} clear` : `you're ▼ ${Math.abs(r.lead)} behind — reel him in`}</span>`
       + (r.news ? `<div class="cg-rival-news">📰 ${r.name} ${r.news}</div>` : '') + `</div>`;
   }
 

@@ -768,8 +768,11 @@ export function makeScenario(rng: () => number, i: number, track: Track = 'outfi
   const maxStakes = band ? band.maxStakes : 3;
   const r = rng();
   const stakes: 1 | 2 | 3 = maxStakes >= 3 && r < 0.05 * exposure ? 3 : maxStakes >= 2 && r < 0.22 * exposure ? 2 : 1; // an agent's exposure = more big stages
-  const moment = stakes === 3 ? HUGE_MOMENTS[Math.floor(rng() * HUGE_MOMENTS.length)]
+  // draw the moment pick unconditionally (keeps the rng stream stable) but only USE a match-flavoured moment
+  // name for MATCH scenarios — "Derby Day"/"Cup Final" was bleeding onto training/life moments (PT-15).
+  const momentPick = stakes === 3 ? HUGE_MOMENTS[Math.floor(rng() * HUGE_MOMENTS.length)]
     : stakes === 2 ? BIG_MOMENTS[Math.floor(rng() * BIG_MOMENTS.length)] : null;
+  const moment = kind === 'match' ? momentPick : null;
   // LIFE EVENT: a slice of low-stakes social moments, from Scholar onward, become an off-pitch dilemma
   // instead of a generic dressing-room beat. A pure hash of (seed, turn) — costs no rng() draws, so it
   // never perturbs demand/stakes/moment above for careers that predate this feature or don't hit the gate.
@@ -1165,6 +1168,17 @@ export class Career {
     const success = clamp(f + (this.rng() - 0.5) * variance + form + bigGame + coaching - fatigue, 0, 1);
     const choice: Choice = { cardId: card.id, tags: card.tags, power: cardPower(card), fit: f, bestFit, success, scenario: this.scenario.label, stakes: this.scenario.stakes };
     this.log.push(choice);
+    // FORM is momentum, not a chapter-long stamp: a slump LIFTS as he strings good games together, and a
+    // purple patch cools if results dip — so "Loss of Form" no longer brands every scenario for ~40 turns
+    // regardless of how he plays. Once a negative event's form has recovered, retire its banner. (PT-14)
+    if (this.formBonus < 0 && success >= 0.55) {
+      this.formBonus = Math.min(0, this.formBonus + 0.03);
+      if (this.formBonus >= -0.01 && this.seasonEvent && ['slump', 'knock', 'transfer-links', 'serious-injury'].includes(this.seasonEvent.id)) {
+        this.seasonEvent = { id: 'form-back', name: 'Back to Form', desc: 'He’s battled through the dip — confidence restored.' };
+      }
+    } else if (this.formBonus > 0 && success < 0.45) {
+      this.formBonus = Math.max(0, this.formBonus - 0.03); // a purple patch cools when results tail off
+    }
     this.updateLife(choice); // NSS meters + energy react to how the moment went (deterministic, no rng)
     if (this.scenario.life) this.applyLifeConsequence(this.scenario.life, success, card.tags); // the life-event's OWN, distinct payoff
     if (this.scenario.rival) this.applyRivalConsequence(success); // bragging rights are worth more than the occasion alone
