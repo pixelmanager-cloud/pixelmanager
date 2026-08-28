@@ -8,7 +8,11 @@ import {
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type Trialist, type MissionsData, type ContractInfo } from './api';
 import { sprite } from './sprites';
-import { crest } from './crest';
+import { crest, crestColors } from './crest';
+import { portraitImg, bandForAge } from './portrait';
+import { flagImg } from './flag';
+import { trophyImg, type TrophyKey } from './trophy';
+import { kitTemplate, recolorKit } from './kit';
 import { audio } from './audio';
 
 /** Single-player manager-season state (per save, in localStorage). `starId` present ⇒ manager phase. */
@@ -597,6 +601,10 @@ class Game {
     // beats override at their event). Deferred contexts (scout/bigmatch/emotional) fall back gracefully.
     const CTX: Record<typeof s, import('./audio').MusicContext> = { login: 'menu', hub: 'hub', lineup: 'hub', match: 'match', scouting: 'career', club: 'hub', academy: 'career', trophies: 'legends', season: 'hub' };
     audio.play(CTX[s]);
+    // ambient pixel backdrop per screen (sits far behind the panels; see #scene-backdrop CSS)
+    const SCENE: Record<typeof s, string> = { login: 'stadium', hub: 'office', lineup: 'dressingroom', match: 'stadium', scouting: 'scouting', club: 'dressingroom', academy: 'academy', trophies: 'trophyroom', season: 'pitch' };
+    const bg = document.getElementById('scene-backdrop');
+    if (bg) bg.style.backgroundImage = `url(/scenes/scene-${SCENE[s]}.png)`;
   }
 
   private wireStaticButtons() {
@@ -711,7 +719,7 @@ class Game {
       + (minted ? `<div class="pc-flash">${tierIconHtml(tier)} TURNED PRO · ${tier.name}</div>` : '')
       + `<div class="pc-top"><div class="pc-ovr">${overall(p)}<span>OVR</span></div>`
       + `<div class="pc-tier">${tierIconHtml(tier)}<span>${tier.name}</span></div></div>`
-      + `<div class="pc-crest role-${p.role}"><span class="pc-crest-role">${p.role}</span></div>`
+      + `<div class="pc-crest role-${p.role}">${portraitImg(p.name, bandForAge((p as any).age), 84)}<span class="pc-crest-role">${p.role}</span></div>`
       + `<div class="pc-name">${p.name}</div>`
       + `<div class="pc-role">${roleName[p.role] ?? p.role}</div>`
       + `<div class="pc-stats">${stats}</div>`
@@ -754,7 +762,7 @@ class Game {
     el.id = 'player-card-ov';
     el.innerHTML = `<div class="pc-card tier-bronze">`
       + `<div class="pc-top"><div class="pc-ovr">10<span>YRS</span></div><div class="pc-tier">🌱<span>PROSPECT</span></div></div>`
-      + `<div class="pc-crest role-${p.roleHint}"><span class="pc-crest-role">${p.roleHint}</span></div>`
+      + `<div class="pc-crest role-${p.roleHint}">${portraitImg(p.name, 'youth', 84)}<span class="pc-crest-role">${p.roleHint}</span></div>`
       + `<div class="pc-name">${p.name}</div><div class="pc-role">Youth Prospect${gen ? ` · gen ${gen}` : ''}</div>`
       + (born ? `<div class="pc-flash">${isGenesis ? '🌱 A NEW BLOODLINE BEGINS' : `🌳 THE ${surname.toUpperCase()} NAME LIVES ON`}</div>` : '')
       + `<div class="pc-contract retired"><div class="pc-legend">Potential ${stars} · pedigree ${(p.pedigree * 100 | 0)}%</div>`
@@ -933,7 +941,16 @@ class Game {
     this.showScreen('hub');
     ($('hub-club').querySelector('.legacy-ico') as HTMLElement).innerHTML = sprite('stadium');
     ($('hub-legacy').querySelector('.legacy-ico') as HTMLElement).innerHTML = sprite('trophy');
-    $('me-name').innerHTML = `<span class="me-crest">${crest(this.club.name, 22)}</span>${this.club.name}`;
+    $('me-name').innerHTML = `<span class="me-crest">${crest(this.club.name, 22)}</span>${this.club.name}<img class="me-kit" width="20" height="20" alt="" />`;
+    // recolor the club's kit template to its own crest colours, then drop it in (async, best-effort)
+    void (async () => {
+      try {
+        const { primary, accent } = crestColors(this.club!.name);
+        const url = await recolorKit(kitTemplate(this.club!.name), primary, accent);
+        const el = $('me-name').querySelector('.me-kit') as HTMLImageElement | null;
+        if (el) el.src = url; else return;
+      } catch { /* leave the empty kit img (it shows nothing) */ }
+    })();
     $('me-rating').textContent = ''; // PvP ELO — hidden: the game is single-player (multiplayer removed, see direction.md)
     if (this.account.coins != null) {
       $('me-coins').innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${this.account.coins}`;
@@ -1328,7 +1345,7 @@ class Game {
     if (edition == null) return '';
     const nation = homeNation(this.starSurname());
     return `<div class="sf-wc"><div class="sf-wc-head">🌐 THE WORLD FINALS — Edition ${edition}</div>`
-      + `<div class="sf-wc-txt">The international summer is here. <b>${m.starName ?? 'Your star'}</b> is away with <b>${nation}</b>, chasing the game's greatest prize.</div>`
+      + `<div class="sf-wc-txt">The international summer is here. <b>${m.starName ?? 'Your star'}</b> is away with ${flagImg(nation, 18)} <b>${nation}</b>, chasing the game's greatest prize.</div>`
       + `<button class="primary" id="sf-wc-follow">Follow the tournament 🌍</button></div>`;
   }
   private wcRunHtml(): string {
@@ -1338,10 +1355,10 @@ class Game {
     const dots = (['qf', 'sf', 'final'] as const).map((s, i) => { const order = { qf: 0, sf: 1, final: 2 }; const cur = order[stage]; return `<span class="sf-cont-dot ${i < cur ? 'won' : i === cur ? 'now' : ''}">${['QF', 'SF', 'F'][i]}</span>`; }).join('');
     const opp = this.wcStageOpp(path, stage);
     const runList = (m.wcRun ?? []).map((r) => `<span class="wc-run-chip ${r.won ? 'w' : 'l'}">${r.round} ${r.my}-${r.opp}</span>`).join(' ');
-    return `<div class="sf-wc"><div class="sf-wc-head">🌐 THE WORLD FINALS — Edition ${m.wcEdition} · ${nation}</div>`
+    return `<div class="sf-wc"><div class="sf-wc-head">🌐 THE WORLD FINALS — Edition ${m.wcEdition} · ${flagImg(nation, 18)} ${nation}</div>`
       + `<div class="sf-wc-txt">Group ${String.fromCharCode(65 + path.groupIndex)} ${path.groupFinish?.toLowerCase()} → into the knockouts. ${runList ? `<div class="wc-run-strip">${runList}</div>` : ''}</div>`
       + `<div class="sf-cont-head" style="margin-bottom:7px;">${dots}</div>`
-      + `<div class="sf-cont-tie"><b>${this.wcStageLabel(stage)}</b> (neutral) vs <b>${opp.opp}</b> · rating ~${opp.oppStrength}</div>`
+      + `<div class="sf-cont-tie"><b>${this.wcStageLabel(stage)}</b> (neutral) vs ${flagImg(opp.opp, 16)} <b>${opp.opp}</b> · rating ~${opp.oppStrength}</div>`
       + `<div class="sf-cont-btns"><button class="primary" id="sf-wc-play">Play the tie ▶</button> <button id="sf-wc-sim">⏩ Sim it</button></div></div>`;
   }
   private async followWorldCup() {
@@ -1846,9 +1863,14 @@ class Game {
     try {
       const [{ honours }, { legends }] = await Promise.all([api.honours(), api.legends()]);
       const titles = honours.filter((h) => h.title === 1);
+      // pick a silverware image for an honour by its kind (self-hides if the file is ever missing)
+      const trophyFor = (kind?: string): string => {
+        const k: TrophyKey = kind === 'continental' ? 'continental' : kind === 'cup' ? 'cup' : kind === 'worldfinals' || kind === 'world' ? 'worldfinals' : 'league';
+        return trophyImg(k, 40);
+      };
       const cabinet = titles.length
-        ? `<div class="tr-cabinet">` + titles.sort((a, b) => a.season_number - b.season_number).map((h) => `<div class="tr-trophy"><div class="tr-trophy-ico">${sprite('trophy')}</div><div class="tr-trophy-name">${h.tier}</div><div class="tr-trophy-sub">Season ${h.season_number}${h.kind && h.kind !== 'league' ? ` · ${h.kind}` : ''}</div></div>`).join('') + `</div>`
-        : `<div class="tr-empty"><div class="tr-empty-art">${sprite('trophy')}</div><div class="muted">No trophies yet — win your league to lift your first title.</div></div>`;
+        ? `<div class="tr-cabinet">` + titles.sort((a, b) => a.season_number - b.season_number).map((h) => `<div class="tr-trophy"><div class="tr-trophy-ico">${trophyFor(h.kind)}</div><div class="tr-trophy-name">${h.tier}</div><div class="tr-trophy-sub">Season ${h.season_number}${h.kind && h.kind !== 'league' ? ` · ${h.kind}` : ''}</div></div>`).join('') + `</div>`
+        : `<div class="tr-empty"><div class="tr-empty-art">${trophyImg('league', 64)}</div><div class="muted">No trophies yet — win your league to lift your first title.</div></div>`;
       // retired numbers (per-save honour for a top-tier 'Immortal' legend)
       const TOP_TIER = 'Immortal', rKey = 'fm_retired_' + (this.account?.handle ?? '');
       let retired: Array<{ n: number; name: string }>; try { retired = JSON.parse(localStorage.getItem(rKey) || '[]'); } catch { retired = []; }
