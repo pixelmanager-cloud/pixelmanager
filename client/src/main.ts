@@ -2,7 +2,7 @@ import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
   TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry, tierName, TIERS,
   FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, deriveExpectation, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition, contTieBlurb, wcGroupDramaBlurb, wcKnockoutDramaBlurb,
-  transferList, wageForLength, sellValue, incomingBid, type Listing,
+  transferList, wageForLength, sellValue, incomingBid, MIN_SQUAD, MAX_SQUAD, type Listing,
   ACHIEVEMENTS, evaluateAchievements, achievementById, type AchSnapshot,
   type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
@@ -887,13 +887,23 @@ class Game {
     ov.querySelector('.set-x')!.addEventListener('click', close);
     const render = () => {
       const body = document.getElementById('cn-body'); if (!body) return;
-      const ask = wageForLength(demand, length);
-      body.innerHTML = `<div class="cn-sub">He’d prefer a <b>${demand.prefLength}-season</b> deal — a longer one ${demand.lengthPremium >= 0 ? 'costs <b>more</b> (he wants paid for the commitment)' : 'costs <b>less</b> (he values the security)'}.</div>`
+      const ask = wageForLength(demand, length); // per-season wage he wants for a deal this long
+      // buttons pass the per-SEASON wage (that's what he judges), but show the TOTAL cost (wage × length) so
+      // a longer deal visibly costs more (PT-32). Multipliers span all outcomes (PT-33): 0.8 insults him
+      // (reject), 0.92 makes him counter, 1.0 he accepts, 1.18 delights him (accept + bigger morale/loyalty).
+      const offer = (label: string, mult: number, hint: string, cls = '') => {
+        const w = Math.round(ask * mult);
+        return `<button class="cn-offer ${cls}" data-wage="${w}"><span class="cn-o-lbl">${label}</span><span class="cn-o-tot">${(w * length).toLocaleString()}c total</span><span class="cn-o-hint">${hint}</span></button>`;
+      };
+      body.innerHTML = `<div class="cn-sub">He’d prefer a <b>${demand.prefLength}-season</b> deal — a longer one asks ${demand.lengthPremium >= 0 ? 'a <b>higher</b> wage per season (he wants paid for the commitment)' : 'a <b>lower</b> wage per season (he values the security)'}, and every extra season adds to the <b>total</b> you pay now.</div>`
         + `<div class="cn-row"><span class="cn-lbl">Deal length</span><div class="cn-len">${[2, 3, 4, 5, 6].map((L) => `<button class="cn-l ${L === length ? 'active' : ''}" data-len="${L}">${L}y</button>`).join('')}</div></div>`
-        + `<div class="cn-ask">He’s asking <b>${ask.toLocaleString()}c</b> for a ${length}-season deal.</div>`
-        + `<div class="cn-offers"><button class="cn-offer" data-wage="${Math.round(ask * 0.9)}">Lowball<span>${Math.round(ask * 0.9).toLocaleString()}c</span></button>`
-        + `<button class="cn-offer primary" data-wage="${ask}">Meet it<span>${ask.toLocaleString()}c</span></button>`
-        + `<button class="cn-offer" data-wage="${Math.round(ask * 1.15)}">Generous<span>${Math.round(ask * 1.15).toLocaleString()}c</span></button></div>`
+        + `<div class="cn-ask">He’s asking <b>${ask.toLocaleString()}c/season</b> — <b>${(ask * length).toLocaleString()}c</b> over ${length} seasons.</div>`
+        + `<div class="cn-offers">`
+        + offer('Lowball', 0.8, 'he may walk')
+        + offer('Haggle', 0.92, 'he’ll push back')
+        + offer('Meet it', 1.0, 'deal done', 'primary')
+        + offer('Generous', 1.18, 'delighted + loyal')
+        + `</div>`
         + `<div class="cn-result" id="cn-result"></div>`;
       body.querySelectorAll('[data-len]').forEach((b) => b.addEventListener('click', () => { length = Number((b as HTMLElement).dataset.len); render(); }));
       body.querySelectorAll('[data-wage]').forEach((b) => b.addEventListener('click', () => this.submitContractOffer(playerId, Number((b as HTMLElement).dataset.wage), length, close)));
@@ -1143,15 +1153,24 @@ class Game {
     let bought: string[]; try { bought = JSON.parse(localStorage.getItem(boughtKey) || '[]'); } catch { bought = []; }
     const listings = transferList(this.leagueSeed(), m.season, tier).filter((l) => !bought.includes(l.player.id));
     const squad = this.club.players, sellable = squad.filter((p) => p.id !== m.starId); // the bloodline star can't be sold here
-    const buyList = listings.length ? listings.map((l) => `<div class="tm-row"><span class="tm-pos tm-${l.player.role}">${l.player.role}</span><span class="tm-name">${l.player.name}</span><span class="tm-ov">OV ${l.ov} · age ${l.age}</span><button class="tm-buy primary" data-buy="${l.player.id}" ${coins < l.fee || squad.length >= 26 ? 'disabled' : ''}>Buy · ${l.fee.toLocaleString()}c</button></div>`).join('') : '<div class="muted">The market has cleared for this season.</div>';
-    const sellList = sellable.map((p) => { const ov = overall(p), v = sellValue(ov); return `<div class="tm-row"><span class="tm-pos tm-${p.role}">${p.role}</span><span class="tm-name">${p.name}</span><span class="tm-ov">OV ${ov}</span><button class="tm-sell" data-sell="${p.id}" ${squad.length <= 14 ? 'disabled' : ''}>Sell · +${v.toLocaleString()}c</button></div>`; }).join('');
-    body.innerHTML = `<div class="tm-head"><span class="tm-coins"><span class="ico-inline">${sprite('coin')}</span> ${coins.toLocaleString()}c</span> · Squad ${squad.length}/26 · ${tierName(tier)}</div>`
-      + `<div class="tm-sub">Buy players to strengthen the squad and climb — the market's quality is scaled to your division.</div>`
+    const squadFull = squad.length >= MAX_SQUAD, squadMin = squad.length <= MIN_SQUAD;
+    const buyList = listings.length ? listings.map((l) => {
+      const cantAfford = coins < l.fee;
+      const reason = squadFull ? `Squad full (max ${MAX_SQUAD})` : cantAfford ? `Not enough coins (need ${l.fee.toLocaleString()}c)` : 'Sign him';
+      return `<div class="tm-row"><span class="tm-pos tm-${l.player.role}">${l.player.role}</span><span class="tm-name">${l.player.name}</span><span class="tm-ov">OV ${l.ov} · age ${l.age}</span><button class="tm-buy primary" data-buy="${l.player.id}" title="${reason}" ${cantAfford || squadFull ? 'disabled' : ''}>Buy · ${l.fee.toLocaleString()}c</button></div>`;
+    }).join('') : '<div class="muted">The market has cleared for this season.</div>';
+    const sellList = sellable.map((p) => { const ov = overall(p), v = sellValue(ov); return `<div class="tm-row"><span class="tm-pos tm-${p.role}">${p.role}</span><span class="tm-name">${p.name}</span><span class="tm-ov">OV ${ov}</span><button class="tm-sell" data-sell="${p.id}" title="${squadMin ? `Can't sell below ${MIN_SQUAD} players` : `Sell for +${v.toLocaleString()}c`}" ${squadMin ? 'disabled' : ''}>Sell · +${v.toLocaleString()}c</button></div>`; }).join('');
+    body.innerHTML = `<div class="tm-head"><span class="tm-coins"><span class="ico-inline">${sprite('coin')}</span> ${coins.toLocaleString()}c</span> · Squad <b>${squad.length}</b>/${MAX_SQUAD} · ${tierName(tier)}</div>`
+      + `<div class="tm-sub">Buy players to strengthen the squad and climb — the market's quality is scaled to your division. Squad must stay between <b>${MIN_SQUAD}</b> and <b>${MAX_SQUAD}</b>.</div>`
       + `<div class="tm-cols"><div class="tm-col"><h4 class="scout-h4">🛒 BUY</h4>${buyList}</div><div class="tm-col"><h4 class="scout-h4">💸 SELL</h4>${sellList}</div></div>`;
     body.querySelectorAll('[data-buy]').forEach((b) => b.addEventListener('click', () => { const l = listings.find((x) => x.player.id === (b as HTMLElement).dataset.buy); if (l) this.buyPlayerFlow(l, boughtKey); }));
     body.querySelectorAll('[data-sell]').forEach((b) => b.addEventListener('click', () => this.sellPlayerFlow((b as HTMLElement).dataset.sell!)));
   }
-  private async buyPlayerFlow(l: Listing, boughtKey: string) {
+  private buyPlayerFlow(l: Listing, boughtKey: string) {
+    // confirm the SPEND — buying is the costlier, irreversible action, so it deserves the same guard as sell (PT-30)
+    this.openConfirm(`Sign <b>${l.player.name}</b> (${l.player.role}, OV ${l.ov}) for <b>${l.fee.toLocaleString()}c</b>?`, 'Sign him', () => this.doBuyPlayer(l, boughtKey));
+  }
+  private async doBuyPlayer(l: Listing, boughtKey: string) {
     try {
       const r = await api.buyPlayer(l.player, l.fee);
       if (this.account) this.account.coins = r.coins;

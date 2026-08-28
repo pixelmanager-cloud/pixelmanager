@@ -347,10 +347,13 @@ export const api = {
     const demand = { baseWage: ci.extendCost, prefLength: ci.lengthSeasons, minLength: 2, maxLength: 6, lengthPremium };
     const result = evaluateContractOffer(demand, Math.round(wage), Math.round(length));
     if (result.outcome !== 'accept') return { outcome: result.outcome, askWage: result.askWage, note: result.note, coins: model.profile.coins };
-    const cost = Math.max(0, Math.round(wage));
+    // COST is the wage across the WHOLE deal (per-season wage × length), so a longer contract genuinely costs
+    // more up front — length is a real trade-off (locks him in longer for more coins now), not a free choice (PT-32).
+    const L = Math.max(2, Math.min(6, Math.round(length)));
+    const cost = Math.max(0, Math.round(wage) * L);
     if (model.profile.coins < cost) throw apiErr('not enough coins', { need: cost }, 402);
     await localStore.addCoins(OWNER, -cost);
-    await localStore.updateToken(playerId, { signed_season: season, length_seasons: Math.max(2, Math.min(6, Math.round(length))) });
+    await localStore.updateToken(playerId, { signed_season: season, length_seasons: L });
     await bumpMoraleLocal(playerId, 'extended');
     return { outcome: 'accept' as const, askWage: result.askWage, note: result.note, coins: getActiveModel().profile.coins, lengthSeasons: Math.max(2, Math.min(6, Math.round(length))) };
   },
