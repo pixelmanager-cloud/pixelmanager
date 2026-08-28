@@ -564,19 +564,29 @@ class Game {
   /** Assemble the lifetime-progress snapshot the achievement predicates read, from data already tracked. */
   private async buildAchSnapshot(): Promise<AchSnapshot> {
     const m = this.loadMgr();
-    const [pr, lg, pros] = await Promise.all([
+    const [pr, lg, pros, hon] = await Promise.all([
       api.prestige().catch(() => null as any),
       api.legends().catch(() => ({ legends: [] as any[] })),
       api.prospects().catch(() => ({ prospects: [] as any[] })),
+      api.honours(1000).catch(() => ({ honours: [] as any[] })), // full lifetime ledger (not the cabinet's recent-30) so multi-generation title milestones count everything (PT-114)
     ]);
     const legends = lg.legends ?? [];
     const generation = Math.max(0, ...(pros.prospects ?? []).map((p: any) => p.generation ?? 0));
     const topLegendRating = legends.reduce((mx: number, l: any) => Math.max(mx, l.card?.legendRating ?? 0), 0);
+    // LIFETIME title counts come from the persisted honours ledger (by kind), NOT the per-generation MgrState
+    // — clearMgr() wipes m.titles/contTitles/wcWins at every succession, so reading them here left multi-gen
+    // dynasty achievements (Kings of the League, A Dynasty Forms) permanently locked beside a cabinet that
+    // already showed the lifetime total. Match the Trophy Room cabinet's kind buckets exactly (PT-114).
+    const titleHonours = (hon.honours ?? []).filter((h: any) => h.title === 1);
+    const isWorld = (k?: string) => k === 'world' || k === 'worldfinals';
+    const leagueTitles = titleHonours.filter((h: any) => h.kind !== 'continental' && !isWorld(h.kind)).length;
+    const contTitles = titleHonours.filter((h: any) => h.kind === 'continental').length;
+    const wcWins = titleHonours.filter((h: any) => isWorld(h.kind)).length;
     return {
-      leagueTitles: m.titles ?? 0,
-      contTitles: m.contTitles ?? 0,
-      wcWins: m.wcWins ?? 0,
-      wcFinals: m.wcFinals ?? 0,
+      leagueTitles,
+      contTitles,
+      wcWins,
+      wcFinals: m.wcFinals ?? 0, // finals REACHED isn't a permanent honour (only titles are recorded); left per-generation
       seasons: pr?.record?.seasons ?? m.season ?? 0,
       wins: pr?.record?.wins ?? 0,
       prestigeIdx: pr?.prestige?.levelIdx ?? 0,
@@ -1846,13 +1856,14 @@ class Game {
     const will = $('cg-will');
     if (will) will.outerHTML = `<div class="cg-grad-windfall">${w.icon} The heir inherits <b>${w.label}</b></div><button id="cg-heir" class="primary" disabled>Raising the next generation…</button>`;
     try {
-      const r = await api.succeed(m.starId!, { seasons, titles, mentorship, inheritance, saleFee });
+      const cups = (m.contTitles ?? 0) + (m.wcWins ?? 0); // continental + World-Finals silverware, onto the permanent legend card (PT-113)
+      const r = await api.succeed(m.starId!, { seasons, titles, cups, mentorship, inheritance, saleFee });
       if (this.account && typeof r.coins === 'number') this.account.coins = r.coins; // the sale fee + legacy are banked atomically inside succeed (PT-60)
       this.recordHeirloom(r.prospect.generation, `${w.icon} ${w.label}`); // remembered against the heir's generation
       this.clearMgr(); // back to player phase — the heir's card-career begins
       this.setMe(await api.me());
       this.checkAchievements(); // a legend retired → new generation / legends / rating milestones
-      toast(`${w.icon} The heir inherits ${w.label}${r.saleFee ? ` · 💰 +${r.saleFee.toLocaleString()}c from the sale` : ''}${r.legacy ? ` · +${r.legacy.toLocaleString()}c legacy` : ''}`);
+      toast(`${w.icon} The heir inherits ${w.label}${(r as any).testimonial ? ` · 🎗️ +${(r as any).testimonial.toLocaleString()}c testimonial` : ''}${r.saleFee ? ` · 💰 +${r.saleFee.toLocaleString()}c from the sale` : ''}${r.legacy ? ` · +${r.legacy.toLocaleString()}c legacy` : ''}`);
       this.showProspectCard(r.prospect, true); // reveal the heir → Develop him → play his career → hand off again
     } catch (e: any) {
       toast(e?.body?.error ?? 'Succession failed');

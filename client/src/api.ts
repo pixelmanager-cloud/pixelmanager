@@ -417,22 +417,25 @@ export const api = {
     await localStore.updateToken(pid, { ...grad, prime_season: season, signed_season: deal.signedSeason, length_seasons: deal.lengthSeasons, staked_since: season });
     return { ok: true as const, player: tokenToPlayer((await localStore.getToken(pid))!) };
   },
-  succeed: async (pid: string, body: { seasons: number; titles: number; mentorship: number; inheritance?: 'craft' | 'fortune' | 'name'; saleFee?: number }) => {
+  succeed: async (pid: string, body: { seasons: number; titles: number; cups?: number; mentorship: number; inheritance?: 'craft' | 'fortune' | 'name'; saleFee?: number }) => {
     await ensureActive();
     const t = await localStore.getToken(pid);
     if (!t) throw apiErr('no such token', {}, 404);
     if (t.state === 'prospect') throw apiErr('not a graduated player', {}, 409);
     const seasons = Math.max(0, Math.min(20, Math.floor(Number(body?.seasons) || 0)));
     const titles = Math.max(0, Math.min(20, Math.floor(Number(body?.titles) || 0)));
+    const cups = Math.max(0, Math.min(40, Math.floor(Number(body?.cups) || 0))); // continental + World-Finals silverware, banked onto the permanent legend card (PT-113)
     const mentorship = Math.max(0, Math.min(10, Math.floor(Number(body?.mentorship) || 0)));
     const inheritance = body?.inheritance; // the will/heirloom decision (see client's showWillDecision)
-    await localStore.updateToken(pid, { ach_seasons: (t.ach_seasons ?? 0) + seasons, ach_apps: (t.ach_apps ?? 0) + seasons * 18, ach_league: (t.ach_league ?? 0) + titles });
+    await localStore.updateToken(pid, { ach_seasons: (t.ach_seasons ?? 0) + seasons, ach_apps: (t.ach_apps ?? 0) + seasons * 18, ach_league: (t.ach_league ?? 0) + titles, ach_cup: (t.ach_cup ?? 0) + cups });
     const decorated = (await localStore.getToken(pid))!;
     // SNAPSHOT THE LEGEND before the token is reborn — this is what populates the Bloodline Tree / Hall of
     // Legends. Keyed with a :g<gen> suffix so every generation is a distinct node (legends() groups by the
     // base id, splitting on ':g'). Without this the game's signature generational chain never fills (PT-18).
+    let testimonial = 0; // the retirement send-off gate receipt — a bounded, greatness-scaled one-off (PT-116)
     try {
       const card = legendCardOf(decorated);
+      testimonial = Math.max(0, Math.round(Number((card as any).testimonial) || 0));
       const retiredSeason = getActiveModel().profile.season ?? (decorated.generation ?? 0);
       await localStore.saveLegacy(`${pid}:g${decorated.generation ?? 0}`, OWNER, decorated.name, JSON.stringify(card), retiredSeason);
     } catch { /* legend snapshot is best-effort — never block the succession itself */ }
@@ -440,6 +443,10 @@ export const api = {
     let legacy = Math.round((decorated.earnings ?? 0) * RETIREMENT_LEGACY_SHARE);
     if (inheritance === 'fortune') legacy = Math.round(legacy * 1.75) + 200;
     if (legacy > 0) await localStore.addCoins(OWNER, legacy);
+    // THE TESTIMONIAL — a great servant's send-off match pays a bounded, greatness-scaled purse. legacyCard
+    // models it (legacy.ts) but succeed() used to discard it; pay it now so a legendary career has a tangible
+    // farewell reward (a one-off coin credit — no rng, determinism-safe) (PT-116).
+    if (testimonial > 0) await localStore.addCoins(OWNER, testimonial);
     // An incoming-bid sale banks its fee HERE — atomically with the star actually leaving the club — not up
     // front. succeed() throws on an already-reborn (prospect) token, so this runs at most once per succession;
     // abandoning the will screen credits nothing and leaves the star owned (no free-money loop) (PT-60).
@@ -456,7 +463,7 @@ export const api = {
     await localStore.updateToken(pid, rf);
     const fresh = (await localStore.getToken(pid))!;
     const pot = rebornPotential(fresh);
-    return { ok: true as const, legacy, saleFee, coins: getActiveModel().profile.coins, inheritance: inheritance ?? null, prospect: { id: pid, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: fresh.pedigree, careerStarted: false, potentialStars: pot.stars, genes: JSON.parse(fresh.genes_json) } };
+    return { ok: true as const, legacy, saleFee, testimonial, coins: getActiveModel().profile.coins, inheritance: inheritance ?? null, prospect: { id: pid, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: fresh.pedigree, careerStarted: false, potentialStars: pot.stars, genes: JSON.parse(fresh.genes_json) } };
   },
   // SP SEASON PRIZE — also where the local season counter advances (see docs note in save.ts's
   // profile.season) and where a league finish is banked as an honour (the old pod/wall-clock season
@@ -768,7 +775,7 @@ export const api = {
     const entry = gaffersDiaryEntry({ seasonNumber: model.profile.season, matches: [], table: null });
     return { entry };
   },
-  honours: async () => { await ensureActive(); return { honours: await localStore.honoursFor(OWNER) }; },
+  honours: async (limit?: number) => { await ensureActive(); return { honours: await localStore.honoursFor(OWNER, limit) }; },
   awards: async () => { await ensureActive(); return { awards: [] as AwardRow[] }; }, // superseded, not downgraded: the old Golden Boot/Playmaker awards were PvP-pod individual-stat leaderboards; single-player surfaces the star's real achievements via honours/caps/legends in the Trophy Room instead. Kept as a stub (no caller remains).
   scoutTiers: async () => ({ opp: TIER, player: TIER, nft: { address: '', chainId: 0, enabled: false } }),
 };
