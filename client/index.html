@@ -580,6 +580,24 @@
       .sf-tiermove b { color: #fff; }
       .sf-tiermove-promoted { background: color-mix(in srgb, var(--good) 15%, transparent); border-left: 3px solid var(--good); color: var(--good); }
       .sf-tiermove-relegated { background: color-mix(in srgb, var(--home) 15%, transparent); border-left: 3px solid var(--home); color: var(--home); }
+      /* transfer market */
+      .sf-tm { text-align: center; margin: 10px 0; }
+      .sf-tm #sf-transfers { font-family: var(--display); font-size: 11px; padding: 8px 16px; }
+      .sf-tm-hint { font-size: 12px; color: var(--muted); margin-left: 8px; }
+      .tm-card { width: 720px; max-width: 94vw; max-height: 88vh; overflow-y: auto; }
+      .tm-head { font-family: var(--display); font-size: 13px; color: var(--good); margin-bottom: 4px; }
+      .tm-coins { color: #f0d98a; }
+      .tm-sub { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
+      .tm-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+      @media (max-width: 640px) { .tm-cols { grid-template-columns: 1fr; } }
+      .tm-row { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 8px; background: var(--panel-2, #1f1f4d); border: 1px solid var(--line); margin-bottom: 6px; }
+      .tm-pos { font-family: var(--display); font-size: 9px; padding: 2px 4px; border-radius: 4px; flex: none; min-width: 20px; text-align: center; }
+      .tm-GK { background: #7cc46b; color: #06301a; } .tm-DF { background: #4d8bff; color: #001028; } .tm-MF { background: #39ff9e; color: #003118; } .tm-FW { background: #ff7a3c; color: #2a0f00; }
+      .tm-name { flex: 1; font-size: 13px; color: var(--text); }
+      .tm-ov { font-size: 12px; color: var(--muted); white-space: nowrap; }
+      .tm-buy, .tm-sell { font-family: var(--display); font-size: 10px; padding: 5px 9px; flex: none; }
+      .tm-sell { background: color-mix(in srgb, #e6c76a 16%, transparent); color: #f0d98a; border: 1px solid color-mix(in srgb, #e6c76a 45%, transparent); border-radius: 6px; }
+      .tm-sell:hover:not(:disabled) { background: color-mix(in srgb, #e6c76a 28%, transparent); }
       #season-head { display: flex; align-items: center; gap: 12px; } #season-head h3 { margin: 0; } #season-back { margin-left: auto; }
       .season-summary { font-size: 17px; color: var(--text); margin: 4px 0 14px; padding: 10px 14px; background: color-mix(in srgb, var(--cyan) 8%, transparent); border: 1px solid var(--line); border-radius: 9px; }
       .season-summary b { color: var(--cyan); }

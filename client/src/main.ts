@@ -2,6 +2,7 @@ import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
   TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry, tierName, TIERS,
   FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, deriveExpectation, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition, contTieBlurb, wcGroupDramaBlurb, wcKnockoutDramaBlurb,
+  transferList, wageForLength, sellValue, type Listing,
   ACHIEVEMENTS, evaluateAchievements, achievementById, type AchSnapshot,
   type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
@@ -1029,6 +1030,52 @@ class Game {
     return `<table class="lt-table"><thead><tr><th></th><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>${rows}</tbody></table>${key}`;
   }
 
+  // ── transfer market: buy/sell fictional players (strengthen the squad → climb the pyramid) ──────────
+  private openTransferMarket() {
+    document.getElementById('settings-ov')?.remove();
+    const ov = document.createElement('div'); ov.id = 'settings-ov'; // reuse the centred-overlay styling
+    ov.innerHTML = `<div class="tt-card tm-card"><div class="set-head"><div class="tt-title">💰 TRANSFER MARKET</div><button class="set-x" aria-label="Close">✕</button></div><div id="tm-body">${SPINNER}</div></div>`;
+    document.body.appendChild(ov);
+    const close = () => ov.remove();
+    ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+    ov.querySelector('.set-x')!.addEventListener('click', close);
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); } };
+    document.addEventListener('keydown', onEsc);
+    this.renderTransferMarket();
+  }
+  private renderTransferMarket() {
+    const body = document.getElementById('tm-body'); if (!body) return;
+    const m = this.loadMgr(), tier = this.clubTier(), coins = this.account?.coins ?? 0;
+    const boughtKey = 'fm_bought_' + (this.account?.handle ?? 'x') + '_' + m.season;
+    let bought: string[]; try { bought = JSON.parse(localStorage.getItem(boughtKey) || '[]'); } catch { bought = []; }
+    const listings = transferList(this.leagueSeed(), m.season, tier).filter((l) => !bought.includes(l.player.id));
+    const squad = this.club.players, sellable = squad.filter((p) => p.id !== m.starId); // the bloodline star can't be sold here
+    const buyList = listings.length ? listings.map((l) => `<div class="tm-row"><span class="tm-pos tm-${l.player.role}">${l.player.role}</span><span class="tm-name">${l.player.name}</span><span class="tm-ov">OV ${l.ov} · age ${l.age}</span><button class="tm-buy primary" data-buy="${l.player.id}" ${coins < l.fee || squad.length >= 26 ? 'disabled' : ''}>Buy · ${l.fee.toLocaleString()}c</button></div>`).join('') : '<div class="muted">The market has cleared for this season.</div>';
+    const sellList = sellable.map((p) => { const ov = overall(p), v = sellValue(ov); return `<div class="tm-row"><span class="tm-pos tm-${p.role}">${p.role}</span><span class="tm-name">${p.name}</span><span class="tm-ov">OV ${ov}</span><button class="tm-sell" data-sell="${p.id}" ${squad.length <= 14 ? 'disabled' : ''}>Sell · +${v.toLocaleString()}c</button></div>`; }).join('');
+    body.innerHTML = `<div class="tm-head"><span class="tm-coins"><span class="ico-inline">${sprite('coin')}</span> ${coins.toLocaleString()}c</span> · Squad ${squad.length}/26 · ${tierName(tier)}</div>`
+      + `<div class="tm-sub">Buy players to strengthen the squad and climb — the market's quality is scaled to your division.</div>`
+      + `<div class="tm-cols"><div class="tm-col"><h4 class="scout-h4">🛒 BUY</h4>${buyList}</div><div class="tm-col"><h4 class="scout-h4">💸 SELL</h4>${sellList}</div></div>`;
+    body.querySelectorAll('[data-buy]').forEach((b) => b.addEventListener('click', () => { const l = listings.find((x) => x.player.id === (b as HTMLElement).dataset.buy); if (l) this.buyPlayerFlow(l, boughtKey); }));
+    body.querySelectorAll('[data-sell]').forEach((b) => b.addEventListener('click', () => this.sellPlayerFlow((b as HTMLElement).dataset.sell!)));
+  }
+  private async buyPlayerFlow(l: Listing, boughtKey: string) {
+    try {
+      const r = await api.buyPlayer(l.player, l.fee);
+      if (this.account) this.account.coins = r.coins;
+      try { const b = JSON.parse(localStorage.getItem(boughtKey) || '[]'); b.push(l.player.id); localStorage.setItem(boughtKey, JSON.stringify(b)); } catch { /* ignore */ }
+      this.setMe(await api.me()); audio.chime('confirm');
+      toast(`✍️ Signed ${l.player.name} (OV ${l.ov}) · −${l.fee.toLocaleString()}c`);
+      this.renderTransferMarket();
+    } catch (e: any) { toast(e?.body?.error ?? 'Could not sign him'); }
+  }
+  private async sellPlayerFlow(playerId: string) {
+    const p = this.club.players.find((x) => x.id === playerId);
+    this.openConfirm(`Sell <b>${p?.name ?? 'this player'}</b> for +${sellValue(p ? overall(p) : 0).toLocaleString()}c?`, 'Sell', async () => {
+      try { const r = await api.sellPlayer(playerId); if (this.account) this.account.coins = r.coins; this.setMe(await api.me()); toast(`💸 Sold · +${r.value.toLocaleString()}c`); this.renderTransferMarket(); }
+      catch (e: any) { toast(e?.body?.error ?? 'Could not sell'); }
+    });
+  }
+
   private showSeason() {
     this.spFixture = null;
     this.showScreen('season');
@@ -1084,6 +1131,7 @@ class Game {
       + this.sponsorHtml()
       + this.worldCupHtml()
       + this.continentalHtml()
+      + (m.starName ? `<div class="sf-tm"><button id="sf-transfers">💰 Transfer Market</button> <span class="sf-tm-hint">buy/sell players to strengthen the squad</span></div>` : '')
       + `<div class="season-cols"><div class="season-fixtures"><h4 class="scout-h4">FIXTURES</h4>${fxRows}${records}${focusSel}${simBtn}</div>`
       + `<div class="season-table-wrap"><h4 class="scout-h4">LEAGUE TABLE — ${tierName(tier).toUpperCase()}</h4>${this.spTableHtml(t, tier)}${this.staffHtml()}</div></div>`;
     $('sf-cont-play')?.addEventListener('click', () => this.playContinentalTie());
@@ -1092,6 +1140,7 @@ class Game {
     $('sf-wc-play')?.addEventListener('click', () => this.playWorldCupTie());
     $('sf-wc-sim')?.addEventListener('click', () => this.simWorldCupTie());
     $('sf-play')?.addEventListener('click', () => this.playNextSpFixture());
+    $('sf-transfers')?.addEventListener('click', () => this.openTransferMarket());
     $('sf-sim')?.addEventListener('click', () => this.simRemainingFixtures());
     $('sf-next-season')?.addEventListener('click', () => this.nextSeason());
     ($('sf-focus') as any)?.addEventListener('change', (e: Event) => { const mm = this.loadMgr(); this.saveMgr({ ...mm, trainFocus: (e.target as HTMLSelectElement).value }); });
