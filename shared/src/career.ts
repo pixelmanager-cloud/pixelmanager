@@ -838,7 +838,7 @@ export function fit(card: Card, sc: Scenario): number {
   return clamp(f, 0, 1);
 }
 
-export interface Choice { cardId: string; tags: Tag[]; power: number; fit: number; bestFit: number; success: number; scenario: string; stakes: number }
+export interface Choice { cardId: string; tags: Tag[]; power: number; fit: number; bestFit: number; success: number; scenario: string; stakes: number; matchedAsk: boolean }
 
 // ── career config ──
 export const HAND_SIZE = 4;
@@ -1240,7 +1240,10 @@ export class Career {
     // Rest and the energy-giving focus choices a real trade-off against a busy, big-moment-heavy chapter.
     const fatigue = this.energy < 35 ? ((35 - this.energy) / 35) * 0.12 : 0;
     const success = clamp(f + (this.rng() - 0.5) * variance + form + bigGame + coaching - fatigue, 0, 1);
-    const choice: Choice = { cardId: card.id, tags: card.tags, power: cardPower(card), fit: f, bestFit, success, scenario: this.scenario.label, stakes: this.scenario.stakes };
+    // did the played card carry ANY tag the moment actually called for (primary OR secondary)? — so a
+    // called-for-but-secondary tag is never branded "wrong", only partial (PT-44)
+    const matchedAsk = card.tags.some((t) => (this.scenario.demand[t] ?? 0) > 0);
+    const choice: Choice = { cardId: card.id, tags: card.tags, power: cardPower(card), fit: f, bestFit, success, scenario: this.scenario.label, stakes: this.scenario.stakes, matchedAsk };
     this.log.push(choice);
     // FORM is momentum, not a chapter-long stamp: a slump LIFTS as he strings good games together, and a
     // purple patch cools if results dip — so "Loss of Form" no longer brands every scenario for ~40 turns

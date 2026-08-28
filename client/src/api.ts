@@ -73,7 +73,7 @@ export interface Prospect { id: string; name: string; roleHint: string; pedigree
 export interface CareerCard { id: string; name: string; tags: string[]; rarity?: string; desc?: string }
 export interface Kit { number: number; boots: string; celebration: string; nickname: string; hairstyle?: string; accessory?: string }
 /** Immediate feedback on a moment just played: how well the card fit the demand, and how it went. */
-export interface CareerOutcome { fit: number; bestFit: number; success: number; tags: string[]; answeredAsk: boolean }
+export interface CareerOutcome { fit: number; bestFit: number; success: number; tags: string[]; answeredAsk: boolean; matchedAsk: boolean }
 export interface LeagueRow { name: string; mine: boolean; P: number; W: number; D: number; L: number; GF: number; GA: number; GD: number; Pts: number }
 export interface CareerState {
   prospectId: string; name: string; pedigree: number; agentId?: string | null; phase: 'play' | 'coach' | 'draft' | 'offer' | 'focus' | 'arc';
@@ -562,7 +562,7 @@ export const api = {
     let outcome: CareerOutcome | null = null;
     if (action.type === 'play' && c.log.length) {
       const ch = c.log[c.log.length - 1];
-      outcome = { fit: ch.fit, bestFit: ch.bestFit, success: ch.success, tags: ch.tags, answeredAsk: ch.fit >= ch.bestFit - 0.05 };
+      outcome = { fit: ch.fit, bestFit: ch.bestFit, success: ch.success, tags: ch.tags, answeredAsk: ch.fit >= ch.bestFit - 0.05, matchedAsk: ch.matchedAsk };
     }
     await localStore.updateToken(pid, { career_actions: JSON.stringify([...JSON.parse(t.career_actions ?? '[]'), action]) });
     if (c.finished) {

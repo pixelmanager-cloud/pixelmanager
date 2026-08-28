@@ -2247,7 +2247,10 @@ class Game {
     } else if (s.phase === 'play' && s.scenario) {
       // the demand — what the moment is asking for. The top tag (biggest weight) is the primary thing to
       // match; render as distinct highlighted pills, labelled, so it never reads like just another card tag.
-      const tags = Object.entries(s.scenario.demand).sort((a, b) => b[1] - a[1]).map(([t], i) => `<span class="cg-dtag${i === 0 ? ' primary' : ''}">${t}</span>`).join('');
+      const demandTags = Object.entries(s.scenario.demand).sort((a, b) => b[1] - a[1]);
+      const tags = demandTags.map(([t], i) => `<span class="cg-dtag${i === 0 ? ' primary' : ''}" title="${i === 0 ? 'Best match — a card with this tag reads the moment perfectly' : 'Also helps — a card with this tag is a partial match'}">${t}</span>`).join('');
+      // legend so the green/amber pill colours aren't a mystery: green is the ideal card, amber ones still help (PT-44)
+      const demandHint = demandTags.length > 1 ? '— <b class="cg-h-green">green</b> is the best match, <b class="cg-h-amber">amber</b> also helps' : '— play a card that matches';
       // distinct presentation per moment type — a matchday scoreboard, the training ground, or life off the pitch
       const mk = s.momentKind ?? (s.lifeEvent ? 'life' : 'training');
       let header: string; let prompt: string;
@@ -2278,7 +2281,7 @@ class Game {
         header = `<div class="cg-mtype training">🏋️ TRAINING GROUND</div>`;
         prompt = 'How does he approach the session?';
       }
-      body = `<div class="cg-scenario stakes-${s.scenario.stakes} ${mk}">${header}<div class="cg-story">${s.story ?? s.scenario.label}</div><div class="cg-demand"><span class="cg-demand-lbl">🎯 This calls for:</span> ${tags}<span class="cg-demand-hint">— play a card that matches</span></div></div>`
+      body = `<div class="cg-scenario stakes-${s.scenario.stakes} ${mk}">${header}<div class="cg-story">${s.story ?? s.scenario.label}</div><div class="cg-demand"><span class="cg-demand-lbl">🎯 This calls for:</span> ${tags}<span class="cg-demand-hint">${demandHint}</span></div></div>`
         + `<div class="cg-prompt">${prompt}${s.coach ? ` · <b>${s.coach.name}</b> is coaching him` : ''}</div>`
         + `<div class="cg-cards">` + (s.hand ?? []).map((c) => this.cardHtml(c, 'play', mk === 'life')).join('') + `</div>`;
     } else if (s.phase === 'coach' && s.coaches) {
@@ -2401,9 +2404,11 @@ class Game {
     // CHOICE — did you pick the card the moment asked for? (about your decision)
     const read = o.answeredAsk
       ? { cls: 'great', label: '🎯 Right card' }
-      : o.fit >= o.bestFit - 0.18
-        ? { cls: 'good', label: '◑ Fair choice' }
-        : { cls: 'poor', label: '✗ Wrong card' };
+      : o.matchedAsk
+        ? { cls: 'good', label: '◑ Partial match' }        // played a called-for (secondary) tag — not wrong, just not the best (PT-44)
+        : o.fit >= o.bestFit - 0.18
+          ? { cls: 'good', label: '◑ Fair choice' }
+          : { cls: 'poor', label: '✗ Wrong card' };
     // RESULT — how the moment actually went (fit + nerve + coaching − fatigue). When the CHOICE was right
     // but the result still dipped, frame it as bad luck on the day, not bad play (reconciles the two pills).
     const unlucky = o.answeredAsk && o.success < 0.58;
