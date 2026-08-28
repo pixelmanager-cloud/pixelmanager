@@ -20,13 +20,16 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done · `(design)` = des
 - [ ] **Store page** — planned week of ~2026-08-31 after approval (see §D).
 
 ### Presentation / assets
-- [~] **Club badges** — generating original crests via Retro Diffusion (120-set, unique-motif pass in progress). `client/public/badges/` + `badge-manifest.ts`.
-- [ ] **Nation flags** — fictional-country flags (via Retro Diffusion, confirm count/cost first).
-- [ ] **Replace generic SVG icons** — `sprites.ts` inline SVG icon set → RD pixel art.
-- [ ] **Player / manager portraits** — none exist; procedural only. Cheap in MB (~4 KB each).
-- [ ] **Kits / trophies / stadium art** — none; optional but raises store-page appeal.
-- [ ] **Capsule / header / library art** — Steam store visuals (RD-generatable; needed for store page).
+- [x] **Club badges** — 120 original RD crests, unique-motif (no repeated families). Wired via `crest()`.
+- [x] **Nation flags** — 32 fictional-nation flags (RD Plus, vivid). Wired into World Finals views (`flag.ts`).
+- [x] **Player / manager portraits** — 64 age-banded (youth/prime/veteran), RD. Wired into player + prospect cards (`portrait.ts`).
+- [x] **Kits** — 16 recolorable 2-tone templates; auto-tint to each club's colours (`kit.ts`). Wired into club header.
+- [x] **Trophies** — 12 RD Plus silverware pieces. Wired into the Trophy Room (`trophy.ts`).
+- [x] **Scene backdrops** — 8 RD Plus environment scenes (stadium/pitch/dressing room/academy/office/trophy room/press/scouting). Wired as per-screen ambient backdrops.
+- [~] **RD UI icons** — 24 generated as candidates; NOT yet swapped in (need per-icon keep-vs-hand-pixeled decision). Hand-pixeled `sprites.ts` set still live.
+- [ ] **Capsule / header / library art** — Steam store visuals (RD Pro; needed for store page).
 - [ ] **Screenshots + short trailer/GIF** — text match view, Trophy Room, bloodline tree, scouting board all show well.
+- [ ] **Art review from playthrough** — user noting weird art during their own playthrough; fix the flagged list after.
 
 ### Integration / QA (the highest-risk item)
 - [ ] **Career ↔ manager seam playtest** — validate the hand-off ("take the reins") feels like ONE game, not two bolted together. *Hybrid games are graded on their weakest integrated system (Soccer Story lesson) — this is the single most important pre-launch validation.*
