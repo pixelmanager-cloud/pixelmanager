@@ -200,4 +200,334 @@ export const TRIUMPH_ARCS: StoryArc[] = [
       },
     },
   },
+  {
+    id: 'tri-league-title', title: 'Champions', icon: '🏆', category: 'triumph',
+    minTurn: 120, maxTurn: 200, weight: 3, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The maths is done, the results are in from across the country, and the title is theirs with a game to spare. Champions. In the sweaty roar of the dressing room, someone shoves a phone in his face for the first words the world will hear. What does he say?',
+        choices: [
+          { id: 'earned', label: 'Point to the graft', desc: 'Name the winter nights and the aching mornings', outcome: 'He talks of the pre-season hills and the games nobody watched. A champion who never forgot the climb.', effect: { attr: { teamwork: 1, leadership: 1 }, meters: { peers: 12, authority: 8 }, tag: 'grafter' }, next: 'parade' },
+          { id: 'kings', label: 'Declare them kings', desc: 'Let it rip — the best in the land, say it loud', outcome: 'He roars that nobody can touch them now, champagne stinging his eyes. The city believes every word.', effect: { form: 0.08, market: 3, meters: { fans: 16, sponsors: 6 }, tag: 'anointed' }, next: 'parade' },
+        ],
+      },
+      parade: {
+        id: 'parade',
+        prompt: 'The open-top bus crawls through streets packed ten deep, a sea of scarves and smoke, the trophy passed from hand to hand above their heads. He has waited his whole life for this ride. How does he take it in?',
+        choices: [
+          { id: 'soak', label: 'Drink it all in', desc: 'Learn every face, remember it forever', outcome: 'He leans over the rail and shakes every hand he can reach, burning the day into memory. Some mornings never fade.', effect: { form: 0.1, meters: { fans: 18, authority: 6 }, attr: { composure: 1 } } },
+          { id: 'again', label: 'Vow to defend it', desc: 'Tell the crowd one is never enough', outcome: 'Trophy aloft, he promises the parade will run again next May. The fans chant his name till they are hoarse.', effect: { form: 0.09, market: 4, attr: { aggression: 1 }, meters: { fans: 14, sponsors: 8 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'tri-european-night', title: 'European Night', icon: '⭐', category: 'triumph',
+    minTurn: 135, maxTurn: 205, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'A foreign stadium under a black sky, forty thousand of theirs against the world, and the biggest trophy the continent offers on a plinth by the tunnel. This is the night boys dream about on wet playgrounds. How does he walk out into it?',
+        choices: [
+          { id: 'still', label: 'Go quiet and cold', desc: 'Shut out the noise, become pure focus', outcome: 'He hears nothing but his own breath as the anthem swells. By kickoff he is a machine, all feeling locked away.', effect: { attr: { composure: 2 }, meters: { authority: 6 }, tag: 'euro-ice' }, next: 'lift' },
+          { id: 'feel', label: 'Feel every inch of it', desc: 'Let the enormity in, ride the goosebumps', outcome: 'The hair on his arms stands up as the floodlights blaze. He lets it fill him and plays like a man possessed.', effect: { form: 0.06, attr: { flair: 1 }, meters: { fans: 10 }, tag: 'euro-fire' }, next: 'lift' },
+        ],
+      },
+      lift: {
+        id: 'lift',
+        prompt: 'They have won it. The great cup is his to raise into a continental night, ribbons in the club colours, a whole generation of supporters sobbing in the stands. As the confetti cannons fire, what does he do first?',
+        choices: [
+          { id: 'team', label: 'Wait for the whole squad', desc: 'No one lifts it until the last sub is up', outcome: 'He refuses to touch it until every reserve and physio is on the podium. Then, together, they hoist it as one.', effect: { form: 0.1, attr: { teamwork: 1, leadership: 1 }, meters: { peers: 16, authority: 8 } } },
+          { id: 'sky', label: 'Raise it to the heavens', desc: 'Lift it alone, roar it at the stars', outcome: 'He thrusts it skyward and screams into the night, a picture that hangs in the club museum for decades.', effect: { form: 0.12, market: 5, attr: { aggression: 1 }, meters: { fans: 18, sponsors: 8 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'tri-team-of-season', title: 'Team of the Season', icon: '🏅', category: 'triumph',
+    minTurn: 110, maxTurn: 190, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The division names its eleven best of the campaign, voted by every manager and captain in the league, and his name is on the sheet among the household stars. Peer-picked, the truest kind of honour. How does he receive the news?',
+        choices: [
+          { id: 'peers', label: 'Treasure the peer vote', desc: 'It means most that rivals chose him', outcome: 'He tells the press it hits differently when the men who marked him all year put him there. Respect, earned the hard way.', effect: { attr: { teamwork: 1, composure: 1 }, meters: { peers: 14, authority: 6 }, tag: 'respected' }, next: 'shoot' },
+          { id: 'proof', label: 'Call it proof', desc: 'Treat it as vindication of a long climb', outcome: 'He says quietly that a lad once released on a free is now in the league eleven. Let the doubters chew on that.', effect: { form: 0.06, market: 2, meters: { fans: 10, sponsors: 4 }, tag: 'vindicated' }, next: 'shoot' },
+        ],
+      },
+      shoot: {
+        id: 'shoot',
+        prompt: 'They gather the chosen eleven for the glossy team photo, a row of the season\'s finest in pristine kit under studio lights. Standing shoulder to shoulder with names he grew up idolising, how does he carry himself?',
+        choices: [
+          { id: 'belong', label: 'Stand like he belongs', desc: 'Chin up, no awe, an equal among them', outcome: 'He shakes each hand as a peer, not a fan, and the veterans clock the quiet confidence. He is one of them now.', effect: { form: 0.08, attr: { leadership: 1 }, meters: { peers: 10, authority: 6 } } },
+          { id: 'learn', label: 'Pick their brains', desc: 'Corner the veterans, soak up the wisdom', outcome: 'He spends the shoot mining the old pros for secrets, notebook of the mind filling fast. Hungry to be better still.', effect: { form: 0.07, attr: { composure: 1, teamwork: 1 }, meters: { peers: 12 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'tri-golden-boot', title: 'The Golden Boot', icon: '👟', category: 'triumph',
+    minTurn: 120, maxTurn: 195, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The final day of the season, and the top-scorer race is a dead heat: him and {RIVAL}, level on goals, both playing at the same hour on opposite sides of the country. The Golden Boot goes to whoever nets one more. How does he play it?',
+        choices: [
+          { id: 'hunt', label: 'Hunt the goal', desc: 'Chase every scrap, gamble on the shoulder', outcome: 'He plays on the last defender\'s toes all afternoon and pounces twice. {RIVAL} blanks; the Boot is his alone.', effect: { form: 0.1, attr: { aggression: 1, flair: 1 }, meters: { fans: 14 }, tag: 'sharpshooter' }, next: 'boot' },
+          { id: 'team', label: 'Play for the win', desc: 'Forget the tally, do the job the team needs', outcome: 'He drops deep, creates two and taps in a third almost by accident. The Boot lands his way, honestly earned.', effect: { form: 0.08, attr: { teamwork: 1, composure: 1 }, meters: { peers: 12, authority: 4 }, tag: 'complete' }, next: 'boot' },
+        ],
+      },
+      boot: {
+        id: 'boot',
+        prompt: 'The golden trophy is presented on the pitch, a season of finishing distilled into one gleaming boot. His children run on to hold it, tiny hands around the prize. What does the moment mean to him?',
+        choices: [
+          { id: 'dedicate', label: 'Give it to the kids', desc: 'Press it into his children\'s hands for good', outcome: 'He tells them the Boot is theirs to keep, that every goal was for their faces in the stand. They beam; so does he.', effect: { form: 0.07, meters: { family: 16, fans: 8 }, attr: { composure: 1 } } },
+          { id: 'more', label: 'Set it as a floor', desc: 'Declare this the first of many', outcome: 'Boot held high, he vows to make it a habit, not a highlight. The strikers of the league take note, and worry.', effect: { form: 0.09, market: 4, attr: { aggression: 1 }, meters: { fans: 12, sponsors: 6 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'tri-domestic-cup', title: 'The Underdog Cup', icon: '🥇', category: 'triumph',
+    minTurn: 100, maxTurn: 185, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'A cup run nobody predicted — a small club, replay after replay, giant after giant slain, and now the final itself against the moneyed favourites. The whole neutral nation is behind the little side. How does he treat the fairytale?',
+        choices: [
+          { id: 'believe', label: 'Preach belief', desc: 'Tell the lads the story is theirs to write', outcome: 'He gathers the youngsters and swears fairytales are won, not wished for. They walk out with fire in their boots.', effect: { attr: { leadership: 2 }, meters: { peers: 12, authority: 6 }, tag: 'believer' }, next: 'giant' },
+          { id: 'loose', label: 'Play with freedom', desc: 'No pressure, no fear, just express it', outcome: 'He tells them nobody expected this, so swing free and enjoy it. The looseness turns them lethal.', effect: { form: 0.06, attr: { flair: 1, composure: 1 }, meters: { peers: 8 }, tag: 'fearless' }, next: 'giant' },
+        ],
+      },
+      giant: {
+        id: 'giant',
+        prompt: 'They have done it — the minnows have toppled the giants and the cup is going to a town that has never won a thing. Grown men who stood on that terrace as boys are weeping. How does he mark a triumph this improbable?',
+        choices: [
+          { id: 'town', label: 'Give it to the town', desc: 'Lift it toward the away end and the whole place', outcome: 'He carries the cup to the corner where his hometown crammed in and holds it there until his arms shake. Theirs forever.', effect: { form: 0.1, meters: { fans: 18, authority: 6 }, attr: { teamwork: 1 } } },
+          { id: 'proof', label: 'Call it a warning', desc: 'Tell the big clubs the little ones are coming', outcome: 'He grins down the camera and says the giants should sleep lighter now. Cheeky, defiant, and the underdogs love it.', effect: { form: 0.08, market: 3, attr: { aggression: 1 }, meters: { fans: 14, sponsors: 4 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'tri-first-senior-goal', title: 'The First One', icon: '⚽', category: 'triumph',
+    minTurn: 40, maxTurn: 120, weight: 3, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'His first senior goal. A scrappy thing bundled in off his shin in front of a half-empty stand on a cold afternoon — but it is his, the first of a career, and the net will never bulge like this again. How does the boy react?',
+        choices: [
+          { id: 'run', label: 'Run to the family', desc: 'Sprint straight to where they always sit', outcome: 'He tears off toward the little cluster who drove him to every trial and points until they see him. All of it, for that look on their faces.', effect: { attr: { composure: 1 }, meters: { family: 14, fans: 6 }, tag: 'first-goal' }, next: 'after' },
+          { id: 'roar', label: 'Roar it out', desc: 'Slide on the knees, let the relief explode', outcome: 'He slides across the wet turf screaming, months of doubt pouring out at once. The bench mobs him grinning.', effect: { form: 0.06, attr: { aggression: 1 }, meters: { peers: 8 }, tag: 'first-goal' }, next: 'after' },
+        ],
+      },
+      after: {
+        id: 'after',
+        prompt: 'In the dressing room afterwards the match ball sits in his lap, teammates\' signatures scrawled across it in marker. A veteran leans over and asks, half-joking, what he means to do with the rest of his career. What does the youngster say?',
+        choices: [
+          { id: 'hundreds', label: 'Promise hundreds more', desc: 'Look him dead-on, mean every word', outcome: 'He says this is goal one of hundreds and does not blink. The old pro nods slowly; he has seen that look before, in the good ones.', effect: { form: 0.08, attr: { aggression: 1, composure: 1 }, meters: { peers: 8, authority: 4 } } },
+          { id: 'humble', label: 'Just savour today', desc: 'Refuse to look past this one moment', outcome: 'He says he only wants to enjoy tonight and worry about tomorrow tomorrow. Wise beyond the years, and the room warms to him.', effect: { form: 0.06, attr: { composure: 1, teamwork: 1 }, meters: { peers: 10, family: 6 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'tri-first-eleven', title: 'The First XI', icon: '🧢', category: 'triumph',
+    minTurn: 115, maxTurn: 180, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'For years he has been the impact sub, the squad man, the one who watches the big nights from the bench. Now the manager reads the international team sheet and his name is in it — the starting eleven, a competitive fixture, at last. How does he process it?',
+        choices: [
+          { id: 'earned', label: 'Own the promotion', desc: 'Tell himself the wait made him ready', outcome: 'He decides the long apprenticeship was the making of him and strides into the XI like he has always belonged. No stage fright now.', effect: { attr: { composure: 1, leadership: 1 }, meters: { authority: 6, peers: 8 }, tag: 'starter' }, next: 'perform' },
+          { id: 'prove', label: 'Treat it as a trial', desc: 'One start is nothing without a performance', outcome: 'He refuses to celebrate a place he might lose, pouring the nerves into preparation. The shirt will have to be prised off him.', effect: { form: 0.05, attr: { stamina: 1 }, meters: { authority: 4 }, tag: 'hungry-start' }, next: 'perform' },
+        ],
+      },
+      perform: {
+        id: 'perform',
+        prompt: 'Ninety minutes of his first international start, and he was the best man on the pitch — assured, tireless, undroppable. The manager singles him out in the press room. How does he handle becoming a fixture in the side?',
+        choices: [
+          { id: 'quiet', label: 'Let it settle quietly', desc: 'No fuss, back to the training ground', outcome: 'He nods at the praise and says only that he intends to keep the shirt. The manager likes a man who wants it that badly.', effect: { form: 0.08, attr: { composure: 1, teamwork: 1 }, meters: { authority: 8, peers: 6 } } },
+          { id: 'ambition', label: 'Aim for the armband', desc: 'Say out loud he wants to lead one day', outcome: 'He tells the room this is a start, and one day he means to captain the side. Bold, and the country marks the ambition.', effect: { form: 0.06, market: 3, attr: { leadership: 1 }, meters: { fans: 10, sponsors: 4 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'tri-tournament-final', title: 'The Summer Final', icon: '🌍', category: 'triumph',
+    minTurn: 130, maxTurn: 195, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'A whole summer of tournament football, a nation daring to dream, and now the unthinkable — his country has reached the final of a major championship, one game from immortality. The night before, the squad is wired to snapping. What does he bring to the room?',
+        choices: [
+          { id: 'calm', label: 'Be the still centre', desc: 'Lower the temperature, spread the calm', outcome: 'He moves quietly among the young lads, cracking small jokes, bleeding the tension out of the air. By morning the camp breathes easy.', effect: { attr: { composure: 2, leadership: 1 }, meters: { peers: 14, authority: 6 }, tag: 'anchor' }, next: 'final' },
+          { id: 'rally', label: 'Light the fire', desc: 'Remind them what one night can make them', outcome: 'He tells them that men become legends on nights like tomorrow, and eyes around the room start to blaze. Ready to run through walls.', effect: { form: 0.06, attr: { aggression: 1, leadership: 1 }, meters: { peers: 10, fans: 8 }, tag: 'igniter' }, next: 'final' },
+        ],
+      },
+      final: {
+        id: 'final',
+        prompt: 'The final itself, a nation holding its breath, and it comes down to the finest margins deep into the night. When the last whistle blows, his country are champions of the continent for the first time in living memory. How does the moment take him?',
+        choices: [
+          { id: 'knees', label: 'Fall to the turf', desc: 'Drop to his knees, let it all pour out', outcome: 'He collapses to the grass and weeps openly, a career and a childhood and a whole nation crashing over him at once. Unforgettable.', effect: { form: 0.12, meters: { fans: 20, family: 8 }, attr: { composure: 1 } } },
+          { id: 'anthem', label: 'Lead the anthem', desc: 'Turn to the fans and start them singing', outcome: 'He faces the wall of his own supporters and conducts the anthem with the medal round his neck. A moment replayed for generations.', effect: { form: 0.11, market: 5, attr: { leadership: 1 }, meters: { fans: 22, sponsors: 8 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'tri-leader-award', title: 'Leader of the League', icon: '📣', category: 'triumph',
+    minTurn: 150, maxTurn: 205, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'A season of dragging an unfancied side up the table by sheer force of will, and the league honours it with an award rarely given to a player: recognition for leadership, the captain who set the standard for every dressing room in the division. How does he wear the acclaim?',
+        choices: [
+          { id: 'share', label: 'Push it to the squad', desc: 'Insist leadership is a group of men, not one', outcome: 'He says a captain is only as good as the lads who follow, and lists a dozen unsung names. The armband, worn exactly right.', effect: { attr: { leadership: 2, teamwork: 1 }, meters: { peers: 16, authority: 8 }, tag: 'true-captain' }, next: 'legacy' },
+          { id: 'accept', label: 'Accept it proudly', desc: 'Take the credit for standards he set', outcome: 'He accepts that he set the tone daily and drove them further than the table said they belonged. Quiet, deserved pride.', effect: { form: 0.07, market: 2, attr: { leadership: 1 }, meters: { authority: 8, fans: 8 }, tag: 'standard-setter' }, next: 'legacy' },
+        ],
+      },
+      legacy: {
+        id: 'legacy',
+        prompt: 'A young apprentice, wide-eyed, asks him afterwards what leadership actually is — how a man learns to carry others. It is the question of his career. What does the captain tell the boy?',
+        choices: [
+          { id: 'example', label: 'It is example', desc: 'Tell him to be first in, last out, always', outcome: 'He says leadership is being the hardest worker in the room when nobody is watching. The boy writes it on his heart.', effect: { form: 0.08, attr: { leadership: 1, stamina: 1 }, meters: { peers: 10, authority: 6 } } },
+          { id: 'listen', label: 'It is listening', desc: 'Tell him a captain hears before he speaks', outcome: 'He says the loudest voice leads nobody; you learn each man and lift him his own way. Wisdom the youngster will carry for years.', effect: { form: 0.07, attr: { leadership: 1, teamwork: 1 }, meters: { peers: 12, authority: 4 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'tri-appearance-milestone', title: 'Five Hundred', icon: '🔢', category: 'triumph',
+    minTurn: 155, maxTurn: 205, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'Five hundred appearances in the same shirt — a number few reach at any club, a testament not to genius but to loyalty, durability, and love. The club marks the milestone before kickoff, the whole ground rising as the number flashes up. What runs through him?',
+        choices: [
+          { id: 'loyal', label: 'Cherish the one badge', desc: 'Reflect on a lifetime given to one club', outcome: 'He thinks of the offers turned down and does not regret one, pressing the crest to his lips as the stadium roars. Home is home.', effect: { attr: { teamwork: 1, composure: 1 }, meters: { fans: 16, authority: 8 }, tag: 'one-club' }, next: 'walk' },
+          { id: 'body', label: 'Salute his own body', desc: 'Marvel quietly at every mile in the legs', outcome: 'He thinks of the ice baths and the physios and the mornings he could barely walk. Five hundred games; every one paid for in sweat.', effect: { form: 0.05, attr: { stamina: 2 }, meters: { peers: 8 }, tag: 'ironman' }, next: 'walk' },
+        ],
+      },
+      walk: {
+        id: 'walk',
+        prompt: 'They present him a golden shirt with the number stitched on the back, and ask him to say a word to the packed stands who have watched him grow from a nervous teenager into a club institution. What does he give the faithful?',
+        choices: [
+          { id: 'thanks', label: 'Thank the terraces', desc: 'Tell them they made every game worth it', outcome: 'He says the number belongs to the men and women who never missed a Saturday, and the ground sings his name till the walls shake.', effect: { form: 0.08, meters: { fans: 18, authority: 6 }, attr: { leadership: 1 } } },
+          { id: 'more', label: 'Promise a few more', desc: 'Grin and say the legs have games left', outcome: 'He winks and swears there are more Saturdays in him yet. The old ground laughs and adores him all the more.', effect: { form: 0.07, attr: { stamina: 1, composure: 1 }, meters: { fans: 14, family: 6 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'tri-comeback-poty', title: 'Back from the Dark', icon: '🌅', category: 'triumph',
+    minTurn: 130, maxTurn: 200, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'A year ago the surgeons told him he might not play again. Now he stands at the awards night, the season\'s finest, holding the Player of the Year after the finest campaign of his life. The comeback nobody believed in is complete. How does he take the podium?',
+        choices: [
+          { id: 'thank', label: 'Thank the ones who rebuilt him', desc: 'Name the physios and the dark mornings', outcome: 'He reads out the names of the medics and rehab staff who dragged him back from nothing. Not a dry eye among them.', effect: { attr: { composure: 1, teamwork: 1 }, meters: { peers: 12, authority: 6 }, tag: 'reborn' }, next: 'lesson' },
+          { id: 'defiant', label: 'Answer the doubters', desc: 'Remind the room he was written off', outcome: 'He holds the trophy up and says softly that he read every obituary of his career — and here he is. The room erupts.', effect: { form: 0.07, market: 3, attr: { aggression: 1 }, meters: { fans: 14, sponsors: 4 }, tag: 'defiant-return' }, next: 'lesson' },
+        ],
+      },
+      lesson: {
+        id: 'lesson',
+        prompt: 'A reporter asks the obvious question: does the game feel different now, having nearly lost it? He turns the trophy slowly in his hands before answering. What has the dark year taught him?',
+        choices: [
+          { id: 'grateful', label: 'Play with gratitude now', desc: 'Say every match is a gift he nearly lost', outcome: 'He says he will never take another ninety minutes for granted, and means it to his bones. A player remade, richer for the loss.', effect: { form: 0.09, attr: { composure: 2 }, meters: { authority: 6, fans: 10 } } },
+          { id: 'fierce', label: 'Play hungrier than ever', desc: 'Say the dark year sharpened him', outcome: 'He says nearly losing it lit a fire that will not go out; he means to make up every stolen month. Ferocious, and fearsome.', effect: { form: 0.08, attr: { aggression: 1, stamina: 1 }, meters: { peers: 8, fans: 8 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'tri-homecoming', title: 'Hometown Hero', icon: '🏙️', category: 'triumph',
+    minTurn: 125, maxTurn: 200, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The town he grew up in — the estate, the cracked pitches, the school that never had much — throws open its doors to honour its most famous son with a civic reception, the mayor, the old teachers, a plaque on the wall of his first club. How does he come home?',
+        choices: [
+          { id: 'roots', label: 'Come home as one of them', desc: 'Walk the old streets, no entourage', outcome: 'He arrives on foot with no security, knocking on doors he knew as a boy. The town clasps him back as its own.', effect: { attr: { composure: 1, teamwork: 1 }, meters: { fans: 16, family: 10 }, tag: 'humble-hero' }, next: 'give' },
+          { id: 'pride', label: 'Wear it with pride', desc: 'Let the town celebrate loud and proud', outcome: 'He lets them line the streets and cheer, and stands on the town-hall steps beaming. A local legend, and glad to be one.', effect: { form: 0.06, market: 2, meters: { fans: 16, sponsors: 4 }, tag: 'local-legend' }, next: 'give' },
+        ],
+      },
+      give: {
+        id: 'give',
+        prompt: 'At the reception a nervous boy from his old estate, no boots to his name, asks shyly if the dream is really possible for someone like them. The whole hall goes quiet, waiting. What does the hometown hero do?',
+        choices: [
+          { id: 'fund', label: 'Fund the next generation', desc: 'Pledge to rebuild the pitches he grew up on', outcome: 'He promises new pitches, boots and coaching for every kid on the estate, and signs it there and then. The town will never forget.', effect: { form: 0.08, earnings: -3, meters: { fans: 18, authority: 6 }, attr: { leadership: 1 } } },
+          { id: 'mentor', label: 'Take the boy under his wing', desc: 'Hand him his own boots, promise to watch him', outcome: 'He unlaces his boots on the spot and gives them to the boy, vowing to follow his progress himself. A moment the child will chase forever.', effect: { form: 0.07, meters: { fans: 14, family: 8 }, attr: { leadership: 1, teamwork: 1 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'tri-fans-player', title: 'The People\'s Choice', icon: '💙', category: 'triumph',
+    minTurn: 110, maxTurn: 195, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'Not the pundits, not the managers — the supporters themselves have voted him their Player of the Year, tens of thousands of ballots from the very people who pay at the turnstile. Of all the trophies, this is the one from the heart. How does he receive it?',
+        choices: [
+          { id: 'them', label: 'Say it is theirs', desc: 'Insist the fans win it, not him', outcome: 'He tells the ground the award belongs to the men and women who sing through the rain, and lifts it toward the Kop. They roar back as one.', effect: { attr: { teamwork: 1, composure: 1 }, meters: { fans: 18, authority: 6 }, tag: 'terrace-favourite' }, next: 'bond' },
+          { id: 'humbled', label: 'Admit it moves him', desc: 'Let the crowd see it means the most', outcome: 'He confesses this trophy hit harder than any other, voice cracking as he thanks them. The bond, sealed for life.', effect: { form: 0.07, meters: { fans: 16, sponsors: 4 }, attr: { composure: 1 }, tag: 'beloved' }, next: 'bond' },
+        ],
+      },
+      bond: {
+        id: 'bond',
+        prompt: 'After the presentation the supporters wait by the players\' gate in the cold, hundreds of them, scarves and shirts held out for a signature. He is exhausted and the team bus is idling. What does he do?',
+        choices: [
+          { id: 'stay', label: 'Stay till the last one', desc: 'Sign and photograph every last supporter', outcome: 'He tells the bus to wait and works down the whole line in the dark, signing every scrap. The fans who chose him love him twice over.', effect: { form: 0.08, meters: { fans: 18, sponsors: 4 }, attr: { teamwork: 1 } } },
+          { id: 'shirt', label: 'Give away the shirt', desc: 'Hand his match shirt to a young supporter', outcome: 'He peels off the shirt he won it in and drapes it over a shivering kid at the front. The photograph makes every local paper.', effect: { form: 0.07, market: 2, meters: { fans: 16, family: 4 }, attr: { composure: 1 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'tri-first-trophy', title: 'First Silver', icon: '🥈', category: 'triumph',
+    minTurn: 120, maxTurn: 200, weight: 3, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The club has existed for over a century and never once won a thing — a proud, unlucky old side whose cabinet has always stood empty. And now, as captain, he is ninety minutes from changing that forever. What does he tell them before they walk out to make history?',
+        choices: [
+          { id: 'history', label: 'Invoke the ghosts', desc: 'Play for every fan who never saw silver', outcome: 'He speaks of the grandfathers who died waiting and the boys they can make immortal today. The room walks out on fire.', effect: { attr: { leadership: 2 }, meters: { peers: 12, fans: 8 }, tag: 'history-maker' }, next: 'lift' },
+          { id: 'calm', label: 'Keep them calm', desc: 'Strip the weight of a century away', outcome: 'He tells them to forget the hundred barren years and just play the game in front of them. The pressure drains from the room.', effect: { form: 0.06, attr: { composure: 1, teamwork: 1 }, meters: { peers: 10 }, tag: 'unburdened' }, next: 'lift' },
+        ],
+      },
+      lift: {
+        id: 'lift',
+        prompt: 'They have won it. As captain, he is the first man in the club\'s entire history to lift a trophy, an old and long-suffering support delirious in the stands, some of them grey and weeping. How does he mark a moment a hundred years in the making?',
+        choices: [
+          { id: 'elders', label: 'Call up the old fans', desc: 'Bring the oldest supporters onto the pitch', outcome: 'He waves the club\'s most ancient season-ticket holders down to lift it with him. They touch the silver with shaking hands and sob. Perfect.', effect: { form: 0.11, meters: { fans: 20, authority: 8 }, attr: { leadership: 1 } } },
+          { id: 'first', label: 'Vow it is the first', desc: 'Promise the empty cabinet fills from here', outcome: 'He lifts it and roars that the drought ends tonight and never returns. A captain who just rewrote a century, and means to write more.', effect: { form: 0.1, market: 4, attr: { aggression: 1, leadership: 1 }, meters: { fans: 16, sponsors: 6 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'tri-season-record', title: 'The Record Haul', icon: '📈', category: 'triumph',
+    minTurn: 115, maxTurn: 195, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'One more goal and he breaks his own personal best for a single season — the most he has ever scored in a campaign, a private summit no one else measures but him. It has been the quiet obsession of the whole year. How does he chase the last one?',
+        choices: [
+          { id: 'patient', label: 'Trust it will come', desc: 'Keep doing the right things, no forcing', outcome: 'He resists snatching at chances and lets the goal find him — a clean, calm finish that tops the tally. Patience, rewarded.', effect: { attr: { composure: 2 }, meters: { peers: 6, authority: 4 }, tag: 'clinical' }, next: 'mark' },
+          { id: 'greedy', label: 'Go for the throat', desc: 'Shoot on sight, chase the number down', outcome: 'He hunts it obsessively, shooting from everywhere, and finally smashes one in off the bar. The record is his, greedily taken.', effect: { form: 0.07, attr: { aggression: 1, flair: 1 }, meters: { fans: 10 }, tag: 'ruthless' }, next: 'mark' },
+        ],
+      },
+      mark: {
+        id: 'mark',
+        prompt: 'The record season is in the books — more goals than he has ever managed, more than he perhaps thought himself capable of. As the campaign closes, a reporter asks whether he has finally found his ceiling. How does he answer?',
+        choices: [
+          { id: 'higher', label: 'Deny the ceiling', desc: 'Insist next year the number climbs again', outcome: 'He shakes his head and says this is a floor to build on, not a peak to admire. The league\'s defenders read it and shudder.', effect: { form: 0.09, market: 3, attr: { aggression: 1 }, meters: { fans: 12, sponsors: 6 } } },
+          { id: 'grateful', label: 'Credit the team', desc: 'Say every goal was built by others', outcome: 'He lists the creators and the grafters who fed him all year, insisting the record is theirs as much as his. Class, quietly shown.', effect: { form: 0.08, attr: { teamwork: 1, composure: 1 }, meters: { peers: 14, authority: 4 } } },
+        ],
+      },
+    },
+  },
 ];

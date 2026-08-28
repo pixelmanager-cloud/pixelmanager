@@ -309,4 +309,478 @@ export const SAGA_ARCS: StoryArc[] = [
       },
     },
   },
+  {
+    id: 'saga-derby-season', title: 'The Derby Season', icon: '🗡️', category: 'saga',
+    minTurn: 90, maxTurn: 190, weight: 3, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The fixture list drops and the whole city exhales at once — twice this season he faces {RIVAL} and the club across town he was raised to loathe. Everything else is undercard now. How does he set his stall for the year that will define him in these streets?',
+        choices: [
+          { id: 'firebrand', label: 'Become the villain', desc: 'Feed the hatred — make himself the face of the fixture', outcome: 'He tells a radio phone-in exactly what he thinks of {RIVAL}, and half the city adopts him as its avenging angel overnight.', effect: { attr: { aggression: 2 }, meters: { fans: 14, authority: 4 }, tag: 'derby-firebrand' }, next: 'home-leg' },
+          { id: 'cold', label: 'Ice in the veins', desc: 'Say nothing — let a season of quiet work do the talking', outcome: 'He refuses to be drawn, and his silence unsettles the other lot more than any headline could.', effect: { attr: { composure: 2 }, meters: { peers: 8 }, form: 0.04, tag: 'derby-cold' }, next: 'away-leg' },
+        ],
+      },
+      'home-leg': {
+        id: 'home-leg',
+        prompt: 'The first derby, under his own roof, the away end goading him by name from the first whistle. He wins a penalty in front of the enemy corner with the score level and the ground shaking. Does he take the ball himself?',
+        choices: [
+          { id: 'grab', label: 'Take it himself', desc: 'Snatch the ball and stare down the away end', outcome: 'He buries it and cups an ear to the visiting fans as flares rain down. A local legend is minted in one swing of his boot.', effect: { form: 0.12, attr: { aggression: 1, composure: 1 }, meters: { fans: 22, authority: 6 } }, next: 'reckoning' },
+          { id: 'hand', label: 'Hand it to the taker', desc: 'Give it to the designated man and trust the plan', outcome: 'He resists the ego and lays it off; the specialist scores and he wheels away pointing at the badge, not himself.', effect: { attr: { teamwork: 2 }, meters: { peers: 12, fans: 10 }, form: 0.06 }, next: 'reckoning' },
+        ],
+      },
+      'away-leg': {
+        id: 'away-leg',
+        prompt: 'The return, deep in {RIVAL} territory, a hostile bowl that has swallowed better men than him. Chants about his family echo off the stands before kick-off. What kind of afternoon does he decide to have in their house?',
+        choices: [
+          { id: 'silence', label: 'Silence the ground', desc: 'Answer the abuse with a performance for the ages', outcome: 'He runs the game from the first minute and celebrates the winner with a finger to his lips. Forty thousand throats fall quiet at once.', effect: { form: 0.13, attr: { flair: 1, composure: 1 }, meters: { fans: 24, sponsors: 6 } }, next: 'reckoning' },
+          { id: 'war', label: 'Fight fire with fire', desc: 'Go to war — no tackle ducked, no word left unsaid', outcome: 'He gives back every ounce he takes, booked inside ten minutes and magnificent for the rest. His own fans sing his name for a week.', effect: { attr: { aggression: 2 }, meters: { fans: 16, authority: 6 }, form: 0.05 }, next: 'reckoning' },
+        ],
+      },
+      reckoning: {
+        id: 'reckoning',
+        prompt: 'The dust settles on the derby double and his name means something in this city it never did before — worshipped on one side of the river, despised on the other. A tabloid offers a fortune for the inside story of his feud with {RIVAL}. How does he close the season?',
+        choices: [
+          { id: 'legend', label: 'Live the legend', desc: 'Lean into it — become the club’s derby talisman for good', outcome: 'He accepts the mantle of the man who owns this fixture, and the terraces will sing about these months for a generation.', effect: { attr: { leadership: 1 }, meters: { fans: 18, authority: 8 } } },
+          { id: 'humble', label: 'Keep it on the grass', desc: 'Turn the money down and let the results speak', outcome: 'He waves the tabloid off; the goals are the only story he wants told. The dressing room respects him all the more for it.', effect: { attr: { composure: 1 }, meters: { peers: 12, fans: 8 }, earnings: -100 } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'saga-first-europe', title: 'Into Europe', icon: '🌟', category: 'saga',
+    minTurn: 95, maxTurn: 180, weight: 3, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'For the first time in the club’s modest history the anthem will play under their own floodlights — a European campaign, a competition his grandfather only ever watched on a grainy telly. The magnitude of it keeps him up at night. How does he carry the club onto this new stage?',
+        choices: [
+          { id: 'lead', label: 'Shoulder the occasion', desc: 'Demand the armband of responsibility for the big nights', outcome: 'He tells the manager he wants the ball when the anthem fades, however cold the away legs get. Ambition, stated out loud.', effect: { attr: { leadership: 2 }, meters: { authority: 8, fans: 6 }, tag: 'euro-leader' }, next: 'away-cauldron' },
+          { id: 'savour', label: 'Soak it all in', desc: 'Treat every whistle-stop city as the reward it is', outcome: 'He photographs the empty stadiums the night before, wide-eyed as the kid who dreamed this. Nothing will rush him.', effect: { attr: { composure: 1, creativity: 1 }, meters: { family: 6, fans: 8 }, form: 0.04, tag: 'euro-dreamer' }, next: 'home-classic' },
+        ],
+      },
+      'away-cauldron': {
+        id: 'away-cauldron',
+        prompt: 'The draw is unkind: a first knockout tie away in one of the continent’s great fortresses, a two-goal deficit from the home leg, and a wall of noise that never stops for ninety minutes. The tie looks dead. What does he demand of the night?',
+        choices: [
+          { id: 'roar', label: 'Chase the miracle', desc: 'Throw everything forward and gamble on a famous comeback', outcome: 'He drags the team up the pitch by sheer will and scores twice in a delirious half-hour. The fortress falls, and Europe learns his name.', effect: { form: 0.14, attr: { aggression: 1, stamina: 1 }, meters: { fans: 24, sponsors: 8 } }, next: 'legacy-night' },
+          { id: 'discipline', label: 'Honour the shape', desc: 'Play it tight, take the tie to the wire, and trust his class late', outcome: 'He keeps eleven men calm in the storm and nicks the away goal that turns the whole tie on its head. Cold, brilliant football.', effect: { attr: { composure: 2, teamwork: 1 }, meters: { peers: 12, authority: 6 }, form: 0.08 }, next: 'legacy-night' },
+        ],
+      },
+      'home-classic': {
+        id: 'home-classic',
+        prompt: 'A glamour side rolls into their little ground for a group-stage night nobody here will ever forget, global cameras trained on a stadium that usually hosts ten thousand. He can feel the whole town holding its breath. How does he want to be remembered from this one match?',
+        choices: [
+          { id: 'showman', label: 'Put on a show', desc: 'Play with the handbrake off and entertain the watching world', outcome: 'He nutmegs an international full-back and dinks the winner past a keeper worth more than his whole squad. The clip circles the planet by dawn.', effect: { form: 0.12, attr: { flair: 2 }, meters: { fans: 20, sponsors: 10 }, market: 3 }, next: 'legacy-night' },
+          { id: 'engine', label: 'Be the engine', desc: 'Run himself into the turf so the glamour boys can’t breathe', outcome: 'He covers every blade of grass and strangles the star men out of the game. The purists purr; the scouts scribble.', effect: { attr: { stamina: 2, teamwork: 1 }, meters: { authority: 8, peers: 10 }, form: 0.07 }, next: 'legacy-night' },
+        ],
+      },
+      'legacy-night': {
+        id: 'legacy-night',
+        prompt: 'The European run ends in heartbreak a round further than anyone dreamed, and in the quiet of the tunnel afterwards a continental super-club’s scout presses a card into his hand. His whole world could change on the back of these floodlit nights. What does he do with the moment?',
+        choices: [
+          { id: 'stay', label: 'Finish what he started', desc: 'Keep building the club into a regular on this stage', outcome: 'He pockets the card and says not yet; there are bigger nights to bring home to this town first. The fans crown him one of their own forever.', effect: { attr: { leadership: 1 }, meters: { fans: 18, authority: 8 }, form: 0.04 } },
+          { id: 'chase', label: 'Chase the bright lights', desc: 'Let his agent open the door the run has unlocked', outcome: 'He takes the leap toward the elite, the European nights his calling card. A small club’s greatest export walks into a bigger world.', effect: { market: 4, greed: 1, earnings: 800, meters: { fans: -6, agent: 10 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'saga-transfer-request', title: 'The Request', icon: '📝', category: 'saga',
+    minTurn: 100, maxTurn: 185, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'His ambition has outgrown the ceiling here, and the honest thing to do is the hardest — walk into the chairman’s office and put a transfer request on the desk. He knows the second he does, the fans who adore him will read it as betrayal. Does he sign the paper?',
+        choices: [
+          { id: 'file', label: 'Hand it in', desc: 'Put it in writing and accept the storm that follows', outcome: 'He slides the letter across the desk, and by teatime the news is a scrolling banner and his name is a swear word on the terraces.', effect: { market: 3, greed: 1, meters: { fans: -20, authority: -8 }, tag: 'requested' }, next: 'storm' },
+          { id: 'talk', label: 'Talk first', desc: 'Ask for a private meeting before he burns anything down', outcome: 'He chooses conversation over conflict, laying out his ambitions face to face and asking the club to help him, not fight him.', effect: { attr: { composure: 1 }, meters: { authority: 4, agent: 4 }, tag: 'requested-quiet' }, next: 'crossroads' },
+        ],
+      },
+      storm: {
+        id: 'storm',
+        prompt: 'The request leaks in full and the backlash is savage — his shirt burned in the car park, his name jeered when he warms up, a manager who benches him to make a point. Three months of purgatory later, no move has materialised. How does he survive the winter he brought on himself?',
+        choices: [
+          { id: 'own', label: 'Own the decision', desc: 'Refuse to grovel — keep his head high and his standards higher', outcome: 'He never apologises but he never hides either, playing through the boos until even the hardest critics grudgingly clap. Respect, clawed back.', effect: { attr: { composure: 2, leadership: 1 }, meters: { authority: 6, peers: 8 }, form: 0.05 }, next: 'resolution' },
+          { id: 'apologise', label: 'Mend the wound', desc: 'Front the fans, admit the timing was wrong, ask forgiveness', outcome: 'He takes the microphone at an open training day and owns his mistake to their faces. The terraces, moved, begin to thaw.', effect: { attr: { teamwork: 1 }, meters: { fans: 14, authority: 4 }, form: 0.03 }, next: 'resolution' },
+        ],
+      },
+      crossroads: {
+        id: 'crossroads',
+        prompt: 'The quiet approach has kept his reputation intact, but it has also given the club room to stall — they praise his professionalism and offer nothing concrete, banking on his patience. The window is ticking and his ambition is curdling into frustration. What now?',
+        choices: [
+          { id: 'ultimatum', label: 'Draw a hard line', desc: 'Set a private deadline and mean it', outcome: 'He tells them plainly that patience has a limit, and the sudden steel in his voice finally makes the club take him seriously.', effect: { attr: { aggression: 1 }, meters: { agent: 8, authority: 4 }, market: 2 }, next: 'resolution' },
+          { id: 'stay-loyal', label: 'Give them the year', desc: 'Agree to stay one more season if they promise to let him go on his terms', outcome: 'He shakes on a gentleman’s deal — one last season of everything he has, then a blessing to leave. Loyalty, banked as leverage.', effect: { attr: { leadership: 1 }, meters: { fans: 10, authority: 6 }, form: 0.04 }, next: 'resolution' },
+        ],
+      },
+      resolution: {
+        id: 'resolution',
+        prompt: 'The saga finally breaks in the summer, and the club sits him down to settle it once and for all — a move can happen, but the terms of his exit are being written in this room. After everything the request has cost and taught him, how does he want the last chapter written?',
+        choices: [
+          { id: 'clean', label: 'Leave the right way', desc: 'Take a fair move and depart with a handshake, not a grudge', outcome: 'He goes with a lump in his throat and a guard of honour from the youth team he mentored. Ambition and grace, in the end.', effect: { attr: { composure: 1 }, meters: { fans: 12, peers: 8 }, earnings: 500, market: 2 } },
+          { id: 'maximise', label: 'Cash the leverage', desc: 'Let his agent squeeze every last pound from the situation', outcome: 'He extracts a signing bonus that raises eyebrows across the game and a contract to match. The saga ends with his bank the clear winner.', effect: { earnings: 900, greed: 2, market: 2, meters: { agent: 10, fans: -6 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'saga-three-managers', title: 'The Revolving Door', icon: '🚪', category: 'saga',
+    minTurn: 100, maxTurn: 190, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'Six weeks into the campaign the chairman pulls the trigger, and the manager who built his whole game plan around him is gone. A firefighter arrives with a clipboard, a foreign accent, and a system that has no obvious place for a player like him. How does he greet the new regime?',
+        choices: [
+          { id: 'adapt', label: 'Learn the new way', desc: 'Study the system and remould himself to fit it', outcome: 'He stays behind with the analysts night after night, bending his game to a shape he never played before. The new boss notices the effort.', effect: { attr: { teamwork: 2, composure: 1 }, meters: { authority: 6, peers: 6 }, tag: 'adaptable' }, next: 'second-boss' },
+          { id: 'resist', label: 'Insist on his game', desc: 'Play the way that made him and dare the manager to drop him', outcome: 'He refuses to be reprogrammed and backs his own quality, a gamble that puts him on a collision course with the dugout.', effect: { attr: { aggression: 1, flair: 1 }, meters: { authority: -4 }, form: -0.03, tag: 'immovable' }, next: 'second-boss' },
+        ],
+      },
+      'second-boss': {
+        id: 'second-boss',
+        prompt: 'The firefighter fails and by February a third manager walks in — a proven winner with a huge ego who wants to know, in the first meeting, whether he is a leader in this dressing room or just a passenger. The whole rest of his season rides on the answer he gives. What does he say?',
+        choices: [
+          { id: 'leader', label: 'Claim the leadership', desc: 'Tell the new boss he’ll drive the standards through the chaos', outcome: 'He looks the winner in the eye and takes ownership of a broken season, and the manager hands him the responsibility on the spot.', effect: { attr: { leadership: 2 }, meters: { authority: 10, peers: 8 }, form: 0.06 }, next: 'endgame' },
+          { id: 'proveit', label: 'Let his boots answer', desc: 'Say nothing and promise to show it on the grass', outcome: 'He makes no speeches and simply produces the most complete football of his life for the run-in. Actions, as always, louder than words.', effect: { attr: { composure: 1, stamina: 1 }, meters: { authority: 6, fans: 10 }, form: 0.08 }, next: 'endgame' },
+        ],
+      },
+      endgame: {
+        id: 'endgame',
+        prompt: 'Three managers, one bewildering season, and somehow he has come out of it as the one constant the club could rely on. In the summer the third boss — the winner who is staying — offers to build the entire project around him. After the year he’s endured, does he trust it?',
+        choices: [
+          { id: 'buyin', label: 'Buy into the vision', desc: 'Commit fully to the manager who finally stuck around', outcome: 'He signs on as the cornerstone of a new era, the survivor of the revolving door made its foundation stone. Stability, at last.', effect: { attr: { leadership: 1, teamwork: 1 }, meters: { authority: 8, fans: 12 }, earnings: 300 } },
+          { id: 'wary', label: 'Keep his options open', desc: 'Nod politely but let his agent listen to the market', outcome: 'He smiles and says the right things, but a season of upheaval has taught him to trust no promise fully. He keeps one eye on the door.', effect: { market: 2, greed: 1, meters: { agent: 8, authority: -2 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'saga-promotion-collapse', title: 'The Run-In', icon: '📉', category: 'saga',
+    minTurn: 90, maxTurn: 180, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'For thirty games they’ve led the promotion race and safe passage to the big league feels all but stamped — and then, without warning, the wheels come off. Three defeats on the bounce, the chasing pack scenting blood, and a dressing room where the confidence has curdled into fear. As a senior man, what does he do about the panic?',
+        choices: [
+          { id: 'steady', label: 'Steady the ship', desc: 'Calm the young heads and preach that the job’s still in their hands', outcome: 'He gathers the frightened kids and tells them nerves are the price of the prize. The room breathes a little easier for hearing it.', effect: { attr: { leadership: 2, composure: 1 }, meters: { peers: 12, authority: 8 }, tag: 'steadier' }, next: 'penultimate' },
+          { id: 'demand', label: 'Crack the whip', desc: 'Tear a strip off them and demand more before it all slips away', outcome: 'He lets rip in the dressing room, no pass unchallenged, and the shock of his fury snaps a soft squad back to attention.', effect: { attr: { aggression: 2 }, meters: { authority: 6, peers: -2 }, form: 0.04, tag: 'enforcer' }, next: 'penultimate' },
+        ],
+      },
+      penultimate: {
+        id: 'penultimate',
+        prompt: 'It comes down to the second-to-last match, and defeat would hand the initiative to {RIVAL}’s promotion rivals for good. An hour in it’s deadlocked, legs are gone, and he limps through the pain barrier with a knock that should really see him off. Does he stay on?',
+        choices: [
+          { id: 'battle', label: 'Play through it', desc: 'Grit his teeth and refuse to leave his team a man down', outcome: 'He hobbles through the last half-hour on one good leg and heads clear the corner that saves the game. Talismanic, and reckless.', effect: { form: 0.1, attr: { aggression: 1, stamina: -1 }, meters: { fans: 18, authority: 8 } }, next: 'final-hurdle' },
+          { id: 'off', label: 'Protect himself', desc: 'Signal the bench — no promotion is worth the final day', outcome: 'He takes himself off to save his body for the match that truly decides it, trusting the squad to hold the fort tonight.', effect: { attr: { composure: 1 }, meters: { peers: 6 }, form: 0.03 }, next: 'final-hurdle' },
+        ],
+      },
+      'final-hurdle': {
+        id: 'final-hurdle',
+        prompt: 'The last day. Win and they’re up; slip and a season of leading the league becomes the cruellest collapse in the club’s memory. Nil-nil, ten minutes left, and a free-kick on the edge of the box drops to him with the entire town praying behind him. What does he do?',
+        choices: [
+          { id: 'hero', label: 'Bend it home', desc: 'Back himself to write the ending they’ve waited all year for', outcome: 'He curls it into the top corner and the ground erupts into a decade of pent-up longing. Promotion, on the last day, off his boot.', effect: { form: 0.14, attr: { flair: 1, composure: 1 }, meters: { fans: 26, authority: 10 }, earnings: 300 } },
+          { id: 'clever', label: 'Play the odds', desc: 'Roll it clever to a runner and trust the move over the moment', outcome: 'He disguises the pass and slips a teammate in for the winner. Not his name on the goal, but his brain all over it, and up they go.', effect: { form: 0.09, attr: { creativity: 2, teamwork: 1 }, meters: { peers: 14, fans: 16 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'saga-lost-season', title: 'The Long Road Back', icon: '🩼', category: 'saga',
+    minTurn: 100, maxTurn: 195, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'A challenge lands late and wrong and the knee gives way with a sound he’ll hear in his sleep for years. The surgeon’s verdict is brutal: the whole season, gone, and no promises about what comes after. Lying in the recovery suite, how does he choose to face the void?',
+        choices: [
+          { id: 'attack', label: 'Attack the rehab', desc: 'Turn the treatment room into a personal war he intends to win', outcome: 'He’s in the gym before the swelling’s down, hunting every marginal gain the physios will allow. The comeback starts the same day the injury does.', effect: { injury: true, attr: { stamina: 1, aggression: 1 }, meters: { authority: 4 }, tag: 'rehab-warrior' }, next: 'dark-days' },
+          { id: 'grieve', label: 'Let the fear in', desc: 'Confront the terror that his best days might be behind him', outcome: 'He sits with the dread instead of running from it, and somewhere in the honesty finds a quieter, harder resolve to return whole.', effect: { injury: true, attr: { composure: 1 }, meters: { family: 8, partner: 6 }, form: -0.06, tag: 'rehab-shaken' }, next: 'dark-days' },
+        ],
+      },
+      'dark-days': {
+        id: 'dark-days',
+        prompt: 'Midwinter, months into the grind, and progress has stalled on a plateau no amount of effort seems to crack. The team is thriving without him, a younger man owns his shirt, and a whisper reaches him that the club is planning around his absence. This is the moment the road breaks men. What gets him through it?',
+        choices: [
+          { id: 'obsess', label: 'Double the work', desc: 'Add solo sessions nobody asked for until the plateau cracks', outcome: 'He films his own drills at dawn and hunts flaws in his gait like a scientist. Slowly, agonisingly, the knee starts to answer.', effect: { attr: { stamina: 2, composure: 1 }, meters: { authority: 6 }, form: 0.04 }, next: 'return-day' },
+          { id: 'lean', label: 'Lean on his people', desc: 'Let family and the dressing room carry him when his own belief fails', outcome: 'He stops trying to be a hero about it and lets the people who love him hold the weight for a while. He heals in more ways than one.', effect: { attr: { teamwork: 1, composure: 1 }, meters: { family: 10, peers: 10, partner: 8 } }, next: 'return-day' },
+        ],
+      },
+      'return-day': {
+        id: 'return-day',
+        prompt: 'A full year to the day, his name is back on the bench and the manager turns to him with twenty minutes left and the crowd already rising in salute. His heart is going like a drum. What does he pour into the moment he bled a whole season for?',
+        choices: [
+          { id: 'statement', label: 'Announce he’s back', desc: 'Go for a moment that erases every doubt in one instant', outcome: 'He wins it late with a finish of pure defiance and sinks to his knees where the injury happened. The stadium weeps with him.', effect: { form: 0.12, attr: { composure: 1, flair: 1 }, meters: { fans: 24, authority: 8 } } },
+          { id: 'careful', label: 'Just feel the grass again', desc: 'Play it safe, get the minutes, and be grateful to be whole', outcome: 'No heroics — just twenty clean, careful minutes and a long exhale at the whistle. Sometimes surviving is the victory.', effect: { attr: { composure: 2, teamwork: 1 }, meters: { fans: 14, family: 8 }, form: 0.05 } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'saga-fire-sale', title: 'The Fire Sale', icon: '🔥', category: 'saga',
+    minTurn: 110, maxTurn: 190, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'As captain he’s the bridge between a dressing room full of frightened teammates and a boardroom quietly liquidating its best assets to balance the books. One by one his closest allies are being sold from under him, and the squad looks to him for answers he doesn’t have. Where does he plant his flag?',
+        choices: [
+          { id: 'players', label: 'Side with the players', desc: 'Confront the board and demand they stop gutting the team', outcome: 'He marches upstairs and reads the directors the riot act on behalf of the room. The board bristles; the dressing room finds a leader worth following.', effect: { attr: { leadership: 2, aggression: 1 }, meters: { peers: 14, authority: -4 }, tag: 'captain-rebel' }, next: 'showdown' },
+          { id: 'bridge', label: 'Broker between them', desc: 'Try to hold squad and board together before it all fractures', outcome: 'He becomes a diplomat in shin pads, carrying honest messages both ways to stop the whole thing collapsing into open war.', effect: { attr: { composure: 2, teamwork: 1 }, meters: { authority: 6, peers: 8 }, tag: 'captain-diplomat' }, next: 'showdown' },
+        ],
+      },
+      showdown: {
+        id: 'showdown',
+        prompt: 'The board saves the biggest blow for last: they want to sell HIM, the captain, the one thing holding the wreckage together, to fund the rebuild. They frame it as doing right by the club. He has the power to refuse. Does the leader let himself be sold to save the rest?',
+        choices: [
+          { id: 'sacrifice', label: 'Take the bullet', desc: 'Agree to go so the money keeps the team alive', outcome: 'He accepts the move for the good of a club that’s selling him, walking away a martyr the supporters will canonise for years.', effect: { attr: { leadership: 1 }, meters: { fans: 20, peers: 12 }, earnings: 400, market: 2 }, next: 'aftershock' },
+          { id: 'stay-fight', label: 'Refuse to be sold', desc: 'Dig in and force the board to keep its captain', outcome: 'He invokes every right he has and simply will not go, staking his career on dragging this club off the rocks himself.', effect: { attr: { aggression: 1, leadership: 1 }, meters: { fans: 16, authority: -6 }, form: 0.05 }, next: 'aftershock' },
+        ],
+      },
+      aftershock: {
+        id: 'aftershock',
+        prompt: 'The window slams shut and the smoke clears on a squad half the size it was in August. Whether he stayed or went, the fans now see him as the one man who stood for something in a summer of surrender. What does he make his legacy from the wreckage?',
+        choices: [
+          { id: 'rebuild', label: 'Lead the rebuild', desc: 'Take the kids left behind and forge something new from nothing', outcome: 'He anoints himself the spine of a threadbare team and vows to overachieve out of spite. Undermanned, unbowed, unmistakably his side now.', effect: { attr: { leadership: 2, stamina: 1 }, meters: { authority: 10, fans: 14 }, form: 0.05 } },
+          { id: 'speak', label: 'Tell the truth', desc: 'Go public about how the club was run into the ground', outcome: 'He breaks ranks in an interview that becomes a lightning rod, naming what everyone knew but nobody dared say. The board never forgives him; the fans never forget it.', effect: { attr: { aggression: 1 }, meters: { fans: 18, authority: -10, sponsors: -4 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'saga-final-contract', title: 'The Last Deal', icon: '✍️', category: 'saga',
+    minTurn: 150, maxTurn: 205, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The legs have a couple of good years left and everyone in the game knows it — the last real contract of his life. On one side, the club that made his name offers loyalty at a cut wage; on the other, a cash-rich outfit dangles a farewell payday that would set up his grandchildren. Which future does he sign for?',
+        choices: [
+          { id: 'loyalty', label: 'Stay for love', desc: 'Take the pay cut and finish where his heart lives', outcome: 'He signs for a fraction of his worth to end it at home, and the terraces understand exactly what the gesture cost him.', effect: { attr: { leadership: 1 }, meters: { fans: 20, family: 8, authority: 6 }, earnings: -300, tag: 'stayed-for-love' }, next: 'twilight-home' },
+          { id: 'payday', label: 'Take the payday', desc: 'Cash the last big cheque his career will ever offer', outcome: 'He signs the mega-deal with clear eyes; sentiment doesn’t pay the mortgage, and he’s earned the right to be paid what he’s worth once more.', effect: { earnings: 1000, greed: 1, market: 1, meters: { fans: -8, agent: 8 }, tag: 'took-payday' }, next: 'twilight-away' },
+        ],
+      },
+      'twilight-home': {
+        id: 'twilight-home',
+        prompt: 'A year into the loyalty deal his body finally begins to betray him — a young manager wants to phase him out gently, but he can still feel the old fire on the big days. How does he want to spend the football he has left at the club he loves?',
+        choices: [
+          { id: 'mentor', label: 'Pass on the torch', desc: 'Accept a smaller role and pour everything into the next generation', outcome: 'He plays the big nights and gives his weekdays to the academy, teaching kids who’ll wear this shirt long after him. A legacy, not a stat line.', effect: { attr: { leadership: 2, teamwork: 1 }, meters: { peers: 14, authority: 8, fans: 12 } } },
+          { id: 'lastdance', label: 'Chase one last trophy', desc: 'Refuse the wind-down and go all-in on a final medal', outcome: 'He tells the young boss he isn’t here to fade away, and drags his aching body toward one more piece of silverware out of sheer will.', effect: { attr: { aggression: 1, composure: 1 }, meters: { fans: 14, authority: 6 }, form: 0.06 } },
+        ],
+      },
+      'twilight-away': {
+        id: 'twilight-away',
+        prompt: 'The payday club got a footballer, but the fans wanted a saviour, and the money now sits on his shoulders like an accusation every time a pass goes astray. He’s richer than he ever dreamed and lonelier than he expected. How does he justify the deal to himself and to them?',
+        choices: [
+          { id: 'earn', label: 'Earn every penny', desc: 'Silence the sneers by being worth the fortune to the last day', outcome: 'He plays like a man with a point to prove and gradually turns the doubters, showing the money bought a professional, not a pensioner.', effect: { attr: { composure: 2, stamina: 1 }, meters: { fans: 12, authority: 6 }, form: 0.07 } },
+          { id: 'coast', label: 'Take the money and go quiet', desc: 'Do his job, cash his cheque, and make peace with the criticism', outcome: 'He stops trying to win their hearts and simply delivers a solid, unspectacular shift each week. Comfortable, wealthy, and a little hollow.', effect: { greed: 1, meters: { fans: -4, family: 6 }, earnings: 200 } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'saga-elder-role', title: 'The Elder Statesman', icon: '🧓', category: 'saga',
+    minTurn: 155, maxTurn: 205, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The manager is gentle but clear: he can’t start every week any more, but a leader like him is worth more to this squad than his ninety minutes. He’s being asked to reinvent his whole identity as an impact sub and a voice in the room. Does the old warrior accept a new kind of importance?',
+        choices: [
+          { id: 'embrace', label: 'Own the elder role', desc: 'Become the finisher and the conscience of the dressing room', outcome: 'He decides the substitute’s board is just a different kind of stage, and reinvents himself as the man who changes games late and steadies the young in between.', effect: { attr: { leadership: 2, composure: 1 }, meters: { authority: 8, peers: 10 }, tag: 'elder-yes' }, next: 'supersub' },
+          { id: 'fight', label: 'Rage against it', desc: 'Refuse to accept the bench and fight for his starting shirt', outcome: 'He tells the boss he isn’t finished starting yet, and turns every training session into a case for his own name in the eleven.', effect: { attr: { aggression: 2, stamina: 1 }, meters: { authority: 4, peers: -2 }, form: 0.04, tag: 'elder-no' }, next: 'proving' },
+        ],
+      },
+      supersub: {
+        id: 'supersub',
+        prompt: 'His new role is tested on the biggest night of the season — thrown on with twenty minutes left and the team a goal down, the whole plan resting on the old head changing the game. This is exactly the moment he swallowed his pride for. What does he bring off that bench?',
+        choices: [
+          { id: 'decisive', label: 'Win it late', desc: 'Be the ruthless finisher the role demands', outcome: 'He arrives like a specialist, reads the tiring game in seconds, and buries the winner. The whole bench mobs the wise old head.', effect: { form: 0.11, attr: { composure: 1, flair: 1 }, meters: { fans: 18, authority: 8 } } },
+          { id: 'orchestrate', label: 'Calm the storm', desc: 'Slow the chaos and pull the young team back into shape', outcome: 'He doesn’t score but he settles everything, dictating the closing minutes like a conductor and turning panic into control. Priceless.', effect: { attr: { leadership: 1, teamwork: 1, composure: 1 }, meters: { authority: 10, peers: 8 }, form: 0.05 } },
+        ],
+      },
+      proving: {
+        id: 'proving',
+        prompt: 'His refusal to fade forces the manager’s hand: he gets one run of starts to prove the old dog can still go the distance across a brutal festive schedule. Every ache is magnified, every young pretender is watching. Can the veteran make the manager eat his words?',
+        choices: [
+          { id: 'defy', label: 'Turn back the clock', desc: 'Pour a career’s cunning into one last vintage run of form', outcome: 'He strings together displays that make a mockery of the calendar, and the manager quietly tears up the plan to phase him out.', effect: { form: 0.09, attr: { stamina: 2, composure: 1 }, meters: { authority: 8, fans: 14 } } },
+          { id: 'accept', label: 'Concede with grace', desc: 'Admit the tank is emptying and take the elder role on his own terms', outcome: 'The schedule wins in the end, and he walks into the manager’s office to accept the substitute’s role with his head held high. Wisdom over pride.', effect: { attr: { leadership: 1, teamwork: 1 }, meters: { authority: 6, peers: 10 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'saga-cup-run', title: 'The Cup Run', icon: '🏅', category: 'saga',
+    minTurn: 95, maxTurn: 185, weight: 3, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'It starts as an afterthought — a rotated side in an early round of the domestic cup — but they win, and win again, and suddenly the whole club is dreaming. Now a top-flight giant awaits in the quarters, live on national telly. How does he approach the tie that could turn a run into a story?',
+        choices: [
+          { id: 'fearless', label: 'Play without fear', desc: 'Attack the giant like there’s nothing to lose', outcome: 'He leads a swashbuckling charge that stuns the favourites, and the cameras leave with a new cult hero to talk about all week.', effect: { attr: { flair: 1, aggression: 1 }, meters: { fans: 16, sponsors: 4 }, form: 0.06, tag: 'cup-cavalier' }, next: 'semi' },
+          { id: 'gameplan', label: 'Strangle the game', desc: 'Suffocate the giant and nick it on the break', outcome: 'He marshals a masterclass of discipline, defends for his life, and springs the counter that ends the tie. Ugly, brilliant, unforgettable.', effect: { attr: { teamwork: 2, composure: 1 }, meters: { peers: 10, authority: 6 }, form: 0.05, tag: 'cup-tactician' }, next: 'semi' },
+        ],
+      },
+      semi: {
+        id: 'semi',
+        prompt: 'The semi-final, one game from a final his club last reached before he was born. It goes to a shootout after two exhausted hours, and the manager asks who’s brave enough to take the fifth. The whole run comes down to whether he steps forward. Does he?',
+        choices: [
+          { id: 'step', label: 'Take the fifth', desc: 'Volunteer for the penalty that sends them to the final', outcome: 'He plants the ball on the spot, ignores a hundred flashing bulbs, and rolls it home cold as ice. Wembley beckons, off his nerve.', effect: { form: 0.1, attr: { composure: 2 }, meters: { fans: 20, authority: 8 } }, next: 'final' },
+          { id: 'inspire', label: 'Lift the takers', desc: 'Let a specialist take it and be the leader who steadies them all', outcome: 'He hangs back, arms round every shaking shooter, and wills them through it one kick at a time. A captain’s shootout, even without the winning kick.', effect: { attr: { leadership: 2, teamwork: 1 }, meters: { peers: 14, authority: 6 }, form: 0.04 }, next: 'final' },
+        ],
+      },
+      final: {
+        id: 'final',
+        prompt: 'The final. Ninety-odd thousand, a lifetime’s worth of dreaming, and {RIVAL}’s lot standing between his club and its first trophy in a generation. It’s level with minutes left and the ball is at his feet in the arena he pictured as a boy. How does he meet the biggest moment of his career?',
+        choices: [
+          { id: 'glory', label: 'Seize the glory', desc: 'Back himself to be the hero the day was made for', outcome: 'He shifts it onto his stronger foot and lashes it into the roof of the net. Cup won, city rejoicing, his name carved into the club forever.', effect: { form: 0.14, attr: { flair: 1, composure: 1 }, meters: { fans: 26, sponsors: 10, authority: 8 }, market: 3 } },
+          { id: 'team', label: 'Trust the team', desc: 'Draw two men and square it for the simple, certain finish', outcome: 'He commits the defenders and rolls it to a teammate for the tap-in that wins the cup. His assist, their glory, everyone’s day.', effect: { form: 0.1, attr: { teamwork: 2, creativity: 1 }, meters: { peers: 16, fans: 18 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'saga-new-money', title: 'New Money', icon: '💰', category: 'saga',
+    minTurn: 105, maxTurn: 185, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'A vast fortune has landed on his modest club overnight, and the dressing room he knew is being buried under a blizzard of superstar signings on wages that dwarf his own. The badge is the same but the soul feels up for sale. As one of the old guard, how does he meet the new order?',
+        choices: [
+          { id: 'adapt', label: 'Ride the wave', desc: 'Embrace the ambition and fight to belong in the new elite', outcome: 'He decides to grow with the project rather than resent it, hunting a level that keeps him in the team alongside the galácticos.', effect: { attr: { stamina: 1, composure: 1 }, meters: { authority: 4, sponsors: 6 }, form: 0.04, tag: 'newmoney-in' }, next: 'clash' },
+          { id: 'soul', label: 'Guard the soul', desc: 'Be the keeper of what the club was before the billions', outcome: 'He appoints himself the conscience of the place, reminding the imports where they are and what these fans expect. Some things money can’t buy.', effect: { attr: { leadership: 2 }, meters: { fans: 12, peers: 8, authority: 6 }, tag: 'newmoney-soul' }, next: 'clash' },
+        ],
+      },
+      clash: {
+        id: 'clash',
+        prompt: 'It boils over in the canteen when a preening superstar mocks the old wages and the local kids in the same breath, and the whole room goes quiet waiting to see if anyone will stand up to the marquee man. All eyes fall on him. What does he do?',
+        choices: [
+          { id: 'confront', label: 'Put him in his place', desc: 'Face the superstar down in front of everyone', outcome: 'He tells the imported ego exactly where he stands, unflinching, and the room silently decides who the real leader is here.', effect: { attr: { aggression: 1, leadership: 1 }, meters: { peers: 12, authority: 6 }, form: 0.03 }, next: 'verdict' },
+          { id: 'win-over', label: 'Win him over', desc: 'Take the superstar out and turn a rival into an ally', outcome: 'He swallows the jibe and invests in the man instead, and by dessert the two are laughing. A dressing room united sooner than anyone expected.', effect: { attr: { teamwork: 2, composure: 1 }, meters: { peers: 10, sponsors: 4 } }, next: 'verdict' },
+        ],
+      },
+      verdict: {
+        id: 'verdict',
+        prompt: 'A season on, the money has bought trophies and turned his club into a global brand, but he can feel himself becoming a relic in his own home. The sporting director offers a choice: a reduced role at the glamorous new giant, or a proud exit while he’s still first-choice somewhere real. Where does he belong?',
+        choices: [
+          { id: 'stay', label: 'Stay and belong', desc: 'Accept a smaller part in something enormous', outcome: 'He decides to be a footnote in a dynasty rather than a headline anywhere else, chasing medals he could never have won before the billions came.', effect: { attr: { teamwork: 1 }, meters: { sponsors: 8, authority: 4 }, earnings: 400, market: 1 } },
+          { id: 'leave', label: 'Leave with his soul', desc: 'Walk to a club where he’s still the heartbeat, not the mascot', outcome: 'He turns his back on the riches for a place that still needs him, choosing to matter over to merely belong. The fans he leaves call him the last real one.', effect: { attr: { leadership: 1, composure: 1 }, meters: { fans: 14, peers: 8 }, form: 0.05 } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'saga-wonderkid-shirt', title: 'The Heir Apparent', icon: '👑', category: 'saga',
+    minTurn: 135, maxTurn: 200, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The academy has produced a phenomenon — a sixteen-year-old who plays his position with a freedom he can barely remember having — and the whole club knows the boy is coming for his shirt. The manager watches the two of them in every session. How does the veteran handle the heir the club is grooming to replace him?',
+        choices: [
+          { id: 'mentor', label: 'Anoint the kid', desc: 'Take the wonderkid under his wing and teach him everything', outcome: 'He decides his last great act might be forging the boy who’ll replace him, and pours a decade of knowledge into the wide-eyed teenager.', effect: { attr: { leadership: 2, teamwork: 1 }, meters: { peers: 12, authority: 8 }, tag: 'heir-mentor' }, next: 'crossover' },
+          { id: 'hold', label: 'Fend him off', desc: 'Treat the prodigy as a threat and cling to the shirt', outcome: 'He refuses to hand over anything without a fight, determined to make the kid earn every inch and prove the old man isn’t done.', effect: { attr: { aggression: 1, composure: 1 }, meters: { authority: 4, peers: -2 }, form: 0.05, tag: 'heir-guard' }, next: 'crossover' },
+        ],
+      },
+      crossover: {
+        id: 'crossover',
+        prompt: 'Midway through the season the manager tries them together in the same side, and it works spectacularly — but the press keeps asking whose team it really is now. A big match arrives where only one can wear the number, and the boss leaves the call, painfully, to the veteran himself. What does he decide?',
+        choices: [
+          { id: 'step-aside', label: 'Give him the day', desc: 'Tell the manager to start the kid and support from the bench', outcome: 'He volunteers to sit so the future can shine, and watches the boy dazzle with a pride that surprises even him. A torch, willingly passed.', effect: { attr: { leadership: 1, teamwork: 1 }, meters: { authority: 8, fans: 12, peers: 10 } }, next: 'succession' },
+          { id: 'take-it', label: 'Take the shirt', desc: 'Back himself for the big one — the kid can wait his turn', outcome: 'He tells the boss the number’s still his when it matters, and delivers a performance that reminds everyone why. The heir sits, and learns.', effect: { form: 0.08, attr: { composure: 1, flair: 1 }, meters: { authority: 6, fans: 10 } }, next: 'succession' },
+        ],
+      },
+      succession: {
+        id: 'succession',
+        prompt: 'By summer the transition is undeniable — the boy is ready, the club is his future, and the veteran must decide what his final relationship with the shirt he owned for a decade will be. How does he write the end of his own reign?',
+        choices: [
+          { id: 'blessing', label: 'Hand it over with grace', desc: 'Publicly bless the succession and become the kid’s mentor for life', outcome: 'He stands beside the boy at the unveiling and tells the cameras the shirt is in the right hands. A dynasty, secured by an act of grace.', effect: { attr: { leadership: 2 }, meters: { fans: 16, peers: 12, authority: 8 } } },
+          { id: 'lastyear', label: 'Squeeze out one more', desc: 'Fight for one final season at the top before he yields', outcome: 'He isn’t ready to be a footnote yet, and backs his body for twelve more months of relevance before he lets the future have it all.', effect: { attr: { stamina: 1, aggression: 1 }, meters: { authority: 4, fans: 8 }, form: 0.06 } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'saga-lower-league', title: 'The Rebuild', icon: '🧱', category: 'saga',
+    minTurn: 120, maxTurn: 200, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'Relegation was the wound; the phone call releasing him was the salt. At his age nobody in the top divisions is calling, and the only concrete offer comes from a proud old club rotting in the lower leagues, desperate for someone to lead them out of the wilderness. Does the fallen star drop down to build something?',
+        choices: [
+          { id: 'accept', label: 'Take the project', desc: 'Sign for the sleeping giant and become its cornerstone', outcome: 'He swaps five-star hotels for muddy training pitches and a squad of hungry kids, betting his final years on dragging a great old name back to life.', effect: { attr: { leadership: 2 }, meters: { fans: 10, authority: 8 }, earnings: -400, tag: 'rebuilder' }, next: 'grind' },
+          { id: 'hold-out', label: 'Wait for better', desc: 'Bet on his name to open a door higher up the pyramid', outcome: 'He tells his agent to keep hunting, unwilling to believe the top level is done with him yet, and rolls the dice on his reputation.', effect: { greed: 1, market: 1, meters: { agent: 6 }, form: -0.04 }, next: 'grind' },
+        ],
+      },
+      grind: {
+        id: 'grind',
+        prompt: 'Wherever he landed, reality bites in the trenches of the lower leagues — freezing away days at grounds with one working floodlight, brutal opponents who see his reputation as a scalp, and a body that no longer bounces back the way it did. What keeps the fallen star going through the mud?',
+        choices: [
+          { id: 'lead', label: 'Drag them up by the collar', desc: 'Impose top-flight standards on everyone around him', outcome: 'He refuses to let anyone hide from his standards, and slowly his ferocious professionalism starts to lift a whole club’s idea of itself.', effect: { attr: { leadership: 1, stamina: 2 }, meters: { peers: 12, authority: 8 }, form: 0.06 }, next: 'promotion' },
+          { id: 'craft', label: 'Play a level above', desc: 'Let his class carve the division open week after week', outcome: 'He’s simply too good for the grade and treats it like a personal exhibition, dropping shoulders and threading passes the division has never seen.', effect: { form: 0.09, attr: { flair: 1, creativity: 1 }, meters: { fans: 14 } }, next: 'promotion' },
+        ],
+      },
+      promotion: {
+        id: 'promotion',
+        prompt: 'Against the odds he’s hauled the club to the brink of promotion, and on the final day it’s in their hands. In the last minute of a scoreless, season-defining match, he’s hacked down on the edge of the box and every exhausted eye turns to him over the free-kick. This is what he dropped down for. What does he do?',
+        choices: [
+          { id: 'redemption', label: 'Complete the redemption', desc: 'Back himself to fire the club and his career back to life', outcome: 'He whips it into the top corner and the ramshackle stand collapses in joy. Promotion won, reputation reborn, the fallen star risen again.', effect: { form: 0.13, attr: { composure: 1, flair: 1 }, meters: { fans: 22, authority: 10 }, market: 2 } },
+          { id: 'selfless', label: 'Set up the kid', desc: 'Roll it to the academy boy he’s mentored all year', outcome: 'He disguises it and squares for the local lad to smash home, and lifts the teenager off his feet as the whole town pours onto the pitch. Legacy over glory.', effect: { attr: { teamwork: 2, leadership: 1 }, meters: { peers: 16, fans: 16 }, form: 0.08 } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'saga-takeover', title: 'The Takeover', icon: '🤝', category: 'saga',
+    minTurn: 100, maxTurn: 190, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'Overnight the club is sold and everything he knew about it changes with a press release — new owners, a new badge on the letterhead, a new manager already booked, and a brutal audit of who fits the vision and who doesn’t. His name is on a list he hasn’t seen. How does he greet the regime that now controls his fate?',
+        choices: [
+          { id: 'impress', label: 'Sell himself to them', desc: 'Treat every session as an audition for the new bosses', outcome: 'He resolves to make himself undroppable before they’ve even watched a tape, turning up the intensity to force his way into the plan.', effect: { attr: { stamina: 1, aggression: 1 }, meters: { authority: 4 }, form: 0.05, tag: 'takeover-buyin' }, next: 'reckoning' },
+          { id: 'wary', label: 'Guard the old guard', desc: 'Rally the survivors against a project that discards its history', outcome: 'He becomes the voice of the players who built the club before the money came, wary of a revolution that treats them as furniture.', effect: { attr: { leadership: 2 }, meters: { peers: 12, authority: -4 }, tag: 'takeover-resist' }, next: 'reckoning' },
+        ],
+      },
+      reckoning: {
+        id: 'reckoning',
+        prompt: 'The new owners make their intentions concrete: a war chest, marquee arrivals, and a demand for instant results that has already cost the fans their cheap tickets and their old kit. He’s offered a central role in the shiny new era — but only if he publicly fronts the changes the terraces despise. What does he choose?',
+        choices: [
+          { id: 'frontman', label: 'Become the face', desc: 'Champion the project and reap the rewards of the new money', outcome: 'He fronts the glossy launch and pins his colours to the owners’ mast, and the club’s ambitions — and his contract — swell overnight.', effect: { earnings: 500, market: 2, meters: { sponsors: 10, authority: 6, fans: -8 } }, next: 'legacy' },
+          { id: 'conscience', label: 'Speak for the terraces', desc: 'Use his platform to hold the new owners to the club’s roots', outcome: 'He tells the new bosses to their faces that a club is its supporters, not its spreadsheet, and the stands adopt him as their champion.', effect: { attr: { leadership: 1 }, meters: { fans: 18, authority: -6 }, form: 0.04 }, next: 'legacy' },
+        ],
+      },
+      legacy: {
+        id: 'legacy',
+        prompt: 'A year of upheaval later, the takeover has remade the club into something unrecognisable — richer, harder, more ruthless — and he must decide who he is inside it before the transformation swallows the last of the old world. What does he make of himself in the new era?',
+        choices: [
+          { id: 'thrive', label: 'Thrive in the new world', desc: 'Fully become a player of the ambitious modern club', outcome: 'He sheds the last of his nostalgia and reinvents himself for the elite level the owners demand, chasing trophies the old club never dared dream of.', effect: { attr: { composure: 1, stamina: 1 }, meters: { authority: 6, sponsors: 6 }, form: 0.06 } },
+          { id: 'anchor', label: 'Be the last link', desc: 'Stay as the living thread to everything the club used to be', outcome: 'He carries on as the one man who remembers who they were, a bridge between two clubs sharing one crest. The old fans will love him forever for it.', effect: { attr: { leadership: 1 }, meters: { fans: 16, peers: 8 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'saga-international', title: 'The Call-Up', icon: '🎽', category: 'saga',
+    minTurn: 90, maxTurn: 175, weight: 2, rare: true, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The letter he stopped daring to hope for finally lands: a first senior international call-up, his nation’s badge, a squad full of names he grew up watching. But he’s the outsider, the bolter, and a whole camp of established stars is quietly wondering if he belongs. How does he walk into that dressing room?',
+        choices: [
+          { id: 'humble', label: 'Earn his place', desc: 'Keep his head down and outwork everyone in camp', outcome: 'He’s first to every session and last to leave, letting sweat rather than talk make his case to a room full of legends.', effect: { attr: { stamina: 1, teamwork: 1 }, meters: { peers: 10, authority: 4 }, tag: 'cap-humble' }, next: 'debut' },
+          { id: 'bold', label: 'Show he belongs', desc: 'Play with the swagger that earned the call in the first place', outcome: 'He refuses to shrink, taking on the senior men in training with the fearlessness that got him noticed. The staff exchange approving glances.', effect: { attr: { flair: 1, aggression: 1 }, meters: { fans: 6, authority: 4 }, form: 0.05, tag: 'cap-bold' }, next: 'debut' },
+        ],
+      },
+      debut: {
+        id: 'debut',
+        prompt: 'His debut comes as a substitute in a tense qualifier, the score level, a nation holding its breath and his own family somewhere in that vast crowd. The manager sends him on with a job to do and a career to launch. What does he make of his first minutes in the shirt?',
+        choices: [
+          { id: 'moment', label: 'Grab the headline', desc: 'Chase the fairytale goal on his very first appearance', outcome: 'He gambles on a run into the box and steals in to win it late, wheeling away to a debut nobody in that stadium will ever forget.', effect: { form: 0.12, attr: { composure: 1, flair: 1 }, meters: { fans: 18, sponsors: 6 }, market: 2 }, next: 'tournament' },
+          { id: 'assured', label: 'Look like he’s always been there', desc: 'Keep it simple and flawless — announce a temperament, not a moment', outcome: 'He never gives the ball away, does the ugly work impeccably, and leaves the pitch having convinced the manager he can be trusted. A career begins quietly.', effect: { attr: { composure: 2, teamwork: 1 }, meters: { authority: 6, peers: 8 }, form: 0.06 }, next: 'tournament' },
+        ],
+      },
+      tournament: {
+        id: 'tournament',
+        prompt: 'The impossible has happened: he’s named in the squad for a major tournament, and by the knockout rounds an injury crisis has thrust the outsider into the starting eleven for a quarter-final his whole country will stop to watch. This is the summit he never dreamed of reaching. What does he do with it?',
+        choices: [
+          { id: 'hero', label: 'Rise to the summit', desc: 'Deliver the tournament performance of his life on the biggest stage', outcome: 'He plays like a man possessed, dragging his nation through a night they’ll retell for decades, and comes home a household name overnight.', effect: { form: 0.14, attr: { leadership: 1, composure: 1 }, meters: { fans: 24, sponsors: 12 }, market: 4 } },
+          { id: 'sacrifice', label: 'Do the unseen work', desc: 'Sacrifice the glory to shackle the opposition’s star man', outcome: 'He spends the night marking the world-class danger out of the game, unglamorous and indispensable, and the pundits finally learn his name for the right reasons.', effect: { attr: { teamwork: 2, stamina: 1 }, meters: { peers: 14, authority: 8 }, form: 0.07 } },
+        ],
+      },
+    },
+  },
 ];
