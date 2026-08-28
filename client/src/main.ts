@@ -1753,7 +1753,7 @@ class Game {
   };
   private acceptStarBid(bid: { club: string; fee: number }, m: MgrState) {
     const surname = (m.starName ?? '').trim().split(/\s+/).slice(1).join(' ') || 'the family';
-    this.openConfirm(`Sell <b>${m.starName}</b> to <b>${bid.club}</b> for <b>${bid.fee.toLocaleString()}c</b>? He leaves the club now — and his son comes through early to carry the <b>${surname}</b> name on.`, 'Sell the star', () => {
+    this.openConfirm(`Sell <b>${m.starName}</b> to <b>${bid.club}</b> for <b>${bid.fee.toLocaleString()}c</b>? He leaves the club now — and the next of the <b>${surname}</b> line comes through early to carry the name on.`, 'Sell the star', () => {
       // The fee is NOT banked here — it lands only when the succession completes (bringThroughHeir → succeed),
       // so abandoning the will screen can't keep the cash while the star stays in the squad (PT-60).
       audio.chime('triumph');
@@ -1775,11 +1775,20 @@ class Game {
     const headlinesLine = ` The back pages carried him for one last day. By the morning after, the game had already moved on to someone else’s story.`;
     const finalMoveLine = finalMove ? ` In his very last season he ${finalMove.move === 'promoted' ? 'took the club up to' : 'saw the club drop to'} <b>${finalMove.tier}</b> — a parting ${finalMove.move === 'promoted' ? 'gift to the fans' : 'blow for the heir to put right'}.` : '';
     const titleLine = sold ? `${m.starName} is sold to ${sold.club}` : `${m.starName} hangs up his boots`;
+    // the send-off varies run to run (PT-57) — the emotional peak shouldn't read word-for-word each dynasty
+    const era = `${seasons} season${seasons === 1 ? '' : 's'}`;
+    const club = `<b>${this.club?.name}</b>`;
+    const farewell = [
+      `${m.starName} — once the heartbeat of this side on the pitch, latterly the man in the dugout — retires a club great after ${era} steering ${club}${honourLine}. Two careers in the same shirt, one bloodline throughout.`,
+      `They'd build a statue for less. After ${era} at ${club}${honourLine}, ${m.starName} steps away for good — a one-club life, on the grass and in the technical area, the fans will talk about for a generation.`,
+      `The boots go up for the last time. ${m.starName} leaves ${club} after ${era}${honourLine}, having given the club everything twice over — as its finest player, then as the gaffer who couldn't quite let go.`,
+      `Some names become the club. After ${era}${honourLine}, ${m.starName} finally walks away from ${club} — a story that started with a boy's first touch and ended with a veteran's last team-talk.`,
+    ][((this.leagueSeed() ^ Math.imul(seasons + 1, 2654435761)) >>> 0) % 4];
     const storyLine = sold
-      ? `After ${seasons} season${seasons === 1 ? '' : 's'} at <b>${this.club?.name}</b>${honourLine}, ${m.starName} leaves for <b>${sold.club}</b> in a <b>${sold.fee.toLocaleString()}c</b> deal — a wrench for the fans, but the money reshapes the club’s future.`
-      : `${m.starName} — once the heartbeat of this side on the pitch, latterly the man in the dugout — retires a club great after ${seasons} season${seasons === 1 ? '' : 's'} steering <b>${this.club?.name}</b>${honourLine}. Two careers in the same shirt, one bloodline throughout.${finalMoveLine}${headlinesLine}`;
+      ? `After ${era} at ${club}${honourLine}, ${m.starName} leaves for <b>${sold.club}</b> in a <b>${sold.fee.toLocaleString()}c</b> deal — a wrench for the fans, but the money reshapes the club’s future.`
+      : `${farewell}${finalMoveLine}${headlinesLine}`;
     $('academy-body').innerHTML = `<div class="cg-graduation"><div class="cg-grad-title"><span class="ico-inline ico-lg">${sprite('banner')}</span> ${titleLine}</div>`
-      + `<div class="cg-epilogue">${storyLine} But the <b>${surname}</b> name isn't done — his son is already coming through the youth ranks.</div>`
+      + `<div class="cg-epilogue">${storyLine} But the <b>${surname}</b> name isn't done — the next of the line is about to kick a ball for the very first time.</div>`
       + `<div class="cg-prompt">What does ${m.starName} do next?</div>`
       + `<div id="cg-nextlife">` + (Object.keys(Game.NEXT_LIFE) as Array<'coaching' | 'media' | 'mentoring'>).map((k) => {
         const nl = Game.NEXT_LIFE[k];
