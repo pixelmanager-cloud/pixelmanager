@@ -5,10 +5,10 @@
 // consistent pixel crest. BADGE_OVERRIDES lets you pin a specific badge to a specific club by name.
 // crestSvg() is a self-contained procedural shield used as a fallback (e.g. if the PNGs are absent).
 
-// How many badge-N.png files exist under client/public/badges/. 0 = no pack yet → use the procedural SVG
-// shield. Pixelated minimal-logo crests (tools/pixelate_badges.py) with the too-real-club ones removed
-// and recoloured/mixed variants added for variety (tools/vary_badges.py).
-const BADGE_COUNT = 150;
+// The badge files that actually exist (client/public/badges/), listed in badge-manifest.ts. Delete any
+// badge-*.png you don't want and re-run `python3 tools/reindex_badges.py` to rebuild the list — crest()
+// picks from whatever remains. Empty list → the procedural SVG shield is used instead.
+import { BADGES } from './badge-manifest';
 
 function h32(s: string): number { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) || 1; }
 export function crestSlug(name: string): string { return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
@@ -22,13 +22,13 @@ export const BADGE_OVERRIDES: Record<string, string> = {
 export function badgeUrl(name: string): string {
   const override = BADGE_OVERRIDES[crestSlug(name)];
   if (override) return override;
-  return BADGE_COUNT > 0 ? `/badges/badge-${(h32(name) % BADGE_COUNT) + 1}.png` : '';
+  return BADGES.length ? `/badges/${BADGES[h32(name) % BADGES.length]}` : '';
 }
 
 /** A club crest for `name` — a real pixel-art badge <img> (falls back to a procedural SVG shield if the
  *  image can't load, so the UI never shows a broken icon). `size` in px. */
 export function crest(name: string, size = 20): string {
-  if (BADGE_COUNT <= 0 && !BADGE_OVERRIDES[crestSlug(name)]) return crestSvg(name, size); // no pack yet → SVG shield
+  if (!BADGES.length && !BADGE_OVERRIDES[crestSlug(name)]) return crestSvg(name, size); // no badge files → SVG shield
   const url = badgeUrl(name);
   // fallback (only if the PNG can't load): the procedural SVG shield, as a base64 data-URI so there are no
   // quote-escaping hazards inside the onerror handler.
