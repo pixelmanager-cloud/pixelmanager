@@ -372,7 +372,7 @@ class Game {
     const saves = this.loadSaves(); const save = saves.find((s) => s.id === id); if (!save) return;
     setToken(save.token);
     try { this.setMe(await api.me()); save.lastPlayed = Date.now(); this.saveSaves(saves); await this.showHub(); }
-    catch { $('login-error').textContent = 'Could not load that save (is the game server running?).'; clearToken(); }
+    catch { $('login-error').textContent = 'Could not load that save — it may be corrupted.'; clearToken(); }
   }
 
   private deleteSave(id: string) {
@@ -522,7 +522,7 @@ class Game {
       this.setMe({ account: r.account, club: r.club, standingOrders: r.standingOrders });
       const saves = this.loadSaves(); saves.push({ id: handle, token: r.token, name, lastPlayed: Date.now() }); this.saveSaves(saves);
       this.showScoutBoard(); // the FIRST decision: scout + pick your founding prospect (the unique hook)
-    } catch { $('login-error').textContent = 'Could not create your club. Is the game server running?'; }
+    } catch { $('login-error').textContent = 'Could not create your club — please try again.'; }
   }
 
   /** The founding-prospect scouting board — the player's very first choice. Deliberately mysterious: a
@@ -1055,7 +1055,7 @@ class Game {
         + `<div class="hp-meta">${active.roleHint}${gen} · ${pedigreeText(active.pedigree, active.generation)} ${active.careerStarted ? '· in development' : '· age 10, ready to develop'}</div>${more}</div>`
         + `<button class="primary hp-go" data-dev="${active.id}">${active.careerStarted ? 'Continue his story' : 'Develop'} →</button></div>`;
       el.querySelector('[data-dev]')!.addEventListener('click', () => this.openCareer(active.id));
-    } catch { el.innerHTML = '<div class="muted">Could not load your player — is the server running?</div>'; }
+    } catch { el.innerHTML = '<div class="muted">Could not load your player — please try again.</div>'; }
   }
 
   /** The Dynasty & Trophy Room summary line on the home hub. */
@@ -1706,7 +1706,7 @@ class Game {
     // this season's W/D/L (fed to the lifetime manager record that powers prestige)
     const rec = (m.results ?? []).reduce((a, r) => { r.myGoals > r.oppGoals ? a.wins++ : r.myGoals < r.oppGoals ? a.losses++ : a.draws++; return a; }, { wins: 0, draws: 0, losses: 0 });
     // bank the season prize money (coins → reinvest in facilities), closing the manager economy loop
-    try { const r = await api.spSeasonReward({ pos: t.pos, size: t.size, sponsor: m.sponsor, tier: this.clubTier(), ...rec }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 Season prize: +${r.prize.toLocaleString()}c${r.sponsorBonus ? ` + 📣 ${r.sponsorBonus}c sponsor bonus` : ''}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ` · ${this.ordinal(t.pos)}`}`); } catch { /* offline: no prize */ }
+    try { const r = await api.spSeasonReward({ pos: t.pos, size: t.size, sponsor: m.sponsor, tier: this.clubTier(), ...rec }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 Season prize: +${r.prize.toLocaleString()}c${r.sponsorBonus ? ` + 📣 ${r.sponsorBonus.toLocaleString()}c sponsor bonus` : ''}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ` · ${this.ordinal(t.pos)}`}`); } catch { /* offline: no prize */ }
     // BOARD VERDICT — how the board judges this season vs what your prestige (and last season) earned you.
     // Stored on the save and surfaced atop next season's planning screen (see showSeason).
     let lastBoard: { message: string; mood: BoardMood; expectation: string } | undefined;
@@ -2007,7 +2007,7 @@ class Game {
     $('facilities-grid').innerHTML = SPINNER;
     this.renderStaff();
     try { this.renderFacilities(await api.facilities()); }
-    catch { $('facilities-grid').innerHTML = '<div class="muted">Could not load — is the server running?</div>'; }
+    catch { $('facilities-grid').innerHTML = '<div class="muted">Could not load — please try again.</div>'; }
   }
 
   /** The backroom staff — four deterministic, save-stable characters (from @fm/shared staffRoster).
@@ -2068,7 +2068,7 @@ class Game {
       this.renderScoutPanel(st.opp, st.player);
       await this.loadMissions();
     } catch {
-      $('trial-pool').innerHTML = '<div class="muted">Could not load — is the server running?</div>';
+      $('trial-pool').innerHTML = '<div class="muted">Could not load — please try again.</div>';
     }
   }
 
@@ -2104,7 +2104,7 @@ class Game {
       $('academy-body').innerHTML = welcome + intro + rows + hall;
       $('mint-genesis').addEventListener('click', () => this.mintGenesis());
       $('academy-body').querySelectorAll('[data-dev]').forEach((b) => b.addEventListener('click', () => this.openCareer((b as HTMLElement).dataset.dev!)));
-    } catch { $('academy-body').innerHTML = '<div class="muted">Could not load — is the server running?</div>'; }
+    } catch { $('academy-body').innerHTML = '<div class="muted">Could not load — please try again.</div>'; }
   }
 
   /** Trophy Room: the club's honours + the bloodlines (legend chains) you've built — the dynasty legacy. */
@@ -2191,7 +2191,7 @@ class Game {
         toast(`🎽 #${n} retired forever in ${name}'s honour`);
         this.showTrophyRoom();
       }));
-    } catch { $('trophies-body').innerHTML = '<div class="muted">Could not load — is the game running?</div>'; }
+    } catch { $('trophies-body').innerHTML = '<div class="muted">Could not load — please try again.</div>'; }
   }
 
   private async mintGenesis() {
@@ -2459,7 +2459,7 @@ class Game {
     } else if (s.phase === 'offer' && s.offers) {
       body = `<div class="cg-prompt">A decision off the pitch — money now, or development?</div>`
         + s.offers.map((o) => `<div class="cg-offer" data-act="offer" data-id="${o.id}"><div class="cg-cname">💷 ${o.name}</div><div class="cg-cdesc">${o.desc}</div>`
-          + `<div class="cg-effs">${o.earn > 0 ? `+${o.earn}c ` : ''}${o.greed > 0 ? '· greedier ' : o.greed < 0 ? '· more loyal ' : ''}${o.market > 0 ? '· more famous ' : ''}${o.form > 0 ? '· sharper' : o.form < 0 ? '· distracted' : ''}</div></div>`).join('');
+          + `<div class="cg-effs">${o.earn > 0 ? `+${o.earn.toLocaleString()}c ` : ''}${o.greed > 0 ? '· greedier ' : o.greed < 0 ? '· more loyal ' : ''}${o.market > 0 ? '· more famous ' : ''}${o.form > 0 ? '· sharper' : o.form < 0 ? '· distracted' : ''}</div></div>`).join('');
     } else if (s.phase === 'focus' && s.focus) {
       const effLabel = (e: Record<string, number>) => Object.entries(e).map(([k, v]) => `<span title="${METER_NAME[k] ?? k}">${METER_ICON[k] ?? ''}${v > 0 ? '+' : ''}${v}</span>`).join(' · ');
       const perkLabel = (p?: Record<string, number>) => p ? Object.entries(p).map(([k, v]) => `<span title="${METER_NAME[k] ?? k}">${METER_ICON[k] ?? ''}${v > 0 ? '+' : ''}${v}</span>`).join(' ') : '';
@@ -2546,7 +2546,7 @@ class Game {
       + `<span class="cgp-pers" title="${p.personality.desc}">🧠 ${p.personality.name}</span>`
       + (p.agent ? `<span class="cgp-meta">🤝 ${p.agent}</span>` : '')
       + (p.coach ? `<span class="cgp-meta">📋 ${p.coach}</span>` : '')
-      + `<span class="cgp-meta">💷 ${p.earnings}c earned</span></div>`
+      + `<span class="cgp-meta">💷 ${p.earnings.toLocaleString()}c earned</span></div>`
       + `<div class="cgp-stats">${key.map(([k]) => stat(k)).join('')}</div>${traits}</div>`;
   }
 
