@@ -72,7 +72,7 @@ export function tokenContract(t: Token, season: number): TokenContract {
 }
 
 // ── career (prospect state) — the breeder card game ──
-export type CareerAction = { type: 'play' | 'draft' | 'coach' | 'offer' | 'focus' | 'lifestyle'; cardId: string };
+export type CareerAction = { type: 'play' | 'draft' | 'coach' | 'offer' | 'focus' | 'lifestyle' | 'arc'; cardId: string };
 export function applyAction(c: Career, a: CareerAction, tolerant = false) {
   if (a.type === 'draft') c.draft(a.cardId, tolerant);
   else if (a.type === 'coach') c.appointCoach(a.cardId, tolerant);
