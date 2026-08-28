@@ -6,8 +6,9 @@
 // crestSvg() is a self-contained procedural shield used as a fallback (e.g. if the PNGs are absent).
 
 // How many badge-N.png files exist under client/public/badges/. 0 = no pack yet → use the procedural SVG
-// shield. 117 pixelated minimal-logo crests (tools/pixelate_badges.py).
-const BADGE_COUNT = 117;
+// shield. Pixelated minimal-logo crests (tools/pixelate_badges.py) with the too-real-club ones removed
+// and recoloured/mixed variants added for variety (tools/vary_badges.py).
+const BADGE_COUNT = 150;
 
 function h32(s: string): number { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0) || 1; }
 export function crestSlug(name: string): string { return name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, ''); }
