@@ -3123,7 +3123,18 @@ class Game {
     return { ...(this.draftCaptain != null ? { captainIdx: this.draftCaptain } : {}), ...(hasTakers ? { takers: { ...t } } : {}) };
   }
   private kickOffMatch() {
-    if (this.spFixture) this.kickOffSpMatch(); // single-player fixture: build the match locally
+    if (!this.spFixture) return;
+    // Commit the star-starts invariant to the DRAFT before kickoff (PT-137, cf PT-20): a manual per-slot swap can
+    // drop the star from draftLineup with no re-guard, and while startSpMatchWith re-forces him onto the pitch via
+    // a local lineup, the team-talk note + personality modulation read this.draftLineup — so without this they'd
+    // key to the captain even though the star is playing. Guard the draft here (realigning any swapped slot's duty)
+    // so the note, the modulation and the played XI all agree.
+    const guarded = this.starGuarded(this.draftLineup);
+    if (guarded.playerIds.some((pid, i) => pid !== this.draftLineup.playerIds[i])) {
+      this.draftDuties = guarded.playerIds.map((pid, i) => pid === this.draftLineup.playerIds[i] ? this.draftDuties[i] : defaultDuty(this.club.players.find((p) => p.id === pid)!));
+      this.draftLineup = guarded;
+    }
+    this.kickOffSpMatch(); // single-player fixture: build the match locally
   }
 
   private lastGate = 0;
