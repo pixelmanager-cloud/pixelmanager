@@ -1347,6 +1347,7 @@ class Game {
     const tie = contOpponent(this.leagueSeed(), m.season, round as 0 | 1 | 2);
     const dots = CONT_ROUNDS.map((r, i) => `<span class="sf-cont-dot ${i < round ? 'won' : i === round ? 'now' : ''}">${['QF', 'SF', 'F'][i]}</span>`).join('');
     return `<div class="sf-cont"><div class="sf-cont-head"><span class="sf-cont-lbl">🌍 CONTINENTAL CUP</span>${dots}</div>`
+      + (round === 0 ? `<div class="sf-cont-explain">You qualified by finishing <b>top-3 in the top flight</b> last season. It's a knockout against the best clubs from other nations — win three ties (<b>QF → SF → Final</b>) to be crowned champions of the continent, alongside your league season.</div>` : '')
       + (m.contBlurb ? `<div class="sf-cont-blurb">${m.contBlurb}</div>` : '')
       + `<div class="sf-cont-tie"><b>${tie.label}</b> ${tie.neutral ? '(neutral)' : ''} vs <span class="sf-opp-crest">${crest(tie.oppName, 15)}</span><b>${tie.oppName}</b> · rating ~${tie.oppStrength}</div>`
       + `<div class="sf-cont-btns"><button class="primary" id="sf-cont-play">Play the tie ▶</button> <button id="sf-cont-sim">⏩ Sim it</button></div></div>`;
@@ -1425,7 +1426,7 @@ class Game {
     if (edition == null) return '';
     const nation = homeNation(this.starSurname());
     return `<div class="sf-wc"><div class="sf-wc-head">🌐 THE WORLD FINALS — Edition ${edition}</div>`
-      + `<div class="sf-wc-txt">The international summer is here. <b>${m.starName ?? 'Your star'}</b> is away with ${flagImg(nation, 18)} <b>${nation}</b>, chasing the game's greatest prize.</div>`
+      + `<div class="sf-wc-txt">The international summer is here — the <b>World Finals</b> come round <b>every four seasons</b>, football's greatest prize. <b>${m.starName ?? 'Your star'}</b> is away with ${flagImg(nation, 18)} <b>${nation}</b>, chasing it.</div>`
       + `<button class="primary" id="sf-wc-follow">Follow the tournament 🌍</button></div>`;
   }
   private wcRunHtml(): string {
@@ -1517,23 +1518,29 @@ class Game {
     const played = playedFinish != null && playedFinish !== 'Group stage' && run.length > 0;
     const groupHtml = wc.groups.map((g, gi) => `<div class="wc-group"><h5>Group ${String.fromCharCode(65 + gi)}</h5>`
       + `<table class="lt-table wc-gtable"><thead><tr><th>Nation</th><th>P</th><th>W</th><th>D</th><th>L</th><th>GD</th><th>Pts</th></tr></thead><tbody>`
-      + g.rows.map((r, i) => `<tr class="${r.mine ? 'mine' : ''} ${i < 2 ? 'wc-qual' : ''}"><td class="lt-name">${r.nation}</td><td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GD > 0 ? '+' : ''}${r.GD}</td><td class="lt-pts">${r.Pts}</td></tr>`).join('')
+      + g.rows.map((r, i) => `<tr class="${r.mine ? 'mine' : ''} ${i < 2 ? 'wc-qual' : ''}"><td class="lt-name">${flagImg(r.nation, 15)} ${r.nation}</td><td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GD > 0 ? '+' : ''}${r.GD}</td><td class="lt-pts">${r.Pts}</td></tr>`).join('')
       + `</tbody></table></div>`).join('');
-    // the actual champion for a played run: you (if you won), the side that beat you in the final, or —
-    // if you fell earlier — the seeded champion (never showing an eliminated you as champion).
-    const realChampion = finish === 'Champions' ? nation : finish === 'Runners-up' ? (finalFoe ?? wc.champion)
-      : wc.champion !== nation ? wc.champion : (wc.final.a === nation ? wc.final.b : wc.final.a);
+    // the actual champion for a played run: you (if you won), the side that beat you in the final, else — if
+    // you fell earlier — the seeded champion, UNLESS that's a nation YOU knocked out (which would contradict
+    // your own run chips). In that case the side that eliminated you is the natural "went on to win it" (PT-36).
+    const beaten = new Set(run.filter((r) => r.won).map((r) => r.oppName));
+    const eliminator = run.find((r) => !r.won)?.oppName;
+    const realChampion = finish === 'Champions' ? nation
+      : finish === 'Runners-up' ? (finalFoe ?? wc.champion)
+      : (wc.champion !== nation && !beaten.has(wc.champion)) ? wc.champion
+      : (eliminator && eliminator !== nation && !beaten.has(eliminator)) ? eliminator
+      : (wc.final.a === nation ? wc.final.b : wc.final.a);
     let bracketHtml: string;
     if (played) {
-      const runChips = run.map((r) => `<div class="wc-ko-tie ${r.won ? 'mine' : ''}"><b>${nation}</b> ${r.my}-${r.opp} <b>${r.oppName}</b> → <span class="${r.won ? 'wc-win' : 'wc-out'}">${r.won ? nation : r.oppName}</span></div>`).join('');
+      const runChips = run.map((r) => `<div class="wc-ko-tie ${r.won ? 'mine' : ''}">${flagImg(nation, 15)} <b>${nation}</b> ${r.my}-${r.opp} ${flagImg(r.oppName, 15)} <b>${r.oppName}</b> → <span class="${r.won ? 'wc-win' : 'wc-out'}">${flagImg(r.won ? nation : r.oppName, 14)} ${r.won ? nation : r.oppName}</span></div>`).join('');
       bracketHtml = `<h4 class="scout-h4">${nation.toUpperCase()}'S KNOCKOUT RUN</h4>${runChips}`
-        + `<div class="wc-final"><div class="wc-champ">🏆 Champions: <b>${realChampion}</b></div></div>`;
+        + `<div class="wc-final"><div class="wc-champ">🏆 Champions: ${flagImg(realChampion, 16)} <b>${realChampion}</b></div></div>`;
     } else {
-      const koTie = (t: import('@fm/shared').WCTie) => `<div class="wc-ko-tie ${t.mine ? 'mine' : ''}"><b>${t.a}</b> ${t.gh}-${t.ga} <b>${t.b}</b>${t.pens ? ' (pens)' : ''} → <span class="wc-win">${t.winner}</span></div>`;
+      const koTie = (t: import('@fm/shared').WCTie) => `<div class="wc-ko-tie ${t.mine ? 'mine' : ''}">${flagImg(t.a, 15)} <b>${t.a}</b> ${t.gh}-${t.ga} ${flagImg(t.b, 15)} <b>${t.b}</b>${t.pens ? ' (pens)' : ''} → <span class="wc-win">${flagImg(t.winner, 14)} ${t.winner}</span></div>`;
       const f = wc.final;
       bracketHtml = `<h4 class="scout-h4">QUARTER-FINALS</h4>${wc.quarters.map(koTie).join('')}`
         + `<h4 class="scout-h4">SEMI-FINALS</h4>${wc.semis.map(koTie).join('')}`
-        + `<div class="wc-final ${f.mine ? 'mine' : ''}"><div class="wc-final-lbl">🏆 FINAL</div><b>${f.a}</b> ${f.gh}-${f.ga} <b>${f.b}</b>${f.pens ? ' (pens)' : ''}<div class="wc-champ">Champions: <b>${wc.champion}</b></div></div>`;
+        + `<div class="wc-final ${f.mine ? 'mine' : ''}"><div class="wc-final-lbl">🏆 FINAL</div>${flagImg(f.a, 16)} <b>${f.a}</b> ${f.gh}-${f.ga} ${flagImg(f.b, 16)} <b>${f.b}</b>${f.pens ? ' (pens)' : ''}<div class="wc-champ">Champions: ${flagImg(wc.champion, 16)} <b>${wc.champion}</b></div></div>`;
     }
     const badge = finish === 'Champions' ? '🏆 WORLD CHAMPIONS' : finish === 'Runners-up' ? '🥈 Runners-up' : finish === 'Semi-finals' ? '🥉 Semi-finalists' : finish === 'Quarter-finals' ? '🎯 Quarter-finalists' : '⚽ Group stage';
     const verdict = finish === 'Champions' ? `${nation} are champions of the world — an immortal chapter for the ${this.starSurname()} name.`
