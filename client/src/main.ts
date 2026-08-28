@@ -803,10 +803,10 @@ class Game {
     el.innerHTML = `<div class="pc-card tier-bronze">`
       + `<div class="pc-top"><div class="pc-ovr">10<span>YRS</span></div><div class="pc-tier">🌱<span>PROSPECT</span></div></div>`
       + `<div class="pc-crest role-${p.roleHint}">${portraitImg(p.name, 'youth', 84)}<span class="pc-crest-role">${p.roleHint}</span></div>`
-      + `<div class="pc-name">${p.name}</div><div class="pc-role">Youth Prospect${gen ? ` · gen ${gen}` : ''}</div>`
+      + `<div class="pc-name">${p.name}</div><div class="pc-role">Youth Prospect${gen ? ` · gen ${gen + 1}` : ''}</div>`
       + (born ? `<div class="pc-flash">${isGenesis ? '🌱 A NEW BLOODLINE BEGINS' : `🌳 THE ${surname.toUpperCase()} NAME LIVES ON`}</div>` : '')
       + `<div class="pc-contract retired"><div class="pc-legend">Potential ${stars} · ${pedigreeText(p.pedigree, gen)}</div>`
-      + (gen ? `<div class="pc-stake">Generation ${gen} of the bloodline — a fresh 10-year-old carrying the family name into a whole new career.</div>` : '')
+      + (gen ? `<div class="pc-stake">Generation ${gen + 1} of the bloodline — a fresh 10-year-old carrying the family name into a whole new career.</div>` : '')
       + (p.note ? `<div class="pc-stake">${p.note}</div>` : '')
       + `</div>`
       + `<div class="pc-foot">🌱 Youth prospect · his story starts at age 10</div>`
@@ -1049,7 +1049,7 @@ class Game {
       // active bloodline = the one already in development, else the newest prospect
       const active = prospects.find((p) => p.careerStarted) ?? prospects[prospects.length - 1];
       const stars = '★'.repeat(active.potentialStars) + '☆'.repeat(5 - active.potentialStars);
-      const gen = active.generation ? ` · gen ${active.generation}` : '';
+      const gen = active.generation ? ` · gen ${active.generation + 1}` : ''; // 1-indexed to match the Bloodline Tree (founder = gen 1) (PT-136)
       const more = prospects.length > 1 ? `<div class="hp-meta" style="margin-top:6px;">+${prospects.length - 1} more in the academy</div>` : '';
       el.innerHTML = `<div class="hub-prow"><div class="hp-main"><div class="hp-name">🌱 ${active.name} <span class="hp-stars">${stars}</span></div>`
         + `<div class="hp-meta">${active.roleHint}${gen} · ${pedigreeText(active.pedigree, active.generation)} ${active.careerStarted ? '· in development' : '· age 10, ready to develop'}</div>${more}</div>`
@@ -2089,7 +2089,7 @@ class Game {
         + `<div class="scout-sub" style="margin:6px 0 0;">Bring another 10-year-old into your academy to develop alongside your bloodline. The <b>300c</b> is <b>coins</b> — the currency you earn from running your club — so this is you choosing to invest in extra youth.</div></div>`;
       const rows = prospects.length ? prospects.map((p) => {
         const stars = '★'.repeat(p.potentialStars) + '☆'.repeat(5 - p.potentialStars);
-        const gen = p.generation ? ` · gen ${p.generation}` : '';
+        const gen = p.generation ? ` · gen ${p.generation + 1}` : ''; // 1-indexed to match the Bloodline Tree (PT-136)
         const btn = `<button class="primary" data-dev="${p.id}">${p.careerStarted ? 'Continue' : 'Develop'} →</button>`;
         return `<div class="prospect-row"><span class="pr-sprite">${sprite('youth')}</span><div><div class="pr-name">${p.name} <span class="pr-stars" title="His potential — how high he could develop with the right career">${stars}</span></div>`
           + `<div class="pr-meta">${p.roleHint}${gen} · ${pedigreeText(p.pedigree, p.generation)} ${p.careerStarted ? '· in development' : '· age 10, ready to develop'}</div></div>${btn}</div>`;
