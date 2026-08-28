@@ -75,21 +75,38 @@ def pixelate(im):
 def main():
     key = api_key()
     os.makedirs(OUT, exist_ok=True)
-    made = 0
-    for i in range(COUNT):
-        p = prompt_for(i)
+    import glob
+    regen = os.environ.get("RD_REGEN", "").strip()
+    if regen:  # regenerate specific badge numbers in place with fresh art
+        nums = [int(x) for x in regen.replace(" ", "").split(",") if x]
+        print(f"regenerating {len(nums)} badges: {nums}")
+        for j, n in enumerate(nums):
+            off = 300 + n * 3 + j   # fresh motif/colour combo, distinct from the existing set
+            try:
+                res = request(key, prompt_for(off), 3000 + off)
+                im = Image.open(io.BytesIO(base64.b64decode(res["base64_images"][0])))
+                pixelate(im).save(os.path.join(OUT, f"badge-{n}.png"))
+                print(f"  badge-{n}: {prompt_for(off)[:44]}…  (balance {res.get('remaining_balance')})")
+            except Exception as e:
+                print(f"  badge-{n} error (kept old):", e)
+        os.system(f'cd "{os.path.dirname(os.path.dirname(os.path.abspath(__file__)))}" && python3 tools/reindex_badges.py')
+        return
+    existing = len(glob.glob(os.path.join(OUT, "badge-*.png")))  # APPEND: keep what's there, fill up to COUNT
+    made = existing
+    print(f"{existing} existing badges; topping up to {COUNT}")
+    for k in range(existing, COUNT):
+        off = k + 200   # offset so top-up badges use fresh motif/colour combos, never the ones already made
+        p = prompt_for(off)
         try:
-            res = request(key, p, 1000 + i)
-            b64 = res.get("base64_images", [None])[0]
-            if not b64: print("no image for", p, res.get("error")); continue
+            res = request(key, p, 1000 + off)
+            b64 = res["base64_images"][0]
             im = Image.open(io.BytesIO(base64.b64decode(b64)))
             made += 1
             pixelate(im).save(os.path.join(OUT, f"badge-{made}.png"))
-            rem = res.get("remaining_balance")
-            print(f"  [{made}/{COUNT}] {p[:48]}…  (balance {rem})")
+            print(f"  [{made}/{COUNT}] {p[:48]}…  (balance {res.get('remaining_balance')})")
         except Exception as e:
-            print("  error:", e); time.sleep(1)
-    print(f"generated {made} badges → {OUT}")
+            print("  error (skipped):", e)
+    print(f"now {made} badges → {OUT}")
     # rebuild manifest + numbered sheet via the existing tool
     os.system(f'cd "{ROOT}" && python3 tools/reindex_badges.py')
 
