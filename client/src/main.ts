@@ -836,17 +836,51 @@ class Game {
   }
 
   /** Pay to extend (re-sign) an NFT player's contract, then refresh the squad + reopen the card. */
-  private async extendPlayer(playerId: string) {
+  private extendPlayer(playerId: string) { this.openContractNegotiation(playerId); } // re-sign now goes through negotiation
+
+  /** Contract-talks modal: pick a deal LENGTH, see his asking wage for it, then make an offer he
+   *  accepts / counters / rejects. A longer deal costs more for a mercenary, less for a loyal one. */
+  private async openContractNegotiation(playerId: string) {
+    let info: Awaited<ReturnType<typeof api.starContractInfo>>;
+    try { info = await api.starContractInfo(playerId); } catch { toast('Can’t open talks right now'); return; }
+    const demand = { baseWage: info.baseWage, prefLength: info.prefLength, minLength: info.minLength, maxLength: info.maxLength, lengthPremium: info.lengthPremium };
+    const name = this.club.players.find((x) => x.id === playerId)?.name ?? 'the player';
+    let length = demand.prefLength;
+    document.getElementById('settings-ov')?.remove();
+    const ov = document.createElement('div'); ov.id = 'settings-ov';
+    ov.innerHTML = `<div class="tt-card cn-card"><div class="set-head"><div class="tt-title">✍️ CONTRACT TALKS — ${name}</div><button class="set-x" aria-label="Close">✕</button></div><div id="cn-body"></div></div>`;
+    document.body.appendChild(ov);
+    const close = () => ov.remove();
+    ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+    ov.querySelector('.set-x')!.addEventListener('click', close);
+    const render = () => {
+      const body = document.getElementById('cn-body'); if (!body) return;
+      const ask = wageForLength(demand, length);
+      body.innerHTML = `<div class="cn-sub">He’d prefer a <b>${demand.prefLength}-season</b> deal — a longer one ${demand.lengthPremium >= 0 ? 'costs <b>more</b> (he wants paid for the commitment)' : 'costs <b>less</b> (he values the security)'}.</div>`
+        + `<div class="cn-row"><span class="cn-lbl">Deal length</span><div class="cn-len">${[2, 3, 4, 5, 6].map((L) => `<button class="cn-l ${L === length ? 'active' : ''}" data-len="${L}">${L}y</button>`).join('')}</div></div>`
+        + `<div class="cn-ask">He’s asking <b>${ask.toLocaleString()}c</b> for a ${length}-season deal.</div>`
+        + `<div class="cn-offers"><button class="cn-offer" data-wage="${Math.round(ask * 0.9)}">Lowball<span>${Math.round(ask * 0.9).toLocaleString()}c</span></button>`
+        + `<button class="cn-offer primary" data-wage="${ask}">Meet it<span>${ask.toLocaleString()}c</span></button>`
+        + `<button class="cn-offer" data-wage="${Math.round(ask * 1.15)}">Generous<span>${Math.round(ask * 1.15).toLocaleString()}c</span></button></div>`
+        + `<div class="cn-result" id="cn-result"></div>`;
+      body.querySelectorAll('[data-len]').forEach((b) => b.addEventListener('click', () => { length = Number((b as HTMLElement).dataset.len); render(); }));
+      body.querySelectorAll('[data-wage]').forEach((b) => b.addEventListener('click', () => this.submitContractOffer(playerId, Number((b as HTMLElement).dataset.wage), length, close)));
+    };
+    render();
+  }
+  private async submitContractOffer(playerId: string, wage: number, length: number, close: () => void) {
     try {
-      const r = await api.extendContract(playerId);
-      toast(`Re-signed · −${(this.contracts[playerId]?.extendCost ?? 0)}c · ${r.contract.lengthSeasons}-season deal`);
-      this.setMe(await api.me());
-      await this.showHub();
-      const p = this.club.players.find((x) => x.id === playerId);
-      if (p) this.showPlayerCard(p);
-    } catch (err: any) {
-      toast(err?.body?.error === 'not enough coins' ? `Not enough coins (need ${err.body.need})` : (err?.body?.error ?? 'Extend failed'));
-    }
+      const r = await api.negotiateStar(playerId, wage, length);
+      if (r.coins != null && this.account) this.account.coins = r.coins;
+      if (r.outcome === 'accept') {
+        audio.chime('success');
+        toast(`✍️ ${r.note} · ${length}-season deal · −${wage.toLocaleString()}c`);
+        this.setMe(await api.me()); close();
+      } else {
+        const res = document.getElementById('cn-result');
+        if (res) res.innerHTML = `<div class="cn-${r.outcome}">${r.outcome === 'reject' ? '❌' : '🤝'} ${r.note}${r.outcome === 'counter' ? ` He’s holding out for <b>${r.askWage.toLocaleString()}c</b>.` : ''}</div>`;
+      }
+    } catch (e: any) { toast(e?.body?.error === 'not enough coins' ? `Not enough coins (need ${e.body.need})` : 'Talks broke down'); }
   }
 
   /** The manager's own legacy — rank + title, from titles/wins/tier. Shown as a hub chip. */
