@@ -24,21 +24,23 @@ NATIONS = ["Astoria","Calderia","Vinland","Montara","Sorvania","Kesselund","Norh
     "Poranto","Zelmark","Ivria","Caldros","Ostrovia","Menteria","Bravanto","Nystrand","Tavora","Groland",
     "Escalona","Volenza","Ardennes"]
 
-LAYOUTS = ["horizontal tricolour of {a}, {b} and {c}",
-    "vertical tricolour of {a}, {b} and {c}",
-    "horizontal bicolour, {a} over {b}",
-    "vertical bicolour of {a} and {b}",
-    "off-centre Nordic cross, {b} cross on a {a} field",
-    "diagonal bicolour split, {a} and {b}",
-    "a {a} field with a {b} canton of small stars",
-    "a solid {a} field with a large centred {b} star",
-    "a solid {a} field with a centred {b} sunburst",
-    "{a} field with a broad central {b} stripe bordered {c}",
-    "quartered {a} and {b}",
-    "a {a} field with a {b} crescent and star"]
-# muted, flag-appropriate palette (no fluorescent tones)
-COLS = ["deep crimson","navy blue","forest green","gold","white","black","maroon","royal blue",
-    "burgundy","sky blue","cream","charcoal grey","teal","olive green","rust orange","slate blue"]
+LAYOUTS = ["bold horizontal tricolour bands of {a}, {b} and {c}",
+    "bold vertical tricolour bands of {a}, {b} and {c}",
+    "a {a} field with a large bold {b} Nordic cross",
+    "a {a} field with a bold {b} plus cross",
+    "clean diagonal split of {a} and {b} with a crisp edge",
+    "a {a} field with a large centred {b} five-point star",
+    "a {a} field with a {b} canton and {c} horizontal stripes",
+    "a {a} field with a bold radiant {b} sunburst",
+    "horizontal bicolour of {a} over {b} with a central {c} stripe",
+    "a {a} field with a {b} crescent and star",
+    "quartered {a} and {b} with crisp straight edges",
+    "a {a} field with a bold {b} diagonal stripe edged {c}"]
+# vivid, flag-appropriate palette — saturated but NOT fluorescent/neon
+COLS = ["vivid red","royal blue","emerald green","golden yellow","white","black","deep crimson",
+    "navy blue","bright orange","royal purple","sky blue","teal","scarlet","cobalt blue","gold","sea green"]
+# rough light/dark class so we can force a high-contrast field-vs-emblem pairing
+LIGHT = {"white","golden yellow","sky blue","gold","bright orange"}
 
 def slug(n): return re.sub(r"[^a-z0-9]+", "-", n.lower()).strip("-")
 
@@ -54,9 +56,14 @@ def prompt_for(i):
     lay = LAYOUTS[i % len(LAYOUTS)]
     a = COLS[(i * 5 + 1) % len(COLS)]; b = COLS[(i * 3 + 7) % len(COLS)]; c = COLS[(i * 7 + 4) % len(COLS)]
     if b == a: b = COLS[(i * 3 + 8) % len(COLS)]
+    # force the emblem/second colour to contrast the field (one light, one dark) for a crisp read
+    if (a in LIGHT) == (b in LIGHT):
+        alt = [x for x in COLS if (x in LIGHT) != (a in LIGHT)]
+        b = alt[i % len(alt)]
     if c in (a, b): c = COLS[(i * 7 + 5) % len(COLS)]
     design = lay.format(a=a, b=b, c=c)
-    return f"a national flag, {design}, flat solid colours, bold clean, symmetrical, no text"
+    return (f"a national flag, {design}, flat solid vivid saturated colours, high contrast, "
+            f"crisp clean geometric edges, bold and symmetrical, no text, no lettering")
 
 def request(key, prompt, seed, retries=4):
     body = json.dumps({"prompt": prompt, "prompt_style": STYLE, "width": GEN, "height": GEN,
@@ -90,7 +97,7 @@ def main():
     print(f"generating {len(todo)} flag(s)")
     for i, n in todo:
         try:
-            res = request(key, prompt_for(i), 4200 + i * 13)
+            res = request(key, prompt_for(i), 4700 + i * 13)
             im = Image.open(io.BytesIO(base64.b64decode(res["base64_images"][0])))
             pixelate(im).save(os.path.join(OUT, f"flag-{slug(n)}.png"))
             print(f"  {n:10} -> flag-{slug(n)}.png   (balance {res.get('remaining_balance')})")
