@@ -20,10 +20,13 @@ for (const a of MANAGER_ARCS) {
 const cats = new Map<string, number>();
 for (const a of MANAGER_ARCS) cats.set(a.category, (cats.get(a.category) ?? 0) + 1);
 
-// REACHABILITY: simulate careers across a spread of situations and see what actually fires.
+// REACHABILITY: simulate careers across a spread of situations and see what actually fires. The sample is
+// deliberately large (2000 careers, ~120k draws): a marginal arc — three stacked gates plus `rare` — can
+// miss a smaller sample by luck, and then "fix" it only to expose the next marginal one. A wide sample
+// answers the real question, which is whether an arc is IMPOSSIBLE or merely uncommon.
 const seen = new Set<string>();
 let firedTotal = 0;
-for (let career = 0; career < 400; career++) {
+for (let career = 0; career < 2000; career++) {
   const fired = new Set<string>();
   for (let season = 1; season <= 12; season++) {
     const s: MgrSituation = {
@@ -46,9 +49,9 @@ for (let career = 0; career < 400; career++) {
 const unreachable = MANAGER_ARCS.filter((a) => !seen.has(a.id));
 console.log(`=== Manager arcs — ${MANAGER_ARCS.length} arcs (target 800+) ===`);
 console.log('  by category: ' + [...cats.entries()].sort().map(([c, n]) => `${c} ${n}`).join(' · '));
-console.log(`  reachability: ${seen.size}/${MANAGER_ARCS.length} fired across 400 simulated careers`);
+console.log(`  reachability: ${seen.size}/${MANAGER_ARCS.length} fired across 2000 simulated careers`);
 if (unreachable.length) console.log('  never fires: ' + unreachable.slice(0, 8).map((a) => a.id).join(', ') + (unreachable.length > 8 ? ` (+${unreachable.length - 8})` : ''));
-const perCareer = firedTotal / 400;
+const perCareer = firedTotal / 2000;
 console.log(`  arcs per career: ${perCareer.toFixed(1)} (a ~10-season career should see ~50)`);
 
 const checks: Array<[string, boolean, string]> = [

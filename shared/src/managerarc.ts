@@ -70,6 +70,10 @@ export interface MgrArcWhen {
 export interface ManagerArc {
   id: string; title: string; icon: string; category: MgrArcCategory;
   when?: MgrArcWhen;
+  /** Accepted at the ROOT as well as inside `when`. The brief listed temperament among the gates and
+   *  several authors reasonably read it as an arc-level property; rejecting that would have failed six
+   *  authors' files for a distinction that does not matter. Both are honoured — see arcFits. */
+  temper?: MgrTemper[];
   weight: number; rare?: boolean;
   first: string;
   beats: Record<string, MgrArcBeat>;
@@ -116,6 +120,9 @@ export interface MgrSituation {
 }
 
 export function arcFits(a: ManagerArc, s: MgrSituation): boolean {
+  // root-level `temper` behaves exactly like `when.temper`
+  const rootTemper = a.temper;
+  if (rootTemper && s.temper && !rootTemper.includes(s.temper)) return false;
   const w = a.when; if (!w) return true;
   if (w.minSeason != null && s.season < w.minSeason) return false;
   if (w.maxSeason != null && s.season > w.maxSeason) return false;
