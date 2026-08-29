@@ -46,9 +46,15 @@ import { YOUTH_MATES_ARCS } from './storyarcs/youth_mates.js';
 import { YOUTH_PITCH_ARCS } from './storyarcs/youth_pitch.js';
 import { YOUTH_COACH_ARCS } from './storyarcs/youth_coach.js';
 import { YOUTH_WORLD_ARCS } from './storyarcs/youth_world.js';
+import { YOUTH_BODY_ARCS } from './storyarcs/youth_body.js';
+import { YOUTH_AWAY_ARCS } from './storyarcs/youth_away.js';
+import { YOUTH_DOUBT_ARCS } from './storyarcs/youth_doubt.js';
+import { YOUTH_JOY_ARCS } from './storyarcs/youth_joy.js';
+import { YOUTH_SEASON_ARCS } from './storyarcs/youth_season.js';
 export const ARCS: StoryArc[] = [...SAGA_ARCS, ...CRISIS_ARCS, ...SIGNATURE_ARCS, ...RELATIONSHIP_ARCS, ...TRIUMPH_ARCS, ...OFFPITCH_ARCS,
   // the childhood library — see storyarcs/youth*.ts (Grassroots + Academy, ages 10-14)
-  ...YOUTH_ARCS, ...YOUTH_FAMILY_ARCS, ...YOUTH_MATES_ARCS, ...YOUTH_PITCH_ARCS, ...YOUTH_COACH_ARCS, ...YOUTH_WORLD_ARCS];
+  ...YOUTH_ARCS, ...YOUTH_FAMILY_ARCS, ...YOUTH_MATES_ARCS, ...YOUTH_PITCH_ARCS, ...YOUTH_COACH_ARCS, ...YOUTH_WORLD_ARCS,
+  ...YOUTH_BODY_ARCS, ...YOUTH_AWAY_ARCS, ...YOUTH_DOUBT_ARCS, ...YOUTH_JOY_ARCS, ...YOUTH_SEASON_ARCS];
 
 const arcById = new Map(ARCS.map((a) => [a.id, a]));
 export const arcByIdOf = (id: string): StoryArc | undefined => arcById.get(id);
