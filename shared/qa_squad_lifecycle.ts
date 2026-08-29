@@ -7,6 +7,7 @@ import {
   advanceSquad, advanceSquadPlayer, signSquadContract, squadSeasonsLeft, squadRetireAge, SQUAD_GROWTH_AGE,
 } from './src/squad.js';
 import { squadSaleValue, squadSeasonWage, squadRenewCost, sellValue, SQUAD_PEAK_AGE, SQUAD_CONTRACT_SEASONS } from './src/transfermarket.js';
+import { moraleEffects } from './src/morale.js';
 
 let failures = 0;
 const check = (cond: boolean, msg: string) => { if (cond) { console.log(`  ok   ${msg}`); } else { console.log(`  FAIL ${msg}`); failures++; } };
@@ -70,6 +71,26 @@ const startOv = aging.reduce((s, x) => s + overall(x), 0) / aging.length;
 for (let s = 1; s <= 6; s++) aging = advanceSquad(aging, s, 1).players;
 const endOv = aging.length ? aging.reduce((s, x) => s + overall(x), 0) / aging.length : 0;
 check(aging.length < 6 || endOv < startOv, `an unrefreshed squad decays or retires away (${startOv.toFixed(1)} -> ${endOv.toFixed(1)}, ${aging.length}/6 left)`);
+
+console.log('=== 7. morale responds to how the manager treats them (Phase 3) ===');
+const m1 = mintSquadPlayer('m1', 'MF', 12, 31);
+check((m1.morale ?? 0) > 0, 'a minted squad player starts with morale');
+const benchedSquad = [signSquadContract({ ...m1, age: 24 }, 1)];
+const played = advanceSquad(benchedSquad, 1, 1, { xi: new Set(['m1']), goodSeason: true }).changes[0];
+const ignored = advanceSquad(benchedSquad, 1, 1, { xi: new Set<string>(), goodSeason: true }).changes[0];
+check(played.moraleAfter > ignored.moraleAfter, `playing a man beats ignoring him (${played.moraleAfter} vs ${ignored.moraleAfter})`);
+const won = advanceSquad(benchedSquad, 1, 1, { xi: new Set(['m1']), goodSeason: true, wonSomething: true }).changes[0];
+check(won.moraleAfter >= played.moraleAfter, 'winning something lifts the dressing room');
+check(moraleEffects(ignored.moraleAfter).extendMult >= moraleEffects(played.moraleAfter).extendMult, 'an unhappier player costs more to re-sign');
+
+console.log('=== 8. traits actually bite (Phase 3) ===');
+let withTrait = 0, checkedTraits = 0;
+for (let i = 0; i < 40; i++) {
+  const p2 = mintSquadPlayer(`t${i}`, 'FW', 16, 900 + i);
+  if (p2.traits?.includes('clinical')) { withTrait++; checkedTraits += (p2.attrs.shooting ?? 0); }
+}
+check(withTrait > 0, `some high-quality forwards earn a trait (${withTrait}/40 clinical)`);
+check(withTrait === 0 || checkedTraits / withTrait >= 15, 'a Clinical Finisher really does have elite shooting (the trait bumped the stat)');
 
 console.log(failures ? `\n✗ ${failures} squad-lifecycle check(s) failed` : '\n✓ all squad-lifecycle checks passed');
 process.exit(failures ? 1 : 0);

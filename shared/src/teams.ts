@@ -5,6 +5,7 @@ import { FORMATIONS, type Formation } from './formations.js';
 // The Living Squad reuses the bloodline star's OWN character generators, so a squad player's personality
 // and traits mean exactly what the star's do (career.ts doesn't import teams.ts — no cycle).
 import { rollPersonality, eligibleTraits, MAX_TRAITS, type CareerPlayerAttrs } from './career.js';
+import { START_MORALE } from './morale.js';
 
 const FIRST = ['Jan', 'Marco', 'Luis', 'Kofi', 'Sven', 'Timo', 'Ade', 'Ivan', 'Paulo', 'Ryo', 'Emil', 'Noah', 'Idris', 'Beto', 'Cato', 'Dario', 'Enzo', 'Felix'];
 const LAST = ['Berg', 'Silva', 'Okafor', 'Larsen', 'Costa', 'Novak', 'Tanaka', 'Mensah', 'Weber', 'Rossi', 'Dubois', 'Kovac', 'Moreau', 'Santos', 'Vidal', 'Haas', 'Ito', 'Zeman'];
@@ -120,9 +121,15 @@ export function mintSquadPlayer(id: string, role: Role, quality: number, seed: n
   // reuse the career trait gates: a squad player earns a trait only if his stats genuinely qualify, so a
   // trait always means something. `log` is empty — play-history traits (e.g. Big-Game Player) need a real
   // career and are reserved for the bloodline star.
-  const traits = eligibleTraits(attrs as unknown as CareerPlayerAttrs, []).slice(0, MAX_TRAITS).map((t) => t.id);
+  const earned = eligibleTraits(attrs as unknown as CareerPlayerAttrs, []).slice(0, MAX_TRAITS);
+  // A trait has to BITE, not just decorate the card: apply the same stat bump the bloodline star gets when he
+  // locks a trait in at graduation, so a squad "Clinical Finisher" really does finish better. The engine has no
+  // trait hook of its own, so stats are how a trait reaches the pitch — and the bumps are the tuned +1s the
+  // career game already uses, which keeps match calibration untouched.
+  for (const t of earned) t.apply?.(attrs as unknown as CareerPlayerAttrs);
+  const traits = earned.map((t) => t.id);
   const finalAge = age ?? 18 + Math.floor(rng() * 16); // 18..33
-  return { id, name, role, attrs, anchor: { x: 0, y: 0 }, personality, traits, age: finalAge };
+  return { id, name, role, attrs, anchor: { x: 0, y: 0 }, personality, traits, age: finalAge, morale: START_MORALE };
 }
 
 /** Generate a full club roster (~20 players) deterministically from a seed. */

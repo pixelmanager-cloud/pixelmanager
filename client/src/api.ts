@@ -20,7 +20,7 @@ import {
   youthPoolBonus, youthUpgradeChance, scoutHitMult, scoutCostDiscount, scoutExtraTrips,
   generatePool, trialistAt, LOANEE_CAP, DESTINATIONS, destinationById, rollMission, travelMs as travelMsPure, previewOdds,
   gaffersDiaryEntry,
-  rollGenes, updateMorale,
+  rollGenes, updateMorale, moraleEffects,
   tokenToPlayer, tokenContract, legendCardOf, loadCareer, actWithNarration, careerState, graduatedFields, careerCast, fillArcText,
   rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, foundingNameFor,
   type FacilityKey, type MissionRow, type Token, type CareerAction,
@@ -513,7 +513,7 @@ export const api = {
   /** THE LIVING SQUAD season rollover: age the manager's whole squad a year, develop the young, fade the
    *  veterans, retire whoever is done, charge the season's wage bill, and report whose deal is now up.
    *  The bloodline star is NOT here — he keeps his own token path (developPlayer + MgrState.starAge). */
-  advanceSquadSeason: async (body: { trainingLvl?: number }) => {
+  advanceSquadSeason: async (body: { trainingLvl?: number; wonSomething?: boolean; goodSeason?: boolean }) => {
     await ensureActive();
     const c = await localStore.getClub(OWNER);
     if (!c) throw apiErr('club not found', {}, 404);
@@ -521,7 +521,11 @@ export const api = {
     // grandfather any player with no deal (a pre-Living-Squad save, or the founding squad) onto one that
     // starts now, so nobody is silently free forever
     const roster = c.club.players.map((p) => (p.signedSeason == null ? signSquadContract(p, season) : p));
-    const roll = advanceSquad(roster, season, Math.max(1, Math.floor(Number(body?.trainingLvl) || 1)));
+    // who actually played matters: a man who spent the season in the XI of a winning side is settled, one who
+    // never got a game is agitating — that's what makes selection a relationship, not just a number (Phase 3)
+    const xi = new Set(c.standingOrders?.playerIds ?? []);
+    const roll = advanceSquad(roster, season, Math.max(1, Math.floor(Number(body?.trainingLvl) || 1)),
+      { xi, wonSomething: !!body?.wonSomething, goodSeason: !!body?.goodSeason });
     // wages are a real cost, but never bankrupt the club into a stuck state — charge what's affordable
     const coinsNow = getActiveModel().profile.coins;
     const charged = Math.max(0, Math.min(coinsNow, Math.round(roll.wageBill)));
@@ -534,7 +538,8 @@ export const api = {
       coins: getActiveModel().profile.coins,
       wageBill: Math.round(roll.wageBill), charged, unpaid: Math.round(roll.wageBill) - charged,
       retired: roll.retired.map(lite),
-      expiring: roll.expiring.map((p) => ({ ...lite(p), renewCost: squadRenewCost(overall(p)) })),
+      expiring: roll.expiring.map((p) => ({ ...lite(p), renewCost: Math.round(squadRenewCost(overall(p)) * moraleEffects(p.morale ?? 65).extendMult), morale: p.morale ?? 65, moraleLabel: moraleEffects(p.morale ?? 65).label })),
+      unhappy: roll.changes.filter((ch) => !ch.retired && moraleEffects(ch.moraleAfter).unsettled).map((ch) => ({ ...lite(ch.player), morale: ch.moraleAfter, moraleLabel: moraleEffects(ch.moraleAfter).label })),
       risers: roll.changes.filter((ch) => ch.ovrAfter > ch.ovrBefore && !ch.retired).map((ch) => ({ ...lite(ch.player), from: ch.ovrBefore, to: ch.ovrAfter })),
       fallers: roll.changes.filter((ch) => ch.ovrAfter < ch.ovrBefore && !ch.retired).map((ch) => ({ ...lite(ch.player), from: ch.ovrBefore, to: ch.ovrAfter })),
     };
@@ -546,7 +551,7 @@ export const api = {
     if (!c) throw apiErr('club not found', {}, 404);
     const p = c.club.players.find((x) => x.id === playerId);
     if (!p) throw apiErr('no such player', {}, 404);
-    const cost = squadRenewCost(overall(p));
+    const cost = Math.round(squadRenewCost(overall(p)) * moraleEffects(p.morale ?? 65).extendMult); // an unhappy player holds out for more
     if (getActiveModel().profile.coins < cost) throw apiErr('not enough coins', { need: cost }, 402);
     await localStore.addCoins(OWNER, -cost);
     c.club.players = c.club.players.map((x) => (x.id === playerId ? signSquadContract(x, getActiveModel().profile.season) : x));

@@ -1245,10 +1245,18 @@ class Game {
       rows.push(`<div class="sq-row exp"><span class="sq-lbl">📝 Deal up</span><span class="sq-list">`
         + r.expiring.map((x: any) => {
           const afford = coins >= x.renewCost;
-          return `<span class="sq-exp">${nm(x)} `
+          return `<span class="sq-exp">${nm(x)}${x.moraleLabel ? ` <i class="sq-mood">${x.moraleLabel}</i>` : ''} `
             + `<button class="sq-btn" data-renew="${x.id}" data-name="${x.name}" data-cost="${x.renewCost}" ${afford ? '' : 'disabled'} title="${afford ? `Renew for ${x.renewCost.toLocaleString()}c` : `Not enough coins (need ${x.renewCost.toLocaleString()}c)`}">Renew · ${x.renewCost.toLocaleString()}c</button> `
             + `<button class="sq-btn ghost" data-release="${x.id}" data-name="${x.name}" title="Let him leave on a free">Let go</button></span>`;
         }).join(' ') + `</span></div>`);
+    }
+    if (r.unhappy?.length) {
+      // an unsettled player is a decision waiting to happen: he'll cost more to re-sign and sells for less,
+      // so the manager needs to see him before the deal is on the table (Phase 3)
+      rows.push(`<div class="sq-row unhappy"><span class="sq-lbl">😠 Unsettled</span><span class="sq-list">`
+        + r.unhappy.slice(0, 5).map((x: any) => `${nm(x)} <i>${x.moraleLabel}</i>`).join(' · ')
+        + (r.unhappy.length > 5 ? ` <i>+${r.unhappy.length - 5} more</i>` : '')
+        + ` — they'll hold out for more to re-sign.</span></div>`);
     }
     const bill = `<div class="sq-row bill"><span class="sq-lbl">💷 Wages</span><span class="sq-list">−${(r.charged ?? 0).toLocaleString()}c paid for the season`
       + (r.unpaid > 0 ? ` · <b class="sq-warn">${r.unpaid.toLocaleString()}c unpaid — the books are stretched</b>` : '') + `</span></div>`;
@@ -1806,7 +1814,7 @@ class Game {
     // has to keep investing in rather than a static roster (PT-90/PT-92).
     if (m.starId) {
       try {
-        const sq = await api.advanceSquadSeason({ trainingLvl: this.facLevels.training ?? 1 });
+        const sq = await api.advanceSquadSeason({ trainingLvl: this.facLevels.training ?? 1, wonSomething: t.pos === 1, goodSeason: t.pos <= Math.ceil(t.size / 2) });
         if (this.account?.coins != null) this.account.coins = sq.coins;
         this.setMe(await api.me());
         this.pendingSquadReport = sq;

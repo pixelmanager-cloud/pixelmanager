@@ -335,4 +335,205 @@ export const YOUTH_ARCS: StoryArc[] = [
       },
     },
   },
+  {
+    id: 'youth-in-goal', title: 'Somebody Has to Go In Goal', icon: '🧤', category: 'saga',
+    minTurn: 1, maxTurn: 12, weight: 3, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The regular keeper hasn\'t turned up and the coach is looking along the line for a volunteer. Nobody moves. Going in goal means ninety minutes of being blamed for things.',
+        choices: [
+          { id: 'volunteer', label: 'Put his hand up', desc: 'Someone has to, and nobody else will', outcome: 'He goes in, makes two saves he has no business making, and learns what it feels like when the team needs you specifically.', effect: { attr: { keeping: 1, leadership: 1 }, meters: { authority: 8, peers: 8 }, tag: 'went-in-goal' } },
+          { id: 'refuse', label: 'Stay out of it', desc: 'He\'s an outfield player and everyone knows it', outcome: 'He keeps his eyes down until someone else cracks. It works, and he feels oddly small about it for the rest of the afternoon.', effect: { attr: { flair: 1 }, meters: { peers: -4 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'youth-own-goal', title: 'Into His Own Net', icon: '😖', category: 'crisis',
+    minTurn: 2, maxTurn: 20, weight: 3, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'A routine ball across the six-yard box, his own studs, and it\'s in. The other team celebrate at him. Somebody\'s dad laughs. There are thirty minutes still to play and he wants to be anywhere else on earth.',
+        choices: [
+          { id: 'front', label: 'Demand the ball immediately', desc: 'The only way out is through', outcome: 'He asks for it again straight from the kickoff, and keeps asking. By full time nobody is talking about the own goal.', effect: { attr: { composure: 2, leadership: 1 }, form: 0.08, meters: { authority: 8, peers: 6 }, tag: 'faced-it' } },
+          { id: 'hide', label: 'Hide for a bit', desc: 'Stay out of the way until it stops stinging', outcome: 'He drifts to the edge of the game for twenty minutes. Nobody blames him for it — but he knows, and it nags.', effect: { attr: { composure: 1 }, form: -0.06, meters: { peers: -3 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'youth-armband', title: 'The First Armband', icon: '🎖️', category: 'triumph',
+    minTurn: 3, maxTurn: 22, weight: 3, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The coach hands him a captain\'s armband three sizes too big and says, without ceremony, that he\'s leading them out today. He has never told anybody what to do in his life.',
+        choices: [
+          { id: 'talk', label: 'Actually say something', desc: 'Try a team talk, aged eleven', outcome: 'He manages four sentences in the changing room, goes bright red, and the team runs out playing for him anyway.', effect: { attr: { leadership: 2 }, form: 0.06, meters: { peers: 10, authority: 6 }, tag: 'first-captain' } },
+          { id: 'example', label: 'Lead by doing', desc: 'Say nothing, do everything', outcome: 'He doesn\'t say a word and simply outruns everybody for an hour. It turns out that counts as a team talk too.', effect: { attr: { stamina: 1, leadership: 1 }, energy: -8, form: 0.08, meters: { peers: 6, authority: 8 }, tag: 'first-captain' } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'youth-grandparent', title: 'The Man in the Flat Cap', icon: '👴', category: 'relationship',
+    minTurn: 1, maxTurn: 24, weight: 3, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'His grandad is at every single game, in the same spot by the corner flag, in the same coat, whatever the weather. He never shouts. He just watches, and afterwards he says one specific thing about the match.',
+        choices: [
+          { id: 'listen', label: 'Ask him what he saw', desc: 'The old man watched football before any of them were born', outcome: 'He starts asking after every game. The answers are short, unglamorous, and better than most of the coaching he gets.', effect: { attr: { composure: 1, creativity: 1 }, meters: { family: 12 }, tag: 'grandad-watches' } },
+          { id: 'play', label: 'Play for the corner flag', desc: 'Do something today worth the trip', outcome: 'He spends the whole game trying to produce one moment worth the old man\'s bus fare. He gets it, late, and looks straight over.', effect: { form: 0.1, attr: { flair: 1 }, meters: { family: 10 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'youth-cheat', title: 'The Boy Who Went Down Easy', icon: '⚖️', category: 'signature',
+    minTurn: 4, maxTurn: 24, weight: 3, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The lad marking him has spent the game diving, tugging shirts off the ball and getting away with all of it. In the last minute he does it again, wins a penalty, and grins about it. The referee is a teenager with a whistle.',
+        choices: [
+          { id: 'same', label: 'Give him a taste of it', desc: 'If that\'s the game, play it', outcome: 'He goes down cheaply at the other end and wins one back. It works, and something about it sits wrong with him for years.', effect: { attr: { aggression: 1 }, form: 0.04, meters: { peers: 4, authority: -6 }, tag: 'played-dirty' } },
+          { id: 'straight', label: 'Refuse to play that way', desc: 'Beat him properly instead', outcome: 'He stays on his feet, beats the lad three more times before the whistle, and never once looks at the referee.', effect: { attr: { composure: 1, flair: 1 }, meters: { authority: 10, family: 6 }, tag: 'played-straight' } },
+          { id: 'word', label: 'Tell the referee', desc: 'The kid with the whistle is fourteen and struggling', outcome: 'He has a quiet word rather than a shout. The young ref is grateful, gets a grip on the game, and remembers him for it.', effect: { attr: { leadership: 1, teamwork: 1 }, meters: { authority: 8 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'youth-winter', title: 'The Coldest Morning of the Year', icon: '❄️', category: 'crisis',
+    minTurn: 2, maxTurn: 22, weight: 3, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'Minus two, a frozen pitch, a bag that hasn\'t dried since Thursday, and nine other kids who look like they\'d rather be in bed. For the first time he genuinely wonders why he does this.',
+        choices: [
+          { id: 'go', label: 'Get up and go', desc: 'Especially on the mornings he doesn\'t want to', outcome: 'He goes. Six of the squad don\'t. The coach says nothing about it at the time and forgets none of it later.', effect: { energy: -8, attr: { stamina: 1, composure: 1 }, meters: { authority: 12 }, tag: 'cold-morning' } },
+          { id: 'skip', label: 'Stay in bed', desc: 'One session won\'t matter', outcome: 'He rolls over. One session doesn\'t matter — but the ease of it frightens him a bit, later.', effect: { energy: 8, meters: { authority: -8, family: -3 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'youth-thrashing', title: 'Nine-Nil', icon: '💀', category: 'crisis',
+    minTurn: 2, maxTurn: 20, weight: 3, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'Nine-nil. Not a game, a demolition — the other side\'s parents stopped celebrating around the sixth. Two of his teammates are crying and the coach has run out of things to say at half time.',
+        choices: [
+          { id: 'keep', label: 'Keep playing to the whistle', desc: 'Don\'t stop, however bad it gets', outcome: 'He chases everything until the final whistle in a game that was gone by half time. The coach quietly builds the next season around him.', effect: { energy: -10, attr: { stamina: 1, composure: 2 }, meters: { authority: 12, peers: 6 }, tag: 'never-stopped' } },
+          { id: 'lift', label: 'Look after the ones crying', desc: 'The scoreline is lost — the lads aren\'t', outcome: 'He spends the last twenty minutes picking teammates up off the floor. Three of them are still playing football years later because of it.', effect: { attr: { leadership: 2, teamwork: 1 }, meters: { peers: 14 } } },
+          { id: 'blame', label: 'Let them know whose fault it is', desc: 'He isn\'t the one who stopped running', outcome: 'He tells two of them exactly what he thinks. It is fair, and it is the wrong day, and it takes a long while to undo.', effect: { attr: { aggression: 1 }, meters: { peers: -12, authority: -4 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'youth-out-of-position', title: 'Stuck at Right Back', icon: '🔀', category: 'saga',
+    minTurn: 3, maxTurn: 24, weight: 3, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The coach has put him at right back. He is not a right back — everyone knows it, including the coach, who needs a body there and picked the one lad reliable enough to do it.',
+        choices: [
+          { id: 'master', label: 'Learn the position properly', desc: 'Be the best right back in the league for a season', outcome: 'He learns to defend for real. It costs him a season of goals and gives him something half the forwards he\'ll ever face never had.', effect: { attr: { teamwork: 1, composure: 1, stamina: 1 }, meters: { authority: 12 }, tag: 'learned-defending' } },
+          { id: 'roam', label: 'Play there in name only', desc: 'Wander forward the second the ball goes', outcome: 'He spends the season technically at right back and functionally wherever he likes. The coach gives up arguing around March.', effect: { attr: { flair: 1, creativity: 1 }, meters: { authority: -6, peers: 4 } } },
+          { id: 'ask', label: 'Ask to move back up', desc: 'Say plainly where he\'s best', outcome: 'He makes his case without sulking. The coach hears him out, says "give me six weeks", and keeps his word.', effect: { attr: { leadership: 1 }, meters: { authority: 6 }, form: 0.05 } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'youth-birthday', title: 'The Party He Missed', icon: '🎂', category: 'relationship',
+    minTurn: 2, maxTurn: 22, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'His best mate from school is having the birthday everyone in the year is going to. It clashes with a match. His mate says, half joking, that he\'s always got a match.',
+        choices: [
+          { id: 'match', label: 'Play the match', desc: 'That\'s the deal, and it always will be', outcome: 'He plays. He also learns something about the shape of the life he\'s chosen, and that not everyone will wait around in it.', effect: { form: 0.06, meters: { peers: -8, authority: 6 }, attr: { composure: 1 }, tag: 'chose-the-match' } },
+          { id: 'party', label: 'Go to the party', desc: 'He is eleven, and it\'s his best mate', outcome: 'He goes, and has the best afternoon he\'s had in months. The coach is unimpressed; his mate never forgets he came.', effect: { energy: 8, meters: { peers: 12, authority: -8 } } },
+          { id: 'both', label: 'Play, then turn up late', desc: 'Kit bag, muddy legs, still going', outcome: 'He arrives at the party in a tracksuit with mud behind his ears, two hours late, and gets a cheer at the door.', effect: { energy: -6, form: 0.04, meters: { peers: 8, authority: 3 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'youth-new-town', title: 'A New Team in a New Town', icon: '📦', category: 'crisis',
+    minTurn: 4, maxTurn: 24, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'The family moves for his dad\'s work. New house, new school, and a new club where the squad has known each other since they were five and doesn\'t obviously need him.',
+        choices: [
+          { id: 'prove', label: 'Let his football introduce him', desc: 'Say nothing, play well, wait', outcome: 'He is quiet for a month and outstanding for all of it. By October nobody remembers he was ever the new boy.', effect: { form: 0.08, attr: { composure: 1 }, meters: { peers: 8, authority: 6 }, tag: 'settled-in' } },
+          { id: 'graft', label: 'Do the unglamorous jobs', desc: 'Carry the nets, chase everything, earn it', outcome: 'He puts the goals away after every session without being asked. It buys him more goodwill than any nutmeg would have.', effect: { attr: { teamwork: 2, stamina: 1 }, meters: { peers: 12, authority: 8 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'youth-pushy-dad', title: 'Somebody Else\'s Father', icon: '📢', category: 'offpitch',
+    minTurn: 3, maxTurn: 24, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'One dad on the touchline shouts at his own son for the entire ninety minutes — every mistake, by name, in front of everyone. Today the boy is close to tears at half time and nobody says anything.',
+        choices: [
+          { id: 'friend', label: 'Go and stand with the lad', desc: 'Say something ordinary and normal to him', outcome: 'He wanders over and talks nonsense about anything else for two minutes. The boy plays the best half of his season.', effect: { attr: { leadership: 1, teamwork: 1 }, meters: { peers: 12 }, tag: 'stood-with-him' } },
+          { id: 'grateful', label: 'Look at his own parents differently', desc: 'Notice what he\'s actually got', outcome: 'He glances at his own mum and dad, who have never once shouted at him, and understands something he\'d taken for granted.', effect: { attr: { composure: 1 }, meters: { family: 12 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'youth-county-trial', title: 'The Letter About the County Trial', icon: '✉️', category: 'triumph',
+    minTurn: 5, maxTurn: 26, weight: 3, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'A letter with a county badge on it. One afternoon, four hundred boys, twelve places, and a hundred parents pretending they aren\'t counting the numbers.',
+        choices: [
+          { id: 'nerves', label: 'Play through the nerves', desc: 'He is terrified and going anyway', outcome: 'He is sick with nerves for the first twenty minutes and fine for the rest. He does not make the twelve — and is asked back the year after.', effect: { attr: { composure: 2 }, form: 0.06, meters: { family: 6, authority: 6 }, tag: 'county-trial' } },
+          { id: 'free', label: 'Play like he\'s got nothing to lose', desc: 'Four hundred kids — go and be memorable', outcome: 'He tries the audacious thing early, it comes off, and one of the men with clipboards writes his number down before half time.', effect: { attr: { flair: 2 }, form: 0.1, meters: { authority: 8 }, tag: 'county-trial' } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'youth-hand-me-down', title: 'A Kit Two Sizes Too Big', icon: '👕', category: 'offpitch',
+    minTurn: 1, maxTurn: 14, weight: 2, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'His kit is his cousin\'s old one, sleeves past his elbows and shorts past his knees. One of the lads makes a joke about it that gets a bigger laugh than it deserves.',
+        choices: [
+          { id: 'own', label: 'Make it his thing', desc: 'Roll the sleeves up and get on with it', outcome: 'He rolls the sleeves, plays a blinder, and by the end of the month two other kids are wearing theirs the same way.', effect: { attr: { flair: 1, composure: 1 }, meters: { peers: 10 }, tag: 'owned-it' } },
+          { id: 'burn', label: 'Say nothing and remember it', desc: 'File it away and use it', outcome: 'He doesn\'t react at all. He does, however, remember precisely who laughed, and plays like it for the rest of the season.', effect: { attr: { aggression: 1 }, form: 0.08, meters: { peers: -3 } } },
+        ],
+      },
+    },
+  },
+  {
+    id: 'youth-teacher-doubt', title: '"And What If Football Doesn\'t Happen?"', icon: '📚', category: 'signature',
+    minTurn: 8, maxTurn: 27, weight: 3, first: 'open',
+    beats: {
+      open: {
+        id: 'open',
+        prompt: 'His form tutor keeps him back and asks, kindly and quite reasonably, what the plan is if football doesn\'t happen. She has seen a lot of boys be sure about this.',
+        choices: [
+          { id: 'both', label: 'Tell her he\'ll do both', desc: 'Keep the grades up and chase it anyway', outcome: 'He promises to keep the grades up, and — unusually for a boy making that promise — actually does.', effect: { attr: { composure: 1, teamwork: 1 }, meters: { school: 12, family: 6 }, tag: 'kept-grades' } },
+          { id: 'certain', label: 'Tell her it\'s going to happen', desc: 'No backup, no hedging', outcome: 'He says it plainly, with no room in it for doubt. She writes something down, and stops asking.', effect: { attr: { leadership: 1 }, form: 0.06, meters: { school: -6, authority: 4 }, tag: 'no-plan-b' } },
+          { id: 'honest', label: 'Admit he doesn\'t know', desc: 'He\'s thirteen. Nobody knows.', outcome: 'He says he doesn\'t know, and that he\'s frightened of it not working. She tells him that\'s the most sensible answer she\'s had all year.', effect: { attr: { composure: 2 }, meters: { school: 8, family: 4 } } },
+        ],
+      },
+    },
+  },
 ];

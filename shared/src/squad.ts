@@ -10,6 +10,7 @@ import type { Player } from './types.js';
 import { developAttrs } from './lifecycle.js';
 import { ageSquadAttrs, squadSeasonWage, SQUAD_CONTRACT_SEASONS, SQUAD_PEAK_AGE } from './transfermarket.js';
 import { overall } from './teams.js';
+import { updateMorale, driftMorale, START_MORALE, type MoraleEvent } from './morale.js';
 
 /** Below this age a squad player still GROWS; at/after SQUAD_PEAK_AGE he plateaus then declines. */
 export const SQUAD_GROWTH_AGE = SQUAD_PEAK_AGE - 1; // grows to 29, plateaus at 30, declines from 31
@@ -37,6 +38,20 @@ export interface SquadSeasonChange {
   ovrAfter: number;
   retired: boolean;
   expiring: boolean;   // contract runs out at the end of this rollover → keep-or-lose decision
+  moraleBefore: number;
+  moraleAfter: number;
+}
+/** How a season treated one squad player, morale-wise. A player who spent the year in the XI of a winning
+ *  side is settled; one who never got a game and is out of contract is agitating. This is what turns a
+ *  squad list into a dressing room the manager has to actually manage. */
+export function squadMoraleAfterSeason(p: Player, opts: { inXI: boolean; wonSomething: boolean; goodSeason: boolean; expiring: boolean }): number {
+  let m = p.morale ?? START_MORALE;
+  const ev: MoraleEvent[] = [];
+  ev.push(opts.inXI ? (opts.goodSeason ? 'played_win' : 'played_draw') : 'unused');
+  if (opts.wonSomething) ev.push('won_trophy');
+  if (opts.expiring) ev.push('contract_lapsed');
+  for (const e of ev) m = updateMorale(m, e);
+  return driftMorale(m); // grudges fade a little over the summer
 }
 export interface SquadRollover {
   players: Player[];            // everyone still at the club (retirees removed)
@@ -64,7 +79,7 @@ export function advanceSquadPlayer(p: Player, trainingLvl = 1): Player {
 
 /** Roll the WHOLE squad forward one season. Pure: returns the new squad + everything the season
  *  report needs (who grew, who faded, who retired, whose deal is up, and the wage bill). */
-export function advanceSquad(players: Player[], season: number, trainingLvl = 1): SquadRollover {
+export function advanceSquad(players: Player[], season: number, trainingLvl = 1, ctx: { xi?: ReadonlySet<string>; wonSomething?: boolean; goodSeason?: boolean } = {}): SquadRollover {
   const out: Player[] = [];
   const changes: SquadSeasonChange[] = [];
   const retired: Player[] = [];
@@ -73,10 +88,16 @@ export function advanceSquad(players: Player[], season: number, trainingLvl = 1)
   for (const p of players) {
     const ovrBefore = overall(p);
     wageBill += squadSeasonWage(ovrBefore); // he was on the books all season
-    const adv = advanceSquadPlayer(p, trainingLvl);
+    let adv = advanceSquadPlayer(p, trainingLvl);
     const isRetired = (adv.age ?? 0) >= squadRetireAge(adv);
     const isExpiring = !isRetired && p.signedSeason != null && squadSeasonsLeft(adv, season + 1) <= 0;
-    changes.push({ player: adv, ovrBefore, ovrAfter: overall(adv), retired: isRetired, expiring: isExpiring });
+    const moraleBefore = p.morale ?? START_MORALE;
+    const moraleAfter = squadMoraleAfterSeason(p, {
+      inXI: ctx.xi ? ctx.xi.has(p.id) : true,
+      wonSomething: !!ctx.wonSomething, goodSeason: !!ctx.goodSeason, expiring: isExpiring,
+    });
+    adv = { ...adv, morale: moraleAfter };
+    changes.push({ player: adv, ovrBefore, ovrAfter: overall(adv), retired: isRetired, expiring: isExpiring, moraleBefore, moraleAfter });
     if (isRetired) { retired.push(adv); continue; }
     out.push(adv);
     if (isExpiring) expiring.push(adv);
