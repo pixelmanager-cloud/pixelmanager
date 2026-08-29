@@ -719,7 +719,7 @@ const SIDE_FOCUS_BY_CHAPTER: Record<string, FocusOption[]> = {
 /** Seeded coach choices for a track: outfield sees no GK-only coach, GK sees the GK coach + mental ones. */
 export function rollCoaches(rng: () => number, track: Track, n = COACH_OFFER): Coach[] {
   const pool = COACHES.filter((c) => (track === 'goalkeeper' ? true : !c.specialty.includes('keeping')));
-  const shuffled = [...pool].sort(() => rng() - 0.5);
+  const shuffled = shuffleSeeded(pool, rng);
   return shuffled.slice(0, Math.min(n, pool.length));
 }
 
@@ -786,6 +786,17 @@ const LIFE_CONSEQUENCE: Record<LifeKind, { good: Partial<Record<MeterKey, number
   move_abroad:      { good: { authority: 8, agent: 4 },   bad: { family: -8, peers: -4 } },
 };
 /** Pure deterministic hash → [0,1), independent of the career's rng() stream (never consumes it). */
+/** A seeded Fisher-Yates shuffle. MUST be used instead of `arr.sort(() => rng() - 0.5)`: an inconsistent
+ *  sort comparator consumes a number of rng() draws that depends on the ENGINE'S sort implementation (V8
+ *  measured 9-12 draws for the same 6-element array), so the identical save replayed in a different browser
+ *  — or after a V8 upgrade — rebuilt a different career from turn 0. This game's saves are (seed + action
+ *  list) replays, so that quietly broke the whole save model. Fisher-Yates always consumes exactly n-1
+ *  draws, making replay engine-independent. (PT-600) */
+function shuffleSeeded<T>(arr: readonly T[], rng: () => number): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
 function pureHash01(seed: number, turn: number, salt: number): number { return mulberry32(((seed ^ Math.imul(turn + 1, 2654435761)) ^ salt) >>> 0)(); }
 // turn-strided index: walks a pool with a stride made coprime to its length, so successive turns land on
 // non-adjacent, non-repeating entries instead of birthday-clustering the way a fresh random draw does.
@@ -821,7 +832,7 @@ export function makeScenario(rng: () => number, i: number, track: Track = 'outfi
   const kind = KIND_POOL[Math.floor(rng() * KIND_POOL.length)];
   const bias = track === 'goalkeeper' ? GK_BIAS : (band ? band.demand : OUTFIELD_TAGS);
   const n = 1 + Math.floor(rng() * Math.min(3, bias.length));
-  const pool = [...new Set([...bias].sort(() => rng() - 0.5))].slice(0, n);
+  const pool = [...new Set(shuffleSeeded(bias, rng))].slice(0, n);
   const raw = pool.map(() => 0.3 + rng());
   const demand: Partial<Record<Tag, number>> = {};
   pool.forEach((t, k) => { demand[t] = raw[k]; });

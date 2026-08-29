@@ -103,7 +103,9 @@ export function advanceSquad(players: Player[], season: number, trainingLvl = 1,
     wageBill += squadSeasonWage(ovrBefore); // he was on the books all season
     let adv = advanceSquadPlayer(p, trainingLvl);
     const isRetired = (adv.age ?? 0) >= squadRetireAge(adv);
-    const isExpiring = !isRetired && p.signedSeason != null && squadSeasonsLeft(adv, season + 1) <= 0;
+    // `season` is ALREADY the upcoming season here — spSeasonReward bumps profile.season before the rollover
+    // runs — so adding another +1 made every deal expire a season early (a 3-season contract lasted 2) (PT-601).
+    const isExpiring = !isRetired && p.signedSeason != null && squadSeasonsLeft(adv, season) <= 0;
     const moraleBefore = p.morale ?? START_MORALE;
     const moraleAfter = squadMoraleAfterSeason(p, {
       inXI: ctx.xi ? ctx.xi.has(p.id) : true,
