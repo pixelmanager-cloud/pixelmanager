@@ -40,7 +40,8 @@ import { SIGNATURE_ARCS } from './storyarcs/signature.js';
 import { RELATIONSHIP_ARCS } from './storyarcs/relationship.js';
 import { TRIUMPH_ARCS } from './storyarcs/triumph.js';
 import { OFFPITCH_ARCS } from './storyarcs/offpitch.js';
-export const ARCS: StoryArc[] = [...SAGA_ARCS, ...CRISIS_ARCS, ...SIGNATURE_ARCS, ...RELATIONSHIP_ARCS, ...TRIUMPH_ARCS, ...OFFPITCH_ARCS];
+import { YOUTH_ARCS } from './storyarcs/youth.js';
+export const ARCS: StoryArc[] = [...SAGA_ARCS, ...CRISIS_ARCS, ...SIGNATURE_ARCS, ...RELATIONSHIP_ARCS, ...TRIUMPH_ARCS, ...OFFPITCH_ARCS, ...YOUTH_ARCS];
 
 const arcById = new Map(ARCS.map((a) => [a.id, a]));
 export const arcByIdOf = (id: string): StoryArc | undefined => arcById.get(id);
@@ -52,17 +53,29 @@ function h01(a: number, b: number, c = 0x9e3779b1): number {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
+/** How many story arcs a single career should surface — the career is cut into this many equal slots and
+ *  each fires one arc, so the storytelling is paced evenly from age 10 to graduation. */
+export const ARCS_PER_CAREER = 16;
+
 /** Should a NEW arc start at this turn? Deterministic per (seed, turn); respects each arc's window, avoids
  *  repeats (fired set), and keeps arcs rare enough to feel special. Returns the arc id, or null. */
-export function pickArcStart(seed: number, turn: number, fired: ReadonlySet<string>): string | null {
+export function pickArcStart(seed: number, turn: number, fired: ReadonlySet<string>, totalTurns = 120): string | null {
   const eligible = ARCS.filter((a) => !fired.has(a.id) && turn >= a.minTurn && turn <= a.maxTurn);
   if (!eligible.length) return null;
-  const gate = h01(seed >>> 0, turn * 131 + 7, 0x51a3);
-  // Tuned for the 120-turn career. Was 0.07 across 202 turns (~11 arcs); raised here so a SHORTER generation
-  // carries MORE story, not less — arcs are additive (an arc beat doesn't consume a card-play turn), so a
-  // higher rate buys narrative density without shrinking the card game underneath it.
-  const baseRate = 0.17;
-  if (gate >= baseRate) return null;
+  // EVEN SPACING, not a flat per-turn dice roll. A constant probability clusters by luck — three arcs in one
+  // chapter, then twenty barren turns — which reads as feast-or-famine. Instead the career is cut into
+  // ARCS_PER_CAREER equal SLOTS and each slot fires exactly one arc, at a seed-jittered turn inside it. That
+  // guarantees a steady drumbeat of story from the first chapter to the last while staying fully
+  // deterministic (pure hash of seed+slot — no rng draw, so replay is unaffected).
+  const spacing = totalTurns / ARCS_PER_CAREER;
+  const slot = Math.floor(turn / spacing);
+  const slotStart = slot * spacing;
+  const fireTurn = Math.floor(slotStart + h01(seed >>> 0, slot * 7717 + 3, 0x51a3) * spacing);
+  // Fire at the jittered turn — but SELF-CORRECT: `fired.size <= slot` means the career is behind schedule
+  // (an earlier slot found nothing eligible in its window), so the next turn with something eligible catches
+  // up instead of silently losing that slot's story. Once a slot has delivered, fired.size outruns the slot
+  // index and the gate closes until the next one.
+  if (turn < fireTurn || fired.size > slot) return null;
   // CATEGORY-BALANCED PICK: choose a CATEGORY first, then an arc inside it. Picking straight from the flat
   // weighted pool let one category crowd out the rest — relationship arcs (widest windows, earliest start)
   // averaged ~4 per career while SIGNATURE arcs, all 34 of which carry `rare`, totalled 3.5% of the pool and
@@ -71,8 +84,6 @@ export function pickArcStart(seed: number, turn: number, fired: ReadonlySet<stri
   const byCat = new Map<string, StoryArc[]>();
   for (const a of eligible) { const l = byCat.get(a.category) ?? []; l.push(a); byCat.set(a.category, l); }
   const cats = [...byCat.keys()].sort(); // sorted → deterministic regardless of ARCS order
-  // sqrt damps the advantage of a category that happens to have more arcs eligible right now, without
-  // ignoring depth entirely (a category with real content available is still likelier than a near-empty one)
   const catW = cats.map((c) => Math.sqrt(byCat.get(c)!.length));
   const catTotal = catW.reduce((s, w) => s + w, 0);
   let cr = h01(seed >>> 0, turn * 613 + 29, 0x7f11) * catTotal;

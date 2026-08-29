@@ -1316,7 +1316,7 @@ export class Career {
       this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure, this.seed); this.ensurePlayableHand();
       // STORY ARC: a branching storyline may interject before the next routine moment (deterministic, no rng
       // draw — so it never perturbs the scenario/draw stream). The arc's beats then play out before this scenario.
-      if (!this.pendingArc) { const arcId = pickArcStart(this.seed, this.turn, this.firedArcs); if (arcId) { const a = arcByIdOf(arcId); if (a) this.pendingArc = { arcId, beatId: a.first }; } }
+      if (!this.pendingArc) { const arcId = pickArcStart(this.seed, this.turn, this.firedArcs, TOTAL_TURNS); if (arcId) { const a = arcByIdOf(arcId); if (a) this.pendingArc = { arcId, beatId: a.first }; } }
     }
     return choice;
   }
