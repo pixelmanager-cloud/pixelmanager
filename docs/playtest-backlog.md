@@ -802,3 +802,29 @@ these assume a young senior pro, which is what turn 57-65 is. -->
   `🔄 ${team} freshen it up — ${e.playerName} on, ${off} off.`
   `🔄 Applause for ${off} as ${e.playerName} takes his place for ${team}.`
      ══════════════════════════════════════════════════════════════════════════ -->
+
+---
+
+## NEXT FEATURE (user-directed, 2026-08-29) — Branching bloodline + a Family Record tree
+
+**Multiple offspring per generation.** At succession the player is offered 2–3 heirs rather than one.
+
+*Genetics (the point the user was explicit about):* siblings must be **correlated but distinct** — each child
+draws from the SAME parental gene pool with independent variation, the way real siblings differ. One inherits
+the pace, another the composure; both are recognisably their father's sons. Not clones (boring, no decision)
+and not strangers (breaks the bloodline fantasy). Child seed = `hash(parent_seed, childIndex)` so it stays
+pure and replay-safe — no rng draws consumed.
+
+*Wiring notes from the audit:* the save is ALREADY a forest, not a chain — `tokens` is a list, each carrying
+`generation`/`genes_json`/`pedigree`, and `main.ts:1084` already picks the active prospect from several.
+Missing: `parentId` on Token, minting N heirs, an heir-pick screen, tree rendering, and a save-version bump
+(`SAVE_VERSION` is still 1).
+
+*Two risks:* (1) combinatorial growth — only the line actually PLAYED branches, siblings are leaves, keeps it
+O(n) not O(3^n); (2) siblings must DO something or the tree is decorative — give them cheap deterministic NPC
+career summaries (peak overall, division reached, an honour or two) from a pure function, not 120 simulated
+turns.
+
+**The Family Record tree.** Visual target: a Victorian/medieval illuminated family-record lithograph — ornate
+border, oval portrait medallions for each family member, a real painted tree whose branches carry the line,
+vignette panels in the corners. Currently a linear list; it should read as an heirloom document.
