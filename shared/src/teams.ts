@@ -160,7 +160,10 @@ export function generateTrialist(id: string, quality: number, seed: number, maxS
   const roles: Role[] = ['DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'FW', 'FW', 'GK'];
   const role = roles[Math.floor(rng() * roles.length)];
   // a trialist joins the manager's own squad, so he's a full character too (Living Squad) — just capped
-  const p = mintSquadPlayer(id, role, quality, seed);
+  // DECORRELATE the seed. mintSquadPlayer re-seeds makeRng(seed) and spends its first draw on the first
+  // name, while the role above came from the first draw of makeRng(seed) too — so role and name were
+  // locked to the same value and every GK trialist drew one of two names. (PT-604)
+  const p = mintSquadPlayer(id, role, quality, (seed ^ 0x5bf03635) >>> 0);
   const attrs = p.attrs;
   (Object.keys(attrs) as Array<keyof PlayerAttrs>).forEach((k) => { const v = attrs[k]; if (v !== undefined) attrs[k] = Math.min(maxStat, v); });
   return { ...p, attrs };

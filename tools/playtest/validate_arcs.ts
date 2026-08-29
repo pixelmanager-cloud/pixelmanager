@@ -86,6 +86,11 @@ const AGE_RULES: Array<{ what: string; limit: number; re: RegExp; iconOnly?: boo
   // which is a different failure from adult content and needs its own rule. Patterns name the PLAYER only,
   // so "the old man" (his father) and "a senior pro froze him out" (a teammate) stay clean.
   { what: 'senior-player framing', limit: 86, re: /\bas a senior (?:man|pro)\b|\belder statesman\b|\bhis final years\b|\bthe fallen star\b|\bat his age nobody\b|\btook under his wing\b|\bhis own protégé\b|\bhis testimonial\b|\bwinding down his career\b/i },
+  // ACCUMULATED HISTORY. Distinct again from seniority framing: these arcs don't call him a veteran, they
+  // quietly require a past he has not lived yet — a decade-old falling-out, eighteen months of rehab
+  // already behind him, a friend's son who is ten. A 19-year-old cannot have fallen out with someone ten
+  // years ago. (PT-805/PT-1105)
+  { what: 'accumulated history', limit: 86, re: /\ba decade ago\b|\bten years of\b|\bfor six years\b|\btime to walk away\b|\bdawn rehab\b|\beighteen months of\b|\bretired into punditry\b|\bthe club's biggest name\b|\bhis late best friend\b/i },
 ];
 let ageFails = 0;
 for (const a of ARCS) {

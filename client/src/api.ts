@@ -308,7 +308,15 @@ export const api = {
     if (c.club.players.length >= MAX_SQUAD) throw apiErr(`your squad is full (max ${MAX_SQUAD})`, {}, 409);
     if (getActiveModel().profile.coins < f) throw apiErr('not enough coins', { need: f }, 402);
     await localStore.addCoins(OWNER, -f);
-    const uid = `bought-${c.club.players.length}-${String(player.id || 'p').replace(/[^a-z0-9]/gi, '')}`;
+    // Squad ids must be unique and STABLE. This used to STRIP the separators out of a listing id
+    // (`mk:${season}:${tier}:${i}`), so `mk:1:1:11` and `mk:11:1:1` both collapsed to `mk1111` — and it
+    // keyed off `players.length`, which moves as players leave. Two squad members could end up sharing an
+    // id, at which point sellPlayer's filter removes BOTH. Keep the separators, stamp the season, and
+    // check the squad rather than trusting the shape. (PT-304)
+    const safe = String(player.id || 'p').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
+    const season = getActiveModel().profile.season;
+    let uid = `bought-${season}-${safe}`;
+    for (let n = 2; c.club.players.some((p) => p.id === uid); n++) uid = `bought-${season}-${safe}-${n}`;
     // A signing joins on a real CONTRACT (Living Squad): he keeps the age the listing advertised, and his
     // deal runs from this season — so he'll age, cost wages, and eventually force a renew-or-lose call
     // instead of being a free permanent asset (PT-90/PT-92).

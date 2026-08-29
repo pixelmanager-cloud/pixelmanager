@@ -1401,8 +1401,17 @@ class Game {
     // FORM GUIDE (last 5) + season RECORDS (biggest win, longest unbeaten run)
     const form = played.slice(-5).map((r) => r.myGoals > r.oppGoals ? 'W' : r.myGoals < r.oppGoals ? 'L' : 'D');
     const formStrip = form.length ? ` · ${form.map((x) => `<span class="ff ff-${x.toLowerCase()}">${x}</span>`).join('')}` : '';
-    let biggest: { gd: number; sc: string } | null = null, run = 0, bestRun = 0;
-    for (const r of played) { const gd = r.myGoals - r.oppGoals; if (gd > 0 && (!biggest || gd > biggest.gd)) biggest = { gd, sc: `${r.myGoals}-${r.oppGoals}` }; if (gd >= 0) { run++; bestRun = Math.max(bestRun, run); } else run = 0; }
+    let biggest: { gd: number; gf: number; sc: string } | null = null, run = 0, bestRun = 0;
+    // Ties on goal difference break on GOALS SCORED: 2-0 and 3-1 are both +2, but a 3-1 is the better
+    // story and this is the one line the player reads to remember his season. It reported "Biggest win
+    // 2-0" for a season containing a 3-1 derby. (PT-1004)
+    for (const r of played) {
+      const gd = r.myGoals - r.oppGoals;
+      if (gd > 0 && (!biggest || gd > biggest.gd || (gd === biggest.gd && r.myGoals > biggest.gf))) {
+        biggest = { gd, gf: r.myGoals, sc: `${r.myGoals}-${r.oppGoals}` };
+      }
+      if (gd >= 0) { run++; bestRun = Math.max(bestRun, run); } else run = 0;
+    }
     const records = played.length ? `<div class="sf-records">📋 ${biggest ? `Biggest win ${biggest.sc}` : 'No win yet'} · Longest unbeaten ${bestRun}</div>` : '';
     // surface the star's rating + make the star→club link explicit (PT-21: his contribution was invisible)
     const starP0 = m.starId ? this.club.players.find((p) => p.id === m.starId) : undefined;
