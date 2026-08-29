@@ -1355,11 +1355,14 @@ export class Career {
     // find the tag, play it, win. Card rarity already drove which STATS grew but was ignored by the outcome,
     // so a common and an epic card played identically. Now a common card played into its demand reads Solid
     // and Brilliant has to be earned, which makes holding an epic for a big moment a real choice. (PT-700/151/1407)
+    // Raised from 0.10 with the PT-158 energy fix: a permanent fatigue penalty of up to -0.12 had been
+    // silently doing much of the difficulty work, and removing it lifted Solid+ from 71% to 85%. Difficulty
+    // now comes from the intended lever rather than from the player being exhausted for 77% of his career.
     // A multiplier compounded badly: top demand is normalised to 0.78, so scaling THAT by 0.72 put a
     // well-played common card at 0.56 — on the Solid line. A flat penalty keeps the scale and still
     // separates the tiers: common 0.68, rare 0.73, epic 0.78 before nerves.
     const quality = (cardPower(card) - 1) / 2;                  // common 0 · rare 0.5 · epic 1
-    const base = f - 0.10 * (1 - quality);
+    const base = f - 0.15 * (1 - quality);
     const success = clamp(base + (this.rng() - 0.5) * variance + form + bigGame + coaching - fatigue, 0, 1);
     // did the played card carry ANY tag the moment actually called for (primary OR secondary)? — so a
     // called-for-but-secondary tag is never branded "wrong", only partial (PT-44)
@@ -1471,7 +1474,7 @@ export class Career {
     this.life('fans',      Math.round(perf * (kind === 'match' ? 1.1 : 0.6) + rev('fans')));
     this.life('sponsors',  Math.round(Math.max(0, perf) * 0.5 + rev('sponsors') * 0.5));
     if (social) this.life('partner', Math.round(perf * 1.3 + rev('partner')));                // personal life tended in social moments
-    this.energy = clamp(this.energy - (choice.stakes >= 3 ? 8 : big ? 6 : 4), 0, 100); // bigger moments drain more — energy is a running resource across the chapter
+    this.energy = clamp(this.energy - (choice.stakes >= 3 ? 7 : big ? 5 : 3), 0, 100); // bigger moments drain more — energy is a running resource across the chapter (eased with the summer-restore fix, PT-158)
   }
 
   /** How the chapter's relationships PAY OFF or BITE (deterministic — reads the end-of-chapter meters,
@@ -1513,7 +1516,14 @@ export class Career {
   private advanceSeasonEvent() {
     const conseq = this.computeConsequences(bandAt(this.turn - 1).band.name); // read the chapter that just ended
     this.chapterConsequences = conseq.notes;
-    this.energy = clamp(this.energy + 34 + this.energyRecoveryBonus + conseq.energy, 0, 100);  // a summer restores some energy (+ good living), but not a full reset — it stays a resource
+    // A SUMMER HAS TO ROUGHLY OFFSET A SEASON. A chapter is ~17 turns draining 4-8 each, so ~75-95 a
+    // chapter — against a flat +34 restore, which meant energy fell off a cliff and never came back:
+    // measured, it hit ZERO by turn 40 and stayed there for the remaining 80 turns, with 77% of a career
+    // spent under the TIRED line carrying a permanent success penalty and no lever to fix it. Restoring to
+    // a FLOOR keeps energy a real within-chapter resource (you still end a hard season on fumes) without
+    // letting the career fall into a hole it can never climb out of. (PT-158)
+    const restored = this.energy + 34 + this.energyRecoveryBonus + conseq.energy;
+    this.energy = clamp(Math.max(restored, 85 + this.energyRecoveryBonus), 0, 100);
     this.earnings += conseq.earn; this.marketBonus += conseq.market;
     this.life('partner', -6); this.life('family', -4); this.life('school', -3); // relationships drift over a summer if untended
     this.demandBias = null;

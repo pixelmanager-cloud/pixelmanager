@@ -192,12 +192,19 @@ const TALK_FIERY = new Set(['biggame', 'leader', 'workhorse', 'maverick', 'showm
 const $ = (id: string) => document.getElementById(id)!;
 
 // Brief retro toast near top-centre; the CSS animation fades it out after ~2s.
+let toastTimer: ReturnType<typeof setTimeout> | undefined;
 function toast(msg: string) {
   const el = $('toast');
   el.textContent = msg;
   el.classList.remove('show');
   void el.offsetWidth; // restart the animation if a toast is already showing
   el.classList.add('show');
+  // CLEAR THE TEXT once it has faded. The CSS animation takes it to opacity 0, so a player stops seeing it
+  // — but textContent stayed set forever, so a stale "cannot buy that" was still IN THE DOM many turns
+  // later, including on the manager-handoff screen. Anything reading the page rather than the pixels (a
+  // screen reader, an automated playtest) sees a message the game is no longer showing. (PT-1405)
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { el.classList.remove('show'); el.textContent = ''; }, 2200);
 }
 
 // Retro pixel spinner used while the hub fetches data (see .pixel-loader in index.html).
@@ -2465,7 +2472,10 @@ class Game {
       + `<span class="cg-m-bar"><b style="width:${m.value}%;background:${meterColor(m.value)}"></b></span></div>`).join('');
     const low = s.energy != null && s.energy < 35;
     const energy = s.energy != null
-      ? `<div class="cg-energy${low ? ' low' : ''}" title="Energy ${s.energy}/100${low ? ' — tired: moments suffer until you rest' : ''}"><span>⚡ ENERGY${low ? ' · TIRED' : ''}</span><span class="cg-e-bar"><b style="width:${s.energy}%"></b></span></div>`
+      // The NUMBER, not just a word. Energy was readable only as "TIRED" or nothing, with the figure hidden
+      // in a title attribute nobody hovers — so a player could not tell 34 from 4, or see a summer's rest
+      // working. It also names the consequence and the lever, since it silently taxes every moment. (PT-158)
+      ? `<div class="cg-energy${low ? ' low' : ''}" title="Energy ${s.energy}/100${low ? ' — tired: moments suffer until he rests' : ''}"><span>⚡ ENERGY ${s.energy}<span class="cg-e-max">/100</span>${low ? ' · TIRED — moments suffer; rest in the summer' : ''}</span><span class="cg-e-bar"><b style="width:${s.energy}%"></b></span></div>`
       : '';
     const money = s.earnings != null ? `<div class="cg-money">💷 ${s.earnings.toLocaleString()}</div>` : '';
     return `<div class="cg-dash">${energy}${money}<div class="cg-meters">${meters}</div></div>`;

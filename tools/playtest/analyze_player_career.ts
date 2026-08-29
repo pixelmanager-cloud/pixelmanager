@@ -87,7 +87,13 @@ function summarise(label: string, rows: Row[]) {
     return { sp: +pct(seg.map((v) => v >= SOLID)), br: +pct(seg.map((v) => v >= BRILLIANT)) };
   });
   console.log(`  by quarter:  Solid+ ${q.map((x) => `${x.sp}%`).join(' → ')}   Brilliant ${q.map((x) => `${x.br}%`).join(' → ')}`);
-  const drift = Math.max(...q.map((x) => x.br)) - Math.min(...q.map((x) => x.br));
+  // Drift is measured over the MATURE career (quarters 2-4), not all four. A ten-year-old with a deck of
+  // common cards SHOULD find Brilliant rare, and growing into a player who produces it is the entire arc —
+  // measured 9% → 22% → 28% → 27%, which is that ramp, not decay. PT-1001 described the opposite failure:
+  // the back half drifting back toward a near-guaranteed Brilliant (48%+). Including Q1 would flag the
+  // growth curve as a bug and push me to flatten the one part of the curve that should not be flat. The
+  // late-career ceiling is held separately by "Brilliant stays special".
+  const drift = Math.max(...q.slice(1).map((x) => x.br)) - Math.min(...q.slice(1).map((x) => x.br));
   console.log(`  back-to-back same scenario: ${(100 * b2b / Math.max(1, tot)).toFixed(1)}%   avg distinct scenarios/career: ${(distinct / rows.length).toFixed(0)}`);
   return { drift, solidPlus: +solidPlus, brilliant: +brilliant, poor: +poor, rivalBeat: +rivalBeat, contested: +contested, badHand: +badHand, avgSucc: avg(allSucc) };
 }
@@ -120,7 +126,7 @@ const checks: Array<[string, boolean, string]> = [
   // guards are the two ceilings above; this one exists so failure stays VISIBLE rather than impossible.
   ['failure is still possible for skilled play (Poor ≥ 3%)', sk.poor >= 3, `${sk.poor}%`],
   ['Brilliant stays special (≤ 45% of turns)', sk.brilliant <= 45, `${sk.brilliant}%`],
-  ['difficulty does not decay late (Brilliant spread across quarters ≤ 18pts)', sk.drift <= 18, `${sk.drift}pts`],
+  ['difficulty does not decay late (Brilliant spread across the mature career ≤ 12pts)', sk.drift <= 12, `${sk.drift}pts (Q2-Q4)`],
   ['skill clearly beats random (Solid+ gap ≥ 20pts)', sk.solidPlus - rn.solidPlus >= 20, `${sk.solidPlus}% vs ${rn.solidPlus}%`],
   // Reading the moment PROPERLY has to beat half-reading it, or the decision is cosmetic. (PT-706)
   // As a RATIO, not a point gap: an absolute threshold is scale-dependent, so making Brilliant rarer —
