@@ -61,6 +61,10 @@ export interface MgrArcWhen {
   requiresTag?: string; forbidsTag?: string;
   /** only for these manager temperaments — a disciplinarian's dressing-room crisis is not a chancer's */
   temper?: MgrTemper[];
+  /** FACILITIES AS CONTENT SOURCES (user decision): an arc can require a facility at a level, so a good
+   *  academy generates youth stories, a community trust opens local ones, and a data department changes
+   *  what your analysts notice. Upgrading stops being a multiplier and starts unlocking material. */
+  facility?: { key: string; min: number };
 }
 
 export interface ManagerArc {
@@ -107,6 +111,8 @@ export interface MgrSituation {
   hasWonderkid: boolean; hasVeteran: boolean; hasUnhappy: boolean; squadSize: number;
   tags: ReadonlySet<string>;
   temper?: MgrTemper;
+  /** current facility levels, so `when.facility` can gate on them */
+  facilities?: Record<string, number>;
 }
 
 export function arcFits(a: ManagerArc, s: MgrSituation): boolean {
@@ -122,6 +128,7 @@ export function arcFits(a: ManagerArc, s: MgrSituation): boolean {
   if (w.requiresTag && !s.tags.has(w.requiresTag)) return false;
   if (w.forbidsTag && s.tags.has(w.forbidsTag)) return false;
   if (w.temper && s.temper && !w.temper.includes(s.temper)) return false;
+  if (w.facility && (s.facilities?.[w.facility.key] ?? 1) < w.facility.min) return false;
   switch (w.needs) {
     case 'wonderkid': return s.hasWonderkid;
     case 'veteran': return s.hasVeteran;
