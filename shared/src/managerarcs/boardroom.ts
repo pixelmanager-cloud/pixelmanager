@@ -20,7 +20,7 @@ export const BOARDROOM_ARCS: ManagerArc[] = [
   },
   {
     id: 'mgr-sell-to-survive', title: 'The Accounts', icon: '📉', category: 'boardroom',
-    when: { minSeason: 3, maxCoins: 200 } as any, weight: 3, first: 'open',
+    when: { minSeason: 3, maxCoins: 200 }, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',

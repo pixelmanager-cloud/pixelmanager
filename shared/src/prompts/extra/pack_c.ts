@@ -694,7 +694,7 @@ export const CHILD_SETUP_C: Bank = {
     'The other team have scored three in ten minutes and his own goalkeeper has stopped speaking to anybody at all.',
     'They are winning comfortably and the coach wants everybody to get a game.',
     'The last minute of a game that has to be won to go top.',
-    'Nobody wants the ball.',
+    'Nobody is asking for it.',
     'A team-mate has been sent off and they have half an hour to survive.',
     'He has scored twice and there is a hat-trick chance coming.',
     'It is the last game of the season, nothing rests on it, and the coach has told them to enjoy themselves for once.',
