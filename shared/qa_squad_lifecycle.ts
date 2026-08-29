@@ -4,7 +4,7 @@
 // that feel true and fair. Pure + deterministic: no rng, no wall-clock.
 import { mintSquadPlayer, overall } from './src/teams.js';
 import {
-  advanceSquad, advanceSquadPlayer, signSquadContract, squadSeasonsLeft, squadRetireAge, SQUAD_GROWTH_AGE,
+  advanceSquad, advanceSquadPlayer, signSquadContract, squadSeasonsLeft, squadRetireAge, SQUAD_GROWTH_AGE, squadStorylines,
 } from './src/squad.js';
 import { squadSaleValue, squadSeasonWage, squadRenewCost, sellValue, SQUAD_PEAK_AGE, SQUAD_CONTRACT_SEASONS } from './src/transfermarket.js';
 import { moraleEffects } from './src/morale.js';
@@ -91,6 +91,20 @@ for (let i = 0; i < 40; i++) {
 }
 check(withTrait > 0, `some high-quality forwards earn a trait (${withTrait}/40 clinical)`);
 check(withTrait === 0 || checkedTraits / withTrait >= 15, 'a Clinical Finisher really does have elite shooting (the trait bumped the stat)');
+
+console.log('=== 9. squad storylines are earned, varied and deterministic (Phase 4) ===');
+const storySquad = Array.from({ length: 14 }, (_, i) => signSquadContract({ ...mintSquadPlayer(`z${i}`, (['GK','DF','MF','FW'] as const)[i % 4], 8 + (i % 7), 6000 + i), age: 18 + (i * 17) % 16 }, 1));
+const zxi = new Set(storySquad.slice(0, 11).map((p) => p.id));
+const rollA = advanceSquad(storySquad, 2, 2, { xi: zxi, goodSeason: true });
+const linesA = squadStorylines(rollA, 2);
+const linesB = squadStorylines(advanceSquad(storySquad, 2, 2, { xi: zxi, goodSeason: true }), 2);
+check(JSON.stringify(linesA) === JSON.stringify(linesB), 'storylines are deterministic (same season = same story)');
+check(linesA.length <= 3, `storylines stay rare (${linesA.length} <= 3 a season)`);
+check(new Set(linesA.map((l) => l.slice(l.indexOf(' ')))).size === linesA.length || linesA.length < 2, 'no two players get the same sentence in one season');
+check(linesA.every((l) => /[.!]$/.test(l)), 'every storyline is a complete sentence');
+// a settled squad in a quiet season should not manufacture drama
+const calm = advanceSquad([signSquadContract({ ...mintSquadPlayer('calm', 'MF', 12, 4), age: 27, morale: 65 }, 1)], 1, 1, { xi: new Set(['calm']), goodSeason: true });
+check(squadStorylines(calm, 1).length === 0, 'an ordinary season for an ordinary player produces no story');
 
 console.log(failures ? `\n✗ ${failures} squad-lifecycle check(s) failed` : '\n✓ all squad-lifecycle checks passed');
 process.exit(failures ? 1 : 0);

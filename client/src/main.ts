@@ -1226,6 +1226,10 @@ class Game {
     if (!r) return '';
     const nm = (x: any) => `${x.name} <span class="sq-meta">${x.role} · ${x.age}</span>`;
     const rows: string[] = [];
+    if (r.storylines?.length) {
+      // the human headline of the season, above the numbers (Phase 4)
+      rows.push(`<div class="sq-story">` + r.storylines.map((s: string) => `<div class="sq-story-line">📣 ${s}</div>`).join('') + `</div>`);
+    }
     if (r.risers?.length) {
       rows.push(`<div class="sq-row up"><span class="sq-lbl">📈 Improved</span><span class="sq-list">`
         + r.risers.slice(0, 5).map((x: any) => `${nm(x)} <b>${x.from}→${x.to}</b>`).join(' · ')

@@ -104,3 +104,110 @@ export function advanceSquad(players: Player[], season: number, trainingLvl = 1,
   }
   return { players: out, changes, wageBill, retired, expiring };
 }
+
+// ── SQUAD STORYLINES (Phase 4) ────────────────────────────────────────────────────────────────────
+// A number moving on a table isn't a story. These are the short beats that turn a season's stat changes
+// into things that happened to PEOPLE — the kid who suddenly arrived, the veteran whose legs went, the
+// one-club man quietly re-signing, the star a rival is sniffing around. Every beat is EARNED: it fires
+// only when the player's real state (age, form swing, morale, contract) justifies it, so it reads as
+// reporting rather than flavour text. Deterministic — a pure hash of (id, season), no rng.
+function pick(list: readonly string[], id: string, season: number): string {
+  let h = 2166136261 >>> 0;
+  const s = `${id}:${season}`;
+  for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return list[(h >>> 0) % list.length];
+}
+const BREAKOUT = [
+  'has come back a different player — training staff noticed inside a week.',
+  'has kicked on hard over the summer; suddenly he looks like he belongs.',
+  'spent the year improving faster than anyone at the club.',
+  'has gone from squad filler to first name on the sheet in ten months.',
+  'grew into himself this season, and it shows in everything he does.',
+  'is barely the same player who turned up last August.',
+];
+const ONE_TO_WATCH = [
+  'is starting to look like a real prospect.',
+  'is getting better every month — worth building around.',
+  'has quietly become one of the best young players here.',
+  'is one to keep hold of; the improvement curve is steep.',
+  'looks like he has another level in him yet.',
+  'is young, and already better than his age suggests.',
+];
+const SLUMP = [
+  'has had a season to forget; the sharpness isn\'t there.',
+  'is going the wrong way, and he knows it.',
+  'looked half a yard off it all year.',
+  'never got going this season — worth finding out why.',
+  'has lost something, and it hasn\'t come back yet.',
+  'spent the year chasing the form he had last spring.',
+];
+const TWILIGHT = [
+  'is nearing the end — the legs are going, though the head is still good.',
+  'can\'t do it twice a week any more, and he\'d tell you so himself.',
+  'is in the last of it now. Worth deciding what he\'s for.',
+  'has one, maybe two years left in those legs.',
+  'is running on know-how rather than pace these days.',
+  'is winding down. He\'s earned a say in how it ends.',
+];
+const LOYAL = [
+  'has been here longer than anyone and has never once made a fuss.',
+  'is the sort the dressing room is built on. He\'ll sign whatever\'s put in front of him.',
+  'wants to stay. That counts for something.',
+  'has never given the club a moment\'s trouble in all his years here.',
+  'would run through a wall for this club, and probably has.',
+  'is happy here, and says so to anyone who asks.',
+];
+const WANTS_AWAY = [
+  'is unsettled, and other clubs will have noticed.',
+  'has stopped looking happy about being here.',
+  'wants away — or at least wants to be asked to stay.',
+  'is going through the motions. Something needs saying.',
+  'has one eye elsewhere, and it\'s showing on the pitch.',
+  'isn\'t enjoying it any more, and hasn\'t hidden it well.',
+];
+const COVETED = [
+  'is being watched. Somebody will come in for him if his deal runs down.',
+  'has scouts at games now. That\'s the price of him being good.',
+  'is the one a rival would take tomorrow.',
+  'is attracting interest the club can\'t pretend isn\'t there.',
+  'will have offers if this contract gets close to running out.',
+  'is exactly the player other clubs go looking for.',
+];
+
+/** A short "what happened to him this season" line for a squad player, or null if his season was ordinary.
+ *  Fires at most one beat per player, ranked so the most notable thing wins. */
+export function squadStoryline(ch: SquadSeasonChange, season: number, expiringSoon: boolean): string | null {
+  const p = ch.player;
+  const age = p.age ?? 24;
+  const delta = ch.ovrAfter - ch.ovrBefore;
+  const morale = ch.moraleAfter;
+  if (ch.retired) return null;                                    // his send-off is already in the report
+  if (delta >= 2 && age <= 23) return pick(BREAKOUT, p.id, season);
+  if (delta <= -2 && age >= 31) return pick(TWILIGHT, p.id, season);
+  if (delta <= -2) return pick(SLUMP, p.id, season);
+  if (morale <= 30) return pick(WANTS_AWAY, p.id, season);
+  if (expiringSoon && ch.ovrAfter >= 14) return pick(COVETED, p.id, season);
+  if (delta >= 1 && age <= 21) return pick(ONE_TO_WATCH, p.id, season);
+  if (morale >= 85 && age >= 28) return pick(LOYAL, p.id, season);
+  return null;
+}
+
+/** The season's squad storylines, most notable first and capped so they stay special. */
+export function squadStorylines(roll: SquadRollover, season: number, max = 3): string[] {
+  const expiring = new Set(roll.expiring.map((p) => p.id));
+  const rank = (ch: SquadSeasonChange) => Math.abs(ch.ovrAfter - ch.ovrBefore) * 10 + (100 - ch.moraleAfter) / 10;
+  const chosen = roll.changes
+    .filter((ch) => !ch.retired)
+    .map((ch) => ({ ch, line: squadStoryline(ch, season, expiring.has(ch.player.id)) }))
+    .filter((x) => !!x.line)
+    .sort((a, b) => rank(b.ch) - rank(a.ch));
+  // Two players can legitimately have the same KIND of season, but printing the same sentence twice in one
+  // report reads like a bug. Keep the first, and drop a later duplicate of the identical line.
+  const out: string[] = []; const seen = new Set<string>();
+  for (const x of chosen) {
+    if (seen.has(x.line!)) continue;          // squadStoryline returns the sentence alone, so this compares cleanly
+    seen.add(x.line!); out.push(`${x.ch.player.name} ${x.line!}`);
+    if (out.length >= max) break;
+  }
+  return out;
+}
