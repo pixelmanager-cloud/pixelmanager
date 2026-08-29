@@ -56,10 +56,26 @@ between them, and the reveal is a toast. Worse, **the upgrade path is gated behi
 the code says *"'base' (no NFT) gets nothing; Gold is a real edge"*, and since web3 was cut every player is
 permanently on the tier that gets nothing. The dial does not turn.
 
-### 5. Backroom staff — decorative by design.
-`staff.ts` states it outright: *"no mechanics, no effect on results or tactics."* You spend 350 coins on an
-Attacking Coach and nothing changes. It is a shop that sells nothing. 86 flavour lines exist; they are
-attached to no consequence.
+### 5. Backroom staff — I GOT THIS WRONG. See the correction below.
+~~`staff.ts` states it outright: "no mechanics, no effect on results or tactics." You spend 350 coins on an
+Attacking Coach and nothing changes.~~
+
+**CORRECTION (2026-08-30).** This finding was wrong, and the user made a decision on the strength of it.
+There are TWO separate things called staff and I conflated them:
+
+- **The BACKROOM_STAFF shop** (`client/src/main.ts:37`) — Fitness Coach, Attacking Coach, Assistant
+  Manager. These **DO have real effects**, in both simulated and live matches: `simEdge` adds +0.4 club
+  strength each (`main.ts:1930`), and a live match applies `conditioning ×0.95`, `homeBoost ×1.03` and
+  `×1.02/×0.98` respectively (`main.ts:2263`). The shop works.
+- **`shared/src/staff.ts`** — a completely different module: a seeded backroom CAST (an assistant, a head
+  scout, a fitness coach, a goalkeeping coach) with names, personalities and flavour quips. THIS is what
+  carries the "no mechanics" comment, and correctly so — it is a narrative cast, not an upgrade.
+
+I read the header comment of one file and attributed it to the other. The real gap is smaller and
+different: the shop's effects are **invisible** (nothing tells the player what 350 coins bought), and the
+seeded CAST is **unused** — four named characters with personalities who never appear in anything. The
+useful work is to surface the first and give the second a job in the new narration and arc systems, not to
+build effects that already exist.
 
 ### 6. The season's end — 253 lines carrying the whole verdict.
 Board verdict 65, diary 188. Once a season, judging everything you did. The board bank is ~5 lines per mood.
