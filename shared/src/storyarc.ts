@@ -58,13 +58,33 @@ export function pickArcStart(seed: number, turn: number, fired: ReadonlySet<stri
   const eligible = ARCS.filter((a) => !fired.has(a.id) && turn >= a.minTurn && turn <= a.maxTurn);
   if (!eligible.length) return null;
   const gate = h01(seed >>> 0, turn * 131 + 7, 0x51a3);
-  const baseRate = 0.07;                          // ~1 arc-start check in ~14 turns passes (scales with library size)
+  // Tuned for the 120-turn career. Was 0.07 across 202 turns (~11 arcs); raised here so a SHORTER generation
+  // carries MORE story, not less — arcs are additive (an arc beat doesn't consume a card-play turn), so a
+  // higher rate buys narrative density without shrinking the card game underneath it.
+  const baseRate = 0.17;
   if (gate >= baseRate) return null;
-  const weights = eligible.map((a) => a.weight * (a.rare ? 0.4 : 1));
+  // CATEGORY-BALANCED PICK: choose a CATEGORY first, then an arc inside it. Picking straight from the flat
+  // weighted pool let one category crowd out the rest — relationship arcs (widest windows, earliest start)
+  // averaged ~4 per career while SIGNATURE arcs, all 34 of which carry `rare`, totalled 3.5% of the pool and
+  // averaged 0.3, so most playthroughs never saw a single one. Balancing by category makes every playthrough
+  // range across saga/crisis/signature/relationship/triumph/offpitch, which is where the variety is felt.
+  const byCat = new Map<string, StoryArc[]>();
+  for (const a of eligible) { const l = byCat.get(a.category) ?? []; l.push(a); byCat.set(a.category, l); }
+  const cats = [...byCat.keys()].sort(); // sorted → deterministic regardless of ARCS order
+  // sqrt damps the advantage of a category that happens to have more arcs eligible right now, without
+  // ignoring depth entirely (a category with real content available is still likelier than a near-empty one)
+  const catW = cats.map((c) => Math.sqrt(byCat.get(c)!.length));
+  const catTotal = catW.reduce((s, w) => s + w, 0);
+  let cr = h01(seed >>> 0, turn * 613 + 29, 0x7f11) * catTotal;
+  let cat = cats[cats.length - 1];
+  for (let i = 0; i < cats.length; i++) { cr -= catW[i]; if (cr <= 0) { cat = cats[i]; break; } }
+  const pool = byCat.get(cat)!;
+  // inside the category, `rare` still means rare — it just no longer suppresses a whole category
+  const weights = pool.map((a) => a.weight * (a.rare ? 0.4 : 1));
   const total = weights.reduce((s, w) => s + w, 0);
   let r = h01(seed >>> 0, turn * 977 + 13, 0x2bd1) * total;
-  for (let i = 0; i < eligible.length; i++) { r -= weights[i]; if (r <= 0) return eligible[i].id; }
-  return eligible[0].id;
+  for (let i = 0; i < pool.length; i++) { r -= weights[i]; if (r <= 0) return pool[i].id; }
+  return pool[0].id;
 }
 
 /** Substitute story placeholders (currently the seeded rival name) into a beat's prose. */

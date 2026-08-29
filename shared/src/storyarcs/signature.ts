@@ -4,7 +4,7 @@ import type { StoryArc } from '../storyarc.js';
 export const SIGNATURE_ARCS: StoryArc[] = [
   {
     id: 'wonder-goal', title: 'The Goal They’ll Never Forget', icon: '⚡', category: 'signature',
-    minTurn: 100, maxTurn: 200, weight: 1, rare: true, first: 'open',
+    minTurn: 60, maxTurn: 119, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -18,7 +18,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'last-minute-winner', title: 'The 96th Minute', icon: '⏱️', category: 'signature',
-    minTurn: 110, maxTurn: 200, weight: 1, rare: true, first: 'open',
+    minTurn: 66, maxTurn: 119, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -32,7 +32,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-hat-trick', title: 'The Match Ball', icon: '🎩', category: 'signature',
-    minTurn: 100, maxTurn: 200, weight: 1, rare: true, first: 'open',
+    minTurn: 60, maxTurn: 119, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -46,7 +46,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-title-decider', title: 'Champions by a Whisker', icon: '🏆', category: 'signature',
-    minTurn: 120, maxTurn: 200, weight: 1, rare: true, first: 'open',
+    minTurn: 72, maxTurn: 119, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -60,7 +60,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-giant-killing', title: 'The Cup Upset', icon: '🗡️', category: 'signature',
-    minTurn: 100, maxTurn: 200, weight: 1, rare: true, first: 'open',
+    minTurn: 60, maxTurn: 119, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -74,7 +74,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-bicycle-kick', title: 'The Overhead', icon: '🚲', category: 'signature',
-    minTurn: 100, maxTurn: 200, weight: 1, rare: true, first: 'open',
+    minTurn: 60, maxTurn: 119, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -88,7 +88,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-shootout-hero', title: 'The Spot Where Legends Stand', icon: '🥅', category: 'signature',
-    minTurn: 110, maxTurn: 200, weight: 1, rare: true, first: 'open',
+    minTurn: 66, maxTurn: 119, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -102,7 +102,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-wonder-assist', title: 'The Pass', icon: '🎯', category: 'signature',
-    minTurn: 100, maxTurn: 200, weight: 1, rare: true, first: 'open',
+    minTurn: 60, maxTurn: 119, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -116,7 +116,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-debut-fairytale', title: 'The Boy Off the Bench', icon: '✨', category: 'signature',
-    minTurn: 100, maxTurn: 180, weight: 1, rare: true, first: 'open',
+    minTurn: 60, maxTurn: 107, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -130,7 +130,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-halfway-lob', title: 'From His Own Half', icon: '🌙', category: 'signature',
-    minTurn: 100, maxTurn: 200, weight: 1, rare: true, first: 'open',
+    minTurn: 60, maxTurn: 119, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -144,7 +144,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-solo-dribble', title: 'The Run', icon: '🏃', category: 'signature',
-    minTurn: 105, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 63, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -158,7 +158,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-freekick-thunderbolt', title: 'Over The Wall', icon: '⚡', category: 'signature',
-    minTurn: 105, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 63, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -172,7 +172,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-goalline-clearance', title: 'Off The Line', icon: '🧱', category: 'signature',
-    minTurn: 100, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 60, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -186,7 +186,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-penalty-save', title: 'The Save', icon: '🧤', category: 'signature',
-    minTurn: 105, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 63, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -200,7 +200,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-diving-header', title: 'The Near Post', icon: '🎯', category: 'signature',
-    minTurn: 105, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 63, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -214,7 +214,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-nutmeg-finish', title: 'Through The Legs', icon: '🪄', category: 'signature',
-    minTurn: 105, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 63, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -228,7 +228,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-rabona-assist', title: 'The Rabona', icon: '🩰', category: 'signature',
-    minTurn: 110, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 66, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -242,7 +242,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-forty-yard-screamer', title: 'From Forty', icon: '🚀', category: 'signature',
-    minTurn: 105, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 63, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -256,7 +256,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-backheel-finish', title: 'The Backheel', icon: '🎭', category: 'signature',
-    minTurn: 110, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 66, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -270,7 +270,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-one-man-counter', title: 'The Break', icon: '💨', category: 'signature',
-    minTurn: 105, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 63, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -284,7 +284,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-captain-rally', title: 'A Man Down', icon: '🎖️', category: 'signature',
-    minTurn: 120, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 72, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -298,7 +298,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-giant-header', title: 'Rising Above The Giant', icon: '🗼', category: 'signature',
-    minTurn: 105, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 63, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -312,7 +312,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-panenka-openplay', title: 'The Dink', icon: '🥄', category: 'signature',
-    minTurn: 110, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 66, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -326,7 +326,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-first-touch-volley', title: 'The Long Ball', icon: '🎿', category: 'signature',
-    minTurn: 105, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 63, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -340,7 +340,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-signature-curl', title: 'His Corner', icon: '🌀', category: 'signature',
-    minTurn: 110, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 66, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -354,7 +354,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-scorpion-kick', title: 'The Scorpion', icon: '🦂', category: 'signature',
-    minTurn: 110, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 66, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -368,7 +368,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-chest-volley-turn', title: 'On The Turn', icon: '🌪️', category: 'signature',
-    minTurn: 105, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 63, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -382,7 +382,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-fingertip-bar', title: 'Onto The Bar', icon: '🖐️', category: 'signature',
-    minTurn: 105, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 63, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -396,7 +396,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-double-save', title: 'The Double Save', icon: '🧤', category: 'signature',
-    minTurn: 110, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 66, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -410,7 +410,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-last-man-tackle', title: 'The Last Man', icon: '🛡️', category: 'signature',
-    minTurn: 105, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 63, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -424,7 +424,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-scrappy-equaliser', title: 'The Scramble', icon: '🧨', category: 'signature',
-    minTurn: 110, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 66, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -438,7 +438,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-clearance-goal', title: 'The Hoof', icon: '🥾', category: 'signature',
-    minTurn: 105, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 63, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -452,7 +452,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-stepover-assist', title: 'The Stepover', icon: '🕺', category: 'signature',
-    minTurn: 105, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 63, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -466,7 +466,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-rain-solo', title: 'The Deluge', icon: '🌧️', category: 'signature',
-    minTurn: 110, maxTurn: 205, weight: 1, rare: true, first: 'open',
+    minTurn: 66, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',

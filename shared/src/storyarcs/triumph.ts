@@ -4,7 +4,7 @@ import type { StoryArc } from '../storyarc.js';
 export const TRIUMPH_ARCS: StoryArc[] = [
   {
     id: 'cup-final-day', title: 'The Final', icon: '🏆', category: 'triumph',
-    minTurn: 100, maxTurn: 195, weight: 2, first: 'open',
+    minTurn: 60, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -26,7 +26,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-promotion', title: 'Up We Go', icon: '🎉', category: 'triumph',
-    minTurn: 95, maxTurn: 175, weight: 2, first: 'open',
+    minTurn: 57, maxTurn: 105, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -48,7 +48,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-player-of-year', title: 'Player of the Year', icon: '🌟', category: 'triumph',
-    minTurn: 110, maxTurn: 185, weight: 2, first: 'open',
+    minTurn: 66, maxTurn: 110, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -70,7 +70,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-hundredth-goal', title: 'The Hundredth', icon: '💯', category: 'triumph',
-    minTurn: 120, maxTurn: 195, weight: 2, first: 'open',
+    minTurn: 72, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -92,7 +92,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-first-cap', title: 'The First Cap', icon: '🎽', category: 'triumph',
-    minTurn: 100, maxTurn: 165, weight: 2, first: 'open',
+    minTurn: 60, maxTurn: 99, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -114,7 +114,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-captain-country', title: 'The Armband', icon: '🎖️', category: 'triumph',
-    minTurn: 140, maxTurn: 195, weight: 2, first: 'open',
+    minTurn: 85, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -136,7 +136,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-club-record', title: 'Into the Books', icon: '📖', category: 'triumph',
-    minTurn: 130, maxTurn: 195, weight: 2, first: 'open',
+    minTurn: 78, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -158,7 +158,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-testimonial', title: 'The Testimonial', icon: '👏', category: 'triumph',
-    minTurn: 165, maxTurn: 200, weight: 2, first: 'open',
+    minTurn: 99, maxTurn: 119, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -180,7 +180,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-silence-doubters', title: 'Silence the Doubters', icon: '🤫', category: 'triumph',
-    minTurn: 105, maxTurn: 190, weight: 2, first: 'open',
+    minTurn: 63, maxTurn: 113, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -202,7 +202,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-league-title', title: 'Champions', icon: '🏆', category: 'triumph',
-    minTurn: 120, maxTurn: 200, weight: 3, first: 'open',
+    minTurn: 72, maxTurn: 119, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -224,7 +224,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-european-night', title: 'European Night', icon: '⭐', category: 'triumph',
-    minTurn: 135, maxTurn: 205, weight: 2, first: 'open',
+    minTurn: 82, maxTurn: 123, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -246,7 +246,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-team-of-season', title: 'Team of the Season', icon: '🏅', category: 'triumph',
-    minTurn: 110, maxTurn: 190, weight: 2, first: 'open',
+    minTurn: 66, maxTurn: 113, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -268,7 +268,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-golden-boot', title: 'The Golden Boot', icon: '👟', category: 'triumph',
-    minTurn: 120, maxTurn: 195, weight: 2, first: 'open',
+    minTurn: 72, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -290,7 +290,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-domestic-cup', title: 'The Underdog Cup', icon: '🥇', category: 'triumph',
-    minTurn: 100, maxTurn: 185, weight: 2, first: 'open',
+    minTurn: 60, maxTurn: 110, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -312,7 +312,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-first-senior-goal', title: 'The First One', icon: '⚽', category: 'triumph',
-    minTurn: 40, maxTurn: 120, weight: 3, first: 'open',
+    minTurn: 23, maxTurn: 72, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -334,7 +334,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-first-eleven', title: 'The First XI', icon: '🧢', category: 'triumph',
-    minTurn: 115, maxTurn: 180, weight: 2, first: 'open',
+    minTurn: 69, maxTurn: 107, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -356,7 +356,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-tournament-final', title: 'The Summer Final', icon: '🌍', category: 'triumph',
-    minTurn: 130, maxTurn: 195, weight: 2, first: 'open',
+    minTurn: 78, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -378,7 +378,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-leader-award', title: 'Leader of the League', icon: '📣', category: 'triumph',
-    minTurn: 150, maxTurn: 205, weight: 2, first: 'open',
+    minTurn: 90, maxTurn: 123, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -400,7 +400,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-appearance-milestone', title: 'Five Hundred', icon: '🔢', category: 'triumph',
-    minTurn: 155, maxTurn: 205, weight: 2, first: 'open',
+    minTurn: 93, maxTurn: 123, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -422,7 +422,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-comeback-poty', title: 'Back from the Dark', icon: '🌅', category: 'triumph',
-    minTurn: 130, maxTurn: 200, weight: 2, first: 'open',
+    minTurn: 78, maxTurn: 119, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -444,7 +444,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-homecoming', title: 'Hometown Hero', icon: '🏙️', category: 'triumph',
-    minTurn: 125, maxTurn: 200, weight: 2, first: 'open',
+    minTurn: 75, maxTurn: 119, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -466,7 +466,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-fans-player', title: 'The People\'s Choice', icon: '💙', category: 'triumph',
-    minTurn: 110, maxTurn: 195, weight: 2, first: 'open',
+    minTurn: 66, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -488,7 +488,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-first-trophy', title: 'First Silver', icon: '🥈', category: 'triumph',
-    minTurn: 120, maxTurn: 200, weight: 3, first: 'open',
+    minTurn: 72, maxTurn: 119, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -510,7 +510,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-season-record', title: 'The Record Haul', icon: '📈', category: 'triumph',
-    minTurn: 115, maxTurn: 195, weight: 2, first: 'open',
+    minTurn: 69, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -532,7 +532,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-world-crown', title: 'On Top of the World', icon: '🌐', category: 'triumph',
-    minTurn: 140, maxTurn: 200, weight: 3, first: 'open',
+    minTurn: 85, maxTurn: 119, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -554,7 +554,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-treble', title: 'The Clean Sweep', icon: '🧹', category: 'triumph',
-    minTurn: 135, maxTurn: 200, weight: 2, first: 'open',
+    minTurn: 82, maxTurn: 119, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -576,7 +576,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-final-motm', title: 'Man of the Match', icon: '🎬', category: 'triumph',
-    minTurn: 120, maxTurn: 200, weight: 2, first: 'open',
+    minTurn: 72, maxTurn: 119, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -598,7 +598,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-hat-trick', title: 'The Match Ball', icon: '🎩', category: 'triumph',
-    minTurn: 90, maxTurn: 175, weight: 3, first: 'open',
+    minTurn: 54, maxTurn: 105, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -620,7 +620,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-invincibles', title: 'Unbeaten', icon: '🛡️', category: 'triumph',
-    minTurn: 130, maxTurn: 200, weight: 2, first: 'open',
+    minTurn: 78, maxTurn: 119, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -642,7 +642,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-knighthood', title: 'The Honour', icon: '🎗', category: 'triumph',
-    minTurn: 175, maxTurn: 205, weight: 2, first: 'open',
+    minTurn: 105, maxTurn: 123, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -664,7 +664,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-young-player', title: 'The Bright Young Thing', icon: '🌱', category: 'triumph',
-    minTurn: 60, maxTurn: 130, weight: 3, first: 'open',
+    minTurn: 35, maxTurn: 78, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -686,7 +686,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-pass-legend', title: 'Past the Legend', icon: '🪜', category: 'triumph',
-    minTurn: 150, maxTurn: 205, weight: 2, first: 'open',
+    minTurn: 90, maxTurn: 123, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -708,7 +708,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-farewell-trophy', title: 'The Last Dance', icon: '🎭', category: 'triumph',
-    minTurn: 185, maxTurn: 205, weight: 2, first: 'open',
+    minTurn: 110, maxTurn: 123, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',

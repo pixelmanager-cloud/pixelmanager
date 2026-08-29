@@ -1137,14 +1137,17 @@ class Game {
    *  a strong, durable body plays on, a pacey one declines sooner; plus a small individual quirk. ~30–41. */
   private retireAgeFor(player: Player): number {
     const a = player.attrs as any;
-    let base = 34;
+    // Tuned with the pacing trim (Phase 5): the dynasty is the point, so a single managerial spell shouldn't
+    // run 15+ seasons. Trimming the base and the long tail keeps retirements plausible (31-38, still a real
+    // footballer's career) while pulling the median spell down to ~9-10 seasons.
+    let base = 32;
     base += player.role === 'GK' ? 4 : player.role === 'DF' ? 1 : player.role === 'FW' ? -1 : 0;
     const robust = ((a.strength ?? 10) + (a.stamina ?? 10) + (a.durability ?? a.stamina ?? 10)) / 3;
     base += Math.round((robust - 11) * 0.35);          // a durable body plays on
     base -= Math.round(((a.pace ?? 11) - 12) * 0.2);   // pace-reliant players decline earlier
     const h = [...player.id].reduce((x, c) => (x * 31 + c.charCodeAt(0)) >>> 0, 7); // deterministic per player
     base += (h % 5) - 2;                               // an individual quirk (±2 years)
-    return Math.max(32, Math.min(41, Math.round(base)));
+    return Math.max(31, Math.min(38, Math.round(base)));
   }
 
   private spTableHtml(t: ReturnType<typeof liveTable>, tier = 1): string {

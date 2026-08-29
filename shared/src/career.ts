@@ -841,7 +841,7 @@ export function makeScenario(rng: () => number, i: number, track: Track = 'outfi
   // never perturbs demand/stakes/moment above for careers that predate this feature or don't hit the gate.
   const bandIdx = band ? AGE_BANDS.indexOf(band) : -1;
   const lifePool = bandIdx >= 4 ? LIFE_KINDS : YOUTH_LIFE_KINDS; // Scholar/Youth-Team (bandIdx 2-3) get only age-appropriate milestones (PT-134)
-  const life: LifeKind | null = seed != null && kind === 'social' && stakes === 1 && bandIdx >= 2 && pureHash01(seed, i, 0x5a17e) < 0.22
+  const life: LifeKind | null = seed != null && kind === 'social' && stakes === 1 && bandIdx >= 2 && pureHash01(seed, i, 0x5a17e) < 0.37
     ? lifePool[Math.floor(pureHash01(seed, i, 0x1123bc) * lifePool.length)]
     : null;
   // RIVALRY MOMENT: a slice of big-stage MATCH scenarios, from Youth Team on, become an explicit
@@ -876,13 +876,13 @@ export const HAND_SIZE = 4;
 export const START_AGE = 10, PRO_AGE = 25, RETIRE_AGE = 40;
 export interface AgeBand { name: string; from: number; to: number; turns: number; maxStakes: 1 | 2 | 3; demand: Tag[] }
 export const AGE_BANDS: AgeBand[] = [
-  { name: 'Grassroots',   from: 10, to: 12, turns: 22, maxStakes: 1, demand: ['flair', 'stamina', 'creativity', 'teamwork'] },
-  { name: 'Academy',      from: 13, to: 14, turns: 26, maxStakes: 1, demand: ['flair', 'stamina', 'creativity', 'teamwork', 'composure', 'aggression'] },
-  { name: 'Scholar',      from: 15, to: 16, turns: 30, maxStakes: 2, demand: OUTFIELD_TAGS },
-  { name: 'Youth Team',   from: 17, to: 18, turns: 32, maxStakes: 2, demand: OUTFIELD_TAGS },
-  { name: 'Breakthrough', from: 19, to: 20, turns: 32, maxStakes: 3, demand: OUTFIELD_TAGS },
-  { name: 'First Team',   from: 21, to: 22, turns: 32, maxStakes: 3, demand: OUTFIELD_TAGS },
-  { name: 'Establishing', from: 23, to: 25, turns: 28, maxStakes: 3, demand: OUTFIELD_TAGS },
+  { name: 'Grassroots',   from: 10, to: 12, turns: 12, maxStakes: 1, demand: ['flair', 'stamina', 'creativity', 'teamwork'] },
+  { name: 'Academy',      from: 13, to: 14, turns: 16, maxStakes: 1, demand: ['flair', 'stamina', 'creativity', 'teamwork', 'composure', 'aggression'] },
+  { name: 'Scholar',      from: 15, to: 16, turns: 18, maxStakes: 2, demand: OUTFIELD_TAGS },
+  { name: 'Youth Team',   from: 17, to: 18, turns: 20, maxStakes: 2, demand: OUTFIELD_TAGS },
+  { name: 'Breakthrough', from: 19, to: 20, turns: 20, maxStakes: 3, demand: OUTFIELD_TAGS },
+  { name: 'First Team',   from: 21, to: 22, turns: 18, maxStakes: 3, demand: OUTFIELD_TAGS },
+  { name: 'Establishing', from: 23, to: 25, turns: 16, maxStakes: 3, demand: OUTFIELD_TAGS },
 ];
 export const TOTAL_TURNS = AGE_BANDS.reduce((s, b) => s + b.turns, 0);
 
@@ -1311,7 +1311,7 @@ export class Career {
     if (this.turn >= TOTAL_TURNS) { this.finished = true; return choice; }
     // at an age-chapter boundary: relationships pay off (or bite), a narrative EVENT fires, then you
     // choose a summer FOCUS, take a financial offer, appoint a coach and draft.
-    if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.earnings += 40 + this.turn * 12; this.pendingFocus = rollFocus(this.chapter, this.standing, this.track); }
+    if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.earnings += 40 + this.turn * 20; this.pendingFocus = rollFocus(this.chapter, this.standing, this.track); }
     else {
       this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure, this.seed); this.ensurePlayableHand();
       // STORY ARC: a branching storyline may interject before the next routine moment (deterministic, no rng
