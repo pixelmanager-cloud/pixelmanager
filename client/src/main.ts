@@ -2096,8 +2096,14 @@ class Game {
         const w = Game.WILL[k];
         return `<div class="cg-coach" data-will="${k}"><div class="cg-cname">${w.icon} ${w.label}</div><div class="cg-cdesc">${w.blurb}</div></div>`;
       }).join('');
+      // SAY WHAT IS ABOUT TO HAPPEN. Choosing a will tears the entire manager layer down — XI, tactics,
+      // fixtures, board, league position all vanish in one step — and drops the player back into ~120 turns
+      // of card play. Nothing warned them, and nothing said the CLUB survives it, so it read as losing
+      // everything they had built rather than handing it on. (PT-509)
       $('cg-nextlife').outerHTML = `<div class="cg-epilogue">${nl.blurb}</div>`
         + `<div class="cg-grad-windfall">🌳 The bloodline continues${windfall}</div>`
+        + `<div class="cg-succession-note">▸ Choosing here starts the heir's own career — around 120 card turns from age 10.`
+        + ` <b>The club, its division, your facilities, staff and honours all stay yours</b>; you take the reins again when he breaks into the first team.</div>`
         + `<div class="cg-prompt">What does ${m.starName} pass down to his heir?</div>`
         + `<div id="cg-will">${willCards}</div>`;
       document.querySelectorAll('#cg-will [data-will]').forEach((el) => el.addEventListener('click', () =>
@@ -2647,7 +2653,17 @@ class Game {
         // the early seasons trivial, since tierStrength(10) is the weakest in the game. The star's career
         // score and his finishing quality now set the entry point: a good career starts you mid-pyramid with
         // somewhere left to climb, a modest one still starts near the bottom. (PT-950/PT-802)
-        this.setClubTier(this.startingTierFor(s, player));
+        const startTier = this.startingTierFor(s, player);
+        this.setClubTier(startTier);
+        // AND BRING THE SQUAD WITH IT. The tier came from his career but the ROSTER was minted at quality 6
+        // when the save was created, before a single career turn — so a Continental finalist took over a pub
+        // team and was the best player at his own club by a mile. The club he inherits should be the club
+        // his career built. (PT-956)
+        try {
+          const al = await api.alignSquadToTier(startTier);
+          this.setMe(await api.me());
+          if (al.lifted > 0) toast(`🏟️ ${al.lifted} of the squad step up to ${tierName(startTier)} standard`);
+        } catch { /* keep the founding roster if this fails — never block the handoff */ }
         this.saveMgr({ season: 1, results: [], starId: s.prospectId, starName: s.name, starAge: s.age, retireAge }); // enter manager phase
         toast(`🧢 You're the manager now — ${s.name} is in your squad`);
         this.showSeason();

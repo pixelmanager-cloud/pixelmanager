@@ -12,7 +12,7 @@ export type { StandingOrders };
 import {
   makeClub as _makeClub, // re-exported nowhere — freshSave() (save.ts) already calls this; kept for reference
   validateLineup, cleanDuties,
-  overall, managerPrestige, signContract, graduationEpilogue, clubInvestOf, TIERS,
+  overall, managerPrestige, signContract, graduationEpilogue, clubInvestOf, TIERS, tierStrength, mintSquadPlayer,
   transferList, transferFee, sellValue, squadSaleValue, incomingBid, MIN_SQUAD, MAX_SQUAD,
   signSquadContract, staggeredContractSeasons, advanceSquad, squadSeasonsLeft, squadRenewCost, squadSeasonWage, squadStorylines,
   contractDemand, evaluateContractOffer, wageForLength,
@@ -794,6 +794,29 @@ export const api = {
     await localStore.saveClub(OWNER, c.club, c.standingOrders);
     await localStore.addLoanee(OWNER, seasonId, player.id);
     return { ok: true as const, player: { name: player.name, role: player.role }, signedCount: await localStore.countLoanees(OWNER, seasonId) };
+  },
+  /** Bring the inherited squad up to the DIVISION the career earned. The manager's roster is minted at
+   *  BASE_QUALITY 6 when the save is first created — before a single career turn is played — and nothing in
+   *  the handoff ever touched it, so a star who reached a Continental Final was handed a pub team and was
+   *  the best player at his own club by a distance. The tier is already derived from his career (PT-950);
+   *  the squad now follows it, so the club he takes over is the club his career built. Keeps the star, his
+   *  contracts and anyone already signed — only the untouched founding roster is levelled up. (PT-956) */
+  alignSquadToTier: async (tier: number) => {
+    await ensureActive();
+    const c = await localStore.getClub(OWNER);
+    if (!c) throw apiErr('club not found', {}, 404);
+    const target = Math.max(4, Math.round(tierStrength(Math.max(1, Math.min(TIERS, tier))) - 1));
+    const starIds = new Set(getActiveModel().tokens.map((t) => t.id));
+    let lifted = 0;
+    c.club.players = c.club.players.map((p, i) => {
+      if (starIds.has(p.id) || p.signedSeason != null) return p;   // the star, and anyone you actually signed
+      if (overall(p) >= target) return p;                          // already good enough for this level
+      lifted++;
+      const seed = (((tier * 7919) ^ (i * 104729)) >>> 0);
+      return { ...mintSquadPlayer(p.id, p.role, target, seed, p.age ?? 24), name: p.name };
+    });
+    await localStore.saveClub(OWNER, c.club, c.standingOrders);
+    return { ok: true as const, lifted, target };
   },
   facilities: async () => {
     await ensureActive();
