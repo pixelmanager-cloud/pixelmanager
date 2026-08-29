@@ -1599,9 +1599,18 @@ class Game {
     $('season-body').querySelectorAll('[data-staff]').forEach((b) => b.addEventListener('click', () => {
       const id = (b as HTMLElement).dataset.staff!;
       const st = BACKROOM_STAFF.find((x) => x.id === id);
+      // SAY WHAT THE MONEY BUYS. These coaches have always had real effects — +0.4 club strength each in a
+      // simmed match, and conditioning/attacking multipliers in a live one — but nothing ever told the
+      // player, so 350 coins bought an invisible edge and read like a decoration.
+      const EFFECT: Record<string, string> = {
+        fitness: 'Your side tires ~5% less over 90 minutes, home and away.',
+        attack: 'A ~3% edge in the final third, home and away.',
+        assistant: 'A ~2% all-round edge, and slightly less fatigue.',
+      };
       this.openConfirm(
         `Hire <b>${st?.name ?? 'this coach'}</b> for <b>💰 ${(st?.cost ?? 0).toLocaleString()}c</b>?`
         + (st?.desc ? `<br><span class="cf-sub">${st.desc}</span>` : '')
+        + (EFFECT[id] ? `<br><span class="cf-sub">▸ ${EFFECT[id]} He stays with the club for good.</span>` : '')
         + `<br><span class="cf-sub">You have ${(this.account?.coins ?? 0).toLocaleString()}c. He stays with the club for good.</span>`,
         `Hire · 💰 ${(st?.cost ?? 0).toLocaleString()}c`, () => this.hireStaff(id));
     }));
@@ -2310,9 +2319,23 @@ class Game {
     const roster = staffRoster(this.leagueSeed());
     const card = (s: StaffMember) => `<div class="cs-card"><span class="cs-role">${s.role}</span>`
       + `<span class="cs-name">${s.name}</span><span class="cs-personality">“${s.personality}”</span></div>`;
+    // the coaches you have actually HIRED, and what each is doing — previously invisible
+    const hired = this.loadMgr().staff ?? [];
+    const EFF: Record<string, string> = {
+      fitness: 'tires ~5% less over 90',
+      attack: '~3% sharper in the final third',
+      assistant: '~2% all-round, and less fatigue',
+    };
+    const hiredHtml = hired.length
+      ? `<div class="cs-title">💼 ON THE PAYROLL</div><div class="cs-hired">`
+        + hired.map((h) => {
+            const meta = BACKROOM_STAFF.find((x) => x.id === h);
+            return `<div class="cs-hired-row">${meta?.icon ?? '🧑‍🏫'} <b>${meta?.name ?? h}</b> — ${EFF[h] ?? 'working away'}</div>`;
+          }).join('') + `</div>`
+      : '';
     el.innerHTML = `<div class="cs-title">🧑‍🏫 YOUR BACKROOM STAFF</div><div class="cs-grid">`
       + card(roster.assistant) + card(roster.scout) + card(roster.fitnessCoach) + card(roster.goalkeepingCoach)
-      + `</div>`;
+      + `</div>` + hiredHtml;
   }
 
   private renderFacilities(d: { coins: number; facilities: import('./api').Facility[] }) {
