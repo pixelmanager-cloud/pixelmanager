@@ -28,7 +28,11 @@ interface MgrState { season: number; results: PlayedResult[]; starId?: string; s
   contElig?: boolean; contRound?: number; contOut?: boolean; contTitles?: number; contBlurb?: string;
   // World-Finals national tournament — the star's nation's knockout run is playable
   wcSeen?: number; wcWins?: number; wcFinals?: number; wcEdition?: number; wcStage?: 'qf' | 'sf' | 'final' | 'done';
-  wcRun?: { round: string; my: number; opp: number; oppName: string; won: boolean }[] }
+  wcRun?: { round: string; my: number; opp: number; oppName: string; won: boolean }[];
+  // The Living Squad season report. It used to live ONLY in a class field, so a refresh between the
+  // rollover and the renew decision silently discarded every keep-or-lose call the player still had to
+  // make — the decisions were gone and the panel came back empty. It belongs in the save. (PT-605)
+  squadReport?: any; squadReportSeason?: number }
 const BACKROOM_STAFF = [
   { id: 'fitness', icon: '🏋️', name: 'Fitness Coach', cost: 350, desc: 'Sharper conditioning — your side fades less over 90.' },
   { id: 'attack', icon: '⚔️', name: 'Attacking Coach', cost: 350, desc: 'Drills the final third — a small finishing edge, home and away.' },
@@ -1105,7 +1109,18 @@ class Game {
   // ── SINGLE-PLAYER MANAGER SEASON: play the club's fixtures one at a time vs the seeded fictional league ──
   private mgrKey() { return 'fm_mgr_' + (this.account?.handle ?? ''); }
   private loadMgr(): MgrState {
-    try { const m = JSON.parse(localStorage.getItem(this.mgrKey()) || ''); if (m && Array.isArray(m.results)) return m; } catch { /* fall through */ }
+    try {
+      const m = JSON.parse(localStorage.getItem(this.mgrKey()) || '');
+      if (m && Array.isArray(m.results)) {
+        // Rehydrate the squad report so a refresh mid-decision doesn't lose the renew calls still to be
+        // made. Only for the season it was written in — an older one is exactly the stale panel PT-807
+        // was about, and showing it again here would reintroduce the bug through the back door.
+        if (m.squadReport && m.squadReportSeason === m.season && !this.pendingSquadReport) {
+          this.pendingSquadReport = m.squadReport;
+        }
+        return m;
+      }
+    } catch { /* fall through */ }
     return { season: 1, results: [] };
   }
   private saveMgr(m: MgrState) { try { localStorage.setItem(this.mgrKey(), JSON.stringify(m)); } catch { /* ignore */ } }
@@ -1336,6 +1351,7 @@ class Game {
         const r = await api.renewSquadPlayer(playerId);
         if (this.account) this.account.coins = r.coins;
         this.pendingSquadReport = { ...this.pendingSquadReport, expiring: (this.pendingSquadReport?.expiring ?? []).filter((x: any) => x.id !== playerId) };
+        { const mm = this.loadMgr(); this.saveMgr({ ...mm, squadReport: this.pendingSquadReport }); }
         this.setMe(await api.me()); audio.chime('confirm');
         toast(`✍️ ${name} re-signs · −${r.cost.toLocaleString()}c`);
         this.showSeason();
@@ -1348,6 +1364,7 @@ class Game {
       try {
         await api.releaseSquadPlayer(playerId);
         this.pendingSquadReport = { ...this.pendingSquadReport, expiring: (this.pendingSquadReport?.expiring ?? []).filter((x: any) => x.id !== playerId) };
+        { const mm = this.loadMgr(); this.saveMgr({ ...mm, squadReport: this.pendingSquadReport }); }
         this.setMe(await api.me());
         toast(`👋 ${name} leaves the club`);
         this.showSeason();
@@ -1480,7 +1497,7 @@ class Game {
       + `<div class="season-cols"><div class="season-fixtures"><h4 class="scout-h4">FIXTURES</h4>${fxRows}${records}${focusSel}${simBtn}</div>`
       + `<div class="season-table-wrap"><h4 class="scout-h4">LEAGUE TABLE — ${tierName(tier).toUpperCase()}</h4>${this.spTableHtml(t, tier)}${this.staffHtml()}</div></div>`;
     ($('mgr-help-x') as any)?.addEventListener('click', () => { localStorage.setItem(this.onbKey('fm_mgr_help_done'), '1'); ($('mgr-help') as any)?.remove(); });
-    document.getElementById('sq-report-x')?.addEventListener('click', () => { this.pendingSquadReport = null; document.getElementById('sq-report')?.remove(); });
+    document.getElementById('sq-report-x')?.addEventListener('click', () => { this.pendingSquadReport = null; const mm = this.loadMgr(); this.saveMgr({ ...mm, squadReport: null }); document.getElementById('sq-report')?.remove(); });
     document.querySelectorAll<HTMLElement>('[data-renew]').forEach((b) => b.addEventListener('click', () => this.renewSquadFlow(b.dataset.renew!, b.dataset.name ?? 'him', Number(b.dataset.cost || 0))));
     document.querySelectorAll<HTMLElement>('[data-release]').forEach((b) => b.addEventListener('click', () => this.releaseSquadFlow(b.dataset.release!, b.dataset.name ?? 'him')));
     $('sf-cont-play')?.addEventListener('click', () => this.playContinentalTie());
@@ -1908,11 +1925,16 @@ class Game {
     // retire, deals run out and wages come due. This is what makes the manager's squad feel like people he
     // has to keep investing in rather than a static roster (PT-90/PT-92).
     if (m.starId) {
+      // Clear FIRST. This assignment sits inside the try, so when advanceSquadSeason threw the field kept
+      // its previous value and the end-of-season panel rendered LAST season's report as if it were
+      // current — right down to re-announcing players it had retired a year earlier. (PT-807)
+      this.pendingSquadReport = null;
       try {
         const sq = await api.advanceSquadSeason({ trainingLvl: this.facLevels.training ?? 1, wonSomething: t.pos === 1, goodSeason: t.pos <= Math.ceil(t.size / 2) });
         if (this.account?.coins != null) this.account.coins = sq.coins;
         this.setMe(await api.me());
         this.pendingSquadReport = sq;
+        const mm = this.loadMgr(); this.saveMgr({ ...mm, squadReport: sq, squadReportSeason: mm.season });
       } catch { /* offline — squad rollover is best-effort, never blocks the season */ }
     }
     if (t.pos === 1) { audio.play('triumph'); audio.chime('triumph'); } // league champions — the victory cue

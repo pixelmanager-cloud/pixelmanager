@@ -332,6 +332,11 @@ export const api = {
     const p = c.club.players.find((x) => x.id === playerId);
     if (!p) throw apiErr('no such player', {}, 404);
     if (await localStore.getToken(playerId)) throw apiErr('the bloodline star can only leave via a transfer offer', {}, 409);
+    // He isn't yours to sell. A trialist costs nothing to sign, so without this the squad screen is a coin
+    // printer: sign a free trialist, sell him, repeat. He leaves for nothing when his trial ends. (PT-303)
+    if ((await localStore.loaneeIds(OWNER, String(getActiveModel().profile.season))).includes(playerId)) {
+      throw apiErr("he's only here on trial — you can't sell a player you don't own", {}, 409);
+    }
     const value = squadSaleValue(overall(p), p.age ?? 26); // a fading veteran is worth less — the SELL column now means something (PT-90)
     await localStore.addCoins(OWNER, value);
     c.club.players = c.club.players.filter((x) => x.id !== playerId);
@@ -528,6 +533,14 @@ export const api = {
     const season = getActiveModel().profile.season;
     // grandfather any player with no deal (a pre-Living-Squad save, or the founding squad) onto one that
     // starts now, so nobody is silently free forever
+    // TRIALISTS GO HOME. A loan/trial is documented as expiring at season end, but nothing ever removed
+    // them: `deleteLoaneesInSeason` cleared the RECORD and left the player in the squad, and it had no
+    // callers anyway. So a free trialist became a permanent, sellable asset — sign, sell, repeat, and the
+    // coin economy prints money from nothing. Their trial ends here. (PT-303)
+    const loaneeIds = new Set(await localStore.loaneeIds(OWNER, String(season)));
+    const stayed = c.club.players.filter((p) => !loaneeIds.has(p.id));
+    const wentHome = c.club.players.length - stayed.length;
+    if (wentHome > 0) { c.club.players = stayed; await localStore.deleteLoaneesInSeason(String(season)); }
     const roster = c.club.players.map((p) => (p.signedSeason == null ? signSquadContract(p, season, staggeredContractSeasons(p.id)) : p));
     // who actually played matters: a man who spent the season in the XI of a winning side is settled, one who
     // never got a game is agitating — that's what makes selection a relationship, not just a number (Phase 3)
