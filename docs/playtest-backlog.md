@@ -205,6 +205,59 @@ _None from the harness right now — the two launch-pass balance flags are fixed
 - [x] **PT-40 [FIXED — family name is capitalised (rossi → Rossi) in preview + saved club.] (stage: menu/settings regression): [low] the family name is never capitalised — a lowercase entry yields "rossi's Club · the rossi bloodline" in the live preview AND in the saved club name.** The preview echoes the raw trimmed value verbatim (`crest(raw + "'s Club")` / `<b>${raw}'s Club</b>` / `the ${raw} bloodline`) and `startNewGame` stores the raw trimmed string as the club name, so a naive player who types "rossi"/"a" gets a permanently lowercase, unpolished club + bloodline that reads as a bug on a premium title. why it hurts: club/family names are expected title-cased; the un-capitalised name persists into the hub, league table and every heir · fix: title-case the display and the stored name (`client/src/main.ts:646` preview, `:495` stored `name`).
 - [x] **PT-41 [FIXED — name maxlength 24→18 so the header wordmark no longer wraps/cramps.] (stage: menu/settings regression): [low] at the 24-char max the New-Game club-name wordmark grows large, wraps to two lines and nearly collides with the crest and the flanking "Your club:" / "· the … bloodline" labels.** The maxLength cap correctly prevents true overflow (scrollWidth==clientWidth), but the preview wordmark uses a fixed large size that doesn't shrink for long names, so a max-length family name renders cramped/tight against its neighbours (visible with "Wolverhamptonshire-Feath's Club"). why it hurts: the preview is the New-Game screen's hero element and looks unfinished at long names · fix: scale the `<b>…'s Club</b>` font-size down as the name lengthens (or reduce the max a little) so the wordmark fits comfortably on one row (`client/src/main.ts:646`, preview typography in the stylesheet).
 
+<!-- ═══ REBALANCE VALIDATION PASS 2026-08-29 (fresh-player critic, browser, localhost:5173) ═══
+Fresh new game "Ferreira" → signed Dane Ferreira (FW, ★4, pot ★★★★★) → Super-Agent → played the WHOLE 120-turn
+career (age 10→23) always answering the demanded tag with a matching card, then took the handoff and simmed
+TWO manager seasons. 100 graded card turns recorded. Zero JS console errors across the whole run.
+
+MEASURED GRADE DISTRIBUTION (100 graded turns, correct/best-available card every time):
+  71 ⭐ Brilliant · 22 ✓ Solid · 5 ◦ Unlucky · 1 ◦ Scrappy · 1 ✗ Poor
+  BY PHASE — turns 1–30: 15 Brilliant / 11 Solid / 1 Unlucky / 1 Poor  (54% Brilliant — a real spread)
+            turns 31–54: 15 Brilliant /  7 Solid / 1 Unlucky            (65% Brilliant)
+            turns 55–120: 41 Brilliant / 4 Solid / 3 Unlucky / 1 Scrappy (84% Brilliant — back to the old problem)
+
+1. CARD DIFFICULTY — PARTIAL PASS / LATE-GAME FAIL. The early game is genuinely fixed: over the first 30 turns
+   only 54% of correct plays graded Brilliant, with Solid the modal result and a Poor and an Unlucky landing.
+   But the spread decays with the star's stats: over the last 65 turns 84% graded Brilliant, essentially the
+   pre-fix 89% (33/37). Filed as PT-1001.
+   SECOND DEMANDED TAG — PASS (weak evidence). Every one of the 6 turns where the chosen card covered two
+   demanded tags graded ⭐ Brilliant (6/6), vs ~70% at one tag. Directionally right, but because single-tag
+   coverage is already ~84% Brilliant late on, the reward is invisible in the half of the game that matters most.
+
+2. THE RIVAL — FAIL (fixed the opening only). Turner genuinely led early: "▼ 5 behind" at turns 8–12, still
+   "▼ 3 behind" at turn 13. After that the gap inverted and grew monotonically and never once closed:
+   ▲ 20 by turn 28, ▲ 48 by turn 45, ▲ 87 by turn 54, ▲ 202 by turn 80. ~100 of the 120 turns had no contest
+   at all. Filed as PT-1000.
+
+3. STARTING TIER — PASS (with a caveat). The handoff put me in TIER 7 of 10 — "the Regional North/South",
+   9th of 10 — not the Sunday League basement. The fix demonstrably scales. Caveat: this was a near-optimal
+   career (71% Brilliant, rival 202 behind) and it still only bought tier 7, because the star graduated at
+   OVR 11 and startingTierFor treats OVR<14 as a "weak graduate" and applies its -1 rung penalty. See PT-1002.
+
+4. MATCH SCORELINES — PASS. Season 1 (18 games): 1-1 3-3 2-0 0-0 1-0 1-2 2-2 1-1 1-0 2-0 0-0 1-1 3-2 1-2 2-0
+   3-1 0-1 1-2 = 10 distinct scorelines, max repeat 3. Season 2: 8 distinct, max repeat 6. Across 36 games,
+   13 distinct scorelines; nothing like the old "one scoreline 14 times in 18". Residual narrowness filed as PT-1003.
+
+5. STAR POSITION/OVR AT HANDOFF — POSITION PASS, OVR FAIL. Dane Ferreira, signed as a forward, arrived in the
+   squad as "FW · Poacher" and auto-picked into a forward slot in the 4-4-2; the key-player line reads
+   "★ Key player: Dane Ferreira (FW, OVR 11)". Position is correct. His OVR is the problem — PT-1002.
+
+OVERALL VERDICT — better, but not yet a game with stakes. The first ~2 hours (turns 1–30) now feel like a real
+game: grades vary, Solid is the honest baseline, and the rival is genuinely ahead of you and worth chasing.
+That opening is a big improvement and it is NOT overcorrected — it never felt punishing. But every one of the
+three tension systems (grade variance, rival, star development) flattens out at roughly the same point,
+turn ~30, and the remaining 90 turns are the same no-stakes ride the previous playthrough reported: an
+unbroken run of Brilliants against a rival 200 points behind. Two of the five fixes fixed the tutorial and
+left the game. The manager side, by contrast, felt competitive from the first season (4th, then 6th, of 10,
+with varied scorelines) — that half is in good shape.
+═══════════════════════════════════════════════════════════════════════════════════ -->
+
+- [ ] **PT-1000 (stage: rebalance validation): [high] the rival rate raise only bought ~20 turns of tension — after that the gap grows monotonically and never closes again.** Playing a full 120-turn career and always answering the demanded tag, Turner genuinely led early ("you're ▼ 5 behind" at turns 8–12, ▼ 3 at turn 13) but the gap then inverted and ran away without a single reversal: ▲ 20 clear by turn 28, ▲ 48 by turn 45, ▲ 87 by turn 54, ▲ 202 by turn 80. Roughly 100 of the 120 turns had no contest whatsoever, and by turn 54 the "reel him in" framing is absurd. why it hurts: the rival is the game's only explicit opponent and the one thing giving a card turn stakes; if he is 200 behind by the halfway mark, the back two-thirds of a career is pure number-go-up with nothing to lose. fix: scale the rival's per-turn gain to the player's own recent gain (a rubber band / catch-up term) so he tracks a few points behind or ahead rather than accruing a flat rate, and cap the displayed gap so a runaway lead reads as "he's chasing you" rather than a blowout. Ref: rival progression in the career loop; the "🆚 RIVAL · <name> — you're ▲/▼ N" widget on the card screen.
+- [ ] **PT-1001 (stage: rebalance validation): [high] the grade-threshold retune fixed the first 30 turns and then decays — the back half of a career is still a near-guaranteed ⭐ Brilliant.** Across 100 graded turns of correct card play the overall split was 71 Brilliant / 22 Solid / 5 Unlucky / 1 Scrappy / 1 Poor, but it is not evenly spread: turns 1–30 graded 15 Brilliant / 11 Solid / 1 Unlucky / 1 Poor (54% Brilliant — a real, satisfying spread), while turns 55–120 graded 41 Brilliant / 4 Solid / 3 Unlucky / 1 Scrappy (84% Brilliant, essentially the pre-fix 89%). The demand normalisation evidently doesn't keep pace with the star's growing attributes, so the same correct play that graded Solid at age 11 grades Brilliant at 20. why it hurts: the spread is what makes a card turn feel like a decision, and it evaporates exactly when the stakes should be highest (senior football, big games, the run-up to the handoff) — the final 65 turns are a formality. fix: make the demand target scale with the star's current attribute level (normalise against his own OVR/attribute, not an absolute), or raise the Brilliant threshold as chapters advance so a senior pro needs a genuinely strong or double-tag play to earn one. Ref: demand normalisation + grade thresholds in the card-resolution path (shared/src engine); the "🎯 Right card / ⭐ Brilliant" outcome block.
+- [ ] **PT-1002 (stage: rebalance validation): [high] a near-optimal 120-turn career graduated the star at OVR 11 against a listed potential of 15, so the new career-scaled handoff still applies its "weak graduate" penalty to a career that could hardly have gone better.** He was FW OVR 10 with "pot 15 ★★★★★" at age 13 (turn 12); after 100 graded turns of which 71 were ⭐ Brilliant, the rival left 202 points behind and a career score in the 700–950 band, he arrived at the handoff at **OVR 11** — one point of growth across ten in-game years. `startingTierFor` (client/src/main.ts:1143-1149) scores `ov >= 16 ? 1 : ov >= 14 ? 0 : -1`, so this run took the `-1` weak-graduate rung and landed tier 7/10, 9th of 10. why it hurts: it silently breaks the reward the tier fix was written to deliver — the code's own bands say a good career should produce a 14–16 OVR graduate, and playing well produces 11, so nobody will ever see the top of the tier ladder and the whole 120-turn career reads as having barely developed the kid. fix: check the attribute-gain curve per graded moment against the 120-turn career length (a Brilliant should visibly move an attribute), and/or recalibrate `startingTierFor`'s OVR bands to the OVR range careers actually produce. Ref: client/src/main.ts:1143-1149 (`startingTierFor`) and the per-turn development/attribute-gain code in the shared engine.
+- [ ] **PT-1003 (stage: rebalance validation): [low-med] the seed-mixing fix worked but the scoreline distribution is still narrow — 42% of 36 simmed games were 2-0 or 2-2, and no side scored 4+ in any of them.** Simming two full seasons produced 13 distinct scorelines across 36 games (vastly better than the reported "one scoreline 14 times in 18"), but 2-0 appeared 8 times and 2-2 seven times; season 2 alone returned 2-2 six times and 2-0 five times in 18 games, and the highest single-team score in either season was 3. why it hurts: after a couple of seasons the fixture list starts to look samey again and there is no thrashing to remember — the emotional peaks of a league season (a 5-0, a 4-3) are absent from the distribution. why it isn't higher severity: the pathological repetition is genuinely fixed and the tables read plausibly. fix: widen the goals-per-team distribution (a longer tail on the scoring model) so blowouts occur at a realistic low rate. Ref: season sim / match result generation; the FIXTURES list on the club-season screen.
+- [ ] **PT-1004 (stage: rebalance validation): [low] the season summary's "Biggest win" ignores goals scored when margins tie — it reported "Biggest win 2-0" in a season containing a 3-1.** Season 1 finished with results including 3-1 (H, derby) and 3-2, yet the summary line read "📋 Biggest win 2-0 · Longest unbeaten 7". Both 2-0 and 3-1 are two-goal margins, but a 3-1 derby win is plainly the better story and the higher-scoring result. why it hurts: it is the one line the player reads to remember the season, and it picks the duller of two tied games — and after PT-1003 lands (wider scorelines) the tie-break will matter more often. fix: break margin ties on goals scored, then on opponent strength / derby flag. Ref: the "📋 Biggest win … · Longest unbeaten …" line on the club-season screen.
+
 ## Fixed (validated by the harness)
 
 - [x] **PT-2 — top-flight titles too rare (~5%/season).** Top-tier transfer market now offers title-contender

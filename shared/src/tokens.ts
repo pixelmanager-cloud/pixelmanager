@@ -141,7 +141,21 @@ function careerScoreOf(c: Career): number { return Math.round(c.log.reduce((s, c
 // is a beatable benchmark, not an inevitable loss. (Was 6..9, which out-ran even perfect play every turn.)
 // 5..7 points/turn. At 3-5 the rival earned less than half the player's ~8.4/turn, so a skilled career was
 // never once behind after turn 20 across 200 simulated careers — the benchmark never threatened. (PT-700)
-function rivalRateOf(seed: number): number { return 5 + ((seed >>> 3) % 3); } // 5..7 points/turn
+function rivalRateOf(seed: number): number { return 3 + ((seed >>> 3) % 3); } // 5..7 points/turn (base)
+/** The rival's score after `turn` turns. He must scale the SAME WAY the player does: the player banks
+ *  `success * 8 * stakes`, and stakes climb from 1 in the child bands to 3 in the senior ones, so a rival on a
+ *  FLAT per-turn rate falls behind structurally no matter how well he "plays". Live testing found exactly
+ *  that — he led to turn 13, then the gap ran away monotonically to +202 by turn 80 with ~100 of 120 turns
+ *  having no contest. Weighting each turn by its band's stakes ceiling keeps him a live opponent all career.
+ *  Pure function of turn — no rng, no replay impact. (PT-1000) */
+function rivalScoreAt(turn: number, rate: number): number {
+  let total = 0;
+  for (let t = 0, band = 0, acc = 0; t < turn && band < AGE_BANDS.length; t++) {
+    while (band < AGE_BANDS.length - 1 && t >= acc + AGE_BANDS[band].turns) { acc += AGE_BANDS[band].turns; band++; }
+    total += rate * (1 + (AGE_BANDS[band].maxStakes - 1) * 0.65); // the player's own expected stakes multiplier
+  }
+  return Math.round(total);
+}
 /** Apply an action and return an immersive narration of the moment (play, or a coach/draft/offer choice). */
 export function actWithNarration(c: Career, a: CareerAction): string | null {
   const baseCtx = { age: c.age, chapter: c.chapter, stakes: 1 as 1 | 2 | 3, personalityId: c.personality.id, turn: c.turn, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0, castAvoid: c.familyName, milestone: null as string | null, seed: (((c as any).seed >>> 0) + c.turn * 2654435761) >>> 0 };
@@ -159,7 +173,7 @@ export function actWithNarration(c: Career, a: CareerAction): string | null {
     if (lifeKind) return narrateLifeEvent(lifeKind, cardName(a.cardId), choice.success, ctx, (c as any).lastLifeEvent?.approach, cardTags(a.cardId), a.cardId);
     if (rivalMoment) {
       const rate = rivalRateOf((c as any).seed >>> 0);
-      const payoff = { rivalName: careerCast((c as any).seed >>> 0, c.familyName).rival, leadBefore: csBefore - Math.round(turnBefore * rate), leadAfter: careerScoreOf(c) - Math.round(c.turn * rate) };
+      const payoff = { rivalName: careerCast((c as any).seed >>> 0, c.familyName).rival, leadBefore: csBefore - rivalScoreAt(turnBefore, rate), leadAfter: careerScoreOf(c) - rivalScoreAt(c.turn, rate) };
       return narrateRivalMoment(cardName(a.cardId), choice.success, ctx, payoff);
     }
     if (callupMoment) return narrateCallupMoment(cardName(a.cardId), choice.success, ctx);
@@ -350,7 +364,7 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
   // career surfaces as a small seeded news beat appropriate to the current life stage.
   const cast = careerCast((c as any).seed >>> 0, c.familyName);
   const rivalRate = rivalRateOf((c as any).seed >>> 0);
-  const rivalScore = Math.round(c.turn * rivalRate);
+  const rivalScore = rivalScoreAt(c.turn, rivalRate);
   const rival = { name: cast.rival, score: rivalScore, lead: careerScore - rivalScore, news: rivalNews((c as any).seed >>> 0, c.chapter, c.turn) };
   // INTERNATIONAL CALL-UP — perform well at the senior stages and you earn a national call-up + caps: an
   // aspirational ceiling to chase. Presentational, from overall × stage (only the good get capped).

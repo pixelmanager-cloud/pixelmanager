@@ -1144,7 +1144,10 @@ class Game {
     const ov = overall(player);
     // score does most of the work; a genuinely elite graduate nudges one further up
     const byScore = score >= 1200 ? 4 : score >= 950 ? 5 : score >= 700 ? 6 : score >= 450 ? 7 : 8;
-    const elite = ov >= 16 ? 1 : ov >= 14 ? 0 : -1;   // a weak graduate starts a rung lower
+    // Bands are on the MANAGER-side overall() scale (a typical graduate measures ~11.3 there, not the ~13.3
+    // careerOverall() reports on the career screens) — calibrating these to the career scale made almost every
+    // graduate read as "weak" and cost him a rung. (PT-1002)
+    const elite = ov >= 13 ? 1 : ov >= 11 ? 0 : -1;
     return Math.max(3, Math.min(TIERS, byScore - elite));
   }
 
