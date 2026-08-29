@@ -1,10 +1,23 @@
+import { mergeBanks } from './merge.js';
+import { FRAME_A } from './extra/pack_a.js';
+import { FRAME_B } from './extra/pack_b.js';
+import { FRAME_C } from './extra/pack_c.js';
+import { FRAME_D } from './extra/pack_d.js';
+import { FRAME_E } from './extra/pack_e.js';
+import { FRAME_F } from './extra/pack_f.js';
+import { FRAME_G } from './extra/pack_g.js';
+import { FRAME_H } from './extra/pack_h.js';
+import { FRAME_I } from './extra/pack_i.js';
+import { FRAME_J } from './extra/pack_j.js';
+import { FRAME_K } from './extra/pack_k.js';
+import { FRAME_L } from './extra/pack_l.js';
 // FRAME_BY_CHAPTER — see shared/src/prompts/README for the authoring rules.
 // ── LIFE-STAGE FRAMING: a much wider bank of human, specific texture per age band — the stuff of an
 // actual childhood/adolescence/career, not just a generic "he's young" clause. Keyed on the CHAPTER
 // (band name) rather than a bare age bracket, so it lines up exactly with what that stage is really
 // about (school and parents at Grassroots; digs and homesickness at Scholar; captaincy and legacy at
 // Establishing) per the "much more human depth per band" brief.
-export const FRAME_BY_CHAPTER: Record<string, string[]> = {
+const BASE_FRAME_BY_CHAPTER: Record<string, string[]> = {
   Grassroots: [
     'Homework still not done and Mum already shouting for the car, ', 'With a familiar face on the touchline in the cold, arms folded, willing him on, ',
     'Picked near-last at school again but not here, not on this pitch, ', 'A growth spurt has left him gangly and not quite sure where his own feet are, ',
@@ -55,3 +68,6 @@ export const FRAME_BY_CHAPTER: Record<string, string[]> = {
     'Reputation now precedes him into every room he walks into, ', 'He’s become the answer to the question a young pro used to ask about him, ',
   ],
 };
+
+/** BASE plus every authoring pack — see ./merge.ts for why the packs are separate files. */
+export const FRAME_BY_CHAPTER = mergeBanks(BASE_FRAME_BY_CHAPTER, FRAME_A, FRAME_B, FRAME_C, FRAME_D, FRAME_E, FRAME_F, FRAME_G, FRAME_H, FRAME_I, FRAME_J, FRAME_K, FRAME_L);

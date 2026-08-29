@@ -1,9 +1,22 @@
+import { mergeBanks } from './merge.js';
+import { EVENT_PREFIX_A } from './extra/pack_a.js';
+import { EVENT_PREFIX_B } from './extra/pack_b.js';
+import { EVENT_PREFIX_C } from './extra/pack_c.js';
+import { EVENT_PREFIX_D } from './extra/pack_d.js';
+import { EVENT_PREFIX_E } from './extra/pack_e.js';
+import { EVENT_PREFIX_F } from './extra/pack_f.js';
+import { EVENT_PREFIX_G } from './extra/pack_g.js';
+import { EVENT_PREFIX_H } from './extra/pack_h.js';
+import { EVENT_PREFIX_I } from './extra/pack_i.js';
+import { EVENT_PREFIX_J } from './extra/pack_j.js';
+import { EVENT_PREFIX_K } from './extra/pack_k.js';
+import { EVENT_PREFIX_L } from './extra/pack_l.js';
 // EVENT_PREFIX — see shared/src/prompts/README for the authoring rules.
 // season-event prefixes (weave the chapter's story into the beat)
 // A season-long event colours EVERY scenario while it runs, so each needs a small pool of lead-ins —
 // otherwise one line ("Riding the wave of a breakout season") opens every prompt for a whole season and
 // dominates the text (PT-9/PT-42). Turn-strided selection walks the pool so it varies turn to turn.
-export const EVENT_PREFIX: Record<string, string[]> = {
+const BASE_EVENT_PREFIX: Record<string, string[]> = {
   'serious-injury': ['Still fighting his way back from a bad injury, ', 'Body not yet all the way healed, ', 'Every stride still a question after the injury, ', 'Barely back in full training, ', 'The doubts about his fitness not quite silenced, '],
   'hot-streak': ['In the form of his life, ', 'Riding a hot streak he daren’t question, ', 'Everything he touches turning to gold lately, ', 'Unable to stop scoring at the minute, ', 'Playing with the freedom of a man who can’t miss, '],
   slump: ['Low on confidence, ', 'Stuck in a rut he can’t explain, ', 'Goals and form having dried up, ', 'Second-guessing every touch lately, ', 'Desperate to end a barren run, '],
@@ -15,3 +28,6 @@ export const EVENT_PREFIX: Record<string, string[]> = {
   'fan-favourite': ['Roared on by supporters who adore him, ', 'A terrace song already sung in his name, ', 'The crowd firmly on his side these days, ', 'Cult-hero status growing on the terraces, ', 'The supporters ready to forgive him anything, '],
   'international-honour': ['Still pinching himself over the international honour, ', 'The national-team call-up still sinking in, ', 'A country’s expectation newly on his shoulders, ', 'The weight of a nation’s badge freshly on his chest, ', 'Back at his club after a proud week away, '],
 };
+
+/** BASE plus every authoring pack — see ./merge.ts for why the packs are separate files. */
+export const EVENT_PREFIX = mergeBanks(BASE_EVENT_PREFIX, EVENT_PREFIX_A, EVENT_PREFIX_B, EVENT_PREFIX_C, EVENT_PREFIX_D, EVENT_PREFIX_E, EVENT_PREFIX_F, EVENT_PREFIX_G, EVENT_PREFIX_H, EVENT_PREFIX_I, EVENT_PREFIX_J, EVENT_PREFIX_K, EVENT_PREFIX_L);

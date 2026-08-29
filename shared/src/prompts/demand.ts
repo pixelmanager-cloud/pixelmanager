@@ -1,3 +1,16 @@
+import { mergeBanks } from './merge.js';
+import { DEMAND_A } from './extra/pack_a.js';
+import { DEMAND_B } from './extra/pack_b.js';
+import { DEMAND_C } from './extra/pack_c.js';
+import { DEMAND_D } from './extra/pack_d.js';
+import { DEMAND_E } from './extra/pack_e.js';
+import { DEMAND_F } from './extra/pack_f.js';
+import { DEMAND_G } from './extra/pack_g.js';
+import { DEMAND_H } from './extra/pack_h.js';
+import { DEMAND_I } from './extra/pack_i.js';
+import { DEMAND_J } from './extra/pack_j.js';
+import { DEMAND_K } from './extra/pack_k.js';
+import { DEMAND_L } from './extra/pack_l.js';
 // DEMAND — see shared/src/prompts/README for the authoring rules.
 // What the moment ASKS of him. Kept setting-neutral so it reads sensibly whether the
 // situation is a training drill, a dressing-room moment or a cup tie (a drill is not
@@ -6,7 +19,7 @@
 // so it is read 120 times a career. At six lines a tag a single career nearly exhausted it, and by the
 // fifth heir of a dynasty 95% of prompt sentences were text an earlier generation had already read.
 // Twelve each. (PT-404)
-export const DEMAND: Record<string, string[]> = {
+const BASE_DEMAND: Record<string, string[]> = {
   aggression: ['They want to see some steel from him.', 'It’s about winning the physical battle.', 'He needs to show he won’t be pushed around.', 'It calls for a bit of nastiness, in the right way.', 'This is a moment to plant a flag and not budge.', 'They need to see he can dish it out as well as take it.', 'Somebody has to put a foot in here.', 'It wants an edge, and he has to find one.', 'The game needs somebody to stop being polite.', 'They want to see whether he can be the one nobody fancies.', 'It is a question of appetite as much as ability.', 'The moment belongs to whoever wants it more.'],
   creativity: ['They’re looking for a spark of invention.', 'It wants imagination — something unexpected.', 'He needs a solution no one else can see.', 'It calls for a moment nobody saw coming.', 'The situation is crying out for a flash of ingenuity.', 'They want proof he can think a half-step ahead of everyone else.', 'The obvious ball will not do here.', 'It wants the answer nobody has thought of yet.', 'Everything sensible has already been tried.', 'They are waiting for him to see something.', 'It needs an idea more than it needs a technique.', 'The picture is there for anyone who can find it.'],
   composure: ['It asks for a cool head under pressure.', 'The test is whether he can keep calm.', 'He needs to slow it down and stay in control.', 'It’s about not letting the moment get too big for him.', 'They want to see the pulse stay steady when it matters.', 'The test is simple: can he trust himself under the heat?', 'The noise is the test, not the football.', 'It asks him to take the extra half-second.', 'Everyone around him is rushing; that is the trap.', 'It wants a still head in a loud place.', 'The panic is the opponent here.', 'He needs to look like he has done this before.'],
@@ -16,3 +29,6 @@ export const DEMAND: Record<string, string[]> = {
   flair: ['It’s a chance to show his imagination.', 'It’s the moment to try something bold.', 'They want to see a bit of magic from him.', 'It calls for something the coaching manual doesn’t cover.', 'This is the moment to back himself and go for broke.', 'They want to see him make it look easy when it isn’t.', 'It is a moment that will either look wonderful or very stupid.', 'The safe option is available, and dull.', 'It wants him to trust the thing he can do.', 'Somebody has to try something here.', 'The crowd can feel one coming.', 'It is the sort of moment careers get remembered for.'],
   keeping: ['It’s down to him to keep them out.', 'It’s a test of his hands and his nerve.', 'They need him to be the wall behind them.', 'It calls for a shot-stopper’s stubbornness.', 'The moment needs a clean take and no fuss.', 'They want to see him command the space that’s his.', 'Everything now depends on the man in the different shirt.', 'It asks him to be certain when nobody else is.', 'The box is his and he has to say so.', 'One touch decides this, and it is his.', 'It wants safe hands and a loud voice.', 'There is nobody behind him to fix it.'],
 };
+
+/** BASE plus every authoring pack — see ./merge.ts for why the packs are separate files. */
+export const DEMAND = mergeBanks(BASE_DEMAND, DEMAND_A, DEMAND_B, DEMAND_C, DEMAND_D, DEMAND_E, DEMAND_F, DEMAND_G, DEMAND_H, DEMAND_I, DEMAND_J, DEMAND_K, DEMAND_L);

@@ -1,6 +1,19 @@
+import { mergeBanks } from './merge.js';
+import { SETTINGS_A } from './extra/pack_a.js';
+import { SETTINGS_B } from './extra/pack_b.js';
+import { SETTINGS_C } from './extra/pack_c.js';
+import { SETTINGS_D } from './extra/pack_d.js';
+import { SETTINGS_E } from './extra/pack_e.js';
+import { SETTINGS_F } from './extra/pack_f.js';
+import { SETTINGS_G } from './extra/pack_g.js';
+import { SETTINGS_H } from './extra/pack_h.js';
+import { SETTINGS_I } from './extra/pack_i.js';
+import { SETTINGS_J } from './extra/pack_j.js';
+import { SETTINGS_K } from './extra/pack_k.js';
+import { SETTINGS_L } from './extra/pack_l.js';
 // SETTINGS — see shared/src/prompts/README for the authoring rules.
 // settings by chapter (age band) — a young park pitch grows into a stadium
-export const SETTINGS: Record<string, string[]> = {
+const BASE_SETTINGS: Record<string, string[]> = {
   Grassroots: ['on a muddy park pitch', 'under grey skies at the local rec', 'with a scatter of parents watching from the touchline', 'on a frostbitten Sunday-league morning', 'between two sets of jumpers-for-goalposts', 'as a dog wandered across the far corner', 'on a pitch more mud than grass', 'with the ball skidding off the wet surface', 'as steam rose off the players in the cold', 'past a car park doubling as the changing rooms', 'with a lone parent-referee keeping order'],
   Academy: ["on the academy's back pitches", 'in a youth-team fixture', 'under the academy floodlights', 'in a coaches-only trial game', 'on the manicured academy turf', 'in front of the youth-development staff', 'on the pristine academy 3G', 'in a behind-closed-doors development game', 'with the age-group coaches lining the touchline', 'in a possession drill that spilled into a real match', 'under the watchful eye of the head of youth'],
   Scholar: ['in a youth-league fixture', 'in front of the scholarship staff', 'with his YTS place on the line', 'on a bitter midweek youth night', 'in a trial game against older lads', 'with the academy director watching closely', 'in a rain-lashed youth-league tie', 'with his scholarship review looming', 'against a physical, streetwise older side', 'on the academy floodlit training pitch', 'with the release list at the back of every mind'],
@@ -9,3 +22,6 @@ export const SETTINGS: Record<string, string[]> = {
   'First Team': ['as a first-team regular now', 'with the shirt his to lose', 'in front of a demanding home crowd', 'with the pressure of a starting spot', 'under the weight of real expectation', 'on a proper league Saturday', 'with the number on his back earned', 'in front of a crowd that expects', 'on a tense, must-not-lose afternoon', "with the season's rhythm in full swing", 'under the steady glare of the regulars'],
   Establishing: ['before a full, expectant stand', 'with cameras tracking his every touch', 'in the thick of a proper contest', 'with a lot of eyes on him', 'as a sell-out crowd leaned in', 'with the pundits watching for a reason to doubt him', 'with the whole ground tuned to him', 'as the neutrals watched to be convinced', 'in a fixture the league had circled', 'with reputations on the line', 'before a stand that had come to see him'],
 };
+
+/** BASE plus every authoring pack — see ./merge.ts for why the packs are separate files. */
+export const SETTINGS = mergeBanks(BASE_SETTINGS, SETTINGS_A, SETTINGS_B, SETTINGS_C, SETTINGS_D, SETTINGS_E, SETTINGS_F, SETTINGS_G, SETTINGS_H, SETTINGS_I, SETTINGS_J, SETTINGS_K, SETTINGS_L);
