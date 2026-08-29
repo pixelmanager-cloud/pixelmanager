@@ -21,7 +21,11 @@ export function developAttrs(attrs: any, genes: any, age: number, trainingLvl: n
   for (const s of DEVELOPABLE) {
     const v = out[s];
     if (typeof v !== 'number') continue;
-    const ceil = PHYSICAL.has(s) ? (genes?.[s]?.ceiling ?? 18) : 18;
+    // A ceiling for ANY stat, not just physical ones. Career genes only define physical ceilings, so this
+    // is identical for the bloodline star — but it lets a SQUAD player carry a role-shaped ceiling, which
+    // is what stops a centre-half's goalkeeping climbing to 18 and the whole squad converging on one
+    // statline. (PT-603)
+    const ceil = genes?.[s]?.ceiling ?? 18;
     if (age <= 31) { // GROWTH — a real ~7-season runway toward the ceiling
       const room = ceil - v;
       if (room > 0.05) out[s] = clampStat(v + Math.min(room, 0.45 * tf * (0.4 + 0.6 * Math.min(1, room / 5))));

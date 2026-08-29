@@ -599,9 +599,27 @@ export const api = {
     const c = await localStore.getClub(OWNER);
     if (!c) throw apiErr('club not found', {}, 404);
     if (c.club.players.length <= MIN_SQUAD) throw apiErr(`you can't drop below ${MIN_SQUAD} players`, {}, 409);
+    const p = c.club.players.find((x) => x.id === playerId);
+    if (!p) throw apiErr('no such player', {}, 404);
+    // The bloodline star is not a squad member you can release. sellPlayer has carried this guard since
+    // PT-90; release never did, so the one irreplaceable player in the game could be deleted from a
+    // routine squad screen with no confirmation and no way back. (PT-307)
+    if (await localStore.getToken(playerId)) throw apiErr('the bloodline star can only leave via a transfer offer', {}, 409);
+    // RELEASING MID-CONTRACT COSTS. Wages are only charged at the rollover, so releasing (or selling) the
+    // week before Next Season dodged the entire bill — the squad screen was a way to play the season and
+    // then not pay for it. A player with seasons left is paid off for one season's wage. (PT-307)
+    const season = getActiveModel().profile.season;
+    const left = squadSeasonsLeft(p, season);
+    let payoff = 0;
+    if (left > 0) {
+      payoff = Math.round(squadSeasonWage(overall(p)));
+      const coins = getActiveModel().profile.coins;
+      if (coins < payoff) throw apiErr(`he has ${left} season${left > 1 ? 's' : ''} left — paying up his deal costs ${payoff}c`, { need: payoff }, 402);
+      await localStore.addCoins(OWNER, -payoff);
+    }
     c.club.players = c.club.players.filter((x) => x.id !== playerId);
     await localStore.saveClub(OWNER, c.club, c.standingOrders);
-    return { ok: true as const, squadSize: c.club.players.length };
+    return { ok: true as const, squadSize: c.club.players.length, payoff, coins: getActiveModel().profile.coins };
   },
   developPlayer: async (pid: string, body: { focus: string; age: number }) => {
     await ensureActive();

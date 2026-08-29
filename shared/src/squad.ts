@@ -73,6 +73,25 @@ export interface SquadRollover {
   intake: Player[];     // academy kids promoted to keep the squad viable
 }
 
+
+/** Per-ROLE development ceilings for squad players. A keeper is not going to develop a striker's finishing
+ *  and a centre-half is not going to grow into a goalkeeper; the stats a role never uses should stay where
+ *  they were minted so players keep distinct shapes as they mature. Shaped like the career `genes` object
+ *  so it drops straight into developAttrs. Anything unlisted keeps the generic 18. (PT-603) */
+const ROLE_CEIL: Record<string, Record<string, number>> = {
+  GK: { keeping: 19, shooting: 7, passing: 12, tackling: 9, pace: 12, creativity: 10, setPiece: 11 },
+  DF: { keeping: 5, shooting: 10, tackling: 19, positioning: 18, strength: 18, creativity: 13 },
+  MF: { keeping: 5, shooting: 15, passing: 19, creativity: 18, workrate: 18, tackling: 15 },
+  FW: { keeping: 5, shooting: 19, pace: 18, tackling: 10, positioning: 17, creativity: 17 },
+};
+function roleCeilings(role: string | undefined): Record<string, { ceiling: number }> | undefined {
+  const m = ROLE_CEIL[String(role ?? '')];
+  if (!m) return undefined;
+  const out: Record<string, { ceiling: number }> = {};
+  for (const k of Object.keys(m)) out[k] = { ceiling: m[k] };
+  return out;
+}
+
 /** Advance ONE squad player a season: age +1, then grow (young) / plateau / decline (old).
  *  `trainingLvl` is the club's Training Ground level — better facilities grow youth faster and slow
  *  the fade, so investing in the club visibly pays off in the squad. */
@@ -80,9 +99,11 @@ export function advanceSquadPlayer(p: Player, trainingLvl = 1): Player {
   const age = (p.age ?? 24) + 1;
   let attrs = p.attrs as any;
   if (age <= SQUAD_GROWTH_AGE) {
-    // reuse the star's own growth curve (genes absent → generic ceilings), so a young squad player
-    // develops on the same model the bloodline player does
-    attrs = developAttrs(attrs, undefined, Math.min(age, 31), trainingLvl);
+    // reuse the star's own growth curve, but against a ROLE-SHAPED ceiling. With generic ceilings every
+    // developable stat climbed toward 18 regardless of position, so a centre-half's goalkeeping rose
+    // season after season and the whole squad compressed toward one identical statline — the opposite of
+    // a dressing room of distinct people. (PT-603)
+    attrs = developAttrs(attrs, roleCeilings(p.role), Math.min(age, 31), trainingLvl);
   } else if (age > SQUAD_PEAK_AGE) {
     attrs = ageSquadAttrs(attrs, age);
   } // == SQUAD_PEAK_AGE: prime plateau
