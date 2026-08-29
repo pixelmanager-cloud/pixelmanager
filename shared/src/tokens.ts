@@ -141,14 +141,17 @@ function careerScoreOf(c: Career): number { return Math.round(c.log.reduce((s, c
 // is a beatable benchmark, not an inevitable loss. (Was 6..9, which out-ran even perfect play every turn.)
 // 5..7 points/turn. At 3-5 the rival earned less than half the player's ~8.4/turn, so a skilled career was
 // never once behind after turn 20 across 200 simulated careers — the benchmark never threatened. (PT-700)
-function rivalRateOf(seed: number): number { return 3 + ((seed >>> 3) % 3); } // 5..7 points/turn (base)
+// Retuned with the card-quality change (PT-1407): the player banks `success * 8 * stakes`, and average
+// success fell from ~0.85 to ~0.68 once a bare tag match stopped guaranteeing a top grade. A rival
+// calibrated against the old, inflated scale beat 61% of skilled careers overnight. Scaled to match.
+export function rivalRateOf(seed: number): number { return 2.9 + ((seed >>> 3) % 3) * 0.5; } // base rate, stakes-weighted below
 /** The rival's score after `turn` turns. He must scale the SAME WAY the player does: the player banks
  *  `success * 8 * stakes`, and stakes climb from 1 in the child bands to 3 in the senior ones, so a rival on a
  *  FLAT per-turn rate falls behind structurally no matter how well he "plays". Live testing found exactly
  *  that — he led to turn 13, then the gap ran away monotonically to +202 by turn 80 with ~100 of 120 turns
  *  having no contest. Weighting each turn by its band's stakes ceiling keeps him a live opponent all career.
  *  Pure function of turn — no rng, no replay impact. (PT-1000) */
-function rivalScoreAt(turn: number, rate: number): number {
+export function rivalScoreAt(turn: number, rate: number): number {
   let total = 0;
   for (let t = 0, band = 0, acc = 0; t < turn && band < AGE_BANDS.length; t++) {
     while (band < AGE_BANDS.length - 1 && t >= acc + AGE_BANDS[band].turns) { acc += AGE_BANDS[band].turns; band++; }

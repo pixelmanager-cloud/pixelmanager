@@ -6,21 +6,15 @@
 //   • is content repetitive (scenario-label repeats within a career / back-to-back)?
 // Deterministic, fast, browser-free — the workhorse for 24/7 balance testing. Run:
 //   npx tsx tools/playtest/analyze_player_career.ts [N]
-import { Career, fit, seedFrom, AGE_BANDS } from '../../shared/src/career.js';
+import { Career, fit, seedFrom } from '../../shared/src/career.js';
+import { rivalRateOf, rivalScoreAt } from '../../shared/src/tokens.js';
 
 const N = Number(process.argv[2] ?? 400);
-// mirror tokens.ts careerScoreOf / rivalRateOf / rivalScoreAt so we can judge rival beatability without
-// importing internals. These MUST track the real thing: this mirror had drifted to the old flat 3-5 model,
-// so the probe kept reporting the rival healthy while live play saw him fall 202 points behind. (PT-1000)
-const rivalRate = (seed: number) => 3 + ((seed >>> 3) % 3);
-const rivalScoreAt = (turn: number, rate: number) => {
-  let total = 0;
-  for (let t = 0, band = 0, acc = 0; t < turn && band < AGE_BANDS.length; t++) {
-    while (band < AGE_BANDS.length - 1 && t >= acc + AGE_BANDS[band].turns) { acc += AGE_BANDS[band].turns; band++; }
-    total += rate * (1 + (AGE_BANDS[band].maxStakes - 1) * 0.55);
-  }
-  return Math.round(total);
-};
+// The rival model is IMPORTED from the game, never copied. This block used to be a hand-maintained mirror
+// with a comment insisting it must track the real thing — and it drifted twice anyway, most recently
+// within an hour of the rival being retuned, so the probe went on reporting a rival it no longer shared a
+// formula with. A copy that must be kept in sync is a bug with a waiting period. (PT-1000)
+const rivalRate = rivalRateOf;
 
 type Row = { successes: number[]; stakes: number[]; bestFits: number[]; labels: string[]; score: number };
 function run(seedTag: string, policy: 'skilled' | 'random'): Row[] {
@@ -76,7 +70,7 @@ function summarise(label: string, rows: Row[]) {
   console.log(`  grades:   Solid+ ${solidPlus}%   Brilliant ${brilliant}%   Poor ${poor}%`);
   console.log(`  bad hand (no fair-fit card available): ${badHand}% of turns`);
   console.log(`  back-to-back same scenario: ${(100 * b2b / Math.max(1, tot)).toFixed(1)}%   avg distinct scenarios/career: ${(distinct / rows.length).toFixed(0)}`);
-  return { solidPlus: +solidPlus, brilliant: +brilliant, rivalBeat: +rivalBeat, contested: +contested, badHand: +badHand, avgSucc: avg(allSucc) };
+  return { solidPlus: +solidPlus, brilliant: +brilliant, poor: +poor, rivalBeat: +rivalBeat, contested: +contested, badHand: +badHand, avgSucc: avg(allSucc) };
 }
 
 console.log(`=== Player-career playtest probe — ${N} careers/policy (skilled = always best-fit) ===`);
@@ -85,6 +79,16 @@ const rn = summarise('RANDOM', run('probe', 'random'));
 console.log(`\n=== player-experience verdict ===`);
 const checks: Array<[string, boolean, string]> = [
   ['skilled play is usually rewarded (Solid+ ≥ 60%)', sk.solidPlus >= 60, `${sk.solidPlus}%`],
+  // These two checks had a FLOOR and no CEILING, so "90% of turns come out Solid or better" scored as a
+  // pass — when 90% is the actual complaint. A loop the player cannot fail has no tension in it, and the
+  // probe was structurally unable to say so. Same one-sided blind spot the manager probe had. (PT-151/1407)
+  ['skilled play can still FAIL (Solid+ ≤ 82%)', sk.solidPlus <= 82, `${sk.solidPlus}%`],
+  // NOTE on this floor: 'skilled' here means the best card in hand EVERY turn, which no human sustains.
+  // For a perfect-play policy a Poor result requires a large adverse swing, so it is rare by construction
+  // and demanding 7% would only push me to add noise the game does not need. The real anti-inflation
+  // guards are the two ceilings above; this one exists so failure stays VISIBLE rather than impossible.
+  ['failure is still possible for skilled play (Poor ≥ 3%)', sk.poor >= 3, `${sk.poor}%`],
+  ['Brilliant stays special (≤ 45% of turns)', sk.brilliant <= 45, `${sk.brilliant}%`],
   ['skill clearly beats random (Solid+ gap ≥ 20pts)', sk.solidPlus - rn.solidPlus >= 20, `${sk.solidPlus}% vs ${rn.solidPlus}%`],
   ['rival is beatable by good play (≥ 60% of skilled careers)', sk.rivalBeat >= 60, `${sk.rivalBeat}%`],
   ['the rival STAYS a contest, not just beatable (≥ 40%)', sk.contested >= 40, `${sk.contested}%`],

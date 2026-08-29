@@ -1338,7 +1338,18 @@ export class Career {
     // FATIGUE: running on empty saps a moment (below 35 energy it bites, up to −0.12 at flat 0). Makes
     // Rest and the energy-giving focus choices a real trade-off against a busy, big-moment-heavy chapter.
     const fatigue = this.energy < 35 ? ((35 - this.energy) / 35) * 0.12 : 0;
-    const success = clamp(f + (this.rng() - 0.5) * variance + form + bigGame + coaching - fatigue, 0, 1);
+    // CARD QUALITY matters, not just the tag match. `fit` saturates at 1.0 for ANY card carrying the
+    // demanded tag, so success was `1.0 + noise` and a right card was a near-guaranteed Brilliant: measured
+    // 90% Solid+, 48% Brilliant and 1% Poor across 400 skilled careers. There was no decision in the turn —
+    // find the tag, play it, win. Card rarity already drove which STATS grew but was ignored by the outcome,
+    // so a common and an epic card played identically. Now a common card played into its demand reads Solid
+    // and Brilliant has to be earned, which makes holding an epic for a big moment a real choice. (PT-700/151/1407)
+    // A multiplier compounded badly: top demand is normalised to 0.78, so scaling THAT by 0.72 put a
+    // well-played common card at 0.56 — on the Solid line. A flat penalty keeps the scale and still
+    // separates the tiers: common 0.68, rare 0.73, epic 0.78 before nerves.
+    const quality = (cardPower(card) - 1) / 2;                  // common 0 · rare 0.5 · epic 1
+    const base = f - 0.10 * (1 - quality);
+    const success = clamp(base + (this.rng() - 0.5) * variance + form + bigGame + coaching - fatigue, 0, 1);
     // did the played card carry ANY tag the moment actually called for (primary OR secondary)? — so a
     // called-for-but-secondary tag is never branded "wrong", only partial (PT-44)
     const matchedAsk = card.tags.some((t) => (this.scenario.demand[t] ?? 0) > 0);
