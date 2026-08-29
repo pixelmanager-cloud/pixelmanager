@@ -316,7 +316,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-gambling', title: 'The Number in His Pocket', icon: '🎰', category: 'crisis',
-    minTurn: 47, maxTurn: 105, weight: 2, first: 'open',
+    minTurn: 86, maxTurn: 105, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -448,7 +448,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-new-league', title: 'Lost in Translation', icon: '🧭', category: 'crisis',
-    minTurn: 50, maxTurn: 107, weight: 2, first: 'open',
+    minTurn: 66, maxTurn: 107, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -492,7 +492,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-legend-feud', title: 'Words With a Legend', icon: '🎙️', category: 'crisis',
-    minTurn: 60, maxTurn: 116, weight: 2, first: 'open',
+    minTurn: 86, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -514,7 +514,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-wage-cut', title: 'The Ultimatum', icon: '✂️', category: 'crisis',
-    minTurn: 63, maxTurn: 116, weight: 2, first: 'open',
+    minTurn: 86, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -602,7 +602,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-drink-spiral', title: 'Last Orders', icon: '🍺', category: 'crisis',
-    minTurn: 47, maxTurn: 107, weight: 2, first: 'open',
+    minTurn: 66, maxTurn: 107, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -690,7 +690,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-dressing-mutiny', title: 'The Revolt', icon: '🪧', category: 'crisis',
-    minTurn: 63, maxTurn: 116, weight: 2, first: 'open',
+    minTurn: 86, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',

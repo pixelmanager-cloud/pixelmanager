@@ -312,7 +312,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-first-senior-goal', title: 'The First One', icon: '⚽', category: 'triumph',
-    minTurn: 23, maxTurn: 72, weight: 3, first: 'open',
+    minTurn: 46, maxTurn: 72, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',

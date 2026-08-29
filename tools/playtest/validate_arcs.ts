@@ -61,12 +61,32 @@ const CHILD_TURN_LIMIT = 46;
 // relative's wedding, or a lift-share that "ends like a marriage", is fine — him having a girlfriend,
 // proposing, moving in with a partner, or being in a casino is not.
 const ADULT_WORDS = /\b(his girlfriend|ask(?:s)? her out|asked her out|propose(?:d)? to her|his fianc|moved in together|moving in together|his partner|nightclub|casino|gambl\w*|mortgage|dating her)\b/i;
+// Tiered by what the material actually requires, since "adult" isn't one age. Turn 46 = 17 (driving age),
+// 56 = 18 (drinking/gambling), 86 = 21 (raising a child). Each pattern is deliberately narrow — the false
+// positives that had to be excluded are noted, because a guard that cries wolf gets switched off:
+//   case-sensitive `He drives`  — so "It drives him hard" passes
+//   `(?! off\b)`                — so "before he drives off" (a lift home) passes
+//   `(?<!who )`                 — so "the coach who drove him to every trial" passes
+// and it deliberately does NOT match "a session", "champagne", "his child" or "his son", which is what keeps
+// the whole 211-arc youth library, tri-promotion and rel-estranged-parent clean.
+const AGE_RULES: Array<{ what: string; limit: number; re: RegExp }> = [
+  { what: 'driving',      limit: 46,  re: /(?<!who )\bHe drives(?! off\b)|\bhis own car\b|\bbehind the wheel\b|\bdriving licence\b/ },
+  { what: 'alcohol',      limit: 56,  re: /\bover a pint\b|\bdrinking spiral\b|\bhis drinking\b|\bpints\b/i },
+  { what: 'gambling',     limit: 56,  re: /\bmatch-fixing\b|\bfix a match\b|\bplace(?:d|s)? a bet\b|\bhis betting\b|\bgambling debt/i },
+  { what: 'guardianship', limit: 86,  re: /\bgodson\b|\bgodchild\b|\bbecoming a father\b|\bhis newborn\b/i },
+];
 let ageFails = 0;
 for (const a of ARCS) {
-  if (a.minTurn >= CHILD_TURN_LIMIT) continue;
   const body = JSON.stringify(a.beats);
-  const hit = body.match(ADULT_WORDS);
-  if (hit) { console.log(`  FAIL [${a.id}] minTurn ${a.minTurn} reaches a child (< ${CHILD_TURN_LIMIT}) but contains adult material: "${hit[0]}"`); ageFails++; }
+  if (a.minTurn < CHILD_TURN_LIMIT) {
+    const hit = body.match(ADULT_WORDS);
+    if (hit) { console.log(`  FAIL [${a.id}] minTurn ${a.minTurn} reaches a child (< ${CHILD_TURN_LIMIT}) but contains adult material: "${hit[0]}"`); ageFails++; }
+  }
+  for (const rule of AGE_RULES) {
+    if (a.minTurn >= rule.limit) continue;
+    const hit = body.match(rule.re);
+    if (hit) { console.log(`  FAIL [${a.id}] minTurn ${a.minTurn} is below the ${rule.what} limit (${rule.limit}) but contains: "${hit[0]}"`); ageFails++; }
+  }
 }
 if (ageFails) { console.log(`\n✗ ${ageFails} arc(s) expose adult material to a child`); process.exitCode = 1; }
 else console.log('  ok   no adult material reachable before age 17');

@@ -52,7 +52,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 2 — a FAMILY ILLNESS
   {
     id: 'rel-family-illness', title: 'The Phone Call at Full Time', icon: '🏥', category: 'relationship',
-    minTurn: 26, maxTurn: 101, weight: 2, first: 'diagnosis',
+    minTurn: 86, maxTurn: 101, weight: 2, first: 'diagnosis',
     beats: {
       diagnosis: {
         id: 'diagnosis',
@@ -76,7 +76,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 3 — BECOMING A FATHER
   {
     id: 'rel-becoming-father', title: 'The Smallest Signing', icon: '👶', category: 'relationship',
-    minTurn: 57, maxTurn: 107, weight: 2, first: 'news',
+    minTurn: 86, maxTurn: 107, weight: 2, first: 'news',
     beats: {
       news: {
         id: 'news',
@@ -100,7 +100,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 4 — a TEAMMATE BEST-FRIEND bond
   {
     id: 'rel-best-mate', title: 'Thick as Thieves', icon: '🤝', category: 'relationship',
-    minTurn: 26, maxTurn: 99, weight: 3, first: 'bond',
+    minTurn: 66, maxTurn: 99, weight: 3, first: 'bond',
     beats: {
       bond: {
         id: 'bond',
@@ -172,7 +172,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 7 — reconnecting with an ESTRANGED PARENT
   {
     id: 'rel-estranged-parent', title: 'The Empty Seat at Every Game', icon: '🚪', category: 'relationship',
-    minTurn: 27, maxTurn: 102, weight: 2, first: 'letter',
+    minTurn: 46, maxTurn: 102, weight: 2, first: 'letter',
     beats: {
       letter: {
         id: 'letter',
@@ -196,7 +196,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 8 — an ACADEMY KID who looks up to him (he becomes the mentor)
   {
     id: 'rel-mentor-kid', title: 'The Kid Who Wears His Number', icon: '🌱', category: 'relationship',
-    minTurn: 57, maxTurn: 110, weight: 2, first: 'shadow',
+    minTurn: 86, maxTurn: 110, weight: 2, first: 'shadow',
     beats: {
       shadow: {
         id: 'shadow',
@@ -244,7 +244,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 10 — a SIBLING whose own football dream stalled
   {
     id: 'rel-sibling-dream', title: 'The Brother Who Didn’t Make It', icon: '🥀', category: 'relationship',
-    minTurn: 29, maxTurn: 105, weight: 2, first: 'release',
+    minTurn: 86, maxTurn: 105, weight: 2, first: 'release',
     beats: {
       release: {
         id: 'release',
@@ -268,7 +268,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 11 — a demanding FOOTBALL DAD who won't let go
   {
     id: 'rel-football-dad', title: 'The Man in the Stand with the Notebook', icon: '📋', category: 'relationship',
-    minTurn: 24, maxTurn: 85, weight: 2, first: 'critique',
+    minTurn: 66, maxTurn: 85, weight: 2, first: 'critique',
     beats: {
       critique: {
         id: 'critique',
@@ -292,7 +292,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 12 — GRIEF over a mentor/coach who passed away
   {
     id: 'rel-coach-passing', title: 'The Whistle That Went Quiet', icon: '🕯️', category: 'relationship',
-    minTurn: 46, maxTurn: 113, weight: 2, first: 'news',
+    minTurn: 86, maxTurn: 113, weight: 2, first: 'news',
     beats: {
       news: {
         id: 'news',
@@ -340,7 +340,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 14 — LOYALTY to the physio who saved his career
   {
     id: 'rel-physio-loyalty', title: 'The Hands That Put Him Back Together', icon: '🩹', category: 'relationship',
-    minTurn: 46, maxTurn: 116, weight: 2, first: 'comeback',
+    minTurn: 86, maxTurn: 116, weight: 2, first: 'comeback',
     beats: {
       comeback: {
         id: 'comeback',
@@ -364,7 +364,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 15 — a FAN who has written to him for years
   {
     id: 'rel-pen-pal-fan', title: 'Seat 14, Row F, Every Week', icon: '✉️', category: 'relationship',
-    minTurn: 38, maxTurn: 116, weight: 2, first: 'letters',
+    minTurn: 86, maxTurn: 116, weight: 2, first: 'letters',
     beats: {
       letters: {
         id: 'letters',
@@ -436,7 +436,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 18 — FALLOUT then RECONCILIATION with an old teammate
   {
     id: 'rel-old-teammate-reconcile', title: 'Ten Years of Not Speaking', icon: '🕰️', category: 'relationship',
-    minTurn: 60, maxTurn: 119, weight: 2, first: 'reunion',
+    minTurn: 104, maxTurn: 119, weight: 2, first: 'reunion',
     beats: {
       reunion: {
         id: 'reunion',
@@ -460,7 +460,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 19 — taking a TROUBLED YOUNG PRO under his wing
   {
     id: 'rel-troubled-youngster', title: 'The Talent on the Edge', icon: '🎢', category: 'relationship',
-    minTurn: 63, maxTurn: 116, weight: 2, first: 'trouble',
+    minTurn: 86, maxTurn: 116, weight: 2, first: 'trouble',
     beats: {
       trouble: {
         id: 'trouble',
@@ -484,7 +484,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 20 — a GODCHILD/NEPHEW he coaches on the quiet
   {
     id: 'rel-godchild-coach', title: 'Sunday Mornings in the Park', icon: '⚽', category: 'relationship',
-    minTurn: 54, maxTurn: 113, weight: 2, first: 'talent',
+    minTurn: 104, maxTurn: 113, weight: 2, first: 'talent',
     beats: {
       talent: {
         id: 'talent',
@@ -508,7 +508,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 21 — a MEDIA PUNDIT who used to be his teammate
   {
     id: 'rel-pundit-expartner', title: 'The Voice in the Gantry', icon: '🎙️', category: 'relationship',
-    minTurn: 57, maxTurn: 119, weight: 2, first: 'roasted',
+    minTurn: 104, maxTurn: 119, weight: 2, first: 'roasted',
     beats: {
       roasted: {
         id: 'roasted',
@@ -628,7 +628,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 26 — the GRANDPARENT who raised him, now ageing
   {
     id: 'rel-grandparent', title: 'The Nan Who Raised Him', icon: '🫖', category: 'relationship',
-    minTurn: 26, maxTurn: 102, weight: 3, first: 'fading',
+    minTurn: 86, maxTurn: 102, weight: 3, first: 'fading',
     beats: {
       fading: {
         id: 'fading',
@@ -676,7 +676,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 28 — the LOYAL KITMAN who's been there since he was a boy
   {
     id: 'rel-kitman', title: 'The Man Who Washes the Shirts', icon: '🧺', category: 'relationship',
-    minTurn: 35, maxTurn: 116, weight: 2, first: 'pushed-out',
+    minTurn: 86, maxTurn: 116, weight: 2, first: 'pushed-out',
     beats: {
       'pushed-out': {
         id: 'pushed-out',
@@ -700,7 +700,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 29 — mentoring a FOREIGN SIGNING through culture shock
   {
     id: 'rel-foreign-signing', title: 'The New Boy Who Can’t Read the Menu', icon: '🌍', category: 'relationship',
-    minTurn: 41, maxTurn: 113, weight: 3, first: 'lost',
+    minTurn: 86, maxTurn: 113, weight: 3, first: 'lost',
     beats: {
       lost: {
         id: 'lost',
@@ -724,7 +724,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 30 — the CHAIRMAN who treats him like a son (or a pawn)
   {
     id: 'rel-chairman', title: 'The Owner’s Favourite Son', icon: '🎩', category: 'relationship',
-    minTurn: 50, maxTurn: 119, weight: 2, first: 'anointed',
+    minTurn: 86, maxTurn: 119, weight: 2, first: 'anointed',
     beats: {
       anointed: {
         id: 'anointed',
@@ -748,7 +748,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 31 — a JEALOUS FRIEND from home who resents his success
   {
     id: 'rel-hometown-friend', title: 'The Mate Who Stayed Behind', icon: '🍺', category: 'relationship',
-    minTurn: 29, maxTurn: 107, weight: 3, first: 'resentment',
+    minTurn: 86, maxTurn: 107, weight: 3, first: 'resentment',
     beats: {
       resentment: {
         id: 'resentment',
@@ -772,7 +772,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 32 — a young ACADEMY KEEPER he takes under his wing
   {
     id: 'rel-academy-keeper', title: 'The Kid Between the Sticks', icon: '🧤', category: 'relationship',
-    minTurn: 60, maxTurn: 116, weight: 2, first: 'howler',
+    minTurn: 86, maxTurn: 116, weight: 2, first: 'howler',
     beats: {
       howler: {
         id: 'howler',

@@ -635,7 +635,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-new-money', title: 'New Money', icon: '💰', category: 'saga',
-    minTurn: 63, maxTurn: 110, weight: 2, first: 'open',
+    minTurn: 104, maxTurn: 110, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
