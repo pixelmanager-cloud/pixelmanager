@@ -49,10 +49,14 @@ const pct = (xs: boolean[]) => (100 * xs.filter(Boolean).length / Math.max(1, xs
 const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
 function summarise(label: string, rows: Row[]) {
   const allSucc = rows.flatMap((r) => r.successes);
+  // Defined ONCE. I first wrote the by-quarter breakdown below with its own 0.55 against solidPlus's 0.60
+  // and it silently reported a career 9 points rosier than the aggregate — the same duplicated-constant
+  // drift that had the rival probe judging a formula the game no longer used.
+  const SOLID = 0.60, BRILLIANT = 0.80, POOR = 0.40;
   // kept in sync with the on-screen grade pills in client/src/main.ts (PT-700 retune)
-  const solidPlus = pct(allSucc.map((s) => s >= 0.60));
-  const brilliant = pct(allSucc.map((s) => s >= 0.80));
-  const poor = pct(allSucc.map((s) => s < 0.40));
+  const solidPlus = pct(allSucc.map((s) => s >= SOLID));
+  const brilliant = pct(allSucc.map((s) => s >= BRILLIANT));
+  const poor = pct(allSucc.map((s) => s < POOR));
   const badHand = pct(rows.flatMap((r) => r.bestFits).map((b) => b < 0.5)); // no card gets even a fair fit
   const rivalBeat = pct(rows.map((r, i) => r.score > rivalScoreAt(r.successes.length, rivalRate(seedFrom('probe', i)))));
   // A rival who is beaten but never THREATENS is not a rival. Measure how much of the career is a real
@@ -69,8 +73,17 @@ function summarise(label: string, rows: Row[]) {
   console.log(`\n[${label}]  avg success ${avg(allSucc).toFixed(2)}`);
   console.log(`  grades:   Solid+ ${solidPlus}%   Brilliant ${brilliant}%   Poor ${poor}%`);
   console.log(`  bad hand (no fair-fit card available): ${badHand}% of turns`);
+  // BY CAREER PHASE. An aggregate hides decay: the grade curve was fixed for the first 30 turns and then
+  // drifted back to a near-guaranteed Brilliant in the late career, and a single career-wide number could
+  // not see it. Quarters of the career, so a trend is visible rather than an average. (PT-1001)
+  const q = [0, 1, 2, 3].map((k) => {
+    const seg = rows.flatMap((r) => r.successes.slice(Math.floor(r.successes.length * k / 4), Math.floor(r.successes.length * (k + 1) / 4)));
+    return { sp: +pct(seg.map((v) => v >= SOLID)), br: +pct(seg.map((v) => v >= BRILLIANT)) };
+  });
+  console.log(`  by quarter:  Solid+ ${q.map((x) => `${x.sp}%`).join(' → ')}   Brilliant ${q.map((x) => `${x.br}%`).join(' → ')}`);
+  const drift = Math.max(...q.map((x) => x.br)) - Math.min(...q.map((x) => x.br));
   console.log(`  back-to-back same scenario: ${(100 * b2b / Math.max(1, tot)).toFixed(1)}%   avg distinct scenarios/career: ${(distinct / rows.length).toFixed(0)}`);
-  return { solidPlus: +solidPlus, brilliant: +brilliant, poor: +poor, rivalBeat: +rivalBeat, contested: +contested, badHand: +badHand, avgSucc: avg(allSucc) };
+  return { drift, solidPlus: +solidPlus, brilliant: +brilliant, poor: +poor, rivalBeat: +rivalBeat, contested: +contested, badHand: +badHand, avgSucc: avg(allSucc) };
 }
 
 console.log(`=== Player-career playtest probe — ${N} careers/policy (skilled = always best-fit) ===`);
@@ -89,6 +102,7 @@ const checks: Array<[string, boolean, string]> = [
   // guards are the two ceilings above; this one exists so failure stays VISIBLE rather than impossible.
   ['failure is still possible for skilled play (Poor ≥ 3%)', sk.poor >= 3, `${sk.poor}%`],
   ['Brilliant stays special (≤ 45% of turns)', sk.brilliant <= 45, `${sk.brilliant}%`],
+  ['difficulty does not decay late (Brilliant spread across quarters ≤ 18pts)', sk.drift <= 18, `${sk.drift}pts`],
   ['skill clearly beats random (Solid+ gap ≥ 20pts)', sk.solidPlus - rn.solidPlus >= 20, `${sk.solidPlus}% vs ${rn.solidPlus}%`],
   ['rival is beatable by good play (≥ 60% of skilled careers)', sk.rivalBeat >= 60, `${sk.rivalBeat}%`],
   ['the rival STAYS a contest, not just beatable (≥ 40%)', sk.contested >= 40, `${sk.contested}%`],
