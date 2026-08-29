@@ -2863,16 +2863,25 @@ class Game {
   private careerProfileHtml(p: import('./api').CareerProfile): string {
     const stars = '★'.repeat(p.stars) + '☆'.repeat(5 - p.stars);
     const key: Array<[string, string]> = [['pace', 'PAC'], ['shooting', 'SHO'], ['passing', 'PAS'], ['tackling', 'TAC'], ['strength', 'STR'], ['composure', 'CMP'], ['creativity', 'CRE'], ['leadership', 'LDR']];
-    const stat = (k: string) => `<span class="cgp-stat" title="${STAT_FULL[k] ?? k}"><b>${key.find((x) => x[0] === k)?.[1]}</b> ${p.attrs[k] ?? 0}</span>`;
+    // A BAR AND A SCALE, not a micro-line of bare abbreviations. This was the game's only stats screen and
+    // it rendered as "PAC 10 SHO 14 PAS 16 TAC 9 STR 6 CMP 14 CRE 14 LDR 7" — no bars, no scale, no sense of
+    // what counts as good, and the abbreviations expanded only in a tooltip nobody hovers. (PT-160)
+    const stat = (k: string) => {
+      const v = Number(p.attrs[k] ?? 0);
+      return `<span class="cgp-stat" title="${STAT_FULL[k] ?? k}: ${v} out of 20"><b>${key.find((x) => x[0] === k)?.[1]}</b>`
+        + `<span class="cgp-bar"><i style="width:${Math.max(0, Math.min(100, v * 5))}%;background:${statColor(v)}"></i></span>`
+        + `<em>${v}</em></span>`;
+    };
     const traits = p.traitsForming.length ? `<div class="cgp-traits">forming: ${p.traitsForming.map((t) => `<span class="cg-tag">${t}</span>`).join(' ')}</div>` : '';
     return `<div class="cg-profile"><div class="cgp-top">`
       + `<span class="cgp-role role-${p.role}" title="His position emerges from HOW you develop him — the cards you play and stats you grow. The academy scout only glimpsed a hint; this is what he's becoming.">${p.role}${p.traitsForming.length ? ' <span class="cgp-forming">· forming</span>' : ''}</span>`
-      + `<span class="cgp-ovr">OVR ${p.currentOverall} <i>→ ${p.potential} pot ${stars}</i></span>`
+      + `<span class="cgp-ovr" title="Overall now, and the ceiling the scouts can currently SEE — it rises as he does, so it is a forecast, not a limit.">OVR ${p.currentOverall} <i>→ ${p.potential} scouted ceiling ${stars}</i></span>`
       + `<span class="cgp-pers" title="${p.personality.desc}">🧠 ${p.personality.name}</span>`
       + (p.agent ? `<span class="cgp-meta">🤝 ${p.agent}</span>` : '')
       + (p.coach ? `<span class="cgp-meta">📋 ${p.coach}</span>` : '')
       + `<span class="cgp-meta">💷 ${p.earnings.toLocaleString()}c earned</span></div>`
-      + `<div class="cgp-stats">${key.map(([k]) => stat(k)).join('')}</div>${traits}</div>`;
+      + `<div class="cgp-stats">${key.map(([k]) => stat(k)).join('')}</div>`
+      + `<div class="cgp-scale">Every attribute runs 1–20. Around 10 is an ordinary senior pro; 15+ is genuinely top level.</div>${traits}</div>`;
   }
 
   private cardHtml(c: import('./api').CareerCard, act: string, life = false, usedLifeNames?: Set<string>, turn = 0): string {
@@ -2892,7 +2901,18 @@ class Game {
     // cards, so you infer the stat from the action itself (the action always thematically matches its stat).
     // Draft/deck cards keep their tags so you can still build a deck knowingly.
     const showTags = !(act === 'play' && this.prefs.hideCardStats);
-    return `<div class="cg-card ${rar}" data-tag="${primaryTag}" data-act="${act}" data-id="${c.id}">${rar ? `<span class="cg-rarity">${rar}</span>` : ''}<div class="cg-cname">${name}</div>`
+    // The cards are the entire game and they were bare DIVs with a click handler: no role, no tab stop and
+    // no accessible name, so to a screen reader the card game read as an unlabelled blank. The name, the
+    // description and the qualities it draws on all belong in the label. (PT-160)
+    const aria = act === 'view'
+      ? `${name}. ${desc ?? ''} ${c.tags.join(', ')}`
+      : `Play ${name}. ${desc ?? ''} Draws on ${c.tags.join(' and ')}.${rar ? ` ${rar} card.` : ''}`;
+    return `<div class="cg-card ${rar}" data-tag="${primaryTag}" data-act="${act}" data-id="${c.id}"`
+      // NOTE: role/tabindex are deliberately NOT set here. makeActivatable() early-returns on anything that
+      // already has role="button", so setting it in the markup would have skipped the keydown handler and
+      // left the cards focusable but not operable by keyboard — worse than before.
+      + ` aria-label="${aria.replace(/"/g, '&quot;').replace(/\s+/g, ' ').trim()}">`
+      + `${rar ? `<span class="cg-rarity">${rar}</span>` : ''}<div class="cg-cname">${name}</div>`
       + (desc ? `<div class="cg-cdescr">${desc}</div>` : '') + (showTags ? `<div class="cg-ctags">${tags}</div>` : '<div class="cg-ctags cg-ctags-masked" title="Challenge mode — infer the quality from the action (toggle in Settings)">🎲</div>') + `</div>`;
   }
 
