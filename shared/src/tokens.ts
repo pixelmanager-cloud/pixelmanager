@@ -144,7 +144,7 @@ function rivalRateOf(seed: number): number { return 3 + ((seed >>> 3) % 3); } //
 export function actWithNarration(c: Career, a: CareerAction): string | null {
   const baseCtx = { age: c.age, chapter: c.chapter, stakes: 1 as 1 | 2 | 3, personalityId: c.personality.id, turn: c.turn, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0, castAvoid: c.familyName, milestone: null as string | null, seed: (((c as any).seed >>> 0) + c.turn * 2654435761) >>> 0 };
   if (a.type === 'play') {
-    const ctx = { ...baseCtx, stakes: c.scenario.stakes, milestone: careerMilestone(c) };
+    const ctx = { ...baseCtx, stakes: c.scenario.stakes, kind: c.scenario.kind, milestone: careerMilestone(c) };
     const lifeKind = c.scenario.life; // capture BEFORE applying — play() advances to the NEXT scenario
     const rivalMoment = c.scenario.rival;
     const callupMoment = c.scenario.callup;

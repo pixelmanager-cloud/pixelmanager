@@ -533,9 +533,30 @@ export const OFFERS: Offer[] = [MONEY_OFFERS[0], BRAND_OFFERS[0], DEVELOP_OFFERS
 export const OFFER_CHOICES = 3;
 /** Deterministic financial offer set for a chapter — one variant of each archetype, indexed by turn so the
  *  specific offers differ season to season while the money/fame/develop choice (and ids) stay stable. */
+// A 13-year-old academy kid does NOT get offered a release-clause buyout, a Gulf fortune or a docu-series.
+// The senior banks above are for players with a professional contract; these are the age-real equivalents —
+// travel money, a local shop's kit deal, a soccer-school gig — so the between-season money decision keeps its
+// shape (money vs fame vs development) without handing a child a senior-pro dilemma (PT-146, cf PT-134).
+const YOUTH_MONEY_OFFERS: Offer[] = [
+  { id: 'money', name: 'Expenses Covered',   desc: 'The club offers to cover travel and kit for the season — it takes a real weight off at home', earn: 60, greed: 1, market: 0, form: -0.02 },
+  { id: 'money', name: 'A Saturday Job',     desc: 'Weekend work at the sports shop — his own money for the first time, but it eats into his rest', earn: 90, greed: 2, market: 0, form: -0.05 },
+  { id: 'money', name: 'The Soccer School',  desc: 'Helping coach the little ones in the holidays for pocket money — good money, long days', earn: 75, greed: 1, market: 1, form: -0.03 },
+];
+const YOUTH_BRAND_OFFERS: Offer[] = [
+  { id: 'brand', name: 'The Local Paper',    desc: 'A photo and a write-up in the county paper — his nan buys six copies, and everyone at school sees it', earn: 25, greed: 0, market: 2, form: -0.02 },
+  { id: 'brand', name: "A Shop's Boot Deal", desc: 'The sports shop on the high street will kit him out if he wears their stuff — free boots, small strings', earn: 50, greed: 1, market: 2, form: -0.02 },
+  { id: 'brand', name: 'The Club Video',     desc: "A clip of him goes on the academy's channel — a taste of being watched, and of what that does to a boy", earn: 20, greed: 0, market: 3, form: -0.04 },
+];
 export function rollOffer(_rng: () => number, turn: number): Offer[] {
   const at = (arr: Offer[], salt: number) => arr[Math.abs(Math.imul(turn + 1, salt) >>> 0) % arr.length];
-  return [at(MONEY_OFFERS, 2654435761), at(BRAND_OFFERS, 40503), at(DEVELOP_OFFERS, 2246822519)];
+  // Youth Team (bandIdx 3, age 17-18) is where a first professional deal becomes plausible; below that the
+  // offers stay age-real. Pure band lookup — no rng draw, so the offer stream is unchanged for older careers.
+  const youth = bandAt(Math.min(turn, TOTAL_TURNS - 1)).index < 3;
+  return [
+    at(youth ? YOUTH_MONEY_OFFERS : MONEY_OFFERS, 2654435761),
+    at(youth ? YOUTH_BRAND_OFFERS : BRAND_OFFERS, 40503),
+    at(DEVELOP_OFFERS, 2246822519),
+  ];
 }
 
 // ── FOCUS: between each chapter you decide how to spend the summer. Deterministic + development-neutral

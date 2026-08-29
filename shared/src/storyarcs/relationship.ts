@@ -178,7 +178,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         id: 'letter',
         prompt: 'A letter arrives in shaky handwriting he half-recognises: the father who walked out when he was nine, who never once came to a match, saying he’s watched every game from afar and would like — if he’s allowed — to talk.',
         choices: [
-          { id: 'reply', label: 'Agree to meet', desc: 'A café, neutral ground, one hour, no promises', outcome: 'He sits across from a stranger with his own eyes and his own frown, and twenty years of resentment loosens by a single, painful notch.', effect: { meters: { family: 8 }, attr: { composure: 2 }, tag: 'reaching-out' }, next: 'reckoning' },
+          { id: 'reply', label: 'Agree to meet', desc: 'A café, neutral ground, one hour, no promises', outcome: 'He sits across from a stranger with his own eyes and his own frown, and years of resentment loosen by a single, painful notch.', effect: { meters: { family: 8 }, attr: { composure: 2 }, tag: 'reaching-out' }, next: 'reckoning' },
           { id: 'burn-it', label: 'Bin the letter', desc: 'He didn’t come when it mattered — too late now', outcome: 'He throws it in the fire and tells himself he feels nothing. He plays with a fury that weekend that says otherwise.', effect: { meters: { family: -4 }, attr: { aggression: 2 }, form: 0.05 } },
         ],
       },

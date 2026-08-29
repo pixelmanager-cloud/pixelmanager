@@ -10,6 +10,8 @@ function mulberry32(seed: number): () => number {
 
 export interface NarrateCtx {
   age: number; chapter: string; stakes: 1 | 2 | 3; personalityId: string; turn?: number;
+  /** the moment's kind — big-occasion match prose must not land on training/off-pitch moments (PT-147) */
+  kind?: 'match' | 'social' | 'training';
   seasonEventId?: string | null; seed: number; careerSeed?: number;
   /** the player's family surname — cast names avoid colliding with it (PT-141) */
   castAvoid?: string;
@@ -295,7 +297,7 @@ const CHILD_CHAPTERS = new Set(['Grassroots', 'Academy']);
 // Establishing) per the "much more human depth per band" brief.
 const FRAME_BY_CHAPTER: Record<string, string[]> = {
   Grassroots: [
-    'Homework still not done and Mum already shouting for the car, ', 'With Dad on the touchline in the cold, arms folded, willing him on, ',
+    'Homework still not done and Mum already shouting for the car, ', 'With a familiar face on the touchline in the cold, arms folded, willing him on, ',
     'Picked near-last at school again but not here, not on this pitch, ', 'A growth spurt has left him gangly and not quite sure where his own feet are, ',
     'Terrified of being dropped for Saturday after one bad training session, ', 'His new coach has spotted something in him nobody else has, ',
     'Still the smallest kid in his year at school, ', 'With his best mate from school lining up right beside him, ',
@@ -455,7 +457,13 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
   // career seed keeps two careers distinct; different strides keep the three surfaces out of lockstep.
   const salt = (ctx.careerSeed ?? ctx.seed) >>> 0;
   const turn = ctx.turn ?? 0;
-  const setting = ctx.stakes === 3 ? pickByTurn(HUGE_SETTINGS, turn, 7, salt) : ctx.stakes === 2 ? pickByTurn(BIG_SETTINGS, turn, 7, salt) : pickByTurn(SETTINGS[ctx.chapter] ?? SETTINGS.Academy, turn, 7, salt);
+  // Big-occasion settings describe a MATCH ("in a white-hot derby"), so they must not be stamped on a
+  // training session or an off-pitch moment just because the stakes are high — the same bleed PT-15 fixed
+  // for moment labels. Non-match moments always use the chapter's own setting bank.
+  const bigOccasion = (ctx.kind ?? 'match') === 'match' && ctx.stakes >= 2;
+  const setting = bigOccasion && ctx.stakes === 3 ? pickByTurn(HUGE_SETTINGS, turn, 7, salt)
+    : bigOccasion ? pickByTurn(BIG_SETTINGS, turn, 7, salt)
+    : pickByTurn(SETTINGS[ctx.chapter] ?? SETTINGS.Academy, turn, 7, salt);
   const verb = pick(VERBS[tag]);
   // per-tag result colour on a big success; otherwise the generic band result
   const result = b === 'triumph' && TAG_TRIUMPH[tag] && rng() < 0.55 ? pickByTurn(TAG_TRIUMPH[tag], turn, 11, salt) : pickByTurn(RESULTS[b], turn, 11, salt);

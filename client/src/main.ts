@@ -2575,7 +2575,9 @@ class Game {
       const budget = s.earnings ?? 0;
       // #7: unaffordable items are shown LOCKED (greyed, unclickable) rather than hidden, with how much more is needed.
       const shopTiles = hasShop ? s.lifestyle!.map((li) => {
-        const locked = !li.clubInvest && li.cost > budget;
+        // every spend tile gates on cost — the Back the Club tiles spend the same earnings as a treat does,
+        // and exempting them left the one tile that stayed clickable and then failed with a terse error (PT-144)
+        const locked = li.cost > budget;
         const effs = li.clubInvest
           ? `<span class="cg-cost">💷 ${li.cost.toLocaleString()}c</span> · <span class="cg-invest-eff">🏛️ +${li.clubInvest.toLocaleString()}c to the club</span>`
           : `<span class="cg-cost">💷 ${li.cost.toLocaleString()}c</span> ${li.recovery ? `· ⚡rec+${li.recovery} ` : ''}${li.market ? `· ⭐fame+${li.market} ` : ''}${perkLabel(li.perks)}`;
