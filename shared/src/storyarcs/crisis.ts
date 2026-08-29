@@ -4,7 +4,7 @@ import type { StoryArc } from '../storyarc.js';
 export const CRISIS_ARCS: StoryArc[] = [
   {
     id: 'injury-comeback', title: 'The Long Road Back', icon: '🩹', category: 'crisis',
-    minTurn: 66, maxTurn: 107, weight: 2, first: 'open',
+    minTurn: 50, maxTurn: 107, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -27,7 +27,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'manager-fallout', title: 'Out in the Cold', icon: '❄️', category: 'crisis',
-    minTurn: 60, maxTurn: 110, weight: 2, first: 'open',
+    minTurn: 46, maxTurn: 110, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -116,7 +116,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-homesick', title: 'A Long Way From Home', icon: '✈️', category: 'crisis',
-    minTurn: 66, maxTurn: 105, weight: 2, first: 'open',
+    minTurn: 50, maxTurn: 105, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -139,7 +139,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-lost-armband', title: 'Stripped of the Stripes', icon: '🎗️', category: 'crisis',
-    minTurn: 66, maxTurn: 113, weight: 2, first: 'open',
+    minTurn: 50, maxTurn: 113, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -183,7 +183,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-fans-turn', title: 'The Banner in the Kop', icon: '📢', category: 'crisis',
-    minTurn: 60, maxTurn: 113, weight: 2, first: 'open',
+    minTurn: 46, maxTurn: 113, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -205,7 +205,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-manager-sacking', title: 'Regime Change', icon: '⚡', category: 'crisis',
-    minTurn: 57, maxTurn: 113, weight: 2, first: 'open',
+    minTurn: 46, maxTurn: 113, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -338,7 +338,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-burnout', title: 'Running on Empty', icon: '🕯️', category: 'crisis',
-    minTurn: 66, maxTurn: 116, weight: 2, first: 'open',
+    minTurn: 50, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -382,7 +382,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-false-accusation', title: 'Clearing His Name', icon: '⚖️', category: 'crisis',
-    minTurn: 57, maxTurn: 113, weight: 2, first: 'open',
+    minTurn: 46, maxTurn: 113, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -404,7 +404,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-yips', title: 'The Simple Pass', icon: '🌀', category: 'crisis',
-    minTurn: 60, maxTurn: 116, weight: 2, first: 'open',
+    minTurn: 46, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -448,7 +448,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-new-league', title: 'Lost in Translation', icon: '🧭', category: 'crisis',
-    minTurn: 66, maxTurn: 107, weight: 2, first: 'open',
+    minTurn: 50, maxTurn: 107, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -470,7 +470,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-mentee-usurps', title: 'The Boy He Taught', icon: '🐣', category: 'crisis',
-    minTurn: 78, maxTurn: 119, weight: 2, first: 'open',
+    minTurn: 62, maxTurn: 119, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -536,7 +536,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-scapegoat', title: 'The Face of the Defeat', icon: '📰', category: 'crisis',
-    minTurn: 57, maxTurn: 116, weight: 3, first: 'open',
+    minTurn: 46, maxTurn: 116, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -558,7 +558,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-chronic-injury', title: 'The Body That Won’t Hold', icon: '🦴', category: 'crisis',
-    minTurn: 72, maxTurn: 119, weight: 2, first: 'open',
+    minTurn: 56, maxTurn: 119, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -602,7 +602,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-drink-spiral', title: 'Last Orders', icon: '🍺', category: 'crisis',
-    minTurn: 66, maxTurn: 107, weight: 2, first: 'open',
+    minTurn: 56, maxTurn: 107, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -646,7 +646,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-final-blunder', title: 'The Final He Threw Away', icon: '🏆', category: 'crisis',
-    minTurn: 60, maxTurn: 118, weight: 3, first: 'open',
+    minTurn: 46, maxTurn: 118, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -668,7 +668,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-doping-scare', title: 'The Sample', icon: '🧪', category: 'crisis',
-    minTurn: 57, maxTurn: 114, weight: 2, first: 'open',
+    minTurn: 46, maxTurn: 114, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -712,7 +712,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-keeper-howler', title: 'The Ball Through His Hands', icon: '🧤', category: 'crisis',
-    minTurn: 57, maxTurn: 117, weight: 2, first: 'open',
+    minTurn: 46, maxTurn: 117, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',

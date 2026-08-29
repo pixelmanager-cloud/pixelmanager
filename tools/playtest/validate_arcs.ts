@@ -61,7 +61,7 @@ const CHILD_TURN_LIMIT = 46;
 // Deliberately targets the PLAYER'S OWN adult life, not any mention of an adult world. A kid attending a
 // relative's wedding, or a lift-share that "ends like a marriage", is fine — him having a girlfriend,
 // proposing, moving in with a partner, or being in a casino is not.
-const ADULT_WORDS = /\b(his girlfriend|ask(?:s)? her out|asked her out|propose(?:d)? to her|his fianc|moved in together|moving in together|his partner|nightclub|casino|gambl\w*|mortgage|dating her)\b/i;
+const ADULT_WORDS = /\b(his girlfriend|ask(?:s)? her out|asked her out|propose(?:d)? to her|his fianc|moved in together|moving in together|his partner|nightclub|casino|gambling|gambler|mortgage|dating her)\b/i;
 // Tiered by what the material actually requires, since "adult" isn't one age. Turn 46 = 17 (driving age),
 // 56 = 18 (drinking/gambling), 86 = 21 (raising a child). Each pattern is deliberately narrow — the false
 // positives that had to be excluded are noted, because a guard that cries wolf gets switched off:
@@ -70,9 +70,14 @@ const ADULT_WORDS = /\b(his girlfriend|ask(?:s)? her out|asked her out|propose(?
 //   `(?<!who )`                 — so "the coach who drove him to every trial" passes
 // and it deliberately does NOT match "a session", "champagne", "his child" or "his son", which is what keeps
 // the whole 211-arc youth library, tri-promotion and rel-estranged-parent clean.
-const AGE_RULES: Array<{ what: string; limit: number; re: RegExp }> = [
+const AGE_RULES: Array<{ what: string; limit: number; re: RegExp; iconOnly?: boolean }> = [
   { what: 'driving',      limit: 46,  re: /(?<!who )\bHe drives(?! off\b)|\bhis own car\b|\bbehind the wheel\b|\bdriving licence\b/ },
   { what: 'alcohol',      limit: 56,  re: /\bover a pint\b|\bdrinking spiral\b|\bhis drinking\b|\bpints\b/i },
+  // The body-text patterns above are deliberately narrow to avoid false positives ("a gamble" on a risky
+  // pass, "barely", "pub team"), but that narrowness let three genuinely 18+ arcs — two drinking, one
+  // betting sponsorship — sit at age 17 after a windows rescale. An arc's ICON is a far stronger signal
+  // than its prose: nobody labels a football moment 🍺 or 🎰 by accident. Checked on icon + title only.
+  { what: 'drink/gambling icon', limit: 56, re: /🍺|🍸|🍷|🥂|🎰|🎲/, iconOnly: true },
   { what: 'gambling',     limit: 56,  re: /\bmatch-fixing\b|\bfix a match\b|\bplace(?:d|s)? a bet\b|\bhis betting\b|\bgambling debt/i },
   { what: 'guardianship', limit: 86,  re: /\bgodson\b|\bgodchild\b|\bbecoming a father\b|\bhis newborn\b/i },
 ];
@@ -85,7 +90,8 @@ for (const a of ARCS) {
   }
   for (const rule of AGE_RULES) {
     if (a.minTurn >= rule.limit) continue;
-    const hit = body.match(rule.re);
+    // icon rules read the arc's label, not its prose — that is the whole point of them
+    const hit = (rule.iconOnly ? `${a.icon ?? ''} ${a.title ?? ''}` : body).match(rule.re);
     if (hit) { console.log(`  FAIL [${a.id}] minTurn ${a.minTurn} is below the ${rule.what} limit (${rule.limit}) but contains: "${hit[0]}"`); ageFails++; }
   }
 }
@@ -111,5 +117,9 @@ for (const it of LIFESTYLE) {
 if (ageFails) { console.log(`\n✗ ${ageFails} arc(s) expose adult material to a child`); process.exitCode = 1; }
 else console.log('  ok   no adult material reachable before age 17');
 
-console.log(errors ? `\n✗ ${errors} arc validation error(s)` : `\n✓ all ${ARCS.length} arcs valid`);
-if (errors) process.exit(1);
+// The summary MUST account for age failures too. It used to report only `errors`, so an age violation
+// printed "✗ 1 arc(s) expose adult material to a child" and then "✓ all 414 arcs valid" directly beneath
+// it — anything reading the last line (a person skimming, or a probe tailing the output) saw a pass.
+const total = errors + ageFails;
+console.log(total ? `\n✗ ${total} arc validation error(s) — ${errors} structural, ${ageFails} age-gating` : `\n✓ all ${ARCS.length} arcs valid`);
+if (total) process.exit(1);

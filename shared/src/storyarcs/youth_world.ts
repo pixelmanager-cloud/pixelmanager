@@ -10,7 +10,7 @@ import type { StoryArc } from '../storyarc.js';
 export const YOUTH_WORLD_ARCS: StoryArc[] = [
   {
     id: 'youth-other-sport', title: 'The Other Thing He Was Good At', icon: '🏏', category: 'saga',
-    minTurn: 3, maxTurn: 20, weight: 3, first: 'open',
+    minTurn: 3, maxTurn: 38, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -33,7 +33,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-school-trip', title: 'The Trip He Isn\'t Going On', icon: '🚌', category: 'crisis',
-    minTurn: 2, maxTurn: 18, weight: 3, first: 'open',
+    minTurn: 2, maxTurn: 36, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -55,7 +55,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-rival-teacher', title: 'Mr Deakin Supports the Other Lot', icon: '📐', category: 'relationship',
-    minTurn: 4, maxTurn: 22, weight: 2, first: 'open',
+    minTurn: 4, maxTurn: 40, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -77,7 +77,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-bad-report', title: 'Could Do Better', icon: '📄', category: 'crisis',
-    minTurn: 6, maxTurn: 24, weight: 3, first: 'open',
+    minTurn: 6, maxTurn: 42, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -99,7 +99,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-playground-fight', title: 'Behind the Sports Hall', icon: '💢', category: 'crisis',
-    minTurn: 5, maxTurn: 24, weight: 3, first: 'open',
+    minTurn: 5, maxTurn: 42, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -122,7 +122,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-instrument', title: 'The Trumpet in the Cupboard', icon: '🎺', category: 'relationship',
-    minTurn: 1, maxTurn: 16, weight: 3, first: 'open',
+    minTurn: 1, maxTurn: 34, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -144,7 +144,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-terrace', title: 'The Corner Where His Grandad Stood', icon: '🎟️', category: 'saga',
-    minTurn: 0, maxTurn: 14, weight: 3, first: 'open',
+    minTurn: 0, maxTurn: 32, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -166,7 +166,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-bully', title: 'The Boy at the Bus Stop', icon: '🚏', category: 'crisis',
-    minTurn: 4, maxTurn: 22, weight: 2, first: 'open',
+    minTurn: 4, maxTurn: 40, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -189,7 +189,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-two-shirts', title: 'Two Shirts, One Saturday', icon: '👕', category: 'crisis',
-    minTurn: 8, maxTurn: 26, weight: 3, first: 'open',
+    minTurn: 8, maxTurn: 44, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -212,7 +212,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-empty-summer', title: 'Six Weeks and Nothing In Them', icon: '🌾', category: 'saga',
-    minTurn: 7, maxTurn: 24, weight: 3, first: 'open',
+    minTurn: 7, maxTurn: 42, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -235,7 +235,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-big-school', title: 'First Day at the Big School', icon: '🏫', category: 'saga',
-    minTurn: 9, maxTurn: 20, weight: 3, first: 'open',
+    minTurn: 9, maxTurn: 38, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -257,7 +257,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-paper-round', title: 'Half Six on a Wednesday', icon: '📰', category: 'offpitch',
-    minTurn: 6, maxTurn: 24, weight: 2, first: 'open',
+    minTurn: 6, maxTurn: 42, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -279,7 +279,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-the-screen', title: 'One in the Morning, Still Watching', icon: '📱', category: 'offpitch',
-    minTurn: 8, maxTurn: 26, weight: 3, first: 'open',
+    minTurn: 8, maxTurn: 44, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -302,7 +302,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-recognised', title: 'The Woman in the Chemist', icon: '👀', category: 'relationship',
-    minTurn: 12, maxTurn: 28, weight: 3, first: 'open',
+    minTurn: 12, maxTurn: 46, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -324,7 +324,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-careers-lesson', title: 'The Careers Lesson', icon: '🧭', category: 'offpitch',
-    minTurn: 15, maxTurn: 29, weight: 3, first: 'open',
+    minTurn: 15, maxTurn: 47, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -347,7 +347,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-the-video', title: 'Forty Seconds, Round the Whole Year', icon: '🎬', category: 'crisis',
-    minTurn: 14, maxTurn: 29, weight: 3, first: 'open',
+    minTurn: 14, maxTurn: 47, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -369,7 +369,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-autograph', title: 'Sign My Planner Then', icon: '✍️', category: 'relationship',
-    minTurn: 16, maxTurn: 30, weight: 2, first: 'open',
+    minTurn: 16, maxTurn: 48, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -391,7 +391,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-town-name', title: 'What They Say About His Town', icon: '🏭', category: 'saga',
-    minTurn: 18, maxTurn: 30, weight: 2, first: 'open',
+    minTurn: 18, maxTurn: 48, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',

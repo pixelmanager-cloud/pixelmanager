@@ -10,7 +10,7 @@ import type { StoryArc } from '../storyarc.js';
 export const YOUTH_SEASON_ARCS: StoryArc[] = [
   {
     id: 'youth-season-preseason-first-day', title: 'First Day Back', icon: '🌾', category: 'saga',
-    minTurn: 0, maxTurn: 14, weight: 3, first: 'open',
+    minTurn: 0, maxTurn: 32, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -33,7 +33,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-season-fixture-list', title: 'The Fixture List Goes Up', icon: '📋', category: 'saga',
-    minTurn: 0, maxTurn: 16, weight: 3, first: 'open',
+    minTurn: 0, maxTurn: 34, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -56,7 +56,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-season-new-kit', title: 'The New Kit', icon: '👕', category: 'triumph',
-    minTurn: 1, maxTurn: 18, weight: 3, first: 'open',
+    minTurn: 1, maxTurn: 36, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -79,7 +79,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-season-opening-day', title: 'The First Sunday', icon: '🚩', category: 'saga',
-    minTurn: 1, maxTurn: 18, weight: 3, first: 'open',
+    minTurn: 1, maxTurn: 36, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -102,7 +102,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-season-christmas-tournament', title: 'The Christmas Tournament', icon: '🎄', category: 'saga',
-    minTurn: 3, maxTurn: 22, weight: 3, first: 'open',
+    minTurn: 3, maxTurn: 40, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -125,7 +125,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-season-boxing-day', title: 'Boxing Day', icon: '❄️', category: 'saga',
-    minTurn: 3, maxTurn: 22, weight: 3, first: 'open',
+    minTurn: 3, maxTurn: 40, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -148,7 +148,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-season-february-grind', title: 'The Middle of February', icon: '🌧️', category: 'crisis',
-    minTurn: 4, maxTurn: 24, weight: 3, first: 'open',
+    minTurn: 4, maxTurn: 42, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -171,7 +171,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-season-nothing-to-play-for', title: 'Nothing To Play For', icon: '🪫', category: 'crisis',
-    minTurn: 5, maxTurn: 26, weight: 3, first: 'open',
+    minTurn: 5, maxTurn: 44, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -194,7 +194,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-season-run-in', title: 'The Run-In', icon: '🏁', category: 'triumph',
-    minTurn: 6, maxTurn: 26, weight: 3, first: 'open',
+    minTurn: 6, maxTurn: 44, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -217,7 +217,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-season-last-game', title: 'The Last Sunday', icon: '🌇', category: 'saga',
-    minTurn: 7, maxTurn: 28, weight: 3, first: 'open',
+    minTurn: 7, maxTurn: 46, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -240,7 +240,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-season-presentation-night', title: 'Presentation Night', icon: '🏵️', category: 'crisis',
-    minTurn: 8, maxTurn: 28, weight: 3, first: 'open',
+    minTurn: 8, maxTurn: 46, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -263,7 +263,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-season-player-of-the-year', title: 'His Name Read Out', icon: '🥇', category: 'triumph',
-    minTurn: 8, maxTurn: 28, weight: 2, rare: true, first: 'open',
+    minTurn: 8, maxTurn: 46, weight: 2, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -286,7 +286,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-season-sign-on-again', title: 'Signing On For Another Year', icon: '✍️', category: 'saga',
-    minTurn: 8, maxTurn: 28, weight: 3, first: 'open',
+    minTurn: 8, maxTurn: 46, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -309,7 +309,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-season-long-gap', title: 'The Long Gap', icon: '⏳', category: 'crisis',
-    minTurn: 9, maxTurn: 28, weight: 3, first: 'open',
+    minTurn: 9, maxTurn: 46, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -332,7 +332,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-season-anniversary', title: 'A Year To The Day', icon: '🗓️', category: 'offpitch',
-    minTurn: 10, maxTurn: 28, weight: 2, first: 'open',
+    minTurn: 10, maxTurn: 46, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -355,7 +355,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-season-back-and-changed', title: 'Everyone Came Back Different', icon: '📏', category: 'crisis',
-    minTurn: 12, maxTurn: 30, weight: 3, first: 'open',
+    minTurn: 12, maxTurn: 48, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -378,7 +378,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-season-trials-for-next-year', title: 'Trialling For Next Season\'s Squad', icon: '🎽', category: 'crisis',
-    minTurn: 14, maxTurn: 30, weight: 3, first: 'open',
+    minTurn: 14, maxTurn: 48, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -402,7 +402,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-season-season-ticket', title: 'The Season Ticket', icon: '🎟️', category: 'offpitch',
-    minTurn: 11, maxTurn: 30, weight: 2, first: 'open',
+    minTurn: 11, maxTurn: 48, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',

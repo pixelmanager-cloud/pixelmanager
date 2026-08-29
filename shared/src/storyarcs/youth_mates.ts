@@ -9,7 +9,7 @@ import type { StoryArc } from '../storyarc.js';
 export const YOUTH_MATES_ARCS: StoryArc[] = [
   {
     id: 'youth-mates-stopped-coming', title: 'The One Who Stopped Coming', icon: '🚪', category: 'relationship',
-    minTurn: 1, maxTurn: 14, weight: 3, first: 'open',
+    minTurn: 1, maxTurn: 32, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -31,7 +31,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-mates-nickname', title: 'The Name That Stuck', icon: '🏷️', category: 'relationship',
-    minTurn: 0, maxTurn: 10, weight: 3, first: 'open',
+    minTurn: 0, maxTurn: 28, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -46,7 +46,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-mates-two-friends', title: 'Choosing Sides', icon: '⚖️', category: 'crisis',
-    minTurn: 2, maxTurn: 16, weight: 3, first: 'open',
+    minTurn: 2, maxTurn: 34, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -69,7 +69,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-mates-boot-money', title: 'The Money in the Boot Bag', icon: '💷', category: 'crisis',
-    minTurn: 3, maxTurn: 18, weight: 3, first: 'open',
+    minTurn: 3, maxTurn: 36, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -84,7 +84,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-mates-away-room', title: 'Sharing a Room', icon: '🛏️', category: 'relationship',
-    minTurn: 6, maxTurn: 24, weight: 3, first: 'open',
+    minTurn: 6, maxTurn: 42, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -106,7 +106,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-mates-group-chat', title: 'The Group Chat', icon: '📱', category: 'crisis',
-    minTurn: 4, maxTurn: 20, weight: 3, first: 'open',
+    minTurn: 4, maxTurn: 38, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -121,7 +121,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-mates-lift-share', title: 'The Lift', icon: '🚗', category: 'relationship',
-    minTurn: 0, maxTurn: 9, weight: 3, first: 'open',
+    minTurn: 0, maxTurn: 27, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -135,7 +135,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-mates-initiation', title: 'Singing on the Table', icon: '🎤', category: 'relationship',
-    minTurn: 1, maxTurn: 12, weight: 2, first: 'open',
+    minTurn: 1, maxTurn: 30, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -149,7 +149,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-mates-never-picked', title: 'The Boy Who Never Gets On', icon: '🪑', category: 'relationship',
-    minTurn: 2, maxTurn: 18, weight: 3, first: 'open',
+    minTurn: 2, maxTurn: 36, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -171,7 +171,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-mates-credit', title: 'Somebody Else\'s Goal', icon: '🙊', category: 'relationship',
-    minTurn: 5, maxTurn: 22, weight: 3, first: 'open',
+    minTurn: 5, maxTurn: 40, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -185,7 +185,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-mates-covering', title: 'Covering for Him', icon: '🤐', category: 'crisis',
-    minTurn: 3, maxTurn: 20, weight: 3, first: 'open',
+    minTurn: 3, maxTurn: 38, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -207,7 +207,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-mates-other-club', title: 'The Lad from the Other Lot', icon: '🤝', category: 'relationship',
-    minTurn: 4, maxTurn: 20, weight: 2, first: 'open',
+    minTurn: 4, maxTurn: 38, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -229,7 +229,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-mates-joke-too-far', title: 'The Joke That Went Too Far', icon: '😬', category: 'crisis',
-    minTurn: 6, maxTurn: 24, weight: 3, first: 'open',
+    minTurn: 6, maxTurn: 42, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -251,7 +251,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-mates-copied', title: 'The One They Copy', icon: '👣', category: 'triumph',
-    minTurn: 7, maxTurn: 26, weight: 2, first: 'open',
+    minTurn: 7, maxTurn: 44, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -266,7 +266,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-mates-quiet-house', title: 'What He Doesn\'t Talk About', icon: '🌧️', category: 'relationship',
-    minTurn: 5, maxTurn: 22, weight: 3, first: 'open',
+    minTurn: 5, maxTurn: 40, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -281,7 +281,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-mates-come-with-me', title: 'Come With Me', icon: '🧭', category: 'crisis',
-    minTurn: 8, maxTurn: 26, weight: 3, first: 'open',
+    minTurn: 8, maxTurn: 44, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -303,7 +303,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-mates-popular', title: 'Being the Popular One', icon: '🌟', category: 'relationship',
-    minTurn: 2, maxTurn: 15, weight: 2, first: 'open',
+    minTurn: 2, maxTurn: 33, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -318,7 +318,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-mates-last-word', title: 'The Row on the Minibus', icon: '🚌', category: 'crisis',
-    minTurn: 4, maxTurn: 20, weight: 3, first: 'open',
+    minTurn: 4, maxTurn: 38, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',

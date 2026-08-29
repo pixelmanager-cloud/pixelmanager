@@ -8,7 +8,7 @@ import type { StoryArc } from '../storyarc.js';
 export const YOUTH_JOY_ARCS: StoryArc[] = [
   {
     id: 'youth-joy-hero-trick', title: 'Six Months of the Same Turn', icon: '🌀',
-    category: 'signature', minTurn: 0, maxTurn: 14, weight: 3, first: 'open',
+    category: 'signature', minTurn: 0, maxTurn: 32, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -31,7 +31,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-joy-name-on-back', title: 'The Name on the Back', icon: '👕',
-    category: 'offpitch', minTurn: 0, maxTurn: 12, weight: 3, first: 'open',
+    category: 'offpitch', minTurn: 0, maxTurn: 30, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -46,7 +46,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-joy-wall', title: 'The Wall at the End of the Garden', icon: '🧱',
-    category: 'signature', minTurn: 0, maxTurn: 16, weight: 3, first: 'open',
+    category: 'signature', minTurn: 0, maxTurn: 34, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -61,7 +61,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-joy-commentary', title: 'The Voice in the Garden', icon: '🎙️',
-    category: 'offpitch', minTurn: 0, maxTurn: 12, weight: 3, first: 'open',
+    category: 'offpitch', minTurn: 0, maxTurn: 30, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -83,7 +83,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-joy-celebration', title: 'Inventing a Celebration', icon: '🙌',
-    category: 'signature', minTurn: 0, maxTurn: 15, weight: 2, first: 'open',
+    category: 'signature', minTurn: 0, maxTurn: 33, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -98,7 +98,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-joy-first-memory', title: 'The First Goal He Can Actually Remember', icon: '🕯️',
-    category: 'offpitch', minTurn: 0, maxTurn: 10, weight: 3, first: 'open',
+    category: 'offpitch', minTurn: 0, maxTurn: 28, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -112,7 +112,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-joy-squad-number', title: 'Choosing a Number', icon: '🔢',
-    category: 'offpitch', minTurn: 0, maxTurn: 14, weight: 3, first: 'open',
+    category: 'offpitch', minTurn: 0, maxTurn: 32, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -127,7 +127,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-joy-ritual', title: 'Left Boot First', icon: '🧦',
-    category: 'signature', minTurn: 0, maxTurn: 18, weight: 3, first: 'open',
+    category: 'signature', minTurn: 0, maxTurn: 36, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -149,7 +149,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-joy-barefoot', title: 'Barefoot in August', icon: '🌞',
-    category: 'offpitch', minTurn: 0, maxTurn: 12, weight: 2, first: 'open',
+    category: 'offpitch', minTurn: 0, maxTurn: 30, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -164,7 +164,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-joy-hero-ordinary', title: 'Meeting Him', icon: '✍️',
-    category: 'relationship', minTurn: 2, maxTurn: 20, weight: 3, first: 'open',
+    category: 'relationship', minTurn: 2, maxTurn: 38, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -187,7 +187,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-joy-old-shirt', title: 'The Shirt He Will Not Bin', icon: '🧺',
-    category: 'offpitch', minTurn: 1, maxTurn: 16, weight: 3, first: 'open',
+    category: 'offpitch', minTurn: 1, maxTurn: 34, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -202,7 +202,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-joy-what-kind', title: 'What He Wants to Be Known For', icon: '🧭',
-    category: 'saga', minTurn: 3, maxTurn: 22, weight: 3, first: 'open',
+    category: 'saga', minTurn: 3, maxTurn: 40, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -225,7 +225,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-joy-imagined-crowd', title: 'Sixty Thousand People', icon: '🏟️',
-    category: 'offpitch', minTurn: 0, maxTurn: 14, weight: 2, first: 'open',
+    category: 'offpitch', minTurn: 0, maxTurn: 32, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -240,7 +240,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-joy-match-changed', title: 'The Game That Changed What He Thought Football Was', icon: '📺',
-    category: 'saga', minTurn: 2, maxTurn: 20, weight: 3, first: 'open',
+    category: 'saga', minTurn: 2, maxTurn: 38, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -262,7 +262,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-joy-cant-stop', title: 'The Thing He Cannot Stop Doing', icon: '🪄',
-    category: 'signature', minTurn: 0, maxTurn: 16, weight: 3, first: 'open',
+    category: 'signature', minTurn: 0, maxTurn: 34, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -277,7 +277,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-joy-mud-grin', title: 'Playing Like It Is the Park', icon: '😄',
-    category: 'triumph', minTurn: 4, maxTurn: 24, weight: 3, first: 'open',
+    category: 'triumph', minTurn: 4, maxTurn: 42, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -292,7 +292,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-joy-two-styles', title: 'Two Players He Could Become', icon: '⚖️',
-    category: 'saga', minTurn: 6, maxTurn: 26, weight: 3, first: 'open',
+    category: 'saga', minTurn: 6, maxTurn: 44, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -315,7 +315,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-joy-teaching-kid', title: 'Somebody Copying Him', icon: '👟',
-    category: 'relationship', minTurn: 8, maxTurn: 28, weight: 3, first: 'open',
+    category: 'relationship', minTurn: 8, maxTurn: 46, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',

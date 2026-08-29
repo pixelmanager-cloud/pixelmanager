@@ -4,7 +4,7 @@ import type { StoryArc } from '../storyarc.js';
 export const RELATIONSHIP_ARCS: StoryArc[] = [
   {
     id: 'the-mentor', title: 'The Old Head', icon: '🧭', category: 'relationship',
-    minTurn: 66, maxTurn: 90, weight: 2, first: 'open',
+    minTurn: 38, maxTurn: 90, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -100,7 +100,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 4 — a TEAMMATE BEST-FRIEND bond
   {
     id: 'rel-best-mate', title: 'Thick as Thieves', icon: '🤝', category: 'relationship',
-    minTurn: 66, maxTurn: 99, weight: 3, first: 'bond',
+    minTurn: 38, maxTurn: 99, weight: 3, first: 'bond',
     beats: {
       bond: {
         id: 'bond',
@@ -124,7 +124,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 5 — a TEAMMATE FEUD
   {
     id: 'rel-teammate-feud', title: 'Two Kings, One Dressing Room', icon: '⚔️', category: 'relationship',
-    minTurn: 46, maxTurn: 102, weight: 2, first: 'spark',
+    minTurn: 38, maxTurn: 102, weight: 2, first: 'spark',
     beats: {
       spark: {
         id: 'spark',
@@ -148,7 +148,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 6 — a RIFT WITH HIS AGENT
   {
     id: 'rel-agent-rift', title: 'The Man Who Takes His Cut', icon: '📉', category: 'relationship',
-    minTurn: 78, maxTurn: 116, weight: 2, first: 'discovery',
+    minTurn: 62, maxTurn: 116, weight: 2, first: 'discovery',
     beats: {
       discovery: {
         id: 'discovery',
@@ -172,7 +172,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 7 — reconnecting with an ESTRANGED PARENT
   {
     id: 'rel-estranged-parent', title: 'The Empty Seat at Every Game', icon: '🚪', category: 'relationship',
-    minTurn: 46, maxTurn: 102, weight: 2, first: 'letter',
+    minTurn: 38, maxTurn: 102, weight: 2, first: 'letter',
     beats: {
       letter: {
         id: 'letter',
@@ -220,7 +220,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 9 — a MARRIAGE strained by relocation and transfers
   {
     id: 'rel-marriage-relocation', title: 'The Fourth City in Six Years', icon: '📦', category: 'relationship',
-    minTurn: 66, maxTurn: 113, weight: 3, first: 'boxes',
+    minTurn: 86, maxTurn: 113, weight: 3, first: 'boxes',
     beats: {
       boxes: {
         id: 'boxes',
@@ -268,7 +268,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 11 — a demanding FOOTBALL DAD who won't let go
   {
     id: 'rel-football-dad', title: 'The Man in the Stand with the Notebook', icon: '📋', category: 'relationship',
-    minTurn: 66, maxTurn: 85, weight: 2, first: 'critique',
+    minTurn: 38, maxTurn: 85, weight: 2, first: 'critique',
     beats: {
       critique: {
         id: 'critique',
@@ -316,7 +316,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 13 — a CHILDHOOD FRIEND who wants to be his agent
   {
     id: 'rel-friend-agent', title: 'A Handshake Between Mates', icon: '🤞', category: 'relationship',
-    minTurn: 46, maxTurn: 99, weight: 2, first: 'pitch',
+    minTurn: 38, maxTurn: 99, weight: 2, first: 'pitch',
     beats: {
       pitch: {
         id: 'pitch',
@@ -388,7 +388,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 16 — a new MANAGER who becomes a father figure
   {
     id: 'rel-manager-father', title: 'The Gaffer Who Saw Him', icon: '🧥', category: 'relationship',
-    minTurn: 66, maxTurn: 102, weight: 3, first: 'arrival',
+    minTurn: 38, maxTurn: 102, weight: 3, first: 'arrival',
     beats: {
       arrival: {
         id: 'arrival',
@@ -532,7 +532,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 22 — HOMESICKNESS eased by a countryman in the squad
   {
     id: 'rel-countryman', title: 'A Voice from Home', icon: '🧳', category: 'relationship',
-    minTurn: 66, maxTurn: 90, weight: 3, first: 'lonely',
+    minTurn: 38, maxTurn: 90, weight: 3, first: 'lonely',
     beats: {
       lonely: {
         id: 'lonely',
@@ -580,7 +580,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 24 — a SECOND CHILD arriving in the middle of a title run
   {
     id: 'rel-second-child', title: 'Two Under Three, Top of the League', icon: '🍼', category: 'relationship',
-    minTurn: 72, maxTurn: 110, weight: 3, first: 'due',
+    minTurn: 56, maxTurn: 110, weight: 3, first: 'due',
     beats: {
       due: {
         id: 'due',
@@ -604,7 +604,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 25 — a SEPARATION and co-parenting from the road
   {
     id: 'rel-coparenting', title: 'Every Other Weekend, A Different City', icon: '🧳', category: 'relationship',
-    minTurn: 69, maxTurn: 119, weight: 3, first: 'split',
+    minTurn: 86, maxTurn: 119, weight: 3, first: 'split',
     beats: {
       split: {
         id: 'split',
@@ -652,7 +652,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 27 — managing a SUPERSTAR TEAMMATE'S ego as captain
   {
     id: 'rel-superstar-ego', title: 'The Galáctico in the Corner', icon: '👑', category: 'relationship',
-    minTurn: 66, maxTurn: 119, weight: 2, first: 'signing',
+    minTurn: 38, maxTurn: 119, weight: 2, first: 'signing',
     beats: {
       signing: {
         id: 'signing',

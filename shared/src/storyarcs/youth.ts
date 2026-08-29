@@ -12,7 +12,7 @@ import type { StoryArc } from '../storyarc.js';
 export const YOUTH_ARCS: StoryArc[] = [
   {
     id: 'youth-first-boots', title: 'The Boots in the Window', icon: '👟', category: 'relationship',
-    minTurn: 2, maxTurn: 14, weight: 3, first: 'open',
+    minTurn: 2, maxTurn: 32, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -34,7 +34,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-smallest', title: 'A Year Behind His Body', icon: '📏', category: 'saga',
-    minTurn: 3, maxTurn: 20, weight: 3, first: 'open',
+    minTurn: 3, maxTurn: 38, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -56,7 +56,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-school-clash', title: 'Two Places at Once', icon: '🎒', category: 'crisis',
-    minTurn: 13, maxTurn: 27, weight: 3, first: 'open',
+    minTurn: 13, maxTurn: 45, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -79,7 +79,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-better-kid', title: 'The Boy Who Was Better', icon: '😤', category: 'relationship',
-    minTurn: 5, maxTurn: 24, weight: 3, first: 'open',
+    minTurn: 5, maxTurn: 42, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -101,7 +101,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-homesick', title: 'The First Night Away', icon: '🌙', category: 'crisis',
-    minTurn: 14, maxTurn: 27, weight: 3, first: 'open',
+    minTurn: 14, maxTurn: 45, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -124,7 +124,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-dropped-school', title: 'Left Off the School Team', icon: '📋', category: 'crisis',
-    minTurn: 4, maxTurn: 22, weight: 2, first: 'open',
+    minTurn: 4, maxTurn: 40, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -139,7 +139,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-long-drive', title: 'Two Hundred Miles a Week', icon: '🚗', category: 'relationship',
-    minTurn: 6, maxTurn: 26, weight: 3, first: 'open',
+    minTurn: 6, maxTurn: 44, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -154,7 +154,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-scouted', title: 'The Man With the Clipboard', icon: '🔍', category: 'triumph',
-    minTurn: 3, maxTurn: 16, weight: 3, first: 'open',
+    minTurn: 3, maxTurn: 34, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -176,7 +176,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-mate-released', title: 'The Friend Who Got the Call', icon: '💔', category: 'relationship',
-    minTurn: 16, maxTurn: 27, weight: 3, first: 'open',
+    minTurn: 16, maxTurn: 45, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -198,7 +198,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-different', title: 'The New Boy Accent', icon: '🧒', category: 'crisis',
-    minTurn: 12, maxTurn: 26, weight: 2, first: 'open',
+    minTurn: 12, maxTurn: 44, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -213,7 +213,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-park-legend', title: 'The Cage on the Estate', icon: '🌇', category: 'signature',
-    minTurn: 2, maxTurn: 18, weight: 3, first: 'open',
+    minTurn: 2, maxTurn: 36, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -228,7 +228,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-first-trophy', title: 'The First Thing He Ever Won', icon: '🏆', category: 'triumph',
-    minTurn: 6, maxTurn: 26, weight: 3, first: 'open',
+    minTurn: 6, maxTurn: 44, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -250,7 +250,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-playing-up', title: 'Playing With the Older Lads', icon: '⬆️', category: 'triumph',
-    minTurn: 8, maxTurn: 27, weight: 3, first: 'open',
+    minTurn: 8, maxTurn: 45, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -272,7 +272,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-injury-scare', title: 'The Ankle That Went Over', icon: '🩹', category: 'crisis',
-    minTurn: 7, maxTurn: 27, weight: 2, first: 'open',
+    minTurn: 7, maxTurn: 45, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -286,7 +286,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-sibling', title: 'The One Who Isn\'t Football', icon: '👧', category: 'relationship',
-    minTurn: 5, maxTurn: 27, weight: 2, first: 'open',
+    minTurn: 5, maxTurn: 45, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -300,7 +300,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-coach-faith', title: 'The Coach Who Saw It First', icon: '🧑‍🏫', category: 'saga',
-    minTurn: 4, maxTurn: 24, weight: 3, first: 'open',
+    minTurn: 4, maxTurn: 42, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -322,7 +322,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-first-money', title: 'Boot Money', icon: '💷', category: 'offpitch',
-    minTurn: 15, maxTurn: 27, weight: 2, first: 'open',
+    minTurn: 15, maxTurn: 45, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -337,7 +337,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-in-goal', title: 'Somebody Has to Go In Goal', icon: '🧤', category: 'saga',
-    minTurn: 1, maxTurn: 12, weight: 3, first: 'open',
+    minTurn: 1, maxTurn: 30, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -351,7 +351,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-own-goal', title: 'Into His Own Net', icon: '😖', category: 'crisis',
-    minTurn: 2, maxTurn: 20, weight: 3, first: 'open',
+    minTurn: 2, maxTurn: 38, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -365,7 +365,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-armband', title: 'The First Armband', icon: '🎖️', category: 'triumph',
-    minTurn: 3, maxTurn: 22, weight: 3, first: 'open',
+    minTurn: 3, maxTurn: 40, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -379,7 +379,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-grandparent', title: 'The Man in the Flat Cap', icon: '👴', category: 'relationship',
-    minTurn: 1, maxTurn: 24, weight: 3, first: 'open',
+    minTurn: 1, maxTurn: 42, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -393,7 +393,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-cheat', title: 'The Boy Who Went Down Easy', icon: '⚖️', category: 'signature',
-    minTurn: 4, maxTurn: 24, weight: 3, first: 'open',
+    minTurn: 4, maxTurn: 42, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -408,7 +408,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-winter', title: 'The Coldest Morning of the Year', icon: '❄️', category: 'crisis',
-    minTurn: 2, maxTurn: 22, weight: 3, first: 'open',
+    minTurn: 2, maxTurn: 40, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -422,7 +422,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-thrashing', title: 'Nine-Nil', icon: '💀', category: 'crisis',
-    minTurn: 2, maxTurn: 20, weight: 3, first: 'open',
+    minTurn: 2, maxTurn: 38, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -437,7 +437,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-out-of-position', title: 'Stuck at Right Back', icon: '🔀', category: 'saga',
-    minTurn: 3, maxTurn: 24, weight: 3, first: 'open',
+    minTurn: 3, maxTurn: 42, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -452,7 +452,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-birthday', title: 'The Party He Missed', icon: '🎂', category: 'relationship',
-    minTurn: 2, maxTurn: 22, weight: 2, first: 'open',
+    minTurn: 2, maxTurn: 40, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -467,7 +467,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-new-town', title: 'A New Team in a New Town', icon: '📦', category: 'crisis',
-    minTurn: 4, maxTurn: 24, weight: 2, first: 'open',
+    minTurn: 4, maxTurn: 42, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -481,7 +481,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-pushy-dad', title: 'Somebody Else\'s Father', icon: '📢', category: 'offpitch',
-    minTurn: 3, maxTurn: 24, weight: 2, first: 'open',
+    minTurn: 3, maxTurn: 42, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -495,7 +495,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-county-trial', title: 'The Letter About the County Trial', icon: '✉️', category: 'triumph',
-    minTurn: 5, maxTurn: 26, weight: 3, first: 'open',
+    minTurn: 5, maxTurn: 44, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -509,7 +509,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-hand-me-down', title: 'A Kit Two Sizes Too Big', icon: '👕', category: 'offpitch',
-    minTurn: 1, maxTurn: 14, weight: 2, first: 'open',
+    minTurn: 1, maxTurn: 32, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -523,7 +523,7 @@ export const YOUTH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-teacher-doubt', title: '"And What If Football Doesn\'t Happen?"', icon: '📚', category: 'signature',
-    minTurn: 8, maxTurn: 27, weight: 3, first: 'open',
+    minTurn: 8, maxTurn: 45, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',

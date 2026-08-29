@@ -9,7 +9,7 @@ import type { StoryArc } from '../storyarc.js';
 export const YOUTH_FAMILY_ARCS: StoryArc[] = [
   {
     id: 'youth-fam-redundancy', title: 'The Envelope on the Worktop', icon: '📄', category: 'crisis',
-    minTurn: 3, maxTurn: 20, weight: 3, first: 'open',
+    minTurn: 3, maxTurn: 38, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -32,7 +32,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-fam-mum-played', title: 'She Was Better Than Him', icon: '⚽', category: 'relationship',
-    minTurn: 1, maxTurn: 18, weight: 3, first: 'open',
+    minTurn: 1, maxTurn: 36, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -54,7 +54,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-fam-absent-dad', title: 'The Space by the Fence', icon: '🚪', category: 'saga',
-    minTurn: 2, maxTurn: 22, weight: 3, first: 'open',
+    minTurn: 2, maxTurn: 40, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -77,7 +77,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-fam-nans-house', title: 'Sunday at Nan\'s', icon: '🍽️', category: 'relationship',
-    minTurn: 0, maxTurn: 16, weight: 3, first: 'open',
+    minTurn: 0, maxTurn: 34, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -100,7 +100,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-fam-holiday', title: 'A Week in Wales', icon: '🏖️', category: 'offpitch',
-    minTurn: 4, maxTurn: 22, weight: 3, first: 'open',
+    minTurn: 4, maxTurn: 40, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -123,7 +123,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-fam-nan-ill', title: 'The Chair by the Window', icon: '🪟', category: 'crisis',
-    minTurn: 6, maxTurn: 26, weight: 2, first: 'open',
+    minTurn: 6, maxTurn: 44, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -145,7 +145,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-fam-split', title: 'Two Front Doors', icon: '🔑', category: 'crisis',
-    minTurn: 5, maxTurn: 26, weight: 3, first: 'open',
+    minTurn: 5, maxTurn: 44, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -168,7 +168,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-fam-stepdad', title: 'The Man Who Puts the Bins Out', icon: '🏠', category: 'relationship',
-    minTurn: 12, maxTurn: 28, weight: 2, first: 'open',
+    minTurn: 12, maxTurn: 46, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -190,7 +190,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-fam-uncle', title: 'The Uncle Who Knows', icon: '🗣️', category: 'offpitch',
-    minTurn: 3, maxTurn: 22, weight: 2, first: 'open',
+    minTurn: 3, maxTurn: 40, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -213,7 +213,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-fam-car', title: 'The Estate with the Dodgy Clutch', icon: '🚗', category: 'crisis',
-    minTurn: 7, maxTurn: 26, weight: 3, first: 'open',
+    minTurn: 7, maxTurn: 44, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -236,7 +236,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-fam-wedding', title: 'A Suit and a Cup Tie', icon: '💒', category: 'offpitch',
-    minTurn: 8, maxTurn: 28, weight: 2, first: 'open',
+    minTurn: 8, maxTurn: 46, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -259,7 +259,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-fam-camcorder', title: 'Every Minute of Every Game', icon: '🎥', category: 'relationship',
-    minTurn: 2, maxTurn: 22, weight: 3, first: 'open',
+    minTurn: 2, maxTurn: 40, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -281,7 +281,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-fam-hope', title: 'The One Who Might', icon: '🕯️', category: 'saga',
-    minTurn: 10, maxTurn: 28, weight: 3, first: 'open',
+    minTurn: 10, maxTurn: 46, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -303,7 +303,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-fam-little-brother', title: 'The Shadow in the Garden', icon: '👦', category: 'relationship',
-    minTurn: 1, maxTurn: 20, weight: 3, first: 'open',
+    minTurn: 1, maxTurn: 38, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -326,7 +326,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-fam-cousin-quit', title: 'The Cousin Who Was Better', icon: '📦', category: 'saga',
-    minTurn: 9, maxTurn: 28, weight: 3, first: 'open',
+    minTurn: 9, maxTurn: 46, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -348,7 +348,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-fam-kit-wash', title: 'Half Nine on a Sunday Night', icon: '🧺', category: 'relationship',
-    minTurn: 0, maxTurn: 18, weight: 3, first: 'open',
+    minTurn: 0, maxTurn: 36, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -371,7 +371,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-fam-dinner-table', title: 'The Plate Under Foil', icon: '🍲', category: 'offpitch',
-    minTurn: 4, maxTurn: 24, weight: 2, first: 'open',
+    minTurn: 4, maxTurn: 42, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -394,7 +394,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-fam-nightshift', title: 'The Hours She Works', icon: '🌃', category: 'crisis',
-    minTurn: 11, maxTurn: 28, weight: 3, first: 'open',
+    minTurn: 11, maxTurn: 46, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',

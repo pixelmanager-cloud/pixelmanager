@@ -10,7 +10,7 @@ import type { StoryArc } from '../storyarc.js';
 export const YOUTH_AWAY_ARCS: StoryArc[] = [
   {
     id: 'youth-away-four-in-a-day', title: 'Four Games Before Tea', icon: '⏱️', category: 'saga',
-    minTurn: 1, maxTurn: 16, weight: 3, first: 'open',
+    minTurn: 1, maxTurn: 34, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -33,7 +33,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-away-kit-left-behind', title: 'The Bag That Stayed in the Hallway', icon: '🎒', category: 'crisis',
-    minTurn: 0, maxTurn: 12, weight: 3, first: 'open',
+    minTurn: 0, maxTurn: 30, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -55,7 +55,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-away-service-station', title: 'Junction 14, Ten to Seven', icon: '⛽', category: 'offpitch',
-    minTurn: 0, maxTurn: 14, weight: 3, first: 'open',
+    minTurn: 0, maxTurn: 32, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -70,7 +70,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-away-first-abroad', title: 'A Passport With Nothing In It', icon: '🛫', category: 'saga',
-    minTurn: 4, maxTurn: 24, weight: 3, first: 'open',
+    minTurn: 4, maxTurn: 42, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -93,7 +93,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-away-host-family', title: 'A Bedroom That Isn\'t His', icon: '🏠', category: 'relationship',
-    minTurn: 6, maxTurn: 26, weight: 3, first: 'open',
+    minTurn: 6, maxTurn: 44, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -116,7 +116,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-away-sports-hall-floor', title: 'Sleeping on the Badminton Lines', icon: '🛏️', category: 'offpitch',
-    minTurn: 2, maxTurn: 18, weight: 3, first: 'open',
+    minTurn: 2, maxTurn: 36, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -131,7 +131,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-away-penalties-far-from-home', title: 'Penalties, Two Hundred Miles Out', icon: '🎯', category: 'crisis',
-    minTurn: 3, maxTurn: 22, weight: 3, first: 'open',
+    minTurn: 3, maxTurn: 40, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -154,7 +154,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-away-long-drive-back', title: 'Five Nil, Five Hours', icon: '🌧️', category: 'offpitch',
-    minTurn: 0, maxTurn: 15, weight: 3, first: 'open',
+    minTurn: 0, maxTurn: 33, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -169,7 +169,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-away-wrong-ground', title: 'The Wrong Ground', icon: '🗺️', category: 'crisis',
-    minTurn: 0, maxTurn: 12, weight: 3, first: 'open',
+    minTurn: 0, maxTurn: 30, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -184,7 +184,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-away-other-clubs-facilities', title: 'The Sign on the Corridor Wall', icon: '🚪', category: 'saga',
-    minTurn: 1, maxTurn: 20, weight: 3, first: 'open',
+    minTurn: 1, maxTurn: 38, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -206,7 +206,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-away-rain-all-day', title: 'The Festival Where It Never Stopped', icon: '☔', category: 'crisis',
-    minTurn: 0, maxTurn: 14, weight: 3, first: 'open',
+    minTurn: 0, maxTurn: 32, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -221,7 +221,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-away-different-football', title: 'They Played It Backwards', icon: '🔄', category: 'saga',
-    minTurn: 5, maxTurn: 26, weight: 3, first: 'open',
+    minTurn: 5, maxTurn: 44, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -243,7 +243,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-away-trophy-too-big', title: 'Too Big for the Bus', icon: '🏆', category: 'triumph',
-    minTurn: 2, maxTurn: 20, weight: 3, first: 'open',
+    minTurn: 2, maxTurn: 38, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -258,7 +258,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-away-no-common-language', title: 'The Boy He Couldn\'t Talk To', icon: '🗣️', category: 'relationship',
-    minTurn: 6, maxTurn: 28, weight: 3, first: 'open',
+    minTurn: 6, maxTurn: 46, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -273,7 +273,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-away-last-day-of-tour', title: 'The Last Morning of the Tour', icon: '🧳', category: 'offpitch',
-    minTurn: 7, maxTurn: 28, weight: 2, first: 'open',
+    minTurn: 7, maxTurn: 46, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -288,7 +288,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-away-six-am-pickup', title: 'Ten Past Six, End of the Road', icon: '🚐', category: 'saga',
-    minTurn: 0, maxTurn: 12, weight: 3, first: 'open',
+    minTurn: 0, maxTurn: 30, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -303,7 +303,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-away-hostile-touchline', title: 'A Touchline That Doesn\'t Like Him', icon: '📣', category: 'crisis',
-    minTurn: 2, maxTurn: 20, weight: 3, first: 'open',
+    minTurn: 2, maxTurn: 38, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -318,7 +318,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-away-two-teams-one-bus', title: 'The Under-12s Are Coming Too', icon: '👟', category: 'relationship',
-    minTurn: 1, maxTurn: 16, weight: 2, first: 'open',
+    minTurn: 1, maxTurn: 34, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',

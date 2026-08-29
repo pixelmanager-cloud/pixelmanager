@@ -8,7 +8,7 @@ import type { StoryArc } from '../storyarc.js';
 export const YOUTH_PITCH_ARCS: StoryArc[] = [
   {
     id: 'youth-pitch-shootout', title: 'Twelve Yards in the Dark', icon: '🥅', category: 'crisis',
-    minTurn: 4, maxTurn: 20, weight: 3, first: 'open',
+    minTurn: 4, maxTurn: 38, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -31,7 +31,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-pitch-hattrick', title: 'The Ball Under His Arm', icon: '⚽', category: 'triumph',
-    minTurn: 3, maxTurn: 22, weight: 3, first: 'open',
+    minTurn: 3, maxTurn: 40, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -53,7 +53,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-pitch-weakfoot', title: 'The Other Foot', icon: '🦶', category: 'saga',
-    minTurn: 1, maxTurn: 18, weight: 3, first: 'open',
+    minTurn: 1, maxTurn: 36, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -75,7 +75,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-pitch-heading', title: 'Eyes Open', icon: '🧠', category: 'saga',
-    minTurn: 2, maxTurn: 18, weight: 2, first: 'open',
+    minTurn: 2, maxTurn: 36, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -90,7 +90,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-pitch-nutmeg', title: 'Through the Legs', icon: '🪄', category: 'signature',
-    minTurn: 5, maxTurn: 24, weight: 3, first: 'open',
+    minTurn: 5, maxTurn: 42, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -112,7 +112,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-pitch-flood', title: 'Water on the Six-Yard Box', icon: '🌧️', category: 'crisis',
-    minTurn: 2, maxTurn: 20, weight: 3, first: 'open',
+    minTurn: 2, maxTurn: 38, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -127,7 +127,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-pitch-astro', title: 'Grass, and the Other Thing', icon: '🟩', category: 'saga',
-    minTurn: 6, maxTurn: 24, weight: 2, first: 'open',
+    minTurn: 6, maxTurn: 42, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -149,7 +149,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-pitch-fluke', title: 'The One That Went In Off His Shin', icon: '🍀', category: 'triumph',
-    minTurn: 4, maxTurn: 22, weight: 2, first: 'open',
+    minTurn: 4, maxTurn: 40, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -164,7 +164,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-pitch-miss', title: 'The Open Goal', icon: '😖', category: 'crisis',
-    minTurn: 7, maxTurn: 26, weight: 3, first: 'open',
+    minTurn: 7, maxTurn: 44, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -186,7 +186,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-pitch-redcard', title: 'The Long Walk', icon: '🟥', category: 'crisis',
-    minTurn: 8, maxTurn: 27, weight: 3, first: 'open',
+    minTurn: 8, maxTurn: 45, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -208,7 +208,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-pitch-noref', title: 'Nobody in Black', icon: '🤷', category: 'saga',
-    minTurn: 1, maxTurn: 16, weight: 2, first: 'open',
+    minTurn: 1, maxTurn: 34, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -223,7 +223,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-pitch-floodlights', title: 'Under the Lights', icon: '💡', category: 'triumph',
-    minTurn: 6, maxTurn: 24, weight: 3, first: 'open',
+    minTurn: 6, maxTurn: 42, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -245,7 +245,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-pitch-theball', title: 'The Ball That Lived Under His Bed', icon: '🧡', category: 'signature',
-    minTurn: 0, maxTurn: 14, weight: 3, first: 'open',
+    minTurn: 0, maxTurn: 32, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -267,7 +267,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-pitch-ingoal', title: 'Somebody Has To Go In', icon: '🧤', category: 'crisis',
-    minTurn: 9, maxTurn: 26, weight: 2, first: 'open',
+    minTurn: 9, maxTurn: 44, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -290,7 +290,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-pitch-unbeaten', title: 'The Run Ends on a Tuesday', icon: '📉', category: 'crisis',
-    minTurn: 12, maxTurn: 28, weight: 3, first: 'open',
+    minTurn: 12, maxTurn: 46, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -312,7 +312,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-pitch-bigground', title: 'A Real Pitch for Ninety Minutes', icon: '🏟️', category: 'triumph',
-    minTurn: 14, maxTurn: 29, weight: 3, first: 'open',
+    minTurn: 14, maxTurn: 47, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -334,7 +334,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-pitch-sixaside', title: 'Six-a-Side in the Rain', icon: '🌀', category: 'saga',
-    minTurn: 10, maxTurn: 26, weight: 2, first: 'open',
+    minTurn: 10, maxTurn: 44, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -349,7 +349,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-pitch-unwanted-pen', title: 'The Penalty Nobody Wants', icon: '🎯', category: 'crisis',
-    minTurn: 16, maxTurn: 30, weight: 3, first: 'open',
+    minTurn: 16, maxTurn: 48, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',

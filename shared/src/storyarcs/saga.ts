@@ -43,7 +43,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'captaincy-journey', title: 'The Armband', icon: '🎗️', category: 'saga',
-    minTurn: 60, maxTurn: 110, weight: 2, first: 'open',
+    minTurn: 46, maxTurn: 110, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -65,7 +65,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'relegation-battle', title: 'The Drop Fight', icon: '🪂', category: 'saga',
-    minTurn: 57, maxTurn: 107, weight: 2, first: 'open',
+    minTurn: 46, maxTurn: 107, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -87,7 +87,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-title-race', title: 'The Final Day', icon: '🏆', category: 'saga',
-    minTurn: 60, maxTurn: 110, weight: 3, first: 'open',
+    minTurn: 46, maxTurn: 110, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -199,7 +199,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-new-signing', title: 'The Replacement', icon: '🪑', category: 'saga',
-    minTurn: 66, maxTurn: 110, weight: 2, first: 'open',
+    minTurn: 50, maxTurn: 110, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -229,7 +229,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-loan-abroad', title: 'The Foreign Adventure', icon: '🌍', category: 'saga',
-    minTurn: 57, maxTurn: 105, weight: 2, first: 'open',
+    minTurn: 46, maxTurn: 105, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -259,7 +259,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-buyout-clause', title: 'The Clause', icon: '📜', category: 'saga',
-    minTurn: 72, maxTurn: 113, weight: 2, first: 'open',
+    minTurn: 56, maxTurn: 113, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -281,7 +281,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-bench-fightback', title: 'Back from the Cold', icon: '🧊', category: 'saga',
-    minTurn: 69, maxTurn: 113, weight: 2, first: 'open',
+    minTurn: 53, maxTurn: 113, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -349,7 +349,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-first-europe', title: 'Into Europe', icon: '🌟', category: 'saga',
-    minTurn: 57, maxTurn: 107, weight: 3, first: 'open',
+    minTurn: 46, maxTurn: 107, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -387,7 +387,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-transfer-request', title: 'The Request', icon: '📝', category: 'saga',
-    minTurn: 60, maxTurn: 110, weight: 2, first: 'open',
+    minTurn: 46, maxTurn: 110, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -425,7 +425,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-three-managers', title: 'The Revolving Door', icon: '🚪', category: 'saga',
-    minTurn: 60, maxTurn: 113, weight: 2, first: 'open',
+    minTurn: 46, maxTurn: 113, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -485,7 +485,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-lost-season', title: 'The Long Road Back', icon: '🩼', category: 'saga',
-    minTurn: 60, maxTurn: 116, weight: 2, first: 'open',
+    minTurn: 46, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -515,7 +515,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-fire-sale', title: 'The Fire Sale', icon: '🔥', category: 'saga',
-    minTurn: 66, maxTurn: 113, weight: 2, first: 'open',
+    minTurn: 50, maxTurn: 113, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -605,7 +605,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-cup-run', title: 'The Cup Run', icon: '🏅', category: 'saga',
-    minTurn: 57, maxTurn: 110, weight: 3, first: 'open',
+    minTurn: 46, maxTurn: 110, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -695,7 +695,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-lower-league', title: 'The Rebuild', icon: '🧱', category: 'saga',
-    minTurn: 72, maxTurn: 119, weight: 2, first: 'open',
+    minTurn: 56, maxTurn: 119, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -725,7 +725,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-takeover', title: 'The Takeover', icon: '🤝', category: 'saga',
-    minTurn: 60, maxTurn: 113, weight: 2, first: 'open',
+    minTurn: 46, maxTurn: 113, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -785,7 +785,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-tournament-run', title: 'The Summer of a Nation', icon: '🌞', category: 'saga',
-    minTurn: 60, maxTurn: 113, weight: 3, first: 'open',
+    minTurn: 46, maxTurn: 113, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -823,7 +823,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-playoff-final', title: 'The Playoff Escape', icon: '🪜', category: 'saga',
-    minTurn: 57, maxTurn: 110, weight: 2, first: 'open',
+    minTurn: 46, maxTurn: 110, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -853,7 +853,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-crossing-over', title: 'Crossing the Divide', icon: '🩸', category: 'saga',
-    minTurn: 63, maxTurn: 110, weight: 2, first: 'open',
+    minTurn: 47, maxTurn: 110, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -913,7 +913,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-var-season', title: 'The Video Season', icon: '📺', category: 'saga',
-    minTurn: 57, maxTurn: 113, weight: 2, first: 'open',
+    minTurn: 46, maxTurn: 113, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -973,7 +973,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-long-ban', title: 'The Ban', icon: '⛔', category: 'saga',
-    minTurn: 60, maxTurn: 113, weight: 2, first: 'open',
+    minTurn: 46, maxTurn: 113, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -1033,7 +1033,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-goal-difference', title: 'By Goal Difference', icon: '🧮', category: 'saga',
-    minTurn: 60, maxTurn: 113, weight: 3, first: 'open',
+    minTurn: 46, maxTurn: 113, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',

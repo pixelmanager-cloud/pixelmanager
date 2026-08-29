@@ -4,7 +4,7 @@ import type { StoryArc } from '../storyarc.js';
 export const OFFPITCH_ARCS: StoryArc[] = [
   {
     id: 'media-storm', title: 'Back Page Storm', icon: '📰', category: 'offpitch',
-    minTurn: 57, maxTurn: 110, weight: 2, first: 'open',
+    minTurn: 46, maxTurn: 110, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -19,7 +19,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'the-endorsement', title: 'The Big Deal', icon: '💰', category: 'offpitch',
-    minTurn: 60, maxTurn: 113, weight: 2, first: 'open',
+    minTurn: 46, maxTurn: 113, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -34,7 +34,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-boot-launch', title: 'The Signature Boot', icon: '👟', category: 'offpitch',
-    minTurn: 66, maxTurn: 110, weight: 2, first: 'open',
+    minTurn: 50, maxTurn: 110, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -57,7 +57,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-documentary', title: 'All Access', icon: '🎬', category: 'offpitch',
-    minTurn: 63, maxTurn: 113, weight: 2, first: 'open',
+    minTurn: 47, maxTurn: 113, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -80,7 +80,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-foundation', title: 'The Foundation', icon: '🤝', category: 'offpitch',
-    minTurn: 69, maxTurn: 116, weight: 2, first: 'open',
+    minTurn: 53, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -103,7 +103,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-nightlife', title: 'Last Orders', icon: '🍸', category: 'offpitch',
-    minTurn: 60, maxTurn: 105, weight: 2, first: 'open',
+    minTurn: 56, maxTurn: 105, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -126,7 +126,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-social-misstep', title: 'The Deleted Tweet', icon: '📱', category: 'offpitch',
-    minTurn: 57, maxTurn: 107, weight: 2, first: 'open',
+    minTurn: 46, maxTurn: 107, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -141,7 +141,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-property', title: 'Bricks and Mortar', icon: '🏠', category: 'offpitch',
-    minTurn: 72, maxTurn: 116, weight: 2, first: 'open',
+    minTurn: 56, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -164,7 +164,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-fashion-line', title: 'The Label', icon: '🧥', category: 'offpitch',
-    minTurn: 75, maxTurn: 116, weight: 2, first: 'open',
+    minTurn: 59, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -179,7 +179,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-fan-culture', title: 'Number on the Wall', icon: '🎨', category: 'offpitch',
-    minTurn: 78, maxTurn: 116, weight: 2, first: 'open',
+    minTurn: 62, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -194,7 +194,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-videogame', title: 'Cover Star', icon: '🎮', category: 'offpitch',
-    minTurn: 72, maxTurn: 113, weight: 3, first: 'open',
+    minTurn: 56, maxTurn: 113, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -217,7 +217,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-crypto', title: 'The Whitepaper', icon: '🪙', category: 'offpitch',
-    minTurn: 60, maxTurn: 110, weight: 3, first: 'open',
+    minTurn: 46, maxTurn: 110, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -240,7 +240,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-restaurant', title: 'Front of House', icon: '🍽️', category: 'offpitch',
-    minTurn: 78, maxTurn: 119, weight: 2, first: 'open',
+    minTurn: 62, maxTurn: 119, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -286,7 +286,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-reality-tv', title: 'Prime Time', icon: '📺', category: 'offpitch',
-    minTurn: 66, maxTurn: 116, weight: 2, first: 'open',
+    minTurn: 50, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -309,7 +309,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-kit-warband', title: 'The Bidding War', icon: '⚔️', category: 'offpitch',
-    minTurn: 69, maxTurn: 113, weight: 3, first: 'open',
+    minTurn: 53, maxTurn: 113, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -332,7 +332,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-tax-scheme', title: 'The Wheeze', icon: '🧾', category: 'offpitch',
-    minTurn: 75, maxTurn: 119, weight: 2, first: 'open',
+    minTurn: 59, maxTurn: 119, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -355,7 +355,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-exhibition-tour', title: 'The Circus', icon: '✈️', category: 'offpitch',
-    minTurn: 78, maxTurn: 116, weight: 2, first: 'open',
+    minTurn: 62, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -401,7 +401,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-watch-ambassador', title: 'Time Piece', icon: '⌚', category: 'offpitch',
-    minTurn: 72, maxTurn: 116, weight: 2, first: 'open',
+    minTurn: 56, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -424,7 +424,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-viral-advert', title: 'The Advert', icon: '🎥', category: 'offpitch',
-    minTurn: 63, maxTurn: 113, weight: 3, first: 'open',
+    minTurn: 47, maxTurn: 113, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -447,7 +447,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-music-crossover', title: 'The Featured Verse', icon: '🎤', category: 'offpitch',
-    minTurn: 66, maxTurn: 110, weight: 2, first: 'open',
+    minTurn: 50, maxTurn: 110, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -470,7 +470,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-betting-sponsor', title: 'The House Always Wins', icon: '🎲', category: 'offpitch',
-    minTurn: 60, maxTurn: 110, weight: 2, first: 'open',
+    minTurn: 56, maxTurn: 110, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -493,7 +493,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-supplement', title: 'The Green Powder', icon: '🥤', category: 'offpitch',
-    minTurn: 78, maxTurn: 119, weight: 2, first: 'open',
+    minTurn: 62, maxTurn: 119, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -516,7 +516,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-charity-gala', title: 'The Guest List', icon: '🎩', category: 'offpitch',
-    minTurn: 72, maxTurn: 119, weight: 2, first: 'open',
+    minTurn: 56, maxTurn: 119, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -539,7 +539,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-streaming-channel', title: 'Going Live', icon: '🔴', category: 'offpitch',
-    minTurn: 63, maxTurn: 113, weight: 3, first: 'open',
+    minTurn: 47, maxTurn: 113, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -562,7 +562,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-esports', title: 'The Roster', icon: '🕹️', category: 'offpitch',
-    minTurn: 69, maxTurn: 116, weight: 2, first: 'open',
+    minTurn: 53, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -585,7 +585,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-biopic', title: 'The Silver Screen', icon: '🎞️', category: 'offpitch',
-    minTurn: 78, maxTurn: 123, weight: 2, first: 'open',
+    minTurn: 62, maxTurn: 123, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -608,7 +608,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-fragrance', title: 'The Scent', icon: '🧴', category: 'offpitch',
-    minTurn: 72, maxTurn: 116, weight: 2, first: 'open',
+    minTurn: 56, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -631,7 +631,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-paparazzi', title: 'The Long Lens', icon: '📸', category: 'offpitch',
-    minTurn: 63, maxTurn: 113, weight: 2, first: 'open',
+    minTurn: 86, maxTurn: 113, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -654,7 +654,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-supercars', title: 'The Garage', icon: '🏎️', category: 'offpitch',
-    minTurn: 69, maxTurn: 116, weight: 2, first: 'open',
+    minTurn: 53, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -677,7 +677,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-political-endorsement', title: 'The Rosette', icon: '🗳️', category: 'offpitch',
-    minTurn: 78, maxTurn: 119, weight: 2, first: 'open',
+    minTurn: 62, maxTurn: 119, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -723,7 +723,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
   },
   {
     id: 'off-dressing-room-dance', title: 'The Trend', icon: '💃', category: 'offpitch',
-    minTurn: 60, maxTurn: 110, weight: 3, first: 'open',
+    minTurn: 46, maxTurn: 110, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',

@@ -8,7 +8,7 @@ import type { StoryArc } from '../storyarc.js';
 export const YOUTH_DOUBT_ARCS: StoryArc[] = [
   {
     id: 'youth-doubt-nothing-comes-off', title: 'A Run of Nothing', icon: '🌫️', category: 'crisis',
-    minTurn: 3, maxTurn: 20, weight: 3, first: 'open',
+    minTurn: 3, maxTurn: 38, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -31,7 +31,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-doubt-dreading-saturday', title: 'The Saturday Feeling', icon: '🕗', category: 'crisis',
-    minTurn: 2, maxTurn: 18, weight: 3, first: 'open',
+    minTurn: 2, maxTurn: 36, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -46,7 +46,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-doubt-safe-pass', title: 'The Safe Ball', icon: '↩️', category: 'crisis',
-    minTurn: 4, maxTurn: 22, weight: 3, first: 'open',
+    minTurn: 4, maxTurn: 40, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -69,7 +69,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-doubt-cant-enjoy-win', title: 'Winning and Not Feeling It', icon: '😐', category: 'crisis',
-    minTurn: 5, maxTurn: 24, weight: 2, first: 'open',
+    minTurn: 5, maxTurn: 42, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -84,7 +84,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-doubt-clip', title: 'Watching Himself Back', icon: '📱', category: 'crisis',
-    minTurn: 6, maxTurn: 24, weight: 3, first: 'open',
+    minTurn: 6, maxTurn: 42, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -99,7 +99,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-doubt-first-nerves', title: 'The First Time It Mattered', icon: '🫨', category: 'saga',
-    minTurn: 1, maxTurn: 14, weight: 3, first: 'open',
+    minTurn: 1, maxTurn: 32, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -114,7 +114,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-doubt-after-the-good-game', title: 'The Week After', icon: '⏳', category: 'crisis',
-    minTurn: 3, maxTurn: 22, weight: 3, first: 'open',
+    minTurn: 3, maxTurn: 40, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -129,7 +129,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-doubt-invisible-slump', title: 'Nobody Notices', icon: '🫥', category: 'crisis',
-    minTurn: 7, maxTurn: 26, weight: 2, first: 'open',
+    minTurn: 7, maxTurn: 44, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -144,7 +144,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-doubt-saying-it', title: 'Telling Someone', icon: '💬', category: 'crisis',
-    minTurn: 8, maxTurn: 26, weight: 3, first: 'open',
+    minTurn: 8, maxTurn: 44, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -167,7 +167,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-doubt-week-off', title: 'A Week Off', icon: '🛋️', category: 'offpitch',
-    minTurn: 6, maxTurn: 26, weight: 3, first: 'open',
+    minTurn: 6, maxTurn: 44, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -190,7 +190,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-doubt-found-out', title: 'Found Out', icon: '🎭', category: 'crisis',
-    minTurn: 9, maxTurn: 28, weight: 3, first: 'open',
+    minTurn: 9, maxTurn: 46, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -205,7 +205,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-doubt-boy-in-red', title: 'The Boy He Never Meets Again', icon: '👤', category: 'crisis',
-    minTurn: 5, maxTurn: 24, weight: 2, first: 'open',
+    minTurn: 5, maxTurn: 42, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -220,7 +220,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-doubt-when-watched', title: 'When Someone Is Watching', icon: '👀', category: 'crisis',
-    minTurn: 4, maxTurn: 24, weight: 3, first: 'open',
+    minTurn: 4, maxTurn: 42, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -243,7 +243,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-doubt-too-hard', title: 'Harder On Himself Than Anyone', icon: '🪞', category: 'crisis',
-    minTurn: 2, maxTurn: 20, weight: 3, first: 'open',
+    minTurn: 2, maxTurn: 38, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -258,7 +258,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-doubt-no-stakes', title: 'A Game That Does Not Count', icon: '🌤️', category: 'triumph',
-    minTurn: 12, maxTurn: 28, weight: 2, first: 'open',
+    minTurn: 12, maxTurn: 46, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -273,7 +273,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-doubt-good-label', title: 'Told He Is Good', icon: '🏷️', category: 'crisis',
-    minTurn: 11, maxTurn: 28, weight: 3, first: 'open',
+    minTurn: 11, maxTurn: 46, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -296,7 +296,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-doubt-perfect', title: 'The Perfect Version', icon: '📐', category: 'crisis',
-    minTurn: 14, maxTurn: 30, weight: 2, first: 'open',
+    minTurn: 14, maxTurn: 48, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -311,7 +311,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-doubt-quit-thought', title: 'The Thought of Stopping', icon: '🚪', category: 'crisis',
-    minTurn: 16, maxTurn: 30, weight: 2, first: 'open',
+    minTurn: 16, maxTurn: 48, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',

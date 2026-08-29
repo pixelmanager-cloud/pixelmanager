@@ -10,7 +10,7 @@ import type { StoryArc } from '../storyarc.js';
 export const YOUTH_COACH_ARCS: StoryArc[] = [
   {
     id: 'youth-coach-dislikes', title: 'The Coach Who Doesn\'t Fancy Him', icon: '🧊', category: 'crisis',
-    minTurn: 2, maxTurn: 20, weight: 3, first: 'open',
+    minTurn: 2, maxTurn: 38, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -33,7 +33,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-coach-leaves', title: 'The Man Who Found Him Goes', icon: '🚪', category: 'crisis',
-    minTurn: 5, maxTurn: 24, weight: 3, first: 'open',
+    minTurn: 5, maxTurn: 42, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -56,7 +56,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-coachs-son', title: 'The Coach\'s Boy', icon: '👨‍👦', category: 'relationship',
-    minTurn: 1, maxTurn: 16, weight: 3, first: 'open',
+    minTurn: 1, maxTurn: 34, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -71,7 +71,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-made-to-apologise', title: 'Made to Say Sorry', icon: '🙇', category: 'crisis',
-    minTurn: 3, maxTurn: 20, weight: 3, first: 'open',
+    minTurn: 3, maxTurn: 38, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -86,7 +86,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-punishment-session', title: 'Everybody Runs', icon: '🏃', category: 'crisis',
-    minTurn: 4, maxTurn: 22, weight: 3, first: 'open',
+    minTurn: 4, maxTurn: 40, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -101,7 +101,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-called-lazy', title: 'The Word He Used Was Lazy', icon: '🗯️', category: 'crisis',
-    minTurn: 6, maxTurn: 24, weight: 3, first: 'open',
+    minTurn: 6, maxTurn: 42, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -123,7 +123,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-bleep-test-fail', title: 'Level Nine', icon: '📉', category: 'crisis',
-    minTurn: 5, maxTurn: 22, weight: 3, first: 'open',
+    minTurn: 5, maxTurn: 40, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -138,7 +138,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-made-example', title: 'Everybody Watch This One', icon: '👀', category: 'triumph',
-    minTurn: 2, maxTurn: 18, weight: 3, first: 'open',
+    minTurn: 2, maxTurn: 36, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -153,7 +153,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-we-will-let-you-know', title: 'We\'ll Let You Know', icon: '✉️', category: 'crisis',
-    minTurn: 8, maxTurn: 26, weight: 3, first: 'open',
+    minTurn: 8, maxTurn: 44, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -175,7 +175,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-bigger-club-scout', title: 'The Coat With the Badge On It', icon: '🧥', category: 'triumph',
-    minTurn: 7, maxTurn: 24, weight: 3, first: 'open',
+    minTurn: 7, maxTurn: 42, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -190,7 +190,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-coach-shields-him', title: 'The Coach Who Sent Him Away', icon: '🛡️', category: 'relationship',
-    minTurn: 9, maxTurn: 26, weight: 2, first: 'open',
+    minTurn: 9, maxTurn: 44, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -212,7 +212,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-tactical-question', title: 'What Did You See?', icon: '🧠', category: 'triumph',
-    minTurn: 9, maxTurn: 26, weight: 3, first: 'open',
+    minTurn: 9, maxTurn: 44, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -227,7 +227,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-new-coach-system', title: 'The New Man\'s Way', icon: '📐', category: 'saga',
-    minTurn: 12, maxTurn: 28, weight: 3, first: 'open',
+    minTurn: 12, maxTurn: 46, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -249,7 +249,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-assessment-day', title: 'Assessment Day', icon: '📊', category: 'crisis',
-    minTurn: 16, maxTurn: 30, weight: 3, first: 'open',
+    minTurn: 16, maxTurn: 48, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -271,7 +271,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-video-room', title: 'The Video Room', icon: '📺', category: 'crisis',
-    minTurn: 15, maxTurn: 30, weight: 3, first: 'open',
+    minTurn: 15, maxTurn: 48, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -286,7 +286,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-secret-trial', title: 'The Tuesday Nobody Was Told About', icon: '🤫', category: 'crisis',
-    minTurn: 18, maxTurn: 30, weight: 2, first: 'open',
+    minTurn: 18, maxTurn: 48, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -309,7 +309,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-open-day', title: 'Open Day', icon: '🎪', category: 'crisis',
-    minTurn: 20, maxTurn: 30, weight: 2, first: 'open',
+    minTurn: 20, maxTurn: 48, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -324,7 +324,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
   },
   {
     id: 'youth-may-letters', title: 'The Month the Letters Go Out', icon: '🕰️', category: 'crisis',
-    minTurn: 22, maxTurn: 30, weight: 3, first: 'open',
+    minTurn: 22, maxTurn: 48, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',

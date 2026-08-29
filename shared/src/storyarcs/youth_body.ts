@@ -10,7 +10,7 @@ import type { StoryArc } from '../storyarc.js';
 export const YOUTH_BODY_ARCS: StoryArc[] = [
   {
     id: 'youth-body-growing-pains', title: 'Two in the Morning', icon: '🌙', category: 'crisis',
-    minTurn: 1, maxTurn: 12, weight: 3, first: 'open',
+    minTurn: 1, maxTurn: 30, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -26,7 +26,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
 
   {
     id: 'youth-body-packed-lunch', title: 'The Lunchbox', icon: '🥪', category: 'offpitch',
-    minTurn: 0, maxTurn: 10, weight: 3, first: 'open',
+    minTurn: 0, maxTurn: 28, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -42,7 +42,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
 
   {
     id: 'youth-body-blisters', title: 'Boots a Size Too Small', icon: '🩹', category: 'crisis',
-    minTurn: 2, maxTurn: 14, weight: 3, first: 'open',
+    minTurn: 2, maxTurn: 32, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -66,7 +66,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
 
   {
     id: 'youth-body-late-nights', title: 'One More Game', icon: '🎮', category: 'offpitch',
-    minTurn: 3, maxTurn: 16, weight: 3, first: 'open',
+    minTurn: 3, maxTurn: 34, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -82,7 +82,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
 
   {
     id: 'youth-body-heavy-cold', title: 'A Cold in the Wrong Week', icon: '🤧', category: 'crisis',
-    minTurn: 4, maxTurn: 18, weight: 3, first: 'open',
+    minTurn: 4, maxTurn: 36, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -98,7 +98,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
 
   {
     id: 'youth-body-warm-up', title: 'The Boring Twenty Minutes', icon: '🧘', category: 'offpitch',
-    minTurn: 0, maxTurn: 11, weight: 2, first: 'open',
+    minTurn: 0, maxTurn: 29, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -114,7 +114,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
 
   {
     id: 'youth-body-changing-room', title: 'The Last One Changed', icon: '👕', category: 'offpitch',
-    minTurn: 5, maxTurn: 20, weight: 3, first: 'open',
+    minTurn: 5, maxTurn: 38, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -130,7 +130,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
 
   {
     id: 'youth-body-water', title: 'The Bottle He Never Fills', icon: '💧', category: 'offpitch',
-    minTurn: 2, maxTurn: 13, weight: 2, first: 'open',
+    minTurn: 2, maxTurn: 31, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -145,7 +145,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
 
   {
     id: 'youth-body-eyes', title: 'The Bottom Two Lines', icon: '👓', category: 'crisis',
-    minTurn: 6, maxTurn: 20, weight: 2, first: 'open',
+    minTurn: 6, maxTurn: 38, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -161,7 +161,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
 
   {
     id: 'youth-body-first-hurt', title: 'The First Session That Hurt', icon: '🥵', category: 'saga',
-    minTurn: 1, maxTurn: 12, weight: 3, first: 'open',
+    minTurn: 1, maxTurn: 30, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -184,7 +184,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
 
   {
     id: 'youth-body-smallest', title: 'Still Waiting', icon: '📏', category: 'crisis',
-    minTurn: 3, maxTurn: 18, weight: 3, first: 'open',
+    minTurn: 3, maxTurn: 36, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -208,7 +208,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
 
   {
     id: 'youth-body-secret-niggle', title: 'The One He Does Not Mention', icon: '🤫', category: 'crisis',
-    minTurn: 7, maxTurn: 22, weight: 3, first: 'open',
+    minTurn: 7, maxTurn: 40, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -232,7 +232,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
 
   {
     id: 'youth-body-fill-out', title: 'Told to Fill Out', icon: '🍽️', category: 'offpitch',
-    minTurn: 8, maxTurn: 24, weight: 3, first: 'open',
+    minTurn: 8, maxTurn: 42, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -248,7 +248,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
 
   {
     id: 'youth-body-after-game-food', title: 'What He Eats at Five', icon: '🍟', category: 'offpitch',
-    minTurn: 6, maxTurn: 19, weight: 2, first: 'open',
+    minTurn: 6, maxTurn: 37, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -264,7 +264,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
 
   {
     id: 'youth-body-shin-splints', title: 'Shins', icon: '🦴', category: 'crisis',
-    minTurn: 12, maxTurn: 26, weight: 3, first: 'open',
+    minTurn: 12, maxTurn: 44, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -280,7 +280,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
 
   {
     id: 'youth-body-summer-quick', title: 'The Summer He Got Quick', icon: '⚡', category: 'triumph',
-    minTurn: 14, maxTurn: 28, weight: 3, first: 'open',
+    minTurn: 14, maxTurn: 46, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -303,7 +303,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
 
   {
     id: 'youth-body-dentist', title: 'The Tooth', icon: '🦷', category: 'offpitch',
-    minTurn: 11, maxTurn: 24, weight: 2, first: 'open',
+    minTurn: 11, maxTurn: 42, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -319,7 +319,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
 
   {
     id: 'youth-body-last-year', title: 'What He Could Do Last Year', icon: '🔁', category: 'crisis',
-    minTurn: 16, maxTurn: 30, weight: 3, first: 'open',
+    minTurn: 16, maxTurn: 48, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
