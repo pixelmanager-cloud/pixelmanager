@@ -49,5 +49,27 @@ console.log(`=== Story-arc validator — ${ARCS.length} arcs, ${[...ids].length}
 const byCat: Record<string, number> = {};
 for (const a of ARCS) byCat[a.category] = (byCat[a.category] ?? 0) + 1;
 console.log('  by category: ' + Object.entries(byCat).map(([c, n]) => `${c} ${n}`).join(' · '));
+
+// ── AGE-APPROPRIATENESS GUARD ─────────────────────────────────────────────────────────────────────
+// The career is 120 turns: Grassroots 0-11 (age 10-12), Academy 12-27 (13-14), Scholar 28-45 (15-16).
+// An arc that can start before turn 46 is shown to a CHILD, so adult material must not be reachable there.
+// This exists because a full romance arc with an adult ("Ask her out") and a MARRIAGE PROPOSAL were both
+// firing on a 15-year-old — the gates were wrong in the original 202-turn library and the rescale carried
+// them over faithfully. A regression here is a content-safety issue, not a polish one.
+const CHILD_TURN_LIMIT = 46;
+// Deliberately targets the PLAYER'S OWN adult life, not any mention of an adult world. A kid attending a
+// relative's wedding, or a lift-share that "ends like a marriage", is fine — him having a girlfriend,
+// proposing, moving in with a partner, or being in a casino is not.
+const ADULT_WORDS = /\b(his girlfriend|ask(?:s)? her out|asked her out|propose(?:d)? to her|his fianc|moved in together|moving in together|his partner|nightclub|casino|gambl\w*|mortgage|dating her)\b/i;
+let ageFails = 0;
+for (const a of ARCS) {
+  if (a.minTurn >= CHILD_TURN_LIMIT) continue;
+  const body = JSON.stringify(a.beats);
+  const hit = body.match(ADULT_WORDS);
+  if (hit) { console.log(`  FAIL [${a.id}] minTurn ${a.minTurn} reaches a child (< ${CHILD_TURN_LIMIT}) but contains adult material: "${hit[0]}"`); ageFails++; }
+}
+if (ageFails) { console.log(`\n✗ ${ageFails} arc(s) expose adult material to a child`); process.exitCode = 1; }
+else console.log('  ok   no adult material reachable before age 17');
+
 console.log(errors ? `\n✗ ${errors} arc validation error(s)` : `\n✓ all ${ARCS.length} arcs valid`);
 if (errors) process.exit(1);

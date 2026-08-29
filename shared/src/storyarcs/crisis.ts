@@ -4,7 +4,7 @@ import type { StoryArc } from '../storyarc.js';
 export const CRISIS_ARCS: StoryArc[] = [
   {
     id: 'injury-comeback', title: 'The Long Road Back', icon: '🩹', category: 'crisis',
-    minTurn: 41, maxTurn: 107, weight: 2, first: 'open',
+    minTurn: 66, maxTurn: 107, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -116,7 +116,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-homesick', title: 'A Long Way From Home', icon: '✈️', category: 'crisis',
-    minTurn: 44, maxTurn: 105, weight: 2, first: 'open',
+    minTurn: 66, maxTurn: 105, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',

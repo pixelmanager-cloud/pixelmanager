@@ -664,7 +664,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-young-player', title: 'The Bright Young Thing', icon: '🌱', category: 'triumph',
-    minTurn: 35, maxTurn: 78, weight: 3, first: 'open',
+    minTurn: 46, maxTurn: 78, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',

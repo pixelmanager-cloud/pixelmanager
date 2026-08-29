@@ -14,7 +14,7 @@ import {
   validateLineup, cleanDuties,
   overall, managerPrestige, signContract, graduationEpilogue, clubInvestOf, TIERS,
   transferList, transferFee, sellValue, squadSaleValue, incomingBid, MIN_SQUAD, MAX_SQUAD,
-  signSquadContract, advanceSquad, squadSeasonsLeft, squadRenewCost, squadSeasonWage, squadStorylines,
+  signSquadContract, staggeredContractSeasons, advanceSquad, squadSeasonsLeft, squadRenewCost, squadSeasonWage, squadStorylines,
   contractDemand, evaluateContractOffer, wageForLength,
   FACILITY_KEYS, FACILITY_META, MAX_LEVEL, upgradeCost, effectAt,
   youthPoolBonus, youthUpgradeChance, scoutHitMult, scoutCostDiscount, scoutExtraTrips,
@@ -520,24 +520,36 @@ export const api = {
     const season = getActiveModel().profile.season;
     // grandfather any player with no deal (a pre-Living-Squad save, or the founding squad) onto one that
     // starts now, so nobody is silently free forever
-    const roster = c.club.players.map((p) => (p.signedSeason == null ? signSquadContract(p, season) : p));
+    const roster = c.club.players.map((p) => (p.signedSeason == null ? signSquadContract(p, season, staggeredContractSeasons(p.id)) : p));
     // who actually played matters: a man who spent the season in the XI of a winning side is settled, one who
     // never got a game is agitating — that's what makes selection a relationship, not just a number (Phase 3)
     const xi = new Set(c.standingOrders?.playerIds ?? []);
+    const avgOv = roster.length ? roster.reduce((t, p) => t + overall(p), 0) / roster.length : 8;
     const roll = advanceSquad(roster, season, Math.max(1, Math.floor(Number(body?.trainingLvl) || 1)),
-      { xi, wonSomething: !!body?.wonSomething, goodSeason: !!body?.goodSeason });
+      { xi, wonSomething: !!body?.wonSomething, goodSeason: !!body?.goodSeason, quality: avgOv });
     // wages are a real cost, but never bankrupt the club into a stuck state — charge what's affordable
     const coinsNow = getActiveModel().profile.coins;
     const charged = Math.max(0, Math.min(coinsNow, Math.round(roll.wageBill)));
     if (charged > 0) await localStore.addCoins(OWNER, -charged);
     c.club.players = roll.players;
-    await localStore.saveClub(OWNER, c.club, c.standingOrders);
+    // PRUNE THE SAVED XI. Retirements/departures leave dangling ids in the standing orders, and buildXI then
+    // throws on a player who no longer exists — the second half of the bricked-save bug (PT-300).
+    const alive = new Set(c.club.players.map((p) => p.id));
+    const so = c.standingOrders;
+    if (so?.playerIds?.some((id) => !alive.has(id))) {
+      const kept = so.playerIds.filter((id) => alive.has(id));
+      const spare = c.club.players.map((p) => p.id).filter((id) => !kept.includes(id));
+      so.playerIds = [...kept, ...spare].slice(0, 11);   // backfill from the rest of the squad
+    }
+    await localStore.saveClub(OWNER, c.club, so);
     const lite = (p: Player) => ({ id: p.id, name: p.name, role: p.role, age: p.age ?? 0, ovr: overall(p) });
     return {
       ok: true as const,
       coins: getActiveModel().profile.coins,
       wageBill: Math.round(roll.wageBill), charged, unpaid: Math.round(roll.wageBill) - charged,
       retired: roll.retired.map(lite),
+      departed: roll.departed.map(lite),
+      intake: roll.intake.map(lite),
       expiring: roll.expiring.map((p) => ({ ...lite(p), renewCost: Math.round(squadRenewCost(overall(p)) * moraleEffects(p.morale ?? 65).extendMult), morale: p.morale ?? 65, moraleLabel: moraleEffects(p.morale ?? 65).label })),
       // the season's human headlines — who arrived, who faded, who's being circled (Phase 4)
       storylines: squadStorylines(roll, season),

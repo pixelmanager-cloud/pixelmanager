@@ -25,7 +25,12 @@ export const SQUAD_PEAK_AGE = 30;                 // physical prime; decline sta
 export const SQUAD_CONTRACT_SEASONS = 3;          // a bought player is signed for this many seasons
 /** A bought player's recurring per-season WAGE (coins) — the ongoing cost of holding a squad, ~15% of his
  *  buy fee each season. Charged every season he's on the books (PT-92). */
-export function squadSeasonWage(ov: number): number { return Math.round(transferFee(ov) * 0.15); }
+// 5% of his transfer value per season. Measured against the real income curve (spSeasonReward 120c at the
+// bottom to 800c for a title, plus up to 700c sponsor): a 20-man squad costs ~154c/season in the basement
+// and ~642c in the top flight, so wages are a genuine pressure that CLIMBING relieves, rather than a bill no
+// tier can pay. (Was 0.15, which billed 461-1,926c/season and exceeded every income source at every tier —
+// even a title-winning season ran a deficit, so the club was pinned at 0 coins forever.)
+export function squadSeasonWage(ov: number): number { return Math.round(transferFee(ov) * 0.05); }
 /** The lump cost to RENEW an expiring bought player for another SQUAD_CONTRACT_SEASONS (wage × length). */
 export function squadRenewCost(ov: number): number { return squadSeasonWage(ov) * SQUAD_CONTRACT_SEASONS; }
 /** Age-adjusted SALE value: a declining veteran is worth progressively less, so there's a real reason to

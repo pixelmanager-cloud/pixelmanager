@@ -4,7 +4,7 @@ import type { StoryArc } from '../storyarc.js';
 export const RELATIONSHIP_ARCS: StoryArc[] = [
   {
     id: 'the-mentor', title: 'The Old Head', icon: '🧭', category: 'relationship',
-    minTurn: 32, maxTurn: 90, weight: 2, first: 'open',
+    minTurn: 66, maxTurn: 90, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -28,7 +28,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 1 — a ROMANCE that steadies or distracts him
   {
     id: 'rel-the-romance', title: 'Someone Worth Coming Home To', icon: '💞', category: 'relationship',
-    minTurn: 28, maxTurn: 105, weight: 3, first: 'meet',
+    minTurn: 86, maxTurn: 105, weight: 3, first: 'meet',
     beats: {
       meet: {
         id: 'meet',
@@ -124,7 +124,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 5 — a TEAMMATE FEUD
   {
     id: 'rel-teammate-feud', title: 'Two Kings, One Dressing Room', icon: '⚔️', category: 'relationship',
-    minTurn: 30, maxTurn: 102, weight: 2, first: 'spark',
+    minTurn: 46, maxTurn: 102, weight: 2, first: 'spark',
     beats: {
       spark: {
         id: 'spark',
@@ -292,7 +292,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 12 — GRIEF over a mentor/coach who passed away
   {
     id: 'rel-coach-passing', title: 'The Whistle That Went Quiet', icon: '🕯️', category: 'relationship',
-    minTurn: 35, maxTurn: 113, weight: 2, first: 'news',
+    minTurn: 46, maxTurn: 113, weight: 2, first: 'news',
     beats: {
       news: {
         id: 'news',
@@ -316,7 +316,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 13 — a CHILDHOOD FRIEND who wants to be his agent
   {
     id: 'rel-friend-agent', title: 'A Handshake Between Mates', icon: '🤞', category: 'relationship',
-    minTurn: 32, maxTurn: 99, weight: 2, first: 'pitch',
+    minTurn: 46, maxTurn: 99, weight: 2, first: 'pitch',
     beats: {
       pitch: {
         id: 'pitch',
@@ -340,7 +340,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 14 — LOYALTY to the physio who saved his career
   {
     id: 'rel-physio-loyalty', title: 'The Hands That Put Him Back Together', icon: '🩹', category: 'relationship',
-    minTurn: 44, maxTurn: 116, weight: 2, first: 'comeback',
+    minTurn: 46, maxTurn: 116, weight: 2, first: 'comeback',
     beats: {
       comeback: {
         id: 'comeback',
@@ -388,7 +388,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 16 — a new MANAGER who becomes a father figure
   {
     id: 'rel-manager-father', title: 'The Gaffer Who Saw Him', icon: '🧥', category: 'relationship',
-    minTurn: 29, maxTurn: 102, weight: 3, first: 'arrival',
+    minTurn: 66, maxTurn: 102, weight: 3, first: 'arrival',
     beats: {
       arrival: {
         id: 'arrival',
@@ -532,7 +532,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 22 — HOMESICKNESS eased by a countryman in the squad
   {
     id: 'rel-countryman', title: 'A Voice from Home', icon: '🧳', category: 'relationship',
-    minTurn: 26, maxTurn: 90, weight: 3, first: 'lonely',
+    minTurn: 66, maxTurn: 90, weight: 3, first: 'lonely',
     beats: {
       lonely: {
         id: 'lonely',
@@ -556,7 +556,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 23 — a PUBLIC PROPOSAL / WEDDING clash with the season
   {
     id: 'rel-proposal-clash', title: 'A Ring and a Fixture List', icon: '💍', category: 'relationship',
-    minTurn: 35, maxTurn: 107, weight: 3, first: 'plan',
+    minTurn: 86, maxTurn: 107, weight: 3, first: 'plan',
     beats: {
       plan: {
         id: 'plan',

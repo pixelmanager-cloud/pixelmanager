@@ -4,7 +4,7 @@
 // that feel true and fair. Pure + deterministic: no rng, no wall-clock.
 import { mintSquadPlayer, overall } from './src/teams.js';
 import {
-  advanceSquad, advanceSquadPlayer, signSquadContract, squadSeasonsLeft, squadRetireAge, SQUAD_GROWTH_AGE, squadStorylines,
+  advanceSquad, advanceSquadPlayer, signSquadContract, staggeredContractSeasons, squadSeasonsLeft, squadRetireAge, SQUAD_GROWTH_AGE, squadStorylines,
 } from './src/squad.js';
 import { squadSaleValue, squadSeasonWage, squadRenewCost, sellValue, SQUAD_PEAK_AGE, SQUAD_CONTRACT_SEASONS } from './src/transfermarket.js';
 import { moraleEffects } from './src/morale.js';
@@ -56,7 +56,13 @@ const squad = Array.from({ length: 8 }, (_, i) => signSquadContract({ ...mintSqu
 const roll = advanceSquad(squad, 1, 2);
 check(roll.wageBill > 0, 'the squad costs a wage bill each season');
 check(roll.changes.length === squad.length, 'every player gets a change record');
-check(roll.players.length + roll.retired.length === squad.length, 'everyone either stays or retires (nobody vanishes)');
+// full conservation: everyone who started either stayed, retired, or left on an expired deal — and any
+// player in the new squad who wasn't there before must be an academy intake (nobody appears from nowhere)
+check(roll.players.length - roll.intake.length + roll.retired.length + roll.departed.length === squad.length,
+  'nobody vanishes or appears: stayed + retired + departed == started, and every newcomer is an intake');
+const startIds = new Set(squad.map((p) => p.id));
+check(roll.players.every((p) => startIds.has(p.id) || roll.intake.some((k) => k.id === p.id)), 'every new face is an academy intake');
+check(roll.players.length >= Math.min(squad.length, 14), 'the squad never falls below a fieldable size (PT-300)');
 check(roll.players.every((x) => (x.age ?? 0) > 0), 'everyone who stayed has an age');
 check(roll.retired.every((x) => (x.age ?? 0) >= squadRetireAge(x)), 'only players at their retirement age retire');
 // determinism: the same squad rolled twice gives the identical result
@@ -71,6 +77,22 @@ const startOv = aging.reduce((s, x) => s + overall(x), 0) / aging.length;
 for (let s = 1; s <= 6; s++) aging = advanceSquad(aging, s, 1).players;
 const endOv = aging.length ? aging.reduce((s, x) => s + overall(x), 0) / aging.length : 0;
 check(aging.length < 6 || endOv < startOv, `an unrefreshed squad decays or retires away (${startOv.toFixed(1)} -> ${endOv.toFixed(1)}, ${aging.length}/6 left)`);
+
+console.log('=== 6b. the squad can never decay into an unfieldable state (PT-300/PT-302) ===');
+{
+  // sign them the way the GAME does — staggered lengths, so deals don't all expire in the same summer
+  let sq = Array.from({ length: 20 }, (_, i) => {
+    const p = { ...mintSquadPlayer(`d${i}`, (['GK','DF','MF','FW'] as const)[i % 4], 9, 700 + i), age: 27 + (i % 8) };
+    return signSquadContract(p, 1, staggeredContractSeasons(p.id));
+  });
+  let minSeen = 99, worstExodus = 0;
+  for (let s = 1; s <= 15; s++) {
+    const r = advanceSquad(sq, s, 1, { xi: new Set(sq.slice(0, 11).map((p) => p.id)), quality: 9 });
+    sq = r.players; minSeen = Math.min(minSeen, sq.length); worstExodus = Math.max(worstExodus, r.departed.length);
+  }
+  check(minSeen >= 14, `15 neglected seasons never drop the squad below a fieldable size (low was ${minSeen})`);
+  check(worstExodus <= 8, `contracts are staggered — no single-season mass exodus (worst was ${worstExodus})`);
+}
 
 console.log('=== 7. morale responds to how the manager treats them (Phase 3) ===');
 const m1 = mintSquadPlayer('m1', 'MF', 12, 31);

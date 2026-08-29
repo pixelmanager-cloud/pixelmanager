@@ -9,7 +9,8 @@
 import type { Player } from './types.js';
 import { developAttrs } from './lifecycle.js';
 import { ageSquadAttrs, squadSeasonWage, SQUAD_CONTRACT_SEASONS, SQUAD_PEAK_AGE } from './transfermarket.js';
-import { overall } from './teams.js';
+import { overall, mintSquadPlayer } from './teams.js';
+import { MIN_SQUAD } from './market.js';
 import { updateMorale, driftMorale, START_MORALE, type MoraleEvent } from './morale.js';
 
 /** Below this age a squad player still GROWS; at/after SQUAD_PEAK_AGE he plateaus then declines. */
@@ -30,6 +31,15 @@ export function squadSeasonsLeft(p: Player, season: number): number {
 /** Give a player a fresh contract as of `season` (signing or renewal). */
 export function signSquadContract(p: Player, season: number, seasons = SQUAD_CONTRACT_SEASONS): Player {
   return { ...p, signedSeason: season, contractSeasons: seasons };
+}
+/** A STAGGERED deal length (2-5 seasons), derived from the player id. Used when a whole squad is put under
+ *  contract at once — the founding roster, or an older save being grandfathered in. Giving everyone the same
+ *  length makes the entire squad's deal expire in the same summer, and the club loses all 14 players at once;
+ *  staggering turns that cliff into a normal churn of two or three a year. */
+export function staggeredContractSeasons(id: string): number {
+  let h = 2166136261 >>> 0;
+  for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 16777619); }
+  return 2 + ((h >>> 0) % 4); // 2..5
 }
 
 export interface SquadSeasonChange {
@@ -59,6 +69,8 @@ export interface SquadRollover {
   wageBill: number;             // total wages to charge for the season just played
   retired: Player[];
   expiring: Player[];
+  departed: Player[];   // deals that ran out and were never renewed — they walk
+  intake: Player[];     // academy kids promoted to keep the squad viable
 }
 
 /** Advance ONE squad player a season: age +1, then grow (young) / plateau / decline (old).
@@ -79,11 +91,12 @@ export function advanceSquadPlayer(p: Player, trainingLvl = 1): Player {
 
 /** Roll the WHOLE squad forward one season. Pure: returns the new squad + everything the season
  *  report needs (who grew, who faded, who retired, whose deal is up, and the wage bill). */
-export function advanceSquad(players: Player[], season: number, trainingLvl = 1, ctx: { xi?: ReadonlySet<string>; wonSomething?: boolean; goodSeason?: boolean } = {}): SquadRollover {
+export function advanceSquad(players: Player[], season: number, trainingLvl = 1, ctx: { xi?: ReadonlySet<string>; wonSomething?: boolean; goodSeason?: boolean; quality?: number } = {}): SquadRollover {
   const out: Player[] = [];
   const changes: SquadSeasonChange[] = [];
   const retired: Player[] = [];
   const expiring: Player[] = [];
+  const departed: Player[] = [];
   let wageBill = 0;
   for (const p of players) {
     const ovrBefore = overall(p);
@@ -99,10 +112,27 @@ export function advanceSquad(players: Player[], season: number, trainingLvl = 1,
     adv = { ...adv, morale: moraleAfter };
     changes.push({ player: adv, ovrBefore, ovrAfter: overall(adv), retired: isRetired, expiring: isExpiring, moraleBefore, moraleAfter });
     if (isRetired) { retired.push(adv); continue; }
+    // A DEAL THAT RAN OUT AND WASN'T RENEWED MEANS HE LEAVES. Without this the "expiring" list re-fired every
+    // season forever, renewing was a pure coin sink with no downside for ignoring it, and the contract layer —
+    // the whole point of the phase — enforced nothing (PT-302).
+    if (p.signedSeason != null && p.contractSeasons != null && p.signedSeason + p.contractSeasons < season) { departed.push(adv); continue; }
     out.push(adv);
     if (isExpiring) expiring.push(adv);
   }
-  return { players: out, changes, wageBill, retired, expiring };
+  // YOUTH INTAKE: a club whose squad ages out doesn't evaporate — the academy pushes kids up. Without a floor
+  // the squad ratcheted below 11 and autoPickXI/buildXI threw on a short roster, BRICKING the save (PT-300).
+  // The intake is deliberately raw (age 17-19, below the club's level), so neglecting the squad still hurts —
+  // it just costs you quality instead of the game.
+  const intake: Player[] = [];
+  const q = Math.max(4, Math.round(ctx.quality ?? 8));
+  for (let i = 0; out.length + intake.length < MIN_SQUAD; i++) {
+    const roles = ['GK', 'DF', 'DF', 'MF', 'MF', 'FW'] as const;
+    const seed = (((season * 7919) ^ ((out.length + i) * 104729)) >>> 0);
+    const kid = mintSquadPlayer(`youth-${season}-${i}`, roles[i % roles.length], Math.max(4, q - 3), seed, 17 + (i % 3));
+    intake.push(signSquadContract(kid, season, staggeredContractSeasons(kid.id)));
+    if (i > 40) break; // guard: never spin
+  }
+  return { players: [...out, ...intake], changes, wageBill, retired, expiring, departed, intake };
 }
 
 // ── SQUAD STORYLINES (Phase 4) ────────────────────────────────────────────────────────────────────

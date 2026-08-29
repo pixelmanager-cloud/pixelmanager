@@ -1244,6 +1244,15 @@ class Game {
       rows.push(`<div class="sq-row ret"><span class="sq-lbl">🎽 Retired</span><span class="sq-list">`
         + r.retired.map((x: any) => `${nm(x)}`).join(' · ') + ` — thanks for the service.</span></div>`);
     }
+    if (r.departed?.length) {
+      rows.push(`<div class="sq-row ret"><span class="sq-lbl">🚪 Left</span><span class="sq-list">`
+        + r.departed.map((x: any) => nm(x)).join(' · ') + ` — their deals ran out and weren't renewed.</span></div>`);
+    }
+    if (r.intake?.length) {
+      rows.push(`<div class="sq-row up"><span class="sq-lbl">🌱 Academy</span><span class="sq-list">`
+        + r.intake.map((x: any) => nm(x)).join(' · ')
+        + ` — promoted to keep the squad up to strength. Raw, but yours.</span></div>`);
+    }
     if (r.expiring?.length) {
       const coins = this.account?.coins ?? 0;
       rows.push(`<div class="sq-row exp"><span class="sq-lbl">📝 Deal up</span><span class="sq-list">`
