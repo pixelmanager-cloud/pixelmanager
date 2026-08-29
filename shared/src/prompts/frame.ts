@@ -1,3 +1,9 @@
+import { FRAME_M } from './extra/pack_m.js';
+import { FRAME_N } from './extra/pack_n.js';
+import { FRAME_O } from './extra/pack_o.js';
+import { FRAME_P } from './extra/pack_p.js';
+import { FRAME_Q } from './extra/pack_q.js';
+import { FRAME_R } from './extra/pack_r.js';
 import { mergeBanks } from './merge.js';
 import { FRAME_A } from './extra/pack_a.js';
 import { FRAME_B } from './extra/pack_b.js';
@@ -70,4 +76,4 @@ const BASE_FRAME_BY_CHAPTER: Record<string, string[]> = {
 };
 
 /** BASE plus every authoring pack — see ./merge.ts for why the packs are separate files. */
-export const FRAME_BY_CHAPTER = mergeBanks(BASE_FRAME_BY_CHAPTER, FRAME_A, FRAME_B, FRAME_C, FRAME_D, FRAME_E, FRAME_F, FRAME_G, FRAME_H, FRAME_I, FRAME_J, FRAME_K, FRAME_L);
+export const FRAME_BY_CHAPTER = mergeBanks(BASE_FRAME_BY_CHAPTER, FRAME_A, FRAME_B, FRAME_C, FRAME_D, FRAME_E, FRAME_F, FRAME_G, FRAME_H, FRAME_I, FRAME_J, FRAME_K, FRAME_L, FRAME_M, FRAME_N, FRAME_O, FRAME_P, FRAME_Q, FRAME_R);

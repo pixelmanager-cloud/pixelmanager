@@ -1,3 +1,9 @@
+import { DEMAND_M } from './extra/pack_m.js';
+import { DEMAND_N } from './extra/pack_n.js';
+import { DEMAND_O } from './extra/pack_o.js';
+import { DEMAND_P } from './extra/pack_p.js';
+import { DEMAND_Q } from './extra/pack_q.js';
+import { DEMAND_R } from './extra/pack_r.js';
 import { mergeBanks } from './merge.js';
 import { DEMAND_A } from './extra/pack_a.js';
 import { DEMAND_B } from './extra/pack_b.js';
@@ -31,4 +37,4 @@ const BASE_DEMAND: Record<string, string[]> = {
 };
 
 /** BASE plus every authoring pack — see ./merge.ts for why the packs are separate files. */
-export const DEMAND = mergeBanks(BASE_DEMAND, DEMAND_A, DEMAND_B, DEMAND_C, DEMAND_D, DEMAND_E, DEMAND_F, DEMAND_G, DEMAND_H, DEMAND_I, DEMAND_J, DEMAND_K, DEMAND_L);
+export const DEMAND = mergeBanks(BASE_DEMAND, DEMAND_A, DEMAND_B, DEMAND_C, DEMAND_D, DEMAND_E, DEMAND_F, DEMAND_G, DEMAND_H, DEMAND_I, DEMAND_J, DEMAND_K, DEMAND_L, DEMAND_M, DEMAND_N, DEMAND_O, DEMAND_P, DEMAND_Q, DEMAND_R);

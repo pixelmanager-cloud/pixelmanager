@@ -1,3 +1,9 @@
+import { CHILD_SETUP_M } from './extra/pack_m.js';
+import { CHILD_SETUP_N } from './extra/pack_n.js';
+import { CHILD_SETUP_O } from './extra/pack_o.js';
+import { CHILD_SETUP_P } from './extra/pack_p.js';
+import { CHILD_SETUP_Q } from './extra/pack_q.js';
+import { CHILD_SETUP_R } from './extra/pack_r.js';
 import { mergeBanks } from './merge.js';
 import { CHILD_SETUP_A } from './extra/pack_a.js';
 import { CHILD_SETUP_B } from './extra/pack_b.js';
@@ -28,4 +34,4 @@ const BASE_CHILD_SETUP: Record<string, string[]> = {
 };
 
 /** BASE plus every authoring pack — see ./merge.ts for why the packs are separate files. */
-export const CHILD_SETUP = mergeBanks(BASE_CHILD_SETUP, CHILD_SETUP_A, CHILD_SETUP_B, CHILD_SETUP_C, CHILD_SETUP_D, CHILD_SETUP_E, CHILD_SETUP_F, CHILD_SETUP_G, CHILD_SETUP_H, CHILD_SETUP_I, CHILD_SETUP_J, CHILD_SETUP_K, CHILD_SETUP_L);
+export const CHILD_SETUP = mergeBanks(BASE_CHILD_SETUP, CHILD_SETUP_A, CHILD_SETUP_B, CHILD_SETUP_C, CHILD_SETUP_D, CHILD_SETUP_E, CHILD_SETUP_F, CHILD_SETUP_G, CHILD_SETUP_H, CHILD_SETUP_I, CHILD_SETUP_J, CHILD_SETUP_K, CHILD_SETUP_L, CHILD_SETUP_M, CHILD_SETUP_N, CHILD_SETUP_O, CHILD_SETUP_P, CHILD_SETUP_Q, CHILD_SETUP_R);

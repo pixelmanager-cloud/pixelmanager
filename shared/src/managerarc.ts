@@ -97,12 +97,20 @@ import { MGR_ARCS_11 } from './managerarcs/pack_11.js';
 import { MGR_ARCS_12 } from './managerarcs/pack_12.js';
 import { MGR_ARCS_13 } from './managerarcs/pack_13.js';
 import { MGR_ARCS_14 } from './managerarcs/pack_14.js';
+import { MGR_ARCS_15 } from './managerarcs/pack_15.js';
+import { MGR_ARCS_16 } from './managerarcs/pack_16.js';
+import { MGR_ARCS_17 } from './managerarcs/pack_17.js';
+import { MGR_ARCS_18 } from './managerarcs/pack_18.js';
+import { MGR_ARCS_19 } from './managerarcs/pack_19.js';
+import { MGR_ARCS_20 } from './managerarcs/pack_20.js';
+import { MGR_ARCS_21 } from './managerarcs/pack_21.js';
+import { MGR_ARCS_22 } from './managerarcs/pack_22.js';
 
 // The seed set, plus every authoring pack. Target is 800+ arcs: at 4-6 a season a manager career sees ~50,
 // and a five-generation dynasty ~250, so the library must be several times that to stay fresh.
 export const MANAGER_ARCS: ManagerArc[] = [
   ...DRESSING_ROOM_ARCS, ...BOARDROOM_ARCS, ...TRANSFER_ARCS, ...CRISIS_ARCS,
-  ...MGR_ARCS_01, ...MGR_ARCS_02, ...MGR_ARCS_03, ...MGR_ARCS_04, ...MGR_ARCS_05, ...MGR_ARCS_06, ...MGR_ARCS_07, ...MGR_ARCS_08, ...MGR_ARCS_09, ...MGR_ARCS_10, ...MGR_ARCS_11, ...MGR_ARCS_12, ...MGR_ARCS_13, ...MGR_ARCS_14,
+  ...MGR_ARCS_01, ...MGR_ARCS_02, ...MGR_ARCS_03, ...MGR_ARCS_04, ...MGR_ARCS_05, ...MGR_ARCS_06, ...MGR_ARCS_07, ...MGR_ARCS_08, ...MGR_ARCS_09, ...MGR_ARCS_10, ...MGR_ARCS_11, ...MGR_ARCS_12, ...MGR_ARCS_13, ...MGR_ARCS_14, ...MGR_ARCS_15, ...MGR_ARCS_16, ...MGR_ARCS_17, ...MGR_ARCS_18, ...MGR_ARCS_19, ...MGR_ARCS_20, ...MGR_ARCS_21, ...MGR_ARCS_22,
 ];
 const byId = new Map(MANAGER_ARCS.map((a) => [a.id, a]));
 export const managerArcById = (id: string): ManagerArc | undefined => byId.get(id);

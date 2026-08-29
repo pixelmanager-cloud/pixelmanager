@@ -1,3 +1,9 @@
+import { KIND_SETUP_M } from './extra/pack_m.js';
+import { KIND_SETUP_N } from './extra/pack_n.js';
+import { KIND_SETUP_O } from './extra/pack_o.js';
+import { KIND_SETUP_P } from './extra/pack_p.js';
+import { KIND_SETUP_Q } from './extra/pack_q.js';
+import { KIND_SETUP_R } from './extra/pack_r.js';
 import { mergeBanks } from './merge.js';
 import { KIND_SETUP_A } from './extra/pack_a.js';
 import { KIND_SETUP_B } from './extra/pack_b.js';
@@ -39,4 +45,4 @@ const BASE_KIND_SETUP: Record<string, string[]> = {
 };
 
 /** BASE plus every authoring pack — see ./merge.ts for why the packs are separate files. */
-export const KIND_SETUP = mergeBanks(BASE_KIND_SETUP, KIND_SETUP_A, KIND_SETUP_B, KIND_SETUP_C, KIND_SETUP_D, KIND_SETUP_E, KIND_SETUP_F, KIND_SETUP_G, KIND_SETUP_H, KIND_SETUP_I, KIND_SETUP_J, KIND_SETUP_K, KIND_SETUP_L);
+export const KIND_SETUP = mergeBanks(BASE_KIND_SETUP, KIND_SETUP_A, KIND_SETUP_B, KIND_SETUP_C, KIND_SETUP_D, KIND_SETUP_E, KIND_SETUP_F, KIND_SETUP_G, KIND_SETUP_H, KIND_SETUP_I, KIND_SETUP_J, KIND_SETUP_K, KIND_SETUP_L, KIND_SETUP_M, KIND_SETUP_N, KIND_SETUP_O, KIND_SETUP_P, KIND_SETUP_Q, KIND_SETUP_R);

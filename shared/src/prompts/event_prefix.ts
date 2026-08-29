@@ -1,3 +1,9 @@
+import { EVENT_PREFIX_M } from './extra/pack_m.js';
+import { EVENT_PREFIX_N } from './extra/pack_n.js';
+import { EVENT_PREFIX_O } from './extra/pack_o.js';
+import { EVENT_PREFIX_P } from './extra/pack_p.js';
+import { EVENT_PREFIX_Q } from './extra/pack_q.js';
+import { EVENT_PREFIX_R } from './extra/pack_r.js';
 import { mergeBanks } from './merge.js';
 import { EVENT_PREFIX_A } from './extra/pack_a.js';
 import { EVENT_PREFIX_B } from './extra/pack_b.js';
@@ -30,4 +36,4 @@ const BASE_EVENT_PREFIX: Record<string, string[]> = {
 };
 
 /** BASE plus every authoring pack — see ./merge.ts for why the packs are separate files. */
-export const EVENT_PREFIX = mergeBanks(BASE_EVENT_PREFIX, EVENT_PREFIX_A, EVENT_PREFIX_B, EVENT_PREFIX_C, EVENT_PREFIX_D, EVENT_PREFIX_E, EVENT_PREFIX_F, EVENT_PREFIX_G, EVENT_PREFIX_H, EVENT_PREFIX_I, EVENT_PREFIX_J, EVENT_PREFIX_K, EVENT_PREFIX_L);
+export const EVENT_PREFIX = mergeBanks(BASE_EVENT_PREFIX, EVENT_PREFIX_A, EVENT_PREFIX_B, EVENT_PREFIX_C, EVENT_PREFIX_D, EVENT_PREFIX_E, EVENT_PREFIX_F, EVENT_PREFIX_G, EVENT_PREFIX_H, EVENT_PREFIX_I, EVENT_PREFIX_J, EVENT_PREFIX_K, EVENT_PREFIX_L, EVENT_PREFIX_M, EVENT_PREFIX_N, EVENT_PREFIX_O, EVENT_PREFIX_P, EVENT_PREFIX_Q, EVENT_PREFIX_R);

@@ -1,3 +1,9 @@
+import { BIG_SETTINGS_M } from './extra/pack_m.js';
+import { BIG_SETTINGS_N } from './extra/pack_n.js';
+import { BIG_SETTINGS_O } from './extra/pack_o.js';
+import { BIG_SETTINGS_P } from './extra/pack_p.js';
+import { BIG_SETTINGS_Q } from './extra/pack_q.js';
+import { BIG_SETTINGS_R } from './extra/pack_r.js';
 import { mergeList } from './merge.js';
 import { BIG_SETTINGS_A } from './extra/pack_a.js';
 import { BIG_SETTINGS_B } from './extra/pack_b.js';
@@ -26,4 +32,4 @@ const BASE_BIG_SETTINGS = ['with the tie hanging in the balance', 'as tempers fr
   'in an atmosphere thick enough to lean on', 'with the bench on their feet from the first whistle',
   'in a game that had been circled for weeks', 'with the result mattering far more than the performance'];
 
-export const BIG_SETTINGS = mergeList(BASE_BIG_SETTINGS, BIG_SETTINGS_A, BIG_SETTINGS_B, BIG_SETTINGS_C, BIG_SETTINGS_D, BIG_SETTINGS_E, BIG_SETTINGS_F, BIG_SETTINGS_G, BIG_SETTINGS_H, BIG_SETTINGS_I, BIG_SETTINGS_J, BIG_SETTINGS_K, BIG_SETTINGS_L);
+export const BIG_SETTINGS = mergeList(BASE_BIG_SETTINGS, BIG_SETTINGS_A, BIG_SETTINGS_B, BIG_SETTINGS_C, BIG_SETTINGS_D, BIG_SETTINGS_E, BIG_SETTINGS_F, BIG_SETTINGS_G, BIG_SETTINGS_H, BIG_SETTINGS_I, BIG_SETTINGS_J, BIG_SETTINGS_K, BIG_SETTINGS_L, BIG_SETTINGS_M, BIG_SETTINGS_N, BIG_SETTINGS_O, BIG_SETTINGS_P, BIG_SETTINGS_Q, BIG_SETTINGS_R);

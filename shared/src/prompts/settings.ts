@@ -1,3 +1,9 @@
+import { SETTINGS_M } from './extra/pack_m.js';
+import { SETTINGS_N } from './extra/pack_n.js';
+import { SETTINGS_O } from './extra/pack_o.js';
+import { SETTINGS_P } from './extra/pack_p.js';
+import { SETTINGS_Q } from './extra/pack_q.js';
+import { SETTINGS_R } from './extra/pack_r.js';
 import { mergeBanks } from './merge.js';
 import { SETTINGS_A } from './extra/pack_a.js';
 import { SETTINGS_B } from './extra/pack_b.js';
@@ -24,4 +30,4 @@ const BASE_SETTINGS: Record<string, string[]> = {
 };
 
 /** BASE plus every authoring pack — see ./merge.ts for why the packs are separate files. */
-export const SETTINGS = mergeBanks(BASE_SETTINGS, SETTINGS_A, SETTINGS_B, SETTINGS_C, SETTINGS_D, SETTINGS_E, SETTINGS_F, SETTINGS_G, SETTINGS_H, SETTINGS_I, SETTINGS_J, SETTINGS_K, SETTINGS_L);
+export const SETTINGS = mergeBanks(BASE_SETTINGS, SETTINGS_A, SETTINGS_B, SETTINGS_C, SETTINGS_D, SETTINGS_E, SETTINGS_F, SETTINGS_G, SETTINGS_H, SETTINGS_I, SETTINGS_J, SETTINGS_K, SETTINGS_L, SETTINGS_M, SETTINGS_N, SETTINGS_O, SETTINGS_P, SETTINGS_Q, SETTINGS_R);

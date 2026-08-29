@@ -15,6 +15,7 @@ import { trophyImg, type TrophyKey } from './trophy';
 import { kitTemplate, recolorKit } from './kit';
 import { audio } from './audio';
 import { commentaryExtra, fillCm } from '../../shared/src/commentary/extra.js';
+import { narrateManager, type PersonCtx } from '../../shared/src/managerNarrate.js';
 
 // Topbar speaker icons — same 24×24 viewBox for both states so the button never changes shape on toggle.
 const ICON_SPEAKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3.5l4.5-3.5v13L7.5 15H4z"/><path d="M16 9.2a4 4 0 0 1 0 5.6M18.6 6.6a7.5 7.5 0 0 1 0 10.8"/></svg>';
@@ -33,7 +34,12 @@ interface MgrState { season: number; results: PlayedResult[]; starId?: string; s
   // The Living Squad season report. It used to live ONLY in a class field, so a refresh between the
   // rollover and the renew decision silently discarded every keep-or-lose call the player still had to
   // make — the decisions were gone and the panel came back empty. It belongs in the save. (PT-605)
-  squadReport?: any; squadReportSeason?: number }
+  squadReport?: any; squadReportSeason?: number;
+  /** THE SEASON FEED. Manager events accumulate here as they happen — injuries, signings, contract news,
+   *  board mutterings, arc outcomes — and are rendered down the season screen. Before this, the manager's
+   *  entire dramatic life was toasts that vanished in two seconds and left nothing to look back at: a
+   *  promotion got less text than a throw-in. Capped so a long dynasty cannot bloat the save. */
+  feed?: Array<{ season: number; icon: string; text: string }> }
 const BACKROOM_STAFF = [
   { id: 'fitness', icon: '🏋️', name: 'Fitness Coach', cost: 350, desc: 'Sharper conditioning — your side fades less over 90.' },
   { id: 'attack', icon: '⚔️', name: 'Attacking Coach', cost: 350, desc: 'Drills the final third — a small finishing edge, home and away.' },
@@ -1318,7 +1324,7 @@ class Game {
   private async sellPlayerFlow(playerId: string) {
     const p = this.club.players.find((x) => x.id === playerId);
     this.openConfirm(`Sell <b>${p?.name ?? 'this player'}</b> for +${sellValue(p ? overall(p) : 0).toLocaleString()}c?`, 'Sell', async () => {
-      try { const r = await api.sellPlayer(playerId); if (this.account) this.account.coins = r.coins; this.setMe(await api.me()); toast(`💸 Sold · +${r.value.toLocaleString()}c`); this.renderTransferMarket(); }
+      try { const r = await api.sellPlayer(playerId); if (this.account) this.account.coins = r.coins; this.setMe(await api.me()); toast(`💸 Sold · +${r.value.toLocaleString()}c`); if (p) this.feedEvent('transfer_out', '💸', this.personCtx(p, false), { fee: r.value }); this.renderTransferMarket(); }
       catch (e: any) { toast(e?.body?.error ?? 'Could not sell'); }
     });
   }
@@ -1534,6 +1540,7 @@ class Game {
       + tierMove
       + boardLine
       + `<div class="sf-gaffer">📔 ${this.gafferTake(played, t.pos, t.size, clubName)}</div>`
+      + this.seasonFeedHtml()
       + this.squadReportHtml()
       + this.sponsorHtml()
       + this.worldCupHtml()
@@ -1998,7 +2005,7 @@ class Game {
     const newTier = promoted ? tier - 1 : relegated ? tier + 1 : tier;
     if (newTier !== tier) this.setClubTier(newTier);
     if (promoted) { toast(`⬆️ PROMOTED to ${tierName(newTier)}!`); audio.chime('triumph'); }
-    else if (relegated) toast(`⬇️ Relegated to ${tierName(newTier)}.`);
+    else if (relegated) toast(`⬇️ Relegated to ${tierName(newTier)}.`); this.feedEvent('relegation', '⬇️', undefined, { from: tierName(tier), to: tierName(newTier) });
     const titles = (m.titles ?? 0) + (t.pos === 1 ? 1 : 0);
     const age = (m.starAge ?? 22) + 1;
     // his playing days are over — the heir comes through. Carry any final-season promotion/relegation into
@@ -2631,6 +2638,45 @@ class Game {
 
   /** The handoff moment: he's a first-team regular — the game switches from playing his career to
    *  MANAGING the club he plays for. Graduates him into your squad, then enters the manager season. */
+  /** Add an event to the season feed. Keeps the most recent FEED_MAX so a twenty-season save stays small. */
+  private static readonly FEED_MAX = 240;
+  /** Narrate a manager event through the context-tiered layer and put it in the season feed. The tiering is
+   *  the point: selling an eleven-season servant and selling a summer signing produce different words. */
+  private feedEvent(event: Parameters<typeof narrateManager>[0], icon: string, person?: PersonCtx, vars?: Record<string, unknown>) {
+    const m = this.loadMgr();
+    const tier = this.clubTier();
+    const line = narrateManager(event, {
+      seed: this.leagueSeed(),
+      person,
+      club: { club: this.club?.name ?? 'the club', season: m.season, tier, tierName: tierName(tier) },
+      vars: vars as any,
+    });
+    if (line) this.pushFeed(icon, line);
+  }
+  /** Build the person context for a squad player — seasons at the club and morale are what the tiers key on. */
+  private personCtx(p: Player, isStar = false): PersonCtx {
+    const m = this.loadMgr();
+    return {
+      name: p.name, role: p.role, age: p.age, morale: p.morale, overall: overall(p),
+      seasonsAtClub: p.signedSeason != null ? Math.max(0, m.season - p.signedSeason) : 0,
+      isStar, wasRegular: (this.standingOrders?.playerIds ?? []).includes(p.id),
+      personality: p.personality,
+    };
+  }
+  private pushFeed(icon: string, text: string) {
+    if (!text) return;
+    const m = this.loadMgr();
+    const feed = [...(m.feed ?? []), { season: m.season, icon, text }];
+    this.saveMgr({ ...m, feed: feed.slice(-Game.FEED_MAX) });
+  }
+  /** The feed for the CURRENT season, newest first. */
+  private seasonFeedHtml(): string {
+    const m = this.loadMgr();
+    const rows = (m.feed ?? []).filter((f) => f.season === m.season);
+    if (!rows.length) return '';
+    const items = rows.slice().reverse().map((f) => `<div class="sf-feed-row"><span class="sf-feed-ico">${f.icon}</span><span>${f.text}</span></div>`).join('');
+    return `<details class="sf-feed" open><summary>📰 Your season so far <span class="sf-feed-n">${rows.length}</span></summary>${items}</details>`;
+  }
   private handoffKey(pid: string): string { return `fm_handoff_defer_${pid}`; }
   private handoffDeferredAt(pid: string): number {
     try { return Number(localStorage.getItem(this.handoffKey(pid)) || '-1'); } catch { return -1; }
@@ -3599,7 +3645,7 @@ class Game {
     }
     try { this.setMe(await api.me()); } catch { /* keep old rating */ }
     // surface any injuries picked up this match (staggered so they don't overlap the result toast)
-    this.lastInjuries.forEach((inj, i) => setTimeout(() => toast(`🤕 ${inj.name} injured — out ${inj.matches} match${inj.matches > 1 ? 'es' : ''}`), 800 * (i + 1)));
+    this.lastInjuries.forEach((inj, i) => setTimeout(() => (() => { toast(`🤕 ${inj.name} injured — out ${inj.matches} match${inj.matches > 1 ? 'es' : ''}`); const ip = this.club?.players.find((x) => x.id === inj.playerId); if (ip) this.feedEvent(inj.matches >= 6 ? 'injury_long' : 'injury', '🤕', this.personCtx(ip, ip.id === this.loadMgr().starId), { n: inj.matches }); })(), 800 * (i + 1)));
     this.showFullTimeCard();
   }
 
