@@ -16,6 +16,8 @@ import { kitTemplate, recolorKit } from './kit';
 import { audio } from './audio';
 import { commentaryExtra, fillCm } from '../../shared/src/commentary/extra.js';
 import { narrateManager, type PersonCtx } from '../../shared/src/managerNarrate.js';
+import { pickManagerArc, managerArcById, type MgrSituation, type MgrArcEffect } from '../../shared/src/managerarc.js';
+import { facilityLevelStory } from '../../shared/src/facilities.js';
 
 // Topbar speaker icons — same 24×24 viewBox for both states so the button never changes shape on toggle.
 const ICON_SPEAKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3.5l4.5-3.5v13L7.5 15H4z"/><path d="M16 9.2a4 4 0 0 1 0 5.6M18.6 6.6a7.5 7.5 0 0 1 0 10.8"/></svg>';
@@ -39,7 +41,13 @@ interface MgrState { season: number; results: PlayedResult[]; starId?: string; s
    *  board mutterings, arc outcomes — and are rendered down the season screen. Before this, the manager's
    *  entire dramatic life was toasts that vanished in two seconds and left nothing to look back at: a
    *  promotion got less text than a throw-in. Capped so a long dynasty cannot bloat the save. */
-  feed?: Array<{ season: number; icon: string; text: string }> }
+  feed?: Array<{ season: number; icon: string; text: string }>;
+  /** MANAGER ARCS. `arcFired` is every arc this career has seen (never repeated); `arcNow` is the one
+   *  awaiting a decision, with the beat it is on. `arcTags` are flags set by past choices, which other
+   *  arcs can require or forbid — that is how a consequence outlives the season it happened in. */
+  arcFired?: string[]; arcNow?: { id: string; beat: string } | null; arcTags?: string[];
+  /** permanent marks on the club, surviving the manager and every succession */
+  clubLegacy?: Array<{ kind: string; label: string; season: number }> }
 const BACKROOM_STAFF = [
   { id: 'fitness', icon: '🏋️', name: 'Fitness Coach', cost: 350, desc: 'Sharper conditioning — your side fades less over 90.' },
   { id: 'attack', icon: '⚔️', name: 'Attacking Coach', cost: 350, desc: 'Drills the final third — a small finishing edge, home and away.' },
@@ -1540,6 +1548,7 @@ class Game {
       + tierMove
       + boardLine
       + `<div class="sf-gaffer">📔 ${this.gafferTake(played, t.pos, t.size, clubName)}</div>`
+      + this.managerArcHtml()
       + this.seasonFeedHtml()
       + this.squadReportHtml()
       + this.sponsorHtml()
@@ -1548,6 +1557,8 @@ class Game {
       + (m.starName ? `<div class="sf-tm"><button id="sf-transfers">💰 Transfer Market</button> <span class="sf-tm-hint">buy/sell players to strengthen the squad</span></div>` : '')
       + `<div class="season-cols"><div class="season-fixtures"><h4 class="scout-h4">FIXTURES</h4>${fxRows}${records}${focusSel}${simBtn}</div>`
       + `<div class="season-table-wrap"><h4 class="scout-h4">LEAGUE TABLE — ${tierName(tier).toUpperCase()}</h4>${this.spTableHtml(t, tier)}${this.staffHtml()}</div></div>`;
+    $('season-body').querySelectorAll('[data-arcchoice]').forEach((el) =>
+      el.addEventListener('click', () => this.resolveArcChoice((el as HTMLElement).dataset.arcchoice!)));
     ($('mgr-help-x') as any)?.addEventListener('click', () => { localStorage.setItem(this.onbKey('fm_mgr_help_done'), '1'); ($('mgr-help') as any)?.remove(); });
     document.getElementById('sq-report-x')?.addEventListener('click', () => { this.pendingSquadReport = null; const mm = this.loadMgr(); this.saveMgr({ ...mm, squadReport: null }); document.getElementById('sq-report')?.remove(); });
     document.querySelectorAll<HTMLElement>('[data-renew]').forEach((b) => b.addEventListener('click', () => this.renewSquadFlow(b.dataset.renew!, b.dataset.name ?? 'him', Number(b.dataset.cost || 0))));
@@ -2334,6 +2345,10 @@ class Game {
       const r = await api.upgradeFacility(key);
       this.account.coins = r.coins;
       toast(`Upgraded to level ${r.level} ✓`);
+      // the club physically changing around you — one line per level, so an upgrade reads as something
+      // that happened to a place rather than a number going up
+      const story = facilityLevelStory(key as any, r.level);
+      if (story) this.pushFeed('🏗️', story);
       this.renderFacilities(await api.facilities());
     } catch (e: any) {
       toast(e?.status === 409 ? (String(e?.body?.error ?? '').includes('max') ? 'Already at max level' : 'Not enough coins') : 'Could not upgrade');
@@ -2676,6 +2691,88 @@ class Game {
     if (!rows.length) return '';
     const items = rows.slice().reverse().map((f) => `<div class="sf-feed-row"><span class="sf-feed-ico">${f.icon}</span><span>${f.text}</span></div>`).join('');
     return `<details class="sf-feed" open><summary>📰 Your season so far <span class="sf-feed-n">${rows.length}</span></summary>${items}</details>`;
+  }
+  /** The club's situation, for arc gating. Everything here is already known at the season screen. */
+  private mgrSituation(): MgrSituation {
+    const m = this.loadMgr();
+    const tier = this.clubTier();
+    const t = liveTable(this.club?.name ?? '', this.clubLeagueStrength(), 1, this.leagueSeed(), m.results ?? [], tier, this.seasonResultSeed());
+    const squad = this.club?.players ?? [];
+    const ages = squad.map((p) => p.age ?? 24);
+    return {
+      season: m.season, tier,
+      posFrac: t && t.size > 1 ? (t.pos - 1) / (t.size - 1) : 0.5,
+      coins: this.account?.coins ?? 0,
+      hasWonderkid: squad.some((p) => (p.age ?? 30) <= 20 && overall(p) >= 10),
+      hasVeteran: ages.some((a) => a >= 32),
+      hasUnhappy: squad.some((p) => (p.morale ?? 65) < 40),
+      squadSize: squad.length,
+      tags: new Set(m.arcTags ?? []),
+      facilities: this.facLevels as Record<string, number>,
+    };
+  }
+  /** Offer an arc if none is pending. Called at the season screen; arcs fire 4-6 a season. */
+  private maybeOfferArc() {
+    const m = this.loadMgr();
+    if (m.arcNow || !m.starId) return;
+    const fired = new Set(m.arcFired ?? []);
+    const salt = (m.season * 7919 + (m.results?.length ?? 0) * 131) >>> 0;
+    const id = pickManagerArc((this.leagueSeed() ^ salt) >>> 0, this.mgrSituation(), fired);
+    if (!id) return;
+    const arc = managerArcById(id);
+    if (!arc) return;
+    this.saveMgr({ ...m, arcNow: { id, beat: arc.first }, arcFired: [...(m.arcFired ?? []), id] });
+  }
+  /** Apply an arc choice's effects — the club's, not one body's. */
+  private applyArcEffect(e: MgrArcEffect | undefined) {
+    if (!e) return;
+    const m = this.loadMgr();
+    if (e.coins && this.account?.coins != null) { this.account.coins = Math.max(0, this.account.coins + e.coins); }
+    if (e.squadMorale && this.club) {
+      for (const p of this.club.players) p.morale = Math.max(0, Math.min(100, (p.morale ?? 65) + e.squadMorale));
+    }
+    if (e.playerMorale && this.club?.players.length) {
+      const sq = this.club.players;
+      const pick = e.playerMorale.who === 'star' ? sq.find((p) => p.id === m.starId)
+        : e.playerMorale.who === 'unhappiest' ? [...sq].sort((a, b) => (a.morale ?? 65) - (b.morale ?? 65))[0]
+        : e.playerMorale.who === 'youngest' ? [...sq].sort((a, b) => (a.age ?? 24) - (b.age ?? 24))[0]
+        : e.playerMorale.who === 'oldest' ? [...sq].sort((a, b) => (b.age ?? 24) - (a.age ?? 24))[0]
+        : [...sq].sort((a, b) => overall(b) - overall(a))[0];
+      if (pick) pick.morale = Math.max(0, Math.min(100, (pick.morale ?? 65) + e.playerMorale.delta));
+    }
+    const next = { ...this.loadMgr() };
+    if (e.tag) next.arcTags = [...new Set([...(next.arcTags ?? []), e.tag])];
+    if (e.clubLegacy) next.clubLegacy = [...(next.clubLegacy ?? []), { ...e.clubLegacy, season: next.season }];
+    this.saveMgr(next);
+  }
+  /** The pending arc, rendered as a real decision on the season screen. */
+  private managerArcHtml(): string {
+    const m = this.loadMgr();
+    if (!m.arcNow) return '';
+    const arc = managerArcById(m.arcNow.id);
+    const beat = arc?.beats[m.arcNow.beat];
+    if (!arc || !beat) return '';
+    const choices = beat.choices.map((c) =>
+      `<div class="mgr-arc-choice" data-arcchoice="${c.id}"><div class="cg-cname">${c.label}</div><div class="cg-cdescr">${c.desc}</div></div>`).join('');
+    return `<div class="mgr-arc arc-${arc.category}">`
+      + `<div class="mgr-arc-head">${arc.icon} ${arc.title.toUpperCase()}</div>`
+      + `<div class="mgr-arc-prompt">${beat.prompt}</div>`
+      + `<div class="mgr-arc-choices">${choices}</div></div>`;
+  }
+  /** Resolve a choice: apply its effects, tell the player what happened, then advance or finish. */
+  private resolveArcChoice(choiceId: string) {
+    const m = this.loadMgr();
+    if (!m.arcNow) return;
+    const arc = managerArcById(m.arcNow.id);
+    const beat = arc?.beats[m.arcNow.beat];
+    const choice = beat?.choices.find((c) => c.id === choiceId);
+    if (!arc || !choice) return;
+    this.applyArcEffect(choice.effect);
+    this.pushFeed(arc.icon, `<b>${arc.title}</b> — ${choice.outcome}`);
+    const after = this.loadMgr();
+    // a `next` beat means the decision has a consequence you see later in the same story
+    this.saveMgr({ ...after, arcNow: choice.next && arc.beats[choice.next] ? { id: arc.id, beat: choice.next } : null });
+    this.showSeason();
   }
   private handoffKey(pid: string): string { return `fm_handoff_defer_${pid}`; }
   private handoffDeferredAt(pid: string): number {
