@@ -825,6 +825,28 @@ O(n) not O(3^n); (2) siblings must DO something or the tree is decorative — gi
 career summaries (peak overall, division reached, an honour or two) from a pure function, not 120 simulated
 turns.
 
-**The Family Record tree.** Visual target: a Victorian/medieval illuminated family-record lithograph — ornate
-border, oval portrait medallions for each family member, a real painted tree whose branches carry the line,
-vignette panels in the corners. Currently a linear list; it should read as an heirloom document.
+**The Family Record tree.** Three references supplied by the user (2026-08-29). The synthesis: take the
+AESTHETIC from the illuminated manuscript and the INFORMATION STRUCTURE from the genealogy chart.
+
+*Aesthetic — "Lancaster & York" illuminated tree, and the Victorian "Family Record" lithograph:*
+  - aged parchment ground, not white; ink-brown and muted red/gold/green, nothing saturated
+  - a real PAINTED TREE, trunk at the base, boughs carrying the generations
+  - each family member is an OVAL PORTRAIT MEDALLION set on a bough, gold-rimmed
+  - names on unfurled BANNER SCROLLS beneath each medallion, with years
+  - a decorative border — floral/vine repeat — framing the whole page
+  - a heraldic device (the club crest, which the game already generates) at the crown
+  - THE FOUNDER SITS AT THE BASE and descendants climb, exactly as Edward III does in the reference.
+    This is the right way round for a dynasty you build upward, and it is the opposite of most family
+    trees, which hang downward. Worth getting right.
+
+*Structure — the "Von Freybler" chart:*
+  - portrait card per person, blackletter/uncial display face for names
+  - lifespan years under each name (here: career years, and the division he reached)
+  - clean orthogonal CONNECTOR LINES from parent down to each child, so branching is legible at a glance
+  - siblings sit on one rank, which is what makes a branch read as a branch
+
+*Practical note:* it must stay legible with 3 children x 5 generations. The illumination is the frame and
+the medallions; the connectors underneath should stay plain and geometric like the Von Freybler chart, or
+the page turns to mud. Portraits: the game already has pixel-art generation via Retro Diffusion — a
+medallion portrait per family member is the obvious use, and the user has said assets go through RD after
+confirming count and cost.
