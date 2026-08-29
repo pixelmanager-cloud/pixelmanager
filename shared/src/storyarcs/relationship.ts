@@ -412,7 +412,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 17 — a PARTNER with their own big career (two-body problem)
   {
     id: 'rel-two-body', title: 'Two Careers, One Calendar', icon: '📅', category: 'relationship',
-    minTurn: 72, maxTurn: 116, weight: 3, first: 'clash',
+    minTurn: 104, maxTurn: 116, weight: 3, first: 'clash',
     beats: {
       clash: {
         id: 'clash',

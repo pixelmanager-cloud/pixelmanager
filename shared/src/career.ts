@@ -397,7 +397,7 @@ export const LIFESTYLE: LifestyleItem[] = [
   { id: 'console',  icon: '🎮', name: 'A Games Console',         blurb: 'Unwind with the lads online after a hard session.',         cost: 240,  minChapterIdx: 1, maxChapterIdx: 3, recovery: 3, perks: { peers: 8, school: -3 } },
   { id: 'gift-fam', icon: '🎁', name: 'Treat Your Parents',      blurb: 'Say thanks for the early mornings and endless lifts.',      cost: 300,  minChapterIdx: 1, maxChapterIdx: 4, perks: { family: 14 } },
   // Scholar — a teenager finding independence: driving lessons, better digs, courting the agent
-  { id: 'driving',  icon: '🚦', name: 'Driving Lessons',         blurb: 'Freedom on the open road is finally within reach.',         cost: 420,  minChapterIdx: 2, maxChapterIdx: 4, perks: { peers: 5, partner: 4 } },
+  { id: 'driving',  icon: '🚦', name: 'Driving Lessons',         blurb: 'Freedom on the open road is finally within reach.',         cost: 420,  minChapterIdx: 3, maxChapterIdx: 4, perks: { peers: 5, partner: 4 } },
   { id: 'digs',     icon: '🛏️', name: 'Nicer Digs',             blurb: 'Better lodgings near the training ground — rest properly.', cost: 650,  minChapterIdx: 2, maxChapterIdx: 4, recovery: 4, perks: { partner: 4 } },
   { id: 'agent-din', icon: '🍽️', name: 'Wine & Dine Your Agent', blurb: 'Keep your agent hungry and fighting your corner.',          cost: 550,  minChapterIdx: 2, maxChapterIdx: 5, greed: 1, perks: { agent: 14 } },
   // Youth Team — a young pro: first car, designer clobber, your own place

@@ -3813,7 +3813,23 @@ class Game {
       case 'tackle_won':
         if (e.zone === 'att') { // a turnover won high up the pitch — a pressing trap
           cls = 'cm-press';
-          text = this.cpick([`⚡ Won high up! ${p} presses and steals it for ${team} — dangerous!`, `⚡ ${team} spring the press — ${p} robs him in the final third!`, `⚡ High turnover! ${p} nicks it right on the edge of the box!`], idx, 6);
+          // The second-heaviest event in a match, and it held THREE lines: a live capture found these firing
+          // 52/51/49 times in one game — 22% of the whole feed from three strings. (PT-1401)
+          text = this.cpickNR([
+            `⚡ Won high up! ${p} presses and steals it for ${team} — dangerous!`,
+            `⚡ ${team} spring the press — ${p} robs him in the final third!`,
+            `⚡ High turnover! ${p} nicks it right on the edge of the box!`,
+            `⚡ ${p} closes him down and wins it back for ${team}.`,
+            `⚡ Caught in possession — ${p} pounces.`,
+            `⚡ ${team} hunt in packs, and ${p} comes away with it.`,
+            `⚡ Dispossessed high up the pitch; ${p} has it.`,
+            `⚡ ${p} reads the pass and steps in front of it.`,
+            `⚡ No time on the ball — ${p} is all over him.`,
+            `⚡ ${team} force the mistake, ${p} collects.`,
+            `⚡ Turned over cheaply, and ${p} is away with it.`,
+            `⚡ ${p} snaps into the challenge and wins it cleanly.`,
+            `⚡ The press pays off for ${team} — ${p} has it in a dangerous spot.`,
+            `⚡ ${p} harries him into giving it up.`], 6);
         } else {
           cls = 'cm-tackle';
           text = this.cpick([`🦵 ${p} wins it back for ${team} ${zone}.`, `🦵 Strong challenge — ${p} nicks it for ${team} ${zone}.`, `🦵 ${p} steps in and dispossesses the man ${zone}.`, `🦵 Turnover! ${p} robs him ${zone}.`], idx, 6);

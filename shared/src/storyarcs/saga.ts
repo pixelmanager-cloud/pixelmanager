@@ -147,7 +147,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-homecoming', title: 'The Return', icon: '🏡', category: 'saga',
-    minTurn: 78, maxTurn: 113, weight: 2, first: 'open',
+    minTurn: 110, maxTurn: 113, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',

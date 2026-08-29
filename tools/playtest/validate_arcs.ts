@@ -1,6 +1,7 @@
 // Story-arc validator — the quality gate for the arc library. Checks every arc for structural + content
 // correctness so a bad arc (invalid tag, dangling beat reference, duplicate id, empty prose) can never ship
 // or brick a career. Run standalone or via `npm run playtest`.  npx tsx tools/playtest/validate_arcs.ts
+import { LIFESTYLE } from '../../shared/src/career.js';
 import { ARCS } from '../../shared/src/storyarc.js';
 
 const TAGS = new Set(['composure', 'aggression', 'creativity', 'teamwork', 'leadership', 'stamina', 'flair', 'keeping']);
@@ -86,6 +87,25 @@ for (const a of ARCS) {
     if (a.minTurn >= rule.limit) continue;
     const hit = body.match(rule.re);
     if (hit) { console.log(`  FAIL [${a.id}] minTurn ${a.minTurn} is below the ${rule.what} limit (${rule.limit}) but contains: "${hit[0]}"`); ageFails++; }
+  }
+}
+// The guard above only ever checked ARCS — and a live playtest then found "Driving Lessons" on sale to a
+// 15-year-old on the summer spend screen. Lifestyle items are age-gated by chapter INDEX, not turn, and were
+// a whole category nothing validated. (PT-1405)
+const CH = ['Grassroots(10-12)', 'Academy(13-14)', 'Scholar(15-16)', 'Youth Team(17-18)', 'Breakthrough(19-20)', 'First Team(21-22)', 'Establishing(23-25)'];
+const ITEM_RULES: Array<{ what: string; minIdx: number; re: RegExp }> = [
+  { what: 'driving (17+)',   minIdx: 3, re: /driving|the open road|behind the wheel|first car/i },
+  { what: 'drinking (18+)',  minIdx: 4, re: /\bbar\b|champagne|vodka|nightclub/i },
+  { what: 'gambling (18+)',  minIdx: 4, re: /casino|betting|a flutter/i },
+  { what: 'property (18+)',  minIdx: 4, re: /mortgage|his own place|buy(?:s)? a house/i },
+];
+for (const it of LIFESTYLE) {
+  for (const rule of ITEM_RULES) {
+    if (it.minChapterIdx >= rule.minIdx) continue;
+    if (rule.re.test(`${it.name} ${it.blurb}`)) {
+      console.log(`  FAIL [lifestyle:${it.id}] on sale from ${CH[it.minChapterIdx]} but is ${rule.what}: "${it.name}"`);
+      ageFails++;
+    }
   }
 }
 if (ageFails) { console.log(`\n✗ ${ageFails} arc(s) expose adult material to a child`); process.exitCode = 1; }
