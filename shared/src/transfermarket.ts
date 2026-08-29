@@ -20,6 +20,35 @@ export function transferFee(ov: number): number { return Math.round(Math.pow(cla
 /** SELL value (coins) for offloading a squad player — a bit under the buy fee (you take a haircut). */
 export function sellValue(ov: number): number { return Math.round(Math.pow(clamp(ov, 1, 20), 2) * 1.6 + 20); }
 
+// ── SQUAD LIFECYCLE — bought players age, decline, cost wages, and their sale value fades (PT-90/PT-92) ──
+export const SQUAD_PEAK_AGE = 30;                 // physical prime; decline starts after this
+export const SQUAD_CONTRACT_SEASONS = 3;          // a bought player is signed for this many seasons
+/** A bought player's recurring per-season WAGE (coins) — the ongoing cost of holding a squad, ~15% of his
+ *  buy fee each season. Charged every season he's on the books (PT-92). */
+export function squadSeasonWage(ov: number): number { return Math.round(transferFee(ov) * 0.15); }
+/** The lump cost to RENEW an expiring bought player for another SQUAD_CONTRACT_SEASONS (wage × length). */
+export function squadRenewCost(ov: number): number { return squadSeasonWage(ov) * SQUAD_CONTRACT_SEASONS; }
+/** Age-adjusted SALE value: a declining veteran is worth progressively less, so there's a real reason to
+ *  cash in before he rots (PT-90). -12%/yr past the peak, floored at 20% of the flat value. */
+export function squadSaleValue(ov: number, age: number): number {
+  const mult = age <= SQUAD_PEAK_AGE ? 1 : Math.max(0.2, 1 - (age - SQUAD_PEAK_AGE) * 0.12);
+  return Math.round(sellValue(ov) * mult);
+}
+/** Age a bought player's attributes ONE season (mutating-safe copy). Before the peak he holds; past it,
+ *  physical attrs fade fastest, technical ones slowly, mentals untouched (experience). Applied once per
+ *  season rollover — pure + deterministic, so it never touches the career rng stream. */
+export function ageSquadAttrs(attrs: Record<string, number | undefined>, newAge: number): Record<string, number | undefined> {
+  if (newAge <= SQUAD_PEAK_AGE) return { ...attrs };
+  const drop = (v: number | undefined, d: number) => (v == null ? v : clamp(Math.round((v - d) * 10) / 10, 1, 20));
+  return {
+    ...attrs,
+    pace: drop(attrs.pace, 0.9), stamina: drop(attrs.stamina, 0.9), strength: drop(attrs.strength, 0.6),
+    passing: drop(attrs.passing, 0.3), shooting: drop(attrs.shooting, 0.3), tackling: drop(attrs.tackling, 0.3),
+    positioning: drop(attrs.positioning, 0.2), workrate: drop(attrs.workrate, 0.3), keeping: drop(attrs.keeping, 0.25),
+    setPiece: drop(attrs.setPiece, 0.2), durability: drop(attrs.durability, 0.7),
+  };
+}
+
 export interface Listing { player: Player; fee: number; age: number; ov: number }
 
 /** The fictional players available to BUY this season — quality scaled to the club's tier (shop at your
