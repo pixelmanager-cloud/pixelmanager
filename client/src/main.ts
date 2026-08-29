@@ -16,7 +16,7 @@ import { kitTemplate, recolorKit } from './kit';
 import { audio } from './audio';
 import { commentaryExtra, fillCm } from '../../shared/src/commentary/extra.js';
 import { narrateManager, type PersonCtx } from '../../shared/src/managerNarrate.js';
-import { pickManagerArc, managerArcById, type MgrSituation, type MgrArcEffect } from '../../shared/src/managerarc.js';
+import { pickManagerArc, managerArcById, MGR_TEMPERS, type MgrSituation, type MgrArcEffect, type MgrTemper } from '../../shared/src/managerarc.js';
 import { facilityLevelStory } from '../../shared/src/facilities.js';
 
 // Topbar speaker icons — same 24×24 viewBox for both states so the button never changes shape on toggle.
@@ -46,6 +46,10 @@ interface MgrState { season: number; results: PlayedResult[]; starId?: string; s
    *  awaiting a decision, with the beat it is on. `arcTags` are flags set by past choices, which other
    *  arcs can require or forbid — that is how a consequence outlives the season it happened in. */
   arcFired?: string[]; arcNow?: { id: string; beat: string } | null; arcTags?: string[];
+  /** matchday of the last arc offered, so they pace across a season rather than arriving in a clump */
+  arcLastMd?: number;
+  /** the manager's chosen temperament — gates which arcs fire and colours how the club reacts */
+  temper?: MgrTemper;
   /** permanent marks on the club, surviving the manager and every succession */
   clubLegacy?: Array<{ kind: string; label: string; season: number }> }
 const BACKROOM_STAFF = [
@@ -1542,6 +1546,7 @@ class Game {
       ? `<div class="sf-board sf-board-${lb.mood}">🪑 <b>The board</b>${nextIdx <= 3 ? ` — on last season: “${lb.message}”` : ''} <span class="sf-board-exp">This season they expect ${this.expectationLabel(lb.expectation, tier)}.</span>`
         + ` <span class="cg-hint-inline">A target to chase, not a threat — they'll have their say either way, and your job is never on the line.</span></div>`
       : '';
+    this.maybeOfferArc();   // arcs are offered at the season screen, paced across the campaign
     $('season-body').innerHTML = this.managerHelpCard()
       + header
       + bidBanner
@@ -2708,6 +2713,7 @@ class Game {
       hasUnhappy: squad.some((p) => (p.morale ?? 65) < 40),
       squadSize: squad.length,
       tags: new Set(m.arcTags ?? []),
+      temper: m.temper,
       facilities: this.facLevels as Record<string, number>,
     };
   }
@@ -2715,13 +2721,17 @@ class Game {
   private maybeOfferArc() {
     const m = this.loadMgr();
     if (m.arcNow || !m.starId) return;
+    // PACING: 4-6 a season across an 18-match campaign, so one every three matchdays. Without this they
+    // all arrive at once at the season screen and the club's whole dramatic year happens in one sitting.
+    const md = m.results?.length ?? 0;
+    if (md - (m.arcLastMd ?? -3) < 3) return;
     const fired = new Set(m.arcFired ?? []);
     const salt = (m.season * 7919 + (m.results?.length ?? 0) * 131) >>> 0;
     const id = pickManagerArc((this.leagueSeed() ^ salt) >>> 0, this.mgrSituation(), fired);
     if (!id) return;
     const arc = managerArcById(id);
     if (!arc) return;
-    this.saveMgr({ ...m, arcNow: { id, beat: arc.first }, arcFired: [...(m.arcFired ?? []), id] });
+    this.saveMgr({ ...m, arcNow: { id, beat: arc.first }, arcFired: [...(m.arcFired ?? []), id], arcLastMd: md });
   }
   /** Apply an arc choice's effects — the club's, not one body's. */
   private applyArcEffect(e: MgrArcEffect | undefined) {
@@ -2785,6 +2795,9 @@ class Game {
       + `<div class="cg-grad-title">🏆 ${s.name} — a first-team regular</div>`
       + `<div class="cg-epilogue">He's done it. After a full season in the first team — <b>${h.status}</b>, ${h.apps} appearances — ${s.name} is a fixture in the side. This is where his career becomes <b>your club's story</b>: it's time to take the reins. From here you pick the XI, set the tactics, and steer <b>${this.club?.name ?? 'the club'}</b> through the season, with ${s.name} your man on the pitch.</div>`
       + `<div class="cg-grad-windfall">⚽ OVR ${h.overall} · ${h.status}${s.careerScore != null ? ` · ★ career score ${s.careerScore.toLocaleString()}` : ''}</div>`
+      + `<div class="cg-temper-q">What kind of gaffer is he going to be?</div>`
+      + `<div class="cg-tempers">` + MGR_TEMPERS.map((t, i) =>
+          `<div class="cg-temper${i === 0 ? ' on' : ''}" data-temper="${t.id}"><div class="cg-cname">${t.name}</div><div class="cg-cdescr">${t.blurb}</div></div>`).join('') + `</div>`
       + `<button id="cg-takereins" class="primary">🧢 Take the reins as manager →</button>`
       + `<button id="cg-playon" class="ghost">Play on — finish his career first</button>`
       + `<div class="cg-handoff-note">He'll keep playing to 25. You'll be offered the reins again at the next stage.</div></div>`;
@@ -2792,6 +2805,12 @@ class Game {
       try { localStorage.setItem(this.handoffKey(s.prospectId), String(s.turn)); } catch { /* ignore */ }
       try { const cur = await api.getCareer(s.prospectId); if (cur?.state) this.renderCareer(cur.state); } catch { /* ignore */ }
     });
+    // the chosen temperament gates which arcs fire and colours how the board and dressing room react
+    let chosenTemper: MgrTemper = MGR_TEMPERS[0].id;
+    $('academy-body').querySelectorAll('[data-temper]').forEach((el) => el.addEventListener('click', () => {
+      chosenTemper = (el as HTMLElement).dataset.temper as MgrTemper;
+      $('academy-body').querySelectorAll('[data-temper]').forEach((o) => o.classList.toggle('on', o === el));
+    }));
     $('cg-takereins').addEventListener('click', async () => {
       try {
         ($('cg-takereins') as HTMLButtonElement).textContent = 'Signing the contracts…';
@@ -2830,7 +2849,7 @@ class Game {
           this.setMe(await api.me());
           if (al.lifted > 0) toast(`🏟️ ${al.lifted} of the squad step up to ${tierName(startTier)} standard`);
         } catch { /* keep the founding roster if this fails — never block the handoff */ }
-        this.saveMgr({ season: 1, results: [], starId: s.prospectId, starName: s.name, starAge: s.age, retireAge }); // enter manager phase
+        this.saveMgr({ season: 1, results: [], starId: s.prospectId, starName: s.name, starAge: s.age, retireAge, temper: chosenTemper }); // enter manager phase
         toast(`🧢 You're the manager now — ${s.name} is in your squad`);
         this.showSeason();
       } catch (e: any) { toast(e?.body?.error ?? 'Handoff failed'); }
