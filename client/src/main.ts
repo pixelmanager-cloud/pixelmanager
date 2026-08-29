@@ -3231,6 +3231,24 @@ class Game {
     }
     ($('save-team') as HTMLButtonElement).textContent = mode === 'standing' ? 'Save Team' : '▶ Kick Off';
     this.renderLineupEditor();
+    // FIRST VISIT: show the XI and a safe way out, and put the nine tactical controls behind a disclosure.
+    // The handoff drops a player into this screen one click after a career whose whole interaction was
+    // "choose 1 of 4 cards". Once they open the tactics (or come back later) they get the full screen. (PT-503)
+    let seen = false;
+    try { seen = localStorage.getItem('fm_lineup_seen') === '1'; } catch { seen = true; }
+    $('lineup').classList.toggle('simple', !seen);
+    $('lineup-firstrun').classList.toggle('hidden', seen);
+    $('lineup-advanced').classList.toggle('hidden', seen);
+    if (!seen) {
+      $('lineup-advanced').onclick = () => {
+        $('lineup').classList.remove('simple');
+        $('lineup-firstrun').classList.add('hidden');
+        $('lineup-advanced').classList.add('hidden');
+        try { localStorage.setItem('fm_lineup_seen', '1'); } catch { /* ignore */ }
+      };
+      // saving from the simple view also counts as having met the screen
+      $('save-team').addEventListener('click', () => { try { localStorage.setItem('fm_lineup_seen', '1'); } catch { /* ignore */ } }, { once: true });
+    }
     this.showScreen('lineup');
   }
 

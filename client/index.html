@@ -1330,6 +1330,12 @@
       .cg-handoff-note { margin-top: 10px; font-size: 12px; opacity: 0.7; }
       .cg-graduation button.ghost { background: transparent; border: 2px solid currentColor; opacity: 0.8; margin-top: 10px; }
       .cg-succession-note { margin: 10px auto 4px; max-width: 46em; font-size: 12.5px; line-height: 1.5; opacity: 0.82; }
+      #lineup.simple #tac-row, #lineup.simple #tac-help, #lineup.simple #match-plan,
+      #lineup.simple #bench, #lineup.simple #toggle-squad, #lineup.simple #squad-panel { display: none; }
+      #lineup.simple #lineup-firstrun, #lineup.simple #lineup-advanced { display: block; }
+      #lineup-firstrun { margin: 10px 0 14px; padding: 10px 12px; border-left: 3px solid var(--good);
+        font-size: 13px; line-height: 1.5; opacity: 0.9; }
+      #lineup-advanced { margin: 0 0 14px; }
       #toast { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 10000;
         pointer-events: none; font-family: var(--display); font-size: 14px; color: #04140b;
         background: var(--good); border: 2px solid #000; box-shadow: 3px 3px 0 rgba(0,0,0,0.6);
@@ -1480,6 +1486,13 @@
       <div id="lineup" class="panel hidden">
         <h3 id="lineup-title">SET MY TEAM</h3>
         <div id="scout-card" class="hidden"></div>
+        <!-- STAGED FOR A FIRST-TIMER. This is the hardest screen in the game — nine tactical controls, 11
+             slots each with two selects and up to four toggles, a bench and a sortable stats table — and
+             the handoff drops a player into it one click after a career whose entire interaction was
+             "choose 1 of 4 cards". In `simple` mode only the XI and a safe escape are shown; everything
+             else is behind this disclosure, which is remembered once opened. (PT-503) -->
+        <div id="lineup-firstrun" class="hidden">Your XI is picked for you. Change anyone you like, or just save it — you can fine-tune the tactics whenever you want.</div>
+        <button id="lineup-advanced" class="cg-linkbtn hidden">⚙ Fine-tune formation &amp; tactics ▾</button>
         <div class="tacrow" id="tac-row"></div>
         <div id="tac-help"></div>
         <div class="insight" id="lineup-insight"></div>
@@ -1489,7 +1502,7 @@
         <button id="toggle-squad">▤ View full squad stats</button>
         <div id="squad-panel" class="hidden"></div>
         <div class="actions">
-          <button id="autopick">Auto-pick best XI</button>
+          <button id="autopick" class="primary">✨ Auto-pick best XI</button>
           <button id="save-team" class="primary">Save Team</button>
           <button id="lineup-back">Back</button>
         </div>
