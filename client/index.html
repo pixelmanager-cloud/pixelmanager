@@ -488,6 +488,8 @@
       .cg-help-list { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 7px; }
       .cg-help-list li { font-family: var(--body); font-size: 15px; line-height: 1.45; color: var(--text); }
       .cg-help-list b { color: #fff; }
+      .htp-list { margin-top: 8px; font-size: 14px; } /* the read-only Settings copy of the explainers (PT-504) */
+      .htp-list li { font-size: 14px; }
       /* dim + block the choice grid while a move resolves (playtest fix K7: no stale/double "card not in hand") */
       #academy-body.cg-acting .cg-cards, #academy-body.cg-acting .cg-focus, #academy-body.cg-acting .cg-coach, #academy-body.cg-acting .cg-offer { opacity: 0.55; pointer-events: none; }
       /* agent-choice effect pills (playtest fix: agents had flavour but no stated mechanics) */
@@ -683,6 +685,7 @@
       .season-summary { font-size: 17px; color: var(--text); margin: 4px 0 14px; padding: 10px 14px; background: color-mix(in srgb, var(--cyan) 8%, transparent); border: 1px solid var(--line); border-radius: 9px; }
       .season-summary b { color: var(--cyan); }
       .season-summary.done { background: color-mix(in srgb, var(--good) 10%, transparent); }
+      .season-summary .sf-wages { color: var(--muted); font-size: 15px; } /* the recurring wage liability, forecast before it's charged (PT-500) */
       .season-cols { display: grid; grid-template-columns: 1fr 1.1fr; gap: 18px; }
       @media (max-width: 720px) { .season-cols { grid-template-columns: 1fr; } }
       .sf-fx { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid color-mix(in srgb, var(--line) 40%, transparent); font-size: 14px; }
@@ -827,6 +830,7 @@
       .sq-row.unhappy .sq-list { color: #e8cfa8; }
       .sq-row.unhappy i, .sq-mood { color: #d6a86a; font-size: 12px; font-style: italic; }
       .sq-warn { color: #e58f8f; }
+      .sq-good { color: #8fd69a; }
       .sq-exp { display: inline-block; margin: 2px 8px 2px 0; }
       .sq-btn { font-size: 12px; padding: 3px 9px; border-radius: 6px; border: 1px solid #57b98a; background: rgba(87,185,138,0.16); color: #d8f2e4; cursor: pointer; }
       .sq-btn:hover:not(:disabled) { background: rgba(87,185,138,0.3); }
@@ -1175,8 +1179,18 @@
       #lineup .tacrow { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
       #lineup .tacrow label { font-family: var(--body); font-size: 14px; color: var(--cyan); display: flex; flex-direction: column; gap: 5px; }
       #lineup select { width: 122px; }
+      /* the tactics glossary — the same explanations that used to live only in hover tooltips (PT-502) */
+      #tac-help { margin: -4px 0 12px; }
+      #tac-help summary { font-family: var(--body); font-size: 14px; color: var(--cyan); cursor: pointer; padding: 5px 0; list-style: none; }
+      #tac-help summary::-webkit-details-marker { display: none; }
+      #tac-help summary::before { content: '▸ '; }
+      #tac-help details[open] summary::before { content: '▾ '; }
+      #tac-help .th-item { font-size: 15px; line-height: 1.5; color: var(--muted); padding: 6px 0 6px 10px; border-left: 2px solid var(--line); margin-top: 6px; }
+      #tac-help .th-item b { color: var(--text); }
+      #tac-help .th-cur { color: var(--cyan); }
+      .slot-duty-note { flex-basis: 100%; font-size: 14px; line-height: 1.4; color: var(--muted); padding: 0 0 3px 42px; }
       .xi { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 16px; }
-      .slot { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: 20px; padding: 3px 8px 3px 6px; border-left: 6px solid var(--line);
+      .slot { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; min-width: 0; font-size: 20px; padding: 3px 8px 3px 6px; border-left: 6px solid var(--line);
         border-radius: 0 6px 6px 0; } /* min-width:0 lets the slot shrink to its grid cell so a wide tier badge doesn't push the row out */
       .slot.slot-oop { border-left-color: var(--warn); background: color-mix(in srgb, var(--warn) 8%, transparent); } /* out of position (PT-85) */
       .slot .slot-oop-badge { color: var(--warn); font-size: 15px; }
@@ -1456,6 +1470,7 @@
         <h3 id="lineup-title">SET MY TEAM</h3>
         <div id="scout-card" class="hidden"></div>
         <div class="tacrow" id="tac-row"></div>
+        <div id="tac-help"></div>
         <div class="insight" id="lineup-insight"></div>
         <div id="match-plan"></div>
         <div class="xi" id="xi"></div>

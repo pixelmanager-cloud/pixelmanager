@@ -2,7 +2,7 @@ import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
   TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry, tierName, TIERS,
   FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, deriveExpectation, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition, contTieBlurb, wcGroupDramaBlurb, wcKnockoutDramaBlurb, worldCupFinishBlurb,
-  transferList, wageForLength, sellValue, incomingBid, MIN_SQUAD, MAX_SQUAD, type Listing,
+  transferList, wageForLength, sellValue, squadSeasonWage, moraleEffects, incomingBid, MIN_SQUAD, MAX_SQUAD, type Listing,
   ACHIEVEMENTS, evaluateAchievements, achievementById, type AchSnapshot, lifeAction,
   type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
@@ -437,6 +437,9 @@ class Game {
       + `<div class="set-hint">Make everything bigger or smaller — handy on small screens or from the couch.</div></div>`
       + `<div class="set-row"><div class="set-lbl"><span>Challenge: hide card stats</span>${sw(this.prefs.hideCardStats, 'hidestats')}</div>`
       + `<div class="set-hint">Mask the stat pills on your choice cards each turn — read the action and work out what it trains. Harder and more immersive; “🎯 This calls for” stays visible.</div></div>`
+      // PT-504: the onboarding explainers are dismiss-forever, so give them a permanent way back
+      + `<div class="set-row"><div class="set-lbl"><span>How to play</span><button id="set-help">📖 Read the rules</button></div>`
+      + `<div class="set-hint">The explainers you were shown once, kept here to re-read any time.</div></div>`
       + `</div>`;
     document.body.appendChild(ov);
     const close = () => { ov.remove(); document.removeEventListener('keydown', onEsc); }; // clean up the ESC listener on EVERY close path (PT-81)
@@ -464,8 +467,30 @@ class Game {
     wireSw(byKey('sfx'), () => { const m = audio.toggleSfxMuted(); flip(byKey('sfx'), m); if (!m) audio.chime('confirm'); });
     wireSw(byKey('motion'), () => { this.prefs.reducedMotion = !this.prefs.reducedMotion; this.savePrefs(); this.applyPrefs(); flip(byKey('motion'), this.prefs.reducedMotion); });
     wireSw(byKey('crt'), () => { this.prefs.crt = !this.prefs.crt; this.savePrefs(); this.applyPrefs(); flip(byKey('crt'), this.prefs.crt); });
+    ov.querySelector('#set-help')?.addEventListener('click', () => { close(); this.openHowToPlay(); });
     wireSw(byKey('hidestats'), () => { this.prefs.hideCardStats = !this.prefs.hideCardStats; this.savePrefs(); flip(byKey('hidestats'), this.prefs.hideCardStats); if (this.lastCareerState) this.renderCareer(this.lastCareerState); }); // re-render so the current hand masks/unmasks live (#3)
     const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); } };
+    document.addEventListener('keydown', onEsc);
+  }
+
+  /** A read-only, always-available copy of both onboarding explainers — reached from Settings, so
+   *  dismissing a "Got it ✕" is no longer permanent (PT-504). */
+  private openHowToPlay() {
+    document.getElementById('settings-ov')?.remove();
+    const ov = document.createElement('div'); ov.id = 'settings-ov'; // reuse the centred-overlay styling
+    const section = (title: string, rows: string[]) =>
+      `<div class="set-row"><div class="set-lbl"><span>${title}</span></div><ul class="cg-help-list htp-list">${rows.map((r) => `<li>${r}</li>`).join('')}</ul></div>`;
+    const isManager = !!this.loadMgr().starId;
+    const body = section('📖 His career', this.careerHelpRows(this.lastCareerState))
+      + (isManager ? section("📋 You're the manager", this.managerHelpRows()) : '');
+    ov.innerHTML = `<div class="tt-card set-card">`
+      + `<div class="set-head"><div class="tt-title">📖 HOW TO PLAY</div><button class="set-x" aria-label="Close">✕</button></div>`
+      + body + `</div>`;
+    document.body.appendChild(ov);
+    const close = () => { ov.remove(); document.removeEventListener('keydown', onEsc); };
+    ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+    ov.querySelector('.set-x')!.addEventListener('click', close);
+    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
     document.addEventListener('keydown', onEsc);
   }
 
@@ -987,7 +1012,7 @@ class Game {
       + `<div class="pc-name">${pr.title}</div><div class="pc-role">Manager legacy</div>`
       + `<div class="pc-char"><div class="pc-crow2">🏅 ${pr.leagueTitles} league · 🏆 ${pr.cupTitles} cup</div>`
       + (pr.nextTitle ? `<div class="pc-cbars"><span class="pc-cbar" style="flex:1"><i>→ ${pr.nextTitle}</i><span class="pc-cbg" style="width:80px"><b class="m" style="width:${Math.round(pr.progress * 100)}%"></b></span></span></div>` : `<div class="pc-earn">the pinnacle — an immortal gaffer</div>`)
-      + `</div><div class="pc-foot">earned across your whole managerial career</div>`
+      + `</div><div class="pc-foot">Earned across your whole managerial career — and it's what the board measures you against: the more you've won, the more they expect of next season.</div>`
       + `<button class="pc-close">Close</button></div>`;
     el.addEventListener('click', (e) => { const t = e.target as HTMLElement; if (t === el || t.classList.contains('pc-close')) el.remove(); });
     document.body.appendChild(el);
@@ -1205,15 +1230,20 @@ class Game {
       return `<div class="tm-row"><span class="tm-pos tm-${l.player.role}">${l.player.role}</span><span class="tm-name">${l.player.name}</span><span class="tm-ov">OV ${l.ov} · age ${l.age}</span><button class="tm-buy primary" data-buy="${l.player.id}" title="${reason}" ${cantAfford || squadFull ? 'disabled' : ''}>Buy · ${l.fee.toLocaleString()}c</button></div>`;
     }).join('') : '<div class="muted">The market has cleared for this season.</div>';
     const sellList = sellable.map((p) => { const ov = overall(p), v = sellValue(ov); return `<div class="tm-row"><span class="tm-pos tm-${p.role}">${p.role}</span><span class="tm-name">${p.name}</span><span class="tm-ov">OV ${ov}</span><button class="tm-sell" data-sell="${p.id}" title="${squadMin ? `Can't sell below ${MIN_SQUAD} players` : `Sell for +${v.toLocaleString()}c`}" ${squadMin ? 'disabled' : ''}>Sell · +${v.toLocaleString()}c</button></div>`; }).join('');
-    body.innerHTML = `<div class="tm-head"><span class="tm-coins"><span class="ico-inline">${sprite('coin')}</span> ${coins.toLocaleString()}c</span> · Squad <b>${squad.length}</b>/${MAX_SQUAD} · ${tierName(tier)}</div>`
-      + `<div class="tm-sub">Buy players to strengthen the squad and climb — the market's quality is scaled to your division. Squad must stay between <b>${MIN_SQUAD}</b> and <b>${MAX_SQUAD}</b>.</div>`
+    const wageBill = squad.reduce((n, p) => n + squadSeasonWage(overall(p)), 0); // PT-500: the recurring cost of the squad, visible BEFORE you add to it
+    body.innerHTML = `<div class="tm-head"><span class="tm-coins"><span class="ico-inline">${sprite('coin')}</span> ${coins.toLocaleString()}c</span> · Squad <b>${squad.length}</b>/${MAX_SQUAD} · ${tierName(tier)} · 💷 wages <b>~${wageBill.toLocaleString()}c</b> a season</div>`
+      + `<div class="tm-sub">Buy players to strengthen the squad and climb — the market's quality is scaled to your division. Squad must stay between <b>${MIN_SQUAD}</b> and <b>${MAX_SQUAD}</b>. A signing costs a one-off fee <i>and</i> a wage every season after it, so leave yourself room for the bill.</div>`
       + `<div class="tm-cols"><div class="tm-col"><h4 class="scout-h4">🛒 BUY</h4>${buyList}</div><div class="tm-col"><h4 class="scout-h4">💸 SELL</h4>${sellList}</div></div>`;
     body.querySelectorAll('[data-buy]').forEach((b) => b.addEventListener('click', () => { const l = listings.find((x) => x.player.id === (b as HTMLElement).dataset.buy); if (l) this.buyPlayerFlow(l, boughtKey); }));
     body.querySelectorAll('[data-sell]').forEach((b) => b.addEventListener('click', () => this.sellPlayerFlow((b as HTMLElement).dataset.sell!)));
   }
   private buyPlayerFlow(l: Listing, boughtKey: string) {
     // confirm the SPEND — buying is the costlier, irreversible action, so it deserves the same guard as sell (PT-30)
-    this.openConfirm(`Sign <b>${l.player.name}</b> (${l.player.role}, OV ${l.ov}) for a one-off <b>${l.fee.toLocaleString()}c</b> transfer fee <span class="cg-hint-inline">(no wage — he's yours outright)</span>?`, 'Sign him', () => this.doBuyPlayer(l, boughtKey)); // PT-93: it's a one-off fee, not a wage
+    // PT-500: signings DO carry a recurring wage — the old copy ("no wage, he's yours outright") taught the
+    // opposite and left the season-end bill unexplained. State both halves of the cost up front.
+    const wage = squadSeasonWage(l.ov);
+    this.openConfirm(`Sign <b>${l.player.name}</b> (${l.player.role}, OV ${l.ov}) for a one-off <b>${l.fee.toLocaleString()}c</b> transfer fee?`
+      + ` <span class="cg-hint-inline">He then draws about <b>${wage.toLocaleString()}c a season</b> in wages, charged with the rest of the squad's bill when the season ends.</span>`, 'Sign him', () => this.doBuyPlayer(l, boughtKey));
   }
   private async doBuyPlayer(l: Listing, boughtKey: string) {
     try {
@@ -1221,7 +1251,7 @@ class Game {
       if (this.account) this.account.coins = r.coins;
       try { const b = JSON.parse(localStorage.getItem(boughtKey) || '[]'); b.push(l.player.id); localStorage.setItem(boughtKey, JSON.stringify(b)); } catch { /* ignore */ }
       this.setMe(await api.me()); audio.chime('confirm');
-      toast(`✍️ Signed ${l.player.name} (OV ${l.ov}) · −${l.fee.toLocaleString()}c transfer fee, no wage`);
+      toast(`✍️ Signed ${l.player.name} (OV ${l.ov}) · −${l.fee.toLocaleString()}c fee · ~${squadSeasonWage(l.ov).toLocaleString()}c a season in wages`);
       this.renderTransferMarket();
     } catch (e: any) { toast(e?.body?.error ?? 'Could not sign him'); }
   }
@@ -1274,7 +1304,12 @@ class Game {
       rows.push(`<div class="sq-row exp"><span class="sq-lbl">📝 Deal up</span><span class="sq-list">`
         + r.expiring.map((x: any) => {
           const afford = coins >= x.renewCost;
-          return `<span class="sq-exp">${nm(x)}${x.moraleLabel ? ` <i class="sq-mood">${x.moraleLabel}</i>` : ''} `
+          // PT-501: say WHY the price is what it is, on the row itself — morale is what bends it
+          const mult = x.morale != null ? moraleEffects(x.morale).extendMult : 1;
+          const swing = Math.round((mult - 1) * 100);
+          const why = swing > 0 ? ` — <b class="sq-warn">+${swing}% to re-sign</b>, the price of him not being settled; more football brings it down`
+            : swing < 0 ? ` — <b class="sq-good">${swing}% to re-sign</b>, a settled man comes cheaper` : '';
+          return `<span class="sq-exp">${nm(x)}${x.moraleLabel ? ` <i class="sq-mood">${x.moraleLabel}</i>${why}` : ''} `
             + `<button class="sq-btn" data-renew="${x.id}" data-name="${x.name}" data-cost="${x.renewCost}" ${afford ? '' : 'disabled'} title="${afford ? `Renew for ${x.renewCost.toLocaleString()}c` : `Not enough coins (need ${x.renewCost.toLocaleString()}c)`}">Renew · ${x.renewCost.toLocaleString()}c</button> `
             + `<button class="sq-btn ghost" data-release="${x.id}" data-name="${x.name}" title="Let him leave on a free">Let go</button></span>`;
         }).join(' ') + `</span></div>`);
@@ -1285,10 +1320,11 @@ class Game {
       rows.push(`<div class="sq-row unhappy"><span class="sq-lbl">😠 Unsettled</span><span class="sq-list">`
         + r.unhappy.slice(0, 5).map((x: any) => `${nm(x)} <i>${x.moraleLabel}</i>`).join(' · ')
         + (r.unhappy.length > 5 ? ` <i>+${r.unhappy.length - 5} more</i>` : '')
-        + ` — they'll hold out for more to re-sign.</span></div>`);
+        + ` — men who didn't play enough, or whose deal was left to run down. They hold out for more to re-sign (up to 30% more) and sell for less (up to 20% less). Give them games and it settles.</span></div>`);
     }
     const bill = `<div class="sq-row bill"><span class="sq-lbl">💷 Wages</span><span class="sq-list">−${(r.charged ?? 0).toLocaleString()}c paid for the season`
-      + (r.unpaid > 0 ? ` · <b class="sq-warn">${r.unpaid.toLocaleString()}c unpaid — the books are stretched</b>` : '') + `</span></div>`;
+      + (r.unpaid > 0 ? ` · <b class="sq-warn">${r.unpaid.toLocaleString()}c unpaid — the books are stretched</b>` : '')
+      + ` — the whole squad's wages, charged once a year. A bill like this is due again next summer.</span></div>`;
     if (!rows.length && !r.charged) return '';
     return `<div class="sq-report" id="sq-report"><div class="sq-head">👥 THE SQUAD, A YEAR ON<button class="sq-x" id="sq-report-x" title="Dismiss">✕</button></div>${rows.join('')}${bill}</div>`;
   }
@@ -1319,16 +1355,25 @@ class Game {
     });
   }
 
+  /** The manager explainer's bullets. Kept separate from the card so Settings → How to play can re-show
+   *  them after the one-time card has been dismissed (PT-504). */
+  private managerHelpRows(): string[] {
+    const m = this.loadMgr();
+    return [
+      `<b>Each matchday:</b> set your <b>XI + tactics</b> (or hit Auto-pick), then <b>Play</b> the match — or <b>⏩ Sim</b> to jump ahead.`,
+      `<b>Win games to climb the table.</b> Finish top to win the league or earn promotion; finish bottom and you go down.`,
+      `<b>${m.starName ?? 'Your bloodline star'} is your key player</b> — his rating drives the whole squad's strength, so keep developing him and always start him.`,
+      `<b>Spend coins</b> on the Transfer Market and club facilities to strengthen the side over the seasons.`,
+      // PT-500 — the wage bill was a save-wide recurring cost no screen forecast
+      `<b>💷 Wages.</b> Everyone on your books draws a wage, players you sign included. The whole bill is charged once, when the season ends — you'll see it on the squad report. Keep a reserve back for it: if the coins aren't there the shortfall is left unpaid and the books are stretched. A bigger, better squad costs more, and climbing a division is what pays for it. The season header shows roughly what you're on the hook for.`,
+      // PT-501 — morale drives renew cost and sale value, and nothing said what moved it
+      `<b>🙂 Morale.</b> How settled a man is. Playing him lifts it, and so does winning something; leaving him out drops it, and letting his contract run down drops it further. It shows up at the deal table — an unsettled player holds out for up to <b>30% more</b> to re-sign, and sells for up to <b>20% less</b>. Rotating the fringe men into the XI is what keeps them cheap to keep.`,
+    ];
+  }
   private managerHelpCard(): string {
     if (localStorage.getItem(this.onbKey('fm_mgr_help_done'))) return '';
-    const m = this.loadMgr();
     return `<div class="cg-help" id="mgr-help"><div class="cg-help-head">📋 YOU'RE THE MANAGER NOW <button class="cg-help-x" id="mgr-help-x">Got it ✕</button></div>`
-      + `<ul class="cg-help-list">`
-      + `<li><b>Each matchday:</b> set your <b>XI + tactics</b> (or hit Auto-pick), then <b>Play</b> the match — or <b>⏩ Sim</b> to jump ahead.</li>`
-      + `<li><b>Win games to climb the table.</b> Finish top to win the league or earn promotion; finish bottom and you go down.</li>`
-      + `<li><b>${m.starName ?? 'Your bloodline star'} is your key player</b> — his rating drives the whole squad's strength, so keep developing him and always start him.</li>`
-      + `<li><b>Spend coins</b> on the Transfer Market and club facilities to strengthen the side over the seasons.</li>`
-      + `</ul></div>`;
+      + `<ul class="cg-help-list">` + this.managerHelpRows().map((r) => `<li>${r}</li>`).join('') + `</ul></div>`;
   }
   private showSeason() {
     this.spFixture = null;
@@ -1362,12 +1407,15 @@ class Game {
     // surface the star's rating + make the star→club link explicit (PT-21: his contribution was invisible)
     const starP0 = m.starId ? this.club.players.find((p) => p.id === m.starId) : undefined;
     const starLine = m.starName && m.starAge
-      ? ` · <span title="Your bloodline player is the club's talisman — his rating feeds the whole squad's strength, so the sharper he is, the higher ${clubName} finishes.">★ ${m.starName} · OVR ${starP0 ? overall(starP0) : '—'} · age ${m.starAge}${m.retireAge ? `, ~retires ${m.retireAge}` : ''}</span>`
+      ? ` · <span title="Your bloodline player is the club's talisman — his rating feeds the whole squad's strength, so the sharper he is, the higher ${clubName} finishes.">★ ${m.starName} · overall (OVR) ${starP0 ? overall(starP0) : '—'} · age ${m.starAge}${m.retireAge ? `, ~retires ${m.retireAge}` : ''}</span>`
       : '';
     const tier = this.clubTier();
+    // PT-500: forecast the season's wage bill IN the header, so the end-of-season charge is never a surprise
+    const wageBill = this.club.players.reduce((n, p) => n + squadSeasonWage(overall(p)), 0);
+    const wageLine = ` · <span class="sf-wages">💷 wage bill ~${wageBill.toLocaleString()}c, due at season's end</span>`;
     const header = done
       ? `<div class="season-summary done"><span class="ss-crest">${crest(clubName, 20)}</span>✅ Season ${m.season} complete — <b>${clubName}</b> finished <b>${this.ordinal(t.pos)}</b> of ${t.size} in <b>${tierName(tier)}</b>${t.pos === 1 ? ' 🏆 CHAMPIONS!' : (t.pos <= 2 && tier > 1) ? ` ⬆️ PROMOTED to ${tierName(tier - 1)}!` : (t.pos >= t.size - 1 && tier < TIERS) ? ` ⬇️ RELEGATED to ${tierName(tier + 1)}` : ''}. <button class="primary" id="sf-next-season">Next season →</button></div>`
-      : `<div class="season-summary"><span class="ss-crest">${crest(clubName, 20)}</span><b>${clubName}</b> · <b>${tierName(tier)}</b> · Season ${m.season} · MD ${nextIdx + 1}/${fixtures.length} · <b>${this.ordinal(t.pos)}</b>/${t.size}${formStrip}${starLine}</div>`;
+      : `<div class="season-summary"><span class="ss-crest">${crest(clubName, 20)}</span><b>${clubName}</b> · <b>${tierName(tier)}</b> · Season ${m.season} · MD ${nextIdx + 1}/${fixtures.length} · <b>${this.ordinal(t.pos)}</b>/${t.size}${formStrip}${starLine}${wageLine}</div>`;
     // INCOMING BID for the star — a rival's offer this season (deterministic); dismissed once per season
     const starP = m.starId ? this.club.players.find((p) => p.id === m.starId) : undefined;
     const bidKey = 'fm_biddismiss_' + (this.account?.handle ?? 'x') + '_' + m.season;
@@ -1395,15 +1443,19 @@ class Game {
           return `<div class="sf-tiermove sf-tiermove-${m.lastTierMove}">${promoted ? `⬆️ PROMOTED — up to <b>${tierName(tier)}</b>.` : `⬇️ RELEGATED — down to <b>${tierName(tier)}</b>.`} ${line}</div>`;
         })()
       : '';
-    const simBtn = done ? '' : `<div style="text-align:center;margin-top:10px;"><button id="sf-sim" style="font-family:var(--display);font-size:11px;padding:7px 14px;">⏩ Sim the rest of the season</button></div>`;
+    const remaining = fixtures.length - nextIdx;
+    const simBtn = done ? '' : `<div style="text-align:center;margin-top:10px;"><button id="sf-sim" style="font-family:var(--display);font-size:11px;padding:7px 14px;">⏩ Sim the remaining ${remaining} ${remaining === 1 ? 'match' : 'matches'}</button></div>`;
     // TRAINING FOCUS — the stat your star works on this season (young grow it, veterans slow their decline)
     const FOCI = ['pace', 'shooting', 'passing', 'tackling', 'strength', 'positioning', 'stamina'];
     const curFocus = m.trainFocus ?? 'passing';
     const focusSel = m.starName ? `<div class="sf-focus">🏋️ <b>Training focus</b> for ${m.starName}: <select id="sf-focus">${FOCI.map((f) => `<option ${f === curFocus ? 'selected' : ''}>${f}</option>`).join('')}</select> <span class="sf-focus-hint">applied when the season ends</span></div>` : '';
     // the board's verdict on LAST season (set in nextSeason) — shown while the new season is still young
     const lb = m.lastBoard;
-    const boardLine = lb && !done && nextIdx <= 3
-      ? `<div class="sf-board sf-board-${lb.mood}">🪑 <b>The board</b> — on last season: “${lb.message}” <span class="sf-board-exp">This season they expect ${this.expectationLabel(lb.expectation, tier)}.</span></div>`
+    // PT-512: keep the target on screen for the whole season it governs, and say what missing it costs
+    // (nothing — the board judges the story, it never sacks you), so it stops reading as a live threat.
+    const boardLine = lb && !done
+      ? `<div class="sf-board sf-board-${lb.mood}">🪑 <b>The board</b>${nextIdx <= 3 ? ` — on last season: “${lb.message}”` : ''} <span class="sf-board-exp">This season they expect ${this.expectationLabel(lb.expectation, tier)}.</span>`
+        + ` <span class="cg-hint-inline">A target to chase, not a threat — they'll have their say either way, and your job is never on the line.</span></div>`
       : '';
     $('season-body').innerHTML = this.managerHelpCard()
       + header
@@ -1434,7 +1486,10 @@ class Game {
       $('sf-bid-accept')?.addEventListener('click', () => this.acceptStarBid(bid, m));
       $('sf-bid-reject')?.addEventListener('click', () => { try { localStorage.setItem(bidKey, '1'); } catch { /* ignore */ } toast('Bid rejected — he stays.'); this.showSeason(); });
     }
-    $('sf-sim')?.addEventListener('click', () => this.simRemainingFixtures());
+    // PT-505: it eats every remaining fixture in one click, so it gets the same guard as selling a player
+    $('sf-sim')?.addEventListener('click', () => this.openConfirm(
+      `Sim the remaining <b>${remaining}</b> ${remaining === 1 ? 'match' : 'matches'}? You won't get to play them.`,
+      'Sim them', () => this.simRemainingFixtures()));
     $('sf-next-season')?.addEventListener('click', () => {
       // don't silently bin an unfinished European run OR an in-progress World Finals when the league fixtures
       // finish first (PT-75 covered the continental strand; PT-95 adds the World Finals).
@@ -2400,15 +2455,20 @@ class Game {
    *  Answers the "what is all this / why is it here?" questions (energy, money, relationships, the rival). */
   private careerHelpCard(s: import('./api').CareerState): string {
     if (localStorage.getItem(this.onbKey('fm_career_help_done'))) return '';
+    return `<div class="cg-help" id="cg-help"><div class="cg-help-head">📖 HOW HIS CAREER WORKS <button class="cg-help-x" id="cg-help-x">Got it ✕</button></div>`
+      + `<ul class="cg-help-list">` + this.careerHelpRows(s).map((r) => `<li>${r}</li>`).join('') + `</ul></div>`;
+  }
+  /** The career explainer's bullets. Split out so Settings → How to play can re-show them after the
+   *  one-time card has been dismissed (PT-504). With no live career state, every bullet is shown. */
+  private careerHelpRows(s?: import('./api').CareerState | null): string[] {
     const rows: string[] = [
       `<b>🃏 Moments & cards.</b> Each turn is a moment. Read what it <b>needs</b> (the tags), then play the card that <b>fits best</b> — good fits develop him faster and go better.`,
     ];
-    if (s.energy != null) rows.push(`<b>⚡ Energy.</b> Big efforts tire him, and tired moments go worse. It <b>recovers between seasons</b> (the summer screen) — and you can spend a summer choice to <b>Rest</b> and refill it.`);
-    if (s.earnings != null) rows.push(`<b>💷 Money & the club's cut.</b> Coins he earns from playing. He's <b>your academy's own</b> — raised in your facilities, wearing your badge — so the club takes a small <b>development cut</b> of everything he earns (you'll see “🏟️ +Xc to the club”), reinvested into the academy that raises the next of the line. The rest is his: between seasons spend it on <b>his life</b>, or <b>invest more back into the club</b>.`);
-    if (s.meters?.length) rows.push(`<b>🤝 Relationships (the meters).</b> Coach, family, teammates, school, agent — these aren't just flavour. A <b>strong</b> meter unlocks better summer opportunities and steadies his form; a <b>neglected</b> one (near empty) drags his development and can spark off-pitch trouble. Every moment you play nudges the meters involved — steer them deliberately on the summer screen.`);
-    if (s.rival) rows.push(`<b>🆚 Rival.</b> A fellow academy kid living his <i>own</i> career in parallel — you're measured against him. Out-develop him to pull ahead. He's here to give your progress something to chase.`);
-    return `<div class="cg-help" id="cg-help"><div class="cg-help-head">📖 HOW HIS CAREER WORKS <button class="cg-help-x" id="cg-help-x">Got it ✕</button></div>`
-      + `<ul class="cg-help-list">` + rows.map((r) => `<li>${r}</li>`).join('') + `</ul></div>`;
+    if (!s || s.energy != null) rows.push(`<b>⚡ Energy.</b> Big efforts tire him, and tired moments go worse. It <b>recovers between seasons</b> (the summer screen) — and you can spend a summer choice to <b>Rest</b> and refill it.`);
+    if (!s || s.earnings != null) rows.push(`<b>💷 Money & the club's cut.</b> Coins he earns from playing. He's <b>your academy's own</b> — raised in your facilities, wearing your badge — so the club takes a small <b>development cut</b> of everything he earns (you'll see “🏟️ +Xc to the club”), reinvested into the academy that raises the next of the line. The rest is his: between seasons spend it on <b>his life</b>, or <b>invest more back into the club</b>.`);
+    if (!s || s.meters?.length) rows.push(`<b>🤝 Relationships (the meters).</b> Coach, family, teammates, school, agent — and, as he grows into a senior professional, the fans, his sponsors and his partner. These aren't just flavour. A <b>strong</b> meter unlocks better summer opportunities and steadies his form; a <b>neglected</b> one (near empty) drags his development and can spark off-pitch trouble. Every moment you play nudges the meters involved — steer them deliberately on the summer screen.`);
+    if (!s || s.rival) rows.push(`<b>🆚 Rival.</b> A fellow academy kid living his <i>own</i> career in parallel — you're measured against him. Out-develop him to pull ahead. He's here to give your progress something to chase.`);
+    return rows;
   }
 
   /** The rival to chase — a named academy contemporary running his own career; you're measured against him. */
@@ -2551,7 +2611,9 @@ class Game {
       const demandTags = Object.entries(s.scenario.demand).sort((a, b) => b[1] - a[1]);
       const tags = demandTags.map(([t], i) => `<span class="cg-dtag${i === 0 ? ' primary' : ''}" title="${i === 0 ? 'Best match — a card with this tag reads the moment perfectly' : 'Also helps — a card with this tag is a partial match'}">${t}</span>`).join('');
       // legend so the green/amber pill colours aren't a mystery: green is the ideal card, amber ones still help (PT-44)
-      const demandHint = demandTags.length > 1 ? '— <b class="cg-h-green">green</b> is the best match, <b class="cg-h-amber">amber</b> also helps' : '— play a card that matches';
+      const demandHint = demandTags.length > 1
+        ? '— <b class="cg-h-green">green</b> is the best match, <b class="cg-h-amber">amber</b> also helps; a rarer card develops him more when it fits'
+        : '— play a card carrying the <b class="cg-h-green">green</b> tag; a rarer card develops him more when it fits';
       // distinct presentation per moment type — a matchday scoreboard, the training ground, or life off the pitch
       const mk = s.momentKind ?? (s.lifeEvent ? 'life' : 'training');
       let header: string; let prompt: string;
@@ -3074,6 +3136,27 @@ class Game {
     }));
   }
 
+  /** The tactics glossary — the same coaching notes that used to exist ONLY in `title=` attributes, put
+   *  on screen where a touch player can read them (PT-502). Collapsed by default; the open/closed choice
+   *  is remembered so it isn't a fight every matchday. */
+  private renderTacticsGlossary(lineHigh: boolean) {
+    const host = document.getElementById('tac-help'); if (!host) return;
+    let open = false; try { open = localStorage.getItem('fm_tac_help_open') === '1'; } catch { /* default closed */ }
+    const items = (Object.keys(LEVELS) as Array<keyof typeof LEVELS>).map((k) => {
+      const label = k[0].toUpperCase() + k.slice(1);
+      const cur = LEVELS[k][this.draftTactics[k] + 2];
+      return `<div class="th-item"><b>${label}</b> <span class="th-cur">— you've set ${cur}</span><br>${TAC_NOTE[k]}</div>`;
+    });
+    items.push(`<div class="th-item"><b>Offside Trap</b>${lineHigh ? '' : ' <span class="th-cur">— needs a High or Very High line to do anything</span>'}<br>The back line steps up together as the ball is played through, catching the receiver offside. Mistimed, he's clean through on your keeper.</div>`);
+    items.push(`<div class="th-item"><b>Play Out From Back</b><br>The keeper always takes the short option instead of hitting it long. It draws the opponent's press onto you and opens space behind them — at the cost of losing the ball in dangerous areas when it goes wrong.</div>`);
+    items.push(`<div class="th-item"><b>Attack Focus</b> <span class="th-cur">— you've set ${this.draftTactics.attackFocus === 'wide' ? 'Wing Focus' : this.draftTactics.attackFocus === 'central' ? 'Central Focus' : 'Balanced'}</span><br>Who gets the ball. Wing Focus floods the flanks for crosses and overlaps; Central Focus works it through the middle for cutbacks and one-twos. Use it to lean into your formation's natural shape, or to correct it.</div>`);
+    items.push(`<div class="th-item"><b>Duties</b><br>Each man in the XI also has a duty — the job he does within the shape. The one you've picked is spelled out under his name below, and it's worth changing when a player's strengths don't match his slot.</div>`);
+    host.innerHTML = `<details id="tac-help-d"${open ? ' open' : ''}><summary>What do these do?</summary>${items.join('')}</details>`;
+    document.getElementById('tac-help-d')?.addEventListener('toggle', (ev) => {
+      try { localStorage.setItem('fm_tac_help_open', (ev.target as HTMLDetailsElement).open ? '1' : '0'); } catch { /* ignore */ }
+    });
+  }
+
   private renderLineupEditor() {
     const tac: string[] = [`<label>Formation<select id="e-formation">${FORMATIONS.map((f) => `<option ${f === this.draftTactics.formation ? 'selected' : ''}>${f}</option>`).join('')}</select></label>`];
     (Object.keys(LEVELS) as Array<keyof typeof LEVELS>).forEach((k) => {
@@ -3087,6 +3170,7 @@ class Game {
     const focus = this.draftTactics.attackFocus ?? 'balanced';
     tac.push(`<label title="Bias who gets the ball — lean into (or correct) your formation's natural width. Wide floods the flanks for crosses; Central packs it through the mixer for cutbacks and one-twos.">Attack Focus<select id="e-focus"><option value="balanced" ${focus === 'balanced' ? 'selected' : ''}>Balanced</option><option value="wide" ${focus === 'wide' ? 'selected' : ''}>Wing Focus</option><option value="central" ${focus === 'central' ? 'selected' : ''}>Central Focus</option></select></label>`);
     $('tac-row').innerHTML = tac.join('');
+    this.renderTacticsGlossary(lineHigh);
     ($('e-formation') as HTMLSelectElement).addEventListener('change', (ev) => {
       this.draftTactics.formation = (ev.target as HTMLSelectElement).value as Formation;
       const prevDuties = new Map<string, Duty>(); // snapshot player→duty BEFORE the re-pick so it can be preserved (PT-84)
@@ -3138,6 +3222,7 @@ class Game {
       const dutyOpts = DUTIES_BY_ROLE[cur.role]
         .map((d) => `<option value="${d}" title="${DUTY_DESC[d]}" ${d === this.draftDuties[i] ? 'selected' : ''}>${DUTY_LABEL[d]}</option>`).join('');
       const curDutyDesc = DUTY_DESC[this.draftDuties[i]] ?? '';
+      const curDutyLabel = DUTY_LABEL[this.draftDuties[i]] ?? '';
       const rb = (role: string, on: boolean, glyph: string, title: string) => `<button class="rb ${role}${on ? ' on' : ''}" data-role="${role}" data-i="${i}" title="${title}">${glyph}</button>`;
       const badges = `<span class="role-badges">`
         + rb('cap', this.draftCaptain === i, '©', 'Captain')
@@ -3146,7 +3231,9 @@ class Game {
         + rb('corner', this.draftTakers.corner === i, 'C', 'Corner taker')
         + `</span>`;
       const oop = cur.role !== roleForSlot; // player fielded out of his natural position (PT-85)
-      return `<div class="slot role-${roleForSlot}${oop ? ' slot-oop' : ''}"${oop ? ` title="Out of position — a ${cur.role} in a ${roleForSlot} slot"` : ''}><span class="role role-${roleForSlot}">${roleForSlot}</span><select class="player-sel" data-i="${i}">${opts}</select><select class="duty-sel" data-i="${i}" title="${curDutyDesc}">${dutyOpts}</select>${tag}<span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span>${oop ? '<span class="slot-oop-badge" title="Out of position">⚠</span>' : ''}${badges}</div>`;
+      return `<div class="slot role-${roleForSlot}${oop ? ' slot-oop' : ''}"${oop ? ` title="Out of position — a ${cur.role} in a ${roleForSlot} slot"` : ''}><span class="role role-${roleForSlot}">${roleForSlot}</span><select class="player-sel" data-i="${i}">${opts}</select><select class="duty-sel" data-i="${i}" title="${curDutyDesc}">${dutyOpts}</select>${tag}<span class="ovr" style="color:${statColor(overall(cur))}">${overall(cur)}</span>${oop ? '<span class="slot-oop-badge" title="Out of position">⚠</span>' : ''}${badges}`
+        // the chosen duty explained IN the slot — this was hover-only, so touch players never saw it (PT-502)
+        + `<div class="slot-duty-note" data-duty-note="${i}">${curDutyLabel ? `${curDutyLabel} — ` : ''}${curDutyDesc}</div></div>`;
     }).join('');
     // validate the XI: warn (don't block) on no keeper / players out of position, so a naive manager gets a signal (PT-85)
     const noGK = !slots.some((_, i) => this.playerAt(i).role === 'GK');
@@ -3175,8 +3262,11 @@ class Game {
       sel.addEventListener('change', (ev) => {
         const t = ev.target as HTMLSelectElement;
         const d = t.value as Duty;
-        this.draftDuties[Number(t.dataset.i)] = d;
+        const i = Number(t.dataset.i);
+        this.draftDuties[i] = d;
         t.title = DUTY_DESC[d] ?? ''; // live-refresh the tooltip so it always matches the picked duty
+        const note = $('xi').querySelector(`[data-duty-note="${i}"]`); // and the VISIBLE caption beside it (PT-502)
+        if (note) note.textContent = `${DUTY_LABEL[d]} — ${DUTY_DESC[d] ?? ''}`;
       });
     });
 
