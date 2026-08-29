@@ -3933,12 +3933,24 @@ class Game {
         text = e.zone === 'mid'
           ? this.cpickNR([`${rc} SECOND YELLOW — ${p} is OFF! ${team} down to ten!`, `${rc} Two yellows and gone! ${p} takes the long walk — ${team} a man light!`], 16)
           : this.cpickNR([`${rc} RED CARD! ${p} is sent off — ${team} down to ten men!`, `${rc} Straight red for ${p}! A moment of madness — ${team} are down to ten!`, `${rc} He’s off! ${p} sees red and ${team} must dig in with ten!`], 16); break; }
-      case 'free_kick': cls = 'cm-freekick'; text = this.cpickNR([`Dangerous free kick for ${team} — ${p} stands over it…`, `${p} lines up the free kick in a promising spot…`, `Chance from the set piece — ${p} to deliver for ${team}…`], 17); break;
+      case 'free_kick': cls = 'cm-freekick'; text = this.cpickNR([`Dangerous free kick for ${team} — ${p} stands over it…`, `${p} lines up the free kick in a promising spot…`, `Chance from the set piece — ${p} to deliver for ${team}…`,
+        `${team} have a free kick in a dangerous area; ${p} is over it.`, `The wall goes up as ${p} measures his run…`,
+        `Inviting position for ${team} — ${p} eyes the near post.`, `${p} stands with his hands on hips, waiting for the whistle…`,
+        `A yard outside the box, and ${p} fancies it himself.`], 17); break;
       case 'penalty': cls = 'cm-pen'; text = this.cpickNR([`⚠️ PENALTY to ${team}! ${p} will take it…`, `⚠️ The ref points to the spot — penalty ${team}! ${p} steps up…`, `⚠️ Spot kick for ${team}! It’s down to ${p}…`], 18); break;
       case 'penalty_missed': cls = 'cm-miss'; text = this.cpickNR([`❌ MISSED! ${p} sends the penalty wide — what a let-off!`, `❌ Saved! The keeper guesses right and denies ${p} from the spot!`, `❌ ${p} blazes the penalty over! He’ll never forget that.`], 19); break;
-      case 'corner': cls = 'cm-corner'; text = this.cpickNR([`Corner to ${team} — ${p} to swing it in…`, `${p} jogs over to take the corner for ${team}…`], 20); break;
-      case 'injury': cls = 'cm-injury'; text = this.cpickNR([`🚑 ${p} is down and hurt — he can’t continue for ${team}.`, `🚑 Trouble for ${team} — ${p} has pulled up injured.`, `🚑 ${p} signals to the bench; that’s him done for the day.`], 23); break;
-      case 'sub': { const off = e.playerName2 ?? 'a teammate'; cls = 'cm-sub'; text = this.cpickNR([`🔄 Change for ${team}: ${e.playerName} comes on for ${off}.`, `🔄 ${team} go to the bench — ${e.playerName} replaces ${off}.`, `🔄 Fresh legs for ${team}: ${off} off, ${e.playerName} on.`], 24); break; }
+      case 'corner': cls = 'cm-corner'; text = this.cpickNR([`Corner to ${team} — ${p} to swing it in…`, `${p} jogs over to take the corner for ${team}…`,
+        `${team} win a corner; ${p} will take it.`, `Out for a corner — ${p} places the ball on the quadrant.`,
+        `Another set piece for ${team}, ${p} over it.`, `${p} waves them forward before he takes it.`,
+        `Corner ${team}. The big men are coming up.`, `${p} signals short, and thinks better of it.`,
+        `Deep corner coming in from ${p}.`, `${p} takes his time over the corner — ${team} loading the box.`], 20); break;
+      case 'injury': cls = 'cm-injury'; text = this.cpickNR([`🚑 ${p} is down and hurt — he can’t continue for ${team}.`, `🚑 Trouble for ${team} — ${p} has pulled up injured.`, `🚑 ${p} signals to the bench; that’s him done for the day.`,
+        `🚑 ${p} goes down untouched — that never looks good.`, `🚑 The physio is on for ${p}, and shaking his head.`,
+        `🚑 ${p} tries to run it off and can't; ${team} will have to change it.`], 23); break;
+      case 'sub': { const off = e.playerName2 ?? 'a teammate'; cls = 'cm-sub'; text = this.cpickNR([`🔄 Change for ${team}: ${e.playerName} comes on for ${off}.`, `🔄 ${team} go to the bench — ${e.playerName} replaces ${off}.`, `🔄 Fresh legs for ${team}: ${off} off, ${e.playerName} on.`,
+        `🔄 ${off} makes way; ${e.playerName} is on for ${team}.`, `🔄 The board goes up — ${e.playerName} for ${off}.`,
+        `🔄 ${team} change it: ${e.playerName} replaces a tiring ${off}.`, `🔄 ${off} gets a hand from the crowd as ${e.playerName} comes on.`,
+        `🔄 A roll of the dice from ${team} — ${e.playerName} on for ${off}.`], 24); break; }
       case 'halftime': cls = 'cm-break'; text = `⏸ Half-time. ${this.homeName} ${sc[0]}–${sc[1]} ${this.awayName}.`; break;
       case 'fulltime': cls = 'cm-break'; text = `🏁 Full-time! ${this.homeName} ${sc[0]}–${sc[1]} ${this.awayName}.`; break;
     }
