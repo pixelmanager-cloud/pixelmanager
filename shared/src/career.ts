@@ -674,8 +674,12 @@ const TAG_FOCUS_ENERGY = -5; // a light, deliberate training focus — a small e
 /** The between-chapter focus choices for a life stage (Rest is always available). `standing`, if given,
  *  adds a high-variance RISK pick for later chapters — sized off current state, not rng (see below).
  *  `track` adds a GK-specific attribute-focus pick from Youth Team onward. */
-export function rollFocus(chapter: string, standing?: Record<MeterKey, number>, track: Track = 'outfield'): FocusOption[] {
-  const base = FOCUS_BY_CHAPTER[chapter] ?? FOCUS_BY_CHAPTER.Establishing;
+export function rollFocus(chapter: string, standing?: Record<MeterKey, number>, track: Track = 'outfield', hasAgent = false): FocusOption[] {
+  // Don't offer to sign an agent he already signed. A player who took the Super-Agent during onboarding
+  // still saw "🤝 Sign With an Agent" on the age-15 summer screen with the AGENT meter sitting in his HUD
+  // — the clearest "the game isn't tracking me" signal in a live playtest, and it devalues the choice the
+  // onboarding made him make. (PT-153)
+  const base = (FOCUS_BY_CHAPTER[chapter] ?? FOCUS_BY_CHAPTER.Establishing).filter((f) => !(hasAgent && f.id === 'agent'));
   const risk = standing ? riskFocusFor(chapter, standing) : null;
   const tagPicks = (TAG_FOCUS_BY_CHAPTER[chapter] ?? []).map((t) => ({ id: t.id, icon: t.icon, name: t.name, desc: t.desc, energy: TAG_FOCUS_ENERGY, effects: {}, tag: t.tag }));
   const gk = track === 'goalkeeper' ? GK_TAG_FOCUS_BY_CHAPTER[chapter] : null;
@@ -1381,7 +1385,7 @@ export class Career {
     if (this.turn >= TOTAL_TURNS) { this.finished = true; return choice; }
     // at an age-chapter boundary: relationships pay off (or bite), a narrative EVENT fires, then you
     // choose a summer FOCUS, take a financial offer, appoint a coach and draft.
-    if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.earnings += 40 + this.turn * 20; this.pendingFocus = rollFocus(this.chapter, this.standing, this.track); }
+    if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.earnings += 40 + this.turn * 20; this.pendingFocus = rollFocus(this.chapter, this.standing, this.track, !!this.agent); }
     else {
       this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure, this.seed); this.ensurePlayableHand();
       // STORY ARC: a branching storyline may interject before the next routine moment (deterministic, no rng

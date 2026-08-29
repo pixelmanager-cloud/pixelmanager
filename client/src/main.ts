@@ -3925,11 +3925,29 @@ GAME.boot();
 // the commentary feed and updates the running score/clock/possession/pressure. Skip-to-
 // full-time and the post-match report card are handled inside GAME independently of this loop.
 let lastFrameMs = performance.now();
-function matchFrame(now: number) {
-  // clamp the delta so a backgrounded/stalled tab can't fast-forward the sim in one giant step
-  const dMs = Math.min(now - lastFrameMs, 100);
+/** One tick. `maxStep` clamps the delta so a stalled tab can't fast-forward the sim in one giant step. */
+function matchStep(now: number, maxStep: number) {
+  const dMs = Math.min(now - lastFrameMs, maxStep);
   lastFrameMs = now;
   GAME.onFrame(dMs);
+}
+function matchFrame(now: number) {
+  matchStep(now, 100);
   requestAnimationFrame(matchFrame);
 }
 requestAnimationFrame(matchFrame);
+// requestAnimationFrame does not fire at all in a hidden tab, and this clock is the sim's TIME SOURCE,
+// not just a display — so a match left in a background tab froze mid-game and resumed from the same
+// minute. Keep it ticking on a timer while hidden. Browsers throttle background timers to roughly 1s,
+// so the step ceiling is raised to match: it advances at about the same rate rather than 10x slower.
+// (PT-1409)
+let hiddenTick: ReturnType<typeof setInterval> | undefined;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) {
+    lastFrameMs = performance.now();
+    hiddenTick ??= setInterval(() => matchStep(performance.now(), 1000), 200);
+  } else if (hiddenTick !== undefined) {
+    clearInterval(hiddenTick); hiddenTick = undefined;
+    lastFrameMs = performance.now();   // don't bill the sim for time already ticked
+  }
+});

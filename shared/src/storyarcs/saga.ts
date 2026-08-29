@@ -199,7 +199,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-new-signing', title: 'The Replacement', icon: '🪑', category: 'saga',
-    minTurn: 50, maxTurn: 110, weight: 2, first: 'open',
+    minTurn: 86, maxTurn: 110, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -455,7 +455,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-promotion-collapse', title: 'The Run-In', icon: '📉', category: 'saga',
-    minTurn: 54, maxTurn: 107, weight: 2, first: 'open',
+    minTurn: 86, maxTurn: 107, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -695,7 +695,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-lower-league', title: 'The Rebuild', icon: '🧱', category: 'saga',
-    minTurn: 56, maxTurn: 119, weight: 2, first: 'open',
+    minTurn: 96, maxTurn: 119, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',

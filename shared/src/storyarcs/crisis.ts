@@ -470,7 +470,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-mentee-usurps', title: 'The Boy He Taught', icon: '🐣', category: 'crisis',
-    minTurn: 62, maxTurn: 119, weight: 2, first: 'open',
+    minTurn: 96, maxTurn: 119, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',

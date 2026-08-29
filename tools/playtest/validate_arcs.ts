@@ -80,6 +80,12 @@ const AGE_RULES: Array<{ what: string; limit: number; re: RegExp; iconOnly?: boo
   { what: 'drink/gambling icon', limit: 56, re: /🍺|🍸|🍷|🥂|🎰|🎲/, iconOnly: true },
   { what: 'gambling',     limit: 56,  re: /\bmatch-fixing\b|\bfix a match\b|\bplace(?:d|s)? a bet\b|\bhis betting\b|\bgambling debt/i },
   { what: 'guardianship', limit: 86,  re: /\bgodson\b|\bgodchild\b|\bbecoming a father\b|\bhis newborn\b/i },
+  // SENIORITY framing. A blanket windows rescale (PT-401) pulled 133 senior arcs 16 turns earlier and put
+  // veteran stories in front of a 16-year-old — "at his age nobody in the top divisions is calling", "as a
+  // senior man, what does he do?". Nothing checked whether an arc presumes a career already BEHIND him,
+  // which is a different failure from adult content and needs its own rule. Patterns name the PLAYER only,
+  // so "the old man" (his father) and "a senior pro froze him out" (a teammate) stay clean.
+  { what: 'senior-player framing', limit: 86, re: /\bas a senior (?:man|pro)\b|\belder statesman\b|\bhis final years\b|\bthe fallen star\b|\bat his age nobody\b|\btook under his wing\b|\bhis own protégé\b|\bhis testimonial\b|\bwinding down his career\b/i },
 ];
 let ageFails = 0;
 for (const a of ARCS) {
