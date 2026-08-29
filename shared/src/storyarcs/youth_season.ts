@@ -25,7 +25,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         id: 'week',
         prompt: 'By Friday the yellow grass has been cut, the balls are out and it has stopped being punishment and started being football again. It happens so gradually that he cannot name the day it turned.',
         choices: [
-          { id: 'love', label: 'Admit he missed it', desc: 'Out loud, walking to the car', outcome: 'He says he missed it and feels stupid for about four seconds. Then it just sits there being true, which is the best thing about the whole week.', effect: { form: 0.06, attr: { teamwork: 1 }, meters: { family: 3, peers: 3 } } },
+          { id: 'love', label: 'Admit he missed it', desc: 'Out loud, walking to the car', outcome: 'He says he missed it and feels stupid for about four seconds. Then it just sits there being true — the best thing about the whole week.', effect: { form: 0.06, attr: { teamwork: 1 }, meters: { family: 3, peers: 3 } } },
           { id: 'private', label: 'Keep it to himself', desc: 'Some things get smaller when you say them', outcome: 'He says nothing at all and carries the feeling home intact. He will remember the smell of that cut grass longer than he remembers most goals.', effect: { form: 0.05, attr: { composure: 1 } } },
         ],
       },
@@ -40,7 +40,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         prompt: 'A single sheet of A4 appears on the clubhouse wall, crooked, held by three drawing pins. Thirty-one Sundays with dates and names next to them. The whole year exists now, in advance, and half the squad is crowded round it reading their own future.',
         choices: [
           { id: 'photo', label: 'Copy every date into his phone', desc: 'Make the year real, all of it', outcome: 'He puts all thirty-one into his phone that evening, then sits looking at them. It is the first time he has ever seen a year laid out and known where he will be in it.', effect: { attr: { composure: 1 }, meters: { authority: 2 }, tag: 'season-fixtures-mapped' }, next: 'one' },
-          { id: 'scan', label: 'Look only for the big ones', desc: 'Find the two names that matter and stop reading', outcome: 'He finds the away trip in November and the last-day fixture and stops caring about the other twenty-nine, which is a habit he will have to break.', effect: { form: 0.04, attr: { aggression: 1 }, tag: 'season-fixtures-cherrypicked' }, next: 'one' },
+          { id: 'scan', label: 'Look only for the big ones', desc: 'Find the two names that matter and stop reading', outcome: 'He finds the away trip in November and the last-day fixture and stops caring about the other twenty-nine. A habit he will have to break.', effect: { form: 0.04, attr: { aggression: 1 }, tag: 'season-fixtures-cherrypicked' }, next: 'one' },
           { id: 'walk', label: 'Walk past it', desc: 'It only matters what happens on the day', outcome: 'He lets the others crowd it and goes to get changed. Somebody calls him boring. He is not sure whether he is being calm or pretending to be.', effect: { attr: { composure: 2 }, meters: { peers: -2 }, tag: 'season-fixtures-ignored' }, next: 'one' },
         ],
       },
@@ -95,7 +95,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         prompt: 'Afterwards somebody\'s dad reads out the league table from his phone. One game played. They are top of it, alphabetically or otherwise, and everyone pretends not to care.',
         choices: [
           { id: 'enjoy', label: 'Enjoy being top of nothing', desc: 'It will never be this simple again', outcome: 'He lets himself enjoy a table one game old, and is right to. By November it is a different document entirely and reads like bad news.', effect: { form: 0.05, meters: { peers: 3 } } },
-          { id: 'dismiss', label: 'Point out it means nothing', desc: 'Thirty games left', outcome: 'He says it means nothing, which is true and unpopular. The dad with the phone calls him a miserable little professional, approvingly.', effect: { attr: { composure: 1 }, meters: { authority: 3, peers: -2 } } },
+          { id: 'dismiss', label: 'Point out it means nothing', desc: 'Thirty games left', outcome: 'He says it means nothing. True, and unpopular. The dad with the phone calls him a miserable little professional, approvingly.', effect: { attr: { composure: 1 }, meters: { authority: 3, peers: -2 } } },
         ],
       },
     },
@@ -141,7 +141,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         prompt: 'Whatever happened, by one o\'clock he is back in a warm house that smells of yesterday, with mud on his shins and a plate of leftovers, and the year is nearly over.',
         choices: [
           { id: 'best', label: 'Decide this is his favourite day of the year', desc: 'And say so', outcome: 'He says Boxing Day football is the best day of the year and half the room disagrees loudly. He never changes his mind about it, not once, not ever.', effect: { form: 0.05, meters: { family: 3 }, attr: { teamwork: 1 } } },
-          { id: 'tired', label: 'Fall asleep in the chair by two', desc: 'Boots still by the door', outcome: 'He is asleep sitting up before the film starts, mud drying on his legs. Somebody takes a photograph that gets shown to girlfriends fifteen years later.', effect: { energy: 8, meters: { family: 4 } } },
+          { id: 'tired', label: 'Fall asleep in the chair by two', desc: 'Boots still by the door', outcome: 'He is asleep sitting up before the film starts, mud drying on his legs. Somebody takes a photograph that stays on the fridge for years.', effect: { energy: 8, meters: { family: 4 } } },
         ],
       },
     },
@@ -201,7 +201,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         prompt: 'Five games left and everything still possible. The Sunday-morning league has turned, briefly, into something with weight: results elsewhere are being checked on phones in car parks, and grown men who have said nothing all year are suddenly speaking to the referee.',
         choices: [
           { id: 'front', label: 'Ask for the ball when it\'s heaviest', desc: 'The last twenty minutes of tight games', outcome: 'He wants it when nobody else does, four weeks running. He does not do anything spectacular with it. He simply keeps asking, and it is the reason they hold on.', effect: { energy: -10, form: 0.08, attr: { leadership: 2, composure: 1 }, meters: { authority: 5, peers: 4 }, tag: 'season-runin-wanted-it' }, next: 'final' },
-          { id: 'calm', label: 'Be the calm one in a squad of screamers', desc: 'Somebody has to be', outcome: 'While the touchline loses it every week he says almost nothing and plays the simple pass. Adults describe him as "old for his age", which is half a compliment.', effect: { form: 0.06, attr: { composure: 3 }, meters: { authority: 4 }, tag: 'season-runin-calm' }, next: 'final' },
+          { id: 'calm', label: 'Be the calm one in a squad of screamers', desc: 'Somebody has to be', outcome: 'While the touchline loses it every week he says almost nothing and plays the simple pass. Adults describe him as "old for his age" — half a compliment.', effect: { form: 0.06, attr: { composure: 3 }, meters: { authority: 4 }, tag: 'season-runin-calm' }, next: 'final' },
           { id: 'tight', label: 'Tighten up completely', desc: 'It matters, so he stops playing', outcome: 'The weight gets into his feet. For three weeks he is the safest, smallest version of himself, and he hates every minute of being that boy.', effect: { form: -0.07, attr: { composure: 1 }, meters: { authority: -2 }, tag: 'season-runin-tightened' }, next: 'final' },
         ],
       },
@@ -386,7 +386,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         choices: [
           { id: 'host', label: 'Behave like it\'s his club', desc: 'Learn the trialists\' names and pass to them', outcome: 'He treats the strangers as teammates for three evenings, which costs him a couple of chances to shine and buys him something the staff notice more.', effect: { form: -0.03, attr: { leadership: 2, teamwork: 2 }, meters: { authority: 6, peers: 4 }, tag: 'season-trials-hosted' }, next: 'list' },
           { id: 'prove', label: 'Treat every trialist as a threat', desc: 'One of them is here for his shirt', outcome: 'He plays three sharp, selfish, excellent evenings and does not learn a single name. He is kept on, and two of the coaches use the word "individual" about him.', effect: { form: 0.07, attr: { aggression: 2 }, meters: { authority: 2, peers: -3 }, tag: 'season-trials-fought' }, next: 'list' },
-          { id: 'flat', label: 'Turn up empty after a long season', desc: 'He has nothing left and it shows', outcome: 'Nine months of football have taken everything and the three Wednesdays get the worst version of him. He knows it while it is happening, which is the horrible part.', effect: { energy: -10, form: -0.07, attr: { composure: 1 }, meters: { authority: -3 }, tag: 'season-trials-flat' }, next: 'list' },
+          { id: 'flat', label: 'Turn up empty after a long season', desc: 'He has nothing left and it shows', outcome: 'Nine months of football have taken everything and the three Wednesdays get the worst version of him. He knows it while it is happening. That is the horrible part.', effect: { energy: -10, form: -0.07, attr: { composure: 1 }, meters: { authority: -3 }, tag: 'season-trials-flat' }, next: 'list' },
         ],
       },
       list: {

@@ -192,7 +192,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'Two footed, late, out of frustration, on a boy who had been kicking him for half an hour. The referee does not even hesitate. There is no tunnel to walk down — just a long diagonal across the pitch to a bag on the grass.',
         choices: [
-          { id: 'apologise', label: 'Apologise to the lad first', desc: 'Before he walks, before anyone tells him to', outcome: 'He stops and puts a hand out to the boy on the floor, who takes it. Then he walks the diagonal on his own, which is the longest walk of his life so far.', effect: { form: -0.05, attr: { leadership: 1, composure: 1 }, meters: { authority: 4, peers: 5 }, tag: 'red-apologised' }, next: 'ban' },
+          { id: 'apologise', label: 'Apologise to the lad first', desc: 'Before he walks, before anyone tells him to', outcome: 'He stops and puts a hand out to the boy on the floor, who takes it. Then he walks the diagonal on his own. It is the longest walk of his life so far.', effect: { form: -0.05, attr: { leadership: 1, composure: 1 }, meters: { authority: 4, peers: 5 }, tag: 'red-apologised' }, next: 'ban' },
           { id: 'argue', label: 'Argue the whole way off', desc: 'He was fouled six times and nothing was given', outcome: 'He argues about the six fouls nobody gave, which is true, and completely beside the point, and makes the ban a week longer.', effect: { form: -0.08, attr: { aggression: 2 }, meters: { authority: -8 }, tag: 'red-argued' }, next: 'ban' },
         ],
       },
@@ -216,7 +216,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
         choices: [
           { id: 'honest', label: 'Give the decisions honestly', desc: 'Including the ones against himself', outcome: 'He gives a corner against himself when nobody saw the touch, and something shifts in how the game is played for the next half hour.', effect: { attr: { leadership: 2 }, meters: { authority: 6, peers: 5 } } },
           { id: 'chance', label: 'Take everything he can get', desc: 'No referee means no punishment', outcome: 'He claims every throw and every corner whether it is his or not, wins about four of them, and the game degenerates into a shouting match by half time.', effect: { form: 0.03, attr: { aggression: 1, flair: 1 }, meters: { peers: -4, authority: -4 } } },
-          { id: 'referee', label: 'Try to run the game himself', desc: 'Somebody has to, or it stops', outcome: 'He ends up settling other people\'s arguments all afternoon, which is exhausting and thankless, and he is very good at it.', effect: { energy: -6, attr: { leadership: 2, composure: 1 }, meters: { authority: 5, peers: 4 } } },
+          { id: 'referee', label: 'Try to run the game himself', desc: 'Somebody has to, or it stops', outcome: 'He ends up settling other people\'s arguments all afternoon. Exhausting, thankless, and he is very good at it.', effect: { energy: -6, attr: { leadership: 2, composure: 1 }, meters: { authority: 5, peers: 4 } } },
         ],
       },
     },
@@ -357,7 +357,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
         choices: [
           { id: 'take', label: 'Pick the ball up', desc: 'Wanting it and taking it are different things', outcome: 'He picks it up because someone has to and being frightened is not a reason. He puts it down the middle, of all places, and does not celebrate.', effect: { form: 0.07, attr: { composure: 2, leadership: 1 }, meters: { authority: 6, peers: 6 }, tag: 'took-the-pen' }, next: 'after' },
           { id: 'giveback', label: 'Give it to the lad who missed', desc: 'He needs it more than the team needs a goal', outcome: 'He puts the ball in the other boy\'s hands and walks away without waiting to see. It goes in. The boy is still talking about it years later.', effect: { attr: { leadership: 2, teamwork: 1 }, meters: { peers: 8, authority: 5 }, tag: 'gave-the-pen' }, next: 'after' },
-          { id: 'defer', label: 'Let someone else sort it out', desc: 'It is not his job to solve this', outcome: 'He steps back and lets the argument resolve itself. It is taken badly by a boy who wanted it far too much, and saved, and nobody blames him at all, which is somehow worse.', effect: { form: -0.04, meters: { peers: -3 }, tag: 'stepped-back' }, next: 'after' },
+          { id: 'defer', label: 'Let someone else sort it out', desc: 'It is not his job to solve this', outcome: 'He steps back and lets the argument resolve itself. It is taken badly by a boy who wanted it far too much, and saved, and nobody blames him at all. Somehow that is worse.', effect: { form: -0.04, meters: { peers: -3 }, tag: 'stepped-back' }, next: 'after' },
         ],
       },
       after: {

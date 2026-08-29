@@ -16,7 +16,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
         prompt: 'His dad is home on a Tuesday afternoon in his work clothes, sitting at the table with the kettle not switched on. The letter stays on the worktop for three days before anyone moves it. Nobody says the word, but the subs for next season are due at the end of the month.',
         choices: [
           { id: 'offer', label: 'Offer to stop for a bit', desc: 'Say he\'ll skip the season if it helps', outcome: 'He offers, quietly, over the washing up. His dad tells him not to be daft and then has to leave the room for a minute.', effect: { meters: { family: 10 }, attr: { composure: 1 }, tag: 'fam-offered-to-quit' }, next: 'month' },
-          { id: 'quiet', label: 'Say nothing and keep going', desc: 'Don\'t make it another thing they have to carry', outcome: 'He acts like he hasn\'t noticed anything, which is its own kind of work. He stops asking for anything at all that winter.', effect: { meters: { family: 5 }, attr: { composure: 1, stamina: 1 }, energy: -4, tag: 'fam-said-nothing' }, next: 'month' },
+          { id: 'quiet', label: 'Say nothing and keep going', desc: 'Don\'t make it another thing they have to carry', outcome: 'He acts like he hasn\'t noticed anything. It is its own kind of work. He stops asking for anything at all that winter.', effect: { meters: { family: 5 }, attr: { composure: 1, stamina: 1 }, energy: -4, tag: 'fam-said-nothing' }, next: 'month' },
           { id: 'ask', label: 'Ask him straight out', desc: 'He\'s eleven, not stupid — ask what\'s happening', outcome: 'He asks. His dad tells him the truth, more of it than he meant to, and something shifts between them that doesn\'t shift back.', effect: { meters: { family: 8 }, attr: { leadership: 1 }, tag: 'fam-asked-straight' }, next: 'month' },
         ],
       },
@@ -47,7 +47,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
         prompt: 'On a light evening she comes out to the garden in her work shoes and asks for the ball.',
         choices: [
           { id: 'learn', label: 'Let her show him something', desc: 'Take the coaching from the one person who never gives it', outcome: 'She shows him a way of taking the ball across her body that nobody at the club has taught him. It stays in his game for twenty years.', effect: { attr: { creativity: 1, flair: 1 }, meters: { family: 10 }, form: 0.05 } },
-          { id: 'beat', label: 'Try to nutmeg his mum', desc: 'He\'s a kid and she\'s in work shoes — easy', outcome: 'She takes it off him twice and doesn\'t gloat, which is worse. He goes to bed furious and gets up early to practise.', effect: { attr: { flair: 1, aggression: 1 }, meters: { family: 8 }, energy: -4 } },
+          { id: 'beat', label: 'Try to nutmeg his mum', desc: 'He\'s a kid and she\'s in work shoes — easy', outcome: 'She takes it off him twice and doesn\'t gloat. That is worse. He goes to bed furious and gets up early to practise.', effect: { attr: { flair: 1, aggression: 1 }, meters: { family: 8 }, energy: -4 } },
         ],
       },
     },
@@ -84,7 +84,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
         prompt: 'Sunday dinner at his nan\'s has happened every week since before he was born, at one o\'clock, no exceptions. This season the fixtures go up and half of them kick off at half twelve. His mum reads the list out loud at the table and nobody eats for a second.',
         choices: [
           { id: 'football', label: 'Miss the dinners', desc: 'Play the games, eat at nan\'s when he can', outcome: 'His nan says of course, love, and keeps a plate under foil for him every single week whether he comes or not.', effect: { meters: { family: -4, authority: 6 }, attr: { stamina: 1 }, tag: 'fam-missed-sundays' }, next: 'plate' },
-          { id: 'nan', label: 'Keep the dinners', desc: 'Some things are older than football', outcome: 'He tells the club he can\'t do the early kick-offs. His nan never finds out that was a choice, which is how he wants it.', effect: { meters: { family: 12, authority: -6 }, attr: { teamwork: 1 }, tag: 'fam-kept-sundays' }, next: 'plate' },
+          { id: 'nan', label: 'Keep the dinners', desc: 'Some things are older than football', outcome: 'He tells the club he can\'t do the early kick-offs. His nan never finds out that was a choice. That is how he wants it.', effect: { meters: { family: 12, authority: -6 }, attr: { teamwork: 1 }, tag: 'fam-kept-sundays' }, next: 'plate' },
           { id: 'move', label: 'Ask nan to move it to five', desc: 'Change a thirty-year habit for a child\'s hobby', outcome: 'She moves it. Nobody says how big that is, but his grandad mentions the new time to everyone he meets for a fortnight.', effect: { meters: { family: 8 }, attr: { leadership: 1 }, tag: 'fam-moved-sundays' }, next: 'plate' },
         ],
       },
@@ -92,7 +92,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
         id: 'plate',
         prompt: 'In February his nan is in hospital for a week and there is no dinner at all. The house on Sunday is very quiet.',
         choices: [
-          { id: 'cook', label: 'Try to do it himself', desc: 'A twelve-year-old and a bag of potatoes', outcome: 'It is a disaster and everyone eats it anyway. His grandad says it was nearly as good as hers, which is a lie they all accept.', effect: { meters: { family: 12 }, attr: { leadership: 1, teamwork: 1 } } },
+          { id: 'cook', label: 'Try to do it himself', desc: 'A twelve-year-old and a bag of potatoes', outcome: 'It is a disaster and everyone eats it anyway. His grandad says it was nearly as good as hers — a lie they all accept.', effect: { meters: { family: 12 }, attr: { leadership: 1, teamwork: 1 } } },
           { id: 'visit', label: 'Go and sit with her instead', desc: 'Miss training, take the fixture list in', outcome: 'He reads her the fixtures off the sheet and she makes him do the away ones twice. She is home by the following Sunday.', effect: { meters: { family: 10, authority: -4 }, attr: { composure: 1 }, energy: 4 } },
         ],
       },
@@ -252,7 +252,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
         prompt: 'The wedding photos come back in a big envelope and get passed round at his nan\'s for weeks.',
         choices: [
           { id: 'own', label: 'Look at them properly with everyone', desc: 'Sit down and go through the lot', outcome: 'He goes through the whole envelope twice, asking who everyone is. His aunt stops being cool with him halfway through the second pass.', effect: { meters: { family: 10 }, attr: { teamwork: 1, composure: 1 } } },
-          { id: 'skip', label: 'Find a reason to be somewhere else', desc: 'He knows what the photos will and won\'t show', outcome: 'He is out at the park every time the envelope comes out. Nobody makes a thing of it, which is how he knows it is a thing.', effect: { meters: { family: -4 }, attr: { flair: 1 }, form: 0.04 } },
+          { id: 'skip', label: 'Find a reason to be somewhere else', desc: 'He knows what the photos will and won\'t show', outcome: 'He is out at the park every time the envelope comes out. Nobody makes a thing of it. That is how he knows it is a thing.', effect: { meters: { family: -4 }, attr: { flair: 1 }, form: 0.04 } },
         ],
       },
     },
@@ -265,7 +265,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'His dad films everything. Every match, from behind the fence, narrating quietly to himself. The tapes are stacked in the front room in date order, and the other lads have started doing an impression of him.',
         choices: [
-          { id: 'watch', label: 'Sit down and watch them with him', desc: 'Sunday nights, the pair of them and the telly', outcome: 'They watch back the whole game, pausing it constantly. He starts seeing the pitch from the outside, which is a rare thing at twelve.', effect: { attr: { creativity: 1, composure: 1 }, meters: { family: 10 }, form: 0.05, tag: 'fam-watched-back' }, next: 'ask' },
+          { id: 'watch', label: 'Sit down and watch them with him', desc: 'Sunday nights, the pair of them and the telly', outcome: 'They watch back the whole game, pausing it constantly. He starts seeing the pitch from the outside. A rare thing at twelve.', effect: { attr: { creativity: 1, composure: 1 }, meters: { family: 10 }, form: 0.05, tag: 'fam-watched-back' }, next: 'ask' },
           { id: 'embarrassed', label: 'Ask him to stop', desc: 'The impressions have got to him', outcome: 'He asks him not to bring the camera. His dad says no problem, mate, and stands at the fence with his hands in his pockets looking like he doesn\'t know where to put them.', effect: { meters: { family: -6, peers: 6 }, attr: { composure: 1 }, tag: 'fam-asked-stop' }, next: 'ask' },
         ],
       },
@@ -378,7 +378,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
         prompt: 'Training finishes at half eight and the family eat at six. His dinner sits under foil on the hob most nights, and he eats it alone at the kitchen table while everyone else is in the front room with the telly on.',
         choices: [
           { id: 'later', label: 'Ask them to hold dinner', desc: 'Eat as four, even if it means eating at nine', outcome: 'They shift to nine o\'clock, which suits nobody and everybody. His little sister falls asleep at the table twice a week and refuses to eat earlier.', effect: { meters: { family: 12 }, attr: { teamwork: 1 }, energy: -4, tag: 'fam-late-dinners' }, next: 'sat' },
-          { id: 'alone', label: 'Eat alone and let them get on', desc: 'Don\'t bend the whole house round his timetable', outcome: 'He eats under the strip light most nights of his childhood. He gets very good at his own company, which is not entirely a gift.', effect: { attr: { composure: 2 }, meters: { family: -2 }, tag: 'fam-eats-alone' }, next: 'sat' },
+          { id: 'alone', label: 'Eat alone and let them get on', desc: 'Don\'t bend the whole house round his timetable', outcome: 'He eats under the strip light most nights of his childhood. He gets very good at his own company. It is not entirely a gift.', effect: { attr: { composure: 2 }, meters: { family: -2 }, tag: 'fam-eats-alone' }, next: 'sat' },
           { id: 'company', label: 'Ask for one person to sit with him', desc: 'Whoever\'s free, just don\'t make him eat on his own', outcome: 'They rota it without telling him. It takes him months to realise it isn\'t a coincidence that someone is always at the table.', effect: { meters: { family: 8 }, attr: { teamwork: 1, composure: 1 }, tag: 'fam-rota' }, next: 'sat' },
         ],
       },

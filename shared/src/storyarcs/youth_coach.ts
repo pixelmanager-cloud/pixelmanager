@@ -18,7 +18,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         choices: [
           { id: 'work', label: 'Be impossible to leave out', desc: 'Make the football answer it', outcome: 'He turns up first, does every drill twice and refuses to give the man a single reason. The silence continues, and he stops needing it to end.', effect: { energy: -8, form: 0.06, attr: { stamina: 1, composure: 1 }, meters: { authority: 3 }, tag: 'coach-cold-worked' }, next: 'why' },
           { id: 'ask', label: 'Ask him what he\'s done wrong', desc: 'Straight out, after training, on his own', outcome: 'He asks. The coach looks briefly caught out, says "nothing, son" — and afterwards uses his name, stiffly, like a word he\'s had to learn.', effect: { attr: { leadership: 1 }, meters: { authority: 6 }, tag: 'coach-cold-asked' }, next: 'why' },
-          { id: 'shrink', label: 'Go quiet and hope it passes', desc: 'Stop putting his hand up, stop being seen', outcome: 'He makes himself smaller in every session until he is genuinely hard to notice, which is a habit that takes years to unlearn.', effect: { form: -0.05, attr: { composure: 1 }, meters: { authority: -4, peers: -3 }, tag: 'coach-cold-shrank' }, next: 'why' },
+          { id: 'shrink', label: 'Go quiet and hope it passes', desc: 'Stop putting his hand up, stop being seen', outcome: 'He makes himself smaller in every session until he is genuinely hard to notice. A habit that takes years to unlearn.', effect: { form: -0.05, attr: { composure: 1 }, meters: { authority: -4, peers: -3 }, tag: 'coach-cold-shrank' }, next: 'why' },
         ],
       },
       why: {
@@ -160,7 +160,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         prompt: 'Six weeks on trial and it ends with a handshake at the gate and the sentence every boy in the country knows: we\'ll let you know. Nobody ever says how long "know" takes. He checks the post for twenty-six days.',
         choices: [
           { id: 'wait', label: 'Wait properly', desc: 'Say nothing, train, let it come', outcome: 'He waits it out and trains all the way through. The letter comes on a Tuesday and by then he has already decided he will be fine either way.', effect: { attr: { composure: 2 }, meters: { authority: 4, family: 4 }, tag: 'waited-well' }, next: 'letter' },
-          { id: 'chase', label: 'Get someone to ring them', desc: 'He can\'t stand not knowing', outcome: 'A call is made. The woman on the phone is kind and says the staff are still deciding, which is both true and no use to anybody.', effect: { form: -0.04, meters: { family: 4, authority: -3 }, tag: 'chased' }, next: 'letter' },
+          { id: 'chase', label: 'Get someone to ring them', desc: 'He can\'t stand not knowing', outcome: 'A call is made. The woman on the phone is kind and says the staff are still deciding — both true and no use to anybody.', effect: { form: -0.04, meters: { family: 4, authority: -3 }, tag: 'chased' }, next: 'letter' },
         ],
       },
       letter: {
@@ -255,7 +255,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'Twice a year they are measured: height, reach, sprint times, a scored game with staff on every side writing on tablets. A whole footballer reduced to a row on a spreadsheet by four o\'clock. Everyone pretends it\'s a normal Wednesday.',
         choices: [
-          { id: 'perform', label: 'Treat it as the biggest day of the year', desc: 'Empty himself into six hours', outcome: 'He goes at it like a cup final and posts numbers he never gets near again. Two staff argue about him at the meeting, which is the best thing that could happen.', effect: { energy: -16, form: 0.08, attr: { stamina: 1, composure: 1 }, meters: { authority: 10 }, tag: 'assessment-big' }, next: 'feedback' },
+          { id: 'perform', label: 'Treat it as the biggest day of the year', desc: 'Empty himself into six hours', outcome: 'He goes at it like a cup final and posts numbers he never gets near again. Two staff argue about him at the meeting. It is the best thing that could happen.', effect: { energy: -16, form: 0.08, attr: { stamina: 1, composure: 1 }, meters: { authority: 10 }, tag: 'assessment-big' }, next: 'feedback' },
           { id: 'normal', label: 'Treat it as a Wednesday', desc: 'Refuse to let a tablet change how he plays', outcome: 'He plays exactly as he always does. The numbers are unremarkable and the game score is the highest on the sheet, and the room disagrees about which matters.', effect: { attr: { composure: 2 }, form: 0.04, meters: { authority: 4 }, tag: 'assessment-normal' }, next: 'feedback' },
         ],
       },

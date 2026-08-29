@@ -12,7 +12,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
     beats: {
       open: {
         id: 'open',
-        prompt: 'He has watched the same eleven seconds of a highlights clip until he can hear where the crowd noise dips. Renn Sadiku, drag back, hip drops, gone. He starts doing it on the way to the shops, on the way to the bins, on grass, on gravel.',
+        prompt: 'He has watched the same eleven seconds of a highlights clip until he can hear where the crowd noise dips. The winger, drag back, hip drops, gone. He starts doing it on the way to the shops, on the way to the bins, on grass, on gravel.',
         choices: [
           { id: 'grind', label: 'Do nothing else for months', desc: 'Ten thousand of them until it stops being a trick', outcome: 'He does it badly for eleven weeks and then, one damp Tuesday, does it without deciding to. That is the day it stops being Sadiku\'s and becomes his.', effect: { energy: -6, attr: { flair: 2, creativity: 1 }, tag: 'hero-trick-owned' }, next: 'use' },
           { id: 'blend', label: 'Steal the idea, not the move', desc: 'Take the timing and put his own feet on it', outcome: 'He works out the trick is really just a lie about which way his shoulders are going, and starts telling that lie in about six different ways.', effect: { attr: { creativity: 2, flair: 1 }, tag: 'hero-trick-adapted' }, next: 'use' },
@@ -89,7 +89,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'He has a celebration ready. He has had it ready for about five months. He has practised it in front of a wardrobe mirror, which is a thing he will deny until he is forty. The problem now is that he has scored.',
         choices: [
-          { id: 'full', label: 'Do the whole thing', desc: 'Arms out, slide, the lot', outcome: 'He does the full routine on a pitch with eleven spectators and a dog, and it is magnificent and slightly too long. Two of his mates copy it the following week, which is the highest honour available.', effect: { form: 0.07, attr: { flair: 2 }, meters: { peers: 6 }, tag: 'signature-celebration' } },
+          { id: 'full', label: 'Do the whole thing', desc: 'Arms out, slide, the lot', outcome: 'He does the full routine on a pitch with eleven spectators and a dog, and it is magnificent and slightly too long. Two of his mates copy it the following week — the highest honour available.', effect: { form: 0.07, attr: { flair: 2 }, meters: { peers: 6 }, tag: 'signature-celebration' } },
           { id: 'point', label: 'Point at whoever passed it', desc: 'The pass was better than the finish', outcome: 'He turns and points straight at the lad who slid it through, and something about that gets remembered longer than the goal does.', effect: { form: 0.04, attr: { teamwork: 2 }, meters: { peers: 7 } } },
           { id: 'nothing', label: 'Jog back like it is normal', desc: 'Say nothing, do nothing', outcome: 'He picks the ball out and jogs back with a face like a man checking his watch, and enjoys it enormously in private. The wardrobe routine is retired unused.', effect: { attr: { composure: 2 }, form: 0.03, tag: 'celebrates-cold' } },
         ],
@@ -168,7 +168,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
     beats: {
       open: {
         id: 'open',
-        prompt: 'Renn Sadiku is opening a sports shop on the ring road. There is a queue of ninety people and a folding table. Up close he is smaller than expected, tired-looking, and signing with a marker that keeps drying out.',
+        prompt: 'The player whose clip he has worn out is opening a sports shop on the ring road. There is a queue of ninety people and a folding table. Up close he is smaller than expected, tired-looking, and signing with a marker that keeps drying out.',
         choices: [
           { id: 'ask', label: 'Ask him something real', desc: 'Not an autograph — a question', outcome: 'He asks how long it took him to learn the turn. Sadiku thinks about it properly and says two years, and that it still goes wrong. It is the most useful sentence anyone says to him that whole year.', effect: { attr: { composure: 2, creativity: 1 }, form: 0.05, tag: 'hero-spoke' }, next: 'after' },
           { id: 'sign', label: 'Just get the shirt signed', desc: 'Say nothing, keep the picture', outcome: 'He gets the signature, says thanks in a voice that barely works, and floats to the bus stop. He does not wash the shirt for a very long time.', effect: { form: 0.06, meters: { peers: 4 }, tag: 'hero-signed' }, next: 'after' },
@@ -179,7 +179,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
         id: 'after',
         prompt: 'On the bus home it settles on him that his hero is a bloke on a Wednesday afternoon doing a job, with a bad marker pen and somewhere else to be.',
         choices: [
-          { id: 'human', label: 'Like him more for it', desc: 'If he is ordinary, the gap is crossable', outcome: 'The idol shrinks and the ambition grows, which is the correct trade. Nothing about that turn is magic. It is two years and it still goes wrong.', effect: { attr: { composure: 2, leadership: 1 }, form: 0.05 } },
+          { id: 'human', label: 'Like him more for it', desc: 'If he is ordinary, the gap is crossable', outcome: 'The idol shrinks and the ambition grows. It is the correct trade. Nothing about that turn is magic. It is two years and it still goes wrong.', effect: { attr: { composure: 2, leadership: 1 }, form: 0.05 } },
           { id: 'keep-myth', label: 'Keep the myth', desc: 'Some things are better slightly out of reach', outcome: 'He decides not to think about the folding table, and keeps the clip and the crowd noise instead. There is a use for something to aim at that never quite becomes furniture.', effect: { attr: { flair: 2 }, form: 0.04 } },
         ],
       },
@@ -229,9 +229,9 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
     beats: {
       open: {
         id: 'open',
-        prompt: 'They let the district squad walk out on the big pitch at Ashfield Park before the ground staff lock up. Empty, it is enormous and very quiet, and the seats go up much further than they look on television.',
+        prompt: 'They let the district squad walk out on the big pitch at the county ground before the ground staff lock up. Empty, it is enormous and very quiet, and the seats go up much further than they look on television.',
         choices: [
-          { id: 'imagine', label: 'Stand in the centre circle and fill it', desc: 'All of it, every seat, out loud in his head', outcome: 'He stands there long enough that a groundsman coughs. In the ninety seconds before that he has heard it full, and it does not frighten him, which is worth knowing.', effect: { form: 0.06, attr: { composure: 2, flair: 1 }, tag: 'imagined-crowd' } },
+          { id: 'imagine', label: 'Stand in the centre circle and fill it', desc: 'All of it, every seat, out loud in his head', outcome: 'He stands there long enough that a groundsman coughs. In the ninety seconds before that he has heard it full, and it does not frighten him. Worth knowing.', effect: { form: 0.06, attr: { composure: 2, flair: 1 }, tag: 'imagined-crowd' } },
           { id: 'measure', label: 'Walk the pitch end to end', desc: 'Find out how far it actually is', outcome: 'He paces it out instead of dreaming on it, counting under his breath, and comes away with a number rather than a feeling. Both are useful. He has picked the one that keeps.', effect: { attr: { composure: 1, stamina: 1 }, meters: { authority: 4 } } },
           { id: 'seats', label: 'Go and sit right at the top', desc: 'Look down at where he was standing', outcome: 'From the back row the pitch is a green stamp and the players would be nothing at all. He decides he would like to be the small figure people lean forward for.', effect: { attr: { leadership: 1, creativity: 1 }, form: 0.04 } },
         ],
@@ -296,7 +296,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
     beats: {
       open: {
         id: 'open',
-        prompt: 'Two clips saved on a battered phone. One is a forward called Aldo Vennick who has never done anything complicated in his life and scores every week. The other is a boy from a Dutch side, all shoulders and misdirection, who might score or might get substituted. He watches both about equally and knows he is choosing.',
+        prompt: 'Two clips saved on a battered phone. One is a forward who has never done anything complicated in his life and scores every week. The other is a boy from a Dutch side, all shoulders and misdirection, who might score or might get substituted. He watches both about equally and knows he is choosing.',
         choices: [
           { id: 'plain', label: 'Choose the plain one', desc: 'Do the simple thing faster than everyone else', outcome: 'He picks Vennick and spends a season removing things from his game rather than adding them. It is much less fun and it works almost immediately.', effect: { attr: { composure: 2, teamwork: 1 }, form: 0.06, meters: { authority: 6 }, tag: 'style-plain' }, next: 'later' },
           { id: 'risky', label: 'Choose the risky one', desc: 'Be the reason something happens', outcome: 'He picks the other one, and accepts in advance that a lot of afternoons will end with him being the problem. Some will end with him being the only reason.', effect: { attr: { flair: 2, creativity: 1 }, form: 0.04, meters: { peers: 5 }, tag: 'style-risk' }, next: 'later' },
@@ -321,7 +321,7 @@ export const YOUTH_JOY_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'A small lad from two doors down has started doing the drag back. Badly, endlessly, on the pavement outside. He is also wearing his socks over his knees, which is not a coincidence, because that is what the boy at number fourteen does.',
         choices: [
-          { id: 'show', label: 'Go out and show him properly', desc: 'Twenty minutes on a pavement', outcome: 'He breaks it into three bits on the kerb and watches the kid get it wrong forty times and then not wrong. Teaching it teaches him what he actually knows, which is less than he thought and more than he feared.', effect: { attr: { leadership: 2, teamwork: 1 }, form: 0.05, meters: { peers: 6 }, tag: 'taught-someone' } },
+          { id: 'show', label: 'Go out and show him properly', desc: 'Twenty minutes on a pavement', outcome: 'He breaks it into three bits on the kerb and watches the kid get it wrong forty times and then not wrong. Teaching it teaches him what he actually knows: less than he thought, more than he feared.', effect: { attr: { leadership: 2, teamwork: 1 }, form: 0.05, meters: { peers: 6 }, tag: 'taught-someone' } },
           { id: 'nothing', label: 'Say nothing, let him work it out', desc: 'Nobody showed him either', outcome: 'He watches from the window and leaves the boy to it, the way he was left to it, and feels a complicated mix of pride and guilt he does not have a word for yet.', effect: { attr: { composure: 1 }, meters: { peers: 2 } } },
           { id: 'careful', label: 'Tell him to make it his own', desc: 'Copy it, then change it', outcome: 'He tells the kid to learn it and then ruin it, which is genuinely the best football advice he will give anyone for about fifteen years.', effect: { attr: { leadership: 1, creativity: 2 }, meters: { peers: 5 }, form: 0.04 } },
         ],

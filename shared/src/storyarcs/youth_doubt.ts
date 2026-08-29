@@ -24,7 +24,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
         prompt: 'It does end, eventually, in a nothing game on a Tuesday, with a pass he would not have remembered in any other month. He notices himself noticing it.',
         choices: [
           { id: 'note', label: 'Remember how it felt to be in it', desc: 'So he knows it is survivable next time', outcome: 'He files the whole month away carefully: it went, it came back, and nothing he did in a panic had much to do with either. That is worth more than the pass was.', effect: { attr: { composure: 2 }, form: 0.04 } },
-          { id: 'relief', label: 'Just be relieved and think no more about it', desc: 'Forget the month, keep the Tuesday', outcome: 'He throws the month away with the sock tape and plays the rest of the season without once looking back at it, which is its own kind of sense.', effect: { form: 0.06, energy: 4 } },
+          { id: 'relief', label: 'Just be relieved and think no more about it', desc: 'Forget the month, keep the Tuesday', outcome: 'He throws the month away with the sock tape and plays the rest of the season without once looking back at it — its own kind of sense.', effect: { form: 0.06, energy: 4 } },
         ],
       },
     },
@@ -120,7 +120,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'He played the best game of his life last Saturday and has spent all week being reminded of it. Now it is Friday and the only thought in his head is that he cannot possibly do that again, and that everyone is going to turn up expecting him to.',
         choices: [
-          { id: 'reset', label: 'Treat it as a completely new game', desc: 'Last week is not owed to anybody', outcome: 'He decides last Saturday belongs to last Saturday. He plays a perfectly ordinary game and is not troubled by it, which is a rarer skill than the good game was.', effect: { attr: { composure: 2 }, form: 0.05 } },
+          { id: 'reset', label: 'Treat it as a completely new game', desc: 'Last week is not owed to anybody', outcome: 'He decides last Saturday belongs to last Saturday. He plays a perfectly ordinary game and is not troubled by it. A rarer skill than the good game was.', effect: { attr: { composure: 2 }, form: 0.05 } },
           { id: 'repeat', label: 'Try to reproduce it exactly', desc: 'Same runs, same shots, same everything', outcome: 'He spends the first half trying to recreate a thing that only happened because he was not thinking, and the harder he reaches for it the further away it gets.', effect: { form: -0.05, energy: -5, attr: { flair: 1 } } },
           { id: 'quiet', label: 'Ask people to stop mentioning it', desc: 'Kindly, but genuinely', outcome: 'He tells them, embarrassed, that it makes it worse rather than better. They are surprised, and they stop, and the Friday gets slightly easier to stand in.', effect: { attr: { composure: 1 }, meters: { family: 4, peers: 3 } } },
         ],
@@ -265,7 +265,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
         prompt: 'A friendly arranged at two days notice against nobody in particular, no league points, no table, half the squad missing and a parent running the line. He realises somewhere around the twentieth minute that he is enjoying himself more than he has all year, and that this is quite a sad thing to realise.',
         choices: [
           { id: 'notice', label: 'Notice what the difference actually is', desc: 'Nothing about the football has changed', outcome: 'The football is identical. The only missing thing is the part of him that watches himself play. He tries, from then on, to leave that part in the changing room.', effect: { attr: { composure: 2, flair: 1 }, form: 0.06, tag: 'left-the-watcher' } },
-          { id: 'enjoy', label: 'Just have the afternoon', desc: 'No lesson required', outcome: 'He plays two hours of football for no reason whatsoever and goes home filthy and happy, and does not examine it, which is possibly the correct response.', effect: { energy: 8, form: 0.05, meters: { peers: 4 } } },
+          { id: 'enjoy', label: 'Just have the afternoon', desc: 'No lesson required', outcome: 'He plays two hours of football for no reason whatsoever and goes home filthy and happy, and does not examine it. Possibly the correct response.', effect: { energy: 8, form: 0.05, meters: { peers: 4 } } },
           { id: 'guilt', label: 'Feel guilty for enjoying the easy one', desc: 'Anyone can play well when it does not matter', outcome: 'He talks himself out of the afternoon on the way home on the grounds that it did not count, and arrives back with less than he left with.', effect: { form: -0.03, attr: { composure: 1 } } },
         ],
       },
