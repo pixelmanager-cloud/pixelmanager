@@ -17,9 +17,16 @@ const finish = (strength: number, tier: number, seed: number): number =>
 // a plausible club-strength arc for a dynasty that INVESTS its coins: a fresh club grows as the bloodline
 // star develops, facilities improve, and (at the top tiers) title-contender signings become available —
 // ramping from weak (~7) to a peak (~16) by late career. A club that doesn't invest peaks lower (~15).
-const strengthAt = (season: number): number => {
-  const ramp = 7 + season * 1.15;     // growth from facilities + the maturing star + top-tier signings
-  return Math.max(5, Math.min(16, Math.round(ramp)));
+// Models how a real managed club actually grows: facilities + the maturing star + signings, but now with a
+// VARIABLE per-save investment rate and the real ceiling. The old model added a flat +1.15/season and capped
+// at 16 — it could never have a bad decade, and it capped BELOW the ~19 a well-run club really reaches, which
+// made top-flight titles look impossible (4%) when the game itself allows them.
+const strengthAt = (season: number, seed = 0): number => {
+  // 0.25-1.5 per season. The low end has to be genuinely low: a club that doesn't invest should PLATEAU
+  // mid-pyramid (and the Living Squad now actively decays a neglected squad), not still arrive at the summit.
+  const invest = 0.25 + (((seed >>> 5) % 100) / 100) * 1.25;
+  const ramp = 7 + season * invest;
+  return Math.max(5, Math.min(19, Math.round(ramp)));
 };
 
 let reachedTop = 0, titles = 0, topFlightSeasons = 0, stuck = 0;
@@ -31,7 +38,7 @@ for (let i = 0; i < N; i++) {
   let everTop = false, firstTopSeason = -1, movesUp = 0;
   for (let s = 0; s < SEASONS; s++) {
     const seed = (((i + 1) * 2654435761) ^ (s * 40503)) >>> 0;
-    const strength = strengthAt(s);
+    const strength = strengthAt(s, ((i + 1) * 2654435761) >>> 0); // per-career investment rate
     const pos = finish(strength, tier, seed);
     if (tier === 1) { topFlightSeasons++; if (pos === 1) titles++; }
     // real promotion/relegation rule: top 2 up, bottom 2 down (size 10)

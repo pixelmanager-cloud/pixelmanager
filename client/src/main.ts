@@ -1135,6 +1135,19 @@ class Game {
   private facLevels: Record<string, number> = {}; // cached club-facility levels — applied to single-player matches
   /** A player's retirement age varies with him: keepers last longest, pace-reliant forwards fade earliest;
    *  a strong, durable body plays on, a pacey one declines sooner; plus a small individual quirk. ~30–41. */
+  /** Which division the bloodline star's career has earned the club. A career is 120 turns of real choices;
+   *  arriving in the basement regardless of how it went made the whole thing feel discarded. Career score is
+   *  the game's own summary of how well he played, and his overall says what he actually is now — together
+   *  they place him. Deliberately never tier 1 or 2: the manager game must keep a climb worth making. */
+  private startingTierFor(s: import('./api').CareerState, player: Player): number {
+    const score = s.careerScore ?? 0;          // ~1050 is a strong 120-turn career (see the probe's p50)
+    const ov = overall(player);
+    // score does most of the work; a genuinely elite graduate nudges one further up
+    const byScore = score >= 1200 ? 4 : score >= 950 ? 5 : score >= 700 ? 6 : score >= 450 ? 7 : 8;
+    const elite = ov >= 16 ? 1 : ov >= 14 ? 0 : -1;   // a weak graduate starts a rung lower
+    return Math.max(3, Math.min(TIERS, byScore - elite));
+  }
+
   private retireAgeFor(player: Player): number {
     const a = player.attrs as any;
     // Tuned with the pacing trim (Phase 5): the dynasty is the point, so a single managerial spell shouldn't
@@ -1764,9 +1777,11 @@ class Game {
    *  venue edge (default 0.25 for neutral/knockout callers); a league sim passes it per-fixture so an AWAY game
    *  doesn't get an unearned home bias (PT-118). */
   private simFixtureResult(myStr: number, oppStr: number, seed: number, homeTerm = 0.25): PlayedResult {
-    const rnd = (n: number) => (((seed >>> (n & 15)) ^ (seed >>> ((n + 7) & 15))) % 100) / 100;
-    const diff = (myStr - oppStr) * 0.12 + homeTerm;
-    return { myGoals: Math.min(6, Math.max(0, Math.round(1.2 + diff + (rnd(1) - 0.5) * 2.2))), oppGoals: Math.min(6, Math.max(0, Math.round(1.2 - diff + (rnd(2) - 0.5) * 2.2))) };
+    // mix the seed before shifting — see clubseason.ts; unmixed, neighbouring fixtures scored identically (PT-900)
+    const mixed = (() => { let x = seed >>> 0; x = Math.imul(x ^ (x >>> 16), 2246822507) >>> 0; x = Math.imul(x ^ (x >>> 13), 3266489909) >>> 0; return (x ^ (x >>> 16)) >>> 0; })();
+    const rnd = (n: number) => (((mixed >>> (n & 15)) ^ (mixed >>> ((n + 7) & 15))) % 100) / 100;
+    const diff = (myStr - oppStr) * 0.10 + homeTerm; // eased (PT-901)
+    return { myGoals: Math.min(6, Math.max(0, Math.round(1.2 + diff + (rnd(1) - 0.5) * 3.2))), oppGoals: Math.min(6, Math.max(0, Math.round(1.2 - diff + (rnd(2) - 0.5) * 3.2))) };
   }
   /** The club-building edge a SIMMED league fixture should carry — the sim otherwise ignores everything a played
    *  match layers on (facilities, staff, venue), making that investment worthless the moment you sim (PT-118).
@@ -2471,12 +2486,22 @@ class Game {
           if (!ids.includes(s.prospectId) && this.club!.players.some((p) => p.id === s.prospectId)) {
             const starters = ids.map((id) => this.club!.players.find((p) => p.id === id)).filter(Boolean) as Player[];
             const worst = starters.slice().sort((a, b) => overall(a) - overall(b))[0];
-            if (worst) ids = [...ids.filter((id) => id !== worst.id), s.prospectId];
+            // SWAP IN PLACE. `ids` is positional — index i is formation slot i — so filtering the worst out and
+            // appending the star to the end shifted every slot after him, fielding ~1.8 players out of position
+            // on the saves where this ran. Replace him in his own slot instead. (PT-952)
+            if (worst) ids = ids.map((id) => (id === worst.id ? s.prospectId : id));
           }
           await api.setStandingOrders({ ...this.standingOrders, playerIds: ids });
           this.setMe(await api.me());
         } catch { /* keep the default XI if the auto-pick fails */ }
         const retireAge = this.retireAgeFor(player);
+        // START THE CLUB WHERE THE CAREER EARNED. clubTier() falls back to TIERS (the Sunday League) when no
+        // tier has been stored, and nothing in the handoff ever stored one — so a player who reached a
+        // Continental Final was handed the bottom division of ten, among clubs he'd never seen. It also made
+        // the early seasons trivial, since tierStrength(10) is the weakest in the game. The star's career
+        // score and his finishing quality now set the entry point: a good career starts you mid-pyramid with
+        // somewhere left to climb, a modest one still starts near the bottom. (PT-950/PT-802)
+        this.setClubTier(this.startingTierFor(s, player));
         this.saveMgr({ season: 1, results: [], starId: s.prospectId, starName: s.name, starAge: s.age, retireAge }); // enter manager phase
         toast(`🧢 You're the manager now — ${s.name} is in your squad`);
         this.showSeason();

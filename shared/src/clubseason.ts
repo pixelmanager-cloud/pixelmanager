@@ -83,7 +83,10 @@ const nameTiebreak = (name: string): number => { let h = 0; for (let i = 0; i < 
 export function tierStrength(tier: number): number {
   // calibrated to the club's real strength range (~9 fresh graduate … ~15 peak squad): tier 10 baseline 5
   // (a graduate dominates → promotes), tier 1 baseline 14 (only a peak squad wins the top flight).
-  return 15 - clamp(Math.round(tier), 1, TIERS);
+  // A STEEPER ladder: the old flat 15-tier meant each promotion cost a fixed +1 while a club's strength grew
+  // faster than that every season, so the climb got easier the higher you went. 16.8 - 1.3*tier widens the gap
+  // between divisions so each rung genuinely asks more. (PT-902)
+  return 16.8 - 1.3 * clamp(Math.round(tier), 1, TIERS);
 }
 
 function hash32(...nums: number[]): number {
@@ -175,12 +178,16 @@ export function liveTable(myClub: string, marlowStrength: number, share: number,
 
 /** Deterministic scoreline for one fixture (a hosts b), weighted by the strength gap + seeded noise. */
 function simMatch(a: LeagueClub, b: LeagueClub, h: number): [number, number] {
-  const rnd = (n: number) => (((h >>> (n & 15)) ^ (h >>> ((n + 7) & 15))) % 100) / 100;
+  // MIX THE SEED FIRST. Right-shifting the raw seed discards the low bits — the very bits that differ between
+  // consecutive fixtures — so neighbouring seeds produced the IDENTICAL scoreline 94.5% of the time and a
+  // season averaged 2.0 distinct results, with one repeating 14 times in 18 games ("13 of 18 were 2-0"). (PT-900)
+  const mixed = (() => { let x = h >>> 0; x = Math.imul(x ^ (x >>> 16), 2246822507) >>> 0; x = Math.imul(x ^ (x >>> 13), 3266489909) >>> 0; return (x ^ (x >>> 16)) >>> 0; })();
+  const rnd = (n: number) => (((mixed >>> (n & 15)) ^ (mixed >>> ((n + 7) & 15))) % 100) / 100;
   // guard a non-finite strength from corrupting goal columns into NaN (QA M2); finite passes through unchanged
   const aStr = Number.isFinite(a.strength) ? a.strength : SQUAD_BASE, bStr = Number.isFinite(b.strength) ? b.strength : SQUAD_BASE;
-  const diff = (aStr - bStr) * 0.12 + 0.25; // small home edge
-  const gh = Math.min(6, Math.max(0, Math.round(1.2 + diff + (rnd(1) - 0.5) * 2.2)));
-  const ga = Math.min(6, Math.max(0, Math.round(1.2 - diff + (rnd(2) - 0.5) * 2.2)));
+  const diff = (aStr - bStr) * 0.10 + 0.25; // small home edge; coefficient eased so a strong side isn't unbeatable (PT-901)
+  const gh = Math.min(6, Math.max(0, Math.round(1.2 + diff + (rnd(1) - 0.5) * 3.2)));
+  const ga = Math.min(6, Math.max(0, Math.round(1.2 - diff + (rnd(2) - 0.5) * 3.2)));
   return [gh, ga];
 }
 

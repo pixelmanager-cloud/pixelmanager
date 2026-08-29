@@ -63,7 +63,12 @@ export function transferList(seed: number, season: number, tier: number, size = 
   // signings (+3) so a dynasty that INVESTS can build a squad that exceeds the league and actually wins the
   // top flight (fees scale with ov², so it's a real, coin-gated reward — not a freebie). Lower tiers keep the
   // tight +1 that made the pyramid climb feel earned. Fixes the "top flight is unwinnable at ~5%" balance flag.
-  const headroom = tier <= 2 ? 3 : 1;
+  // Headroom trimmed (was 3/1). Taking the best of ~20 listings with ±3 jitter already puts the top name ~5
+  // above the tier baseline, so the MARKET — not the match engine — was erasing the difficulty: two signings a
+  // season took every simulated career to the top flight. (PT-903)
+  // Top-flight clubs keep a little more reach (2 vs 0): with headroom trimmed everywhere the title rate at
+  // tier 1 collapsed to 4% — reaching the summit but being unable to ever win there is its own dead end.
+  const headroom = tier <= 2 ? 2 : 0;
   const quality = clamp(tierStrength(tier) + headroom, 4, 18);
   // generate a couple of squads' worth at this quality, then take a spread across positions
   // rich=true: market players are FULL characters (15 stats + personality + traits) — you're signing a
