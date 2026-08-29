@@ -1,3 +1,8 @@
+import { mergeBanks } from './prompts/merge.js';
+import { PRESTIGE_EXTRA_1 } from './extra/prestige_pack_1.js';
+import { PRESTIGE_EXTRA_2 } from './extra/prestige_pack_2.js';
+import { PRESTIGE_EXTRA_3 } from './extra/prestige_pack_3.js';
+import { PRESTIGE_EXTRA_4 } from './extra/prestige_pack_4.js';
 // Manager PRESTIGE — the human manager's legacy, earned across their whole career (every club, every
 // season). Distinct from a player's ability: this is the GAFFER's reputation, built from titles won,
 // how high up the pyramid they were won, wins ground out, and longevity. Pure + deterministic so the
@@ -68,7 +73,7 @@ function hash32(...nums: number[]): number {
   for (const n of nums) { h ^= (n >>> 0); h = Math.imul(h, 16777619); }
   return h >>> 0;
 }
-const RANK_UP_BLURB: Record<string, string[]> = {
+const BASE_RANK_UP_BLURB: Record<string, string[]> = {
   'Rookie Gaffer': [
     'Every legend starts somewhere. This is where it begins.',
     'First steps in the dugout. The rest is still to be written.',
@@ -106,6 +111,10 @@ const RANK_UP_BLURB: Record<string, string[]> = {
     'There is no higher rank than this. A career for the ages.',
   ],
 };
+
+// BASE plus every authoring pack.
+const RANK_UP_BLURB = mergeBanks(BASE_RANK_UP_BLURB, PRESTIGE_EXTRA_1, PRESTIGE_EXTRA_2, PRESTIGE_EXTRA_3, PRESTIGE_EXTRA_4);
+
 /** A deterministic one-line blurb for crossing INTO `title` with this record — same record, same
  *  rank always reads the same way; different records at the same rank vary. */
 export function prestigeRankUpBlurb(title: string, r: ManagerRecord): string {

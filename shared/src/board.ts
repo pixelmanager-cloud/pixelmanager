@@ -1,3 +1,8 @@
+import { mergeBanks } from './prompts/merge.js';
+import { BOARD_EXTRA_1 } from './extra/board_pack_1.js';
+import { BOARD_EXTRA_2 } from './extra/board_pack_2.js';
+import { BOARD_EXTRA_3 } from './extra/board_pack_3.js';
+import { BOARD_EXTRA_4 } from './extra/board_pack_4.js';
 // ── Board mood — a pure, deterministic reading of how the board feels about the manager right now ──
 // Highest-leverage gap flagged in docs/overnight/manager-content-audit.md: nothing tracked manager
 // standing with the board across a season. This module is FLAVOUR + a bounded mood SCORE only — no
@@ -81,7 +86,7 @@ function moodFromScore(score: number): BoardMood {
   return 'furious';
 }
 
-const MOOD_LINES: Record<BoardMood, string[]> = {
+const BASE_MOOD_LINES: Record<BoardMood, string[]> = {
   delighted: [
     'The board are delighted — this is exactly, if not better than, what they signed up for.',
     'Boardroom mood: delighted. Results like these buy real patience for whatever comes next.',
@@ -125,6 +130,10 @@ const MOOD_LINES: Record<BoardMood, string[]> = {
     'Furious is the only word for the boardroom right now. The pressure is total.',
   ],
 };
+
+// BASE plus every authoring pack.
+const MOOD_LINES = mergeBanks(BASE_MOOD_LINES, BOARD_EXTRA_1, BOARD_EXTRA_2, BOARD_EXTRA_3, BOARD_EXTRA_4);
+
 
 /** The board's current mood + flavour message, given today's league standing vs. expectation. Pure —
  *  same input, same reading. Callers should pass FRESH per-round input (no state to persist here). */

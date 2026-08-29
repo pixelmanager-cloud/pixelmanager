@@ -1,3 +1,8 @@
+import { mergeList } from './prompts/merge.js';
+import { INTL_EXTRA_1 } from './extra/intl_pack_1.js';
+import { INTL_EXTRA_2 } from './extra/intl_pack_2.js';
+import { INTL_EXTRA_3 } from './extra/intl_pack_3.js';
+import { INTL_EXTRA_4 } from './extra/intl_pack_4.js';
 // ── International competitions — beyond the domestic league ──────────────────────────────────────
 // Three strands, all fully deterministic (hash-seeded, no rng / no wall-clock / no storage), so they
 // replay identically from a save seed:
@@ -37,7 +42,7 @@ function knockout(aStr: number, bStr: number, h: number, neutral = false): { gh:
 // Stronger, more glamorous fictional clubs than the domestic league — the continent's elite.
 // Widened from the original 16 (audit finding: a continental run can span many seasons in one save,
 // and the QF/SF/Final opponent is redrawn each season, so a small pool repeats faces fast). 30 names.
-const CONT_POOL = [
+const BASE_CONT_POOL = [
   'Atlético Verdano', 'Real Solaris', 'FC Nordwind', 'Olympique Marenne', 'Internazio Milano',
   'Sporting Listerra', 'Rot-Weiss Halden', 'Dynamo Volgar', 'AC Fiorina', 'Galata Boru',
   'Ajaccio United', 'Benfica do Sul', 'Zenit Nevsky', 'Bayern Hafen', 'Porto Marinho', 'Sevilla Real',
@@ -183,7 +188,7 @@ export interface WCPlayerPath {
 // a client-shell change, out of this lane) — ready for a future hookup.
 function pick<T>(h: number, arr: readonly T[]): T { return arr[h % arr.length]; }
 
-const CONT_WIN: string[] = [
+const BASE_CONT_WIN: string[] = [
   'A statement result on the continental stage — the kind that gets the club noticed abroad.',
   'Away from the bread and butter of the league, and the club delivers when it matters.',
   'Continental nights like that are what a season is remembered for.',
@@ -191,29 +196,29 @@ const CONT_WIN: string[] = [
   'A big scalp on the continental run, and belief is growing that this could go somewhere.',
 ];
 // won the shootout — through to the next round
-const CONT_WIN_PENS: string[] = [
+const BASE_CONT_WIN_PENS: string[] = [
   'Settled on penalties — the cruellest way to go through, but a way through all the same.',
   'Nerves shredded from twelve yards, but the club lives to fight another round.',
   'A shootout decided it. Somebody had to blink first, and it wasn\'t us.',
 ];
 // lost the shootout — out on penalties
-const CONT_LOSS_PENS: string[] = [
+const BASE_CONT_LOSS_PENS: string[] = [
   'Settled on penalties — the cruellest way to go out, inches from the next round.',
   'Nerves shredded from twelve yards, and this time the shootout went against us.',
   'A shootout decided it. Somebody had to blink first, and this time it was us.',
 ];
-const CONT_LOSS: string[] = [
+const BASE_CONT_LOSS: string[] = [
   'The continental run ends here. A step further than some feared, not as far as others hoped.',
   'Outclassed on the night by a side with a bit more continental pedigree.',
   'A tough exit, but a run worth being proud of all the same.',
   'The dream ends, but nights like these are exactly why the club chases this competition.',
 ];
-const CONT_FINAL_WIN: string[] = [
+const BASE_CONT_FINAL_WIN: string[] = [
   'Champions of the continent. Whatever else this season holds, that\'s forever in the record books.',
   'A continental trophy for the cabinet — the biggest night in the club\'s history, some say.',
   'The final delivered, and the whole club will remember exactly where they were for this one.',
 ];
-const CONT_FINAL_LOSS: string[] = [
+const BASE_CONT_FINAL_LOSS: string[] = [
   'So close to continental glory, and it slips away in the final itself. A bitter one.',
   'Runners-up on the biggest stage the club has ever reached. Progress, even if it doesn\'t feel like it tonight.',
   'A final lost is still a final reached. Small comfort tonight, real credit in time.',
@@ -230,17 +235,17 @@ export function contTieBlurb(seed: number, season: number, round: ContRound, aWo
   return pick(h, isFinal ? CONT_FINAL_LOSS : pens ? CONT_LOSS_PENS : CONT_LOSS);
 }
 
-const CALLUP_DEBUT: string[] = [
+const BASE_CALLUP_DEBUT: string[] = [
   'A first cap at last — pulling on the national shirt for the very first time.',
   'International recognition arrives: a maiden call-up, and a proud day for the whole family.',
   'From club football to the national stage — cap number one is in the books.',
 ];
-const CALLUP_SCORED: string[] = [
+const BASE_CALLUP_SCORED: string[] = [
   'On the scoresheet on the international stage — a night to remember in a national shirt.',
   'Delivers for the national team when it mattered, and the manager will have noticed.',
   'A goal at international level. The kind of moment that gets talked about back home.',
 ];
-const CALLUP_QUIET: string[] = [
+const BASE_CALLUP_QUIET: string[] = [
   'Another cap added to the collection — steady, if unspectacular, in national colours.',
   'A quieter night in the national shirt, but every cap still counts toward the legacy.',
   'Did a job for the national side without grabbing the headlines.',
@@ -321,13 +326,13 @@ export function contRivalClub(seed: number): string {
   return CONT_POOL[h % CONT_POOL.length];
 }
 
-const CONT_RIVALRY_WIN: string[] = [
+const BASE_CONT_RIVALRY_WIN: string[] = [
   'Beat them again. This rivalry is starting to tilt firmly in our favour.',
   'Another win over the old enemy — the fixture that never feels routine, whatever the stakes.',
   'That\'s the one the fans wanted more than any other. The rivalry stays lopsided, our way.',
   'Bragging rights again over a club that just cannot get the better of us these days.',
 ];
-const CONT_RIVALRY_LOSS: string[] = [
+const BASE_CONT_RIVALRY_LOSS: string[] = [
   'Beaten by the old enemy again. That one will sting in the dressing room for a while yet.',
   'The rivalry stings tonight — they have the bragging rights again, and they will let us know it.',
   'A tough one to lose, and to THEM of all sides. The rematch cannot come soon enough.',
@@ -341,13 +346,13 @@ export function contRivalryBlurb(seed: number, season: number, round: ContRound,
   return pick(h, aWon ? CONT_RIVALRY_WIN : CONT_RIVALRY_LOSS);
 }
 
-const WC_GROUP_DECIDER: string[] = [
+const BASE_WC_GROUP_DECIDER: string[] = [
   'Goal difference is doing the talking in this group — every minute of the last game mattered.',
   'A group settled by the finest of margins. Nerve-shredding stuff for anyone watching from home.',
   'Came down to the very last kick of the group stage. Qualification never felt safe until the whistle.',
   'A group that stayed live until the final whistle of the final round — no dead rubbers here.',
 ];
-const WC_GROUP_COMFORTABLE: string[] = [
+const BASE_WC_GROUP_COMFORTABLE: string[] = [
   'A comfortable passage out of the group, points to spare before the last round even kicked off.',
   'Job done early in the group — the closing matches were about rhythm, not survival.',
   'Cruised through the group stage. The knockouts is where the real tournament starts.',
@@ -362,20 +367,40 @@ export function wcGroupDramaBlurb(seed: number, edition: number, groupIndex: num
   return pick(h, tight ? WC_GROUP_DECIDER : WC_GROUP_COMFORTABLE);
 }
 
-const WC_KNOCKOUT_PENS: string[] = [
+const BASE_WC_KNOCKOUT_PENS: string[] = [
   'Settled on penalties. The cruellest way for a tournament run to turn, one way or the other.',
   'A shootout decided it — twelve yards of pure nerve, and somebody had to lose it.',
   'Penalties. The whole nation held its breath for every single kick.',
 ];
-const WC_KNOCKOUT_TIGHT: string[] = [
+const BASE_WC_KNOCKOUT_TIGHT: string[] = [
   'One goal in it. The margins at this stage of a tournament rarely get any finer.',
   'A single strike separated the sides. Knockout football at its most unforgiving.',
   'Backs to the wall for long spells, but the result held by the barest of margins.',
 ];
-const WC_KNOCKOUT_CLEAR: string[] = [
+const BASE_WC_KNOCKOUT_CLEAR: string[] = [
   'A comfortable, controlled knockout performance — no last-minute nerves required tonight.',
   'Dominant from early on. The kind of knockout win that settles a squad for the round ahead.',
 ];
+
+// BASE banks plus every authoring pack — see shared/src/prompts/merge.ts for why packs are separate files.
+const CONT_POOL: string[] = mergeList(BASE_CONT_POOL as string[], INTL_EXTRA_1['CONT_POOL'], INTL_EXTRA_2['CONT_POOL'], INTL_EXTRA_3['CONT_POOL'], INTL_EXTRA_4['CONT_POOL']);
+const CONT_WIN: string[] = mergeList(BASE_CONT_WIN as string[], INTL_EXTRA_1['CONT_WIN'], INTL_EXTRA_2['CONT_WIN'], INTL_EXTRA_3['CONT_WIN'], INTL_EXTRA_4['CONT_WIN']);
+const CONT_WIN_PENS: string[] = mergeList(BASE_CONT_WIN_PENS as string[], INTL_EXTRA_1['CONT_WIN_PENS'], INTL_EXTRA_2['CONT_WIN_PENS'], INTL_EXTRA_3['CONT_WIN_PENS'], INTL_EXTRA_4['CONT_WIN_PENS']);
+const CONT_LOSS_PENS: string[] = mergeList(BASE_CONT_LOSS_PENS as string[], INTL_EXTRA_1['CONT_LOSS_PENS'], INTL_EXTRA_2['CONT_LOSS_PENS'], INTL_EXTRA_3['CONT_LOSS_PENS'], INTL_EXTRA_4['CONT_LOSS_PENS']);
+const CONT_LOSS: string[] = mergeList(BASE_CONT_LOSS as string[], INTL_EXTRA_1['CONT_LOSS'], INTL_EXTRA_2['CONT_LOSS'], INTL_EXTRA_3['CONT_LOSS'], INTL_EXTRA_4['CONT_LOSS']);
+const CONT_FINAL_WIN: string[] = mergeList(BASE_CONT_FINAL_WIN as string[], INTL_EXTRA_1['CONT_FINAL_WIN'], INTL_EXTRA_2['CONT_FINAL_WIN'], INTL_EXTRA_3['CONT_FINAL_WIN'], INTL_EXTRA_4['CONT_FINAL_WIN']);
+const CONT_FINAL_LOSS: string[] = mergeList(BASE_CONT_FINAL_LOSS as string[], INTL_EXTRA_1['CONT_FINAL_LOSS'], INTL_EXTRA_2['CONT_FINAL_LOSS'], INTL_EXTRA_3['CONT_FINAL_LOSS'], INTL_EXTRA_4['CONT_FINAL_LOSS']);
+const CALLUP_DEBUT: string[] = mergeList(BASE_CALLUP_DEBUT as string[], INTL_EXTRA_1['CALLUP_DEBUT'], INTL_EXTRA_2['CALLUP_DEBUT'], INTL_EXTRA_3['CALLUP_DEBUT'], INTL_EXTRA_4['CALLUP_DEBUT']);
+const CALLUP_SCORED: string[] = mergeList(BASE_CALLUP_SCORED as string[], INTL_EXTRA_1['CALLUP_SCORED'], INTL_EXTRA_2['CALLUP_SCORED'], INTL_EXTRA_3['CALLUP_SCORED'], INTL_EXTRA_4['CALLUP_SCORED']);
+const CALLUP_QUIET: string[] = mergeList(BASE_CALLUP_QUIET as string[], INTL_EXTRA_1['CALLUP_QUIET'], INTL_EXTRA_2['CALLUP_QUIET'], INTL_EXTRA_3['CALLUP_QUIET'], INTL_EXTRA_4['CALLUP_QUIET']);
+const CONT_RIVALRY_WIN: string[] = mergeList(BASE_CONT_RIVALRY_WIN as string[], INTL_EXTRA_1['CONT_RIVALRY_WIN'], INTL_EXTRA_2['CONT_RIVALRY_WIN'], INTL_EXTRA_3['CONT_RIVALRY_WIN'], INTL_EXTRA_4['CONT_RIVALRY_WIN']);
+const CONT_RIVALRY_LOSS: string[] = mergeList(BASE_CONT_RIVALRY_LOSS as string[], INTL_EXTRA_1['CONT_RIVALRY_LOSS'], INTL_EXTRA_2['CONT_RIVALRY_LOSS'], INTL_EXTRA_3['CONT_RIVALRY_LOSS'], INTL_EXTRA_4['CONT_RIVALRY_LOSS']);
+const WC_GROUP_DECIDER: string[] = mergeList(BASE_WC_GROUP_DECIDER as string[], INTL_EXTRA_1['WC_GROUP_DECIDER'], INTL_EXTRA_2['WC_GROUP_DECIDER'], INTL_EXTRA_3['WC_GROUP_DECIDER'], INTL_EXTRA_4['WC_GROUP_DECIDER']);
+const WC_GROUP_COMFORTABLE: string[] = mergeList(BASE_WC_GROUP_COMFORTABLE as string[], INTL_EXTRA_1['WC_GROUP_COMFORTABLE'], INTL_EXTRA_2['WC_GROUP_COMFORTABLE'], INTL_EXTRA_3['WC_GROUP_COMFORTABLE'], INTL_EXTRA_4['WC_GROUP_COMFORTABLE']);
+const WC_KNOCKOUT_PENS: string[] = mergeList(BASE_WC_KNOCKOUT_PENS as string[], INTL_EXTRA_1['WC_KNOCKOUT_PENS'], INTL_EXTRA_2['WC_KNOCKOUT_PENS'], INTL_EXTRA_3['WC_KNOCKOUT_PENS'], INTL_EXTRA_4['WC_KNOCKOUT_PENS']);
+const WC_KNOCKOUT_TIGHT: string[] = mergeList(BASE_WC_KNOCKOUT_TIGHT as string[], INTL_EXTRA_1['WC_KNOCKOUT_TIGHT'], INTL_EXTRA_2['WC_KNOCKOUT_TIGHT'], INTL_EXTRA_3['WC_KNOCKOUT_TIGHT'], INTL_EXTRA_4['WC_KNOCKOUT_TIGHT']);
+const WC_KNOCKOUT_CLEAR: string[] = mergeList(BASE_WC_KNOCKOUT_CLEAR as string[], INTL_EXTRA_1['WC_KNOCKOUT_CLEAR'], INTL_EXTRA_2['WC_KNOCKOUT_CLEAR'], INTL_EXTRA_3['WC_KNOCKOUT_CLEAR'], INTL_EXTRA_4['WC_KNOCKOUT_CLEAR']);
+
 /** A deterministic "how it went" drama line for a specific World-Finals knockout tie, using the
  *  ACTUAL score margin + whether it went to penalties (from `WCTie`). Pure function of that data. */
 export function wcKnockoutDramaBlurb(seed: number, edition: number, tie: WCTie): string {

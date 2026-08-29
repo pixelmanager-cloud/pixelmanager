@@ -14,6 +14,7 @@ import { flagImg } from './flag';
 import { trophyImg, type TrophyKey } from './trophy';
 import { kitTemplate, recolorKit } from './kit';
 import { audio } from './audio';
+import { commentaryExtra, fillCm } from '@fm/shared/commentary/extra.js';
 
 // Topbar speaker icons — same 24×24 viewBox for both states so the button never changes shape on toggle.
 const ICON_SPEAKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3.5l4.5-3.5v13L7.5 15H4z"/><path d="M16 9.2a4 4 0 0 1 0 5.6M18.6 6.6a7.5 7.5 0 0 1 0 10.8"/></svg>';
@@ -3832,7 +3833,15 @@ class Game {
    *  22% of the whole feed. A bag makes usage exactly even: with a bank of N, no line can appear twice until
    *  all N have appeared once. Still fully deterministic — the shuffle is the same seeded hash. (PT-1204)
    *  The seam between two bags is the one place a repeat could still slip through, so it is patched too. */
-  private cpickNR<T>(arr: T[], salt: number): T {
+  private cpickNR<T>(arr: T[], salt: number, key?: string, vars?: Record<string, string | undefined>): T {
+    // AUTHORED LINES merge in here. The live banks are template literals and cannot be edited in parallel,
+    // so authors write data (with {p}/{team}/{zone} placeholders) into shared/src/commentary/pack_*.ts and
+    // it is substituted at draw time. This is the game's weakest surface — 159 lines against ~700 shown in
+    // a single match — so the bank a player actually sees is base + everything authored for that event.
+    if (key) {
+      const extra = commentaryExtra(key);
+      if (extra.length) arr = [...arr, ...extra.map((l) => fillCm(l, vars ?? {}) as unknown as T)];
+    }
     if (arr.length <= 1) return arr[0];
     // Salts are hand-assigned and 18 of them are reused across different banks, so the bag is keyed by
     // salt AND bank size — otherwise a 4-line bank and a 14-line bank sharing salt 6 would refill each
@@ -3984,17 +3993,17 @@ class Game {
     const sc = this.liveScore; // running tally (correct in live AND skip-to-end flush)
     let text = '', cls = '';
     switch (e.type) {
-      case 'kickoff': text = this.cpickNR(['We’re underway!', 'And the match kicks off!', 'Here we go — game on!', 'The referee gets us started!'], 5); break;
+      case 'kickoff': text = this.cpickNR(['We’re underway!', 'And the match kicks off!', 'Here we go — game on!', 'The referee gets us started!'], 5, 'kickoff', { p, team, zone }); break;
       case 'goal': cls = 'cm-goal'; text = this.goalLine(e, team, idx); break;
       case 'chance':
         cls = 'cm-chance';
         text = e.counter
-          ? this.cpickNR([`They break at pace! ${p} is away for ${team}…`, `Counter-attack, ${team}! ${p} storms clear…`, `Caught square — ${p} springs the trap for ${team}…`, `On the turnover! ${p} races through…`], 2)
-          : this.cpickNR([`${p} works a yard and shapes to shoot…`, `Here come ${team} — ${p} bursts in behind!`, `Big chance! ${p} is in for ${team}…`, `${team} carve it open — ${p} with a sight of goal!`, `${p} shifts it onto his stronger foot…`, `A gap opens up and ${p} goes for it…`], 2);
+          ? this.cpickNR([`They break at pace! ${p} is away for ${team}…`, `Counter-attack, ${team}! ${p} storms clear…`, `Caught square — ${p} springs the trap for ${team}…`, `On the turnover! ${p} races through…`], 2, 'chance', { p, team, zone })
+          : this.cpickNR([`${p} works a yard and shapes to shoot…`, `Here come ${team} — ${p} bursts in behind!`, `Big chance! ${p} is in for ${team}…`, `${team} carve it open — ${p} with a sight of goal!`, `${p} shifts it onto his stronger foot…`, `A gap opens up and ${p} goes for it…`], 2, 'chance', { p, team, zone });
         if (e.counter) cls = 'cm-chance cm-counter';
         break;
-      case 'shot_saved': cls = 'cm-save'; text = this.cpickNR([`🧤 SAVED! ${opp}’s keeper turns ${p} away!`, `🧤 Denied! A fine stop to keep ${p} out!`, `🧤 What a save — ${p} was sure he’d scored!`, `🧤 Beaten away! ${p} is foiled!`, `🧤 Big hands! ${opp} keep ${p} out!`], 3); break;
-      case 'shot_missed': cls = 'cm-miss'; text = this.cpickNR([`${p} drags it wide!`, `Off target — ${p} will want that one back.`, `${p} blazes over the bar!`, `Just past the post from ${p}!`, `Wild from ${p} — miles over!`], 4); break;
+      case 'shot_saved': cls = 'cm-save'; text = this.cpickNR([`🧤 SAVED! ${opp}’s keeper turns ${p} away!`, `🧤 Denied! A fine stop to keep ${p} out!`, `🧤 What a save — ${p} was sure he’d scored!`, `🧤 Beaten away! ${p} is foiled!`, `🧤 Big hands! ${opp} keep ${p} out!`], 3, 'shot_saved', { p, team, zone }); break;
+      case 'shot_missed': cls = 'cm-miss'; text = this.cpickNR([`${p} drags it wide!`, `Off target — ${p} will want that one back.`, `${p} blazes over the bar!`, `Just past the post from ${p}!`, `Wild from ${p} — miles over!`], 4, 'shot_missed', { p, team, zone }); break;
       case 'tackle_won':
         if (e.zone === 'att') { // a turnover won high up the pitch — a pressing trap
           cls = 'cm-press';
@@ -4014,7 +4023,7 @@ class Game {
             `⚡ Turned over cheaply, and ${p} is away with it.`,
             `⚡ ${p} snaps into the challenge and wins it cleanly.`,
             `⚡ The press pays off for ${team} — ${p} has it in a dangerous spot.`,
-            `⚡ ${p} harries him into giving it up.`], 6);
+            `⚡ ${p} harries him into giving it up.`], 6, 'tackle_won', { p, team, zone });
         } else {
           cls = 'cm-tackle';
           text = this.cpickNR([
@@ -4031,11 +4040,11 @@ class Game {
             `🦵 Intercepted by ${p} ${zone} — read all the way.`,
             `🦵 ${p} refuses to be beaten ${zone} and wins it.`,
             `🦵 Beaten to it by ${p} ${zone}.`,
-            `🦵 ${p} nips in front of his man ${zone}.`], 26);
+            `🦵 ${p} nips in front of his man ${zone}.`], 26, 'tackle_won', { p, team, zone });
         }
         break;
-      case 'fatigue': cls = 'cm-injury'; text = this.cpickNR([`${p} is blowing hard — the legs are going.`, `${p} looks spent, hands on hips ${zone}.`, `Tiring badly now, ${p} — running on empty.`, `${p} can barely get back — gassed.`], 12); break;
-      case 'woodwork': cls = 'cm-post'; text = this.cpickNR([`🪵 OFF THE POST! ${p} rattles the woodwork — so close!`, `🪵 OFF THE BAR! ${p} is inches away!`, `🪵 It cannons back off the upright — ${p} can't believe it!`], 13); break;
+      case 'fatigue': cls = 'cm-injury'; text = this.cpickNR([`${p} is blowing hard — the legs are going.`, `${p} looks spent, hands on hips ${zone}.`, `Tiring badly now, ${p} — running on empty.`, `${p} can barely get back — gassed.`], 12, 'fatigue', { p, team, zone }); break;
+      case 'woodwork': cls = 'cm-post'; text = this.cpickNR([`🪵 OFF THE POST! ${p} rattles the woodwork — so close!`, `🪵 OFF THE BAR! ${p} is inches away!`, `🪵 It cannons back off the upright — ${p} can't believe it!`], 13, 'woodwork', { p, team, zone }); break;
       // the heaviest bank in the game (~200 draws a match) — it was 4 lines, half of them without a player
       // name, so ~100 draws collapsed onto a handful of strings (PT-1201)
       case 'loose_ball': cls = 'cm-loose'; text = this.cpickNR([
@@ -4046,32 +4055,32 @@ class Game {
         `Neither of them wins it — loose ${zone}.`, `Ricochet ${zone}, nobody's ball.`,
         `${p} overhits it ${zone}.`, `A scramble ${zone}.`, `It breaks kindly ${zone}.`,
         `${p}'s touch lets him down ${zone}.`, `Bobbling around ${zone}.`,
-        `Cleared, but only as far as ${zone}.`, `${p} stretches and can only poke it ${zone}.`], 8); break;
-      case 'foul': cls = 'cm-foul'; text = this.cpickNR([`Foul by ${p} ${zone}. Free kick ${team === this.homeName ? this.awayName : this.homeName}.`, `${p} catches his man — referee blows for the foul ${zone}.`, `Cynical from ${p} — that’s a free kick ${zone}.`, `${p} gives it away with a clumsy challenge ${zone}.`], 14); break;
+        `Cleared, but only as far as ${zone}.`, `${p} stretches and can only poke it ${zone}.`], 8, 'loose_ball', { p, team, zone }); break;
+      case 'foul': cls = 'cm-foul'; text = this.cpickNR([`Foul by ${p} ${zone}. Free kick ${team === this.homeName ? this.awayName : this.homeName}.`, `${p} catches his man — referee blows for the foul ${zone}.`, `Cynical from ${p} — that’s a free kick ${zone}.`, `${p} gives it away with a clumsy challenge ${zone}.`], 14, 'foul', { p, team, zone }); break;
       case 'yellow_card': { cls = 'cm-card yellow'; const yc = `<span class="ico-inline">${sprite('card')}</span>`;
-        text = this.cpickNR([`${yc} Booked! ${p} goes into the book for that one.`, `${yc} Yellow card for ${p} — the ref had no choice.`, `${yc} ${p} is cautioned. He’ll have to be careful now.`], 15); break; }
+        text = this.cpickNR([`${yc} Booked! ${p} goes into the book for that one.`, `${yc} Yellow card for ${p} — the ref had no choice.`, `${yc} ${p} is cautioned. He’ll have to be careful now.`], 15, 'yellow_card', { p, team, zone }); break; }
       case 'red_card': { cls = 'cm-card red'; const rc = `<span class="ico-inline">${sprite('card-red')}</span>`;
         text = e.zone === 'mid'
-          ? this.cpickNR([`${rc} SECOND YELLOW — ${p} is OFF! ${team} down to ten!`, `${rc} Two yellows and gone! ${p} takes the long walk — ${team} a man light!`], 16)
-          : this.cpickNR([`${rc} RED CARD! ${p} is sent off — ${team} down to ten men!`, `${rc} Straight red for ${p}! A moment of madness — ${team} are down to ten!`, `${rc} He’s off! ${p} sees red and ${team} must dig in with ten!`], 16); break; }
+          ? this.cpickNR([`${rc} SECOND YELLOW — ${p} is OFF! ${team} down to ten!`, `${rc} Two yellows and gone! ${p} takes the long walk — ${team} a man light!`], 16, 'red_card', { p, team, zone })
+          : this.cpickNR([`${rc} RED CARD! ${p} is sent off — ${team} down to ten men!`, `${rc} Straight red for ${p}! A moment of madness — ${team} are down to ten!`, `${rc} He’s off! ${p} sees red and ${team} must dig in with ten!`], 16, 'red_card', { p, team, zone }); break; }
       case 'free_kick': cls = 'cm-freekick'; text = this.cpickNR([`Dangerous free kick for ${team} — ${p} stands over it…`, `${p} lines up the free kick in a promising spot…`, `Chance from the set piece — ${p} to deliver for ${team}…`,
         `${team} have a free kick in a dangerous area; ${p} is over it.`, `The wall goes up as ${p} measures his run…`,
         `Inviting position for ${team} — ${p} eyes the near post.`, `${p} stands with his hands on hips, waiting for the whistle…`,
-        `A yard outside the box, and ${p} fancies it himself.`], 17); break;
-      case 'penalty': cls = 'cm-pen'; text = this.cpickNR([`⚠️ PENALTY to ${team}! ${p} will take it…`, `⚠️ The ref points to the spot — penalty ${team}! ${p} steps up…`, `⚠️ Spot kick for ${team}! It’s down to ${p}…`], 18); break;
-      case 'penalty_missed': cls = 'cm-miss'; text = this.cpickNR([`❌ MISSED! ${p} sends the penalty wide — what a let-off!`, `❌ Saved! The keeper guesses right and denies ${p} from the spot!`, `❌ ${p} blazes the penalty over! He’ll never forget that.`], 19); break;
+        `A yard outside the box, and ${p} fancies it himself.`], 17, 'free_kick', { p, team, zone }); break;
+      case 'penalty': cls = 'cm-pen'; text = this.cpickNR([`⚠️ PENALTY to ${team}! ${p} will take it…`, `⚠️ The ref points to the spot — penalty ${team}! ${p} steps up…`, `⚠️ Spot kick for ${team}! It’s down to ${p}…`], 18, 'penalty', { p, team, zone }); break;
+      case 'penalty_missed': cls = 'cm-miss'; text = this.cpickNR([`❌ MISSED! ${p} sends the penalty wide — what a let-off!`, `❌ Saved! The keeper guesses right and denies ${p} from the spot!`, `❌ ${p} blazes the penalty over! He’ll never forget that.`], 19, 'penalty_missed', { p, team, zone }); break;
       case 'corner': cls = 'cm-corner'; text = this.cpickNR([`Corner to ${team} — ${p} to swing it in…`, `${p} jogs over to take the corner for ${team}…`,
         `${team} win a corner; ${p} will take it.`, `Out for a corner — ${p} places the ball on the quadrant.`,
         `Another set piece for ${team}, ${p} over it.`, `${p} waves them forward before he takes it.`,
         `Corner ${team}. The big men are coming up.`, `${p} signals short, and thinks better of it.`,
-        `Deep corner coming in from ${p}.`, `${p} takes his time over the corner — ${team} loading the box.`], 20); break;
+        `Deep corner coming in from ${p}.`, `${p} takes his time over the corner — ${team} loading the box.`], 20, 'corner', { p, team, zone }); break;
       case 'injury': cls = 'cm-injury'; text = this.cpickNR([`🚑 ${p} is down and hurt — he can’t continue for ${team}.`, `🚑 Trouble for ${team} — ${p} has pulled up injured.`, `🚑 ${p} signals to the bench; that’s him done for the day.`,
         `🚑 ${p} goes down untouched — that never looks good.`, `🚑 The physio is on for ${p}, and shaking his head.`,
-        `🚑 ${p} tries to run it off and can't; ${team} will have to change it.`], 23); break;
+        `🚑 ${p} tries to run it off and can't; ${team} will have to change it.`], 23, 'injury', { p, team, zone }); break;
       case 'sub': { const off = e.playerName2 ?? 'a teammate'; cls = 'cm-sub'; text = this.cpickNR([`🔄 Change for ${team}: ${e.playerName} comes on for ${off}.`, `🔄 ${team} go to the bench — ${e.playerName} replaces ${off}.`, `🔄 Fresh legs for ${team}: ${off} off, ${e.playerName} on.`,
         `🔄 ${off} makes way; ${e.playerName} is on for ${team}.`, `🔄 The board goes up — ${e.playerName} for ${off}.`,
         `🔄 ${team} change it: ${e.playerName} replaces a tiring ${off}.`, `🔄 ${off} gets a hand from the crowd as ${e.playerName} comes on.`,
-        `🔄 A roll of the dice from ${team} — ${e.playerName} on for ${off}.`], 24); break; }
+        `🔄 A roll of the dice from ${team} — ${e.playerName} on for ${off}.`], 24, 'sub', { p, team, zone, off, name: e.playerName }); break; }
       case 'halftime': cls = 'cm-break'; text = `⏸ Half-time. ${this.homeName} ${sc[0]}–${sc[1]} ${this.awayName}.`; break;
       case 'fulltime': cls = 'cm-break'; text = `🏁 Full-time! ${this.homeName} ${sc[0]}–${sc[1]} ${this.awayName}.`; break;
     }

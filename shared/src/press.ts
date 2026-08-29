@@ -1,3 +1,8 @@
+import { mergeList } from './prompts/merge.js';
+import { PRESS_EXTRA_1 } from './extra/press_pack_1.js';
+import { PRESS_EXTRA_2 } from './extra/press_pack_2.js';
+import { PRESS_EXTRA_3 } from './extra/press_pack_3.js';
+import { PRESS_EXTRA_4 } from './extra/press_pack_4.js';
 // ── Press conferences — a deterministic pool of pre-/post-match media beats ──
 // Audit finding: variety in the manager hub was folded entirely into the Gaffer's Diary; there was no
 // distinct "press conference" surface. This module is a standalone system (its own file, per the
@@ -36,76 +41,93 @@ const COMPETITION_TAG: Record<PressCompetition, string> = {
 };
 
 // ── PRE-match: reporters probe team news, pressure, expectation ──
-const PRE_ROUTINE: string[] = [
+const BASE_PRE_ROUTINE: string[] = [
   'A quiet room today — mostly routine questions about team news and fitness.',
   '"Just another game to us, prepare the same way every week," is the line to the press.',
   'The press pack are more interested in the team sheet than any grand narrative today.',
   'Nothing to read into the tone in the room — a routine build-up to a routine fixture.',
 ];
-const PRE_STAKES_HIGH: string[] = [
+const BASE_PRE_STAKES_HIGH: string[] = [
   'The room is packed. Every question circles back to the same word: pressure.',
   '"We embrace it, we don\'t hide from it," comes the answer when the stakes are put to the room.',
   'A charged press conference — everyone in the building knows what tonight could mean.',
   'The line about "taking each game as it comes" gets a harder test than usual today.',
 ];
-const PRE_HOT_FORM: string[] = [
+const BASE_PRE_HOT_FORM: string[] = [
   'Reporters are asking about momentum, and there\'s no reason to talk it down.',
   '"We\'re playing with real confidence right now, and it shows," is the message to the press.',
   'A relaxed, upbeat room — good form makes for easy press conferences.',
 ];
-const PRE_COLD_FORM: string[] = [
+const BASE_PRE_COLD_FORM: string[] = [
   'Every question today comes back to the recent run, one way or another.',
   '"We\'re better than the results suggest, and we\'ll prove it," is the line under pressure.',
   'A tense room. The questions about form keep coming, and there\'s no ducking them.',
 ];
-const PRE_CONTINENTAL: string[] = [
+const BASE_PRE_CONTINENTAL: string[] = [
   'The foreign press are in the room too today — a different kind of occasion, a different set of questions.',
   '"European nights are what you dream about as a kid," the manager tells the assembled media.',
 ];
-const PRE_INTERNATIONAL: string[] = [
+const BASE_PRE_INTERNATIONAL: string[] = [
   'Talk turns to the players away on international duty, and the risk of picking up knocks.',
   '"We just hope everyone comes back in one piece," is the honest answer on the international break.',
 ];
-const PRE_CUP: string[] = [
+const BASE_PRE_CUP: string[] = [
   'Cup magic gets a mention more than once — reporters love a giant-killing storyline.',
   '"Respect for the opposition, but we\'re here to win it," is the message ahead of the tie.',
 ];
 
 // ── POST-match: reaction to the result just gone ──
-const POST_WIN_ROUTINE: string[] = [
+const BASE_POST_WIN_ROUTINE: string[] = [
   '"Job done, professional performance," is the summary for the cameras.',
   'A satisfied but low-key press conference — three points, nothing more said about it.',
   '"We take the three points and move on to the next one," comes the familiar line.',
 ];
-const POST_WIN_BIG: string[] = [
+const BASE_POST_WIN_BIG: string[] = [
   '"That\'s as complete a performance as we\'ve put in all season," beams the manager.',
   'A genuinely buoyant press conference — this result will be talked about for a while.',
   '"I couldn\'t be prouder of this group after that," is the verdict, and it\'s not for show.',
 ];
-const POST_DRAW: string[] = [
+const BASE_POST_DRAW: string[] = [
   '"A point\'s a point, and on another day it\'s three," is the diplomatic line afterward.',
   'A measured press conference — mild frustration, but no panic in the answers.',
   '"We\'ll take the positives and fix what didn\'t work," comes the response.',
 ];
-const POST_LOSS_ROUTINE: string[] = [
+const BASE_POST_LOSS_ROUTINE: string[] = [
   '"We\'ll analyse it, learn from it, and move on," is the composed reaction.',
   'A short, businesslike press conference — no excuses offered, none really needed.',
   '"Not our day. It happens over a long season," comes the shrugged-off answer.',
 ];
-const POST_LOSS_STAKES: string[] = [
+const BASE_POST_LOSS_STAKES: string[] = [
   'A tense room afterward — every question carries an edge that wasn\'t there before kick-off.',
   '"We\'ll take the criticism, that\'s part of the job," comes the answer, jaw tight.',
   'A defensive, careful press conference — the manager picks every word with real caution.',
   '"I take responsibility. The buck stops with me," is the blunt line to a packed room.',
 ];
-const POST_HOT_FORM_CONTINUES: string[] = [
+const BASE_POST_HOT_FORM_CONTINUES: string[] = [
   '"We just keep winning and let people talk about it," is the relaxed response to another good result.',
   'The questions about momentum get easier to answer with every passing week like this one.',
 ];
-const POST_COLD_FORM_CONTINUES: string[] = [
+const BASE_POST_COLD_FORM_CONTINUES: string[] = [
   '"We know it needs to change, and it will," is the tired but defiant line after another below-par result.',
   'A press conference that\'s starting to feel repetitive — same questions, same patient answers, different week.',
 ];
+
+// BASE banks plus every authoring pack — see shared/src/prompts/merge.ts for why packs are separate files.
+const PRE_ROUTINE: string[] = mergeList(BASE_PRE_ROUTINE as string[], PRESS_EXTRA_1['PRE_ROUTINE'], PRESS_EXTRA_2['PRE_ROUTINE'], PRESS_EXTRA_3['PRE_ROUTINE'], PRESS_EXTRA_4['PRE_ROUTINE']);
+const PRE_STAKES_HIGH: string[] = mergeList(BASE_PRE_STAKES_HIGH as string[], PRESS_EXTRA_1['PRE_STAKES_HIGH'], PRESS_EXTRA_2['PRE_STAKES_HIGH'], PRESS_EXTRA_3['PRE_STAKES_HIGH'], PRESS_EXTRA_4['PRE_STAKES_HIGH']);
+const PRE_HOT_FORM: string[] = mergeList(BASE_PRE_HOT_FORM as string[], PRESS_EXTRA_1['PRE_HOT_FORM'], PRESS_EXTRA_2['PRE_HOT_FORM'], PRESS_EXTRA_3['PRE_HOT_FORM'], PRESS_EXTRA_4['PRE_HOT_FORM']);
+const PRE_COLD_FORM: string[] = mergeList(BASE_PRE_COLD_FORM as string[], PRESS_EXTRA_1['PRE_COLD_FORM'], PRESS_EXTRA_2['PRE_COLD_FORM'], PRESS_EXTRA_3['PRE_COLD_FORM'], PRESS_EXTRA_4['PRE_COLD_FORM']);
+const PRE_CONTINENTAL: string[] = mergeList(BASE_PRE_CONTINENTAL as string[], PRESS_EXTRA_1['PRE_CONTINENTAL'], PRESS_EXTRA_2['PRE_CONTINENTAL'], PRESS_EXTRA_3['PRE_CONTINENTAL'], PRESS_EXTRA_4['PRE_CONTINENTAL']);
+const PRE_INTERNATIONAL: string[] = mergeList(BASE_PRE_INTERNATIONAL as string[], PRESS_EXTRA_1['PRE_INTERNATIONAL'], PRESS_EXTRA_2['PRE_INTERNATIONAL'], PRESS_EXTRA_3['PRE_INTERNATIONAL'], PRESS_EXTRA_4['PRE_INTERNATIONAL']);
+const PRE_CUP: string[] = mergeList(BASE_PRE_CUP as string[], PRESS_EXTRA_1['PRE_CUP'], PRESS_EXTRA_2['PRE_CUP'], PRESS_EXTRA_3['PRE_CUP'], PRESS_EXTRA_4['PRE_CUP']);
+const POST_WIN_ROUTINE: string[] = mergeList(BASE_POST_WIN_ROUTINE as string[], PRESS_EXTRA_1['POST_WIN_ROUTINE'], PRESS_EXTRA_2['POST_WIN_ROUTINE'], PRESS_EXTRA_3['POST_WIN_ROUTINE'], PRESS_EXTRA_4['POST_WIN_ROUTINE']);
+const POST_WIN_BIG: string[] = mergeList(BASE_POST_WIN_BIG as string[], PRESS_EXTRA_1['POST_WIN_BIG'], PRESS_EXTRA_2['POST_WIN_BIG'], PRESS_EXTRA_3['POST_WIN_BIG'], PRESS_EXTRA_4['POST_WIN_BIG']);
+const POST_DRAW: string[] = mergeList(BASE_POST_DRAW as string[], PRESS_EXTRA_1['POST_DRAW'], PRESS_EXTRA_2['POST_DRAW'], PRESS_EXTRA_3['POST_DRAW'], PRESS_EXTRA_4['POST_DRAW']);
+const POST_LOSS_ROUTINE: string[] = mergeList(BASE_POST_LOSS_ROUTINE as string[], PRESS_EXTRA_1['POST_LOSS_ROUTINE'], PRESS_EXTRA_2['POST_LOSS_ROUTINE'], PRESS_EXTRA_3['POST_LOSS_ROUTINE'], PRESS_EXTRA_4['POST_LOSS_ROUTINE']);
+const POST_LOSS_STAKES: string[] = mergeList(BASE_POST_LOSS_STAKES as string[], PRESS_EXTRA_1['POST_LOSS_STAKES'], PRESS_EXTRA_2['POST_LOSS_STAKES'], PRESS_EXTRA_3['POST_LOSS_STAKES'], PRESS_EXTRA_4['POST_LOSS_STAKES']);
+const POST_HOT_FORM_CONTINUES: string[] = mergeList(BASE_POST_HOT_FORM_CONTINUES as string[], PRESS_EXTRA_1['POST_HOT_FORM_CONTINUES'], PRESS_EXTRA_2['POST_HOT_FORM_CONTINUES'], PRESS_EXTRA_3['POST_HOT_FORM_CONTINUES'], PRESS_EXTRA_4['POST_HOT_FORM_CONTINUES']);
+const POST_COLD_FORM_CONTINUES: string[] = mergeList(BASE_POST_COLD_FORM_CONTINUES as string[], PRESS_EXTRA_1['POST_COLD_FORM_CONTINUES'], PRESS_EXTRA_2['POST_COLD_FORM_CONTINUES'], PRESS_EXTRA_3['POST_COLD_FORM_CONTINUES'], PRESS_EXTRA_4['POST_COLD_FORM_CONTINUES']);
+
 
 /** A deterministic press-conference line for the given moment. `seed` should be the save seed (or a
  *  combination of save seed + round/season number) so the same moment always reads the same way, but
