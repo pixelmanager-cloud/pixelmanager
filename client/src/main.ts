@@ -2719,7 +2719,7 @@ class Game {
       }
       body = `<div class="cg-scenario stakes-${s.scenario.stakes} ${mk}">${header}<div class="cg-story">${s.story ?? s.scenario.label}</div><div class="cg-demand"><span class="cg-demand-lbl">🎯 This calls for:</span> ${tags}<span class="cg-demand-hint">${demandHint}</span></div></div>`
         + `<div class="cg-prompt">${prompt}${s.coach ? ` · <b>${s.coach.name}</b> is coaching him` : ''}</div>`
-        + `<div class="cg-cards">` + (() => { const used = new Set<string>(); return (s.hand ?? []).map((c) => this.cardHtml(c, 'play', mk === 'life', used)).join(''); })() + `</div>`;
+        + `<div class="cg-cards">` + (() => { const used = new Set<string>(); return (s.hand ?? []).map((c) => this.cardHtml(c, 'play', mk === 'life', used, s.turn ?? 0)).join(''); })() + `</div>`;
     } else if (s.phase === 'coach' && s.coaches) {
       body = `<div class="cg-prompt">Appoint a mentor or coach for the coming chapter — they sharpen the work you do in their specialty:</div>`
         + s.coaches.map((c) => `<div class="cg-coach" data-act="coach" data-id="${c.id}"><div class="cg-cname">${c.kind === 'mentor' ? '🧭' : '📋'} ${c.name}</div><div class="cg-cdesc">${c.desc} · <i>${c.specialty.join(', ')}</i></div></div>`).join('');
@@ -2822,7 +2822,7 @@ class Game {
       + `<div class="cgp-stats">${key.map(([k]) => stat(k)).join('')}</div>${traits}</div>`;
   }
 
-  private cardHtml(c: import('./api').CareerCard, act: string, life = false, usedLifeNames?: Set<string>): string {
+  private cardHtml(c: import('./api').CareerCard, act: string, life = false, usedLifeNames?: Set<string>, turn = 0): string {
     const rar = c.rarity && c.rarity !== 'common' ? c.rarity : '';
     // each tag pill carries its own icon + colour class; the card takes the colour of its PRIMARY tag (data-tag)
     // so a hand reads as a scannable spread of identities and matching the demand becomes a visual cue.
@@ -2831,7 +2831,7 @@ class Game {
     // At an off-pitch LIFE EVENT the same card is reframed by the quality it draws on, so "how does he
     // handle it?" gets an off-pitch answer, not an on-pitch move name like "stepover" (PT-43). `usedLifeNames`
     // keeps a whole hand's labels distinct when two cards share a dominant tag (PT-49).
-    const la = life ? lifeAction(c.tags, c.id, usedLifeNames) : null;
+    const la = life ? lifeAction(c.tags, c.id, usedLifeNames, turn) : null;
     if (la && usedLifeNames) usedLifeNames.add(la.name);
     const name = la ? la.name : c.name;
     const desc = la ? la.desc : c.desc;

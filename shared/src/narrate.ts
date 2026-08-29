@@ -59,7 +59,18 @@ const SETTINGS: Record<string, string[]> = {
   Establishing: ['before a full, expectant stand', 'with cameras tracking his every touch', 'in the thick of a proper contest', 'with a lot of eyes on him', 'as a sell-out crowd leaned in', 'with the pundits watching for a reason to doubt him', 'with the whole ground tuned to him', 'as the neutrals watched to be convinced', 'in a fixture the league had circled', 'with reputations on the line', 'before a stand that had come to see him'],
 };
 // big-moment settings override the chapter setting when the stakes are high
-const BIG_SETTINGS = ['in a white-hot derby', 'with the tie hanging in the balance', 'as tempers frayed and the stakes climbed', 'in a bruising six-pointer', 'with promotion on the line', 'under the lights, everything to play for', 'with the season threatening to turn on this one game', 'in the Boxing Day six-pointer', 'on Community Shield curtain-raiser day', 'under the floodlights on a European night', 'in the Youth Cup final', 'with a relegation rival in town', 'in a testimonial the old man deserved', 'as the away end bounced all afternoon'];
+// ATMOSPHERE ONLY — never a fixture identity or a venue. Half of these used to name the match: a moment
+// LABELLED "A Point to Prove" resolved "in a white-hot derby", and "A Scout-Packed Showcase" resolved "on
+// Community Shield curtain-raiser day". The label and this pool are chosen independently, so anything here
+// that claims what KIND of game it is will eventually contradict the screen above it. "as the away end
+// bounced" did the same for venue on a home fixture. Tone is safe; facts are not. (PT-155/PT-808)
+const BIG_SETTINGS = ['with the tie hanging in the balance', 'as tempers frayed and the stakes climbed',
+  'under the lights, everything to play for', 'with the season threatening to turn on this one game',
+  'with the noise never dropping for a second', 'in a game nobody wanted to lose',
+  'with every loose ball fought over twice', 'as the tension crept into everyone\'s legs',
+  'in front of a crowd that had turned up for exactly this', 'with the whole thing balanced on a knife edge',
+  'in an atmosphere you could lean on', 'with the bench on their feet from the first whistle',
+  'in a game that had been circled for weeks', 'with the result mattering far more than the performance'];
 const HUGE_SETTINGS = ['in the cup final, the whole ground holding its breath', 'with the title on the line', 'on the grandest stage of his young life', 'as sixty thousand roared', 'in the last minute of the biggest game of the season', 'with silverware within touching distance', 'in front of a nation watching at home', 'in the derby to end all derbies', 'with promotion, the title, everything riding on ninety minutes', 'on a European night the whole city will remember', 'with the trophy close enough to touch', 'in a winner-takes-all decider', 'as the whole country stopped to watch'];
 
 // action verbs by the card's dominant tag (≥6 each so beats rarely repeat)
@@ -206,7 +217,7 @@ const EVENT_PREFIX: Record<string, string[]> = {
 
 // ── SCENARIO STORY: describe the SITUATION the player faces this turn (before he chooses) ──
 const KIND_SETUP: Record<string, string[]> = {
-  match: ['The game is finely poised.', 'The match hangs in the balance.', 'This is where games are won and lost.', 'The tempo is rising and the tackles are flying in.', 'Both sides are trading blows and neither will blink.', 'It’s scrappy, tight, and crying out for someone to take control.', 'The clock is ticking and the game needs a hero.', 'The ball has just broken loose in a dangerous area.', 'One mistake here and the game turns on its head.', 'The crowd senses something is about to happen.', 'A set-piece is coming and the shape needs to hold.', 'A wet pitch, a heavy ball, and a game turning into a battle of wills.', 'The visiting end has gone quiet — this is his chance to silence the home crowd.', 'A red card has left his side a man light, and someone has to step up.', 'It’s the last action of the half, and the whistle is seconds away.', 'A goal either way here changes the whole complexion of the match.', 'The opposition’s best player has gone quiet — someone else needs to be the difference.', 'A corner is about to be swung in, and the box is a scrum.'],
+  match: ['The game is finely poised.', 'The match hangs in the balance.', 'This is where games are won and lost.', 'The tempo is rising and the tackles are flying in.', 'Both sides are trading blows and neither will blink.', 'It’s scrappy, tight, and crying out for someone to take control.', 'The clock is ticking and the game needs a hero.', 'The ball has just broken loose in a dangerous area.', 'One mistake here and the game turns on its head.', 'The crowd senses something is about to happen.', 'A set-piece is coming and the shape needs to hold.', 'A wet pitch, a heavy ball, and a game turning into a battle of wills.', 'One end of the ground has gone quiet — this is his chance to take the noise out of the other.', 'A red card has left his side a man light, and someone has to step up.', 'It’s the last action of the half, and the whistle is seconds away.', 'A goal either way here changes the whole complexion of the match.', 'The opposition’s best player has gone quiet — someone else needs to be the difference.', 'A corner is about to be swung in, and the box is a scrum.'],
   training: ['On the training ground, the coaches are watching closely.', 'The gaffer has set up a pointed drill.', 'It’s a sharp session, and the staff want to see something specific.', 'Cones out, whistle sharp — this is a test dressed up as a drill.', 'A small-sided game, but the staff are marking cards.', 'Rondos done, now the real work: he’s being pushed today.', 'The fitness coach has set a target and is timing every rep.', 'A tactical shape drill, and the staff want it drilled right.', 'A one-on-one against the reserve-team hardman — no easy reps today.', 'Video session done; now he has to prove he took it in.', 'A recovery session the day after a hard match, legs like lead.', 'A specific weakness has been flagged, and today’s whole session is built around fixing it.', 'The analyst has pulled up clips of exactly what went wrong last time.', 'A friendly, low-key five-a-side that somehow always turns competitive.', 'Pre-season doubles: two sessions, no excuses, everyone watching the fitness numbers.', 'A youth-team kid has been drafted in to make up the numbers, and he’s not going easy.'],
   social: ['Away from the pitch, his character is being tested.', 'In the dressing room, the mood needs handling.', 'Off the field, who he is matters as much as how he plays.', 'A quiet word is needed, and everyone’s watching how he takes it.', 'The group dynamic is fragile, and he’s in the middle of it.', 'This one won’t show on the stat sheet — but it counts.', 'A senior pro has pulled him aside for a word he didn’t ask for.', 'The club wants an answer, and there’s no ducking this one.', 'Team-mates are watching to see what kind of character he really is.', 'Away from the cameras, this is the moment that shapes a reputation.', 'A team meal, and the seating plan says more than anyone will admit.', 'A young player has come to him for advice, and he isn’t sure he has any to give.', 'The captain has called a players-only meeting, and eyes keep flicking his way.', 'A club function, small talk with people who matter more than they let on.', 'A long coach journey home after a bad result, and the silence says everything.'],
   // LIFE-EVENT kinds (real mechanic — see career.ts Scenario.life / LIFE_CONSEQUENCE)
@@ -255,50 +266,78 @@ const LIFE_ACTION: Record<string, LifeAction[]> = {
     { name: 'Keep a cool head', desc: 'Stay calm and deal with it, no drama', noun: 'his cool head' },
     { name: 'Take it in his stride', desc: 'Not let it rattle him', noun: 'an unflappable calm' },
     { name: 'Ride it out calmly', desc: 'Let the storm pass without reacting', noun: 'a level head' },
+    { name: 'Let it wash over him', desc: 'Refuse to give it any weight', noun: 'a stillness that unnerves people' },
+    { name: 'Wait for the noise to stop', desc: 'Say nothing until it passes', noun: 'his knack for outlasting a storm' },
+    { name: 'Deal with it and move on', desc: 'No fuss, no post-mortem', noun: 'an unsentimental streak' },
   ],
   aggression: [
     { name: 'Stand his ground', desc: 'Meet it head-on and refuse to back down', noun: 'his stubborn streak' },
     { name: 'Front up to it', desc: 'Square up to the problem, no flinching', noun: 'a refusal to be pushed around' },
     { name: 'Dig his heels in', desc: 'Hold firm and make his point', noun: 'a bloody-minded streak' },
+    { name: 'Push back twice as hard', desc: 'Make it clear he will not be moved', noun: 'an edge people learn to respect' },
+    { name: 'Say the unsayable thing', desc: 'Put it on the table, bluntly', noun: 'a willingness to have the row' },
+    { name: 'Refuse to let it go', desc: 'Follow it all the way through', noun: 'a stubbornness that borders on a fault' },
   ],
   creativity: [
     { name: 'Find another way', desc: 'Think around the problem', noun: 'his knack for a solution nobody else sees' },
     { name: 'Talk his way through', desc: 'A clever answer to a tricky spot', noun: 'quick thinking' },
     { name: 'Improvise a fix', desc: 'Come at it from an angle no one expects', noun: 'a bit of improvisation' },
+    { name: 'Come at it sideways', desc: 'Try the answer nobody expects', noun: 'a mind that will not sit still' },
+    { name: 'Make something out of nothing', desc: 'Improvise, and hope', noun: 'his talent for the unlikely' },
+    { name: 'Change the question', desc: 'Refuse the choice he was offered', noun: 'an unwillingness to accept the obvious' },
   ],
   teamwork: [
     { name: 'Lean on the people around him', desc: 'Not try to carry it alone', noun: 'the people around him' },
     { name: 'Share the load', desc: 'Bring others in rather than bottle it up', noun: 'his instinct to share the load' },
     { name: 'Talk it through with the group', desc: 'Sort it together, not on his own', noun: 'the trust of the dressing room' },
+    { name: 'Get everyone in a room', desc: 'Sort it out together or not at all', noun: 'an instinct for pulling people in' },
+    { name: 'Take the smaller part', desc: 'Let someone else have the moment', noun: 'a lack of interest in the credit' },
+    { name: 'Cover for someone else', desc: 'Carry it so they do not have to', noun: 'a habit of shouldering other people\'s weight' },
   ],
   leadership: [
     { name: 'Take charge of it', desc: 'Front up and own the situation', noun: 'his instinct to take charge' },
     { name: 'Set the example', desc: 'Handle it the way he’d want others to', noun: 'a quiet authority' },
     { name: 'Lead from the front', desc: 'Show everyone how it’s done', noun: 'his sense of responsibility' },
+    { name: 'Say what nobody will', desc: 'Be the one who names it', noun: 'a voice people wait for' },
+    { name: 'Take the blame himself', desc: 'Whether or not it was his', noun: 'a broad set of shoulders' },
+    { name: 'Set the standard and hold it', desc: 'Do it right and let them follow', noun: 'a way of raising the room' },
   ],
   stamina: [
     { name: 'Grind through it', desc: 'Head down, outlast the hard part', noun: 'sheer persistence' },
     { name: 'Keep going', desc: 'Refuse to let it wear him down', noun: 'a refusal to be worn down' },
     { name: 'Tough it out', desc: 'Put in the graft nobody sees', noun: 'a bottomless work ethic' },
+    { name: 'Outlast it', desc: 'Simply be the last one standing', noun: 'a refusal to tire' },
+    { name: 'Do the boring work first', desc: 'Grind out the unglamorous part', noun: 'an appetite for the dull hours' },
+    { name: 'Keep going long after sensible', desc: 'Well past the point of reason', noun: 'a body that answers when asked' },
   ],
   flair: [
     { name: 'Front it out', desc: 'Carry it off with easy confidence', noun: 'an easy confidence' },
     { name: 'Charm his way through', desc: 'Disarm it with a bit of personality', noun: 'his natural charm' },
     { name: 'Style it out', desc: 'Wave it off like it’s nothing', noun: 'an unshakeable swagger' },
+    { name: 'Do it with a bit of style', desc: 'If it is worth doing, make it memorable', noun: 'a taste for the theatrical' },
+    { name: 'Enjoy himself', desc: 'Refuse to treat it as a chore', noun: 'a lightness that carries him' },
+    { name: 'Make a moment of it', desc: 'Give people something to talk about', noun: 'an eye for the occasion' },
   ],
   keeping: [
     { name: 'Hold the line', desc: 'Be the steady, dependable one', noun: 'a steady, dependable streak' },
     { name: 'Stay solid', desc: 'Keep it together and see it out', noun: 'his composure under pressure' },
     { name: 'Be the safe pair of hands', desc: 'The one everyone can rely on', noun: 'a reassuring dependability' },
+    { name: 'Read it before it happens', desc: 'Be where it is going to be', noun: 'an instinct for anticipation' },
+    { name: 'Command his area', desc: 'Take charge of the space around him', noun: 'an authority in his own patch' },
+    { name: 'Hold his line', desc: 'Trust the position and stay', noun: 'a discipline that rarely breaks' },
   ],
 };
 const strHash = (s: string): number => { let h = 2166136261 >>> 0; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0; } return h >>> 0; };
 /** Reframe a football card as an off-pitch response, keyed on its dominant tag and stable per card id.
  *  `avoid` (names already used by other cards in the same hand) lets the caller keep a hand's off-pitch
  *  labels DISTINCT even when two cards share a dominant tag (PT-49). */
-export function lifeAction(tags: string[], id: string, avoid?: ReadonlySet<string>): LifeAction {
+/** `rotate` (pass the turn) makes the phrasing MOVE over a career. Selection used to be
+ *  `strHash(id) % pool.length` and nothing else — stable per card forever — so the eight off-pitch cards a
+ *  ten-year-old is offered were still the identical eight labels at twenty-two, and growing the pool could
+ *  not change that, because a given card always mapped to the same entry. (PT-809) */
+export function lifeAction(tags: string[], id: string, avoid?: ReadonlySet<string>, rotate = 0): LifeAction {
   const pool = LIFE_ACTION[tags[0]] ?? LIFE_ACTION.composure;
-  const start = strHash(id) % pool.length;
+  const start = (strHash(id) + Math.floor(rotate / 6)) % pool.length;
   for (let i = 0; i < pool.length; i++) {
     const cand = pool[(start + i) % pool.length];
     if (!avoid || !avoid.has(cand.name)) return cand;
@@ -690,7 +729,7 @@ export function narrateLifeEvent(kind: string, cardName: string, success: number
     : '';
   // Splice a tag-derived quality ("his cool head"), NOT the on-pitch card name — an off-pitch moment isn't
   // resolved by "a defence-splitting pass" (PT-43). Fall back to the raw name only if tags weren't supplied.
-  const token = cardTags && cardId ? lifeAction(cardTags, cardId).noun : cardName;
+  const token = cardTags && cardId ? lifeAction(cardTags, cardId, undefined, ctx.turn ?? 0).noun : cardName;
   return `${lead} ${token} ${resline}${approachLine}${castReact}`;
 }
 
@@ -818,7 +857,7 @@ export function narrateAcademyScare(cardName: string, success: number, ctx: Narr
   const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
   const strong = band(success) === 'triumph' || band(success) === 'good';
   const resline = pick(strong ? SCARE_RESOLUTION_GOOD : SCARE_RESOLUTION_SHAKY);
-  const token = cardTags && cardId ? lifeAction(cardTags, cardId).noun : cardName;
+  const token = cardTags && cardId ? lifeAction(cardTags, cardId, undefined, ctx.turn ?? 0).noun : cardName;
   return `He falls back on ${token} to make his case ${resline}`;
 }
 
