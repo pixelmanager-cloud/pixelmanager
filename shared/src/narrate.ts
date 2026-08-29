@@ -32,7 +32,12 @@ export interface CareerCast { gaffer: string; rival: string; mentor: string; cap
  *  never share the bloodline's own name — "Coach Okonkwo" for the Okonkwo family reads as a bug (PT-141). This
  *  rng is careerCast-local (seeded only from careerSeed, not the career's main stream), so the collision-skip
  *  never perturbs career replay. */
-export function careerCast(careerSeed: number, avoid?: string): CareerCast {
+// `avoid` is REQUIRED (pass undefined deliberately if you mean it). It was optional, and three call sites
+// simply forgot it — the story-arc branch, the chapter recap and the graduation epilogue — so the seeded
+// rival renamed himself between the arc you were reading and the recap of the chapter it was in. An
+// optional argument that must not be omitted is a bug waiting for a new call site; the compiler can hold
+// this invariant and a grep cannot. (PT-602)
+export function careerCast(careerSeed: number, avoid: string | undefined): CareerCast {
   const rng = mulberry32((careerSeed >>> 0) ^ 0x9e3779b9);
   const av = (avoid ?? '').trim().toLowerCase();
   const pick = (a: readonly string[]): string => {
@@ -414,16 +419,15 @@ export function scenarioStory(kind: string, topTag: string, moment: string | nul
   const eventTint = c.seasonEventId && EVENT_PREFIX[c.seasonEventId] && strHash(salt + ':evt:' + turn) % 2 === 0
     ? pickByTurn(EVENT_PREFIX[c.seasonEventId], turn, 7, salt) : '';
   const cast = c.careerSeed != null ? careerCast(c.careerSeed, c.castAvoid) : null;
-  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   // occasionally attribute the situation to a recurring character (its own sentence — follows a full stop)
   // a child on a park pitch has a coach, parents on the touchline and rival kids — never a club captain or a
   // veteran mentor, so Grassroots/Academy get their own park-appropriate cast framings (PT-133, cf PT-46/103)
   const charRaw = cast && rng() < 0.4
     ? (c.chapter && CHILD_CHAPTERS.has(c.chapter)
-        ? pickByTurn([`Coach ${cast.gaffer} wants to see how he handles it.`, `Beat ${cast.rival} to it and he'll never hear the end of it.`, `His mum's watching from the touchline.`, `Coach ${cast.gaffer} has been talking about this one all week.`, `${cast.rival} is watching from the other side.`, `His dad has taken the morning off for it.`, `The whole team is buzzing about it.`], turn, 5, salt)
-        : pickByTurn([`${cap(cast.mentor)} reckons this is the making of him.`, `${cast.gaffer} wants to see how he handles it.`, `${cap(cast.captain)} is looking his way.`, `Beat ${cast.rival} to it and the point is made.`,
-            `${cast.gaffer} has picked him for a reason.`, `${cap(cast.mentor)} has been waiting to see this.`, `${cap(cast.captain)} has already had a word.`,
-            `${cast.rival} is having a good week. That rankles.`, `There are people here to watch him specifically.`, `${cast.gaffer} said one sentence to him before kick-off.`], turn, 5, salt))
+        ? pickByTurn([`Coach ${cast.gaffer} wants to see how he handles it.`, `Beat ${cast.rival} to it and he'll never hear the end of it.`, `His mum's watching from the touchline.`, `Coach ${cast.gaffer} has been talking about this one all week.`, `${cap(cast.rival)} is watching from the other side.`, `His dad has taken the morning off for it.`, `The whole team is buzzing about it.`], turn, 5, salt)
+        : pickByTurn([`${cap(cast.mentor)} reckons this is the making of him.`, `${cap(cast.gaffer)} wants to see how he handles it.`, `${cap(cast.captain)} is looking his way.`, `Beat ${cast.rival} to it and the point is made.`,
+            `${cap(cast.gaffer)} has picked him for a reason.`, `${cap(cast.mentor)} has been waiting to see this.`, `${cap(cast.captain)} has already had a word.`,
+            `${cap(cast.rival)} is having a good week. That rankles.`, `There are people here to watch him specifically.`, `${cap(cast.gaffer)} said one sentence to him before kick-off.`], turn, 5, salt))
     : '';
   const charline = charRaw ? ' ' + charRaw : '';
   // The frame ("Terrified of being dropped, ") describes HIM; the setup describes the SITUATION — splicing
@@ -433,7 +437,7 @@ export function scenarioStory(kind: string, topTag: string, moment: string | nul
   const frameRaw = eventTint || ageFraming(turn, salt, c.age, c.chapter);
   const frameSentence = frameRaw ? asSentence(frameRaw) + ' ' : '';
   if (moment) {
-    return `${frameSentence}It’s ${moment}. ${demand}${charline}`.trim();
+    return `${frameSentence}It’s ${momentPhrase(moment)}. ${demand}${charline}`.trim();
   }
   // youngest chapters draw park/school-football language, not the senior reserve-team banks (PT-46)
   const pool = c.chapter && CHILD_CHAPTERS.has(c.chapter) && CHILD_SETUP[kind] ? CHILD_SETUP[kind] : KIND_SETUP[kind] ?? KIND_SETUP.match;
@@ -517,7 +521,6 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
   // the outcome carries the season-event colour only sometimes — the scenario prompt already shows it, so
   // stamping it on every outcome too doubled the repetition across the two surfaces (PT-54)
   const prefix = ctx.seasonEventId && EVENT_PREFIX[ctx.seasonEventId] && rng() < 0.4 ? pick(EVENT_PREFIX[ctx.seasonEventId]) : '';
-  const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
   const lead = prefix ? prefix + setting : cap(setting);
   // personality VOICE: an adverbial colour before the verb (felt throughout), plus the rare stated clause
   const adv = PERSONALITY_ADV[ctx.personalityId] && rng() < 0.5 ? pick(PERSONALITY_ADV[ctx.personalityId]) + ' ' : '';
@@ -532,10 +535,10 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
         // park-football cast, no senior captain/mentor (PT-133); widened from 4 (PT-403)
         ? pick([`Coach ${cast.gaffer} gave him a nod.`, `His dad cheered louder than anyone.`, `His teammates mobbed him.`, `One in the eye for ${cast.rival}.`,
             `Coach ${cast.gaffer} pretended not to be pleased.`, `Someone's parent shouted his name.`, `The touchline made a noise it hadn't all morning.`,
-            `${cast.rival} didn't look over. He'd seen it.`, `He was still buzzing about it on the walk home.`, `His dad said nothing, and grinned the whole way back.`])
-        : pick([`${cast.gaffer} said nothing, but noted it.`, `${cap(cast.mentor)} allowed himself a smile.`, `${cast.captain} clapped him on the back.`, `One in the eye for ${cast.rival}.`,
-            `${cast.gaffer} made a mark on his sheet.`, `${cap(cast.mentor)} had seen that coming for weeks.`, `${cast.captain} said his name in the huddle.`,
-            `${cast.rival} watched it and said nothing.`, `The bench were up before the ball landed.`, `${cast.gaffer} let the staff know about that one later.`]))
+            `${cap(cast.rival)} didn't look over. He'd seen it.`, `He was still buzzing about it on the walk home.`, `His dad said nothing, and grinned the whole way back.`])
+        : pick([`${cap(cast.gaffer)} said nothing, but noted it.`, `${cap(cast.mentor)} allowed himself a smile.`, `${cap(cast.captain)} clapped him on the back.`, `One in the eye for ${cast.rival}.`,
+            `${cap(cast.gaffer)} made a mark on his sheet.`, `${cap(cast.mentor)} had seen that coming for weeks.`, `${cap(cast.captain)} said his name in the huddle.`,
+            `${cap(cast.rival)} watched it and said nothing.`, `The bench were up before the ball landed.`, `${cap(cast.gaffer)} let the staff know about that one later.`]))
     : '';
   const milestone = ctx.milestone && MILESTONE[ctx.milestone] ? MILESTONE[ctx.milestone] : '';
   const action = adv ? `he, ${adv}${verb}` : `he ${verb}`; // "he, grinning, flew into …"
@@ -679,10 +682,10 @@ export function narrateLifeEvent(kind: string, cardName: string, success: number
   const castReact = cast && rng() < 0.3 && good
     ? ' ' + (CHILD_CHAPTERS.has(ctx.chapter)
         ? pick([`Coach ${cast.gaffer} appreciates how he handled it.`, `Even ${cast.rival} would admit that was well played.`, `His mates are impressed.`,
-            `Coach ${cast.gaffer} tells someone about it that evening.`, `Nobody expected him to handle it that well.`, `${cast.rival} has gone quiet about it.`,
+            `Coach ${cast.gaffer} tells someone about it that evening.`, `Nobody expected him to handle it that well.`, `${cap(cast.rival)} has gone quiet about it.`,
             `His mum hears a version of it twice.`, `It goes down rather better than he'd feared.`])
-        : pick([`${cast.gaffer} appreciates how he handled it.`, `Even ${cast.rival} would admit that was well played.`, `His agent breathes a quiet sigh of relief.`,
-            `${cast.gaffer} noted the way he dealt with it.`, `It reflects well on him in rooms he wasn't in.`, `${cast.rival} would not have handled it as neatly.`,
+        : pick([`${cap(cast.gaffer)} appreciates how he handled it.`, `Even ${cast.rival} would admit that was well played.`, `His agent breathes a quiet sigh of relief.`,
+            `${cap(cast.gaffer)} noted the way he dealt with it.`, `It reflects well on him in rooms he wasn't in.`, `${cap(cast.rival)} would not have handled it as neatly.`,
             `The staff mention it approvingly.`, `That will have been noticed upstairs.`]))
     : '';
   // Splice a tag-derived quality ("his cool head"), NOT the on-pitch card name — an off-pitch moment isn't
@@ -713,7 +716,7 @@ const RIVAL_RESOLUTION = {
 export function rivalMomentStory(rivalName: string, moment: string | null, ctx: ScenarioCtx): string {
   const rng = mulberry32(ctx.seed >>> 0);
   const setup = pickFrom(rng, RIVAL_SETUP).replace('{rival}', rivalName);
-  return moment ? `It’s ${moment} — and ${setup.charAt(0).toLowerCase() + setup.slice(1)}` : setup;
+  return moment ? `It’s ${momentPhrase(moment)} — and ${setup.charAt(0).toLowerCase() + setup.slice(1)}` : setup;
 }
 export interface RivalPayoff { rivalName: string; leadBefore: number; leadAfter: number }
 /** The RESOLUTION beat for a rivalry moment — names the actual lead swing (overtook him / fell behind). */
@@ -751,7 +754,7 @@ const CALLUP_RESOLUTION = {
 export function callupMomentStory(moment: string | null, ctx: ScenarioCtx): string {
   const rng = mulberry32(ctx.seed >>> 0);
   const setup = pickFrom(rng, CALLUP_SETUP);
-  return moment ? `It’s ${moment} — and ${setup.charAt(0).toLowerCase() + setup.slice(1)}` : setup;
+  return moment ? `It’s ${momentPhrase(moment)} — and ${setup.charAt(0).toLowerCase() + setup.slice(1)}` : setup;
 }
 /** The RESOLUTION beat for a shock call-up. */
 export function narrateCallupMoment(cardName: string, success: number, ctx: NarrateCtx): string {
@@ -761,7 +764,7 @@ export function narrateCallupMoment(cardName: string, success: number, ctx: Narr
   const resline = pick(good ? CALLUP_RESOLUTION.good : CALLUP_RESOLUTION.bad);
   const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed, ctx.castAvoid) : null;
   const reax = cast && rng() < 0.3
-    ? ' ' + (good ? `${cast.gaffer} could not have asked for more.` : `${cast.gaffer} will give him another chance — everyone gets one bad night.`)
+    ? ' ' + (good ? `${cap(cast.gaffer)} could not have asked for more.` : `${cap(cast.gaffer)} will give him another chance — everyone gets one bad night.`)
     : '';
   return `Thrown in cold, he goes to work on ${cardName} ${resline}${reax}`;
 }
@@ -879,13 +882,23 @@ export function chapterRecap(ctx: RecapCtx): string {
     Establishing: ['He belongs here now.', 'No longer the kid — a fixture, a name.', 'The dressing room defers to him a little more with each passing month.', 'Younger lads watch how he trains now. That tells you everything.'],
   };
   const open = pickFrom(rng, openers[ctx.chapter] ?? openers.Academy);
-  const middle = pickFrom(rng, [`${cast.gaffer} has pushed him hard.`, `${cap0(cast.mentor)} has taken him under his wing.`, `He’s measured himself against ${cast.rival} at every step.`, `${cast.captain} says the makings are there.`]);
+  const middle = pickFrom(rng, [`${cap(cast.gaffer)} has pushed him hard.`, `${cap(cast.mentor)} has taken him under his wing.`, `He’s measured himself against ${cast.rival} at every step.`, `${cap(cast.captain)} says the makings are there.`]);
   const ahead = ctx.nextChapter
     ? pickFrom(rng, [` Now comes the ${ctx.nextChapter} chapter — and the pressure that comes with it.`, ` The ${ctx.nextChapter} stage awaits, tougher than the last.`])
     : '';
   return `${open} ${middle}${ahead}`;
 }
-function cap0(s: string) { return s.charAt(0).toUpperCase() + s.slice(1); }
+/** Capitalise a sentence-initial name. The ONE helper — see PT-810. */
+function cap(s: string) { return s.charAt(0).toUpperCase() + s.slice(1); }
+/** A moment label rendered as PROSE. These strings double as UI badges, where some are shouted
+ *  ("CUP FINAL") and others are already sentence case ("Derby Day"). Splicing them raw produced
+ *  "It's CUP FINAL — and he..." next to a correct "It's Derby Day." in the same run. Shouted labels get
+ *  title case; anything already mixed-case is left exactly as the author wrote it. (PT-810) */
+function momentPhrase(m: string): string {
+  const letters = m.replace(/[^A-Za-z]/g, '');
+  if (!letters || letters !== letters.toUpperCase()) return m;   // not a shouted label — leave it alone
+  return m.toLowerCase().replace(/\b[a-z]/g, (ch) => ch.toUpperCase());
+}
 
 export interface EpilogueCtx { name: string; careerSeed: number; personalityId?: string; overall: number; topTraits?: string[]; role?: string; castAvoid?: string }
 /** An evocative summary of the whole 10→25 journey, shown at graduation before the pro reveal. */
@@ -915,13 +928,13 @@ export function graduationEpilogue(ctx: EpilogueCtx): string {
     'Somewhere there’s a photo of him, aged ten, grinning with a medal too big for a ten-year-old’s neck.',
   ]);
   const close = pickFrom(rng, [
-    `${cast.gaffer} always said he’d make it. He was right.`,
-    `${cap0(cast.mentor)} — the same voice at the end of the phone through every crossroads — shook his hand and said little. He didn’t need to.`,
+    `${cap(cast.gaffer)} always said he’d make it. He was right.`,
+    `${cap(cast.mentor)} — the same voice at the end of the phone through every crossroads — shook his hand and said little. He didn’t need to.`,
     `Somewhere, ${cast.rival} — the mate turned rival turned, somehow, still a friend — is watching, and wondering.`,
-    `His family were there for every step of it — and they’re still there now.`, `${cast.captain} is already talking about a dressing room with him in it.`,
+    `His family were there for every step of it — and they’re still there now.`, `${cap(cast.captain)} is already talking about a dressing room with him in it.`,
     `Fifteen years of Sunday mornings and van journeys, and it was worth every single one.`,
     `He and ${cast.rival} came up together, fell out, and came out the other side still able to look each other in the eye. That, in the end, might be the real story.`,
-    `${cap0(cast.mentor)}’s advice is still in his head, all these years on — even the bits of it he eventually chose to ignore.`,
+    `${cap(cast.mentor)}’s advice is still in his head, all these years on — even the bits of it he eventually chose to ignore.`,
   ]);
   return `${start} At twenty-five, ${ctx.name} emerges as ${tier}.${pers} ${close}`;
 }

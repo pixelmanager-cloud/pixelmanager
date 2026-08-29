@@ -365,7 +365,7 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
   // CHAPTER RECAP: at an age-chapter boundary, a short "the story so far" beat about the chapter just closed
   const prevChapter = c.turn > 0 ? bandAt(c.turn - 1).band.name : null;
   if (prevChapter && prevChapter !== c.chapter && !c.finished) {
-    st.recap = chapterRecap({ chapter: prevChapter, nextChapter: c.chapter, age: c.age, careerSeed: (c as any).seed >>> 0, personalityId: c.personality.id, seasonEventId: c.seasonEvent?.id ?? null });
+    st.recap = chapterRecap({ chapter: prevChapter, nextChapter: c.chapter, age: c.age, careerSeed: (c as any).seed >>> 0, castAvoid: c.familyName, personalityId: c.personality.id, seasonEventId: c.seasonEvent?.id ?? null });
     // HANDOFF: if he just completed a full season as a first-team REGULAR (Regular starter+), the game is
     // ready to switch to manager mode — you take the reins with him as your star. Offered once, at the boundary.
     const prevBand = bandAt(c.turn - 1).index;

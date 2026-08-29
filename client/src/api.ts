@@ -674,7 +674,7 @@ export const api = {
     const earningsBefore = c.earnings;
     let narration: string | null = null;
     try {
-      if (action.type === 'arc') { narration = fillArcText(c.resolveArc(action.cardId), careerCast((c as any).seed >>> 0).rival); } // story-arc branch: apply + fill {RIVAL}
+      if (action.type === 'arc') { narration = fillArcText(c.resolveArc(action.cardId), careerCast((c as any).seed >>> 0, (c as any).familyName).rival); } // story-arc branch: apply + fill {RIVAL} (surname-avoided — PT-602)
       else narration = actWithNarration(c, action as CareerAction);
     } catch (e: any) { throw apiErr(e?.message ?? 'illegal move'); }
     let clubGain = Math.round(Math.max(0, c.earnings - earningsBefore) * CLUB_WAGE_CUT);
@@ -694,7 +694,7 @@ export const api = {
       const windfall = Math.round((grad.earnings ?? 0) * PRO_SIGNING_SHARE);
       clubGain += windfall;
       if (clubGain > 0) await localStore.addCoins(OWNER, clubGain);
-      const epilogue = graduationEpilogue({ name: fresh.name, careerSeed: fresh.career_seed!, personalityId: grad.personality ?? c.personality.id, overall: grad.peak_overall ?? 10, role: grad.role ?? undefined, topTraits: JSON.parse(grad.traits_json ?? '[]') });
+      const epilogue = graduationEpilogue({ name: fresh.name, careerSeed: fresh.career_seed!, castAvoid: (c as any).familyName, personalityId: grad.personality ?? c.personality.id, overall: grad.peak_overall ?? 10, role: grad.role ?? undefined, topTraits: JSON.parse(grad.traits_json ?? '[]') });
       return { ok: true as const, graduated: true as const, narration, outcome, clubGain, windfall, epilogue, player: tokenToPlayer((await localStore.getToken(pid))!) };
     }
     if (clubGain > 0) await localStore.addCoins(OWNER, clubGain);
