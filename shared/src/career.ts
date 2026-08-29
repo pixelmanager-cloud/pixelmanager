@@ -1338,7 +1338,14 @@ export class Career {
     const bigGame = this.scenario.stakes >= 2 ? this.personality.bigGame : 0;
     const form = this.formBonus < 0 ? this.formBonus * this.personality.resilience : this.formBonus;
     // your coach lifts success when you play to their specialty (good coaching → that development compounds)
-    const coaching = this.coach && card.tags.some((t) => this.coach!.specialty.includes(t)) ? this.coach.bonus : 0;
+    // COACHING helps where coaching helps: on the moments he is NOT already answering perfectly. As a flat
+    // bonus it was a free +0.06 the deck learned to farm — drafting into one identity pushed the
+    // specialty-match rate from 0% to 57% over a career, so the bonus quietly grew exactly when the player
+    // needed it least, and stacked on top of a card that was already a full-fit answer. Scaling it by the
+    // REMAINING headroom keeps a good coach worth appointing without letting a specialised deck mine him.
+    // (PT-1303)
+    const coachHit = this.coach && card.tags.some((t) => this.coach!.specialty.includes(t));
+    const coaching = coachHit ? this.coach!.bonus * (1 - Math.min(1, f)) * 2 : 0;
     // FATIGUE: running on empty saps a moment (below 35 energy it bites, up to −0.12 at flat 0). Makes
     // Rest and the energy-giving focus choices a real trade-off against a busy, big-moment-heavy chapter.
     const fatigue = this.energy < 35 ? ((35 - this.energy) / 35) * 0.12 : 0;

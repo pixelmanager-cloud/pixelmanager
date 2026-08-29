@@ -123,7 +123,10 @@ const checks: Array<[string, boolean, string]> = [
   ['difficulty does not decay late (Brilliant spread across quarters ≤ 18pts)', sk.drift <= 18, `${sk.drift}pts`],
   ['skill clearly beats random (Solid+ gap ≥ 20pts)', sk.solidPlus - rn.solidPlus >= 20, `${sk.solidPlus}% vs ${rn.solidPlus}%`],
   // Reading the moment PROPERLY has to beat half-reading it, or the decision is cosmetic. (PT-706)
-  ['reading it right beats half-reading it (Brilliant gap ≥ 8pts)', sk.brilliant - dc.brilliant >= 8, `${sk.brilliant}% vs ${dc.brilliant}%`],
+  // As a RATIO, not a point gap: an absolute threshold is scale-dependent, so making Brilliant rarer —
+  // which is the whole point of the PT-1407 work — mechanically shrinks the gap and would flag a game that
+  // had just got better. 18% vs 12% is the same 1.5x edge as 36% vs 24%.
+  ['reading it right beats half-reading it (Brilliant ≥ 1.35x decent)', sk.brilliant >= dc.brilliant * 1.35, `${sk.brilliant}% vs ${dc.brilliant}% = ${(sk.brilliant / Math.max(1, dc.brilliant)).toFixed(2)}x`],
   // PT-705 asked for career-score DISPERSION, and I first checked p90/p10 across skilled careers — but
   // that varies only the SEED, so it measures how much luck decides, not how much play decides. Low seed
   // spread is desirable when play spread is high; the two only looked alike in the old build where
