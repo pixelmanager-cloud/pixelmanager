@@ -800,7 +800,7 @@ export function narrateOffer(name: string, effs: { earn: number; greed: number; 
 }
 
 // ── CHAPTER RECAP + GRADUATION EPILOGUE (the story-so-far beats) ──
-export interface RecapCtx { chapter: string; nextChapter?: string | null; age: number; careerSeed: number; personalityId?: string; overall?: number; seasonEventId?: string | null }
+export interface RecapCtx { chapter: string; nextChapter?: string | null; age: number; careerSeed: number; personalityId?: string; overall?: number; seasonEventId?: string | null; castAvoid?: string }
 /** A short "the story so far" passage shown at an age-chapter boundary. */
 export function chapterRecap(ctx: RecapCtx): string {
   const rng = mulberry32(((ctx.careerSeed >>> 0) ^ Math.imul(ctx.age, 2654435761)) >>> 0);
@@ -823,7 +823,7 @@ export function chapterRecap(ctx: RecapCtx): string {
 }
 function cap0(s: string) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
-export interface EpilogueCtx { name: string; careerSeed: number; personalityId?: string; overall: number; topTraits?: string[]; role?: string }
+export interface EpilogueCtx { name: string; careerSeed: number; personalityId?: string; overall: number; topTraits?: string[]; role?: string; castAvoid?: string }
 /** An evocative summary of the whole 10→25 journey, shown at graduation before the pro reveal. */
 export function graduationEpilogue(ctx: EpilogueCtx): string {
   const rng = mulberry32(((ctx.careerSeed >>> 0) ^ 0x5f3759df) >>> 0);

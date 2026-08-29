@@ -77,6 +77,17 @@ export interface Player {
   /** coins banked across the player's career (career-built players): the breeder's payout when the NFT
    *  first sells, and an "established wage" that raises his contract-extension cost. Optional. */
   earnings?: number;
+  /** current age (Living Squad: bought/starter/trialist players carry an age that advances each season so
+   *  they develop when young and decline when old — see mintSquadPlayer + the nextSeason squad loop). The
+   *  bloodline STAR keeps its age in MgrState, not here. Optional. */
+  age?: number;
+  /** the season this squad player's current contract was signed / last renewed (Living Squad) — with the
+   *  club's season it yields seasons-left; a lapsed contract benches him until renewed. Optional. */
+  signedSeason?: number;
+  /** the length in seasons of this squad player's current contract (Living Squad). Optional. */
+  contractSeasons?: number;
+  /** live morale 0-100 (Living Squad): moves with selection/results/contract, bends re-sign cost. Optional. */
+  morale?: number;
 }
 
 export interface Team {

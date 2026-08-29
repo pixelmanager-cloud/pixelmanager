@@ -2,6 +2,9 @@ import type { Duty, Player, PlayerAttrs, Role, Team } from './types.js';
 import { PITCH } from './types.js';
 import { makeRng } from './rng.js';
 import { FORMATIONS, type Formation } from './formations.js';
+// The Living Squad reuses the bloodline star's OWN character generators, so a squad player's personality
+// and traits mean exactly what the star's do (career.ts doesn't import teams.ts — no cycle).
+import { rollPersonality, eligibleTraits, MAX_TRAITS, type CareerPlayerAttrs } from './career.js';
 
 const FIRST = ['Jan', 'Marco', 'Luis', 'Kofi', 'Sven', 'Timo', 'Ade', 'Ivan', 'Paulo', 'Ryo', 'Emil', 'Noah', 'Idris', 'Beto', 'Cato', 'Dario', 'Enzo', 'Felix'];
 const LAST = ['Berg', 'Silva', 'Okafor', 'Larsen', 'Costa', 'Novak', 'Tanaka', 'Mensah', 'Weber', 'Rossi', 'Dubois', 'Kovac', 'Moreau', 'Santos', 'Vidal', 'Haas', 'Ito', 'Zeman'];
@@ -88,16 +91,55 @@ const ROSTER_ROLES: Role[] = [
   'FW', 'FW', 'FW', 'FW',
 ];
 
-/** Generate a full club roster (~20 players) deterministically from a seed. */
-export function generateClub(id: string, name: string, shortName: string, shirtColor: number, quality: number, seed: number): Club {
+// ── THE LIVING SQUAD ─────────────────────────────────────────────────────────────────────────────
+// A squad player is a full character, not filler: the SAME 15 stat categories the bloodline star carries
+// (10 physical/technical + the 5-stat mental layer), plus a personality and earned traits. The manager's
+// attachment to his squad is the point of the mode, so every player he can select, buy or lose is minted
+// here. Deliberately a LIGHTWEIGHT mint (a seeded roll), not a full career sim — 20 starters + a market
+// every season would be far too heavy for that, and only the bloodline star earns his stats by playing.
+// Opponent clubs keep the cheap rollAttrs path (they're regenerated per fixture and never persist).
+
+/** The mental layer, rolled around the same quality centre as the physical stats. Kept a touch tighter
+ *  (±2.5 vs ±3) so temperament reads as a personality trait rather than another random stat. */
+function rollMentals(rng: () => number, quality: number): Pick<PlayerAttrs, 'composure' | 'aggression' | 'creativity' | 'teamwork' | 'leadership'> {
+  const m = () => Math.max(1, Math.min(20, Math.round(quality + (rng() - 0.5) * 5)));
+  return { composure: m(), aggression: m(), creativity: m(), teamwork: m(), leadership: m() };
+}
+
+/** Mint a FULL squad player: 15 stats + durability, a personality, 0-2 earned traits, and an age.
+ *  `age` defaults to a seeded 18-33 spread so a squad has youth to develop and veterans to replace. */
+export function mintSquadPlayer(id: string, role: Role, quality: number, seed: number, age?: number): Player {
   const rng = makeRng(seed);
-  const players: Player[] = ROSTER_ROLES.map((role, i) => ({
-    id: `${id}-${i}`,
-    name: `${FIRST[Math.floor(rng() * FIRST.length)]} ${LAST[Math.floor(rng() * LAST.length)]}`,
-    role,
-    attrs: rollAttrs(rng, role, quality),
-    anchor: { x: 0, y: 0 }, // assigned when placed into a lineup
-  }));
+  const name = `${FIRST[Math.floor(rng() * FIRST.length)]} ${LAST[Math.floor(rng() * LAST.length)]}`;
+  const base = rollAttrs(rng, role, quality);
+  const mentals = rollMentals(rng, quality);
+  // durability mirrors the career formula (strength+stamina driven) so injury-resistance reads consistently
+  const durability = Math.max(1, Math.min(20, Math.round((base.strength + base.stamina) / 2)));
+  const attrs: PlayerAttrs = { ...base, ...mentals, durability };
+  const personality = rollPersonality(seed).id;
+  // reuse the career trait gates: a squad player earns a trait only if his stats genuinely qualify, so a
+  // trait always means something. `log` is empty — play-history traits (e.g. Big-Game Player) need a real
+  // career and are reserved for the bloodline star.
+  const traits = eligibleTraits(attrs as unknown as CareerPlayerAttrs, []).slice(0, MAX_TRAITS).map((t) => t.id);
+  const finalAge = age ?? 18 + Math.floor(rng() * 16); // 18..33
+  return { id, name, role, attrs, anchor: { x: 0, y: 0 }, personality, traits, age: finalAge };
+}
+
+/** Generate a full club roster (~20 players) deterministically from a seed. */
+export function generateClub(id: string, name: string, shortName: string, shirtColor: number, quality: number, seed: number, rich = false): Club {
+  const rng = makeRng(seed);
+  // `rich` = the MANAGER'S OWN squad: every player is a full character (15 stats + personality + traits +
+  // age) so the manager gets attached to them (Living Squad). Opponent clubs stay on the cheap path —
+  // they're regenerated per fixture from a seed and never persist, so the depth would be invisible.
+  const players: Player[] = ROSTER_ROLES.map((role, i) => rich
+    ? mintSquadPlayer(`${id}-${i}`, role, quality, (seed ^ ((i + 1) * 0x9e3779b1)) >>> 0)
+    : {
+      id: `${id}-${i}`,
+      name: `${FIRST[Math.floor(rng() * FIRST.length)]} ${LAST[Math.floor(rng() * LAST.length)]}`,
+      role,
+      attrs: rollAttrs(rng, role, quality),
+      anchor: { x: 0, y: 0 }, // assigned when placed into a lineup
+    });
   return { id, name, shortName, shirtColor, players };
 }
 
@@ -110,10 +152,11 @@ export function generateTrialist(id: string, quality: number, seed: number, maxS
   const rng = makeRng(seed);
   const roles: Role[] = ['DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'FW', 'FW', 'GK'];
   const role = roles[Math.floor(rng() * roles.length)];
-  const name = `${FIRST[Math.floor(rng() * FIRST.length)]} ${LAST[Math.floor(rng() * LAST.length)]}`;
-  const attrs = rollAttrs(rng, role, quality);
+  // a trialist joins the manager's own squad, so he's a full character too (Living Squad) — just capped
+  const p = mintSquadPlayer(id, role, quality, seed);
+  const attrs = p.attrs;
   (Object.keys(attrs) as Array<keyof PlayerAttrs>).forEach((k) => { const v = attrs[k]; if (v !== undefined) attrs[k] = Math.min(maxStat, v); });
-  return { id, name, role, attrs, anchor: { x: 0, y: 0 } };
+  return { ...p, attrs };
 }
 
 /** A lineup: 11 roster player-ids ordered to match FORMATIONS[formation] slots (slot 0 = GK). */

@@ -22,7 +22,9 @@ export function makeClub(
   accountId: string, handle: string, seed: number, shirtColor: number, clubName?: string,
 ): { club: Club; standingOrders: { formation: Formation; playerIds: string[]; tactics: Tactics } } {
   const name = clubName?.trim() || `${handle}'s Club`;
-  const club = generateClub(accountId, name, short(clubName?.trim() || handle), shirtColor, BASE_QUALITY, seed);
+  // rich=true — this is the MANAGER'S OWN squad, so every player is a full character the manager can get
+  // attached to (15 stats + personality + traits + age), not filler (Living Squad).
+  const club = generateClub(accountId, name, short(clubName?.trim() || handle), shirtColor, BASE_QUALITY, seed, true);
   const lineup = autoPickXI(club, '4-4-2');
   return { club, standingOrders: { formation: '4-4-2', playerIds: lineup.playerIds, tactics: { ...TACTIC_PRESETS.Balanced } } };
 }

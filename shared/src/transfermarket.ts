@@ -61,7 +61,9 @@ export function transferList(seed: number, season: number, tier: number, size = 
   const headroom = tier <= 2 ? 3 : 1;
   const quality = clamp(tierStrength(tier) + headroom, 4, 18);
   // generate a couple of squads' worth at this quality, then take a spread across positions
-  const club = generateClub(`market-${season}-${tier}`, 'Free Agents', 'FA', 0x888888, quality, hash32(seed, season * 7919, tier * 131));
+  // rich=true: market players are FULL characters (15 stats + personality + traits) — you're signing a
+  // person into your squad, not a stat line, so the card must read as richly as the bloodline star's.
+  const club = generateClub(`market-${season}-${tier}`, 'Free Agents', 'FA', 0x888888, quality, hash32(seed, season * 7919, tier * 131), true);
   const pool = club.players.slice();
   const out: Listing[] = [];
   for (let i = 0; i < size && i < pool.length; i++) {
@@ -69,7 +71,9 @@ export function transferList(seed: number, season: number, tier: number, size = 
     const ov = overall(p);
     const age = 18 + (hash32(seed, season, i * 97) % 15);          // 18..32, flavour + fee nudge
     const youthPremium = age <= 23 ? 1.25 : age >= 30 ? 0.8 : 1;    // young + able = dearer
-    out.push({ player: { ...p, id: `mk:${season}:${tier}:${i}` }, fee: Math.round(transferFee(ov) * youthPremium), age, ov });
+    // stamp the listing's age ONTO the player so a signing carries it into the squad (it used to be
+    // sidecar-only and was discarded at purchase, leaving bought players ageless — PT-90)
+    out.push({ player: { ...p, id: `mk:${season}:${tier}:${i}`, age }, fee: Math.round(transferFee(ov) * youthPremium), age, ov });
   }
   return out.sort((a, b) => b.ov - a.ov);
 }

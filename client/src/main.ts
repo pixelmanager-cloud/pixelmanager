@@ -283,7 +283,7 @@ function statsTableHTML(players: Player[], highlight?: Set<string>, sort?: Squad
     const mark = on ? '<td class="inxi-mark">●</td>' : '<td></td>';
     const nameCell = tier
       ? `<td class="name nft-name tier-${tier.key}" data-card="${p.id}" title="Your star · ${tier.name} — click to view card">${tier.icon} ${p.name}</td>`
-      : `<td class="name">${p.name}</td>`;
+      : `<td class="name" data-card="${p.id}" title="Click to view his card">${p.name}</td>`; // every squad player is a full character now — his card is worth opening (Living Squad)
     return `<tr class="${on ? 'inxi' : ''}${nft ? ' nft-row' : ''}">${mark}<td class="pos role-${p.role}">${p.role}</td>${nameCell}<td class="stat" style="background:${statColor(overall(p))}">${overall(p)}</td>${cells}</tr>`;
   }).join('');
   return `<table class="squad">${head}${rows}</table>`;
@@ -780,7 +780,7 @@ class Game {
       + this.careerRecordHtml(p)
       + this.characterHtml(p)
       + contractHtml
-      + `<div class="pc-foot">★ ${tier.name}${tokenId ? ` · #${tokenId}` : ''}</div>`
+      + `<div class="pc-foot">★ ${tier.name}${tokenId ? ` · #${tokenId}` : ''}${!ci && (p as any).age ? ` · age ${(p as any).age}` : ''}</div>` // squad players carry their own age (the star's shows in the contract block)
       + `<button class="pc-close">${minted ? 'Nice ✓' : 'Close'}</button></div>`;
     el.addEventListener('click', async (e) => {
       const t = e.target as HTMLElement;
@@ -866,9 +866,11 @@ class Game {
     const greed = (p as any).greed as number | undefined;
     const market = (p as any).marketability as number | undefined;
     const earnings = (p as any).earnings as number | undefined;
-    if (!pers && !traits.length && greed == null) return ''; // base players have no character layer
-    const PERS: Record<string, string> = { pro: 'Model Pro', biggame: 'Big-Game Player', fragile: 'Fragile', leader: 'Born Leader', workhorse: 'Workhorse', mercurial: 'Mercurial', maverick: 'Maverick' };
-    const TRAIT: Record<string, string> = { clinical: 'Clinical Finisher', ballwinner: 'Ball-Winner', metronome: 'Metronome', maestro: 'Creative Maestro', leader: 'Born Leader', livewire: 'Livewire', ironman: 'Iron Man', deadball: 'Dead-Ball Spec.', wall: 'The Wall', biggame: 'Big-Game', engine: 'Box-to-Box Engine', rock: 'Defensive Rock', spark: 'The Spark', injury_prone: 'Injury-Prone', mercenary: 'Mercenary', loyal: 'One-Club Man', marketable: 'Marketable' };
+    if (!pers && !traits.length && greed == null) return ''; // nothing to show (e.g. a legacy save's filler)
+    // every personality the game can roll — squad players are full characters now, so an unmapped id would
+    // surface as a raw slug on their card (Living Squad)
+    const PERS: Record<string, string> = { pro: 'Model Pro', biggame: 'Big-Game Player', fragile: 'Fragile', leader: 'Born Leader', workhorse: 'Workhorse', mercurial: 'Mercurial', maverick: 'Maverick', latebloom: 'Late Bloomer', showman: 'Showman', stoic: 'The Stoic', hothead: 'Hothead', perfectionist: 'Perfectionist', joker: 'Dressing-Room Joker' };
+    const TRAIT: Record<string, string> = { clinical: 'Clinical Finisher', ballwinner: 'Ball-Winner', metronome: 'Metronome', maestro: 'Creative Maestro', leader: 'Born Leader', livewire: 'Livewire', ironman: 'Iron Man', deadball: 'Dead-Ball Spec.', wall: 'The Wall', biggame: 'Big-Game', engine: 'Box-to-Box Engine', rock: 'Defensive Rock', spark: 'The Spark', aerial: 'Aerial Threat', general2: 'Engine-Room General', showstopper: 'Showstopper', ironwill: 'Iron Will', quarterback: 'The Quarterback', utility: 'Utility Man', injury_prone: 'Injury-Prone', mercenary: 'Mercenary', loyal: 'One-Club Man', marketable: 'Marketable' };
     const flaws = new Set(['injury_prone', 'mercenary', 'loyal', 'marketable']);
     const perks = traits.filter((t) => !flaws.has(t)).map((t) => `<span class="pc-trait perk">${TRAIT[t] ?? t}</span>`);
     const flags = traits.filter((t) => flaws.has(t)).map((t) => `<span class="pc-trait flag">${TRAIT[t] ?? t}</span>`);
