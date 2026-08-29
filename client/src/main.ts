@@ -3564,6 +3564,22 @@ class Game {
     return (h >>> 0) % len;
   }
   private cpick<T>(arr: T[], idx: number, salt: number): T { return arr[this.cidx(arr.length, idx, salt)]; }
+  /** A monotonic commentary counter. Several call sites derived their picker index from match STATE that
+   *  barely varies — `flushMove` used `seq.length + touches`, and since `seq` is capped at 4 a 2-touch passage
+   *  (82% of them) always evaluated to 4, so one lead phrase printed ~190 times in a single match. An
+   *  ever-advancing counter is the right index for "which line next". (PT-1200) */
+  private cmSeq = 0;
+  private lastPick: Record<number, number> = {};
+  /** cpick with NO BACK-TO-BACK REPEAT: never returns the same line twice running from the same bank. The
+   *  hash picker has no memory, and measured collision rates ran 17-45% per bank — a line following itself is
+   *  the repeat a reader actually notices. Deterministic (still a pure hash), just skipped forward on a clash. */
+  private cpickNR<T>(arr: T[], salt: number): T {
+    if (arr.length <= 1) return arr[0];
+    let i = this.cidx(arr.length, this.cmSeq++, salt);
+    if (this.lastPick[salt] === i) i = (i + 1) % arr.length;
+    this.lastPick[salt] = i;
+    return arr[i];
+  }
   // running match context for narration (reset each match in startMatch)
   private liveScore: [number, number] = [0, 0];
   private scorerTally = new Map<string, number>();
@@ -3610,7 +3626,7 @@ class Game {
     const diff = us - them, total = us + them, late = e.minute >= 80;
     let state = '';
     if (total === 1) state = note('The deadlock is broken.');
-    else if (diff === 0) state = note(this.cpick(['Level again!', 'It’s all square!', 'Right back in it!'], idx, 9));
+    else if (diff === 0) state = note(this.cpickNR(['Level again!', 'It’s all square!', 'Right back in it!', 'All square once more!', 'Back on terms!'], 9));
     else if (diff < 0) state = note(`A consolation for ${team}.`);
     else if (diff === 1 && late) state = note('This could be the winner!');
     else if (diff === 1) state = note(`${team} back in front.`);
@@ -3652,8 +3668,14 @@ class Game {
     const chain = seq.join(' → ');
     // a genuinely sustained sequence gets a "total control" framing; a short one stays low-key
     const lead = touches >= 7
-      ? this.cpick([`${touches} passes and counting — `, `Wonderful patience, ${team} (${touches} touches): `, `Total control from ${team} — `], touches, 7)
-      : this.cpick([`${team} work it — `, `Neat from ${team}: `, `Patient build-up, ${team}: `, `${team} keep it: `], seq.length + touches, 7);
+      ? this.cpickNR([`${touches} passes and counting — `, `Wonderful patience, ${team} (${touches} touches): `, `Total control from ${team} — `,
+        `${team} have settled into it (${touches} touches): `, `${touches} unanswered passes — `, `${team} pass it round the shirts: `,
+        `A long spell of it now, ${team} — `], 7)
+      : this.cpickNR([`${team} work it — `, `Neat from ${team}: `, `Patient build-up, ${team}: `, `${team} keep it: `,
+        `${team} knock it about — `, `Tidy stuff from ${team}: `, `${team} take their time: `, `Worked nicely by ${team} — `,
+        `${team} coming forward: `, `A move building for ${team} — `, `${team} in possession: `, `Simple and clean, ${team}: `,
+        `${team} probing — `, `They shift it, ${team}: `, `${team} look to build: `, `Calmly done by ${team} — `,
+        `${team} moving it on: `, `Nothing rushed from ${team}: `, `${team} work an angle — `, `Kept alive by ${team}: `], 7);
     this.appendLine(`<span class="cm-min"></span> <span class="cm-flow">${lead}${chain} ${this.zoneWord(m.zone)}.</span>`, 'cm-flow');
   }
   private pushTicker(e: MatchEvent) {
@@ -3709,7 +3731,17 @@ class Game {
         break;
       case 'fatigue': cls = 'cm-injury'; text = this.cpick([`${p} is blowing hard — the legs are going.`, `${p} looks spent, hands on hips ${zone}.`, `Tiring badly now, ${p} — running on empty.`, `${p} can barely get back — gassed.`], idx, 12); break;
       case 'woodwork': cls = 'cm-post'; text = this.cpick([`🪵 OFF THE POST! ${p} rattles the woodwork — so close!`, `🪵 OFF THE BAR! ${p} is inches away!`, `🪵 It cannons back off the upright — ${p} can't believe it!`], idx, 13); break;
-      case 'loose_ball': cls = 'cm-loose'; text = this.cpick([`The ball breaks loose ${zone}.`, `Cut out! ${p}'s pass is intercepted ${zone}.`, `Scrappy — it pinballs around ${zone}.`, `${p}'s ball is cut out ${zone}.`], idx, 8); break;
+      // the heaviest bank in the game (~200 draws a match) — it was 4 lines, half of them without a player
+      // name, so ~100 draws collapsed onto a handful of strings (PT-1201)
+      case 'loose_ball': cls = 'cm-loose'; text = this.cpickNR([
+        `The ball breaks loose ${zone}.`, `Cut out! ${p}'s pass is intercepted ${zone}.`,
+        `Scrappy — it pinballs around ${zone}.`, `${p}'s ball is cut out ${zone}.`,
+        `${p} loses it ${zone}.`, `A heavy touch from ${p} ${zone}.`, `It squirms away from ${p} ${zone}.`,
+        `Half-cleared, and it drops ${zone}.`, `${p} can't keep hold of it ${zone}.`,
+        `Neither of them wins it — loose ${zone}.`, `Ricochet ${zone}, nobody's ball.`,
+        `${p} overhits it ${zone}.`, `A scramble ${zone}.`, `It breaks kindly ${zone}.`,
+        `${p}'s touch lets him down ${zone}.`, `Bobbling around ${zone}.`,
+        `Cleared, but only as far as ${zone}.`, `${p} stretches and can only poke it ${zone}.`], 8); break;
       case 'foul': cls = 'cm-foul'; text = this.cpick([`Foul by ${p} ${zone}. Free kick ${team === this.homeName ? this.awayName : this.homeName}.`, `${p} catches his man — referee blows for the foul ${zone}.`, `Cynical from ${p} — that’s a free kick ${zone}.`, `${p} gives it away with a clumsy challenge ${zone}.`], idx, 14); break;
       case 'yellow_card': { cls = 'cm-card yellow'; const yc = `<span class="ico-inline">${sprite('card')}</span>`;
         text = this.cpick([`${yc} Booked! ${p} goes into the book for that one.`, `${yc} Yellow card for ${p} — the ref had no choice.`, `${yc} ${p} is cautioned. He’ll have to be careful now.`], idx, 15); break; }
