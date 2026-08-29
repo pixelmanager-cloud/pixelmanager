@@ -398,11 +398,11 @@ export const LIFESTYLE: LifestyleItem[] = [
   { id: 'gift-fam', icon: '🎁', name: 'Treat Your Parents',      blurb: 'Say thanks for the early mornings and endless lifts.',      cost: 300,  minChapterIdx: 1, maxChapterIdx: 4, perks: { family: 14 } },
   // Scholar — a teenager finding independence: driving lessons, better digs, courting the agent
   { id: 'driving',  icon: '🚦', name: 'Driving Lessons',         blurb: 'Freedom on the open road is finally within reach.',         cost: 420,  minChapterIdx: 3, maxChapterIdx: 4, perks: { peers: 5, partner: 4 } },
-  { id: 'digs',     icon: '🛏️', name: 'Nicer Digs',             blurb: 'Better lodgings near the training ground — rest properly.', cost: 650,  minChapterIdx: 2, maxChapterIdx: 4, recovery: 4, perks: { partner: 4 } },
+  { id: 'digs',     icon: '🛏️', name: 'Nicer Digs',             blurb: 'Better lodgings near the training ground — rest properly.', cost: 650,  minChapterIdx: 2, maxChapterIdx: 4, recovery: 4, perks: { peers: 4 } },
   { id: 'agent-din', icon: '🍽️', name: 'Wine & Dine Your Agent', blurb: 'Keep your agent hungry and fighting your corner.',          cost: 550,  minChapterIdx: 2, maxChapterIdx: 5, greed: 1, perks: { agent: 14 } },
   // Youth Team — a young pro: first car, designer clobber, your own place
-  { id: 'wheels',   icon: '🚗', name: 'Your First Car',           blurb: 'Freedom on four wheels — and a few admiring glances.',      cost: 1000, minChapterIdx: 3, market: 1, perks: { fans: 6, partner: 4 } },
-  { id: 'wardrobe', icon: '🕶️', name: 'A Designer Wardrobe',      blurb: 'Turn up looking the part — the brands start to notice.',    cost: 900,  minChapterIdx: 3, market: 1, greed: 1, perks: { sponsors: 8 } },
+  { id: 'wheels',   icon: '🚗', name: 'Your First Car',           blurb: 'Freedom on four wheels — and a few admiring glances.',      cost: 1000, minChapterIdx: 3, market: 1, perks: { peers: 6, partner: 4 } },
+  { id: 'wardrobe', icon: '🕶️', name: 'A Designer Wardrobe',      blurb: 'Turn up looking the part — the brands start to notice.',    cost: 900,  minChapterIdx: 5, market: 1, greed: 1, perks: { sponsors: 8 } },
   { id: 'moveout',  icon: '🏡', name: 'Your Own Place',           blurb: 'Independence at last — your own space to recharge.',        cost: 1300, minChapterIdx: 3, recovery: 5, perks: { partner: 6 } },
   // Breakthrough — earning real money: marginal-gains, giving back, looking after family
   { id: 'chef',     icon: '🥗', name: 'Personal Chef & Trainer',  blurb: 'Marginal gains — you recover better and live right.',       cost: 1600, minChapterIdx: 4, recovery: 8 },
@@ -419,7 +419,7 @@ export const LIFESTYLE: LifestyleItem[] = [
   // add, it reallocates. Lets a career choose an image, not just a shopping list.
   { id: 'flash-jewellery', icon: '💎', name: 'Flash the Jewellery', blurb: 'Chains and watches on full display — the cameras love it, the dressing room less so.', cost: 1100, minChapterIdx: 4, market: 2, greed: 1, perks: { fans: 10, peers: -10 } },
   { id: 'nightclub', icon: '🍾', name: 'A Night Out That Makes the Papers', blurb: 'A big night, splashed across the tabloids the next morning.', cost: 700, minChapterIdx: 4, market: 1, perks: { fans: 6, partner: -12, authority: -6 } },
-  { id: 'private-tutor', icon: '📚', name: 'A Private Tutor', blurb: 'Keep learning off the pitch — a level head the papers can never take from you.', cost: 500, minChapterIdx: 2, maxChapterIdx: 4, perks: { school: 16, family: 6 } },
+  { id: 'private-tutor', icon: '📚', name: 'A Private Tutor', blurb: 'Keep learning off the pitch — a level head the papers can never take from you.', cost: 500, minChapterIdx: 2, maxChapterIdx: 3, perks: { school: 16, family: 6 } },
   { id: 'youth-coach-gift', icon: '🎁', name: 'Give Back to Your First Club', blurb: 'A donation to the grassroots club that made you — a nod to where it all started.', cost: 900, minChapterIdx: 5, perks: { fans: 10, family: 8 } },
   { id: 'entourage', icon: '🕴️', name: 'Build an Entourage', blurb: 'Old mates on the payroll now — loyal, but it costs, and the club whispers about who’s really around you.', cost: 1800, minChapterIdx: 5, greed: 1, perks: { peers: 12, authority: -6 } },
   // Player-directed investing — put earnings into the CLUB instead of a personal treat. Repeatable (never
@@ -959,14 +959,19 @@ const METER: Record<string, MeterDesc> = {
   sponsors:  { key: 'sponsors',  icon: '📸', label: 'Sponsors' },
   partner:   { key: 'partner',   icon: '❤️', label: 'Partner' },
 };
+// A meter the player SPENDS COINS ON must be on screen. Family was hidden from Scholar onward — five of
+// the seven chapters — while "Treat Your Parents 🏠+14" and "Buy Your Family a Home" were on sale in all
+// of them, so the player was paying into a bar he could not see. Agent was hidden at First Team and
+// Establishing while "Wine & Dine Your Agent" and "Cut Your Agent Loose" both moved it. Family in
+// particular belongs everywhere in a game about a bloodline. tools/playtest/meters.ts guards this. (PT-154)
 const CHAPTER_METERS: Record<string, string[]> = {
   Grassroots:   ['coach', 'parents', 'mates'],
   Academy:      ['coach', 'parents', 'teammates', 'school'],
-  Scholar:      ['coach', 'teammates', 'school', 'agent'],   // scholarship years: an agent enters, school still counts
-  'Youth Team': ['coach', 'teammates', 'agent', 'partner'],
-  Breakthrough: ['gaffer', 'team', 'fans', 'agent', 'partner'],
-  'First Team': ['gaffer', 'team', 'fans', 'sponsors', 'partner'],
-  Establishing: ['gaffer', 'team', 'fans', 'sponsors', 'partner'],
+  Scholar:      ['coach', 'parents', 'teammates', 'school', 'agent'],   // scholarship years: an agent enters, school still counts
+  'Youth Team': ['coach', 'parents', 'teammates', 'school', 'agent', 'partner'],
+  Breakthrough: ['gaffer', 'parents', 'team', 'fans', 'agent', 'partner'],
+  'First Team': ['gaffer', 'parents', 'team', 'fans', 'sponsors', 'agent', 'partner'],
+  Establishing: ['gaffer', 'parents', 'team', 'fans', 'sponsors', 'agent', 'partner'],
 };
 /** The age-appropriate meters (key + icon + stage label) for a given life chapter. */
 export function activeMeters(chapter: string): MeterDesc[] {

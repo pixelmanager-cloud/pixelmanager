@@ -789,15 +789,15 @@ class Game {
     // contract situation (NFT players only): age, deal status, extend/sell — the NFT stays owned either way
     const ci = this.contracts[p.id];
     const stakeHtml = ci ? (ci.staked
-      ? `<div class="pc-stake">🔒 staked ${ci.stakedSeasons} season${ci.stakedSeasons === 1 ? '' : 's'} — loyalty discount · <a class="pc-link" data-stake="off" data-pid="${p.id}">unstake</a></div>`
-      : `<div class="pc-stake">⭘ not staked — <a class="pc-link" data-stake="on" data-pid="${p.id}">stake to make eligible</a></div>`) : '';
+      ? `<div class="pc-stake">📋 registered ${ci.stakedSeasons} season${ci.stakedSeasons === 1 ? '' : 's'} — long service earns him a loyalty discount · <a class="pc-link" data-stake="off" data-pid="${p.id}">withdraw from the squad</a></div>`
+      : `<div class="pc-stake">⭘ not registered — <a class="pc-link" data-stake="on" data-pid="${p.id}">register him for the season</a></div>`) : '';
     let contractHtml = '';
     // NOTE: single-player has no 'retired' token state — succession goes pro→prospect directly via rebornFields,
     // so the old NFT-era "retired keepsake + Reborn" card branch was unreachable and has been removed (PT-115).
     if (ci) {
       contractHtml = `<div class="pc-contract${ci.available ? '' : ' lapsed'}">`
         + `<div class="pc-crow"><span>Age ${ci.age}${ci.age >= 39 ? ' · nearing retirement' : ''}</span>`
-        + `<span>${ci.available ? `<span class="ico-inline ico-lg">${sprite('contract')}</span> ${ci.seasonsLeft} season${ci.seasonsLeft === 1 ? '' : 's'} left` : ci.staked === false ? '⭘ idle — not staked' : '⛔ contract lapsed — benched'}</span></div>`
+        + `<span>${ci.available ? `<span class="ico-inline ico-lg">${sprite('contract')}</span> ${ci.seasonsLeft} season${ci.seasonsLeft === 1 ? '' : 's'} left` : ci.staked === false ? '⭘ not registered — he can’t play' : '⛔ contract lapsed — benched'}</span></div>`
         + (ci.morale != null ? `<div class="pc-morale"><i>morale</i><span class="pc-mbg"><b style="width:${ci.morale}%"></b></span><span>${ci.moraleLabel}</span></div>` : '')
         // show the TOTAL cost (wage × length), not one season's wage — talks charge the whole deal (PT-32/PT-124)
         + `<div class="pc-cactions"><button class="pc-extend" data-extend="${p.id}"><span class="ico-inline ico-lg">${sprite('seal')}</span> ${ci.available ? 'Re-sign' : 'Extend'} · ~${(ci.extendCost * ci.lengthSeasons).toLocaleString()}c over ${ci.lengthSeasons}y</button>`
@@ -868,18 +868,21 @@ class Game {
         : ci.available ? `<span class="ns-tag ${ci.seasonsLeft <= 1 ? 'warn' : 'ok'}">${ci.seasonsLeft}y left</span>`
         : `<span class="ns-tag lapsed">lapsed</span>`;
       const dot = ci.morale != null ? `<span class="ns-mood" title="morale: ${ci.moraleLabel}" style="background:${ci.morale >= 75 ? '#6ad06a' : ci.morale >= 45 ? '#e0c14a' : '#d06a6a'}"></span>` : '';
-      const act = ci.staked === false ? `<button class="ns-act" data-nstake="${ci.playerId}">Stake</button>`
+      const act = ci.staked === false ? `<button class="ns-act" data-nstake="${ci.playerId}">Register</button>`
         : `<button class="ns-act" data-nextend="${ci.playerId}">${ci.available ? 'Re-sign' : 'Extend'} ~${(ci.extendCost * ci.lengthSeasons).toLocaleString()}c</button>`; // total deal cost (wage × length), not one season (PT-124)
       return `<div class="ns-row" data-open="${ci.playerId}"><span class="ns-name">${dot}${name}</span><span class="ns-age">${ci.age}y</span>${status}${act}</div>`;
     }).join('');
     return `<div class="nft-status"><div class="ns-head">⭐ YOUR STARS — lifecycle at a glance</div>${rows}</div>`;
   }
 
-  /** Stake / unstake a pro token (staked = eligible to play + earns loyalty tenure). */
+  /** Register / withdraw a pro (registered = eligible to play + accrues loyalty tenure).
+   *  "Stake/unstake" was leftover web3 vocabulary for a squad-REGISTRATION mechanic, explained nowhere and
+   *  meaning nothing to a football player. The data field keeps its name — renaming it would need a save
+   *  migration — but nothing the player reads says "stake" any more. (PT-506) */
   private async stakePlayer(playerId: string, on: boolean) {
     try {
       await api.stake(playerId, on);
-      toast(on ? 'Staked — eligible to play' : 'Unstaked — now idle');
+      toast(on ? 'Registered — he can play' : 'Withdrawn — he’s out of the squad');
       this.setMe(await api.me());
       await this.showHub();
       const p = this.club.players.find((x) => x.id === playerId);
@@ -1547,7 +1550,15 @@ class Game {
       } else this.nextSeason();
     });
     ($('sf-focus') as any)?.addEventListener('change', (e: Event) => { const mm = this.loadMgr(); this.saveMgr({ ...mm, trainFocus: (e.target as HTMLSelectElement).value }); });
-    $('season-body').querySelectorAll('[data-staff]').forEach((b) => b.addEventListener('click', () => this.hireStaff((b as HTMLElement).dataset.staff!)));
+    $('season-body').querySelectorAll('[data-staff]').forEach((b) => b.addEventListener('click', () => {
+      const id = (b as HTMLElement).dataset.staff!;
+      const st = BACKROOM_STAFF.find((x) => x.id === id);
+      this.openConfirm(
+        `Hire <b>${st?.name ?? 'this coach'}</b> for <b>💰 ${(st?.cost ?? 0).toLocaleString()}c</b>?`
+        + (st?.desc ? `<br><span class="cf-sub">${st.desc}</span>` : '')
+        + `<br><span class="cf-sub">You have ${(this.account?.coins ?? 0).toLocaleString()}c. He stays with the club for good.</span>`,
+        `Hire · 💰 ${(st?.cost ?? 0).toLocaleString()}c`, () => this.hireStaff(id));
+    }));
     $('season-body').querySelectorAll('[data-sponsor]').forEach((b) => b.addEventListener('click', () => this.chooseSponsor((b as HTMLElement).dataset.sponsor!)));
   }
 
@@ -2269,8 +2280,17 @@ class Game {
         + `<div class="fac-effect">▸ ${f.effect}</div>`
         + action + `</div>`;
     }).join('');
-    Array.from($('facilities-grid').querySelectorAll('button[data-key]')).forEach((b) =>
-      b.addEventListener('click', () => this.upgradeFacility((b as HTMLElement).dataset.key!)));
+    Array.from($('facilities-grid').querySelectorAll('button[data-key]')).forEach((b) => {
+      const key = (b as HTMLElement).dataset.key!;
+      const f = d.facilities.find((x) => x.key === key);
+      // Hundreds of coins on one unconfirmed click, with the effect written in club-speak. Confirm it, and
+      // say what it actually does — the coins are a season's prize money. (PT-507)
+      b.addEventListener('click', () => this.openConfirm(
+        `Upgrade <b>${f?.name ?? 'this facility'}</b> to level ${(f?.level ?? 0) + 1} for <b>💰 ${(f?.upgradeCost ?? 0).toLocaleString()}c</b>?`
+        + (f?.nextEffect ? `<br><span class="cf-sub">It gets you: ${f.nextEffect}</span>` : '')
+        + `<br><span class="cf-sub">You have ${(this.account?.coins ?? 0).toLocaleString()}c. Upgrades are permanent and carry to your heir.</span>`,
+        `Upgrade · 💰 ${(f?.upgradeCost ?? 0).toLocaleString()}c`, () => this.upgradeFacility(key)));
+    });
   }
 
   private async upgradeFacility(key: string) {
