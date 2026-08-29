@@ -38,7 +38,9 @@ export function __setBackendForTests(b: SaveBackend): void { setSaveBackend(b); 
 
 const OWNER = 'local'; // the single local owner every GameStore call is scoped to (see save.ts)
 const TRIPS_PER_SEASON = 3;
-const TIER = 'base'; // scout tiers were wallet/NFT-gated; off-chain the game always ran at 'base' by default
+// Scout quality now comes from the Scouting HQ facility, not a wallet. 'base' remains the neutral floor
+// for the legacy tier table; the real dial is the facility level passed alongside it. (2026-08-30)
+const TIER = 'base';
 const SUPPLY_CAP = 10000;
 const GENESIS_COST = 300;
 const REBORN_COST = 150;
@@ -856,7 +858,7 @@ export const api = {
     const destinations: ScoutDestination[] = DESTINATIONS.map((d) => ({
       id: d.id, name: d.name, blurb: d.blurb, weights: d.weights, travelMins: d.travelMins,
       cost: Math.round(d.cost * (1 - discount)),
-      ...previewOdds(d, TIER, hqMult),
+      ...previewOdds(d, TIER, hqMult, fac.scouting),
     }));
     return {
       season: model.profile.season, tier: TIER, tripsPerSeason, tripsUsed: count,
@@ -877,7 +879,7 @@ export const api = {
     if (model.profile.coins < cost) throw apiErr(`not enough coins — ${dest.name} costs ${cost}`, {}, 409);
     await localStore.addCoins(OWNER, -cost);
     const id = crypto.randomUUID();
-    const outcome = rollMission(id, dest, TIER, scoutHitMult(fac.scouting));
+    const outcome = rollMission(id, dest, TIER, scoutHitMult(fac.scouting), fac.scouting);
     const now = Date.now();
     const row: MissionRow = {
       id, account_id: OWNER, season_id: seasonId, destination: dest.id,

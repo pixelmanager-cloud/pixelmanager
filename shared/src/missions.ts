@@ -36,15 +36,28 @@ export const DESTINATIONS: Destination[] = [
 ];
 export const destinationById = (id: string): Destination | undefined => DESTINATIONS.find((d) => d.id === id);
 
-// Player-scout NFT tier boosts: a hit-rate multiplier and a chance to bump a found
-// prospect up one band. 'base' (no NFT) gets nothing; Gold is a real edge.
+// SCOUTING QUALITY comes from the Scouting HQ facility. It used to come from a player-scout NFT tier, and
+// when web3 was removed the caller was hardcoded to 'base' — which the table below gave a hit multiplier of
+// 1.0 and an upgrade chance of ZERO. So the band-upgrade mechanic, the thing that makes a scouting trip
+// occasionally return someone special, could never fire for anybody. The whole risk/reward dial the module
+// was built around was dead, gated behind a paywall that no longer exists.
+//
+// It now runs off the Scouting HQ the player already levels 1→10 with coins, so investing in the facility
+// buys better finds as well as better odds. (user decision, 2026-08-30)
 const HIT_MULT: Record<string, number> = { base: 1.0, bronze: 1.12, silver: 1.25, gold: 1.4 };
 const UPGRADE: Record<string, number> = { base: 0.0, bronze: 0.15, silver: 0.28, gold: 0.45 };
+/** Chance a found prospect is bumped up a quality band, from the Scouting HQ level (1 → 10). */
+export function hqUpgradeChance(hqLevel: number): number {
+  return Math.max(0, Math.min(0.5, (Math.max(1, hqLevel) - 1) * 0.055));
+}
 
 /** The tier-adjusted odds to show on a destination card (never mutates config).
  *  hqMult is the Scouting-HQ facility's extra hit-rate multiplier (1 = no bonus). */
-export function previewOdds(dest: Destination, playerTier: string, hqMult = 1): { hitRate: number; upgradeChance: number } {
-  return { hitRate: Math.min(0.95, dest.hitRate * (HIT_MULT[playerTier] ?? 1) * hqMult), upgradeChance: UPGRADE[playerTier] ?? 0 };
+export function previewOdds(dest: Destination, playerTier: string, hqMult = 1, hqLevel = 1): { hitRate: number; upgradeChance: number } {
+  return {
+    hitRate: Math.min(0.95, dest.hitRate * (HIT_MULT[playerTier] ?? 1) * hqMult),
+    upgradeChance: Math.max(UPGRADE[playerTier] ?? 0, hqUpgradeChance(hqLevel)),
+  };
 }
 
 const BAND_Q: Record<ScoutBand, [number, number]> = { raw: [1, 3], squad: [4, 6], quality: [6, 8], gem: [8, 10] };
@@ -65,7 +78,7 @@ export interface MissionOutcome { found: boolean; player: Player | null; band: S
 
 /** Deterministically seal a trip's outcome at dispatch. Same (missionId, destination,
  *  playerTier) → same result forever; travel time only controls WHEN it's shown. */
-export function rollMission(missionId: string, dest: Destination, playerTier: string, hqMult = 1): MissionOutcome {
+export function rollMission(missionId: string, dest: Destination, playerTier: string, hqMult = 1, hqLevel = 1): MissionOutcome {
   const rng = mulberry32(seedFrom(`${missionId}:${dest.id}:${playerTier}`));
   const hit = rng() < Math.min(0.95, dest.hitRate * (HIT_MULT[playerTier] ?? 1) * hqMult);
   if (!hit) return { found: false, player: null, band: null, overall: null };
@@ -73,7 +86,9 @@ export function rollMission(missionId: string, dest: Destination, playerTier: st
   const r = rng();
   let acc = 0, band: ScoutBand = 'raw';
   for (const b of ['gem', 'quality', 'squad', 'raw'] as ScoutBand[]) { acc += dest.weights[b]; if (r < acc) { band = b; break; } }
-  if (rng() < (UPGRADE[playerTier] ?? 0)) band = bumpUp[band]; // scout-tier upgrade
+  // a good Scouting HQ occasionally turns an ordinary find into a real one — this is the mechanic that
+  // was permanently zero while it was gated on the removed NFT tier
+  if (rng() < Math.max(UPGRADE[playerTier] ?? 0, hqUpgradeChance(hqLevel))) band = bumpUp[band];
   const [lo, hi] = BAND_Q[band];
   const q = lo + rng() * (hi - lo);
   const statSeed = (seedFrom(missionId) ^ 0x9e3779b1) >>> 0;
