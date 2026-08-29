@@ -2720,10 +2720,12 @@ class Game {
           : { cls: 'poor', label: '✗ Wrong card' };
     // RESULT — how the moment actually went (fit + nerve + coaching − fatigue). When the CHOICE was right
     // but the result still dipped, frame it as bad luck on the day, not bad play (reconciles the two pills).
-    const unlucky = o.answeredAsk && o.success < 0.58;
-    const perf = o.success >= 0.78 ? { cls: 'great', label: '⭐ Brilliant' }
-      : o.success >= 0.58 ? { cls: 'good', label: '✓ Solid' }
-        : o.success >= 0.38 ? { cls: 'mid', label: unlucky ? '◦ Unlucky' : '◦ Scrappy' }
+    // Cut points lifted with the demand/nerve retune (PT-700) so "Brilliant" stays a genuine standout rather
+    // than the default outcome of a correct card — it was landing on 92% of skilled turns.
+    const unlucky = o.answeredAsk && o.success < 0.60;
+    const perf = o.success >= 0.80 ? { cls: 'great', label: '⭐ Brilliant' }
+      : o.success >= 0.60 ? { cls: 'good', label: '✓ Solid' }
+        : o.success >= 0.40 ? { cls: 'mid', label: unlucky ? '◦ Unlucky' : '◦ Scrappy' }
           : { cls: 'poor', label: unlucky ? '✗ Unlucky' : '✗ Poor' };
     const grew = o.tags.length
       ? `<span class="cg-oc-grew">developed ${o.tags.map((t) => `<span class="cg-tag">${t}</span>`).join(' ')}</span>` : '';

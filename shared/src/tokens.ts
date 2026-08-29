@@ -139,7 +139,9 @@ function careerScoreOf(c: Career): number { return Math.round(c.log.reduce((s, c
 // Rival banks a flat rate per turn; the player earns success*8*stakes. Set so CONSISTENT GOOD play pulls
 // ahead (a solid ~0.6 turn = ~4.8, a brilliant/big turn more) while mediocre play falls behind — the rival
 // is a beatable benchmark, not an inevitable loss. (Was 6..9, which out-ran even perfect play every turn.)
-function rivalRateOf(seed: number): number { return 3 + ((seed >>> 3) % 3); } // 3..5 points/turn
+// 5..7 points/turn. At 3-5 the rival earned less than half the player's ~8.4/turn, so a skilled career was
+// never once behind after turn 20 across 200 simulated careers — the benchmark never threatened. (PT-700)
+function rivalRateOf(seed: number): number { return 5 + ((seed >>> 3) % 3); } // 5..7 points/turn
 /** Apply an action and return an immersive narration of the moment (play, or a coach/draft/offer choice). */
 export function actWithNarration(c: Career, a: CareerAction): string | null {
   const baseCtx = { age: c.age, chapter: c.chapter, stakes: 1 as 1 | 2 | 3, personalityId: c.personality.id, turn: c.turn, seasonEventId: c.seasonEvent?.id ?? null, careerSeed: (c as any).seed >>> 0, castAvoid: c.familyName, milestone: null as string | null, seed: (((c as any).seed >>> 0) + c.turn * 2654435761) >>> 0 };

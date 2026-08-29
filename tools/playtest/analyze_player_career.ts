@@ -45,9 +45,10 @@ const pct = (xs: boolean[]) => (100 * xs.filter(Boolean).length / Math.max(1, xs
 const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.length);
 function summarise(label: string, rows: Row[]) {
   const allSucc = rows.flatMap((r) => r.successes);
-  const solidPlus = pct(allSucc.map((s) => s >= 0.58));
-  const brilliant = pct(allSucc.map((s) => s >= 0.78));
-  const poor = pct(allSucc.map((s) => s < 0.38));
+  // kept in sync with the on-screen grade pills in client/src/main.ts (PT-700 retune)
+  const solidPlus = pct(allSucc.map((s) => s >= 0.60));
+  const brilliant = pct(allSucc.map((s) => s >= 0.80));
+  const poor = pct(allSucc.map((s) => s < 0.40));
   const badHand = pct(rows.flatMap((r) => r.bestFits).map((b) => b < 0.5)); // no card gets even a fair fit
   const rivalBeat = pct(rows.map((r, i) => r.score > rivalRate(seedFrom('probe', i)) * r.successes.length));
   // repetition: back-to-back identical scenario labels, and avg distinct labels per career

@@ -842,7 +842,13 @@ export function makeScenario(rng: () => number, i: number, track: Track = 'outfi
   // need reads as a strong fit; extra matched tags still add (fit sums, clamped at 1) so covering more is
   // better, and a card that matches nothing important stays low. This is the core "good play feels good" fix.
   const mx = Math.max(...(Object.values(demand) as number[]), 0.001);
-  for (const t of Object.keys(demand) as Tag[]) demand[t] = (demand[t] ?? 0) / mx;
+  // Normalise the TOP demand to 0.78, not 1.0. At 1.0 any card carrying the top tag scored a full 1.0 (fit is
+  // clamped at 1), so a correct play was arithmetically incapable of being less than Brilliant at ordinary
+  // stakes: 92% of skilled turns graded Brilliant and career outcomes spread only 8.8% between best and worst.
+  // At 0.78 a single-tag answer is good but not maximal, and COVERING A SECOND demanded tag is what restores
+  // it to 1.0 — so reading the whole demand becomes the actual skill. (PT-700)
+  const TOP_DEMAND = 0.78;
+  for (const t of Object.keys(demand) as Tag[]) demand[t] = ((demand[t] ?? 0) / mx) * TOP_DEMAND;
   const maxStakes = band ? band.maxStakes : 3;
   const r = rng();
   const stakes: 1 | 2 | 3 = maxStakes >= 3 && r < 0.05 * exposure ? 3 : maxStakes >= 2 && r < 0.17 * exposure ? 2 : 1; // an agent's exposure = more big stages; big games kept scarcer so they land as occasions (PT-111)
@@ -1306,7 +1312,9 @@ export class Career {
     // dampens slumps; form (season event) nudges success.
     // variance = nerves. Kept modest at low stakes so SKILL (fit) dominates the outcome — a strong fit should
     // reliably read well — while big games still swing more. (Was 0.3 base, which drowned out good play.)
-    const variance = (0.18 + 0.14 * (this.scenario.stakes - 1)) * this.personality.variance;
+    // Nerve has to be able to actually bite: at 0.18 the maximum downswing was 0.09 against the 0.22 needed to
+    // drop a right card below Brilliant, so ordinary turns had no downside at all. (PT-700)
+    const variance = (0.26 + 0.16 * (this.scenario.stakes - 1)) * this.personality.variance;
     const bigGame = this.scenario.stakes >= 2 ? this.personality.bigGame : 0;
     const form = this.formBonus < 0 ? this.formBonus * this.personality.resilience : this.formBonus;
     // your coach lifts success when you play to their specialty (good coaching → that development compounds)
