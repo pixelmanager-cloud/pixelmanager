@@ -14,7 +14,7 @@ import { flagImg } from './flag';
 import { trophyImg, type TrophyKey } from './trophy';
 import { kitTemplate, recolorKit } from './kit';
 import { audio } from './audio';
-import { commentaryExtra, fillCm } from '@fm/shared/commentary/extra.js';
+import { commentaryExtra, fillCm } from '../../shared/src/commentary/extra.js';
 
 // Topbar speaker icons — same 24×24 viewBox for both states so the button never changes shape on toggle.
 const ICON_SPEAKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3.5l4.5-3.5v13L7.5 15H4z"/><path d="M16 9.2a4 4 0 0 1 0 5.6M18.6 6.6a7.5 7.5 0 0 1 0 10.8"/></svg>';
@@ -3840,14 +3840,14 @@ class Game {
     // a single match — so the bank a player actually sees is base + everything authored for that event.
     if (key) {
       const extra = commentaryExtra(key);
-      if (extra.length) arr = [...arr, ...extra.map((l) => fillCm(l, vars ?? {}) as unknown as T)];
+      if (extra.length) arr = [...arr, ...extra.map((l: string) => fillCm(l, vars ?? {}) as unknown as T)];
     }
     if (arr.length <= 1) return arr[0];
     // Salts are hand-assigned and 18 of them are reused across different banks, so the bag is keyed by
     // salt AND bank size — otherwise a 4-line bank and a 14-line bank sharing salt 6 would refill each
     // other's bag on every alternating draw and the even-coverage guarantee would evaporate.
-    const key = `${salt}:${arr.length}`;
-    let bag = this.cmBag[key];
+    const bagKey = `${salt}:${arr.length}`;
+    let bag = this.cmBag[bagKey];
     if (!bag || bag.length === 0) {
       bag = arr.map((_, i) => i);
       for (let i = bag.length - 1; i > 0; i--) {           // seeded Fisher-Yates
@@ -3855,13 +3855,13 @@ class Game {
         const t = bag[i]; bag[i] = bag[j]; bag[j] = t;
       }
       // we deal from the END, so guard the seam: don't open a bag with the line that closed the last one
-      if (bag.length > 1 && bag[bag.length - 1] === this.lastPick[key]) {
+      if (bag.length > 1 && bag[bag.length - 1] === this.lastPick[bagKey]) {
         const t = bag[bag.length - 1]; bag[bag.length - 1] = bag[0]; bag[0] = t;
       }
-      this.cmBag[key] = bag;
+      this.cmBag[bagKey] = bag;
     }
     const i = bag.pop()!;
-    this.lastPick[key] = i;
+    this.lastPick[bagKey] = i;
     return arr[i];
   }
   // running match context for narration (reset each match in startMatch)

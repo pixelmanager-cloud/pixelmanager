@@ -132,3 +132,19 @@ wiring the commentary packs; an author caught it and wrote zone-neutral lines to
    real payoff and uses a system that already exists.
 
 Build order follows: arcs (the biggest), then the feed to show them, then the two mechanical fixes.
+
+## DECISIONS, round 2 (user, 2026-08-30)
+
+5. **The manager has a CHOSEN temperament** — picked at the handoff, like the player's 13 personalities. It
+   colours which arcs fire, how the board and dressing room react, and how events are narrated. This is the
+   single biggest depth multiplier available: it doubles the meaning of every arc for one system.
+6. **Arcs fire 4–6 a season** — so a ~10-season career sees ~50, and a five-generation dynasty ~250. The
+   library therefore needs to be **800+ arcs** to avoid repeats. This is the target.
+7. **Facilities get all three treatments**: MORE of them (medical centre, data department, club shop,
+   academy dormitory, women's team, community trust), DEEPER levels (5 → 10) each with its own narration,
+   and facilities become CONTENT SOURCES that unlock arcs and events rather than just multipliers.
+8. **Arcs permanently change the club.** A stand gets renamed, a number retired, a rivalry started that
+   outlives the manager, a sponsor lost, the club marked as a selling club. The dynasty accumulates a
+   history you can read back across generations.
+
+The user then granted full autonomy: "do as you recommend, I'll accept your recommendations."
