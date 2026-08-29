@@ -322,6 +322,9 @@ class Game {
   spFixture: { idx: number; oppClub: Club; oppName: string; oppStrength: number; venue: 'home' | 'away'; neutral?: boolean; oppLineup: Lineup; oppTactics: Tactics; comp?: 'league' | 'cont' | 'wc'; contRound?: number } | null = null; // the single-player fixture being played (neutral = a neutral-ground decider: no fan-zone home bonus, PT-130)
   pendingCont: { myGoals: number; oppGoals: number; oppStrength: number } | null = null; // a continental tie awaiting resolution once the full-time card is dismissed
   pendingWc: { myGoals: number; oppGoals: number; oppName: string } | null = null; // a World-Finals knockout tie awaiting resolution
+  /** The last squad-rollover report (Living Squad) — shown on the season screen after a rollover so the
+   *  manager sees who grew, who faded, who retired and whose deal is up. */
+  pendingSquadReport: any = null;
   draftPlan = new Set<string>();          // armed conditional match-plan rule ids (single-player)
   planFired = new Set<string>();          // rules already triggered this match
   planBaseTactics: Tactics | null = null; // the kickoff tactics — shifts apply relative to this
@@ -1213,6 +1216,69 @@ class Game {
 
   /** One-time, dismissible first-manager explainer — the jump from "pick 1 of 4 cards" to a full tactics
    *  suite needs a hand (PT-23). Per-save so a new bloodline sees it again. */
+  /** THE LIVING SQUAD season report: who grew, who faded, who retired, whose deal is up, and what the
+   *  wage bill cost. This is the beat that makes the squad feel like people rather than a static roster. */
+  private squadReportHtml(): string {
+    const r = this.pendingSquadReport;
+    if (!r) return '';
+    const nm = (x: any) => `${x.name} <span class="sq-meta">${x.role} · ${x.age}</span>`;
+    const rows: string[] = [];
+    if (r.risers?.length) {
+      rows.push(`<div class="sq-row up"><span class="sq-lbl">📈 Improved</span><span class="sq-list">`
+        + r.risers.slice(0, 5).map((x: any) => `${nm(x)} <b>${x.from}→${x.to}</b>`).join(' · ')
+        + (r.risers.length > 5 ? ` <i>+${r.risers.length - 5} more</i>` : '') + `</span></div>`);
+    }
+    if (r.fallers?.length) {
+      rows.push(`<div class="sq-row down"><span class="sq-lbl">📉 Fading</span><span class="sq-list">`
+        + r.fallers.slice(0, 5).map((x: any) => `${nm(x)} <b>${x.from}→${x.to}</b>`).join(' · ')
+        + (r.fallers.length > 5 ? ` <i>+${r.fallers.length - 5} more</i>` : '') + `</span></div>`);
+    }
+    if (r.retired?.length) {
+      rows.push(`<div class="sq-row ret"><span class="sq-lbl">🎽 Retired</span><span class="sq-list">`
+        + r.retired.map((x: any) => `${nm(x)}`).join(' · ') + ` — thanks for the service.</span></div>`);
+    }
+    if (r.expiring?.length) {
+      const coins = this.account?.coins ?? 0;
+      rows.push(`<div class="sq-row exp"><span class="sq-lbl">📝 Deal up</span><span class="sq-list">`
+        + r.expiring.map((x: any) => {
+          const afford = coins >= x.renewCost;
+          return `<span class="sq-exp">${nm(x)} `
+            + `<button class="sq-btn" data-renew="${x.id}" data-name="${x.name}" data-cost="${x.renewCost}" ${afford ? '' : 'disabled'} title="${afford ? `Renew for ${x.renewCost.toLocaleString()}c` : `Not enough coins (need ${x.renewCost.toLocaleString()}c)`}">Renew · ${x.renewCost.toLocaleString()}c</button> `
+            + `<button class="sq-btn ghost" data-release="${x.id}" data-name="${x.name}" title="Let him leave on a free">Let go</button></span>`;
+        }).join(' ') + `</span></div>`);
+    }
+    const bill = `<div class="sq-row bill"><span class="sq-lbl">💷 Wages</span><span class="sq-list">−${(r.charged ?? 0).toLocaleString()}c paid for the season`
+      + (r.unpaid > 0 ? ` · <b class="sq-warn">${r.unpaid.toLocaleString()}c unpaid — the books are stretched</b>` : '') + `</span></div>`;
+    if (!rows.length && !r.charged) return '';
+    return `<div class="sq-report" id="sq-report"><div class="sq-head">👥 THE SQUAD, A YEAR ON<button class="sq-x" id="sq-report-x" title="Dismiss">✕</button></div>${rows.join('')}${bill}</div>`;
+  }
+
+  /** Pay to keep an out-of-contract squad player. */
+  private async renewSquadFlow(playerId: string, name: string, cost: number) {
+    this.openConfirm(`Renew <b>${name}</b>'s contract for <b>${cost.toLocaleString()}c</b>?`, 'Renew', async () => {
+      try {
+        const r = await api.renewSquadPlayer(playerId);
+        if (this.account) this.account.coins = r.coins;
+        this.pendingSquadReport = { ...this.pendingSquadReport, expiring: (this.pendingSquadReport?.expiring ?? []).filter((x: any) => x.id !== playerId) };
+        this.setMe(await api.me()); audio.chime('confirm');
+        toast(`✍️ ${name} re-signs · −${r.cost.toLocaleString()}c`);
+        this.showSeason();
+      } catch (e: any) { toast(e?.body?.error ?? 'Could not renew'); }
+    });
+  }
+  /** Let an out-of-contract squad player walk. */
+  private async releaseSquadFlow(playerId: string, name: string) {
+    this.openConfirm(`Let <b>${name}</b> leave on a free? He walks and you save his wages.`, 'Let him go', async () => {
+      try {
+        await api.releaseSquadPlayer(playerId);
+        this.pendingSquadReport = { ...this.pendingSquadReport, expiring: (this.pendingSquadReport?.expiring ?? []).filter((x: any) => x.id !== playerId) };
+        this.setMe(await api.me());
+        toast(`👋 ${name} leaves the club`);
+        this.showSeason();
+      } catch (e: any) { toast(e?.body?.error ?? 'Could not release'); }
+    });
+  }
+
   private managerHelpCard(): string {
     if (localStorage.getItem(this.onbKey('fm_mgr_help_done'))) return '';
     const m = this.loadMgr();
@@ -1305,6 +1371,7 @@ class Game {
       + tierMove
       + boardLine
       + `<div class="sf-gaffer">📔 ${this.gafferTake(played, t.pos, t.size, clubName)}</div>`
+      + this.squadReportHtml()
       + this.sponsorHtml()
       + this.worldCupHtml()
       + this.continentalHtml()
@@ -1312,6 +1379,9 @@ class Game {
       + `<div class="season-cols"><div class="season-fixtures"><h4 class="scout-h4">FIXTURES</h4>${fxRows}${records}${focusSel}${simBtn}</div>`
       + `<div class="season-table-wrap"><h4 class="scout-h4">LEAGUE TABLE — ${tierName(tier).toUpperCase()}</h4>${this.spTableHtml(t, tier)}${this.staffHtml()}</div></div>`;
     ($('mgr-help-x') as any)?.addEventListener('click', () => { localStorage.setItem(this.onbKey('fm_mgr_help_done'), '1'); ($('mgr-help') as any)?.remove(); });
+    document.getElementById('sq-report-x')?.addEventListener('click', () => { this.pendingSquadReport = null; document.getElementById('sq-report')?.remove(); });
+    document.querySelectorAll<HTMLElement>('[data-renew]').forEach((b) => b.addEventListener('click', () => this.renewSquadFlow(b.dataset.renew!, b.dataset.name ?? 'him', Number(b.dataset.cost || 0))));
+    document.querySelectorAll<HTMLElement>('[data-release]').forEach((b) => b.addEventListener('click', () => this.releaseSquadFlow(b.dataset.release!, b.dataset.name ?? 'him')));
     $('sf-cont-play')?.addEventListener('click', () => this.playContinentalTie());
     $('sf-cont-sim')?.addEventListener('click', () => this.simContinentalTie());
     $('sf-wc-follow')?.addEventListener('click', () => this.followWorldCup());
@@ -1727,6 +1797,17 @@ class Game {
     // TRAINING: the star develops per the focus (young grow it, veterans decline) — his overall shifts the club
     if (m.starId) {
       try { const d = await api.developPlayer(m.starId, { focus: m.trainFocus ?? 'passing', age: m.starAge ?? 27 }); this.setMe(await api.me()); toast(`🏋️ ${m.starName} — off-season training (OVR now ${d.overall})`); } catch { /* offline */ }
+    }
+    // THE LIVING SQUAD: the rest of the squad lives too — the young improve, the veterans fade, the old
+    // retire, deals run out and wages come due. This is what makes the manager's squad feel like people he
+    // has to keep investing in rather than a static roster (PT-90/PT-92).
+    if (m.starId) {
+      try {
+        const sq = await api.advanceSquadSeason({ trainingLvl: this.facLevels.training ?? 1 });
+        if (this.account?.coins != null) this.account.coins = sq.coins;
+        this.setMe(await api.me());
+        this.pendingSquadReport = sq;
+      } catch { /* offline — squad rollover is best-effort, never blocks the season */ }
     }
     if (t.pos === 1) { audio.play('triumph'); audio.chime('triumph'); } // league champions — the victory cue
     // PROMOTION / RELEGATION — the pyramid climb: top-2 go up, bottom-2 go down (club property, survives the heir)

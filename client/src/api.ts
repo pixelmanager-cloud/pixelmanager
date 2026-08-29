@@ -13,7 +13,8 @@ import {
   makeClub as _makeClub, // re-exported nowhere — freshSave() (save.ts) already calls this; kept for reference
   validateLineup, cleanDuties,
   overall, managerPrestige, signContract, graduationEpilogue, clubInvestOf, TIERS,
-  transferList, transferFee, sellValue, incomingBid, MIN_SQUAD, MAX_SQUAD,
+  transferList, transferFee, sellValue, squadSaleValue, incomingBid, MIN_SQUAD, MAX_SQUAD,
+  signSquadContract, advanceSquad, squadSeasonsLeft, squadRenewCost, squadSeasonWage,
   contractDemand, evaluateContractOffer, wageForLength,
   FACILITY_KEYS, FACILITY_META, MAX_LEVEL, upgradeCost, effectAt,
   youthPoolBonus, youthUpgradeChance, scoutHitMult, scoutCostDiscount, scoutExtraTrips,
@@ -308,7 +309,10 @@ export const api = {
     if (getActiveModel().profile.coins < f) throw apiErr('not enough coins', { need: f }, 402);
     await localStore.addCoins(OWNER, -f);
     const uid = `bought-${c.club.players.length}-${String(player.id || 'p').replace(/[^a-z0-9]/gi, '')}`;
-    c.club.players.push({ ...player, id: uid });
+    // A signing joins on a real CONTRACT (Living Squad): he keeps the age the listing advertised, and his
+    // deal runs from this season — so he'll age, cost wages, and eventually force a renew-or-lose call
+    // instead of being a free permanent asset (PT-90/PT-92).
+    c.club.players.push(signSquadContract({ ...player, id: uid }, getActiveModel().profile.season));
     await localStore.saveClub(OWNER, c.club, c.standingOrders);
     return { ok: true as const, coins: getActiveModel().profile.coins, squadSize: c.club.players.length };
   },
@@ -320,7 +324,7 @@ export const api = {
     const p = c.club.players.find((x) => x.id === playerId);
     if (!p) throw apiErr('no such player', {}, 404);
     if (await localStore.getToken(playerId)) throw apiErr('the bloodline star can only leave via a transfer offer', {}, 409);
-    const value = sellValue(overall(p));
+    const value = squadSaleValue(overall(p), p.age ?? 26); // a fading veteran is worth less — the SELL column now means something (PT-90)
     await localStore.addCoins(OWNER, value);
     c.club.players = c.club.players.filter((x) => x.id !== playerId);
     await localStore.saveClub(OWNER, c.club, c.standingOrders);
@@ -505,6 +509,59 @@ export const api = {
     if (upfront == null) throw apiErr('unknown deal');
     await localStore.addCoins(OWNER, upfront);
     return { ok: true as const, upfront, coins: getActiveModel().profile.coins };
+  },
+  /** THE LIVING SQUAD season rollover: age the manager's whole squad a year, develop the young, fade the
+   *  veterans, retire whoever is done, charge the season's wage bill, and report whose deal is now up.
+   *  The bloodline star is NOT here — he keeps his own token path (developPlayer + MgrState.starAge). */
+  advanceSquadSeason: async (body: { trainingLvl?: number }) => {
+    await ensureActive();
+    const c = await localStore.getClub(OWNER);
+    if (!c) throw apiErr('club not found', {}, 404);
+    const season = getActiveModel().profile.season;
+    // grandfather any player with no deal (a pre-Living-Squad save, or the founding squad) onto one that
+    // starts now, so nobody is silently free forever
+    const roster = c.club.players.map((p) => (p.signedSeason == null ? signSquadContract(p, season) : p));
+    const roll = advanceSquad(roster, season, Math.max(1, Math.floor(Number(body?.trainingLvl) || 1)));
+    // wages are a real cost, but never bankrupt the club into a stuck state — charge what's affordable
+    const coinsNow = getActiveModel().profile.coins;
+    const charged = Math.max(0, Math.min(coinsNow, Math.round(roll.wageBill)));
+    if (charged > 0) await localStore.addCoins(OWNER, -charged);
+    c.club.players = roll.players;
+    await localStore.saveClub(OWNER, c.club, c.standingOrders);
+    const lite = (p: Player) => ({ id: p.id, name: p.name, role: p.role, age: p.age ?? 0, ovr: overall(p) });
+    return {
+      ok: true as const,
+      coins: getActiveModel().profile.coins,
+      wageBill: Math.round(roll.wageBill), charged, unpaid: Math.round(roll.wageBill) - charged,
+      retired: roll.retired.map(lite),
+      expiring: roll.expiring.map((p) => ({ ...lite(p), renewCost: squadRenewCost(overall(p)) })),
+      risers: roll.changes.filter((ch) => ch.ovrAfter > ch.ovrBefore && !ch.retired).map((ch) => ({ ...lite(ch.player), from: ch.ovrBefore, to: ch.ovrAfter })),
+      fallers: roll.changes.filter((ch) => ch.ovrAfter < ch.ovrBefore && !ch.retired).map((ch) => ({ ...lite(ch.player), from: ch.ovrBefore, to: ch.ovrAfter })),
+    };
+  },
+  /** Renew an expiring squad player's contract (wage x length, paid up front). */
+  renewSquadPlayer: async (playerId: string) => {
+    await ensureActive();
+    const c = await localStore.getClub(OWNER);
+    if (!c) throw apiErr('club not found', {}, 404);
+    const p = c.club.players.find((x) => x.id === playerId);
+    if (!p) throw apiErr('no such player', {}, 404);
+    const cost = squadRenewCost(overall(p));
+    if (getActiveModel().profile.coins < cost) throw apiErr('not enough coins', { need: cost }, 402);
+    await localStore.addCoins(OWNER, -cost);
+    c.club.players = c.club.players.map((x) => (x.id === playerId ? signSquadContract(x, getActiveModel().profile.season) : x));
+    await localStore.saveClub(OWNER, c.club, c.standingOrders);
+    return { ok: true as const, coins: getActiveModel().profile.coins, cost };
+  },
+  /** Let an expiring squad player walk (frees his wage, no fee). */
+  releaseSquadPlayer: async (playerId: string) => {
+    await ensureActive();
+    const c = await localStore.getClub(OWNER);
+    if (!c) throw apiErr('club not found', {}, 404);
+    if (c.club.players.length <= MIN_SQUAD) throw apiErr(`you can't drop below ${MIN_SQUAD} players`, {}, 409);
+    c.club.players = c.club.players.filter((x) => x.id !== playerId);
+    await localStore.saveClub(OWNER, c.club, c.standingOrders);
+    return { ok: true as const, squadSize: c.club.players.length };
   },
   developPlayer: async (pid: string, body: { focus: string; age: number }) => {
     await ensureActive();
