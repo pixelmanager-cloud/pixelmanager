@@ -523,11 +523,17 @@ const BRAND_OFFERS: Offer[] = [
   { id: 'brand', name: 'The Boot Launch',    desc: 'His own signature boot drops this summer — huge exposure, and eyes that are no longer all on the pitch', earn: 620, greed: 1, market: 3, form: -0.05 },
   { id: 'brand', name: 'Docu-series Deal',   desc: 'Cameras follow him for a season — the fame spikes, the focus wobbles',                       earn: 540, greed: 2, market: 4, form: -0.07 },
 ];
+// These used to have NO downside: positive form, negative greed (a cheaper re-sign) and positive
+// marketability, with forgone earnings as the only cost — and "The One-Club Man" advertised itself as "the
+// fans adore him, the money waits, the football gets better", which is not a choice, it is a correct
+// answer. Turning down the money now costs PROFILE: staying put means fewer eyes on him, and marketability
+// is what pays for sponsors and the lifestyle that lifts his meters. Money buys reach; loyalty buys
+// football. (PT-157)
 const DEVELOP_OFFERS: Offer[] = [
-  { id: 'develop', name: 'Stay & Develop',   desc: 'Turn the money down, knuckle down at your club — you develop keenly and the fans adore you',   earn: 120, greed: -2, market: 0, form: 0.06 },
-  { id: 'develop', name: 'Back the Project', desc: 'Reject the interest and commit to the club’s plan — quieter, but he grows and the terraces sing his name', earn: 100, greed: -2, market: 1, form: 0.07 },
-  { id: 'develop', name: 'Head Down, Work',  desc: 'No deals, no distractions — a pure season of graft that sharpens every edge of his game',     earn: 90, greed: -3, market: 0, form: 0.08 },
-  { id: 'develop', name: 'The One-Club Man', desc: 'Publicly pledge his future here — the fans adore him, the money waits, the football gets better', earn: 140, greed: -3, market: 1, form: 0.06 },
+  { id: 'develop', name: 'Stay & Develop',   desc: 'Turn the money down and knuckle down — he develops keenly, but the bigger stage forgets him for a while',   earn: 120, greed: -2, market: -1, form: 0.06 },
+  { id: 'develop', name: 'Back the Project', desc: 'Reject the interest and commit to the club’s plan — he grows, though nobody outside the town is watching', earn: 100, greed: -2, market: 0, form: 0.07 },
+  { id: 'develop', name: 'Head Down, Work',  desc: 'No deals, no distractions — a pure season of graft that sharpens his game and keeps him out of the papers',     earn: 90, greed: -3, market: -2, form: 0.08 },
+  { id: 'develop', name: 'The One-Club Man', desc: 'Publicly pledge his future here — the terraces will love him for it, and the money and the limelight both go elsewhere', earn: 140, greed: -3, market: 0, form: 0.06 },
 ];
 export const OFFERS: Offer[] = [MONEY_OFFERS[0], BRAND_OFFERS[0], DEVELOP_OFFERS[0]]; // canonical set (kept for any external ref)
 export const OFFER_CHOICES = 3;

@@ -43,6 +43,20 @@ const BACKROOM_STAFF = [
 const METER_ICON: Record<string, string> = { authority: '🧑‍🏫', peers: '👥', family: '🏠', school: '🎒', agent: '🤝', fans: '📣', sponsors: '📸', partner: '❤️' };
 // Readable names for the relationship-meter icons (tooltip + legend so the summer-focus icon-math is decodable — playtest PT-10).
 const METER_NAME: Record<string, string> = { authority: 'Coach', peers: 'Teammates', family: 'Family', school: 'School', agent: 'Agent', fans: 'Fans', sponsors: 'Sponsors', partner: 'Partner' };
+/** What each meter actually DOES, on the meter itself. The one-time help card named five of the eight and
+ *  described them only in aggregate ("a strong meter unlocks better summer opportunities") — and it is
+ *  permanently dismissible, three chapters before Fans, Sponsors and Partner first appear, so those three
+ *  could never be explained to anybody. A tooltip on the bar cannot be dismissed early. (PT-510) */
+const METER_WHAT: Record<string, string> = {
+  authority: 'How your coach rates you. High: better coaching offers and more trust in big moments.',
+  peers: 'How the dressing room sees you. High: teammates back you up when a season turns.',
+  family: 'The people at home. High: a settled head — it steadies you when things go badly.',
+  school: 'Your education. High: a safety net, and a level head the papers can’t rattle.',
+  agent: 'How well your agent is working for you. High: better money and better moves.',
+  fans: 'The terraces. High: they forgive a bad run and lift you on the big days.',
+  sponsors: 'Commercial interest. High: bigger endorsement money between seasons.',
+  partner: 'Life at home as an adult. High: you play with a clear head; low, and it follows you out.',
+};
 // Normalize a typed family name at the source: strip anything that isn't a letter/space/'/- (kills the
 // HTML-injection vector, PT-78), collapse whitespace, and title-case each word so "MESSI" / "de bruyne"
 // store + render as "Messi" / "De Bruyne" (PT-80). Since the cleaned name now flows into the club name, the
@@ -2493,7 +2507,7 @@ class Game {
     const meterColor = (v: number) => v >= 66 ? '#5bd06a' : v >= 33 ? '#ffd75e' : '#ff6d6d';
     // stage-aware: the meters you juggle change with age (coach/parents/mates → gaffer/fans/sponsors/partner)
     const meters = (s.meters ?? []).map((m) =>
-      `<div class="cg-meter" title="${m.label}: ${m.value}/100"><span class="cg-m-icon">${m.icon}</span>`
+      `<div class="cg-meter" title="${m.label}: ${m.value}/100 — ${METER_WHAT[m.key] ?? ''}"><span class="cg-m-icon">${m.icon}</span>`
       + `<span class="cg-m-lbl">${m.label}</span>`
       + `<span class="cg-m-bar"><b style="width:${m.value}%;background:${meterColor(m.value)}"></b></span></div>`).join('');
     const low = s.energy != null && s.energy < 35;

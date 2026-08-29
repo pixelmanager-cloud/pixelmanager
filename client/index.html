@@ -949,7 +949,13 @@
       /* #7: the remaining-budget bar, prominent above the spend tiles */
       .cg-budget { font-family: var(--display); font-size: 13px; color: #ffd75e; background: color-mix(in srgb, var(--warn) 12%, var(--panel)); border: 1px solid color-mix(in srgb, var(--warn) 40%, var(--line)); border-radius: 9px; padding: 8px 12px; margin: 2px 0 12px; display: inline-block; }
       /* #5: the two-step summer flow — Continue button + a back link */
-      .cg-summer-next-wrap { margin-top: 16px; display: flex; justify-content: center; }
+      /* STICKY EXIT. By the senior chapters the spend grid is 22 tiles and the only way forward sat at
+         y~1056 in a 1400px viewport — off-screen, with no other route out of the screen, and the grid
+         re-flowed under you on every purchase so it moved as you shopped. (PT-811) */
+      .cg-summer-next-wrap { margin-top: 16px; display: flex; justify-content: center;
+        position: sticky; bottom: 0; z-index: 5; padding: 10px 0 12px;
+        background: linear-gradient(to top, var(--panel) 60%, transparent); }
+      .cg-summer-next-wrap button { box-shadow: 0 -3px 14px rgba(0,0,0,0.5); }
       .cg-linkbtn { background: none; border: none; color: var(--cyan); font-family: var(--body); font-size: 15px; cursor: pointer; padding: 4px 0; margin-bottom: 8px; text-decoration: underline; }
       .legends-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px; margin-top: 8px; }
       .legend-card { padding: 11px 13px; border-radius: 10px; background: linear-gradient(160deg, rgba(150,120,40,0.14), rgba(90,70,20,0.1)); border: 1px solid rgba(220,190,90,0.34); }
