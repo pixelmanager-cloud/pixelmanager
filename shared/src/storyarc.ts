@@ -55,7 +55,7 @@ function h01(a: number, b: number, c = 0x9e3779b1): number {
 
 /** How many story arcs a single career should surface — the career is cut into this many equal slots and
  *  each fires one arc, so the storytelling is paced evenly from age 10 to graduation. */
-export const ARCS_PER_CAREER = 16;
+export const ARCS_PER_CAREER = 20;
 
 /** Should a NEW arc start at this turn? Deterministic per (seed, turn); respects each arc's window, avoids
  *  repeats (fired set), and keeps arcs rare enough to feel special. Returns the arc id, or null. */
