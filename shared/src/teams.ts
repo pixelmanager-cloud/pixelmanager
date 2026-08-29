@@ -135,9 +135,14 @@ export function mintSquadPlayer(id: string, role: Role, quality: number, seed: n
 /** Generate a full club roster (~20 players) deterministically from a seed. */
 export function generateClub(id: string, name: string, shortName: string, shirtColor: number, quality: number, seed: number, rich = false): Club {
   const rng = makeRng(seed);
-  // `rich` = the MANAGER'S OWN squad: every player is a full character (15 stats + personality + traits +
-  // age) so the manager gets attached to them (Living Squad). Opponent clubs stay on the cheap path —
-  // they're regenerated per fixture from a seed and never persist, so the depth would be invisible.
+  // `rich` = a full character (15 stats + personality + traits + age) rather than the 10 physical/technical
+  // stats alone. Originally only the MANAGER'S squad was rich, on the reasoning that opponents are
+  // regenerated per fixture and never persist so the depth is invisible — but the mental layer is not
+  // decoration, the match engine READS it, and an absent mental defaults to 10. That made the comparison
+  // wildly asymmetric: measured, a manager's squad at quality 6 averaged 5.9 mentals against every
+  // opponent's flat 10 (a 4.1 handicap in the basement), and at quality 18 averaged 17.9 against the same
+  // flat 10 (a 7.9 advantage in the top flight). The pyramid was harder at the bottom and easier at the
+  // top than anything intended it to be. Opponents are rich too now — one extra mint per fixture. (PT-305)
   const players: Player[] = ROSTER_ROLES.map((role, i) => rich
     ? mintSquadPlayer(`${id}-${i}`, role, quality, (seed ^ ((i + 1) * 0x9e3779b1)) >>> 0)
     : {

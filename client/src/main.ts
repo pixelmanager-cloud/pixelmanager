@@ -68,7 +68,7 @@ const cleanFamilyName = (raw: string): string =>
      .replace(/(^|[\s'-])(\p{L})/gu, (_, sep, ch) => sep + ch.toUpperCase());
 // Readable full names for the stat abbreviations shown around the UI (tooltip on hover — playtest fix:
 // abbreviations like CMP/CRE/LDR/WRK were unexplained).
-const STAT_FULL: Record<string, string> = { pace: 'Pace', strength: 'Strength', passing: 'Passing', shooting: 'Shooting', tackling: 'Tackling', positioning: 'Positioning', workrate: 'Work rate', keeping: 'Goalkeeping', setPiece: 'Set pieces', stamina: 'Stamina', composure: 'Composure', creativity: 'Creativity', leadership: 'Leadership', teamwork: 'Teamwork', aggression: 'Aggression' };
+const STAT_FULL: Record<string, string> = { pace: 'Pace', strength: 'Strength', passing: 'Passing', shooting: 'Shooting', tackling: 'Tackling', positioning: 'Positioning', workrate: 'Work rate', keeping: 'Goalkeeping', setPiece: 'Set pieces', stamina: 'Stamina', composure: 'Composure', creativity: 'Creativity', leadership: 'Leadership', teamwork: 'Teamwork', aggression: 'Aggression', durability: 'Durability — how well he holds up, and how long he plays on' };
 // Pedigree readout — a founding prospect legitimately has 0% (nothing inherited yet), which reads as
 // "worthless" next to his potential stars. Signpost it instead of showing a bare "0%". Playtest fix PT-4.
 function pedigreeText(pedigree: number, generation?: number): string {
@@ -273,16 +273,24 @@ type SquadSort = { key: string; dir: 'asc' | 'desc' };
 const ROLE_ORDER: Record<string, number> = { GK: 0, DF: 1, MF: 2, FW: 3 };
 
 function statsTableHTML(players: Player[], highlight?: Set<string>, sort?: SquadSort | null): string {
+  // The five MENTAL stats and durability are shown here too. This table hard-coded the same ten
+  // physical/technical columns it had before the Living Squad existed, so the entire mental layer — which
+  // the match engine reads, which traits bump, and which is most of what makes one squad player different
+  // from another — was invisible everywhere except a once-a-year report. AGE is here for the same reason:
+  // it decides development, decline and retirement, and the manager could not see it. (PT-306)
   const cols: Array<[string, keyof Player['attrs']]> = [
     ['PAC', 'pace'], ['STR', 'strength'], ['PAS', 'passing'], ['SHO', 'shooting'],
     ['TAK', 'tackling'], ['POS', 'positioning'], ['WRK', 'workrate'], ['KEE', 'keeping'],
     ['SET', 'setPiece'], ['STA', 'stamina'],
+    ['COM', 'composure'], ['AGG', 'aggression'], ['CRE', 'creativity'], ['TEA', 'teamwork'],
+    ['LEA', 'leadership'], ['DUR', 'durability'],
   ];
   // Value a row contributes to a given sort key (number for stats, string for name).
   const sortVal = (p: Player, key: string): number | string => {
     if (key === 'pos') return ROLE_ORDER[p.role];
     if (key === 'name') return p.name.toLowerCase();
     if (key === 'ovr') return overall(p);
+    if (key === 'age') return p.age ?? 0;
     return p.attrs[key as keyof Player['attrs']] ?? 0;
   };
   let sorted: Player[];
@@ -299,7 +307,7 @@ function statsTableHTML(players: Player[], highlight?: Set<string>, sort?: Squad
   const arrow = (key: string) => (sort?.key === key ? (sort.dir === 'asc' ? ' ▲' : ' ▼') : '');
   const th = (label: string, key: string, style = '', title = '') =>
     `<th class="sortable" data-sort="${key}"${title ? ` title="${title}"` : ''}${style ? ` style="${style}"` : ''}>${label}${arrow(key)}</th>`;
-  const head = `<tr><th></th>${th('Pos', 'pos', '', 'Position')}${th('Name', 'name', 'text-align:left')}${th('OVR', 'ovr', '', 'Overall rating')}${cols.map(([l, k]) => th(l, k, '', STAT_FULL[k] ?? String(k))).join('')}</tr>`;
+  const head = `<tr><th></th>${th('Pos', 'pos', '', 'Position')}${th('Name', 'name', 'text-align:left')}${th('OVR', 'ovr', '', 'Overall rating')}${th('AGE', 'age', '', 'Age — decides growth, decline and when he retires')}${cols.map(([l, k]) => th(l, k, '', STAT_FULL[k] ?? String(k))).join('')}</tr>`;
   const rows = sorted.map((p) => {
     const on = !!highlight?.has(p.id);
     const nft = isNftId(p.id);
@@ -309,7 +317,7 @@ function statsTableHTML(players: Player[], highlight?: Set<string>, sort?: Squad
     const nameCell = tier
       ? `<td class="name nft-name tier-${tier.key}" data-card="${p.id}" title="Your star · ${tier.name} — click to view card">${tier.icon} ${p.name}</td>`
       : `<td class="name" data-card="${p.id}" title="Click to view his card">${p.name}</td>`; // every squad player is a full character now — his card is worth opening (Living Squad)
-    return `<tr class="${on ? 'inxi' : ''}${nft ? ' nft-row' : ''}">${mark}<td class="pos role-${p.role}">${p.role}</td>${nameCell}<td class="stat" style="background:${statColor(overall(p))}">${overall(p)}</td>${cells}</tr>`;
+    return `<tr class="${on ? 'inxi' : ''}${nft ? ' nft-row' : ''}">${mark}<td class="pos role-${p.role}">${p.role}</td>${nameCell}<td class="stat" style="background:${statColor(overall(p))}">${overall(p)}</td><td class="stat age">${p.age ?? '–'}</td>${cells}</tr>`;
   }).join('');
   return `<table class="squad">${head}${rows}</table>`;
 }
@@ -1648,7 +1656,7 @@ class Game {
     const tie = contOpponent(this.leagueSeed(), m.season, round as 0 | 1 | 2);
     const short = (tie.oppName.match(/[A-Z]/g) ?? ['C', 'O', 'N']).join('').slice(0, 3);
     const oppSeed = (this.leagueSeed() ^ (round * 131)) >>> 0;
-    const oppClub = generateClub('cont-' + m.season + '-' + round, tie.oppName, short, 0x8844cc, tie.oppStrength, oppSeed);
+    const oppClub = generateClub('cont-' + m.season + '-' + round, tie.oppName, short, 0x8844cc, tie.oppStrength, oppSeed, true);
     const venue: 'home' | 'away' = tie.neutral ? 'home' : (round % 2 === 0 ? 'home' : 'away'); // final on neutral ground, else alternate
     const oppTactics = seededOpponentTactics(oppSeed);
     this.spFixture = { idx: -1, oppClub, oppName: tie.oppName, oppStrength: tie.oppStrength, venue, neutral: tie.neutral, oppLineup: autoPickXI(oppClub, oppTactics.formation), oppTactics, comp: 'cont', contRound: round }; // neutral final: no fan-zone home bonus (PT-130)
@@ -1772,7 +1780,7 @@ class Game {
     const opp = this.wcStageOpp(path, stage);
     const short = (opp.opp.match(/[A-Z]/g) ?? ['N', 'A', 'T']).join('').slice(0, 3);
     const oppSeed = (this.leagueSeed() ^ ([...opp.opp].reduce((a, c) => a + c.charCodeAt(0), 0) * 131)) >>> 0;
-    const oppClub = generateClub('wc-' + m.wcEdition + '-' + stage, opp.opp, short, 0x3a7bd5, opp.oppStrength, oppSeed);
+    const oppClub = generateClub('wc-' + m.wcEdition + '-' + stage, opp.opp, short, 0x3a7bd5, opp.oppStrength, oppSeed, true);
     void nation;
     const oppTactics = seededOpponentTactics(oppSeed);
     this.spFixture = { idx: -1, oppClub, oppName: opp.opp, oppStrength: opp.oppStrength, venue: 'home', neutral: true, oppLineup: autoPickXI(oppClub, oppTactics.formation), oppTactics, comp: 'wc' }; // World-Finals ties are on neutral ground → no fan-zone home bonus (PT-130)
@@ -2162,7 +2170,7 @@ class Game {
     const f = fixtures[idx];
     const opp = seededOpponents(clubName, seed, this.clubTier()).find((o) => o.name === f.oppName)!;
     const short = (opp.name.match(/[A-Z]/g) ?? ['O', 'P', 'P']).join('').slice(0, 3);
-    const oppClub = generateClub('sp-' + opp.seed, opp.name, short, 0xcc4444, opp.strength, opp.seed);
+    const oppClub = generateClub('sp-' + opp.seed, opp.name, short, 0xcc4444, opp.strength, opp.seed, true);
     const venue: 'home' | 'away' = f.venue === 'H' ? 'home' : 'away';
     const oppTactics = seededOpponentTactics(opp.seed);
     this.spFixture = { idx, oppClub, oppName: opp.name, oppStrength: opp.strength, venue, oppLineup: autoPickXI(oppClub, oppTactics.formation), oppTactics };
