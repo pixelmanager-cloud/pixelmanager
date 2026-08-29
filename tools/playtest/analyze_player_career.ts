@@ -17,7 +17,7 @@ const N = Number(process.argv[2] ?? 400);
 const rivalRate = rivalRateOf;
 
 type Row = { successes: number[]; stakes: number[]; bestFits: number[]; labels: string[]; score: number };
-function run(seedTag: string, policy: 'skilled' | 'random'): Row[] {
+function run(seedTag: string, policy: 'skilled' | 'decent' | 'random'): Row[] {
   const rows: Row[] = [];
   for (let i = 0; i < N; i++) {
     const seed = seedFrom(seedTag, i);
@@ -32,9 +32,15 @@ function run(seedTag: string, policy: 'skilled' | 'random'): Row[] {
       if (st.phase === 'coach') { c.appointCoach(st.coaches![0].id); continue; }
       if (st.phase === 'draft') { c.draft(st.options![0].id); continue; }
       const hand = st.hand!, sc = st.scenario!;
+      // DECENT = plays a card carrying SOME demanded tag, but not necessarily the best one. This is what a
+      // player who half-reads the moment does, and the gap between it and SKILLED is what makes reading the
+      // moment properly worth doing. If the two score the same, the game only looks like it has decisions.
+      const decent = hand.filter((x) => fit(x, sc) > 0);
       const pick = policy === 'skilled'
         ? hand.reduce((b, x) => (fit(x, sc) > fit(b, sc) ? x : b), hand[0])
-        : hand[Math.floor((i * 2654435761 + guard * 40503) % hand.length)]; // deterministic pseudo-random pick
+        : policy === 'decent'
+          ? (decent.length ? decent[Math.floor((i * 2654435761 + guard * 40503) % decent.length)] : hand[0])
+          : hand[Math.floor((i * 2654435761 + guard * 40503) % hand.length)]; // deterministic pseudo-random pick
       const ch = c.play(pick.id);
       r.successes.push(ch.success); r.stakes.push(ch.stakes); r.bestFits.push(ch.bestFit); r.labels.push(ch.scenario);
       r.score += ch.success * 8 * (ch.stakes ?? 1);
@@ -87,8 +93,20 @@ function summarise(label: string, rows: Row[]) {
 }
 
 console.log(`=== Player-career playtest probe — ${N} careers/policy (skilled = always best-fit) ===`);
-const sk = summarise('SKILLED', run('probe', 'skilled'));
+const skRows = run('probe', 'skilled');
+const dcRows = run('probe', 'decent');
+const sk = summarise('SKILLED', skRows);
+const dc = summarise('DECENT', dcRows);
 const rn = summarise('RANDOM', run('probe', 'random'));
+// Spread of final career score under IDENTICAL play. A narrow band means the number you finish on was
+// settled at character creation and the 120 turns barely moved it. (PT-705)
+const scores = skRows.map((r) => r.score).sort((a, b) => a - b);
+const at = (q: number) => scores[Math.min(scores.length - 1, Math.floor(scores.length * q))];
+const spread = 100 * (at(0.9) - at(0.1)) / Math.max(1, at(0.1));
+console.log(`\ncareer score (skilled): p10 ${Math.round(at(0.1))} · p50 ${Math.round(at(0.5))} · p90 ${Math.round(at(0.9))}  → p90/p10 spread ${spread.toFixed(1)}%`);
+const dcMed = [...dcRows.map((r) => r.score)].sort((a, b) => a - b)[Math.floor(dcRows.length / 2)];
+const playGap = 100 * (at(0.5) - dcMed) / Math.max(1, dcMed);
+console.log(`skilled vs decent: career score ${Math.round(at(0.5))} vs ${Math.round(dcMed)}  → play is worth ${playGap.toFixed(1)}%`);
 console.log(`\n=== player-experience verdict ===`);
 const checks: Array<[string, boolean, string]> = [
   ['skilled play is usually rewarded (Solid+ ≥ 60%)', sk.solidPlus >= 60, `${sk.solidPlus}%`],
@@ -104,6 +122,14 @@ const checks: Array<[string, boolean, string]> = [
   ['Brilliant stays special (≤ 45% of turns)', sk.brilliant <= 45, `${sk.brilliant}%`],
   ['difficulty does not decay late (Brilliant spread across quarters ≤ 18pts)', sk.drift <= 18, `${sk.drift}pts`],
   ['skill clearly beats random (Solid+ gap ≥ 20pts)', sk.solidPlus - rn.solidPlus >= 20, `${sk.solidPlus}% vs ${rn.solidPlus}%`],
+  // Reading the moment PROPERLY has to beat half-reading it, or the decision is cosmetic. (PT-706)
+  ['reading it right beats half-reading it (Brilliant gap ≥ 8pts)', sk.brilliant - dc.brilliant >= 8, `${sk.brilliant}% vs ${dc.brilliant}%`],
+  // PT-705 asked for career-score DISPERSION, and I first checked p90/p10 across skilled careers — but
+  // that varies only the SEED, so it measures how much luck decides, not how much play decides. Low seed
+  // spread is desirable when play spread is high; the two only looked alike in the old build where
+  // success pinned to the clamp and NOTHING moved the number. The honest check is the play gap: the same
+  // seed pool, played well versus played half-well.
+  ['play moves the career score more than luck does (≥ 8%)', playGap >= 8, `${playGap.toFixed(1)}% (skilled ${Math.round(at(0.5))} vs decent ${Math.round(dcMed)}), seed spread ${spread.toFixed(1)}%`],
   ['rival is beatable by good play (≥ 60% of skilled careers)', sk.rivalBeat >= 60, `${sk.rivalBeat}%`],
   ['the rival STAYS a contest, not just beatable (≥ 40%)', sk.contested >= 40, `${sk.contested}%`],
   ['rival is NOT trivial for random play (< 55%)', rn.rivalBeat < 55, `${rn.rivalBeat}%`],
