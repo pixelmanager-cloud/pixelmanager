@@ -182,12 +182,26 @@ function simMatch(a: LeagueClub, b: LeagueClub, h: number): [number, number] {
   // consecutive fixtures — so neighbouring seeds produced the IDENTICAL scoreline 94.5% of the time and a
   // season averaged 2.0 distinct results, with one repeating 14 times in 18 games ("13 of 18 were 2-0"). (PT-900)
   const mixed = (() => { let x = h >>> 0; x = Math.imul(x ^ (x >>> 16), 2246822507) >>> 0; x = Math.imul(x ^ (x >>> 13), 3266489909) >>> 0; return (x ^ (x >>> 16)) >>> 0; })();
-  const rnd = (n: number) => (((mixed >>> (n & 15)) ^ (mixed >>> ((n + 7) & 15))) % 100) / 100;
   // guard a non-finite strength from corrupting goal columns into NaN (QA M2); finite passes through unchanged
   const aStr = Number.isFinite(a.strength) ? a.strength : SQUAD_BASE, bStr = Number.isFinite(b.strength) ? b.strength : SQUAD_BASE;
   const diff = (aStr - bStr) * 0.10 + 0.25; // small home edge; coefficient eased so a strong side isn't unbeatable (PT-901)
-  const gh = Math.min(6, Math.max(0, Math.round(1.2 + diff + (rnd(1) - 0.5) * 3.2)));
-  const ga = Math.min(6, Math.max(0, Math.round(1.2 - diff + (rnd(2) - 0.5) * 3.2)));
+  // GOALS ARE POISSON, not a rounded uniform. Both goal columns used to be read off the same `mixed` word
+  // by bit-shifting it, which made them correlated, and `round(1.2 ± 1.6)` can only ever produce 0-3 — so
+  // no side could score 4 however one-sided the game, and 42% of a season came out 2-0 or 2-2. Football
+  // scorelines are close to Poisson, which gives the long tail (the 4-1, the occasional 5) that makes a
+  // season memorable, for free and still fully deterministic. (PT-1003)
+  const stream = (salt: number) => {
+    let x = (mixed ^ Math.imul(salt, 2654435761)) >>> 0;
+    return () => { x = (x + 0x6d2b79f5) >>> 0; let t = x; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return (((t ^ (t >>> 14)) >>> 0) / 4294967296); };
+  };
+  const poisson = (lambda: number, rng: () => number) => {
+    const L = Math.exp(-Math.max(0.05, lambda));
+    let k = 0, p = 1;
+    do { k++; p *= rng(); } while (p > L && k < 40);
+    return k - 1;
+  };
+  const gh = Math.min(6, poisson(1.35 + diff, stream(1)));
+  const ga = Math.min(6, poisson(1.35 - diff, stream(2)));
   return [gh, ga];
 }
 

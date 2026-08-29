@@ -269,7 +269,7 @@ function isAcademyScareTurn(c: Career, kind: string): boolean {
 export function seasonObjectives(band: { turns: number; maxStakes: number }, deckTags: string[] = []) {
   const has = (t: string) => deckTags.length === 0 || deckTags.includes(t);
   return [
-    { id: 'strong', test: (ch: any) => ch.success >= 0.68, target: Math.max(3, Math.round(band.turns * 0.55)), label: (n: number) => `Turn in ${n} strong displays this stage` },
+    { id: 'strong', test: (ch: any) => ch.success >= 0.68, target: Math.max(3, Math.round(band.turns * 0.45)), label: (n: number) => `Turn in ${n} strong displays this stage` },
     { id: 'big', test: (ch: any) => ch.stakes >= 2 && ch.success >= 0.6, target: 2, label: (n: number) => `Rise to the occasion in ${n} big-game moments` },
     // The read must actually COME OFF. Testing the read alone made this objective identical to "played the
     // best card", so it completed on 100% of stages and no target could change that — the game marks the

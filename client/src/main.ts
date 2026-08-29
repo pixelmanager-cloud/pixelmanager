@@ -1159,10 +1159,22 @@ class Game {
   // bloodline hand-off (stored apart from the per-generation manager save), so the dynasty climbs one pyramid.
   private clubTier(): number { try { const t = Number(localStorage.getItem('fm_tier_' + (this.account?.handle ?? 'x'))); return t >= 1 && t <= TIERS ? Math.round(t) : TIERS; } catch { return TIERS; } }
   private setClubTier(t: number): void { try { localStorage.setItem('fm_tier_' + (this.account?.handle ?? 'x'), String(Math.max(1, Math.min(TIERS, Math.round(t))))); } catch { /* ignore */ } }
-  /** the club's raw squad strength = average overall of the best XI (1-20 scale) */
+  /** the club's raw squad strength = weighted average overall of the best XI (1-20 scale).
+   *  The BLOODLINE STAR carries extra weight. As a flat mean of eleven he was worth at most +1.09 club
+   *  strength — an OVR-20 star dropped into an 8.55 squad moved it to 9.64, and a same-level star moved it
+   *  by nothing at all — while facilities and staff handed over +2.8 for free. The one player the whole
+   *  game is about mattered less than a training-ground upgrade, which is backwards for a game whose pitch
+   *  is a bloodline. He now counts as three of the eleven: enough to feel like the difference, not enough
+   *  to make the other ten decorative. (PT-904) */
+  private static readonly STAR_WEIGHT = 3;
   private squadStrength(): number {
-    const ovrs = this.club.players.map((p) => overall(p)).sort((a, b) => b - a).slice(0, 11);
-    return ovrs.length ? ovrs.reduce((a, b) => a + b, 0) / ovrs.length : 8;
+    const starId = this.loadMgr().starId;
+    const rated = this.club.players.map((p) => ({ ov: overall(p), star: !!starId && p.id === starId }));
+    const xi = rated.sort((a, b) => b.ov - a.ov).slice(0, 11);
+    if (!xi.length) return 8;
+    let sum = 0, w = 0;
+    for (const p of xi) { const k = p.star ? Game.STAR_WEIGHT : 1; sum += p.ov * k; w += k; }
+    return sum / w;
   }
   /** the strength the LEAGUE sees — the squad, shifted by the bloodline star's age curve: he peaks in his
    *  mid-20s and declines toward retirement, so the club's results rise then fade over his managed career. */
