@@ -29,7 +29,24 @@ export interface StoryArc {
   rare?: boolean;                                 // a low-probability "signature" one-off
   first: string;                                  // the opening beat id
   beats: Record<string, ArcBeat>;
+  /** Arcs whose PREMISE contradicts this one — they can never both run in a career. The library assumes
+   *  several mutually exclusive home set-ups and nothing stopped them co-occurring: a player could be told
+   *  his dad "has driven to every game since he was six" AND that his dad "said he'd come to this one" and
+   *  did not, AND that his nan "raised him single-handed after his parents couldn't". Checked in BOTH
+   *  directions, so a conflict only needs declaring once. (PT-202) */
+  excludes?: string[];
 }
+
+/** Mutually exclusive HOME SET-UPS. Declared once, here, rather than scattered through the arc files, so
+ *  the whole conflict map is readable in one place. (PT-202) */
+const HOME_CONFLICTS: Record<string, string[]> = {
+  // a devoted, ever-present father cannot also be the father who never turns up, or absent entirely
+  'rel-football-dad':      ['youth-fam-absent-dad', 'rel-grandparent', 'youth-fam-stepdad'],
+  'youth-fam-camcorder':   ['youth-fam-absent-dad', 'rel-grandparent'],
+  // raised by his nan because his parents could not — rules out every arc built on a parent at home
+  'rel-grandparent':       ['youth-fam-absent-dad', 'youth-fam-split', 'youth-fam-stepdad', 'youth-fam-redundancy',
+                            'youth-fam-nightshift', 'youth-fam-mum-played', 'youth-fam-dinner-table', 'youth-fam-kit-wash'],
+};
 
 // ── the arc library ───────────────────────────────────────────────────────────────────────────────
 // Arcs live in per-category files under ./storyarcs/ (so authoring scales without merge conflicts) and are
@@ -73,7 +90,17 @@ export const ARCS_PER_CAREER = 20;
 /** Should a NEW arc start at this turn? Deterministic per (seed, turn); respects each arc's window, avoids
  *  repeats (fired set), and keeps arcs rare enough to feel special. Returns the arc id, or null. */
 export function pickArcStart(seed: number, turn: number, fired: ReadonlySet<string>, totalTurns = 120): string | null {
-  const eligible = ARCS.filter((a) => !fired.has(a.id) && turn >= a.minTurn && turn <= a.maxTurn);
+  const conflictsWithFired = (a: StoryArc): boolean => {
+    const mine = [...(a.excludes ?? []), ...(HOME_CONFLICTS[a.id] ?? [])];
+    if (mine.some((id) => fired.has(id))) return true;
+    // the other direction too, so a conflict only has to be declared once
+    for (const id of fired) {
+      const other = arcById.get(id);
+      if ([...(other?.excludes ?? []), ...(HOME_CONFLICTS[id] ?? [])].includes(a.id)) return true;
+    }
+    return false;
+  };
+  const eligible = ARCS.filter((a) => !fired.has(a.id) && turn >= a.minTurn && turn <= a.maxTurn && !conflictsWithFired(a));
   if (!eligible.length) return null;
   // EVEN SPACING, not a flat per-turn dice roll. A constant probability clusters by luck — three arcs in one
   // chapter, then twenty barren turns — which reads as feast-or-famine. Instead the career is cut into
