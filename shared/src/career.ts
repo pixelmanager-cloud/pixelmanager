@@ -547,8 +547,18 @@ const YOUTH_BRAND_OFFERS: Offer[] = [
   { id: 'brand', name: "A Shop's Boot Deal", desc: 'The sports shop on the high street will kit him out if he wears their stuff — free boots, small strings', earn: 50, greed: 1, market: 2, form: -0.02 },
   { id: 'brand', name: 'The Club Video',     desc: "A clip of him goes on the academy's channel — a taste of being watched, and of what that does to a boy", earn: 20, greed: 0, market: 3, form: -0.04 },
 ];
-export function rollOffer(_rng: () => number, turn: number): Offer[] {
-  const at = (arr: Offer[], salt: number) => arr[Math.abs(Math.imul(turn + 1, salt) >>> 0) % arr.length];
+/** The three offers at a chapter break. Takes the CAREER SEED, not the rng: it must not consume a draw
+ *  (that would shift every later roll and break replay), but it must still differ between careers.
+ *  It previously ignored the seed entirely — `Math.imul(turn + 1, salt)` and nothing else — and the six
+ *  chapter breaks land on fixed turns, so every career ever played saw the same six screens in the same
+ *  order, and the weak mixing made the t46/t66/t86 trios come out identical to each other as well.
+ *  40 careers produced just 12 distinct offer narrations. A proper hash of (seed, turn) fixes both. (PT-400) */
+export function rollOffer(seed: number, turn: number): Offer[] {
+  const at = (arr: Offer[], salt: number) => {
+    let h = (Math.imul(seed ^ salt, 2654435761) ^ Math.imul(turn + 1, 374761393)) >>> 0;
+    h = Math.imul(h ^ (h >>> 15), 2246822519); h = Math.imul(h ^ (h >>> 13), 3266489917); h ^= h >>> 16;
+    return arr[(h >>> 0) % arr.length];
+  };
   // Youth Team (bandIdx 3, age 17-18) is where a first professional deal becomes plausible; below that the
   // offers stay age-real. Pure band lookup — no rng draw, so the offer stream is unchanged for older careers.
   const youth = bandAt(Math.min(turn, TOTAL_TURNS - 1)).index < 3;
@@ -1184,7 +1194,7 @@ export class Career {
       this.pendingFocus = [...sideOpts, FOCUS_SIDE_SKIP];
     } else {
       this.sideFocusFor = null;
-      this.pendingOffer = rollOffer(this.rng, this.turn);
+      this.pendingOffer = rollOffer(this.seed, this.turn);
     }
   }
   /** Lifestyle upgrades affordable + unlocked RIGHT NOW (offered at the between-chapter focus screen).
@@ -1220,7 +1230,7 @@ export class Career {
   private autoResolveFocus() {
     if (!this.pendingFocus) return;
     this.pendingFocus = null;
-    this.pendingOffer = rollOffer(this.rng, this.turn);
+    this.pendingOffer = rollOffer(this.seed, this.turn);
   }
 
   /** RESOLVE the financial offer on the table: apply its money/fame/greed/form, then move to the coach. */
