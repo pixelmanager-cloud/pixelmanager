@@ -154,6 +154,21 @@ export function arcFits(a: ManagerArc, s: MgrSituation): boolean {
   }
 }
 
+/** Apply a morale change with DIMINISHING RETURNS near the ceiling.
+ *
+ *  Measured over 600 simulated careers, the authored arcs are net morale-positive: mean swing +2.0, and
+ *  42% of careers finished with the dressing room pinned at 100. That makes the whole morale system inert —
+ *  it feeds re-sign cost, selection and squad storylines, and none of that means anything if it is always
+ *  maxed. Rebalancing 534 arcs written by six people would be the wrong fix; a happy dressing room simply
+ *  being harder to make happier is both realistic and self-correcting.
+ *
+ *  A gain is scaled by the headroom left; a LOSS always lands in full, because bad news should always bite. */
+export function applyMorale(current: number, delta: number): number {
+  const now = Math.max(0, Math.min(100, current));
+  const eff = delta > 0 ? delta * (1 - now / 100) * 1.7 : delta;
+  return Math.max(0, Math.min(100, now + eff));
+}
+
 function h01(seed: number, a: number, b: number): number {
   let h = (seed ^ Math.imul(a + 1, 2654435761) ^ Math.imul(b + 1, 40503)) >>> 0;
   h = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0;

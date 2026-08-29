@@ -16,7 +16,7 @@ import { kitTemplate, recolorKit } from './kit';
 import { audio } from './audio';
 import { commentaryExtra, fillCm } from '../../shared/src/commentary/extra.js';
 import { narrateManager, type PersonCtx } from '../../shared/src/managerNarrate.js';
-import { pickManagerArc, managerArcById, MGR_TEMPERS, type MgrSituation, type MgrArcEffect, type MgrTemper } from '../../shared/src/managerarc.js';
+import { pickManagerArc, managerArcById, MGR_TEMPERS, applyMorale, type MgrSituation, type MgrArcEffect, type MgrTemper } from '../../shared/src/managerarc.js';
 import { facilityLevelStory } from '../../shared/src/facilities.js';
 
 // Topbar speaker icons — same 24×24 viewBox for both states so the button never changes shape on toggle.
@@ -2758,7 +2758,7 @@ class Game {
     const m = this.loadMgr();
     if (e.coins && this.account?.coins != null) { this.account.coins = Math.max(0, this.account.coins + e.coins); }
     if (e.squadMorale && this.club) {
-      for (const p of this.club.players) p.morale = Math.max(0, Math.min(100, (p.morale ?? 65) + e.squadMorale));
+      for (const p of this.club.players) p.morale = applyMorale(p.morale ?? 65, e.squadMorale);
     }
     if (e.playerMorale && this.club?.players.length) {
       const sq = this.club.players;
@@ -2767,7 +2767,7 @@ class Game {
         : e.playerMorale.who === 'youngest' ? [...sq].sort((a, b) => (a.age ?? 24) - (b.age ?? 24))[0]
         : e.playerMorale.who === 'oldest' ? [...sq].sort((a, b) => (b.age ?? 24) - (a.age ?? 24))[0]
         : [...sq].sort((a, b) => overall(b) - overall(a))[0];
-      if (pick) pick.morale = Math.max(0, Math.min(100, (pick.morale ?? 65) + e.playerMorale.delta));
+      if (pick) pick.morale = applyMorale(pick.morale ?? 65, e.playerMorale.delta);
     }
     const next = { ...this.loadMgr() };
     if (e.tag) next.arcTags = [...new Set([...(next.arcTags ?? []), e.tag])];
