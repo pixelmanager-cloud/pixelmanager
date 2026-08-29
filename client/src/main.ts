@@ -3780,7 +3780,12 @@ class Game {
     }
     try { this.setMe(await api.me()); } catch { /* keep old rating */ }
     // surface any injuries picked up this match (staggered so they don't overlap the result toast)
-    this.lastInjuries.forEach((inj, i) => setTimeout(() => (() => { toast(`🤕 ${inj.name} injured — out ${inj.matches} match${inj.matches > 1 ? 'es' : ''}`); const ip = this.club?.players.find((x) => x.id === inj.playerId); if (ip) this.feedEvent(inj.matches >= 6 ? 'injury_long' : 'injury', '🤕', this.personCtx(ip, ip.id === this.loadMgr().starId), { n: inj.matches }); })(), 800 * (i + 1)));
+    this.lastInjuries.forEach((inj, i) => setTimeout(() => {
+      toast(`🤕 ${inj.name} injured — out ${inj.matches} match${inj.matches > 1 ? 'es' : ''}`);
+      // the injury record carries a NAME, not an id, so the squad lookup matches on that
+      const ip = this.club?.players.find((x) => x.name === inj.name);
+      if (ip) this.feedEvent(inj.matches >= 6 ? 'injury_long' : 'injury', '🤕', this.personCtx(ip, ip.id === this.loadMgr().starId), { n: inj.matches });
+    }, 800 * (i + 1)));
     this.showFullTimeCard();
   }
 
