@@ -56,6 +56,11 @@ console.log(`  title rate while IN the top flight:    ${titleRateTop}%\n`);
 
 const checks: Array<[string, boolean, string]> = [
   ['the climb to the top is achievable in a career (≥ 55%)', reachedTop / N >= 0.55, `${p(reachedTop)}%`],
+  // ...but it must not be GUARANTEED. These one-sided "is it achievable?" checks passed at 100% while a live
+  // playthrough went P18 W18 D0 L0 and every single simulated career ended in the top flight — the harness
+  // reported "healthy" for a mode with no difficulty at all. A climb nobody can fail is not a climb. (PT-802)
+  ['the climb is NOT guaranteed — some careers fall short (≤ 90%)', reachedTop / N <= 0.90, `${p(reachedTop)}%`],
+  ['careers do not ALL end at the summit (avg end tier ≥ 1.5)', +avgEndTier >= 1.5, `${avgEndTier}`],
   ['progress is earned — few careers stay stuck (< 20%)', stuck / N < 0.20, `${p(stuck)}%`],
   ['top-flight titles are a real but hard prize (8–45%)', +titleRateTop >= 8 && +titleRateTop <= 45, `${titleRateTop}%`],
   ['careers end high on average (avg end tier ≤ 4)', +avgEndTier <= 4, `${avgEndTier}`],
