@@ -449,29 +449,29 @@ export const LIFESTYLE: LifestyleItem[] = [
 // shores up a weakness. A strategic layer on top of deck-building.
 export interface Coach { id: string; name: string; kind: 'coach' | 'mentor'; desc: string; specialty: Tag[]; bonus: number }
 export const COACHES: Coach[] = [
-  { id: 'finishing',  name: 'Finishing Coach',   kind: 'coach',  desc: 'Hours drilling the work in front of goal',   specialty: ['composure', 'flair'], bonus: 0.12 },
-  { id: 'technical',  name: 'Technical Coach',    kind: 'coach',  desc: 'Endless reps on close control & vision',      specialty: ['creativity', 'flair'], bonus: 0.12 },
-  { id: 'defensive',  name: 'Defensive Coach',    kind: 'coach',  desc: 'Drills the dark arts of defending',           specialty: ['aggression', 'teamwork'], bonus: 0.12 },
-  { id: 'fitness',    name: 'Fitness Coach',      kind: 'coach',  desc: 'Runs you into the ground — and back',         specialty: ['stamina'], bonus: 0.14 },
-  { id: 'mentality',  name: 'Mentality Coach',    kind: 'coach',  desc: 'Builds the mind as much as the body',         specialty: ['composure', 'leadership'], bonus: 0.12 },
-  { id: 'veteran',    name: 'Veteran Mentor',     kind: 'mentor', desc: 'A wise old pro takes you under his wing',     specialty: ['composure', 'leadership', 'teamwork'], bonus: 0.1 },
-  { id: 'playmaker',  name: 'Playmaker Mentor',   kind: 'mentor', desc: 'A legendary no.10 shows you how to see it',   specialty: ['creativity', 'teamwork'], bonus: 0.12 },
-  { id: 'warrior',    name: 'Warrior Mentor',     kind: 'mentor', desc: 'An old-school hard man teaches you to bite',  specialty: ['aggression', 'stamina'], bonus: 0.12 },
-  { id: 'gk-coach',   name: 'Goalkeeping Coach',  kind: 'coach',  desc: 'Shot-stopping, handling, commanding the box', specialty: ['keeping'], bonus: 0.14 },
-  { id: 'leadership', name: 'Leadership Coach',   kind: 'coach',  desc: 'Turns quiet lads into captains',              specialty: ['leadership'], bonus: 0.14 },
-  { id: 'pressing',   name: 'Pressing Coach',     kind: 'coach',  desc: 'Choreographs the collective press',           specialty: ['stamina', 'aggression'], bonus: 0.12 },
-  { id: 'creative',   name: 'Creativity Coach',   kind: 'coach',  desc: 'Frees the imagination in tight spaces',       specialty: ['creativity', 'composure'], bonus: 0.12 },
-  { id: 'talisman-m', name: 'Talisman Mentor',    kind: 'mentor', desc: 'A born matchwinner teaches you to seize it',  specialty: ['flair', 'leadership'], bonus: 0.12 },
-  { id: 'general-m',  name: 'The General',        kind: 'mentor', desc: 'A commanding centre-half drills your reading of the game', specialty: ['aggression', 'composure', 'teamwork'], bonus: 0.11 },
-  { id: 'setpiece',   name: 'Set-Piece Coach',    kind: 'coach',  desc: 'Free-kicks, corners, every rehearsed dead ball',           specialty: ['composure', 'creativity', 'flair'], bonus: 0.1 },
-  { id: 'psych',      name: 'Sports Psychologist', kind: 'coach', desc: 'Gets inside your head — and settles it',                   specialty: ['composure'], bonus: 0.15 },
-  { id: 'scout-m',    name: 'Scout Mentor',       kind: 'mentor', desc: 'An old scout teaches you what the eye in the stand looks for', specialty: ['flair', 'creativity'], bonus: 0.12 },
-  { id: 'youth-guru', name: 'Youth Development Guru', kind: 'mentor', desc: 'Coaxes raw talent out at its own pace, never forcing it', specialty: ['creativity', 'stamina'], bonus: 0.11 },
-  { id: 'analytics',  name: 'Data & Analytics Coach', kind: 'coach', desc: 'Numbers over instinct — drills the patterns the data reveals', specialty: ['composure', 'teamwork'], bonus: 0.11 },
-  { id: 'man-mgmt',   name: 'Man-Management Specialist', kind: 'mentor', desc: 'Knows exactly which button to push in which player', specialty: ['leadership', 'teamwork'], bonus: 0.13 },
-  { id: 'street',     name: 'Street-Football Mentor', kind: 'mentor', desc: 'Learned the game on concrete, not carpet — and it shows', specialty: ['flair', 'creativity'], bonus: 0.13 },
-  { id: 'discipline', name: 'Old-School Disciplinarian', kind: 'coach', desc: 'Fear and respect in equal measure — no excuses, ever', specialty: ['aggression', 'leadership'], bonus: 0.12 },
-  { id: 'nutrition',  name: 'Nutrition & Recovery Coach', kind: 'coach', desc: 'What goes in matters as much as what comes out', specialty: ['stamina'], bonus: 0.13 },
+  { id: 'finishing',  name: 'Finishing Coach',   kind: 'coach',  desc: 'Hours drilling the work in front of goal',   specialty: ['composure', 'flair'], bonus: 0.074 },
+  { id: 'technical',  name: 'Technical Coach',    kind: 'coach',  desc: 'Endless reps on close control & vision',      specialty: ['creativity', 'flair'], bonus: 0.074 },
+  { id: 'defensive',  name: 'Defensive Coach',    kind: 'coach',  desc: 'Drills the dark arts of defending',           specialty: ['aggression', 'teamwork'], bonus: 0.074 },
+  { id: 'fitness',    name: 'Fitness Coach',      kind: 'coach',  desc: 'Runs you into the ground — and back',         specialty: ['stamina'], bonus: 0.087 },
+  { id: 'mentality',  name: 'Mentality Coach',    kind: 'coach',  desc: 'Builds the mind as much as the body',         specialty: ['composure', 'leadership'], bonus: 0.074 },
+  { id: 'veteran',    name: 'Veteran Mentor',     kind: 'mentor', desc: 'A wise old pro takes you under his wing',     specialty: ['composure', 'leadership', 'teamwork'], bonus: 0.062 },
+  { id: 'playmaker',  name: 'Playmaker Mentor',   kind: 'mentor', desc: 'A legendary no.10 shows you how to see it',   specialty: ['creativity', 'teamwork'], bonus: 0.074 },
+  { id: 'warrior',    name: 'Warrior Mentor',     kind: 'mentor', desc: 'An old-school hard man teaches you to bite',  specialty: ['aggression', 'stamina'], bonus: 0.074 },
+  { id: 'gk-coach',   name: 'Goalkeeping Coach',  kind: 'coach',  desc: 'Shot-stopping, handling, commanding the box', specialty: ['keeping'], bonus: 0.087 },
+  { id: 'leadership', name: 'Leadership Coach',   kind: 'coach',  desc: 'Turns quiet lads into captains',              specialty: ['leadership'], bonus: 0.087 },
+  { id: 'pressing',   name: 'Pressing Coach',     kind: 'coach',  desc: 'Choreographs the collective press',           specialty: ['stamina', 'aggression'], bonus: 0.074 },
+  { id: 'creative',   name: 'Creativity Coach',   kind: 'coach',  desc: 'Frees the imagination in tight spaces',       specialty: ['creativity', 'composure'], bonus: 0.074 },
+  { id: 'talisman-m', name: 'Talisman Mentor',    kind: 'mentor', desc: 'A born matchwinner teaches you to seize it',  specialty: ['flair', 'leadership'], bonus: 0.074 },
+  { id: 'general-m',  name: 'The General',        kind: 'mentor', desc: 'A commanding centre-half drills your reading of the game', specialty: ['aggression', 'composure', 'teamwork'], bonus: 0.068 },
+  { id: 'setpiece',   name: 'Set-Piece Coach',    kind: 'coach',  desc: 'Free-kicks, corners, every rehearsed dead ball',           specialty: ['composure', 'creativity', 'flair'], bonus: 0.062 },
+  { id: 'psych',      name: 'Sports Psychologist', kind: 'coach', desc: 'Gets inside your head — and settles it',                   specialty: ['composure'], bonus: 0.093 },
+  { id: 'scout-m',    name: 'Scout Mentor',       kind: 'mentor', desc: 'An old scout teaches you what the eye in the stand looks for', specialty: ['flair', 'creativity'], bonus: 0.074 },
+  { id: 'youth-guru', name: 'Youth Development Guru', kind: 'mentor', desc: 'Coaxes raw talent out at its own pace, never forcing it', specialty: ['creativity', 'stamina'], bonus: 0.068 },
+  { id: 'analytics',  name: 'Data & Analytics Coach', kind: 'coach', desc: 'Numbers over instinct — drills the patterns the data reveals', specialty: ['composure', 'teamwork'], bonus: 0.068 },
+  { id: 'man-mgmt',   name: 'Man-Management Specialist', kind: 'mentor', desc: 'Knows exactly which button to push in which player', specialty: ['leadership', 'teamwork'], bonus: 0.081 },
+  { id: 'street',     name: 'Street-Football Mentor', kind: 'mentor', desc: 'Learned the game on concrete, not carpet — and it shows', specialty: ['flair', 'creativity'], bonus: 0.081 },
+  { id: 'discipline', name: 'Old-School Disciplinarian', kind: 'coach', desc: 'Fear and respect in equal measure — no excuses, ever', specialty: ['aggression', 'leadership'], bonus: 0.074 },
+  { id: 'nutrition',  name: 'Nutrition & Recovery Coach', kind: 'coach', desc: 'What goes in matters as much as what comes out', specialty: ['stamina'], bonus: 0.081 },
 ];
 export const COACH_OFFER = 3; // choices shown at each appointment
 
@@ -1072,6 +1072,12 @@ export class Career {
   seasonEvent: SeasonEvent | null = null;
   private demandBias: Tag | null = null;   // the gaffer's demand this chapter → scenarios lean this tag
   private formBonus = 0;                    // hot streak / slump → success nudge this chapter
+  /** Form is BOUNDED. Unclamped it was the single thing that killed late-career difficulty: it drifted from
+   *  +0.024 in the opening turns to +0.384 by turn 60, which pushed `success` over the Brilliant line before
+   *  nerve was even rolled — the share of turns where Brilliant was ARITHMETICALLY GUARANTEED went from 1.5%
+   *  early to 82% from turn 50. Positive form is capped much tighter than negative: a purple patch should be
+   *  a nudge, a slump should still be able to bite. (PT-1300) */
+  private addForm(d: number) { this.formBonus = Math.max(-0.30, Math.min(0.15, this.formBonus + d)); }
   private extraPicks = 0;                   // a breakthrough chapter → +draft picks at the next draft
 
   // ── New Star Soccer-style life sim (deterministic — evolves from seeded outcomes, no extra rng) ──
@@ -1226,7 +1232,7 @@ export class Career {
     this.earnings += offer.earn;
     this.greedBonus += offer.greed;
     this.marketBonus += offer.market;
-    this.formBonus += offer.form;                 // added on top of the chapter's season-event form
+    this.addForm(offer.form);                     // added on top of the chapter's season-event form (clamped)
     this.actions.push({ type: 'offer', cardId: offerId });
     this.pendingOffer = null;
     this.pendingCoaches = rollCoaches(this.rng, this.track);
@@ -1246,7 +1252,7 @@ export class Career {
   }
   private applyArcEffect(e?: ArcEffect): void {
     if (!e) return;
-    if (e.form) this.formBonus += e.form;
+    if (e.form) this.addForm(e.form);
     if (e.earnings) this.earnings += e.earnings;
     if (e.market) this.marketBonus += e.market;
     if (e.greed) this.greedBonus += e.greed;
@@ -1339,8 +1345,11 @@ export class Career {
       if (this.formBonus >= -0.01 && this.seasonEvent && ['slump', 'knock', 'transfer-links', 'serious-injury'].includes(this.seasonEvent.id)) {
         this.seasonEvent = { id: 'form-back', name: 'Back to Form', desc: 'He’s battled through the dip — confidence restored.' };
       }
-    } else if (this.formBonus > 0 && success < 0.45) {
-      this.formBonus = Math.max(0, this.formBonus - 0.03); // a purple patch cools when results tail off
+    } else if (this.formBonus > 0) {
+      // cool by 15% EVERY turn (was: only when success < 0.45, which fired on 0.2-0.8% of skilled turns, so a
+      // purple patch effectively never ended and simply accumulated all career). A run of good results still
+      // outruns the decay; a quiet spell now genuinely gives the edge back. (PT-1300)
+      this.formBonus = Math.max(0, this.formBonus * 0.85 - (success < 0.45 ? 0.03 : 0));
     }
     this.updateLife(choice); // NSS meters + energy react to how the moment went (deterministic, no rng)
     if (this.scenario.life) this.applyLifeConsequence(this.scenario.life, success, card.tags); // the life-event's OWN, distinct payoff

@@ -17,7 +17,7 @@ const rivalScoreAt = (turn: number, rate: number) => {
   let total = 0;
   for (let t = 0, band = 0, acc = 0; t < turn && band < AGE_BANDS.length; t++) {
     while (band < AGE_BANDS.length - 1 && t >= acc + AGE_BANDS[band].turns) { acc += AGE_BANDS[band].turns; band++; }
-    total += rate * (1 + (AGE_BANDS[band].maxStakes - 1) * 0.65);
+    total += rate * (1 + (AGE_BANDS[band].maxStakes - 1) * 0.55);
   }
   return Math.round(total);
 };
