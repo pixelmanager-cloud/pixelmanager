@@ -118,7 +118,7 @@ export class LocalStore implements GameStore {
       greed: null, marketability: null, earnings: null, prime_season: null, peak_overall: 0,
       signed_season: null, length_seasons: null, staked_since: null,
       ach_seasons: 0, ach_apps: 0, ach_league: 0, ach_cup: 0, ach_promotions: 0, ach_tier: 0, morale: 65,
-      ach_goals: 0, ach_assists: 0, ach_potm: 0, kit_json: null,
+      ach_goals: 0, ach_assists: 0, ach_potm: 0, kit_json: null, career_honours_json: null,
     };
     this.m.tokens.push(token); this.touch();
   }

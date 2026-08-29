@@ -447,6 +447,36 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
     turn: c.turn, totalTurns: TOTAL_TURNS, seasonEvent: c.seasonEvent, earnings: c.earnings, energy: c.energy, meters: c.meters, profile: prof, clubSeason: clubSeasonData, careerScore, objective, rival, international, offPitch, kit: t.kit_json ? JSON.parse(t.kit_json) : null, lastLifeOutcome, chemistry: c.chemistry, ...st,
   };
 }
+
+export interface CareerHonours {
+  caps: number; nation: string | null;
+  bigNights: string[];        // the stakes-3 occasions he actually played, deduplicated
+  peakOverall: number; careerScore: number; turnsPlayed: number;
+}
+/** What his PLAYING career was, frozen at graduation. Nothing used to survive the end of a career: the big
+ *  occasions were transient scenario labels and caps were derived live from the running state, so a
+ *  Continental finalist and a lad who never left the reserves left behind identical records. The bloodline
+ *  tree, the legend card and an heir's pedigree all need this to exist. (PT-955) */
+export function careerHonours(t: Token, c: Career, peakOverall: number): CareerHonours {
+  const nights = new Set<string>();
+  // Only real OCCASIONS. Training and off-pitch moments can also carry stakes 3, and they were landing in
+  // the honours list as "training: stamina / creativity / teamwork" — not something you tell a grandchild.
+  for (const ch of c.log) {
+    if (ch.stakes < 3 || !ch.scenario) continue;
+    if (ch.scenario.includes(':')) continue;          // "training: …" / "social: …" are kinds, not occasions
+    nights.add(ch.scenario.replace(/^★\s*/, ''));
+  }
+  // mirrors the live derivation in careerState so the frozen record agrees with what the player was shown
+  const rate = peakOverall >= 15 ? 0.4 : peakOverall >= 13 ? 0.25 : peakOverall >= 11 ? 0.12 : 0;
+  const caps = Math.max(0, Math.round((c.turn - 60) * rate));
+  const surname = (t.name || '').trim().split(/\s+/).slice(1).join(' ') || t.name || '';
+  return {
+    caps, nation: caps > 0 && surname ? homeNation(surname) : null,
+    bigNights: [...nights].slice(0, 12),
+    peakOverall, careerScore: careerScoreOf(c), turnsPlayed: c.turn,
+  };
+}
+
 /** Graduate the finished career → the pro attrs to write onto the SAME token (state → pro). */
 export function graduatedFields(t: Token, c: Career): Partial<Token> {
   const genes = JSON.parse(t.genes_json);
@@ -455,6 +485,7 @@ export function graduatedFields(t: Token, c: Career): Partial<Token> {
   return {
     state: 'pro', attrs_json: JSON.stringify(grad.attrs), role: grad.role, traits_json: JSON.stringify(grad.traits),
     personality: grad.personality, greed: grad.greed, marketability: grad.marketability, earnings: grad.earnings, peak_overall: grad.overall,
+    career_honours_json: JSON.stringify(careerHonours(t, c, grad.overall)),
   };
 }
 

@@ -12,4 +12,10 @@ export interface Token {
   ach_seasons: number; ach_apps: number; ach_league: number; ach_cup: number; ach_promotions: number; ach_tier: number; morale: number;
   ach_goals: number; ach_assists: number; ach_potm: number;
   kit_json: string | null;   // cosmetic kit & identity (number, boots, celebration, nickname) — carries to the pro
+  // WHAT HIS PLAYING CAREER ACTUALLY WAS. "A Continental Final" was only ever a string in a big-moments
+  // list and international caps existed only as a derived block on the live career state — Career stored no
+  // honours and graduatedFields wrote none, so the moment a career ended every headline it produced was
+  // gone and nothing downstream COULD read them. The bloodline tree, the legend card and the heir's
+  // pedigree all want this. (PT-955)
+  career_honours_json: string | null;
 }
