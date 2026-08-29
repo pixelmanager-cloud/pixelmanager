@@ -254,6 +254,36 @@ function isAcademyScareTurn(c: Career, kind: string): boolean {
   return SCARE_CHAPTERS.has(c.chapter) && kind === 'social' && gate < 10;
 }
 
+
+/** The per-stage OBJECTIVE table. Exported so the playtest probe can measure the REAL targets instead of
+ *  keeping a copy — every hand-maintained mirror in this repo has drifted, usually within a day.
+ *
+ *  Measured over 200 careers x 7 stages, the old table split into gimmes and impossibilities:
+ *    reads 100% done with 12 idle turns left · consistency 99% · strong 91%
+ *    flair 27% · leadership 19%
+ *  So a stage was either already won or quietly unwinnable, and both read the same on the table.
+ *  The three easy targets are raised; the two tag-gated ones are only OFFERED when the player's deck
+ *  actually holds that tag, which is what made them unreachable — they gated on a card the draft may
+ *  never have dealt him. (PT-703)
+ */
+export function seasonObjectives(band: { turns: number; maxStakes: number }, deckTags: string[] = []) {
+  const has = (t: string) => deckTags.length === 0 || deckTags.includes(t);
+  return [
+    { id: 'strong', test: (ch: any) => ch.success >= 0.68, target: Math.max(3, Math.round(band.turns * 0.55)), label: (n: number) => `Turn in ${n} strong displays this stage` },
+    { id: 'big', test: (ch: any) => ch.stakes >= 2 && ch.success >= 0.6, target: 2, label: (n: number) => `Rise to the occasion in ${n} big-game moments` },
+    // The read must actually COME OFF. Testing the read alone made this objective identical to "played the
+    // best card", so it completed on 100% of stages and no target could change that — the game marks the
+    // right card with 🎯, so choosing it is not the skill being tested. Requiring the outcome too makes it
+    // a real target and stops the metric measuring the policy instead of the player.
+    { id: 'reads', test: (ch: any) => ch.fit >= ch.bestFit - 0.05 && ch.success >= 0.6, target: Math.max(4, Math.round(band.turns * 0.58)), label: (n: number) => `Read the game right ${n} times and make it count` },
+    { id: 'flair', test: (ch: any) => (ch.tags ?? []).includes('flair') && ch.success >= 0.65, target: Math.max(2, Math.round(band.turns * 0.13)), label: (n: number) => `Produce ${n} moments of real quality (flair)` },
+    { id: 'leadership', test: (ch: any) => (ch.tags ?? []).includes('leadership') && ch.success >= 0.6, target: Math.max(2, Math.round(band.turns * 0.13)), label: (n: number) => `Lead by example ${n} times` },
+    { id: 'consistency', test: (ch: any) => ch.success >= 0.5, target: Math.max(5, Math.round(band.turns * 0.85)), label: (n: number) => `Never dip below a solid standard — ${n} respectable performances` },
+  ].filter((o) => (o.id !== 'big' || band.maxStakes >= 2)          // big-game target only where big games happen
+                && (o.id !== 'flair' || has('flair'))              // don't set a target he has no card for
+                && (o.id !== 'leadership' || has('leadership')));
+}
+
 export function careerState(t: Token, c: Career, clubName?: string | null, clubLevel = 0) {
   const st = c.current() as any;
   // STORY ARC beat — fill {RIVAL} with the career's seeded nemesis so the storyline feels personal + recurring.
@@ -389,14 +419,7 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
     const bandStart = AGE_BANDS.slice(0, bandIdx).reduce((s, b) => s + b.turns, 0);
     const bandLog = c.log.slice(bandStart, c.turn);
     const band = AGE_BANDS[bandIdx];
-    const OBJS = [
-      { id: 'strong', test: (ch: any) => ch.success >= 0.68, target: Math.max(2, Math.round(band.turns * 0.35)), label: (n: number) => `Turn in ${n} strong displays this stage` },
-      { id: 'big', test: (ch: any) => ch.stakes >= 2 && ch.success >= 0.6, target: 2, label: (n: number) => `Rise to the occasion in ${n} big-game moments` },
-      { id: 'reads', test: (ch: any) => ch.fit >= ch.bestFit - 0.05, target: Math.max(3, Math.round(band.turns * 0.3)), label: (n: number) => `Read the game right ${n} times (perfect reads)` },
-      { id: 'flair', test: (ch: any) => (ch.tags ?? []).includes('flair') && ch.success >= 0.65, target: Math.max(2, Math.round(band.turns * 0.2)), label: (n: number) => `Produce ${n} moments of real quality (flair)` },
-      { id: 'leadership', test: (ch: any) => (ch.tags ?? []).includes('leadership') && ch.success >= 0.6, target: Math.max(2, Math.round(band.turns * 0.2)), label: (n: number) => `Lead by example ${n} times` },
-      { id: 'consistency', test: (ch: any) => ch.success >= 0.5, target: Math.max(4, Math.round(band.turns * 0.6)), label: (n: number) => `Never dip below a solid standard — ${n} respectable performances` },
-    ].filter((o) => o.id !== 'big' || band.maxStakes >= 2); // big-game target only where big games happen
+    const OBJS = seasonObjectives(band, ((c as any).deck ?? []).flatMap((cd: any) => cd.tags ?? []));
     const pick = OBJS[((((c as any).seed >>> 0) ^ Math.imul(bandIdx + 1, 2654435761)) >>> 0) % OBJS.length];
     const progress = Math.min(pick.target, bandLog.filter(pick.test).length);
     objective = { desc: pick.label(pick.target), target: pick.target, progress, done: progress >= pick.target };
