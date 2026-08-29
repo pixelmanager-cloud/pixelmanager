@@ -21,8 +21,20 @@
 // Everything here is a PURE FUNCTION of (parent, parentSeed, childIndex) — no rng draws, no wall clock — so
 // an heir list is identical on every replay and costs nothing to recompute. (PT-404 follow-on / branching)
 import { inheritGenes, rollPersonality, type Genes } from './career.js';
+import { mintSquadPlayer } from './teams.js';
+import type { Player, Role } from './types.js';
 
-export const HEIRS_PER_GENERATION = 3;
+export const MAX_HEIRS = 3;
+
+/** How many sons a generation produces: 1, 2 or 3, weighted 20/40/40. A generation with a single heir is
+ *  DELIBERATE — it is lifelike, and it makes the generations that do offer a choice feel like an event. The
+ *  UI must say so in words, or a one-heir succession reads as a bug rather than a fact of the family. */
+export function heirCount(parentSeed: number, generation = 0): number {
+  let h = (parentSeed ^ Math.imul(generation + 1, 0x85ebca6b)) >>> 0;
+  h = Math.imul(h ^ (h >>> 13), 0xc2b2ae35) >>> 0;
+  const r = ((h ^ (h >>> 16)) >>> 0) % 100;
+  return r < 20 ? 1 : r < 60 ? 2 : 3;
+}
 
 /** Deterministic per-child seed. Mixed hard rather than added, so sibling 0 and sibling 1 do not land on
  *  neighbouring seeds and produce near-identical rolls. */
@@ -50,7 +62,7 @@ export interface Heir {
 
 /** The heirs a retiring player leaves behind. `keepPct` is how strongly the father shows through on the
  *  NON-family attributes; the family trait is inherited far harder (see FAMILY_KEEP). */
-export function mintHeirs(parent: Genes, parentSeed: number, count = HEIRS_PER_GENERATION, ceilingLift = 0): Heir[] {
+export function mintHeirs(parent: Genes, parentSeed: number, count = MAX_HEIRS, ceilingLift = 0): Heir[] {
   const trait = familyTrait(parentSeed);
   // The variance is controlled HERE rather than inside inheritGenes, because that function applies a fixed
   // ±2 jitter on every call: `keepPct` governs how far a son regresses from his FATHER, and says nothing
@@ -105,3 +117,25 @@ export function mintHeirs(parent: Genes, parentSeed: number, count = HEIRS_PER_G
   return out;
 }
 
+
+/** An unplayed brother as a FULL PLAYER — the user's requirement, in their words: "they become full players,
+ *  the same as other generated players with their own stats, mentalities, characteristics, etc."
+ *
+ *  So he goes through `mintSquadPlayer`, the same path every rich squad player takes: 15 stats, a
+ *  personality, earned traits, an age, durability and morale. He is not a summary row and not a card career.
+ *  His three PHYSICAL attributes are then pulled toward the gene bands he actually inherited, so the family
+ *  attribute shows up in the player you can scout, sign and play — otherwise the genetics would be invisible
+ *  the moment he walked onto a pitch. */
+export function heirAsPlayer(heir: Heir, id: string, role: Role, age: number): Player {
+  const mid = (k: keyof Genes) => (heir.genes[k].floor + heir.genes[k].ceiling) / 2;
+  // his overall quality follows his inheritance rather than being independent of it
+  const quality = Math.max(4, Math.min(18, Math.round((mid('pace') + mid('strength') + mid('stamina')) / 3)));
+  const p = mintSquadPlayer(id, role, quality, heir.seed, age);
+  const attrs: any = { ...p.attrs };
+  for (const k of ['pace', 'strength', 'stamina'] as Array<keyof Genes>) {
+    const band = heir.genes[k];
+    // clamp the minted stat into his inherited band, so a fast family produces visibly fast brothers
+    attrs[k] = Math.max(band.floor, Math.min(band.ceiling, Number(attrs[k] ?? 10)));
+  }
+  return { ...p, attrs };
+}

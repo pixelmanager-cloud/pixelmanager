@@ -44,8 +44,19 @@ const tic = all.filter(([, l]) => /,\s*which is\b/i.test(l));
 say('the ", which is …" tic stays rare (< 2%)', 100 * tic.length / Math.max(1, all.length) < 2, `${tic.length} lines`);
 
 // 5. SECOND PERSON — prompts are third-person about "he"; "you" leaks from other surfaces
-const you = all.filter(([, l]) => /\byou\b|\byour\b/i.test(l));
+// "thank you" / "you name it" are idioms, not the second person addressing the player — a guard that
+// cries wolf gets switched off, so they are excluded rather than left to be argued about every wave.
+const you = all.filter(([, l]) => /(?<!thank )\byou\b|\byour\b/i.test(l) && !/thank you|you name it/i.test(l));
 say('no second person', you.length === 0, you.length ? `${you.length}, e.g. "${you[0][1].slice(0, 50)}"` : '0');
+
+// 6. PLACEHOLDERS — narrate.ts substitutes exactly {rival} and {mentor} in a setup line. Anything else
+// renders LITERALLY on screen, so an author inventing {gaffer} or {captain} ships a visible bug. With tens
+// of thousands of authored lines this cannot be caught by reading.
+const ALLOWED = new Set(['{rival}', '{mentor}']);
+const badPh: Array<[string, string]> = [];
+for (const [k, l] of all) for (const m of l.match(/\{[^}]*\}/g) ?? []) if (!ALLOWED.has(m)) badPh.push([k, m]);
+say('only {rival} and {mentor} placeholders are used', badPh.length === 0,
+  badPh.length ? `${badPh.length}, e.g. ${badPh[0][1]} in ${badPh[0][0]}` : '0');
 
 console.log(`=== Prompt register — ${all.length} lines ===`);
 let fails = 0;

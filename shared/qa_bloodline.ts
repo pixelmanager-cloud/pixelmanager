@@ -1,7 +1,8 @@
 // Do the heirs actually behave like SIBLINGS? The design claim is "correlated but distinct" — recognisably
 // their father's sons, visibly different from each other. That is a measurable claim, so it is measured
 // here rather than asserted in a comment.
-import { mintHeirs, heirSeed, familyTrait, HEIRS_PER_GENERATION } from './src/bloodline.js';
+import { mintHeirs, heirSeed, familyTrait, heirCount, heirAsPlayer, MAX_HEIRS } from './src/bloodline.js';
+import { overall } from './src/teams.js';
 import { rollGenes, type Genes } from './src/career.js';
 
 let fails = 0;
@@ -89,7 +90,40 @@ console.log('\n=== 5. temperament is NOT inherited ===');
     if (new Set(h.map((x) => x.personality)).size > 1) varied++;
   }
   ok('most sets of brothers have different temperaments', varied / N > 0.75, `${Math.round(100 * varied / N)}% of bloodlines`);
-  ok('every generation offers a real choice', HEIRS_PER_GENERATION >= 2);
+  ok('a generation can offer up to three', MAX_HEIRS === 3);
+}
+
+console.log('\n=== 6. how many sons a generation gives (1-3, weighted 20/40/40) ===');
+{
+  const dist: Record<number, number> = { 1: 0, 2: 0, 3: 0 };
+  for (let s = 0; s < 4000; s++) dist[heirCount(s * 2654435761, s % 6)]++;
+  const pct = (n: number) => Math.round(100 * dist[n] / 4000);
+  ok('every count actually occurs', dist[1] > 0 && dist[2] > 0 && dist[3] > 0, `1:${pct(1)}%  2:${pct(2)}%  3:${pct(3)}%`);
+  ok('a lone heir stays uncommon (10-30%)', pct(1) >= 10 && pct(1) <= 30, `${pct(1)}%`);
+  ok('most generations offer a choice (>= 65%)', pct(2) + pct(3) >= 65, `${pct(2) + pct(3)}%`);
+  ok('the count is deterministic', heirCount(12345, 2) === heirCount(12345, 2));
+}
+
+console.log('\n=== 7. an unplayed brother is a FULL PLAYER, not a stat line ===');
+{
+  let withPersonality = 0, withMentals = 0, inBand = 0, n = 0;
+  const roles = ['GK', 'DF', 'MF', 'FW'] as const;
+  for (let s = 0; s < 200; s++) {
+    const pseed = s * 104729 + 11;
+    const heirs = mintHeirs(rollGenes(s * 7919 + 3), pseed, 3);
+    for (const h of heirs) {
+      const pl: any = heirAsPlayer(h, `h-${s}-${h.index}`, roles[(s + h.index) % 4], 18 + (s % 6));
+      n++;
+      if (pl.personality) withPersonality++;
+      if (['composure', 'aggression', 'creativity', 'teamwork', 'leadership'].every((k) => typeof pl.attrs[k] === 'number')) withMentals++;
+      const band = h.genes.pace;
+      if (pl.attrs.pace >= band.floor && pl.attrs.pace <= band.ceiling) inBand++;
+      if (!(overall(pl) > 0) || !pl.age) { console.log('    bad player', pl.id); }
+    }
+  }
+  ok('every brother has a temperament', withPersonality === n, `${withPersonality}/${n}`);
+  ok('every brother has the full mental layer', withMentals === n, `${withMentals}/${n}`);
+  ok('his physique respects the genes he inherited', inBand === n, `${inBand}/${n}`);
 }
 
 console.log(fails ? `\n✗ ${fails} bloodline check(s) failed` : '\n✓ heirs are correlated but distinct — they read as brothers');
