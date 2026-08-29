@@ -808,12 +808,18 @@ export function academyScareStory(chapter: string, seed: number): string {
 }
 /** The RESOLUTION beat — he is ALWAYS kept on (see TONE RULE above); only the framing (comfortable vs
  *  narrow) reads from how the moment right before the decision actually went. */
-export function narrateAcademyScare(cardName: string, success: number, ctx: NarrateCtx): string {
+/** The scholarship-review scare ("KEEP OR CUT?"). It is an OFF-PITCH moment, so it must name the
+ *  tag-derived quality the card screen showed him — not the raw matchday deck name. It used to print
+ *  "He falls back on Defence-Splitter to make his case", naming a passing card that was never on screen,
+ *  while every other off-pitch resolution correctly said "his instinct to share the load". Same defect
+ *  narrateLifeEvent already solved; this call site simply never got the tags. (PT-156) */
+export function narrateAcademyScare(cardName: string, success: number, ctx: NarrateCtx, cardTags?: string[], cardId?: string): string {
   const rng = mulberry32(ctx.seed >>> 0);
   const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
   const strong = band(success) === 'triumph' || band(success) === 'good';
   const resline = pick(strong ? SCARE_RESOLUTION_GOOD : SCARE_RESOLUTION_SHAKY);
-  return `He falls back on ${cardName} to make his case ${resline}`;
+  const token = cardTags && cardId ? lifeAction(cardTags, cardId).noun : cardName;
+  return `He falls back on ${token} to make his case ${resline}`;
 }
 
 // Deterministic "news" about the rival's own career — surfaced as a small ticker alongside the score, so

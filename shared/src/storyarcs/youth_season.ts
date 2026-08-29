@@ -271,7 +271,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         choices: [
           { id: 'speech', label: 'Say a few words when the mic is offered', desc: 'Twelve years old, in front of everyone', outcome: 'He thanks the coaches and then, unprompted, the two lads who never get picked. The room goes quiet in a good way. His grandmother cries into a napkin.', effect: { form: 0.06, attr: { leadership: 3 }, meters: { peers: 5, authority: 4, family: 5 }, tag: 'season-poty-spoke' }, next: 'after' },
           { id: 'grab', label: 'Take it and get back to his seat', desc: 'Shake the hand, say cheers, sit down', outcome: 'He is back in his chair inside fifteen seconds, red to the ears, holding a trophy he cannot look at. His father does not stop grinning all night.', effect: { form: 0.05, attr: { composure: 1 }, meters: { family: 5 }, tag: 'season-poty-quiet' }, next: 'after' },
-          { id: 'share', label: 'Say it should have been someone else', desc: 'And name him', outcome: 'He says another lad had the better season, which is arguably true and definitely awkward, and the room isn\'t sure whether to laugh. The other lad never forgets it.', effect: { attr: { teamwork: 2, leadership: 1 }, meters: { peers: 6, authority: -1 }, tag: 'season-poty-deflected' }, next: 'after' },
+          { id: 'share', label: 'Say it should have been someone else', desc: 'And name him', outcome: 'He says {RIVAL} had the better season, which is arguably true and definitely awkward, and the room isn\'t sure whether to laugh. {RIVAL} never forgets it.', effect: { attr: { teamwork: 2, leadership: 1 }, meters: { peers: 6, authority: -1 }, tag: 'season-poty-deflected' }, next: 'after' },
         ],
       },
       after: {

@@ -92,6 +92,17 @@ const AGE_RULES: Array<{ what: string; limit: number; re: RegExp; iconOnly?: boo
   // years ago. (PT-805/PT-1105)
   { what: 'accumulated history', limit: 86, re: /\ba decade ago\b|\bten years of\b|\bfor six years\b|\btime to walk away\b|\bdawn rehab\b|\beighteen months of\b|\bretired into punditry\b|\bthe club's biggest name\b|\bhis late best friend\b/i },
 ];
+// {RIVAL} substitutes a seeded PERSON'S NAME. A determiner in front of it means the author was treating
+// it as a club or a thing — "the {RIVAL} keeper" renders as "the Turner keeper", and "the {RIVAL} of it
+// all" as "the Turner of it all". Six of these shipped in signature.ts. (PT-810)
+let castFails = 0;
+for (const a of ARCS) {
+  const m = JSON.stringify(a.beats).match(/\b(the|a|an)\s+\{RIVAL\}/i);
+  if (m) { console.log(`  FAIL [${a.id}] uses "${m[0]}" — {RIVAL} is a person's name, not a club or a thing`); castFails++; }
+}
+if (castFails) process.exitCode = 1;
+else console.log('  ok   {RIVAL} is only ever used as a name');
+
 let ageFails = 0;
 for (const a of ARCS) {
   const body = JSON.stringify(a.beats);
@@ -131,6 +142,6 @@ else console.log('  ok   no adult material reachable before age 17');
 // The summary MUST account for age failures too. It used to report only `errors`, so an age violation
 // printed "✗ 1 arc(s) expose adult material to a child" and then "✓ all 414 arcs valid" directly beneath
 // it — anything reading the last line (a person skimming, or a probe tailing the output) saw a pass.
-const total = errors + ageFails;
-console.log(total ? `\n✗ ${total} arc validation error(s) — ${errors} structural, ${ageFails} age-gating` : `\n✓ all ${ARCS.length} arcs valid`);
+const total = errors + ageFails + castFails;
+console.log(total ? `\n✗ ${total} arc validation error(s) — ${errors} structural, ${ageFails} age-gating, ${castFails} cast-placeholder` : `\n✓ all ${ARCS.length} arcs valid`);
 if (total) process.exit(1);

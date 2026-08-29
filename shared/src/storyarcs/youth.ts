@@ -83,17 +83,17 @@ export const YOUTH_ARCS: StoryArc[] = [
     beats: {
       open: {
         id: 'open',
-        prompt: 'A new lad joins the group and is, plainly, better than him. The coaches gather round the new boy at finishing drills. For the first time in his life he is the second-best player in the room, and he hates how much it hurts.',
+        prompt: 'A new lad called {RIVAL} joins the group and is, plainly, better than him. The coaches gather round him at finishing drills. For the first time in his life he is the second-best player in the room, and he hates how much it hurts.',
         choices: [
-          { id: 'learn', label: 'Watch him and steal everything', desc: 'If he\'s better, learn why', outcome: 'He shadows the new boy for a season, copying his first touch until it stops being a copy. They end up close.', effect: { attr: { creativity: 1, teamwork: 1 }, meters: { peers: 8 }, tag: 'youth-friend' }, next: 'trials' },
-          { id: 'race', label: 'Turn it into a private war', desc: 'Beat him at everything, every session', outcome: 'Every drill becomes a contest. He gets better fast, and neither of them ever quite relaxes around the other again.', effect: { attr: { aggression: 1, stamina: 1 }, form: 0.06, meters: { peers: -5, authority: 4 }, tag: 'youth-rival' }, next: 'trials' },
+          { id: 'learn', label: 'Watch him and steal everything', desc: 'If he\'s better, learn why', outcome: 'He shadows {RIVAL} for a season, copying his first touch until it stops being a copy. They end up close — which will make what comes later stranger, not easier.', effect: { attr: { creativity: 1, teamwork: 1 }, meters: { peers: 8 }, tag: 'youth-friend' }, next: 'trials' },
+          { id: 'race', label: 'Turn it into a private war', desc: 'Beat him at everything, every session', outcome: 'Every drill becomes a contest with {RIVAL}. He gets better fast, and neither of them ever quite relaxes around the other again.', effect: { attr: { aggression: 1, stamina: 1 }, form: 0.06, meters: { peers: -5, authority: 4 }, tag: 'youth-rival' }, next: 'trials' },
         ],
       },
       trials: {
         id: 'trials',
-        prompt: 'End of the season. Only one of them is being put forward for the district trial, and the coach hasn\'t said which.',
+        prompt: 'End of the season. Only one of them — him or {RIVAL} — is being put forward for the district trial, and the coach hasn\'t said which.',
         choices: [
-          { id: 'grace', label: 'Wish him well either way', desc: 'Whatever happens, be decent about it', outcome: 'He tells the other boy he deserves it, and means it. The coach hears him say it — and remembers that as much as the football.', effect: { attr: { leadership: 1, composure: 1 }, meters: { authority: 10, peers: 8 } } },
+          { id: 'grace', label: 'Wish him well either way', desc: 'Whatever happens, be decent about it', outcome: 'He tells {RIVAL} he deserves it, and means it. The coach hears him say it — and remembers that as much as the football.', effect: { attr: { leadership: 1, composure: 1 }, meters: { authority: 10, peers: 8 } } },
           { id: 'push', label: 'Make the case for himself', desc: 'Ask the coach, straight out, what he needs to do', outcome: 'He knocks on the office door and asks what he\'s missing. The coach gives him a list — and puts him forward.', effect: { attr: { leadership: 1 }, form: 0.08, meters: { authority: 8, peers: -3 } } },
         ],
       },

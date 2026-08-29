@@ -10,7 +10,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'Ball drops to him on the halfway line, the whole pitch ahead, the game on a knife-edge. There is a moment where time seems to slow. What does he do?',
         choices: [
-          { id: 'solo', label: 'Take them all on', desc: 'Head down, everything or nothing', outcome: 'He beats one, two, three, and buries it. A goal replayed for a generation — the {RIVAL} of it all forgotten in an instant.', effect: { form: 0.12, market: 4, attr: { flair: 2, creativity: 1 }, meters: { fans: 22 }, tag: 'legend-goal' } },
+          { id: 'solo', label: 'Take them all on', desc: 'Head down, everything or nothing', outcome: 'He beats one, two, three, and buries it. A goal replayed for a generation — even {RIVAL} forgotten in an instant.', effect: { form: 0.12, market: 4, attr: { flair: 2, creativity: 1 }, meters: { fans: 22 }, tag: 'legend-goal' } },
           { id: 'team', label: 'Play the killer pass', desc: 'The unselfish option, the right option', outcome: 'He slides in the winner for a teammate — no glory, all class. The room loves him for it.', effect: { form: 0.08, attr: { teamwork: 1, creativity: 1 }, meters: { peers: 14, fans: 8 } } },
         ],
       },
@@ -134,7 +134,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
     beats: {
       open: {
         id: 'open',
-        prompt: 'He wins it back inside his own half and glances up to see the {RIVAL} keeper caught yards off his line, sweeping and stranded. Sixty yards of empty grass stretch between the ball and the gaping net, and cheek is whispering in his ear.',
+        prompt: 'He wins it back inside his own half and glances up to see the opposition keeper caught yards off his line, sweeping and stranded. Sixty yards of empty grass stretch between the ball and the gaping net, and cheek is whispering in his ear.',
         choices: [
           { id: 'lob', label: 'Lob him from distance', desc: 'The audacity of a lifetime — go on, try it', outcome: 'He clips it early and high and the whole ground turns to watch it float, the keeper back-pedalling in horror as it drops under the bar off the faintest kiss of the woodwork. From his own half! An absurd, jaw-dropping goal that belongs on every highlight reel ever cut.', effect: { form: 0.14, market: 6, attr: { flair: 2, creativity: 1 }, meters: { fans: 26, sponsors: 8 } } },
           { id: 'drive', label: 'Drive forward and make sure', desc: 'Carry it in rather than chance the impossible', outcome: 'He resists the madness, gallops into the acres of space, and rounds the scrambling keeper to roll it into an empty net. Not the worldie it might have been, but a cool, clinical solo goal that has the crowd on their feet all the same.', effect: { form: 0.1, market: 3, attr: { composure: 1, stamina: 1 }, meters: { fans: 16 } } },
@@ -220,7 +220,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'The last {RIVAL} defender squares up to him at the edge of the box, feet planted, daring him to try something. There is a gap between those boots, a sliver of daylight, and a devil on his shoulder whispering that he should.',
         choices: [
-          { id: 'meg', label: 'Nutmeg him and finish', desc: 'Roll it through his legs, then bury it — pure humiliation', outcome: 'He slips it clean through the defender’s legs, skips round the other side, and rifles it into the roof of the net in one contemptuous motion. The {RIVAL} man is left sitting on the grass, nutmegged and beaten, as the away end drowns in noise. Cruel, brilliant, unforgettable.', effect: { form: 0.13, market: 5, attr: { flair: 3 }, meters: { fans: 24, peers: 8 } } },
+          { id: 'meg', label: 'Nutmeg him and finish', desc: 'Roll it through his legs, then bury it — pure humiliation', outcome: 'He slips it clean through the defender’s legs, skips round the other side, and rifles it into the roof of the net in one contemptuous motion. The man he beat is left sitting on the grass, nutmegged and beaten, as the away end drowns in noise. Cruel, brilliant, unforgettable.', effect: { form: 0.13, market: 5, attr: { flair: 3 }, meters: { fans: 24, peers: 8 } } },
           { id: 'shimmy', label: 'Shimmy past and slot it', desc: 'Drop the shoulder, glide by, no need to embarrass', outcome: 'He drops a shoulder that sends the defender the wrong way entirely, strolls into the space, and passes it calmly into the corner. Less circus than the nutmeg, but a moment of icy control that dismantles {RIVAL} just the same. The finish never in doubt.', effect: { form: 0.11, market: 3, attr: { flair: 1, composure: 2 }, meters: { fans: 18 } } },
         ],
       },
@@ -274,7 +274,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
     beats: {
       open: {
         id: 'open',
-        prompt: 'The {RIVAL} corner is cleared to him and suddenly there is nothing but green grass and one exhausted defender between him and the goal seventy yards away. He sets off, the whole stadium sensing what is coming, the counter-attack on.',
+        prompt: 'The corner is cleared to him and suddenly there is nothing but green grass and one exhausted defender between him and the goal seventy yards away. He sets off, the whole stadium sensing what is coming, the counter-attack on.',
         choices: [
           { id: 'burn', label: 'Burn him for pace and finish', desc: 'Full throttle, leave the defender for dead', outcome: 'He hits top gear and simply sprints away from the trailing defender, eating up the pitch before rolling it coolly under the advancing keeper. A one-man counter finished with a heartbeat that never rose above resting — devastating on the break, ice at the death.', effect: { form: 0.13, market: 5, attr: { stamina: 2, composure: 1 }, meters: { fans: 22, peers: 10 } } },
           { id: 'dummy', label: 'Wait, dummy the keeper, roll it in', desc: 'Slow it down, freeze the goalie, make him commit', outcome: 'He deliberately slows, lets the keeper come, sells him a shot that never arrives, and strolls the ball into the vacated net with an outrageous coolness. Seventy yards of sprint and then the calmest of finishes — a solo counter of pure, taunting composure.', effect: { form: 0.12, market: 4, attr: { composure: 2, flair: 1 }, meters: { fans: 20 } } },
@@ -302,7 +302,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
     beats: {
       open: {
         id: 'open',
-        prompt: 'The corner swings toward the far post where the {RIVAL} colossus waits, a defender a full head taller than him and twice as broad, a man no ball in the air should ever get past. He starts his run anyway, timing it to the last inch.',
+        prompt: 'The corner swings toward the far post where the colossus of a centre-half waits, a defender a full head taller than him and twice as broad, a man no ball in the air should ever get past. He starts his run anyway, timing it to the last inch.',
         choices: [
           { id: 'leap', label: 'Out-jump the giant', desc: 'Spring early, hang in the air, win the unwinnable duel', outcome: 'He launches himself a fraction before the giant and hangs there, somehow rising above a man towering over him to thump the header down and in. The whole ground gasps at the sheer defiance of physics — the little man who beat the tower to the ball.', effect: { form: 0.13, market: 4, attr: { aggression: 2, composure: 1 }, meters: { fans: 22, peers: 12 } } },
           { id: 'lose', label: 'Lose him with a clever run', desc: 'Peel off blind-side, cunning over muscle', outcome: 'Rather than fight the losing battle, he ghosts off the giant’s blind side at the last second and meets the ball completely unmarked, nodding it home with the big man left grasping at air. A header won by brains, not brawn — the smartest movement on the pitch.', effect: { form: 0.11, attr: { creativity: 2, composure: 1 }, meters: { fans: 16, peers: 10 } } },
@@ -358,7 +358,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
     beats: {
       open: {
         id: 'open',
-        prompt: 'The {RIVAL} shot skids in behind him at an angle no boot could ever reach, already past him and heading goalward — unless a man were mad enough to dive forward and flick his heels up over his own back to meet it.',
+        prompt: 'The shot skids in behind him at an angle no boot could ever reach, already past him and heading goalward — unless a man were mad enough to dive forward and flick his heels up over his own back to meet it.',
         choices: [
           { id: 'flick', label: 'Throw the scorpion at it', desc: 'Dive forward, heels to the sky — insanity or immortality', outcome: 'He pitches himself face-first at the turf and whips both heels up over his spine, the studs meeting the ball behind his own head and clawing it up and clear of the line. A scorpion so outrageous the fourth official forgets to raise his flag — a clearance no human should attempt, let alone pull off.', effect: { form: 0.13, market: 5, attr: { flair: 3, aggression: 1 }, meters: { fans: 24, peers: 10 } } },
           { id: 'block', label: 'Block it flat and safe', desc: 'Get a solid body behind it, no theatrics', outcome: 'He abandons the acrobatics, plants himself square in the flight, and lets the ball thud harmlessly into his chest before shepherding it away. No highlight reel, but a defender reading danger and killing it with cold, unfussy certainty. The bench exhales as one.', effect: { form: 0.09, attr: { composure: 2, teamwork: 1 }, meters: { peers: 12, fans: 8 } } },
@@ -372,7 +372,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
     beats: {
       open: {
         id: 'open',
-        prompt: 'The pass arrives chest-high with his back to goal and a {RIVAL} centre-half breathing down his neck, no space to turn and no time to bring it down. The orthodox play is to lay it off. His instinct is telling him something far ruder.',
+        prompt: 'The pass arrives chest-high with his back to goal and a centre-half breathing down his neck, no space to turn and no time to bring it down. The orthodox play is to lay it off. His instinct is telling him something far ruder.',
         choices: [
           { id: 'spinvolley', label: 'Chest it, spin, and volley in one motion', desc: 'Trap on the breastbone, whip round, hit it before it lands', outcome: 'He cushions it off his chest, spins a full half-turn away from his marker, and lashes the dropping ball on the volley before it can touch the grass — all in one impossible, flowing movement. The keeper never even set himself. A goal of breathtaking invention on the turn, conjured out of nothing.', effect: { form: 0.14, market: 6, attr: { flair: 2, creativity: 2 }, meters: { fans: 24, sponsors: 6 } } },
           { id: 'layoff', label: 'Lay it and spin onto the return', desc: 'Bounce it off a teammate, take the wall pass, finish clean', outcome: 'He nudges it into a runner, spins his marker on the blind side, and collects the one-two in his stride to slot home calmly. Less circus than the swivel-volley, but a piece of quick, intelligent combination play that leaves the defender chasing shadows. Textbook.', effect: { form: 0.1, attr: { creativity: 1, teamwork: 2 }, meters: { peers: 14, fans: 10 } } },
@@ -386,7 +386,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
     beats: {
       open: {
         id: 'open',
-        prompt: 'The {RIVAL} striker connects flush from the edge of the area and the ball flies, arrowing for the top corner with the winner written all over it. He is already diving the wrong way and there is one desperate, outstretched hand between glory and ruin.',
+        prompt: 'The striker connects flush from the edge of the area and the ball flies, arrowing for the top corner with the winner written all over it. He is already diving the wrong way and there is one desperate, outstretched hand between glory and ruin.',
         choices: [
           { id: 'tip', label: 'Fling out a single fingertip', desc: 'Full extension, one hand, claw it onto the woodwork', outcome: 'He arches backward at full horizontal stretch and gets the faintest brush of one fingertip on it, just enough to lift the ball onto the crossbar and away to safety. A save so improbable the striker sinks to his knees clutching his head — a fingertip onto the bar that they will replay until the pixels fade.', effect: { form: 0.13, market: 5, attr: { keeping: 3, composure: 1 }, meters: { fans: 24, peers: 12 } } },
           { id: 'strong', label: 'Get a strong palm behind it', desc: 'Trust the reach, punch it down and smother the rebound', outcome: 'He throws a firm palm at it and beats it straight down, then scrambles across to swallow the loose ball before anyone can pounce. Not the balletic tip, but a keeper trusting his positioning and hands to snuff out the danger twice over. Ruthlessly efficient.', effect: { form: 0.1, attr: { keeping: 2, composure: 1 }, meters: { fans: 16, peers: 8 } } },
@@ -400,7 +400,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
     beats: {
       open: {
         id: 'open',
-        prompt: 'The {RIVAL} striker is through and shoots low and hard, and he blocks it — but the rebound spins straight to a second attacker with the whole goal yawning open and him flat on the floor, half a second to somehow be a hero twice.',
+        prompt: 'The striker is through and shoots low and hard, and he blocks it — but the rebound spins straight to a second attacker with the whole goal yawning open and him flat on the floor, half a second to somehow be a hero twice.',
         choices: [
           { id: 'scramble', label: 'Spring up and fly at the second', desc: 'No time to set — throw everything at the follow-up', outcome: 'He blocks the first with his legs, claws himself off the deck in a heartbeat, and hurls his whole body across the line to somehow smother the point-blank rebound too. A double save in one frantic passage of play that defies belief — the goalmouth erupts and the strikers stare at each other, ashen. Twice denied.', effect: { form: 0.14, market: 5, attr: { keeping: 3, stamina: 1 }, meters: { fans: 24, peers: 14 } } },
           { id: 'spread', label: 'Stay big and make himself a wall', desc: 'Read the rebound early, spread and let it hit him', outcome: 'Sensing the follow-up before it comes, he refuses to commit to ground and instead makes himself enormous, and the second shot cannons off his sprawled frame to safety. No flailing, just a keeper who read the whole sequence a beat ahead of everyone. Positional genius under siege.', effect: { form: 0.11, attr: { keeping: 2, composure: 1 }, meters: { fans: 16, peers: 10 } } },
@@ -414,7 +414,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
     beats: {
       open: {
         id: 'open',
-        prompt: 'A slip in midfield sends the {RIVAL} forward clean through with only open grass ahead, and he is ten yards adrift and the last hope, lungs already screaming. The certain goal is being scored in real time unless he can somehow catch a man with a flying start.',
+        prompt: 'A slip in midfield sends the opposition forward clean through with only open grass ahead, and he is ten yards adrift and the last hope, lungs already screaming. The certain goal is being scored in real time unless he can somehow catch a man with a flying start.',
         choices: [
           { id: 'slide', label: 'Sprint him down and slide the tackle', desc: 'Chase the impossible, then a perfect toe-poke at full stretch', outcome: 'He devours the ten-yard gap with a recovery sprint that seems to bend physics, times his slide to the last inch, and pokes the ball clean off the striker’s toe as the shot loads. A saving tackle so perfectly judged the crowd roars as though a goal had gone in the other end. The last man, and he did not miss.', effect: { form: 0.13, market: 4, attr: { stamina: 2, aggression: 1 }, meters: { fans: 22, peers: 14 } } },
           { id: 'shepherd', label: 'Shepherd him wide and force the error', desc: 'Catch up, stay on his feet, angle him off the goal', outcome: 'Rather than gamble on the tackle, he claws his way alongside and calmly ushers the striker away from goal and toward the byline, closing the angle until the shot dribbles wide. No dramatics, just a defender who ran his heart out and then kept his head. Danger strangled at the death.', effect: { form: 0.1, attr: { stamina: 1, composure: 2 }, meters: { peers: 12, fans: 10 } } },
@@ -442,7 +442,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
     beats: {
       open: {
         id: 'open',
-        prompt: 'Under siege on the edge of his own box, he swings a boot at a dropping ball with one thought — get it as far away as humanly possible. It leaves his laces like a cannon shot, and only then does he notice the {RIVAL} keeper wandering yards off his line downfield.',
+        prompt: 'Under siege on the edge of his own box, he swings a boot at a dropping ball with one thought — get it as far away as humanly possible. It leaves his laces like a cannon shot, and only then does he notice the opposition keeper wandering yards off his line downfield.',
         choices: [
           { id: 'let-it-fly', label: 'Watch it sail and dare to dream', desc: 'Half-clearance, half-shot — let the monstrous strike carry', outcome: 'The booming volley never stops climbing then dips wickedly out of the sky, the horrified keeper scrambling back too late as it drops under his own bar from inside his own half. A clearance that became the goal of the season by glorious accident — he wheels away shrugging, arms wide, as bewildered as the eighty thousand watching.', effect: { form: 0.14, market: 6, attr: { aggression: 1, flair: 2 }, meters: { fans: 26, sponsors: 8 } } },
           { id: 'chase', label: 'Sprint upfield to make it count', desc: 'Trust the flight, gallop after it, be there for the follow-up', outcome: 'He hares after his own wild clearance, and when the keeper only half-claws it down he is first to the loose ball to roll it into the empty net. Less the freak worldie, more the reward for never stopping running — an opportunist’s goal born from a defender’s panic. Relentless.', effect: { form: 0.11, market: 3, attr: { stamina: 2, composure: 1 }, meters: { fans: 18, peers: 8 } } },
@@ -470,7 +470,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
     beats: {
       open: {
         id: 'open',
-        prompt: 'The rain is coming down in biblical sheets and the pitch is a lake, the ball sticking and skidding in the puddles, every touch a lottery. He picks it up near halfway in the storm with the {RIVAL} defence wading toward him, and decides the water is his friend.',
+        prompt: 'The rain is coming down in biblical sheets and the pitch is a lake, the ball sticking and skidding in the puddles, every touch a lottery. He picks it up near halfway in the storm with the opposition defence wading toward him, and decides the water is his friend.',
         choices: [
           { id: 'slalom', label: 'Slalom through the storm', desc: 'Ride the puddles, dance through the flood, defy the elements', outcome: 'He glides across the surface water where everyone else is bogged down, slaloming past four floundering, aquaplaning defenders before sliding it home through the spray. A solo goal conjured out of a monsoon that the highlight cameras can barely make out — genius that treated a swamp like a dry training pitch. Unforgettable, and unrepeatable.', effect: { form: 0.14, market: 6, attr: { flair: 2, stamina: 2 }, meters: { fans: 24, sponsors: 6 } } },
           { id: 'skim', label: 'Use the water and skim a low finish', desc: 'Keep it simple, drive it hard and flat across the wet surface', outcome: 'He carries it a few strides then drills a low, skidding shot that the surface water only speeds up, the ball aquaplaning under the keeper’s despairing hands. Not the slalom the crowd wanted through the deluge, but a cannily judged finish that turned the flooded pitch into a weapon. Clever in the chaos.', effect: { form: 0.1, market: 3, attr: { composure: 1, stamina: 1 }, meters: { fans: 16 } } },
