@@ -70,15 +70,33 @@ const VERBS: Record<string, string[]> = {
 };
 // tag-specific triumph colour — occasionally used instead of a generic result so a flair moment reads
 // unlike a keeping one (per-tag result colour)
+// Replaces the generic result on 55% of triumphs — the game's reward line — and it was a straight
+// coin-flip between two options per tag, so one string landed 12x in a single career. Six each. (PT-406)
 const TAG_TRIUMPH: Record<string, string[]> = {
-  aggression: ['and the whole midfield bent to his will', 'and the opponent thought twice after that'],
-  creativity: ['and it split the pitch open like a scalpel', 'and nobody else on the field had seen the pass'],
-  composure: ['and you’d never have known the stakes', 'and time seemed to slow around him'],
-  flair: ['and the crowd came up as one', 'and grown adults gasped'],
-  leadership: ['and suddenly the whole team stood taller', 'and the tie turned on that act of will'],
-  teamwork: ['and it was a goal built by six players and finished by one', 'and the move was a thing of collective beauty'],
-  stamina: ['on legs that had no right to carry him', 'when everyone else had emptied the tank'],
-  keeping: ['and he saved his side single-handed', 'and the striker held his head in disbelief'],
+  aggression: ['and the whole midfield bent to his will', 'and the opponent thought twice after that',
+    'and the game had a new centre of gravity', 'and nobody fancied the next duel with him',
+    'and he simply refused to be second to it', 'and the tempo became whatever he decided it was'],
+  creativity: ['and it split the pitch open like a scalpel', 'and nobody else on the field had seen the pass',
+    'and the defence was still turning when the ball arrived', 'and it came from a picture only he had',
+    'and the obvious ball never even occurred to him', 'and geometry seemed to bend for a second'],
+  composure: ['and you’d never have known the stakes', 'and time seemed to slow around him',
+    'and the noise might as well not have existed', 'and his pulse never troubled itself',
+    'and he took the extra half-second nobody else had', 'and the panic around him never reached his feet'],
+  flair: ['and the crowd came up as one', 'and grown adults gasped',
+    'and the away end applauded despite themselves', 'and it will be on a screen somewhere for years',
+    'and there was an audible intake of breath', 'and someone in the stand simply started laughing'],
+  leadership: ['and suddenly the whole team stood taller', 'and the tie turned on that act of will',
+    'and ten other players remembered what they were there for', 'and the heads that had dropped came back up',
+    'and he dragged the rest of them into it', 'and the belief arrived from somewhere, all at once'],
+  teamwork: ['and it was a goal built by six players and finished by one', 'and the move was a thing of collective beauty',
+    'and every pass in it had been unselfish', 'and it was the whole team in one movement',
+    'and nobody could tell you who deserved the credit', 'and it was a training-ground drill made flesh'],
+  stamina: ['on legs that had no right to carry him', 'when everyone else had emptied the tank',
+    'in the ninety-fourth minute of a game he had run all night', 'long after the rest had stopped making the run',
+    'with a body that had asked to stop an hour earlier', 'because he was the only one still able to get there'],
+  keeping: ['and he saved his side single-handed', 'and the striker held his head in disbelief',
+    'and it was the save of the season, whatever comes next', 'and he got a hand to something he had no right to reach',
+    'and the goal simply refused to happen', 'and his defenders just looked at each other'],
 };
 // results + reactions by outcome band (≥6 each)
 // register spread within each band so a long career doesn't read one emotional note throughout — wry,
@@ -110,35 +128,59 @@ const CHILD_REACTIONS: Record<string, string[]> = {
 // it doesn't recycle one line every game, and reads fine on a win OR a loss (observations about the player,
 // never praise for a poor result). Playtest fix PT-3.
 const PERSONALITY: Record<string, string[]> = {
-  maverick: ['He never does it the easy way.', 'Always the unexpected with him.', 'He’d find a hard way through an open door.', 'Predictable is the one thing he’ll never be.', 'The coaching manual doesn’t have a page for him.', 'He sees a pass nobody else is even looking for.', 'Method to the madness, usually.', 'You don’t coach that out of a player — you just hope he aims it well.'],
-  fragile: ['The nerves were written all over him.', 'You could see the doubt flicker.', 'He carries the weight visibly.', 'Confidence comes and goes with this one.', 'One kind word away from his best, one harsh one from his worst.', 'The talent has never been the question with him.', 'He feels every moment twice as hard as most.', 'A settled head would unlock so much more.'],
-  leader: ['The armband would suit him.', 'Others look to him without thinking.', 'He sets the tone, good day or bad.', 'A voice the dressing room follows.', 'He drags the players around him up a level.', 'The kind who’s loudest when it’s quietest.', 'Responsibility seems to make him bigger, not smaller.', 'You can build a team around a head like his.'],
-  biggame: ['He lives for these.', 'The bigger the stage, the more he shows up.', 'Occasions like this find him.', 'He’s built for the spotlight.', 'The nerves that shrink others seem to feed him.', 'Give him a crowd and a cause and watch.', 'The routine games bore him; the huge ones wake him.', 'He saves his best for when it’s watched.'],
-  workhorse: ['He never stopped running.', 'Covered every blade of grass, that lad.', 'Effort is never the question with him.', 'The engine simply doesn’t cut out.', 'First to press, last to stop.', 'He does the unseen work all afternoon.', 'You could set a clock by his work rate.', 'The legs of two players in one shirt.'],
-  mercurial: ["You never quite know which version you'll get.", 'Brilliance and frustration in the same breath.', 'A riddle, this one.', 'Two players in one shirt.', 'Genius and maddening, ten minutes apart.', 'The highs are higher and the lows are lower with him.', 'A coin-flip of a footballer — but what a coin.', 'When it clicks, nobody’s better; when it doesn’t…'],
-  pro: ['Consummate, as ever.', 'Nothing left to chance with him.', 'Professional to his boots.', 'He does the simple things right.', 'Prepared, every single time.', 'No fuss, no drama, just the job done.', 'The staff never have to think about him twice.', 'A model for the younger lads to copy.'],
-  latebloom: ['Better every single week, this lad.', 'Still growing into himself.', 'The best of him is ahead.', 'A work in progress, and improving.', 'The penny is dropping, a bit more each game.', 'He’s catching up to his own potential in real time.', 'Whatever they’re doing with him, it’s working.', 'A slow burn, but the flame is climbing.'],
-  showman: ['He plays with a grin and one eye on the crowd.', 'Never happier than with an audience.', 'A touch of theatre in everything he does.', 'He wants to entertain as much as win.', 'The flick was on before the simple pass ever occurred to him.', 'He’d rather do it with style than without.', 'Half footballer, half performer.', 'The crowd is his co-star, and he knows it.'],
-  stoic: ['Nothing about his face ever gives it away.', 'Unreadable, as always.', 'The same expression, whatever happens.', 'Calm as still water, this one.', 'You’d never know from him whether it was a final or a friendly.', 'Not a flicker, win or lose.', 'The pulse never seems to climb.', 'Ice where others carry nerves.'],
-  hothead: ['It could go off at any second, and everyone knows it.', 'The fuse is always short.', 'Passion and trouble, forever close.', 'One decision from brilliance or the book.'],
-  perfectionist: ['He’ll pick holes in it later, whatever anyone says.', 'Never satisfied, this one.', 'His own harshest critic.', 'By his own standard, there’s always more.'],
-  joker: ['Somewhere in the huddle, he’s already found something to laugh about.', 'A grin is never far away.', 'He keeps it light, whatever the score.', 'The dressing room’s favourite.'],
+  maverick: ['He never does it the easy way.', 'Always the unexpected with him.', 'He’d find a hard way through an open door.', 'Predictable is the one thing he’ll never be.', 'The coaching manual doesn’t have a page for him.', 'He sees a pass nobody else is even looking for.', 'Method to the madness, usually.', 'You don’t coach that out of a player — you just hope he aims it well.', 'He\'d rather be wrong his own way than right someone else\'s.', 'The staff have stopped trying to standardise him.', 'There is always a simpler option, and he is rarely interested in it.', 'Watching him is never dull, whatever else it is.'],
+  fragile: ['The nerves were written all over him.', 'You could see the doubt flicker.', 'He carries the weight visibly.', 'Confidence comes and goes with this one.', 'One kind word away from his best, one harsh one from his worst.', 'The talent has never been the question with him.', 'He feels every moment twice as hard as most.', 'A settled head would unlock so much more.', 'He needs an arm round him more than a rollicking.', 'The head goes before the legs ever do.', 'On a good day you forget he was ever in doubt.', 'He believes the bad reviews and not the good ones.'],
+  leader: ['The armband would suit him.', 'Others look to him without thinking.', 'He sets the tone, good day or bad.', 'A voice the dressing room follows.', 'He drags the players around him up a level.', 'The kind who’s loudest when it’s quietest.', 'Responsibility seems to make him bigger, not smaller.', 'You can build a team around a head like his.', 'He speaks last and everyone waits for it.', 'The younger ones copy how he warms up.', 'He takes the blame that isn’t his and passes on credit that is.', 'A captain long before anyone gives him the armband.'],
+  biggame: ['He lives for these.', 'The bigger the stage, the more he shows up.', 'Occasions like this find him.', 'He’s built for the spotlight.', 'The nerves that shrink others seem to feed him.', 'Give him a crowd and a cause and watch.', 'The routine games bore him; the huge ones wake him.', 'He saves his best for when it’s watched.', 'Ordinary Tuesdays are the problem, not finals.', 'He walks out slower when the ground is fuller.', 'The bigger it gets, the calmer he looks.', 'Some players survive these nights. He enjoys them.'],
+  workhorse: ['He never stopped running.', 'Covered every blade of grass, that lad.', 'Effort is never the question with him.', 'The engine simply doesn’t cut out.', 'First to press, last to stop.', 'He does the unseen work all afternoon.', 'You could set a clock by his work rate.', 'The legs of two players in one shirt.', 'He is still closing down at 88 minutes when it is 4–0.', 'The stats never quite capture what he did.', 'He makes the run that drags a defender away and gets nothing for it.', 'Ask his teammates who they’d pick first.'],
+  mercurial: ["You never quite know which version you'll get.", 'Brilliance and frustration in the same breath.', 'A riddle, this one.', 'Two players in one shirt.', 'Genius and maddening, ten minutes apart.', 'The highs are higher and the lows are lower with him.', 'A coin-flip of a footballer — but what a coin.', 'When it clicks, nobody’s better; when it doesn’t…', 'He can look disinterested for an hour and decide a game in a minute.', 'The staff have given up predicting him.', 'On his day there is no one; the question is how many days.', 'You pick him and find out which one turned up.'],
+  pro: ['Consummate, as ever.', 'Nothing left to chance with him.', 'Professional to his boots.', 'He does the simple things right.', 'Prepared, every single time.', 'No fuss, no drama, just the job done.', 'The staff never have to think about him twice.', 'A model for the younger lads to copy.', 'He is the first in and it is not close.', 'The same routine, in every ground, every week.', 'Nothing about his career will ever be an accident.', 'Dull, if you find reliability dull.'],
+  latebloom: ['Better every single week, this lad.', 'Still growing into himself.', 'The best of him is ahead.', 'A work in progress, and improving.', 'The penny is dropping, a bit more each game.', 'He’s catching up to his own potential in real time.', 'Whatever they’re doing with him, it’s working.', 'A slow burn, but the flame is climbing.', 'He was nowhere near this a year ago.', 'The gap between him and the rest is closing every month.', 'Nobody rated him at fourteen. They do now.', 'He is arriving late and arriving anyway.'],
+  showman: ['He plays with a grin and one eye on the crowd.', 'Never happier than with an audience.', 'A touch of theatre in everything he does.', 'He wants to entertain as much as win.', 'The flick was on before the simple pass ever occurred to him.', 'He’d rather do it with style than without.', 'Half footballer, half performer.', 'The crowd is his co-star, and he knows it.', 'He plays the game he watched as a boy, not the one on the whiteboard.', 'The simple pass is available. It is also boring.', 'He hears the crowd and answers it.', 'Style is not a bonus for him, it is the point.'],
+  stoic: ['Nothing about his face ever gives it away.', 'Unreadable, as always.', 'The same expression, whatever happens.', 'Calm as still water, this one.', 'You’d never know from him whether it was a final or a friendly.', 'Not a flicker, win or lose.', 'The pulse never seems to climb.', 'Ice where others carry nerves.', 'A goal and a goal-kick get the same face.', 'He does not celebrate, and he does not sulk.', 'You would have to ask him, and he would not tell you.', 'The temperature never changes with him.'],
+  // these three carried 4 lines where the other ten carried 8, and ~23% of heirs draw one of them,
+  // so those careers read measurably more repetitively (17x for one line vs 13x max elsewhere) — PT-405
+  hothead: ['It could go off at any second, and everyone knows it.', 'The fuse is always short.', 'Passion and trouble, forever close.', 'One decision from brilliance or the book.',
+    'He plays on the edge because he doesn’t know where else to stand.', 'The referee has already learned his name.', 'Channel it and he’s frightening; don’t, and he’s gone.', 'The fire is the talent — that’s the problem.', 'The best and worst minutes of his career will be the same minute.', 'He argues with teammates who are on his side.', 'You can see it building three passes before it happens.', 'All that heat, and nowhere sensible to put it.'],
+  perfectionist: ['He’ll pick holes in it later, whatever anyone says.', 'Never satisfied, this one.', 'His own harshest critic.', 'By his own standard, there’s always more.',
+    'He’ll be thinking about the one he misplaced, not the rest.', 'Praise slides straight off him.', 'The standard he’s chasing may not actually exist.', 'Good is a word he seems not to accept about himself.', 'He watches the clips of the ones that went wrong.', 'A win with a bad performance in it is still a bad night.', 'He apologises for passes that arrived perfectly well.', 'Nothing is ever quite finished, to him.'],
+  joker: ['Somewhere in the huddle, he’s already found something to laugh about.', 'A grin is never far away.', 'He keeps it light, whatever the score.', 'The dressing room’s favourite.',
+    'He’d have the lads laughing at half-time in a cup final.', 'Nothing seems to weigh on him for long.', 'The jokes are how he handles it, which the staff worked out early.', 'Morale goes wherever he goes.', 'He is the reason the coach has to say "settle down" twice.', 'Nobody stays in a mood around him for long.', 'The lightness is not a lack of seriousness, whatever it looks like.', 'He would have the room laughing at a funeral, gently.'],
 };
 // personality-flavoured verbs woven in occasionally so the temperament is felt, not just stated
+// A career has exactly ONE personality, so this player sees only his own row — and it was drawn on ~50% of
+// ~94 turns, meaning three phrases carried ~47 draws and each opened a line ~16 times. It is the closest
+// thing the prose has to the star's own voice, so thinness here reads as the game not knowing him. Nine
+// each. (Bank size does not change the rng draw COUNT — `pick` consumes one value either way — so save
+// replay is unaffected.) (PT-402)
 const PERSONALITY_ADV: Record<string, string[]> = {
-  maverick: ['with a swagger,', 'grinning,', 'off the cuff,'],
-  fragile: ['tentatively,', 'jaw tight,', 'heart in mouth,'],
-  leader: ['barking orders,', 'chest out,', 'taking responsibility,'],
-  biggame: ['relishing it,', 'eyes lit up,', 'right at home,'],
-  workhorse: ['lungs burning,', 'without a word,', 'for the fifth time that half,'],
-  mercurial: ['on a whim,', 'inscrutable as ever,', 'in one of his moods,'],
-  pro: ['methodically,', 'as drilled,', 'ice in his veins,'],
-  latebloom: ['growing into it,', 'sharper than last month,', 'still learning,'],
-  showman: ['playing to the gallery,', 'with a flourish,', 'grinning,'],
-  stoic: ['face like stone,', 'without a flicker,', 'utterly unmoved,'],
-  hothead: ['jaw clenched,', 'simmering,', 'right on the edge,'],
-  perfectionist: ['already dissecting it in his head,', 'never quite satisfied,', 'chasing the perfect version,'],
-  joker: ['with a wink,', 'cracking a smile,', 'enjoying himself far too much,'],
+  maverick: ['with a swagger,', 'grinning,', 'off the cuff,', 'because why not,', 'with a shrug at the coaching notes,',
+    'improvising,', 'as though the textbook were optional,', 'trusting the moment,', 'delighted with himself,'],
+  fragile: ['tentatively,', 'jaw tight,', 'heart in mouth,', 'half-expecting it to go wrong,', 'talking himself into it,',
+    'with a glance at the bench,', 'hoping nobody was watching too closely,', 'breath held,', 'willing his hands to stop shaking,'],
+  leader: ['barking orders,', 'chest out,', 'taking responsibility,', 'dragging them with him,', 'because somebody had to,',
+    'first to demand it,', 'setting the tone,', 'refusing to let heads drop,', 'shouldering it,'],
+  biggame: ['relishing it,', 'eyes lit up,', 'right at home,', 'as the noise swelled,', 'built for exactly this,',
+    'feeding off the occasion,', 'utterly unbothered by the size of it,', 'as if the crowd were his,', 'alive to it,'],
+  workhorse: ['lungs burning,', 'without a word,', 'for the fifth time that half,', 'legs gone and running anyway,',
+    'because the work does not do itself,', 'unglamorously,', 'covering ground nobody thanks him for,', 'again,', 'still going,'],
+  mercurial: ['on a whim,', 'inscrutable as ever,', 'in one of his moods,', 'for reasons known only to him,',
+    'having decided, apparently, to bother,', 'unreadable,', 'as the mood took him,', 'brilliant one minute, absent the next,', 'on some private impulse,'],
+  pro: ['methodically,', 'as drilled,', 'ice in his veins,', 'exactly as rehearsed,', 'without fuss,',
+    'the way he has a thousand times,', 'entirely within himself,', 'to the letter,', 'unhurried,'],
+  latebloom: ['growing into it,', 'sharper than last month,', 'still learning,', 'better than he was in September,',
+    'catching up fast,', 'with a confidence that is new,', 'improving in front of them,', 'later than most and getting there,', 'finding it,'],
+  showman: ['playing to the gallery,', 'with a flourish,', 'grinning,', 'for the cameras,', 'with an unnecessary stepover,',
+    'because the crowd wanted it,', 'milking it,', 'with one eye on the highlights,', 'theatrically,'],
+  stoic: ['face like stone,', 'without a flicker,', 'utterly unmoved,', 'giving nothing away,', 'as though it cost him nothing,',
+    'expressionless,', 'without celebrating,', 'the same as he would a training drill,', 'unmoved either way,'],
+  hothead: ['jaw clenched,', 'simmering,', 'right on the edge,', 'still furious about the last one,', 'with the referee in his ear,',
+    'spoiling for it,', 'a word away from trouble,', 'nostrils flaring,', 'daring someone to say something,'],
+  perfectionist: ['already dissecting it in his head,', 'never quite satisfied,', 'chasing the perfect version,',
+    'unhappy with it even so,', 'replaying the touch he got wrong,', 'to a standard only he can see,',
+    'certain it could have been cleaner,', 'grading himself harshly,', 'not quite right, to his eye,'],
+  joker: ['with a wink,', 'cracking a smile,', 'enjoying himself far too much,', 'saying something unrepeatable,',
+    'laughing before it landed,', 'to groans from the bench,', 'entirely unserious,', 'having made someone laugh first,', 'grin already spreading,'],
 };
 // season-event prefixes (weave the chapter's story into the beat)
 // A season-long event colours EVERY scenario while it runs, so each needs a small pool of lead-ins —
@@ -378,8 +420,10 @@ export function scenarioStory(kind: string, topTag: string, moment: string | nul
   // veteran mentor, so Grassroots/Academy get their own park-appropriate cast framings (PT-133, cf PT-46/103)
   const charRaw = cast && rng() < 0.4
     ? (c.chapter && CHILD_CHAPTERS.has(c.chapter)
-        ? pickByTurn([`Coach ${cast.gaffer} wants to see how he handles it.`, `Beat ${cast.rival} to it and he'll never hear the end of it.`, `His mum's watching from the touchline.`, `The whole team is buzzing about it.`], turn, 5, salt)
-        : pickByTurn([`${cap(cast.mentor)} reckons this is the making of him.`, `${cast.gaffer} wants to see how he handles it.`, `${cap(cast.captain)} is looking his way.`, `Beat ${cast.rival} to it and the point is made.`], turn, 5, salt))
+        ? pickByTurn([`Coach ${cast.gaffer} wants to see how he handles it.`, `Beat ${cast.rival} to it and he'll never hear the end of it.`, `His mum's watching from the touchline.`, `Coach ${cast.gaffer} has been talking about this one all week.`, `${cast.rival} is watching from the other side.`, `His dad has taken the morning off for it.`, `The whole team is buzzing about it.`], turn, 5, salt)
+        : pickByTurn([`${cap(cast.mentor)} reckons this is the making of him.`, `${cast.gaffer} wants to see how he handles it.`, `${cap(cast.captain)} is looking his way.`, `Beat ${cast.rival} to it and the point is made.`,
+            `${cast.gaffer} has picked him for a reason.`, `${cap(cast.mentor)} has been waiting to see this.`, `${cap(cast.captain)} has already had a word.`,
+            `${cast.rival} is having a good week. That rankles.`, `There are people here to watch him specifically.`, `${cast.gaffer} said one sentence to him before kick-off.`], turn, 5, salt))
     : '';
   const charline = charRaw ? ' ' + charRaw : '';
   // The frame ("Terrified of being dropped, ") describes HIM; the setup describes the SITUATION — splicing
@@ -485,8 +529,13 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
   const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed, ctx.castAvoid) : null;
   const castReact = cast && rng() < 0.25
     ? ' ' + (CHILD_CHAPTERS.has(ctx.chapter)
-        ? pick([`Coach ${cast.gaffer} gave him a nod.`, `His dad cheered louder than anyone.`, `His teammates mobbed him.`, `One in the eye for ${cast.rival}.`]) // park-football cast, no senior captain/mentor (PT-133)
-        : pick([`${cast.gaffer} said nothing, but noted it.`, `${cap(cast.mentor)} allowed himself a smile.`, `${cast.captain} clapped him on the back.`, `One in the eye for ${cast.rival}.`]))
+        // park-football cast, no senior captain/mentor (PT-133); widened from 4 (PT-403)
+        ? pick([`Coach ${cast.gaffer} gave him a nod.`, `His dad cheered louder than anyone.`, `His teammates mobbed him.`, `One in the eye for ${cast.rival}.`,
+            `Coach ${cast.gaffer} pretended not to be pleased.`, `Someone's parent shouted his name.`, `The touchline made a noise it hadn't all morning.`,
+            `${cast.rival} didn't look over. He'd seen it.`, `He was still buzzing about it on the walk home.`, `His dad said nothing, and grinned the whole way back.`])
+        : pick([`${cast.gaffer} said nothing, but noted it.`, `${cap(cast.mentor)} allowed himself a smile.`, `${cast.captain} clapped him on the back.`, `One in the eye for ${cast.rival}.`,
+            `${cast.gaffer} made a mark on his sheet.`, `${cap(cast.mentor)} had seen that coming for weeks.`, `${cast.captain} said his name in the huddle.`,
+            `${cast.rival} watched it and said nothing.`, `The bench were up before the ball landed.`, `${cast.gaffer} let the staff know about that one later.`]))
     : '';
   const milestone = ctx.milestone && MILESTONE[ctx.milestone] ? MILESTONE[ctx.milestone] : '';
   const action = adv ? `he, ${adv}${verb}` : `he ${verb}`; // "he, grinning, flew into …"
@@ -513,7 +562,10 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
 // ── LIFE EVENTS: the resolution beat for a mid-chapter dilemma (see career.ts Scenario.life /
 // LIFE_CONSEQUENCE). Distinct from narratePlay — these read like a real off-pitch moment resolving, not
 // a football action, though the CARD is still named (it's the trait/approach he leans on to get through it).
-const LIFE_APPROACH = ['He falls back on', 'It’s', 'He leans on', 'What gets him through it is', 'He draws on'];
+// Prefixes EVERY life event and every social resolution — ~25 firings a career from five options. (PT-406)
+const LIFE_APPROACH = ['He falls back on', 'It’s', 'He leans on', 'What gets him through it is', 'He draws on',
+  'He gets through it on', 'What carries him is', 'He meets it with', 'The thing that holds is',
+  'He answers it with', 'What he has, in the end, is', 'He steadies himself on'];
 const LIFE_RESOLUTION: Record<string, { good: string[]; bad: string[] }> = {
   contract: {
     good: ['and terms are agreed — a weight off everyone’s shoulders.', 'and the club gets its man signed, both sides happy with the number.', 'and the negotiation ends in a handshake, not a stand-off.'],
@@ -626,8 +678,12 @@ export function narrateLifeEvent(kind: string, cardName: string, success: number
   // a child at Grassroots/Academy has no agent — use park-appropriate reactions, mirroring PT-133 (PT-143)
   const castReact = cast && rng() < 0.3 && good
     ? ' ' + (CHILD_CHAPTERS.has(ctx.chapter)
-        ? pick([`Coach ${cast.gaffer} appreciates how he handled it.`, `Even ${cast.rival} would admit that was well played.`, `His mates are impressed.`])
-        : pick([`${cast.gaffer} appreciates how he handled it.`, `Even ${cast.rival} would admit that was well played.`, `His agent breathes a quiet sigh of relief.`]))
+        ? pick([`Coach ${cast.gaffer} appreciates how he handled it.`, `Even ${cast.rival} would admit that was well played.`, `His mates are impressed.`,
+            `Coach ${cast.gaffer} tells someone about it that evening.`, `Nobody expected him to handle it that well.`, `${cast.rival} has gone quiet about it.`,
+            `His mum hears a version of it twice.`, `It goes down rather better than he'd feared.`])
+        : pick([`${cast.gaffer} appreciates how he handled it.`, `Even ${cast.rival} would admit that was well played.`, `His agent breathes a quiet sigh of relief.`,
+            `${cast.gaffer} noted the way he dealt with it.`, `It reflects well on him in rooms he wasn't in.`, `${cast.rival} would not have handled it as neatly.`,
+            `The staff mention it approvingly.`, `That will have been noticed upstairs.`]))
     : '';
   // Splice a tag-derived quality ("his cool head"), NOT the on-pitch card name — an off-pitch moment isn't
   // resolved by "a defence-splitting pass" (PT-43). Fall back to the raw name only if tags weren't supplied.
