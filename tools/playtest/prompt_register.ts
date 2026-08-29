@@ -31,9 +31,34 @@ for (const [, l] of all) {
 }
 const topOpen = [...opens.entries()].sort((a, b) => b[1] - a[1])[0] ?? ['', 0];
 const openShare = 100 * topOpen[1] / Math.max(1, all.length);
-say('no single opening dominates (< 2.5% of lines)', openShare < 2.5, `"${topOpen[0]}" ${openShare.toFixed(1)}%`);
+say('no single opening dominates (< 2.0% of lines)', openShare < 2.0, `"${topOpen[0]}" ${openShare.toFixed(2)}%`);
 
-// 3. LENGTH SPREAD — all-same-length lines read mechanical
+// 2b. ENDINGS — the mirror, and the axis where generated prose usually clusters HARDEST ("…and he knows
+// it", "…in a way he can't name"). Measured at 0.14% worst when this was added, which is genuinely good;
+// the check exists to keep it that way rather than to fix it.
+const ends = new Map<string, number>();
+for (const [, l] of all) {
+  const k = l.toLowerCase().replace(/[^a-z ]/g, '').split(/\s+/).filter(Boolean).slice(-3).join(' ');
+  if (k) ends.set(k, (ends.get(k) ?? 0) + 1);
+}
+const topEnd = [...ends.entries()].sort((a, b) => b[1] - a[1])[0] ?? ['', 0];
+const endShare = 100 * topEnd[1] / Math.max(1, all.length);
+say('no single ending dominates (< 1.0% of lines)', endShare < 1.0, `"${topEnd[0]}" ${endShare.toFixed(2)}%`);
+
+// 2c. EMOTING — naming the feeling instead of showing it is the loudest tell of generated prose. The
+// corpus sat at 0.7% when this was added; the check guards the habit, it does not create it.
+const ABSTRACT = /\b(fear|pride|doubt|hope|love|shame|confidence|belief|respect|trust|anger|joy|sadness|despair)\b/i;
+const emoting = all.filter(([, l]) => ABSTRACT.test(l));
+say('lines show rather than name the feeling (< 4%)', 100 * emoting.length / Math.max(1, all.length) < 4,
+  `${(100 * emoting.length / Math.max(1, all.length)).toFixed(1)}%`);
+
+// 3. LENGTH SPREAD — a CRUDE PROXY, recorded as such so nobody mistakes it for a law. Uniform length reads
+// mechanical, so this nudges toward variety. Two things worth knowing before anyone tunes it: the game's
+// own ORIGINAL hand-written corpus measures sd 2.5 and would fail this gate, and an earlier house rule of
+// "8-16 words" mathematically capped sd near 2.3, so the style guide and this check contradicted each other
+// for the first several authoring waves. The gate is deliberately stricter than the source material,
+// because at ~49,000 lines uniformity becomes visible in a way it never was at 489. Verified NOT gamed:
+// the length histogram is a clean unimodal curve, not the two humps that padding-to-hit-a-number produces.
 const lens = all.map(([, l]) => l.split(/\s+/).length);
 const mean = lens.reduce((a, b) => a + b, 0) / Math.max(1, lens.length);
 const sd = Math.sqrt(lens.reduce((s, v) => s + (v - mean) ** 2, 0) / Math.max(1, lens.length));
