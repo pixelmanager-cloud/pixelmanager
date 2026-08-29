@@ -1183,7 +1183,6 @@ class Game {
   private savePlan() { try { localStorage.setItem(this.planKey(), JSON.stringify([...this.draftPlan])); } catch { /* ignore */ } }
   private clearMgr() { try { localStorage.removeItem(this.mgrKey()); } catch { /* ignore */ } }
   /** manager phase = you've handed off and are now managing the club with a bloodline star on the pitch */
-  private isManagerPhase(): boolean { return !!this.loadMgr().starId; }
   /** Guarantee the bloodline star starts (manager phase). autoPickXI is generic and can drop him on a
    *  formation change / auto-pick / stale standing orders; this swaps him into the weakest same-role slot
    *  (or the weakest overall) so he's never silently benched — the "your man on the pitch" promise. (PT-20) */
@@ -2211,10 +2210,7 @@ class Game {
   }
 
   /** The managed STAR player (club owner's own NFT pro) — his personality colours how team talks land. */
-  private starPlayer(): Player | undefined {
-    const id = this.loadMgr().starId;
-    return id ? this.club.players.find((p) => p.id === id) : undefined;
-  }
+
   /** Who the pre-kickoff team talk is pitched at: the bloodline star when he's actually in the XI, otherwise
    *  the on-pitch captain (or the best available starter). starGuarded benches an injured/lapsed star, so a
    *  talk keyed unconditionally to the star would praise — and take a mechanical edge from — a man on the

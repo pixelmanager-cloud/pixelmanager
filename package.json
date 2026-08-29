@@ -8,7 +8,7 @@
     "fuzz": "tsx shared/fuzz_test.ts",
     "verify": "npm run build --workspace=client && npm run test:engine && npm run fuzz && tsx shared/career_sim.ts && tsx client/qa_savestore.ts && tsx client/qa_offline_facade.ts && tsx shared/qa_squad_lifecycle.ts && tsx shared/qa_bloodline.ts && tsx shared/qa_manager_narrate.ts",
     "qa": "node scripts/run-qa.mjs",
-    "playtest": "tsx tools/playtest/analyze_player_career.ts 400 && tsx tools/playtest/analyze_manager_career.ts 300 15 && tsx tools/playtest/analyze_text_repetition.ts 250 && tsx tools/playtest/prompt_corpus.ts && tsx tools/playtest/meters.ts && tsx tools/playtest/objectives.ts 200 && tsx tools/playtest/arc_windows.ts && tsx tools/playtest/arc_conflicts.ts && tsx tools/playtest/manager_arcs.ts && tsx tools/playtest/validate_arcs.ts"
+    "playtest": "tsx tools/playtest/analyze_player_career.ts 400 && tsx tools/playtest/analyze_manager_career.ts 300 15 && tsx tools/playtest/analyze_text_repetition.ts 250 && tsx tools/playtest/prompt_corpus.ts && tsx tools/playtest/meters.ts && tsx tools/playtest/objectives.ts 200 && tsx tools/playtest/arc_windows.ts && tsx tools/playtest/arc_conflicts.ts && tsx tools/playtest/manager_arcs.ts && tsx tools/playtest/wired.ts && tsx tools/playtest/validate_arcs.ts"
   },
   "devDependencies": {
     "tsx": "^4.19.0"
