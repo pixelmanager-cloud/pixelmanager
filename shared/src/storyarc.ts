@@ -41,7 +41,14 @@ import { RELATIONSHIP_ARCS } from './storyarcs/relationship.js';
 import { TRIUMPH_ARCS } from './storyarcs/triumph.js';
 import { OFFPITCH_ARCS } from './storyarcs/offpitch.js';
 import { YOUTH_ARCS } from './storyarcs/youth.js';
-export const ARCS: StoryArc[] = [...SAGA_ARCS, ...CRISIS_ARCS, ...SIGNATURE_ARCS, ...RELATIONSHIP_ARCS, ...TRIUMPH_ARCS, ...OFFPITCH_ARCS, ...YOUTH_ARCS];
+import { YOUTH_FAMILY_ARCS } from './storyarcs/youth_family.js';
+import { YOUTH_MATES_ARCS } from './storyarcs/youth_mates.js';
+import { YOUTH_PITCH_ARCS } from './storyarcs/youth_pitch.js';
+import { YOUTH_COACH_ARCS } from './storyarcs/youth_coach.js';
+import { YOUTH_WORLD_ARCS } from './storyarcs/youth_world.js';
+export const ARCS: StoryArc[] = [...SAGA_ARCS, ...CRISIS_ARCS, ...SIGNATURE_ARCS, ...RELATIONSHIP_ARCS, ...TRIUMPH_ARCS, ...OFFPITCH_ARCS,
+  // the childhood library — see storyarcs/youth*.ts (Grassroots + Academy, ages 10-14)
+  ...YOUTH_ARCS, ...YOUTH_FAMILY_ARCS, ...YOUTH_MATES_ARCS, ...YOUTH_PITCH_ARCS, ...YOUTH_COACH_ARCS, ...YOUTH_WORLD_ARCS];
 
 const arcById = new Map(ARCS.map((a) => [a.id, a]));
 export const arcByIdOf = (id: string): StoryArc | undefined => arcById.get(id);
