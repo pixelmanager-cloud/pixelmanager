@@ -113,7 +113,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
     },
   },
   {
-    id: 'tri-captain-country', title: 'The Armband', icon: '🎖️', category: 'triumph',
+    id: 'tri-captain-country', title: 'His Country’s Armband', icon: '🎖️', category: 'triumph',
     minTurn: 85, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
@@ -597,7 +597,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
     },
   },
   {
-    id: 'tri-hat-trick', title: 'The Match Ball', icon: '🎩', category: 'triumph',
+    id: 'tri-hat-trick', title: 'Three, and the Ball Under His Arm', icon: '🎩', category: 'triumph',
     minTurn: 54, maxTurn: 105, weight: 3, first: 'open',
     beats: {
       open: {

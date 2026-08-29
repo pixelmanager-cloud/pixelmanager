@@ -262,7 +262,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
     },
   },
   {
-    id: 'youth-season-player-of-the-year', title: 'His Name Read Out', icon: '🥇', category: 'triumph',
+    id: 'youth-season-player-of-the-year', title: 'The Envelope at the End', icon: '🥇', category: 'triumph',
     minTurn: 8, maxTurn: 46, weight: 2, rare: true, first: 'open',
     beats: {
       open: {

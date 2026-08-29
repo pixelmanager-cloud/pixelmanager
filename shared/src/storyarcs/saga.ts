@@ -789,7 +789,7 @@ export const SAGA_ARCS: StoryArc[] = [
     beats: {
       open: {
         id: 'open',
-        prompt: 'The whole country has gone feverish: his nation has scraped into a major tournament and he has made the plane. The manager pulls him aside on the eve of the opener — he can be the starting fulcrum this side is built around, or the game-changer held back for when a match is dying. Which summer does he want?',
+        prompt: 'The whole country has gone feverish: his nation has scraped into a major tournament and he has made the plane. On the eve of the opener the gaffer sits him down — he can be the starting fulcrum this side is built around, or the game-changer held back for when a match is dying. Which summer does he want?',
         choices: [
           { id: 'starter', label: 'Start every game', desc: 'Tell the boss he wants the shirt from the first whistle to the last', outcome: 'He looks the manager dead in the eye and asks for the burden of ninety minutes, every round. The staff scribble his name in ink.', effect: { attr: { leadership: 1, stamina: 1 }, meters: { authority: 8, fans: 8 }, tag: 'nation-starter' }, next: 'groups' },
           { id: 'impact', label: 'Be the finisher', desc: 'Embrace the role of the man who wins it late off the bench', outcome: 'He accepts the substitute’s brief with a nod — cold legs, colder head, saved for the death of tight games.', effect: { attr: { composure: 2 }, meters: { peers: 8 }, form: 0.05, tag: 'nation-finisher' }, next: 'super-sub' },

@@ -62,7 +62,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
         choices: [
           { id: 'stop', label: 'Stop looking at the fence', desc: 'Decide, at eleven, to stop expecting him', outcome: 'He makes himself watch only the ball. It works, mostly, and it costs him something he can\'t name yet.', effect: { attr: { composure: 2 }, meters: { family: -4 }, form: 0.05, tag: 'fam-stopped-looking' }, next: 'later' },
           { id: 'ring', label: 'Ring him after', desc: 'Give him the chance to explain', outcome: 'The phone rings out. He leaves a message about the game that is far more cheerful than he feels.', effect: { meters: { family: -2 }, attr: { teamwork: 1 }, energy: -4, tag: 'fam-rang-dad' }, next: 'later' },
-          { id: 'grandad', label: 'Walk home with whoever did come', desc: 'Somebody was there — go home with them', outcome: 'His nan walks him home the long way and buys chips and doesn\'t mention his dad once. It is exactly the right amount of talking.', effect: { meters: { family: 8 }, attr: { composure: 1 }, tag: 'fam-nan-walked' }, next: 'later' },
+          { id: 'nan', label: 'Walk home with whoever did come', desc: 'Somebody was there — go home with them', outcome: 'His nan walks him home the long way and buys chips and doesn\'t mention his dad once. It is exactly the right amount of talking.', effect: { meters: { family: 8 }, attr: { composure: 1 }, tag: 'fam-nan-walked' }, next: 'later' },
         ],
       },
       later: {
@@ -127,10 +127,10 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
     beats: {
       open: {
         id: 'open',
-        prompt: 'His grandad has been ill since the spring and now watches from a chair by the front window instead of the touchline. He asks about every game in enormous detail — the weather, the pitch, who played left-back — because the detail is the only way he gets to be there.',
+        prompt: 'His nan has been ill since the spring and now watches from a chair by the front window instead of the touchline. She asks about every game in enormous detail — the weather, the pitch, who played left-back — because the detail is the only way she gets to be there.',
         choices: [
           { id: 'detail', label: 'Give him every last detail', desc: 'Come home and talk him through all ninety minutes', outcome: 'He learns to describe a match properly: the shape, the moment it turned, the mistake nobody else spotted. It changes how he watches football.', effect: { attr: { creativity: 1, composure: 1 }, meters: { family: 12 }, tag: 'fam-match-reports' }, next: 'after' },
-          { id: 'film', label: 'Get someone to film it for him', desc: 'A phone on the fence beats a description', outcome: 'His dad films it badly, mostly sky and shouting. His grandad watches all of it twice, sky included.', effect: { meters: { family: 10 }, attr: { teamwork: 1 }, tag: 'fam-filmed-for-him' }, next: 'after' },
+          { id: 'film', label: 'Get someone to film it for him', desc: 'A phone on the fence beats a description', outcome: 'His dad films it badly, mostly sky and shouting. His nan watches all of it twice, sky included.', effect: { meters: { family: 10 }, attr: { teamwork: 1 }, tag: 'fam-filmed-for-him' }, next: 'after' },
         ],
       },
       after: {
@@ -138,7 +138,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
         prompt: 'On a Saturday in November the game is at eleven and the hospital visiting hour is at eleven too.',
         choices: [
           { id: 'hospital', label: 'Go to the hospital', desc: 'There will be other games', outcome: 'He goes. His grandad is annoyed with him for missing it, and holds his hand the whole time he\'s telling him off.', effect: { meters: { family: 14, authority: -6 }, attr: { composure: 1 }, energy: -4 } },
-          { id: 'play', label: 'Play, because he asked him to', desc: 'The old man was very clear about it', outcome: 'He plays because he was told to, and gets to the ward at two with mud still on his knees to report back. That was the point.', effect: { form: 0.06, meters: { family: 10, authority: 6 }, attr: { stamina: 1, composure: 1 } } },
+          { id: 'play', label: 'Play, because he asked him to', desc: 'She was very clear about it', outcome: 'He plays because she told him to, and gets to the ward at two with mud still on his knees to report back. That was the point.', effect: { form: 0.06, meters: { family: 10, authority: 6 }, attr: { stamina: 1, composure: 1 } } },
         ],
       },
     },

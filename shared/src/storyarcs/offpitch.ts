@@ -102,7 +102,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
     },
   },
   {
-    id: 'off-nightlife', title: 'Last Orders', icon: '🍸', category: 'offpitch',
+    id: 'off-nightlife', title: 'The Table in the Corner', icon: '🍸', category: 'offpitch',
     minTurn: 56, maxTurn: 105, weight: 2, first: 'open',
     beats: {
       open: {

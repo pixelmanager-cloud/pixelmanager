@@ -3,7 +3,7 @@ import type { StoryArc } from '../storyarc.js';
 // CRISIS arcs — adversity storylines: injuries, slumps, fall-outs, scandals, pressure to overcome.
 export const CRISIS_ARCS: StoryArc[] = [
   {
-    id: 'injury-comeback', title: 'The Long Road Back', icon: '🩹', category: 'crisis',
+    id: 'injury-comeback', title: 'Nine Months in the Gym', icon: '🩹', category: 'crisis',
     minTurn: 50, maxTurn: 107, weight: 2, first: 'open',
     beats: {
       open: {

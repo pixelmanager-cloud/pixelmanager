@@ -213,7 +213,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
     },
   },
   {
-    id: 'sig-nutmeg-finish', title: 'Through The Legs', icon: '🪄', category: 'signature',
+    id: 'sig-nutmeg-finish', title: 'Through Him, and In', icon: '🪄', category: 'signature',
     minTurn: 34, maxTurn: 123, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
