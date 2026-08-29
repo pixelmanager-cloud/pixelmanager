@@ -114,3 +114,21 @@ Authored commentary for `tackle_won` merges into BOTH branches — the attacking
 ordinary tackle (🦵) — so a press line can fire for a defensive tackle. Same for `red_card` (straight vs
 second yellow) and `chance` (counter vs open play). Needs branch-specific keys. My bug, introduced when
 wiring the commentary packs; an author caught it and wrote zone-neutral lines to work around it.
+
+---
+
+# DECISIONS (user, 2026-08-30, before going to sleep)
+
+1. **Manager events become a full ARC LIBRARY** — not just narration, not just choices on existing beats.
+   The player career's 414 branching arcs are the best content in the game; the manager side gets the
+   equivalent. A squad revolt, a board ultimatum, a wonderkid's agent, a fixture pile-up. This is what makes
+   manager mode playable rather than watchable.
+2. **A running SEASON FEED** — events accumulate down the season screen as they happen, and can be scrolled
+   back through. Not toasts, not a separate diary page nobody visits.
+3. **Backroom staff get REAL EFFECTS** — a Fitness Coach genuinely reduces fatigue drain, an Attacking Coach
+   genuinely sharpens finishing. They already cost 350–500 coins; the shop starts selling something.
+4. **Scouting is driven by the SCOUTING HQ FACILITY** — the dead NFT tiers are replaced by the facility the
+   player already levels 1→5 with coins. Better HQ, better odds and better finds. Gives facility upgrades a
+   real payoff and uses a system that already exists.
+
+Build order follows: arcs (the biggest), then the feed to show them, then the two mechanical fixes.
