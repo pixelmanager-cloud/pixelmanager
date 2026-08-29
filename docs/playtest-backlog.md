@@ -850,3 +850,39 @@ the medallions; the connectors underneath should stay plain and geometric like t
 the page turns to mud. Portraits: the game already has pixel-art generation via Retro Diffusion — a
 medallion portrait per family member is the obvious use, and the user has said assets go through RD after
 confirming count and cost.
+
+
+---
+
+## PT-404 — OPEN, and it needs a decision rather than a patch (measured 2026-08-30)
+
+Cross-generation sentence reuse, measured by the new `tools/playtest/generations.ts` over 5-generation
+bloodlines:
+
+  gen 1  0%   gen 2  56%   gen 3  68%   gen 4  67%   gen 5  72%
+
+Worse than the original finding said (it reported 45%→58%). The split by surface is the useful part:
+
+  gen 5 PROMPTS  95% reused        gen 5 OUTCOMES  49% reused
+
+So the staleness is almost entirely in the per-turn scenario PROMPT, not the outcome prose. A prompt is
+frame + setup + demand, each drawn from a bank of roughly 6-12 lines, and a career reads 120 of them — a
+single career already exhausts every component, so every later generation is re-reading by construction.
+
+I doubled the DEMAND bank (6 → 12 per tag, 48 new lines) and gen-5 reuse moved from 72.0% to 71.7%. That
+is the honest measure of how far widening banks gets you here: to reach 45% you would need roughly 3-5x the
+ENTIRE prompt corpus, which is an authoring project, not a patch. Nudging it further would be theatre.
+
+Three real options, for a decision:
+
+1. **Author it.** ~400-600 new lines across KIND_SETUP (21 keys), FRAME_BY_CHAPTER (5) and DEMAND (8).
+   Biggest win, biggest cost.
+2. **Lean on the arcs instead.** The arc library is 414 and a career fires 20, so five generations use ~24%
+   of it — the arcs are the FRESH layer and the per-turn prompt is the stale one. Showing less templated
+   prose per turn and letting arcs carry the emotional weight reduces the surface that repeats.
+3. **Accept it.** Some familiarity across a bloodline is not obviously wrong — it is the same world, the
+   same club, the same sport. The risk is that it reads as generated rather than authored.
+
+Worth noting before the branching-bloodline work: more generations makes this MORE visible, not less.
+`npm run playtest` does not gate on this yet, deliberately — it would fail permanently until a decision is
+made.
