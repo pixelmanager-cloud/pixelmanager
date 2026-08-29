@@ -2602,6 +2602,10 @@ class Game {
 
   /** The handoff moment: he's a first-team regular — the game switches from playing his career to
    *  MANAGING the club he plays for. Graduates him into your squad, then enters the manager season. */
+  private handoffKey(pid: string): string { return `fm_handoff_defer_${pid}`; }
+  private handoffDeferredAt(pid: string): number {
+    try { return Number(localStorage.getItem(this.handoffKey(pid)) || '-1'); } catch { return -1; }
+  }
   private renderHandoff(s: import('./api').CareerState) {
     this.showScreen('academy');
     const h = s.handoff!;
@@ -2609,7 +2613,13 @@ class Game {
       + `<div class="cg-grad-title">🏆 ${s.name} — a first-team regular</div>`
       + `<div class="cg-epilogue">He's done it. After a full season in the first team — <b>${h.status}</b>, ${h.apps} appearances — ${s.name} is a fixture in the side. This is where his career becomes <b>your club's story</b>: it's time to take the reins. From here you pick the XI, set the tactics, and steer <b>${this.club?.name ?? 'the club'}</b> through the season, with ${s.name} your man on the pitch.</div>`
       + `<div class="cg-grad-windfall">⚽ OVR ${h.overall} · ${h.status}${s.careerScore != null ? ` · ★ career score ${s.careerScore.toLocaleString()}` : ''}</div>`
-      + `<button id="cg-takereins" class="primary">🧢 Take the reins as manager →</button></div>`;
+      + `<button id="cg-takereins" class="primary">🧢 Take the reins as manager →</button>`
+      + `<button id="cg-playon" class="ghost">Play on — finish his career first</button>`
+      + `<div class="cg-handoff-note">He'll keep playing to 25. You'll be offered the reins again at the next stage.</div></div>`;
+    $('cg-playon').addEventListener('click', async () => {
+      try { localStorage.setItem(this.handoffKey(s.prospectId), String(s.turn)); } catch { /* ignore */ }
+      try { const cur = await api.getCareer(s.prospectId); if (cur?.state) this.renderCareer(cur.state); } catch { /* ignore */ }
+    });
     $('cg-takereins').addEventListener('click', async () => {
       try {
         ($('cg-takereins') as HTMLButtonElement).textContent = 'Signing the contracts…';
@@ -2650,7 +2660,12 @@ class Game {
     // the outer "🎓 ACADEMY / Back to hub" bar while playing a career — it was redundant + cramped (H2/G1).
     $('academy-head').style.display = 'none';
     // HANDOFF: he's established himself as a first-team regular — take the reins as manager.
-    if (s.handoff) { this.renderHandoff(s); return; }
+    // Offered, not forced. The handoff fires at the first chapter boundary where he is a first-team
+    // regular — which can be turn ~106, age 22 — while the progress bar counts to /120 and the Academy copy
+    // promises "age 10→25". So the career was seized 14 turns and three years before the game said it
+    // would end. It is still offered at every subsequent boundary, and graduation at 25 happens regardless;
+    // the player simply gets to finish the career he was promised. (PT-1406)
+    if (s.handoff && this.handoffDeferredAt(s.prospectId) < s.turn) { this.renderHandoff(s); return; }
     // MUSIC follows the moment: a shock call-up gets tension, a life-event gets drama, else the career loop.
     audio.play(s.callupMoment ? 'tension' : (s.momentKind === 'life' || s.lifeEvent) ? 'drama' : 'career');
     const pct = Math.round((s.turn / s.totalTurns) * 100);
