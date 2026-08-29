@@ -1,4 +1,26 @@
 // Career-game NARRATION — turns each card you play into a beat in a real person's life. Deterministic
+import { KIND_SETUP } from './prompts/kind_setup.js';
+import { DEMAND } from './prompts/demand.js';
+import { FRAME_BY_CHAPTER } from './prompts/frame.js';
+import { CHILD_SETUP } from './prompts/child_setup.js';
+import { SETTINGS } from './prompts/settings.js';
+import { EVENT_PREFIX } from './prompts/event_prefix.js';
+import { BIG_SETTINGS } from './prompts/big_settings.js';
+
+const HUGE_SETTINGS = ['in the cup final, the whole ground holding its breath', 'with the title on the line', 'on the grandest stage of his young life', 'as sixty thousand roared', 'in the last minute of the biggest game of the season', 'with silverware within touching distance', 'in front of a nation watching at home', 'in the derby to end all derbies', 'with promotion, the title, everything riding on ninety minutes', 'on a European night the whole city will remember', 'with the trophy close enough to touch', 'in a winner-takes-all decider', 'as the whole country stopped to watch'];
+
+// action verbs by the card's dominant tag (≥6 each so beats rarely repeat)
+const VERBS: Record<string, string[]> = {
+  aggression: ['flew into', 'threw himself into', 'crunched into', 'went in hard for', 'snapped into', 'bristled into', 'stood his ground for'],
+  creativity: ['conjured', 'threaded', 'dreamed up', 'engineered', 'invented', 'sketched out', 'unpicked the lock with'],
+  composure: ['calmly produced', 'coolly executed', 'took his time over', 'nervelessly played', 'unhurriedly slotted in', 'kept his head and delivered', 'measured out'],
+  flair: ['lit up the moment with', 'produced a piece of magic —', 'brought the crowd up with', 'dared to try', 'flicked out', 'brazenly attempted', 'showboated into'],
+  leadership: ['took charge with', 'rallied the lads with', 'demanded the ball and', 'led by example with', 'grabbed the game by the collar with', 'dragged the team forward with'],
+  teamwork: ['linked up for', 'worked the ball into', 'combined for', 'selflessly played', 'dovetailed into', 'knitted the move with', 'played the percentages with'],
+  stamina: ['dug deep for', 'powered through for', 'ran himself into the ground for', 'kept going for', 'gutted out', 'found one last surge for', 'refused to stop for'],
+  keeping: ['pulled off', 'commanded his box with', 'stood tall for', 'threw himself across for', 'clawed out', 'read it early and produced', 'got a strong hand to'],
+};
+
 // (seeded from the career + turn), so a career replays identically and reads like a story. The tone
 // shifts with the player's AGE/chapter, the STAKES of the moment, how WELL it came off, his TEMPERAMENT,
 // the recurring CHARACTERS around him, and whatever SEASON EVENT is coloring the chapter. No LLM —
@@ -48,42 +70,8 @@ export function careerCast(careerSeed: number, avoid: string | undefined): Caree
   return { gaffer: pick(GAFFER_NAMES), rival: pick(RIVAL_NAMES), mentor: pick(MENTOR_NAMES), captain: pick(CAPTAIN_NAMES) };
 }
 
-// settings by chapter (age band) — a young park pitch grows into a stadium
-const SETTINGS: Record<string, string[]> = {
-  Grassroots: ['on a muddy park pitch', 'under grey skies at the local rec', 'with a scatter of parents watching from the touchline', 'on a frostbitten Sunday-league morning', 'between two sets of jumpers-for-goalposts', 'as a dog wandered across the far corner', 'on a pitch more mud than grass', 'with the ball skidding off the wet surface', 'as steam rose off the players in the cold', 'past a car park doubling as the changing rooms', 'with a lone parent-referee keeping order'],
-  Academy: ["on the academy's back pitches", 'in a youth-team fixture', 'under the academy floodlights', 'in a coaches-only trial game', 'on the manicured academy turf', 'in front of the youth-development staff', 'on the pristine academy 3G', 'in a behind-closed-doors development game', 'with the age-group coaches lining the touchline', 'in a possession drill that spilled into a real match', 'under the watchful eye of the head of youth'],
-  Scholar: ['in a youth-league fixture', 'in front of the scholarship staff', 'with his YTS place on the line', 'on a bitter midweek youth night', 'in a trial game against older lads', 'with the academy director watching closely', 'in a rain-lashed youth-league tie', 'with his scholarship review looming', 'against a physical, streetwise older side', 'on the academy floodlit training pitch', 'with the release list at the back of every mind'],
-  'Youth Team': ['in a reserve-team match', 'with a couple of scouts jotting notes', 'in front of a smattering of regulars', 'on a wind-whipped afternoon', 'in a tight, chippy reserve derby', 'with a first-team coach watching from the tunnel', 'in a stop-start reserve fixture', 'before a handful in the main stand', "with the gaffer up in the directors' box", 'on a heavy, energy-sapping surface', 'in a niggly, foul-strewn reserve match'],
-  Breakthrough: ['in front of a proper crowd now', 'with the first-team staff watching on', 'as the terraces found their voice', 'under real floodlights, real pressure', 'with the home end starting to sing his name', 'on a raucous midweek night', 'with his name on a few lips in the crowd', 'as the atmosphere crackled', 'in front of a watching, hopeful home end', 'with the step up written all over the occasion', 'under lights and rising expectation'],
-  'First Team': ['as a first-team regular now', 'with the shirt his to lose', 'in front of a demanding home crowd', 'with the pressure of a starting spot', 'under the weight of real expectation', 'on a proper league Saturday', 'with the number on his back earned', 'in front of a crowd that expects', 'on a tense, must-not-lose afternoon', "with the season's rhythm in full swing", 'under the steady glare of the regulars'],
-  Establishing: ['before a full, expectant stand', 'with cameras tracking his every touch', 'in the thick of a proper contest', 'with a lot of eyes on him', 'as a sell-out crowd leaned in', 'with the pundits watching for a reason to doubt him', 'with the whole ground tuned to him', 'as the neutrals watched to be convinced', 'in a fixture the league had circled', 'with reputations on the line', 'before a stand that had come to see him'],
-};
-// big-moment settings override the chapter setting when the stakes are high
-// ATMOSPHERE ONLY — never a fixture identity or a venue. Half of these used to name the match: a moment
-// LABELLED "A Point to Prove" resolved "in a white-hot derby", and "A Scout-Packed Showcase" resolved "on
-// Community Shield curtain-raiser day". The label and this pool are chosen independently, so anything here
-// that claims what KIND of game it is will eventually contradict the screen above it. "as the away end
-// bounced" did the same for venue on a home fixture. Tone is safe; facts are not. (PT-155/PT-808)
-const BIG_SETTINGS = ['with the tie hanging in the balance', 'as tempers frayed and the stakes climbed',
-  'under the lights, everything to play for', 'with the season threatening to turn on this one game',
-  'with the noise never dropping for a second', 'in a game nobody wanted to lose',
-  'with every loose ball fought over twice', 'as the tension crept into everyone\'s legs',
-  'in front of a crowd that had turned up for exactly this', 'with the whole thing balanced on a knife edge',
-  'in an atmosphere you could lean on', 'with the bench on their feet from the first whistle',
-  'in a game that had been circled for weeks', 'with the result mattering far more than the performance'];
-const HUGE_SETTINGS = ['in the cup final, the whole ground holding its breath', 'with the title on the line', 'on the grandest stage of his young life', 'as sixty thousand roared', 'in the last minute of the biggest game of the season', 'with silverware within touching distance', 'in front of a nation watching at home', 'in the derby to end all derbies', 'with promotion, the title, everything riding on ninety minutes', 'on a European night the whole city will remember', 'with the trophy close enough to touch', 'in a winner-takes-all decider', 'as the whole country stopped to watch'];
 
-// action verbs by the card's dominant tag (≥6 each so beats rarely repeat)
-const VERBS: Record<string, string[]> = {
-  aggression: ['flew into', 'threw himself into', 'crunched into', 'went in hard for', 'snapped into', 'bristled into', 'stood his ground for'],
-  creativity: ['conjured', 'threaded', 'dreamed up', 'engineered', 'invented', 'sketched out', 'unpicked the lock with'],
-  composure: ['calmly produced', 'coolly executed', 'took his time over', 'nervelessly played', 'unhurriedly slotted in', 'kept his head and delivered', 'measured out'],
-  flair: ['lit up the moment with', 'produced a piece of magic —', 'brought the crowd up with', 'dared to try', 'flicked out', 'brazenly attempted', 'showboated into'],
-  leadership: ['took charge with', 'rallied the lads with', 'demanded the ball and', 'led by example with', 'grabbed the game by the collar with', 'dragged the team forward with'],
-  teamwork: ['linked up for', 'worked the ball into', 'combined for', 'selflessly played', 'dovetailed into', 'knitted the move with', 'played the percentages with'],
-  stamina: ['dug deep for', 'powered through for', 'ran himself into the ground for', 'kept going for', 'gutted out', 'found one last surge for', 'refused to stop for'],
-  keeping: ['pulled off', 'commanded his box with', 'stood tall for', 'threw himself across for', 'clawed out', 'read it early and produced', 'got a strong hand to'],
-};
+
 // tag-specific triumph colour — occasionally used instead of a generic result so a flair moment reads
 // unlike a keeping one (per-tag result colour)
 // Replaces the generic result on 55% of triumphs — the game's reward line — and it was a straight
@@ -198,65 +186,10 @@ const PERSONALITY_ADV: Record<string, string[]> = {
   joker: ['with a wink,', 'cracking a smile,', 'enjoying himself far too much,', 'saying something unrepeatable,',
     'laughing before it landed,', 'to groans from the bench,', 'entirely unserious,', 'having made someone laugh first,', 'grin already spreading,'],
 };
-// season-event prefixes (weave the chapter's story into the beat)
-// A season-long event colours EVERY scenario while it runs, so each needs a small pool of lead-ins —
-// otherwise one line ("Riding the wave of a breakout season") opens every prompt for a whole season and
-// dominates the text (PT-9/PT-42). Turn-strided selection walks the pool so it varies turn to turn.
-const EVENT_PREFIX: Record<string, string[]> = {
-  'serious-injury': ['Still fighting his way back from a bad injury, ', 'Body not yet all the way healed, ', 'Every stride still a question after the injury, ', 'Barely back in full training, ', 'The doubts about his fitness not quite silenced, '],
-  'hot-streak': ['In the form of his life, ', 'Riding a hot streak he daren’t question, ', 'Everything he touches turning to gold lately, ', 'Unable to stop scoring at the minute, ', 'Playing with the freedom of a man who can’t miss, '],
-  slump: ['Low on confidence, ', 'Stuck in a rut he can’t explain, ', 'Goals and form having dried up, ', 'Second-guessing every touch lately, ', 'Desperate to end a barren run, '],
-  'new-gaffer': ['Desperate to catch the new gaffer’s eye, ', 'With a new manager still making his mind up on him, ', 'Everything to prove to a boss who didn’t sign him, ', 'Learning a whole new system on the fly, ', 'One good game from the new manager’s trust, '],
-  knock: ['Carrying a knock he wouldn’t admit to, ', 'Strapped up and playing through the pain, ', 'One bad tackle from the treatment table, ', 'Nursing a niggle the staff don’t know about, ', 'Not quite at his sharpest with the injury, '],
-  breakthrough: ['Riding the wave of a breakout season, ', 'The breakout year rolling on beneath him, ', 'Suddenly the name on everyone’s lips, ', 'The hype around him building week on week, ', 'Every eye in the academy on him now, '],
-  'cup-run': ['Buzzing off a thrilling cup run, ', 'Swept up in a cup run nobody saw coming, ', 'The whole town dreaming of a cup upset, ', 'Another cup tie, another shot at glory, ', 'The giant-killing talk following the club around, '],
-  'transfer-links': ['Trying to tune out the transfer talk, ', 'His name in the transfer pages again, ', 'With bigger clubs reportedly circling, ', 'A price tag suddenly attached to his name, ', 'The speculation about his future refusing to die, '],
-  'fan-favourite': ['Roared on by supporters who adore him, ', 'A terrace song already sung in his name, ', 'The crowd firmly on his side these days, ', 'Cult-hero status growing on the terraces, ', 'The supporters ready to forgive him anything, '],
-  'international-honour': ['Still pinching himself over the international honour, ', 'The national-team call-up still sinking in, ', 'A country’s expectation newly on his shoulders, ', 'The weight of a nation’s badge freshly on his chest, ', 'Back at his club after a proud week away, '],
-};
 
-// ── SCENARIO STORY: describe the SITUATION the player faces this turn (before he chooses) ──
-const KIND_SETUP: Record<string, string[]> = {
-  match: ['The game is finely poised.', 'The match hangs in the balance.', 'This is where games are won and lost.', 'The tempo is rising and the tackles are flying in.', 'Both sides are trading blows and neither will blink.', 'It’s scrappy, tight, and crying out for someone to take control.', 'The clock is ticking and the game needs a hero.', 'The ball has just broken loose in a dangerous area.', 'One mistake here and the game turns on its head.', 'The crowd senses something is about to happen.', 'A set-piece is coming and the shape needs to hold.', 'A wet pitch, a heavy ball, and a game turning into a battle of wills.', 'One end of the ground has gone quiet — this is his chance to take the noise out of the other.', 'A red card has left his side a man light, and someone has to step up.', 'It’s the last action of the half, and the whistle is seconds away.', 'A goal either way here changes the whole complexion of the match.', 'The opposition’s best player has gone quiet — someone else needs to be the difference.', 'A corner is about to be swung in, and the box is a scrum.'],
-  training: ['On the training ground, the coaches are watching closely.', 'The gaffer has set up a pointed drill.', 'It’s a sharp session, and the staff want to see something specific.', 'Cones out, whistle sharp — this is a test dressed up as a drill.', 'A small-sided game, but the staff are marking cards.', 'Rondos done, now the real work: he’s being pushed today.', 'The fitness coach has set a target and is timing every rep.', 'A tactical shape drill, and the staff want it drilled right.', 'A one-on-one against the reserve-team hardman — no easy reps today.', 'Video session done; now he has to prove he took it in.', 'A recovery session the day after a hard match, legs like lead.', 'A specific weakness has been flagged, and today’s whole session is built around fixing it.', 'The analyst has pulled up clips of exactly what went wrong last time.', 'A friendly, low-key five-a-side that somehow always turns competitive.', 'Pre-season doubles: two sessions, no excuses, everyone watching the fitness numbers.', 'A youth-team kid has been drafted in to make up the numbers, and he’s not going easy.'],
-  social: ['Away from the pitch, his character is being tested.', 'In the dressing room, the mood needs handling.', 'Off the field, who he is matters as much as how he plays.', 'A quiet word is needed, and everyone’s watching how he takes it.', 'The group dynamic is fragile, and he’s in the middle of it.', 'This one won’t show on the stat sheet — but it counts.', 'A senior pro has pulled him aside for a word he didn’t ask for.', 'The club wants an answer, and there’s no ducking this one.', 'Team-mates are watching to see what kind of character he really is.', 'Away from the cameras, this is the moment that shapes a reputation.', 'A team meal, and the seating plan says more than anyone will admit.', 'A young player has come to him for advice, and he isn’t sure he has any to give.', 'The captain has called a players-only meeting, and eyes keep flicking his way.', 'A club function, small talk with people who matter more than they let on.', 'A long coach journey home after a bad result, and the silence says everything.'],
-  // LIFE-EVENT kinds (real mechanic — see career.ts Scenario.life / LIFE_CONSEQUENCE)
-  contract: ['The agent’s phone won’t stop ringing. A big decision looms.', 'Money and loyalty are pulling in different directions.', 'A career-shaping choice has landed on his plate.', 'The club has put a number on the table, and it isn’t quite what he hoped.', 'A deadline day looms and terms still aren’t agreed.'],
-  loan: ['A loan move is on the table — a fork in the road.', 'Stay and fight for minutes, or leave to find them elsewhere?', 'The club want him to go and toughen up somewhere real.', 'A smaller club wants him for the season, first-team football guaranteed.', 'Comfort at home, or a real chance somewhere colder and harder?'],
-  setback: ['A very public mistake to bounce back from.', 'The headlines weren’t kind. Now he has to answer them.', 'Confidence dented, reputation on the line — this is about response.', 'A howler nobody will let him forget just yet.', 'The kind of week that either breaks a young player or forges him.'],
-  media: ['A story has broken and his name is in it.', 'The papers have got hold of something, and now it’s everywhere.', 'Cameras and microphones where there used to be none — a storm to manage.', 'A quote, taken out of context, is doing the rounds.', 'Journalists camped outside training, all wanting the same answer.'],
-  loyalty: ['The club he grew up supporting have come calling.', 'A boyhood dream is dangled in front of him — and it complicates everything.', 'Head or heart? The club of his childhood wants an answer.', 'The shirt he wore as a kid could be his to wear for real.', 'An old scarf in a drawer at home suddenly means everything again.'],
-  role: ['The gaffer has laid out where he stands in the pecking order — and it isn’t where he hoped.', 'A blunt conversation about his role, and no easy way to take it.', 'Told plainly what he is and isn’t in this squad — now he has to respond.', 'A new signing in his position has changed the maths overnight.', 'Reduced to impact sub, and asked to be grateful for it.'],
-  fallout: ['Words were said in the dressing room that can’t be unsaid.', 'A rift with a teammate has spilled out where everyone can see it.', 'The changing room has taken sides, and he’s in the middle of it.', 'A training-ground bust-up nobody quite wants to talk about.', 'An old friend in the squad now barely looks at him.'],
-  injury_comeback: ['Weeks of rehab behind him, and the first minutes back feel like starting over.', 'His body says yes; his head still isn’t sure.', 'Cleared to play, but nobody — least of all him — knows if it’s too soon.', 'A tentative first tackle since the injury, and everything hinges on how it feels.', 'The physio room has become a second home; today he finally leaves it behind.'],
-  transfer_rumour: ['His name is all over the transfer pages this week.', 'A release clause figure has somehow found its way into the papers.', 'Scouts from a bigger club were reportedly in the stands on Saturday.', 'His agent won’t confirm or deny it, which somehow says everything.', 'Team-mates keep asking if it’s true — he isn’t sure himself.'],
-  manager_fallout: ['A blazing row with the manager after being hooked at half-time.', 'The gaffer publicly questioned his attitude, and it stung.', 'Frozen out of the manager’s plans overnight, for reasons nobody explained.', 'A training-ground disagreement that got louder than it should have.', 'The manager’s trust in him feels like it’s hanging by a thread.'],
-  charity: ['A morning at a local school, a room full of kids who idolise him.', 'A hospital visit that puts the whole game into perspective.', 'His name attached to a cause bigger than football, for once.', 'A community coaching session on the pitch where it all started for him.', 'A charity match for an old team-mate whose career ended too soon.'],
-  social_storm: ['An old post has resurfaced, and it’s spreading fast.', 'A throwaway comment online has become a full-blown story.', 'Thousands of strangers suddenly have an opinion about him.', 'A photo, taken without his knowledge, is everywhere by lunchtime.', 'His phone won’t stop buzzing, and none of it is good news.'],
-  family_illness: ['A phone call from home changes everything, right before kick-off week.', 'A parent’s health scare has his mind a thousand miles from the training ground.', 'Torn between being where the team needs him and where his family does.', 'News from home he wasn’t ready to hear.', 'A hospital corridor, a waiting room, and a match he can barely think about.'],
-  romance: ['Someone new in his life, and it’s starting to feel serious.', 'A big, public step in his relationship — the kind that can’t be undone.', 'Balancing a settling-down life with the chaos of a football schedule.', 'A quiet proposal, planned for months, finally about to happen.', 'The first time he’s introduced someone to the people who matter most.'],
-  mentor_crossroads: ['{mentor} rings with advice nobody asked him for.', 'The coach who first believed in him — {mentor} — wants a word, and it isn’t small talk.', 'A phone call from the man who shaped him, {mentor}, and a choice he didn’t expect to face.', 'Years on, {mentor} still sees him as the raw kid he once coached — and says so.', 'The advice {mentor} is giving him cuts against everything the club wants from him.'],
-  friend_rivalry: ['{rival} — the mate he grew up playing with — lines up in the opposite shirt today.', 'A childhood friendship with {rival} is starting to curdle into something sharper.', '{rival}, who once shared a bedroom with him on away trips, now wants his shirt.', '{rival}’s success has started to sting more than he’d like to admit.', 'What used to be banter between him and {rival} doesn’t feel like banter anymore.'],
-  new_money: ['The first proper payday lands in his account, and the number doesn’t look real yet.', 'A wage slip with more zeros than he knows what to do with — and everyone around him has noticed.', '{mentor} rings, unprompted, with a blunt warning: money changes people before they notice it happening.', 'His agent already has plans for the money. He isn’t sure he has any of his own.', 'Old mates have started asking for favours that never used to come up.'],
-  move_abroad: ['A move to a club in a country whose language he doesn’t speak yet — everything about home feels a long way off.', 'Boxes still half-packed, a new time zone, and a dressing room where the jokes go straight over his head.', 'The kind of move {rival} always talked about making and never had the nerve to.', 'A city he can’t read the street signs in, and a football club expecting him to be brilliant in it anyway.', 'The new flat is furnished, but it doesn’t feel like anything close to home yet.'],
-};
-// What the moment ASKS of him. Kept setting-neutral so it reads sensibly whether the
-// situation is a training drill, a dressing-room moment or a cup tie (a drill is not
-// "the kind of moment careers are remembered for" — that mismatch kills the immersion).
-// The per-tag "what this moment is asking for" line — one of three components of EVERY scenario prompt,
-// so it is read 120 times a career. At six lines a tag a single career nearly exhausted it, and by the
-// fifth heir of a dynasty 95% of prompt sentences were text an earlier generation had already read.
-// Twelve each. (PT-404)
-const DEMAND: Record<string, string[]> = {
-  aggression: ['They want to see some steel from him.', 'It’s about winning the physical battle.', 'He needs to show he won’t be pushed around.', 'It calls for a bit of nastiness, in the right way.', 'This is a moment to plant a flag and not budge.', 'They need to see he can dish it out as well as take it.', 'Somebody has to put a foot in here.', 'It wants an edge, and he has to find one.', 'The game needs somebody to stop being polite.', 'They want to see whether he can be the one nobody fancies.', 'It is a question of appetite as much as ability.', 'The moment belongs to whoever wants it more.'],
-  creativity: ['They’re looking for a spark of invention.', 'It wants imagination — something unexpected.', 'He needs a solution no one else can see.', 'It calls for a moment nobody saw coming.', 'The situation is crying out for a flash of ingenuity.', 'They want proof he can think a half-step ahead of everyone else.', 'The obvious ball will not do here.', 'It wants the answer nobody has thought of yet.', 'Everything sensible has already been tried.', 'They are waiting for him to see something.', 'It needs an idea more than it needs a technique.', 'The picture is there for anyone who can find it.'],
-  composure: ['It asks for a cool head under pressure.', 'The test is whether he can keep calm.', 'He needs to slow it down and stay in control.', 'It’s about not letting the moment get too big for him.', 'They want to see the pulse stay steady when it matters.', 'The test is simple: can he trust himself under the heat?', 'The noise is the test, not the football.', 'It asks him to take the extra half-second.', 'Everyone around him is rushing; that is the trap.', 'It wants a still head in a loud place.', 'The panic is the opponent here.', 'He needs to look like he has done this before.'],
-  teamwork: ['It’s about bringing others into the play.', 'They want to see him link it and share it.', 'It’s a test of how he lifts the players around him.', 'It calls for the unselfish option, not the flashy one.', 'They want to see him make someone else look good.', 'The moment rewards trust — giving it up and getting it back.', 'It is not his moment unless he makes it somebody else\'s.', 'The right pass is the boring one.', 'It wants him to be useful rather than brilliant.', 'Somebody has to do the work that never gets clipped.', 'It rewards the run nobody will notice.', 'The team need him more than the highlights do.'],
-  leadership: ['They want him to take charge of this.', 'It’s a chance to show he can lead.', 'He needs to grab it and drag the rest with him.', 'It calls for someone to stand up and be counted.', 'They need a voice, and it might as well be his.', 'This is the kind of moment that either makes a captain or exposes one.', 'Heads are dropping and somebody has to lift them.', 'It wants a voice more than a touch.', 'Ten people are waiting to be told what happens next.', 'Somebody has to take responsibility for this one.', 'The room needs a standard set, right now.', 'It is the kind of moment people remember who stepped up in.'],
-  stamina: ['It’s a test of his engine.', 'It comes down to who keeps going longest.', 'They want to see him cover every blade of grass.', 'It’s about the effort nobody notices until it’s missing.', 'The legs are tired — the question is whether his are, too.', 'They want to see if there’s anything left in the tank.', 'It comes down to who is still running at the end.', 'The legs have gone; the question is what is left after that.', 'It wants him to make the run for the fourth time.', 'Everyone is tired — that is the whole point of it.', 'There is no clever way through this one, only work.', 'It asks how much he has actually got.'],
-  flair: ['It’s a chance to show his imagination.', 'It’s the moment to try something bold.', 'They want to see a bit of magic from him.', 'It calls for something the coaching manual doesn’t cover.', 'This is the moment to back himself and go for broke.', 'They want to see him make it look easy when it isn’t.', 'It is a moment that will either look wonderful or very stupid.', 'The safe option is available, and dull.', 'It wants him to trust the thing he can do.', 'Somebody has to try something here.', 'The crowd can feel one coming.', 'It is the sort of moment careers get remembered for.'],
-  keeping: ['It’s down to him to keep them out.', 'It’s a test of his hands and his nerve.', 'They need him to be the wall behind them.', 'It calls for a shot-stopper’s stubbornness.', 'The moment needs a clean take and no fuss.', 'They want to see him command the space that’s his.', 'Everything now depends on the man in the different shirt.', 'It asks him to be certain when nobody else is.', 'The box is his and he has to say so.', 'One touch decides this, and it is his.', 'It wants safe hands and a loud voice.', 'There is nobody behind him to fix it.'],
-};
+
+
+
 const pickFrom = <T,>(rng: () => number, arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
 
 // ── OFF-PITCH RESPONSES (PT-43): at a LIFE EVENT the player still plays a football card, but showing its
@@ -364,78 +297,10 @@ function pickByTurn<T>(arr: readonly T[], turn: number, stride: number, salt: nu
   return arr[idx];
 }
 
-// ── CHILD/PARK-FOOTBALL SETUP BANKS: the youngest chapters (age ~10–15) are jumpers-for-goalposts and
-// academy trials, so they must NOT borrow the senior pools' "reserve-team hardman / dropped for Saturday /
-// the analyst pulled up clips" vocabulary (PT-46). Same three kinds, re-voiced for school & park football.
-const CHILD_SETUP: Record<string, string[]> = {
-  match: [
-    'The park pitch is churned to mud and both sets of parents are roaring from the touchline.', 'It’s the last kick of a break-time match and pride is on the line.', 'Jumpers for goalposts, no ref, and an argument brewing about whether the last one was over the line.', 'The school-team game is on a knife-edge and the PE teacher keeps glancing at the clock.', 'Bigger, older lads have wandered onto the pitch and the game just got a lot more physical.', 'A cup game for the district side, and a few grown-ups with clipboards are watching from the fence.', 'The ball’s gone into the nettles again, and everyone’s waiting to see who dares fetch it.', 'It’s freezing, half the team want to go home, and the game is still there to be won.', 'A rival from the school down the road has been talking all week — now the whistle’s gone.', 'Oranges at the break and a team-talk from a dad who means well, with it all still to play for.', 'The five-a-side cage after school, where reputations are made and lost in an afternoon.', 'A proper pitch with real nets for once, and it makes the whole thing feel enormous.',
-  ],
-  training: [
-    'At training the coach has set out cones and wants to see who’s been practising.', 'A skills drill in the school hall, trainers squeaking on the wood.', 'The Saturday-morning session, half the squad still half-asleep.', 'Keepy-uppie contest before the coach arrives, and everyone’s counting out loud.', 'A shooting drill where the whole queue watches every effort.', 'The coach has split them into teams for a small-sided game and is keeping score.', 'Cold hands, a heavy leather-feeling ball, and a passing drill that has to click.', 'The academy taster session, surrounded by kids who all look a bit better than him.', 'A dribbling course of cones, timed, with the fastest getting to pick teams.', 'Wet bibs, a muddy field behind the school, and a coach who believes in him.', 'A one-touch drill where one mistake sends the whole group back to the start.', 'The end-of-session match everyone actually turns up for.',
-  ],
-  social: [
-    'On the walk home from the match, the other kids are deciding who was best.', 'A team-mate’s in tears after a mistake and nobody quite knows what to say.', 'Picking teams in the playground, and who he chooses says a lot.', 'Mum’s waiting in the car and the coach wants a quiet word first.', 'A squabble over who takes the free-kicks has split the whole team.', 'The new kid doesn’t know anyone yet and is standing on his own.', 'A birthday party clashes with the big game, and he has to choose.', 'The group chat is buzzing after training and he’s not sure what to type.', 'A smaller lad is getting picked on for a bad miss, and everyone’s watching.', 'Sharing the last space in the car home, and who gets left is up to him.', 'His best mate has been dropped and is putting on a brave face.', 'The coach asks who’ll captain the side on Saturday, and heads turn.',
-  ],
-};
+
 const CHILD_CHAPTERS = new Set(['Grassroots', 'Academy']);
 
-// ── LIFE-STAGE FRAMING: a much wider bank of human, specific texture per age band — the stuff of an
-// actual childhood/adolescence/career, not just a generic "he's young" clause. Keyed on the CHAPTER
-// (band name) rather than a bare age bracket, so it lines up exactly with what that stage is really
-// about (school and parents at Grassroots; digs and homesickness at Scholar; captaincy and legacy at
-// Establishing) per the "much more human depth per band" brief.
-const FRAME_BY_CHAPTER: Record<string, string[]> = {
-  Grassroots: [
-    'Homework still not done and Mum already shouting for the car, ', 'With a familiar face on the touchline in the cold, arms folded, willing him on, ',
-    'Picked near-last at school again but not here, not on this pitch, ', 'A growth spurt has left him gangly and not quite sure where his own feet are, ',
-    'Terrified of being dropped for Saturday after one bad training session, ', 'His new coach has spotted something in him nobody else has, ',
-    'Still the smallest kid in his year at school, ', 'With his best mate from school lining up right beside him, ',
-    'Fresh off a school report that mentioned football more than maths, ', 'Desperate to make the actual team, not just the bench, ',
-  ],
-  Academy: [
-    'Bussed in after school again, kit bag heavier than his school one, ', 'Word is the coaches are trimming the squad soon, and nobody feels safe, ',
-    'Another growth spurt, another summer of feeling like a stranger in his own body, ', 'Homework forgotten in his bag, again, ',
-    'His mum still drives him to every single session without complaint, ', 'A new coach has arrived and the old certainties are gone, ',
-    'Watching mates from school drift away as football swallows every weekend, ', 'Desperate to prove last week’s axing was a mistake, ',
-    'Torn between the exam next week and the extra session tonight, ', 'Finally feeling like one of the good ones in this year group, ',
-  ],
-  Scholar: [
-    'Homesick in digs that still don’t feel like home, ', 'A string of released team-mates has the whole dorm on edge, ',
-    'An agent’s number saved in his phone for the first time, unsure whether to call it, ', 'A trial game against a bigger club’s youth side, everything riding on ninety minutes, ',
-    'His coach has never once told him he’ll make it — and never once told him he won’t, ', 'The scholarship paperwork made it feel real for the first time, ',
-    'Missing his own bed, his own kitchen, his own life, ', 'A fierce, needling rivalry with the lad who plays his exact position, ',
-    'Grades slipping while the football consumes every hour, ', 'The academy director watching from the side, clipboard in hand, ',
-  ],
-  'Youth Team': [
-    'Reserve football has taught him the game has real teeth, ', 'His agent is starting to make real calls on his behalf now, ',
-    'A loan away is being quietly discussed, and it terrifies and thrills him in equal measure, ', 'Fighting a lad he used to room with for the same one shirt, ',
-    'The first-team coach watched from the touchline again today — no idea what he made of it, ', 'Independence, a flat of his own, and nobody to tell him what time to be in, ',
-    'Old digs-mates are already being released around him, ', 'A first taste of training with the senior pros, and it showed him how far there still is to go, ',
-    'Money is starting to change hands and it feels strange to be worth something, ', 'His name mentioned, for the first time, in a first-team team-talk, ',
-  ],
-  Breakthrough: [
-    'His agent is fielding calls he never used to get, ', 'The first proper contract talk of his life is looming, ',
-    'A journalist wants "five minutes," and he still doesn’t trust himself with a microphone, ', 'The senior dressing room hasn’t fully let him in yet, ',
-    'Transfer talk has started, and he can’t work out if it’s flattering or terrifying, ', 'His face is starting to appear where it never has before, ',
-    'A veteran pro has taken it upon himself to test the new boy, ', 'The manager who gave him his chance is exactly the one he doesn’t want to let down, ',
-    'His family still can’t quite believe what’s happening to him, ', 'One eye on the shirt he wants, one eye on the man currently wearing it, ',
-  ],
-  'First Team': [
-    'Whispers of the captaincy have started, and he’s not sure he’s ready, ', 'The wages now support people who aren’t just him, ',
-    'A run of poor form has the phone-ins circling, ', 'A kid from the academy looks at him the way he used to look at the senior pros, ',
-    'His family life pulls at him just as hard as the football now does, ', 'Expectation sits on him like a second shirt, ',
-    'The dressing room looks to him for the answer now, not the other way round, ', 'Somewhere between "promising" and "the finished article," and everyone can feel it, ',
-    'A slump nobody can quite explain, least of all him, ', 'Money, fame and football pulling in three different directions at once, ',
-  ],
-  Establishing: [
-    'The armband has his name on it more often than not these days, ', 'Younger lads at the club study the way he trains, ',
-    'His investments matter almost as much as his form now, ', 'What he leaves behind is starting to matter more than what he does today, ',
-    'A testimonial is being quietly discussed by people who assume he’ll retire a legend, ', 'His own kids are old enough to watch him play and understand it, ',
-    'The next contract might be his last big one, and everyone in the building knows it, ', 'A younger version of himself is coming up through the ranks, watching, learning, waiting, ',
-    'Reputation now precedes him into every room he walks into, ', 'He’s become the answer to the question a young pro used to ask about him, ',
-  ],
-};
+
 /** Weave the age/chapter into the situation so a 12-year-old on a park pitch reads unlike a 23-year-old.
  *  Turn-strided (not random) so the frame walks the whole bank before repeating within a chapter (PT-9). */
 function ageFraming(turn: number, salt: number, age?: number, chapter?: string): string {
