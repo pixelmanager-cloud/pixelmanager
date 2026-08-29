@@ -3384,6 +3384,7 @@ class Game {
     }
     this.engine = new MatchEngine([payload.home.team, payload.away.team], payload.seed, [payload.home.tactics, payload.away.tactics]);
     this.matchSeed = payload.seed >>> 0;
+    this.cmSeq = 0; this.cmBag = {}; this.lastPick = {};   // fresh banks each match
     this.playerAttrs = new Map();
     for (const t of [payload.home.team, payload.away.team]) {
       for (const p of t.players) this.playerAttrs.set(p.name, p.attrs);
@@ -3659,15 +3660,35 @@ class Game {
    *  (82% of them) always evaluated to 4, so one lead phrase printed ~190 times in a single match. An
    *  ever-advancing counter is the right index for "which line next". (PT-1200) */
   private cmSeq = 0;
-  private lastPick: Record<number, number> = {};
-  /** cpick with NO BACK-TO-BACK REPEAT: never returns the same line twice running from the same bank. The
-   *  hash picker has no memory, and measured collision rates ran 17-45% per bank — a line following itself is
-   *  the repeat a reader actually notices. Deterministic (still a pure hash), just skipped forward on a clash. */
+  private lastPick: Record<string, number> = {};
+  private cmBag: Record<string, number[]> = {};
+  /** cpick as a SHUFFLED BAG: draw a seeded permutation of the bank and deal it out, only reshuffling once
+   *  every line has been used. Blocking back-to-back repeats (the previous behaviour) was not enough — a
+   *  memoryless hash still clusters, and a live 90-minute capture measured three lines of one bank taking
+   *  22% of the whole feed. A bag makes usage exactly even: with a bank of N, no line can appear twice until
+   *  all N have appeared once. Still fully deterministic — the shuffle is the same seeded hash. (PT-1204)
+   *  The seam between two bags is the one place a repeat could still slip through, so it is patched too. */
   private cpickNR<T>(arr: T[], salt: number): T {
     if (arr.length <= 1) return arr[0];
-    let i = this.cidx(arr.length, this.cmSeq++, salt);
-    if (this.lastPick[salt] === i) i = (i + 1) % arr.length;
-    this.lastPick[salt] = i;
+    // Salts are hand-assigned and 18 of them are reused across different banks, so the bag is keyed by
+    // salt AND bank size — otherwise a 4-line bank and a 14-line bank sharing salt 6 would refill each
+    // other's bag on every alternating draw and the even-coverage guarantee would evaporate.
+    const key = `${salt}:${arr.length}`;
+    let bag = this.cmBag[key];
+    if (!bag || bag.length === 0) {
+      bag = arr.map((_, i) => i);
+      for (let i = bag.length - 1; i > 0; i--) {           // seeded Fisher-Yates
+        const j = this.cidx(i + 1, this.cmSeq++, salt);
+        const t = bag[i]; bag[i] = bag[j]; bag[j] = t;
+      }
+      // we deal from the END, so guard the seam: don't open a bag with the line that closed the last one
+      if (bag.length > 1 && bag[bag.length - 1] === this.lastPick[key]) {
+        const t = bag[bag.length - 1]; bag[bag.length - 1] = bag[0]; bag[0] = t;
+      }
+      this.cmBag[key] = bag;
+    }
+    const i = bag.pop()!;
+    this.lastPick[key] = i;
     return arr[i];
   }
   // running match context for narration (reset each match in startMatch)
@@ -3799,17 +3820,17 @@ class Game {
     const sc = this.liveScore; // running tally (correct in live AND skip-to-end flush)
     let text = '', cls = '';
     switch (e.type) {
-      case 'kickoff': text = this.cpick(['We’re underway!', 'And the match kicks off!', 'Here we go — game on!', 'The referee gets us started!'], idx, 5); break;
+      case 'kickoff': text = this.cpickNR(['We’re underway!', 'And the match kicks off!', 'Here we go — game on!', 'The referee gets us started!'], 5); break;
       case 'goal': cls = 'cm-goal'; text = this.goalLine(e, team, idx); break;
       case 'chance':
         cls = 'cm-chance';
         text = e.counter
-          ? this.cpick([`They break at pace! ${p} is away for ${team}…`, `Counter-attack, ${team}! ${p} storms clear…`, `Caught square — ${p} springs the trap for ${team}…`, `On the turnover! ${p} races through…`], idx, 2)
-          : this.cpick([`${p} works a yard and shapes to shoot…`, `Here come ${team} — ${p} bursts in behind!`, `Big chance! ${p} is in for ${team}…`, `${team} carve it open — ${p} with a sight of goal!`, `${p} shifts it onto his stronger foot…`, `A gap opens up and ${p} goes for it…`], idx, 2);
+          ? this.cpickNR([`They break at pace! ${p} is away for ${team}…`, `Counter-attack, ${team}! ${p} storms clear…`, `Caught square — ${p} springs the trap for ${team}…`, `On the turnover! ${p} races through…`], 2)
+          : this.cpickNR([`${p} works a yard and shapes to shoot…`, `Here come ${team} — ${p} bursts in behind!`, `Big chance! ${p} is in for ${team}…`, `${team} carve it open — ${p} with a sight of goal!`, `${p} shifts it onto his stronger foot…`, `A gap opens up and ${p} goes for it…`], 2);
         if (e.counter) cls = 'cm-chance cm-counter';
         break;
-      case 'shot_saved': cls = 'cm-save'; text = this.cpick([`🧤 SAVED! ${opp}’s keeper turns ${p} away!`, `🧤 Denied! A fine stop to keep ${p} out!`, `🧤 What a save — ${p} was sure he’d scored!`, `🧤 Beaten away! ${p} is foiled!`, `🧤 Big hands! ${opp} keep ${p} out!`], idx, 3); break;
-      case 'shot_missed': cls = 'cm-miss'; text = this.cpick([`${p} drags it wide!`, `Off target — ${p} will want that one back.`, `${p} blazes over the bar!`, `Just past the post from ${p}!`, `Wild from ${p} — miles over!`], idx, 4); break;
+      case 'shot_saved': cls = 'cm-save'; text = this.cpickNR([`🧤 SAVED! ${opp}’s keeper turns ${p} away!`, `🧤 Denied! A fine stop to keep ${p} out!`, `🧤 What a save — ${p} was sure he’d scored!`, `🧤 Beaten away! ${p} is foiled!`, `🧤 Big hands! ${opp} keep ${p} out!`], 3); break;
+      case 'shot_missed': cls = 'cm-miss'; text = this.cpickNR([`${p} drags it wide!`, `Off target — ${p} will want that one back.`, `${p} blazes over the bar!`, `Just past the post from ${p}!`, `Wild from ${p} — miles over!`], 4); break;
       case 'tackle_won':
         if (e.zone === 'att') { // a turnover won high up the pitch — a pressing trap
           cls = 'cm-press';
@@ -3832,11 +3853,25 @@ class Game {
             `⚡ ${p} harries him into giving it up.`], 6);
         } else {
           cls = 'cm-tackle';
-          text = this.cpick([`🦵 ${p} wins it back for ${team} ${zone}.`, `🦵 Strong challenge — ${p} nicks it for ${team} ${zone}.`, `🦵 ${p} steps in and dispossesses the man ${zone}.`, `🦵 Turnover! ${p} robs him ${zone}.`], idx, 6);
+          text = this.cpickNR([
+            `🦵 ${p} wins it back for ${team} ${zone}.`,
+            `🦵 Strong challenge — ${p} nicks it for ${team} ${zone}.`,
+            `🦵 ${p} steps in and dispossesses the man ${zone}.`,
+            `🦵 Turnover! ${p} robs him ${zone}.`,
+            `🦵 Well timed from ${p} — he takes the ball cleanly ${zone}.`,
+            `🦵 ${p} stands him up and wins the duel ${zone}.`,
+            `🦵 Blocked off by ${p} ${zone}; ${team} have it.`,
+            `🦵 ${p} slides in and comes away with it ${zone}.`,
+            `🦵 A firm shoulder from ${p} and the ball is ${team}'s ${zone}.`,
+            `🦵 ${p} jockeys him back and pinches it ${zone}.`,
+            `🦵 Intercepted by ${p} ${zone} — read all the way.`,
+            `🦵 ${p} refuses to be beaten ${zone} and wins it.`,
+            `🦵 Beaten to it by ${p} ${zone}.`,
+            `🦵 ${p} nips in front of his man ${zone}.`], 26);
         }
         break;
-      case 'fatigue': cls = 'cm-injury'; text = this.cpick([`${p} is blowing hard — the legs are going.`, `${p} looks spent, hands on hips ${zone}.`, `Tiring badly now, ${p} — running on empty.`, `${p} can barely get back — gassed.`], idx, 12); break;
-      case 'woodwork': cls = 'cm-post'; text = this.cpick([`🪵 OFF THE POST! ${p} rattles the woodwork — so close!`, `🪵 OFF THE BAR! ${p} is inches away!`, `🪵 It cannons back off the upright — ${p} can't believe it!`], idx, 13); break;
+      case 'fatigue': cls = 'cm-injury'; text = this.cpickNR([`${p} is blowing hard — the legs are going.`, `${p} looks spent, hands on hips ${zone}.`, `Tiring badly now, ${p} — running on empty.`, `${p} can barely get back — gassed.`], 12); break;
+      case 'woodwork': cls = 'cm-post'; text = this.cpickNR([`🪵 OFF THE POST! ${p} rattles the woodwork — so close!`, `🪵 OFF THE BAR! ${p} is inches away!`, `🪵 It cannons back off the upright — ${p} can't believe it!`], 13); break;
       // the heaviest bank in the game (~200 draws a match) — it was 4 lines, half of them without a player
       // name, so ~100 draws collapsed onto a handful of strings (PT-1201)
       case 'loose_ball': cls = 'cm-loose'; text = this.cpickNR([
@@ -3848,19 +3883,19 @@ class Game {
         `${p} overhits it ${zone}.`, `A scramble ${zone}.`, `It breaks kindly ${zone}.`,
         `${p}'s touch lets him down ${zone}.`, `Bobbling around ${zone}.`,
         `Cleared, but only as far as ${zone}.`, `${p} stretches and can only poke it ${zone}.`], 8); break;
-      case 'foul': cls = 'cm-foul'; text = this.cpick([`Foul by ${p} ${zone}. Free kick ${team === this.homeName ? this.awayName : this.homeName}.`, `${p} catches his man — referee blows for the foul ${zone}.`, `Cynical from ${p} — that’s a free kick ${zone}.`, `${p} gives it away with a clumsy challenge ${zone}.`], idx, 14); break;
+      case 'foul': cls = 'cm-foul'; text = this.cpickNR([`Foul by ${p} ${zone}. Free kick ${team === this.homeName ? this.awayName : this.homeName}.`, `${p} catches his man — referee blows for the foul ${zone}.`, `Cynical from ${p} — that’s a free kick ${zone}.`, `${p} gives it away with a clumsy challenge ${zone}.`], 14); break;
       case 'yellow_card': { cls = 'cm-card yellow'; const yc = `<span class="ico-inline">${sprite('card')}</span>`;
-        text = this.cpick([`${yc} Booked! ${p} goes into the book for that one.`, `${yc} Yellow card for ${p} — the ref had no choice.`, `${yc} ${p} is cautioned. He’ll have to be careful now.`], idx, 15); break; }
+        text = this.cpickNR([`${yc} Booked! ${p} goes into the book for that one.`, `${yc} Yellow card for ${p} — the ref had no choice.`, `${yc} ${p} is cautioned. He’ll have to be careful now.`], 15); break; }
       case 'red_card': { cls = 'cm-card red'; const rc = `<span class="ico-inline">${sprite('card-red')}</span>`;
         text = e.zone === 'mid'
-          ? this.cpick([`${rc} SECOND YELLOW — ${p} is OFF! ${team} down to ten!`, `${rc} Two yellows and gone! ${p} takes the long walk — ${team} a man light!`], idx, 16)
-          : this.cpick([`${rc} RED CARD! ${p} is sent off — ${team} down to ten men!`, `${rc} Straight red for ${p}! A moment of madness — ${team} are down to ten!`, `${rc} He’s off! ${p} sees red and ${team} must dig in with ten!`], idx, 16); break; }
-      case 'free_kick': cls = 'cm-freekick'; text = this.cpick([`Dangerous free kick for ${team} — ${p} stands over it…`, `${p} lines up the free kick in a promising spot…`, `Chance from the set piece — ${p} to deliver for ${team}…`], idx, 17); break;
-      case 'penalty': cls = 'cm-pen'; text = this.cpick([`⚠️ PENALTY to ${team}! ${p} will take it…`, `⚠️ The ref points to the spot — penalty ${team}! ${p} steps up…`, `⚠️ Spot kick for ${team}! It’s down to ${p}…`], idx, 18); break;
-      case 'penalty_missed': cls = 'cm-miss'; text = this.cpick([`❌ MISSED! ${p} sends the penalty wide — what a let-off!`, `❌ Saved! The keeper guesses right and denies ${p} from the spot!`, `❌ ${p} blazes the penalty over! He’ll never forget that.`], idx, 19); break;
-      case 'corner': cls = 'cm-corner'; text = this.cpick([`Corner to ${team} — ${p} to swing it in…`, `${p} jogs over to take the corner for ${team}…`], idx, 20); break;
-      case 'injury': cls = 'cm-injury'; text = this.cpick([`🚑 ${p} is down and hurt — he can’t continue for ${team}.`, `🚑 Trouble for ${team} — ${p} has pulled up injured.`, `🚑 ${p} signals to the bench; that’s him done for the day.`], idx, 23); break;
-      case 'sub': { const off = e.playerName2 ?? 'a teammate'; cls = 'cm-sub'; text = this.cpick([`🔄 Change for ${team}: ${e.playerName} comes on for ${off}.`, `🔄 ${team} go to the bench — ${e.playerName} replaces ${off}.`, `🔄 Fresh legs for ${team}: ${off} off, ${e.playerName} on.`], idx, 24); break; }
+          ? this.cpickNR([`${rc} SECOND YELLOW — ${p} is OFF! ${team} down to ten!`, `${rc} Two yellows and gone! ${p} takes the long walk — ${team} a man light!`], 16)
+          : this.cpickNR([`${rc} RED CARD! ${p} is sent off — ${team} down to ten men!`, `${rc} Straight red for ${p}! A moment of madness — ${team} are down to ten!`, `${rc} He’s off! ${p} sees red and ${team} must dig in with ten!`], 16); break; }
+      case 'free_kick': cls = 'cm-freekick'; text = this.cpickNR([`Dangerous free kick for ${team} — ${p} stands over it…`, `${p} lines up the free kick in a promising spot…`, `Chance from the set piece — ${p} to deliver for ${team}…`], 17); break;
+      case 'penalty': cls = 'cm-pen'; text = this.cpickNR([`⚠️ PENALTY to ${team}! ${p} will take it…`, `⚠️ The ref points to the spot — penalty ${team}! ${p} steps up…`, `⚠️ Spot kick for ${team}! It’s down to ${p}…`], 18); break;
+      case 'penalty_missed': cls = 'cm-miss'; text = this.cpickNR([`❌ MISSED! ${p} sends the penalty wide — what a let-off!`, `❌ Saved! The keeper guesses right and denies ${p} from the spot!`, `❌ ${p} blazes the penalty over! He’ll never forget that.`], 19); break;
+      case 'corner': cls = 'cm-corner'; text = this.cpickNR([`Corner to ${team} — ${p} to swing it in…`, `${p} jogs over to take the corner for ${team}…`], 20); break;
+      case 'injury': cls = 'cm-injury'; text = this.cpickNR([`🚑 ${p} is down and hurt — he can’t continue for ${team}.`, `🚑 Trouble for ${team} — ${p} has pulled up injured.`, `🚑 ${p} signals to the bench; that’s him done for the day.`], 23); break;
+      case 'sub': { const off = e.playerName2 ?? 'a teammate'; cls = 'cm-sub'; text = this.cpickNR([`🔄 Change for ${team}: ${e.playerName} comes on for ${off}.`, `🔄 ${team} go to the bench — ${e.playerName} replaces ${off}.`, `🔄 Fresh legs for ${team}: ${off} off, ${e.playerName} on.`], 24); break; }
       case 'halftime': cls = 'cm-break'; text = `⏸ Half-time. ${this.homeName} ${sc[0]}–${sc[1]} ${this.awayName}.`; break;
       case 'fulltime': cls = 'cm-break'; text = `🏁 Full-time! ${this.homeName} ${sc[0]}–${sc[1]} ${this.awayName}.`; break;
     }

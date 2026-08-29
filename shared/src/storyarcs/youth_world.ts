@@ -339,7 +339,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         id: 'talk',
         prompt: 'At the end she keeps him back for two minutes and asks, quite gently, what he will do at eighteen if the football has not happened by then.',
         choices: [
-          { id: 'afraid', label: 'Tell her he doesn\'t know', desc: 'And that the not-knowing frightens him', outcome: 'He says he does not know, and that he is frightened of it not working. She tells him that is the most sensible answer she has had all year, and gives him a leaflet he actually reads.', effect: { attr: { composure: 2 }, meters: { school: 12, family: 6 } } },
+          { id: 'afraid', label: 'Tell her he doesn\'t know', desc: 'And that the not-knowing frightens him', outcome: 'He admits he has no idea, and that the blankness where the answer should be scares him. She tells him that is the most sensible answer she has had all year, and gives him a leaflet he actually reads.', effect: { attr: { composure: 2 }, meters: { school: 12, family: 6 } } },
           { id: 'certain', label: 'Tell her it will have happened', desc: 'No hedge, no maybe', outcome: 'He says it will have happened. She writes it down without arguing, and he walks out into the corridor feeling brilliant and, an hour later, slightly sick.', effect: { attr: { leadership: 1, aggression: 1 }, form: 0.06, meters: { school: -2 } } },
         ],
       },

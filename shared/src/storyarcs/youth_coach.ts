@@ -116,7 +116,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         prompt: 'A year later a different coach, one who has never met the first, uses the same word about him in passing without knowing it has a history.',
         choices: [
           { id: 'answer', label: 'Answer it with a season', desc: 'Say nothing, run for ten months', outcome: 'He never argues the word again; he just makes it impossible to say. By spring nobody remembers who used it first.', effect: { energy: -12, form: 0.1, attr: { stamina: 1, composure: 1 }, meters: { authority: 8 } } },
-          { id: 'carry', label: 'Carry it', desc: 'Let it live in him', outcome: 'He carries that sentence for the rest of his life. On the bad days it is the thing he goes back to.', effect: { attr: { aggression: 1, composure: 1 }, form: 0.04, meters: { authority: -2 } } },
+          { id: 'carry', label: 'Carry it', desc: 'Let it live in him', outcome: 'The sentence lodges somewhere and never comes loose. Years later, on the thin days, it is still the thing he reaches for.', effect: { attr: { aggression: 1, composure: 1 }, form: 0.04, meters: { authority: -2 } } },
         ],
       },
     },
