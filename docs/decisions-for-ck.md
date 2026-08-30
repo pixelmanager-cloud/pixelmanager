@@ -607,3 +607,93 @@ and proved against all seven poisons.
   match. **One piece of that is cheap and carries no engine risk: the defensive presets are player-traps —
   as an underdog, Park the Bus scores 0.025 ppg and Counter 0.008 against Balanced's 0.417 — and the fix is
   data in `shared/src/tactics.ts`.** Say the word and I will do that one on its own.
+
+---
+
+# ROUND 6 — a second adversarial pass. Five more holes in my own work, all closed.
+
+> It found faults in the fixes from Round 5, including in the gate I had just rewritten. Everything in this
+> section is **done**; the open items are listed at the end.
+
+## ~~29. The browser-safety gate was STILL bypassed by the original attack~~ — FIXED
+
+Moving it to the TypeScript AST fixed the text-scanning defects and left the important one. `guardedBy`
+walked up to the nearest **statement** and asked whether a `typeof` appeared anywhere in it — so one decoy
+in a sibling declarator laundered every other declarator in the same `const`:
+
+```ts
+export const _NODE = typeof process, SPEED = Number(process.env.FM_SPEED ?? 1), DRAG = Number(...);
+```
+
+That is **exactly** the shape of the forty module-scope reads that took the game to a black screen. A
+`typeof` in one class member licensed the whole class the same way. It also missed
+`globalThis['process']`, `global.`/`window.`, and the builtins `fs/promises`, `events`, `http`, `stream` —
+and produced **nine false positives** on one browser-safe file (a class named `Buffer`, a method named
+`process()`, an enum member, a loop label), any of which would have failed the build.
+
+Now walks the expression chain and stops at declarator/property/function/class boundaries; uses Node's own
+`builtinModules`; recognises a file's own declarations as its own. Proved against every bypass.
+
+## ~~30. My team-sheet fix had a hole of its own~~ — FIXED
+
+`draftSubs` was captured when the editor opened and never invalidated, so saving applied slot→player entries
+computed for one XI onto a different one. Editing that slot by hand wrote the injured man back over the
+manager's choice; after Autopick it wrote him back **and dropped a fit player**. A cover now records who
+came in as well as who went out, and a slot is handed back only if the stand-in is still in it.
+
+## ~~31. A physically truncated career record was undetectable~~ — FIXED
+
+Every surviving action still applies, so `applied === actions.length` and the career reports perfect health
+while sitting at **turn 61 of 120**. Measured: 8 of 8 truncated careers loaded clean. Nothing inside the
+array can reveal that — `Token.career_action_count` records the length outside it, and saves written before
+it opt out rather than being condemned. A non-array payload is flagged too: `applied 0 of stored 0` is not a
+shortfall by arithmetic, so a corrupt record used to pass every guard and silently restart from turn zero.
+
+`careerHandoff` had **no guard at all** and would graduate a truncated career at 18 instead of 25 —
+measured, **66.7–76.4% of earnings lost**, irreversibly.
+
+## ~~32. Three of eleven formations silently saved nothing~~ — FIXED
+
+`isFormation` was a hand-written list of eight while the editor offers eleven, so `4-1-4-1`, `5-4-1` and
+`4-2-2-2` threw into a bare `catch {}` — every match, with nothing said. Both lists now derive from the
+shapes, and a failed save tells the player.
+
+## ~~33. Two more of my own gates were wrong~~ — FIXED
+
+`saveHealth` could never return to healthy without IndexedDB, even for a working backend. And
+`division_balance` had three holes: a placeholder worst-case that let an engine winning **5-0 in every
+division** pass, a margin check reading the wrong tier, and a five-tier sample that missed tier 6 where the
+widest margin actually is.
+
+## 34. Still open
+
+- **`pruneXI` rotates the designations my fix made live.** Measured on one retirement at slot 2: the armband
+  moves to the free-kick taker, the penalties go to a youth-intake player, and 9 of 11 duties describe a
+  different man. **And `sellPlayer` never prunes at all** — it saves the club with the sold man still in the
+  XI, so the next `openLineup` rebuilds and commits the wipe. My fix changed the trigger from "one injury"
+  (frequent) to "one mid-season sale" (rarer), but the mechanism is unchanged.
+- **`qa_replay_contract`'s fixture covers 1.1% of a career.** Every seed dies at turn 1–4 on
+  `resolve the story beat first`, so 5 of the 7 action types are never exercised. It needs to drive off
+  `c.current().phase` the way `simCareer` does.
+
+## 35. YOUR CALL — why the defensive presets are traps, now with the cause
+
+Measured at 11-v-15, both orderings, n=3000 per preset: **Park the Bus 0.074 PPG, Counter 0.125, against
+Balanced's 0.384.** Paired, Park the Bus is **−0.261 PPG [−0.299, −0.223]** against Balanced.
+
+The cause is not the presets, it is that **the engine gives a low press and a deep line no defensive value
+at all**:
+
+| setting | measured at 11-v-15 |
+|---|---|
+| `press: -1` | **+1.104 goals conceded** [0.960, 1.248] — `deriveMods` drops `pressCount` 2 → 1 |
+| `press: -2` | **+2.342** [2.182, 2.502] |
+| `line: -2` | **+1.062** [0.921, 1.203] — the wrong sign; line 0 is optimal at every gap |
+| `mentality: -2` | +0.273, and it sets `attackPush` to exactly zero |
+
+**Both defensive presets are built almost entirely out of the two settings that measure as pure penalties.**
+So retuning them is a plaster: it would make them non-losing by making them less defensive, which is the
+opposite of what their names promise. The real fix is an engine mechanism that rewards sitting deep —
+interception, lane-blocking, or shot-blocking, none of which exist. That is a day of engine work, and after
+last night I am not starting it without you. **Tell me which you want: the cheap preset retune, or the
+mechanism.**
