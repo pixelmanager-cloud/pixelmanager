@@ -51,7 +51,12 @@ console.log('\n[qa-money] spSeasonReward prize formula — bounds + monotonicity
       if (!finite(r.prize) || r.prize < 0) log(`spSeasonReward(pos=${pos},size=${size}) prize=${r.prize} invalid (must be finite, >= 0)`);
       if (!finite(r.sponsorBonus) || r.sponsorBonus < 0) log(`spSeasonReward(pos=${pos},size=${size}) sponsorBonus=${r.sponsorBonus} invalid`);
       const after = await coinsOf();
-      if (after !== before + r.prize + r.sponsorBonus) log(`spSeasonReward(pos=${pos},size=${size}) coin delta mismatch: before=${before} after=${after} payout=${r.prize + r.sponsorBonus}`);
+      // The ledger must account for EVERY line the call pays, not just the two it used to. `facilities.total`
+      // now carries the division merit payment as well as gate/sponsor/shop/women's, and upkeep and salvage
+      // move coins in the same call — checking prize + bonus alone made this harness fail the moment a new
+      // income line was added, which is a harness that tracks a fixed list rather than the ledger.
+      const paid = r.prize + r.sponsorBonus + (r.facilities?.total ?? 0) + (r.salvage ?? 0) - (r.upkeep ?? 0);
+      if (after !== before + paid) log(`spSeasonReward(pos=${pos},size=${size}) coin delta mismatch: before=${before} after=${after} payout=${paid}`);
       const clampedPos = Math.min(pos, size); // api.ts clamps pos <= size internally — a real "5th of 3" finish can't happen
       if (clampedPos <= size / 2 && r.prize < prevPrize) { /* fine — only check the monotone-worsening direction below */ }
       prevPrize = r.prize;

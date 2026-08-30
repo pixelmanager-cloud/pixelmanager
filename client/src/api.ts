@@ -775,7 +775,7 @@ export const api = {
     // comment as "a small payoff" banked 1,890 coins of sponsorship the club had already been paid.
     // Same `kind === 'league'` guard the season counter one block below already uses.
     const isLeagueRoll = body?.kind !== 'continental' && body?.kind !== 'world';
-    const facIncome = !isLeagueRoll ? { gate: 0, sponsor: 0, shop: 0, womens: 0, total: 0 } : seasonFacilityIncome(
+    const facIncome = !isLeagueRoll ? { gate: 0, sponsor: 0, shop: 0, womens: 0, merit: 0, total: 0 } : seasonFacilityIncome(
       model.facilities, tierIdx,
       // A SUNDAY LEAGUE TITLE DOES NOT PRICE A SPONSORSHIP DEAL. This passed a raw count, and the trophy
       // term inside sponsorIncome has no tier scaling — so a club that never left the basement banked the
@@ -828,6 +828,13 @@ export const api = {
     let upkeep = 0, salvage = 0, fellIn: FacilityKey[] = [];
     if (isLeagueRoll) {
       const due = seasonUpkeep(model.facilities);
+      // `have` is deliberately read AFTER the season's income has been banked (line above): a club pays its
+      // bills out of what it has once the prize money is in, which is what a real one does. A prior review
+      // called this a bug on the grounds that disrepair almost never fires — it does not, 9 times in 4,680
+      // measured seasons — but the cause is that upkeep is not a binding constraint on the income curve
+      // (6,804 a season against 10,428 at the summit), not that the test reads the wrong number. Logged as
+      // an economy-balance item rather than patched here, where it would make the club pay bills it can
+      // afford out of money it does not yet have.
       const have = getActiveModel().profile.coins;
       upkeep = Math.max(0, Math.min(have, due));
       if (upkeep > 0) await localStore.addCoins(OWNER, -upkeep);
@@ -901,6 +908,7 @@ export const api = {
     // as every other route out of a level, and is capped per season like the league-roll path.
     const unpaidWages = Math.max(0, Math.round(roll.wageBill) - charged);
     let wageCut: FacilityKey[] = [], wageSalvage = 0;
+    const forcedOut: Player[] = [];
     if (unpaidWages > 0) {
       const model = getActiveModel();
       const dis = applyDisrepair(model.facilities, Math.max(0, seasonUpkeep(model.facilities) - unpaidWages));
@@ -908,6 +916,32 @@ export const api = {
       wageSalvage = dis.salvage;
       if (wageSalvage > 0) await localStore.addCoins(OWNER, wageSalvage);
       for (const k of new Set(wageCut)) await localStore.setFacilityLevel(OWNER, k, facLevel(model.facilities, k as FacilityKey));
+      // AND WHEN THERE IS NOTHING LEFT TO SELL, THE MECHANISM DISARMED ITSELF. `facilityToDowngrade` returns
+      // null once every facility is at level 1, so `applyDisrepair` returned an empty cut and the shortfall
+      // was simply forgiven. Measured: 40 seasons at level 1 billed 320,000 coins of wages, PAID ZERO, and
+      // lost nothing — a club that keeps its treasury at zero could run an unlimited wage bill forever. And
+      // level 1 is precisely where the disrepair slide ENDS, so the penalty switched itself off at the exact
+      // moment it was needed. The football answer is the obvious one: a club that cannot pay its wages sells
+      // a player, at a price that reflects everyone knowing it has to. Cheapest first, so the slide costs the
+      // squad's fringe before its spine, and never below MIN_SQUAD.
+      if (wageCut.length === 0) {
+        let owed = unpaidWages;
+        // the bloodline star is a Token merged in for reads and is never in `club.players`, so the squad
+        // list here is already only the men the club actually pays.
+        const sellable = roll.players
+          .slice()
+          .sort((a, b) => squadSaleValue(overall(a), a.age ?? 26) - squadSaleValue(overall(b), b.age ?? 26));
+        while (owed > 0 && roll.players.length - forcedOut.length > MIN_SQUAD) {
+          const p = sellable.find((x) => !forcedOut.includes(x));
+          if (!p) break;
+          const distressed = Math.round(squadSaleValue(overall(p), p.age ?? 26) * 0.6); // forced sale, forced price
+          forcedOut.push(p);
+          owed -= distressed;
+          wageSalvage += distressed;
+          if (distressed > 0) await localStore.addCoins(OWNER, distressed);
+        }
+        if (forcedOut.length) roll.players = roll.players.filter((p) => !forcedOut.includes(p));
+      }
     }
     c.club.players = roll.players;
     const so = pruneXI(c.club, c.standingOrders);
@@ -919,7 +953,7 @@ export const api = {
       wageBill: Math.round(roll.wageBill), charged, unpaid: Math.round(roll.wageBill) - charged,
       disrepair: wageCut, salvage: wageSalvage,
       retired: roll.retired.map(lite),
-      departed: roll.departed.map(lite),
+      departed: [...roll.departed, ...forcedOut].map(lite),
       intake: roll.intake.map(lite),
       expiring: roll.expiring.map((p) => ({ ...lite(p), renewCost: Math.round(squadRenewCost(overall(p), season) * moraleEffects(p.morale ?? 65).extendMult), morale: p.morale ?? 65, moraleLabel: moraleEffects(p.morale ?? 65).label })),
       // the season's human headlines — who arrived, who faded, who's being circled (Phase 4)

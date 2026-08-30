@@ -1357,7 +1357,6 @@ class Game {
     return new Set(['chase-ht', 'hold-lead']); // sensible defaults: chase when behind, see out a lead
   }
   private savePlan() { try { localStorage.setItem(this.planKey(), JSON.stringify([...this.draftPlan])); } catch { /* ignore */ } }
-  private clearMgr() { try { localStorage.removeItem(this.mgrKey()); } catch { /* ignore */ } }
   /** THE HANDOVER RESET. What ends at a succession is the SEASON and the MAN; what the family built is the
    *  whole point of the game and carries.
    *
@@ -1384,8 +1383,19 @@ class Game {
       squadReport: undefined, squadReportSeason: undefined,
       contElig: undefined, contRound: 0, contOut: false, contBlurb: undefined,
       wcStage: undefined, wcEdition: undefined, wcRun: undefined,
-      // titles, contTitles, wcWins, staff, arcPrestige, clubLegacy, arcFired, arcTags, lastRankIdx,
-      // temper and feed all carry, because they are the dynasty rather than the season.
+      // THE STORY LIBRARY RESETS WITH THE MAN. `arcFired` is this career's seen-list — `pickManagerArc`
+      // filters on it and never repeats — so carrying it across successions spends the 819-arc library
+      // ONCE, across the whole dynasty, and then runs dry. Measured over 10-season generations at the
+      // shipped pacing: 50 arcs a generation until generation 12, 19 by generation 13, and from
+      // generation 19 onward ZERO arcs, permanently, for the rest of the bloodline. `generations.ts 12`
+      // stops one generation short of the cliff, which is why nothing caught it. A new manager has not
+      // lived his father's seasons; he should be offered the same stories.
+      arcFired: [],
+      // Same shape, different key space: `feedOnce` keys are `intake:${season}` and `bid:${season}`, and
+      // the season resets to 1 here. Carried, they suppress every heir's first youth-intake line.
+      feedFired: [],
+      // titles, contTitles, wcWins, staff, arcPrestige, clubLegacy, arcTags, lastRankIdx, temper and the
+      // feed itself all carry, because they are the dynasty rather than the season.
     } as MgrState);
   }
   /** manager phase = you've handed off and are now managing the club with a bloodline star on the pitch */
@@ -1723,7 +1733,15 @@ class Game {
   private showSeason() {
     this.spFixture = null;
     this.showScreen('season');
-    api.facilities().then((d) => { this.facLevels = Object.fromEntries(d.facilities.map((f) => [f.key, f.level])); }).catch(() => {}); // cache for the match edges
+    // AND RE-OFFER THE ARC ONCE THEY LAND. `facLevels` starts empty and this is a promise, while
+    // `maybeOfferArc()` below runs synchronously in this same call — so on the first season screen after any
+    // page load, all thirty `when.facility` arc gates read level 1 and the arcs they gate cannot be offered.
+    // Re-running the offer after the levels arrive costs nothing when one has already been picked
+    // (`maybeOfferArc` returns immediately if `arcNow` is set) and closes the window when it has not.
+    api.facilities().then((d) => {
+      this.facLevels = Object.fromEntries(d.facilities.map((f) => [f.key, f.level]));
+      if (!$('season').classList.contains('hidden') && !this.loadMgr().arcNow) this.maybeOfferArc();
+    }).catch(() => {}); // cache for the match edges
     api.houses().then((d) => { this.houseBidMult = renownBidMult(d.mine.renown); }).catch(() => {});
     const clubName = this.club.name, seed = this.leagueSeed();
     const fixtures = seasonFixtures(clubName, seed, this.clubTier());
@@ -2287,10 +2305,11 @@ class Game {
       // WHAT THE CLUB EARNED BY BEING A CLUB, itemised. The facilities pay for the first time, and an income
       // the player cannot see is exactly the invisible effect this fix exists to end — so the gate, the
       // sponsors, the shop and the women's team each report what they brought in.
-      const fi = (r as any).facilities as { gate: number; sponsor: number; shop: number; womens: number; total: number } | undefined;
+      const fi = (r as any).facilities as { gate: number; sponsor: number; shop: number; womens: number; merit: number; total: number } | undefined;
       if (fi?.total) {
         const parts = [fi.gate && `🎟️ gate ${fi.gate.toLocaleString()}c`, fi.sponsor && `🤝 sponsors ${fi.sponsor.toLocaleString()}c`,
-          fi.shop && `🛍️ shop ${fi.shop.toLocaleString()}c`, fi.womens && `⚽ women's team ${fi.womens.toLocaleString()}c`].filter(Boolean);
+          fi.shop && `🛍️ shop ${fi.shop.toLocaleString()}c`, fi.womens && `⚽ women's team ${fi.womens.toLocaleString()}c`,
+          fi.merit && `📺 division merit ${fi.merit.toLocaleString()}c`].filter(Boolean);
         this.pushFeed('🏟️', `The club earned <b>${fi.total.toLocaleString()}c</b> off the pitch this season — ${parts.join(' · ')}.`, m.season + 1);
       }
       // AND WHAT IT COST TO RUN. Reported next to the income and in the same breath, because upkeep is only
@@ -3537,10 +3556,21 @@ class Game {
         // real founding, and lives outside the manager save, so it still answers the question after the
         // handover reset. Reading it directly (not through startTier(), which falls back to clubTier()).
         let everFounded = false;
-        try { everFounded = !!localStorage.getItem('fm_starttier_' + (this.account?.handle ?? 'x')); } catch { /* treat as unfounded */ }
+        // ...OR any earlier evidence the club has already been founded. `fm_starttier_` is written at the
+        // founding handover and only there, so it does not exist in any save written before it was added —
+        // and those saves reach their next succession with a climbed `fm_tier_` and no start tier, are read
+        // as founding, and are re-baselined to the bottom of the pyramid. Reproduced: a tier-1 club handed
+        // over as tier 8, seven divisions of climb thrown away, which is the exact defect this key was added
+        // to stop. `fm_tier_` existing at all is prior evidence of a founding that already happened.
+        try {
+          const h = this.account?.handle ?? 'x';
+          everFounded = !!localStorage.getItem('fm_starttier_' + h) || !!localStorage.getItem('fm_tier_' + h);
+        } catch { /* treat as unfounded */ }
         const founding = !everFounded;
         const startTier = founding ? this.startingTierFor(s, player) : this.clubTier();
         if (founding) { this.setClubTier(startTier); this.setStartTier(startTier); }
+        // backfill for a save recovered by the `fm_tier_` fallback above, so it is only ever needed once
+        else { try { if (!localStorage.getItem('fm_starttier_' + (this.account?.handle ?? 'x'))) this.setStartTier(startTier); } catch { /* ignore */ } }
         // AND BRING THE SQUAD WITH IT. The tier came from his career but the ROSTER was minted at quality 6
         // when the save was created, before a single career turn — so a Continental finalist took over a pub
         // team and was the best player at his own club by a mile. The club he inherits should be the club

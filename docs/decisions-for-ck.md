@@ -85,3 +85,114 @@ and the trailer are the critical path** — the store copy is the easy half.
   visibility fixes, because a critic found that every disrepair warning was being deleted before the player
   could read it (the season-rollover feed clobber, fixed in 55a3abf). Making wages destroy facilities while
   the failure was invisible would have turned a hard game into an unexplained one.
+
+---
+
+# ROUND 2 — four critic agents, 2026-08-31
+
+Four agents measured the shipped game rather than reading it. Everything below is a number from a run.
+I have **fixed** the items marked FIXED. The rest are design calls that are yours, not mine.
+
+## 6. Fixed without asking (they were defects, not choices)
+
+- **The manager arc library ran dry and stayed dry.** `arcFired` — the list of arcs *this career* has seen,
+  which `pickManagerArc` filters on — was carried across successions as if it were dynasty property. It
+  spent the 819-arc library ONCE across the whole bloodline: 50 arcs a generation until generation 12, 19 by
+  generation 13, and from **generation 19 onward, zero manager arcs, permanently**. My own probe asserted
+  the carry as an invariant, and `generations.ts 12` stops one generation short of the cliff, which is why
+  nothing caught it. Now reset per generation, and the probe now asserts the opposite.
+- **Every heir lost his first youth-intake line.** `feedFired` keys are `intake:${season}`, and the season
+  resets to 1 at handover. Same fix.
+- **Old saves were still being re-baselined to the bottom of the pyramid.** `fm_starttier_` was added on
+  2026-08-30, so no save written before it has the key — and those reach their next succession with a
+  climbed tier and no start tier, are read as *founding*, and get sent from tier 1 back to tier 8.
+  Reproduced. `fm_tier_` existing at all now counts as evidence of a founding that already happened.
+- **A club at level 1 could run an unlimited wage bill forever.** `facilityToDowngrade` returns null when
+  nothing is above level 1, so the disrepair penalty switched itself off at exactly the point it was needed:
+  40 seasons billed 320,000 coins of wages, paid zero, and lost nothing. A club that cannot pay its wages
+  now sells players — cheapest first, at a forced price, never below the minimum squad.
+- **Thirty facility-gated arcs could not fire on the first season screen** after any page load: `facLevels`
+  is filled by a promise and `maybeOfferArc()` ran synchronously in the same call, so every gate read
+  level 1. The offer is now re-run when the levels land.
+- **`clearMgr()`** — dead since the succession fix. Deleted.
+
+## 7. Fixed, and it changes the balance — tell me if you disagree
+
+**The pyramid was three different games.** The calibration gate measures goals/match at ONE squad quality
+and asserts it lands in [1.6, 3.6]. It passed for months. Across the strengths the game actually generates:
+
+| tier | strength | goals/match BEFORE | AFTER |
+|---|---|---|---|
+| 8 | 6.4 | **0.19** | 1.9 |
+| 3 | 12.9 | 2.81 | 2.75 |
+| 1 | 15.5 | **6.22** | 2.7 |
+
+A 33-fold spread. The bottom of the pyramid — where every career starts and where the player spends his
+first hours — was close to goalless, and the top flight was a shootout. Details are in the engine commits;
+the short version is that the pass read only the attacker's ability and never the defender's, and **nobody
+in the engine marked anybody**: against a *maximum* press, pressure on the receiver in the passing side's
+own defensive third measured 0.062. A high press did not press high.
+
+**Division merit payment, +600 per division climbed per season.** Facility levels 9 and 10 cost 10,000 and
+14,000; the highest treasury a club ever held across 130 seasons of top-flight dominance while also buying
+players was **8,668**, and level 9 was never reached in any seed under any policy. Of the three fixes
+measured — cut top-end costs, flatten upkeep, scale income with the climb — only the third worked: cutting
+costs empties the ladder by season 91, and flattening upkeep does nothing at all, because upkeep was never
+the constraint (a summit club earns 10,428 against 6,804 of upkeep; the 14,000 capital cost is what it
+cannot do). **If you want the top of the ladder to stay out of reach as a deliberate choice, say so and I
+will revert this one** — it is the only balance change here I would call arguable.
+
+**Park the Bus and Counter were traps.** Both measured LAST at every quality gap; as an 11-v-15 underdog
+Park the Bus took 0.03 points a game where Balanced took 0.17. The cause was not their defending but their
+attack: `mentality: -2` sets the attacking push to exactly zero, so the side never came out, never relieved
+pressure, and conceded *more* than anyone. Retuned. Sitting deep is an identity; refusing to leave the box
+is not a tactic.
+
+## 8. YOUR CALL — the card career's core progression
+
+This is the biggest finding of the four and I have deliberately not touched it.
+
+`deriveStats` normalises every tag by the **most frequent** tag: `norm[t] = freq[t] / maxFreq`. Composure is
+already the most frequent tag in essentially every career, so **awarding composure shrinks every other
+stat.** Measured on 300 real career logs:
+
+| added to a finished career | Δ overall |
+|---|---|
+| +2 composure | **−0.130** |
+| +5 composure | **−0.333** |
+| +10 composure | **−0.643** |
+| +5 creativity | +0.423 |
+
+Composure appears in **841 of the 1,541** story-arc choices that carry an attribute effect, for a summed
++1,095 against creativity's +166. So the most common reward in the game makes the player worse, and an arc
+policy that deliberately picks the *mechanically worst* branch graduates a **better** player (13.69 vs
+13.22) and a far more varied one.
+
+The same normaliser is why builds do not steer: a career spent entirely on a midfielder build produces a
+midfielder **7% of the time** (baseline: 1 in 250). Every build produces the same composure-18 forward.
+
+**Why I stopped:** fixing it means changing how every graduated player's stats are computed, which changes
+what the manager phase inherits and re-balances the whole game. It is a day of work and a design decision
+about what "development" means, not a bug with an obvious right answer. Options, roughly:
+1. Normalise by the mean rather than the max, and re-tune `BASELINE`/`SPREAD` (biggest change, cleanest).
+2. Leave the normaliser and rebalance the arc library away from composure (safer, doesn't fix steering).
+3. Both.
+
+## 9. Also true, also yours
+
+- **Choosing goalkeeper at creation is worth +2.23 overall** — four times the entire best-vs-decent
+  card-play skill gap (0.57–0.64). The largest lever in a 197-screen career is a coin flip on the first screen.
+- **Three of the four choice screens are within noise of doing nothing.** Coach: 0.042 overall across six
+  screens a career (the *worse* coach won by 0.016). Focus: every variant scored at or below "always press
+  Rest". Draft: 0.385 across 19.5 screens. That is 9% of the career's clicks spent on nothing.
+- **Lifestyle spending does nothing, and hoarding is punished** — 16 purchases, ~8,300 coins, Δ overall
+  0.000; meanwhile unspent earnings raise the dynasty's wages 31% via `contractCost`.
+- **Six of eight meter downside branches never fire** under competent play, and `sponsors` is a dead meter
+  whose only consumer is a branch that fires 0.3% of the time.
+- **7 of the 8 deck synergies are structurally impossible** on whichever track you are on; a perfect
+  omniscient synergy-hunting drafter activates one in 29.8% of careers.
+- **Nine of twelve facilities produce bit-identical seasons** at every level — 2,000 seasons each, zero
+  difference. Only training, fanzone and data change a result. And **Fan Zone returns exactly zero while
+  the Stadium is at level 1**, because it multiplies a gate that is zero.
+- **`analyze_manager_career.ts` measures a model the game does not have** — it reports a 31% title rate
+  where the real one is 57–74%.

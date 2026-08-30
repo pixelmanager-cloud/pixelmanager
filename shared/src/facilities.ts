@@ -283,7 +283,27 @@ export function facilityLevelStory(key: FacilityKey, level: number): string | nu
  *  season's record is split half home and the home results are assumed to mirror the overall record — a
  *  simplification, but a far smaller lie than paying nothing.
  */
-export interface SeasonIncome { gate: number; sponsor: number; shop: number; womens: number; total: number }
+/** Per-season CENTRAL DISTRIBUTION from the division itself — the game's answer to a broadcast deal, paid
+ *  for being in the division rather than for anything the club owns or does.
+ *
+ *  THE TOP OF THE FACILITY LADDER WAS UNREACHABLE. Levels 9 and 10 cost 10,000 and 14,000; measured across
+ *  130 seasons of top-flight dominance under every purchasing policy tried, the peak treasury a club ever
+ *  held while also buying players was 8,668. Not once in four seeds, under any line of play, did a dynasty
+ *  reach level 9 — and a 130-season run bought 34% of the facility content and made its last purchase
+ *  around season 100, leaving the final thirty seasons with nothing to decide.
+ *
+ *  Three fixes were measured. Cutting the top-end costs reaches those levels but empties the ladder by
+ *  season 91. Flattening upkeep does nothing at all — a summit club earns 10,428 against 6,804 of upkeep,
+ *  so the running cost was never the constraint; the 14,000 capital cost was. Income that scales with the
+ *  CLIMB is the only lever that moved it: at +600 a division, level 9 arrives around season 28 and level 10
+ *  around season 66, while seven of twelve facilities are still unbuilt at season 130 and purchases are
+ *  still arriving at season 117.
+ *
+ *  It also fixes the shape of the incentive. The climb previously paid off almost entirely through prize
+ *  money, which is won; this pays for being there, which is what promotion is actually worth. */
+export const DIVISION_MERIT = 600;
+
+export interface SeasonIncome { gate: number; sponsor: number; shop: number; womens: number; merit: number; total: number }
 export function seasonFacilityIncome(
   fac: Facilities, tierIdx: number, trophies: number, marketabilityAvg: number,
   record: { wins: number; draws: number; losses: number },
@@ -298,5 +318,7 @@ export function seasonFacilityIncome(
   // undefined here — level 1 is the neutral baseline and pays nothing, which is the right default.
   const shop = shopIncome(fac.shop ?? 1, tierIdx);
   const womens = womensIncome(fac.women ?? 1, tierIdx);
-  return { gate, sponsor, shop, womens, total: gate + sponsor + shop + womens };
+  // tierIdx runs 0 (bottom) .. TIERS-1 (top flight), which is already the number of divisions climbed.
+  const merit = Math.max(0, Math.round(tierIdx)) * DIVISION_MERIT;
+  return { gate, sponsor, shop, womens, merit, total: gate + sponsor + shop + womens + merit };
 }
