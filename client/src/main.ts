@@ -14,7 +14,7 @@ import { flagImg } from './flag';
 import { trophyImg, type TrophyKey } from './trophy';
 import { kitTemplate, recolorKit } from './kit';
 import { audio } from './audio';
-import { commentaryExtra, fillCm } from '../../shared/src/commentary/extra.js';
+import { commentaryExtra, fillCm, type CommentaryBranch } from '../../shared/src/commentary/extra.js';
 import { narrateManager, type PersonCtx } from '../../shared/src/managerNarrate.js';
 import { pickManagerArc, managerArcById, MGR_TEMPERS, applyMorale, type MgrSituation, type MgrArcEffect, type MgrTemper } from '../../shared/src/managerarc.js';
 import { facilityLevelStory } from '../../shared/src/facilities.js';
@@ -3849,7 +3849,7 @@ class Game {
       for (const p of (t.bench ?? [])) this.playerAttrs.set(p.name, p.attrs); // subs appear later
     }
     this.move = null;
-    this.liveScore = [0, 0]; this.scorerTally = new Map(); this.lastGoalIdx = -1;
+    this.liveScore = [0, 0]; this.scorerTally = new Map();
     this.attackBeats = []; this.lastMomentumMin = -99; this.lastAttackMin = 0;
     // match plan: snapshot the kickoff tactics (shifts apply from here) and clear the fired set
     this.planFired = new Set();
@@ -4131,13 +4131,16 @@ class Game {
    *  22% of the whole feed. A bag makes usage exactly even: with a bank of N, no line can appear twice until
    *  all N have appeared once. Still fully deterministic — the shuffle is the same seeded hash. (PT-1204)
    *  The seam between two bags is the one place a repeat could still slip through, so it is patched too. */
-  private cpickNR<T>(arr: T[], salt: number, key?: string, vars?: Record<string, string | undefined>): T {
+  private cpickNR<T>(arr: T[], salt: number, key?: string, vars?: Record<string, string | undefined>, branch?: CommentaryBranch): T {
     // AUTHORED LINES merge in here. The live banks are template literals and cannot be edited in parallel,
     // so authors write data (with {p}/{team}/{zone} placeholders) into shared/src/commentary/pack_*.ts and
     // it is substituted at draw time. This is the game's weakest surface — 159 lines against ~700 shown in
     // a single match — so the bank a player actually sees is base + everything authored for that event.
+    // `branch` narrows that to one rendered beat of the event: an event like tackle_won draws a ⚡ pressing
+    // turnover and a 🦵 ordinary challenge from separate live banks, and the authored bank has to be split
+    // the same way or a pressing line lands on a tackle in the back four.
     if (key) {
-      const extra = commentaryExtra(key);
+      const extra = commentaryExtra(key, branch);
       if (extra.length) arr = [...arr, ...extra.map((l: string) => fillCm(l, vars ?? {}) as unknown as T)];
     }
     if (arr.length <= 1) return arr[0];
@@ -4165,7 +4168,6 @@ class Game {
   // running match context for narration (reset each match in startMatch)
   private liveScore: [number, number] = [0, 0];
   private scorerTally = new Map<string, number>();
-  private lastGoalIdx = -1;
   private attackBeats: Array<{ t: 0 | 1; min: number }> = []; // rolling attacking moments for momentum
   private lastMomentumMin = -99;
   private lastAttackMin = 0;
@@ -4196,10 +4198,13 @@ class Game {
     const raw = e.playerName ?? 'someone';
     const n = (this.scorerTally.get(raw) ?? 0) + 1; this.scorerTally.set(raw, n);
     const p = this.descriptor(raw);
+    // The goal call is the loudest line in the game and it drew from these EIGHT strings, while 179
+    // authored goal lines sat in the packs unread — goalLine is the one commentary beat that never went
+    // through cpickNR, so the merge that every other event got had simply never reached it. (The corpus
+    // probe counted those 179 as live, which is why nobody noticed; it now reads its keys off the call
+    // sites instead.) Routed through the shuffled bag like everything else, for even coverage.
     const pool = [`⚽ GOAL! ${p} buries it for ${team}!`, `⚽ IT’S IN! ${p} finishes it off — ${team}!`, `⚽ GOAL! What a strike from ${p}!`, `⚽ ${p} makes no mistake — ${team}!`, `⚽ GET IN! ${p} lashes it home!`, `⚽ Clinical from ${p} — ${team} find the net!`, `⚽ ${p} steals in — ${team} score!`, `⚽ Tucked away by ${p}!`];
-    let bi = this.cidx(pool.length, idx, 1);
-    if (bi === this.lastGoalIdx) bi = (bi + 1) % pool.length; // never the same phrasing twice running
-    this.lastGoalIdx = bi;
+    const call = this.cpickNR(pool, 31, 'goal', { p, team, opp: e.teamIdx === 0 ? this.awayName : this.homeName });
     const note = (t: string) => ` <span class="cm-note">${t}</span>`;
     let tally = '';
     if (n === 2) tally = note('His second!');
@@ -4215,7 +4220,7 @@ class Game {
     else if (diff >= 3) state = note('This is turning into a rout.');
     const score = ` <span class="cm-score">${this.liveScore[0]}–${this.liveScore[1]}</span>`;
     const assist = e.playerName2 ? ` <span class="cm-assist">🅰 ${e.playerName2}</span>` : '';
-    return pool[bi] + score + tally + state + assist;
+    return call + score + tally + state + assist;
   }
   private playerAttrs = new Map<string, any>();
   private commentaryMode: 'full' | 'key' = 'full';
@@ -4321,7 +4326,7 @@ class Game {
             `⚡ Turned over cheaply, and ${p} is away with it.`,
             `⚡ ${p} snaps into the challenge and wins it cleanly.`,
             `⚡ The press pays off for ${team} — ${p} has it in a dangerous spot.`,
-            `⚡ ${p} harries him into giving it up.`], 6, 'tackle_won', { p, team, zone });
+            `⚡ ${p} harries him into giving it up.`], 6, 'tackle_won', { p, team, zone }, { icon: '⚡' });
         } else {
           cls = 'cm-tackle';
           text = this.cpickNR([
@@ -4338,7 +4343,7 @@ class Game {
             `🦵 Intercepted by ${p} ${zone} — read all the way.`,
             `🦵 ${p} refuses to be beaten ${zone} and wins it.`,
             `🦵 Beaten to it by ${p} ${zone}.`,
-            `🦵 ${p} nips in front of his man ${zone}.`], 26, 'tackle_won', { p, team, zone });
+            `🦵 ${p} nips in front of his man ${zone}.`], 26, 'tackle_won', { p, team, zone }, { icon: '🦵', neutral: true });
         }
         break;
       case 'fatigue': cls = 'cm-injury'; text = this.cpickNR([`${p} is blowing hard — the legs are going.`, `${p} looks spent, hands on hips ${zone}.`, `Tiring badly now, ${p} — running on empty.`, `${p} can barely get back — gassed.`], 12, 'fatigue', { p, team, zone }); break;
@@ -4359,7 +4364,7 @@ class Game {
         text = this.cpickNR([`${yc} Booked! ${p} goes into the book for that one.`, `${yc} Yellow card for ${p} — the ref had no choice.`, `${yc} ${p} is cautioned. He’ll have to be careful now.`], 15, 'yellow_card', { p, team, zone }); break; }
       case 'red_card': { cls = 'cm-card red'; const rc = `<span class="ico-inline">${sprite('card-red')}</span>`;
         text = e.zone === 'mid'
-          ? this.cpickNR([`${rc} SECOND YELLOW — ${p} is OFF! ${team} down to ten!`, `${rc} Two yellows and gone! ${p} takes the long walk — ${team} a man light!`], 16, 'red_card', { p, team, zone })
+          ? this.cpickNR([`${rc} SECOND YELLOW — ${p} is OFF! ${team} down to ten!`, `${rc} Two yellows and gone! ${p} takes the long walk — ${team} a man light!`], 16, 'red_card_second', { p, team, zone })
           : this.cpickNR([`${rc} RED CARD! ${p} is sent off — ${team} down to ten men!`, `${rc} Straight red for ${p}! A moment of madness — ${team} are down to ten!`, `${rc} He’s off! ${p} sees red and ${team} must dig in with ten!`], 16, 'red_card', { p, team, zone }); break; }
       case 'free_kick': cls = 'cm-freekick'; text = this.cpickNR([`Dangerous free kick for ${team} — ${p} stands over it…`, `${p} lines up the free kick in a promising spot…`, `Chance from the set piece — ${p} to deliver for ${team}…`,
         `${team} have a free kick in a dangerous area; ${p} is over it.`, `The wall goes up as ${p} measures his run…`,

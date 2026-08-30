@@ -23,22 +23,56 @@ import { CM_EXTRA_3 } from './pack_3.js';
 import { CM_EXTRA_4 } from './pack_4.js';
 import { CM_EXTRA_5 } from './pack_5.js';
 import { CM_EXTRA_6 } from './pack_6.js';
+import { CM_EXTRA_7 } from './pack_7.js';
 
-const PACKS: CommentaryBank[] = [CM_EXTRA_1, CM_EXTRA_2, CM_EXTRA_3, CM_EXTRA_4, CM_EXTRA_5, CM_EXTRA_6];
+const PACKS: CommentaryBank[] = [CM_EXTRA_1, CM_EXTRA_2, CM_EXTRA_3, CM_EXTRA_4, CM_EXTRA_5, CM_EXTRA_6, CM_EXTRA_7];
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 {}]/g, '').replace(/\s+/g, ' ').trim();
 const cache = new Map<string, string[]>();
-/** Every authored line for an event type, de-duplicated across packs. */
-export function commentaryExtra(key: string): string[] {
-  const hit = cache.get(key);
+
+// ── BRANCHES ───────────────────────────────────────────────────────────────────────────────────────
+// A few event types render as two visually distinct beats. `tackle_won` is the clear case: a ⚡ PRESSING
+// turnover high up the pitch and a 🦵 ordinary challenge are different moments, and the live banks mark
+// which is which with the leading icon. Authors write both under the one event key and follow the same
+// icon convention — so drawing from the flat bank put "Hounded into the mistake!" on a sliding tackle in
+// the back four about half the time. Filtering by that leading icon is what keeps the two apart.
+//
+// The icon set is DERIVED from the bank rather than declared, so an author who opens a new branch gets
+// the separation for free instead of silently polluting an existing one.
+const LEAD_ICON = /^([^\p{ASCII}\s]+)\s/u;
+function leadIcon(line: string): string | null { const m = LEAD_ICON.exec(line); return m ? m[1] : null; }
+
+/** How to narrow an event's bank to one of its rendered branches.
+ *  `icon` — take the lines that open with this icon.
+ *  `neutral` — ALSO take the un-iconed lines. Set this on the branch that reads as the default beat
+ *  (an ordinary tackle), so a line written without a marker still gets used rather than stranded. */
+export interface CommentaryBranch { icon: string; neutral?: boolean }
+
+/** Every authored line for an event type, de-duplicated across packs; optionally narrowed to one branch. */
+export function commentaryExtra(key: string, branch?: CommentaryBranch): string[] {
+  const ck = branch ? `${key}\u0000${branch.icon}${branch.neutral ? '+' : ''}` : key;
+  const hit = cache.get(ck);
   if (hit) return hit;
   const seen = new Set<string>();
-  const out: string[] = [];
+  const all: string[] = [];
   for (const p of PACKS) for (const l of p[key] ?? []) {
     const n = norm(l);
     if (!n || seen.has(n)) continue;
-    seen.add(n); out.push(l);
+    seen.add(n); all.push(l);
   }
-  cache.set(key, out);
+  let out = all;
+  if (branch) {
+    // Only icons that actually mark a branch in THIS bank count as markers. A one-off decoration an
+    // author used on a single line shouldn't make every other line look "iconed" and get dropped.
+    const counts = new Map<string, number>();
+    for (const l of all) { const i = leadIcon(l); if (i) counts.set(i, (counts.get(i) ?? 0) + 1); }
+    const markers = new Set([...counts].filter(([, n]) => n >= 3).map(([i]) => i));
+    out = all.filter((l) => {
+      const i = leadIcon(l);
+      if (i && markers.has(i)) return i === branch.icon;
+      return !!branch.neutral;
+    });
+  }
+  cache.set(ck, out);
   return out;
 }
