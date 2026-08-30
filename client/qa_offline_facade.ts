@@ -6,7 +6,7 @@
 // this is about the WIRING: does every reachable api.ts call run in-process end to end.
 import { api, __setBackendForTests, setToken } from './src/api.js';
 import { createInMemoryBackend } from './src/save.js';
-import { transferList, wageForLength } from '@fm/shared';
+import { transferList, wageForLength, TIERS } from '@fm/shared';
 
 __setBackendForTests(createInMemoryBackend());
 
@@ -111,12 +111,20 @@ const reward = await api.spSeasonReward({ pos: 1, size: 10, wins: 24, draws: 8, 
 // name. Asserting the relationship rather than the old literal, so the check keeps meaning something if
 // either the base or the multiplier is retuned; a hard-coded 800 just encodes today's numbers.
 assert(reward.houseMult >= 1 && reward.houseMult <= 1.4, `renown income multiplier in range (${reward.houseMult})`);
-// The champion prize is the 800 base scaled by the pyramid TIER and by the house's renown. No `tier` is
-// passed here, so it defaults to the basement and its 0.4x — winning the bottom division should not pay
-// what winning the top one does, which was the defect this multiplier exists to fix.
-assert(reward.tierMult > 0.39 && reward.tierMult < 1.61, `tier multiplier in range (${reward.tierMult})`);
-assert(reward.prize === Math.round(800 * reward.tierMult * reward.houseMult),
-  `champion prize for pos=1/size=10 (800 × ${reward.tierMult} tier × ${reward.houseMult} renown = ${reward.prize})`);
+// THESE TWO CHECKS USED TO BE VACUOUS, AND THE COMMENT ABOVE THEM WAS BACKWARDS.
+// `tierMult > 0.39 && tierMult < 1.61` spans the ENTIRE range the function can return, so it could only
+// fail on a NaN; and `prize === Math.round(800 * reward.tierMult * reward.houseMult)` is the response
+// checking itself. Flattening `tierMult` to a constant 1.0 — so winning the basement pays the top-flight
+// champion's prize — passed both.
+//
+// The old comment also claimed "no `tier` is passed here, so it defaults to the basement and its 0.4x".
+// It does not: with `tier` undefined, `tierIdx` resolves to `TIERS - 1`, so the multiplier is 1.6 — the TOP
+// FLIGHT — and the band was wide enough to accept the exact opposite of what the comment asserted. A reader
+// checking the gate for reassurance was being actively misinformed.
+assert(Math.abs(reward.tierMult - 1.6) < 1e-6,
+  `an unspecified tier resolves to the TOP flight's 1.6x, not the basement (got ${reward.tierMult})`);
+assert(reward.prize === Math.round(800 * 1.6 * reward.houseMult),
+  `champion prize is 800 x 1.6 x renown (got ${reward.prize})`);
 // Coins banked are the prize PLUS whatever the facilities earned off the pitch. At a founding club every
 // facility is level 1 — the neutral baseline — so this is 0 here, and asserting the sum rather than the
 // prize alone is what will catch it if that ever silently stops being true.
@@ -214,6 +222,19 @@ assert(meFirst.club.name === "Bloodline FC's Club", 'setToken() + me() resumed s
 setToken(reg2.token);
 const meSecond = await api.me();
 assert(meSecond.club.name === "Second Club FC's Club", 'setToken() + me() resumed save #2');
+
+// ── THE PYRAMID PAYS BY DIVISION ─────────────────────────────────────────────────────────────────────
+// Checked against numbers stated HERE rather than read back out of the response, at both ends of the
+// pyramid. Its own backend and save, because banking two champion seasons would otherwise advance the
+// season counter and honours ledger that the checks above depend on.
+__setBackendForTests(createInMemoryBackend());
+await api.register('tiers', 'x', 'Tier Test', 909);
+for (const [tier, wantMult] of [[TIERS, 0.4], [1, 1.6]] as const) {
+  const r = await api.spSeasonReward({ pos: 1, size: 10, wins: 24, draws: 8, losses: 6, tier });
+  assert(Math.abs(r.tierMult - wantMult) < 1e-6, `tier ${tier} pays x${wantMult} (got x${r.tierMult})`);
+  assert(r.prize === Math.round(800 * wantMult * r.houseMult),
+    `tier ${tier} champion prize is 800 x ${wantMult} x renown (got ${r.prize})`);
+}
 
 console.log(failures === 0 ? `\n✓ all offline-facade checks passed` : `\n✗ ${failures} offline-facade check(s) FAILED`);
 if (failures > 0) process.exit(1);
