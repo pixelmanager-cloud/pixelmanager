@@ -6,6 +6,25 @@ import { DEFAULT_TACTICS, deriveMods, type TacticMods, type Tactics } from './ta
 import { dutyMods, effectiveDuty, type DutyMods } from './duties.js';
 import { mMul, mAdd, hasTrait, teamLeadership } from './mental.js';
 
+/** Read a tuning constant, overridable from the environment BY A NODE HARNESS ONLY.
+ *
+ *  THIS MUST NOT TOUCH `process` DIRECTLY. `process` does not exist in a browser, and these constants are
+ *  evaluated at module scope — so a bare `process.env.X` here threw a ReferenceError the instant the engine
+ *  module was imported, and took the whole game down to a black screen on load. It shipped, because nothing
+ *  in the gate runs the page: `vite build` type-checks and bundles without executing, and all sixty-six
+ *  harnesses across verify/playtest/qa run in Node, where `process` exists. Green everywhere, dead in the
+ *  only place that counts. tools/playtest/browser_safe.ts now fails on any Node global reaching this package.
+ *
+ *  The overrides themselves are worth keeping: sweeping these dials from a harness is how the calibration
+ *  defects in this file were found. They just have to be reachable without assuming a runtime. */
+const ENV: Record<string, string | undefined> =
+  typeof process !== 'undefined' && process && process.env ? process.env : {};
+const tune = (name: string, fallback: number): number => {
+  const raw = ENV[name];
+  const v = raw == null ? NaN : Number(raw);
+  return Number.isFinite(v) ? v : fallback;
+};
+
 export const TICK_SEC = 0.5; // game-seconds per tick
 const MATCH_SEC = 90 * 60;
 const SHOOT_RANGE = 22; // metres from goal a player will attempt a shot // metres from goal a player will attempt a shot
@@ -19,21 +38,21 @@ const BOX_RUN_TRIGGER = 35;
 /** The duty `push` at or above which a midfielder joins the run. Forwards always go. */
 const BOX_RUN_PUSH = 1;
 /** How much of a runner's natural width he keeps as he attacks the box (1 = keeps his flank entirely). */
-const BOX_RUN_WIDTH = Number(process.env.BW ?? 0.25);
+const BOX_RUN_WIDTH = tune('BW', 0.25);
 /** Distance off centre at which a player's anchor makes him a touchline outlet rather than a box runner. */
-const WIDE_ANCHOR = Number(process.env.WA ?? 15);      // above this, a player overlaps instead of attacking the box
+const WIDE_ANCHOR = tune('WA', 15);      // above this, a player overlaps instead of attacking the box
 /** How far up the flank an overlapping wide player pushes — metres short of the goal line. */
-const OVERLAP_DEPTH = Number(process.env.OD ?? 14);
+const OVERLAP_DEPTH = tune('OD', 14);
 /** Extra metres a DEFENDER holds back when overlapping, so he is nearer home when it turns over. */
 /** Holding defenders back on the overlap helps a back five and hurts a back four, monotonically, and
  *  every non-zero value cost more elsewhere than it bought: 0 -> 1 failure, 3 -> 6, 5 -> 5, 8 -> 3, 16 -> 6. */
-const DF_OVERLAP_HOLD = Number(process.env.DOH ?? 0);
+const DF_OVERLAP_HOLD = tune('DOH', 0);
 /** How close a defender counts as crowding a shot, and how much each one costs its quality. */
-const CROWD_RADIUS = Number(process.env.CR2 ?? 5);
-const CROWD_PENALTY = Number(process.env.CP ?? 0.07);
+const CROWD_RADIUS = tune('CR2', 5);
+const CROWD_PENALTY = tune('CP', 0.07);
 /** How much each defender standing in the passing lane costs a through ball, and how near the line counts. */
-const LANE_BLOCK = Number(process.env.LB ?? 0.12);
-const LANE_WIDTH = Number(process.env.LW ?? 3.5);
+const LANE_BLOCK = tune('LB', 0.12);
+const LANE_WIDTH = tune('LW', 3.5);
 /** Base pass-completion probability before passer quality, distance and pressure.
  *  MEASURED AT 59.2% COMPLETION against roughly 80% in real football, and that gap was the engine's real
  *  structural defect. A pass failed almost two times in five, so the median possession spell was TWO TICKS
@@ -42,7 +61,7 @@ const LANE_WIDTH = Number(process.env.LW ?? 3.5);
  *  only chance-creation the game had was a through ball hit from wherever play had stalled, a median of
  *  45.8 metres out. Every downstream symptom — the clamped shooting term, the inert Fan Zone and duty
  *  shoot multipliers, 65 shots a match — traces back here rather than to the finish. */
-const PASS_BASE = Number(process.env.PB ?? 0.948);
+const PASS_BASE = tune('PB', 0.948);
 /** How much of pass completion follows the passer's ability in the ABSOLUTE.
  *
  *  THE PYRAMID WAS THREE DIFFERENT GAMES. The calibration gate measures goals/match at one squad quality and
@@ -78,17 +97,17 @@ const PASS_BASE = Number(process.env.PB ?? 0.948);
  *  while the shooter's reached 0.36, so a better keeper could never fully answer a better striker. That is
  *  now handled at the chance itself — see SHOT_REL, which applies the standard of the match to both sides
  *  at once instead of only to the man shooting. */
-const SHOOT_BASE_P = Number(process.env.SBP ?? 0.0022);
-const SHOOT_ABS = Number(process.env.SA ?? 0.004);
-const GK_SCALE = Number(process.env.GKS ?? 0.2);
+const SHOOT_BASE_P = tune('SBP', 0.0022);
+const SHOOT_ABS = tune('SA', 0.004);
+const GK_SCALE = tune('GKS', 0.2);
 /** How far a chance's quality is judged against the opposition rather than in the absolute, and the squad
  *  quality the whole engine is calibrated at (tier 3-to-2 strength, where the goals/match gate was set). */
-const SHOT_REL = Number(process.env.SR ?? 1.1);
+const SHOT_REL = tune('SR', 1.1);
 const DEF_ANCHOR = 0.65;
 /** How much of the pressure penalty a drilled side shrugs off when playing out of its own defensive third.
  *  A flat completion bonus was the wrong shape — the instruction's claim is that the side BEATS THE PRESS,
  *  so it belongs on the pressure term, which is the only thing a press does to a pass. */
-const PLAY_OUT_DRILL = Number(process.env.POD ?? 0.5);
+const PLAY_OUT_DRILL = tune('POD', 0.5);
 /** How far a defender abandons his shape anchor to track the man he is marking, at neutral press.
  *  NOBODY MARKED ANYONE. `pressers` sends the nearest `pressCount` players AT THE BALL, and everyone else
  *  held a formation anchor pulled loosely toward it — so the defending side converged on the carrier and
@@ -97,68 +116,68 @@ const PLAY_OUT_DRILL = Number(process.env.POD ?? 0.5);
  *  side's own defensive third. A press that does not deny the pass is not a press, and three separate
  *  assertions fail on it: play-out-of-defence has no press to beat, and the anchor duty has no screening
  *  job to be good at. */
-const MARK_PULL = Number(process.env.MP ?? 0.25);
+const MARK_PULL = tune('MP', 0.25);
 /** How far goal-side of his man a marker positions himself, in metres. */
 const MARK_GOALSIDE = 2.5;
 /** Marking strength in a side's OWN defensive area, where a block is settled and picks people up whatever
  *  its press setting says, and how far from its own goal that area extends. */
-const MARK_DEEP = Number(process.env.MD ?? 1.3);
-const MARK_DEEP_RANGE = Number(process.env.MDR ?? 38);
-const PASS_ABS = Number(process.env.PA ?? 0.06);
+const MARK_DEEP = tune('MD', 1.3);
+const MARK_DEEP_RANGE = tune('MDR', 38);
+const PASS_ABS = tune('PA', 0.06);
 /** Scales the per-tick, per-defender tackle probability.
  *  MEASURED AT 1,508 TACKLES A MATCH against roughly 40 in real football. Every pressing defender within
  *  range rolled a ~19% chance EVERY TICK, so with two defenders near the ball a carrier lost it about a
  *  third of the time each second. This — not the finish, and not off-ball movement — is why possession
  *  never lasted, why nothing that takes time could occur, and why the box stayed empty. */
-const TACKLE_SCALE = Number(process.env.TS ?? 0.15);
+const TACKLE_SCALE = tune('TS', 0.15);
 /** Scales how readily a carrier inside SHOOT_RANGE pulls the trigger. With the through-ball shot removed
  *  this branch is now the game's ONLY finish, so it carries all the shot volume; at the old value carriers
  *  dribbled to the goal line before shooting (median shot distance 2.2m) instead of striking from range. */
-const SHOOT_SCALE = Number(process.env.SS ?? 5);
-const GP_BASE = Number(process.env.GB ?? 0.12);
-const GP_Q = Number(process.env.GQ ?? 0.36);
+const SHOOT_SCALE = tune('SS', 5);
+const GP_BASE = tune('GB', 0.12);
+const GP_Q = tune('GQ', 0.36);
 /** How much likelier a tackle is on the goal line than outside the final third. */
-const BOX_DEFENCE = Number(process.env.BD ?? 3);
+const BOX_DEFENCE = tune('BD', 3);
 /** How strongly a tactic's press intensity converts into tackles won. The old flat tackle probability
  *  SATURATED against its 0.8 clamp, which quietly compressed every press difference; once the rate is
  *  realistic nothing saturates, the full press advantage expresses, and Gegenpress dominates the field at
  *  68%. Sub-linear scaling restores a beatable press. */
-const PRESS_EXP = Number(process.env.PE ?? 2.2);
+const PRESS_EXP = tune('PE', 2.2);
 /** How far out a wide player will deliver a cross, and how far off-centre counts as "wide". */
-const CROSS_RANGE = Number(process.env.CR ?? 34);
-const CROSS_WIDE_Y = Number(process.env.CW ?? 13);
+const CROSS_RANGE = tune('CR', 34);
+const CROSS_WIDE_Y = tune('CW', 13);
 /** Base per-tick rate a wide carrier in range whips one in. */
-const CROSS_RATE = Number(process.env.CX ?? 0.07);
+const CROSS_RATE = tune('CX', 0.07);
 /** How much a duty's `magnet` — its designation as the team's out-ball, i.e. its creator — raises how often
  *  it delivers from wide. 0 keeps every wide player delivering at the same rate regardless of role. */
-const CROSS_CREATOR = Number(process.env.CC ?? 0.16);
+const CROSS_CREATOR = tune('CC', 0.16);
 /** How much a duty's `magnet` improves the QUALITY of its delivery (finding a man), as opposed to how
  *  often it delivers. Quality is the targeted lever; volume distorts the whole attack. */
-const CROSS_VISION = Number(process.env.CV ?? 0.012);
+const CROSS_VISION = tune('CV', 0.012);
 /** How strongly a cross seeks the designated FINISHER (a duty's `shoot`) over merely the nearest man. */
 /** Tried and left OFF: aiming crosses at the finisher changed nothing at either 3 or 8 (identical shot
  *  counts), so it is not on the path that decides who shoots. Kept as a documented dead end. */
-const CROSS_TO_FINISHER = Number(process.env.CF ?? 0);
+const CROSS_TO_FINISHER = tune('CF', 0);
 /** How strongly play seeks the designated finisher (a duty's `shoot`) as it nears the opposition goal. */
 /** Tried and left OFF: at 4 it made the poacher shoot LESS (37.4 from 38.6) and added a failure. The
  *  poacher problem was three measurement errors, not a missing pull. */
-const FINISHER_PULL = Number(process.env.FP ?? 0);
+const FINISHER_PULL = tune('FP', 0);
 /** Radius from goal counted as "attacking the box" for both the runner and the defenders contesting it. */
-const BOX_ATTACK_RADIUS = Number(process.env.BAR ?? 16);
+const BOX_ATTACK_RADIUS = tune('BAR', 16);
 /** How heavily a pass option's progress-toward-goal and its freedom-from-pressure weigh against each other. */
-const GAIN_W = Number(process.env.GW ?? 1);
-const PRESSURE_W = Number(process.env.PW ?? 3);
+const GAIN_W = tune('GW', 1);
+const PRESSURE_W = tune('PW', 3);
 /** Distance from goal beyond which a carrier keeps his own channel rather than drifting to the centre. */
-const LANE_HOLD_RANGE = Number(process.env.LH ?? 40);
+const LANE_HOLD_RANGE = tune('LH', 40);
 /** How strongly a free wide option in the final third is sought as a switch of play. */
 /** How much of `gain` is measured up the pitch rather than toward the goal spot. 0 == the original. */
-const UPFIELD_W = Number(process.env.UW ?? 0.65);
-const WIDTH_PULL = Number(process.env.WP ?? 3);
-const WIDTH_ZONE = Number(process.env.WZ ?? 40);
+const UPFIELD_W = tune('UW', 0.65);
+const WIDTH_PULL = tune('WP', 3);
+const WIDTH_ZONE = tune('WZ', 40);
 /** How unpressured a wide team-mate must be for a lateral switch to him to be allowed at all, and how much
  *  ground such a switch may concede. */
-const SWITCH_FREEDOM = Number(process.env.SF ?? 0.35);
-const SWITCH_TOLERANCE = Number(process.env.ST ?? 22);
+const SWITCH_FREEDOM = tune('SF', 0.35);
+const SWITCH_TOLERANCE = tune('ST', 22);
 const BASE_DRAIN = 0.000034; // fitness lost per tick by a working outfielder (tuned via harness)
 
 const norm = (stat: number) => stat / 20;
