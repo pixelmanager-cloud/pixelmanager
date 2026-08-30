@@ -1,5 +1,5 @@
 import {
-  MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
+  MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, resolveMatchXI, intentOf, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
   TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry, tierName, TIERS, tierStrength,
   FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, moodFromScore, boardMessageFor, deriveExpectation, PRESTIGE_LEVELS, prestigeRankUpBlurb, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition, contTieBlurb, wcGroupDramaBlurb, wcKnockoutDramaBlurb, worldCupFinishBlurb,
   transferList, wageForLength, sellValue, squadSaleValue, squadSeasonWage, moraleEffects, incomingBid, MIN_SQUAD, MAX_SQUAD, type Listing,
@@ -406,6 +406,8 @@ class Game {
   draftDuties: Duty[] = []; // per-slot manager duties, parallel to draftLineup.playerIds
   draftCaptain?: number;    // slot index wearing the armband
   draftTakers: { pen?: number; fk?: number; corner?: number } = {}; // set-piece taker slot indices
+  /** slot index -> the player the manager actually picked, when today's XI had to substitute for him. */
+  private draftSubs = new Map<number, string>();
   editorMode: 'standing' | 'match' = 'standing';
   squadSort: SquadSort | null = null;
   spFixture: { idx: number; oppClub: Club; oppName: string; oppStrength: number; venue: 'home' | 'away'; neutral?: boolean; oppLineup: Lineup; oppTactics: Tactics; comp?: 'league' | 'cont' | 'wc'; contRound?: number } | null = null; // the single-player fixture being played (neutral = a neutral-ground decider: no fan-zone home bonus, PT-130)
@@ -4153,11 +4155,26 @@ class Game {
     // the saved XI can reference players no longer in the squad (e.g. an NFT star that's
     // been transferred/de-listed) — fall back to a valid auto-pick so the editor still opens
     const avail = this.availableClub();
-    const owned = new Set(avail.players.map((x) => x.id)); // injured players are unavailable
-    const soValid = this.standingOrders.playerIds.length === 11 && this.standingOrders.playerIds.every((id) => owned.has(id));
-    this.draftLineup = this.starGuarded(soValid
-      ? { formation: this.standingOrders.formation, playerIds: [...this.standingOrders.playerIds] }
-      : autoPickXI(avail, this.standingOrders.formation));
+    const availIds = new Set(avail.players.map((x) => x.id));
+    // AN INJURED PLAYER IS STILL YOURS. Validity used to be checked against `availableClub()`, so a single
+    // knock made `soValid` false and the editor rebuilt the XI from `autoPickXI` — discarding the eleven
+    // duties, the captain and all three set-piece takers with it. That was survivable while nothing wrote
+    // the reconstruction back; once kicking off began persisting the sheet (which it must, or the player's
+    // tactics are thrown away every match) the same fallback started COMMITTING the wipe. Measured over a
+    // season: one injury on matchday 2, none after it, and 0 of the 17 remaining matchdays opened with the
+    // player's own sheet.
+    //
+    // Standing orders are the manager's INTENT. Squad membership makes them valid; availability is a
+    // per-match concern, handled by substituting that one slot and restoring it when the sheet is saved.
+    // resolveMatchXI lives in shared/src/teamsheet.ts and is unit-tested by shared/qa_teamsheet.ts. It is
+    // CALLED, not mirrored here — a duplicated copy of a rule like this is exactly how the fictional-model
+    // defect in analyze_manager_career.ts happened.
+    const sheet = (ps: Player[]) => ps.map((p) => ({ id: p.id, role: p.role as string, ovr: overall(p) }));
+    const resolved = resolveMatchXI(this.standingOrders.playerIds, sheet(this.club.players), sheet(avail.players));
+    const soValid = resolved.usable;
+    this.draftSubs = new Map(resolved.subs);
+    const baseIds = soValid ? resolved.ids : autoPickXI(avail, this.standingOrders.formation).playerIds;
+    this.draftLineup = this.starGuarded({ formation: this.standingOrders.formation, playerIds: baseIds });
     this.draftDuties = this.draftLineup.playerIds.map((pid, i) => {
       const p = this.club.players.find((x) => x.id === pid)!;
       const saved = soValid ? this.standingOrders.duties?.[i] : undefined;
@@ -4505,9 +4522,12 @@ class Game {
   /** Persist the current draft as the club's standing orders — what the next matchday starts from. */
   private async persistTeamSheet(): Promise<void> {
     try {
+      // restore any slot that was substituted only because its man could not play today, so a knock never
+      // silently rewrites who the manager picked
+      const intent = intentOf(this.draftLineup.playerIds, this.draftSubs);
       const so: StandingOrders = {
         formation: this.draftTactics.formation,
-        playerIds: this.draftLineup.playerIds,
+        playerIds: intent,
         tactics: { ...this.draftTactics },
         duties: [...this.draftDuties],
         ...this.draftRoles(),

@@ -17,7 +17,17 @@
 //
 // Nothing could catch it: it is DOM-coupled, so no harness drives it, and every engine test passes tactics
 // in directly rather than through the screen the player uses. This is a source-level guard for exactly that
-// blind spot — cruder than a behavioural test, and the only thing available.
+// blind spot — cruder than a behavioural test, and it MISSED THE REGRESSION THE FIX ITSELF INTRODUCED.
+//
+// Persisting at kickoff turned a transient wipe into a permanent one. `openLineup` used to check the saved
+// XI against AVAILABLE players, so a single injury made it "invalid" and rebuilt from `autoPickXI`,
+// discarding the duties, captain and set-piece takers — harmless while nothing wrote it back, fatal the
+// moment kicking off started saving. Measured: one injury on matchday 2 and 0 of the next 17 matchdays
+// opened with the manager's own sheet. A grep for "does this call persist?" says yes in both worlds.
+//
+// The rule that was wrong is now in `shared/src/teamsheet.ts` as a pure function with real tests
+// (`shared/qa_teamsheet.ts`). What is left here is the reachability question a unit test cannot answer:
+// is the writer wired to the screen at all.
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
@@ -40,6 +50,8 @@ check(/persistTeamSheet\s*\(/.test(kick),
 // 2. the persist helper must actually write through the facade, and write the whole sheet
 const persist = body('private async persistTeamSheet');
 check(/api\.setStandingOrders\s*\(/.test(persist), 'persistTeamSheet() calls api.setStandingOrders');
+check(/intentOf\s*\(/.test(persist),
+  'persistTeamSheet() saves the manager INTENT (intentOf), not the substituted matchday XI');
 for (const field of ['formation', 'playerIds', 'tactics', 'duties']) {
   check(new RegExp(`${field}\\s*:`).test(persist), `persistTeamSheet() saves \`${field}\``);
 }
