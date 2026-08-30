@@ -797,7 +797,7 @@ export const api = {
     // UPKEEP — charged in the same league roll that pays the facility income, because it is the other half
     // of the same transaction: what the club earns by being a club, minus what it costs to BE one. Only on
     // a league roll, for the same reason the income is (a cup run must not re-bill a per-season cost).
-    let upkeep = 0, fellIn: FacilityKey[] = [];
+    let upkeep = 0, salvage = 0, fellIn: FacilityKey[] = [];
     if (isLeagueRoll) {
       const due = seasonUpkeep(model.facilities);
       const have = getActiveModel().profile.coins;
@@ -809,13 +809,20 @@ export const api = {
       // Cut toward what the club actually earned this season, not toward zero — the target is a bill it can
       // carry next year, so the slide stops as soon as the club fits inside its own means.
       if (due > have) {
-        fellIn = applyDisrepair(model.facilities, Math.max(0, prize + sponsorBonus + facIncome.total));
+        const dis = applyDisrepair(model.facilities, Math.max(0, prize + sponsorBonus + facIncome.total));
+        fellIn = dis.cut;
+        // SELLING OFF A LEVEL PAYS THE SAME WHETHER YOU CHOSE IT OR NOT (see applyDisrepair). This also
+        // gives a club in trouble the cash to arrest the slide, instead of draining it to exactly 0 and
+        // leaving it there — measured, a relegated maxed club sat on 0 coins for SIXTY consecutive
+        // seasons with every purchase in the game disabled.
+        salvage = dis.salvage;
+        if (salvage > 0) await localStore.addCoins(OWNER, salvage);
         // PERSIST each cut. applyDisrepair mutates the in-memory object, which does NOT schedule a write —
         // the club would repair itself on reload and upkeep would be unenforceable.
         for (const k of new Set(fellIn)) await localStore.setFacilityLevel(OWNER, k, facLevel(model.facilities, k as FacilityKey));
       }
     }
-    return { ok: true as const, prize, sponsorBonus, houseMult, tierMult, facilities: facIncome, upkeep, disrepair: fellIn, coins: getActiveModel().profile.coins };
+    return { ok: true as const, prize, sponsorBonus, houseMult, tierMult, facilities: facIncome, upkeep, salvage, disrepair: fellIn, coins: getActiveModel().profile.coins };
   },
   spSponsor: async (deal: string) => {
     await ensureActive();

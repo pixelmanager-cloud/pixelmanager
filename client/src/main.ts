@@ -2261,11 +2261,19 @@ class Game {
       // AND WHAT IT COST TO RUN. Reported next to the income and in the same breath, because upkeep is only
       // a decision if the player sees both halves of the ledger together.
       const up = (r as any).upkeep as number | undefined;
-      if (up) this.pushFeed('🧾', `Running the club cost <b>${up.toLocaleString()}c</b> in upkeep — wages, upkeep, the lights, the lot.`);
+      if (up) this.pushFeed('🧾', `Keeping the club's facilities running cost <b>${up.toLocaleString()}c</b> this season — the upkeep on every stand, pitch and department you have built. Wages are billed separately.`);
+      // RUNNING ON EMPTY. Disrepair only fires when the club cannot pay its UPKEEP, but a relegated club
+      // with a big ground can often just cover upkeep and then be stripped to nothing by wages — measured,
+      // 44 seasons out of 60 ending on exactly 0 coins with no facility ever falling in. Nothing is broken
+      // and nothing warns you; you simply cannot buy anything, ever, and the reason is never stated. Say it.
+      if ((this.account?.coins ?? 0) === 0) {
+        this.pushFeed('⚠️', `<b>The club is running on empty.</b> Everything coming in is going straight back out on upkeep and wages, and there is nothing left to spend. Scale a facility back on the <b>Club</b> screen to cut the bill and recover some of what it cost, or climb a division to earn more.`);
+      }
       const dis = ((r as any).disrepair ?? []) as string[];
       if (dis.length) {
         const names = [...new Set(dis)].map((k) => FACILITY_META[k as FacilityKey]?.name ?? k);
-        this.pushFeed('🚧', `<b>The club could not pay its bills.</b> ${names.join(' and ')} fell into disrepair — ${dis.length} level${dis.length > 1 ? 's' : ''} lost. Something has to give: scale back what the club is for, or climb far enough to afford it.`);
+        const sal = (r as any).salvage as number | undefined;
+        this.pushFeed('🚧', `<b>The club could not pay its bills.</b> ${names.join(' and ')} fell into disrepair — ${dis.length} level${dis.length > 1 ? 's' : ''} lost${sal ? `, and the sale of what was stripped out raised <b>${sal.toLocaleString()}c</b>` : ''}. Something has to give: scale back what the club is for, or climb far enough to afford it.`);
         toast(`🚧 ${names[0]} fell into disrepair — the club is living beyond its means`);
       }
     } catch { /* offline: no prize */ }
