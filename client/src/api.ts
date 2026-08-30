@@ -22,7 +22,7 @@ import {
   generatePool, trialistAt, LOANEE_CAP, DESTINATIONS, destinationById, rollMission, travelMs as travelMsPure, previewOdds,
   gaffersDiaryEntry,
   rollGenes, updateMorale, moraleEffects, rollMatchInjuries,
-  houseRenown, branchCareer, rivalStandings, type HouseMember,
+  houseRenown, branchCareer, rivalStandings, renownPedigree, renownBidMult, renownIncomeMult, type HouseMember,
   tokenToPlayer, tokenContract, legendCardOf, loadCareer, actWithNarration, careerState, graduatedFields, careerCast, fillArcText,
   rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, foundingNameFor,
   type FacilityKey, type MissionRow, type Token, type CareerAction,
@@ -207,6 +207,32 @@ function missionView(m: MissionRow, now: number) {
 }
 
 const travelMs = (dest: Parameters<typeof travelMsPure>[0]) => travelMsPure(dest);
+
+/** Everyone the house is scored on, drawn straight off the tokens. Module-level because both the Houses
+ *  table and the places renown OPENS DOORS need it, and a second derivation would be a second thing to
+ *  drift. */
+function membersOf(model: ReturnType<typeof getActiveModel>): HouseMember[] {
+  return model.tokens.map((t) => {
+      let hon: any = null;
+      try { hon = t.career_honours_json ? JSON.parse(t.career_honours_json) : null; } catch { /* none */ }
+      const played = ((t as any).branch ?? 'played') !== 'sibling';
+      if (!played && !hon) {
+        // He played somewhere; the game just never watched. Without this the branches sit at zero and
+        // contribute nothing, in the one place the design says they should count.
+        const c = branchCareer(((t as any).branch_seed ?? 0) >>> 0, t.pedigree ?? 0);
+        return { name: t.name, generation: t.generation ?? 0, played: false, ...c };
+      }
+      return {
+        name: t.name, generation: t.generation ?? 0, played,
+        peakOverall: hon?.peakOverall ?? t.peak_overall ?? 0,
+        caps: hon?.caps ?? 0,
+        leagueTitles: t.ach_league ?? 0,
+        cups: t.ach_cup ?? 0,
+        seasons: t.ach_seasons ?? 0,
+        bigNights: hon?.bigNights?.length ?? 0,
+      };
+    });
+}
 
 export const api = {
   // ── new game / continue (no server accounts — a "save" IS the local profile) ──
@@ -523,6 +549,11 @@ export const api = {
     rf.dev_bonus_json = JSON.stringify(dev);
     // THE NAME — the family renown opens doors: a pedigree (potential) head-start for the heir.
     if (inheritance === 'name') rf.pedigree = Math.min(1, (rf.pedigree ?? 0) + 0.15);
+    // AND THE HOUSE'S OWN STANDING, on top and unconditionally. A famous surname gets a boy seen by the
+    // right people at the right age; it does not make him better, it makes him NOTICED, which is what
+    // pedigree already means here. Sublinear, so a house that is already winning is not handed more.
+    const houseBefore = houseRenown(membersOf(getActiveModel())).renown;
+    rf.pedigree = Math.min(1, (rf.pedigree ?? 0) + renownPedigree(houseBefore));
     await localStore.updateToken(pid, rf);
     // ── THE BRANCHING BLOODLINE ────────────────────────────────────────────────────────────────────
     // A generation produces 1-3 heirs. The PLAYED line keeps the parent's token id (above), because the
@@ -623,10 +654,14 @@ export const api = {
   spSeasonReward: async (body: { pos: number; size: number; sponsor?: string; wins?: number; draws?: number; losses?: number; tier?: number; kind?: 'league' | 'continental' | 'world' }) => {
     await ensureActive();
     const model = getActiveModel();
+    // THE COMMERCIAL PULL OF A FAMOUS HOUSE — sponsorship and gate follow the name, so the season's money
+    // rises with the family's standing. Sublinear and capped at +39%: real money, never the reason you
+    // can afford a squad.
+    const houseMult = renownIncomeMult(houseRenown(membersOf(model)).renown);
     const size = Math.max(2, Math.min(30, Math.floor(Number(body?.size) || 10)));
     const pos = Math.max(1, Math.min(size, Math.floor(Number(body?.pos) || 10)));
     const frac = (pos - 1) / (size - 1);
-    const prize = Math.max(0, pos === 1 ? 800 : Math.round(120 + (1 - frac) * 480));
+    const prize = Math.round(Math.max(0, pos === 1 ? 800 : Math.round(120 + (1 - frac) * 480)) * houseMult);
     const sponsorBonus = String(body?.sponsor) === 'performance' && pos <= 3 ? (pos === 1 ? 700 : 400) : 0;
     const season = model.profile.season;
     // accrue this season's W/D/L into the lifetime manager record (drives prestige, now that the PvP
@@ -644,7 +679,7 @@ export const api = {
     // LEAGUE title mid-season (PT-94).
     if (kind === 'league') model.profile.season = season + 1;
     await localStore.addCoins(OWNER, prize + sponsorBonus); // also schedules the persist that banks the season bump above
-    return { ok: true as const, prize, sponsorBonus, coins: getActiveModel().profile.coins };
+    return { ok: true as const, prize, sponsorBonus, houseMult, coins: getActiveModel().profile.coins };
   },
   spSponsor: async (deal: string) => {
     await ensureActive();
@@ -896,6 +931,13 @@ export const api = {
       }),
     };
   },
+  /** The house's renown, as a bare number, for the places it OPENS DOORS. Recomputed rather than cached:
+   *  it is derived from the tokens, and a cached copy is a copy that can be stale or wrong. */
+  houseRenownNow: async (): Promise<number> => {
+    await ensureActive();
+    return (await api.houses()).mine.renown;
+  },
+
   /** THE HOUSES OF THE GAME — your family's standing, and the twelve rival dynasties it is measured
    *  against. The rivals are derived from the save seed rather than stored, so nothing needs persisting or
    *  migrating and a save opened five generations later reconstructs their entire history exactly. Both
@@ -904,27 +946,7 @@ export const api = {
   houses: async () => {
     await ensureActive();
     const model = getActiveModel();
-    const members: HouseMember[] = model.tokens.map((t) => {
-      let hon: any = null;
-      try { hon = t.career_honours_json ? JSON.parse(t.career_honours_json) : null; } catch { /* none */ }
-      const played = ((t as any).branch ?? 'played') !== 'sibling';
-      if (!played && !hon) {
-        // He played somewhere; the game just never watched. Without this the branches sit at zero and
-        // contribute nothing, in the one place the design says they should count.
-        const c = branchCareer(((t as any).branch_seed ?? 0) >>> 0, t.pedigree ?? 0);
-        return { name: t.name, generation: t.generation ?? 0, played: false, ...c };
-      }
-      return {
-        name: t.name, generation: t.generation ?? 0, played,
-        peakOverall: hon?.peakOverall ?? t.peak_overall ?? 0,
-        caps: hon?.caps ?? 0,
-        leagueTitles: t.ach_league ?? 0,
-        cups: t.ach_cup ?? 0,
-        seasons: t.ach_seasons ?? 0,
-        bigNights: hon?.bigNights?.length ?? 0,
-      };
-    });
-    const mine = houseRenown(members);
+    const members = membersOf(model);    const mine = houseRenown(members);
     const generations = Math.max(0, ...model.tokens.map((t) => t.generation ?? 0));
     // The same derivation main.ts uses for the league, so the rival families belong to THIS save's world
     // rather than to a second, unrelated one.

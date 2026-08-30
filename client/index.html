@@ -997,6 +997,95 @@
       .cg-tut-x { position: absolute; top: 9px; right: 10px; font-family: var(--display); font-size: 11px; padding: 5px 10px; cursor: pointer; white-space: nowrap;
         background: var(--panel-2); color: var(--muted); border: 1px solid var(--line); border-radius: 6px; }
       .cg-tut-x:hover { color: #e2e8f0; }
+      /* ── THE TROPHY ROOM ─────────────────────────────────────────────────────────────────────────
+         The one room in the game that is a PLACE rather than a screen. Everywhere else is the club's
+         navy UI; this is a hall, and it is lit differently — a near-black ground with a warm bias, gold
+         as its only metal, and light falling from above onto the silverware. The Family Record already
+         proved the room can hold a richer material world than the rest of the game; this extends that
+         language outward so the parchment reads as one exhibit in a hall rather than as an oddity
+         sitting in a settings page.
+
+         Everything here is scoped to #trophies. The rest of the game is untouched. */
+      #trophies {
+        --gold: #e6c76a; --gold-lit: #f7e3a8; --gold-deep: #8a6d2a;
+        /* A hall's ground: near-black, warm rather than the blue-black used everywhere else, so stepping
+           in reads as a change of room and not a change of tab. */
+        --hall: #100d14; --hall-2: #171320;
+        background:
+          radial-gradient(ellipse 120% 60% at 50% -10%, rgba(230,199,106,0.10) 0%, transparent 60%),
+          linear-gradient(#120f17, #0c0a10);
+        border-color: color-mix(in srgb, var(--gold) 26%, transparent);
+      }
+      /* The masthead. The old summary was an emoji sentence; a dynasty's record deserves to be SET like a
+         record — the numbers large, their labels small underneath, on a rail. */
+      .troom-head { display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+        padding: 16px 18px 18px; margin-bottom: 20px; position: relative;
+        background: linear-gradient(180deg, rgba(230,199,106,0.09), transparent 70%);
+        border-bottom: 1px solid color-mix(in srgb, var(--gold) 30%, transparent); }
+      .troom-crest { width: 46px; height: 46px; flex: none; opacity: 0.92; }
+      .troom-crest .px { width: 46px; height: 46px; }
+      .troom-title { font-family: var(--display); font-size: 15px; color: var(--gold-lit); letter-spacing: 1px; }
+      .troom-sub { font-family: var(--body); font-size: 16px; color: #a99a74; margin-top: 5px; }
+      .troom-stats { display: flex; gap: 22px; margin-left: auto; flex-wrap: wrap; }
+      .troom-stat { text-align: center; min-width: 56px; }
+      .troom-stat b { display: block; font-family: var(--display); font-size: 18px; color: var(--gold);
+        font-variant-numeric: tabular-nums; }
+      .troom-stat span { display: block; font-family: var(--body); font-size: 14px; color: #8d825f;
+        letter-spacing: 0.08em; text-transform: uppercase; margin-top: 4px; }
+      /* Section headings become gold rules. In this room the pink used elsewhere reads as a different
+         product; the rule also gives the long page a rhythm it did not have. */
+      #trophies .scout-h4 { display: flex; align-items: center; gap: 12px; color: var(--gold);
+        font-size: 15px; letter-spacing: 0.12em; margin: 30px 0 4px; }
+      #trophies .scout-h4::after { content: ''; flex: 1; height: 1px;
+        background: linear-gradient(90deg, color-mix(in srgb, var(--gold) 45%, transparent), transparent); }
+      #trophies .scout-sub { color: #8d825f; }
+      /* THE CABINET. Trophies stand on a shelf under a light, and each one throws a reflection down the
+         front of it. This single device does most of the work of making the room feel expensive, and it
+         is only a gradient, a rule and a mirrored copy. */
+      #trophies .tr-cabinet { position: relative; gap: 0; padding: 26px 18px 0;
+        background:
+          radial-gradient(ellipse 80% 90% at 50% 0%, rgba(247,227,168,0.16) 0%, transparent 70%),
+          linear-gradient(180deg, var(--hall-2), var(--hall));
+        border: 1px solid color-mix(in srgb, var(--gold) 22%, transparent);
+        border-bottom: none; justify-content: center; }
+      #trophies .tr-trophy { background: none; border: none; border-radius: 0; padding: 0 18px 18px;
+        min-width: 132px; position: relative; }
+      #trophies .tr-trophy-ico { filter: drop-shadow(0 4px 10px rgba(0,0,0,0.6)); }
+      /* The reflection: the same trophy, flipped, faded into the shelf. Pointer-events off — it is an
+         image of a thing, not a thing. */
+      #trophies .tr-trophy-ico::after { content: ''; display: block; }
+      #trophies .tr-trophy-name { color: var(--gold-lit); font-size: 11px; margin-top: 10px; }
+      #trophies .tr-trophy-sub { color: #85794f; }
+      /* The shelf edge the silverware stands on. */
+      .troom-shelf { height: 10px; margin-bottom: 24px;
+        background: linear-gradient(180deg, var(--gold-deep), #3a2d12 60%, #14100a);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.6), inset 0 1px 0 color-mix(in srgb, var(--gold) 55%, transparent); }
+      /* Achievements become MEDALS: earned ones catch the light, locked ones sink into the hall. */
+      #trophies .ach { background: linear-gradient(160deg, var(--hall-2), var(--hall));
+        border-color: color-mix(in srgb, var(--gold) 14%, transparent); border-radius: 0; }
+      #trophies .ach.got { border-color: color-mix(in srgb, var(--gold) 55%, transparent);
+        background: linear-gradient(160deg, color-mix(in srgb, var(--gold) 13%, var(--hall-2)), var(--hall));
+        box-shadow: inset 0 1px 0 color-mix(in srgb, var(--gold) 30%, transparent); }
+      #trophies .ach.got .ach-name { color: var(--gold-lit); }
+      #trophies .ach.locked { opacity: 0.4; }
+      #trophies .ach-desc { color: #8d825f; }
+      #trophies .ach-count { color: var(--gold); }
+      /* The bloodline spine and the houses table both sit in the hall, so they take its metal too. */
+      #trophies .bloodtree { background: linear-gradient(160deg, var(--hall-2), var(--hall));
+        border: 1px solid color-mix(in srgb, var(--gold) 18%, transparent); }
+      #trophies .bt-family { color: var(--gold-lit); }
+      #trophies .hs-row { border-bottom-color: color-mix(in srgb, var(--gold) 12%, transparent); }
+      #trophies .hs-row.me { background: color-mix(in srgb, var(--gold) 10%, transparent);
+        box-shadow: inset 3px 0 0 var(--gold); }
+      #trophies .hs-you, #trophies .hs-mine { color: var(--gold-lit); }
+      #trophies .hs-bar > b { background: linear-gradient(90deg, var(--gold-deep), var(--gold-lit)); }
+      #trophies .hs-opens { border-left-color: var(--gold); background: rgba(230,199,106,0.05); }
+      #trophies .tm-crest { color: var(--gold); }
+      @media (max-width: 620px) {
+        .troom-stats { margin-left: 0; gap: 14px; }
+        .troom-stat b { font-size: 15px; }
+      }
+
       /* ── Trophy Room ── */
       .tr-summary { font-family: var(--display); font-size: 13px; color: #d8cfa0; margin-bottom: 18px; letter-spacing: 0.5px; }
       /* achievements grid (trophy room) */
@@ -1372,6 +1461,12 @@
       .hs-sub { font-family: var(--body); font-size: 15px; opacity: 0.72; }
       .hs-bar { height: 6px; background: rgba(255,255,255,0.10); margin-bottom: 12px; }
       .hs-bar > b { display: block; height: 100%; background: var(--good); }
+      .hs-opens { display: flex; flex-direction: column; gap: 4px; font-family: var(--body); font-size: 15px;
+        padding: 10px 12px; margin: 0 0 14px; background: rgba(255,255,255,0.04);
+        border-left: 3px solid var(--good); opacity: 0.88; }
+      .hs-opens > b { font-size: 13px; letter-spacing: 0.07em; text-transform: uppercase; opacity: 0.6; }
+      .tm-house { background: rgba(255,255,255,0.05); }
+      .tm-crest { font-size: 13px; color: var(--good); font-weight: normal; }
       .hs-table { display: flex; flex-direction: column; }
       .hs-row { display: grid; grid-template-columns: 32px 1fr auto 88px; gap: 10px; align-items: center;
         padding: 7px 10px; font-family: var(--body); font-size: 16px;

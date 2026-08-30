@@ -118,3 +118,48 @@ export function houseManAsPlayer(h: RivalHouse, generation: number, seed: number
   const p = mintSquadPlayer(id, role, q, hash32(seed, generation * 2654435761, h.name.length), age);
   return { ...p, name: houseManAt(h, generation, seed).name };
 }
+
+// ── THE RIVAL FAMILIES, ON THE PITCH ───────────────────────────────────────────────────────────────
+import { transferFee, type Listing } from './transfermarket.js';
+import { overall } from './teams.js';
+
+/** A famous surname costs more than the same player without one. This is the first place renown bites in
+ *  a direction the player FEELS rather than reads: you are not buying a centre-half, you are buying a
+ *  Vasquez, and the Vasquez know it. */
+export const HOUSE_FEE_PREMIUM = 1.35;
+
+const ROLES: Role[] = ['GK', 'DF', 'MF', 'FW'];
+
+/** Rival-house sons on the market this season.
+ *
+ *  Deliberately RARE — at most one most seasons, occasionally two, often none. The table in the Trophy
+ *  Room is only interesting if the names on it are hard to get; a market that offers a rival's boy every
+ *  season turns the twelve great families into a supplier. He also has to be roughly at your level, or
+ *  the offer is either an insult or an impossibility. */
+export function houseListings(seed: number, season: number, tier: number, generation: number, quality: number): Listing[] {
+  const out: Listing[] = [];
+  for (let i = 0; i < RIVAL_HOUSES.length; i++) {
+    const h = RIVAL_HOUSES[i];
+    const roll = frac(hash32(seed, season * 6151, i * 977));
+    if (roll > 0.03) continue;                                   // ~1 house in 33 offers a son in a season
+    const q = houseQualityAt(h, generation, seed);
+    // Out of your world, either way. This gate does more than filter: because it compares the family's man
+    // to YOUR DIVISION's standard, access to the great houses scales with the pyramid — at the bottom
+    // essentially none of them will sign for you, and at the top most of them will. Climbing is what opens
+    // the door to the names you are chasing on the table, which is the right thing for climbing to do.
+    if (Math.abs(q - quality) > 3.5) continue;
+    const role = ROLES[hash32(seed, season, i * 31) % ROLES.length];
+    const age = 21 + (hash32(seed, season * 13, i) % 8);
+    const p = houseManAsPlayer(h, generation, seed, `hs:${season}:${h.name}`, role, age);
+    const ov = overall(p);
+    out.push({ player: p, fee: Math.round(transferFee(ov) * HOUSE_FEE_PREMIUM), age, ov });
+  }
+  return out.slice(0, 2);
+}
+
+/** Is this player a rival house's son? Read off the surname, so it survives the round-trip into the squad
+ *  and back without needing a flag on Player that every other system would have to carry. */
+export function houseOf(name: string): RivalHouse | null {
+  const surname = (name || '').trim().split(/\s+/).slice(-1)[0];
+  return RIVAL_HOUSES.find((h) => h.name === surname) ?? null;
+}

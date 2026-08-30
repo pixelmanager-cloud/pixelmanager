@@ -1,6 +1,6 @@
 import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
-  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry, tierName, TIERS,
+  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry, tierName, TIERS, tierStrength,
   FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, deriveExpectation, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition, contTieBlurb, wcGroupDramaBlurb, wcKnockoutDramaBlurb, worldCupFinishBlurb,
   transferList, wageForLength, sellValue, squadSeasonWage, moraleEffects, incomingBid, MIN_SQUAD, MAX_SQUAD, type Listing,
   ACHIEVEMENTS, evaluateAchievements, achievementById, type AchSnapshot, lifeAction,
@@ -18,14 +18,15 @@ import { commentaryExtra, fillCm, type CommentaryBranch } from '../../shared/src
 import { narrateManager, type PersonCtx } from '../../shared/src/managerNarrate.js';
 import { pickManagerArc, managerArcById, MGR_TEMPERS, applyMorale, type MgrSituation, type MgrArcEffect, type MgrTemper } from '../../shared/src/managerarc.js';
 import { facilityLevelStory, FACILITY_META, type FacilityKey } from '../../shared/src/facilities.js';
-import { nextHouseTier } from '../../shared/src/renown.js';
+import { nextHouseTier, renownBidMult, renownPedigree, renownIncomeMult } from '../../shared/src/renown.js';
+import { houseListings, houseOf } from '../../shared/src/houses.js';
 
 // Topbar speaker icons — same 24×24 viewBox for both states so the button never changes shape on toggle.
 const ICON_SPEAKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3.5l4.5-3.5v13L7.5 15H4z"/><path d="M16 9.2a4 4 0 0 1 0 5.6M18.6 6.6a7.5 7.5 0 0 1 0 10.8"/></svg>';
 const ICON_MUTED = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3.5l4.5-3.5v13L7.5 15H4z"/><path d="M16.5 9.5l5 5M21.5 9.5l-5 5"/></svg>';
 
 /** Single-player manager-season state (per save, in localStorage). `starId` present ⇒ manager phase. */
-interface MgrState { season: number; results: PlayedResult[]; starId?: string; starName?: string; starAge?: number; retireAge?: number; titles?: number; trainFocus?: string; staff?: string[]; sponsor?: string;
+interface MgrState { season: number; results: PlayedResult[]; starId?: string; starName?: string; starAge?: number; starGen?: number; retireAge?: number; titles?: number; trainFocus?: string; staff?: string[]; sponsor?: string;
   // board verdict on the season just gone + that finishing position (feeds next season's expectation)
   lastBoard?: { message: string; mood: BoardMood; expectation: string }; lastFinishPos?: number;
   lastTierMove?: 'promoted' | 'relegated'; // set the season after a promotion/relegation, for the reveal banner
@@ -1303,13 +1304,24 @@ class Game {
     const m = this.loadMgr(), tier = this.clubTier(), coins = this.account?.coins ?? 0;
     const boughtKey = 'fm_bought_' + (this.account?.handle ?? 'x') + '_' + m.season;
     let bought: string[]; try { bought = JSON.parse(localStorage.getItem(boughtKey) || '[]'); } catch { bought = []; }
-    const listings = transferList(this.leagueSeed(), m.season, tier).filter((l) => !bought.includes(l.player.id));
+    // A RIVAL HOUSE'S SON, occasionally, at a premium. This is what stops the Houses table being a
+    // spreadsheet: the name you are chasing up the ladder turns up in your own market, and you can take
+    // him off them. Rare on purpose — a market that offered one every season would turn the twelve great
+    // families into a supplier.
+    const gen = m.starGen ?? 0;
+    const listings = [
+      ...houseListings(this.leagueSeed(), m.season, tier, gen, tierStrength(tier)),
+      ...transferList(this.leagueSeed(), m.season, tier),
+    ].filter((l) => !bought.includes(l.player.id));
     const squad = this.club.players, sellable = squad.filter((p) => p.id !== m.starId); // the bloodline star can't be sold here
     const squadFull = squad.length >= MAX_SQUAD, squadMin = squad.length <= MIN_SQUAD;
     const buyList = listings.length ? listings.map((l) => {
       const cantAfford = coins < l.fee;
       const reason = squadFull ? `Squad full (max ${MAX_SQUAD})` : cantAfford ? `Not enough coins (need ${l.fee.toLocaleString()}c)` : 'Sign him';
-      return `<div class="tm-row"><span class="tm-pos tm-${l.player.role}">${l.player.role}</span><span class="tm-name">${l.player.name}</span><span class="tm-ov">OV ${l.ov} · age ${l.age}</span><button class="tm-buy primary" data-buy="${l.player.id}" title="${reason}" ${cantAfford || squadFull ? 'disabled' : ''}>Buy · ${l.fee.toLocaleString()}c</button></div>`;
+      const house = houseOf(l.player.name);
+      return `<div class="tm-row${house ? ' tm-house' : ''}"><span class="tm-pos tm-${l.player.role}">${l.player.role}</span>`
+        + `<span class="tm-name">${l.player.name}${house ? ` <b class="tm-crest" title="${house.blurb.replace(/"/g, '&quot;')}">👑 of the ${house.name}s</b>` : ''}</span>`
+        + `<span class="tm-ov">OV ${l.ov} · age ${l.age}</span><button class="tm-buy primary" data-buy="${l.player.id}" title="${reason}" ${cantAfford || squadFull ? 'disabled' : ''}>Buy · ${l.fee.toLocaleString()}c</button></div>`;
     }).join('') : '<div class="muted">The market has cleared for this season.</div>';
     const sellList = sellable.map((p) => { const ov = overall(p), v = sellValue(ov); return `<div class="tm-row"><span class="tm-pos tm-${p.role}">${p.role}</span><span class="tm-name">${p.name}</span><span class="tm-ov">OV ${ov}</span><button class="tm-sell" data-sell="${p.id}" title="${squadMin ? `Can't sell below ${MIN_SQUAD} players` : `Sell for +${v.toLocaleString()}c`}" ${squadMin ? 'disabled' : ''}>Sell · +${v.toLocaleString()}c</button></div>`; }).join('');
     const wageBill = squad.reduce((n, p) => n + squadSeasonWage(overall(p)), 0); // PT-500: the recurring cost of the squad, visible BEFORE you add to it
@@ -1477,6 +1489,7 @@ class Game {
     this.spFixture = null;
     this.showScreen('season');
     api.facilities().then((d) => { this.facLevels = Object.fromEntries(d.facilities.map((f) => [f.key, f.level])); }).catch(() => {}); // cache for the match edges
+    api.houses().then((d) => { this.houseBidMult = renownBidMult(d.mine.renown); }).catch(() => {});
     const clubName = this.club.name, seed = this.leagueSeed();
     const fixtures = seasonFixtures(clubName, seed, this.clubTier());
     const m = this.loadMgr(), played = m.results;
@@ -1527,7 +1540,11 @@ class Game {
     const starP = m.starId ? this.club.players.find((p) => p.id === m.starId) : undefined;
     const bidKey = 'fm_biddismiss_' + (this.account?.handle ?? 'x') + '_' + m.season;
     const bidGone = (() => { try { return localStorage.getItem(bidKey) === '1'; } catch { return false; } })();
-    const bid = (starP && m.starAge && !bidGone && !done) ? incomingBid(this.leagueSeed(), m.season, overall(starP), m.starAge) : null;
+    // A BIG CLUB PAYS OVER THE ODDS FOR A NAME its supporters already know, so the house's standing lifts
+    // every offer for the star. It is the most legible of renown's effects — the same player is worth more
+    // because of who his family are, which is the whole idea stated in one number.
+    const rawBid = (starP && m.starAge && !bidGone && !done) ? incomingBid(this.leagueSeed(), m.season, overall(starP), m.starAge) : null;
+    const bid = rawBid ? { ...rawBid, fee: Math.round(rawBid.fee * this.houseBidMult) } : null;
     // The REJECTION was in the feed and the offer itself was not, so a save read back a season later
     // recorded a decision with nothing to decide about.
     if (bid && starP) this.feedOnce(`bid:${m.season}`, 'bid_received', '🤝', this.personCtx(starP, true), { fee: bid.fee, name: bid.club });
@@ -2494,7 +2511,8 @@ class Game {
       };
       const cabinet = titles.length
         ? `<div class="tr-cabinet">` + titles.sort((a, b) => a.season_number - b.season_number).map((h) => `<div class="tr-trophy"><div class="tr-trophy-ico">${trophyFor(h.kind)}</div><div class="tr-trophy-name">${trophyName(h)}</div><div class="tr-trophy-sub">Season ${h.season_number}</div></div>`).join('') + `</div>`
-        : `<div class="tr-empty"><div class="tr-empty-art">${trophyImg('league', 64)}</div><div class="muted">No trophies yet — win your league to lift your first title.</div></div>`;
+          + `<div class="troom-shelf"></div>`
+        : `<div class="tr-cabinet"><div class="tr-empty"><div class="tr-empty-art">${trophyImg('league', 64)}</div><div class="muted">No trophies yet — win your league to lift your first title.</div></div></div><div class="troom-shelf"></div>`;
       // retired numbers (per-save honour for a top-tier 'Immortal' legend)
       const TOP_TIER = 'Immortal', rKey = 'fm_retired_' + (this.account?.handle ?? '');
       let retired: Array<{ n: number; name: string }>; try { retired = JSON.parse(localStorage.getItem(rKey) || '[]'); } catch { retired = []; }
@@ -2530,10 +2548,29 @@ class Game {
         : `<div class="tr-empty"><div class="tr-empty-art">${sprite('crown')}</div><div class="muted">No bloodlines yet — develop a player, field him for a career, and retire him to found a dynasty. Every generation after adds a link to the tree.</div></div>`;
       const retiredSection = retired.length
         ? `<h4 class="scout-h4" style="margin-top:24px;">🎽 RETIRED NUMBERS</h4><div class="scout-sub">Shirts hung up forever for the club's immortals — no future player wears these.</div>`
-          + `<div class="tr-cabinet">` + retired.map((r) => `<div class="tr-trophy"><div class="tr-trophy-ico">#${r.n}</div><div class="tr-trophy-name">${r.name}</div><div class="tr-trophy-sub">retired</div></div>`).join('') + `</div>`
+          + `<div class="tr-cabinet">` + retired.map((r) => `<div class="tr-trophy"><div class="tr-trophy-ico">#${r.n}</div><div class="tr-trophy-name">${r.name}</div><div class="tr-trophy-sub">retired</div></div>`).join('') + `</div><div class="troom-shelf"></div>`
         : '';
       const seasons = honours.length ? Math.max(...honours.map((h) => h.season_number)) : 0;
-      const summary = `<div class="tr-summary">🏆 ${titles.length} title${titles.length === 1 ? '' : 's'} · 🌳 ${lines.length} bloodline${lines.length === 1 ? '' : 's'} · ⭐ ${legends.length} legend${legends.length === 1 ? '' : 's'}${retired.length ? ` · 🎽 ${retired.length} retired` : ''} · ${seasons} season${seasons === 1 ? '' : 's'} managed</div>`;
+      // THE MASTHEAD. This was an emoji sentence — "🏆 2 titles · 🌳 1 bloodline · ⭐ 3 legends" — which is
+      // the same information a status bar carries, in a room whose entire job is to make the record feel
+      // like an achievement. A dynasty's record should be SET like a record: the numbers large, their
+      // labels small underneath, on a rail.
+      const stat = (n: number | string, label: string) => `<div class="troom-stat"><b>${n}</b><span>${label}</span></div>`;
+      // NOT account.handle — that is the save-slot UUID, and the masthead read "THE 3D85629C-08DB-4F7C…
+      // COLLECTION". makeClub appends "'s Club" to the founding name, so the family name is recoverable
+      // from the club without an async call, which matters because this header renders synchronously.
+      const houseName = (this.club?.name ?? '').replace(/[''`]s Club$/i, '').trim() || 'the family';
+      const summary = `<div class="troom-head">`
+        + `<span class="troom-crest">${sprite('crown')}</span>`
+        + `<div><div class="troom-title">THE ${houseName.toUpperCase()} COLLECTION</div>`
+        + `<div class="troom-sub">${seasons ? `Everything the name has won in ${seasons} season${seasons === 1 ? '' : 's'}.` : 'Nothing in it yet. Win something.'}</div></div>`
+        + `<div class="troom-stats">`
+        + stat(titles.length, titles.length === 1 ? 'title' : 'titles')
+        + stat(lines.length, lines.length === 1 ? 'bloodline' : 'bloodlines')
+        + stat(legends.length, legends.length === 1 ? 'legend' : 'legends')
+        + (retired.length ? stat(retired.length, 'retired') : '')
+        + stat(seasons, seasons === 1 ? 'season' : 'seasons')
+        + `</div></div>`;
       // ACHIEVEMENTS — evaluate live and union with the persisted unlocked set (so the screen is always
       // accurate even if a milestone was crossed without a check firing), then persist the union.
       const earnedAch = new Set([...this.loadUnlockedAch(), ...evaluateAchievements(await this.buildAchSnapshot())]);
@@ -2544,7 +2581,7 @@ class Game {
         return `<div class="ach ${got ? 'got' : 'locked'}"><span class="ach-ico">${got ? a.icon : '🔒'}</span><div class="ach-txt"><div class="ach-name">${a.name}</div><div class="ach-desc">${a.desc}</div></div></div>`;
       }).join('') + `</div>`;
       const achSection = `<h4 class="scout-h4" style="margin-top:24px;">🏅 ACHIEVEMENTS <span class="ach-count">${gotCount}/${ACHIEVEMENTS.length}</span></h4>` + achGrid;
-      $('trophies-body').innerHTML = `<div id="houses-host"></div><div id="family-record-host"></div>` + summary
+      $('trophies-body').innerHTML = summary + `<div id="houses-host"></div><div id="family-record-host"></div>`
         + `<h4 class="scout-h4">🏆 TROPHY CABINET</h4>` + cabinet
         + `<h4 class="scout-h4" style="margin-top:24px;">🌳 BLOODLINES</h4><div class="scout-sub">The dynasties you've built — each line is a bloodline across the generations, newest at the bottom.</div>` + bloodlines
         + retiredSection
@@ -2939,13 +2976,22 @@ class Game {
     const bar = next ? `<div class="hs-bar"><b style="width:${Math.round(next.progress * 100)}%"></b></div>` : '';
     // What the branches contributed is worth saying out loud — it is the one number that tells the player
     // the brothers he passed over were not wasted.
+    // WHAT THE NAME OPENS, stated on the page. An effect the player cannot see is not a reward, it is a
+    // hidden variable — and these three are the whole answer to "what is renown FOR".
+    const opens = `<div class="hs-opens"><b>What the name opens</b>`
+      // Pedigree is a 0-1 internal, and "+0.8 pedigree" is a number on a scale the player is never shown.
+      // Said as a percentage of the scouting range it is the same fact in the game's own language.
+      + `<span>🧬 Heirs are scouted <b>+${Math.round(renownPedigree(d.mine.renown) * 100)}%</b> higher on the family name — a famous surname gets a boy seen by the right people</span>`
+      + `<span>🤝 Bids for your star come in <b>×${renownBidMult(d.mine.renown).toFixed(2)}</b> — big clubs pay over the odds for a name their supporters know</span>`
+      + `<span>💰 Season prize money <b>×${renownIncomeMult(d.mine.renown).toFixed(2)}</b> — sponsorship and gate follow the family</span>`
+      + `</div>`;
     const foot = d.mine.greatest
       ? `<div class="hs-foot">The name rests on <b>${d.mine.greatest.name}</b>${d.mine.fromBranches > 0
           ? `, and ${Math.round((d.mine.fromBranches / Math.max(1, d.mine.renown)) * 100)}% of it was earned by the sons you passed over.` : '.'}</div>`
       : '';
     host.innerHTML = `<div class="houses"><h4 class="scout-h4">👑 THE HOUSES OF THE GAME</h4>`
       + `<div class="scout-sub">Every family climbing the same ladder. Renown never falls — a quiet generation adds little, it never takes anything back.</div>`
-      + head + bar + `<div class="hs-table">${rows}</div>` + foot + `</div>`;
+      + head + bar + opens + `<div class="hs-table">${rows}</div>` + foot + `</div>`;
     void me;
   }
 
@@ -3077,7 +3123,7 @@ class Game {
           this.setMe(await api.me());
           if (al.lifted > 0) toast(`🏟️ ${al.lifted} of the squad step up to ${tierName(startTier)} standard`);
         } catch { /* keep the founding roster if this fails — never block the handoff */ }
-        this.saveMgr({ season: 1, results: [], starId: s.prospectId, starName: s.name, starAge: s.age, retireAge, temper: chosenTemper }); // enter manager phase
+        this.saveMgr({ season: 1, results: [], starId: s.prospectId, starName: s.name, starAge: s.age, starGen: (s as any).generation ?? 0, retireAge, temper: chosenTemper }); // enter manager phase
         toast(`🧢 You're the manager now — ${s.name} is in your squad`);
         this.showSeason();
       } catch (e: any) { toast(e?.body?.error ?? 'Handoff failed'); }
@@ -3924,6 +3970,10 @@ class Game {
     this.kickOffSpMatch(); // single-player fixture: build the match locally
   }
 
+  /** The house's bid multiplier, refreshed when the season screen loads. Cached because the season view
+   *  is rendered synchronously and recomputing renown from every token on each redraw would be wasteful;
+   *  a stale value here only ever costs one screen's accuracy, never a saved number. */
+  private houseBidMult = 1;
   private lastGate = 0;
   private startMatch(payload: MatchPayload) {
     this.mySide = payload.mySide;

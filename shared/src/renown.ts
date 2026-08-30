@@ -158,3 +158,37 @@ export function branchCareer(branchSeed: number, pedigree: number): { peakOveral
     bigNights: Math.round(peak / 3),
   };
 }
+
+
+// ── WHAT THE NAME OPENS ────────────────────────────────────────────────────────────────────────────
+//
+// Renown that only ranks you is a scoreboard, and scoreboards stop mattering. These are the three places
+// it bites, chosen because each one is felt in a different part of the game — the card career, the
+// transfer window, and the club itself.
+//
+// All three are DELIBERATELY SUBLINEAR. A dynasty that is already winning must not be handed the tools to
+// win by more; the point of a famous name is that doors open, not that the game gets easier. Each effect
+// therefore rises fast at the bottom of the ladder, where it changes a struggling house's prospects, and
+// flattens hard at the top, where the house needs no help.
+// The 3500 is set against the LADDER, not chosen for feel: at 6000 the curve was still climbing steeply
+// when the ladder ran out, so roughly two-thirds of every effect landed on houses that had already won.
+const curve = (renown: number, cap: number) => cap * (1 - Math.exp(-Math.max(0, renown) / 3500));
+
+/** PEDIGREE the name buys an heir, added to what he inherited. A famous surname gets a boy seen by the
+ *  right people at the right age — it does not make him better, it makes him NOTICED, which in this game
+ *  is what pedigree already means. Caps at +0.18 on a 0-1 scale. */
+export function renownPedigree(renown: number): number {
+  return Math.round(curve(renown, 0.18) * 1000) / 1000;
+}
+
+/** Multiplier on incoming BIDS for your star. Big clubs pay over the odds for a name their supporters
+ *  already know. Caps at +45%. */
+export function renownBidMult(renown: number): number {
+  return Math.round((1 + curve(renown, 0.45)) * 100) / 100;
+}
+
+/** Extra coins on the season prize — the commercial pull of a famous house, in sponsorship and gate.
+ *  Caps at +40%, which is real money without ever being the reason you can afford a squad. */
+export function renownIncomeMult(renown: number): number {
+  return Math.round((1 + curve(renown, 0.40)) * 100) / 100;
+}
