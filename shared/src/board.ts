@@ -53,7 +53,10 @@ export interface BoardStanding {
 function expectationBand(exp: BoardExpectation, total: number, promote: number, relegate: number): number {
   switch (exp) {
     case 'title': return 1;
-    case 'promotion': return Math.max(1, Math.round(promote / 2));
+    // TOP-`promote` IS PROMOTION. This was `round(promote / 2)`, which with the game's promote:2 resolved
+    // to 1 — so the "promotion" expectation demanded the player WIN the league, identically to the "title"
+    // expectation above it. Two of the five bands were the same band.
+    case 'promotion': return promote;
     case 'playoffs': return promote + 3;
     case 'survival': return total - relegate - 1;
     case 'midtable':
@@ -73,11 +76,31 @@ export function boardScore(input: BoardMoodInput): number {
   // relegation zone with real expectation of survival hits harder than a mid-table side sliding a few places
   const inDropZone = position > total - relegate;
   const dropPenalty = inDropZone && expectation !== 'survival' ? -25 : 0;
-  const raw = normalisedGap * 140 * seasonProgress + dropPenalty;
+  // MEETING A HARD BAR IS AN ACHIEVEMENT; MEETING AN EASY ONE IS NOT. The score was pure distance from
+  // target, so hitting the mark exactly always scored 0 — "patient" — whether the board asked you to
+  // survive or to win the league. With a `title` expectation the best possible finish IS the target, so
+  // the ceiling was 0 and `pleased` and `delighted` were unreachable for the whole back half of a career:
+  // the reward for the hardest thing in the game was a shrug indistinguishable from mid-table.
+  //
+  // Clearing the bar now pays according to how high the bar was. It applies only when the bar is actually
+  // MET, so it lifts the ceiling without cushioning failure — a title-chasing side that finishes tenth is
+  // scored exactly as harshly as before.
+  const DIFFICULTY: Record<BoardExpectation, number> = {
+    survival: 0, midtable: 12, playoffs: 28, promotion: 45, title: 62,
+  };
+  // TAPERED, NOT A STEP. All-or-nothing at the target left a 78-point cliff either side of it: on a title
+  // expectation 1st was `delighted` and 2nd `concerned`, with `pleased` and `patient` unreachable — the
+  // middle of the band structure this bonus exists to unlock was still missing. Full credit at the target,
+  // half a place off, nothing from two places out.
+  const missedBy = Math.max(0, position - target);
+  const met = (DIFFICULTY[expectation] ?? 0) * seasonProgress * Math.max(0, 1 - missedBy / 2);
+  const raw = normalisedGap * 140 * seasonProgress + dropPenalty + met;
   return Math.max(-100, Math.min(100, Math.round(raw)));
 }
 
-function moodFromScore(score: number): BoardMood {
+/** Exported so the manager loop can re-derive the mood after shifting the season's score by the board
+ *  goodwill an arc decision earned or spent — see MgrState.arcBoard. */
+export function moodFromScore(score: number): BoardMood {
   if (score >= 55) return 'delighted';
   if (score >= 20) return 'pleased';
   if (score >= -15) return 'patient';
@@ -137,6 +160,13 @@ const MOOD_LINES = mergeBanks(BASE_MOOD_LINES, BOARD_EXTRA_1, BOARD_EXTRA_2, BOA
 
 /** The board's current mood + flavour message, given today's league standing vs. expectation. Pure —
  *  same input, same reading. Callers should pass FRESH per-round input (no state to persist here). */
+/** A board line for a mood, picked deterministically. Exported because the manager loop shifts the season
+ *  score by the goodwill a season of arc decisions earned, and was then showing the mood of the SHIFTED
+ *  score beside the message of the unshifted one — a 'restless' verdict wrapped around "steady as she goes". */
+export function boardMessageFor(mood: BoardMood, seed: number): string {
+  return pick(hash32(seed, 4177), MOOD_LINES[mood]);
+}
+
 export function boardStanding(seed: number, input: BoardMoodInput): BoardStanding {
   const score = boardScore(input);
   const mood = moodFromScore(score);

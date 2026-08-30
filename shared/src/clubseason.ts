@@ -177,6 +177,35 @@ export function liveTable(myClub: string, marlowStrength: number, share: number,
 }
 
 /** Deterministic scoreline for one fixture (a hosts b), weighted by the strength gap + seeded noise. */
+/** THE ONE GOAL ENGINE. Exported so the PLAYER's own fixtures use the same maths as the nine clubs he
+ *  never watches — they did not. PT-1003 replaced the rounded-uniform draw with Poisson here because the old
+ *  one produced 42% of a season as 2-0 or 2-2 and could never score four; the player's simFixtureResult in
+ *  main.ts kept the broken version, so his own results had 9-11 distinct scorelines against the rivals' 48,
+ *  and a side eight strength points clear could not lose a match at all — measured 0.0% across 100k seeds.
+ *  Two engines is how that happens; there is now one.
+ *
+ *  `diff` is the home side's edge: (strength difference) * 0.10 plus the venue term. */
+export function goalPair(mixedSeed: number, diff: number): [number, number] {
+  const stream = (salt: number) => {
+    let x = (mixedSeed ^ Math.imul(salt, 2654435761)) >>> 0;
+    return () => { x = (x + 0x6d2b79f5) >>> 0; let t = x; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return (((t ^ (t >>> 14)) >>> 0) / 4294967296); };
+  };
+  const poisson = (lambda: number, rng: () => number) => {
+    const L = Math.exp(-Math.max(0.05, lambda));
+    let k = 0, p = 1;
+    do { k++; p *= rng(); } while (p > L && k < 40);
+    return k - 1;
+  };
+  return [Math.min(6, poisson(1.35 + diff, stream(1))), Math.min(6, poisson(1.35 - diff, stream(2)))];
+}
+
+/** Mix a raw seed before use — right-shifting the raw value discards the low bits, the very ones that
+ *  differ between consecutive fixtures. Exported alongside goalPair so both callers mix identically. */
+export function mixSeed(h: number): number {
+  let x = h >>> 0; x = Math.imul(x ^ (x >>> 16), 2246822507) >>> 0;
+  x = Math.imul(x ^ (x >>> 13), 3266489909) >>> 0; return (x ^ (x >>> 16)) >>> 0;
+}
+
 function simMatch(a: LeagueClub, b: LeagueClub, h: number): [number, number] {
   // MIX THE SEED FIRST. Right-shifting the raw seed discards the low bits — the very bits that differ between
   // consecutive fixtures — so neighbouring seeds produced the IDENTICAL scoreline 94.5% of the time and a

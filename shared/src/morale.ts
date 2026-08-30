@@ -45,6 +45,10 @@ export function moraleEffects(morale: number): MoraleEffects {
     wantsAway: morale <= 25,
     extendMult: clamp(1 + (60 - morale) * 0.006, 0.85, 1.3),  // ≤ +30% to re-sign an unhappy player, −15% for a happy one
     sellMult: clamp(1 - (60 - morale) * 0.004, 0.8, 1.1),     // an unsettled player sells for up to 20% less
-    label: morale >= 75 ? 'settled and happy' : morale >= 45 ? 'content' : morale >= 25 ? 'unsettled' : 'wants to leave',
+    // BOUNDARIES MUST AGREE WITH THE FLAGS. The flags above use `<=` and this ternary used `>=`, so both
+    // bounds were inclusive on both sides: at exactly 45 the player was flagged `unsettled` while the squad
+    // screen labelled him 'content', and at exactly 25 he was flagged `wantsAway` while reading 'unsettled'.
+    // Two values out of 101 where the game told the player the opposite of what it had decided.
+    label: morale >= 75 ? 'settled and happy' : morale > 45 ? 'content' : morale > 25 ? 'unsettled' : 'wants to leave',
   };
 }

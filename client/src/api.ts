@@ -17,11 +17,11 @@ import {
   transferList, transferFee, sellValue, squadSaleValue, incomingBid, MIN_SQUAD, MAX_SQUAD,
   signSquadContract, staggeredContractSeasons, advanceSquad, squadSeasonsLeft, squadRenewCost, squadSeasonWage, squadStorylines,
   contractDemand, evaluateContractOffer, wageForLength,
-  FACILITY_KEYS, FACILITY_META, MAX_LEVEL, upgradeCost, effectAt,
-  youthPoolBonus, youthUpgradeChance, scoutHitMult, scoutCostDiscount, scoutExtraTrips,
+  FACILITY_KEYS, FACILITY_META, MAX_LEVEL, upgradeCost, effectAt, seasonFacilityIncome, squadMarketability,
+  youthPoolBonus, youthUpgradeChance, dormIntakeBonus, scoutHitMult, scoutCostDiscount, scoutExtraTrips,
   generatePool, trialistAt, LOANEE_CAP, DESTINATIONS, destinationById, rollMission, travelMs as travelMsPure, previewOdds,
   gaffersDiaryEntry,
-  rollGenes, updateMorale, moraleEffects, rollMatchInjuries,
+  rollGenes, updateMorale, moraleEffects, rollMatchInjuries, developAttrs,
   houseRenown, branchCareer, rivalStandings, renownPedigree, renownBidMult, renownIncomeMult, type HouseMember,
   tokenToPlayer, tokenContract, legendCardOf, loadCareer, actWithNarration, careerState, graduatedFields, careerCast, fillArcText,
   rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, foundingNameFor,
@@ -169,7 +169,19 @@ function mergedClub(): { club: Club; standingOrders: StandingOrders } {
   const m = getActiveModel();
   const have = new Set(m.club.players.map((p) => p.id));
   const merged = [...m.club.players];
-  for (const t of m.tokens) if ((t.state === 'pro' || t.state === 'retired') && !have.has(t.id)) { merged.push(tokenToPlayer(t)); have.add(t.id); }
+  for (const t of m.tokens) {
+    if (t.state !== 'pro' && t.state !== 'retired') continue;
+    if (have.has(t.id)) continue;
+    // A PERSON ON THE TREE IS NOT A FOOTBALLER IN THE SQUAD. Branching retires every passed-over brother
+    // at the succession after his own, and those men never played a career — no attrs_json, so
+    // tokenToPlayer yields `attrs: {}` and overall() is NaN. Merging them put one NaN body into the club
+    // per generation, permanently: the season header rendered "wage bill ~NaNc" from generation 2,
+    // autoPickXI selected ghosts in every formation tested, and setStandingOrders accepted the XI because
+    // validateLineup has no finite-rating check. They could not even be sold — sellPlayer does not know
+    // them. attrs_json is the honest test of "did this person ever actually play".
+    if (!t.attrs_json) continue;
+    merged.push(tokenToPlayer(t)); have.add(t.id);
+  }
   return { club: { ...m.club, players: merged }, standingOrders: m.standingOrders };
 }
 
@@ -661,7 +673,22 @@ export const api = {
     const size = Math.max(2, Math.min(30, Math.floor(Number(body?.size) || 10)));
     const pos = Math.max(1, Math.min(size, Math.floor(Number(body?.pos) || 10)));
     const frac = (pos - 1) / (size - 1);
-    const prize = Math.round(Math.max(0, pos === 1 ? 800 : Math.round(120 + (1 - frac) * 480)) * houseMult);
+    // THE CLIMB HAS TO PAY. `tier` was passed in, filed on the honour, and then ignored by the prize — so
+    // winning the top flight paid exactly what winning the Sunday league paid, and nine of the ten tiers
+    // were content with no economic reason to leave them.
+    //
+    // Corrected by making the BOTTOM poorer rather than the top richer. The economy already only ever goes
+    // up — a straight four-generation run went 500 to 45,101 coins without once falling toward zero — so
+    // inflating the summit would have made a solved economy worse. A 4x gradient from basement to top
+    // flight instead makes the early game genuinely tight and the climb worth making.
+    // A CALLER THAT OMITS `tier` IS NOT IN THE BASEMENT. Defaulting to TIERS taxed every cup 60%: none of
+    // the three cup call sites passes a tier, so winning the Continental Cup paid 320 against the 800 its
+    // own comment documents, and a quarter of what topping that same league pays. Default to the top and
+    // let the league path pass the real tier. `|| 1` also catches NaN, and Math.round handles the sign.
+    const rawTier = Number(body?.tier);
+    const tierIdx = TIERS - Math.max(1, Math.min(TIERS, Number.isFinite(rawTier) ? Math.round(rawTier) || 1 : 1));  // 0 = basement … 9 = top flight
+    const tierMult = 0.4 + tierIdx * (1.2 / Math.max(1, TIERS - 1));                                 // 0.4x … 1.6x
+    const prize = Math.round(Math.max(0, pos === 1 ? 800 : Math.round(120 + (1 - frac) * 480)) * tierMult * houseMult);
     const sponsorBonus = String(body?.sponsor) === 'performance' && pos <= 3 ? (pos === 1 ? 700 : 400) : 0;
     const season = model.profile.season;
     // accrue this season's W/D/L into the lifetime manager record (drives prestige, now that the PvP
@@ -670,6 +697,22 @@ export const api = {
     model.profile.wins = (model.profile.wins ?? 0) + clampN(body?.wins);
     model.profile.draws = (model.profile.draws ?? 0) + clampN(body?.draws);
     model.profile.losses = (model.profile.losses ?? 0) + clampN(body?.losses);
+    // THE FACILITIES FINALLY PAY. Everything the club built that promised money now returns it, once a
+    // season, through the one shared function so the sum can never drift from what the facility cards say.
+    const honoursSoFar = await localStore.honoursFor(OWNER, 9999).catch(() => [] as any[]);
+    // ONCE A SEASON, NOT ONCE A PAYOUT. spSeasonReward is called by the league roll AND by three cup
+    // payouts, and this was unconditional — so sponsorship, shop and women's-team income, all explicitly
+    // per-season lumps, were re-paid in full up to four times. A group-stage EXIT described in its own
+    // comment as "a small payoff" banked 1,890 coins of sponsorship the club had already been paid.
+    // Same `kind === 'league'` guard the season counter one block below already uses.
+    const isLeagueRoll = body?.kind !== 'continental' && body?.kind !== 'world';
+    const facIncome = !isLeagueRoll ? { gate: 0, sponsor: 0, shop: 0, womens: 0, total: 0 } : seasonFacilityIncome(
+      model.facilities, tierIdx,
+      (honoursSoFar as any[]).filter((h) => h.title && h.kind === 'league').length,
+      squadMarketability(model.club.players),
+      { wins: clampN(body?.wins), draws: clampN(body?.draws), losses: clampN(body?.losses) },
+    );
+
     // store the pyramid TIER in the honour's `tier` field (was a 'Local' placeholder), so prestige can weight
     // a top-flight title far above a Sunday-league one and credit the climb (PT-86).
     const kind = body?.kind === 'continental' ? 'continental' : body?.kind === 'world' ? 'world' : 'league';
@@ -678,8 +721,8 @@ export const api = {
     // distinctly-kinded honour but must not bump profile.season or it desyncs the ledger and files a phantom
     // LEAGUE title mid-season (PT-94).
     if (kind === 'league') model.profile.season = season + 1;
-    await localStore.addCoins(OWNER, prize + sponsorBonus); // also schedules the persist that banks the season bump above
-    return { ok: true as const, prize, sponsorBonus, houseMult, coins: getActiveModel().profile.coins };
+    await localStore.addCoins(OWNER, prize + sponsorBonus + facIncome.total); // also schedules the persist that banks the season bump above
+    return { ok: true as const, prize, sponsorBonus, houseMult, tierMult, facilities: facIncome, coins: getActiveModel().profile.coins };
   },
   spSponsor: async (deal: string) => {
     await ensureActive();
@@ -794,10 +837,22 @@ export const api = {
     const age = Math.max(18, Math.min(42, Math.floor(Number(body?.age) || 27)));
     const focus = String(body?.focus ?? '');
     const attrs = JSON.parse(t.attrs_json ?? '{}') as Record<string, number>;
-    const bump = (k: string, d: number) => { if (attrs[k] != null) attrs[k] = Math.max(1, Math.min(20, Math.round(attrs[k] + d))); };
-    if (age < 27) { bump(focus || 'passing', 1); bump('stamina', 1); }
-    else if (age < 31) { bump(focus || 'passing', 1); bump('pace', -1); }
-    else { bump('pace', -1); bump('stamina', -1); if (age >= 34) bump('strength', -1); }
+    // THE STAR NOW DEVELOPS ON THE SAME MODEL AS HIS OWN SQUAD — which is where he should always have been.
+    //
+    // This used to bump ONE focused attribute and stamina by a whole point a season. Overall is a mean over
+    // fifteen attributes, so +2 across fifteen is about +0.13 overall a year: measured, the star went 8 → 9
+    // and stopped. Meanwhile every bought squad player ran through developAttrs, a real growth-toward-
+    // ceiling curve driven by the Training facility. The one player the entire game is about was on a
+    // weaker development path than the men he plays alongside, and it showed everywhere downstream — a
+    // graduate peaks at 8-11, `incomingBid` needs 13, so the "a rival club wants your star" beat had never
+    // fired once, and renownBidMult (advertised on the Houses screen) multiplied a bid that never came.
+    const genes = JSON.parse(t.genes_json ?? '{}');
+    const grown = developAttrs(attrs, genes, age, getActiveModel().facilities.training) as Record<string, number>;
+    // The manager's TRAINING FOCUS on top, and it stays a real choice: a deliberate extra push on one
+    // attribute, above what the lifecycle gives everyone. Half a point, not a whole one — a point a season
+    // compounding on a single stat is how you get a 20-rated passer with nothing else.
+    if (focus && grown[focus] != null) grown[focus] = Math.max(1, Math.min(20, Math.round((grown[focus] + 0.5) * 10) / 10));
+    for (const k of Object.keys(grown)) attrs[k] = grown[k];
     const player = tokenToPlayer({ ...t, attrs_json: JSON.stringify(attrs) } as Token);
     await localStore.updateToken(pid, { attrs_json: JSON.stringify(attrs), peak_overall: Math.max(t.peak_overall ?? 0, overall(player)) });
     return { ok: true as const, player, overall: overall(player) };
@@ -1000,7 +1055,9 @@ export const api = {
     const signed = await localStore.loaneeIds(OWNER, seasonId);
     const count = await localStore.countLoanees(OWNER, seasonId);
     const signedSet = new Set(signed);
-    const extra = youthPoolBonus(model.facilities.youth), youthUp = youthUpgradeChance(model.facilities.youth);
+    // Academy Digs add intake places on top of the Youth academy's — the facility promised 'extra youth
+    // intake places' on its card and delivered none.
+    const extra = youthPoolBonus(model.facilities.youth) + dormIntakeBonus(model.facilities.dorm ?? 1), youthUp = youthUpgradeChance(model.facilities.youth);
     const pool = generatePool(OWNER, model.profile.season, TIER, extra, youthUp).map((t) => ({ ...t, signed: signedSet.has(t.id) }));
     return { season: model.profile.season, cap: LOANEE_CAP, signedCount: count, pool };
   },
@@ -1009,7 +1066,9 @@ export const api = {
     const model = getActiveModel();
     const seasonId = String(model.profile.season);
     if ((await localStore.countLoanees(OWNER, seasonId)) >= LOANEE_CAP) throw apiErr(`you can sign at most ${LOANEE_CAP} loanees a season`, {}, 409);
-    const extra = youthPoolBonus(model.facilities.youth), youthUp = youthUpgradeChance(model.facilities.youth);
+    // Academy Digs add intake places on top of the Youth academy's — the facility promised 'extra youth
+    // intake places' on its card and delivered none.
+    const extra = youthPoolBonus(model.facilities.youth) + dormIntakeBonus(model.facilities.dorm ?? 1), youthUp = youthUpgradeChance(model.facilities.youth);
     const player = trialistAt(OWNER, model.profile.season, index, TIER, extra, youthUp);
     if (!player) throw apiErr('no such trialist', {}, 404);
     const c = await localStore.getClub(OWNER);

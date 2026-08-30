@@ -6,7 +6,7 @@
 // NOT WIRED IN YET — this module is additive and unused until Phase 3 points the `api.ts` facade at a
 // `LocalStore` singleton. Built + tested standalone here (see shared/qa_savestore.ts).
 import {
-  makeClub, DEFAULT_FACILITIES, type FacilityKey,
+  makeClub, DEFAULT_FACILITIES, type FacilityKey, type Facilities,
   type Club, type StandingOrders, type Token,
   type GameStore, type HonourRow, type MissionRow, type ProspectRow, type PlayerSeasonStat, type Award,
 } from '@fm/shared';
@@ -22,7 +22,10 @@ export interface SaveModel {
   club: Club;
   standingOrders: StandingOrders;
   tokens: Token[]; // THE HEART — unified lifecycle records (prospect/pro/retired)
-  facilities: { stadium: number; training: number; youth: number; scouting: number; medical: number; sponsor: number; fanzone: number };
+  /** The shared Facilities shape, not a hand-copy of it. This listed only the original seven while the
+   *  game had long shipped twelve, so the five newer ones were present in every save and invisible to the
+   *  type — which is how their effects went unwired without a single compile error. */
+  facilities: Facilities;
   injuries: { playerId: string; matchesRemaining: number }[];
   legacies: { playerId: string; name: string; cardJson: string; retiredSeason: number; rebornId: string | null }[];
   honours: HonourRow[];
@@ -113,7 +116,7 @@ export class LocalStore implements GameStore {
   // ── facilities ──
   async getFacilities(_accountId: string) { return { ...this.m.facilities }; }
   async setFacilityLevel(_accountId: string, key: string, level: number): Promise<void> {
-    (this.m.facilities as Record<string, number>)[key as FacilityKey] = level; this.touch();
+    (this.m.facilities as unknown as Record<string, number>)[key] = level; this.touch();
   }
 
   // ── injuries ──

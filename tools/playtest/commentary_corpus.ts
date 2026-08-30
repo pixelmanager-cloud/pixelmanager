@@ -7,7 +7,7 @@
 // READ OUT OF THE CALL SITES, so a key can only be missed if nothing in the game draws it — and a key the
 // authors wrote that no call site draws is itself reported, because those lines are dead weight.
 import { readFileSync } from 'node:fs';
-import { commentaryExtra } from '../../shared/src/commentary/extra.js';
+import { commentaryExtra, RAW_PACKS } from '../../shared/src/commentary/extra.js';
 
 const src = readFileSync(new URL('../../client/src/main.ts', import.meta.url), 'utf8');
 const KEYS = [...new Set([...src.matchAll(/\bcpickNR\([\s\S]*?,\s*\d+,\s*'([a-z_]+)'/g)].map((m) => m[1]))].sort();
@@ -20,7 +20,10 @@ let dupes = 0;
 for (const k of KEYS) {
   const lines = commentaryExtra(k);
   total += lines.length; rows.push([k, lines.length]);
-  for (const l of lines) {
+  // DUPLICATES ARE CHECKED ON THE RAW PACKS, not on this. commentaryExtra() de-duplicates before it
+  // returns, so the previous version of this probe fed itself already-clean output and printed a green
+  // tick that could not have gone red under any input — while exact duplicates sat in the source files.
+  for (const l of RAW_PACKS.flatMap((p) => p[k] ?? [])) {
     const n = l.toLowerCase().replace(/[^a-z0-9 {}]/g, '').replace(/\s+/g, ' ').trim();
     const prev = seen.get(n);
     if (prev) { console.log(`  DUPLICATE "${l.slice(0, 62)}"  (${k} — already in ${prev})`); dupes++; }

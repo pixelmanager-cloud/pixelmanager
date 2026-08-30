@@ -25,7 +25,7 @@ import { CM_EXTRA_5 } from './pack_5.js';
 import { CM_EXTRA_6 } from './pack_6.js';
 import { CM_EXTRA_7 } from './pack_7.js';
 
-const PACKS: CommentaryBank[] = [CM_EXTRA_1, CM_EXTRA_2, CM_EXTRA_3, CM_EXTRA_4, CM_EXTRA_5, CM_EXTRA_6, CM_EXTRA_7];
+export const RAW_PACKS: CommentaryBank[] = [CM_EXTRA_1, CM_EXTRA_2, CM_EXTRA_3, CM_EXTRA_4, CM_EXTRA_5, CM_EXTRA_6, CM_EXTRA_7];
 
 const norm = (s: string) => s.toLowerCase().replace(/[^a-z0-9 {}]/g, '').replace(/\s+/g, ' ').trim();
 const cache = new Map<string, string[]>();
@@ -55,7 +55,7 @@ export function commentaryExtra(key: string, branch?: CommentaryBranch): string[
   if (hit) return hit;
   const seen = new Set<string>();
   const all: string[] = [];
-  for (const p of PACKS) for (const l of p[key] ?? []) {
+  for (const p of RAW_PACKS) for (const l of p[key] ?? []) {
     const n = norm(l);
     if (!n || seen.has(n)) continue;
     seen.add(n); all.push(l);

@@ -7,6 +7,7 @@
 // generations and deliberately SWITCHES THE LINE onto a cousin at the last one.
 import { api, __setBackendForTests } from './src/api.js';
 import { createInMemoryBackend } from './src/save.js';
+import { overall } from '@fm/shared';
 
 __setBackendForTests(createInMemoryBackend());
 
@@ -58,6 +59,16 @@ for (let g = 0; g < GENS; g++) {
   assert(s.siblings.every((b: any) => b.temper && b.familyTrait && b.fatherName),
     `succession ${g}: every candidate carries a temperament, the family trait and whose son he is`);
   if (g === 0) assert(cousins.length === 0, 'the first succession cannot offer a cousin — nothing has been passed over yet');
+
+  // A PERSON ON THE TREE MUST NEVER BECOME A BODY IN THE SQUAD. Retiring the passed-over branches put a
+  // NaN player into the club per generation — they never played, so they have no attributes, and the
+  // season header rendered "wage bill ~NaNc" while autoPickXI happily selected them. Cheap to check, and
+  // the failure was invisible until someone summed a column.
+  const squad = (await api.me()).club.players;
+  const ghosts = squad.filter((p: any) => !Number.isFinite(overall(p)));
+  assert(ghosts.length === 0,
+    `succession ${g}: no unplayable ghost in the squad${ghosts.length ? ` (${ghosts.map((p: any) => p.name).join(', ')})` : ''}`);
+  assert(squad.every((p: any) => p.age == null || Number.isFinite(p.age)), `succession ${g}: every squad player has a usable age`);
 
   const pool = (await api.prospects()).prospects;
   assert(pool.every((p: any) => p.generation === s.prospect.generation),

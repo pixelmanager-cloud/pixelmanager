@@ -1,7 +1,7 @@
 import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
   TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry, tierName, TIERS, tierStrength,
-  FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, deriveExpectation, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition, contTieBlurb, wcGroupDramaBlurb, wcKnockoutDramaBlurb, worldCupFinishBlurb,
+  FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, moodFromScore, boardMessageFor, deriveExpectation, PRESTIGE_LEVELS, prestigeRankUpBlurb, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition, contTieBlurb, wcGroupDramaBlurb, wcKnockoutDramaBlurb, worldCupFinishBlurb,
   transferList, wageForLength, sellValue, squadSeasonWage, moraleEffects, incomingBid, MIN_SQUAD, MAX_SQUAD, type Listing,
   ACHIEVEMENTS, evaluateAchievements, achievementById, type AchSnapshot, lifeAction,
   type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
@@ -17,7 +17,8 @@ import { audio } from './audio';
 import { commentaryExtra, fillCm, type CommentaryBranch } from '../../shared/src/commentary/extra.js';
 import { narrateManager, type PersonCtx } from '../../shared/src/managerNarrate.js';
 import { pickManagerArc, managerArcById, MGR_TEMPERS, applyMorale, type MgrSituation, type MgrArcEffect, type MgrTemper } from '../../shared/src/managerarc.js';
-import { facilityLevelStory, FACILITY_META, type FacilityKey } from '../../shared/src/facilities.js';
+import { goalPair, mixSeed } from '../../shared/src/clubseason.js';
+import { facilityLevelStory, FACILITY_META, trainingConditioning, fanHomeBoost, dataEdge, dormIntakeBonus, type FacilityKey } from '../../shared/src/facilities.js';
 import { nextHouseTier, renownBidMult, renownPedigree, renownIncomeMult } from '../../shared/src/renown.js';
 import { houseListings, houseOf, seedHouseIntoSquad, houseNews } from '../../shared/src/houses.js';
 
@@ -39,6 +40,15 @@ interface MgrState { season: number; results: PlayedResult[]; starId?: string; s
   // report, the scouting board, the season screen), which re-run on every refresh and every navigation
   // back — without a ledger the same retirement is announced half a dozen times.
   feedFired?: string[];
+  /** What the arc decisions have actually earned. 65% of every manager-arc option carries a `prestige`
+   *  effect and 45% a `boardMood` one — 1,633 and 1,142 of 2,513 — and applyArcEffect silently dropped
+   *  both, so two thirds of every decision in the library had a written consequence that never happened.
+   *  You could gamble the dressing room on a chancer's call, read "the board's patience is spent", and
+   *  watch nothing move. `arcPrestige` is permanent, because standing is; `arcBoard` is a season's
+   *  goodwill and is spent at the verdict. */
+  arcPrestige?: number; arcBoard?: number;
+  /** The prestige rank last announced, so crossing INTO a rank is marked once. */
+  lastRankIdx?: number;
   // The Living Squad season report. It used to live ONLY in a class field, so a refresh between the
   // rollover and the renew decision silently discarded every keep-or-lose call the player still had to
   // make — the decisions were gone and the panel came back empty. It belongs in the save. (PT-605)
@@ -1033,10 +1043,32 @@ class Game {
     } catch (e: any) { toast(e?.body?.error === 'not enough coins' ? `Not enough coins (need ${e.body.need})` : 'Talks broke down'); }
   }
 
+  /** What one point of arc prestige is worth against the honours-derived prestige score.
+   *
+   *  The ladder runs 0 / 120 / 350 / 800 / 1600 …, and arc options grant 1–3 points at a time, so raw
+   *  they would be noise — a whole career of decisions worth less than a single mid-table finish. At 15
+   *  apiece a typical career's arcs are worth a few hundred points: enough to move a rank, never enough
+   *  to replace winning things. */
+  private static readonly ARC_PRESTIGE_WORTH = 15;
+
+  /** The honours-derived prestige, plus what the manager's own decisions earned. Applied HERE rather than
+   *  in api.prestige() because the arc total lives in MgrState, which is client-side only. Every consumer
+   *  must go through this — surfacing it in the hub chip but not in the board's expectation would put the
+   *  effect back where it started: visible and inert. */
+  private withArcPrestige<T extends { score: number; levelIdx: number; title: string; icon: string }>(pr: T): T {
+    const bonus = (this.loadMgr().arcPrestige ?? 0) * Game.ARC_PRESTIGE_WORTH;
+    if (!bonus) return pr;
+    const score = Math.max(0, pr.score + bonus);
+    let levelIdx = 0;
+    for (let i = 0; i < PRESTIGE_LEVELS.length; i++) if (score >= PRESTIGE_LEVELS[i].at) levelIdx = i;
+    const lv = PRESTIGE_LEVELS[levelIdx];
+    return { ...pr, score, levelIdx, title: lv.title, icon: lv.icon };
+  }
+
   /** The manager's own legacy — rank + title, from titles/wins/tier. Shown as a hub chip. */
   private async refreshPrestige() {
     try {
-      const { prestige: pr } = await api.prestige();
+      const pr = this.withArcPrestige((await api.prestige()).prestige);
       const el = $('me-prestige');
       el.classList.remove('hidden');
       el.textContent = `${pr.icon} ${pr.title}`;
@@ -1762,7 +1794,7 @@ class Game {
         audio.chime('triumph');
         toast(`🏆 CONTINENTAL CHAMPIONS! ${this.club?.name} win the cup${pens ? ' on penalties' : ''}`);
         // the flagship cup pays a clear PREMIUM over a league title: the honour (800c) + a 1000c winners' bonus (PT-96)
-        api.spSeasonReward({ pos: 1, size: 10, sponsor: undefined, kind: 'continental' }).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; }).catch(() => {}); // kind:'continental' — a cup, not a league title, and doesn't bump the season (PT-94)
+        api.spSeasonReward({ pos: 1, size: 10, sponsor: undefined, tier: this.clubTier(), kind: 'continental' }).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; }).catch(() => {}); // kind:'continental' — a cup, not a league title, and doesn't bump the season (PT-94)
         api.cupPrize(1000).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; toast(`💰 Continental winners' prize +1,800c`); }).catch(() => {});
       } else {
         this.saveMgr({ ...m, contRound: nextRound, contBlurb });
@@ -1840,7 +1872,7 @@ class Game {
       // persist wcEdition (+ an empty run → deriveWcFinish reads 'Group stage') so the concluded report stays
       // reviewable — the done-surface + review handler both gate on wcEdition != null (PT-128, extends PT-72)
       this.saveMgr({ ...m, wcEdition: edition, wcRun: [], wcSeen: edition, wcStage: 'done' });
-      try { const r = await api.spSeasonReward({ pos: 6, size: 10, sponsor: undefined, kind: 'world' }); if (this.account?.coins != null) this.account.coins = r.coins; } catch { /* offline */ }
+      try { const r = await api.spSeasonReward({ pos: 6, size: 10, sponsor: undefined, tier: this.clubTier(), kind: 'world' }); if (this.account?.coins != null) this.account.coins = r.coins; } catch { /* offline */ }
       this.showWorldCup(wc, 'Group stage'); return;
     }
     this.saveMgr({ ...m, wcEdition: edition, wcStage: 'qf', wcRun: [] }); // qualified → play the knockout run
@@ -1901,7 +1933,7 @@ class Game {
   /** After a played run ends, show the tournament with the star's ACTUAL result + bank the legacy payoff. */
   private async concludeWorldCup(finish: WCResult['myFinish'], finalFoe: string) {
     const m = this.loadMgr();
-    try { const r = await api.spSeasonReward({ pos: finish === 'Champions' ? 1 : finish === 'Runners-up' ? 2 : finish === 'Semi-finals' ? 3 : 4, size: 10, sponsor: undefined, kind: 'world' }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 World Finals payoff +${r.prize.toLocaleString()}c`); } catch { /* offline */ }
+    try { const r = await api.spSeasonReward({ pos: finish === 'Champions' ? 1 : finish === 'Runners-up' ? 2 : finish === 'Semi-finals' ? 3 : 4, size: 10, sponsor: undefined, tier: this.clubTier(), kind: 'world' }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 World Finals payoff +${r.prize.toLocaleString()}c`); } catch { /* offline */ }
     const { wc } = this.wcData(m.wcEdition!);
     this.checkAchievements(); // World Finals final reached / won
     this.showWorldCup(wc, finish, finalFoe);
@@ -1986,10 +2018,14 @@ class Game {
    *  doesn't get an unearned home bias (PT-118). */
   private simFixtureResult(myStr: number, oppStr: number, seed: number, homeTerm = 0.25): PlayedResult {
     // mix the seed before shifting — see clubseason.ts; unmixed, neighbouring fixtures scored identically (PT-900)
-    const mixed = (() => { let x = seed >>> 0; x = Math.imul(x ^ (x >>> 16), 2246822507) >>> 0; x = Math.imul(x ^ (x >>> 13), 3266489909) >>> 0; return (x ^ (x >>> 16)) >>> 0; })();
-    const rnd = (n: number) => (((mixed >>> (n & 15)) ^ (mixed >>> ((n + 7) & 15))) % 100) / 100;
+    // ONE ENGINE, shared with the rivals' league. This used to roll its own goals by bit-shifting a single
+    // word twice — correlated columns, and `round(1.2 ± 1.6)` can only ever produce 0-3. Measured over
+    // 100k seeds it yielded 9-11 distinct scorelines against the rivals' 48, and at an eight-point strength
+    // advantage the player's side could not lose: 0.0%. PT-1003 fixed exactly this in clubseason.ts and the
+    // fix reached the nine clubs the player never watches, but not the one whose results he reads weekly.
     const diff = (myStr - oppStr) * 0.10 + homeTerm; // eased (PT-901)
-    return { myGoals: Math.min(6, Math.max(0, Math.round(1.2 + diff + (rnd(1) - 0.5) * 3.2))), oppGoals: Math.min(6, Math.max(0, Math.round(1.2 - diff + (rnd(2) - 0.5) * 3.2))) };
+    const [mine, theirs] = goalPair(mixSeed(seed), diff);
+    return { myGoals: mine, oppGoals: theirs };
   }
   /** The club-building edge a SIMMED league fixture should carry — the sim otherwise ignores everything a played
    *  match layers on (facilities, staff, venue), making that investment worthless the moment you sim (PT-118).
@@ -1997,11 +2033,22 @@ class Game {
   private simEdge(venue: 'home' | 'away'): { strDelta: number; homeTerm: number } {
     const trainLvl = this.facLevels.training ?? 1, fanLvl = this.facLevels.fanzone ?? 1;
     const staff = this.loadMgr().staff ?? [];
-    let strDelta = (trainLvl - 1) * 0.4;                          // training-ground conditioning — both venues
+    // DERIVED FROM THE SHARED CURVES, like the played path. I converted startSpMatchWith and left this —
+    // the path that drives every simmed fixture, every continental tie and every World Finals tie, i.e.
+    // MOST matches — still running its own inlined constants. They had drifted into a different game:
+    // measured over 200k seeds, maxed Training and Fan Zone were worth +13.6 league points a season when
+    // simmed against a bounded shot-probability nudge when played. The Data Department did nothing here at all.
+    let strDelta = (1 - trainingConditioning(trainLvl)) * 8;      // training-ground conditioning — both venues
+    strDelta += dataEdge(this.facLevels.data ?? 1) * 8;           // opposition prep — both venues
     if (staff.includes('fitness')) strDelta += 0.4;
     if (staff.includes('attack')) strDelta += 0.4;
     if (staff.includes('assistant')) strDelta += 0.4;
-    const homeTerm = venue === 'home' ? 0.25 + (fanLvl - 1) * 0.06 : 0; // venue + fan-zone edge apply at home only
+    // AWAY IS A DISADVANTAGE, not merely the absence of an advantage. This gave the player +0.25 at home and
+    // 0.0 away, while every rival club in clubseason.ts concedes the same +0.25 to ITS host — so the player's
+    // was the only side in the league that never played a real away match. Measured over 200 seasons at
+    // exactly the division's strength: 4th on average and promoted 31% of the time, against 5.55th and 10%
+    // once the venue term is symmetric. A free 1.5 league places.
+    const homeTerm = venue === 'home' ? 0.25 + (fanHomeBoost(fanLvl) - 1) * 3 : -0.25;
     return { strDelta, homeTerm };
   }
   private simRemainingFixtures() {
@@ -2025,12 +2072,34 @@ class Game {
     // this season's W/D/L (fed to the lifetime manager record that powers prestige)
     const rec = (m.results ?? []).reduce((a, r) => { r.myGoals > r.oppGoals ? a.wins++ : r.myGoals < r.oppGoals ? a.losses++ : a.draws++; return a; }, { wins: 0, draws: 0, losses: 0 });
     // bank the season prize money (coins → reinvest in facilities), closing the manager economy loop
-    try { const r = await api.spSeasonReward({ pos: t.pos, size: t.size, sponsor: m.sponsor, tier: this.clubTier(), ...rec }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 Season prize: +${r.prize.toLocaleString()}c${r.sponsorBonus ? ` + 📣 ${r.sponsorBonus.toLocaleString()}c sponsor bonus` : ''}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ` · ${this.ordinal(t.pos)}`}`); } catch { /* offline: no prize */ }
+    try { const r = await api.spSeasonReward({ pos: t.pos, size: t.size, sponsor: m.sponsor, tier: this.clubTier(), ...rec }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 Season prize: +${r.prize.toLocaleString()}c${r.sponsorBonus ? ` + 📣 ${r.sponsorBonus.toLocaleString()}c sponsor bonus` : ''}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ` · ${this.ordinal(t.pos)}`}`);
+      // WHAT THE CLUB EARNED BY BEING A CLUB, itemised. The facilities pay for the first time, and an income
+      // the player cannot see is exactly the invisible effect this fix exists to end — so the gate, the
+      // sponsors, the shop and the women's team each report what they brought in.
+      const fi = (r as any).facilities as { gate: number; sponsor: number; shop: number; womens: number; total: number } | undefined;
+      if (fi?.total) {
+        const parts = [fi.gate && `🎟️ gate ${fi.gate.toLocaleString()}c`, fi.sponsor && `🤝 sponsors ${fi.sponsor.toLocaleString()}c`,
+          fi.shop && `🛍️ shop ${fi.shop.toLocaleString()}c`, fi.womens && `⚽ women's team ${fi.womens.toLocaleString()}c`].filter(Boolean);
+        this.pushFeed('🏟️', `The club earned <b>${fi.total.toLocaleString()}c</b> off the pitch this season — ${parts.join(' · ')}.`);
+      }
+    } catch { /* offline: no prize */ }
     // BOARD VERDICT — how the board judges this season vs what your prestige (and last season) earned you.
     // Stored on the save and surfaced atop next season's planning screen (see showSeason).
     let lastBoard: { message: string; mood: BoardMood; expectation: string } | undefined;
     try {
-      const { prestige } = await api.prestige();
+      const pres = await api.prestige();
+      const prestige = this.withArcPrestige(pres.prestige);
+      // CROSSING A RANK IS THE ONE MOMENT THE NINE-RANK LADDER EXISTS TO MARK, and it passed in silence:
+      // prestigeRankUpBlurb holds 423 authored lines and had no caller anywhere in the client, so a manager
+      // could climb from Rookie Gaffer to Immortal without the game ever once saying so.
+      if (prestige.levelIdx > (m.lastRankIdx ?? -1)) {
+        const line = prestigeRankUpBlurb(prestige.title, {
+          wins: pres.record.wins, draws: pres.record.draws, losses: pres.record.losses,
+          seasons: pres.record.seasons, honours: [], highestTierIdx: pres.highestTierIdx ?? 0,
+        });
+        this.pushFeed(prestige.icon, `<b>${prestige.title}</b> — ${line}`);
+        this.saveMgr({ ...this.loadMgr(), lastRankIdx: prestige.levelIdx });
+      }
       // derive the COMING season's expectation from the season JUST ended (t.pos), incl. its tier move — not
       // from m.lastFinishPos (the season before that), which lagged the board a year behind reality (PT-64/66)
       const expectation = deriveExpectation({ prestigeLevelIdx: prestige.levelIdx, priorFinish: this.finishOf(t.pos, t.size, this.clubTier()) });
@@ -2039,7 +2108,18 @@ class Game {
         position: t.pos, total: t.size, promote: 2, relegate: this.clubTier() < TIERS ? 2 : 0, // top-2 up / bottom-2 down (PT-28); no relegation in the basement, so the drop-zone penalty can't fire there (PT-123)
         points: rec.wins * 3 + rec.draws, matchesPlayed: gp, totalMatches: gp, expectation,
       });
-      lastBoard = { message: st.message, mood: st.mood, expectation };
+      // A season of arc decisions shifts the verdict. Each point of boardMood is worth 12 of board score,
+      // which is about a third of a mood band — so one call never flips the room, and a season of them can.
+      // FOUR, NOT TWELVE. At 12 a single arc option (boardMood ranges -3..+3) was worth 36 board score — a
+      // full 35-wide mood band, not the "about a third of one" the comment claimed — and a season of
+      // one-sided picks swung ±65, more than the gap between finishing 1st and 6th. A nudge must not
+      // outgun the table. At 4, one call is worth 12 and a whole season about ±20.
+      const shifted = Math.max(-100, Math.min(100, st.score + (m.arcBoard ?? 0) * 4));
+      // AND THE MESSAGE MUST MATCH THE MOOD. st.message was picked from the UNSHIFTED score, so the season
+      // screen rendered a 'restless' style around a quote saying "steady as she goes". Re-derive both from
+      // the shifted score rather than showing one number's mood beside another number's words.
+      const shiftedMood = moodFromScore(shifted);
+      lastBoard = { message: shiftedMood === st.mood ? st.message : boardMessageFor(shiftedMood, (this.leagueSeed() ^ (m.season * 0x9e3779b1)) >>> 0), mood: shiftedMood, expectation };
     } catch { /* offline / no prestige — skip the verdict */ }
     // TRAINING: the star develops per the focus (young grow it, veterans decline) — his overall shifts the club
     if (m.starId) {
@@ -2096,7 +2176,7 @@ class Game {
     const qualified = tier === 1 && t.pos <= 3; // only the TOP flight's top-3 book a Continental Cup place
     if (qualified) toast('🌍 Top-3 in the top flight — qualified for the Continental Cup!');
     // new season → fresh sponsor; drop any unfinished World-Finals run (it belongs to its staging season)
-    this.saveMgr({ ...m, season: m.season + 1, results: [], starAge: age, titles, sponsor: undefined, contElig: qualified, contRound: 0, contOut: false, contBlurb: undefined, wcStage: undefined, wcEdition: undefined, wcRun: undefined, lastBoard, lastFinishPos: t.pos, lastTierMove: promoted ? 'promoted' : relegated ? 'relegated' : undefined });
+    this.saveMgr({ ...m, season: m.season + 1, results: [], starAge: age, titles, sponsor: undefined, contElig: qualified, contRound: 0, contOut: false, contBlurb: undefined, wcStage: undefined, wcEdition: undefined, wcRun: undefined, lastBoard, lastFinishPos: t.pos, lastTierMove: promoted ? 'promoted' : relegated ? 'relegated' : undefined, arcBoard: 0 });
     this.checkAchievements(); // titles / seasons / prestige milestones
     this.showSeason();
   }
@@ -2350,9 +2430,16 @@ class Game {
       myTeam.conditioning = 0.92 + (sensitive ? -0.02 : fiery ? 0.02 : 0);
     } else { myTeam.homeBoost = 1.04; }                                                  // a small balanced edge, unmodulated
     // CLUB FACILITIES apply to the match: Training Ground → less fitness drain; Fan Zone → home attack edge.
+    // Through the shared functions, not re-derived here. These two edges were inlined as `1 - (lvl-1)*0.05`
+    // and `1 + (lvl-1)*0.02` — the exact formulas trainingConditioning() and fanHomeBoost() already hold —
+    // so the game had two copies of every facility curve, free to drift apart. That drift is precisely how
+    // injuryChanceMult ended up crossing zero and making injuries impossible at a maxed Medical Centre.
     const trainLvl = this.facLevels.training ?? 1, fanLvl = this.facLevels.fanzone ?? 1;
-    myTeam.conditioning = (myTeam.conditioning ?? 1) * (1 - (trainLvl - 1) * 0.05);
-    if (sp.venue === 'home' && !sp.neutral) myTeam.homeBoost = (myTeam.homeBoost ?? 1) * (1 + (fanLvl - 1) * 0.02); // fan-zone edge only at a true home game, never a neutral-ground decider (PT-130)
+    myTeam.conditioning = (myTeam.conditioning ?? 1) * trainingConditioning(trainLvl);
+    if (sp.venue === 'home' && !sp.neutral) myTeam.homeBoost = (myTeam.homeBoost ?? 1) * fanHomeBoost(fanLvl); // fan-zone edge only at a true home game, never a neutral-ground decider (PT-130)
+    // DATA DEPARTMENT — opposition prep, so it applies home AND away, unlike the fan-zone edge. It was
+    // computed only to render its own description string and applied to nothing.
+    myTeam.homeBoost = (myTeam.homeBoost ?? 1) * (1 + dataEdge(this.facLevels.data ?? 1));
     // BACKROOM STAFF edges (apply home AND away)
     const staff = this.loadMgr().staff ?? [];
     if (staff.includes('fitness')) myTeam.conditioning = (myTeam.conditioning ?? 1) * 0.95;
@@ -2874,6 +2961,8 @@ class Game {
       if (pick) pick.morale = applyMorale(pick.morale ?? 65, e.playerMorale.delta);
     }
     const next = { ...this.loadMgr() };
+    if (e.prestige) next.arcPrestige = (next.arcPrestige ?? 0) + e.prestige;
+    if (e.boardMood) next.arcBoard = (next.arcBoard ?? 0) + e.boardMood;
     if (e.tag) next.arcTags = [...new Set([...(next.arcTags ?? []), e.tag])];
     if (e.clubLegacy) next.clubLegacy = [...(next.clubLegacy ?? []), { ...e.clubLegacy, season: next.season }];
     this.saveMgr(next);
@@ -3124,8 +3213,15 @@ class Game {
         // the early seasons trivial, since tierStrength(10) is the weakest in the game. The star's career
         // score and his finishing quality now set the entry point: a good career starts you mid-pyramid with
         // somewhere left to climb, a modest one still starts near the bottom. (PT-950/PT-802)
-        const startTier = this.startingTierFor(s, player);
-        this.setClubTier(startTier);
+        // ONLY THE FOUNDER STARTS SOMEWHERE NEW. startingTierFor derives an entry point from the heir's
+        // career score and never reads the tier the club is already in, and this ran at EVERY succession —
+        // so a dynasty that had climbed to the top flight was dropped back mid-pyramid every generation,
+        // flatly contradicting the comment on clubTier() that the tier "survives the bloodline hand-off, so
+        // the dynasty climbs one pyramid". The heir inherits the club his father left, not a new one.
+        const prior = this.loadMgr();
+        const founding = prior.starId == null && (prior.season ?? 1) <= 1;
+        const startTier = founding ? this.startingTierFor(s, player) : this.clubTier();
+        if (founding) this.setClubTier(startTier);
         // AND BRING THE SQUAD WITH IT. The tier came from his career but the ROSTER was minted at quality 6
         // when the save was created, before a single career turn — so a Continental finalist took over a pub
         // team and was the best player at his own club by a mile. The club he inherits should be the club
@@ -3135,7 +3231,20 @@ class Game {
           this.setMe(await api.me());
           if (al.lifted > 0) toast(`🏟️ ${al.lifted} of the squad step up to ${tierName(startTier)} standard`);
         } catch { /* keep the founding roster if this fails — never block the handoff */ }
-        this.saveMgr({ season: 1, results: [], starId: s.prospectId, starName: s.name, starAge: s.age, starGen: (s as any).generation ?? 0, retireAge, temper: chosenTemper }); // enter manager phase
+        // SPREAD, NOT REPLACE. This handler runs at every succession, and a bare object literal wiped
+        // everything the dynasty had accumulated: arcPrestige (documented three screens up as permanent,
+        // "because standing is"), clubLegacy — the stands and traditions an arc names after a man who
+        // played four hundred games — plus titles, continental and World Finals wins, and the one-off arc
+        // ledgers, so arcs that had already fired fired again. What resets at a handoff is the SEASON; what
+        // the family built is the whole point of the game and carries.
+        this.saveMgr({
+          ...prior,
+          season: 1, results: [], lastBoard: undefined, lastFinishPos: undefined, arcBoard: 0,
+          sponsor: undefined, contElig: undefined, contRound: 0, contOut: false, contBlurb: undefined,
+          wcStage: undefined, wcEdition: undefined, wcRun: undefined, squadReport: undefined,
+          starId: s.prospectId, starName: s.name, starAge: s.age, starGen: (s as any).generation ?? 0,
+          retireAge, temper: chosenTemper,
+        }); // enter manager phase
         toast(`🧢 You're the manager now — ${s.name} is in your squad`);
         this.showSeason();
       } catch (e: any) { toast(e?.body?.error ?? 'Handoff failed'); }
@@ -3704,7 +3813,18 @@ class Game {
       const dutyNote = dangerMan
         ? `<div class="scout-sub scout-role">👤 <b>${dangerMan.name}</b> — ${DUTY_LABEL[effectiveDuty(dangerMan)]}: ${DUTY_DESC[effectiveDuty(dangerMan)]}</div>` : '';
       sc.classList.remove('hidden');
-      sc.innerHTML = `<div class="scout-head">🔍 ${this.spFixture.oppName}</div><div class="scout-sub">${this.spFixture.venue === 'away' ? 'Away' : 'Home'} fixture · squad rating ~${this.spFixture.oppStrength} <span style="color:#e6c76a">${stars}</span></div>${dutyNote}`
+      // THE PRE-MATCH PRESSER. `pressConferenceLine` supports timing 'pre' and holds roughly 476 authored
+      // lines behind it — PRE_ROUTINE, PRE_HOT_FORM, PRE_COLD_FORM, PRE_STAKES_HIGH and the rest — and not
+      // one of them had ever been rendered, because the only call site in the game hardcoded 'post'. Nearly
+      // half the press corpus was written for a moment that did not exist. The team sheet IS that moment.
+      const recent = (this.loadMgr().results ?? []).slice(-5);
+      const pts = recent.reduce((n, r) => n + (r.myGoals > r.oppGoals ? 3 : r.myGoals === r.oppGoals ? 1 : 0), 0);
+      const preForm: PressForm = recent.length < 3 ? 'level' : pts >= 9 ? 'hot' : pts <= 3 ? 'cold' : 'level';
+      const preStakes: 1 | 2 | 3 = this.spFixture.oppStrength >= this.squadStrength() + 2 ? 3 : this.spFixture.oppStrength >= this.squadStrength() ? 2 : 1;
+      const preLine = pressConferenceLine(this.leagueSeed(),
+        (this.loadMgr().results?.length ?? 0) * 31 + 7, { timing: 'pre', competition: 'league', stakes: preStakes, form: preForm });
+      sc.innerHTML = `<div class="scout-head">🔍 ${this.spFixture.oppName}</div><div class="scout-sub">${this.spFixture.venue === 'away' ? 'Away' : 'Home'} fixture · squad rating ~${this.spFixture.oppStrength} <span style="color:#e6c76a">${stars}</span></div>`
+        + `<div class="ft-presser">🎙️ <b>Before kick-off</b> — “${preLine}”</div>${dutyNote}`
         + `<div class="scout-sub scout-matchup" id="scout-matchup">📐 ${formationMatchupInsight(this.draftTactics.formation, this.spFixture.oppTactics.formation)}</div>`;
     } else {
       sc.classList.add('hidden'); sc.innerHTML = '';

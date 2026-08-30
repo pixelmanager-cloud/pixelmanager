@@ -53,7 +53,13 @@ export const FACILITY_META: Record<FacilityKey, { icon: string; name: string; bl
 /** Home matchday income after a match you hosted. tierIdx 0..9; outcome per your result. */
 export function stadiumIncome(level: number, tierIdx: number, outcome: 'win' | 'draw' | 'loss'): number {
   const resultMult = outcome === 'win' ? 1.5 : outcome === 'draw' ? 1.0 : 0.6;
-  return Math.round(20 * level * (1 + tierIdx * 0.15) * resultMult);
+  // RECALIBRATED when this was finally connected. Nothing had ever called it, so its constants had never
+  // been measured against the economy they feed: at `20 * level` a maxed stadium paid over 18,000 coins a
+  // season against a top-flight title prize of 1,280, and even at level 1 — the documented neutral
+  // baseline, where every other facility pays nothing — it was already paying about 1,000. Now `level - 1`
+  // like its neighbours, and scaled so a maxed ground is a real income stream that repays its 14,000-coin
+  // cost across roughly a manager's career rather than in a season and a half.
+  return Math.round(2.5 * (level - 1) * (1 + tierIdx * 0.15) * resultMult);
 }
 /** Training-ground fitness-drain multiplier: 1.0 at L1 → 0.80 at L5 (fades less). */
 export function trainingConditioning(level: number): number { return 1 - (level - 1) * 0.05; }
@@ -83,7 +89,12 @@ export function recoveryCut(level: number): number { return Math.min(2, Math.flo
  *  his own wages. marketabilityAvg is centred at 10 (neutral), so an all-ordinary squad earns as before. */
 export function sponsorIncome(level: number, tierIdx: number, trophies: number, marketabilityAvg = 10): number {
   if (level <= 1) return 0;
-  const base = (60 * (level - 1)) * (1 + tierIdx * 0.12) + trophies * 25 * (level - 1);
+  // THE TROPHY TERM IS CAPPED. It was linear and unbounded, so a long dynasty's sponsorship climbed
+  // forever: measured at level 10 in the top flight, 200 titles paid 46,123 coins a season against a
+  // 1,280 title prize, and a traced 80-season run finished with 565,527 coins and nothing left to buy.
+  // Twenty titles is still a monumental haul and worth 4,500 a season; beyond that the name is as famous
+  // as it is going to get.
+  const base = (60 * (level - 1)) * (1 + tierIdx * 0.12) + Math.min(trophies, 20) * 25 * (level - 1);
   const brandMult = clampNum(1 + 0.03 * (marketabilityAvg - 10), 0.7, 1.5); // avg 20 → +30%, avg 5 → −15%
   return Math.round(base * brandMult);
 }
@@ -114,7 +125,12 @@ export function communityStanding(level: number): number { return (level - 1) * 
 /** A short human description of a facility's effect AT a given level (for the UI). */
 export function effectAt(key: FacilityKey, level: number): string {
   switch (key) {
-    case 'stadium':  return `Home gate ≈ ${20 * level}–${Math.round(20 * level * 2.35 * 1.5)} coins per match (by division & result)`;
+    // DERIVED FROM stadiumIncome, NOT A COPY OF IT. This still printed the pre-recalibration formula sixty
+    // lines below the function it describes — promising "≈ 200–705 coins per match" at level 10 against an
+    // actual 34–79, and "≈ 20–70" at level 1 where the function returns exactly 0. That is the precise
+    // failure the recalibration was written to end, reproduced one function above it.
+    case 'stadium':  return level <= 1 ? 'No gate receipts yet'
+      : `Home gate ≈ ${stadiumIncome(level, 0, 'draw')}–${stadiumIncome(level, 9, 'win')} coins per match (by division & result)`;
     case 'training': return level === 1 ? 'No conditioning bonus yet' : `−${Math.round((1 - trainingConditioning(level)) * 100)}% fitness drain over a match`;
     case 'youth':    return level === 1 ? 'Standard walk-ups' : `+${youthPoolBonus(level)} tryout slot(s), ${Math.round(youthUpgradeChance(level) * 100)}% quality-upgrade chance`;
     case 'scouting': return level === 1 ? 'Standard trips' : `+${Math.round((scoutHitMult(level) - 1) * 100)}% odds, −${Math.round(scoutCostDiscount(level) * 100)}% cost${scoutExtraTrips(level) ? `, +${scoutExtraTrips(level)} trip(s)` : ''}`;
@@ -150,4 +166,35 @@ export function facilityLevelStory(key: FacilityKey, level: number): string | nu
     if (hit) return hit;
   }
   return null;
+}
+
+/** EVERY FACILITY THAT PROMISES MONEY, PAID ONCE A SEASON, IN ONE PLACE.
+ *
+ *  Ten of the twelve facilities were decorative: `stadiumIncome`, `sponsorIncome`, `shopIncome`,
+ *  `womensIncome` and `fanIncomeMult` were computed only to render their own description string and were
+ *  applied to no game state at all. `stadiumIncome` was not even reached by that — `effectAt` inlines the
+ *  formula — so the Stadium, at 14,000 coins the most expensive purchase in the game, returned exactly
+ *  nothing while its card promised "≈ 200–705 coins per match". A player saved across several seasons for
+ *  a number that never moved, and the UI told him it had.
+ *
+ *  Gate receipts are the one that needs care: they are per HOME match and depend on the result, so the
+ *  season's record is split half home and the home results are assumed to mirror the overall record — a
+ *  simplification, but a far smaller lie than paying nothing.
+ */
+export interface SeasonIncome { gate: number; sponsor: number; shop: number; womens: number; total: number }
+export function seasonFacilityIncome(
+  fac: Facilities, tierIdx: number, trophies: number, marketabilityAvg: number,
+  record: { wins: number; draws: number; losses: number },
+): SeasonIncome {
+  const homeOf = (n: number) => Math.round(n / 2);
+  const gatePer = (outcome: 'win' | 'draw' | 'loss') => stadiumIncome(fac.stadium, tierIdx, outcome);
+  const gate = Math.round(
+    (homeOf(record.wins) * gatePer('win') + homeOf(record.draws) * gatePer('draw') + homeOf(record.losses) * gatePer('loss'))
+    * fanIncomeMult(fac.fanzone));
+  const sponsor = sponsorIncome(fac.sponsor, tierIdx, trophies, marketabilityAvg);
+  // The five newer facilities are optional on the interface, so a save written before they existed reads
+  // undefined here — level 1 is the neutral baseline and pays nothing, which is the right default.
+  const shop = shopIncome(fac.shop ?? 1, tierIdx);
+  const womens = womensIncome(fac.women ?? 1, tierIdx);
+  return { gate, sponsor, shop, womens, total: gate + sponsor + shop + womens };
 }

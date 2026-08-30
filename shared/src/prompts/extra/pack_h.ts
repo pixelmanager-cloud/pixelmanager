@@ -135,7 +135,7 @@ export const FRAME_H: Bank = {
     'Given the captain’s armband for one week while somebody is on holiday, ',
     'A ball at his feet, and the rest of the world going quiet, ',
     'His shorts have been rolled over at the waist to make them fit, ',
-    'The coach has drawn a formation on the back of a betting slip and nobody understands it, ',
+    'The coach has drawn a formation on the back of an envelope and nobody understands it, ',
     'A muddy Sunday, a tight game, and a father shouting himself hoarse, ',
     'Late for the coach, ',
     'Told to enjoy it, by adults who mean it more than he can possibly understand yet, ',

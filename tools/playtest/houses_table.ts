@@ -4,11 +4,21 @@
 import { rivalStandings, RIVAL_HOUSES, houseQualityAt } from '../../shared/src/houses.js';
 import { houseRenown, houseTier, type HouseMember } from '../../shared/src/renown.js';
 
+// CALIBRATED AGAINST THE REAL GAME — and RE-calibrated twice, which is the lesson worth recording.
+//
+// v1 used peak 11/14/16/18, invented. v2 dropped to 8/10/12/14 after six real careers were driven through
+// the facade and graduated at 8-11. v3 is these numbers, because the star's development was then moved onto
+// the squad lifecycle curve and his peak moved with it: measured now, he tops out at **12** with no training
+// investment and **17** with the Training Ground maxed.
+//
+// THE DEPENDENCY IS THE POINT. This file's thresholds are only meaningful relative to what the game can
+// actually produce, so any change to career graduation, developPlayer or the Training facility invalidates
+// them. Re-measure before trusting a green tick here — driving four real careers takes about a minute.
 const SHAPES: Array<[string, number, number, number]> = [
-  ['a modest dynasty   ', 11, 0, 0],
-  ['an ordinary dynasty', 14, 1, 12],
-  ['a strong dynasty   ', 16, 2, 35],
-  ['a flawless dynasty ', 18, 3, 60],
+  ['a poor dynasty     ', 10, 0, 0],
+  ['an ordinary dynasty', 12, 1, 10],
+  ['a good dynasty     ', 15, 2, 30],
+  ['an exceptional one ', 17, 3, 55],
 ];
 const SEEDS = [7, 1234, 99991, 424242, 8675309, 31337, 90210, 555];
 
@@ -52,10 +62,10 @@ const place = (peak: number, titles: number, caps: number, seed: number) => {
   const me = houseRenown(mine).renown;
   return rivalStandings(seed, 7).filter((r) => r.renown > me).length + 1;
 };
-const flawless = SEEDS.map((s) => place(18, 3, 60, s));
-const strong = SEEDS.map((s) => place(16, 2, 35, s));
-const modestBest = Math.min(...SEEDS.map((s) => place(11, 0, 0, s)));
-const ordinary = SEEDS.map((s) => place(14, 1, 12, s));
+const flawless = SEEDS.map((s) => place(17, 3, 55, s));
+const strong = SEEDS.map((s) => place(15, 2, 30, s));
+const modestBest = Math.min(...SEEDS.map((s) => place(10, 0, 0, s)));
+const ordinary = SEEDS.map((s) => place(12, 1, 10, s));
 const ordWorst = Math.max(...ordinary), ordBest = Math.min(...ordinary);
 // A dynasty that produces an 18-peak, three-title man EVERY generation for eight generations is not
 // "great", it is flawless, and it should win. What must not be a foregone conclusion is the tier below.

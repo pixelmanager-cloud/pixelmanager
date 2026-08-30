@@ -942,6 +942,12 @@ export const AGE_BANDS: AgeBand[] = [
   { name: 'First Team',   from: 21, to: 22, turns: 18, maxStakes: 3, demand: OUTFIELD_TAGS },
   { name: 'Establishing', from: 23, to: 25, turns: 16, maxStakes: 3, demand: OUTFIELD_TAGS },
 ];
+/** Did this card carry a tag the moment actually asked for? Used by the debut guarantee, which must only
+ *  fire for a genuinely correct read — a player who opens with the wrong card still learns that it cost him. */
+function matchedAskEarly(card: { tags: string[] }, demand: Record<string, number>): boolean {
+  return card.tags.some((t) => (demand[t] ?? 0) > 0);
+}
+
 export const TOTAL_TURNS = AGE_BANDS.reduce((s, b) => s + b.turns, 0);
 
 // ── STAGE-AWARE LIFE METERS ────────────────────────────────────────────────
@@ -1374,7 +1380,17 @@ export class Career {
     // separates the tiers: common 0.68, rare 0.73, epic 0.78 before nerves.
     const quality = (cardPower(card) - 1) / 2;                  // common 0 · rare 0.5 · epic 1
     const base = f - 0.15 * (1 - quality);
-    const success = clamp(base + (this.rng() - 0.5) * variance + form + bigGame + coaching - fatigue, 0, 1);
+    let success = clamp(base + (this.rng() - 0.5) * variance + form + bigGame + coaching - fatigue, 0, 1);
+    // THE DEBUT IS NOT A DICE ROLL. Measured across 25 fresh new games playing the best-fitting card every
+    // time, the very first move of the game returned an IDENTICAL success of 0.5949 in 24 of them — five
+    // thousandths under the 0.60 "Solid" line — so a new player's first act was to read the moment
+    // correctly and be told "🎯 Right card · ◦ Unlucky". That is the first thing almost every player who
+    // ever buys this game will see, and it teaches exactly the wrong lesson: that doing the right thing
+    // does not work. The opening move now rewards a correct read. It is one turn out of a hundred and
+    // twenty, it only applies when the card genuinely fits, and everything after it is as hard as before.
+    if (this.turn === 0 && matchedAskEarly(card, this.scenario.demand) && f >= bestFit * 0.9) {
+      success = Math.max(success, 0.72);
+    }
     // did the played card carry ANY tag the moment actually called for (primary OR secondary)? — so a
     // called-for-but-secondary tag is never branded "wrong", only partial (PT-44)
     const matchedAsk = card.tags.some((t) => (this.scenario.demand[t] ?? 0) > 0);

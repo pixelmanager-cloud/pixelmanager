@@ -71,7 +71,12 @@ say('the ", which is …" tic stays rare (< 2%)', 100 * tic.length / Math.max(1,
 // 5. SECOND PERSON — prompts are third-person about "he"; "you" leaks from other surfaces
 // "thank you" / "you name it" are idioms, not the second person addressing the player — a guard that
 // cries wolf gets switched off, so they are excluded rather than left to be argued about every wave.
-const you = all.filter(([, l]) => /(?<!thank )\byou\b|\byour\b/i.test(l) && !/thank you|you name it/i.test(l));
+// REPORTED SPEECH IS NOT SECOND PERSON. A manager saying "'You'll know in April,'" or an app telling him
+// to rate his sleep is dialogue inside a third-person sentence — the narrator has not turned to address
+// the player. The old rule flagged those as register breaks and would have had authors delete good
+// writing to satisfy it, so quoted spans are stripped before the test rather than argued about each wave.
+const unquoted = (l: string) => l.replace(/['"‘’“”][^'"‘’“”]*['"‘’“”]/g, ' ');
+const you = all.filter(([, l]) => /(?<!thank )\byou\b|\byour\b/i.test(unquoted(l)) && !/thank you|you name it/i.test(l));
 say('no second person', you.length === 0, you.length ? `${you.length}, e.g. "${you[0][1].slice(0, 50)}"` : '0');
 
 // 6. PLACEHOLDERS — narrate.ts substitutes exactly {rival} and {mentor} in a setup line. Anything else

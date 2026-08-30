@@ -111,8 +111,18 @@ const reward = await api.spSeasonReward({ pos: 1, size: 10, wins: 24, draws: 8, 
 // name. Asserting the relationship rather than the old literal, so the check keeps meaning something if
 // either the base or the multiplier is retuned; a hard-coded 800 just encodes today's numbers.
 assert(reward.houseMult >= 1 && reward.houseMult <= 1.4, `renown income multiplier in range (${reward.houseMult})`);
-assert(reward.prize === Math.round(800 * reward.houseMult), `champion prize for pos=1/size=10 (800 × ${reward.houseMult} = ${reward.prize})`);
-assert(reward.coins === coinsBeforeReward + reward.prize, 'season prize banked');
+// The champion prize is the 800 base scaled by the pyramid TIER and by the house's renown. No `tier` is
+// passed here, so it defaults to the basement and its 0.4x — winning the bottom division should not pay
+// what winning the top one does, which was the defect this multiplier exists to fix.
+assert(reward.tierMult > 0.39 && reward.tierMult < 1.61, `tier multiplier in range (${reward.tierMult})`);
+assert(reward.prize === Math.round(800 * reward.tierMult * reward.houseMult),
+  `champion prize for pos=1/size=10 (800 × ${reward.tierMult} tier × ${reward.houseMult} renown = ${reward.prize})`);
+// Coins banked are the prize PLUS whatever the facilities earned off the pitch. At a founding club every
+// facility is level 1 — the neutral baseline — so this is 0 here, and asserting the sum rather than the
+// prize alone is what will catch it if that ever silently stops being true.
+assert(reward.facilities.total >= 0, 'facility income is never negative');
+assert(reward.coins === coinsBeforeReward + reward.prize + reward.sponsorBonus + reward.facilities.total,
+  `season prize + facility income banked (${reward.prize} + ${reward.sponsorBonus} + ${reward.facilities.total})`);
 const meAfterReward = await api.me();
 assert(meAfterReward.season === 1, 'spSeasonReward advances the local season counter');
 
