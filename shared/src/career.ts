@@ -1233,7 +1233,9 @@ export class Career {
       this.pendingOffer = rollOffer(this.seed, this.turn);
     }
   }
-  /** Lifestyle upgrades affordable + unlocked RIGHT NOW (offered at the between-chapter focus screen).
+  /** Lifestyle upgrades UNLOCKED right now (offered at the between-chapter focus screen). Note this
+   *  includes ones he cannot yet afford — see the comment on the return below; they are shown locked, not
+   *  hidden. It previously said "affordable + unlocked", contradicting its own implementation two lines down.
    *  Meter-gated items only appear once the relevant standing actually earns (or costs) them — see
    *  LifestyleItem.minMeter/maxMeter: relationships gate real opportunities and real trouble, not just flavour. */
   get lifestyleOffer(): LifestyleItem[] {
@@ -1810,7 +1812,15 @@ export function deriveStats(log: Choice[], seed: number, genes: Genes = rollGene
   const out = {} as CareerPlayerAttrs;
   for (const stat of Object.keys(STAT_SOURCES) as (keyof typeof STAT_SOURCES)[]) {
     const src = STAT_SOURCES[stat];
-    const shape = src.length ? src.reduce((s, t) => s + norm[t], 0) / src.length : 0;
+    // SHAPE CANNOT GO NEGATIVE. `freq` accumulates card power x stakes AND the focus lean
+    // (attrFocus[t] * FOCUS_TAG_WEIGHT), and neither term is sign-guarded — a negative contribution drives
+    // freq[t] below zero, and maxFreq's `Math.max(1, ...)` floor only guards the DIVISOR, not the numerator.
+    // A negative shape then hits `Math.pow(shape, 1.5)`, and a negative base with a fractional exponent is
+    // NaN. That NaN lands straight in a graduated player's attrs, and NaN attrs are the exact input the
+    // match engine warns about (norm(NaN) -> NaN fitness -> NaN positions -> invisible players).
+    // Measured on goalkeeper careers: stamina and durability both NaN.
+    // Clamping at 0 is a no-op for every well-formed career, so existing careers are unchanged.
+    const shape = Math.max(0, src.length ? src.reduce((s, t) => s + norm[t], 0) / src.length : 0);
     const peaked = Math.pow(shape, PEAK);
     const noise = (rng() - 0.5) * 3;
     if (innate.has(stat)) {

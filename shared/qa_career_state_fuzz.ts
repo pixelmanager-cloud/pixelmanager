@@ -137,7 +137,12 @@ function driveCareer(opts: { seed: number; track: Track; agentId?: string; token
     if (st.recap) recapSeen = true;
 
     try {
-      if (st.phase === 'focus') {
+      // STORY ARCS ARE A CAREER PHASE. This dispatch predates them and never handled 'arc', so the first arc
+      // beat fell through to the play branch, read an undefined hand and killed the suite. Deterministic pick
+      // (first choice) so the harness stays reproducible.
+      if (st.phase === 'arc') {
+        c.resolveArc((st as any).arc.choices[0].id);
+      } else if (st.phase === 'focus') {
         const opt = badPlayer ? st.focus[st.focus.length - 1] : st.focus[Math.floor(rng() * st.focus.length)];
         c.chooseFocus(opt.id);
       } else if (st.phase === 'offer') {

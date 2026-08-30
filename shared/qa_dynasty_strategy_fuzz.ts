@@ -76,6 +76,10 @@ function playScriptedCareer(seed: number, track: Track, agentId: string | undefi
   while (!c.finished) {
     if (++guard > HARD_CAP) throw new Error(`softlock: exceeded ${HARD_CAP} steps (policy=${policy})`);
     const st = c.current();
+    // STORY ARCS ARE A CAREER PHASE. This dispatch predates them and never handled 'arc', so the first arc
+    // beat fell through to the play branch, read an undefined hand and killed the suite. Deterministic pick
+    // (first choice) so the harness stays reproducible.
+    if (st.phase === 'arc') { c.resolveArc((st as any).arc.choices[0].id); continue; }
     if (st.phase === 'focus') {
       const opts = st.focus;
       let pickC = opts[0];
