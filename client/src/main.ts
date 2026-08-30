@@ -1359,7 +1359,15 @@ class Game {
   private planKey(): string { return `fm_plan_${this.account?.handle ?? 'x'}`; }
   private loadPlan(): Set<string> {
     try { const raw = localStorage.getItem(this.planKey()); if (raw) return new Set(JSON.parse(raw)); } catch { /* fall through */ }
-    return new Set(['chase-ht', 'hold-lead']); // sensible defaults: chase when behind, see out a lead
+    // ONLY THE CHASE RULE IS ARMED BY DEFAULT. `hold-lead` shifts { mentality -1, line -1, press -1,
+    // tempo -1 } — built out of the two settings measured as pure penalties on this engine. Driven through
+    // the real engine and fired only under its own trigger (leading at 75'), paired on seed, n=411
+    // qualifying matches of 1200: leads held fell from 92.9% to 85.4%, conceding after 75' rose from 0.178
+    // to 0.304. Arming it costs 7.5 percentage points of the leads it exists to protect. `manage-2up`
+    // (-0.152 net) and `blowout-lead` (-0.408) are the same shape; the four chase rules use positive
+    // shifts and are fine. They stay AVAILABLE — a player may want the fiction — but the game should not
+    // hand a new manager a losing order pre-ticked.
+    return new Set(['chase-ht']);
   }
   private savePlan() { try { localStorage.setItem(this.planKey(), JSON.stringify([...this.draftPlan])); } catch { /* ignore */ } }
   /** THE HANDOVER RESET. What ends at a succession is the SEASON and the MAN; what the family built is the
@@ -1764,7 +1772,18 @@ class Game {
       this.facLevels = Object.fromEntries(d.facilities.map((f) => [f.key, f.level]));
       if (!$('season').classList.contains('hidden') && !this.loadMgr().arcNow) this.maybeOfferArc();
     }).catch(() => {}); // cache for the match edges
-    api.houses().then((d) => { this.houseBidMult = renownBidMult(d.mine.renown); }).catch(() => {});
+    // ...AND RE-RENDER WHEN IT LANDS. `houseBidMult` defaults to 1 and `api.houses()` is called from
+    // nowhere at boot, so the FIRST season screen of a page session priced the incoming bid at x1.00 while
+    // the Houses screen was advertising x1.44. Unlike the facility-gate case this one is not merely a
+    // cosmetic miss: `feedOnce` writes the fee into the feed permanently, and the closed-over bid is what
+    // `acceptStarBid` banks — so a player accepting on that first render is paid the un-multiplied fee.
+    // At Royalty renown that is ~528 coins missing from a ~1,200 coin offer.
+    api.houses().then((d) => {
+      const mult = renownBidMult(d.mine.renown);
+      const changed = mult !== this.houseBidMult;
+      this.houseBidMult = mult;
+      if (changed && !$('season').classList.contains('hidden')) this.showSeason();
+    }).catch(() => {});
     const clubName = this.club.name, seed = this.leagueSeed();
     const fixtures = seasonFixtures(clubName, seed, this.clubTier());
     const m = this.loadMgr(), played = m.results;
