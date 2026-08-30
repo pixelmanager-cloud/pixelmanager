@@ -427,7 +427,7 @@ const PART_ONE: Bank = {
     'A supporter has written asking him to visit a lad who has not left the house since March.',
     'The club’s foundation want a name on a project they have already started building.',
     'A charity match on the one free weekend of the year.',
-    'Somebody has set up a fundraiser using his name without asking him.',
+  
     'The local hospice have asked for a signed shirt and been asking for four months.',
     'A refugee family have moved into the street behind the training ground with nothing.',
     'The kit man has quietly been paying for a young lad’s boots since September.',
@@ -1161,7 +1161,7 @@ const PART_TWO: Bank = {
   family_illness: [
     'A ward round at eight in the morning and a coach that leaves at half seven.',
     'His father has stopped coming to fixtures and has not said why.',
-    'The scan is on Friday.',
+  
     'A family member has been given a bed in a hospital two hours from anywhere.',
     'His mother has been given a date for an operation that she has not told anybody about.',
     'A brother who needs someone to sit with him and a fixture list that says otherwise.',
@@ -1284,7 +1284,7 @@ const PART_TWO: Bank = {
     '{rival} has been named in a squad announcement he expected to be in.',
     'Their mothers still speak every Sunday.',
     'A charity fixture that has become extremely competitive very quickly.',
-    '{rival} has asked for a favour that would cost him something.',
+  
   ],
   new_money: [
     'An agent’s invoice that is larger than his father earned in a year.',
@@ -2543,7 +2543,7 @@ const PART_FOUR: Bank = {
     'Nobody said anything.',
     'A phone call at twenty past five in the morning, a drive of three hours, a hospital corridor, and a fixture that kicks off at three in a city two hundred miles from where he is standing.',
     'His father has been having tests since October and has not told anybody in the family about them.',
-    'A diagnosis that arrived in the same week as the best form of his career.',
+  
     'The consultant has asked for the family to be there and named a time that clashes with everything.',
     'His mother has been getting worse for months and has been very good at hiding it on the telephone.',
     'A brother who has needed him all season and has never once asked.',

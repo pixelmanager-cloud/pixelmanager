@@ -262,7 +262,7 @@ const P3: Bank = {
     'The captain’s birthday.',
     'A supporters’ club committee has asked for half an hour before the away trip.',
     'Christmas Day training, and everybody in by ten.',
-    'The kit man is retiring after thirty-one years and nobody has organised anything.',
+  
     'One of the lads has stopped coming to anything.',
     'Somebody has put a group message together for the whole squad and it has already gone wrong.',
     'A five-hour coach journey with no card school and a broken television.',
@@ -424,7 +424,7 @@ const P4: Bank = {
     'A three-year offer, with a condition that he takes a coaching qualification alongside it.',
     'The club have asked him to defer part of his money for a year to help with the accounts.',
     'A bonus for promotion, nothing for survival.',
-    'Two clubs have made contact and neither has put anything in writing.',
+  
     'The finance director has asked for a meeting without the manager present.',
     'A deal that would make him the highest earner in the building, and everybody would know within a week.',
     'His agent has retired.',
@@ -574,7 +574,7 @@ const P5: Bank = {
     'A deal with a clause that stops the parent club recalling him under any circumstances.',
     'Two hours in a car park waiting for a fax that nobody uses any more.',
     'A club near the top with a squad already too big for the fixtures available.',
-    'The loan would be his fourth in three years.',
+  
     'A move to a side whose style is the opposite of everything he has been coached to do here.',
     'His agent gets paid either way.',
     'The receiving club have asked whether he would consider signing permanently in the summer, before he has played a minute.',
@@ -824,7 +824,7 @@ const P7: Bank = {
     'A national has offered a substantial fee for his story and set a deadline of Friday.',
     'The camera is on and the red light is the only thing in the room.',
     'A reporter has been briefed against him by somebody inside the building.',
-    'A press conference where the first four questions are about somebody else.',
+  
     'His social media has been quiet for a month and a piece has been written about the silence.',
     'A broadcaster wants him to react to a montage of his own mistakes.',
     'The interviewer has opened with a compliment, which never means anything good.',
@@ -1418,7 +1418,7 @@ const P12: Bank = {
     'A club three divisions above have been mentioned and nobody at his own club is laughing.',
     'The speculation has been running since November and it is now March.',
     'A story naming him has been written by somebody who has never seen him play.',
-    'Supporters have started asking at the training ground gate.',
+  
     'A rumour that he has asked to leave, which he has not, printed as a matter of fact.',
     'Two clubs, one story, and a deadline in eleven days.',
     'The club’s statement about the speculation has made things considerably worse.',
@@ -1651,7 +1651,7 @@ const P14: Bank = {
     'Somebody has asked for a signed shirt for a raffle, again, for the ninth time this season.',
     'A homelessness charity holds a sleep-out in the stadium car park in November.',
     'The foundation’s minibus has failed its test.',
-    'A family in the town have lost everything in a fire and the club has been asked to help.',
+  
     'A cancer charity wants him for a campaign that will run for three years.',
     'Two hours on a Tuesday.',
     'A hospital has asked whether any player might visit a ward where nobody expects to go home.',
@@ -1946,7 +1946,7 @@ const P16: Bank = {
     'The treatment plan has eleven appointments and a season has thirty-eight games.',
     'A stroke, on a Tuesday, with nobody in the house.',
     'His father collapsed at the ground.',
-    'A hospital an hour from the training ground and a session at half past nine.',
+  
     'The family are arguing about care and he is the one nobody wants to upset.',
     'A test result that has come back inconclusive for the third time.',
     'His son has been referred to a specialist with an eleven-month waiting list.',
@@ -2035,7 +2035,7 @@ const P17: Bank = {
     'Two hours on the phone and neither of them said the thing.',
     'Home, where the family is and the football is not: that is what she wants.',
     'She has been at every away game this season and he has not thanked her once.',
-    'A first Christmas together, and a fixture on the twenty-sixth.',
+  
     'His partner’s father has asked to speak to him alone.',
     'A relationship that ended badly two years ago and has just got in touch.',
     'The flat has one toothbrush in it again.',
@@ -2538,7 +2538,7 @@ const P21: Bank = {
     'A move to a league where the games are played at ten at night in August.',
     'His driving licence will not be valid and the training ground is thirty miles out of the city.',
     'The club president rings players directly, at any hour, about anything.',
-    'A dressing room with four languages in it and no common one.',
+  
     'A city where he will be recognised by everybody and understood by nobody.',
     'The league has a reputation for paying late and the club has a reputation within the league.',
     'A move that his family have already decided about and have not told him.',

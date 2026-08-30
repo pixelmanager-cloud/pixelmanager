@@ -811,7 +811,7 @@ const PART_ONE: Bank = {
     'A partner who has given up her own studies to follow the moves.',
     'They met before any of this and she remembers who he was.',
     'The club’s social calendar includes her and does not consult her.',
-    'She has read something online about him and has not mentioned it.',
+  
     'A ring bought in January and still in a drawer in June.',
     'His mother and his partner have not spoken since Christmas.',
     'A flat that neither of them has had time to unpack.',
@@ -1315,7 +1315,7 @@ const PART_TWO: Bank = {
     'He gets beaten for pace by a thirty-four-year-old and the highlights show it three times.',
     'A hamstring that let go during the warm-up of the biggest fixture of his life.',
     'His mother has started turning her phone off on Saturday evenings and has not said why.',
-    'The last three touches of his afternoon were a slip, a miscontrol and a foul.',
+  
     'A goal conceded from his header, sixty seconds after coming on as a substitute.',
     'The captain has stopped defending him in interviews and has started choosing his words.',
     'Two errors in a fortnight, and the second one had nothing to do with the pitch.',
@@ -1351,9 +1351,9 @@ const PART_TWO: Bank = {
     'A caller on the radio claims to have been at school with him.',
     'Somebody has printed his fee alongside his goal tally.',
     'His agent has been quoted, badly, and did in fact speak.',
-    'A magazine cover, flattering, and a trap of its own kind.',
+  
     'The club want a puff piece and the writer wants something harder.',
-    'A photographer follows him from the car park to his front door.',
+  
     'His injury is being reported as a fitness issue, which is a different thing.',
     'The reporter is polite, well prepared, and saving one question for the end.',
     'A press conference where the first four questions have nothing to do with football.',
@@ -1362,7 +1362,7 @@ const PART_TWO: Bank = {
     'The apology from a pundit repeats the accusation twice on the way through.',
     'An old interview from his academy days has been dug up, clipped and captioned unkindly.',
     'A journalist who has been fair to him for two years now wants something in return.',
-    'The club statement is being written this afternoon and nobody has asked him for a line in it.',
+  
     'His answer to a routine question in September is being replayed as evidence in March.',
     'A live broadcast, four minutes, no press officer in the room and no way to end it early.',
     'Two hundred words in a local paper, read by everybody he went to school with.',
@@ -1378,7 +1378,7 @@ const PART_TWO: Bank = {
     'Somebody has been leaking team news and the journalists know perfectly well it is not him.',
     'A quote about ambition is being read across three papers as a transfer request.',
     'He is booked to appear on a programme he has never watched in his life.',
-    'A tabloid has found somebody willing to be described as a source close to the player.',
+  
     'The photograph on the back page is four years old and taken at a bad moment.',
     'A podcast has spent a full hour discussing his temperament with no one to answer for him.',
     'The question is about his manager’s future and the game is in twelve hours.',
@@ -1405,7 +1405,7 @@ const PART_TWO: Bank = {
     'The rest of that promotion side have gone, one by one, for money.',
     'A pub near the ground has his shirt hanging behind the bar.',
     'The club owes the staff a month’s wages and nobody says so publicly.',
-    'A stand full of people who queued in the rain for his shirt.',
+  
     'His whole family sit in the same block, in the same four seats.',
     'The owner has been kind to him personally and ruinous to the club.',
     'They want him to lead the youngsters and to be paid like one of them.',
@@ -1481,7 +1481,7 @@ const PART_TWO: Bank = {
     'He has become the man they bring on to see games out, at the age of twenty-five.',
     'The role is important, entirely invisible, and no scout in the country watches it.',
     'They are asking him to give up a season for the good of the shape.',
-    'A place is available in the side, in a role he has never trained for once.',
+  
     'The gaffer wants him deeper, which suits the team and finishes his goalscoring.',
     'His job in this side is to be the reason another player has a good year.',
     'They want him to accept it quietly and to be ready when it changes in April.',
@@ -1502,15 +1502,14 @@ const PART_TWO: Bank = {
     'They have not passed to each other in training all week.',
     'A request has gone in to be moved to another training group.',
     'A row about a parking space that stopped being about parking.',
-    'His best friend at the club has taken the other side of it.',
+  
     'The gaffer wants it sorted by Thursday, or else.',
     'A kit basket kicked over, and nobody picking any of it up.',
-    'Somebody wants a public apology, in front of the whole group.',
+  
     'Between them they have scored two thirds of the goals this season.',
     'He was shouted at on the halfway line where three thousand could see.',
     'Somebody else’s disciplinary hearing has his name all over it.',
-    'The lad he fell out with has just been made vice-captain.',
-    'They were friends for six years before Tuesday afternoon.',
+  
     'An argument on the coach that the driver has felt obliged to report.',
     'The staff want it buried quietly and the players want it settled properly.',
     'He said out loud what half of the room had been thinking, and the other half heard him.',
@@ -1529,10 +1528,10 @@ const PART_TWO: Bank = {
     'The row is technically over and nothing about the room has gone back to how it was.',
     'They are roomed together on Friday night and nobody has changed the list.',
     'A grudge from a previous club has followed them both here and got worse.',
-    'The club have fined them both, which has settled precisely nothing.',
+  
     'He was defended by nobody in that room and has a long memory.',
     'The captain has stopped picking him in the five-a-sides, which everybody has noticed.',
-    'A senior pro has told him to stop talking in team meetings, in front of the team.',
+  
     'He was blamed for a goal, loudly, by a man who was forty yards away from it.',
     'Sanctions have been discussed upstairs and no decision has been made yet.',
     'The two of them have to take a set-piece together in three days.',
@@ -1552,12 +1551,12 @@ const PART_TWO: Bank = {
     'Fit, and nowhere near sharp.',
     'His last competitive touch was in August.',
     'The surgeon’s note does not mention fear.',
-    'They want thirty minutes and he wants ninety.',
+  
     'His replacement has been excellent and everyone has noticed.',
     'There is fluid on it every Thursday and everybody calls that expected.',
     'A comeback in a derby, which nobody would have chosen for him.',
     'He has learned the name of every bone in his own foot.',
-    'The plan says twenty minutes and the game may not agree with the plan.',
+  
     'A stress fracture that took four months and three scans to be found.',
     'His boots have been in the same bag since a Tuesday in October.',
     'The club have brought his return date forward twice without asking him.',
@@ -1584,7 +1583,7 @@ const PART_TWO: Bank = {
     'Two rehabs back to back, and the second one has gone far slower than the first.',
     'He is training with the group again and finishing every drill last.',
     'The consultant offered him a choice between two things and neither was any good.',
-    'A first ninety minutes since the injury, on a plastic pitch, in the rain.',
+  
     'The ankle is fine, the scans are clean, and something in him has not agreed yet.',
     'He is a stone heavier than he wants to be and cleared to play regardless.',
     'A comeback that the supporters have been counting down to on the internet.',
@@ -1601,7 +1600,7 @@ const PART_TWO: Bank = {
     'Eighth on a list of eight.',
     'A bid, rejected, apparently.',
     'The manager paused too long.',
-    'His team-mates have started making jokes about it.',
+  
     'A journalist has tweeted three words and the training ground knows.',
     'A figure with six digits in it is being quoted as his price.',
     'The club deny it with a statement that denies nothing.',
@@ -1609,10 +1608,9 @@ const PART_TWO: Bank = {
     'His parents are getting calls from numbers they do not recognise.',
     'A story says he has a medical booked while he is sitting at home.',
     'The supporters have split into two camps in about six hours.',
-    'He is asked to sign a shirt by a lad who hopes he stays.',
+  
     'The interest is entirely real and the club is one he would never choose.',
-    'The link is to a league he has genuinely never thought about once.',
-    'His house has been listed by an estate agent he has never instructed.',
+  
     'A tenth of the story is true and nobody can work out which tenth it is.',
     'The manager pulled him aside before training to tell him it is nonsense, twice.',
     'A team-mate asked him outright this morning and he could not lie convincingly enough.',
@@ -1620,7 +1618,7 @@ const PART_TWO: Bank = {
     'The window opened a fortnight ago and his phone has gone quiet, which is worse.',
     'A rumour started by somebody guessing in a podcast is now being reported as fact.',
     'The club value him at a figure that has already been offered and rejected twice.',
-    'It is the fourth club he has been linked with this month and the least likely of them.',
+  
     'He is being asked to pose in next season’s shirt for a campaign that launches in June.',
     'A story places him in a meeting in a hotel he has never been inside.',
     'The talk started because a team-mate is leaving, and has attached itself to him instead.',
@@ -1634,7 +1632,7 @@ const PART_TWO: Bank = {
     'A rival’s badge is in his replies about a thousand times a day now.',
     'His name is being used to sell newspapers and he sees none of the money.',
     'A transfer expert has given the move a percentage, live on air.',
-    'The manager has been asked about it four separate times in one press conference.',
+  
     'Somebody spotted his agent at an airport, and that is the entire basis of the story.',
     'A club he supported as a boy is in the story, which complicates all of it.',
     'The rumour comes with a photograph of a house he has never seen in his life.',
@@ -1661,13 +1659,13 @@ const PART_TWO: Bank = {
     'The coaches have been instructed to stop staying behind with him.',
     'He is one of three the manager inherited and would rather not have.',
     'The gaffer’s job is under threat and he is being blamed for it loudly.',
-    'A pre-season conversation that everything since has quietly contradicted.',
+  
     'A dressing-room speech that was obviously about one player and named nobody.',
     'There is no handshake at the gate any more, and both men notice.',
     'He said no to a position and the consequences arrived very quietly afterwards.',
     'The gaffer holds grudges and has never once pretended otherwise about it.',
     'A row about fitness numbers that neither man is willing to be the first to drop.',
-    'He was told his attitude is the problem and asked which part of it, specifically.',
+  
     'The club captain has been sent to mediate and would rather be anywhere else.',
     'The manager is right about him, which is by some distance the hardest part of it.',
     'A note under his door, unsigned, telling him to be in at nine.',
@@ -1686,7 +1684,7 @@ const PART_TWO: Bank = {
     'A meeting has been scheduled for after the game on Saturday, win, lose or draw.',
     'The gaffer has apologised for the words he used and not for the decision behind them.',
     'He has been at this club longer than the manager and both of them keep remembering it.',
-    'Something was said about his family that has not been withdrawn.',
+  
     'A team meeting where the manager described a type of player, looking in one direction.',
     'He is fourth choice in the position the club paid a fee to sign him for.',
     'The assistant has quietly told him where he stands, because the manager will not.',
@@ -1705,21 +1703,21 @@ const PART_TWO: Bank = {
     'An hour of his time.',
     'Somebody has used his photograph without asking.',
     'A former apprentice is sleeping in a hostel.',
-    'The event clashes with his only free weekend this year.',
+  
     'A grassroots club with no floodlights has written politely.',
     'The visit is unpublicised, which is exactly why they want him.',
     'They have asked for the shirt from the game he would rather forget.',
     'A black-tie evening with a raffle prize worth more than a car.',
     'The cause matters a great deal to a member of the ground staff.',
-    'A boy in a wheelchair waits at the training-ground gate every Thursday.',
+  
     'Cameras have been booked and the family have asked for none.',
     'A charity is asking him to speak publicly about something entirely private.',
     'His mother volunteers there and has never once mentioned it to him.',
     'An appeal has stalled two thousand pounds short of what it needs.',
     'The organiser is thoroughly well meaning and has promised things nobody can deliver.',
     'A refugee side plays every Sunday morning on the pitch where he learned the game.',
-    'They have asked for him rather than the captain, and he can guess exactly why.',
-    'A collection for a supporter who died on the way to an away game in November.',
+  
+  
     'The charity is run by somebody with a complicated history that a journalist will find.',
     'A cancer ward on a Tuesday morning, forty minutes of his day, and a matter of years for somebody else.',
     'He could write a cheque this afternoon or he could turn up on Saturday, and only one of those is easy.',
@@ -1728,7 +1726,7 @@ const PART_TWO: Bank = {
     'Every player at this club has done the hospital rota this season except him.',
     'Somebody has asked him to fund a lad’s season, and the amount involved is genuinely nothing to him.',
     'The event is entirely genuine, badly organised, and starts in about six hours.',
-    'A dressing room full of eight-year-olds who have been told for a week that he is coming.',
+  
     'His agent thinks the whole thing is a distraction and has said so more than once.',
     'A veterans’ group meets every Wednesday in the social club under the main stand.',
     'The request came through the club and has already been accepted on his behalf.',
@@ -1761,10 +1759,9 @@ const PART_TWO: Bank = {
     'An account he followed years ago has posted something appalling.',
     'A sponsor has quietly asked the club a question about it.',
     'The pile-on has moved across to his partner’s account.',
-    'A gesture towards the away end is being analysed frame by frame.',
-    'His deleted post is still sitting on four thousand phones.',
+  
     'An impersonator has apologised on his behalf, at length.',
-    'A player at another club has waded in and made it national news.',
+  
     'Two hundred people are outside the training ground with their phones out.',
     'The clip is from a boot-room conversation that was never meant to leave the room.',
     'A joke about a manager is being read as a joke about a country.',
@@ -1775,14 +1772,14 @@ const PART_TWO: Bank = {
     'Somebody has counted the days since he last posted anything about the club, and made a graphic.',
     'A fan page he has nothing to do with has posted a statement written in his voice.',
     'The apology template arrived from the press office at half past ten this morning.',
-    'His comment about the state of the pitch has become a story about disrespect.',
+  
     'A charity he has supported for years is being dragged in by association with him.',
     'Somebody has found a photograph of him as a child in a rival’s shirt.',
     'The story broke online a full hour before anybody at the club had heard about it.',
     'A message he sent privately has been screenshotted and posted by somebody he trusted.',
     'His mentions are being read by his mother, who has never been on there before.',
     'The people defending him loudest are making the whole thing considerably worse.',
-    'An old team-mate has posted something that reads unmistakably as a dig at him.',
+  
     'A compilation of his worst moments has been set to music and it is genuinely funny.',
     'The club’s community manager has been taking screenshots since Friday evening.',
     'His name is the most searched thing in the country today, for no footballing reason.',
@@ -1802,21 +1799,20 @@ const PART_TWO: Bank = {
     'A scan, on a Friday.',
     'His mother, not answering.',
     'A funeral date, and a fixture.',
-    'Three days off, one already gone.',
+  
     'A hospital car park, again.',
     'Nobody at the club knows.',
     'A man who has worked since fifteen has been told to stop, and has not.',
-    'The visiting hours do not fit a football week.',
+  
     'A decision about a care home is falling to him.',
     'A grandparent who no longer knows him still watches every game.',
     'One sibling has carried the whole of it since November.',
     'The course of treatment finishes the week the season does.',
     'The family have not told the youngest one yet.',
-    'His father asks about the team first, every single time.',
+  
     'The club doctor has quietly offered to make a few phone calls.',
     'A relative has asked him to pay for private treatment.',
-    'He books a flight home and the fixture gets moved for television.',
-    'His brother has taken it far worse than anybody expected him to.',
+  
     'The consultant said there is time and did not say how much.',
     'He is the only one in the family with money and every one of them knows it.',
     'A phone left on in the dressing room, ringing right through the team talk.',
@@ -1837,7 +1833,7 @@ const PART_TWO: Bank = {
     'A cup final in April, and an operation in the same week of April.',
     'He goes to training because the alternative is sitting in that house all day.',
     'The gaffer knows and has told him to take whatever he needs, twice.',
-    'A specialist appointment on the Friday afternoon before a long away trip.',
+  
     'His mother has told him not to come home, and clearly means the opposite.',
     'A ward round happens at seven in the morning and nobody can tell him what was said.',
     'The family are pretending in front of each other and everybody has noticed.',
@@ -1867,7 +1863,7 @@ const PART_TWO: Bank = {
     'An engagement that half of one workplace still knows nothing about.',
     'Ending it would be reported, which makes ending it harder.',
     'She has asked for one Saturday, a single Saturday, in the year.',
-    'He proposed in a hotel corridor because that is where they happened to be.',
+  
     'A new relationship in a city he has been living in for six weeks.',
     'She has a whole life here and he has an offer three hundred miles away.',
     'Their argument in February has been the same argument every month since.',
@@ -1883,7 +1879,7 @@ const PART_TWO: Bank = {
     'A house purchase, ten minutes from a training ground he may not be at in a year.',
     'He has missed the birth of a friend’s child, a funeral and two weddings for fixtures.',
     'Her name has appeared in a story that was supposed to be about him.',
-    'They have been together since school and he has moved four times since then.',
+  
     'A partner who has been asked to sign something by the club’s lawyers.',
     'The travel means she eats alone more nights than she does not.',
     'He wants to tell the world and she wants to be left completely alone.',
@@ -1912,33 +1908,32 @@ const PART_TWO: Bank = {
     'He has outgrown the advice and cannot bring himself to say so.',
     '{mentor} watched one game and asked a question nobody else has asked.',
     'The man who drove him to training at seven every morning needs something.',
-    '{mentor} thinks the agent is the whole problem and has said it out loud.',
+  
     'Four missed calls in a fortnight, none of them returned.',
-    '{mentor} is being pushed out of a club that employed him for twenty years.',
+  
     'A conversation about retirement, roughly twelve years too early.',
     'The advice is old-fashioned, deeply unpopular, and probably right.',
-    '{mentor} has taken a job at the club that wants to sign him.',
+  
     'A wake in a function room, and the two of them in a corner of it.',
     'A verdict from the one man qualified to give it, and it stings.',
     '{mentor} wants him to speak to a boy who reminds him of somebody.',
-    'He is asked what he actually wants, and finds he has no ready answer.',
+  
     '{mentor} is out of the game now and misses it more than he will admit.',
     'The two of them disagree about the manager, in public and in private.',
     '{mentor} refuses money and has needed it badly for some considerable time.',
     'Advice that would cost him a great deal of money and might be entirely correct.',
     'The man who made him is being written out of the story by journalists who never met him.',
-    '{mentor} has been offered his old academy job back and cannot decide what to do.',
+  
     'A criticism delivered so gently that it takes a full day to land properly.',
     '{mentor} heard the rumour and rang before the agent had even picked up the phone.',
     'The old coach thinks the injury changed him as a player and has said as much.',
-    'He wants permission for something and is being offered honesty instead.',
-    'A grudge between {mentor} and this club that goes back to before he was born.',
+  
     'The advice contradicts everything his agent has been telling him for a month.',
     '{mentor} says the move is about fear rather than football, and will not be talked out of it.',
     'Somebody who never had a career of his own is telling him how to manage one.',
     'A birthday that has now been forgotten two years running.',
     '{mentor} has stopped calling him son, and that is the whole message.',
-    'The old man has a favour to ask on behalf of somebody else entirely.',
+  
     'He is being offered a truth he has been paying other people to keep away from him.',
     '{mentor} has never once been wrong about a player, which makes this uncomfortable.',
     'A testimonial, a speech, and a man he has been avoiding for two years.',
@@ -1962,13 +1957,13 @@ const PART_TWO: Bank = {
     '{rival} has just signed for the club that released him.',
     'The two of them are marking each other on Saturday.',
     'A wind-up in front of strangers that only two people understand.',
-    'They both signed on the same day, at fourteen, in the same room.',
+  
     '{rival} did an interview about him and did not warn him first.',
     'One of them made it and one of them very nearly did.',
     '{rival} is out until next season, which alters the whole shape of it.',
     'They have the same agent, and it has quietly become a problem.',
     'A five-a-side at Christmas that got a great deal too competitive.',
-    'The friendship survived the first transfer and may not survive this one.',
+  
     'He was best man at the wedding and has not been asked to the christening.',
     '{rival} has been dropped, and he cannot work out how he feels about that.',
     'Every autograph queue asks about somebody else first.',
@@ -1976,15 +1971,14 @@ const PART_TWO: Bank = {
     '{rival} sent a message after the mistake and it read very badly indeed.',
     '{rival} is working in the media now and has him as this week’s subject.',
     'A benchmark he never asked for and cannot stop checking on a Sunday morning.',
-    'He is the quicker of the two and {rival} has scored twenty-two goals this season.',
-    'The rivalry is affectionate to absolutely everybody except the two of them.',
+  
     'A coach who had them both as boys has quietly picked a side.',
     '{rival} has a testimonial coming up and has asked him to play in it.',
     'They text each other about everything except football now, carefully.',
     'He found out about {rival}’s transfer from a television in a service station.',
     'A game between them, live on television, on his birthday, in front of his family.',
     '{rival} was released at fifteen and got there anyway, the long way round.',
-    'The two of them have not been in the same room since the incident in May.',
+  
     'He is asked to be a character reference for somebody he has come to resent.',
     'Their careers went different ways over one afternoon and both of them know which one.',
     '{rival} is at a bigger club, playing less, and pretending that is not the case.',
@@ -2011,38 +2005,37 @@ const PART_TWO: Bank = {
     'Eight thousand pounds, borrowed.',
     'Nods, in a meeting, at terms he could not define afterwards.',
     'A tax arrangement explained with a slideshow in a conference suite.',
-    'He has more in one month than his father earned in two years.',
+  
     'The lads are going away for a week and it costs what it costs.',
     'His agent has a property man he would very much like him to meet.',
     'Nobody in his family has ever had a pension in their lives.',
-    'A jeweller has offered him something at a price he cannot possibly judge.',
+  
     'They have told him to buy in a city he may leave in June.',
     'A works van, bought outright, for a brother who would not ask.',
     'An adviser would like power of attorney over the accounts, for convenience.',
     'An older pro at his last club lost the lot in something similar.',
-    'He is twenty and is being asked to think seriously about being forty.',
+  
     'A relative has taken out a loan on the assumption that he would cover it.',
     'Somebody has asked him to invest in a nightclub, and made it sound reasonable.',
     'His girlfriend’s family have started treating him noticeably differently.',
     'A cousin has been telling people that he will be paying for the wedding.',
-    'The house he grew up in is for sale and he could buy the entire street.',
+  
     'An offer to be the face of a betting firm, for a genuinely enormous sum.',
     'His father refuses every penny, which has become a standing row at Christmas.',
     'A property abroad, bought off-plan, in a country he has visited once for four days.',
-    'He has never in his life had a conversation about money that felt honest.',
+  
     'The club’s financial education seminar is scheduled for the players’ day off.',
     'Somebody at the club has quietly warned him about the adviser everybody uses.',
     'A former player, now with nothing at all, has asked him for a meeting.',
     'He no longer has any idea what ordinary things are supposed to cost.',
     'The money has changed and not one other thing about his life has yet.',
-    'His mates from home have started calling him by his surname, and meaning it.',
-    'A cheque arrives for an image-rights deal he does not remember agreeing to.',
+  
     'The best financial advice he has ever been given came from the kit man.',
     'A large sum has been sitting in a current account, doing nothing, for eleven months.',
     'His first bonus lands and he cannot work out what has been taken in tax.',
     'A friend from school has asked to borrow money and made it awkward for both of them.',
     'The wages are guaranteed for four years and there is nothing whatsoever after that.',
-    'Somebody in the dressing room is describing an investment as an absolute certainty.',
+  
     'He has been asked to put his name on a guarantee for a member of his family.',
     'A charity request and a sponsorship offer arrive within the same hour.',
     'The number on the wage slip does not look like it belongs to him.',
@@ -2065,30 +2058,28 @@ const PART_TWO: Bank = {
     'Nobody at home has a passport and the flight is four hours.',
     'There is a translator for the manager and none for the banter.',
     'An hour of tactics, and he understands the diagrams only.',
-    'He is the only foreigner in the squad and everybody is very kind about it.',
+  
     'A landlord wanting six months up front and paperwork he cannot read.',
     'His registration is stuck in an office somewhere and he cannot play until it clears.',
     'The league here punishes exactly the way he has always played.',
     'His partner has followed him out and has nothing at all to do all day.',
-    'A club with a president rather than a chairman, and the difference matters.',
+  
     'The season here runs to a different calendar and he has missed a pre-season entirely.',
-    'Nobody at this club has heard of the club he came from.',
-    'A local derby here involves things he has only ever read about.',
-    'The physio explains the injury and he understands roughly one word in five.',
+  
     'A team-mate has taken him under his wing and speaks no English whatsoever.',
     'The manager shouts at everybody and he cannot yet tell whether it is personal.',
     'His agent is in a different time zone and asleep whenever it matters.',
     'A twelve-hour flight for a friendly on another continent in the middle of the season.',
-    'The style demands he defends in a way that nobody ever taught him how to do.',
+  
     'A grandmother’s birthday at home, and no chance at all of being there.',
     'The club want him to learn the language and have not arranged a single lesson.',
-    'A crowd that whistles its own players loudly from the very first minute.',
+  
     'He is homesick in a way he would never admit to anybody inside this building.',
     'A contract written in two languages, only one of which is legally binding.',
     'Christmas is a normal training day here and nobody thinks that is remotely strange.',
     'He was signed by a director who left the club eleven days later.',
     'A national side back home have stopped sending anybody to watch him.',
-    'He is expected to be the difference and cannot yet ask for the ball in training.',
+  
     'The heat in August turns the second half into a completely different sport.',
     'Two hours a day in traffic, in a city with no way around any of it.',
     'His post still goes to an address in another country where he no longer lives.',

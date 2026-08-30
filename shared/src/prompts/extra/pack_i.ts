@@ -524,7 +524,7 @@ export const CHILD_SETUP_I: Bank = {
     'The coach has said the first person to lose concentration will have everybody running, which is a strange way to build a team.',
     'Shooting from the edge of the box with a goalkeeper who has decided to take it personally.',
     'A session on defending that everybody has already decided is going to be boring.',
-    'Heading practice with a ball that is far too hard for it.',
+  
     'The pitch is frozen so it is a session of running and stretching instead.',
     'Bibs that have not been washed.',
     'A one-touch passing square where three of them cannot do one touch and it keeps collapsing.',
@@ -1322,7 +1322,7 @@ export const CHILD_SETUP_I: Bank = {
     'A lad has stood up for him and he did not expect it.',
     'Nobody has stood up for him.',
     'Having said nothing when he should have said something.',
-    'Having said something when he should have said nothing.',
+  
     'An apology that needs making and keeps not being made.',
     'A week of not speaking that has gone on too long to fix easily.',
     'A friendship that ended over a game of five-a-side.',

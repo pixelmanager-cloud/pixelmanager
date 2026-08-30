@@ -839,7 +839,7 @@ export const FRAME_H: Bank = {
     'A season in which he has trained brilliantly and played eleven minutes, ',
     'His agent has told him to say nothing and he is finding it very hard, ',
     'Told his best position is the one currently occupied by the club captain, ',
-    'A goal that changed the way people say his name, ',
+  
     'The manager who gave him his debut has been sacked, ',
     'Told to introduce himself to the new coaching staff, ',
     'A first taste of a manager who has no reason to trust him, ',
@@ -882,7 +882,7 @@ export const FRAME_H: Bank = {
     'Told to go on loan and come back a man, ',
     'A season-defining twenty minutes at home, coming on with the score level, ',
     'Twenty, and beginning to wonder how long this window stays open, ',
-    'Told the club have offered new terms and his agent has told him to wait, ',
+  
     'A first taste of a press conference, with two questions and a great deal of nodding, ',
     'His old academy coach still texts after every game he plays, ',
     'Told he needs to be better without the ball, which he has been told for years, ',
@@ -1050,7 +1050,7 @@ export const FRAME_H: Bank = {
     'Told the club have opened talks and made an opening offer he expected to be better, ',
     'A stadium full an hour before kick-off for a fixture he is the reason for, ',
     'Twenty-five, and the players look to him when it goes wrong, ',
-    'Told his consistency is worth more than anybody else’s flair, ',
+  
     'A full house on a Friday night, live on television, and a plan for him specifically, ',
     'His routine, his sleep and his diet are now managed by four different people, ',
     'Told to think about coaching badges, at twenty-five, ',
@@ -1068,7 +1068,7 @@ export const FRAME_H: Bank = {
     'Told he should be captaining the side, by people who do not pick it, ',
     'A televised defeat in which he was singled out by everybody with a microphone, ',
     'Twenty-five, and the club have never played better than when he is in it, ',
-    'Told he has ten years left if he looks after himself, ',
+  
     'A physio who knows more about his body than he does and always has, ',
     'His performances have quietly outgrown the division his club sit in, ',
     'Told the board have rejected a bid without speaking to him, ',
@@ -1129,7 +1129,7 @@ export const FRAME_H: Bank = {
     'A stadium under lights on a cold Wednesday, full, and loud from the start, ',
     'Twenty-three, and asked to be a leader before he feels like one, ',
     'Told he has stopped being the young one and never noticed it happening, ',
-    'A summer spent working on something nobody asked him to fix, ',
+  
     'His body knows exactly what a week can take now and tells him when it cannot, ',
     'Told the club are building around him and to take that seriously, ',
     'A crowd that came to see him and a defence set up to stop him, ',
@@ -1243,7 +1243,7 @@ export const SETTINGS_H: Bank = {
     'in front of a touchline of folding chairs and flasks',
     'on grass that had not seen a mower since October',
     'under a pylon',
-    'as the church bells went at eleven',
+  
     'on the far pitch, the one everybody hopes not to be given',
     'with a bag of oranges cut up and waiting on the halfway line',
     'in a thickening drizzle',
@@ -1306,7 +1306,7 @@ export const SETTINGS_H: Bank = {
     'under one working light',
     'in cold that got into the fingers first of all',
     'with the goal frames borrowed from the pitch next door',
-    'on a surface that took the studs and gave absolutely nothing back',
+  
     'beside a farm gate',
     'beside a working tractor',
     'on a Sunday morning that started at half past eight in a freezing car park',
@@ -1570,7 +1570,7 @@ export const SETTINGS_H: Bank = {
     'on a pitch that was under a foot of water on Monday and perfect on Thursday',
     'with the whole session recorded and clipped before the minibus leaves',
     'in an academy fixture with school the next morning whatever happens',
-    'on a hard, bouncing surface after a dry fortnight',
+  
     'past a wall of framed shirts in a corridor he walks down twice a week',
     'with an assistant relaying instructions from behind the goal',
     'in a game where the opposition are a year older and considerably bigger',
@@ -1762,7 +1762,7 @@ export const SETTINGS_H: Bank = {
     'with a place in the reserves on Thursday quietly at stake',
     'in a match played under a single working floodlight after the others failed',
     'on the club’s worst pitch, which is always given to the youngest',
-    'with the education tutor watching from a car in the car park',
+  
     'in a youth-league game with the season already decided',
     'on a surface that punished the clever pass all afternoon',
     'past a fire door with a mop propped against it',
@@ -1773,7 +1773,7 @@ export const SETTINGS_H: Bank = {
     'in a reserve fixture he has been called into at four hours’ notice',
     'on a pitch shared with the under-sixteens and cut up already',
     'past a corridor of framed photographs of everybody who got a contract',
-    'with the youth-team gaffer talking through his teeth',
+  
     'in a game watched by a man taking absolutely no notes',
     'on a heavy, energy-sapping surface after a fortnight of rain',
     'with a bag of ice waiting on the bench before kick-off',
@@ -1810,7 +1810,7 @@ export const SETTINGS_H: Bank = {
     'with the whole squad aware that two of them will be professionals in May',
     'in a fixture in which he is the youngest by two years',
     'on a slope that everybody complained about before kick-off and after it',
-    'past a laundry room full of steaming kit and nobody in it',
+  
     'with the physio watching from the tunnel mouth',
     'in a youth-team game in front of a scattering of dads',
     'on grass that was cut on Monday and has not stopped growing since',
@@ -1840,7 +1840,7 @@ export const SETTINGS_H: Bank = {
     'on a pitch a long way from home, after a journey that took most of the morning',
     'past a cleaner working her way along a corridor of empty dressing rooms',
     'with an unopened letter from his college sitting in his bag',
-    'in a fixture squeezed in before an international break',
+  
     'on ground that has not properly dried since the first week of November',
     'with the sort of schedule that has him playing men on Tuesday and lessons on Wednesday',
     'in a match with a place on the substitutes’ bench upstairs at stake',
@@ -1989,7 +1989,7 @@ export const SETTINGS_H: Bank = {
     'on an afternoon when the wind swirled inside the four stands and helped nobody',
     'with two thousand travelling supporters behind the goal he was attacking',
     'in a stadium he had stood in as a boy, on the wrong side of the advertising boards',
-    'on a surface that held up better than anybody’s legs did',
+  
     'past a row of photographers crouched behind the goal',
     'with the kitman handing him a shirt an hour before kick-off and saying nothing',
     'in a game the club had sold out by Thursday lunchtime',
@@ -2001,14 +2001,14 @@ export const SETTINGS_H: Bank = {
     'in a reserve match on a plastic pitch four counties from home',
     'in a faster, louder game',
     'past a stand full of people who had read about him and come to see',
-    'with the physio’s bag already open on the touchline',
+  
     'in a fixture the town had been talking about since Wednesday',
     'on a surface watered ten minutes before the teams came out',
     'with the tannoy reading out a name most of the ground had not heard a year ago',
     'in front of a stand that has watched better players than him fail',
     'on an afternoon of long shadows across the penalty area',
     'with an old professional watching from the gantry and saying very little',
-    'in a game shown live to a few thousand people at home',
+  
     'on a pitch where the grass had been left longer to slow the game down',
     'past a dressing room that still smelled unfamiliar to him',
     'with the crowd’s eyes going to him at every restart',
@@ -2224,7 +2224,7 @@ export const SETTINGS_H: Bank = {
     'on a surface watered twice in the hour before kick-off',
     'past a mixed zone full of people who all wanted the same quote',
     'with the opposition manager pointing him out during the warm-up',
-    'in a fixture the schedulers moved to a Sunday teatime',
+  
     'on a pitch where every touch is counted by three separate companies',
     'with the tunnel camera catching him saying absolutely nothing',
     'in front of a stand carrying the name of a player his father used to talk about',
@@ -2236,7 +2236,7 @@ export const SETTINGS_H: Bank = {
     'in front of season-ticket holders who miss nothing and forgive less',
     'on a night the club had waited a decade for',
     'on a managed hamstring',
-    'in a fixture carrying considerably more weight than the table suggested',
+  
     'on a pitch relaid over the winter and still not quite right',
     'past a row of photographers who moved when he moved',
     'with the substitutes’ bench full of internationals',
@@ -2245,7 +2245,7 @@ export const SETTINGS_H: Bank = {
     'with the referee having been spoken to by both benches already',
     'in front of a crowd that had come to see whether he still had it',
     'on a Sunday afternoon with a camera on a rail following him down the touchline',
-    'with the captaincy question hanging over the whole dressing room',
+  
     'in a derby that had been previewed, argued about and analysed all week',
     'on a pitch where the low winter sun made the far half unreadable',
     'past a directors’ box he is now occasionally invited into',
@@ -2255,7 +2255,7 @@ export const SETTINGS_H: Bank = {
     'with the tempo of the whole match set by the crowd rather than the players',
     'in front of a stand that has decided what it thinks and will not be argued with',
     'on an evening when the ground filled an hour before the teams came out',
-    'with the fixture list allowing no rest either side of it',
+  
     'in a match where the noise doubled every time he collected the ball',
     'on a pitch cut short for a side that wants the ball moving quickly',
     'past a bank of screens showing his face before he had touched the ball',
@@ -2273,8 +2273,7 @@ export const SETTINGS_H: Bank = {
     'in a fixture at a ground where he has scored in each of the last three seasons',
     'on a pitch he now knows better than his own garden',
     'with a full stand behind the goal his side attack in the second half',
-    'in front of a crowd who no longer make allowances for anybody',
-    'on a night of long throws, set-pieces and very thin margins',
+  
     'with the pundits having spent the week explaining what he does badly',
     'in a match where his every touch was counted, timed and turned into a number',
     'on a surface that had been under a cover since Wednesday',
@@ -2359,7 +2358,7 @@ export const SETTINGS_H: Bank = {
     'in a fixture at the end of a run of three games in seven days',
     'on a surface where the ball came off the wet grass at twice the expected speed',
     'with a stand behind the goal that has not stopped singing since the warm-up',
-    'in front of supporters who have paid a great deal and expect to be repaid',
+  
     'on a night when the club had put on extra trains and filled them',
     'with the whole fixture built around whether his side could hold a lead',
     'in a match where he was fouled four times in the opening twenty minutes',

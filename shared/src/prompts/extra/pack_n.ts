@@ -199,7 +199,7 @@ export const SETTINGS_N: Bank = {
     'after a Friday meeting that ran long',
     'while a new signing watched from the stand, unregistered',
     'in front of a bench of eight, five of them under twenty',
-    'with the manager watching from the stand, serving a touchline ban',
+  
     'the week the club announced a loss for the financial year',
     'while a fitness coach counted his sprints from the side',
     'in front of the same three photographers who follow the club everywhere',

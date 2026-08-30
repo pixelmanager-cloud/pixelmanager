@@ -1912,7 +1912,7 @@ export const KIND_SETUP_E: Bank = {
   romance: [
     "Two years together, and a conversation about where they will actually live.",
     "A relationship conducted mostly by phone, across three time zones and a season.",
-    "She has been offered a job in another city, and the offer is a good one.",
+  
     "The first time she has been introduced to the dressing room, at a Christmas do.",
     "A wedding date has been suggested for the second week of June.",
     "He has not been home for eleven days and the flat has started to feel like hers.",
