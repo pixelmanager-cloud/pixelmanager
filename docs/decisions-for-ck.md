@@ -822,3 +822,22 @@ lesson is not "use a bigger window."
   CHOSEN that are wide: 1.3%" — still true on the reverted engine.
 
 Both need an assertion, not just a slot in the chain.
+
+## 44. Your existing dev saves carry a scrambled team sheet — new ones do not
+
+I played the game after tonight's fixes rather than reading the diff, and the save on this machine had
+**6 of 11 slots holding a player of the wrong role**, including a **goalkeeper in midfield with a keeper
+duty**, and the bloodline star pushed into a midfield slot.
+
+That is the old `pruneXI` damage (§37), caught in the wild. A save created *now* is clean — driven through
+the real facade, a fresh club's standing XI is **0 of 11 out of position**, with every role in its own slot.
+So the fixes stop the damage; they do not repair a sheet that was already scrambled, because `reconcileSheet`
+deliberately never reorders — reordering is what caused the damage in the first place.
+
+**No auto-repair, deliberately.** The editor already flags every one of them: `slot-oop` with a ⚠ badge and
+the tooltip *"Out of position — a MF in a DF slot"*, on all six. A player can see it and fix it in a few
+clicks. A migration that silently reshuffled someone's XI to "help" would be the same class of act as the
+bug — and these are dev saves, not shipped ones.
+
+**If you want it repaired anyway, say so** and I will add a one-time migration that re-seats out-of-position
+players into slots matching their role, leaving the men themselves alone.
