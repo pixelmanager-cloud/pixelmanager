@@ -9,7 +9,8 @@ import {
   makeClub, DEFAULT_FACILITIES, type FacilityKey, type Facilities,
   type Club, type StandingOrders, type Token,
   type GameStore, type HonourRow, type MissionRow, type ProspectRow, type PlayerSeasonStat, type Award,
-} from '@fm/shared';
+
+  autoPickXI, TACTIC_PRESETS,} from '@fm/shared';
 
 // The whole save belongs to one local profile — server-era `ownerId`/`accountId` params are accepted
 // (for signature-compatibility with lifted server logic, see GameStore doc-comment) but ignored.
@@ -79,6 +80,15 @@ export function migrate(m: SaveModel): SaveModel {
     honours: arr(m.honours), awards: arr(m.awards), missions: arr(m.missions),
     loanees: arr(m.loanees), retiredNumbers: arr(m.retiredNumbers), playerStats: arr(m.playerStats),
     facilities: { ...DEFAULT_FACILITIES, ...(m.facilities && typeof m.facilities === 'object' ? m.facilities : {}) },
+    // THE ONE COLLECTION THIS REPAIR SKIPPED. Every array above is guarded and `facilities` is defaulted,
+    // but `standingOrders` was passed through untouched — so a save that lost it loads with the field
+    // `undefined`, survives a season rollover still undefined (the sheet reconciler early-returns it and
+    // `saveClub` re-persists it), and then `openLineup`'s `{ ...this.standingOrders.tactics }` throws a
+    // TypeError. Permanently: the club can never be managed again. A sheet whose `playerIds` is not an
+    // array is the same shape, so both get a usable default rather than a crash.
+    standingOrders: (m.standingOrders && Array.isArray((m.standingOrders as any).playerIds))
+      ? m.standingOrders
+      : { formation: '4-4-2', playerIds: autoPickXI(m.club, '4-4-2').playerIds, tactics: { ...TACTIC_PRESETS.Balanced } },
   };
   m = repaired;
   if ((m.version ?? 1) >= SAVE_VERSION) return m;

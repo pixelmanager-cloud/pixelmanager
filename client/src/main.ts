@@ -5,7 +5,8 @@ import {
   transferList, wageForLength, sellValue, squadSaleValue, squadSeasonWage, moraleEffects, incomingBid, MIN_SQUAD, MAX_SQUAD, type Listing,
   ACHIEVEMENTS, evaluateAchievements, achievementById, type AchSnapshot, lifeAction,
   type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
-} from '@fm/shared';
+
+  reconcileSheet,} from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type Trialist, type MissionsData, type ContractInfo } from './api';
 import { flushSave, getSaveHealth } from './save';
 import { sprite } from './sprites';
@@ -3575,7 +3576,29 @@ class Game {
             // on the saves where this ran. Replace him in his own slot instead. (PT-952)
             if (worst) ids = ids.map((id) => (id === worst.id ? s.prospectId : id));
           }
-          await api.setStandingOrders({ ...this.standingOrders, playerIds: ids });
+          // DO NOT SPREAD OLD DESIGNATIONS ONTO A NEW XI. `{ ...this.standingOrders, playerIds: ids }`
+          // kept the previous generation's `duties`, `captainIdx` and `takers` at their old SLOT NUMBERS
+          // while replacing every man in those slots — so at every succession the armband and all three
+          // set-piece takers landed on whoever happened to occupy the index, and each changed slot kept the
+          // outgoing man's duty because `cleanDuties` only rejects duties that are illegal for the role,
+          // not ones that belong to somebody else. Wrong by construction, every generation.
+          //
+          // If the club's existing sheet still describes this squad, keep it — the CLUB survives the
+          // handover even though the man does not. Otherwise take the auto-picked XI with duties derived
+          // from the men actually in it, and no captain or takers: an empty armband asks the new manager a
+          // question, which is the honest state at the start of a career.
+          const squad = this.club!.players.map((p) => ({ id: p.id, role: p.role as string, ovr: overall(p) }));
+          const kept = reconcileSheet(this.standingOrders as any, squad,
+            (role, duty) => isDutyForRole(role as any, duty as any),
+            (sp) => defaultDuty(this.club!.players.find((p) => p.id === sp.id)!));
+          const keepIt = kept && (kept as any).playerIds.includes(s.prospectId);
+          await api.setStandingOrders(keepIt ? (kept as any) : {
+            ...this.standingOrders,
+            playerIds: ids,
+            duties: ids.map((id) => defaultDuty(this.club!.players.find((p) => p.id === id)!)),
+            captainIdx: undefined,
+            takers: undefined,
+          });
           this.setMe(await api.me());
         } catch { /* keep the default XI if the auto-pick fails */ }
         const retireAge = this.retireAgeFor(player);

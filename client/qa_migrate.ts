@@ -87,4 +87,36 @@ for (const key of ['injuries', 'legacies', 'honours', 'awards', 'missions', 'loa
   } catch (e: any) { fail(`${key} as a string: migrate threw ${e?.message}`); }
 }
 
+// THE TEAM SHEET — the one thing in the model this repair used to skip. A save that lost `standingOrders`
+// loaded with the field `undefined`, survived a season rollover still undefined (the reconciler
+// early-returns it and `saveClub` re-persists it), and then `openLineup`'s `{ ...this.standingOrders.tactics }`
+// threw a TypeError. Permanently — the club could never be managed again.
+for (const [label, bad] of [
+  ['missing', undefined],
+  ['null', null],
+  ['a string', 'not a sheet'],
+  ['playerIds not an array', { formation: '4-4-2', playerIds: 'nope', tactics: {} }],
+  ['an empty object', {}],
+] as [string, unknown][]) {
+  const raw: any = { ...freshSave('NoSheet'), version: 1, standingOrders: bad };
+  try {
+    const fixed: any = migrate(raw);
+    const so = fixed.standingOrders;
+    if (!so || !Array.isArray(so.playerIds) || so.playerIds.length !== 11) {
+      fail(`standingOrders ${label}: not repaired to a usable sheet (got ${JSON.stringify(so)?.slice(0, 60)})`);
+    } else if (!so.tactics || !so.formation) {
+      fail(`standingOrders ${label}: repaired sheet has no formation/tactics`);
+    } else if (new Set(so.playerIds).size !== 11) {
+      fail(`standingOrders ${label}: repaired XI has a duplicate`);
+    }
+  } catch (e: any) { fail(`standingOrders ${label}: migrate threw ${e?.message}`); }
+}
+// ...and a GOOD sheet must be left exactly alone
+{
+  const good: any = freshSave('HasSheet');
+  const before = JSON.stringify(good.standingOrders);
+  const fixed: any = migrate({ ...good, version: 1 });
+  if (JSON.stringify(fixed.standingOrders) !== before) fail('a valid team sheet was rewritten by the repair');
+}
+
 if (!process.exitCode) console.log('✓ migration repairs missing AND malformed collections, and leaves its input alone');
