@@ -1,5 +1,14 @@
 #!/usr/bin/env node
-// Runs every standalone QA harness so they can't silently bit-rot. `npm run verify` stays the fast
+// Runs every standalone QA harness so they can't silently bit-rot.
+//
+// AND THEY DID BIT-ROT, exactly as this file's own header warns, because auto-globbing only guarantees a
+// harness is RUN — not that anyone runs this script. `verify` is the pre-commit gate and does not include
+// `qa`, so nothing routinely invoked it, and seven harnesses were failing at once: six crashed on an
+// unhandled 'arc' career phase (qa_facade_invariant_fuzz had never completed a single career in its life)
+// and one had a stale fixture. `verify` stayed green throughout.
+//
+// `npm run gate` (verify + playtest + qa) is the one command that runs everything. Use it before anything
+// you would call finished; `verify` alone is the fast inner-loop check, not proof. `npm run verify` stays the fast
 // pre-commit gate (build + engine + fuzz + career_sim + savestore + offline_facade); `npm run qa` is the
 // heavier full sweep of the shared/ and client/ qa_*.ts fuzz harnesses. Auto-globs, so a NEW harness is
 // covered the moment it's added — no list to forget to update (the failure mode that broke three harnesses
