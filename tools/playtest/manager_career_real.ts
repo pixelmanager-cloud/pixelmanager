@@ -24,6 +24,10 @@ import { transferList } from '../../shared/src/transfermarket.js';
 import { MAX_SQUAD } from '../../shared/src/market.js';
 import { overall } from '../../shared/src/teams.js';
 
+// A PROBE THAT CANNOT FAIL IS SCROLLBACK, NOT A GATE. `npm run playtest` is an `&&` chain and
+// `scripts/run-qa.mjs` keys on `r.status === 0`; neither reads stdout. This file computed a correct verdict,
+// printed it, and exited 0 whatever it said — so the build could not tell five passes from five failures.
+// Measured: forcing two of the five checks to FLAG still gave EXIT=0.
 const N = Number(process.argv[2] ?? 10);
 // TWO HORIZONS, because the game has two. One MANAGER's tenure runs about a dozen seasons — his star
 // signs, peaks and retires — and no single generation should conquer the pyramid, or the bloodline is
@@ -157,6 +161,7 @@ const checks: Array<[string, boolean, string]> = [
 let fails = 0;
 console.log('=== verdict (real economy) ===');
 for (const [name, ok, val] of checks) { console.log(`  ${ok ? 'OK  ' : 'FLAG'} ${name}  (${val})`); if (!ok) fails++; }
-console.log(fails ? `\n⚠ ${fails} concern(s) flagged` : `\n✓ the manager career reads healthy against the real economy`);
+console.log(fails ? `\n✗ ${fails} concern(s) — the manager career does not hold up against the real economy` : `\n✓ the manager career reads healthy against the real economy`);
+  if (fails) process.exitCode = 1;
 }
 main();

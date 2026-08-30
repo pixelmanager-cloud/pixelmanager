@@ -68,4 +68,5 @@ for (const [id, rate, idle] of rows) {
   console.log(`  ${ok ? 'OK  ' : 'FLAG'} ${id}: a real target (not <35% done, not >92% with idle turns)  (${rate}%, ${idle} idle)${why ? ' — ' + why : ''}`);
   if (!ok) fails++;
 }
-console.log(fails ? `\n⚠ ${fails} objective(s) are either a gimme or unreachable` : `\n✓ objectives give each stage real direction`);
+console.log(fails ? `\n✗ ${fails} objective(s) are either a gimme or unreachable` : `\n✓ objectives give each stage real direction`);
+if (fails) process.exitCode = 1;   // a probe that cannot fail is scrollback, not a gate

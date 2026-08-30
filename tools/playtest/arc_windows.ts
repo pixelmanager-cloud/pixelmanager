@@ -39,4 +39,5 @@ for (const c of ['saga', 'crisis', 'signature', 'relationship', 'triumph', 'offp
 }
 console.log('\n=== verdict ===');
 for (const [name, ok, val] of checks) { console.log(`  ${ok ? 'OK  ' : 'FLAG'} ${name}  (${val})`); if (!ok) fails++; }
-console.log(fails ? `\n⚠ ${fails} window problem(s)` : `\n✓ arc windows are healthy`);
+console.log(fails ? `\n✗ ${fails} window problem(s)` : `\n✓ arc windows are healthy`);
+if (fails) process.exitCode = 1;   // a probe that cannot fail is scrollback, not a gate

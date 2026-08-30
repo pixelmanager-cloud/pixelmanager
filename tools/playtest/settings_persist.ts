@@ -28,42 +28,91 @@
 // The rule that was wrong is now in `shared/src/teamsheet.ts` as a pure function with real tests
 // (`shared/qa_teamsheet.ts`). What is left here is the reachability question a unit test cannot answer:
 // is the writer wired to the screen at all.
+import ts from 'typescript';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 
-const src = readFileSync(fileURLToPath(new URL('../../client/src/main.ts', import.meta.url)), 'utf8');
+// PARSED, NOT SLICED. The first version read a fixed 2,400-character window from a string index and asked
+// whether `persistTeamSheet` appeared in it. Measured in today's `main.ts`, the real call sits at delta
+// 2,290 and the NEXT METHOD'S OWN DECLARATION at 2,507 — 107 characters outside, in the file that grows
+// comments faster than any other in the repo. Collapse a comment above the call and the declaration slides
+// into the window and vouches for a call that is gone: an adversarial pass removed the call, tidied one
+// comment, and this probe printed all-ok and exited 0 with the original defect bit-for-bit restored.
+const file = fileURLToPath(new URL('../../client/src/main.ts', import.meta.url));
+const src = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.ESNext, true);
 let fails = 0;
 const check = (ok: boolean, msg: string) => { if (ok) console.log(`  ok   ${msg}`); else { console.log(`  FAIL ${msg}`); fails++; } };
 
-/** Body of a method, from its declaration to the next same-indent method. */
-function body(name: string, chars = 2400): string {
-  const i = src.indexOf(name);
-  return i < 0 ? '' : src.slice(i, i + chars);
+/** The class member with this name, wherever it is in the file. */
+function method(name: string): ts.MethodDeclaration | undefined {
+  let found: ts.MethodDeclaration | undefined;
+  const visit = (n: ts.Node): void => {
+    if (found) return;
+    if (ts.isMethodDeclaration(n) && ts.isIdentifier(n.name) && n.name.text === name) { found = n; return; }
+    ts.forEachChild(n, visit);
+  };
+  visit(src);
+  return found;
 }
 
-// 1. kicking off a match must commit the team sheet the player just set
-const kick = body('private kickOffMatch()');
-check(kick.length > 0, 'kickOffMatch() exists');
-check(/persistTeamSheet\s*\(/.test(kick),
+/** Does `owner`'s own body call `this.<name>(...)`? Its body, not the bytes that happen to follow it. */
+function calls(owner: ts.MethodDeclaration | undefined, name: string): boolean {
+  if (!owner?.body) return false;
+  let found = false;
+  const visit = (n: ts.Node): void => {
+    if (found) return;
+    if (ts.isCallExpression(n) && ts.isPropertyAccessExpression(n.expression)
+      && n.expression.expression.kind === ts.SyntaxKind.ThisKeyword
+      && n.expression.name.text === name) { found = true; return; }
+    ts.forEachChild(n, visit);
+  };
+  visit(owner.body);
+  return found;
+}
+
+/** Every `this.<name>(...)` call site in the file, with the method that contains it. */
+function callersOf(name: string): string[] {
+  const out: string[] = [];
+  const visit = (n: ts.Node, owner?: string): void => {
+    const nextOwner = ts.isMethodDeclaration(n) && ts.isIdentifier(n.name) ? n.name.text : owner;
+    if (ts.isCallExpression(n) && ts.isPropertyAccessExpression(n.expression)
+      && n.expression.expression.kind === ts.SyntaxKind.ThisKeyword
+      && n.expression.name.text === name && nextOwner) out.push(nextOwner);
+    ts.forEachChild(n, (c) => visit(c, nextOwner));
+  };
+  visit(src);
+  return out;
+}
+
+const kick = method('kickOffMatch');
+const persist = method('persistTeamSheet');
+check(!!kick, 'kickOffMatch() exists');
+check(!!persist, 'persistTeamSheet() exists');
+
+// 1. the reachability question a unit test cannot answer: is the writer wired to the screen?
+check(calls(kick, 'persistTeamSheet'),
   'kicking off PERSISTS the team sheet — the player committing to a XI is him choosing it');
 
-// 2. the persist helper must actually write through the facade, and write the whole sheet
-const persist = body('private async persistTeamSheet');
-check(/api\.setStandingOrders\s*\(/.test(persist), 'persistTeamSheet() calls api.setStandingOrders');
-check(/intentOf\s*\(/.test(persist),
-  'persistTeamSheet() saves the manager INTENT (intentOf), not the substituted matchday XI');
+// 2. and it must be reachable from somewhere OTHER than the editor-mode branch that was dead for months.
+//    `saveTeam()` only runs when `editorMode === 'standing'`, which never happens, so a lone caller there
+//    is exactly the state this whole guard exists to detect.
+const callers = callersOf('persistTeamSheet');
+check(callers.some((c) => c !== 'saveTeam'),
+  `persistTeamSheet has a caller outside saveTeam() (callers: ${callers.join(', ') || 'none'})`);
+
+// 3. the writer must go through the facade, and write the whole sheet
+const body = persist?.body ? persist.body.getText(src) : '';
+check(/api\.setStandingOrders\s*\(/.test(body), 'persistTeamSheet() calls api.setStandingOrders');
 for (const field of ['formation', 'playerIds', 'tactics', 'duties']) {
-  check(new RegExp(`${field}\\s*:`).test(persist), `persistTeamSheet() saves \`${field}\``);
+  check(new RegExp(`${field}\\s*:`).test(body), `persistTeamSheet() saves \`${field}\``);
 }
-check(/draftRoles\s*\(\s*\)/.test(persist), 'persistTeamSheet() saves the captain and set-piece takers (draftRoles)');
+check(/draftRoles\s*\(\s*\)/.test(body), 'persistTeamSheet() saves the captain and set-piece takers (draftRoles)');
+check(/intentOf\s*\(/.test(body),
+  'persistTeamSheet() saves the manager INTENT (intentOf), not the substituted matchday XI');
 
-// 3. the reachability trap itself: if the ONLY writer is behind an editorMode check, it is dead again
-const writers = [...src.matchAll(/api\.setStandingOrders\s*\(/g)].length;
-check(writers >= 2, `api.setStandingOrders has more than one writer (found ${writers}) — one of them used to be unreachable`);
-
-// 4. and openLineup must still be the thing that reads them back, or the round trip is broken elsewhere
-const open = body('private openLineup(', 3000);
-check(/this\.standingOrders/.test(open), 'openLineup() still seeds the draft from the saved standing orders');
+// 4. and openLineup must still read them back, or the round trip is broken at the other end
+check(calls(method('openLineup'), 'starGuarded') || /this\.standingOrders/.test(method('openLineup')?.body?.getText(src) ?? ''),
+  'openLineup() still seeds the draft from the saved standing orders');
 
 console.log(fails
   ? `\n✗ ${fails} settings-persistence check(s) failed — a screen the player uses is being discarded`
