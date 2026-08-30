@@ -139,6 +139,20 @@ export function mintSquadPlayer(id: string, role: Role, quality: number, seed: n
 }
 
 /** Generate a full club roster (~20 players) deterministically from a seed. */
+/** `rich` STAYS FALSE BY DEFAULT — and that default is a known trap, deliberately left in place.
+ *
+ *  A rich squad carries the mental layer (composure, aggression, creativity, teamwork, leadership,
+ *  durability); a plain one leaves all six undefined, and mental.ts centres a missing stat at 10. Every
+ *  production call site passes `true`, so only harnesses ever see the thin version — where
+ *  `attrs.composure + 4` yields NaN, propagates into goalProb, and silently stops that side scoring. A
+ *  balance investigation lost a measurement to exactly that, which is why this comment exists.
+ *
+ *  Flipping the default to `true` was tried and REVERTED, because it is not the cosmetic change it looks
+ *  like: `shared/fuzz_test.ts` builds its squads through this default, and with the mental layer present
+ *  goals/match goes 2.8 -> 6.17, outside the sane range the fuzzer enforces. That is a real signal worth
+ *  chasing — varying mentals around 10 destabilises the engine far more than centring them — but it is a
+ *  balance investigation, not a default change, and production already runs on rich squads. Pass the flag
+ *  explicitly in new harnesses rather than relying on either default. */
 export function generateClub(id: string, name: string, shortName: string, shirtColor: number, quality: number, seed: number, rich = false): Club {
   const rng = makeRng(seed);
   // `rich` = a full character (15 stats + personality + traits + age) rather than the 10 physical/technical

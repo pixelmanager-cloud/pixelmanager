@@ -9,6 +9,10 @@ import { mMul, mAdd, hasTrait, teamLeadership } from './mental.js';
 export const TICK_SEC = 0.5; // game-seconds per tick
 const MATCH_SEC = 90 * 60;
 const SHOOT_RANGE = 18; // metres from goal a player will attempt a shot
+/** The distance at which shot quality falls to zero. SEPARATE from SHOOT_RANGE, which is the trigger
+ *  radius — one constant was doing both jobs via `SHOOT_RANGE + 8`, so re-tuning when a player shoots
+ *  silently re-tuned how well he finishes. Same value as before (18 + 8), so behaviour is unchanged. */
+const QUALITY_RANGE = 26;
 const BASE_DRAIN = 0.000034; // fitness lost per tick by a working outfielder (tuned via harness)
 
 const norm = (stat: number) => stat / 20;
@@ -485,7 +489,26 @@ export class MatchEngine {
           // through-ball that springs a fast forward behind a high line => clear chance
           if (pick.through && this.beatsLastDefender(teamIdx, pick.idx)) {
             s.events.push({ minute: this.minute(), type: 'chance', teamIdx, playerName: rec.name, counter: this.onCounter(teamIdx) });
-            // NOTE — A MEASURED, UNFIXED DEFECT. The shot resolves from wherever the receiver was STANDING
+            // NOTE — A MEASURED, UNFIXED DEFECT, and a REBALANCE THAT WAS DESIGNED AND REJECTED.
+            //
+            // A full two-sided rebalance was measured over ~1,600 mirrored matches and DOES fix this axis:
+            // chances 68 -> 3.6 a match, shots 70 -> 24.6, median shot distance 45.9m -> 16.4m, goals held
+            // at 2.26, no side bias, and `shooting` (t=4.6 -> 10.5), `homeBoost` (inert -> t=6.4) and
+            // `computeZonal` (inert -> t=2.6) all become live. It was rejected because it breaks the
+            // tactical layer: 10 of strategy_test's assertions fail, the formation rock-paper-scissors
+            // INVERTS (wide 3-4-3 vs narrow diamond, 69W-28L -> 9W-42L) and so does the preset one
+            // (Counter vs Gegenpress, 32W-23L -> 12W-45L). Tuning does not recover it.
+            //
+            // The reason is structural, and it is the thing to fix first: THIS IS THE GAME'S ONLY CHANCE-
+            // CREATION MECHANISM. Only 2% of carrier time is spent inside 18m and there is a hard wall at
+            // 25-30m, so with the through-ball shot removed the game produces 2.3 shots and 0.13 goals a
+            // match. All shot volume is therefore faked by an inflated shoot-from-range constant, and that
+            // constant is what currently rewards central compactness and high pressing over everything
+            // else — which is why the shape tests invert when it changes. Off-ball movement has to
+            // manufacture box entries before the finish can be unclamped; then the attribute sensitivity
+            // budget needs re-normalising as a whole, and computeZonal re-derived as a chance-CREATION
+            // edge rather than a shot-probability multiplier. Shipping the tuning alone would trade one
+            // measured defect for three. The shot resolves from wherever the receiver was STANDING
             // when the pass arrived: a median of 45.9 metres, past the halfway line. `quality` is
             // clamp(shooting * fit * (1 - dist/26) + 0.15, 0, 1), so 97% of every shot in the game has its
             // shooting term clamped to exactly zero — a 20-rated finisher converts the same as a 5-rated
@@ -614,7 +637,7 @@ export class MatchEngine {
     const defTeam = (1 - teamIdx) as 0 | 1;
     const gk = this.teams[defTeam].players[0];
     const gks = s.players[defTeam][0];
-    const quality = clamp(norm(shooter.attrs.shooting) * fit(ss.fitness) * (1 - distGoal / (SHOOT_RANGE + 8)) + (clear ? 0.15 : 0), 0, 1);
+    const quality = clamp(norm(shooter.attrs.shooting) * fit(ss.fitness) * (1 - distGoal / QUALITY_RANGE) + (clear ? 0.15 : 0), 0, 1);
     const minute = this.minute();
     const onTarget = this.rng() < 0.5 + quality * 0.45;
     if (!onTarget) {
