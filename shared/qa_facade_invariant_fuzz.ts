@@ -55,7 +55,11 @@ async function graduateRandomProspect(): Promise<string> {
   while (guard++ < 3000) {
     const phase = state.phase;
     let action: { type: string; cardId: string };
-    if (phase === 'focus') action = { type: 'focus', cardId: pick(state.focus!).id };
+    // 'arc' is a real career phase and was missing from this list, so the first story-arc beat sent the
+    // else-branch to read state.hand — undefined on an arc state — and the whole suite died on `.length`.
+    // It had never once completed a career.
+    if (phase === 'arc') action = { type: 'arc', cardId: pick((state as any).arc.choices).id };
+    else if (phase === 'focus') action = { type: 'focus', cardId: pick(state.focus!).id };
     else if (phase === 'offer') action = { type: 'offer', cardId: pick(state.offers!).id };
     else if (phase === 'coach') action = { type: 'coach', cardId: pick(state.coaches!).id };
     else if (phase === 'draft') action = { type: 'draft', cardId: pick(state.options!).id };
@@ -168,10 +172,15 @@ console.log('\n[qa-facade] extendContract — exact coin debit + insufficient-fu
     const me = await api.me();
     const ci = me.contracts[pid];
     const before = me.account.coins;
-    if (before >= ci.extendCost) {
+    // THE DEAL COSTS WAGE x LENGTH, not one season's wage. This asserted the flat one-season debit, which
+    // is precisely the "length is free" exploit (PT-32/PT-127) that the implementation comment says it was
+    // written to prevent — so the test was demanding the bug back. It never ran to find out: the harness
+    // was dead on an unhandled 'arc' phase long before reaching here.
+    const dealCost = ci.extendCost * ci.lengthSeasons;
+    if (before >= dealCost) {
       const r = await api.extendContract(pid);
       noNaN(r, `extendContract#${i}`);
-      if (r.coins !== before - ci.extendCost) log(`extendContract#${i} coin delta mismatch: before=${before} cost=${ci.extendCost} after=${r.coins}`);
+      if (r.coins !== before - dealCost) log(`extendContract#${i} coin delta mismatch: before=${before} cost=${dealCost} after=${r.coins}`);
     } else {
       let threw = false;
       try { await api.extendContract(pid); } catch { threw = true; }
