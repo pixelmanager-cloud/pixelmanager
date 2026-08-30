@@ -20,14 +20,30 @@
 import { MatchEngine } from '../../shared/src/engine.js';
 import { generateTeam } from '../../shared/src/teams.js';
 import { DEFAULT_TACTICS } from '../../shared/src/tactics.js';
-import { tierStrength, TIERS } from '../../shared/src/clubseason.js';
+import { tierStrength, TIERS, seededOpponents } from '../../shared/src/clubseason.js';
 
 const N = Number(process.env.N ?? 150);
 let fails = 0;
 const check = (ok: boolean, msg: string) => { if (ok) console.log(`  ok   ${msg}`); else { console.log(`  FAIL ${msg}`); fails++; } };
 
-/** The strongest and weakest club a division can generate, per `seededOpponents`' +/-3 draw. */
-const SPREAD = 3;
+/** The strongest and weakest club a division ACTUALLY generates — measured by asking `seededOpponents`,
+ *  not by restating its arithmetic.
+ *
+ *  This was `const SPREAD = 3`, a local copy of the `(hash % 7) - 3` inside `clubseason.ts`. A mutation
+ *  test widened the real draw to +/-8 and this probe's output was BYTE-IDENTICAL, because it never called
+ *  the function it exists to measure. That is the same defect as the manager-career probe that modelled
+ *  club strength with a straight line: a gate that re-derives its fixture from a copy of the thing under
+ *  test cannot see the thing under test change. */
+function measuredSpread(tier: number, samples = 400): number {
+  let widest = 0;
+  for (let s = 0; s < samples; s++) {
+    const clubs = seededOpponents('Mine', s * 7919 + 13, tier);
+    if (!clubs.length) continue;
+    const strengths = clubs.map((c) => c.strength);
+    widest = Math.max(widest, (Math.max(...strengths) - Math.min(...strengths)) / 2);
+  }
+  return Math.max(1, Math.round(widest));
+}
 
 function fixture(qa: number, qb: number) {
   let gd = 0, gf = 0, ga = 0, big = 0, wins = 0;
@@ -51,12 +67,14 @@ console.log('  tier  strength      fixture      GD     scoreline    won by 6+   
 // inverted U, because the clamp on `seededOpponents` compresses both ends of the range. The peak sits at
 // tier 6, which was never measured. A gate that samples around a maximum and reports the samples is the
 // same defect as the goals/match gate that measured one squad quality and called it the pyramid.
+const rows: { tier: number; gf: number; ga: number }[] = [];
 let worstThrash = { tier: 0, v: -1 };
 let worstMargin = { tier: 0, v: -1 };
 for (let tier = 1; tier <= TIERS; tier++) {
   const base = tierStrength(tier);
-  const hi = Math.max(3, Math.min(20, Math.round(base + SPREAD)));
-  const lo = Math.max(3, Math.min(20, Math.round(base - SPREAD)));
+  const spread = measuredSpread(tier);
+  const hi = Math.max(3, Math.min(20, Math.round(base + spread)));
+  const lo = Math.max(3, Math.min(20, Math.round(base - spread)));
   const r = fixture(hi, lo);
   console.log(`   ${String(tier).padStart(2)}    ${base.toFixed(1).padStart(4)}      ${hi} v ${String(lo).padEnd(2)}   ${r.gd >= 0 ? '+' : ''}${r.gd.toFixed(2).padStart(5)}   ${r.gf.toFixed(2)}-${r.ga.toFixed(2)}      ${(100 * r.big).toFixed(0).padStart(3)}%       ${(100 * r.win).toFixed(0)}%`);
   // TRACKED INDEPENDENTLY. These used to share one `worst` record, so the margin assertion reported the
@@ -64,6 +82,7 @@ for (let tier = 1; tier <= TIERS; tier++) {
   // `{big: 0, gd: 0}` and was only replaced when a tier beat it, an engine that won 5-0 in every division
   // and never once by six left the placeholder in place and passed both checks while violating the stated
   // bound by 25%. An engine that never scored at all also passed.
+  rows.push({ tier, gf: r.gf, ga: r.ga });
   if (r.big > worstThrash.v) worstThrash = { tier, v: r.big };
   if (Math.abs(r.gd) > worstMargin.v) worstMargin = { tier, v: Math.abs(r.gd) };
 }
@@ -75,6 +94,12 @@ if (worstThrash.tier === 0 || worstMargin.tier === 0) {
 }
 // A six-goal win is a thrashing. It happens in real leagues; it is not most weeks. The pre-rebuild engine
 // this bar is calibrated against produces it in 1-7% of top-vs-bottom fixtures; the rebuilt one made it 53%.
+// UPPER BOUNDS ONLY WAS NOT ENOUGH. A mutation that disabled one of the engine's four goal paths — average
+// scoreline 0.41-0.01, about 80% goalless — passed both of these perfectly, because a league in which
+// nobody scores is never a thrashing and never a wide margin. A football match has goals in it.
+const goalsPerFixture = rows.reduce((a, r) => a + r.gf + r.ga, 0) / rows.length;
+check(goalsPerFixture >= 1.2,
+  `the widest league fixture is still a football match (${goalsPerFixture.toFixed(2)} goals in it, not a goalless procession)`);
 check(worstThrash.v <= 0.15,
   `a top-vs-bottom fixture is a thrashing at most 15% of the time (worst: tier ${worstThrash.tier}, ${(100 * worstThrash.v).toFixed(0)}%)`);
 check(worstMargin.v <= 4.0,

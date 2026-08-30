@@ -100,15 +100,75 @@ const callers = callersOf('persistTeamSheet');
 check(callers.some((c) => c !== 'saveTeam'),
   `persistTeamSheet has a caller outside saveTeam() (callers: ${callers.join(', ') || 'none'})`);
 
-// 3. the writer must go through the facade, and write the whole sheet
-const body = persist?.body ? persist.body.getText(src) : '';
-check(/api\.setStandingOrders\s*\(/.test(body), 'persistTeamSheet() calls api.setStandingOrders');
-for (const field of ['formation', 'playerIds', 'tactics', 'duties']) {
-  check(new RegExp(`${field}\\s*:`).test(body), `persistTeamSheet() saves \`${field}\``);
+// 3. the writer must go through the facade, and write the WHOLE sheet.
+//
+// These were regexes over `persistTeamSheet`'s body TEXT — which includes its comments. A mutation deleted
+// `formation`, `tactics`, `duties`, the captain and all three set-piece takers from the object being
+// written, left one comment naming them, and all four checks passed: 12 of 12 ok, "the team sheet the
+// player sets survives the match he sets it for". Half of this file was moved to the AST and half was not,
+// which is worse than neither, because the header now claims it cannot be laundered by a comment.
+//
+// So: find the object literal actually handed to `api.setStandingOrders` and read ITS properties.
+function sheetWrite(owner: ts.MethodDeclaration | undefined): ts.ObjectLiteralExpression | undefined {
+  if (!owner?.body) return undefined;
+  let found: ts.ObjectLiteralExpression | undefined;
+  const visit = (n: ts.Node): void => {
+    if (found) return;
+    if (ts.isCallExpression(n) && ts.isPropertyAccessExpression(n.expression)
+      && n.expression.name.text === 'setStandingOrders') {
+      // unwrap parentheses and `as`/`!` casts, or a legitimate `{...} as StandingOrders` reads as "no literal"
+      const unwrap = (e: ts.Expression): ts.Expression => {
+        let x: ts.Expression = e;
+        while (ts.isParenthesizedExpression(x) || ts.isAsExpression(x) || ts.isTypeAssertionExpression(x) || ts.isNonNullExpression(x)) x = x.expression;
+        return x;
+      };
+      const arg = n.arguments[0] ? unwrap(n.arguments[0]) : undefined;
+      if (arg && ts.isObjectLiteralExpression(arg)) { found = arg; return; }
+      // written via a local: follow the identifier back to its initialiser in this same body
+      if (arg && ts.isIdentifier(arg)) {
+        const name = arg.text;
+        const seek = (m: ts.Node): void => {
+          if (found) return;
+          if (ts.isVariableDeclaration(m) && ts.isIdentifier(m.name) && m.name.text === name && m.initializer) {
+            const init = unwrap(m.initializer);
+            if (ts.isObjectLiteralExpression(init)) { found = init; return; }
+          }
+          ts.forEachChild(m, seek);
+        };
+        seek(owner.body!);
+      }
+      return;
+    }
+    ts.forEachChild(n, visit);
+  };
+  visit(owner.body);
+  return found;
 }
-check(/draftRoles\s*\(\s*\)/.test(body), 'persistTeamSheet() saves the captain and set-piece takers (draftRoles)');
-check(/intentOf\s*\(/.test(body),
-  'persistTeamSheet() saves the manager INTENT (intentOf), not the substituted matchday XI');
+
+const written = sheetWrite(persist);
+check(!!written, 'persistTeamSheet() hands an object literal to api.setStandingOrders');
+const props = new Set<string>();
+let spreadsPrior = false;
+for (const p of written?.properties ?? []) {
+  if (ts.isSpreadAssignment(p)) { spreadsPrior = true; continue; }
+  const n = (p as any).name;
+  if (n && ts.isIdentifier(n)) props.add(n.text);
+}
+for (const field of ['formation', 'playerIds', 'tactics', 'duties']) {
+  check(props.has(field) || spreadsPrior, `the saved sheet actually carries \`${field}\``);
+}
+// the captain and the three set-piece takers arrive via draftRoles(); check the call is IN the literal,
+// not merely mentioned somewhere in the method
+const rolesInLiteral = (written?.properties ?? []).some((p) =>
+  ts.isSpreadAssignment(p) && ts.isCallExpression(p.expression)
+  && ts.isPropertyAccessExpression(p.expression.expression)
+  && p.expression.expression.name.text === 'draftRoles');
+check(rolesInLiteral, 'the saved sheet actually carries the captain and set-piece takers (spread draftRoles())');
+// and the XI written must be the manager INTENT, not the substituted matchday side
+const usesIntent = (written?.properties ?? []).some((p) =>
+  ts.isPropertyAssignment(p) && ts.isIdentifier(p.name) && p.name.text === 'playerIds'
+  && /intentOf|intent\b/.test(p.initializer.getText(src)));
+check(usesIntent, 'the saved XI is the manager INTENT (intentOf), not the substituted matchday XI');
 
 // 4. and openLineup must still read them back, or the round trip is broken at the other end
 check(calls(method('openLineup'), 'starGuarded') || /this\.standingOrders/.test(method('openLineup')?.body?.getText(src) ?? ''),
