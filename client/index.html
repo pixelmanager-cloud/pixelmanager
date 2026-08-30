@@ -229,7 +229,14 @@
       .tt-opt b { display: block; font-family: var(--display); font-size: 13px; color: var(--text); margin-bottom: 3px; }
       .tt-opt span { font-size: 13px; color: var(--muted); }
       /* settings + confirm dialogs (reuse the centred-overlay pattern) */
-      #settings-ov, #confirm-ov { position: fixed; inset: 0; z-index: 120; display: flex; align-items: safe center; justify-content: center;
+      /* #pause-ov was missing from this list and had NO rule anywhere in the stylesheet — the only one of the
+         dynamically-created overlays without one. It therefore rendered `position: static`: a plain block
+         appended to the end of <body>, below whatever screen was showing, with no backdrop and no z-index.
+         On the Trophy Room it landed at document y=2,511 and its autofocus yanked the viewport 2,130px down,
+         so pressing the top-bar menu looked like the game had broken. It also silently disabled its own
+         dismiss handler, which closes on `e.target === ov` — an element that does not cover anything can
+         never be clicked "outside". This is the only mid-game route to Settings and Quit. */
+      #settings-ov, #confirm-ov, #pause-ov { position: fixed; inset: 0; z-index: 120; display: flex; align-items: safe center; justify-content: center;
         overflow-y: auto; padding: 16px 12px; background: rgba(4,4,12,0.85); cursor: pointer; animation: ftfade 0.25s ease-out; }
       .set-card { max-height: none; } /* the overlay scrolls (safe center keeps the top reachable at any UI scale) */
       .set-head { position: sticky; top: -20px; z-index: 2; display: flex; align-items: baseline; justify-content: space-between; margin: -20px -22px 4px; padding: 16px 22px 6px; background: var(--panel); }
