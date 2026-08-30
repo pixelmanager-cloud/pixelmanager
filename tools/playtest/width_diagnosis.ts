@@ -44,7 +44,7 @@ const mk = (s: number): Team => {
   const m: any = new MatchEngine([mk(seed), mk(seed + 1)], seed, [DEFAULT_TACTICS, DEFAULT_TACTICS]);
   const proto = Object.getPrototypeOf(m);
   const orig = proto.pickPassTarget;
-  let cands = 0, candWide = 0, chosen = 0, chosenWide = 0;
+  let cands = 0, candWide = 0, chosen = 0, chosenWide = 0, wideVetoed = 0;
   proto.pickPassTarget = function (teamIdx: 0 | 1, playerIdx: number, goal: { x: number; y: number }) {
     const s = this.state, cs = s.players[teamIdx][playerIdx];
     for (let i = 0; i < 11; i++) {
@@ -52,7 +52,14 @@ const mk = (s: number): Team => {
       const ts = s.players[teamIdx][i];
       const d = Math.hypot(ts.x - cs.x, ts.y - cs.y);
       if (d > 42 || d < 3) continue;
-      cands++; if (Math.abs(ts.y - 34) > 10) candWide++;
+      cands++;
+      const wide = Math.abs(ts.y - 34) > 10;
+      if (wide) candWide++;
+      // does this option die at the SCORE, or at the hard `gain > -6` veto applied after it?
+      const myD = Math.hypot(goal.x - cs.x, goal.y - cs.y);
+      const tD = Math.hypot(goal.x - ts.x, goal.y - ts.y);
+      const g = (myD - tD) * 0.35 + (Math.abs(goal.x - cs.x) - Math.abs(goal.x - ts.x)) * 0.65;
+      if (wide && !(g > -6)) wideVetoed++;
     }
     const r = orig.call(this, teamIdx, playerIdx, goal);
     if (r) { chosen++; if (Math.abs(s.players[teamIdx][r.idx].y - 34) > 10) chosenWide++; }
@@ -68,6 +75,7 @@ const mk = (s: number): Team => {
   carrierOff.sort((a, b) => a - b);
   console.log('\n── what happens to the ball ──');
   console.log(`  pass candidates wide (>10m off centre): ${(100 * candWide / cands).toFixed(1)}%`);
+  console.log(`  wide candidates KILLED by the gain > -6 veto: ${(100 * wideVetoed / candWide).toFixed(1)}%  <- a hard gate the score cannot outvote`);
   console.log(`  passes CHOSEN that are wide:            ${(100 * chosenWide / chosen).toFixed(1)}%   <- the gap is the defect`);
   console.log(`  carrier |y-34|: p50 ${carrierOff[Math.floor(carrierOff.length / 2)].toFixed(1)}  p90 ${carrierOff[Math.floor(carrierOff.length * 0.9)].toFixed(1)}  max ${carrierOff[carrierOff.length - 1].toFixed(1)}`);
 }

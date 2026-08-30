@@ -20,6 +20,8 @@ const BOX_RUN_TRIGGER = 35;
 const BOX_RUN_PUSH = 1;
 /** How much of a runner's natural width he keeps as he attacks the box (1 = keeps his flank entirely). */
 const BOX_RUN_WIDTH = Number(process.env.BW ?? 0.55);
+/** Distance off centre at which a player's anchor makes him a touchline outlet rather than a box runner. */
+const WIDE_ANCHOR = Number(process.env.WA ?? 99);      // 99 == nobody is excluded from box runs, i.e. OFF
 /** Base pass-completion probability before passer quality, distance and pressure.
  *  MEASURED AT 59.2% COMPLETION against roughly 80% in real football, and that gap was the engine's real
  *  structural defect. A pass failed almost two times in five, so the median possession spell was TWO TICKS
@@ -52,17 +54,23 @@ const PRESS_EXP = Number(process.env.PE ?? 0.5);
 const CROSS_RANGE = Number(process.env.CR ?? 34);
 const CROSS_WIDE_Y = Number(process.env.CW ?? 13);
 /** Base per-tick rate a wide carrier in range whips one in. */
-const CROSS_RATE = Number(process.env.CX ?? 0.9);
+const CROSS_RATE = Number(process.env.CX ?? 0);        // OFF by default — the delivery works, the supply does not
 /** Radius from goal counted as "attacking the box" for both the runner and the defenders contesting it. */
 const BOX_ATTACK_RADIUS = Number(process.env.BAR ?? 16);
 /** How heavily a pass option's progress-toward-goal and its freedom-from-pressure weigh against each other. */
 const GAIN_W = Number(process.env.GW ?? 1);
 const PRESSURE_W = Number(process.env.PW ?? 3);
 /** Distance from goal beyond which a carrier keeps his own channel rather than drifting to the centre. */
-const LANE_HOLD_RANGE = Number(process.env.LH ?? 40);
+const LANE_HOLD_RANGE = Number(process.env.LH ?? 0);   // 0 == aim at the goal spot, i.e. the original dribble
 /** How strongly a free wide option in the final third is sought as a switch of play. */
-const WIDTH_PULL = Number(process.env.WP ?? 0.8);
+/** How much of `gain` is measured up the pitch rather than toward the goal spot. 0 == the original. */
+const UPFIELD_W = Number(process.env.UW ?? 0);
+const WIDTH_PULL = Number(process.env.WP ?? 0);        // OFF by default — see the part-3 commit message
 const WIDTH_ZONE = Number(process.env.WZ ?? 40);
+/** How unpressured a wide team-mate must be for a lateral switch to him to be allowed at all, and how much
+ *  ground such a switch may concede. */
+const SWITCH_FREEDOM = Number(process.env.SF ?? 0.35);
+const SWITCH_TOLERANCE = Number(process.env.ST ?? 6);  // 6 == the original absolute veto, i.e. OFF
 const BASE_DRAIN = 0.000034; // fitness lost per tick by a working outfielder (tuned via harness)
 
 const norm = (stat: number) => stat / 20;
@@ -420,7 +428,14 @@ export class MatchEngine {
         // break for the box instead of holding their anchor, fanning out across it by player index so they
         // arrive at the near post, the penalty spot and the far post rather than stacking on one square.
         // Pure position maths — it draws no rng, so the match stream is untouched.
-        const runner = attacking && p.role !== 'GK' && p.role !== 'DF'
+        // WIDE PLAYERS DO NOT ATTACK THE BOX — THEY SUPPLY IT. My first pass had every attacker break for
+        // the box AND keep his width, which is two jobs at once and does neither: measured, the carrier was
+        // in a crossing position 14 ticks a match and 84% of those had nobody within 16m of goal to aim at.
+        // Keeping the runs wide (to preserve formation shape) is exactly what pushed the runners out of the
+        // area they were running into. The flank and the box are different jobs: a player anchored wide
+        // HOLDS the touchline as the crossing outlet, and everyone else attacks the six-yard space.
+        const heldWide = Math.abs(a.y - 34) > WIDE_ANCHOR;
+        const runner = attacking && p.role !== 'GK' && p.role !== 'DF' && !heldWide
           && (p.role === 'FW' || dm.push >= BOX_RUN_PUSH)
           && Math.abs(s.ball.x - goalX) < BOX_RUN_TRIGGER;
         if (runner) {
@@ -710,7 +725,7 @@ export class MatchEngine {
       // formation anchors put four players 24m off centre and the receiver of a pass was a median of 3.2m
       // off centre. That is the root cause of width being worthless, and it is upstream of the shape edge,
       // the crossing game and every formation-width assertion in strategy_test.
-      const gain = (myDistGoal - dGoal) * 0.35 + (Math.abs(goal.x - cs.x) - Math.abs(goal.x - ts.x)) * 0.65;
+      const gain = (myDistGoal - dGoal) * (1 - UPFIELD_W) + (Math.abs(goal.x - cs.x) - Math.abs(goal.x - ts.x)) * UPFIELD_W;
       const pressure = this.pressureOn(defTeam, ts);
       // ATTACK-FOCUS instruction (unset = neutral): bias the ball toward the widest or the most
       // central available option, on top of everything else — a deliberate lean into (or away from)
@@ -744,7 +759,19 @@ export class MatchEngine {
       const throughP = clamp(0.5 + 0.16 * directness + (counter ? 0.14 : 0)
         + mAdd(passer.attrs.creativity, 0.12) + (hasTrait(passer, 'maestro') ? 0.05 : 0), 0.25, 0.9);
       const through = gain > (counter ? 14 : 16) && this.teams[teamIdx].players[i].role === 'FW' && this.rng() < throughP;
-      if (gain > -6 && score > bestScore) { bestScore = score; best = { idx: i, through }; }
+      // THE VETO, NOT THE SCORE, IS WHAT CLOSED THE FLANKS. This gate is applied AFTER the score, so it
+      // cannot be outvoted: measured, 80% of all wide candidates died here, which is why adding a
+      // switch-of-play term to the score moved wide passes only from 4.6% to 8.1% however hard it was
+      // pushed. I had fixed the wrong half of this expression — reweighting `gain` helped the score while
+      // the absolute veto went on discarding the same options.
+      //
+      // A switch of play is lateral BY DEFINITION and gains no ground, so an absolute progress requirement
+      // forbids it outright. What actually distinguishes a good switch from a bad hospital ball is whether
+      // the man is FREE: allow a lateral option to a genuinely unpressured team-mate, and keep the strict
+      // requirement for everything else, so an aimless backward ball under pressure is still refused.
+      const laneOpen = Math.abs(ts.y - 34) > 10 && pressure < SWITCH_FREEDOM;
+      const progresses = gain > (laneOpen ? -SWITCH_TOLERANCE : -6);
+      if (progresses && score > bestScore) { bestScore = score; best = { idx: i, through }; }
     }
     return best;
   }
