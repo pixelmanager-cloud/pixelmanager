@@ -126,14 +126,22 @@ export function loadCareer(t: Token): Career {
   // between-turn decision with a default and retry the action once, so a save that straddles an engine
   // change self-heals rather than getting stuck at a boundary (#11). Only if it still can't apply do we
   // stop and resume from the last consistent state.
-  const actions = JSON.parse(t.career_actions ?? '[]') as CareerAction[];
+  // A malformed or truncated `career_actions` must not throw out of here — a JSON parse error used to
+  // reach the UI as "career not started", which renders the AGENT-PICKER over a career 36 turns deep.
+  let actions: CareerAction[] = [];
+  try { const p = JSON.parse(t.career_actions ?? '[]'); actions = Array.isArray(p) ? p : []; }
+  catch { actions = []; }
+  let applied = 0;
   for (const a of actions) {
-    try { applyAction(c, a, true); }
+    try { applyAction(c, a, true); applied++; }
     catch {
-      try { if (drainPending(c)) applyAction(c, a, true); else break; }
+      try { if (drainPending(c)) { applyAction(c, a, true); applied++; } else break; }
       catch { break; }
     }
   }
+  // Record the shortfall rather than swallowing it. See Career.replay for why this is the difference
+  // between a recoverable save and a permanently stalled bloodline.
+  if (applied < actions.length) c.replay = { applied, stored: actions.length };
   // if the final stored action left a pending phase that later engine logic expanded (e.g. an extra draft
   // pick), leave it pending so the UI surfaces it — but never leave a phase the UI can't act on.
   return c;

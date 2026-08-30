@@ -1085,7 +1085,14 @@ export const api = {
     if (t.state !== 'prospect') throw apiErr('not a prospect', {}, 409);
     if (t.career_seed == null) throw apiErr('career not started');
     const clubName = getActiveModel().club.name ?? null;
-    return { ok: true as const, state: careerState(t, loadCareer(t), clubName) };
+    const loaded = loadCareer(t);
+    // Surface a truncated replay rather than quietly returning a shorter career. The UI can then say what
+    // happened instead of showing a 12-year-old where a 25-year-old international used to be.
+    return {
+      ok: true as const,
+      state: careerState(t, loaded, clubName),
+      ...(loaded.replay ? { replayIssue: loaded.replay } : {}),
+    };
   },
   careerAct: async (pid: string, action: { type: string; cardId: string }) => {
     await ensureActive();
@@ -1094,6 +1101,17 @@ export const api = {
     if (t.state !== 'prospect') throw apiErr('not a prospect', {}, 409);
     if (t.career_seed == null) throw apiErr('career not started');
     const c = loadCareer(t);
+    // REFUSE TO PLAY ON A TRUNCATED REPLAY. The append below adds to the STORED action list, which still
+    // holds every action, while this replay stopped short — so each new move grows the record, is lost on
+    // the next load, and `finished` can never be reached. Stopping here keeps the stored career intact and
+    // therefore recoverable; continuing quietly destroys it and strands the bloodline forever.
+    if (c.replay) {
+      throw apiErr(
+        `This career can't be continued safely — ${c.replay.applied} of ${c.replay.stored} recorded moments could be replayed. `
+        + `Your record is intact and has not been changed; playing on would overwrite it.`,
+        { replay: c.replay }, 409,
+      );
+    }
     const earningsBefore = c.earnings;
     let narration: string | null = null;
     try {

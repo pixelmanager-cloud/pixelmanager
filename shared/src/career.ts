@@ -1100,6 +1100,19 @@ export class Career {
   log: Choice[] = [];
   actions: Action[] = [];           // every play/draft decision — the trade-able, resumable record
   finished = false;
+  /** Set by `loadCareer` when a replay could NOT apply every stored action.
+   *
+   *  Replay is deliberately tolerant — a card or coach that drifted since the career started degrades to a
+   *  best-fit fallback rather than bricking the save. But the last resort is a `break`, and that used to be
+   *  completely silent: no log, no flag, nothing any caller could read. Measured, one turn of schedule drift
+   *  desynced 20 of 20 recorded careers and lost 108-115 of their 120 turns, and the player was shown a
+   *  25-year-old international as a 12-year-old at Grassroots with nothing anywhere saying why.
+   *
+   *  Worse than the loss: `careerAct` appends each new action to the STORED list, which still holds all 120,
+   *  while the replay keeps stopping at 10 — so play moves the counter by one, vanishes on reload, and
+   *  `finished` is never reached, which means the prospect never graduates and THE BLOODLINE CAN NEVER
+   *  ADVANCE ANOTHER GENERATION. A save that refuses to open is recoverable. That one is not. */
+  replay?: { applied: number; stored: number };
   /** When set, the career is paused for a between-chapter DRAFT: pick DRAFT_PICKS of these to add. */
   pendingDraft: { options: Card[]; picksLeft: number } | null = null;
   /** When set, the career is paused to APPOINT a mentor/coach for the coming chapter. */
