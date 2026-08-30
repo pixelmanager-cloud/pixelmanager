@@ -45,6 +45,22 @@ export const SAVE_VERSION = 2;
 
 /** Bring an older save up to SAVE_VERSION. Pure and idempotent — running it twice must be a no-op. */
 export function migrate(m: SaveModel): SaveModel {
+  // BACKFILL EVERY COLLECTION FIRST, unconditionally — before the version gate, because a save that is
+  // already v2 can still be missing an array. This repaired only tokens: a save with no `injuries` threw
+  // inside me(), no `honours` broke prestige and the season reward, no `legacies` broke the Hall of
+  // Legends — and a save with no `tokens` made migrate() itself throw `m.tokens is not iterable`. Every
+  // one of those is a permanently unloadable save, reported to the player as "may be corrupted", with no
+  // repair path and the entry left in the save list for ever. One absent array should never cost a dynasty.
+  // `...m` FIRST, then fill the gaps — spreading m over the defaults would put an explicit `undefined`
+  // straight back and undo the repair.
+  const repaired: SaveModel = {
+    ...m,
+    tokens: m.tokens ?? [], injuries: m.injuries ?? [], legacies: m.legacies ?? [],
+    honours: m.honours ?? [], awards: m.awards ?? [], missions: m.missions ?? [],
+    loanees: m.loanees ?? [], retiredNumbers: m.retiredNumbers ?? [], playerStats: m.playerStats ?? [],
+    facilities: { ...DEFAULT_FACILITIES, ...(m.facilities ?? {}) },
+  };
+  m = repaired;
   if ((m.version ?? 1) >= SAVE_VERSION) return m;
   // v1 → v2. Before branching there was exactly one heir per generation, so the forest is recoverable
   // from the generation counter alone: each token's father is the one generation above it. Anyone with
@@ -54,15 +70,29 @@ export function migrate(m: SaveModel): SaveModel {
     const g = t.generation ?? 0;
     (byGen.get(g) ?? byGen.set(g, []).get(g)!).push(t);
   }
-  for (const t of m.tokens) {
+  // COPY, don't mutate. The doc-comment promises this is pure and it was not: it wrote through to the
+  // caller's own token objects and then returned a spread of the container, so a caller who kept its
+  // original reference saw it change underneath.
+  const tokens = m.tokens.map((t) => {
     const anyT = t as any;
-    if (anyT.branch == null) anyT.branch = 'played';   // every pre-branching token was a played line
-    if (anyT.parent_id === undefined) {
-      const parents = byGen.get((t.generation ?? 0) - 1) ?? [];
-      anyT.parent_id = parents.length === 1 ? parents[0].id : null;
+    const branch = anyT.branch ?? 'played';            // every pre-branching token was a played line
+    let parent_id = anyT.parent_id;
+    if (parent_id === undefined) {
+      // ONLY LINK WHAT THE ID ACTUALLY PROVES. Matching on "one generation above" fabricates relationships:
+      // a founder line at generation 3 alongside an independent `api.genesis()` line at generation 2 made
+      // two unrelated men father and son on the Family Record — a tree that asserts something untrue is
+      // worse than one that admits it does not know.
+      //
+      // And there is nothing to reconstruct anyway. Pre-branching, the played line REUSED one token id and
+      // bumped its generation in place, so a real v1 save holds exactly one token per line however many
+      // generations were played; that history lives in `legacies`, keyed `${id}:g<gen>`, not in tokens.
+      // Siblings are the one case the id proves, because it encodes the father: `${parentId}:b<gen>.<i>`.
+      const sib = /^(.*):b\d+\.\d+$/.exec(t.id);
+      parent_id = sib && m.tokens.some((o) => o.id === sib[1]) ? sib[1] : null;
     }
-  }
-  return { ...m, version: SAVE_VERSION };
+    return { ...t, branch, parent_id } as Token;
+  });
+  return { ...m, tokens, version: SAVE_VERSION };
 }
 
 /** An empty new-game save. `Date.now()`/`Math.random()` here are fine — this is client, not @fm/shared. */
@@ -100,7 +130,13 @@ export class LocalStore implements GameStore {
 
   // ── economy ──
   async getCoins(_id: string): Promise<number> { return this.m.profile.coins; }
-  async addCoins(_id: string, delta: number): Promise<void> { this.m.profile.coins += delta; this.touch(); }
+  async addCoins(_id: string, delta: number): Promise<void> {
+    // REFUSE A NON-FINITE DELTA. `coins += NaN` is irreversible — the wallet never recovers, and worse it
+    // fails silently, because every later `coins < cost` test is false against NaN so nothing is ever
+    // refused. One bad number upstream used to end the save's economy without a single error.
+    if (!Number.isFinite(delta)) { console.warn('[save] refused a non-finite coin delta', delta); return; }
+    this.m.profile.coins += delta; this.touch();
+  }
 
   // ── club ──
   async saveClub(_accountId: string, club: Club, so: StandingOrders): Promise<void> {

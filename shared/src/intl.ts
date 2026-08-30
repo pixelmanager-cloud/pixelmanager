@@ -135,7 +135,7 @@ export function worldCup(seed: number, edition: number, myNation: string, myStre
       if (gh > ga) { ri.W++; rj.L++; ri.Pts += 3; } else if (gh < ga) { rj.W++; ri.L++; rj.Pts += 3; } else { ri.D++; rj.D++; ri.Pts++; rj.Pts++; }
     }
     for (const r of rows) r.GD = r.GF - r.GA;
-    rows.sort((a, b) => b.Pts - a.Pts || b.GD - a.GD || b.GF - a.GF || a.nation.localeCompare(b.nation));
+    rows.sort((a, b) => b.Pts - a.Pts || b.GD - a.GD || b.GF - a.GF || (a.nation < b.nation ? -1 : a.nation > b.nation ? 1 : 0)  /* NOT localeCompare: it depends on the runtime's ICU data and locale, and this table decides who advances */);
     return { rows };
   };
   const groups = groupsN.map(runGroup);

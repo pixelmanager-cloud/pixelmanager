@@ -28,7 +28,7 @@ import {
   type FacilityKey, type MissionRow, type Token, type CareerAction,
 } from '@fm/shared';
 import {
-  localStore, getActiveModel, getActiveSlotId, newGame as newGameSlot, continueSave, deleteSave as deleteSaveSlot, setSaveBackend, type SaveBackend,
+  localStore, getActiveModel, getActiveSlotId, newGame as newGameSlot, continueSave, listSaves, deleteSave as deleteSaveSlot, setSaveBackend, type SaveBackend,
 } from './save';
 
 void _makeClub; // silence unused-import — see comment above
@@ -179,7 +179,10 @@ function mergedClub(): { club: Club; standingOrders: StandingOrders } {
     // autoPickXI selected ghosts in every formation tested, and setStandingOrders accepted the XI because
     // validateLineup has no finite-rating check. They could not even be sold — sellPlayer does not know
     // them. attrs_json is the honest test of "did this person ever actually play".
-    if (!t.attrs_json) continue;
+    // `'{}'` IS TRUTHY. The guard was `!t.attrs_json`, which a token carrying an empty attrs object walks
+    // straight through — and tokenToPlayer then yields overall() === NaN, the ghost-player bug again by a
+    // different door. Test for an actual attribute, not for the string being present.
+    if (!t.attrs_json || !/[0-9]/.test(t.attrs_json)) continue;
     merged.push(tokenToPlayer(t)); have.add(t.id);
   }
   return { club: { ...m.club, players: merged }, standingOrders: m.standingOrders };
@@ -888,7 +891,7 @@ export const api = {
     const t = await localStore.getToken(pid);
     if (!t) throw apiErr('no such token', {}, 404);
     if (t.state !== 'prospect') throw apiErr('not a prospect', {}, 409);
-    if (t.career_seed == null) await localStore.updateToken(pid, { career_seed: careerSeedFor(t.id, t.generation), agent_id: agentId ?? null, track: trackFor(t.role ?? 'MF'), career_actions: '[]' });
+    if (t.career_seed == null) await localStore.updateToken(pid, { career_seed: careerSeedFor(t.id, t.generation, getActiveSlotId() ?? OWNER), agent_id: agentId ?? null, track: trackFor(t.role ?? 'MF'), career_actions: '[]' });
     // TAKING HIM ON IS WHAT MAKES A BRANCH THE LINE. If the player chose a brother or a cousin, this is the
     // moment the trunk moves onto him — every candidate is minted as 'sibling' precisely because which one
     // becomes the played line is not decided until here. The brothers he was picked over keep 'sibling',
@@ -998,6 +1001,11 @@ export const api = {
    *  migrating and a save opened five generations later reconstructs their entire history exactly. Both
    *  sides go through the same `houseRenown`, because a table where the rivals are graded on a different
    *  curve is a table that means nothing. */
+  /** Every save the DURABLE half of storage knows about. The model lives in IndexedDB but the save index
+   *  lives in localStorage, which is the more evictable of the two — so this is how the menu finds a
+   *  dynasty the index has forgotten. `listSaves` existed in save.ts with no caller anywhere. */
+  listSaves: () => listSaves(),
+
   houses: async () => {
     await ensureActive();
     const model = getActiveModel();

@@ -65,7 +65,13 @@ export function generateTeam(
 /** Overall rating 1-20: weighted average of the stats that matter for the role. */
 export function overall(p: Player): number {
   const a = p.attrs;
-  const avg = (...xs: number[]) => xs.reduce((s, x) => s + x, 0) / xs.length;
+  // A MISSING ATTRIBUTE IS A 10, NOT A NaN. The mental layer (workrate, positioning and the rest) was added
+  // to Player after some saves were already written, and any absent stat turned the whole average into NaN
+  // — which then flowed into sellPlayer, into addCoins, and permanently poisoned the wallet, after which
+  // every affordability check silently passed because `NaN < cost` is false. 10 is the scale's neutral
+  // midpoint and the same default the match engine already assumes for these stats.
+  const avg = (...xs: Array<number | undefined>) =>
+    xs.reduce((s: number, x) => s + (Number.isFinite(x as number) ? (x as number) : 10), 0) / xs.length;
   switch (p.role) {
     case 'GK': return Math.round(avg(a.keeping, a.keeping, a.positioning, a.strength));
     case 'DF': return Math.round(avg(a.tackling, a.positioning, a.strength, a.pace, a.passing));

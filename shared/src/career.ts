@@ -890,7 +890,12 @@ export function makeScenario(rng: () => number, i: number, track: Track = 'outfi
   // youth chapters (Grassroots..Youth Team) draw age-appropriate big-game names, not senior-club ones (PT-107).
   // One rng() draw either way, so the stream — and determinism — is unchanged; only the chosen string differs.
   const bigPool = band && AGE_BANDS.indexOf(band) <= 3 ? YOUTH_BIG_MOMENTS : BIG_MOMENTS;
-  const bigRoll = Math.floor(rng() * bigPool.length); void bigRoll; // consume the rng draw to keep the stream stable...
+  // TWO DRAWS AT STAKES 3, ONE OTHERWISE — and that asymmetry is now load-bearing, so it must not be
+  // "tidied away". The comment here used to claim one draw either way, which is false: this draw always
+  // happens and the HUGE_MOMENTS pick below takes a second when stakes === 3. Replay is safe because
+  // `stakes` comes from the same stream, so both sides agree — but anyone who deletes this deliberately
+  // dead draw, or retunes the stakes thresholds, silently rewrites every career already saved.
+  const bigRoll = Math.floor(rng() * bigPool.length); void bigRoll; // deliberately dead: holds the stream
   const momentPick = stakes === 3 ? HUGE_MOMENTS[Math.floor(rng() * HUGE_MOMENTS.length)]
     : stakes === 2 ? bigPool[stridedIdx(bigPool.length, i, (seed ?? 0) >>> 0, 7)] : null; // ...but pick the label by a turn-strided walk so it doesn't repeat within a chapter (PT-111)
   const moment = kind === 'match' ? momentPick : null;

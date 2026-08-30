@@ -17,7 +17,7 @@
         --bg:#0a0a15; --panel:#1b1b3a; --panel-2:#262652; --line:#454585; --text:#eef0fb;
         --muted:#b6b8d6; /* de-emphasized copy — one clear step below --text, still high-contrast on --panel */
         --home:#e5586a; --away:#5a8de0; --good:#43d38c; --warn:#ecbe4d;
-        --pink:#e85c93; --cyan:#46cfe6; --purple:#8461e0; --accent:#6f8ad9;
+        --pink:#e85c93; --cyan:#46cfe6; --purple:#a189ec; --accent:#6f8ad9;  /* purple lightened: #8461e0 measured 4.15:1 as text on --plate, under the floor, and it is used at 11px */
         --gk:#ecbe4d; --df:#5a8de0; --mf:#43d38c; --fw:#ef8049;
         --display:'Press Start 2P', monospace; --body:'VT323', 'Courier New', monospace;
         /* app column width — grows on wide viewports so panels use the widescreen dead-space */
@@ -1596,7 +1596,12 @@
       }
       .panel {
         background:
-          linear-gradient(180deg, rgba(28,28,43,0.90), rgba(16,16,26,0.94)),
+          /* 0.94, not 0.90. Raising the scene backdrop to 42% so the painted rooms show through lifted the
+             effective panel ground over a bright art pixel from rgb(26,26,41) to rgb(36,35,49), which pushed
+             --home (#e5586a) from 5.16:1 down to 4.37:1 — under the floor, on error text and the relegation
+             zone. Matching the bottom stop restores 4.75:1 and costs nothing visible: the art still reads at
+             the panel edges, which is where there is no text. */
+          linear-gradient(180deg, rgba(28,28,43,0.94), rgba(16,16,26,0.94)),
           radial-gradient(ellipse 90% 50% at 50% 0%, color-mix(in srgb, var(--room) 10%, transparent), transparent 70%);
         border-color: color-mix(in srgb, var(--room) 30%, var(--rule));
         box-shadow: 0 0 0 2px #000, 6px 6px 0 rgba(0,0,0,0.45),

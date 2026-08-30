@@ -40,7 +40,18 @@ export const foundingNameFor = (seed: number, familyName?: string | null) => {
 export const roleHintOf = (t: Token): string => t.role ?? 'MF';
 export const trackFor = (roleHint: string): Track => (roleHint === 'GK' ? 'goalkeeper' : 'outfield');
 export const ageOf = (primeSeason: number, season: number) => Math.min(40, Math.max(25, 25 + (season - primeSeason)));
-export const careerSeedFor = (id: string, gen: number) => seedFrom(`${id}:career:g${gen}`);
+/** The seed a career replays from. MUST be mixed with the save's own id.
+ *
+ *  This hashed the token id alone — and token ids are deterministic counters (`nft:1`, `nft:2`), not
+ *  UUIDs. So the founding prospect's career seed was the constant 77173451 in every save ever created:
+ *  every player's founder was a `workhorse`, faced a rival named Turner, opened on "match: creativity",
+ *  and played the same 120-turn script. Generation 1 was universally `pro` vs De Groot. The league and the
+ *  rival dynasties correctly varied per save because they hash the slot UUID; the career — the thing you
+ *  spend two hours inside — did not.
+ *
+ *  `world` is the save's slot id. Existing careers are unaffected: `career_seed` is written once at
+ *  startCareer and persisted, so an in-progress career keeps the seed it began with and replays exactly. */
+export const careerSeedFor = (id: string, gen: number, world = '') => seedFrom(`${world}:${id}:career:g${gen}`);
 // Include READABLE effect labels so the player can see what an agent actually DOES, not just flavour text.
 export const agentsList = () => AGENTS.map((a) => ({
   id: a.id, name: a.name, desc: a.desc,

@@ -407,6 +407,8 @@ class Game {
     this.loadPrefs(); // reduced-motion etc., applied before first paint
     this.wireStaticButtons();
     this.showScreen('login');
+    // Reconcile the durable half against the evictable index BEFORE drawing the menu.
+    void this.recoverOrphanedSaves().then(() => this.renderMainMenu());
     this.renderMainMenu();
   }
 
@@ -415,6 +417,29 @@ class Game {
     try { return JSON.parse(localStorage.getItem('fm_saves') || '[]'); } catch { return []; }
   }
   private saveSaves(s: Array<{ id: string; token: string; name: string; lastPlayed: number }>) { localStorage.setItem('fm_saves', JSON.stringify(s)); }
+
+  /** RECOVER SAVES THE INDEX HAS LOST.
+   *
+   *  A save lives in two places: the model in IndexedDB, and the `fm_saves` index — plus the manager state
+   *  and the club tier — in localStorage. Nothing reconciled them, and localStorage is the MORE evictable
+   *  half (Safari clears it after seven idle days). Lose it and the title screen computes `saves.length
+   *  === 0`: no Continue button, no list, while the complete dynasty sits untouched in IndexedDB. Not
+   *  merely unreachable — invisible.
+   *
+   *  `listSaves()` already existed to read the durable half and had no caller anywhere. It does now. */
+  private async recoverOrphanedSaves(): Promise<void> {
+    try {
+      const known = new Set(this.loadSaves().map((s) => s.id));
+      const onDisk = await api.listSaves();
+      const orphans = onDisk.filter((m: { id: string }) => !known.has(m.id));
+      if (!orphans.length) return;
+      const rebuilt = [...this.loadSaves(), ...orphans.map((m: { id: string; name?: string; lastPlayed?: number }) => ({
+        id: m.id, token: m.id, name: m.name ?? 'Recovered save', lastPlayed: m.lastPlayed ?? 0,
+      }))];
+      this.saveSaves(rebuilt);
+      toast(`↩️ Recovered ${orphans.length} save${orphans.length === 1 ? '' : 's'} the browser had lost track of`);
+    } catch { /* recovery is best-effort — never block the menu on it */ }
+  }
 
   private renderMainMenu() {
     $('mm-emblem').innerHTML = `<span class="mm-crown">${sprite('crown')}</span><span class="mm-ball">${sprite('ball')}</span>`;
@@ -564,6 +589,41 @@ class Game {
 
   private syncMuteBtn() { const at = $('audio-toggle'); at.innerHTML = audio.isMuted() ? ICON_MUTED : ICON_SPEAKER; at.classList.toggle('muted', audio.isMuted()); }
 
+  /** MAKE AN OVERLAY BEHAVE LIKE A DIALOG: move focus into it, trap Tab inside it, close on Escape, mark
+   *  the page behind it inert, and put focus back where it was on close.
+   *
+   *  Six overlays existed and not one trapped focus; three had no Escape at all — including the confirm
+   *  used for deleting a save forever and the contract-talks negotiation. On a controller that is fatal:
+   *  the dialog opens, focus is still behind it, B does nothing, and Tab walks the screen underneath before
+   *  ever reaching Cancel. The pause menu already did the focus-and-Escape half correctly; this is that
+   *  pattern, finished, in one place. Returns a close function the caller should use.
+   */
+  private dialogify(ov: HTMLElement, onClose?: () => void): () => void {
+    const app = document.getElementById('app');
+    const previously = document.activeElement as HTMLElement | null;
+    app?.setAttribute('inert', '');
+    const focusables = () => Array.from(ov.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), a[href], select, input, [tabindex]:not([tabindex="-1"])'));
+    focusables()[0]?.focus();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+      if (e.key !== 'Tab') return;
+      const f = focusables(); if (!f.length) return;
+      const first = f[0], last = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+    };
+    document.addEventListener('keydown', onKey, true);
+    const close = () => {
+      document.removeEventListener('keydown', onKey, true);
+      app?.removeAttribute('inert');
+      ov.remove();
+      previously?.focus?.();
+      onClose?.();
+    };
+    return close;
+  }
+
   /** A generic yes/cancel confirm overlay (used for destructive actions like deleting a save). */
   private openConfirm(message: string, confirmLabel: string, onYes: () => void) {
     document.getElementById('confirm-ov')?.remove();
@@ -572,7 +632,7 @@ class Game {
       + `<div class="tt-sub" style="margin-bottom:6px">${message}</div>`
       + `<div class="cf-btns"><button id="cf-no">Cancel</button><button id="cf-yes" class="danger">${confirmLabel}</button></div></div>`;
     document.body.appendChild(ov);
-    const close = () => ov.remove();
+    const close = this.dialogify(ov);
     ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
     ov.querySelector('#cf-no')!.addEventListener('click', close);
     ov.querySelector('#cf-yes')!.addEventListener('click', () => { close(); onYes(); });
@@ -805,6 +865,7 @@ class Game {
     $('view-club').addEventListener('click', () => this.showClub()); // the club-facilities coin sink (dynasty-building, not the gated match loop)
     $('season-back').addEventListener('click', () => this.showHub());
     ($('hub-season-dev') as any)?.addEventListener('click', () => this.showSeason()); // TEMP entry until the handoff wires it
+    this.makeActivatable([$('app-title')]);
     $('app-title').addEventListener('click', () => { if (hasToken()) void this.showHub(); });
     $('academy-back').addEventListener('click', () => this.showHub());
     $('club-back').addEventListener('click', () => this.showHub());
@@ -846,7 +907,7 @@ class Game {
     // contract situation (NFT players only): age, deal status, extend/sell — the NFT stays owned either way
     const ci = this.contracts[p.id];
     const stakeHtml = ci ? (ci.staked
-      ? `<div class="pc-stake">📋 registered ${ci.stakedSeasons} season${ci.stakedSeasons === 1 ? '' : 's'} — long service earns him a loyalty discount · <a class="pc-link" data-stake="off" data-pid="${p.id}">withdraw from the squad</a></div>`
+      ? `<div class="pc-stake">📋 registered ${ci.stakedSeasons} season${ci.stakedSeasons === 1 ? '' : 's'} — long service earns him a loyalty discount · <button type="button" class="pc-link" data-stake="off" data-pid="${p.id}">withdraw from the squad</button></div>`
       : `<div class="pc-stake">⭘ not registered — <a class="pc-link" data-stake="on" data-pid="${p.id}">register him for the season</a></div>`) : '';
     let contractHtml = '';
     // NOTE: single-player has no 'retired' token state — succession goes pro→prospect directly via rebornFields,
@@ -885,6 +946,9 @@ class Game {
       if (t === el || t.classList.contains('pc-close')) el.remove();
     });
     document.body.appendChild(el);
+    // The player card holds the contract, morale and the career record, and its only exit was a click.
+    const closeCard = this.dialogify(el);
+    void closeCard;
   }
 
   /** A prospect card — a 10-year-old about to live his career. For an heir (gen > 0) this is the payoff
@@ -907,12 +971,13 @@ class Game {
       + `</div>`
       + `<div class="pc-foot">🌱 Youth prospect · his story starts at age 10</div>`
       + `<div class="pc-cta"><button class="pc-dev primary" data-dev="${p.id}">Develop him →</button><button class="pc-close">${born ? 'Later' : 'Close'}</button></div></div>`;
+    document.body.appendChild(el);
+    const closeProspect = this.dialogify(el);
     el.addEventListener('click', (e) => {
       const t = e.target as HTMLElement;
-      if (t.dataset.dev) { el.remove(); void this.openCareer(t.dataset.dev); return; }
-      if (t === el || t.classList.contains('pc-close')) el.remove();
+      if (t.dataset.dev) { closeProspect(); void this.openCareer(t.dataset.dev); return; }
+      if (t === el || t.classList.contains('pc-close')) closeProspect();
     });
-    document.body.appendChild(el);
   }
 
   /** A lifecycle-at-a-glance panel for the manager's NFT stars — age, contract, morale, staking + quick actions. */
@@ -997,7 +1062,8 @@ class Game {
     const ov = document.createElement('div'); ov.id = 'settings-ov';
     ov.innerHTML = `<div class="tt-card cn-card"><div class="set-head"><div class="tt-title">✍️ CONTRACT TALKS — ${name}</div><button class="set-x" aria-label="Close">✕</button></div><div id="cn-body"></div></div>`;
     document.body.appendChild(ov);
-    const close = () => ov.remove();
+    // A full-screen negotiation whose only exit was a mouse click on the ✕ — no Escape, no focus move.
+    const close = this.dialogify(ov);
     ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
     ov.querySelector('.set-x')!.addEventListener('click', close);
     const render = () => {
@@ -1145,7 +1211,7 @@ class Game {
   // Do not re-surface them. Single-player content (own youth academy, facilities, season, trophy room) stays.
 
   /** The "Your Player" block on the home hub — the bloodline you're living, inline with a develop/continue CTA. */
-  private async refreshHubPlayer() {
+  private async refreshHubPlayer(): Promise<void> {
     const el = $('hub-player');
     // MANAGER PHASE: you've handed off — the home shows the managed star + Continue the season.
     const mgr = this.loadMgr();
@@ -1161,6 +1227,21 @@ class Game {
     }
     el.innerHTML = SPINNER;
     try {
+      // THE OTHER HALF OF THE SPLIT-STORAGE TRAP. The manager state lives in localStorage and the club in
+      // IndexedDB, and losing the localStorage half strands a complete dynasty: the star's token is 'pro',
+      // so api.prospects() is empty and the hub offered "Scout a prospect" over a club with a squad, coins
+      // and honours still intact. There was no way back, because `starId` is only ever assigned inside the
+      // handoff, which throws unless the token is a prospect — the one door needs a career you have already
+      // finished. Rebuild the manager state from the durable half instead.
+      const me = await api.me();
+      const star = me.club.players.find((p) => me.contracts?.[p.id]);
+      if (star && !mgr.starId) {
+        const ci: any = me.contracts?.[star.id];
+        this.saveMgr({ ...mgr, starId: star.id, starName: star.name, starAge: ci?.age ?? star.age ?? 24,
+          starGen: 0, season: Math.max(1, mgr.season ?? 1), results: mgr.results ?? [] });
+        toast('↩️ Recovered your manager career from the club record');
+        return this.refreshHubPlayer();
+      }
       const { prospects } = await api.prospects();
       if (!prospects.length) {
         el.innerHTML = `<div class="hub-prow scout"><div class="hp-main"><div class="hp-name">🌱 No prospect yet</div>`
@@ -1632,6 +1713,9 @@ class Game {
       + (m.starName ? `<div class="sf-tm"><button id="sf-transfers">💰 Transfer Market</button> <span class="sf-tm-hint">buy/sell players to strengthen the squad</span></div>` : '')
       + `<div class="season-cols"><div class="season-fixtures"><h4 class="scout-h4">FIXTURES</h4>${fxRows}${records}${focusSel}${simBtn}</div>`
       + `<div class="season-table-wrap"><h4 class="scout-h4">LEAGUE TABLE — ${tierName(tier).toUpperCase()}</h4>${this.spTableHtml(t, tier)}${this.staffHtml()}</div></div>`;
+    // Keyboard/controller access for the decision the game turns on — see makeActivatable. It exists and
+    // was applied to two of ten click-only choice patterns; the gap was coverage, not capability.
+    this.makeActivatable($('season-body').querySelectorAll('[data-arcchoice]'));
     $('season-body').querySelectorAll('[data-arcchoice]').forEach((el) =>
       el.addEventListener('click', () => this.resolveArcChoice((el as HTMLElement).dataset.arcchoice!)));
     ($('mgr-help-x') as any)?.addEventListener('click', () => { localStorage.setItem(this.onbKey('fm_mgr_help_done'), '1'); ($('mgr-help') as any)?.remove(); });
@@ -2278,6 +2362,7 @@ class Game {
           : `<div class="cg-effs cg-eff-mute">a new chapter for him — no direct effect on the heir</div>`;
         return `<div class="cg-coach" data-nextlife="${k}"><div class="cg-cname">${nl.icon} ${nl.label}</div><div class="cg-cdesc">${nl.blurb}</div>${eff}</div>`;
       }).join('') + `</div></div>`;
+    this.makeActivatable(document.querySelectorAll('#cg-nextlife [data-nextlife]'));
     document.querySelectorAll('#cg-nextlife [data-nextlife]').forEach((el) => el.addEventListener('click', () => {
       const choice = (el as HTMLElement).dataset.nextlife as 'coaching' | 'media' | 'mentoring';
       const nl = Game.NEXT_LIFE[choice];
@@ -2298,6 +2383,7 @@ class Game {
         + ` <b>The club, its division, your facilities, staff and honours all stay yours</b>; you take the reins again when he breaks into the first team.</div>`
         + `<div class="cg-prompt">What does ${m.starName} pass down to his heir?</div>`
         + `<div id="cg-will">${willCards}</div>`;
+      this.makeActivatable(document.querySelectorAll('#cg-will [data-will]'));   // the inheritance — irreversible
       document.querySelectorAll('#cg-will [data-will]').forEach((el) => el.addEventListener('click', () =>
         this.bringThroughHeir(m, seasons, titles, appliedMentorship, (el as HTMLElement).dataset.will as 'craft' | 'name' | 'fortune', sold?.fee ?? 0)));
     }));
@@ -3030,6 +3116,7 @@ class Game {
       + `<div class="cg-heirs">${cards}</div>`
       + `<button id="cg-heir-go" class="primary">Take him on →</button></div>`;
     let chosen = all[0].id;
+    this.makeActivatable($('academy-body').querySelectorAll('[data-heir]'));   // an irreversible dynasty choice
     $('academy-body').querySelectorAll('[data-heir]').forEach((el) => el.addEventListener('click', () => {
       chosen = (el as HTMLElement).dataset.heir!;
       $('academy-body').querySelectorAll('[data-heir]').forEach((o) => o.classList.toggle('on', o === el));
@@ -3182,6 +3269,7 @@ class Game {
     });
     // the chosen temperament gates which arcs fire and colours how the board and dressing room react
     let chosenTemper: MgrTemper = MGR_TEMPERS[0].id;
+    this.makeActivatable($('academy-body').querySelectorAll('[data-temper]'));
     $('academy-body').querySelectorAll('[data-temper]').forEach((el) => el.addEventListener('click', () => {
       chosenTemper = (el as HTMLElement).dataset.temper as MgrTemper;
       $('academy-body').querySelectorAll('[data-temper]').forEach((o) => o.classList.toggle('on', o === el));
@@ -3864,6 +3952,7 @@ class Game {
     }).join('');
     host.innerHTML = `<div class="mp-head">📋 MATCH PLAN — conditional orders</div>`
       + `<div class="mp-sub">Arm the moves your side makes automatically as the game unfolds.</div>${rows}`;
+    this.makeActivatable(host.querySelectorAll('[data-plan]'));
     host.querySelectorAll('[data-plan]').forEach((el) => el.addEventListener('click', () => {
       const id = (el as HTMLElement).dataset.plan!;
       if (this.draftPlan.has(id)) this.draftPlan.delete(id); else this.draftPlan.add(id);
@@ -4016,6 +4105,7 @@ class Game {
         : `${p.name} (${p.role} ${overall(p)})`;
     }).join(' · ') + injuredHtml;
     // NFT badges/names open the collectible card
+    this.makeActivatable(document.querySelectorAll('#xi [data-card], #bench [data-card]'));
     Array.from(document.querySelectorAll<HTMLElement>('#xi [data-card], #bench [data-card]')).forEach((el) => {
       el.style.cursor = 'pointer';
       el.addEventListener('click', () => { const p = this.club.players.find((x) => x.id === el.dataset.card); if (p) this.showPlayerCard(p); });
@@ -4056,6 +4146,7 @@ class Game {
         this.renderSquadPanel();
       });
     });
+    this.makeActivatable(panel.querySelectorAll('[data-card]'));   // the player card holds contract, morale and the career record
     panel.querySelectorAll<HTMLElement>('[data-card]').forEach((td) => {
       td.addEventListener('click', () => {
         const p = this.club.players.find((x) => x.id === td.dataset.card);
