@@ -479,6 +479,10 @@ export class IndexedDBBackend implements SaveBackend {
 // `writeSlotInner`'s own comment calls a silent failed write "the worst bug this file can have"; this was
 // the same bug through a different door, and the only door with no warning at all.
 const HAS_IDB = typeof indexedDB !== 'undefined';
+/** True while the active backend cannot outlive the tab. Tracked separately from HAS_IDB so a deliberately
+ *  chosen durable backend (a test seam, or the Steam FileBackend) clears the warning and a volatile one
+ *  keeps it — the flag follows what the backend IS, not what the environment happened to offer at load. */
+let volatileBackend = !HAS_IDB;
 const defaultBackend: SaveBackend = HAS_IDB ? new IndexedDBBackend() : createInMemoryBackend();
 
 // ── the save-slot manager (replaces the `fm_saves` localStorage concept) ──
@@ -513,9 +517,14 @@ async function writeSlotInner(id: string, model: SaveModel): Promise<void> {
   // moves and reporting success while nothing reaches disk; you close the tab and the evening is gone.
   try {
     await backend.save(id, model);
-    if (!saveHealth.ok && HAS_IDB) saveHealth = { ok: true };
+    // A verified write clears the warning whatever backend is in use. The `HAS_IDB` guard I added here was
+    // wrong: it meant that with no IndexedDB the flag could NEVER return to healthy, even for a backend
+    // that demonstrably works — which re-breaks the banner it was meant to serve, and would bite the Steam
+    // FileBackend this file already anticipates. The no-storage warning is raised at module load and by
+    // `markVolatile()`; it does not need to be sticky here as well.
+    if (!saveHealth.ok && !volatileBackend) saveHealth = { ok: true };
   } catch (e) {
-    try { await backend.save(id, model); if (!saveHealth.ok && HAS_IDB) saveHealth = { ok: true }; return; } catch { /* fall through */ }
+    try { await backend.save(id, model); if (!saveHealth.ok && !volatileBackend) saveHealth = { ok: true }; return; } catch { /* fall through */ }
     saveHealth = { ok: false, error: (e as Error)?.message ?? String(e) };
   }
 }
@@ -533,11 +542,17 @@ function schedulePersist(): void {
 }
 
 /** Swap the persistence backend (tests inject `createInMemoryBackend()`; real code never needs to). */
-export function setSaveBackend(b: SaveBackend): void { backend = b;
+export function setSaveBackend(b: SaveBackend, opts?: { volatile?: boolean }): void {
+  backend = b;
   // Choosing a backend deliberately is not the "no storage available" failure state, so clear the warning
-  // that `HAS_IDB === false` raises at module load. Without this every Node harness would run with a
-  // permanently unhealthy save flag, which would mask a real regression rather than reveal one.
-  saveHealth = { ok: true };
+  // that a missing IndexedDB raises at module load — otherwise every Node harness runs permanently
+  // unhealthy, which masks a regression rather than revealing one. Callers that know their backend does not
+  // persist should say so; a bare `setSaveBackend` used to clear a live "disk full" warning with no
+  // evidence of anything, which is the same silent-success failure this file exists to prevent.
+  volatileBackend = opts?.volatile ?? false;
+  saveHealth = volatileBackend
+    ? { ok: false, error: 'Progress is being kept in memory only and will be lost when you close the game.' }
+    : { ok: true };
 }
 export function getActiveSlotId(): string | null { return activeSlotId; }
 export function getActiveModel(): SaveModel { return modelBox.model; }

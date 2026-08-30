@@ -200,7 +200,10 @@ const MATCH_PLAN_RULES: PlanRule[] = [
 ];
 const clampTac = (v: number) => Math.max(-2, Math.min(2, v));
 
-const FORMATIONS: Formation[] = ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1', '3-4-3', '4-1-2-1-2', '5-3-2', '4-5-1', '4-1-4-1', '5-4-1', '4-2-2-2'];
+// Derived from the shapes, so the picker and the validator can never disagree again. They did: this was a
+// hand-written eleven while `isFormation` in api.ts was a hand-written eight, and the three extra shapes
+// silently failed to save.
+const FORMATIONS = Object.keys(FORMATION_SHAPES) as Formation[];
 const SLOT_ROLES: Record<Formation, string[]> = {
   '4-4-2': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'MF', 'FW', 'FW'],
   '4-3-3': ['GK', 'DF', 'DF', 'DF', 'DF', 'MF', 'MF', 'MF', 'FW', 'FW', 'FW'],
@@ -407,7 +410,7 @@ class Game {
   draftCaptain?: number;    // slot index wearing the armband
   draftTakers: { pen?: number; fk?: number; corner?: number } = {}; // set-piece taker slot indices
   /** slot index -> the player the manager actually picked, when today's XI had to substitute for him. */
-  private draftSubs = new Map<number, string>();
+  private draftSubs = new Map<number, import('@fm/shared').Cover>();
   editorMode: 'standing' | 'match' = 'standing';
   squadSort: SquadSort | null = null;
   spFixture: { idx: number; oppClub: Club; oppName: string; oppStrength: number; venue: 'home' | 'away'; neutral?: boolean; oppLineup: Lineup; oppTactics: Tactics; comp?: 'league' | 'cont' | 'wc'; contRound?: number } | null = null; // the single-player fixture being played (neutral = a neutral-ground decider: no fan-zone home bonus, PT-130)
@@ -4534,7 +4537,12 @@ class Game {
       };
       const r = await api.setStandingOrders(so);
       this.standingOrders = r.standingOrders;
-    } catch { /* never block kickoff on a failed write — the next one retries */ }
+    } catch (e: any) {
+      // NEVER BLOCK KICKOFF on a failed write — but do not swallow it either. A bare catch here is what hid
+      // `isFormation` rejecting three of the eleven formations the editor offers: the sheet simply did not
+      // save, every match, with nothing said.
+      toast(`Couldn't save your team sheet — ${e?.message ?? 'unknown error'}`);
+    }
   }
 
   /** The house's bid multiplier, refreshed when the season screen loads. Cached because the season view

@@ -46,23 +46,39 @@ function fixture(qa: number, qb: number) {
 
 console.log(`[division-balance] top club vs bottom club of the SAME division, n=${N} each\n`);
 console.log('  tier  strength      fixture      GD     scoreline    won by 6+   fav win%');
-const worst = { tier: 0, big: 0, gd: 0 };
-for (const tier of [1, 3, 5, 8, TIERS]) {
+
+// EVERY tier, not a sample of five. The first version tested 1, 3, 5, 8 and 10 — and the mismatch is an
+// inverted U, because the clamp on `seededOpponents` compresses both ends of the range. The peak sits at
+// tier 6, which was never measured. A gate that samples around a maximum and reports the samples is the
+// same defect as the goals/match gate that measured one squad quality and called it the pyramid.
+let worstThrash = { tier: 0, v: -1 };
+let worstMargin = { tier: 0, v: -1 };
+for (let tier = 1; tier <= TIERS; tier++) {
   const base = tierStrength(tier);
   const hi = Math.max(3, Math.min(20, Math.round(base + SPREAD)));
   const lo = Math.max(3, Math.min(20, Math.round(base - SPREAD)));
   const r = fixture(hi, lo);
   console.log(`   ${String(tier).padStart(2)}    ${base.toFixed(1).padStart(4)}      ${hi} v ${String(lo).padEnd(2)}   ${r.gd >= 0 ? '+' : ''}${r.gd.toFixed(2).padStart(5)}   ${r.gf.toFixed(2)}-${r.ga.toFixed(2)}      ${(100 * r.big).toFixed(0).padStart(3)}%       ${(100 * r.win).toFixed(0)}%`);
-  if (r.big > worst.big) { worst.tier = tier; worst.big = r.big; worst.gd = r.gd; }
+  // TRACKED INDEPENDENTLY. These used to share one `worst` record, so the margin assertion reported the
+  // margin of the worst-THRASHING tier rather than the worst margin — and because that record started at
+  // `{big: 0, gd: 0}` and was only replaced when a tier beat it, an engine that won 5-0 in every division
+  // and never once by six left the placeholder in place and passed both checks while violating the stated
+  // bound by 25%. An engine that never scored at all also passed.
+  if (r.big > worstThrash.v) worstThrash = { tier, v: r.big };
+  if (Math.abs(r.gd) > worstMargin.v) worstMargin = { tier, v: Math.abs(r.gd) };
 }
 
 console.log('');
-// A six-goal win is a thrashing. It happens in real leagues; it is not most weeks. Pre-rebuild this
-// engine produced it in 5% of top-vs-bottom fixtures, which is about right; the rebuild made it 53%.
-check(worst.big <= 0.15,
-  `a top-vs-bottom fixture is a thrashing at most 15% of the time (worst: tier ${worst.tier}, ${(100 * worst.big).toFixed(0)}%)`);
-check(Math.abs(worst.gd) <= 4.0,
-  `the widest ordinary league fixture stays inside 4 goals of average margin (worst: tier ${worst.tier}, ${worst.gd.toFixed(2)})`);
+if (worstThrash.tier === 0 || worstMargin.tier === 0) {
+  console.log('  FAIL no division was measured at all — the gate cannot pass by default');
+  process.exit(1);
+}
+// A six-goal win is a thrashing. It happens in real leagues; it is not most weeks. The pre-rebuild engine
+// this bar is calibrated against produces it in 1-7% of top-vs-bottom fixtures; the rebuilt one made it 53%.
+check(worstThrash.v <= 0.15,
+  `a top-vs-bottom fixture is a thrashing at most 15% of the time (worst: tier ${worstThrash.tier}, ${(100 * worstThrash.v).toFixed(0)}%)`);
+check(worstMargin.v <= 4.0,
+  `the widest ordinary league fixture stays inside 4 goals of average margin (worst: tier ${worstMargin.tier}, ${worstMargin.v.toFixed(2)})`);
 
 console.log(fails
   ? `\n✗ ${fails} division-balance check(s) failed — the league the game actually generates is not competitive`

@@ -6,6 +6,16 @@ export interface Token {
   id: string; owner_id: string; generation: number; state: 'prospect' | 'pro' | 'retired'; name: string;
   genes_json: string; pedigree: number; dev_bonus_json: string;
   career_seed: number | null; agent_id: string | null; track: string | null; career_actions: string | null;
+  /** How many actions `career_actions` was LAST WRITTEN with.
+   *
+   *  A physically truncated array — a partial write, an aborted quota write, a half-synced cloud save —
+   *  replays perfectly: every action that survived applies, so `applied === actions.length` and the career
+   *  reports full health while sitting at turn 61 of 120. There is nothing to compare the array against
+   *  without a count held OUTSIDE it. Measured: 8 of 8 careers truncated to half length loaded with no
+   *  shortfall reported, and `careerAct` then appended onto the shortened record.
+   *
+   *  Optional, so saves written before it exists simply opt out of the check rather than being condemned. */
+  career_action_count?: number;
   attrs_json: string | null; role: string | null; traits_json: string | null; personality: string | null;
   greed: number | null; marketability: number | null; earnings: number | null; prime_season: number | null; peak_overall: number;
   signed_season: number | null; length_seasons: number | null; staked_since: number | null;

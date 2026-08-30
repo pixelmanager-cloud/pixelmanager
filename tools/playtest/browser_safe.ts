@@ -27,6 +27,7 @@
 // This is still the cheap half. The expensive half is loading the built page in a headless browser, and
 // this file does not pretend to be that.
 import ts from 'typescript';
+import { builtinModules } from 'node:module';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, relative } from 'node:path';
@@ -34,7 +35,13 @@ import { join, relative } from 'node:path';
 const ROOT = fileURLToPath(new URL('../../', import.meta.url));
 const SCAN = ['shared/src', 'client/src'];
 const NODE_GLOBALS = new Set(['process', '__dirname', '__filename', 'Buffer', 'require']);
-const NODE_MODULES = /^(node:|fs$|path$|os$|child_process$|crypto$|util$|worker_threads$|module$)/;
+// Ask Node what its built-ins are rather than guessing. The hand-rolled regex missed `fs/promises`,
+// `events`, `http` and `stream`, and would have missed every builtin added since it was written.
+const BUILTINS = new Set(builtinModules);
+const isNodeModule = (spec: string): boolean =>
+  spec.startsWith('node:') || BUILTINS.has(spec) || BUILTINS.has(spec.split('/')[0]);
+/** Objects a Node global can be reached through without naming it directly. */
+const GLOBAL_OBJECTS = new Set(['globalThis', 'global', 'window', 'self']);
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const name of readdirSync(dir)) {
@@ -45,18 +52,65 @@ function walk(dir: string, out: string[] = []): string[] {
   return out;
 }
 
-/** Does the statement enclosing this node short-circuit on `typeof <name>`? */
-function guardedBy(node: ts.Node, name: string): boolean {
-  let stmt: ts.Node = node;
-  while (stmt.parent && !ts.isStatement(stmt)) stmt = stmt.parent;
+/** Does a `typeof <name>` actually protect THIS reference?
+ *
+ *  The first version walked up to the nearest STATEMENT and asked whether a `typeof` appeared anywhere in
+ *  it. One decoy in a sibling declarator therefore laundered every other declarator in the same `const` —
+ *  and `const _n = typeof process, A = Number(process.env.X ?? 1), B = ...` is exactly the shape of the
+ *  forty module-scope reads that took the game to a black screen. A `typeof` in one class member licensed
+ *  the whole class the same way.
+ *
+ *  A reference is protected only when short-circuiting actually reaches it: it is on the right of an
+ *  `&&`/`||`/`??` whose left tests `typeof <name>`, or inside the taken branch of a `?:` or `if` whose
+ *  condition does. The walk stops at a declarator, property, function or class boundary, because those are
+ *  precisely the seams a decoy used to cross. */
+function mentionsTypeOf(n: ts.Node, name: string): boolean {
   let found = false;
-  const scan = (n: ts.Node): void => {
+  const scan = (x: ts.Node): void => {
     if (found) return;
-    if (ts.isTypeOfExpression(n) && ts.isIdentifier(n.expression) && n.expression.text === name) { found = true; return; }
-    ts.forEachChild(n, scan);
+    if (ts.isTypeOfExpression(x) && ts.isIdentifier(x.expression) && x.expression.text === name) { found = true; return; }
+    ts.forEachChild(x, scan);
   };
-  scan(stmt);
+  scan(n);
   return found;
+}
+
+function guardedBy(node: ts.Node, name: string): boolean {
+  let cur: ts.Node = node;
+  let parent = cur.parent;
+  while (parent) {
+    if (ts.isBinaryExpression(parent)
+      && (parent.operatorToken.kind === ts.SyntaxKind.AmpersandAmpersandToken
+        || parent.operatorToken.kind === ts.SyntaxKind.BarBarToken
+        || parent.operatorToken.kind === ts.SyntaxKind.QuestionQuestionToken)
+      && parent.right === cur && mentionsTypeOf(parent.left, name)) return true;
+    if (ts.isConditionalExpression(parent) && (parent.whenTrue === cur || parent.whenFalse === cur)
+      && mentionsTypeOf(parent.condition, name)) return true;
+    if (ts.isIfStatement(parent) && parent.expression !== cur && mentionsTypeOf(parent.expression, name)) return true;
+    // a decoy must not reach across these seams
+    if (ts.isVariableDeclaration(parent) || ts.isPropertyDeclaration(parent) || ts.isPropertyAssignment(parent)
+      || ts.isFunctionLike(parent) || ts.isClassLike(parent) || ts.isSourceFile(parent)) return false;
+    cur = parent; parent = cur.parent;
+  }
+  return false;
+}
+
+/** Names this file declares itself. A class called `Buffer` or a method called `process` is yours, not
+ *  Node's, and flagging it would be a false positive — 9 of them on one 13-line browser-safe file. */
+function localNames(src: ts.SourceFile): Set<string> {
+  const names = new Set<string>();
+  const add = (n?: ts.Node) => { if (n && ts.isIdentifier(n)) names.add(n.text); };
+  const visit = (n: ts.Node): void => {
+    if (ts.isClassDeclaration(n) || ts.isFunctionDeclaration(n) || ts.isEnumDeclaration(n)
+      || ts.isInterfaceDeclaration(n) || ts.isTypeAliasDeclaration(n)) add(n.name);
+    if (ts.isVariableDeclaration(n) || ts.isParameter(n) || ts.isBindingElement(n)) add(n.name as ts.Node);
+    if (ts.isImportSpecifier(n) || ts.isImportClause(n) || ts.isNamespaceImport(n)) add((n as any).name);
+    if (ts.isMethodDeclaration(n) || ts.isPropertyDeclaration(n) || ts.isGetAccessor(n) || ts.isSetAccessor(n)
+      || ts.isEnumMember(n)) add(n.name as ts.Node);
+    ts.forEachChild(n, visit);
+  };
+  visit(src);
+  return names;
 }
 
 const problems: string[] = [];
@@ -67,6 +121,7 @@ for (const rel of SCAN) {
     filesScanned++;
     const shown = relative(ROOT, file);
     const src = ts.createSourceFile(file, readFileSync(file, 'utf8'), ts.ScriptTarget.ESNext, true);
+    const mine = localNames(src);
     const at = (n: ts.Node) => `${shown}:${src.getLineAndCharacterOfPosition(n.getStart(src)).line + 1}`;
 
     const visit = (node: ts.Node): void => {
@@ -74,7 +129,7 @@ for (const rel of SCAN) {
       const spec = (ts.isImportDeclaration(node) || ts.isExportDeclaration(node)) ? node.moduleSpecifier
         : (ts.isCallExpression(node) && node.expression.kind === ts.SyntaxKind.ImportKeyword) ? node.arguments[0]
         : undefined;
-      if (spec && ts.isStringLiteral(spec) && NODE_MODULES.test(spec.text)) {
+      if (spec && ts.isStringLiteral(spec) && isNodeModule(spec.text)) {
         problems.push(`${at(node)}  imports the Node built-in '${spec.text}'`);
       }
       if (ts.isIdentifier(node) && NODE_GLOBALS.has(node.text)) {
@@ -86,23 +141,29 @@ for (const rel of SCAN) {
         const isDeclName = (ts.isVariableDeclaration(p) || ts.isParameter(p) || ts.isFunctionDeclaration(p)
           || ts.isImportSpecifier(p) || ts.isBindingElement(p)) && (p as any).name === node;
         const inType = (() => { let q: ts.Node | undefined = node; while (q) { if (ts.isTypeNode(q)) return true; q = q.parent; } return false; })();
-        if (!isPropertyName && !isDeclName && !inType) {
+        // `typeof process` is the safe idiom itself — its operand must not be reported
+        const isTypeOfOperand = ts.isTypeOfExpression(p) && p.expression === node;
+        // a name this file declares is this file's, not Node's
+        const isOurs = mine.has(node.text);
+        if (!isPropertyName && !isDeclName && !inType && !isTypeOfOperand && !isOurs) {
           // `globalThis.process` is a property access, but it is still a Node global reached at runtime
           if (guardedBy(node, node.text)) guardedAllowed++;
           else problems.push(`${at(node)}  uses the Node global \`${node.text}\` unguarded`);
         }
       }
-      // globalThis.process.* — a property name, so the identifier branch above skips it deliberately.
-      // Unwrap parentheses and casts first: `(globalThis as any).process.env.X` is the idiomatic way to
-      // write this in TypeScript, and a naive isIdentifier check misses every instance of it.
-      const unwrap = (n: ts.Expression): ts.Expression => {
-        let e: ts.Expression = n;
+      // Reached THROUGH a global object rather than named directly. Both spellings, because
+      // `globalThis['process']` is an ElementAccess and slipped past a PropertyAccess-only check.
+      const viaGlobal = (obj: ts.Expression, nameNode: ts.Node, text: string | undefined): void => {
+        let e: ts.Expression = obj;
         while (ts.isParenthesizedExpression(e) || ts.isAsExpression(e) || ts.isTypeAssertionExpression(e) || ts.isNonNullExpression(e)) e = e.expression;
-        return e;
+        if (!ts.isIdentifier(e) || !GLOBAL_OBJECTS.has(e.text)) return;
+        if (!text || !NODE_GLOBALS.has(text)) return;
+        if (guardedBy(nameNode, text)) { guardedAllowed++; return; }
+        problems.push(`${at(nameNode)}  reaches the Node global \`${text}\` via ${e.text}`);
       };
-      if (ts.isPropertyAccessExpression(node) && ts.isIdentifier(unwrap(node.expression)) && (unwrap(node.expression) as ts.Identifier).text === 'globalThis'
-        && NODE_GLOBALS.has(node.name.text) && !guardedBy(node, node.name.text)) {
-        problems.push(`${at(node)}  reaches the Node global \`${node.name.text}\` via globalThis`);
+      if (ts.isPropertyAccessExpression(node)) viaGlobal(node.expression, node, node.name.text);
+      if (ts.isElementAccessExpression(node) && ts.isStringLiteralLike(node.argumentExpression)) {
+        viaGlobal(node.expression, node, node.argumentExpression.text);
       }
       ts.forEachChild(node, visit);
     };

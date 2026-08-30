@@ -129,8 +129,12 @@ export function loadCareer(t: Token): Career {
   // A malformed or truncated `career_actions` must not throw out of here — a JSON parse error used to
   // reach the UI as "career not started", which renders the AGENT-PICKER over a career 36 turns deep.
   let actions: CareerAction[] = [];
-  try { const p = JSON.parse(t.career_actions ?? '[]'); actions = Array.isArray(p) ? p : []; }
-  catch { actions = []; }
+  let malformed = false;
+  try {
+    const p = JSON.parse(t.career_actions ?? '[]');
+    if (Array.isArray(p)) actions = p;
+    else malformed = t.career_actions != null;   // a stored non-array is a damaged record, not an empty one
+  } catch { malformed = true; }
   let applied = 0;
   for (const a of actions) {
     try { applyAction(c, a, true); applied++; }
@@ -141,7 +145,14 @@ export function loadCareer(t: Token): Career {
   }
   // Record the shortfall rather than swallowing it. See Career.replay for why this is the difference
   // between a recoverable save and a permanently stalled bloodline.
-  if (applied < actions.length) c.replay = { applied, stored: actions.length };
+  // Three ways a record can be short, and only the first was noticed: an action that would not apply, an
+  // array that was physically truncated (caught by the count invariant, absent on older saves so they opt
+  // out), and a payload that is not an array at all — which used to give applied 0 of stored 0, so `0 < 0`
+  // was false and nothing was flagged while the career silently restarted from turn zero.
+  const expected = t.career_action_count ?? actions.length;
+  if (malformed || applied < actions.length || actions.length < expected) {
+    c.replay = { applied, stored: Math.max(actions.length, expected) };
+  }
   // if the final stored action left a pending phase that later engine logic expanded (e.g. an extra draft
   // pick), leave it pending so the UI surfaces it — but never leave a phase the UI can't act on.
   return c;

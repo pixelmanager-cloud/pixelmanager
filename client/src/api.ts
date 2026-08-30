@@ -27,6 +27,7 @@ import {
   tokenToPlayer, tokenContract, legendCardOf, loadCareer, actWithNarration, careerState, graduatedFields, careerCast, fillArcText,
   rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, foundingNameFor, nameFor,
   type FacilityKey, type MissionRow, type Token, type CareerAction,
+  FORMATIONS,
 } from '@fm/shared';
 import {
   localStore, getActiveModel, getActiveSlotId, newGame as newGameSlot, continueSave, listSaves, deleteSave as deleteSaveSlot, setSaveBackend, type SaveBackend,
@@ -163,8 +164,38 @@ function cleanRoles(body: any): { captainIdx?: number; takers?: { pen?: number; 
   const hasTakers = takers.pen != null || takers.fk != null || takers.corner != null;
   return { ...(captainIdx != null ? { captainIdx } : {}), ...(hasTakers ? { takers } : {}) };
 }
-const isFormation = (f: unknown): f is Lineup['formation'] => typeof f === 'string' &&
-  (['4-4-2', '4-3-3', '3-5-2', '4-2-3-1', '3-4-3', '4-1-2-1-2', '5-3-2', '4-5-1'] as string[]).includes(f);
+// DERIVED, not duplicated. This was a hand-written list of EIGHT while the lineup editor offers ELEVEN
+// (`client/src/main.ts:203`), so saving a sheet set to `4-1-4-1`, `5-4-1` or `4-2-2-2` threw 'bad formation'
+// — into a bare `catch {}` at the kickoff persist, which meant the team sheet silently did not save at all
+// for three of the eleven shapes the game invites the player to pick. `FORMATIONS` in shared/src/formations.ts
+// is the single source of truth: a formation is valid exactly when the engine knows where to stand for it.
+/** The stored action record, or null when it is not a record at all. A non-array payload must never be
+ *  spread: `'"corrupt"'` spreads to its characters and writes fabricated turns into the save. */
+function parseActions(raw: string | null | undefined): unknown[] | null {
+  if (raw == null) return [];
+  try { const p = JSON.parse(raw); return Array.isArray(p) ? p : null; } catch { return null; }
+}
+
+/** Refuse to advance a career whose stored record did not fully replay, or could not be read.
+ *
+ *  Refusing keeps the record intact and therefore recoverable. Continuing overwrites it: `careerAct`
+ *  appends to the stored list while the replay stops short, so play moves the counter by one, vanishes on
+ *  reload, and `finished` is never reached — which strands the bloodline permanently. */
+function assertReplayable(c: { replay?: { applied: number; stored: number } }, t: { career_actions?: string | null }): void {
+  if (parseActions(t.career_actions) === null) {
+    throw apiErr('This career\'s record could not be read. It has NOT been changed — playing on would overwrite it.', {}, 409);
+  }
+  if (c.replay) {
+    throw apiErr(
+      `This career can't be continued safely — ${c.replay.applied} of ${c.replay.stored} recorded moments could be replayed. `
+      + 'Your record is intact and has not been changed; playing on would overwrite it.',
+      { replay: c.replay }, 409,
+    );
+  }
+}
+
+const isFormation = (f: unknown): f is Lineup['formation'] =>
+  typeof f === 'string' && Object.prototype.hasOwnProperty.call(FORMATIONS, f);
 
 /** Load the club with the owner's PRO/RETIRED tokens merged in as fieldable players — read/gameplay
  *  only, mirrors server/src/index.ts's `loadSquad`. Never feed this into `saveClub`/`saveStandingOrders`. */
@@ -546,6 +577,10 @@ export const api = {
     if (t.state !== 'prospect') throw apiErr('not a prospect', {}, 409);
     if (t.career_seed == null) throw apiErr('career not started');
     const c = loadCareer(t);
+    // GRADUATION IS IRREVERSIBLE. On a career that replayed short this would sign the player at the age the
+    // truncated replay reached — 18 instead of 25, with 62-72% less in earnings — and flip the token out of
+    // `prospect` for good. `careerAct` refuses on the same condition; this path had no guard at all.
+    assertReplayable(c, t);
     const season = getActiveModel().profile.season;
     const grad = graduatedFields(t, c);
     const deal = signContract(season, grad.greed ?? 10, grad.personality ?? undefined);
@@ -1068,7 +1103,7 @@ export const api = {
     const t = await localStore.getToken(pid);
     if (!t) throw apiErr('no such token', {}, 404);
     if (t.state !== 'prospect') throw apiErr('not a prospect', {}, 409);
-    if (t.career_seed == null) await localStore.updateToken(pid, { career_seed: careerSeedFor(t.id, t.generation, getActiveSlotId() ?? OWNER), agent_id: agentId ?? null, track: trackFor(t.role ?? 'MF'), career_actions: '[]' });
+    if (t.career_seed == null) await localStore.updateToken(pid, { career_seed: careerSeedFor(t.id, t.generation, getActiveSlotId() ?? OWNER), agent_id: agentId ?? null, track: trackFor(t.role ?? 'MF'), career_actions: '[]', career_action_count: 0 });
     // TAKING HIM ON IS WHAT MAKES A BRANCH THE LINE. If the player chose a brother or a cousin, this is the
     // moment the trunk moves onto him — every candidate is minted as 'sibling' precisely because which one
     // becomes the played line is not decided until here. The brothers he was picked over keep 'sibling',
@@ -1101,17 +1136,7 @@ export const api = {
     if (t.state !== 'prospect') throw apiErr('not a prospect', {}, 409);
     if (t.career_seed == null) throw apiErr('career not started');
     const c = loadCareer(t);
-    // REFUSE TO PLAY ON A TRUNCATED REPLAY. The append below adds to the STORED action list, which still
-    // holds every action, while this replay stopped short — so each new move grows the record, is lost on
-    // the next load, and `finished` can never be reached. Stopping here keeps the stored career intact and
-    // therefore recoverable; continuing quietly destroys it and strands the bloodline forever.
-    if (c.replay) {
-      throw apiErr(
-        `This career can't be continued safely — ${c.replay.applied} of ${c.replay.stored} recorded moments could be replayed. `
-        + `Your record is intact and has not been changed; playing on would overwrite it.`,
-        { replay: c.replay }, 409,
-      );
-    }
+    assertReplayable(c, t);
     const earningsBefore = c.earnings;
     let narration: string | null = null;
     try {
@@ -1125,7 +1150,14 @@ export const api = {
       const ch = c.log[c.log.length - 1];
       outcome = { fit: ch.fit, bestFit: ch.bestFit, success: ch.success, tags: ch.tags, answeredAsk: ch.fit >= ch.bestFit - 0.05, matchedAsk: ch.matchedAsk };
     }
-    await localStore.updateToken(pid, { career_actions: JSON.stringify([...JSON.parse(t.career_actions ?? '[]'), action]) });
+    // Append to the STORED record, having first established it is a record. This used to spread
+    // `JSON.parse(t.career_actions)` directly: with a corrupt payload of `'"corrupt"'` the next move wrote
+    // ["c","o","r","r","u","p","t",{...}] — seven fabricated turns, permanently. `assertReplayable` above
+    // now rejects that payload before we get here; this is the belt to its braces.
+    const stored = parseActions(t.career_actions);
+    if (!stored) throw apiErr('this career\'s record could not be read, so it has not been changed', {}, 409);
+    const next = [...stored, action];
+    await localStore.updateToken(pid, { career_actions: JSON.stringify(next), career_action_count: next.length });
     if (c.finished) {
       const fresh = (await localStore.getToken(pid))!;
       const season = getActiveModel().profile.season;

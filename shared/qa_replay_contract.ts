@@ -77,6 +77,30 @@ console.log('\n[qa-replay] a BROKEN replay must be detected, never silently trun
   check(silent === 0, `every broken replay is flagged, none truncates silently (${detected} detected, ${silent} silent)`);
 }
 
+console.log('\n[qa-replay] a PHYSICALLY TRUNCATED record must be detected...');
+{
+  // The subtle one. Every surviving action still applies, so `applied === actions.length` and the career
+  // reports perfect health while sitting well short of where it was. Nothing inside the array can reveal
+  // that; only a count written outside it can. Measured before the invariant: 8 of 8 truncated careers
+  // loaded clean, and the next move appended onto the shortened record.
+  let detected = 0, silent = 0;
+  for (const seed of [11, 2027, 90210, 7, 123456]) {
+    const { token } = record(seed, 60);
+    const acts = JSON.parse(token.career_actions!) as CareerAction[];
+    if (acts.length < 2) continue;                                   // nothing to truncate
+    const half = Math.max(1, Math.floor(acts.length / 2));
+    const cut = { ...token, career_actions: JSON.stringify(acts.slice(0, half)), career_action_count: acts.length } as Token;
+    const back = loadCareer(cut);
+    if (back.replay && back.replay.stored > back.replay.applied) detected++; else silent++;
+  }
+  check(silent === 0, `a truncated array is caught by the count invariant (${detected} detected, ${silent} silent)`);
+
+  // ...and a save written before the invariant existed must NOT be condemned by its absence
+  const { token } = record(11, 20);
+  const legacy = { ...token, career_action_count: undefined } as Token;
+  check(!loadCareer(legacy).replay, 'a save with no recorded count is not falsely flagged');
+}
+
 console.log('\n[qa-replay] malformed stored actions must not throw out of loadCareer...');
 {
   const { token } = record(11, 20);
@@ -88,6 +112,9 @@ console.log('\n[qa-replay] malformed stored actions must not throw out of loadCa
   // a non-array payload must apply NOTHING — iterating a string's characters used to fabricate history
   const fabricated = loadCareer({ ...token, career_actions: '"corrupt"' } as Token);
   check(fabricated.turn === 0, `a non-array payload plays no turns rather than fabricating them (turn=${fabricated.turn})`);
+  // ...and it must be FLAGGED, not treated as an empty career. `applied 0 of stored 0` is not a shortfall
+  // by arithmetic, so this used to pass every guard and silently restart the career from turn zero.
+  check(!!fabricated.replay, 'a non-array payload is flagged as damaged rather than read as an empty career');
 }
 
 console.log(fails ? `\n✗ ${fails} replay-contract check(s) failed` : '\n✓ the replay contract holds: exact when clean, detected when broken, never silent');
