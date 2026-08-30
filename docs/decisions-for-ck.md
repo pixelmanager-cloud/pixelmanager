@@ -697,3 +697,62 @@ opposite of what their names promise. The real fix is an engine mechanism that r
 interception, lane-blocking, or shot-blocking, none of which exist. That is a day of engine work, and after
 last night I am not starting it without you. **Tell me which you want: the cheap preset retune, or the
 mechanism.**
+
+---
+
+# ROUND 7 — the audits turned on my own gates, and found four that could not fail
+
+> Everything in this section is **done** unless marked otherwise.
+
+## ~~36. Three of my own gates could not fail — including the one I cited to you as certification~~ — FIXED
+
+- **`manager_career_real.ts` never set an exit code.** Its last statement is a `console.log`, and `playtest`
+  is an `&&` chain that reads only exit status. Forcing two of its five checks to FLAG still gave **EXIT=0**.
+  This is the probe written *because* the cheaper analyzer "measures a fictional model", and it is what I
+  pointed at in §24 as evidence the headroom change was sound. The build could not tell five passes from
+  five failures.
+- **`settings_persist.ts` could certify the exact defect it was written for.** It sliced a fixed
+  2,400-character window from a string index; the real call sits at delta 2,290 and the *next method's own
+  declaration* at 2,507 — **107 characters outside**. An auditor removed the call, tidied one comment above
+  it, and my probe printed all-ok and exited 0 with the original bug bit-for-bit restored. Rewritten on the
+  TypeScript AST; its old "is the writer reachable" check counted textual occurrences and tested nothing,
+  and now enumerates real callers.
+- **`objectives.ts` and `arc_windows.ts`** had the same shape — a computed verdict, a `⚠`, exit 0.
+- **`injury_rate.ts`** stated an invariant in its header and asserted nothing. It now checks the rate is a
+  handful (not none, not a lottery) and that **the Medical Centre monotonically reduces injuries** — proved
+  by making the facility do nothing and watching it fail.
+
+## ~~37. The bloodline star was evicted from his own team sheet every season~~ — FIXED
+
+`advanceSquadSeason` handed `pruneXI` the **raw** club, and the star is a Token never present in
+`club.players` — a fact stated in a comment I wrote myself, in a different function, in the same file. He
+counted as dead every season: **ejected 3 of 3 seasons with zero squad churn**, nine of eleven slots
+rewritten each time, all three takers reassigned. Over 20 seasons of ordinary play, 18 scrambled the sheet:
+**the armband moved 17 times, 118 illegal duties**, none of it reported because the output is a *valid*
+sheet. `reconcileSheet` replaces it — designations follow the **man**, not the index.
+
+## ~~38. Also fixed since round 6~~
+
+- **The succession handoff was wrong by construction**, every generation: old designations spread onto a new XI.
+- **`migrate()` repaired every collection except the team sheet** — a save that lost it could never be
+  managed again (`{ ...this.standingOrders.tactics }` on `undefined`).
+- **The game shipped a losing order pre-ticked.** `hold-lead`, armed by default, costs **7.5 percentage
+  points of the leads it exists to protect** (92.9% → 85.4% held, n=411).
+- **The first bid of every session was priced at ×1.00** while the Houses screen advertised ×1.44 — and it
+  persists, because `feedOnce` writes the fee permanently and `acceptStarBid` banks the stale value.
+- **Three of eleven formations silently saved nothing**; **a truncated career record was undetectable**;
+  **`careerHandoff` had no replay guard** (67–76% of earnings lost, irreversibly).
+
+## 39. Open — dead code, low player value, your call whether it is worth the churn
+
+- **`Team.shortName` is required on every club in the game and read nowhere** — one declaration, two
+  parameters, three copies, zero reads. Every caller is forced to invent a value.
+- **13 of 31 pixel sprites (42%) are unreachable**, and 8 of 12 trophy images; the `kind === 'cup'` branch
+  in `trophyFor` can never be true because `addHonour` constrains `kind` to three other values.
+- **Four facade methods have zero callers** (`awards`, `houseRenownNow`, `login`, `starBid` — the last is a
+  second, unused implementation of the bid path the client already does inline).
+- **`saveTeam()` is unreachable** and holds the editor's only "save failed" message. Deleting it is easy;
+  **wiring a standing-orders editor reachable outside a matchday is a design question**, and that is why I
+  have not touched it.
+- **10 probes are in no gate at all** and the `playtest` list is hand-maintained where `run-qa.mjs`
+  auto-globs. A critic is assessing whether globbing is safe — some are slow.
