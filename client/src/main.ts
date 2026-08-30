@@ -2367,6 +2367,15 @@ class Game {
         if (this.account?.coins != null) this.account.coins = sq.coins;
         this.setMe(await api.me());
         this.pendingSquadReport = sq;
+        // A WAGE BILL THE CLUB COULD NOT MEET NOW COSTS IT A FACILITY. Say so where the player will read
+        // it — filed under the season about to start, like every other rollover line, because the feed
+        // renders the CURRENT season and these are written while the counter still reads the old one.
+        const wd = ((sq as any).disrepair ?? []) as string[];
+        if (wd.length) {
+          const names = [...new Set(wd)].map((k) => FACILITY_META[k as FacilityKey]?.name ?? k);
+          const sal = (sq as any).salvage as number | undefined;
+          this.pushFeed('🚧', `<b>The wages could not be paid in full.</b> ${names.join(' and ')} fell into disrepair — ${wd.length} level${wd.length > 1 ? 's' : ''} lost${sal ? `, raising <b>${sal.toLocaleString()}c</b> from what was stripped out` : ''}. The squad costs more than the club earns: sell, let a contract run down, or scale the club back.`, m.season + 1);
+        }
         const mm = this.loadMgr(); this.saveMgr({ ...mm, squadReport: sq, squadReportSeason: mm.season });
       } catch { /* offline — squad rollover is best-effort, never blocks the season */ }
     }

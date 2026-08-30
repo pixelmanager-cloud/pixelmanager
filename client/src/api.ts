@@ -888,6 +888,27 @@ export const api = {
     const coinsNow = getActiveModel().profile.coins;
     const charged = Math.max(0, Math.min(coinsNow, Math.round(roll.wageBill)));
     if (charged > 0) await localStore.addCoins(OWNER, -charged);
+    // WAGES CAN FORCE DISREPAIR TOO — and until now nothing could. Disrepair lived only in the league roll,
+    // where it tested `due > have` with `have` read AFTER the season's income had been banked, so it needed
+    // upkeep to exceed the treasury PLUS a whole season's earnings. Measured: 0 disrepair events in 194
+    // seasons, and 0 across 101 more with an aggressive build policy, despite 27 seasons ending under 200
+    // coins and one ending on 1. Meanwhile the bill that actually empties a club is the wage bill, charged
+    // here and absent from that test entirely — so the real failure state was silent permanent poverty
+    // rather than the visible, arrestable slide applyDisrepair was written to be.
+    //
+    // An unpaid wage is the honest trigger: the club has run out of money meeting its obligations, which is
+    // exactly what "living beyond its means" means. It cuts toward the shortfall, pays the same 40% salvage
+    // as every other route out of a level, and is capped per season like the league-roll path.
+    const unpaidWages = Math.max(0, Math.round(roll.wageBill) - charged);
+    let wageCut: FacilityKey[] = [], wageSalvage = 0;
+    if (unpaidWages > 0) {
+      const model = getActiveModel();
+      const dis = applyDisrepair(model.facilities, Math.max(0, seasonUpkeep(model.facilities) - unpaidWages));
+      wageCut = dis.cut;
+      wageSalvage = dis.salvage;
+      if (wageSalvage > 0) await localStore.addCoins(OWNER, wageSalvage);
+      for (const k of new Set(wageCut)) await localStore.setFacilityLevel(OWNER, k, facLevel(model.facilities, k as FacilityKey));
+    }
     c.club.players = roll.players;
     const so = pruneXI(c.club, c.standingOrders);
     await localStore.saveClub(OWNER, c.club, so);
@@ -896,6 +917,7 @@ export const api = {
       ok: true as const,
       coins: getActiveModel().profile.coins,
       wageBill: Math.round(roll.wageBill), charged, unpaid: Math.round(roll.wageBill) - charged,
+      disrepair: wageCut, salvage: wageSalvage,
       retired: roll.retired.map(lite),
       departed: roll.departed.map(lite),
       intake: roll.intake.map(lite),
