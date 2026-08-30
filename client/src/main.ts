@@ -914,7 +914,6 @@ class Game {
     $('view-club').addEventListener('click', () => this.showClub()); // the club-facilities coin sink (dynasty-building, not the gated match loop)
     $('season-back').addEventListener('click', () => this.showHub());
     $('view-scouting')?.addEventListener('click', () => void this.showScouting());
-    ($('hub-season-dev') as any)?.addEventListener('click', () => this.showSeason()); // TEMP entry until the handoff wires it
     this.makeActivatable([$('app-title')]);
     $('app-title').addEventListener('click', () => { if (hasToken()) void this.showHub(); });
     $('academy-back').addEventListener('click', () => this.showHub());

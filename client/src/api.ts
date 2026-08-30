@@ -386,13 +386,6 @@ export const api = {
     const t = (await localStore.getToken(id))!;
     return { ok: true as const, prospect: { id, name: t.name, roleHint, generation: 0, pedigree: 0, careerStarted: false, potentialStars: rebornPotential(t).stars, genes } };
   },
-  login: async (handle: string, _password: string) => {
-    // no passwords locally — `handle` here is a save-slot id (kept for signature-compatibility; unused
-    // by main.ts, which drives loading purely through setToken()+me()).
-    await continueSave(handle);
-    const model = getActiveModel();
-    return { token: handle, account: { id: OWNER, handle, rating: 1000, coins: model.profile.coins }, ...mergedClub() };
-  },
   me: async () => {
     await ensureActive();
     const model = getActiveModel();
@@ -551,15 +544,6 @@ export const api = {
   // (sellStar removed: the incoming-bid fee is now banked atomically inside succeed(), so an abandoned
   //  succession can't keep the cash while the star stays owned — see PT-60.)
   /** A rival's incoming BID for the star this season (or null). Deterministic per (seed, season). */
-  starBid: async (playerId: string, seed: number) => {
-    await ensureActive();
-    const model = getActiveModel();
-    const t = await localStore.getToken(playerId);
-    if (!t || t.state !== 'pro') return { bid: null };
-    const ov = overall(tokenToPlayer(t));
-    const age = (t as any).age ?? 26;
-    return { bid: incomingBid(seed >>> 0, model.profile.season, ov, age) };
-  },
   stake: async (playerId: string, on: boolean) => {
     await ensureActive();
     const t = await localStore.getToken(playerId);
@@ -1243,19 +1227,6 @@ export const api = {
   },
   /** The house's renown, as a bare number, for the places it OPENS DOORS. Recomputed rather than cached:
    *  it is derived from the tokens, and a cached copy is a copy that can be stale or wrong. */
-  houseRenownNow: async (): Promise<number> => {
-    await ensureActive();
-    return (await api.houses()).mine.renown;
-  },
-
-  /** THE HOUSES OF THE GAME — your family's standing, and the twelve rival dynasties it is measured
-   *  against. The rivals are derived from the save seed rather than stored, so nothing needs persisting or
-   *  migrating and a save opened five generations later reconstructs their entire history exactly. Both
-   *  sides go through the same `houseRenown`, because a table where the rivals are graded on a different
-   *  curve is a table that means nothing. */
-  /** Every save the DURABLE half of storage knows about. The model lives in IndexedDB but the save index
-   *  lives in localStorage, which is the more evictable of the two — so this is how the menu finds a
-   *  dynasty the index has forgotten. `listSaves` existed in save.ts with no caller anywhere. */
   listSaves: () => listSaves(),
 
   houses: async () => {
@@ -1474,6 +1445,5 @@ export const api = {
     return { entry };
   },
   honours: async (limit?: number) => { await ensureActive(); return { honours: await localStore.honoursFor(OWNER, limit) }; },
-  awards: async () => { await ensureActive(); return { awards: [] as AwardRow[] }; }, // superseded, not downgraded: the old Golden Boot/Playmaker awards were PvP-pod individual-stat leaderboards; single-player surfaces the star's real achievements via honours/caps/legends in the Trophy Room instead. Kept as a stub (no caller remains).
   scoutTiers: async () => ({ opp: TIER, player: TIER, nft: { address: '', chainId: 0, enabled: false } }),
 };
