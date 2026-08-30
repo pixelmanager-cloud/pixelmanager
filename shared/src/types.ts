@@ -145,13 +145,6 @@ export interface MatchState {
   /** rolling possession tick counts per team, for a possession % readout */
   possession: [number, number];
   events: MatchEvent[];
-  /** EVERY shot actually attempted, per team and per player index, whether or not it was logged as an
-   *  event. `events` deliberately drops low-quality misses ("hopeful long-range efforts don't clutter the
-   *  feed"), which makes it a biased sample of shooting: a duty that shoots MORE speculatively registers
-   *  FEWER events, so counting events measured a poacher as shooting less than a hold-up man despite twice
-   *  the shooting weight and identical possession. This is the unbiased count. */
-  shotAttempts: [number, number];
-  shotAttemptsBy: [Record<number, number>, Record<number, number>];
   finished: boolean;
 }
 

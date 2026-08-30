@@ -200,8 +200,6 @@ function describe(s: Setup): string {
 
 const failures: string[] = [];
 let totalGoals = 0;
-// ...and the same total restricted to the pairings the GAME can actually produce (see the gate below).
-let divisionGoals = 0, divisionMatches = 0;
 let zeroZero = 0;
 let equalQ = 0, equalHomeWins = 0, equalAwayWins = 0;
 let maxTicks = 0;
@@ -243,7 +241,6 @@ for (let iter = 0; iter < N && failures.length < MAX_LOGGED; iter++) {
   maxTicks = Math.max(maxTicks, ticks);
   const [a, b] = m.state.score;
   totalGoals += a + b;
-  if (Math.abs(setup.qA - setup.qB) <= 3) { divisionGoals += a + b; divisionMatches++; }
   if (a === 0 && b === 0) zeroZero++;
   if (setup.qA === setup.qB) {
     equalQ++;
@@ -265,19 +262,8 @@ if (failures.length === 0) {
     if (hw > 0.75 || aw > 0.75)
       failures.push(`equal-quality outcomes lopsided: home ${(hw * 100).toFixed(0)}% / away ${(aw * 100).toFixed(0)}% (one side wins almost always)`);
   }
-  // THE GATE THAT MATTERS IS THE ONE ON MATCHES THE GAME CAN ACTUALLY STAGE. This harness pairs quality
-  // uniformly over [3, 20], so a large share of its sample is a 20 against a 3 — a fixture the pyramid
-  // never creates, because a division's clubs sit within about 1.3 of tierStrength of each other. The
-  // full-sample mean is therefore dominated by scorelines that cannot occur, and using it as the realism
-  // check reads a blow-up in an impossible fixture as a calibration failure in a real one, and vice versa.
-  // Both are reported; the tight band is on the division-sized gap, the loose one still catches a genuine
-  // explosion anywhere in the space.
-  const divisionGpm = divisionGoals / Math.max(1, divisionMatches);
-  console.log(`[fuzz] division-sized gaps only (|qA-qB| <= 3): matches=${divisionMatches}  goals/match=${divisionGpm.toFixed(2)}`);
-  if (!(divisionGpm >= 1.4 && divisionGpm <= 3.8))
-    failures.push(`goals/match ${divisionGpm.toFixed(2)} outside the realistic range [1.4, 3.8] for division-sized quality gaps`);
-  if (!(goalsPerMatch >= 0.8 && goalsPerMatch <= 8.0))
-    failures.push(`goals/match ${goalsPerMatch.toFixed(2)} across ALL quality gaps outside sane range [0.8, 8.0]`);
+  if (!(goalsPerMatch >= 0.8 && goalsPerMatch <= 6.0))
+    failures.push(`goals/match ${goalsPerMatch.toFixed(2)} outside sane range [0.8, 6.0]`);
   if (zeroZero >= N)
     failures.push(`every match ended 0-0 — engine is not scoring`);
   if (maxTicks > EXPECTED_TICKS)

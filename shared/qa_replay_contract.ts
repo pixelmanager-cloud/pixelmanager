@@ -17,8 +17,8 @@
 // detected break refuses to write rather than quietly destroying the record.
 import { Career } from './src/career.js';
 import { loadCareer } from './src/tokens.js';
-import type { Token } from './src/types.js';
-import type { CareerAction } from './src/career.js';
+import type { Token } from './src/token.js';
+import type { CareerAction } from './src/tokens.js';
 
 let fails = 0;
 const check = (ok: boolean, msg: string) => { if (ok) console.log(`  ok   ${msg}`); else { console.log(`  FAIL ${msg}`); fails++; } };
