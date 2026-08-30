@@ -1,0 +1,3296 @@
+[
+  {
+    "seed": 11,
+    "track": "outfield",
+    "actions": [
+      {
+        "type": "play",
+        "cardId": "anchor"
+      },
+      {
+        "type": "arc",
+        "cardId": "quiet"
+      },
+      {
+        "type": "arc",
+        "cardId": "enjoy"
+      },
+      {
+        "type": "play",
+        "cardId": "hold-up"
+      },
+      {
+        "type": "play",
+        "cardId": "stepover"
+      },
+      {
+        "type": "play",
+        "cardId": "splitter"
+      },
+      {
+        "type": "play",
+        "cardId": "ice-veins"
+      },
+      {
+        "type": "play",
+        "cardId": "splitter"
+      },
+      {
+        "type": "play",
+        "cardId": "lung-buster"
+      },
+      {
+        "type": "play",
+        "cardId": "hold-up"
+      },
+      {
+        "type": "arc",
+        "cardId": "speak"
+      },
+      {
+        "type": "play",
+        "cardId": "ice-veins"
+      },
+      {
+        "type": "play",
+        "cardId": "lung-buster"
+      },
+      {
+        "type": "play",
+        "cardId": "splitter"
+      },
+      {
+        "type": "play",
+        "cardId": "lung-buster"
+      },
+      {
+        "type": "focus",
+        "cardId": "rest"
+      },
+      {
+        "type": "offer",
+        "cardId": "money"
+      },
+      {
+        "type": "coach",
+        "cardId": "veteran"
+      },
+      {
+        "type": "draft",
+        "cardId": "shepherd"
+      },
+      {
+        "type": "draft",
+        "cardId": "flick-on"
+      },
+      {
+        "type": "draft",
+        "cardId": "slow-it"
+      },
+      {
+        "type": "play",
+        "cardId": "anchor"
+      },
+      {
+        "type": "play",
+        "cardId": "ice-veins"
+      },
+      {
+        "type": "arc",
+        "cardId": "example"
+      },
+      {
+        "type": "play",
+        "cardId": "lung-buster"
+      },
+      {
+        "type": "play",
+        "cardId": "hold-up"
+      },
+      {
+        "type": "play",
+        "cardId": "ice-veins"
+      },
+      {
+        "type": "play",
+        "cardId": "splitter"
+      },
+      {
+        "type": "play",
+        "cardId": "flick-on"
+      },
+      {
+        "type": "play",
+        "cardId": "stepover"
+      },
+      {
+        "type": "play",
+        "cardId": "slow-it"
+      },
+      {
+        "type": "play",
+        "cardId": "ice-veins"
+      },
+      {
+        "type": "arc",
+        "cardId": "wall"
+      },
+      {
+        "type": "arc",
+        "cardId": "shift"
+      },
+      {
+        "type": "play",
+        "cardId": "flick-on"
+      },
+      {
+        "type": "play",
+        "cardId": "crunch"
+      },
+      {
+        "type": "arc",
+        "cardId": "offer"
+      },
+      {
+        "type": "arc",
+        "cardId": "thanks"
+      },
+      {
+        "type": "play",
+        "cardId": "shepherd"
+      },
+      {
+        "type": "play",
+        "cardId": "lung-buster"
+      },
+      {
+        "type": "play",
+        "cardId": "lung-buster"
+      },
+      {
+        "type": "play",
+        "cardId": "hold-up"
+      },
+      {
+        "type": "focus",
+        "cardId": "school"
+      },
+      {
+        "type": "focus",
+        "cardId": "trial"
+      },
+      {
+        "type": "offer",
+        "cardId": "brand"
+      },
+      {
+        "type": "coach",
+        "cardId": "analytics"
+      },
+      {
+        "type": "draft",
+        "cardId": "up-and-down"
+      },
+      {
+        "type": "draft",
+        "cardId": "counter-press"
+      },
+      {
+        "type": "draft",
+        "cardId": "reverse"
+      },
+      {
+        "type": "play",
+        "cardId": "flick-on"
+      },
+      {
+        "type": "play",
+        "cardId": "hold-up"
+      },
+      {
+        "type": "play",
+        "cardId": "shepherd"
+      },
+      {
+        "type": "play",
+        "cardId": "lung-buster"
+      },
+      {
+        "type": "play",
+        "cardId": "ice-veins"
+      },
+      {
+        "type": "arc",
+        "cardId": "both"
+      },
+      {
+        "type": "play",
+        "cardId": "counter-press"
+      },
+      {
+        "type": "play",
+        "cardId": "up-and-down"
+      },
+      {
+        "type": "play",
+        "cardId": "shepherd"
+      },
+      {
+        "type": "play",
+        "cardId": "lung-buster"
+      },
+      {
+        "type": "play",
+        "cardId": "crunch"
+      },
+      {
+        "type": "play",
+        "cardId": "slow-it"
+      },
+      {
+        "type": "play",
+        "cardId": "reverse"
+      },
+      {
+        "type": "arc",
+        "cardId": "talk"
+      },
+      {
+        "type": "arc",
+        "cardId": "quiet"
+      },
+      {
+        "type": "play",
+        "cardId": "anchor"
+      },
+      {
+        "type": "play",
+        "cardId": "stepover"
+      },
+      {
+        "type": "play",
+        "cardId": "ice-veins"
+      },
+      {
+        "type": "play",
+        "cardId": "flick-on"
+      },
+      {
+        "type": "play",
+        "cardId": "hold-up"
+      },
+      {
+        "type": "play",
+        "cardId": "reverse"
+      },
+      {
+        "type": "focus",
+        "cardId": "focus_teamwork"
+      },
+      {
+        "type": "focus",
+        "cardId": "side_skip"
+      },
+      {
+        "type": "offer",
+        "cardId": "develop"
+      },
+      {
+        "type": "coach",
+        "cardId": "man-mgmt"
+      },
+      {
+        "type": "draft",
+        "cardId": "cheeky-flick"
+      },
+      {
+        "type": "draft",
+        "cardId": "nutmeg"
+      },
+      {
+        "type": "draft",
+        "cardId": "overlap"
+      },
+      {
+        "type": "play",
+        "cardId": "splitter"
+      },
+      {
+        "type": "arc",
+        "cardId": "open-up"
+      },
+      {
+        "type": "arc",
+        "cardId": "let-run"
+      },
+      {
+        "type": "play",
+        "cardId": "counter-press"
+      },
+      {
+        "type": "play",
+        "cardId": "up-and-down"
+      },
+      {
+        "type": "play",
+        "cardId": "slow-it"
+      },
+      {
+        "type": "arc",
+        "cardId": "mask"
+      },
+      {
+        "type": "arc",
+        "cardId": "rest"
+      },
+      {
+        "type": "play",
+        "cardId": "shepherd"
+      },
+      {
+        "type": "play",
+        "cardId": "stepover"
+      },
+      {
+        "type": "play",
+        "cardId": "counter-press"
+      },
+      {
+        "type": "play",
+        "cardId": "reverse"
+      },
+      {
+        "type": "play",
+        "cardId": "overlap"
+      },
+      {
+        "type": "play",
+        "cardId": "ice-veins"
+      },
+      {
+        "type": "play",
+        "cardId": "slow-it"
+      },
+      {
+        "type": "play",
+        "cardId": "shepherd"
+      },
+      {
+        "type": "play",
+        "cardId": "up-and-down"
+      },
+      {
+        "type": "arc",
+        "cardId": "accept"
+      },
+      {
+        "type": "arc",
+        "cardId": "renegotiate"
+      },
+      {
+        "type": "play",
+        "cardId": "counter-press"
+      },
+      {
+        "type": "play",
+        "cardId": "flick-on"
+      },
+      {
+        "type": "play",
+        "cardId": "cheeky-flick"
+      },
+      {
+        "type": "play",
+        "cardId": "slow-it"
+      },
+      {
+        "type": "play",
+        "cardId": "shepherd"
+      },
+      {
+        "type": "play",
+        "cardId": "counter-press"
+      },
+      {
+        "type": "arc",
+        "cardId": "adapt"
+      },
+      {
+        "type": "arc",
+        "cardId": "graft"
+      },
+      {
+        "type": "play",
+        "cardId": "reverse"
+      },
+      {
+        "type": "focus",
+        "cardId": "focus_composure"
+      },
+      {
+        "type": "focus",
+        "cardId": "mediaday"
+      },
+      {
+        "type": "offer",
+        "cardId": "brand"
+      },
+      {
+        "type": "coach",
+        "cardId": "setpiece"
+      },
+      {
+        "type": "draft",
+        "cardId": "bricklayer"
+      },
+      {
+        "type": "draft",
+        "cardId": "fox-box"
+      },
+      {
+        "type": "draft",
+        "cardId": "showboat"
+      },
+      {
+        "type": "play",
+        "cardId": "crunch"
+      },
+      {
+        "type": "play",
+        "cardId": "lung-buster"
+      },
+      {
+        "type": "play",
+        "cardId": "ice-veins"
+      },
+      {
+        "type": "play",
+        "cardId": "overlap"
+      },
+      {
+        "type": "arc",
+        "cardId": "weave"
+      },
+      {
+        "type": "play",
+        "cardId": "hold-up"
+      },
+      {
+        "type": "play",
+        "cardId": "flick-on"
+      },
+      {
+        "type": "play",
+        "cardId": "flick-on"
+      },
+      {
+        "type": "play",
+        "cardId": "shepherd"
+      },
+      {
+        "type": "play",
+        "cardId": "stepover"
+      },
+      {
+        "type": "play",
+        "cardId": "fox-box"
+      },
+      {
+        "type": "arc",
+        "cardId": "own-it"
+      },
+      {
+        "type": "arc",
+        "cardId": "roof"
+      },
+      {
+        "type": "play",
+        "cardId": "anchor"
+      },
+      {
+        "type": "play",
+        "cardId": "crunch"
+      },
+      {
+        "type": "arc",
+        "cardId": "keep-light"
+      },
+      {
+        "type": "arc",
+        "cardId": "set-free"
+      },
+      {
+        "type": "play",
+        "cardId": "bricklayer"
+      },
+      {
+        "type": "play",
+        "cardId": "ice-veins"
+      },
+      {
+        "type": "play",
+        "cardId": "counter-press"
+      },
+      {
+        "type": "play",
+        "cardId": "splitter"
+      },
+      {
+        "type": "play",
+        "cardId": "lung-buster"
+      },
+      {
+        "type": "play",
+        "cardId": "cheeky-flick"
+      },
+      {
+        "type": "play",
+        "cardId": "overlap"
+      },
+      {
+        "type": "play",
+        "cardId": "shepherd"
+      },
+      {
+        "type": "focus",
+        "cardId": "partner"
+      },
+      {
+        "type": "focus",
+        "cardId": "charity"
+      },
+      {
+        "type": "offer",
+        "cardId": "money"
+      },
+      {
+        "type": "coach",
+        "cardId": "talisman-m"
+      },
+      {
+        "type": "draft",
+        "cardId": "thru-lines"
+      },
+      {
+        "type": "draft",
+        "cardId": "press-unit"
+      },
+      {
+        "type": "draft",
+        "cardId": "win-header"
+      },
+      {
+        "type": "play",
+        "cardId": "nutmeg"
+      },
+      {
+        "type": "arc",
+        "cardId": "impact"
+      },
+      {
+        "type": "arc",
+        "cardId": "seize"
+      },
+      {
+        "type": "arc",
+        "cardId": "shield"
+      },
+      {
+        "type": "play",
+        "cardId": "counter-press"
+      },
+      {
+        "type": "play",
+        "cardId": "showboat"
+      },
+      {
+        "type": "play",
+        "cardId": "flick-on"
+      },
+      {
+        "type": "arc",
+        "cardId": "straight-bat"
+      },
+      {
+        "type": "play",
+        "cardId": "splitter"
+      },
+      {
+        "type": "play",
+        "cardId": "nutmeg"
+      },
+      {
+        "type": "play",
+        "cardId": "fox-box"
+      },
+      {
+        "type": "play",
+        "cardId": "thru-lines"
+      },
+      {
+        "type": "play",
+        "cardId": "cheeky-flick"
+      },
+      {
+        "type": "play",
+        "cardId": "press-unit"
+      },
+      {
+        "type": "play",
+        "cardId": "anchor"
+      },
+      {
+        "type": "arc",
+        "cardId": "kings"
+      },
+      {
+        "type": "arc",
+        "cardId": "again"
+      },
+      {
+        "type": "play",
+        "cardId": "win-header"
+      },
+      {
+        "type": "play",
+        "cardId": "up-and-down"
+      },
+      {
+        "type": "play",
+        "cardId": "bricklayer"
+      },
+      {
+        "type": "play",
+        "cardId": "overlap"
+      },
+      {
+        "type": "play",
+        "cardId": "crunch"
+      },
+      {
+        "type": "play",
+        "cardId": "slow-it"
+      },
+      {
+        "type": "play",
+        "cardId": "overlap"
+      },
+      {
+        "type": "focus",
+        "cardId": "focus_flair"
+      },
+      {
+        "type": "focus",
+        "cardId": "boardroom"
+      },
+      {
+        "type": "offer",
+        "cardId": "brand"
+      },
+      {
+        "type": "coach",
+        "cardId": "psych"
+      },
+      {
+        "type": "draft",
+        "cardId": "late-run"
+      },
+      {
+        "type": "draft",
+        "cardId": "drag-back"
+      },
+      {
+        "type": "draft",
+        "cardId": "roar"
+      },
+      {
+        "type": "play",
+        "cardId": "anchor"
+      },
+      {
+        "type": "play",
+        "cardId": "lung-buster"
+      },
+      {
+        "type": "arc",
+        "cardId": "hold-out"
+      },
+      {
+        "type": "arc",
+        "cardId": "lead"
+      },
+      {
+        "type": "arc",
+        "cardId": "selfless"
+      },
+      {
+        "type": "play",
+        "cardId": "shepherd"
+      },
+      {
+        "type": "play",
+        "cardId": "fox-box"
+      },
+      {
+        "type": "play",
+        "cardId": "nutmeg"
+      },
+      {
+        "type": "play",
+        "cardId": "cheeky-flick"
+      },
+      {
+        "type": "play",
+        "cardId": "stepover"
+      },
+      {
+        "type": "play",
+        "cardId": "counter-press"
+      },
+      {
+        "type": "arc",
+        "cardId": "steady"
+      },
+      {
+        "type": "arc",
+        "cardId": "prove"
+      },
+      {
+        "type": "play",
+        "cardId": "bricklayer"
+      },
+      {
+        "type": "play",
+        "cardId": "win-header"
+      },
+      {
+        "type": "play",
+        "cardId": "press-unit"
+      },
+      {
+        "type": "play",
+        "cardId": "splitter"
+      },
+      {
+        "type": "play",
+        "cardId": "counter-press"
+      },
+      {
+        "type": "arc",
+        "cardId": "cushion"
+      },
+      {
+        "type": "play",
+        "cardId": "crunch"
+      },
+      {
+        "type": "play",
+        "cardId": "reverse"
+      },
+      {
+        "type": "play",
+        "cardId": "slow-it"
+      }
+    ],
+    "expected": {
+      "turn": 120,
+      "finished": true,
+      "replayShortfall": null,
+      "overall": 11,
+      "role": "DF",
+      "attrs": {
+        "pace": 12,
+        "strength": 10,
+        "stamina": 13,
+        "passing": 7,
+        "shooting": 12,
+        "tackling": 9,
+        "positioning": 12,
+        "workrate": 8,
+        "keeping": 4,
+        "setPiece": 9,
+        "composure": 14,
+        "aggression": 9,
+        "creativity": 5,
+        "teamwork": 8,
+        "leadership": 5,
+        "durability": 11
+      },
+      "personality": null,
+      "traits": []
+    }
+  },
+  {
+    "seed": 2027,
+    "track": "outfield",
+    "actions": [
+      {
+        "type": "play",
+        "cardId": "stepover"
+      },
+      {
+        "type": "play",
+        "cardId": "ice-veins"
+      },
+      {
+        "type": "play",
+        "cardId": "lung-buster"
+      },
+      {
+        "type": "play",
+        "cardId": "ice-veins"
+      },
+      {
+        "type": "arc",
+        "cardId": "both"
+      },
+      {
+        "type": "arc",
+        "cardId": "sting"
+      },
+      {
+        "type": "play",
+        "cardId": "hold-up"
+      },
+      {
+        "type": "play",
+        "cardId": "anchor"
+      },
+      {
+        "type": "play",
+        "cardId": "splitter"
+      },
+      {
+        "type": "arc",
+        "cardId": "walk"
+      },
+      {
+        "type": "arc",
+        "cardId": "pick"
+      },
+      {
+        "type": "play",
+        "cardId": "anchor"
+      },
+      {
+        "type": "play",
+        "cardId": "crunch"
+      },
+      {
+        "type": "play",
+        "cardId": "stepover"
+      },
+      {
+        "type": "play",
+        "cardId": "splitter"
+      },
+      {
+        "type": "play",
+        "cardId": "anchor"
+      },
+      {
+        "type": "focus",
+        "cardId": "school"
+      },
+      {
+        "type": "offer",
+        "cardId": "brand"
+      },
+      {
+        "type": "coach",
+        "cardId": "warrior"
+      },
+      {
+        "type": "draft",
+        "cardId": "showboat"
+      },
+      {
+        "type": "draft",
+        "cardId": "cheeky-flick"
+      },
+      {
+        "type": "draft",
+        "cardId": "maestro"
+      },
+      {
+        "type": "play",
+        "cardId": "hold-up"
+      },
+      {
+        "type": "arc",
+        "cardId": "team"
+      },
+      {
+        "type": "arc",
+        "cardId": "shelf"
+      },
+      {
+        "type": "play",
+        "cardId": "ice-veins"
+      },
+      {
+        "type": "play",
+        "cardId": "crunch"
+      },
+      {
+        "type": "play",
+        "cardId": "showboat"
+      },
+      {
+        "type": "play",
+        "cardId": "crunch"
+      },
+      {
+        "type": "play",
+        "cardId": "cheeky-flick"
+      },
+      {
+        "type": "play",
+        "cardId": "ice-veins"
+      },
+      {
+        "type": "play",
+        "cardId": "maestro"
+      },
+      {
+        "type": "play",
+        "cardId": "crunch"
+      },
+      {
+        "type": "arc",
+        "cardId": "quiet"
+      },
+      {
+        "type": "arc",
+        "cardId": "own-it"
+      },
+      {
+        "type": "play",
+        "cardId": "showboat"
+      },
+      {
+        "type": "play",
+        "cardId": "anchor"
+      },
+      {
+        "type": "play",
+        "cardId": "cheeky-flick"
+      },
+      {
+        "type": "play",
+        "cardId": "lung-buster"
+      },
+      {
+        "type": "play",
+        "cardId": "ice-veins"
+      },
+      {
+        "type": "play",
+        "cardId": "hold-up"
+      },
+      {
+        "type": "arc",
+        "cardId": "awkward"
+      },
+      {
+        "type": "play",
+        "cardId": "crunch"
+      },
+      {
+        "type": "focus",
+        "cardId": "setback"
+      },
+      {
+        "type": "focus",
+        "cardId": "side_skip"
+      },
+      {
+        "type": "offer",
+        "cardId": "develop"
+      },
+      {
+        "type": "coach",
+        "cardId": "scout-m"
+      },
+      {
+        "type": "draft",
+        "cardId": "unflappable"
+      },
+      {
+        "type": "draft",
+        "cardId": "lead-press"
+      },
+      {
+        "type": "draft",
+        "cardId": "bruiser"
+      },
+      {
+        "type": "play",
+        "cardId": "anchor"
+      },
+      {
+        "type": "play",
+        "cardId": "showboat"
+      },
+      {
+        "type": "play",
+        "cardId": "stepover"
+      },
+      {
+        "type": "arc",
+        "cardId": "nan"
+      },
+      {
+        "type": "arc",
+        "cardId": "play"
+      },
+      {
+        "type": "play",
+        "cardId": "splitter"
+      },
+      {
+        "type": "play",
+        "cardId": "lead-press"
+      },
+      {
+        "type": "play",
+        "cardId": "ice-veins"
+      },
+      {
+        "type": "play",
+        "cardId": "showboat"
+      },
+      {
+        "type": "play",
+        "cardId": "unflappable"
+      },
+      {
+        "type": "arc",
+        "cardId": "go"
+      },
+      {
+        "type": "play",
+        "cardId": "cheeky-flick"
+      },
+      {
+        "type": "play",
+        "cardId": "hold-up"
+      },
+      {
+        "type": "play",
+        "cardId": "maestro"
+      },
+      {
+        "type": "play",
+        "cardId": "lead-press"
+      },
+      {
+        "type": "play",
+        "cardId": "crunch"
+      },
+      {
+        "type": "play",
+        "cardId": "anchor"
+      },
+      {
+        "type": "play",
+        "cardId": "anchor"
+      },
+      {
+        "type": "arc",
+        "cardId": "neither"
+      },
+      {
+        "type": "arc",
+        "cardId": "push"
+      },
+      {
+        "type": "play",
+        "cardId": "bruiser"
+      },
+      {
+        "type": "play",
+        "cardId": "showboat"
+      },
+      {
+        "type": "play",
+        "cardId": "splitter"
+      },
+      {
+        "type": "focus",
+        "cardId": "agent"
+      },
+      {
+        "type": "focus",
+        "cardId": "side_skip"
+      },
+      {
+        "type": "offer",
+        "cardId": "develop"
+      },
+      {
+        "type": "coach",
+        "cardId": "scout-m"
+      },
+      {
+        "type": "draft",
+        "cardId": "lofted"
+      },
+      {
+        "type": "draft",
+        "cardId": "disguised-pass"
+      },
+      {
+        "type": "draft",
+        "cardId": "marshal"
+      },
+      {
+        "type": "play",
+        "cardId": "lead-press"
+      },
+      {
+        "type": "play",
+        "cardId": "lung-buster"
+      },
+      {
+        "type": "play",
+        "cardId": "unflappable"
+      },
+      {
+        "type": "arc",
+        "cardId": "point-out"
+      },
+      {
+        "type": "arc",
+        "cardId": "silence-critics"
+      },
+      {
+        "type": "play",
+        "cardId": "cheeky-flick"
+      },
+      {
+        "type": "play",
+        "cardId": "maestro"
+      },
+      {
+        "type": "play",
+        "cardId": "showboat"
+      },
+      {
+        "type": "play",
+        "cardId": "marshal"
+      },
+      {
+        "type": "play",
+        "cardId": "crunch"
+      },
+      {
+        "type": "play",
+        "cardId": "anchor"
+      },
+      {
+        "type": "play",
+        "cardId": "lead-press"
+      },
+      {
+        "type": "play",
+        "cardId": "ice-veins"
+      },
+      {
+        "type": "arc",
+        "cardId": "kings"
+      },
+      {
+        "type": "arc",
+        "cardId": "soak"
+      },
+      {
+        "type": "play",
+        "cardId": "stepover"
+      },
+      {
+        "type": "play",
+        "cardId": "disguised-pass"
+      },
+      {
+        "type": "play",
+        "cardId": "hold-up"
+      },
+      {
+        "type": "play",
+        "cardId": "splitter"
+      },
+      {
+        "type": "arc",
+        "cardId": "gameplan"
+      },
+      {
+        "type": "arc",
+        "cardId": "step"
+      },
+      {
+        "type": "arc",
+        "cardId": "team"
+      },
+      {
+        "type": "play",
+        "cardId": "anchor"
+      },
+      {
+        "type": "play",
+        "cardId": "maestro"
+      },
+      {
+        "type": "play",
+        "cardId": "lofted"
+      },
+      {
+        "type": "play",
+        "cardId": "cheeky-flick"
+      },
+      {
+        "type": "play",
+        "cardId": "hold-up"
+      },
+      {
+        "type": "focus",
+        "cardId": "rest"
+      },
+      {
+        "type": "focus",
+        "cardId": "charity"
+      },
+      {
+        "type": "offer",
+        "cardId": "money"
+      },
+      {
+        "type": "coach",
+        "cardId": "mentality"
+      },
+      {
+        "type": "draft",
+        "cardId": "roulette"
+      },
+      {
+        "type": "draft",
+        "cardId": "box-to-box"
+      },
+      {
+        "type": "draft",
+        "cardId": "overlap"
+      },
+      {
+        "type": "play",
+        "cardId": "showboat"
+      },
+      {
+        "type": "play",
+        "cardId": "ice-veins"
+      },
+      {
+        "type": "arc",
+        "cardId": "them"
+      },
+      {
+        "type": "arc",
+        "cardId": "shirt"
+      },
+      {
+        "type": "play",
+        "cardId": "anchor"
+      },
+      {
+        "type": "play",
+        "cardId": "lead-press"
+      },
+      {
+        "type": "play",
+        "cardId": "hold-up"
+      },
+      {
+        "type": "play",
+        "cardId": "marshal"
+      },
+      {
+        "type": "play",
+        "cardId": "maestro"
+      },
+      {
+        "type": "play",
+        "cardId": "splitter"
+      },
+      {
+        "type": "play",
+        "cardId": "lead-press"
+      },
+      {
+        "type": "play",
+        "cardId": "disguised-pass"
+      },
+      {
+        "type": "arc",
+        "cardId": "fulldive"
+      },
+      {
+        "type": "play",
+        "cardId": "bruiser"
+      },
+      {
+        "type": "play",
+        "cardId": "anchor"
+      },
+      {
+        "type": "play",
+        "cardId": "lofted"
+      },
+      {
+        "type": "play",
+        "cardId": "stepover"
+      },
+      {
+        "type": "play",
+        "cardId": "disguised-pass"
+      },
+      {
+        "type": "arc",
+        "cardId": "build-brand"
+      },
+      {
+        "type": "play",
+        "cardId": "overlap"
+      },
+      {
+        "type": "play",
+        "cardId": "unflappable"
+      },
+      {
+        "type": "play",
+        "cardId": "roulette"
+      },
+      {
+        "type": "play",
+        "cardId": "bruiser"
+      },
+      {
+        "type": "play",
+        "cardId": "lung-buster"
+      },
+      {
+        "type": "focus",
+        "cardId": "leadership"
+      },
+      {
+        "type": "focus",
+        "cardId": "signing"
+      },
+      {
+        "type": "offer",
+        "cardId": "brand"
+      },
+      {
+        "type": "coach",
+        "cardId": "street"
+      },
+      {
+        "type": "draft",
+        "cardId": "weighted-pass"
+      },
+      {
+        "type": "draft",
+        "cardId": "read-game"
+      },
+      {
+        "type": "draft",
+        "cardId": "the-pause"
+      },
+      {
+        "type": "play",
+        "cardId": "ice-veins"
+      },
+      {
+        "type": "play",
+        "cardId": "lead-press"
+      },
+      {
+        "type": "play",
+        "cardId": "showboat"
+      },
+      {
+        "type": "arc",
+        "cardId": "starter"
+      },
+      {
+        "type": "arc",
+        "cardId": "manage"
+      },
+      {
+        "type": "arc",
+        "cardId": "immortal"
+      },
+      {
+        "type": "play",
+        "cardId": "splitter"
+      },
+      {
+        "type": "arc",
+        "cardId": "hide"
+      },
+      {
+        "type": "arc",
+        "cardId": "compose"
+      },
+      {
+        "type": "play",
+        "cardId": "marshal"
+      },
+      {
+        "type": "play",
+        "cardId": "bruiser"
+      },
+      {
+        "type": "play",
+        "cardId": "maestro"
+      },
+      {
+        "type": "play",
+        "cardId": "cheeky-flick"
+      },
+      {
+        "type": "play",
+        "cardId": "anchor"
+      },
+      {
+        "type": "play",
+        "cardId": "ice-veins"
+      },
+      {
+        "type": "arc",
+        "cardId": "trace"
+      },
+      {
+        "type": "arc",
+        "cardId": "rebuild-quiet"
+      },
+      {
+        "type": "play",
+        "cardId": "splitter"
+      },
+      {
+        "type": "play",
+        "cardId": "showboat"
+      },
+      {
+        "type": "play",
+        "cardId": "lead-press"
+      },
+      {
+        "type": "play",
+        "cardId": "read-game"
+      },
+      {
+        "type": "play",
+        "cardId": "disguised-pass"
+      },
+      {
+        "type": "play",
+        "cardId": "roulette"
+      },
+      {
+        "type": "arc",
+        "cardId": "servant"
+      },
+      {
+        "type": "arc",
+        "cardId": "drive"
+      },
+      {
+        "type": "play",
+        "cardId": "crunch"
+      },
+      {
+        "type": "play",
+        "cardId": "stepover"
+      },
+      {
+        "type": "focus",
+        "cardId": "fans"
+      },
+      {
+        "type": "focus",
+        "cardId": "side_skip"
+      },
+      {
+        "type": "offer",
+        "cardId": "develop"
+      },
+      {
+        "type": "coach",
+        "cardId": "talisman-m"
+      },
+      {
+        "type": "draft",
+        "cardId": "recovery"
+      },
+      {
+        "type": "draft",
+        "cardId": "counter-press"
+      },
+      {
+        "type": "draft",
+        "cardId": "press-unit"
+      },
+      {
+        "type": "play",
+        "cardId": "the-pause"
+      },
+      {
+        "type": "play",
+        "cardId": "weighted-pass"
+      },
+      {
+        "type": "play",
+        "cardId": "hold-up"
+      },
+      {
+        "type": "play",
+        "cardId": "lofted"
+      },
+      {
+        "type": "play",
+        "cardId": "marshal"
+      },
+      {
+        "type": "play",
+        "cardId": "overlap"
+      },
+      {
+        "type": "arc",
+        "cardId": "wave-off"
+      },
+      {
+        "type": "play",
+        "cardId": "stepover"
+      },
+      {
+        "type": "play",
+        "cardId": "bruiser"
+      },
+      {
+        "type": "play",
+        "cardId": "unflappable"
+      },
+      {
+        "type": "play",
+        "cardId": "cheeky-flick"
+      },
+      {
+        "type": "play",
+        "cardId": "maestro"
+      },
+      {
+        "type": "play",
+        "cardId": "crunch"
+      },
+      {
+        "type": "play",
+        "cardId": "lead-press"
+      },
+      {
+        "type": "play",
+        "cardId": "anchor"
+      },
+      {
+        "type": "arc",
+        "cardId": "build-around-her"
+      },
+      {
+        "type": "arc",
+        "cardId": "dig-in"
+      },
+      {
+        "type": "play",
+        "cardId": "lead-press"
+      },
+      {
+        "type": "play",
+        "cardId": "weighted-pass"
+      }
+    ],
+    "expected": {
+      "turn": 120,
+      "finished": true,
+      "replayShortfall": null,
+      "overall": 11,
+      "role": "FW",
+      "attrs": {
+        "pace": 4,
+        "strength": 8,
+        "stamina": 5,
+        "passing": 11,
+        "shooting": 12,
+        "tackling": 7,
+        "positioning": 11,
+        "workrate": 8,
+        "keeping": 6,
+        "setPiece": 12,
+        "composure": 13,
+        "aggression": 8,
+        "creativity": 13,
+        "teamwork": 8,
+        "leadership": 5,
+        "durability": 9
+      },
+      "personality": null,
+      "traits": []
+    }
+  },
+  {
+    "seed": 90210,
+    "track": "goalkeeper",
+    "actions": [
+      {
+        "type": "play",
+        "cardId": "claim-cross"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-back"
+      },
+      {
+        "type": "arc",
+        "cardId": "stop"
+      },
+      {
+        "type": "arc",
+        "cardId": "quiet"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "play",
+        "cardId": "claim-cross"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "arc",
+        "cardId": "go"
+      },
+      {
+        "type": "arc",
+        "cardId": "own"
+      },
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-back"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-back"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-back"
+      },
+      {
+        "type": "focus",
+        "cardId": "focus_keeping0b"
+      },
+      {
+        "type": "offer",
+        "cardId": "brand"
+      },
+      {
+        "type": "coach",
+        "cardId": "mentality"
+      },
+      {
+        "type": "draft",
+        "cardId": "brave-feet"
+      },
+      {
+        "type": "draft",
+        "cardId": "parry"
+      },
+      {
+        "type": "draft",
+        "cardId": "calm-high-ball"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "arc",
+        "cardId": "both"
+      },
+      {
+        "type": "arc",
+        "cardId": "own"
+      },
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-back"
+      },
+      {
+        "type": "play",
+        "cardId": "brave-feet"
+      },
+      {
+        "type": "play",
+        "cardId": "claim-cross"
+      },
+      {
+        "type": "play",
+        "cardId": "parry"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "arc",
+        "cardId": "scare"
+      },
+      {
+        "type": "arc",
+        "cardId": "choose"
+      },
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "play",
+        "cardId": "brave-feet"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-high-ball"
+      },
+      {
+        "type": "play",
+        "cardId": "claim-cross"
+      },
+      {
+        "type": "arc",
+        "cardId": "ball"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-back"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "play",
+        "cardId": "parry"
+      },
+      {
+        "type": "play",
+        "cardId": "claim-cross"
+      },
+      {
+        "type": "focus",
+        "cardId": "focus_keeping0c"
+      },
+      {
+        "type": "focus",
+        "cardId": "side_skip"
+      },
+      {
+        "type": "offer",
+        "cardId": "develop"
+      },
+      {
+        "type": "coach",
+        "cardId": "creative"
+      },
+      {
+        "type": "draft",
+        "cardId": "spot-king"
+      },
+      {
+        "type": "draft",
+        "cardId": "goal-kick"
+      },
+      {
+        "type": "draft",
+        "cardId": "safe-hands"
+      },
+      {
+        "type": "play",
+        "cardId": "brave-feet"
+      },
+      {
+        "type": "play",
+        "cardId": "safe-hands"
+      },
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "play",
+        "cardId": "parry"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "play",
+        "cardId": "spot-king"
+      },
+      {
+        "type": "arc",
+        "cardId": "shrink"
+      },
+      {
+        "type": "arc",
+        "cardId": "test"
+      },
+      {
+        "type": "play",
+        "cardId": "goal-kick"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-high-ball"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-back"
+      },
+      {
+        "type": "play",
+        "cardId": "parry"
+      },
+      {
+        "type": "play",
+        "cardId": "goal-kick"
+      },
+      {
+        "type": "arc",
+        "cardId": "laces"
+      },
+      {
+        "type": "play",
+        "cardId": "brave-feet"
+      },
+      {
+        "type": "play",
+        "cardId": "spot-king"
+      },
+      {
+        "type": "arc",
+        "cardId": "private-joy"
+      },
+      {
+        "type": "play",
+        "cardId": "claim-cross"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-back"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-high-ball"
+      },
+      {
+        "type": "play",
+        "cardId": "parry"
+      },
+      {
+        "type": "focus",
+        "cardId": "partner"
+      },
+      {
+        "type": "focus",
+        "cardId": "reserves"
+      },
+      {
+        "type": "offer",
+        "cardId": "brand"
+      },
+      {
+        "type": "coach",
+        "cardId": "finishing"
+      },
+      {
+        "type": "draft",
+        "cardId": "read-forward"
+      },
+      {
+        "type": "draft",
+        "cardId": "point-blank"
+      },
+      {
+        "type": "draft",
+        "cardId": "quick-reflex"
+      },
+      {
+        "type": "play",
+        "cardId": "goal-kick"
+      },
+      {
+        "type": "play",
+        "cardId": "safe-hands"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-high-ball"
+      },
+      {
+        "type": "play",
+        "cardId": "parry"
+      },
+      {
+        "type": "play",
+        "cardId": "brave-feet"
+      },
+      {
+        "type": "play",
+        "cardId": "goal-kick"
+      },
+      {
+        "type": "arc",
+        "cardId": "refuse-advert"
+      },
+      {
+        "type": "play",
+        "cardId": "safe-hands"
+      },
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "play",
+        "cardId": "read-forward"
+      },
+      {
+        "type": "play",
+        "cardId": "quick-reflex"
+      },
+      {
+        "type": "arc",
+        "cardId": "shatter"
+      },
+      {
+        "type": "arc",
+        "cardId": "exorcise"
+      },
+      {
+        "type": "play",
+        "cardId": "claim-cross"
+      },
+      {
+        "type": "play",
+        "cardId": "point-blank"
+      },
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "play",
+        "cardId": "spot-king"
+      },
+      {
+        "type": "play",
+        "cardId": "safe-hands"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "arc",
+        "cardId": "point-out"
+      },
+      {
+        "type": "arc",
+        "cardId": "silence-critics"
+      },
+      {
+        "type": "play",
+        "cardId": "brave-feet"
+      },
+      {
+        "type": "play",
+        "cardId": "parry"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-high-ball"
+      },
+      {
+        "type": "focus",
+        "cardId": "oldmentor"
+      },
+      {
+        "type": "focus",
+        "cardId": "charity"
+      },
+      {
+        "type": "offer",
+        "cardId": "money"
+      },
+      {
+        "type": "coach",
+        "cardId": "talisman-m"
+      },
+      {
+        "type": "draft",
+        "cardId": "command-box"
+      },
+      {
+        "type": "draft",
+        "cardId": "penalty-read"
+      },
+      {
+        "type": "draft",
+        "cardId": "throw-launch"
+      },
+      {
+        "type": "play",
+        "cardId": "read-forward"
+      },
+      {
+        "type": "play",
+        "cardId": "spot-king"
+      },
+      {
+        "type": "play",
+        "cardId": "goal-kick"
+      },
+      {
+        "type": "play",
+        "cardId": "throw-launch"
+      },
+      {
+        "type": "arc",
+        "cardId": "prove"
+      },
+      {
+        "type": "arc",
+        "cardId": "quiet"
+      },
+      {
+        "type": "play",
+        "cardId": "quick-reflex"
+      },
+      {
+        "type": "play",
+        "cardId": "command-box"
+      },
+      {
+        "type": "play",
+        "cardId": "penalty-read"
+      },
+      {
+        "type": "play",
+        "cardId": "claim-cross"
+      },
+      {
+        "type": "arc",
+        "cardId": "small-angel"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-high-ball"
+      },
+      {
+        "type": "play",
+        "cardId": "safe-hands"
+      },
+      {
+        "type": "play",
+        "cardId": "parry"
+      },
+      {
+        "type": "play",
+        "cardId": "brave-feet"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-back"
+      },
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "arc",
+        "cardId": "lob"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "play",
+        "cardId": "point-blank"
+      },
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "play",
+        "cardId": "spot-king"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "play",
+        "cardId": "penalty-read"
+      },
+      {
+        "type": "focus",
+        "cardId": "risk_press"
+      },
+      {
+        "type": "focus",
+        "cardId": "signing"
+      },
+      {
+        "type": "offer",
+        "cardId": "brand"
+      },
+      {
+        "type": "coach",
+        "cardId": "defensive"
+      },
+      {
+        "type": "draft",
+        "cardId": "long-throw"
+      },
+      {
+        "type": "draft",
+        "cardId": "play-short"
+      },
+      {
+        "type": "draft",
+        "cardId": "distribution"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-back"
+      },
+      {
+        "type": "play",
+        "cardId": "goal-kick"
+      },
+      {
+        "type": "arc",
+        "cardId": "fearless"
+      },
+      {
+        "type": "arc",
+        "cardId": "inspire"
+      },
+      {
+        "type": "arc",
+        "cardId": "the-outrageous"
+      },
+      {
+        "type": "play",
+        "cardId": "claim-cross"
+      },
+      {
+        "type": "play",
+        "cardId": "read-forward"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-high-ball"
+      },
+      {
+        "type": "play",
+        "cardId": "brave-feet"
+      },
+      {
+        "type": "arc",
+        "cardId": "deny"
+      },
+      {
+        "type": "arc",
+        "cardId": "perform"
+      },
+      {
+        "type": "play",
+        "cardId": "throw-launch"
+      },
+      {
+        "type": "play",
+        "cardId": "quick-reflex"
+      },
+      {
+        "type": "play",
+        "cardId": "throw-launch"
+      },
+      {
+        "type": "play",
+        "cardId": "command-box"
+      },
+      {
+        "type": "play",
+        "cardId": "parry"
+      },
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "arc",
+        "cardId": "letter"
+      },
+      {
+        "type": "arc",
+        "cardId": "thunder"
+      },
+      {
+        "type": "play",
+        "cardId": "point-blank"
+      },
+      {
+        "type": "play",
+        "cardId": "quick-reflex"
+      },
+      {
+        "type": "play",
+        "cardId": "penalty-read"
+      },
+      {
+        "type": "play",
+        "cardId": "safe-hands"
+      },
+      {
+        "type": "play",
+        "cardId": "distribution"
+      },
+      {
+        "type": "arc",
+        "cardId": "dip-in"
+      },
+      {
+        "type": "arc",
+        "cardId": "fight-hmrc"
+      },
+      {
+        "type": "play",
+        "cardId": "play-short"
+      },
+      {
+        "type": "focus",
+        "cardId": "rest"
+      },
+      {
+        "type": "focus",
+        "cardId": "side_skip"
+      },
+      {
+        "type": "offer",
+        "cardId": "develop"
+      },
+      {
+        "type": "coach",
+        "cardId": "man-mgmt"
+      },
+      {
+        "type": "draft",
+        "cardId": "narrow-ang"
+      },
+      {
+        "type": "draft",
+        "cardId": "punch-clear"
+      },
+      {
+        "type": "draft",
+        "cardId": "fingertip"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-back"
+      },
+      {
+        "type": "play",
+        "cardId": "long-throw"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "play",
+        "cardId": "claim-cross"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-high-ball"
+      },
+      {
+        "type": "play",
+        "cardId": "brave-feet"
+      },
+      {
+        "type": "play",
+        "cardId": "goal-kick"
+      },
+      {
+        "type": "play",
+        "cardId": "command-box"
+      },
+      {
+        "type": "play",
+        "cardId": "read-forward"
+      },
+      {
+        "type": "arc",
+        "cardId": "settle"
+      },
+      {
+        "type": "play",
+        "cardId": "narrow-ang"
+      },
+      {
+        "type": "play",
+        "cardId": "point-blank"
+      },
+      {
+        "type": "arc",
+        "cardId": "fight-for-terry"
+      },
+      {
+        "type": "arc",
+        "cardId": "big-send-off"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-back"
+      },
+      {
+        "type": "play",
+        "cardId": "safe-hands"
+      },
+      {
+        "type": "play",
+        "cardId": "spot-king"
+      },
+      {
+        "type": "play",
+        "cardId": "brave-feet"
+      },
+      {
+        "type": "play",
+        "cardId": "penalty-read"
+      }
+    ],
+    "expected": {
+      "turn": 120,
+      "finished": true,
+      "replayShortfall": null,
+      "overall": 12,
+      "role": "GK",
+      "attrs": {
+        "pace": 8,
+        "strength": 5,
+        "stamina": 13,
+        "passing": 6,
+        "shooting": 8,
+        "tackling": 8,
+        "positioning": 9,
+        "workrate": 5,
+        "keeping": 16,
+        "setPiece": 8,
+        "composure": 10,
+        "aggression": 6,
+        "creativity": 8,
+        "teamwork": 8,
+        "leadership": 8,
+        "durability": 11
+      },
+      "personality": null,
+      "traits": [
+        "biggame",
+        "wall"
+      ]
+    }
+  },
+  {
+    "seed": 7,
+    "track": "goalkeeper",
+    "actions": [
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "play",
+        "cardId": "claim-cross"
+      },
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "arc",
+        "cardId": "football"
+      },
+      {
+        "type": "arc",
+        "cardId": "peace"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-back"
+      },
+      {
+        "type": "arc",
+        "cardId": "sing"
+      },
+      {
+        "type": "arc",
+        "cardId": "home"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-back"
+      },
+      {
+        "type": "play",
+        "cardId": "claim-cross"
+      },
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "play",
+        "cardId": "claim-cross"
+      },
+      {
+        "type": "play",
+        "cardId": "claim-cross"
+      },
+      {
+        "type": "focus",
+        "cardId": "focus_keeping0b"
+      },
+      {
+        "type": "offer",
+        "cardId": "brand"
+      },
+      {
+        "type": "coach",
+        "cardId": "finishing"
+      },
+      {
+        "type": "draft",
+        "cardId": "tip-over"
+      },
+      {
+        "type": "draft",
+        "cardId": "stay-big"
+      },
+      {
+        "type": "draft",
+        "cardId": "calm-high-ball"
+      },
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "arc",
+        "cardId": "refuse"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "play",
+        "cardId": "stay-big"
+      },
+      {
+        "type": "play",
+        "cardId": "tip-over"
+      },
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-back"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-high-ball"
+      },
+      {
+        "type": "play",
+        "cardId": "stay-big"
+      },
+      {
+        "type": "play",
+        "cardId": "stay-big"
+      },
+      {
+        "type": "play",
+        "cardId": "claim-cross"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "arc",
+        "cardId": "expose"
+      },
+      {
+        "type": "arc",
+        "cardId": "extra"
+      },
+      {
+        "type": "play",
+        "cardId": "tip-over"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-back"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "play",
+        "cardId": "stay-big"
+      },
+      {
+        "type": "arc",
+        "cardId": "quiet"
+      },
+      {
+        "type": "arc",
+        "cardId": "simple"
+      },
+      {
+        "type": "play",
+        "cardId": "tip-over"
+      },
+      {
+        "type": "focus",
+        "cardId": "focus_keeping0c"
+      },
+      {
+        "type": "focus",
+        "cardId": "side_skip"
+      },
+      {
+        "type": "offer",
+        "cardId": "develop"
+      },
+      {
+        "type": "coach",
+        "cardId": "psych"
+      },
+      {
+        "type": "draft",
+        "cardId": "long-throw"
+      },
+      {
+        "type": "draft",
+        "cardId": "quick-reflex"
+      },
+      {
+        "type": "draft",
+        "cardId": "spot-king"
+      },
+      {
+        "type": "play",
+        "cardId": "claim-cross"
+      },
+      {
+        "type": "play",
+        "cardId": "spot-king"
+      },
+      {
+        "type": "play",
+        "cardId": "long-throw"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "arc",
+        "cardId": "openly"
+      },
+      {
+        "type": "arc",
+        "cardId": "soft"
+      },
+      {
+        "type": "play",
+        "cardId": "spot-king"
+      },
+      {
+        "type": "play",
+        "cardId": "stay-big"
+      },
+      {
+        "type": "play",
+        "cardId": "quick-reflex"
+      },
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-back"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-high-ball"
+      },
+      {
+        "type": "arc",
+        "cardId": "detail"
+      },
+      {
+        "type": "arc",
+        "cardId": "play"
+      },
+      {
+        "type": "play",
+        "cardId": "tip-over"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "play",
+        "cardId": "long-throw"
+      },
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "play",
+        "cardId": "spot-king"
+      },
+      {
+        "type": "play",
+        "cardId": "claim-cross"
+      },
+      {
+        "type": "play",
+        "cardId": "long-throw"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "focus",
+        "cardId": "partner"
+      },
+      {
+        "type": "focus",
+        "cardId": "reserves"
+      },
+      {
+        "type": "offer",
+        "cardId": "brand"
+      },
+      {
+        "type": "coach",
+        "cardId": "defensive"
+      },
+      {
+        "type": "draft",
+        "cardId": "safe-hands"
+      },
+      {
+        "type": "draft",
+        "cardId": "leader-box"
+      },
+      {
+        "type": "draft",
+        "cardId": "one-handed"
+      },
+      {
+        "type": "play",
+        "cardId": "quick-reflex"
+      },
+      {
+        "type": "arc",
+        "cardId": "defer"
+      },
+      {
+        "type": "arc",
+        "cardId": "honest"
+      },
+      {
+        "type": "play",
+        "cardId": "tip-over"
+      },
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "play",
+        "cardId": "stay-big"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-back"
+      },
+      {
+        "type": "play",
+        "cardId": "long-throw"
+      },
+      {
+        "type": "arc",
+        "cardId": "impose"
+      },
+      {
+        "type": "arc",
+        "cardId": "define"
+      },
+      {
+        "type": "play",
+        "cardId": "tip-over"
+      },
+      {
+        "type": "play",
+        "cardId": "safe-hands"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "arc",
+        "cardId": "laces"
+      },
+      {
+        "type": "play",
+        "cardId": "leader-box"
+      },
+      {
+        "type": "play",
+        "cardId": "one-handed"
+      },
+      {
+        "type": "play",
+        "cardId": "quick-reflex"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-high-ball"
+      },
+      {
+        "type": "play",
+        "cardId": "spot-king"
+      },
+      {
+        "type": "arc",
+        "cardId": "believe"
+      },
+      {
+        "type": "arc",
+        "cardId": "counter"
+      },
+      {
+        "type": "arc",
+        "cardId": "cashin"
+      },
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "play",
+        "cardId": "quick-reflex"
+      },
+      {
+        "type": "play",
+        "cardId": "safe-hands"
+      },
+      {
+        "type": "play",
+        "cardId": "claim-cross"
+      },
+      {
+        "type": "play",
+        "cardId": "tip-over"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "focus",
+        "cardId": "focus_creativity"
+      },
+      {
+        "type": "focus",
+        "cardId": "charity"
+      },
+      {
+        "type": "offer",
+        "cardId": "money"
+      },
+      {
+        "type": "coach",
+        "cardId": "pressing"
+      },
+      {
+        "type": "draft",
+        "cardId": "play-short"
+      },
+      {
+        "type": "draft",
+        "cardId": "fingertip"
+      },
+      {
+        "type": "draft",
+        "cardId": "read-forward"
+      },
+      {
+        "type": "play",
+        "cardId": "leader-box"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-back"
+      },
+      {
+        "type": "play",
+        "cardId": "long-throw"
+      },
+      {
+        "type": "play",
+        "cardId": "stay-big"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-back"
+      },
+      {
+        "type": "arc",
+        "cardId": "shield"
+      },
+      {
+        "type": "play",
+        "cardId": "long-throw"
+      },
+      {
+        "type": "play",
+        "cardId": "safe-hands"
+      },
+      {
+        "type": "play",
+        "cardId": "read-forward"
+      },
+      {
+        "type": "play",
+        "cardId": "quick-reflex"
+      },
+      {
+        "type": "play",
+        "cardId": "spot-king"
+      },
+      {
+        "type": "arc",
+        "cardId": "stay-guarded"
+      },
+      {
+        "type": "arc",
+        "cardId": "walk-him-out"
+      },
+      {
+        "type": "play",
+        "cardId": "claim-cross"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "play",
+        "cardId": "tip-over"
+      },
+      {
+        "type": "arc",
+        "cardId": "confront"
+      },
+      {
+        "type": "arc",
+        "cardId": "second-chance"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-high-ball"
+      },
+      {
+        "type": "play",
+        "cardId": "fingertip"
+      },
+      {
+        "type": "play",
+        "cardId": "one-handed"
+      },
+      {
+        "type": "play",
+        "cardId": "quick-reflex"
+      },
+      {
+        "type": "play",
+        "cardId": "long-throw"
+      },
+      {
+        "type": "play",
+        "cardId": "safe-hands"
+      },
+      {
+        "type": "play",
+        "cardId": "play-short"
+      },
+      {
+        "type": "focus",
+        "cardId": "rest"
+      },
+      {
+        "type": "focus",
+        "cardId": "side_skip"
+      },
+      {
+        "type": "offer",
+        "cardId": "develop"
+      },
+      {
+        "type": "coach",
+        "cardId": "setpiece"
+      },
+      {
+        "type": "draft",
+        "cardId": "command"
+      },
+      {
+        "type": "draft",
+        "cardId": "sweeper-elite"
+      },
+      {
+        "type": "draft",
+        "cardId": "brave-block"
+      },
+      {
+        "type": "play",
+        "cardId": "tip-over"
+      },
+      {
+        "type": "arc",
+        "cardId": "humbled"
+      },
+      {
+        "type": "arc",
+        "cardId": "stay"
+      },
+      {
+        "type": "play",
+        "cardId": "stay-big"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-back"
+      },
+      {
+        "type": "play",
+        "cardId": "claim-cross"
+      },
+      {
+        "type": "play",
+        "cardId": "long-throw"
+      },
+      {
+        "type": "arc",
+        "cardId": "resist"
+      },
+      {
+        "type": "arc",
+        "cardId": "leader"
+      },
+      {
+        "type": "arc",
+        "cardId": "wary"
+      },
+      {
+        "type": "play",
+        "cardId": "spot-king"
+      },
+      {
+        "type": "play",
+        "cardId": "read-forward"
+      },
+      {
+        "type": "play",
+        "cardId": "long-throw"
+      },
+      {
+        "type": "play",
+        "cardId": "play-short"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-high-ball"
+      },
+      {
+        "type": "arc",
+        "cardId": "meg"
+      },
+      {
+        "type": "play",
+        "cardId": "one-handed"
+      },
+      {
+        "type": "play",
+        "cardId": "sweeper-elite"
+      },
+      {
+        "type": "play",
+        "cardId": "brave-block"
+      },
+      {
+        "type": "play",
+        "cardId": "command"
+      },
+      {
+        "type": "play",
+        "cardId": "quick-reflex"
+      },
+      {
+        "type": "play",
+        "cardId": "leader-box"
+      },
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "focus",
+        "cardId": "sponsors"
+      },
+      {
+        "type": "focus",
+        "cardId": "charity"
+      },
+      {
+        "type": "offer",
+        "cardId": "money"
+      },
+      {
+        "type": "coach",
+        "cardId": "talisman-m"
+      },
+      {
+        "type": "draft",
+        "cardId": "commanding-punch"
+      },
+      {
+        "type": "draft",
+        "cardId": "reflex"
+      },
+      {
+        "type": "draft",
+        "cardId": "punch-clear"
+      },
+      {
+        "type": "draft",
+        "cardId": "wonder-save"
+      },
+      {
+        "type": "play",
+        "cardId": "safe-hands"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-back"
+      },
+      {
+        "type": "arc",
+        "cardId": "charge"
+      },
+      {
+        "type": "play",
+        "cardId": "fingertip"
+      },
+      {
+        "type": "play",
+        "cardId": "shot-stop"
+      },
+      {
+        "type": "play",
+        "cardId": "punch-clear"
+      },
+      {
+        "type": "arc",
+        "cardId": "carve-time"
+      },
+      {
+        "type": "arc",
+        "cardId": "share-load"
+      },
+      {
+        "type": "play",
+        "cardId": "leader-box"
+      },
+      {
+        "type": "play",
+        "cardId": "organise"
+      },
+      {
+        "type": "play",
+        "cardId": "tip-over"
+      },
+      {
+        "type": "play",
+        "cardId": "spot-king"
+      },
+      {
+        "type": "play",
+        "cardId": "sweeper-elite"
+      },
+      {
+        "type": "play",
+        "cardId": "long-throw"
+      },
+      {
+        "type": "arc",
+        "cardId": "endorse"
+      },
+      {
+        "type": "arc",
+        "cardId": "loyal-error"
+      },
+      {
+        "type": "play",
+        "cardId": "quick-reflex"
+      },
+      {
+        "type": "play",
+        "cardId": "reflex"
+      },
+      {
+        "type": "play",
+        "cardId": "claim-cross"
+      },
+      {
+        "type": "play",
+        "cardId": "wonder-save"
+      },
+      {
+        "type": "play",
+        "cardId": "calm-high-ball"
+      }
+    ],
+    "expected": {
+      "turn": 120,
+      "finished": true,
+      "replayShortfall": null,
+      "overall": 12,
+      "role": "GK",
+      "attrs": {
+        "pace": 9,
+        "strength": 9,
+        "stamina": 11,
+        "passing": 6,
+        "shooting": 7,
+        "tackling": 5,
+        "positioning": 9,
+        "workrate": 5,
+        "keeping": 16,
+        "setPiece": 8,
+        "composure": 11,
+        "aggression": 7,
+        "creativity": 7,
+        "teamwork": 8,
+        "leadership": 9,
+        "durability": 11
+      },
+      "personality": null,
+      "traits": [
+        "biggame",
+        "wall"
+      ]
+    }
+  }
+]
