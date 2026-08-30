@@ -42,7 +42,55 @@ const LANE_WIDTH = Number(process.env.LW ?? 3.5);
  *  only chance-creation the game had was a through ball hit from wherever play had stalled, a median of
  *  45.8 metres out. Every downstream symptom — the clamped shooting term, the inert Fan Zone and duty
  *  shoot multipliers, 65 shots a match — traces back here rather than to the finish. */
-const PASS_BASE = 0.75;
+const PASS_BASE = Number(process.env.PB ?? 0.948);
+/** How much of pass completion is decided by the passer AGAINST THE DEFENCE HE IS PLAYING (PASS_REL), and
+ *  how much by his ability in the absolute (PASS_ABS).
+ *
+ *  THE PASS ONLY EVER READ ONE SIDE. `pressureOn` counts BODIES within four metres and nothing anywhere
+ *  read a defender's tackling or positioning, so a better defence could not make a pass harder to complete
+ *  while a better attack always made it easier. The tackle is already relative — `defEff / (defEff + retain)`
+ *  is a ratio, so it holds steady when both sides improve — and that asymmetry is what broke the calibration
+ *  across the pyramid. Measured on equal sides at each squad quality the game actually generates:
+ *
+ *      quality  4 → 0.19 goals/match      quality 13 → 2.81      quality 18 → 6.22
+ *
+ *  The gate asserts goals/match sits in [1.6, 3.6] but only ever measured quality 13, so it passed while
+ *  tier 8 (strength 6.4) played out goalless and tier 1 (strength 15.5) ran at four-plus a game. Completion
+ *  compounds: a chain of eight passes lands 17% of the time at 80% completion and 66% at 95%, and reaching
+ *  the final third that much more often is most of a sixteen-fold swing in shot attempts.
+ *
+ *  Splitting the term lets the passer's edge over the opposition carry the weight while a small absolute
+ *  slope keeps better players genuinely tidier. Old behaviour is PASS_REL 0 / PASS_ABS 0.38 / PASS_BASE 0.75. */
+const PASS_REL = Number(process.env.PR ?? 0.38);
+/** The two other places absolute quality leaked into scoring, once the pass was made relative.
+ *  With PASS_REL/PASS_ABS in place the spread across the pyramid fell from sixteen-fold to about six, and
+ *  the residue splits cleanly in two: shot ATTEMPTS still rose 3.1x from quality 6 to 18 and CONVERSION
+ *  1.86x. SHOOT_ABS is how much a carrier's own shooting drives him to pull the trigger (attempts), and
+ *  GK_SCALE is how hard the keeper resists (conversion) — the keeper's term was fixed at 0.2 while the
+ *  shooter's reached 0.36, so a better keeper could never fully answer a better striker. */
+const SHOOT_BASE_P = Number(process.env.SBP ?? 0.0022);
+const SHOOT_ABS = Number(process.env.SA ?? 0.004);
+const GK_SCALE = Number(process.env.GKS ?? 0.2);
+/** How far a chance's quality is judged against the opposition rather than in the absolute, and the squad
+ *  quality the whole engine is calibrated at (tier 3-to-2 strength, where the goals/match gate was set). */
+const SHOT_REL = Number(process.env.SR ?? 0.9);
+const DEF_ANCHOR = 0.65;
+/** How much of the pressure penalty a drilled side shrugs off when playing out of its own defensive third.
+ *  A flat completion bonus was the wrong shape — the instruction's claim is that the side BEATS THE PRESS,
+ *  so it belongs on the pressure term, which is the only thing a press does to a pass. */
+const PLAY_OUT_DRILL = Number(process.env.POD ?? 0.5);
+/** How far a defender abandons his shape anchor to track the man he is marking, at neutral press.
+ *  NOBODY MARKED ANYONE. `pressers` sends the nearest `pressCount` players AT THE BALL, and everyone else
+ *  held a formation anchor pulled loosely toward it — so the defending side converged on the carrier and
+ *  left every passing option free. `pressureOn`, which is what actually gates a pass, measures opponents
+ *  within four metres OF THE RECEIVER, and measured against a maximum press it read 0.062 in the passing
+ *  side's own defensive third. A press that does not deny the pass is not a press, and three separate
+ *  assertions fail on it: play-out-of-defence has no press to beat, and the anchor duty has no screening
+ *  job to be good at. */
+const MARK_PULL = Number(process.env.MP ?? 0.25);
+/** How far goal-side of his man a marker positions himself, in metres. */
+const MARK_GOALSIDE = 2.5;
+const PASS_ABS = Number(process.env.PA ?? 0.06);
 /** Scales the per-tick, per-defender tackle probability.
  *  MEASURED AT 1,508 TACKLES A MATCH against roughly 40 in real football. Every pressing defender within
  *  range rolled a ~19% chance EVERY TICK, so with two defenders near the ball a carrier lost it about a
@@ -53,7 +101,7 @@ const TACKLE_SCALE = Number(process.env.TS ?? 0.15);
  *  this branch is now the game's ONLY finish, so it carries all the shot volume; at the old value carriers
  *  dribbled to the goal line before shooting (median shot distance 2.2m) instead of striking from range. */
 const SHOOT_SCALE = Number(process.env.SS ?? 5);
-const GP_BASE = Number(process.env.GB ?? 0.08);
+const GP_BASE = Number(process.env.GB ?? 0.14);
 const GP_Q = Number(process.env.GQ ?? 0.36);
 /** How much likelier a tackle is on the goal line than outside the final third. */
 const BOX_DEFENCE = Number(process.env.BD ?? 3);
@@ -126,6 +174,10 @@ export class MatchEngine {
   private zonal: [number, number];
   /** small team-wide finishing steadiness from each side's best leader (0 for a leaderless side) */
   private leadershipBonus: [number, number];
+  /** Each side's ability to CUT A PASS OUT — mean tackling/positioning across its outfielders, normalised.
+   *  The counterweight to the passer's own quality, so that two equally good sides pass at the same rate no
+   *  matter how good they both are. Recomputed whenever the XI can change. */
+  private defSkill: [number, number];
   /** commentary-only throttle: last game-second we emitted a "flow" event (pass/tackle/loose-ball),
    *  so the feed gets texture without a line every micro-tick. Purely cosmetic — never read by the sim. */
   private lastFlowSec = -99;
@@ -168,6 +220,7 @@ export class MatchEngine {
     this.dm = [teams[0].players.map((p) => dutyMods(effectiveDuty(p))), teams[1].players.map((p) => dutyMods(effectiveDuty(p)))];
     this.zonal = this.computeZonal();
     this.leadershipBonus = [teamLeadership(teams[0].players), teamLeadership(teams[1].players)];
+    this.defSkill = [this.computeDefSkill(0), this.computeDefSkill(1)];
     this.state = {
       clockSec: 0,
       score: [0, 0],
@@ -360,6 +413,32 @@ export class MatchEngine {
 
   // ---- movement ----
 
+  /** Who is picking up whom. Everyone not chasing the ball takes the nearest opponent no team-mate has
+   *  already claimed, walking the defenders in index order so the assignment is deterministic. Only the
+   *  opponents who matter — the ones upfield of their own keeper — get picked up, so a defending side does
+   *  not send men to stand next to an opposition centre-half. */
+  private assignMarks(defTeam: 0 | 1, pressSet: ReadonlySet<number>): (number | null)[] {
+    const s = this.state;
+    const atk = (1 - defTeam) as 0 | 1;
+    const marks: (number | null)[] = new Array(11).fill(null);
+    const taken = new Set<number>();
+    const carrier = s.carrier;
+    for (let i = 1; i < 11; i++) {
+      if (pressSet.has(i) || this.sentOff.has(defTeam * 100 + i)) continue;
+      const ds = s.players[defTeam][i];
+      let best = -1, bestD = Infinity;
+      for (let j = 1; j < 11; j++) {
+        if (taken.has(j) || this.sentOff.has(atk * 100 + j)) continue;
+        if (carrier && carrier.teamIdx === atk && carrier.playerIdx === j) continue; // the ball-carrier is the pressers' job
+        const as = s.players[atk][j];
+        const d = Math.hypot(as.x - ds.x, as.y - ds.y);
+        if (d < bestD) { bestD = d; best = j; }
+      }
+      if (best >= 0) { marks[i] = best; taken.add(best); }
+    }
+    return marks;
+  }
+
   private pressers(defTeam: 0 | 1): Set<number> {
     const s = this.state;
     const set = new Set<number>();
@@ -390,6 +469,7 @@ export class MatchEngine {
       const mods = this.mods[teamIdx];
       const dir = this.attackDir(teamIdx);
       const pressSet = attacking ? new Set<number>() : this.pressers(teamIdx);
+      const marks = attacking ? null : this.assignMarks(teamIdx, pressSet);
       const goalX = this.goalOf(teamIdx).x;   // the goal THIS team is attacking
 
       // emergency box defence: if an opponent is carrying near OUR goal, the closest
@@ -439,6 +519,17 @@ export class MatchEngine {
         const pullY = p.role === 'GK' ? 0.25 : attacking ? 0.30 : 0.46;
         tx += (s.ball.x - tx) * pullX;
         ty += (s.ball.y - ty) * pullY;
+
+        // TRACK YOUR MAN. Scaled by the side's press setting, so a high press genuinely denies the pass and
+        // a deep block sits off and concedes it — which is the difference the two settings claim to be.
+        const markIdx = marks ? marks[i] : null;
+        if (markIdx != null) {
+          const op = s.players[(1 - teamIdx) as 0 | 1][markIdx];
+          const ownGoalX = this.goalOf((1 - teamIdx) as 0 | 1).x;
+          const w = clamp(MARK_PULL * mods.pressIntensity * (1 + dm.press * 0.3), 0, 0.9);
+          tx += (op.x + Math.sign(ownGoalX - op.x) * MARK_GOALSIDE - tx) * w;
+          ty += (op.y - ty) * w;
+        }
 
         // ── OFF-BALL BOX RUNS ────────────────────────────────────────────────────────────────────
         // THE MISSING MECHANISM. Every off-ball player targeted a tactical anchor pulled toward the ball,
@@ -602,7 +693,7 @@ export class MatchEngine {
       const closeness = 1 - distGoal / SHOOT_RANGE; // 0 at the edge of range, 1 at the goal
       const central = 1 - Math.abs(cs.y - PITCH.h / 2) / (PITCH.h / 2); // 1 dead-central, 0 at the touchline
       const homeBoost = this.teams[teamIdx].homeBoost ?? 1; // Fan Zone home advantage (only teams[0] carries it)
-      const shootP = SHOOT_SCALE * (0.0022 + norm(carrier.attrs.shooting) * 0.004) * closeness * (0.35 + 0.65 * central) * this.dm[teamIdx][playerIdx].shoot * (1 + this.zonal[teamIdx]) * homeBoost * TICK_SEC;
+      const shootP = SHOOT_SCALE * (SHOOT_BASE_P + norm(carrier.attrs.shooting) * SHOOT_ABS) * closeness * (0.35 + 0.65 * central) * this.dm[teamIdx][playerIdx].shoot * (1 + this.zonal[teamIdx]) * homeBoost * TICK_SEC;
       if (this.rng() < shootP) {
         this.resolveShot(teamIdx, playerIdx, distGoal, false);
         return;
@@ -691,8 +782,17 @@ export class MatchEngine {
         // is punished (build-up disrupted) — so pressing is a real counter to possession,
         // without the chaos of forced turnovers.
         const patientUnderPress = Math.max(0, -this.mods[teamIdx].directness) * Math.max(0, defMods.pressIntensity - 1) * 0.42;
+        const skill = norm(carrier.attrs.passing) * fit(cs.fitness);
+        // PLAY-OUT-OF-DEFENCE WAS A TOGGLE THAT DID NOTHING. Its only effect anywhere was to force the
+        // keeper's `directness` to -1 when picking a pass target — so the ball went short and then took its
+        // chances like any other pass. Measured over 250 paired matches against a high press it was worth
+        // +0.072 goals conceded (95% CI [-0.117, 0.261]) and +0.001 possession share: no benefit, no cost,
+        // no reason to ever touch it. The instruction's whole premise is that the side has REHEARSED this —
+        // the angles, the third-man runs, who drops in — so the drilled bonus belongs on the ball played out
+        // of the back, and the risk stays exactly where it was, in the short option under a press.
+        const drilled = this.tactics[teamIdx].playOutOfDefence && this.zoneOf(teamIdx, cs.x) === 'def' ? PLAY_OUT_DRILL : 0;
         const completion = clamp(
-          PASS_BASE + 0.38 * norm(carrier.attrs.passing) * fit(cs.fitness) - dist * 0.008 - pressure * 0.18 - patientUnderPress - risk
+          PASS_BASE + PASS_REL * (skill - this.defSkill[defTeam]) + PASS_ABS * skill - dist * 0.008 - pressure * 0.18 * (1 - drilled) - patientUnderPress - risk
           + mAdd(carrier.attrs.teamwork, 0.07) + (hasTrait(carrier, 'metronome') ? 0.03 : 0), // teamwork/Metronome sharpen link-up
           0.1, 0.96,
         );
@@ -744,6 +844,20 @@ export class MatchEngine {
     this.stepToward(cs, goal.x, driveY, speed);
     this.drain(cs, carrier, this.mods[teamIdx], 1.2);
     s.ball = { x: cs.x, y: cs.y };
+  }
+
+  /** Mean interception ability across a side's outfielders — tackling and positioning, normalised. Reading
+   *  a defender's QUALITY is what `pressureOn` cannot do: it counts bodies, so a packed box of poor markers
+   *  and a packed box of good ones were the same number. */
+  private computeDefSkill(teamIdx: 0 | 1): number {
+    const ps = this.teams[teamIdx].players;
+    let sum = 0, n = 0;
+    for (let i = 1; i < ps.length && i < 11; i++) {
+      const a = ps[i].attrs;
+      sum += (norm(a.tackling) + norm(a.positioning ?? a.tackling)) / 2;
+      n++;
+    }
+    return n ? sum / n : 0.5;
   }
 
   /** Count of opponents within 4m of a spot (passing/receiving pressure, 0..~3). */
@@ -908,7 +1022,20 @@ export class MatchEngine {
       const dp = s.players[defTeam][i];
       if (Math.hypot(dp.x - ss.x, dp.y - ss.y) < CROWD_RADIUS) crowd++;
     }
-    const quality = clamp(norm(shooter.attrs.shooting) * fit(ss.fitness) * (1 - distGoal / QUALITY_RANGE)
+    // HOW GOOD A CHANCE IS depends on the striker RELATIVE TO THE DEFENDING HE IS UP AGAINST, not on his
+    // shooting in the absolute. Left absolute, `quality` fed both the on-target roll (0.5 + quality * 0.45)
+    // and the conversion, so a top-flight striker's chances were better in both — while the top-flight
+    // defenders and keeper facing him got no equivalent lift, and conversion climbed 4.5% to 8.1% across the
+    // pyramid. Anchored at DEF_ANCHOR so an evenly-matched game at the calibration quality is unchanged.
+    // Judged against the STANDARD OF THE MATCH — the mean of both defences — not against this particular
+    // opponent. Against the opponent alone the adjustment runs in opposite directions for the two sides and
+    // so doubles every mismatch: a 15 against an 11 finished 7.80-0.04, a scoreline no football match has.
+    // The mean moves both sides together, which is the whole point — it is the LEVEL being played at that
+    // decides whether a chance is a good one, and at equal strength the two are identical anyway, so the
+    // flattening across the pyramid is unchanged.
+    const standard = (this.defSkill[0] + this.defSkill[1]) / 2;
+    const shotSkill = norm(shooter.attrs.shooting) * fit(ss.fitness) - SHOT_REL * (standard - DEF_ANCHOR);
+    const quality = clamp(shotSkill * (1 - distGoal / QUALITY_RANGE)
       + (clear ? 0.15 : 0) - crowd * CROWD_PENALTY, 0, 1);
     const minute = this.minute();
     const onTarget = this.rng() < 0.5 + quality * 0.45;
@@ -925,7 +1052,7 @@ export class MatchEngine {
       // all centred → a neutral shooter/keeper/team scores exactly as before.
       const finish = mAdd(shooter.attrs.composure, 0.1) + (hasTrait(shooter, 'clinical') ? 0.04 : 0) + this.leadershipBonus[teamIdx];
       const wall = hasTrait(gk, 'wall') ? 0.06 : 0;
-      const goalProb = clamp(GP_BASE + quality * GP_Q - norm(gk.attrs.keeping) * fit(gks.fitness) * 0.2 + (clear ? 0.12 : 0) + finish - wall, 0.02, 0.9);
+      const goalProb = clamp(GP_BASE + quality * GP_Q - norm(gk.attrs.keeping) * fit(gks.fitness) * GK_SCALE + (clear ? 0.12 : 0) + finish - wall, 0.02, 0.9);
       if (this.rng() < goalProb) {
         s.score[teamIdx]++;
         // assist = the player who played the last pass to this scorer, if recent (<=8s) and not himself
