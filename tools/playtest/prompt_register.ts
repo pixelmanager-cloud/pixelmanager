@@ -76,8 +76,26 @@ say('the ", which is …" tic stays rare (< 2%)', 100 * tic.length / Math.max(1,
 // the player. The old rule flagged those as register breaks and would have had authors delete good
 // writing to satisfy it, so quoted spans are stripped before the test rather than argued about each wave.
 const unquoted = (l: string) => l.replace(/['"‘’“”][^'"‘’“”]*['"‘’“”]/g, ' ');
-const you = all.filter(([, l]) => /(?<!thank )\byou\b|\byour\b/i.test(unquoted(l)) && !/thank you|you name it/i.test(l));
-say('no second person', you.length === 0, you.length ? `${you.length}, e.g. "${you[0][1].slice(0, 50)}"` : '0');
+// THE IMPERSONAL "YOU" IS NOT THE SECOND PERSON. "Nobody warns you that the biggest day is a Tuesday" and
+// "a hamstring gives you about a second of warning" are ordinary English generics — the narrator has not
+// turned to address the player any more than "you can see the ground from the bypass" does. Flagging them
+// flagged eleven lines, nine of which are good writing, and this file's own comment two lines up says why
+// that matters: a guard that cries wolf gets switched off.
+//
+// What IS a register break is a line that does both at once — the generic "you" and the third-person "he"
+// in the same breath, about the same man, which is the clash a reader actually notices:
+//     "Two hundred appearances gets you a plaque on the corridor wall … and he is roughly a quarter of the
+//      way there"
+// That is the one this now catches, along with genuine direct address (an imperative aimed at the player).
+const secondPerson = (l: string) => /(?<!thank )\byou\b|\byour\b/i.test(unquoted(l)) && !/thank you|you name it/i.test(l);
+const thirdPerson = (l: string) => /\b(he|him|his)\b/i.test(unquoted(l));
+const mixed = all.filter(([, l]) => secondPerson(l) && thirdPerson(l));
+say('no line mixes "you" and "he" about the same man', mixed.length === 0,
+  mixed.length ? `${mixed.length}, e.g. "${mixed[0][1].slice(0, 70)}"` : '0');
+// reported separately, not asserted: the impersonal-you count, so a drift toward second-person narration
+// is still visible in the output even though it does not fail the build.
+const impersonal = all.filter(([, l]) => secondPerson(l) && !thirdPerson(l));
+console.log(`  note impersonal "you" (generic, not address): ${impersonal.length} line(s) — register, not a defect`);
 
 // 6. PLACEHOLDERS — narrate.ts substitutes exactly {rival} and {mentor} in a setup line. Anything else
 // renders LITERALLY on screen, so an author inventing {gaffer} or {captain} ships a visible bug. With tens

@@ -17,7 +17,7 @@ export const FRAME_P: Bank = {
     "Boots a size bigger than they were at Christmas, ",
     "Ice baths at half seven, four lads to a tub, ",
     "A knock on the hip that has not gone in eleven days, ",
-    "They have taught him how to fall properly, which nobody warns you about, ",
+    "They have taught him how to fall properly, which nobody had warned him about, ",
     "Stretching on a corridor floor because the gym is booked, ",
     "Rest is a thing prescribed now, not chosen, ",
     "The doctor pressed his knee and said nothing for a long moment, ",

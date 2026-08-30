@@ -27,7 +27,7 @@ export const FRAME_R: Bank = {
     "Cramp in both calves at eighty-eight minutes and no substitutes left, ",
     "Nothing is torn. Nothing is torn, and yet, ",
     "In January the gym smells different than it does in August, ",
-    "He has learned that a hamstring gives you about a second of warning, ",
+    "He has learned that a hamstring gives him about a second of warning, ",
     "Twenty-one years old and there is a folder with his name on it in the medical room, ",
     "Stop the anti-inflammatories before games, the doc says, and does not say what to do instead, ",
     "Boots half a size up since the toe, and nobody knows except the kit man, ",
@@ -436,7 +436,7 @@ export const FRAME_R: Bank = {
     "Cold water on the back of the neck before he goes out, ",
     "Boots done up, undone, done up again, ",
     "His father drove him to games for eleven years and now watches on a laptop, ",
-    "Two hundred appearances gets you a plaque on the corridor wall and a handshake in the boardroom, and he is roughly a quarter of the way there, ",
+    "Two hundred appearances earns a plaque on the corridor wall and a handshake in the boardroom, and he is roughly a quarter of the way there, ",
     "Some of this is going to be the best of it and he cannot tell which part, ",
   ],
 };
