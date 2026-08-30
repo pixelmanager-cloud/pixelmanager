@@ -268,6 +268,12 @@ if (failures.length === 0) {
     failures.push(`every match ended 0-0 — engine is not scoring`);
   if (maxTicks > EXPECTED_TICKS)
     failures.push(`a match ran ${maxTicks} ticks (> expected ${EXPECTED_TICKS})`);
+  // ...AND A LOWER BOUND. This was an upper bound only, so a mutation that ended every match at half-time
+  // (`clockSec >= MATCH_SEC / 2`) sailed through: 2000 matches, all invariants "held", with maxTicks=5400
+  // printed on the same line as the tick. A match that stops at forty-five minutes is not a match, and
+  // every goals/match figure measured off it is half of what it claims to be.
+  if (maxTicks < EXPECTED_TICKS)
+    failures.push(`no match reached full time — longest was ${maxTicks} ticks of an expected ${EXPECTED_TICKS}`);
 }
 
 // ---- verdict ----

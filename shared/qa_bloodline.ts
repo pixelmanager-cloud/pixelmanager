@@ -106,7 +106,7 @@ console.log('\n=== 6. how many sons a generation gives (1-3, weighted 20/40/40) 
 
 console.log('\n=== 7. an unplayed brother is a FULL PLAYER, not a stat line ===');
 {
-  let withPersonality = 0, withMentals = 0, inBand = 0, n = 0;
+  let withPersonality = 0, withMentals = 0, inBand = 0, n = 0, unusable = 0;
   const roles = ['GK', 'DF', 'MF', 'FW'] as const;
   for (let s = 0; s < 200; s++) {
     const pseed = s * 104729 + 11;
@@ -118,9 +118,14 @@ console.log('\n=== 7. an unplayed brother is a FULL PLAYER, not a stat line ==='
       if (['composure', 'aggression', 'creativity', 'teamwork', 'leadership'].every((k) => typeof pl.attrs[k] === 'number')) withMentals++;
       const band = h.genes.pace;
       if (pl.attrs.pace >= band.floor && pl.attrs.pace <= band.ceiling) inBand++;
-      if (!(overall(pl) > 0) || !pl.age) { console.log('    bad player', pl.id); }
+      // A BARE LOG IS NOT A CHECK. This was `console.log('    bad player', pl.id)` with no `fails++`, so a
+      // mutation that returned every heir with `age: 0` printed 600 of those lines and the harness still
+      // finished with `✓ heirs are correlated but distinct`. Counted and asserted once below, so it fails
+      // without burying the output in six hundred lines.
+      if (!(overall(pl) > 0) || !pl.age) { unusable++; if (unusable <= 3) console.log(`    unusable heir ${pl.id}: overall=${overall(pl)}, age=${pl.age}`); }
     }
   }
+  ok('every heir is a usable player at all (real overall, real age)', unusable === 0, `${n - unusable}/${n}`);
   ok('every brother has a temperament', withPersonality === n, `${withPersonality}/${n}`);
   ok('every brother has the full mental layer', withMentals === n, `${withMentals}/${n}`);
   ok('his physique respects the genes he inherited', inBand === n, `${inBand}/${n}`);
