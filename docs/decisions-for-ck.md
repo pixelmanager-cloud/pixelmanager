@@ -90,10 +90,13 @@ and the trailer are the critical path** — the store copy is the easy half.
 
 # ROUND 2 — four critic agents, 2026-08-31
 
+> **~~Struck-through items are DONE.~~** Anything not struck through is still open and, if it sits under a
+> "YOUR CALL" heading, is waiting on you rather than on me.
+
 Four agents measured the shipped game rather than reading it. Everything below is a number from a run.
 I have **fixed** the items marked FIXED. The rest are design calls that are yours, not mine.
 
-## 6. Fixed without asking (they were defects, not choices)
+## ~~6. Fixed without asking (they were defects, not choices)~~ — ALL DONE
 
 - **The manager arc library ran dry and stayed dry.** `arcFired` — the list of arcs *this career* has seen,
   which `pickManagerArc` filters on — was carried across successions as if it were dynasty property. It
@@ -116,7 +119,7 @@ I have **fixed** the items marked FIXED. The rest are design calls that are your
   level 1. The offer is now re-run when the levels land.
 - **`clearMgr()`** — dead since the succession fix. Deleted.
 
-## 7. Fixed, and it changes the balance — tell me if you disagree
+## ~~7. Fixed, and it changes the balance~~ — DONE, but tell me if you disagree with the two marked arguable
 
 **The pyramid was three different games.** The calibration gate measures goals/match at ONE squad quality
 and asserts it lands in [1.6, 3.6]. It passed for months. Across the strengths the game actually generates:
@@ -201,7 +204,7 @@ about what "development" means, not a bug with an obvious right answer. Options,
 
 # OVERNIGHT LOG — 2026-08-31, second half
 
-## 10. THE ONE YOU SHOULD READ FIRST — the game did not run in a browser
+## ~~10. THE ONE YOU SHOULD READ FIRST — the game did not run in a browser~~ — FIXED, gate added
 
 I merged the engine rebuild to `main` with a fully green gate, and then opened the game. Black screen, one
 console line:
@@ -267,3 +270,126 @@ midfielder is left marking whoever remains — possibly dragging him AWAY from t
   empty screen.
 - The agent-selection screen says **"No wrong pick here"** while the agent demonstrably changes draft luck,
   wages and transfer fees. Either the choice is fake or the copy is wrong — that is a design call, not a bug.
+
+---
+
+# ROUND 3 — 2026-08-31, small hours. Three more critics reported.
+
+> Convention as above: ~~struck through~~ = done.
+
+## ~~14. Every tactical setting you made was thrown away after each match~~ — FIXED
+
+This is the one that matters most tonight, and it invalidates a category of work rather than one feature.
+
+`api.setStandingOrders` had two call sites and **one of them was unreachable**: `saveTeam()` only runs when
+`editorMode === 'standing'`, and all three `openLineup(...)` calls pass `'match'`. So from the very first
+fixture the save path could never execute, and the orders were written exactly once — at the founding
+handoff, with only `playerIds` set.
+
+Meanwhile `openLineup` rebuilds every draft field from `this.standingOrders` at the top of each call. So
+**35 of the 42 settings on the pre-match screen** — formation, five sliders, three instructions, the XI,
+eleven duties, the captain, three set-piece takers — reset to `4-4-2 / Balanced / defaultDuty() / no
+captain / no takers` **on every matchday, eighteen times a season, forever.** And those defaults are the
+ones already measured as the worst options in the game.
+
+**Why it matters beyond itself:** every duty, preset and formation measurement made this week was taken by
+passing tactics straight into the engine, while the screen the player actually uses discarded his choices
+before the next match. The tactical layer has never been played as designed. Fixed; guarded by
+`tools/playtest/settings_persist.ts`.
+
+## 15. YOUR CALL — the anchor duty. You asked; here is the measurement.
+
+You asked whether to remove it. **My recommendation is to keep it for now, and I'd like to correct myself
+first:** I earlier read the duty matrix as showing the anchor with the best goals-against in the game
+(1.02 against 1.18-1.40). Paired against the same seeds, that gap does not survive.
+
+Goals conceded, paired on seed, across a spread of six opposing presets (n=260):
+
+| comparison | difference | 95% CI | verdict |
+|---|---|---|---|
+| anchor − ball-winner | +0.081 | [-0.113, 0.275] | no difference |
+| anchor − box-to-box | +0.092 | [-0.113, 0.297] | no difference |
+| anchor − playmaker | +0.081 | [-0.118, 0.280] | no difference |
+| anchor − deep-lying-playmaker | +0.023 | [-0.182, 0.228] | no difference |
+| anchor − wide-playmaker | **−0.238** | [-0.431, -0.046] | anchor genuinely better |
+
+So its card — *"pure destroyer, screens the back four"* — is false. But the finding is not "the anchor is
+broken", it is **"five of the six midfield duties are defensively identical"**. Deleting the anchor removes
+one of five indistinguishable things and leaves four, fixes nothing, and costs a recognisable football role
+that the player picks deliberately (`defaultDuty()` never emits it). Note also that `'anchor'` is a card id
+in `career.ts` as well — a careless removal touches two systems.
+
+**And the decisive reason to wait: until tonight, no duty the player chose survived a single match** (see
+14). The entire duty layer has never been measured under the conditions it will actually ship in. Ask me
+again after a re-measure and I'll have a real answer — including which duties earn their place, which is
+the question actually worth asking.
+
+## 16. YOUR CALL — simming beats playing, by 5 to 12 league points a season
+
+The button that skips the match wins more games than the match. Same fixture, symmetric squads, both sides
+on default tactics (n=500/cell):
+
+| | played | simmed | gap over 9 home fixtures |
+|---|---|---|---|
+| tier 8, level-1 facilities | 1.222 ppg | **1.812** | +5.3 pts |
+| tier 8, maxed facilities + staff | 1.550 ppg | **2.846** | +11.7 pts |
+| tier 5, maxed facilities + staff | 1.498 ppg | **2.846** | +12.1 pts |
+
+Cause is a scale collision, not a tuning error. `simEdge()` denominates facilities in **strength points**
+(maxed = +5.66, which is 4.4 divisions of the pyramid) and home advantage at 5.0 strength points (3.8
+divisions); `startSpMatchWith()` denominates the same facilities as a ~1.43x shot multiplier. At maxed
+facilities the simmed opponent's Poisson λ computes **negative** and floors at 0.05 — they concede 0.08
+goals a game and mathematically cannot score.
+
+It also changes what exists: **injuries, composure and leadership only exist in the played path.** So the
+Medical Centre is worth exactly zero to a player who sims — and so is the inheritance system, because
+`overall()` reads neither composure nor leadership, which makes "The Craft" and the mentoring bequest worth
+**Δ0** to the club.
+
+I have not touched this. It is two systems disagreeing about what a football match is, and which one is
+canonical is your call: make Sim a fast run of the real engine, or accept it as a separate cheaper model and
+re-scale it. I would make Sim run the engine.
+
+## 17. YOUR CALL — the player cannot see the number that decides his season
+
+- **97% of the variance in a league finish is the seed.** A +1.0 strength swing explains 2.4-3.0%.
+- The same club, unchanged, ranges over **8.2 league places** across 30 seasons.
+- A season in which the player made **every** decision in the game (+0.484 club strength) and one in which he
+  made **none** produce the identical league position **65-73% of the time**.
+- `squadStrength()` — the single input that decides the table — has **zero render sites**. The *opponent's*
+  rating is shown twice on the pre-match card. The player is shown everyone's strength except his own.
+- And the two numbers are on different scales: `overall()` of a generated XI measures quality **+2.5**, so
+  the player silently carries ~two divisions of free strength in every simmed fixture.
+
+It does compound — do-nothing parks at tier 7.6 over 25 seasons while best play reaches 1.5 — so the layer
+is legible at a resolution of about ten seasons. Inside any one season the player is reading noise with no
+instrument. The cheapest fix in this whole document is one line on the rollover: *"you finished 4th; at your
+squad strength this division expects 4.2; you are +0.9 stronger than last season."* That converts a slot
+machine into a game without touching a balance constant. **Say the word and I'll do it.**
+
+## 18. YOUR CALL — nine ways to lose a dynasty, and one is unrecoverable
+
+A save is twenty hours of someone's life, offline, with no server backup. Worst first:
+
+1. **One turn of schedule drift permanently bricks a career.** Adding or removing a single turn before a
+   between-turn beat desynced **20 of 20** recorded careers, losing 108-115 of 120 turns. Worse, `careerAct`
+   re-runs `loadCareer` on every action, so it truncates back each time: the player's 25-year-old
+   international is a 12-year-old at Grassroots, 40 more moments of play move the counter by 1 and vanish on
+   reload, `finished` is never reached — **so the bloodline can never advance another generation.** Silent;
+   no flag, no log, nothing a UI could read.
+   The written contract in the code is also **wrong**: four files claim replay safety because a change makes
+   "no rng draw". `career.ts:1602` disproves it — `success` feeds `playedWell`, which changes the number of
+   draft picks *and* takes a branch with an extra `rng()` call. **The draw count is itself success-dependent.**
+   And every determinism test in the repo replays inside its own build, so none can catch this.
+2. **A failed write makes one dynasty overwrite another** — `continueSave` sets `modelBox.model` and
+   `activeSlotId` non-atomically across an `await`.
+3. **`migrate` never refuses.** 35 malformed inputs, zero refusals; wrong-shaped `tokens` / `legacies` /
+   `honours` silently become `[]` and are written back over the recoverable bytes.
+4. **"Delete forever" un-deletes itself**, three ways — and the resurrected dynasty returns as a season-1
+   basement club because its manager state was swept.
+5. **IndexedDB absent → the game reports success and saves nothing**, with `saveHealth` green forever.
+6. Plus: a corrupt career bricks the prospect behind a button that re-throws; deleting the save you are in
+   keeps accepting moves into a void; the season rollover can be re-run for a **duplicate league title**.
+
+These are mine to fix and I am starting on them, worst first. Flagging them here because #1 is the kind of
+thing that should inform whether you ship a Steam beta before it is closed.
