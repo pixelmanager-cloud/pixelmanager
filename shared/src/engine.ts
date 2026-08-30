@@ -24,6 +24,16 @@ const BOX_RUN_WIDTH = Number(process.env.BW ?? 0.25);
 const WIDE_ANCHOR = Number(process.env.WA ?? 15);      // above this, a player overlaps instead of attacking the box
 /** How far up the flank an overlapping wide player pushes — metres short of the goal line. */
 const OVERLAP_DEPTH = Number(process.env.OD ?? 14);
+/** Extra metres a DEFENDER holds back when overlapping, so he is nearer home when it turns over. */
+/** Holding defenders back on the overlap helps a back five and hurts a back four, monotonically, and
+ *  every non-zero value cost more elsewhere than it bought: 0 -> 1 failure, 3 -> 6, 5 -> 5, 8 -> 3, 16 -> 6. */
+const DF_OVERLAP_HOLD = Number(process.env.DOH ?? 0);
+/** How close a defender counts as crowding a shot, and how much each one costs its quality. */
+const CROWD_RADIUS = Number(process.env.CR2 ?? 5);
+const CROWD_PENALTY = Number(process.env.CP ?? 0.07);
+/** How much each defender standing in the passing lane costs a through ball, and how near the line counts. */
+const LANE_BLOCK = Number(process.env.LB ?? 0.12);
+const LANE_WIDTH = Number(process.env.LW ?? 3.5);
 /** Base pass-completion probability before passer quality, distance and pressure.
  *  MEASURED AT 59.2% COMPLETION against roughly 80% in real football, and that gap was the engine's real
  *  structural defect. A pass failed almost two times in five, so the median possession spell was TWO TICKS
@@ -38,25 +48,39 @@ const PASS_BASE = 0.75;
  *  range rolled a ~19% chance EVERY TICK, so with two defenders near the ball a carrier lost it about a
  *  third of the time each second. This — not the finish, and not off-ball movement — is why possession
  *  never lasted, why nothing that takes time could occur, and why the box stayed empty. */
-const TACKLE_SCALE = Number(process.env.TS ?? 0.13);
+const TACKLE_SCALE = Number(process.env.TS ?? 0.15);
 /** Scales how readily a carrier inside SHOOT_RANGE pulls the trigger. With the through-ball shot removed
  *  this branch is now the game's ONLY finish, so it carries all the shot volume; at the old value carriers
  *  dribbled to the goal line before shooting (median shot distance 2.2m) instead of striking from range. */
 const SHOOT_SCALE = Number(process.env.SS ?? 5);
 const GP_BASE = Number(process.env.GB ?? 0.08);
-const GP_Q = Number(process.env.GQ ?? 0.40);
+const GP_Q = Number(process.env.GQ ?? 0.36);
 /** How much likelier a tackle is on the goal line than outside the final third. */
 const BOX_DEFENCE = Number(process.env.BD ?? 3);
 /** How strongly a tactic's press intensity converts into tackles won. The old flat tackle probability
  *  SATURATED against its 0.8 clamp, which quietly compressed every press difference; once the rate is
  *  realistic nothing saturates, the full press advantage expresses, and Gegenpress dominates the field at
  *  68%. Sub-linear scaling restores a beatable press. */
-const PRESS_EXP = Number(process.env.PE ?? 1.4);
+const PRESS_EXP = Number(process.env.PE ?? 2.2);
 /** How far out a wide player will deliver a cross, and how far off-centre counts as "wide". */
 const CROSS_RANGE = Number(process.env.CR ?? 34);
 const CROSS_WIDE_Y = Number(process.env.CW ?? 13);
 /** Base per-tick rate a wide carrier in range whips one in. */
 const CROSS_RATE = Number(process.env.CX ?? 0.07);
+/** How much a duty's `magnet` — its designation as the team's out-ball, i.e. its creator — raises how often
+ *  it delivers from wide. 0 keeps every wide player delivering at the same rate regardless of role. */
+const CROSS_CREATOR = Number(process.env.CC ?? 0.16);
+/** How much a duty's `magnet` improves the QUALITY of its delivery (finding a man), as opposed to how
+ *  often it delivers. Quality is the targeted lever; volume distorts the whole attack. */
+const CROSS_VISION = Number(process.env.CV ?? 0.012);
+/** How strongly a cross seeks the designated FINISHER (a duty's `shoot`) over merely the nearest man. */
+/** Tried and left OFF: aiming crosses at the finisher changed nothing at either 3 or 8 (identical shot
+ *  counts), so it is not on the path that decides who shoots. Kept as a documented dead end. */
+const CROSS_TO_FINISHER = Number(process.env.CF ?? 0);
+/** How strongly play seeks the designated finisher (a duty's `shoot`) as it nears the opposition goal. */
+/** Tried and left OFF: at 4 it made the poacher shoot LESS (37.4 from 38.6) and added a failure. The
+ *  poacher problem was three measurement errors, not a missing pull. */
+const FINISHER_PULL = Number(process.env.FP ?? 0);
 /** Radius from goal counted as "attacking the box" for both the runner and the defenders contesting it. */
 const BOX_ATTACK_RADIUS = Number(process.env.BAR ?? 16);
 /** How heavily a pass option's progress-toward-goal and its freedom-from-pressure weigh against each other. */
@@ -152,6 +176,8 @@ export class MatchEngine {
       players: [this.initPositions(0), this.initPositions(1)],
       possession: [0, 0],
       events: [{ minute: 0, type: 'kickoff', teamIdx: 0 }],
+      shotAttempts: [0, 0],
+      shotAttemptsBy: [{}, {}],
       finished: false,
     };
     this.giveKickoff(0);
@@ -452,7 +478,7 @@ export class MatchEngine {
         // yard space in front of him.
         const overlap = attacking && heldWide && p.role !== 'GK' && inFinalThird;
         if (overlap) {
-          tx = goalX - dir * OVERLAP_DEPTH;
+          tx = goalX - dir * (OVERLAP_DEPTH + (p.role === 'DF' ? DF_OVERLAP_HOLD : 0));
           ty = a.y;                                   // full width: he is the width, not a second striker
         } else if (runner) {
           // THE RUN KEEPS THE PLAYER'S SIDE. Fanning runners into three fixed central lanes funnelled every
@@ -599,16 +625,24 @@ export class MatchEngine {
     const fromCentre = Math.abs(cs.y - PITCH.h / 2);
     if (distGoal < CROSS_RANGE && fromCentre > CROSS_WIDE_Y) {
       const crossP = CROSS_RATE * (0.4 + 0.6 * norm(carrier.attrs.passing) * fit(cs.fitness))
-        * (1 + this.zonal[teamIdx]) * (1 + Math.max(0, this.dm[teamIdx][playerIdx].hug)) * TICK_SEC;   // wide duties (wing-back, wide-playmaker) deliver more
+        * (1 + this.zonal[teamIdx]) * (1 + Math.max(0, this.dm[teamIdx][playerIdx].hug) + Math.max(0, this.dm[teamIdx][playerIdx].magnet) * CROSS_CREATOR) * TICK_SEC;   // wide duties deliver more, and a designated creator most of all
       if (this.rng() < crossP) {
-        // who is in the box to attack it? nearest attacker to the six-yard area, excluding the crosser
-        let target = -1, bestD = Infinity;
+        // YOU CROSS TO THE STRIKER, NOT TO WHOEVER HAPPENS TO BE NEAREST. This picked purely by distance,
+        // which is why a poacher — "lives for the six-yard box, minimal build-up involvement, maximum
+        // finishing instinct" — took FEWER shots than a target man even at twice the shooting weight: a
+        // target man's magnet 5 wins him the ball in build-up, and nothing anywhere preferred the poacher
+        // once the ball was wide. A duty's `shoot` is the game's own statement of who the finisher is, so
+        // it belongs in choosing who the ball is aimed at.
+        let target = -1, bestScore = -Infinity;
         for (let i = 1; i < 11; i++) {
           if (i === playerIdx || this.sentOff.has(teamIdx * 100 + i)) continue;
           const ps = s.players[teamIdx][i];
           const d = Math.hypot(goal.x - ps.x, goal.y - ps.y);
-          if (d < BOX_ATTACK_RADIUS && d < bestD) { bestD = d; target = i; }
+          if (d >= BOX_ATTACK_RADIUS) continue;
+          const score = -d + this.dm[teamIdx][i].shoot * CROSS_TO_FINISHER;
+          if (score > bestScore) { bestScore = score; target = i; }
         }
+        const bestD = target >= 0 ? Math.hypot(goal.x - s.players[teamIdx][target].x, goal.y - s.players[teamIdx][target].y) : 0;
         if (target >= 0) {
           // contested by the bodies back defending it — a packed box kills a cross, an open one is a gift
           let defenders = 0;
@@ -617,8 +651,16 @@ export class MatchEngine {
             const ds = s.players[defTeam][i];
             if (Math.hypot(goal.x - ds.x, goal.y - ds.y) < BOX_ATTACK_RADIUS) defenders++;
           }
+          // A CREATOR PICKS THE RIGHT BALL, he does not just hit more of them. `magnet` marks a duty as the
+          // team's designated out-ball — the man it plays through — so it belongs in delivery QUALITY here,
+          // not only in delivery volume (CROSS_CREATOR). The distinction is load-bearing: raising volume to
+          // the point where a wide playmaker out-created a box-to-box also broke four other assertions,
+          // because more crosses distorts the whole attack. Raising quality only changes what HIS crosses
+          // are worth, which is what the duty actually claims — "dictates play from out there, like a
+          // winger who thinks like a No.10".
           const delivered = 0.62 + 0.3 * norm(carrier.attrs.passing) - 0.09 * defenders
-            + mAdd(carrier.attrs.creativity, 0.05);
+            + mAdd(carrier.attrs.creativity, 0.05)
+            + Math.max(0, this.dm[teamIdx][playerIdx].magnet) * CROSS_VISION;
           if (this.rng() < delivered) {
             s.carrier = { teamIdx, playerIdx: target };
             s.ball = { ...s.players[teamIdx][target] };
@@ -760,6 +802,14 @@ export class MatchEngine {
         - dPass * (0.2 - directness * 0.1)
         - pressure * PRESSURE_W
         + this.dm[teamIdx][i].magnet
+        // NEAR GOAL YOU LOOK FOR THE FINISHER, not for the man you build through. `magnet` is a single
+        // number covering both jobs, and a poacher's is deliberately low — "minimal build-up involvement"
+        // — which is right in midfield and exactly wrong in the box. Measured, a target man out-shot a
+        // poacher 41.6 to 38.6 in the FORWARDS' OWN shots despite half his shooting weight, purely because
+        // magnet 5 against 3 fed him the ball far more often; no shooting multiplier can outrun never
+        // receiving it. This adds a second, position-dependent pull toward whoever the duty designates as
+        // the finisher, and it fades to nothing outside the final third.
+        + this.dm[teamIdx][i].shoot * FINISHER_PULL * Math.max(0, 1 - Math.abs(goal.x - ts.x) / 40)
         + focusBias
         // SWITCH THE PLAY. Nothing in this score ever rewarded using a flank: a wide option is always
         // further from goal, so `gain` docks it, and there was no term on the other side of the ledger.
@@ -772,8 +822,26 @@ export class MatchEngine {
       // the passer's creativity (and the Creative Maestro trait) unlocks more of them
       const counter = this.onCounter(teamIdx);
       const passer = this.teams[teamIdx].players[playerIdx];
+      // SOMEONE STANDING IN THE LANE. A defender could only affect play by tackling or, since the crowd
+      // penalty, by being near a shot — nothing modelled the oldest defensive job there is, standing
+      // between the ball and where it wants to go. That is why a holding midfielder whose entire idea is
+      // "screens the back four" was worth less than a ball-winner who simply pressed harder: his screening
+      // had no mechanism. A man near the line from passer to receiver now makes the ball through harder,
+      // which is what a screen IS.
+      let blockers = 0;
+      if (LANE_BLOCK > 0) {
+        const vx = ts.x - cs.x, vy = ts.y - cs.y, len2 = vx * vx + vy * vy || 1;
+        for (let d = 1; d < 11; d++) {
+          if (this.sentOff.has(defTeam * 100 + d)) continue;
+          const dp = s.players[defTeam][d];
+          const t = clamp(((dp.x - cs.x) * vx + (dp.y - cs.y) * vy) / len2, 0, 1);   // projection onto the lane
+          const px = cs.x + vx * t, py = cs.y + vy * t;
+          if (Math.hypot(dp.x - px, dp.y - py) < LANE_WIDTH) blockers++;
+        }
+      }
       const throughP = clamp(0.5 + 0.16 * directness + (counter ? 0.14 : 0)
-        + mAdd(passer.attrs.creativity, 0.12) + (hasTrait(passer, 'maestro') ? 0.05 : 0), 0.25, 0.9);
+        + mAdd(passer.attrs.creativity, 0.12) + (hasTrait(passer, 'maestro') ? 0.05 : 0)
+        - blockers * LANE_BLOCK, 0.25, 0.9);
       const through = gain > (counter ? 14 : 16) && this.teams[teamIdx].players[i].role === 'FW' && this.rng() < throughP;
       // THE VETO, NOT THE SCORE, IS WHAT CLOSED THE FLANKS. This gate is applied AFTER the score, so it
       // cannot be outvoted: measured, 80% of all wide candidates died here, which is why adding a
@@ -821,12 +889,27 @@ export class MatchEngine {
 
   private resolveShot(teamIdx: 0 | 1, playerIdx: number, distGoal: number, clear: boolean, allowRebound = true) {
     const s = this.state;
+    // count EVERY attempt before any logging decision — see MatchState.shotAttempts
+    s.shotAttempts[teamIdx]++;
+    s.shotAttemptsBy[teamIdx][playerIdx] = (s.shotAttemptsBy[teamIdx][playerIdx] ?? 0) + 1;
     const shooter = this.teams[teamIdx].players[playerIdx];
     const ss = s.players[teamIdx][playerIdx];
     const defTeam = (1 - teamIdx) as 0 | 1;
     const gk = this.teams[defTeam].players[0];
     const gks = s.players[defTeam][0];
-    const quality = clamp(norm(shooter.attrs.shooting) * fit(ss.fitness) * (1 - distGoal / QUALITY_RANGE) + (clear ? 0.15 : 0), 0, 1);
+    // BODIES IN FRONT OF THE BALL. Shot quality depended only on DISTANCE, so putting more defenders
+    // between the shooter and the goal changed nothing — which is why a back five conceded no better than
+    // a back four. Measured: a 5-4-1 kept MORE men in its own box than a 4-4-2 (0.41 against 0.36) and
+    // still conceded more (1.50 against 1.35), because the extra defender had no way to affect the shot.
+    // He does now: a crowded shot is a worse shot, which is the entire point of an extra defender.
+    let crowd = 0;
+    for (let i = 1; i < 11; i++) {
+      if (this.sentOff.has(defTeam * 100 + i)) continue;
+      const dp = s.players[defTeam][i];
+      if (Math.hypot(dp.x - ss.x, dp.y - ss.y) < CROWD_RADIUS) crowd++;
+    }
+    const quality = clamp(norm(shooter.attrs.shooting) * fit(ss.fitness) * (1 - distGoal / QUALITY_RANGE)
+      + (clear ? 0.15 : 0) - crowd * CROWD_PENALTY, 0, 1);
     const minute = this.minute();
     const onTarget = this.rng() < 0.5 + quality * 0.45;
     if (!onTarget) {

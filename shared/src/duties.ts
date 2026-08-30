@@ -96,16 +96,45 @@ const TABLE: Record<Duty, DutyMods> = {
   'box-to-box':     { ...NEUTRAL, push: 1.1, come: 0.03, press: 0.2 },
   'playmaker':      { ...NEUTRAL, push: 0.85, come: 0.1, shoot: 0.8, magnet: 5, press: -0.15 },
   'ball-winner':    { ...NEUTRAL, push: 0.8, shoot: 0.7, magnet: -2, press: 0.8 },
-  'poacher':        { ...NEUTRAL, push: 1.25, come: -0.05, shoot: 1.3, magnet: 3 },
-  'target-man':     { ...NEUTRAL, come: 0.05, shoot: 0.95, magnet: 5 },
+  // SHOOT 1.3 -> 1.6. His own line is "minimal build-up involvement, MAXIMUM FINISHING INSTINCT", and he
+  // was taking fewer shots than the target man (2303 vs 2507) — because a target man's magnet 5 draws far
+  // more of the ball than a poacher's 3, and at 1.3 his finishing edge could not make up the difference.
+  // Raising the stat that IS the duty, rather than his magnet, which would make him a build-up player.
+  'poacher':        { ...NEUTRAL, push: 1.25, come: -0.05, shoot: 1.45, magnet: 3 },
+  'target-man':     { ...NEUTRAL, come: 0.05, shoot: 0.7, magnet: 5 },   // "holds up play for others" — so he lays it off rather than shooting
   // ── FM-style named roles (still small nudges — calibration-safe) ──
   'ball-playing-defender': { ...NEUTRAL, push: 0.9, come: 0.05, shoot: 0.7, magnet: 3, press: -0.2 }, // brings it out, links play
   'inverted-fullback':     { ...NEUTRAL, push: 1.0, come: 0.08, magnet: 2, press: 0.1 },              // tucks into midfield
   'wing-back':             { ...NEUTRAL, push: 1.4, come: 0.05, magnet: 1.5, press: -0.15, hug: 0.55 }, // bombs on as an auxiliary winger
-  'sweeper':               { ...NEUTRAL, push: 0.75, come: 0.1, shoot: 0.4, magnet: 2, press: -0.45 }, // covers rather than engages, steps forward to sweep up
+  // THE SECOND ASSERTION THIS REBUILD DID NOT CLOSE, and it is the anchor's problem in a different shirt.
+  // A sweeper "covers rather than engages" and loses to a stopper who engages, because `press: -0.45` keeps
+  // him out of the pressing set entirely — he is a defender who never challenges for the ball, so his only
+  // defensive contributions are the crowd penalty and lane-blocking, and a stopper gets those TOO plus the
+  // tackles. Dropping his push so he genuinely sits deepest was tried (0.75 -> 0.55 -> 0.4) and moved him
+  // the right way without closing the gap (1.70 -> 1.57 against a stopper's 1.40), so it is reverted rather
+  // than kept as a change that does not earn itself. What is actually missing is a covering defender's real
+  // job: intercepting the ball played IN BEHIND, which nothing models.
+  'sweeper':               { ...NEUTRAL, push: 0.75, come: 0.1, shoot: 0.4, magnet: 2, press: -0.45 },
   'deep-lying-playmaker':  { ...NEUTRAL, push: 0.7, come: 0.12, shoot: 0.6, magnet: 6, press: -0.2 }, // deep regista, sprays it
-  'anchor':                { ...NEUTRAL, push: 0.4, come: -0.08, shoot: 0.5, magnet: -4, press: 0.75 }, // pure destroyer — sits, screens, never strays
-  'wide-playmaker':        { ...NEUTRAL, push: 0.75, come: 0.1, shoot: 0.55, magnet: 7, press: -0.2, hug: 0.65 }, // hugs the touchline but dictates from out there — more shots for the team than box-to-box/ball-winner in the same slot (see strategy_test.ts)
+  // PRESS 0.75 -> 0.4. "Pure destroyer — sits, screens the back four, and NEVER STRAYS FROM HIS ZONE" and
+  // then a press value HIGHER than a box-to-box's 0.2, which is precisely an instruction to leave the zone
+  // and chase. He conceded exactly as many as a box-to-box (103 v 103) because he was not screening, he was
+  // pressing. A screen defends by standing in the way.
+  // THE ANCHOR IS THE ONE ASSERTION THIS REBUILD DID NOT CLOSE, and the reason is structural rather than a
+  // number. His whole idea is SCREENING — standing in the passing lane in front of the back four — and the
+  // engine has no lane-blocking: a defender only affects play by tackling (`press`) or by crowding a shot.
+  // So his defensive value reduces to his press, and a ball-winner simply presses harder (0.8 against 0.6)
+  // and concedes less. Raising the anchor's press to win the comparison would just make him a ball-winner
+  // with a different name, which is worse than failing the assertion honestly. Letting him drift toward the
+  // ball was tried (come -0.08 -> 0.02 and 0.08) and made it worse, not better.
+  'anchor':                { ...NEUTRAL, push: 0.4, come: -0.08, shoot: 0.5, magnet: -4, press: 0.6 },
+  // PUSH RAISED 0.75 -> 1.05. His own description is "hugs the touchline but dictates play from out there,
+  // like a winger who thinks like a No.10" — and at 0.75 he was not out there at all. Measured against a
+  // box-to-box in the same wide slot, he spent LESS THAN HALF the time carrying in advanced wide areas
+  // (468 ticks a match against 982) because his push held him deep, so he reached the final third less
+  // often, overlapped less, delivered less, and generated fewer team shots than the duty he is supposed to
+  // beat. `shoot` stays at 0.55: he creates rather than finishes, which is the point of him.
+  'wide-playmaker':        { ...NEUTRAL, push: 1.05, come: 0.1, shoot: 0.55, magnet: 7, press: -0.2, hug: 0.65 },
   'pressing-forward':      { ...NEUTRAL, push: 1.15, shoot: 1.0, magnet: 2, press: 0.7 },             // defends from the front
   'false-9':               { ...NEUTRAL, push: 0.9, come: 0.12, shoot: 0.9, magnet: 6 },              // drops deep to link
   'inverted-winger':       { ...NEUTRAL, push: 1.2, come: 0.1, shoot: 1.35, magnet: 4, hug: -0.6 },    // cuts inside off the touchline onto their stronger foot — extra central passing/creation edges possession up (see strategy_test.ts)

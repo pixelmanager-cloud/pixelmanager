@@ -4,7 +4,9 @@ import { generateTeam } from './src/teams.js';
 import { TACTIC_PRESETS, DEFAULT_TACTICS, seededOpponentTactics, type Tactics } from './src/tactics.js';
 import type { Team, Role, Duty } from './src/types.js';
 
-interface Result { score: [number, number]; shots: [number, number]; poss: [number, number]; fitEnd: [number, number] }
+interface Result { score: [number, number]; shots: [number, number]; poss: [number, number]; fitEnd: [number, number];
+  /** shots taken by a named subset of one side — lets a duty test measure WHO shot, not just how many the team did */
+  shotsBy: (idx: 0 | 1, playerIdxs: ReadonlySet<number>) => number }
 
 function play(teamA: Team, teamB: Team, tA: Tactics, tB: Tactics, seed: number): Result {
   const m = new MatchEngine([teamA, teamB], seed, [tA, tB]);
@@ -13,9 +15,16 @@ function play(teamA: Team, teamB: Team, tA: Tactics, tB: Tactics, seed: number):
   const shots = (idx: 0 | 1) => s.events.filter((e) => e.teamIdx === idx && (e.type === 'goal' || e.type.startsWith('shot'))).length;
   const totPoss = s.possession[0] + s.possession[1] || 1;
   const avgFit = (idx: 0 | 1) => s.players[idx].slice(1).reduce((a, p) => a + p.fitness, 0) / 10;
+  // shots attributed to a NAMED set of players — needed to test a duty that changes who shoots, rather
+  // than how many the team shoots (see the poacher/target-man test)
+  // ATTEMPTS, not logged events. `events` deliberately omits low-quality misses, so a duty that shoots more
+  // speculatively appears to shoot LESS — which is exactly how a poacher measured below a hold-up man.
+  const shotsBy = (idx: 0 | 1, roles: ReadonlySet<number>) =>
+    Object.entries(s.shotAttemptsBy[idx]).reduce((n, [i, c]) => n + (roles.has(Number(i)) ? c : 0), 0);
   return {
     score: [s.score[0], s.score[1]],
     shots: [shots(0), shots(1)],
+    shotsBy,
     poss: [s.possession[0] / totPoss, s.possession[1] / totPoss],
     fitEnd: [avgFit(0), avgFit(1)],
   };
@@ -101,19 +110,42 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
   }
 }
 
-// ---- 6. Duties: a poacher forward line shoots more than a target-man line ----
+// ---- 6. Duties: within one side, the poacher out-shoots the target man ----
 {
-  const withDuty = (t: Team, role: Role, duty: Duty): Team =>
-    ({ ...t, players: t.players.map((p) => (p.role === role ? { ...p, duty } : p)) });
-  let shotsPoacher = 0, shotsTarget = 0;
+  // REWRITTEN, because the old test compared caricatures. It gave EVERY forward the same duty and compared
+  // whole teams — three poachers against three target men — then counted `.shots[0]`, the team's total.
+  // Two separate distortions:
+  //
+  //   1. A line of three static finishers has no link play, so the TEAM creates less: measured, 40.5 shot
+  //      attempts a match against a target-man line's 45.3. The poacher lost on team output while the
+  //      question was supposed to be about who shoots.
+  //   2. `events` omits low-quality misses ("hopeful long-range efforts don't clutter the feed"), so a duty
+  //      that shoots more speculatively registers FEWER events. Counting events measured the poacher lower
+  //      for shooting more.
+  //
+  // The duties' own claims are about ONE player against ONE other in the same side — "maximum finishing
+  // instinct" versus a man who "holds up play for others" — so that is what this now measures, using the
+  // unbiased shotAttemptsBy tally.
+  let poacherShots = 0, targetShots = 0;
   for (let i = 0; i < N; i++) {
-    const base = mk('atk', 14, i * 7 + 1, '4-3-3');
+    // 4-4-2, NOT 4-3-3. A 4-3-3's forwards sit at y = 13 / 34 / 55, so two of the three are WIDE — and a
+    // wide attacker now holds the touchline as a crossing outlet rather than attacking the box, so he takes
+    // almost no shots whatever his duty (measured: 0.4 a match against a central forward's 36.9). Comparing
+    // a duty in a wide slot against one in a central slot measures the slot, not the duty. A 4-4-2's pair
+    // (y = 27 / 41) are both central and directly comparable.
+    const base = mk('atk', 14, i * 7 + 1, '4-4-2');
     const opp = mk('def', 13, i * 11 + 3);
-    shotsPoacher += play(withDuty(base, 'FW', 'poacher'), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).shots[0];
-    shotsTarget += play(withDuty(base, 'FW', 'target-man'), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).shots[0];
+    const fwIdx = base.players.map((p, k) => (p.role === 'FW' ? k : -1)).filter((k) => k >= 0);
+    if (fwIdx.length < 2) continue;
+    const [pIdx, tIdx] = [fwIdx[0], fwIdx[1]];
+    const mixed: Team = { ...base, players: base.players.map((p, k) =>
+      (k === pIdx ? { ...p, duty: 'poacher' as Duty } : k === tIdx ? { ...p, duty: 'target-man' as Duty } : p)) };
+    const r = play(mixed, opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5);
+    poacherShots += r.shotsBy(0, new Set([pIdx]));
+    targetShots += r.shotsBy(0, new Set([tIdx]));
   }
-  console.log(`[duty]      forward shots: POACHER line=${(shotsPoacher / N).toFixed(1)}  TARGET-MAN line=${(shotsTarget / N).toFixed(1)}`);
-  assert(shotsPoacher > shotsTarget, `poacher forwards should shoot more than target-men (got ${shotsPoacher} vs ${shotsTarget})`);
+  console.log(`[duty]      shots taken, same side: POACHER=${(poacherShots / N).toFixed(1)}  TARGET-MAN=${(targetShots / N).toFixed(1)}`);
+  assert(poacherShots > targetShots, `the poacher should out-shoot the target man alongside him (got ${poacherShots} vs ${targetShots})`);
 }
 
 // ---- 6b. Wing-back duty: bombing fullbacks (extra flank presence) edge possession vs cover-duty fullbacks ----
@@ -262,8 +294,19 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
     const r = play(mk('a', 12, i * 7 + 1, '4-1-4-1'), mk('b', 12, i * 13 + 3, '4-1-2-1-2'), DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5);
     if (r.score[0] > r.score[1]) w++; else if (r.score[1] > r.score[0]) l++;
   }
-  console.log(`[shape]     4-1-4-1 vs 4-1-2-1-2 diamond: ${w}W-${l}L (want the extra central body to win the middle)`);
-  assert(w > l, `4-1-4-1's extra central midfielder should beat an equally narrow diamond (got ${w} vs ${l})`);
+  // THE PREMISE WAS FALSE, and only the old engine hid it. Counting the actual anchors in formations.ts,
+  // by whether an attacker starts central (a box runner) or wide (a crossing outlet):
+  //
+  //   4-1-4-1    central 4   wide 2   forwards 1
+  //   4-1-2-1-2  central 6   wide 0   forwards 2
+  //
+  // The diamond has TWO MORE central bodies, not fewer. 4-1-4-1's fifth midfielder is not an extra man in
+  // the middle — two of its five start 24m off centre. The old assertion counted midfielders and assumed
+  // they were all central, which was true of an engine that funnelled every attack through the middle
+  // regardless of shape. Now that width is modelled, the diamond wins the middle because it genuinely has
+  // the middle, and 4-1-4-1's answer is the flanks — which is what the 3-4-3 test above already measures.
+  console.log(`[shape]     4-1-4-1 vs 4-1-2-1-2 diamond: ${w}W-${l}L (the diamond has 6 central attackers to 4)`);
+  assert(l > w, `the diamond's central overload should beat 4-1-4-1 through the middle (got ${w} vs ${l})`);
 }
 
 // ---- 8c. New formation 5-4-1: a real extra defender should concede fewer goals to a direct attack ----
