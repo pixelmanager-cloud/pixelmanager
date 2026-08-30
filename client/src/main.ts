@@ -429,13 +429,20 @@ class Game {
    *  `listSaves()` already existed to read the durable half and had no caller anywhere. It does now. */
   private async recoverOrphanedSaves(): Promise<void> {
     try {
-      const known = new Set(this.loadSaves().map((s) => s.id));
+      // RECONCILE ON THE DURABLE KEY. `fm_saves` rows are keyed by the NAME-DERIVED handle while SaveMeta.id
+      // is the slot UUID, so comparing the two matched nothing: every save looked orphaned on its second
+      // launch, was duplicated into the list, flipped a one-save game into a "Switch save" chooser showing
+      // the same club twice — and deleting one row left a phantom pointing at a slot that no longer exists.
+      const known = new Set(this.loadSaves().map((s) => s.token));
       const onDisk = await api.listSaves();
       const orphans = onDisk.filter((m: { id: string }) => !known.has(m.id));
       if (!orphans.length) return;
-      const rebuilt = [...this.loadSaves(), ...orphans.map((m: { id: string; name?: string; lastPlayed?: number }) => ({
+      const merged = [...this.loadSaves(), ...orphans.map((m: { id: string; name?: string; lastPlayed?: number }) => ({
         id: m.id, token: m.id, name: m.name ?? 'Recovered save', lastPlayed: m.lastPlayed ?? 0,
       }))];
+      // De-dupe by the durable key too, so a list that was already doubled heals itself on next launch.
+      const seenTok = new Set<string>();
+      const rebuilt = merged.filter((r) => (seenTok.has(r.token) ? false : (seenTok.add(r.token), true)));
       this.saveSaves(rebuilt);
       toast(`↩️ Recovered ${orphans.length} save${orphans.length === 1 ? '' : 's'} the browser had lost track of`);
     } catch { /* recovery is best-effort — never block the menu on it */ }
@@ -598,9 +605,15 @@ class Game {
    *  ever reaching Cancel. The pause menu already did the focus-and-Escape half correctly; this is that
    *  pattern, finished, in one place. Returns a close function the caller should use.
    */
+  private static inertDepth = 0;
   private dialogify(ov: HTMLElement, onClose?: () => void): () => void {
+    let closed = false;
     const app = document.getElementById('app');
     const previously = document.activeElement as HTMLElement | null;
+    // REFCOUNTED. Two overlays can stack — a player card opening a confirm — and a plain
+    // setAttribute/removeAttribute pair meant the inner one's close un-inerted the page while the outer
+    // was still up, silently losing modality.
+    Game.inertDepth++;
     app?.setAttribute('inert', '');
     const focusables = () => Array.from(ov.querySelectorAll<HTMLElement>(
       'button:not([disabled]), a[href], select, input, [tabindex]:not([tabindex="-1"])'));
@@ -615,8 +628,10 @@ class Game {
     };
     document.addEventListener('keydown', onKey, true);
     const close = () => {
+      if (closed) return;                       // idempotent: a double close must not unbalance the refcount
+      closed = true;
       document.removeEventListener('keydown', onKey, true);
-      app?.removeAttribute('inert');
+      if (--Game.inertDepth <= 0) { Game.inertDepth = 0; app?.removeAttribute('inert'); }
       ov.remove();
       previously?.focus?.();
       onClose?.();
@@ -864,6 +879,7 @@ class Game {
     $('hub-academy').addEventListener('click', () => this.showAcademy());
     $('view-club').addEventListener('click', () => this.showClub()); // the club-facilities coin sink (dynasty-building, not the gated match loop)
     $('season-back').addEventListener('click', () => this.showHub());
+    $('view-scouting')?.addEventListener('click', () => void this.showScouting());
     ($('hub-season-dev') as any)?.addEventListener('click', () => this.showSeason()); // TEMP entry until the handoff wires it
     this.makeActivatable([$('app-title')]);
     $('app-title').addEventListener('click', () => { if (hasToken()) void this.showHub(); });
@@ -939,16 +955,19 @@ class Game {
       + contractHtml
       + `<div class="pc-foot">★ ${tier.name}${tokenId ? ` · #${tokenId}` : ''}${!ci && (p as any).age ? ` · age ${(p as any).age}` : ''}</div>` // squad players carry their own age (the star's shows in the contract block)
       + `<button class="pc-close">${minted ? 'Nice ✓' : 'Close'}</button></div>`;
+    document.body.appendChild(el);
+    // EVERY EXIT MUST GO THROUGH closeCard. I wired dialogify here and then threw its close function away
+    // with `void closeCard`, while all three exits called `el.remove()` directly — so closing a player card
+    // removed the card and left `#app` INERT FOREVER. The entire game went dead behind it, on the first
+    // card most players ever open. (Escape happened to un-freeze it, via the keydown listener the same bug
+    // was leaking.) The listener is also registered AFTER dialogify now, as showProspectCard already did.
+    const closeCard = this.dialogify(el);
     el.addEventListener('click', async (e) => {
       const t = e.target as HTMLElement;
-      if (t.dataset.extend) { await this.extendPlayer(t.dataset.extend); el.remove(); return; }
-      if (t.dataset.stake) { el.remove(); await this.stakePlayer(t.dataset.pid!, t.dataset.stake === 'on'); return; }
-      if (t === el || t.classList.contains('pc-close')) el.remove();
+      if (t.dataset.extend) { closeCard(); await this.extendPlayer(t.dataset.extend); return; }
+      if (t.dataset.stake) { closeCard(); await this.stakePlayer(t.dataset.pid!, t.dataset.stake === 'on'); return; }
+      if (t === el || t.classList.contains('pc-close')) closeCard();
     });
-    document.body.appendChild(el);
-    // The player card holds the contract, morale and the career record, and its only exit was a click.
-    const closeCard = this.dialogify(el);
-    void closeCard;
   }
 
   /** A prospect card — a 10-year-old about to live his career. For an heir (gen > 0) this is the payoff
@@ -1234,11 +1253,21 @@ class Game {
       // handoff, which throws unless the token is a prospect — the one door needs a career you have already
       // finished. Rebuild the manager state from the durable half instead.
       const me = await api.me();
-      const star = me.club.players.find((p) => me.contracts?.[p.id]);
-      if (star && !mgr.starId) {
+      // The CURRENT star, not merely the first contracted man in array order: me().contracts covers every
+      // non-prospect token and mergedClub admits retired ones, so on a multi-generation save the first hit
+      // can be a retired legend. Prefer a 'pro'.
+      const star = me.club.players.find((p) => (me.contracts as any)?.[p.id]?.state === 'pro')
+        ?? me.club.players.find((p) => me.contracts?.[p.id]);
+      if (star && !mgr.starId && !this.rebuildingMgr) {
         const ci: any = me.contracts?.[star.id];
+        this.rebuildingMgr = true;   // one attempt only — saveMgr swallows a quota failure, so without this
+                                     // guard a failed write means loadMgr still has no starId and the
+                                     // recursion below never terminates, one api.me() per turn of the loop.
         this.saveMgr({ ...mgr, starId: star.id, starName: star.name, starAge: ci?.age ?? star.age ?? 24,
-          starGen: 0, season: Math.max(1, mgr.season ?? 1), results: mgr.results ?? [] });
+          starGen: ci?.generation ?? (star as any).generation ?? mgr.starGen ?? 0,
+          retireAge: mgr.retireAge ?? this.retireAgeFor(star),
+          temper: mgr.temper ?? 'builder',   // a real temperament, so temperament-gated arcs are not silently disabled
+          season: Math.max(1, mgr.season ?? 1), results: mgr.results ?? [] });
         toast('↩️ Recovered your manager career from the club record');
         return this.refreshHubPlayer();
       }
@@ -1878,7 +1907,7 @@ class Game {
         audio.chime('triumph');
         toast(`🏆 CONTINENTAL CHAMPIONS! ${this.club?.name} win the cup${pens ? ' on penalties' : ''}`);
         // the flagship cup pays a clear PREMIUM over a league title: the honour (800c) + a 1000c winners' bonus (PT-96)
-        api.spSeasonReward({ pos: 1, size: 10, sponsor: undefined, tier: this.clubTier(), kind: 'continental' }).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; }).catch(() => {}); // kind:'continental' — a cup, not a league title, and doesn't bump the season (PT-94)
+        api.spSeasonReward({ pos: 1, size: 10, sponsor: undefined,   /* no tier: a cup is its own competition, not a division — see spSeasonReward */ kind: 'continental' }).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; }).catch(() => {}); // kind:'continental' — a cup, not a league title, and doesn't bump the season (PT-94)
         api.cupPrize(1000).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; toast(`💰 Continental winners' prize +1,800c`); }).catch(() => {});
       } else {
         this.saveMgr({ ...m, contRound: nextRound, contBlurb });
@@ -1956,7 +1985,7 @@ class Game {
       // persist wcEdition (+ an empty run → deriveWcFinish reads 'Group stage') so the concluded report stays
       // reviewable — the done-surface + review handler both gate on wcEdition != null (PT-128, extends PT-72)
       this.saveMgr({ ...m, wcEdition: edition, wcRun: [], wcSeen: edition, wcStage: 'done' });
-      try { const r = await api.spSeasonReward({ pos: 6, size: 10, sponsor: undefined, tier: this.clubTier(), kind: 'world' }); if (this.account?.coins != null) this.account.coins = r.coins; } catch { /* offline */ }
+      try { const r = await api.spSeasonReward({ pos: 6, size: 10, sponsor: undefined,   /* no tier: a cup is its own competition, not a division — see spSeasonReward */ kind: 'world' }); if (this.account?.coins != null) this.account.coins = r.coins; } catch { /* offline */ }
       this.showWorldCup(wc, 'Group stage'); return;
     }
     this.saveMgr({ ...m, wcEdition: edition, wcStage: 'qf', wcRun: [] }); // qualified → play the knockout run
@@ -2017,7 +2046,7 @@ class Game {
   /** After a played run ends, show the tournament with the star's ACTUAL result + bank the legacy payoff. */
   private async concludeWorldCup(finish: WCResult['myFinish'], finalFoe: string) {
     const m = this.loadMgr();
-    try { const r = await api.spSeasonReward({ pos: finish === 'Champions' ? 1 : finish === 'Runners-up' ? 2 : finish === 'Semi-finals' ? 3 : 4, size: 10, sponsor: undefined, tier: this.clubTier(), kind: 'world' }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 World Finals payoff +${r.prize.toLocaleString()}c`); } catch { /* offline */ }
+    try { const r = await api.spSeasonReward({ pos: finish === 'Champions' ? 1 : finish === 'Runners-up' ? 2 : finish === 'Semi-finals' ? 3 : 4, size: 10, sponsor: undefined,   /* no tier: a cup is its own competition, not a division — see spSeasonReward */ kind: 'world' }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 World Finals payoff +${r.prize.toLocaleString()}c`); } catch { /* offline */ }
     const { wc } = this.wcData(m.wcEdition!);
     this.checkAchievements(); // World Finals final reached / won
     this.showWorldCup(wc, finish, finalFoe);
@@ -4196,6 +4225,7 @@ class Game {
   /** The house's bid multiplier, refreshed when the season screen loads. Cached because the season view
    *  is rendered synchronously and recomputing renown from every token on each redraw would be wasteful;
    *  a stale value here only ever costs one screen's accuracy, never a saved number. */
+  private rebuildingMgr = false;   // guards the MgrState rebuild against an unbounded retry loop
   private houseBidMult = 1;
   private lastGate = 0;
   private startMatch(payload: MatchPayload) {

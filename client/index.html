@@ -90,8 +90,9 @@
       .legacy-menu { font-family: var(--display); font-size: 13px; letter-spacing: 0.5px; padding: 0 20px; cursor: pointer;
         background: transparent; color: var(--muted); border: 1px solid var(--line); border-radius: 12px; }
       .legacy-menu:hover { color: #fff; border-color: var(--muted); }
-      #hub-legacy, #hub-club { margin-top: 18px; }
-      #hub-legacy .legacy-btn, #hub-club .legacy-btn { width: 100%; }
+      #hub-legacy, #hub-club, #hub-scouting { margin-top: 18px; }
+      #hub-legacy .legacy-btn, #hub-club .legacy-btn, #hub-scouting .legacy-btn { width: 100%; }
+      #hub-scouting { --room: #a98ce8; }   /* the door wears the room it leads to */
       /* (the door's colour now comes from the room it leads to — see THE CHASSIS at the end of this sheet) */
       .hub-sub { font-family: var(--body); font-size: 13px; color: var(--muted); font-weight: normal; }
       .hub-link { float: right; font-family: var(--display); font-size: 12px; letter-spacing: 0.5px; cursor: pointer;
@@ -1769,6 +1770,16 @@
           <button id="view-club" class="legacy-btn">
             <span class="legacy-ico">🏛️</span>
             <span class="legacy-body"><span class="legacy-title">YOUR CLUB</span><span class="legacy-sub" id="hub-club-sub">Invest coins in facilities, youth &amp; scouting — build the house your dynasty plays for.</span></span>
+            <span class="legacy-go">→</span>
+          </button>
+        </div>
+        <!-- SCOUTING — the whole feature had NO entry point. showScouting() was only ever called from
+             inside itself, so local tryouts, the scouting network and its three trips a season were
+             unreachable from anywhere in the game, while the club door's own copy advertised them. -->
+        <div id="hub-scouting">
+          <button id="view-scouting" class="legacy-btn">
+            <span class="legacy-ico">🔭</span>
+            <span class="legacy-body"><span class="legacy-title">SCOUTING &amp; TRIALS</span><span class="legacy-sub" id="hub-scouting-sub">Send scouts abroad and run local tryouts — how you find players nobody else has seen.</span></span>
             <span class="legacy-go">→</span>
           </button>
         </div>

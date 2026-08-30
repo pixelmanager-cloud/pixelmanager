@@ -179,9 +179,11 @@ function mergedClub(): { club: Club; standingOrders: StandingOrders } {
     // autoPickXI selected ghosts in every formation tested, and setStandingOrders accepted the XI because
     // validateLineup has no finite-rating check. They could not even be sold — sellPlayer does not know
     // them. attrs_json is the honest test of "did this person ever actually play".
-    // `'{}'` IS TRUTHY. The guard was `!t.attrs_json`, which a token carrying an empty attrs object walks
-    // straight through — and tokenToPlayer then yields overall() === NaN, the ghost-player bug again by a
-    // different door. Test for an actual attribute, not for the string being present.
+    // "DID THIS MAN EVER ACTUALLY PLAY", not "is the field present". `'{}'` is truthy, so the old
+    // `!t.attrs_json` admitted a token with an empty attrs object. It no longer yields NaN — overall()
+    // defaults a missing attribute to 10 — but an attribute-less person is still not a footballer, and a
+    // passed-over brother should not appear in the squad at a flat 10. JSON.stringify always emits a digit
+    // for a real number, so any token with one genuine attribute passes.
     if (!t.attrs_json || !/[0-9]/.test(t.attrs_json)) continue;
     merged.push(tokenToPlayer(t)); have.add(t.id);
   }
@@ -554,7 +556,7 @@ export const api = {
     const parentName = decorated.name;
     // A career that ended without a seed still needs one, and it must be stable across replays and unique
     // per person: careerSeedFor is exactly that, and is what startCareer would have used.
-    const parentSeed = ((decorated.career_seed ?? 0) >>> 0) || (careerSeedFor(decorated.id, parentGen) >>> 0);
+    const parentSeed = ((decorated.career_seed ?? 0) >>> 0) || (careerSeedFor(decorated.id, parentGen, getActiveSlotId() ?? OWNER) >>> 0)  /* world-mixed, like startCareer — a bare two-arg call reinstates the constant-across-all-saves seed */;
 
     const rf = rebornFields(decorated);
     const dev = JSON.parse(rf.dev_bonus_json ?? '{}');
@@ -684,12 +686,19 @@ export const api = {
     // up — a straight four-generation run went 500 to 45,101 coins without once falling toward zero — so
     // inflating the summit would have made a solved economy worse. A 4x gradient from basement to top
     // flight instead makes the early game genuinely tight and the climb worth making.
-    // A CALLER THAT OMITS `tier` IS NOT IN THE BASEMENT. Defaulting to TIERS taxed every cup 60%: none of
-    // the three cup call sites passes a tier, so winning the Continental Cup paid 320 against the 800 its
-    // own comment documents, and a quarter of what topping that same league pays. Default to the top and
-    // let the league path pass the real tier. `|| 1` also catches NaN, and Math.round handles the sign.
+    // A CUP IS NOT A DIVISION. Defaulting a missing `tier` to TIERS taxed every cup payout 60% — winning
+    // the Continental Cup paid 320 against the 800 its own comment documents. The first attempt at this
+    // fixed the default AND made the cup call sites pass `this.clubTier()`, which cancelled out: a
+    // basement club winning a continental trophy still got 320, the exact number the fix existed to
+    // remove. The cup sites now pass no tier, so continental and world silverware pays a flat top rate
+    // wherever the club sits domestically — which is what winning a continental trophy means.
     const rawTier = Number(body?.tier);
-    const tierIdx = TIERS - Math.max(1, Math.min(TIERS, Number.isFinite(rawTier) ? Math.round(rawTier) || 1 : 1));  // 0 = basement … 9 = top flight
+    // A garbage tier resolves to the TOP flight and its 1.6x, so an upstream bug would quadruple a prize
+    // rather than fail. Only a value genuinely inside the pyramid is honoured; anything else takes the
+    // documented cup default, and says so.
+    const validTier = Number.isFinite(rawTier) && rawTier >= 1 && rawTier <= TIERS;
+    if (rawTier !== undefined && !Number.isNaN(rawTier) && !validTier) console.warn('[reward] tier out of range, using the cup default:', rawTier);
+    const tierIdx = TIERS - (validTier ? Math.round(rawTier) : 1);  // 0 = basement … 9 = top flight
     const tierMult = 0.4 + tierIdx * (1.2 / Math.max(1, TIERS - 1));                                 // 0.4x … 1.6x
     const prize = Math.round(Math.max(0, pos === 1 ? 800 : Math.round(120 + (1 - frac) * 480)) * tierMult * houseMult);
     const sponsorBonus = String(body?.sponsor) === 'performance' && pos <= 3 ? (pos === 1 ? 700 : 400) : 0;

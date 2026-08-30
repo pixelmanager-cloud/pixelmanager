@@ -485,6 +485,20 @@ export class MatchEngine {
           // through-ball that springs a fast forward behind a high line => clear chance
           if (pick.through && this.beatsLastDefender(teamIdx, pick.idx)) {
             s.events.push({ minute: this.minute(), type: 'chance', teamIdx, playerName: rec.name, counter: this.onCounter(teamIdx) });
+            // NOTE — A MEASURED, UNFIXED DEFECT. The shot resolves from wherever the receiver was STANDING
+            // when the pass arrived: a median of 45.9 metres, past the halfway line. `quality` is
+            // clamp(shooting * fit * (1 - dist/26) + 0.15, 0, 1), so 97% of every shot in the game has its
+            // shooting term clamped to exactly zero — a 20-rated finisher converts the same as a 5-rated
+            // one, and eight of sixteen player attributes do not move results at all. It is also the only
+            // reason the shoot-from-range branch fires 0.2% of the time, which in turn makes the formation
+            // shape edge, the Fan Zone home advantage and every duty shoot multiplier inert.
+            //
+            // Resolving the finish from a realistic 7-16m was tried and REVERTED: it takes the game to
+            // 26.25 goals and 72 shots a match, because the through-ball gate fires ~67 times a match and
+            // the current 3.7% conversion is the only thing hiding that. Fixing this properly means making
+            // clear chances RARE first (tighten `beatsLastDefender` / the through-ball gate to a handful a
+            // match), then unclamping the finish — a balance project, not a one-line change. Shipping the
+            // half of it that raises conversion would be far worse than the defect.
             this.resolveShot(teamIdx, pick.idx, Math.hypot(goal.x - recS.x, goal.y - recS.y), true);
           }
         } else {
