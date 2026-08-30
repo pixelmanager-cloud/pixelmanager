@@ -106,9 +106,23 @@ const cleanFamilyName = (raw: string): string =>
 const STAT_FULL: Record<string, string> = { pace: 'Pace', strength: 'Strength', passing: 'Passing', shooting: 'Shooting', tackling: 'Tackling', positioning: 'Positioning', workrate: 'Work rate', keeping: 'Goalkeeping', setPiece: 'Set pieces', stamina: 'Stamina', composure: 'Composure', creativity: 'Creativity', leadership: 'Leadership', teamwork: 'Teamwork', aggression: 'Aggression', durability: 'Durability — how well he holds up, and how long he plays on' };
 // Pedigree readout — a founding prospect legitimately has 0% (nothing inherited yet), which reads as
 // "worthless" next to his potential stars. Signpost it instead of showing a bare "0%". Playtest fix PT-4.
-function pedigreeText(pedigree: number, generation?: number): string {
+/** Does this person carry the dynasty's surname? The founder and every heir do; a prospect bought off the
+ *  street does not, which is the whole point of him being an outsider. Derived from the club name, which
+ *  makeClub builds as "<family>'s Club", so it needs no async call. */
+function carriesFamilyName(name: string | null | undefined, clubName: string | null | undefined): boolean {
+  const fam = (clubName ?? '').replace(/['’`]s Club$/i, '').trim();
+  if (!fam) return true;                       // unknown: fall back to the generous reading
+  return (name ?? '').trim().toLowerCase().endsWith(fam.toLowerCase());
+}
+
+function pedigreeText(pedigree: number, generation?: number, isFounder = true): string {
   const pctv = (pedigree * 100) | 0;
-  if ((generation ?? 0) === 0 && pctv === 0) return 'first of the line · his heirs will inherit his pedigree';
+  // "First of the line" belongs to the FOUNDER, not to every generation-0 token — a bought prospect is a
+  // scouted outsider who happens to have no pedigree yet, and calling him the head of the bloodline while
+  // the real founder is on the same screen made the family name look like a label anyone could wear.
+  if ((generation ?? 0) === 0 && pctv === 0) return isFounder
+    ? 'first of the line · his heirs will inherit his pedigree'
+    : 'no pedigree behind him · whatever he becomes, he builds himself';
   return `pedigree ${pctv}%`;
 }
 const TAG_ICON: Record<string, string> = { composure: '🧊', aggression: '⚔️', creativity: '🎨', teamwork: '🧩', leadership: '🎖️', stamina: '🏃', flair: '✨', keeping: '🧤' };
@@ -357,11 +371,17 @@ function statsTableHTML(players: Player[], highlight?: Set<string>, sort?: Squad
   return `<table class="squad">${head}${rows}</table>`;
 }
 
-function squadInsight(team: Team): string {
+function squadInsight(team: Team, starId?: string): string {
   const byRole = (r: Player['role']) => team.players.filter((p) => p.role === r);
   const avg = (ps: Player[], k: keyof Player['attrs']) => ps.length ? Math.round(ps.reduce((a, p) => a + (p.attrs[k] ?? 0), 0) / ps.length) : 0;
   const fw = byRole('FW'), df = byRole('DF');
-  const best = team.players.reduce((a, b) => (overall(b) > overall(a) ? b : a));
+  // TIES GO TO THE BLOODLINE. This was a bare max-by-overall, so signing any player who merely MATCHED the
+  // star's rating handed the "key player" title to him — a 386-coin goalkeeper displaced the family's own
+  // man while the season header and the tutorial both still called the star the key player. The star also
+  // carries triple weight in club strength (STAR_WEIGHT), so on a tie he genuinely is the more important
+  // footballer; only a player who is actually BETTER should take the billing.
+  const star = starId ? team.players.find((p) => p.id === starId) : undefined;
+  const best = team.players.reduce((a, b) => (overall(b) > overall(a) ? b : a), star ?? team.players[0]);
   const tips = [`★ Key player: <b>${best.name}</b> (${best.role}, OVR ${overall(best)})`];
   if (avg(fw, 'pace') >= 15) tips.push(`⚡ Your forwards are quick (pace ${avg(fw, 'pace')}) — a high line + direct tempo suit you.`);
   else if (avg(fw, 'strength') >= 15) tips.push(`💪 Your forwards are strong (strength ${avg(fw, 'strength')}) — long balls pay off.`);
@@ -984,7 +1004,7 @@ class Game {
       + `<div class="pc-crest role-${p.roleHint}">${portraitImg(p.name, 'youth', 84)}<span class="pc-crest-role">${p.roleHint}</span></div>`
       + `<div class="pc-name">${p.name}</div><div class="pc-role">Youth Prospect${gen ? ` · gen ${gen + 1}` : ''}</div>`
       + (born ? `<div class="pc-flash">${isGenesis ? '🌱 A NEW BLOODLINE BEGINS' : `🌳 THE ${surname.toUpperCase()} NAME LIVES ON`}</div>` : '')
-      + `<div class="pc-contract retired"><div class="pc-legend">Potential ${stars} · ${pedigreeText(p.pedigree, gen)}</div>`
+      + `<div class="pc-contract retired"><div class="pc-legend">Potential ${stars} · ${pedigreeText(p.pedigree, gen, carriesFamilyName(p.name, this.club?.name))}</div>`
       + (gen ? `<div class="pc-stake">Generation ${gen + 1} of the bloodline — a fresh 10-year-old carrying the family name into a whole new career.</div>` : '')
       + (p.note ? `<div class="pc-stake">${p.note}</div>` : '')
       + `</div>`
@@ -1285,7 +1305,7 @@ class Game {
       const gen = active.generation ? ` · gen ${active.generation + 1}` : ''; // 1-indexed to match the Bloodline Tree (founder = gen 1) (PT-136)
       const more = prospects.length > 1 ? `<div class="hp-meta" style="margin-top:6px;">+${prospects.length - 1} more in the academy</div>` : '';
       el.innerHTML = `<div class="hub-prow"><div class="hp-main"><div class="hp-name">🌱 ${active.name} <span class="hp-stars">${stars}</span></div>`
-        + `<div class="hp-meta">${active.roleHint}${gen} · ${pedigreeText(active.pedigree, active.generation)} ${active.careerStarted ? '· in development' : '· age 10, ready to develop'}</div>${more}</div>`
+        + `<div class="hp-meta">${active.roleHint}${gen} · ${pedigreeText(active.pedigree, active.generation, carriesFamilyName(active.name, this.club?.name))} ${active.careerStarted ? '· in development' : '· age 10, ready to develop'}</div>${more}</div>`
         + `<button class="primary hp-go" data-dev="${active.id}">${active.careerStarted ? 'Continue his story' : 'Develop'} →</button></div>`;
       el.querySelector('[data-dev]')!.addEventListener('click', () => this.openCareer(active.id));
     } catch { el.innerHTML = '<div class="muted">Could not load your player — please try again.</div>'; }
@@ -4185,7 +4205,7 @@ class Game {
   }
 
   private updateEditorInsight() {
-    $('lineup-insight').innerHTML = squadInsight(buildXI(this.club, this.draftLineup));
+    $('lineup-insight').innerHTML = squadInsight(buildXI(this.club, this.draftLineup), this.loadMgr().starId);
   }
 
   private async saveTeam() {

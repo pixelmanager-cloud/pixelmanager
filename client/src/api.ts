@@ -24,7 +24,7 @@ import {
   rollGenes, updateMorale, moraleEffects, rollMatchInjuries, developAttrs,
   houseRenown, branchCareer, rivalStandings, renownPedigree, renownBidMult, renownIncomeMult, type HouseMember,
   tokenToPlayer, tokenContract, legendCardOf, loadCareer, actWithNarration, careerState, graduatedFields, careerCast, fillArcText,
-  rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, foundingNameFor,
+  rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, foundingNameFor, nameFor,
   type FacilityKey, type MissionRow, type Token, type CareerAction,
 } from '@fm/shared';
 import {
@@ -196,9 +196,16 @@ async function mintGenesisLocal(): Promise<Token> {
   if ((await localStore.countTokens()) >= SUPPLY_CAP) throw new Error('supply cap reached');
   const n = (await localStore.countTokens()) + 1;
   const id = `nft:${n}`;
+  // A BOUGHT PROSPECT IS AN OUTSIDER, NOT FAMILY. This used foundingNameFor, so a 300-coin purchase came
+  // back carrying the player's own surname and the academy called him "first of the line" — the same
+  // billing as the actual founder. For a game whose entire pitch is that heirs carry the family name,
+  // handing that name to every stranger you buy off the street guts the premise. The three candidates on
+  // the NEW GAME scout board keep the family name, because one of them becomes the founder; this one is a
+  // spare body with a life of his own.
   const seed = seedFrom(id + ':genesis');
   const genes = rollGenes(seed);
-  await localStore.createToken({ id, owner_id: OWNER, generation: 0, state: 'prospect', name: foundingNameFor(seed, getActiveModel().profile.name), genes_json: JSON.stringify(genes), pedigree: 0, dev_bonus_json: '{}' });
+  // The save id is mixed in so two saves do not mint the same stranger — the id is a counter, not a UUID.
+  await localStore.createToken({ id, owner_id: OWNER, generation: 0, state: 'prospect', name: nameFor(seedFrom(`${getActiveSlotId() ?? OWNER}:${id}:genesis`)), genes_json: JSON.stringify(genes), pedigree: 0, dev_bonus_json: '{}' });
   await localStore.updateToken(id, { role: seedFrom(id + ':gk') % 100 < 12 ? 'GK' : 'MF' });
   return (await localStore.getToken(id))!;
 }
