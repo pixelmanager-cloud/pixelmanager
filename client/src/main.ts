@@ -2028,8 +2028,15 @@ class Game {
     const relegated = t.pos >= t.size - 1 && tier < TIERS;
     const newTier = promoted ? tier - 1 : relegated ? tier + 1 : tier;
     if (newTier !== tier) this.setClubTier(newTier);
-    if (promoted) { toast(`⬆️ PROMOTED to ${tierName(newTier)}!`); audio.chime('triumph'); }
-    else if (relegated) toast(`⬇️ Relegated to ${tierName(newTier)}.`); this.feedEvent('relegation', '⬇️', undefined, { from: tierName(tier), to: tierName(newTier) });
+    if (promoted) {
+      toast(`⬆️ PROMOTED to ${tierName(newTier)}!`); audio.chime('triumph');
+      this.feedEvent('promotion', '⬆️', undefined, { from: tierName(tier), to: tierName(newTier) });
+    } else if (relegated) {
+      toast(`⬇️ Relegated to ${tierName(newTier)}.`);
+      this.feedEvent('relegation', '⬇️', undefined, { from: tierName(tier), to: tierName(newTier) });
+    } else if (t.pos === 1) {
+      this.feedEvent('title', '🏆', undefined, { from: tierName(tier), to: tierName(tier) });
+    }
     const titles = (m.titles ?? 0) + (t.pos === 1 ? 1 : 0);
     const age = (m.starAge ?? 22) + 1;
     // his playing days are over — the heir comes through. Carry any final-season promotion/relegation into
