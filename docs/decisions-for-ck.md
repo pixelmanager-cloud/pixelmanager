@@ -841,3 +841,62 @@ bug — and these are dev saves, not shipped ones.
 
 **If you want it repaired anyway, say so** and I will add a one-time migration that re-seats out-of-position
 players into slots matching their role, leaving the men themselves alone.
+
+---
+
+# ROUND 9 — 16 of the 24 mutation survivors are closed
+
+> Each fix below is proved by a mutation that **typechecks** — a broken build that exits 1 proves nothing,
+> and I mistook one for a proof six times before making it a rule.
+
+## ~~45. Closed since round 8~~
+
+| gate | what could be broken without it noticing | now |
+|---|---|---|
+| **`career_sim`** + new **`golden_replay`** | a module-scope `Date.now()` salt: same-seed replays agreed *within* a process while two runs differed by 98 lines | four careers with their expected outcome **committed to disk**; the salt now fails it |
+| **`succession_carries`** | the dynasty wipe restored by mutating `prior` **before** the spread — literal untouched | catches assignments and deletes on the source too |
+| **`settings_persist`** | a second bare write after the correct one (last wins); the writer wrapped in `if (editorMode === 'standing')`, the branch that never runs | requires exactly one write, ungated |
+| **`qa_squad_lifecycle`** | youth development deleted entirely — the check was `>=` on **one player over one season**, printing `13 -> 13` | a 200-youngster cohort over 4 seasons: 119 improve, 136 outgrown, +0.73 a head |
+| **`qa_offline_facade`** | `tierMult` flattened to 1.0, so winning the basement pays the top-flight prize | both ends checked against numbers stated in the harness (×0.4 → 323, ×1.6 → 1,293) |
+| **`qa_manager_arcs_e2e`** | every `when` gate ignored (**16,765 of 30,000** arcs fired at clubs they do not apply to); the seen-list ignored (**5.45%** repeats) | both asserted, re-deriving the gate from the situation rather than asking `arcFits` about itself |
+| **`qa_branching`** | `candMax > 8` unreachable by construction; and a forest collapsed to sons-only scored **perfectly** | derived bound + an absolute one + a lower bound |
+
+**Two corrections against my own work in this round**, both worth more than the fixes:
+
+- The `qa_branching` fix I wrote *first* derived its ceiling from `BRANCHES_KEPT` — so raising that constant
+  raised the bound and passed. That is the identical defect I had removed from `division_balance` an hour
+  earlier. I only caught it by running the mutation instead of trusting the fix.
+- **`BRANCHES_KEPT` is barely load-bearing.** Raising it **tenfold** moves the widest succession from 6 to 8
+  candidates and the average from 2.69 to 2.78 — `nephewCount` returning zero for ~7 uncles in 10 does the
+  real bounding. Worth knowing before anyone tunes it expecting an effect.
+
+## 46. YOUR CALL — one dev dependency would close the last big hole
+
+**`IndexedDBBackend` — the backend that actually ships — is never even constructed under Node.**
+`typeof indexedDB` is undefined there, so `defaultBackend` always takes the in-memory branch, and every
+harness then calls `__setBackendForTests(createInMemoryBackend())` on top of that.
+
+Proved by breaking it two ways at once — `load()` returning the storage wrapper instead of the save, and
+`list()` returning empty, so every slot vanishes and any loaded save comes back with no profile, club or
+tokens:
+
+    qa_savestore  EXIT=0    qa_migrate  EXIT=0    qa_offline_facade  EXIT=0    qa_branch_switch  EXIT=0
+
+**A correction to what I told you in §42:** I said the shipping backend "has structured-clone semantics that
+drop `undefined`". That is backwards. Structured clone *preserves* undefined-valued keys; the in-memory
+backend's `JSON.parse(JSON.stringify(...))` *drops* them. **The tested backend is the lossier one.** Driven
+across a real populated save the fidelity gap is currently latent (0 undefined keys, 0 non-finite numbers,
+0 Date/Map/Set), so this is about untested **wiring**, not live corruption.
+
+There is also a subtler problem: `qa_savestore`'s equality check is sorted `JSON.stringify` — the in-memory
+backend's own clone function — so `canon(loaded) === canon(model)` after a JSON-cloning backend is a
+tautology that cannot distinguish the two backends by construction.
+
+**The fix is `npm i -D fake-indexeddb`** and one new harness (~60 lines) covering: `save`→`load` returns a
+model and not the wrapper; two saves both appear in `list()`; `remove` really removes; **a second
+`IndexedDBBackend` instance sees the first one's writes** — the durability claim the in-memory backend
+structurally cannot make; re-opening at the current `DB_VERSION` with stores present still works; and
+equality by structural walk rather than `JSON.stringify`.
+
+**I have not installed it.** Adding a dependency is a supply-chain decision, however small and however
+standard the package, and you have been clear that decisions are yours. Say the word and it is an hour.
