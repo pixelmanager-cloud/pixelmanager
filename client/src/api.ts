@@ -263,9 +263,11 @@ function membersOf(model: ReturnType<typeof getActiveModel>): HouseMember[] {
 
 export const api = {
   // ── new game / continue (no server accounts — a "save" IS the local profile) ──
-  register: async (_handle: string, _password: string, clubName?: string) => {
+  /** `worldSeed` is for HARNESSES ONLY — it pins the generated world so a test is reproducible. The game
+   *  never passes it, so a real new game is as random as it ever was. */
+  register: async (_handle: string, _password: string, clubName?: string, worldSeed?: number, slotId?: string) => {
     const name = (clubName && clubName.trim()) || 'My Club';
-    const id = await newGameSlot(name); // freshSave() (save.ts) already builds the starting club + standing orders
+    const id = await newGameSlot(name, worldSeed, slotId); // freshSave() (save.ts) already builds the starting club + standing orders
     // NO auto-mint — the player scouts + PICKS their founding prospect (see scoutProspects/signProspect).
     const model = getActiveModel();
     return { token: id, account: { id: OWNER, handle: id, rating: 1000, coins: model.profile.coins }, ...mergedClub() };

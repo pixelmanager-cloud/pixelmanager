@@ -37,7 +37,10 @@ async function playCareer(id: string): Promise<void> {
 }
 
 console.log('=== found the line ===');
-await api.register('ignored', 'ignored', 'Kestrel');
+// PIN THE WORLD. freshSave() seeds from Math.random(), so this suite drew a different world every run and
+// the cousin assertion below failed roughly one run in eight — inside `npm run verify`, with no diff to
+// explain it. Seeded, this is a real regression gate instead of a coin toss.
+await api.register('ignored', 'ignored', 'Kestrel', 20260830, 'qa-branch-switch-slot');
 const board = await api.scoutProspects(3);
 await api.signProspect(board.candidates[0].seed);
 let line = (await api.prospects()).prospects[0].id;

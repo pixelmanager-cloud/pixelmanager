@@ -95,10 +95,16 @@ export function migrate(m: SaveModel): SaveModel {
   return { ...m, tokens, version: SAVE_VERSION };
 }
 
-/** An empty new-game save. `Date.now()`/`Math.random()` here are fine — this is client, not @fm/shared. */
-export function freshSave(name: string): SaveModel {
-  const seed = Math.floor(Math.random() * 2 ** 31);
-  const shirtColor = Math.floor(Math.random() * 0xffffff);
+/** An empty new-game save. `Date.now()`/`Math.random()` here are fine — this is client, not @fm/shared.
+ *
+ *  ...EXCEPT IN A TEST, where an unseeded world is a flaky test. client/qa_branch_switch.ts asserts that a
+ *  cousin is offered within six generations, and whether one IS depends on the world this draws — so that
+ *  assertion failed about one run in eight, inside `npm run verify`, for reasons no diff could explain.
+ *  A flaky gate is worse than no gate: it trains you to re-run until green, which is how a real regression
+ *  gets waved through. `seed` lets a harness pin the world; production still passes nothing and stays
+ *  random. */
+export function freshSave(name: string, seed = Math.floor(Math.random() * 2 ** 31)): SaveModel {
+  const shirtColor = (seed * 2654435761) % 0xffffff;
   const { club, standingOrders } = makeClub(OWNER, name, seed, shirtColor);
   return {
     version: SAVE_VERSION,
@@ -471,9 +477,13 @@ export async function listSaves(): Promise<SaveMeta[]> { return backend.list(); 
 
 /** Start a brand-new game: creates a fresh save, makes it active, and persists it immediately
  *  (not debounced) so it shows up in `listSaves()` right away. Returns the new slot id. */
-export async function newGame(name: string): Promise<string> {
-  const id = crypto.randomUUID();
-  modelBox.model = freshSave(name);
+export async function newGame(name: string, seed?: number, slotId?: string): Promise<string> {
+  // `slotId` is for HARNESSES ONLY. Career seeds are world-mixed through the ACTIVE SLOT ID
+  // (careerSeedFor(..., getActiveSlotId()) in api.ts) so that two saves play out differently — which is
+  // correct and worth keeping, but it means a random UUID here leaks into every succession. Pinning the
+  // world seed alone left qa_branch_switch failing ~1 run in 20; this is the other half.
+  const id = slotId ?? crypto.randomUUID();
+  modelBox.model = freshSave(name, seed);
   activeSlotId = id;
   await backend.save(id, modelBox.model);
   return id;
