@@ -8,11 +8,46 @@ import { mMul, mAdd, hasTrait, teamLeadership } from './mental.js';
 
 export const TICK_SEC = 0.5; // game-seconds per tick
 const MATCH_SEC = 90 * 60;
-const SHOOT_RANGE = 18; // metres from goal a player will attempt a shot
+const SHOOT_RANGE = 22; // metres from goal a player will attempt a shot // metres from goal a player will attempt a shot
 /** The distance at which shot quality falls to zero. SEPARATE from SHOOT_RANGE, which is the trigger
  *  radius — one constant was doing both jobs via `SHOOT_RANGE + 8`, so re-tuning when a player shoots
  *  silently re-tuned how well he finishes. Same value as before (18 + 8), so behaviour is unchanged. */
 const QUALITY_RANGE = 26;
+/** How close to the attacking goal the ball must be before off-ball attackers break for the box. 35m is
+ *  roughly the final third — runs start as the move enters it, not from the halfway line. */
+const BOX_RUN_TRIGGER = 35;
+/** The duty `push` at or above which a midfielder joins the run. Forwards always go. */
+const BOX_RUN_PUSH = 1;
+/** How much of a runner's natural width he keeps as he attacks the box (1 = keeps his flank entirely). */
+const BOX_RUN_WIDTH = Number(process.env.BW ?? 0.55);
+/** Base pass-completion probability before passer quality, distance and pressure.
+ *  MEASURED AT 59.2% COMPLETION against roughly 80% in real football, and that gap was the engine's real
+ *  structural defect. A pass failed almost two times in five, so the median possession spell was TWO TICKS
+ *  — one second. Nothing that takes time to happen could ever happen: an attacker cannot run thirty metres
+ *  into a penalty area in one second, which is why the box was measured empty (0.02 attackers) and why the
+ *  only chance-creation the game had was a through ball hit from wherever play had stalled, a median of
+ *  45.8 metres out. Every downstream symptom — the clamped shooting term, the inert Fan Zone and duty
+ *  shoot multipliers, 65 shots a match — traces back here rather than to the finish. */
+const PASS_BASE = 0.75;
+/** Scales the per-tick, per-defender tackle probability.
+ *  MEASURED AT 1,508 TACKLES A MATCH against roughly 40 in real football. Every pressing defender within
+ *  range rolled a ~19% chance EVERY TICK, so with two defenders near the ball a carrier lost it about a
+ *  third of the time each second. This — not the finish, and not off-ball movement — is why possession
+ *  never lasted, why nothing that takes time could occur, and why the box stayed empty. */
+const TACKLE_SCALE = 0.13;
+/** Scales how readily a carrier inside SHOOT_RANGE pulls the trigger. With the through-ball shot removed
+ *  this branch is now the game's ONLY finish, so it carries all the shot volume; at the old value carriers
+ *  dribbled to the goal line before shooting (median shot distance 2.2m) instead of striking from range. */
+const SHOOT_SCALE = 5;
+const GP_BASE = 0.08;
+const GP_Q = 0.38;
+/** How much likelier a tackle is on the goal line than outside the final third. */
+const BOX_DEFENCE = 3;
+/** How strongly a tactic's press intensity converts into tackles won. The old flat tackle probability
+ *  SATURATED against its 0.8 clamp, which quietly compressed every press difference; once the rate is
+ *  realistic nothing saturates, the full press advantage expresses, and Gegenpress dominates the field at
+ *  68%. Sub-linear scaling restores a beatable press. */
+const PRESS_EXP = Number(process.env.PE ?? 1);
 const BASE_DRAIN = 0.000034; // fitness lost per tick by a working outfielder (tuned via harness)
 
 const norm = (stat: number) => stat / 20;
@@ -304,6 +339,7 @@ export class MatchEngine {
       const mods = this.mods[teamIdx];
       const dir = this.attackDir(teamIdx);
       const pressSet = attacking ? new Set<number>() : this.pressers(teamIdx);
+      const goalX = this.goalOf(teamIdx).x;   // the goal THIS team is attacking
 
       // emergency box defence: if an opponent is carrying near OUR goal, the closest
       // outfielder collapses onto the ball regardless of the press setting — you never
@@ -352,6 +388,38 @@ export class MatchEngine {
         const pullY = p.role === 'GK' ? 0.25 : attacking ? 0.30 : 0.46;
         tx += (s.ball.x - tx) * pullX;
         ty += (s.ball.y - ty) * pullY;
+
+        // ── OFF-BALL BOX RUNS ────────────────────────────────────────────────────────────────────
+        // THE MISSING MECHANISM. Every off-ball player targeted a tactical anchor pulled toward the ball,
+        // and nothing in the engine ever sent anyone INTO the penalty area — measured at 0.02 attackers in
+        // the box on average while attacking, i.e. essentially never. With no bodies in the box there is
+        // nobody to pass to near goal, so the only way the ball ever got there was the through-ball, whose
+        // shot resolves from wherever the receiver happened to be standing: a median of 45.8 metres.
+        //
+        // That single fact is what makes `quality`'s shooting term clamp to zero on 97% of shots, what
+        // makes the shoot-from-range branch fire 0.2% of the time, and what leaves the formation shape
+        // edge, the Fan Zone home advantage and every duty shoot multiplier inert. It is upstream of all
+        // of them, which is why the rebalance that tried to fix the FINISH first had to be rejected.
+        //
+        // So: when the ball is in the final third, forwards (and midfielders whose duty pushes them on)
+        // break for the box instead of holding their anchor, fanning out across it by player index so they
+        // arrive at the near post, the penalty spot and the far post rather than stacking on one square.
+        // Pure position maths — it draws no rng, so the match stream is untouched.
+        const runner = attacking && p.role !== 'GK' && p.role !== 'DF'
+          && (p.role === 'FW' || dm.push >= BOX_RUN_PUSH)
+          && Math.abs(s.ball.x - goalX) < BOX_RUN_TRIGGER;
+        if (runner) {
+          // THE RUN KEEPS THE PLAYER'S SIDE. Fanning runners into three fixed central lanes funnelled every
+          // attack through the middle and erased the whole point of a wide shape — the formation width
+          // assertions inverted on exactly that. A wide player attacks the near or far post from HIS flank;
+          // a central one attacks the spot. Width is preserved, just compressed into the box.
+          const depth = p.role === 'FW' ? 8 : 15;               // forwards get in behind; midfielders arrive late
+          tx = goalX - dir * depth;
+          ty = 34 + (a.y - 34) * BOX_RUN_WIDTH;
+          // still drawn a little toward the ball, so a wide attack pulls the runs across rather than
+          // leaving three men on the spot while the ball is in the corner
+          ty += (s.ball.y - ty) * 0.25;
+        }
 
         tx = clamp(tx, 2, 103);
         ty = clamp(ty, 3, 65);
@@ -424,7 +492,14 @@ export class MatchEngine {
           * mMul(def.attrs.aggression, 0.18) * (hasTrait(def, 'ballwinner') ? 1.08 : 1);
         const retain = (norm(carrier.attrs.strength) * 0.5 + norm(carrier.attrs.pace) * 0.3 + norm(carrier.attrs.passing) * 0.2) * fit(cs.fitness)
           * mMul(carrier.attrs.creativity, 0.2) * (hasTrait(carrier, 'maestro') ? 1.06 : 1);
-        const pTackle = clamp(0.12 + 0.5 * (defEff / (defEff + retain)), 0.05, 0.8) * defMods.pressIntensity
+        // DEFENCE COMPRESSES NEAR ITS OWN GOAL. A flat tackle rate across the whole pitch let an attacker
+        // who got in behind simply walk to the goal line — measured median shot distance 2.7m, with 98% of
+        // shots inside the box, which is as unreal as the 45.8m it replaced. Real defending gets harder to
+        // play through the closer you get: bodies, angles and desperation. Ramps from no bonus at 35m to
+        // BOX_DEFENCE times as likely on the goal line.
+        const ownGoalDist = Math.hypot(cs.x - this.goalOf(defTeam === 0 ? 1 : 0).x, cs.y - PITCH.h / 2);
+        const compress = 1 + (BOX_DEFENCE - 1) * clamp(1 - ownGoalDist / 35, 0, 1);
+        const pTackle = TACKLE_SCALE * compress * clamp(0.12 + 0.5 * (defEff / (defEff + retain)), 0.05, 0.8) * Math.pow(defMods.pressIntensity, PRESS_EXP)
           * (1 + Math.max(0, this.dm[defTeam][i].press) * 0.25) * TICK_SEC;
         const roll = this.rng();
         if (roll < pTackle) {
@@ -455,7 +530,7 @@ export class MatchEngine {
       const closeness = 1 - distGoal / SHOOT_RANGE; // 0 at the edge of range, 1 at the goal
       const central = 1 - Math.abs(cs.y - PITCH.h / 2) / (PITCH.h / 2); // 1 dead-central, 0 at the touchline
       const homeBoost = this.teams[teamIdx].homeBoost ?? 1; // Fan Zone home advantage (only teams[0] carries it)
-      const shootP = (0.0022 + norm(carrier.attrs.shooting) * 0.004) * closeness * (0.35 + 0.65 * central) * this.dm[teamIdx][playerIdx].shoot * (1 + this.zonal[teamIdx]) * homeBoost * TICK_SEC;
+      const shootP = SHOOT_SCALE * (0.0022 + norm(carrier.attrs.shooting) * 0.004) * closeness * (0.35 + 0.65 * central) * this.dm[teamIdx][playerIdx].shoot * (1 + this.zonal[teamIdx]) * homeBoost * TICK_SEC;
       if (this.rng() < shootP) {
         this.resolveShot(teamIdx, playerIdx, distGoal, false);
         return;
@@ -476,7 +551,7 @@ export class MatchEngine {
         // without the chaos of forced turnovers.
         const patientUnderPress = Math.max(0, -this.mods[teamIdx].directness) * Math.max(0, defMods.pressIntensity - 1) * 0.42;
         const completion = clamp(
-          0.58 + 0.38 * norm(carrier.attrs.passing) * fit(cs.fitness) - dist * 0.008 - pressure * 0.18 - patientUnderPress - risk
+          PASS_BASE + 0.38 * norm(carrier.attrs.passing) * fit(cs.fitness) - dist * 0.008 - pressure * 0.18 - patientUnderPress - risk
           + mAdd(carrier.attrs.teamwork, 0.07) + (hasTrait(carrier, 'metronome') ? 0.03 : 0), // teamwork/Metronome sharpen link-up
           0.1, 0.96,
         );
@@ -489,40 +564,16 @@ export class MatchEngine {
           // through-ball that springs a fast forward behind a high line => clear chance
           if (pick.through && this.beatsLastDefender(teamIdx, pick.idx)) {
             s.events.push({ minute: this.minute(), type: 'chance', teamIdx, playerName: rec.name, counter: this.onCounter(teamIdx) });
-            // NOTE — A MEASURED, UNFIXED DEFECT, and a REBALANCE THAT WAS DESIGNED AND REJECTED.
+            // A THROUGH BALL IS NOT A SHOT. This used to resolve a shot the instant the pass landed, from
+            // wherever the receiver happened to be standing — a median of 45.8 metres out, past the halfway
+            // line. That single line was the game's entire chance-creation model, and it is why `quality`'s
+            // shooting term clamped to zero on 97% of shots, why the shoot-from-range branch fired 0.2% of
+            // the time, and why the Fan Zone edge and every duty shoot multiplier were inert.
             //
-            // A full two-sided rebalance was measured over ~1,600 mirrored matches and DOES fix this axis:
-            // chances 68 -> 3.6 a match, shots 70 -> 24.6, median shot distance 45.9m -> 16.4m, goals held
-            // at 2.26, no side bias, and `shooting` (t=4.6 -> 10.5), `homeBoost` (inert -> t=6.4) and
-            // `computeZonal` (inert -> t=2.6) all become live. It was rejected because it breaks the
-            // tactical layer: 10 of strategy_test's assertions fail, the formation rock-paper-scissors
-            // INVERTS (wide 3-4-3 vs narrow diamond, 69W-28L -> 9W-42L) and so does the preset one
-            // (Counter vs Gegenpress, 32W-23L -> 12W-45L). Tuning does not recover it.
-            //
-            // The reason is structural, and it is the thing to fix first: THIS IS THE GAME'S ONLY CHANCE-
-            // CREATION MECHANISM. Only 2% of carrier time is spent inside 18m and there is a hard wall at
-            // 25-30m, so with the through-ball shot removed the game produces 2.3 shots and 0.13 goals a
-            // match. All shot volume is therefore faked by an inflated shoot-from-range constant, and that
-            // constant is what currently rewards central compactness and high pressing over everything
-            // else — which is why the shape tests invert when it changes. Off-ball movement has to
-            // manufacture box entries before the finish can be unclamped; then the attribute sensitivity
-            // budget needs re-normalising as a whole, and computeZonal re-derived as a chance-CREATION
-            // edge rather than a shot-probability multiplier. Shipping the tuning alone would trade one
-            // measured defect for three. The shot resolves from wherever the receiver was STANDING
-            // when the pass arrived: a median of 45.9 metres, past the halfway line. `quality` is
-            // clamp(shooting * fit * (1 - dist/26) + 0.15, 0, 1), so 97% of every shot in the game has its
-            // shooting term clamped to exactly zero — a 20-rated finisher converts the same as a 5-rated
-            // one, and eight of sixteen player attributes do not move results at all. It is also the only
-            // reason the shoot-from-range branch fires 0.2% of the time, which in turn makes the formation
-            // shape edge, the Fan Zone home advantage and every duty shoot multiplier inert.
-            //
-            // Resolving the finish from a realistic 7-16m was tried and REVERTED: it takes the game to
-            // 26.25 goals and 72 shots a match, because the through-ball gate fires ~67 times a match and
-            // the current 3.7% conversion is the only thing hiding that. Fixing this properly means making
-            // clear chances RARE first (tighten `beatsLastDefender` / the through-ball gate to a handful a
-            // match), then unclamping the finish — a balance project, not a one-line change. Shipping the
-            // half of it that raises conversion would be far worse than the defect.
-            this.resolveShot(teamIdx, pick.idx, Math.hypot(goal.x - recS.x, goal.y - recS.y), true);
+            // Now that possession lasts (see TACKLE_SCALE) and attackers actually run into the box (see the
+            // box-run block in movePlayers), the honest model works: springing the last defender leaves the
+            // receiver in behind WITH THE BALL, and he carries on and finishes from a real distance like any
+            // other attack. The chance is still recorded as a chance; it simply has to be taken.
           }
         } else {
           // Intercepted/loose ball scatters near the midpoint of the attempted pass;
@@ -653,7 +704,7 @@ export class MatchEngine {
       // all centred → a neutral shooter/keeper/team scores exactly as before.
       const finish = mAdd(shooter.attrs.composure, 0.1) + (hasTrait(shooter, 'clinical') ? 0.04 : 0) + this.leadershipBonus[teamIdx];
       const wall = hasTrait(gk, 'wall') ? 0.06 : 0;
-      const goalProb = clamp(0.13 + quality * 0.55 - norm(gk.attrs.keeping) * fit(gks.fitness) * 0.2 + (clear ? 0.12 : 0) + finish - wall, 0.03, 0.9);
+      const goalProb = clamp(GP_BASE + quality * GP_Q - norm(gk.attrs.keeping) * fit(gks.fitness) * 0.2 + (clear ? 0.12 : 0) + finish - wall, 0.02, 0.9);
       if (this.rng() < goalProb) {
         s.score[teamIdx]++;
         // assist = the player who played the last pass to this scorer, if recent (<=8s) and not himself
