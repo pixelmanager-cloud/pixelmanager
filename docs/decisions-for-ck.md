@@ -46,21 +46,42 @@ start persisting across a career. Worth doing, but it is a content project with 
 
 ---
 
-## 3. Steam
+## 3. Pre-fix saves lost their history — accept, or attempt a backfill?
+
+Successions used to call `clearMgr()`, a blanket `removeItem`, so every generation destroyed the club's
+titles, continental/World-Finals wins, hired staff, `arcPrestige`, `arcFired`, `arcTags` and `clubLegacy`.
+Fixed in `55a3abf`; the dynasty carries from now on.
+
+**What cannot be recovered:** the key was REMOVED rather than overwritten, so for a save already several
+generations deep that history is simply gone. There is nothing on disk to read back.
+
+**What recovers on its own:** the club TIER. `fm_tier_` lives in its own key and was never wiped — it was
+being overwritten by the founding path, which no longer runs at a handover.
+
+**Your call:** accept the loss for pre-fix saves, or have me attempt a partial backfill from the honours
+table and legend snapshots. My recommendation is ACCEPT. A migration that credits a save with titles it
+cannot prove it won is exactly the fabricated-parentage mistake `migrate()` already made once (it invented
+father/son links from generation adjacency, and had to be torn out). The game has not shipped; the only
+affected saves are yours and the test ones.
+
+---
+
+## 4. Steam
 
 Blocked on tax/banking approval, which you submitted but has not come back. When it clears, **capsule art
 and the trailer are the critical path** — the store copy is the easy half.
 
 ---
 
-## 4. Smaller things I chose not to do alone
+## 5. Smaller things I chose not to do alone
 
 - **`youth_joy.ts` stays 64% costless on purpose.** The shirt with his name on the back, commentating his
   own goals in the garden. If you want those priced, say so — I think pricing them would make the game
   worse, and `arc_stakes.ts` warns rather than fails for exactly this reason.
-- **`Token.father_name`** is written three times and read nowhere (`field_wiring.ts` flags it). Either
-  render it or drop it from the save format; both are one-line changes but it is your data model.
-- **13 stale `worktree-agent-*` branches** from earlier sessions. Nothing depends on them.
-- **The relegation lockout is softened, not solved.** A club can cover its upkeep and still be stripped to
-  zero by wages, with no facility falling in. There is now an explicit "running on empty" warning pointing
-  at Scale Back, but the deeper question — should wages force disrepair too? — is a design decision.
+- ~~`Token.father_name` write-only~~ — DONE: now read in the Family Record as each medallion's tooltip
+  and screen-reader label ("Kai Vance — Dane's boy").
+- ~~13 stale `worktree-agent-*` branches~~ — DONE: deleted.
+- ~~Should wages force disrepair too?~~ — you said yes; in progress. Deliberately sequenced AFTER the
+  visibility fixes, because a critic found that every disrepair warning was being deleted before the player
+  could read it (the season-rollover feed clobber, fixed in 55a3abf). Making wages destroy facilities while
+  the failure was invisible would have turned a hard game into an unexplained one.
