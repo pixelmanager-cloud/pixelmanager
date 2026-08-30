@@ -1102,6 +1102,11 @@ export const api = {
         return {
           id: t.id, name: t.name, generation: t.generation ?? 0,
           parentId: (t as any).parent_id ?? null,
+          // WHOSE SON HE IS. Token.father_name was written at every succession and read by NOTHING — the
+          // succession screen's "Dane's boy" caption comes from a transient field on the response, so the
+          // persisted column had no reader at all and field_wiring.ts flagged it. The Family Record is
+          // where it earns its place: the tree draws lineage as lines, and this says it in words.
+          fatherName: (t as any).father_name ?? null,
           branch: (t as any).branch ?? 'played',
           state: t.state, overall: t.peak_overall ?? 0,
           personality: t.personality ?? null,
