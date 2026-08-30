@@ -82,20 +82,31 @@ export interface DutyMods {
   /** while attacking, stretches (+) or narrows (-) the player's lateral anchor offset from the
    *  centre — a wing-back hugs the touchline as an auxiliary winger instead of tucking infield. */
   hug: number;
+  /** MARKING, which is a different job from PRESSING and the table had no way to say so. `press` decides
+   *  who leaves his position to chase the ball; `mark` decides how tightly a player who has NOT gone to the
+   *  ball picks up the man nearest him. Two duties whose descriptions are opposites — "sits, screens the
+   *  back four, never strays from his zone" and "steps up to engage" — could only be written as one number,
+   *  so the screener had to be given a LOW press to make him sit, which also made him mark loosest of all.
+   *  Measured, the anchor conceded MORE than a ball-winner (+0.060) and more than a box-to-box (+0.180).
+   *  1 = neutral. */
+  mark: number;
+  /** Extra metres GOAL-SIDE of his man a defender takes up, on top of the standard marking offset — a
+   *  sweeper's actual job, and the thing a "covers rather than engages" duty had no way to express. */
+  sweep: number;
 }
 
-const NEUTRAL: DutyMods = { push: 1, come: 0, shoot: 1, magnet: 0, press: 0, gkStep: 0, hug: 0 };
+const NEUTRAL: DutyMods = { push: 1, come: 0, shoot: 1, magnet: 0, press: 0, gkStep: 0, hug: 0, mark: 1, sweep: 0 };
 
 // Magnitudes are deliberately small — duties are nudges, not overrides, so the
 // engine's goals/possession calibration holds (see shared/strategy_test.ts).
 const TABLE: Record<Duty, DutyMods> = {
   'keeper':         { ...NEUTRAL },
   'sweeper-keeper': { ...NEUTRAL, gkStep: 7 },
-  'cover':          { ...NEUTRAL, push: 0.8, press: -0.3 },
-  'stopper':        { ...NEUTRAL, push: 1.2, press: 0.6 },
-  'box-to-box':     { ...NEUTRAL, push: 1.1, come: 0.03, press: 0.2 },
+  'cover':          { ...NEUTRAL, push: 0.8, press: -0.3, mark: 1.1, sweep: 2 },        // covers space behind rather than duelling
+  'stopper':        { ...NEUTRAL, push: 1.2, press: 0.6, mark: 1.15, sweep: -1.5 },     // steps up ONTO his man, in front of the line
+  'box-to-box':     { ...NEUTRAL, push: 1.1, come: 0.03, press: 0.2, mark: 0.75 },      // covers ground, not a man
   'playmaker':      { ...NEUTRAL, push: 0.85, come: 0.1, shoot: 0.8, magnet: 5, press: -0.15 },
-  'ball-winner':    { ...NEUTRAL, push: 0.8, shoot: 0.7, magnet: -2, press: 0.8 },
+  'ball-winner':    { ...NEUTRAL, push: 0.8, shoot: 0.7, magnet: -2, press: 0.8, mark: 0.85 }, // hunts the BALL — leaves his man to do it
   // SHOOT 1.3 -> 1.6. His own line is "minimal build-up involvement, MAXIMUM FINISHING INSTINCT", and he
   // was taking fewer shots than the target man (2303 vs 2507) — because a target man's magnet 5 draws far
   // more of the ball than a poacher's 3, and at 1.3 his finishing edge could not make up the difference.
@@ -106,15 +117,13 @@ const TABLE: Record<Duty, DutyMods> = {
   'ball-playing-defender': { ...NEUTRAL, push: 0.9, come: 0.05, shoot: 0.7, magnet: 3, press: -0.2 }, // brings it out, links play
   'inverted-fullback':     { ...NEUTRAL, push: 1.0, come: 0.08, magnet: 2, press: 0.1 },              // tucks into midfield
   'wing-back':             { ...NEUTRAL, push: 1.4, come: 0.05, magnet: 1.5, press: -0.15, hug: 0.55 }, // bombs on as an auxiliary winger
-  // THE SECOND ASSERTION THIS REBUILD DID NOT CLOSE, and it is the anchor's problem in a different shirt.
-  // A sweeper "covers rather than engages" and loses to a stopper who engages, because `press: -0.45` keeps
-  // him out of the pressing set entirely — he is a defender who never challenges for the ball, so his only
-  // defensive contributions are the crowd penalty and lane-blocking, and a stopper gets those TOO plus the
-  // tackles. Dropping his push so he genuinely sits deepest was tried (0.75 -> 0.55 -> 0.4) and moved him
-  // the right way without closing the gap (1.70 -> 1.57 against a stopper's 1.40), so it is reverted rather
-  // than kept as a change that does not earn itself. What is actually missing is a covering defender's real
-  // job: intercepting the ball played IN BEHIND, which nothing models.
-  'sweeper':               { ...NEUTRAL, push: 0.75, come: 0.1, shoot: 0.4, magnet: 2, press: -0.45 },
+  // A SWEEPER'S JOB NOW EXISTS. This previously read that what was missing was "intercepting the ball played
+  // in behind, which nothing models" — and that was the right diagnosis of the wrong mechanism. Nobody in
+  // this engine marked anybody at all: `pressers` sent the nearest few players at the ball and everyone else
+  // held a formation anchor, so a defender who "covers rather than engages" had literally nothing to do. He
+  // has the two fields his description asks for now: he picks his man up (mark) and stands further goal-side
+  // of him than anyone else does (sweep), which is what sweeping up is.
+  'sweeper':               { ...NEUTRAL, push: 0.75, come: 0.1, shoot: 0.4, magnet: 2, press: -0.45, mark: 1.15, sweep: 5 },
   'deep-lying-playmaker':  { ...NEUTRAL, push: 0.7, come: 0.12, shoot: 0.6, magnet: 6, press: -0.2 }, // deep regista, sprays it
   // PRESS 0.75 -> 0.4. "Pure destroyer — sits, screens the back four, and NEVER STRAYS FROM HIS ZONE" and
   // then a press value HIGHER than a box-to-box's 0.2, which is precisely an instruction to leave the zone
@@ -127,7 +136,11 @@ const TABLE: Record<Duty, DutyMods> = {
   // and concedes less. Raising the anchor's press to win the comparison would just make him a ball-winner
   // with a different name, which is worse than failing the assertion honestly. Letting him drift toward the
   // ball was tried (come -0.08 -> 0.02 and 0.08) and made it worse, not better.
-  'anchor':                { ...NEUTRAL, push: 0.4, come: -0.08, shoot: 0.5, magnet: -4, press: 0.6 },
+  // SCREENING IS MARKING, NOT PRESSING. His press was cut to make him sit in his zone, which was right, but
+  // with one number that also made him the loosest marker in the table — a "pure destroyer" who destroyed
+  // nothing. mark 1.6 is the screen: he does not chase, he picks up whoever comes into the space in front of
+  // the back four, which is the whole of the description.
+  'anchor':                { ...NEUTRAL, push: 0.4, come: -0.08, shoot: 0.5, magnet: -4, press: 0.6, mark: 1.6 },
   // PUSH RAISED 0.75 -> 1.05. His own description is "hugs the touchline but dictates play from out there,
   // like a winger who thinks like a No.10" — and at 0.75 he was not out there at all. Measured against a
   // box-to-box in the same wide slot, he spent LESS THAN HALF the time carrying in advanced wide areas

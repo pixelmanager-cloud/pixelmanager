@@ -43,27 +43,27 @@ const LANE_WIDTH = Number(process.env.LW ?? 3.5);
  *  45.8 metres out. Every downstream symptom — the clamped shooting term, the inert Fan Zone and duty
  *  shoot multipliers, 65 shots a match — traces back here rather than to the finish. */
 const PASS_BASE = Number(process.env.PB ?? 0.948);
-/** How much of pass completion is decided by the passer AGAINST THE DEFENCE HE IS PLAYING (PASS_REL), and
- *  how much by his ability in the absolute (PASS_ABS).
+/** How much of pass completion follows the passer's ability in the ABSOLUTE.
  *
- *  THE PASS ONLY EVER READ ONE SIDE. `pressureOn` counts BODIES within four metres and nothing anywhere
- *  read a defender's tackling or positioning, so a better defence could not make a pass harder to complete
- *  while a better attack always made it easier. The tackle is already relative — `defEff / (defEff + retain)`
- *  is a ratio, so it holds steady when both sides improve — and that asymmetry is what broke the calibration
- *  across the pyramid. Measured on equal sides at each squad quality the game actually generates:
+ *  THE PYRAMID WAS THREE DIFFERENT GAMES. The calibration gate measures goals/match at one squad quality and
+ *  asserts it sits in [1.6, 3.6]; it passed, while the same engine produced 0.19 goals/match at tier 8's
+ *  strength and 6.22 at tier 1's — a thirty-three-fold spread the gate could not see, because it only ever
+ *  looked at one point on it. The bottom of the pyramid, where every career starts, was close to goalless.
  *
- *      quality  4 → 0.19 goals/match      quality 13 → 2.81      quality 18 → 6.22
+ *  Completion is the reason, and it compounds: a chain of eight passes lands 17% of the time at 80%
+ *  completion and 66% at 95%, so a side whose passers are a few points better reaches the final third
+ *  several times as often. At 0.38 this term swung completion from ~0.83 to ~1.09 across the range of squads
+ *  the game generates. At 0.06 it barely moves, which is what real football looks like: pass completion is
+ *  broadly similar in the fourth tier and the first, because the defending scales with the passing.
  *
- *  The gate asserts goals/match sits in [1.6, 3.6] but only ever measured quality 13, so it passed while
- *  tier 8 (strength 6.4) played out goalless and tier 1 (strength 15.5) ran at four-plus a game. Completion
- *  compounds: a chain of eight passes lands 17% of the time at 80% completion and 66% at 95%, and reaching
- *  the final third that much more often is most of a sixteen-fold swing in shot attempts.
- *
- *  Splitting the term lets the passer's edge over the opposition carry the weight while a small absolute
- *  slope keeps better players genuinely tidier. Old behaviour is PASS_REL 0 / PASS_ABS 0.38 / PASS_BASE 0.75. */
-const PASS_REL = Number(process.env.PR ?? 0.38);
+ *  A DIFFERENTIAL FORM WAS TRIED FIRST AND REJECTED — the passer measured against the specific defence he
+ *  was playing. It flattens the equal-strength curve no better than this does (the two are identical when
+ *  the sides are equal, which is the only case that curve measures) and it doubles every mismatch, because
+ *  the adjustment runs in opposite directions for the two teams: a 15 against an 11 finished 7.80-0.04.
+ *  What varies with the STANDARD of the game belongs at the shot, where SHOT_REL applies it to both sides
+ *  at once. See PASS_ABS below. */
 /** The two other places absolute quality leaked into scoring, once the pass was made relative.
- *  With PASS_REL/PASS_ABS in place the spread across the pyramid fell from sixteen-fold to about six, and
+ *  With the absolute passing slope cut (PASS_ABS) the spread across the pyramid fell from sixteen-fold to
  *  the residue splits cleanly in two: shot ATTEMPTS still rose 3.1x from quality 6 to 18 and CONVERSION
  *  1.86x. SHOOT_ABS is how much a carrier's own shooting drives him to pull the trigger (attempts), and
  *  GK_SCALE is how hard the keeper resists (conversion) — the keeper's term was fixed at 0.2 while the
@@ -73,7 +73,7 @@ const SHOOT_ABS = Number(process.env.SA ?? 0.004);
 const GK_SCALE = Number(process.env.GKS ?? 0.2);
 /** How far a chance's quality is judged against the opposition rather than in the absolute, and the squad
  *  quality the whole engine is calibrated at (tier 3-to-2 strength, where the goals/match gate was set). */
-const SHOT_REL = Number(process.env.SR ?? 0.9);
+const SHOT_REL = Number(process.env.SR ?? 1.1);
 const DEF_ANCHOR = 0.65;
 /** How much of the pressure penalty a drilled side shrugs off when playing out of its own defensive third.
  *  A flat completion bonus was the wrong shape — the instruction's claim is that the side BEATS THE PRESS,
@@ -90,6 +90,10 @@ const PLAY_OUT_DRILL = Number(process.env.POD ?? 0.5);
 const MARK_PULL = Number(process.env.MP ?? 0.25);
 /** How far goal-side of his man a marker positions himself, in metres. */
 const MARK_GOALSIDE = 2.5;
+/** Marking strength in a side's OWN defensive area, where a block is settled and picks people up whatever
+ *  its press setting says, and how far from its own goal that area extends. */
+const MARK_DEEP = Number(process.env.MD ?? 1.3);
+const MARK_DEEP_RANGE = Number(process.env.MDR ?? 38);
 const PASS_ABS = Number(process.env.PA ?? 0.06);
 /** Scales the per-tick, per-defender tackle probability.
  *  MEASURED AT 1,508 TACKLES A MATCH against roughly 40 in real football. Every pressing defender within
@@ -101,7 +105,7 @@ const TACKLE_SCALE = Number(process.env.TS ?? 0.15);
  *  this branch is now the game's ONLY finish, so it carries all the shot volume; at the old value carriers
  *  dribbled to the goal line before shooting (median shot distance 2.2m) instead of striking from range. */
 const SHOOT_SCALE = Number(process.env.SS ?? 5);
-const GP_BASE = Number(process.env.GB ?? 0.14);
+const GP_BASE = Number(process.env.GB ?? 0.12);
 const GP_Q = Number(process.env.GQ ?? 0.36);
 /** How much likelier a tackle is on the goal line than outside the final third. */
 const BOX_DEFENCE = Number(process.env.BD ?? 3);
@@ -526,8 +530,15 @@ export class MatchEngine {
         if (markIdx != null) {
           const op = s.players[(1 - teamIdx) as 0 | 1][markIdx];
           const ownGoalX = this.goalOf((1 - teamIdx) as 0 | 1).x;
-          const w = clamp(MARK_PULL * mods.pressIntensity * (1 + dm.press * 0.3), 0, 0.9);
-          tx += (op.x + Math.sign(ownGoalX - op.x) * MARK_GOALSIDE - tx) * w;
+          // A DEEP BLOCK MARKS TIGHTER, NOT LOOSER. Scaling the whole thing by press intensity made a low
+          // press worse everywhere, which is exactly why Park the Bus and Counter measured as the two worst
+          // presets at every quality gap — the "defensive" options were named to attract the player who
+          // should never pick them. Choosing a low press is a choice about WHERE you defend, not whether:
+          // near your own goal a settled block picks people up harder than a high press does, and it is up
+          // the pitch that the low press declines to chase.
+          const deep = Math.abs(s.ball.x - ownGoalX) < MARK_DEEP_RANGE;
+          const w = clamp(MARK_PULL * (deep ? MARK_DEEP : mods.pressIntensity) * dm.mark, 0, 0.9);
+          tx += (op.x + Math.sign(ownGoalX - op.x) * (MARK_GOALSIDE + dm.sweep) - tx) * w;
           ty += (op.y - ty) * w;
         }
 
@@ -792,7 +803,7 @@ export class MatchEngine {
         // of the back, and the risk stays exactly where it was, in the short option under a press.
         const drilled = this.tactics[teamIdx].playOutOfDefence && this.zoneOf(teamIdx, cs.x) === 'def' ? PLAY_OUT_DRILL : 0;
         const completion = clamp(
-          PASS_BASE + PASS_REL * (skill - this.defSkill[defTeam]) + PASS_ABS * skill - dist * 0.008 - pressure * 0.18 * (1 - drilled) - patientUnderPress - risk
+          PASS_BASE + PASS_ABS * skill - dist * 0.008 - pressure * 0.18 * (1 - drilled) - patientUnderPress - risk
           + mAdd(carrier.attrs.teamwork, 0.07) + (hasTrait(carrier, 'metronome') ? 0.03 : 0), // teamwork/Metronome sharpen link-up
           0.1, 0.96,
         );
@@ -981,14 +992,21 @@ export class MatchEngine {
     const rec = this.teams[teamIdx].players[recIdx];
     const recS = s.players[teamIdx][recIdx];
     const dir = this.attackDir(teamIdx);
-    let nearest = 1, nd = Infinity;
+    // THE LAST DEFENDER IS THE DEEPEST ONE, NOT THE NEAREST ONE. This picked whoever was closest to the
+    // receiver, which inverts the line-height slider: dropping the line moves the back four AWAY from an
+    // advanced forward, so the "nearest defender" becomes a midfielder standing further up the pitch and
+    // the receiver counts as in behind him. Measured on the old engine, a DEEP line conceded 42.6 clear
+    // chances a match against a neutral line's 30.4 — the deeper you sat, the more often you were played
+    // through, which is why every defensive preset was a trap and `line: -2` was the worst single setting
+    // in the game. Ranked by depth it is what the method has always claimed to be.
+    let last = 1, deepest = Infinity;
     for (let i = 1; i < 11; i++) {
       if (this.sentOff.has(defTeam * 100 + i)) continue;
-      const d = Math.hypot(s.players[defTeam][i].x - recS.x, s.players[defTeam][i].y - recS.y);
-      if (d < nd) { nd = d; nearest = i; }
+      const depth = dir === 1 ? -s.players[defTeam][i].x : s.players[defTeam][i].x;
+      if (depth < deepest) { deepest = depth; last = i; }
     }
-    const def = this.teams[defTeam].players[nearest];
-    const ds = s.players[defTeam][nearest];
+    const def = this.teams[defTeam].players[last];
+    const ds = s.players[defTeam][last];
     const behind = dir === 1 ? recS.x > ds.x : recS.x < ds.x; // receiver already past that defender
     const paceGap = norm(rec.attrs.pace) * fit(recS.fitness) - norm(def.attrs.pace) * fit(ds.fitness);
     // OFFSIDE TRAP instruction (off by default, and only meaningful with a high/very-high line): the
