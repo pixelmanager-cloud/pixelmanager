@@ -18,7 +18,7 @@ import { commentaryExtra, fillCm, type CommentaryBranch } from '../../shared/src
 import { narrateManager, type PersonCtx } from '../../shared/src/managerNarrate.js';
 import { pickManagerArc, managerArcById, MGR_TEMPERS, applyMorale, type MgrSituation, type MgrArcEffect, type MgrTemper } from '../../shared/src/managerarc.js';
 import { goalPair, mixSeed } from '../../shared/src/clubseason.js';
-import { facilityLevelStory, FACILITY_META, trainingConditioning, fanHomeBoost, dataEdge, dormIntakeBonus, type FacilityKey } from '../../shared/src/facilities.js';
+import { facilityLevelStory, FACILITY_META, facilityUpkeep, mothballRefund, trainingConditioning, fanHomeBoost, dataEdge, dormIntakeBonus, type FacilityKey } from '../../shared/src/facilities.js';
 import { nextHouseTier, renownBidMult, renownPedigree, renownIncomeMult } from '../../shared/src/renown.js';
 import { houseListings, houseOf, seedHouseIntoSquad, houseNews } from '../../shared/src/houses.js';
 
@@ -1497,7 +1497,8 @@ class Game {
         + `<span class="tm-ov">OV ${l.ov} · age ${l.age}</span><button class="tm-buy primary" data-buy="${l.player.id}" title="${reason}" ${cantAfford || squadFull ? 'disabled' : ''}>Buy · ${l.fee.toLocaleString()}c</button></div>`;
     }).join('') : '<div class="muted">The market has cleared for this season.</div>';
     const sellList = sellable.map((p) => { const ov = overall(p), v = squadSaleValue(ov, p.age ?? 26); return `<div class="tm-row"><span class="tm-pos tm-${p.role}">${p.role}</span><span class="tm-name">${p.name}</span><span class="tm-ov">OV ${ov}</span><button class="tm-sell" data-sell="${p.id}" title="${squadMin ? `Can't sell below ${MIN_SQUAD} players` : `Sell for +${v.toLocaleString()}c`}" ${squadMin ? 'disabled' : ''}>Sell · +${v.toLocaleString()}c</button></div>`; }).join('');
-    const wageBill = squad.reduce((n, p) => n + squadSeasonWage(overall(p)), 0); // PT-500: the recurring cost of the squad, visible BEFORE you add to it
+    const season = this.season ?? 0;
+    const wageBill = squad.reduce((n, p) => n + squadSeasonWage(overall(p), season), 0); // PT-500: the recurring cost of the squad, visible BEFORE you add to it
     body.innerHTML = `<div class="tm-head"><span class="tm-coins"><span class="ico-inline">${sprite('coin')}</span> ${coins.toLocaleString()}c</span> · Squad <b>${squad.length}</b>/${MAX_SQUAD} · ${tierName(tier)} · 💷 wages <b>~${wageBill.toLocaleString()}c</b> a season</div>`
       + `<div class="tm-sub">Buy players to strengthen the squad and climb — the market's quality is scaled to your division. Squad must stay between <b>${MIN_SQUAD}</b> and <b>${MAX_SQUAD}</b>. A signing costs a one-off fee <i>and</i> a wage every season after it, so leave yourself room for the bill.</div>`
       + `<div class="tm-cols"><div class="tm-col"><h4 class="scout-h4">🛒 BUY</h4>${buyList}</div><div class="tm-col"><h4 class="scout-h4">💸 SELL</h4>${sellList}</div></div>`;
@@ -1508,7 +1509,7 @@ class Game {
     // confirm the SPEND — buying is the costlier, irreversible action, so it deserves the same guard as sell (PT-30)
     // PT-500: signings DO carry a recurring wage — the old copy ("no wage, he's yours outright") taught the
     // opposite and left the season-end bill unexplained. State both halves of the cost up front.
-    const wage = squadSeasonWage(l.ov);
+    const wage = squadSeasonWage(l.ov, this.season ?? 0);
     this.openConfirm(`Sign <b>${l.player.name}</b> (${l.player.role}, OV ${l.ov}) for a one-off <b>${l.fee.toLocaleString()}c</b> transfer fee?`
       + ` <span class="cg-hint-inline">He then draws about <b>${wage.toLocaleString()}c a season</b> in wages, charged with the rest of the squad's bill when the season ends.</span>`, 'Sign him', () => this.doBuyPlayer(l, boughtKey));
   }
@@ -1519,7 +1520,7 @@ class Game {
       try { const b = JSON.parse(localStorage.getItem(boughtKey) || '[]'); b.push(l.player.id); localStorage.setItem(boughtKey, JSON.stringify(b)); } catch { /* ignore */ }
       this.setMe(await api.me()); audio.chime('confirm');
       this.feedEvent('transfer_in', '✍️', { name: l.player.name, seasonsAtClub: 0, age: l.age, overall: l.ov }, { fee: l.fee });
-      toast(`✍️ Signed ${l.player.name} (OV ${l.ov}) · −${l.fee.toLocaleString()}c fee · ~${squadSeasonWage(l.ov).toLocaleString()}c a season in wages`);
+      toast(`✍️ Signed ${l.player.name} (OV ${l.ov}) · −${l.fee.toLocaleString()}c fee · ~${squadSeasonWage(l.ov, this.season ?? 0).toLocaleString()}c a season in wages`);
       this.renderTransferMarket();
     } catch (e: any) { toast(e?.body?.error ?? 'Could not sign him'); }
   }
@@ -1730,7 +1731,7 @@ class Game {
       : '';
     const tier = this.clubTier();
     // PT-500: forecast the season's wage bill IN the header, so the end-of-season charge is never a surprise
-    const wageBill = this.club.players.reduce((n, p) => n + squadSeasonWage(overall(p)), 0);
+    const wageBill = this.club.players.reduce((n, p) => n + squadSeasonWage(overall(p), this.season ?? 0), 0);
     const wageLine = ` · <span class="sf-wages">💷 wage bill ~${wageBill.toLocaleString()}c, due at season's end</span>`;
     const header = done
       ? `<div class="season-summary done"><span class="ss-crest">${crest(clubName, 20)}</span>✅ Season ${m.season} complete — <b>${clubName}</b> finished <b>${this.ordinal(t.pos)}</b> of ${t.size} in <b>${tierName(tier)}</b>${t.pos === 1 ? ' 🏆 CHAMPIONS!' : (t.pos <= 2 && tier > 1) ? ` ⬆️ PROMOTED to ${tierName(tier - 1)}!` : (t.pos >= t.size - 1 && tier < TIERS) ? ` ⬇️ RELEGATED to ${tierName(tier + 1)}` : ''}. <button class="primary" id="sf-next-season">Next season →</button></div>`
@@ -2257,6 +2258,16 @@ class Game {
           fi.shop && `🛍️ shop ${fi.shop.toLocaleString()}c`, fi.womens && `⚽ women's team ${fi.womens.toLocaleString()}c`].filter(Boolean);
         this.pushFeed('🏟️', `The club earned <b>${fi.total.toLocaleString()}c</b> off the pitch this season — ${parts.join(' · ')}.`);
       }
+      // AND WHAT IT COST TO RUN. Reported next to the income and in the same breath, because upkeep is only
+      // a decision if the player sees both halves of the ledger together.
+      const up = (r as any).upkeep as number | undefined;
+      if (up) this.pushFeed('🧾', `Running the club cost <b>${up.toLocaleString()}c</b> in upkeep — wages, upkeep, the lights, the lot.`);
+      const dis = ((r as any).disrepair ?? []) as string[];
+      if (dis.length) {
+        const names = [...new Set(dis)].map((k) => FACILITY_META[k as FacilityKey]?.name ?? k);
+        this.pushFeed('🚧', `<b>The club could not pay its bills.</b> ${names.join(' and ')} fell into disrepair — ${dis.length} level${dis.length > 1 ? 's' : ''} lost. Something has to give: scale back what the club is for, or climb far enough to afford it.`);
+        toast(`🚧 ${names[0]} fell into disrepair — the club is living beyond its means`);
+      }
     } catch { /* offline: no prize */ }
     // BOARD VERDICT — how the board judges this season vs what your prestige (and last season) earned you.
     // Stored on the save and surfaced atop next season's planning screen (see showSeason).
@@ -2670,22 +2681,30 @@ class Game {
       + `</div>` + hiredHtml;
   }
 
-  private renderFacilities(d: { coins: number; facilities: import('./api').Facility[] }) {
+  private renderFacilities(d: { coins: number; facilities: import('./api').Facility[]; upkeep?: number }) {
     this.account.coins = d.coins;
     $('club-coins').innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${d.coins}`;
+    // THE RUNNING TOTAL, ALWAYS ON SCREEN. Upkeep is a decision only if you can see it accumulating as you
+    // buy — a bill that appears once a season, after the spending, is a punishment instead.
+    const upEl = document.getElementById('fac-upkeep');
+    if (upEl) upEl.innerHTML = d.upkeep ? `Season upkeep: <b>💰 ${d.upkeep.toLocaleString()}c</b>` : '';
     $('facilities-grid').innerHTML = d.facilities.map((f) => {
       const pips = Array.from({ length: f.maxLevel }, (_, i) => `<i class="${i < f.level ? 'on' : ''}"></i>`).join('');
       const maxed = f.level >= f.maxLevel;
       const action = maxed
-        ? '<div class="fac-maxed">★ MAX LEVEL</div>'
+        ? `<div class="fac-maxed">★ MAX LEVEL</div><div class="fac-upkeep">Upkeep <b>${f.upkeep.toLocaleString()}c</b> a season</div>`
         : `<div class="fac-next">Next: <b>${f.nextEffect ?? ''}</b></div>`
+          + (f.nextUpkeep != null && f.nextUpkeep > f.upkeep
+            ? `<div class="fac-upkeep">Upkeep ${f.upkeep.toLocaleString()}c ▸ <b>${f.nextUpkeep.toLocaleString()}c</b> a season</div>` : '')
           + `<button class="fac-up" data-key="${f.key}" ${f.canAfford ? '' : 'disabled'}>Upgrade · 💰 ${f.upgradeCost} ▶</button>`;
+      const scaleBack = f.level > 1
+        ? `<button class="fac-down" data-down="${f.key}" title="Scale back a level and recover part of what it cost">Scale back ▾</button>` : '';
       return `<div class="facility ${maxed ? 'maxed' : ''}">`
         + `<div class="fac-top"><span class="fac-icon">${sprite(f.key) || f.icon}</span><span class="fac-name">${f.name}</span><span class="fac-lvl">LVL ${f.level}/${f.maxLevel}</span></div>`
         + `<div class="fac-pips">${pips}</div>`
         + `<div class="fac-blurb">${f.blurb}</div>`
         + `<div class="fac-effect">▸ ${f.effect}</div>`
-        + action + `</div>`;
+        + action + scaleBack + `</div>`;
     }).join('');
     Array.from($('facilities-grid').querySelectorAll('button[data-key]')).forEach((b) => {
       const key = (b as HTMLElement).dataset.key!;
@@ -2694,10 +2713,32 @@ class Game {
       // say what it actually does — the coins are a season's prize money. (PT-507)
       b.addEventListener('click', () => this.openConfirm(
         `Upgrade <b>${f?.name ?? 'this facility'}</b> to level ${(f?.level ?? 0) + 1} for <b>💰 ${(f?.upgradeCost ?? 0).toLocaleString()}c</b>?`
+        + (f?.nextUpkeep != null && f.nextUpkeep > f.upkeep ? ` It will cost <b>${f.nextUpkeep.toLocaleString()}c a season</b> to run, up from ${f.upkeep.toLocaleString()}c.` : '')
         + (f?.nextEffect ? `<br><span class="cf-sub">It gets you: ${f.nextEffect}</span>` : '')
-        + `<br><span class="cf-sub">You have ${(this.account?.coins ?? 0).toLocaleString()}c. Upgrades are permanent and carry to your heir.</span>`,
+        + `<br><span class="cf-sub">You have ${(this.account?.coins ?? 0).toLocaleString()}c. Levels carry to your heir — but a club that cannot pay its upkeep loses them.</span>`,
         `Upgrade · 💰 ${(f?.upgradeCost ?? 0).toLocaleString()}c`, () => this.upgradeFacility(key)));
     });
+    Array.from($('facilities-grid').querySelectorAll('button[data-down]')).forEach((b) => {
+      const key = (b as HTMLElement).dataset.down!;
+      const f = d.facilities.find((x) => x.key === key);
+      const back = f ? f.level - 1 : 0;
+      b.addEventListener('click', () => this.openConfirm(
+        `Scale <b>${f?.name ?? 'this facility'}</b> back to level ${back}?`
+        + ` It frees up <b>${((f?.upkeep ?? 0) - facilityUpkeep(back)).toLocaleString()}c a season</b> in upkeep.`
+        + `<br><span class="cf-sub">You recover ${mothballRefund(f?.level ?? 1).toLocaleString()}c of what the level cost. You can build it back later at the full price.</span>`,
+        'Scale back', () => this.mothballFacility(key)));
+    });
+  }
+
+  /** Sell a level back — the player's own lever when the upkeep bill outgrows the club. */
+  private async mothballFacility(key: string) {
+    try {
+      const r = await api.mothballFacility(key);
+      const nm = FACILITY_META[key as FacilityKey]?.name ?? key;
+      toast(`▾ ${nm} scaled back to level ${r.level}${r.refund ? ` · +${r.refund.toLocaleString()}c recovered` : ''}`);
+      this.pushFeed('📉', `<b>${nm}</b> scaled back to level ${r.level}. The club is smaller, and cheaper to run.`);
+      this.renderFacilities(await api.facilities());
+    } catch { toast('Could not scale that back'); }
   }
 
   private async upgradeFacility(key: string) {

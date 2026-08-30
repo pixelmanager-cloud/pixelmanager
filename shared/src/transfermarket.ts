@@ -30,9 +30,25 @@ export const SQUAD_CONTRACT_SEASONS = 3;          // a bought player is signed f
 // and ~642c in the top flight, so wages are a genuine pressure that CLIMBING relieves, rather than a bill no
 // tier can pay. (Was 0.15, which billed 461-1,926c/season and exceeded every income source at every tier —
 // even a title-winning season ran a deficit, so the club was pinned at 0 coins forever.)
-export function squadSeasonWage(ov: number): number { return Math.round(transferFee(ov) * 0.05); }
+// RECALIBRATED AGAINST AN ECONOMY THAT NOW EXISTS. The 0.05 rate above was set when 0.15 was measured as
+// unpayable "at every tier" — but that measurement was taken while TEN OF THE TWELVE FACILITIES PAID
+// NOTHING. They were decorative: stadiumIncome, sponsorIncome, shopIncome, womensIncome and fanIncomeMult
+// were computed only to render their own description strings. Connecting them added ~9,400 coins a season
+// to a maxed top-flight club, and the wage rate was never revisited, so it stayed tuned to a game where
+// the club had no off-pitch income at all. At 0.05 a 20-man squad cost 740 a season against ~15,100 of
+// income — 5%, a rounding error rather than the "genuine pressure" the comment claims it is.
+const WAGE_RATE = 0.11;
+/** How much the sport's money has grown since the dynasty began. Football gets more expensive; a wage bill
+ *  that is fixed forever means the third generation runs the same club as the first, and the late game has
+ *  no shape. Capped, and on the same saturating curve renown uses, so it bites early and then settles —
+ *  inflation that compounded without limit would eventually make any squad unaffordable. Season 0 → 1.00,
+ *  season 20 → 1.35, season 45 → 1.63, season 100 → 1.86, ceiling 2.00. */
+export function wageEra(season: number): number {
+  return 1 + 1.0 * (1 - Math.exp(-Math.max(0, season) / 42));
+}
+export function squadSeasonWage(ov: number, season = 0): number { return Math.round(transferFee(ov) * WAGE_RATE * wageEra(season)); }
 /** The lump cost to RENEW an expiring bought player for another SQUAD_CONTRACT_SEASONS (wage × length). */
-export function squadRenewCost(ov: number): number { return squadSeasonWage(ov) * SQUAD_CONTRACT_SEASONS; }
+export function squadRenewCost(ov: number, season = 0): number { return squadSeasonWage(ov, season) * SQUAD_CONTRACT_SEASONS; }
 /** Age-adjusted SALE value: a declining veteran is worth progressively less, so there's a real reason to
  *  cash in before he rots (PT-90). -12%/yr past the peak, floored at 20% of the flat value. */
 export function squadSaleValue(ov: number, age: number): number {

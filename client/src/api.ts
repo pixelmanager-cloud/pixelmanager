@@ -18,6 +18,7 @@ import {
   signSquadContract, staggeredContractSeasons, advanceSquad, squadSeasonsLeft, squadRenewCost, squadSeasonWage, squadStorylines,
   contractDemand, evaluateContractOffer, wageForLength,
   FACILITY_KEYS, FACILITY_META, MAX_LEVEL, upgradeCost, effectAt, seasonFacilityIncome, squadMarketability,
+  seasonUpkeep, facilityUpkeep, applyDisrepair, mothballRefund, facLevel,
   youthPoolBonus, youthUpgradeChance, dormIntakeBonus, scoutHitMult, scoutCostDiscount, scoutExtraTrips,
   generatePool, trialistAt, LOANEE_CAP, DESTINATIONS, destinationById, rollMission, travelMs as travelMsPure, previewOdds,
   gaffersDiaryEntry,
@@ -141,8 +142,10 @@ export interface AwardRow { season_number: number; tier: string; pod: number; ki
 export interface Facility {
   key: string; icon: string; name: string; blurb: string; level: number; maxLevel: number;
   effect: string; nextEffect: string | null; upgradeCost: number | null; canAfford: boolean;
+  /** What this level costs to run each season, and what the next one would. */
+  upkeep: number; nextUpkeep: number | null;
 }
-export interface FacilitiesData { coins: number; facilities: Facility[] }
+export interface FacilitiesData { coins: number; facilities: Facility[]; upkeep: number }
 export interface MatchPayload {
   matchId: string; seed: number; result: [number, number]; mySide: 0 | 1; coinsEarned?: number; gateIncome?: number; injuries?: Array<{ name: string; matches: number }>;
   home: { id: string; handle: string; rating?: number; team: Team; tactics: Tactics };
@@ -788,7 +791,29 @@ export const api = {
       });
     }
     await localStore.addCoins(OWNER, prize + sponsorBonus + facIncome.total); // also schedules the persist that banks the season bump above
-    return { ok: true as const, prize, sponsorBonus, houseMult, tierMult, facilities: facIncome, coins: getActiveModel().profile.coins };
+
+    // UPKEEP — charged in the same league roll that pays the facility income, because it is the other half
+    // of the same transaction: what the club earns by being a club, minus what it costs to BE one. Only on
+    // a league roll, for the same reason the income is (a cup run must not re-bill a per-season cost).
+    let upkeep = 0, fellIn: FacilityKey[] = [];
+    if (isLeagueRoll) {
+      const due = seasonUpkeep(model.facilities);
+      const have = getActiveModel().profile.coins;
+      upkeep = Math.max(0, Math.min(have, due));
+      if (upkeep > 0) await localStore.addCoins(OWNER, -upkeep);
+      // CANNOT PAY THE BILL: something in the club falls into disrepair. This is the failure state that
+      // makes upkeep a decision rather than a tax — you overreached, and the club physically shrinks back
+      // to what you can run. One level per season, so it is a slide you can arrest, not a collapse.
+      // Cut toward what the club actually earned this season, not toward zero — the target is a bill it can
+      // carry next year, so the slide stops as soon as the club fits inside its own means.
+      if (due > have) {
+        fellIn = applyDisrepair(model.facilities, Math.max(0, prize + sponsorBonus + facIncome.total));
+        // PERSIST each cut. applyDisrepair mutates the in-memory object, which does NOT schedule a write —
+        // the club would repair itself on reload and upkeep would be unenforceable.
+        for (const k of new Set(fellIn)) await localStore.setFacilityLevel(OWNER, k, facLevel(model.facilities, k as FacilityKey));
+      }
+    }
+    return { ok: true as const, prize, sponsorBonus, houseMult, tierMult, facilities: facIncome, upkeep, disrepair: fellIn, coins: getActiveModel().profile.coins };
   },
   spSponsor: async (deal: string) => {
     await ensureActive();
@@ -845,7 +870,7 @@ export const api = {
       retired: roll.retired.map(lite),
       departed: roll.departed.map(lite),
       intake: roll.intake.map(lite),
-      expiring: roll.expiring.map((p) => ({ ...lite(p), renewCost: Math.round(squadRenewCost(overall(p)) * moraleEffects(p.morale ?? 65).extendMult), morale: p.morale ?? 65, moraleLabel: moraleEffects(p.morale ?? 65).label })),
+      expiring: roll.expiring.map((p) => ({ ...lite(p), renewCost: Math.round(squadRenewCost(overall(p), season) * moraleEffects(p.morale ?? 65).extendMult), morale: p.morale ?? 65, moraleLabel: moraleEffects(p.morale ?? 65).label })),
       // the season's human headlines — who arrived, who faded, who's being circled (Phase 4)
       storylines: squadStorylines(roll, season),
       unhappy: roll.changes.filter((ch) => !ch.retired && moraleEffects(ch.moraleAfter).unsettled).map((ch) => ({ ...lite(ch.player), morale: ch.moraleAfter, moraleLabel: moraleEffects(ch.moraleAfter).label })),
@@ -860,7 +885,7 @@ export const api = {
     if (!c) throw apiErr('club not found', {}, 404);
     const p = c.club.players.find((x) => x.id === playerId);
     if (!p) throw apiErr('no such player', {}, 404);
-    const cost = Math.round(squadRenewCost(overall(p)) * moraleEffects(p.morale ?? 65).extendMult); // an unhappy player holds out for more
+    const cost = Math.round(squadRenewCost(overall(p), getActiveModel().profile.season) * moraleEffects(p.morale ?? 65).extendMult); // an unhappy player holds out for more
     if (getActiveModel().profile.coins < cost) throw apiErr('not enough coins', { need: cost }, 402);
     await localStore.addCoins(OWNER, -cost);
     c.club.players = c.club.players.map((x) => (x.id === playerId ? signSquadContract(x, getActiveModel().profile.season) : x));
@@ -886,7 +911,7 @@ export const api = {
     const left = squadSeasonsLeft(p, season);
     let payoff = 0;
     if (left > 0) {
-      payoff = Math.round(squadSeasonWage(overall(p)));
+      payoff = Math.round(squadSeasonWage(overall(p), season));
       const coins = getActiveModel().profile.coins;
       if (coins < payoff) throw apiErr(`he has ${left} season${left > 1 ? 's' : ''} left — paying up his deal costs ${payoff}c`, { need: payoff }, 402);
       await localStore.addCoins(OWNER, -payoff);
@@ -1185,9 +1210,9 @@ export const api = {
     const facilities: Facility[] = FACILITY_KEYS.map((key) => {
       const level = (fac as any)[key] as number;
       const cost = upgradeCost(level);
-      return { key, ...FACILITY_META[key], level, maxLevel: MAX_LEVEL, effect: effectAt(key, level), nextEffect: level < MAX_LEVEL ? effectAt(key, level + 1) : null, upgradeCost: cost, canAfford: cost != null && coins >= cost };
+      return { key, ...FACILITY_META[key], level, maxLevel: MAX_LEVEL, effect: effectAt(key, level), nextEffect: level < MAX_LEVEL ? effectAt(key, level + 1) : null, upgradeCost: cost, canAfford: cost != null && coins >= cost, upkeep: facilityUpkeep(level), nextUpkeep: level < MAX_LEVEL ? facilityUpkeep(level + 1) : null };
     });
-    return { coins, facilities };
+    return { coins, facilities, upkeep: seasonUpkeep(fac) };
   },
   upgradeFacility: async (key: string) => {
     await ensureActive();
@@ -1200,6 +1225,19 @@ export const api = {
     await localStore.addCoins(OWNER, -cost);
     await localStore.setFacilityLevel(OWNER, key, level + 1);
     return { ok: true as const, key, level: level + 1, coins: getActiveModel().profile.coins };
+  },
+  /** Scale a facility back a level and recover part of what it cost — the player's own lever against a
+   *  bill they cannot pay. Refuses at level 1: there is nothing below the neutral baseline. */
+  mothballFacility: async (key: string) => {
+    await ensureActive();
+    const model = getActiveModel();
+    if (!FACILITY_KEYS.includes(key as any)) throw apiErr('unknown facility', {}, 400);
+    const level = facLevel(model.facilities, key as any);
+    if (level <= 1) throw apiErr('already at its lowest', {}, 409);
+    const refund = mothballRefund(level);
+    await localStore.setFacilityLevel(OWNER, key, level - 1);
+    if (refund > 0) await localStore.addCoins(OWNER, refund);
+    return { ok: true as const, key, level: level - 1, refund, coins: getActiveModel().profile.coins };
   },
   missions: async () => {
     await ensureActive();

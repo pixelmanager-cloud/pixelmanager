@@ -122,6 +122,73 @@ export function womensIncome(level: number, tierIdx: number): number { return Ma
 /** Community Trust: local goodwill. Does not win matches; changes what the club is worth to the town. */
 export function communityStanding(level: number): number { return (level - 1) * 3; }
 
+// ── UPKEEP — the recurring cost of BEING a big club ────────────────────────────────────────────────
+// Facilities were a one-way ratchet: you bought a level and it was yours forever, free. Measured over a
+// long dynasty that produced the game's flattest failure — everything in the club maxed by around season
+// 92, after which ~14,000 coins a season accrued against nothing to spend them on, reaching 609,906 by
+// season 149. The only recurring cost in the entire game was the squad wage bill, and at ~1,000 a season
+// against ~15,100 of income it was 7% of the club's earnings: a rounding error, not a pressure.
+//
+// Upkeep makes a big club something you must keep AFFORDING. It is quadratic in level, so the early
+// levels are nearly free (L2 costs 12 a season) and the top end is a genuine commitment (L10 costs 972).
+// Total to hold all twelve at maximum is 11,664 a season, against roughly 15,100 for a maxed top-flight
+// club — so the summit is sustainable but not comfortable, and NOTHING below the summit can hold all
+// twelve. That is the intended shape: a dynasty picks the six or seven things its club is FOR, and the
+// rest stay modest. It also gives relegation real teeth, because upkeep does not fall with the division
+// while income does.
+//
+// Level 1 is free, like every other neutral baseline in this module, so a young club feels none of this.
+export function facilityUpkeep(level: number): number {
+  return Math.round(12 * Math.pow(Math.max(0, level - 1), 2));
+}
+/** The club's whole upkeep bill for a season. */
+export function seasonUpkeep(fac: Partial<Facilities> | undefined): number {
+  return FACILITY_KEYS.reduce((t, k) => t + facilityUpkeep(facLevel(fac, k)), 0);
+}
+/** When the club cannot pay, facilities fall into disrepair until the bill is one the club could meet.
+ *
+ *  ONE LEVEL A SEASON IS NOT ENOUGH. A maxed club that gets relegated runs a ~4,000-coin deficit, and
+ *  shedding that much upkeep takes about 36 level-drops — at one a season the club would sit in permanent,
+ *  un-arrestable deficit for over thirty years. So the slide is proportional to how badly you overreached:
+ *  it cuts until the bill fits the income, capped at MAX_DISREPAIR levels so it is always a decline you can
+ *  see coming and act on, never a collapse in a single season.
+ *
+ *  Always the most expensive facility to run, which is both the one the club can least afford and the one
+ *  that recovers the most. Deterministic — ties break on the fixed FACILITY_KEYS order, never on rng — so
+ *  this is replay-safe.
+ */
+export const MAX_DISREPAIR = 3;
+export function facilityToDowngrade(fac: Partial<Facilities> | undefined): FacilityKey | null {
+  let best: FacilityKey | null = null, bestLvl = 1;
+  for (const k of FACILITY_KEYS) {
+    const l = facLevel(fac, k);
+    if (l > bestLvl) { best = k; bestLvl = l; }
+  }
+  return best;
+}
+/** Cut upkeep toward `budget`. Returns the facilities that lost a level (may repeat a key). Pure. */
+export function applyDisrepair(fac: Facilities, budget: number): FacilityKey[] {
+  const cut: FacilityKey[] = [];
+  for (let i = 0; i < MAX_DISREPAIR && seasonUpkeep(fac) > budget; i++) {
+    const k = facilityToDowngrade(fac);
+    if (!k) break;
+    (fac as any)[k] = Math.max(1, facLevel(fac, k) - 1);
+    cut.push(k);
+  }
+  return cut;
+}
+
+/** SCALING BACK ON PURPOSE — the lever that makes upkeep a decision instead of a trap.
+ *  Without this the only answer to a bill you cannot pay is to win your way out of it, which is precisely
+ *  the thing a struggling club cannot do; the player would watch the slide with no control over WHICH parts
+ *  of the club survive it. Mothballing lets a dynasty choose its identity under pressure — sell the Data
+ *  Department to keep the Academy — and returns part of what the level cost, since you are selling
+ *  something real. Deliberately less than half, so churning levels is never a way to make money. */
+export const MOTHBALL_REFUND = 0.4;
+export function mothballRefund(level: number): number {
+  return level <= 1 ? 0 : Math.round((COST_TO_REACH[level] ?? 0) * MOTHBALL_REFUND);
+}
+
 /** A short human description of a facility's effect AT a given level (for the UI). */
 export function effectAt(key: FacilityKey, level: number): string {
   switch (key) {

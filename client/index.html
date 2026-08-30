@@ -1231,6 +1231,11 @@
       .facility button.fac-up:disabled { opacity: 0.4; cursor: not-allowed; }
       .facility.maxed { border-color: #d8a72a; }
       .facility .fac-maxed { font-family: var(--body); font-size: 14px; color: var(--warn); text-align: center; padding: 8px; }
+      .facility .fac-down { display: block; width: 100%; margin-top: 6px; font-size: 12px; padding: 5px; background: transparent; border: 1px solid var(--line); color: var(--muted); cursor: pointer; }
+      .facility .fac-down:hover { color: var(--warn); border-color: var(--warn); }
+      .facility .fac-upkeep { font-family: var(--body); font-size: 13px; color: var(--muted); text-align: center; padding: 2px 0 6px; }
+      #fac-upkeep { font-family: var(--body); font-size: 15px; color: var(--muted); margin-top: 10px; text-align: right; }
+      #fac-upkeep b { color: var(--warn); }
 
       /* ===== Scouting Network ===== */
       #scout-destinations { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px; }
@@ -1845,7 +1850,8 @@
       <!-- CLUB FACILITIES -->
       <div id="club" class="panel hidden">
         <div id="club-head"><h3>🏛️ CLUB FACILITIES</h3><span id="club-coins"></span><button id="club-back">← Back to hub</button></div>
-        <div class="scout-sub">Invest coins to build your club up over the seasons. A bigger <b>Stadium</b> earns home-match gate receipts; the <b>Training Ground</b> keeps your legs fresh; the <b>Youth Academy</b> and <b>Scouting HQ</b> sharpen your recruitment. Levels are permanent.</div>
+        <div class="scout-sub">Invest coins to build your club up over the seasons. A bigger <b>Stadium</b> earns home-match gate receipts; the <b>Training Ground</b> keeps your legs fresh; the <b>Youth Academy</b> and <b>Scouting HQ</b> sharpen your recruitment. Every level also costs coins <b>every season</b> to run — a big club is something you have to keep affording, and a club that cannot pay its bills falls into disrepair.</div>
+        <div id="fac-upkeep"></div>
         <div id="facilities-grid"></div>
         <div id="club-staff"></div>
       </div>

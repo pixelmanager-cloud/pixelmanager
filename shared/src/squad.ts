@@ -121,7 +121,7 @@ export function advanceSquad(players: Player[], season: number, trainingLvl = 1,
   let wageBill = 0;
   for (const p of players) {
     const ovrBefore = overall(p);
-    wageBill += squadSeasonWage(ovrBefore); // he was on the books all season
+    wageBill += squadSeasonWage(ovrBefore, season); // he was on the books all season, priced in this season's money
     let adv = advanceSquadPlayer(p, trainingLvl);
     const isRetired = (adv.age ?? 0) >= squadRetireAge(adv);
     // `season` is ALREADY the upcoming season here — spSeasonReward bumps profile.season before the rollover
