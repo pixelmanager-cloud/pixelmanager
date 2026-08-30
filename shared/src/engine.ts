@@ -64,10 +64,20 @@ const PASS_BASE = Number(process.env.PB ?? 0.948);
  *  at once. See PASS_ABS below. */
 /** The two other places absolute quality leaked into scoring, once the pass was made relative.
  *  With the absolute passing slope cut (PASS_ABS) the spread across the pyramid fell from sixteen-fold to
- *  the residue splits cleanly in two: shot ATTEMPTS still rose 3.1x from quality 6 to 18 and CONVERSION
- *  1.86x. SHOOT_ABS is how much a carrier's own shooting drives him to pull the trigger (attempts), and
- *  GK_SCALE is how hard the keeper resists (conversion) — the keeper's term was fixed at 0.2 while the
- *  shooter's reached 0.36, so a better keeper could never fully answer a better striker. */
+ *  about six, and the residue split in two: shot ATTEMPTS still rose 3.1x from quality 6 to 18, and
+ *  CONVERSION 1.86x.
+ *
+ *  SHOOT_ABS WAS THE OBVIOUS SUSPECT FOR THE ATTEMPTS HALF AND IT IS NOT THE CAUSE. Taking it to zero
+ *  (with SHOOT_BASE_P raised to hold the calibration quality steady) moved attempts from 15.9 to 16.0 at
+ *  quality 6 and from 49.9 to 47.7 at quality 18 — nothing, against a 3.1x spread. A carrier's own
+ *  shooting barely decides how often he pulls the trigger; what decides it is how often play reaches a
+ *  shooting position at all, and that turned out to be marking (see MARK_PULL) rather than the shot.
+ *  Left at its measured-neutral value and recorded here so the next person does not sweep it again.
+ *
+ *  The conversion half is GK_SCALE, and it was genuinely lopsided: the keeper's term was fixed at 0.2
+ *  while the shooter's reached 0.36, so a better keeper could never fully answer a better striker. That is
+ *  now handled at the chance itself — see SHOT_REL, which applies the standard of the match to both sides
+ *  at once instead of only to the man shooting. */
 const SHOOT_BASE_P = Number(process.env.SBP ?? 0.0022);
 const SHOOT_ABS = Number(process.env.SA ?? 0.004);
 const GK_SCALE = Number(process.env.GKS ?? 0.2);
