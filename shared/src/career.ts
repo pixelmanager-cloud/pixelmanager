@@ -852,8 +852,21 @@ export function makeScenario(rng: () => number, i: number, track: Track = 'outfi
   const kind = KIND_POOL[Math.floor(rng() * KIND_POOL.length)];
   const bias = track === 'goalkeeper' ? GK_BIAS : (band ? band.demand : OUTFIELD_TAGS);
   const n = 1 + Math.floor(rng() * Math.min(3, bias.length));
-  const pool = [...new Set(shuffleSeeded(bias, rng))].slice(0, n);
-  const raw = pool.map(() => 0.3 + rng());
+  const drawn = [...new Set(shuffleSeeded(bias, rng))].slice(0, n);
+  const raw = drawn.map(() => 0.3 + rng());
+  // KEEP THE DEMAND IN KEEPING WITH THE MOMENT. KIND_BIAS has always described which tags each kind of
+  // scenario should ask for — a dressing-room or media moment wants leadership/composure/teamwork, a
+  // training session wants the tools — and nothing ever read it. Measured, 75% of social and training
+  // scenarios demanded at least one tag their own kind excludes: a media scrum asking an outfielder for
+  // `keeping`, a training drill asking for `teamwork`.
+  //
+  // Substituted rather than filtered, and mapped through pureHash01 rather than rng(), because BOTH the
+  // shuffle and the `raw` map consume draws proportional to the array length — filtering here would change
+  // the number of rng draws and invalidate every stored career. This keeps the stream byte-identical and
+  // only changes which tag the moment ends up asking for.
+  const allow = KIND_BIAS[kind];
+  const pool = allow === TAGS ? drawn
+    : drawn.map((t, k) => (allow.includes(t) ? t : allow[Math.floor(pureHash01(seed ?? 0, i, 0x4b1d + k) * allow.length)]));
   const demand: Partial<Record<Tag, number>> = {};
   pool.forEach((t, k) => { demand[t] = raw[k]; });
   if (demandBias) demand[demandBias] = (demand[demandBias] ?? 0) + 0.6;  // the gaffer wants more of this
@@ -879,7 +892,7 @@ export function makeScenario(rng: () => number, i: number, track: Track = 'outfi
     const want = stakes >= 3 ? 3 : 2;
     let guard = 0;
     while (Object.keys(demand).length < want && guard < 8) {
-      const extras = bias.filter((t) => !(t in demand));
+      const extras = (allow === TAGS ? bias : allow).filter((t) => !(t in demand));
       if (!extras.length) break;
       demand[extras[Math.floor(pureHash01(seed, i, 0x71b12 + guard) * extras.length)]] = 0.6 - guard * 0.08;
       guard++;

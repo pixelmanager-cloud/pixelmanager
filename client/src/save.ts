@@ -53,12 +53,20 @@ export function migrate(m: SaveModel): SaveModel {
   // repair path and the entry left in the save list for ever. One absent array should never cost a dynasty.
   // `...m` FIRST, then fill the gaps — spreading m over the defaults would put an explicit `undefined`
   // straight back and undo the repair.
+  // `?? []` REPAIRS ABSENT, NOT MALFORMED — and the difference is a dynasty. A save whose `tokens` is an
+  // object, a string or a number sails past every one of these defaults and then kills migrate itself
+  // ("m.tokens is not iterable", "m.tokens.map is not a function"), and a null entry inside the array kills
+  // it on `.generation`. Four such shapes were reproducible, each a permanently unloadable save reported to
+  // the player as "may be corrupted" with no repair path — which is precisely the outcome the comment
+  // above says one absent array should never cost. A structured-clone failure or a truncated write is all
+  // it takes. Anything that is not a usable array becomes an empty one; junk entries are dropped.
+  const arr = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v.filter((x) => x != null) as T[]) : []);
   const repaired: SaveModel = {
     ...m,
-    tokens: m.tokens ?? [], injuries: m.injuries ?? [], legacies: m.legacies ?? [],
-    honours: m.honours ?? [], awards: m.awards ?? [], missions: m.missions ?? [],
-    loanees: m.loanees ?? [], retiredNumbers: m.retiredNumbers ?? [], playerStats: m.playerStats ?? [],
-    facilities: { ...DEFAULT_FACILITIES, ...(m.facilities ?? {}) },
+    tokens: arr<Token>(m.tokens), injuries: arr(m.injuries), legacies: arr(m.legacies),
+    honours: arr(m.honours), awards: arr(m.awards), missions: arr(m.missions),
+    loanees: arr(m.loanees), retiredNumbers: arr(m.retiredNumbers), playerStats: arr(m.playerStats),
+    facilities: { ...DEFAULT_FACILITIES, ...(m.facilities && typeof m.facilities === 'object' ? m.facilities : {}) },
   };
   m = repaired;
   if ((m.version ?? 1) >= SAVE_VERSION) return m;
