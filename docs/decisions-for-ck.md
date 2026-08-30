@@ -756,3 +756,69 @@ sheet. `reconcileSheet` replaces it — designations follow the **man**, not the
   have not touched it.
 - **10 probes are in no gate at all** and the `playtest` list is hand-maintained where `run-qa.mjs`
   auto-globs. A critic is assessing whether globbing is safe — some are slow.
+
+---
+
+# ROUND 8 — the gate itself was mutation-tested. 24 checks did not fail when their subject broke.
+
+> A critic broke 24 subjects in a copy of the tree and watched the harness pass each time. Seven are closed
+> below; the rest are queued. **Most of the survivors were mine.**
+
+## 40. YOUR ANCHOR QUESTION — the answer has changed, and it moves toward you
+
+When you asked whether to remove the anchor duty, I argued against it: measured at n=260 across six opposing
+presets it was **+0.081 [-0.113, 0.275]** against a ball-winner — no difference. `tactical_power` was one of
+the ten probes in **no gate at all**, so nobody had run it since the engine was reverted. Run now, at n=900:
+
+| comparison | difference | 95% CI | verdict |
+|---|---|---|---|
+| anchor − ball-winner | **+0.217** | **[0.101, 0.333]** | **significantly WORSE** |
+
+That interval excludes zero. On the shipped (reverted) engine the anchor concedes **more** than a
+ball-winner, reliably. That is a stronger case for your instinct than I had when I disagreed with you.
+
+**I still would not delete it first**, for the reason in §35: the engine gives a low press and a deep line
+no defensive value at all (`press: -1` costs +1.104 goals conceded, `line: -2` +1.062), so *every* duty and
+preset built around sitting deep measures badly. Deleting the anchor removes one symptom of that. But the
+evidence now genuinely supports removal if you want it, and I was wrong to call it "no difference".
+
+## ~~41. Seven gates that could not fail — closed~~
+
+| gate | what I broke | before | now |
+|---|---|---|---|
+| **`career_sim`** | made `graduate()` non-deterministic | printed `identical player: false`, **exit 0** — 126s of every verify asserting nothing | 4 invariants, exit 1 |
+| **`succession_carries`** | restored the `clearMgr()` dynasty wipe, pushed past its 2,200-byte window with a comment | `ok ... carries titles` ×8 | parsed; 9 checks fail |
+| **`settings_persist`** | deleted formation/tactics/duties/captain/takers from the write, left a comment naming them | 12/12 ok | reads the real object literal; 7 fail |
+| **`division_balance`** | widened the real division spread ±3 → ±8 | **byte-identical output** | samples `seededOpponents`; fails at 63% thrashings |
+| **`division_balance`** | disabled a goal path — ~80% goalless | passed both checks perfectly | lower bound on goals added |
+| **`fuzz_test`** | ended every match at half-time | `✓ fuzz clean`, with `maxTicks=5400` on the same line | lower tick bound |
+| **`qa_bloodline`** | every heir returned `age: 0` | 600 `bad player` lines, then `✓ heirs are correlated but distinct` | counted and asserted |
+
+**Three of those were byte-window gates, all three written by me, all three defeated by a comment.** The
+lesson is not "use a bigger window."
+
+## 42. Still open from the mutation pass — queued
+
+- **`qa_squad_lifecycle` passes with youth development removed entirely**, and with the training-ground
+  effect removed. Its checks are `>=` on a single player over one season, where growth is +0.2 and
+  `overall()` is an integer. Measured: level 5 beats level 1 in 30 of 200 youngsters, and it samples one.
+- **`qa_manager_arcs_e2e` passes with every `when` gate ignored** (season/tier/coins/position/tag/temper/
+  facility), and with `pickManagerArc` ignoring the seen-list — 5.4% repeat picks, which is §6's defect.
+- **`client/qa_offline_facade` re-derives its expectations from the response it is checking.** Flattening
+  `tierMult` to 1.0 — so winning the basement pays the top-flight prize — passes.
+- **`qa_branching`'s bound is unreachable by construction**: `candMax > 8` while the harness builds its
+  candidates from `BRANCHES_KEPT` itself, so at 2 the maximum is 7.
+- **144 of 337 `shared/src` exports are exercised by no harness** (42.7%), including **36 of 37 in
+  `facilities.ts`** — the module §7, §9 and §28 keep re-litigating — and `scouting.ts`, `mental.ts`,
+  `matchstats.ts` and `standingOrders.ts` at 100% untouched.
+- **`IndexedDBBackend` is exercised by no harness.** `qa_savestore` only ever drives the in-memory backend,
+  which uses a plain clone; the one that ships has structured-clone semantics that drop `undefined`.
+
+## 43. Two probes report real defects into scrollback with no failure path
+
+- `tactics_matrix` ends with **"VERDICT: sweeper-keeper is a BIT-FOR-BIT NO-OP"** — 0 of 400 matches differ,
+  keeper displacement 0.000000 m.
+- `width_diagnosis` ends with **"wide candidates KILLED by the gain > -6 veto: 72.5%"** against "passes
+  CHOSEN that are wide: 1.3%" — still true on the reverted engine.
+
+Both need an assertion, not just a slot in the chain.
