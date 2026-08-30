@@ -4439,15 +4439,11 @@ class Game {
   }
 
   private async saveTeam() {
-    const so: StandingOrders = {
-      formation: this.draftTactics.formation,
-      playerIds: this.draftLineup.playerIds,
-      tactics: { ...this.draftTactics },
-      duties: [...this.draftDuties],
-      ...this.draftRoles(),
-    };
-    try { const r = await api.setStandingOrders(so); this.standingOrders = r.standingOrders; toast('Team saved ✓'); await this.showHub(); }
-    catch { $('lineup-insight').innerHTML = '<span style="color:var(--home)">Could not save — check your XI.</span>'; }
+    const before = this.standingOrders;
+    await this.persistTeamSheet();
+    if (this.standingOrders === before) { $('lineup-insight').innerHTML = '<span style="color:var(--home)">Could not save — check your XI.</span>'; return; }
+    toast('Team saved ✓');
+    await this.showHub();
   }
 
   // ---- match ----
@@ -4469,7 +4465,38 @@ class Game {
       this.draftDuties = guarded.playerIds.map((pid, i) => pid === this.draftLineup.playerIds[i] ? this.draftDuties[i] : defaultDuty(this.club.players.find((p) => p.id === pid)!));
       this.draftLineup = guarded;
     }
+    // KEEP THE TEAM SHEET. `api.setStandingOrders` had exactly two call sites and one of them was
+    // unreachable: `saveTeam()` only runs when `editorMode === 'standing'`, and all three `openLineup`
+    // calls pass 'match'. So the orders were written ONCE, at the founding handoff, with only `playerIds`
+    // set — and `openLineup` rebuilds every draft field from `this.standingOrders` at the top of each
+    // call. Formation, five sliders, the three instructions, the XI, eleven duties, the captain and three
+    // set-piece takers — 35 of the 42 settings on the pre-match screen — reset to 4-4-2 / Balanced /
+    // defaultDuty() / no captain / no takers on EVERY matchday, eighteen times a season, forever.
+    //
+    // The defaults it fell back to are the ones measured as the worst options in the game: `defaultDuty()`
+    // emits only 8 of 19 duties and picks ranks 5 and 6 of 6 for defenders, and Balanced sits 0.11 PPG
+    // below the strongest presets. So the game silently re-imposed an inferior team sheet after every
+    // match and deleted the player's correction, which makes every tactical screen in the game a toy.
+    //
+    // Kicking off IS the player committing to this team, so it saves it. Fire-and-forget: a failed write
+    // must never block the match starting, and the next kickoff will try again.
+    void this.persistTeamSheet();
     this.kickOffSpMatch(); // single-player fixture: build the match locally
+  }
+
+  /** Persist the current draft as the club's standing orders — what the next matchday starts from. */
+  private async persistTeamSheet(): Promise<void> {
+    try {
+      const so: StandingOrders = {
+        formation: this.draftTactics.formation,
+        playerIds: this.draftLineup.playerIds,
+        tactics: { ...this.draftTactics },
+        duties: [...this.draftDuties],
+        ...this.draftRoles(),
+      };
+      const r = await api.setStandingOrders(so);
+      this.standingOrders = r.standingOrders;
+    } catch { /* never block kickoff on a failed write — the next one retries */ }
   }
 
   /** The house's bid multiplier, refreshed when the season screen loads. Cached because the season view
