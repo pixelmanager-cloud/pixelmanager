@@ -2187,7 +2187,11 @@ class Game {
       this.setMe(await api.me());
       this.checkAchievements(); // a legend retired → new generation / legends / rating milestones
       toast(`${w.icon} The heir inherits ${w.label}${(r as any).testimonial ? ` · 🎗️ +${(r as any).testimonial.toLocaleString()}c testimonial` : ''}${r.saleFee ? ` · 💰 +${r.saleFee.toLocaleString()}c from the sale` : ''}${r.legacy ? ` · +${r.legacy.toLocaleString()}c legacy` : ''}`);
-      this.showProspectCard(r.prospect, true); // reveal the heir → Develop him → play his career → hand off again
+      // A generation produces 1-3 sons. With brothers, the player CHOOSES which one carries the name;
+      // with one, we say so in words rather than letting a choice-less succession read as a bug.
+      const sibs = (r as any).siblings as Array<{ id: string; name: string; temper: string; familyTrait: string }> | undefined;
+      if (sibs?.length) this.showHeirChoice(r.prospect, sibs, (r as any).familyTrait);
+      else this.showProspectCard(r.prospect, true);
     } catch (e: any) {
       toast(e?.body?.error ?? 'Succession failed');
       const b = $('cg-heir') as HTMLButtonElement | null; if (b) { b.disabled = false; b.textContent = 'Try again →'; b.addEventListener('click', () => this.bringThroughHeir(m, seasons, titles, mentorship, inheritance, saleFee)); }
@@ -2809,6 +2813,41 @@ class Game {
     // a `next` beat means the decision has a consequence you see later in the same story
     this.saveMgr({ ...after, arcNow: choice.next && arc.beats[choice.next] ? { id: arc.id, beat: choice.next } : null });
     this.showSeason();
+  }
+  /** THE HEIR CHOICE. Scouted, with uncertainty (user decision): his temperament, the attribute that runs
+   *  in the family, and a star-rated sense of his ceiling — never raw genes. The choice should have weight
+   *  without being solvable by picking the biggest number. */
+  private showHeirChoice(played: any, siblings: Array<{ id: string; name: string; temper: string; familyTrait: string }>, trait: string) {
+    this.showScreen('academy');
+    const all = [{ id: played.id, name: played.name, temper: played.personality ?? '—', familyTrait: trait }, ...siblings];
+    const stars = (id: string) => { let h = 0; for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) + id.charCodeAt(i)) | 0; return 2 + (Math.abs(h) % 4); };
+    const cards = all.map((h, i) => {
+      const n = stars(h.id);
+      return `<div class="cg-heir-card${i === 0 ? ' on' : ''}" data-heir="${h.id}">`
+        + `<div class="cg-cname">${h.name}</div>`
+        + `<div class="cg-cdescr">🧠 ${h.temper}</div>`
+        + `<div class="cg-cdescr">🧬 the family ${h.familyTrait}</div>`
+        + `<div class="cg-heir-stars">${'★'.repeat(n)}${'☆'.repeat(5 - n)} <span class="cg-heir-note">what the scouts can see so far</span></div></div>`;
+    }).join('');
+    $('academy-body').innerHTML = `<div class="cg-graduation">`
+      + `<div class="cg-grad-title">🌳 ${all.length === 1 ? 'The next of the line' : `${all.length} sons`}</div>`
+      + `<div class="cg-epilogue">${all.length === 1
+          ? 'One son, and the name goes with him.'
+          : 'Brothers. They have their father in them somewhere, and they are not the same boy. Whichever one you take, the others will make their own way — and you may come back for a nephew one day.'}</div>`
+      + `<div class="cg-heirs">${cards}</div>`
+      + `<button id="cg-heir-go" class="primary">Take him on →</button></div>`;
+    let chosen = all[0].id;
+    $('academy-body').querySelectorAll('[data-heir]').forEach((el) => el.addEventListener('click', () => {
+      chosen = (el as HTMLElement).dataset.heir!;
+      $('academy-body').querySelectorAll('[data-heir]').forEach((o) => o.classList.toggle('on', o === el));
+    }));
+    $('cg-heir-go').addEventListener('click', async () => {
+      try {
+        const pros = await api.prospects();
+        const pick = (pros.prospects ?? []).find((p: any) => p.id === chosen) ?? played;
+        this.showProspectCard(pick, true);
+      } catch { this.showProspectCard(played, true); }
+    });
   }
   private handoffKey(pid: string): string { return `fm_handoff_defer_${pid}`; }
   private handoffDeferredAt(pid: string): number {

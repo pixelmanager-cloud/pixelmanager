@@ -17,6 +17,7 @@ export * from './squad.js';
 export * from './intl.js';
 export * from './board.js';
 export * from './press.js';
+export * from './bloodline.js';
 export * from './staff.js';
 export * from './achievements.js';
 export * from './offpitch.js';

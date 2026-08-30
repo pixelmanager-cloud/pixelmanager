@@ -13,6 +13,7 @@ import {
   makeClub as _makeClub, // re-exported nowhere — freshSave() (save.ts) already calls this; kept for reference
   validateLineup, cleanDuties,
   overall, managerPrestige, signContract, graduationEpilogue, clubInvestOf, TIERS, tierStrength, mintSquadPlayer,
+  mintHeirs, heirCount, familyTrait,
   transferList, transferFee, sellValue, squadSaleValue, incomingBid, MIN_SQUAD, MAX_SQUAD,
   signSquadContract, staggeredContractSeasons, advanceSquad, squadSeasonsLeft, squadRenewCost, squadSeasonWage, squadStorylines,
   contractDemand, evaluateContractOffer, wageForLength,
@@ -483,9 +484,35 @@ export const api = {
     // THE NAME — the family renown opens doors: a pedigree (potential) head-start for the heir.
     if (inheritance === 'name') rf.pedigree = Math.min(1, (rf.pedigree ?? 0) + 0.15);
     await localStore.updateToken(pid, rf);
+    // ── THE BRANCHING BLOODLINE ────────────────────────────────────────────────────────────────────
+    // A generation produces 1-3 heirs. The PLAYED line keeps the parent's token id (above), because the
+    // legend chain snapshots by `${id}:g<gen>` and reusing the id is what makes a dynasty's history
+    // contiguous. The BROTHERS are new tokens hanging off it by `parent_id`, so the save becomes a forest
+    // without breaking anything that walks the old chain.
+    //
+    // A brother is a FULL PLAYER, not a summary row — the user was explicit. He is minted through the same
+    // path every rich squad player takes, so he can be scouted, signed, played against, and can father the
+    // next generation himself.
+    const parentGenes = JSON.parse(decorated.genes_json);
+    const parentSeed = (decorated.career_seed ?? 0) >>> 0 || ((decorated.generation ?? 0) * 2654435761) >>> 0;
+    const nHeirs = heirCount(parentSeed, decorated.generation ?? 0);
+    const heirs = mintHeirs(parentGenes, parentSeed, nHeirs);
+    const siblings: Array<{ id: string; name: string; temper: string; familyTrait: string }> = [];
+    for (let i = 1; i < heirs.length; i++) {
+      const h = heirs[i];
+      const sid = `${pid}:b${(decorated.generation ?? 0) + 1}.${i}`;
+      const nm = foundingNameFor(h.seed, getActiveModel().profile.name);
+      await localStore.createToken({
+        id: sid, owner_id: OWNER, generation: (decorated.generation ?? 0) + 1, state: 'prospect', name: nm,
+        genes_json: JSON.stringify(h.genes), pedigree: rf.pedigree ?? 0, dev_bonus_json: rf.dev_bonus_json ?? '{}',
+      });
+      await localStore.updateToken(sid, { parent_id: pid, branch: 'sibling', personality: h.personality } as any);
+      siblings.push({ id: sid, name: nm, temper: h.personality, familyTrait: h.familyTrait });
+    }
+
     const fresh = (await localStore.getToken(pid))!;
     const pot = rebornPotential(fresh);
-    return { ok: true as const, legacy, saleFee, testimonial, coins: getActiveModel().profile.coins, inheritance: inheritance ?? null, prospect: { id: pid, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: fresh.pedigree, careerStarted: false, potentialStars: pot.stars, genes: JSON.parse(fresh.genes_json) } };
+    return { ok: true as const, legacy, saleFee, testimonial, siblings, familyTrait: familyTrait(parentSeed), coins: getActiveModel().profile.coins, inheritance: inheritance ?? null, prospect: { id: pid, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: fresh.pedigree, careerStarted: false, potentialStars: pot.stars, genes: JSON.parse(fresh.genes_json) } };
   },
   // SP SEASON PRIZE — also where the local season counter advances (see docs note in save.ts's
   // profile.season) and where a league finish is banked as an honour (the old pod/wall-clock season
