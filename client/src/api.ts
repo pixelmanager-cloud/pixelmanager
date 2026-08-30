@@ -168,6 +168,25 @@ const isFormation = (f: unknown): f is Lineup['formation'] => typeof f === 'stri
 
 /** Load the club with the owner's PRO/RETIRED tokens merged in as fieldable players — read/gameplay
  *  only, mirrors server/src/index.ts's `loadSquad`. Never feed this into `saveClub`/`saveStandingOrders`. */
+/** PRUNE THE SAVED XI of players who no longer exist, backfilling from the rest of the squad.
+ *  Retirements, departures AND SUCCESSION leave dangling ids in the standing orders, and buildXI then
+ *  throws on a player who is not there — the second half of the bricked-save bug (PT-300).
+ *
+ *  This lived inline in advanceSquadSeason and so covered only the rollover. It did NOT cover succession,
+ *  where the outgoing star's token flips from 'pro' back to 'prospect' and he therefore drops out of
+ *  mergedClub() — so EVERY handover left an XI referencing a player who is no longer in the squad, and the
+ *  save's own standing orders were rejected by setStandingOrders from that point on. The lineup editor
+ *  repairs it on screen, but the repair was never written back, so the hand-picked XI and its per-slot
+ *  duties were silently discarded at every generation.
+ */
+function pruneXI(club: Club, so: StandingOrders): StandingOrders {
+  const alive = new Set(club.players.map((p) => p.id));
+  if (!so?.playerIds?.some((id) => !alive.has(id))) return so;
+  const kept = so.playerIds.filter((id) => alive.has(id));
+  const spare = club.players.map((p) => p.id).filter((id) => !kept.includes(id));
+  return { ...so, playerIds: [...kept, ...spare].slice(0, 11) };
+}
+
 function mergedClub(): { club: Club; standingOrders: StandingOrders } {
   const m = getActiveModel();
   const have = new Set(m.club.players.map((p) => p.id));
@@ -690,6 +709,15 @@ export const api = {
 
     const fresh = (await localStore.getToken(pid))!;
     const pot = rebornPotential(fresh);
+    // THE OUTGOING STAR IS NO LONGER IN THE SQUAD, so the saved XI now names a player who does not exist.
+    // Write the repair back rather than leaving the save carrying an invalid lineup for the next manager.
+    {
+      const cc = await localStore.getClub(OWNER);
+      if (cc) {
+        const pruned = pruneXI(cc.club, cc.standingOrders);
+        if (pruned !== cc.standingOrders) await localStore.saveClub(OWNER, cc.club, pruned);
+      }
+    }
     return { ok: true as const, legacy, saleFee, testimonial, siblings, familyTrait: familyTrait(parentSeed), coins: getActiveModel().profile.coins, inheritance: inheritance ?? null, prospect: { id: pid, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: fresh.pedigree, careerStarted: false, potentialStars: pot.stars, genes: JSON.parse(fresh.genes_json) } };
   },
   // SP SEASON PRIZE — also where the local season counter advances (see docs note in save.ts's
@@ -861,15 +889,7 @@ export const api = {
     const charged = Math.max(0, Math.min(coinsNow, Math.round(roll.wageBill)));
     if (charged > 0) await localStore.addCoins(OWNER, -charged);
     c.club.players = roll.players;
-    // PRUNE THE SAVED XI. Retirements/departures leave dangling ids in the standing orders, and buildXI then
-    // throws on a player who no longer exists — the second half of the bricked-save bug (PT-300).
-    const alive = new Set(c.club.players.map((p) => p.id));
-    const so = c.standingOrders;
-    if (so?.playerIds?.some((id) => !alive.has(id))) {
-      const kept = so.playerIds.filter((id) => alive.has(id));
-      const spare = c.club.players.map((p) => p.id).filter((id) => !kept.includes(id));
-      so.playerIds = [...kept, ...spare].slice(0, 11);   // backfill from the rest of the squad
-    }
+    const so = pruneXI(c.club, c.standingOrders);
     await localStore.saveClub(OWNER, c.club, so);
     const lite = (p: Player) => ({ id: p.id, name: p.name, role: p.role, age: p.age ?? 0, ovr: overall(p) });
     return {

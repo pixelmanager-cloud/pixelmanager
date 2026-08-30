@@ -671,7 +671,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         prompt: 'Barely out of his teens and already the game has noticed: he is named the division\'s Young Player of the Year, the brightest of a new generation, his face suddenly on every back page and every scout\'s list. How does a boy handle a spotlight this sudden?',
         choices: [
           { id: 'grounded', label: 'Keep his feet planted', desc: 'Treat the award as a starting line, not a summit', outcome: 'He tells the cameras that young player awards are a promise to keep, not a prize to enjoy, and drives back to his digs. Old head on young shoulders.', effect: { attr: { composure: 1 }, meters: { authority: 6, family: 8 }, tag: 'wonderkid' }, next: 'hype' },
-          { id: 'ambition', label: 'Aim past the age brackets', desc: 'Declare he wants the seniors\' awards next', outcome: 'He says respectfully that young player is nice, but he is coming for the real thing soon. The bravado makes headlines and marks him as one to watch.', effect: { form: 0.07, market: 3, attr: { aggression: 1 }, meters: { fans: 12, sponsors: 6 }, tag: 'wonderkid' }, next: 'hype' },
+          { id: 'ambition', label: 'Aim past the age brackets', desc: 'Declare he wants the seniors\' awards next', outcome: 'He says respectfully that young player is nice, but he is coming for the real thing soon. The bravado makes headlines and marks him as one to watch.', effect: { form: 0.07, market: 3, attr: { aggression: 1 }, meters: { fans: 12, agent: 6 }, tag: 'wonderkid' }, next: 'hype' },
         ],
       },
       hype: {
@@ -679,7 +679,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         prompt: 'The award opens a floodgate: agents, boot deals, glossy magazines, a bigger club sniffing already. It is a lot for a young man who was in academy digs a year ago. Which way does he lean as the noise swells?',
         choices: [
           { id: 'work', label: 'Bury himself in the work', desc: 'Ignore the circus, live on the training pitch', outcome: 'He switches the phone off and stays behind for extra finishing every evening, letting his football answer the hype. The coaches quietly adore him for it.', effect: { form: 0.08, attr: { stamina: 1, composure: 1 }, meters: { authority: 6, peers: 6 } } },
-          { id: 'brand', label: 'Build the profile', desc: 'Let the agent turn the buzz into deals', outcome: 'He signs the boot contract and the magazine covers, cashing in while the light shines brightest. Lucrative and dazzling, if a touch dizzying for one so young.', effect: { earnings: 4, market: 4, attr: { flair: 1 }, meters: { sponsors: 12, agent: 8 }, form: -0.03 } },
+          { id: 'brand', label: 'Build the profile', desc: 'Let the agent turn the buzz into deals', outcome: 'He signs the boot contract and the magazine covers, cashing in while the light shines brightest. Lucrative and dazzling, if a touch dizzying for one so young.', effect: { earnings: 4, market: 4, attr: { flair: 1 }, meters: { agent: 14 }, form: -0.03 } },
         ],
       },
     },

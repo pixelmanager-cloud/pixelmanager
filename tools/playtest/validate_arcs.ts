@@ -1,7 +1,7 @@
 // Story-arc validator — the quality gate for the arc library. Checks every arc for structural + content
 // correctness so a bad arc (invalid tag, dangling beat reference, duplicate id, empty prose) can never ship
 // or brick a career. Run standalone or via `npm run playtest`.  npx tsx tools/playtest/validate_arcs.ts
-import { LIFESTYLE } from '../../shared/src/career.js';
+import { LIFESTYLE, activeMeters, bandAt, TOTAL_TURNS } from '../../shared/src/career.js';
 import { ARCS } from '../../shared/src/storyarc.js';
 import { Career } from '../../shared/src/career.js';
 import { careerState } from '../../shared/src/tokens.js';
@@ -186,9 +186,35 @@ for (const it of LIFESTYLE) {
 if (ageFails) { console.log(`\n✗ ${ageFails} arc(s) expose adult material to a child`); process.exitCode = 1; }
 else console.log('  ok   no adult material reachable before age 17');
 
+// A METER EFFECT THAT CAN NEVER APPLY. `life()` gates every meter nudge on the meters ACTIVE IN THE
+// CURRENT CHAPTER — correct, because a ten-year-old has no sponsors — and silently discards the rest. That
+// is right for an arc whose window spans chapters where the meter comes and goes, but an arc whose window
+// contains NO chapter where the meter is active declares an outcome the game can never deliver: the text
+// says the sponsors noticed and nothing anywhere moves, on every run, forever. Two shipped like that
+// (tri-young-player nudging `sponsors` from a window covering only Youth Team and Breakthrough).
+let meterFails = 0;
+for (const a of ARCS) {
+  const chapters = new Set<string>();
+  for (let t = Math.max(0, a.minTurn); t <= Math.min(a.maxTurn, TOTAL_TURNS - 1); t++) chapters.add(bandAt(t).band.name);
+  const reachable = new Set<string>();
+  for (const ch of chapters) for (const m of activeMeters(ch)) reachable.add(m.key);
+  for (const b of Object.values(a.beats)) {
+    for (const c of b.choices) {
+      for (const k of Object.keys((c.effect as any)?.meters ?? {})) {
+        if (!reachable.has(k)) {
+          console.log(`  FAIL [${a.id}/${b.id}/${c.id}] nudges meters.${k}, which is active in NO chapter its window (${a.minTurn}-${a.maxTurn}) can reach`);
+          meterFails++;
+        }
+      }
+    }
+  }
+}
+if (meterFails) process.exitCode = 1;
+else console.log('  ok   every arc meter effect can actually apply somewhere in its own window');
+
 // The summary MUST account for age failures too. It used to report only `errors`, so an age violation
 // printed "✗ 1 arc(s) expose adult material to a child" and then "✓ all 414 arcs valid" directly beneath
 // it — anything reading the last line (a person skimming, or a probe tailing the output) saw a pass.
-const total = errors + ageFails + castFails + fillFails;
-console.log(total ? `\n✗ ${total} arc validation error(s) — ${errors} structural, ${ageFails} age-gating, ${castFails} cast-placeholder, ${fillFails} unfilled-placeholder` : `\n✓ all ${ARCS.length} arcs valid`);
+const total = errors + ageFails + castFails + fillFails + meterFails;
+console.log(total ? `\n✗ ${total} arc validation error(s) — ${errors} structural, ${ageFails} age-gating, ${castFails} cast-placeholder, ${fillFails} unfilled-placeholder, ${meterFails} unreachable-meter` : `\n✓ all ${ARCS.length} arcs valid`);
 if (total) process.exit(1);

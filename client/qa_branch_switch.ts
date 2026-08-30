@@ -53,7 +53,35 @@ let switched = false;
 let maxCandidates = 0;
 for (let g = 0; g < GENS; g++) {
   await playCareer(line);
+  // PUT THE STAR IN THE XI FIRST. He is the ONE player succession removes, so an XI that never names him
+  // cannot detect the bug — my first version of the check asserted against whatever lineup happened to be
+  // saved, passed with the fix reverted, and proved nothing.
+  {
+    const pre: any = await api.me();
+    const ids: string[] = (pre.club?.players ?? []).map((p: any) => p.id);
+    if (ids.includes(line)) {
+      const xi = [line, ...ids.filter((id) => id !== line)].slice(0, 11);
+      if (xi.length === 11) await api.setStandingOrders({ ...(pre.standingOrders ?? {}), playerIds: xi });
+    }
+  }
   const s: any = await api.succeed(line, { seasons: 6, titles: g === 0 ? 1 : 0, mentorship: 1 });
+  // THE SAVED XI MUST SURVIVE THE HANDOVER. The outgoing star's token flips back to 'prospect' and he
+  // drops out of the club, so a succession that does not repair standingOrders leaves the save naming a
+  // player who no longer exists — and the game then rejects its own lineup. Measured before the fix: a
+  // dangling id after EVERY generation, and setStandingOrders throwing "invalid lineup" on the save's own
+  // standing orders.
+  {
+    const me: any = await api.me();
+    const ids = new Set((me.club?.players ?? []).map((p: any) => p.id));
+    const xi: string[] = me.standingOrders?.playerIds ?? [];
+    const dangling = xi.filter((id) => !ids.has(id));
+    assert(dangling.length === 0, `succession ${g} left no dangling ids in the saved XI (found ${JSON.stringify(dangling)})`);
+    if (xi.length) {
+      let threw = '';
+      try { await api.setStandingOrders({ ...me.standingOrders }); } catch (e: any) { threw = e?.message ?? String(e); }
+      assert(!threw, `the save's own standing orders are still accepted after succession ${g} (${threw})`);
+    }
+  }
   const cousins = s.siblings.filter((b: any) => b.cousin);
   const total = 1 + s.siblings.length;
   maxCandidates = Math.max(maxCandidates, total);
