@@ -37,6 +37,20 @@ let minD = Infinity;
 for (let i = 0; i < core.length; i++) for (let j = i + 1; j < core.length; j++) minD = Math.min(minD, dist(core[i].a, core[j].a));
 console.log('closest pair distance:', minD, '(want comfortably > 0 — no near-clones)');
 
+// ── THIS FILE ASSERTED NOTHING FOR 126 SECONDS OF EVERY `npm run verify` ─────────────────────────────
+// It printed eight verdict-shaped lines — "should decrease with skill", "big-game should be higher",
+// "graduates the SAME player", "identical player: true" — and exited 0 whichever way they read. A mutation
+// made `graduate()` non-deterministic; it printed `identical player: false` and `graduates the SAME
+// player: false` and the build was green. `grep -c 'process.exit|exitCode|throw'` returned 0.
+//
+// The two determinism claims are not decoration: the entire save format is (career_seed, actions[]) replayed
+// through this code, so "same seed and choices gives the same player" is the contract every save depends on.
+let simFailures = 0;
+const simCheck = (ok: boolean, msg: string) => {
+  if (ok) console.log(`  ok   ${msg}`);
+  else { console.log(`  FAIL ${msg}`); simFailures++; }
+};
+
 // magnitude: same style, high vs low skill — AVERAGED over many seeds (single careers are noisy)
 const avgOvr = (skill: number) => {
   let sum = 0; const N = 60;
@@ -293,7 +307,7 @@ console.log('\n=== prospect market — trade an in-development player ===');
   const straight = new Career(seedFrom('prospect'));
   while (!straight.finished) { const st = straight.current(); st.phase === 'arc' ? straight.resolveArc((st as any).arc.choices[0].id) : st.phase === 'focus' ? straight.chooseFocus(st.focus[0].id) : st.phase === 'offer' ? straight.resolveOffer(st.offers[0].id) : st.phase === 'coach' ? straight.appointCoach(st.coaches[0].id) : st.phase === 'draft' ? straight.draft(st.options[0].id) : straight.play(st.hand[0].id); }
   const same = JSON.stringify(graduate(buyer.log, seedFrom('prospect'), genes, undefined, buyer.finContext())) === JSON.stringify(graduate(straight.log, seedFrom('prospect'), genes, undefined, straight.finContext()));
-  console.log(`  buyer resumes → graduates the SAME player as continuous development: ${same}`);
+  simCheck(same, 'a resumed career graduates the SAME player as continuous development');
 }
 
 // determinism: same seed + same choices (play + draft) → identical player
@@ -304,4 +318,18 @@ const replay = (seed: number) => {
   return { player: graduate(c.log, seed), ids };
 };
 const r1 = replay(999), r2 = replay(999);
-console.log('  same seed + same choices → identical player:', JSON.stringify(r1.player) === JSON.stringify(r2.player) && r1.ids.join() === r2.ids.join());
+const deterministic = JSON.stringify(r1.player) === JSON.stringify(r2.player) && r1.ids.join() === r2.ids.join();
+simCheck(deterministic, 'same seed + same choices → identical player (every save in the game replays through this)');
+
+// 3. skill must pay. Averaged over 60 careers a side, so this is signal rather than one noisy career.
+const hi = Number(avgOvr(0.9)), mid = Number(avgOvr(0.6)), lo = Number(avgOvr(0.3));
+simCheck(hi > lo, `playing better produces a better player (skill .90 → ${hi}, .30 → ${lo})`);
+simCheck(hi >= mid && mid >= lo, `and it is monotone (${hi} ≥ ${mid} ≥ ${lo})`);
+
+// NOT asserted, deliberately, and worth stating rather than quietly omitting: the role spread printed
+// above is NOT balanced — measured FW ~86% / DF ~14% / MF ~0.4% — and `ROLE_BASELINE`'s own comment claims
+// it is. That is a known open design item (the deriveStats normaliser), logged for CK rather than turned
+// into a red build.
+
+console.log(simFailures ? `\n✗ ${simFailures} career-sim invariant(s) failed` : '\n✓ career-sim invariants hold');
+if (simFailures) process.exit(1);
