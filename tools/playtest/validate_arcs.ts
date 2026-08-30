@@ -3,6 +3,8 @@
 // or brick a career. Run standalone or via `npm run playtest`.  npx tsx tools/playtest/validate_arcs.ts
 import { LIFESTYLE } from '../../shared/src/career.js';
 import { ARCS } from '../../shared/src/storyarc.js';
+import { Career } from '../../shared/src/career.js';
+import { careerState } from '../../shared/src/tokens.js';
 
 const TAGS = new Set(['composure', 'aggression', 'creativity', 'teamwork', 'leadership', 'stamina', 'flair', 'keeping']);
 const METERS = new Set(['authority', 'peers', 'family', 'school', 'agent', 'fans', 'sponsors', 'partner']);
@@ -103,6 +105,51 @@ for (const a of ARCS) {
 if (castFails) process.exitCode = 1;
 else console.log('  ok   {RIVAL} is only ever used as a name');
 
+// AND EVERY FIELD THE CLIENT RENDERS MUST ACTUALLY GET FILLED — asserted against the REAL state builder,
+// not against fillArcText. The bug this guards was never that fillArcText couldn't handle a label; it was
+// that careerState() substituted into `prompt` alone while main.ts renders each choice's `label` and
+// `desc` raw, so three choices shipped a literal "{RIVAL}" on the button the player clicks. A guard that
+// called fillArcText itself would have passed happily before the fix and caught nothing — which is the
+// exact shape of dead check this project keeps finding. Drive careers, take what careerState hands the
+// client, and assert on that.
+let fillFails = 0, arcsSeen = 0;
+for (let seed = 1; seed <= 260 && fillFails < 10; seed++) {
+  const c: any = new (Career as any)(seed * 7919 + 13);
+  const tok: any = {
+    id: `nft:v${seed}`, owner_id: 'owner:v', generation: 0, state: 'prospect', name: 'Kai Vance',
+    genes_json: JSON.stringify({ pace: { floor: 5, ceiling: 15 }, strength: { floor: 5, ceiling: 15 }, stamina: { floor: 5, ceiling: 15 } }),
+    pedigree: 0, dev_bonus_json: '{}', career_seed: seed * 7919 + 13, agent_id: null, track: null,
+    career_actions: null, attrs_json: null, role: null, traits_json: null, personality: null,
+    greed: null, marketability: null, earnings: null, prime_season: null, peak_overall: 0,
+    signed_season: null, length_seasons: null, staked_since: null,
+    ach_seasons: 0, ach_apps: 0, ach_league: 0, ach_cup: 0, ach_promotions: 0, ach_tier: 0, morale: 65,
+    ach_goals: 0, ach_assists: 0, ach_potm: 0, kit_json: null, career_honours_json: null,
+  };
+  let guard = 0;
+  while (!c.finished && guard++ < 3000) {
+    const raw = c.current();
+    if (raw.phase === 'arc') {
+      const st: any = careerState(tok as any, c);
+      if (st.arc) {
+        arcsSeen++;
+        const rendered = [st.arc.prompt, ...(st.arc.choices ?? []).flatMap((ch: any) => [ch.label, ch.desc])];
+        for (const t of rendered) {
+          const m = typeof t === 'string' && t.match(/\{[A-Z_]+\}/);
+          if (m) { console.log(`  FAIL [${st.arc.id ?? '?'}] careerState returned an UNFILLED field: "${String(t).slice(0, 80)}"`); fillFails++; break; }
+        }
+      }
+      c.resolveArc(raw.arc.choices[0].id); continue;
+    }
+    if (raw.phase === 'focus') { c.chooseFocus(raw.focus[0].id); continue; }
+    if (raw.phase === 'offer') { c.resolveOffer('develop'); continue; }
+    if (raw.phase === 'coach') { c.appointCoach(raw.coaches[0].id); continue; }
+    if (raw.phase === 'draft') { c.draft(raw.options[0].id); continue; }
+    c.play(raw.hand[0].id);
+  }
+}
+if (fillFails) process.exitCode = 1;
+else console.log(`  ok   careerState fills every rendered arc field (${arcsSeen} arc states inspected)`);
+
 let ageFails = 0;
 for (const a of ARCS) {
   const body = JSON.stringify(a.beats);
@@ -142,6 +189,6 @@ else console.log('  ok   no adult material reachable before age 17');
 // The summary MUST account for age failures too. It used to report only `errors`, so an age violation
 // printed "✗ 1 arc(s) expose adult material to a child" and then "✓ all 414 arcs valid" directly beneath
 // it — anything reading the last line (a person skimming, or a probe tailing the output) saw a pass.
-const total = errors + ageFails + castFails;
-console.log(total ? `\n✗ ${total} arc validation error(s) — ${errors} structural, ${ageFails} age-gating, ${castFails} cast-placeholder` : `\n✓ all ${ARCS.length} arcs valid`);
+const total = errors + ageFails + castFails + fillFails;
+console.log(total ? `\n✗ ${total} arc validation error(s) — ${errors} structural, ${ageFails} age-gating, ${castFails} cast-placeholder, ${fillFails} unfilled-placeholder` : `\n✓ all ${ARCS.length} arcs valid`);
 if (total) process.exit(1);

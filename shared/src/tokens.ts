@@ -304,7 +304,21 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
   // which soft-locked the save the moment any arc fired (PT-52/PT-53).
   if (st.phase === 'arc' && st.arc) {
     const rivalName = careerCast((c as any).seed >>> 0, c.familyName).rival;
-    st.arc = { ...st.arc, prompt: fillArcText(st.arc.prompt, rivalName), rivalName };
+    // FILL THE WHOLE ARC, NOT JUST THE PROMPT. Only `prompt` was filled here, and the client renders
+    // `label` and `desc` raw — so three choices shipped a literal "{RIVAL}" on the BUTTON the player
+    // clicks ("Salute {RIVAL}", "Give {RIVAL} both barrels", "leave {RIVAL} for dead"). The prompt above
+    // it and the outcome after it both read correctly, which makes the raw token in between look exactly
+    // like what it is: an unfinished game.
+    st.arc = {
+      ...st.arc,
+      prompt: fillArcText(st.arc.prompt, rivalName),
+      choices: (st.arc.choices ?? []).map((ch: any) => ({
+        ...ch,
+        label: fillArcText(ch.label, rivalName),
+        desc: fillArcText(ch.desc, rivalName),
+      })),
+      rivalName,
+    };
   }
   const recentForm = (() => { const r = c.log.slice(-6); return r.length ? r.reduce((s, e) => s + e.success, 0) / r.length : 0.5; })();
   // STORY MODE: describe the situation + what each card would do

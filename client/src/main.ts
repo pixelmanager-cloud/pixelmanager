@@ -7,6 +7,7 @@ import {
   type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type Trialist, type MissionsData, type ContractInfo } from './api';
+import { flushSave, getSaveHealth } from './save';
 import { sprite } from './sprites';
 import { crest, crestColors } from './crest';
 import { portraitImg, bandForAge } from './portrait';
@@ -4990,10 +4991,33 @@ requestAnimationFrame(matchFrame);
 // not just a display — so a match left in a background tab froze mid-game and resumed from the same
 // minute. Keep it ticking on a timer while hidden. Browsers throttle background timers to roughly 1s,
 // so the step ceiling is raised to match: it advances at about the same rate rather than 10x slower.
+// SETTLE THE SAVE WHEN THE TAB GOES AWAY. Writes are debounced 500ms, and flushSave() was written for
+// exactly this ("e.g. before the tab closes") and then wired to nothing — so closing, refreshing or
+// backgrounding the tab within half a second of an action silently dropped it. `pagehide` is the reliable
+// one on mobile Safari, where `beforeunload` often never fires; both are cheap and idempotent.
+const settleSave = () => { void flushSave(); };
+// AND SAY SO IF THE DISK IS REFUSING US. A failing autosave used to be completely silent — the game kept
+// accepting moves and reporting success while nothing reached storage. Warn once, and keep the banner up:
+// the honest advice when the browser will not store anything is to stop playing, not to play on.
+let saveWarned = false;
+setInterval(() => {
+  const h = getSaveHealth();
+  if (h.ok || saveWarned) return;
+  saveWarned = true;
+  const el = document.createElement('div');
+  el.id = 'save-broken';
+  el.innerHTML = `<b>⚠️ THE GAME IS NOT BEING SAVED.</b> Your browser refused to store this save${h.error ? ` (${h.error})` : ''}. `
+    + `Progress since you started playing will be lost when you close this tab. This usually means private browsing, a full disk, or blocked site data.`;
+  document.body.appendChild(el);
+}, 4000);
+window.addEventListener('pagehide', settleSave);
+window.addEventListener('beforeunload', settleSave);
+
 // (PT-1409)
 let hiddenTick: ReturnType<typeof setInterval> | undefined;
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
+    void flushSave();   // a backgrounded tab can be killed without ever firing pagehide
     lastFrameMs = performance.now();
     hiddenTick ??= setInterval(() => matchStep(performance.now(), 1000), 200);
   } else if (hiddenTick !== undefined) {

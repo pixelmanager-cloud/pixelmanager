@@ -461,11 +461,36 @@ const modelBox: { model: SaveModel } = { model: freshSave('New Manager') };
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
 const PERSIST_DEBOUNCE_MS = 500;
 
+/** Set when the last write to disk failed. The UI reads this to warn that play is not being saved. */
+let saveHealth: { ok: boolean; error?: string } = { ok: true };
+/** Whether the last write to disk succeeded. The UI polls this so a failing autosave cannot stay silent. */
+export function getSaveHealth(): { ok: boolean; error?: string } { return saveHealth; }
+
+async function writeSlot(id: string, model: SaveModel): Promise<void> {
+  // A SWALLOWED WRITE IS THE WORST BUG THIS FILE CAN HAVE. This was `void backend.save(...)`: every
+  // rejection became an unhandled rejection the app never saw. No retry, no error state, no warning — and
+  // IndexedDBBackend caches its open promise, so once opening fails (Safari private browsing, a corrupt
+  // DB, a blocked upgrade) EVERY later write rejects for the whole session. The game goes on accepting
+  // moves and reporting success while nothing reaches disk; you close the tab and the evening is gone.
+  try {
+    await backend.save(id, model);
+    if (!saveHealth.ok) saveHealth = { ok: true };
+  } catch (e) {
+    try { await backend.save(id, model); if (!saveHealth.ok) saveHealth = { ok: true }; return; } catch { /* fall through */ }
+    saveHealth = { ok: false, error: (e as Error)?.message ?? String(e) };
+  }
+}
+
 function schedulePersist(): void {
   if (!activeSlotId) return;
   if (persistTimer != null) clearTimeout(persistTimer);
   const id = activeSlotId;
-  persistTimer = setTimeout(() => { persistTimer = null; void backend.save(id, modelBox.model); }, PERSIST_DEBOUNCE_MS);
+  // CAPTURE THE MODEL, NOT JUST THE SLOT. This read `modelBox.model` at FIRE time while capturing `id` at
+  // SCHEDULE time, so a slot swap inside the 500ms debounce wrote the NEW save's contents into the OLD
+  // save's slot. Reproduced: mutate slot A, start a new game, wait — slot A then holds slot B's save and
+  // both dynasties are the same dynasty, with no undo.
+  const model = modelBox.model;
+  persistTimer = setTimeout(() => { persistTimer = null; void writeSlot(id, model); }, PERSIST_DEBOUNCE_MS);
 }
 
 /** Swap the persistence backend (tests inject `createInMemoryBackend()`; real code never needs to). */
@@ -482,6 +507,7 @@ export async function newGame(name: string, seed?: number, slotId?: string): Pro
   // (careerSeedFor(..., getActiveSlotId()) in api.ts) so that two saves play out differently — which is
   // correct and worth keeping, but it means a random UUID here leaks into every succession. Pinning the
   // world seed alone left qa_branch_switch failing ~1 run in 20; this is the other half.
+  await flushSave();          // settle the outgoing save before its slot stops being active
   const id = slotId ?? crypto.randomUUID();
   modelBox.model = freshSave(name, seed);
   activeSlotId = id;
@@ -491,6 +517,7 @@ export async function newGame(name: string, seed?: number, slotId?: string): Pro
 
 /** Continue an existing save: loads it into the active in-memory model. */
 export async function continueSave(id: string): Promise<SaveModel> {
+  await flushSave();          // ...and before loading another one over it
   const raw = await backend.load(id);
   if (!raw) throw new Error(`save not found: ${id}`);
   const m = migrate(raw);
@@ -501,6 +528,9 @@ export async function continueSave(id: string): Promise<SaveModel> {
 }
 
 export async function deleteSave(id: string): Promise<void> {
+  // CANCEL ANY PENDING WRITE TO THIS SLOT FIRST, or the debounced timer fires after the removal and the
+  // save comes back: "Delete forever" un-deleting itself. Reproduced.
+  if (activeSlotId === id && persistTimer != null) { clearTimeout(persistTimer); persistTimer = null; }
   await backend.remove(id);
   if (activeSlotId === id) activeSlotId = null;
 }
@@ -508,7 +538,7 @@ export async function deleteSave(id: string): Promise<void> {
 /** Force an immediate (non-debounced) write of the active model — e.g. before the tab closes. */
 export async function flushSave(): Promise<void> {
   if (persistTimer != null) { clearTimeout(persistTimer); persistTimer = null; }
-  if (activeSlotId) await backend.save(activeSlotId, modelBox.model);
+  if (activeSlotId) await writeSlot(activeSlotId, modelBox.model);
 }
 
 /** The one `LocalStore` instance the Phase 3 facade will point `db` at — reads/writes `modelBox.model`,
