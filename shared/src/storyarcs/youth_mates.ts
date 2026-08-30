@@ -62,7 +62,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
         prompt: 'A month on, the pair of them are speaking again, and the squad has moved on to something else. But there is a first team-talk of the new season and the group looks around for who is going to say something.',
         choices: [
           { id: 'speak', label: 'Say it', desc: 'Somebody has to, and everybody is looking at him', outcome: 'He says something short and unclever about all of them being in it. It isn\'t a speech, but it is him that said it, and the room settles.', effect: { meters: { peers: 8 }, attr: { leadership: 1, teamwork: 1 } } },
-          { id: 'look', label: 'Look at the floor', desc: 'Let somebody louder do it', outcome: 'He studies his laces until somebody else fills the silence. He is relieved, and then, on the bus, faintly annoyed with himself.', effect: { attr: { composure: 1 }, meters: { peers: 2 } } },
+          { id: 'look', label: 'Look at the floor', desc: 'Let somebody louder do it', outcome: 'He studies his laces until somebody else fills the silence. He is relieved, and then, on the bus, faintly annoyed with himself.', effect: { attr: { composure: 1 }, meters: { peers: -5 } } },
         ],
       },
     },
@@ -91,15 +91,15 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
         prompt: 'First away trip with an overnight stay. The rooming list pairs him with the lad nobody rooms with — quiet, from the other end of the county, plays well and says about nine words a season. There is a free bed in the room where everyone wants to be.',
         choices: [
           { id: 'stay', label: 'Stay where he\'s put', desc: 'Room with him and see what happens', outcome: 'They stay up too late with the telly on mute, and the boy talks more in three hours than he has all year. On the pitch next morning they find each other twice without looking.', effect: { meters: { peers: 8 }, attr: { teamwork: 1 }, tag: 'mates-roomed' }, next: 'season' },
-          { id: 'swap', label: 'Swap into the good room', desc: 'It\'s one night and he wants to enjoy it', outcome: 'He swaps, and the night is loud and brilliant. The quiet boy sleeps on his own and is fine about it in a way that is worse than sulking.', effect: { meters: { peers: 4 }, attr: { flair: 1 }, tag: 'mates-swapped' }, next: 'season' },
+          { id: 'swap', label: 'Swap into the good room', desc: 'It\'s one night and he wants to enjoy it', outcome: 'He swaps, and the night is loud and brilliant. The quiet boy sleeps on his own and is fine about it in a way that is worse than sulking.', effect: { meters: { peers: 4 }, attr: { flair: 1, teamwork: -1 }, tag: 'mates-swapped' }, next: 'season' },
         ],
       },
       season: {
         id: 'season',
         prompt: 'The trip ends and the season grinds on. By March the squad has hardened into groups — who warms up with who, who saves a seat.',
         choices: [
-          { id: 'mix', label: 'Keep crossing between them', desc: 'Refuse to belong to only one group', outcome: 'He drifts between the cliques all season, welcome everywhere and central nowhere, and ends up the one everyone tells things to.', effect: { meters: { peers: 6 }, attr: { teamwork: 1, composure: 1 } } },
-          { id: 'settle', label: 'Settle into his group', desc: 'Pick his three and be properly theirs', outcome: 'He picks his three and they become the kind of friends you get once. The rest of the squad is polite to him and nothing more.', effect: { meters: { peers: 8 }, attr: { teamwork: 1 }, form: 0.04 } },
+          { id: 'mix', label: 'Keep crossing between them', desc: 'Refuse to belong to only one group', outcome: 'He drifts between the cliques all season, welcome everywhere and central nowhere, and ends up the one everyone tells things to.', effect: { energy: -5, meters: { peers: 6 }, attr: { teamwork: 1, composure: 1 } } },
+          { id: 'settle', label: 'Settle into his group', desc: 'Pick his three and be properly theirs', outcome: 'He picks his three and they become the kind of friends you get once. The rest of the squad is polite to him and nothing more.', effect: { meters: { peers: 8 }, attr: { teamwork: 1, leadership: -1 }, form: 0.04 } },
         ],
       },
     },
@@ -156,7 +156,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
         prompt: 'One lad has been on the bench for the whole season. He comes to everything, warms up harder than anyone, and gets four minutes in November. At the end of a game he is the first one clapping and it costs him something to do it.',
         choices: [
           { id: 'sit', label: 'Sit with him on the bus', desc: 'Not to say anything clever — just sit there', outcome: 'He sits next to him and talks about nothing for an hour. The boy doesn\'t mention the football and neither does he, and that turns out to be the point.', effect: { meters: { peers: 10 }, attr: { teamwork: 1 }, tag: 'mates-sat-with' }, next: 'chance' },
-          { id: 'push', label: 'Tell him he\'s good enough', desc: 'Say the thing nobody has said to him', outcome: 'He tells him, badly and honestly, that he is better than his minutes. The boy laughs it off and then trains like a lunatic for a month.', effect: { meters: { peers: 6 }, attr: { leadership: 1 }, tag: 'mates-encouraged' }, next: 'chance' },
+          { id: 'push', label: 'Tell him he\'s good enough', desc: 'Say the thing nobody has said to him', outcome: 'He tells him, badly and honestly, that he is better than his minutes. The boy laughs it off and then trains like a lunatic for a month.', effect: { meters: { peers: 6, authority: -5 }, attr: { leadership: 1 }, tag: 'mates-encouraged' }, next: 'chance' },
         ],
       },
       chance: {
@@ -164,7 +164,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
         prompt: 'Last game of the season, three-nil up, and the boy finally gets twenty minutes. He is nervous to the point of being ill with it. Then the ball breaks and there is a chance on — his, or the easy pass.',
         choices: [
           { id: 'pass', label: 'Give it to him', desc: 'Square it and let him have the moment', outcome: 'He rolls it across and the boy puts it in, and the celebration is the loudest thing that has happened all year. Nobody remembers who passed.', effect: { meters: { peers: 12 }, attr: { teamwork: 1 }, form: 0.04 } },
-          { id: 'score', label: 'Take it himself', desc: 'It\'s his shot and he\'s the one who scores', outcome: 'He takes it and scores, properly, and it\'s a good goal. The boy is first to him in the pile-on, and hugs him, and means it, mostly.', effect: { form: 0.08, attr: { flair: 1 }, meters: { peers: 2 } } },
+          { id: 'score', label: 'Take it himself', desc: 'It\'s his shot and he\'s the one who scores', outcome: 'He takes it and scores, properly, and it\'s a good goal. The boy is first to him in the pile-on, and hugs him, and means it, mostly.', effect: { form: 0.08, attr: { flair: 1 }, meters: { peers: -5 } } },
         ],
       },
     },
@@ -236,15 +236,15 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
         prompt: 'The changing-room wind-up they do to everyone — kit hidden, boots up in the rafters — happens to the youngest lad on a night when he is already close to tears about something none of them know about. He goes very quiet and then he goes home in his socks.',
         choices: [
           { id: 'chase', label: 'Go after him', desc: 'Out into the car park in his own socks', outcome: 'He catches him at the gate and walks him to the car park with the boots under his arm, and neither of them says much. The boy never forgets that he came out.', effect: { meters: { peers: 10 }, attr: { leadership: 1, teamwork: 1 }, tag: 'mates-went-after' }, next: 'room' },
-          { id: 'stay', label: 'Stay in the room', desc: 'It was a joke. He\'ll be fine tomorrow', outcome: 'He stays and laughs with the rest of them, and it is genuinely funny for about four more minutes. Then it isn\'t, and nobody says so.', effect: { meters: { peers: 3 }, attr: { composure: 1 }, tag: 'mates-stayed-in' }, next: 'room' },
+          { id: 'stay', label: 'Stay in the room', desc: 'It was a joke. He\'ll be fine tomorrow', outcome: 'He stays and laughs with the rest of them, and it is genuinely funny for about four more minutes. Then it isn\'t, and nobody says so.', effect: { meters: { peers: 3 }, attr: { composure: 1, leadership: -1 }, tag: 'mates-stayed-in' }, next: 'room' },
         ],
       },
       room: {
         id: 'room',
         prompt: 'Next session, the same lads are lining up the same joke on the same boy, laughing before they\'ve started. They want him in on it — being in on it is the whole thing.',
         choices: [
-          { id: 'stop', label: 'Stop it', desc: 'Put the boots back on the peg in front of them', outcome: 'He takes the boots down and puts them back without saying much. Somebody calls him a bore. The joke doesn\'t happen again all season.', effect: { meters: { peers: 4 }, attr: { leadership: 1 } } },
-          { id: 'join', label: 'Join in', desc: 'Being outside the joke is its own risk', outcome: 'He joins in and the room loves him for it, and the boy laughs along in the way you do when you have no other option.', effect: { meters: { peers: 8 }, attr: { flair: 1 } } },
+          { id: 'stop', label: 'Stop it', desc: 'Put the boots back on the peg in front of them', outcome: 'He takes the boots down and puts them back without saying much. Somebody calls him a bore. The joke doesn\'t happen again all season.', effect: { meters: { peers: -6 }, attr: { leadership: 2 } } },
+          { id: 'join', label: 'Join in', desc: 'Being outside the joke is its own risk', outcome: 'He joins in and the room loves him for it, and the boy laughs along in the way you do when you have no other option.', effect: { meters: { peers: 8 }, attr: { flair: 1, teamwork: -1 } } },
         ],
       },
     },
@@ -333,7 +333,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
         prompt: 'Tuesday training. His mate is on the far side of the pitch and has been all night, and the squad has quietly arranged itself so the two of them never end up in the same drill.',
         choices: [
           { id: 'first', label: 'Speak first', desc: 'Walk over and say something ordinary', outcome: 'He goes over and says something completely mundane about the weather, and that is the apology, and both of them know it. They warm up together.', effect: { meters: { peers: 8 }, attr: { leadership: 1, composure: 1 } } },
-          { id: 'wait', label: 'Wait for him', desc: 'He said it. He can fix it', outcome: 'He waits. It takes eleven days and comes out as a shove and a grin in a rondo, which is how it works at that age.', effect: { meters: { peers: 4 }, attr: { aggression: 1 } } },
+          { id: 'wait', label: 'Wait for him', desc: 'He said it. He can fix it', outcome: 'He waits. It takes eleven days and comes out as a shove and a grin in a rondo, which is how it works at that age.', effect: { form: -0.05, meters: { peers: 4 }, attr: { aggression: 1 } } },
         ],
       },
     },

@@ -116,7 +116,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
         prompt: 'September. The photos from the caravan go up on the fridge, and one of them has an obvious space in it.',
         choices: [
           { id: 'own', label: 'Own the choice', desc: 'Say it out loud rather than let it sit', outcome: 'He says he\'d make the same call again, and that he\'s sorry it hurt. Both halves of that land.', effect: { attr: { leadership: 1, composure: 1 }, meters: { family: 8 } } },
-          { id: 'promise', label: 'Promise next year is theirs', desc: 'One year off, whatever\'s on', outcome: 'He promises. He keeps it, too — for one summer — and it becomes the week the whole family talks about for years.', effect: { meters: { family: 12 }, attr: { teamwork: 1 }, energy: 4 } },
+          { id: 'promise', label: 'Promise next year is theirs', desc: 'One year off, whatever\'s on', outcome: 'He promises. He keeps it, too — for one summer — and it becomes the week the whole family talks about for years.', effect: { form: -0.06, meters: { family: 12, authority: -6 }, attr: { teamwork: 1 }, energy: 4 } },
         ],
       },
     },
@@ -129,7 +129,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'His nan has been ill since the spring and now watches from a chair by the front window instead of the touchline. She asks about every game in enormous detail — the weather, the pitch, who played left-back — because the detail is the only way she gets to be there.',
         choices: [
-          { id: 'detail', label: 'Give him every last detail', desc: 'Come home and talk him through all ninety minutes', outcome: 'He learns to describe a match properly: the shape, the moment it turned, the mistake nobody else spotted. It changes how he watches football.', effect: { attr: { creativity: 1, composure: 1 }, meters: { family: 12 }, tag: 'fam-match-reports' }, next: 'after' },
+          { id: 'detail', label: 'Give him every last detail', desc: 'Come home and talk him through all ninety minutes', outcome: 'He learns to describe a match properly: the shape, the moment it turned, the mistake nobody else spotted. It changes how he watches football.', effect: { energy: -4, attr: { creativity: 1, composure: 1 }, meters: { family: 12 }, tag: 'fam-match-reports' }, next: 'after' },
           { id: 'film', label: 'Get someone to film it for him', desc: 'A phone on the fence beats a description', outcome: 'His dad films it badly, mostly sky and shouting. His nan watches all of it twice, sky included.', effect: { meters: { family: 10 }, attr: { teamwork: 1 }, tag: 'fam-filmed-for-him' }, next: 'after' },
         ],
       },
@@ -183,7 +183,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
         prompt: 'One night he comes downstairs and finds him at the back door with a nail brush, cleaning the mud out of his studs, because nobody asked him to.',
         choices: [
           { id: 'sit', label: 'Sit down and do the other boot', desc: 'Say nothing, pick up the brush', outcome: 'They clean boots in silence for ten minutes. It is the first evening the house feels like it has four people in it rather than three and a visitor.', effect: { meters: { family: 12 }, attr: { teamwork: 1, composure: 1 } } },
-          { id: 'thanks', label: 'Say thanks and go back up', desc: 'Acknowledge it, but not too much', outcome: 'He says thanks and goes up. He hears the brush start again behind him, and lies awake thinking about it longer than he expected.', effect: { meters: { family: 6 }, attr: { composure: 1 } } },
+          { id: 'thanks', label: 'Say thanks and go back up', desc: 'Acknowledge it, but not too much', outcome: 'He says thanks and goes up. He hears the brush start again behind him, and lies awake thinking about it longer than he expected.', effect: { energy: -5, meters: { family: 6 }, attr: { composure: 1 } } },
         ],
       },
     },
@@ -229,7 +229,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
         prompt: 'In spring his mum gets a lift sorted permanently — a neighbour going that way anyway, she says. He later finds out the neighbour wasn\'t going that way at all.',
         choices: [
           { id: 'thank', label: 'Thank the neighbour properly', desc: 'Knock on the door and say it to his face', outcome: 'He knocks and says thanks. The man is embarrassed and gruff about it and drives him for another two years.', effect: { meters: { family: 8, peers: 6 }, attr: { leadership: 1, teamwork: 1 } } },
-          { id: 'quiet', label: 'Keep quiet and never be late', desc: 'Repay it by being on the kerb five minutes early, always', outcome: 'He is never once late, for two full years. It becomes a habit that follows him into every dressing room he ever walks into.', effect: { attr: { composure: 1, stamina: 1 }, meters: { family: 6, authority: 6 } } },
+          { id: 'quiet', label: 'Keep quiet and never be late', desc: 'Repay it by being on the kerb five minutes early, always', outcome: 'He is never once late, for two full years. It becomes a habit that follows him into every dressing room he ever walks into.', effect: { energy: -6, attr: { composure: 1, stamina: 1 }, meters: { family: 6, authority: 6 } } },
         ],
       },
     },
@@ -273,7 +273,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
         id: 'ask',
         prompt: 'Years\' worth of tapes, and he realises the camera is always on him and never once on his little sister\'s netball.',
         choices: [
-          { id: 'redirect', label: 'Point it at her for once', desc: 'Ask his dad to film a netball match', outcome: 'His dad films the netball, badly, and his sister watches it back four times. It costs him one Saturday and buys him a sister.', effect: { meters: { family: 12 }, attr: { teamwork: 1, leadership: 1 } } },
+          { id: 'redirect', label: 'Point it at her for once', desc: 'Ask his dad to film a netball match', outcome: 'His dad films the netball, badly, and his sister watches it back four times. It costs him one Saturday and buys him a sister.', effect: { form: -0.04, meters: { family: 12, authority: -5 }, attr: { teamwork: 1, leadership: 1 } } },
           { id: 'keep', label: 'Let his dad have his thing', desc: 'The tapes are how he says it', outcome: 'He lets him keep filming. Twenty years later the tapes are the only footage of his childhood anyone has, and he is grateful and slightly ashamed at once.', effect: { meters: { family: 8 }, attr: { composure: 1 }, form: 0.03 } },
         ],
       },
@@ -364,7 +364,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
         prompt: 'A fortnight later he leaves his kit festering in the bag until Saturday morning, and finds it washed and folded on the end of his bed anyway.',
         choices: [
           { id: 'say', label: 'Say sorry, properly', desc: 'Not a mumble on the way out the door', outcome: 'He apologises properly and means it. She tells him it\'s nothing; the bag never gets left again.', effect: { meters: { family: 10 }, attr: { leadership: 1, composure: 1 } } },
-          { id: 'rule', label: 'Make it a rule for himself', desc: 'Bag emptied within an hour of getting in, forever', outcome: 'He makes the rule and keeps it. Kit men at three different clubs will one day comment on it without ever knowing where it came from.', effect: { attr: { composure: 1, teamwork: 1 }, meters: { family: 8, authority: 4 } } },
+          { id: 'rule', label: 'Make it a rule for himself', desc: 'Bag emptied within an hour of getting in, forever', outcome: 'He makes the rule and keeps it. Kit men at three different clubs will one day comment on it without ever knowing where it came from.', effect: { energy: -4, attr: { composure: 1, teamwork: 1 }, meters: { family: 8, authority: 4 } } },
         ],
       },
     },
@@ -401,7 +401,7 @@ export const YOUTH_FAMILY_ARCS: StoryArc[] = [
         prompt: 'His mum has picked up nights at the depot because the money is better and the hours mean she can still do the school run. She sleeps in the afternoons with the curtains shut. She has not seen him play since October, and she asks about every game as though she had.',
         choices: [
           { id: 'wake', label: 'Wake her up when he gets in', desc: 'She said to, and she meant it', outcome: 'He wakes her every Saturday teatime and tells her the whole game while she\'s still half asleep. She misses nothing and gets almost no sleep.', effect: { meters: { family: 10 }, attr: { teamwork: 1 }, tag: 'fam-wakes-her' }, next: 'shift' },
-          { id: 'let', label: 'Let her sleep', desc: 'She needs the four hours more than he needs an audience', outcome: 'He leaves a note on the fridge with the score on it every week. She keeps every single one in a drawer.', effect: { meters: { family: 8 }, attr: { composure: 1 }, tag: 'fam-leaves-notes' }, next: 'shift' },
+          { id: 'let', label: 'Let her sleep', desc: 'She needs the four hours more than he needs an audience', outcome: 'He leaves a note on the fridge with the score on it every week. She keeps every single one in a drawer.', effect: { form: -0.04, meters: { family: 8 }, attr: { composure: 1 }, tag: 'fam-leaves-notes' }, next: 'shift' },
         ],
       },
       shift: {

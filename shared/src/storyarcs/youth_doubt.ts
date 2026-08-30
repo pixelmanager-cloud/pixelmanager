@@ -24,7 +24,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
         prompt: 'It does end, eventually, in a nothing game on a Tuesday, with a pass he would not have remembered in any other month. He notices himself noticing it.',
         choices: [
           { id: 'note', label: 'Remember how it felt to be in it', desc: 'So he knows it is survivable next time', outcome: 'He files the whole month away carefully: it went, it came back, and nothing he did in a panic had much to do with either. That is worth more than the pass was.', effect: { attr: { composure: 2 }, form: 0.04 } },
-          { id: 'relief', label: 'Just be relieved and think no more about it', desc: 'Forget the month, keep the Tuesday', outcome: 'He throws the month away with the sock tape and plays the rest of the season without once looking back at it — its own kind of sense.', effect: { form: 0.06, energy: 4 } },
+          { id: 'relief', label: 'Just be relieved and think no more about it', desc: 'Forget the month, keep the Tuesday', outcome: 'He throws the month away with the sock tape and plays the rest of the season without once looking back at it — its own kind of sense.', effect: { form: 0.06, energy: 4, attr: { composure: -1 } } },
         ],
       },
     },
@@ -61,8 +61,8 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
         id: 'weeks',
         prompt: 'Weeks later, one-nil up with ten to go, the gap opens again and there is a boy in space beyond it. Nobody watching would ever know if he did not see it.',
         choices: [
-          { id: 'through', label: 'Slide it through', desc: 'Because he saw it', outcome: 'He slides it through. It does not lead to a goal and barely anyone notices, but he walks off knowing he did not lie to himself about what he saw.', effect: { attr: { creativity: 1, leadership: 1 }, form: 0.05 } },
-          { id: 'keep', label: 'Keep the ball and see the game out', desc: 'One-nil is a result', outcome: 'He takes it into the corner instead and they win it, and he is honest enough afterwards to admit he is not sure which of the two reasons made the choice.', effect: { attr: { composure: 2 }, meters: { authority: 4 } } },
+          { id: 'through', label: 'Slide it through', desc: 'Because he saw it', outcome: 'He slides it through. It does not lead to a goal and barely anyone notices, but he walks off knowing he did not lie to himself about what he saw.', effect: { attr: { creativity: 1, leadership: 1 }, form: 0.05, meters: { authority: -4 } } },
+          { id: 'keep', label: 'Keep the ball and see the game out', desc: 'One-nil is a result', outcome: 'He takes it into the corner instead and they win it, and he is honest enough afterwards to admit he is not sure which of the two reasons made the choice.', effect: { attr: { composure: 2, creativity: -1 }, meters: { authority: 4 } } },
         ],
       },
     },
@@ -160,7 +160,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
         prompt: 'Nothing changes overnight. But the month afterwards has a slightly different shape, depending on how much of it he is still carrying by himself.',
         choices: [
           { id: 'again', label: 'Decide he will say it earlier next time', desc: 'A month was too long', outcome: 'He makes a private rule that a fortnight is long enough to sit with something on his own. It is one of the more useful rules he ever makes.', effect: { attr: { composure: 2 }, meters: { family: 4 } } },
-          { id: 'own', label: 'Keep it his own to sort out', desc: 'Talking is not the same as fixing', outcome: 'He decides the fixing is still his job either way, and gets on with it quietly. He is not entirely wrong, and not entirely right either.', effect: { attr: { composure: 1, stamina: 1 }, form: 0.03 } },
+          { id: 'own', label: 'Keep it his own to sort out', desc: 'Talking is not the same as fixing', outcome: 'He decides the fixing is still his job either way, and gets on with it quietly. He is not entirely wrong, and not entirely right either.', effect: { attr: { composure: 1, stamina: 1 }, form: 0.03, meters: { family: -4 } } },
         ],
       },
     },
@@ -326,8 +326,8 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
         id: 'after',
         prompt: 'He goes on Saturday, obviously. But he knows now that going is a thing he does rather than a thing that simply happens to him.',
         choices: [
-          { id: 'choose', label: 'Decide he is choosing it', desc: 'Every week, on purpose', outcome: 'He starts thinking of it as a decision he renews rather than a track he is on. It makes the hard weeks harder to complain about and easier to get through.', effect: { attr: { composure: 2, leadership: 1 }, form: 0.05 } },
-          { id: 'quiet', label: 'Say nothing and keep going', desc: 'Some things do not need concluding', outcome: 'He never mentions the evening again to anyone and goes every week for years, and remembers the exact stretch of pavement for the rest of his life.', effect: { attr: { composure: 1, stamina: 1 }, form: 0.03 } },
+          { id: 'choose', label: 'Decide he is choosing it', desc: 'Every week, on purpose', outcome: 'He starts thinking of it as a decision he renews rather than a track he is on. It makes the hard weeks harder to complain about and easier to get through.', effect: { attr: { composure: 2, leadership: 1 }, form: 0.05, meters: { peers: -4 } } },
+          { id: 'quiet', label: 'Say nothing and keep going', desc: 'Some things do not need concluding', outcome: 'He never mentions the evening again to anyone and goes every week for years, and remembers the exact stretch of pavement for the rest of his life.', effect: { attr: { composure: 1, stamina: 1 }, form: 0.03, meters: { family: -4 } } },
         ],
       },
     },

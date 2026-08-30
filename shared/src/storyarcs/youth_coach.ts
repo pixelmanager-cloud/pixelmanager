@@ -167,7 +167,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         id: 'letter',
         prompt: 'The envelope has the crest on it. It is thin. He knows before he opens it that thin means one thing, and he opens it in the hall on his own anyway.',
         choices: [
-          { id: 'read-alone', label: 'Read it alone and then go training', desc: 'Whatever it says, go anyway', outcome: 'It says no, in three careful paragraphs signed by a name he does not recognise. He goes to training that night and is the best player there.', effect: { attr: { composure: 2, stamina: 1 }, form: 0.06, meters: { authority: 6 }, tag: 'rejected-and-went' } },
+          { id: 'read-alone', label: 'Read it alone and then go training', desc: 'Whatever it says, go anyway', outcome: 'It says no, in three careful paragraphs signed by a name he does not recognise. He goes to training that night and is the best player there.', effect: { attr: { composure: 2, stamina: 1 }, form: 0.06, meters: { authority: 6, family: -5 }, tag: 'rejected-and-went' } },
           { id: 'keep', label: 'Keep it', desc: 'Fold it small and put it somewhere', outcome: 'He folds it into the lid of his boot box. It is still there years later, softened at the creases from being taken out.', effect: { attr: { aggression: 1, composure: 1 }, form: 0.04, tag: 'kept-the-letter' } },
         ],
       },
@@ -205,7 +205,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         prompt: 'The following November the same scout comes back, exactly as promised, and this time asks to speak to him directly with the coach standing there.',
         choices: [
           { id: 'speak', label: 'Answer for himself', desc: 'Look the man in the eye and talk', outcome: 'He answers every question himself while the coach stands silent behind him. Both men leave thinking he is older than he is.', effect: { attr: { leadership: 2, composure: 1 }, form: 0.06, meters: { authority: 4 } } },
-          { id: 'defer', label: 'Let the coach do the talking', desc: 'He\'s fourteen and the man knows him best', outcome: 'He lets his coach speak for him and stares at the grass. It goes fine, and he spends the drive home wishing he had said one thing of his own.', effect: { attr: { composure: 1, teamwork: 1 }, meters: { authority: 8 } } },
+          { id: 'defer', label: 'Let the coach do the talking', desc: 'He\'s fourteen and the man knows him best', outcome: 'He lets his coach speak for him and stares at the grass. It goes fine, and he spends the drive home wishing he had said one thing of his own.', effect: { attr: { composure: 1, teamwork: 1, leadership: -1 }, meters: { authority: 8 } } },
         ],
       },
     },
@@ -263,7 +263,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         id: 'feedback',
         prompt: 'The feedback is delivered in a small room with a printed sheet turned around to face him. Two columns. One is headed Strengths. The other one is longer.',
         choices: [
-          { id: 'questions', label: 'Ask about every line', desc: 'Make them explain what each phrase means', outcome: 'He asks what "lacks presence" actually means, and the coach struggles to answer. Making an adult defend a phrase is a skill he keeps for life.', effect: { attr: { leadership: 1, composure: 1 }, meters: { authority: 6 } } },
+          { id: 'questions', label: 'Ask about every line', desc: 'Make them explain what each phrase means', outcome: 'He asks what "lacks presence" actually means, and the coach struggles to answer. Making an adult defend a phrase is a skill he keeps for life.', effect: { attr: { leadership: 1, composure: 1 }, meters: { authority: -6 } } },
           { id: 'take', label: 'Take the sheet and say thank you', desc: 'Read it properly later, on his own', outcome: 'He folds the sheet, says thanks, and reads it four times that night in bed. By the fourth time he has stopped arguing with it.', effect: { attr: { composure: 2 }, form: 0.04, meters: { authority: 4 } } },
         ],
       },
@@ -301,7 +301,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         id: 'after',
         prompt: 'By Friday it has got back to his own academy anyway — these things always do — and the coach asks him, in front of the staff room door, whether he wants to be here.',
         choices: [
-          { id: 'honest', label: 'Tell him the truth', desc: 'That he wants to play and he\'s scared of being let go', outcome: 'He admits he\'s frightened of the summer. The coach softens completely, and tells him something about his own release at sixteen that he never tells the group.', effect: { attr: { composure: 2 }, meters: { authority: 12, family: 3 } } },
+          { id: 'honest', label: 'Tell him the truth', desc: 'That he wants to play and he\'s scared of being let go', outcome: 'He admits he\'s frightened of the summer. The coach softens completely, and tells him something about his own release at sixteen that he never tells the group.', effect: { form: -0.05, attr: { composure: 2 }, meters: { authority: 12, family: 3 } } },
           { id: 'commit', label: 'Say yes, flatly', desc: 'No explanation, no apology', outcome: 'He says yes and nothing else. The coach accepts it, and the pair of them never mention Tuesday again.', effect: { attr: { composure: 1, teamwork: 1 }, form: 0.04, meters: { authority: 6 } } },
         ],
       },
@@ -340,7 +340,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         prompt: 'Thursday, four o\'clock, a small room with three chairs and only two people in it. The coach has a folder he does not open, and starts with the words "so, look".',
         choices: [
           { id: 'listen', label: 'Sit still and let him say it', desc: 'Whatever it is, hear all of it', outcome: 'He is kept on, with conditions attached, listed slowly. He hears every one of them and can still recite the list in his thirties.', effect: { attr: { composure: 2 }, form: 0.06, meters: { authority: 10 } } },
-          { id: 'ask-truth', label: 'Ask him for the honest version', desc: 'Not the version they say to parents', outcome: 'He asks what the staff actually say about him when he isn\'t in the room. The coach tells him, and it is harder and more useful than anything on the sheet.', effect: { attr: { composure: 1, leadership: 1 }, form: 0.04, meters: { authority: 8 }, tag: 'heard-the-truth' } },
+          { id: 'ask-truth', label: 'Ask him for the honest version', desc: 'Not the version they say to parents', outcome: 'He asks what the staff actually say about him when he isn\'t in the room. The coach tells him, and it is harder and more useful than anything on the sheet.', effect: { attr: { composure: 1, leadership: 1 }, form: -0.05, meters: { authority: 8 }, tag: 'heard-the-truth' } },
         ],
       },
     },
