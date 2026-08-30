@@ -37,7 +37,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'Two goals by half time, both scruffy. Twenty minutes left and the third has not come. Then it does — a toe-poke that goes in off the post — and someone on the touchline shouts that he gets to keep the ball.',
         choices: [
-          { id: 'keepball', label: 'Take the ball home', desc: 'Write the date on it in biro', outcome: 'He carries it home under his arm the whole bus journey and writes the date on the panel in blue biro, pressing hard enough to dent it.', effect: { form: 0.08, attr: { flair: 1 }, meters: { family: 5, peers: 4 }, tag: 'hattrick-ball' }, next: 'next' },
+          { id: 'keepball', label: 'Take the ball home', desc: 'Write the date on it in biro', outcome: 'He carries it home under his arm the whole bus journey and writes the date on the panel in blue biro, pressing hard enough to dent it.', effect: { form: 0.08, attr: { flair: 1 }, meters: { family: 5, peers: 4, authority: -5 }, tag: 'hattrick-ball' }, next: 'next' },
           { id: 'give', label: 'Give it back to the club', desc: 'It is the only decent match ball they own', outcome: 'He hands it to the kit man, because the club has three balls and one of them is soft. Nobody makes a fuss. He remembers the game perfectly anyway.', effect: { form: 0.06, attr: { teamwork: 1 }, meters: { authority: 6, peers: 5 } }, next: 'next' },
         ],
       },
@@ -105,7 +105,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
         prompt: 'They are drawn against the same team in the spring. He recognises the number four in the warm-up, and the number four recognises him.',
         choices: [
           { id: 'hand', label: 'Shake his hand before kickoff', desc: 'Take the feud out of it', outcome: 'He puts a hand out in the tunnel line and the boy takes it, and the game is a proper game instead of a grudge with a ball in it.', effect: { attr: { leadership: 1, composure: 1 }, meters: { authority: 5, peers: 4 } } },
-          { id: 'feed', label: 'Let him stew', desc: 'An angry defender is a bad defender', outcome: 'He says nothing, drifts across into his half of the pitch all afternoon, and the boy gets booked inside eight minutes chasing him.', effect: { form: 0.05, attr: { flair: 1, aggression: 1 }, meters: { peers: 4 } } },
+          { id: 'feed', label: 'Let him stew', desc: 'An angry defender is a bad defender', outcome: 'He says nothing, drifts across into his half of the pitch all afternoon, and the boy gets booked inside eight minutes chasing him.', effect: { form: 0.05, attr: { flair: 1, aggression: 1 }, meters: { peers: 6, authority: -6 } } },
         ],
       },
     },
@@ -134,7 +134,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
         prompt: 'Winter moves them onto the 3G behind the leisure centre. The ball comes off it twice as fast, the rubber crumb gets in his socks and stays there for months, and the boys who were good on mud are suddenly a half-second late.',
         choices: [
           { id: 'love', label: 'Fall in love with the quick surface', desc: 'The ball does what he tells it here', outcome: 'On the carpet everything he tries actually works, and he spends the winter playing the best football of his life on a pitch that smells of burnt tyres.', effect: { form: 0.07, attr: { flair: 1, creativity: 1 }, meters: { peers: 5 }, tag: 'astro-native' }, next: 'spring' },
-          { id: 'grind', label: 'Use it to fix his touch', desc: 'A fast surface punishes a heavy first touch', outcome: 'He treats the speed of it as a test rather than a gift, and by February his first touch has quietly become the best part of his game.', effect: { attr: { composure: 1, teamwork: 1 }, meters: { authority: 6 }, tag: 'astro-touch' }, next: 'spring' },
+          { id: 'grind', label: 'Use it to fix his touch', desc: 'A fast surface punishes a heavy first touch', outcome: 'He treats the speed of it as a test rather than a gift, and by February his first touch has quietly become the best part of his game.', effect: { energy: -5, form: -0.04, attr: { composure: 1, teamwork: 1 }, meters: { authority: 6 }, tag: 'astro-touch' }, next: 'spring' },
         ],
       },
       spring: {
@@ -155,9 +155,9 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'He miscontrols it entirely, the ball loops off his shin, over a keeper who has come three yards too far, and drops under the bar. The touchline goes up. He knows exactly what happened and so does everyone within ten feet.',
         choices: [
-          { id: 'claim', label: 'Wheel away and claim it', desc: 'It is in the book as a goal either way', outcome: 'He runs off with both arms up like he meant it, and keeps a completely straight face for the rest of the afternoon.', effect: { form: 0.05, attr: { flair: 1 }, meters: { peers: 5 } } },
+          { id: 'claim', label: 'Wheel away and claim it', desc: 'It is in the book as a goal either way', outcome: 'He runs off with both arms up like he meant it, and keeps a completely straight face for the rest of the afternoon.', effect: { form: 0.05, attr: { flair: 1 }, meters: { peers: 5, authority: -5 } } },
           { id: 'admit', label: 'Admit it was a shank', desc: 'Laugh at himself before anybody else can', outcome: 'He puts his hands on his head laughing before he has finished celebrating, and the whole team laugh with him rather than at him.', effect: { form: 0.04, attr: { leadership: 1, teamwork: 1 }, meters: { peers: 7, authority: 4 } } },
-          { id: 'sour', label: 'Let it bother him', desc: 'He wants goals he has actually scored', outcome: 'It nags at him all week that his best moment of the season was an accident, which is a strange and useful kind of standard to have set for himself.', effect: { attr: { composure: 1 }, meters: { authority: 3 }, tag: 'high-standards' } },
+          { id: 'sour', label: 'Let it bother him', desc: 'He wants goals he has actually scored', outcome: 'It nags at him all week that his best moment of the season was an accident, which is a strange and useful kind of standard to have set for himself.', effect: { form: -0.04, attr: { composure: 1 }, meters: { authority: 3 }, tag: 'high-standards' } },
         ],
       },
     },
@@ -238,7 +238,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
         prompt: 'The trouble with floodlights is the ball comes out of the black without warning, and twice in the first half he loses a high one completely.',
         choices: [
           { id: 'ground', label: 'Keep it on the floor all night', desc: 'What he cannot see he will not play', outcome: 'He plays everything along the ground, one and two touch, and has the best passing game of his season out of pure self-preservation.', effect: { form: 0.06, attr: { teamwork: 1, creativity: 1 }, meters: { authority: 5 } } },
-          { id: 'trust', label: 'Judge it earlier and trust it', desc: 'Move to where it will land, not where it is', outcome: 'He starts moving to where the ball is going instead of tracking it through the dark, and it works often enough to be worth the two he gets wrong.', effect: { attr: { creativity: 1, composure: 1 }, form: 0.04 } },
+          { id: 'trust', label: 'Judge it earlier and trust it', desc: 'Move to where it will land, not where it is', outcome: 'He starts moving to where the ball is going instead of tracking it through the dark, and it works often enough to be worth the two he gets wrong.', effect: { attr: { creativity: 1, composure: 1 }, form: 0.04, meters: { authority: -4 } } },
         ],
       },
     },
@@ -283,7 +283,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
         prompt: 'The regular keeper is back the following week and mentions, quietly, that it is horrible in there and nobody ever says thank you.',
         choices: [
           { id: 'respect', label: 'Tell him he is right', desc: 'And mean it', outcome: 'He agrees, out loud, in front of others, and from then on he is the one who claps the keeper first at full time whatever the score was.', effect: { attr: { leadership: 1, teamwork: 1 }, meters: { peers: 6 } } },
-          { id: 'shrug', label: 'Change the subject', desc: 'He would rather not think about it again', outcome: 'He laughs it off and gets his boots on. He does not want to think about that goalmouth ever again, and mostly manages it.', effect: { form: 0.03, attr: { composure: 1 } } },
+          { id: 'shrug', label: 'Change the subject', desc: 'He would rather not think about it again', outcome: 'He laughs it off and gets his boots on. He does not want to think about that goalmouth ever again, and mostly manages it.', effect: { form: 0.03, attr: { composure: 1 }, meters: { peers: -5 } } },
         ],
       },
     },
@@ -305,7 +305,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
         prompt: 'Saturday comes round regardless. Somebody says, half joking, that they should just start a new one.',
         choices: [
           { id: 'lead', label: 'Say it properly, not as a joke', desc: 'Start a new run, from nil, this week', outcome: 'He repeats it without laughing, and eleven of them believe him because he is not laughing. They win four-one.', effect: { form: 0.07, attr: { leadership: 2 }, meters: { peers: 6, authority: 5 } } },
-          { id: 'quiet', label: 'Just play', desc: 'Runs are things you notice afterwards', outcome: 'He says nothing about runs at all and simply plays, which is roughly the lesson, and he keeps it for the next twenty years.', effect: { form: 0.05, attr: { composure: 2 }, meters: { authority: 5 } } },
+          { id: 'quiet', label: 'Just play', desc: 'Runs are things you notice afterwards', outcome: 'He says nothing about runs at all and simply plays, which is roughly the lesson, and he keeps it for the next twenty years.', effect: { form: 0.05, attr: { composure: 2 }, meters: { authority: 5, peers: -4 } } },
         ],
       },
     },
@@ -364,7 +364,7 @@ export const YOUTH_PITCH_ARCS: StoryArc[] = [
         id: 'after',
         prompt: 'On the bus home he works out that the ninety seconds around that penalty told him something about himself he had not previously known.',
         choices: [
-          { id: 'accept', label: 'Decide he is one of the ones who takes them', desc: 'From now on the ball is his', outcome: 'He decides, quietly and permanently, that he is one of the ones who picks the ball up, and he never once ducks it again.', effect: { attr: { composure: 1, leadership: 1 }, meters: { authority: 5 }, tag: 'penalty-taker' } },
+          { id: 'accept', label: 'Decide he is one of the ones who takes them', desc: 'From now on the ball is his', outcome: 'He decides, quietly and permanently, that he is one of the ones who picks the ball up, and he never once ducks it again.', effect: { attr: { composure: 1, leadership: 1 }, meters: { authority: 5, peers: -4 }, tag: 'penalty-taker' } },
           { id: 'honest', label: 'Admit he hated every second', desc: 'And that hating it changes nothing', outcome: 'He admits to himself that he hated all of it and will hate it every time, and that this is simply what the job costs. It is the most grown-up thought he has had.', effect: { attr: { composure: 2 }, form: 0.04 } },
         ],
       },

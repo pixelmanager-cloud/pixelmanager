@@ -53,12 +53,32 @@ export function migrate(m: SaveModel): SaveModel {
   // repair path and the entry left in the save list for ever. One absent array should never cost a dynasty.
   // `...m` FIRST, then fill the gaps — spreading m over the defaults would put an explicit `undefined`
   // straight back and undo the repair.
+  // `?? []` REPAIRS ABSENT, NOT MALFORMED — and the difference is a dynasty. A save whose `tokens` is an
+  // object, a string or a number sails past every one of these defaults and then kills migrate itself
+  // ("m.tokens is not iterable", "m.tokens.map is not a function"), and a null entry inside the array kills
+  // it on `.generation`. Four such shapes were reproducible, each a permanently unloadable save reported to
+  // the player as "may be corrupted" with no repair path — which is precisely the outcome the comment
+  // above says one absent array should never cost. A structured-clone failure or a truncated write is all
+  // it takes. Anything that is not a usable array becomes an empty one; junk entries are dropped.
+  // ARRAY-LIKE FIRST, EMPTY ONLY AS A LAST RESORT. Coercing straight to [] destroys data that was fully
+  // recoverable: `{0:{…},1:{…},length:2}` — what a truncated structured clone or a sparse-array round-trip
+  // yields — has two intact men in it. Before the malformed-save fix that shape THREW, and the bytes
+  // survived on disk as "may be corrupted", recoverable by hand. After it, the save loaded clean and the
+  // first ordinary action's autosave overwrote the recoverable data with the emptied version. Repair by
+  // deletion plus write-back is permanent loss, and is a worse outcome than the crash it replaced.
+  const arr = <T,>(v: unknown): T[] => {
+    if (Array.isArray(v)) return v.filter((x) => x != null) as T[];
+    if (v && typeof v === 'object' && typeof (v as { length?: unknown }).length === 'number') {
+      try { return Array.from(v as ArrayLike<T>).filter((x) => x != null); } catch { return []; }
+    }
+    return [];
+  };
   const repaired: SaveModel = {
     ...m,
-    tokens: m.tokens ?? [], injuries: m.injuries ?? [], legacies: m.legacies ?? [],
-    honours: m.honours ?? [], awards: m.awards ?? [], missions: m.missions ?? [],
-    loanees: m.loanees ?? [], retiredNumbers: m.retiredNumbers ?? [], playerStats: m.playerStats ?? [],
-    facilities: { ...DEFAULT_FACILITIES, ...(m.facilities ?? {}) },
+    tokens: arr<Token>(m.tokens), injuries: arr(m.injuries), legacies: arr(m.legacies),
+    honours: arr(m.honours), awards: arr(m.awards), missions: arr(m.missions),
+    loanees: arr(m.loanees), retiredNumbers: arr(m.retiredNumbers), playerStats: arr(m.playerStats),
+    facilities: { ...DEFAULT_FACILITIES, ...(m.facilities && typeof m.facilities === 'object' ? m.facilities : {}) },
   };
   m = repaired;
   if ((m.version ?? 1) >= SAVE_VERSION) return m;
@@ -95,10 +115,16 @@ export function migrate(m: SaveModel): SaveModel {
   return { ...m, tokens, version: SAVE_VERSION };
 }
 
-/** An empty new-game save. `Date.now()`/`Math.random()` here are fine — this is client, not @fm/shared. */
-export function freshSave(name: string): SaveModel {
-  const seed = Math.floor(Math.random() * 2 ** 31);
-  const shirtColor = Math.floor(Math.random() * 0xffffff);
+/** An empty new-game save. `Date.now()`/`Math.random()` here are fine — this is client, not @fm/shared.
+ *
+ *  ...EXCEPT IN A TEST, where an unseeded world is a flaky test. client/qa_branch_switch.ts asserts that a
+ *  cousin is offered within six generations, and whether one IS depends on the world this draws — so that
+ *  assertion failed about one run in eight, inside `npm run verify`, for reasons no diff could explain.
+ *  A flaky gate is worse than no gate: it trains you to re-run until green, which is how a real regression
+ *  gets waved through. `seed` lets a harness pin the world; production still passes nothing and stays
+ *  random. */
+export function freshSave(name: string, seed = Math.floor(Math.random() * 2 ** 31)): SaveModel {
+  const shirtColor = (seed * 2654435761) % 0xffffff;
   const { club, standingOrders } = makeClub(OWNER, name, seed, shirtColor);
   return {
     version: SAVE_VERSION,
@@ -455,11 +481,44 @@ const modelBox: { model: SaveModel } = { model: freshSave('New Manager') };
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
 const PERSIST_DEBOUNCE_MS = 500;
 
+/** Set when the last write to disk failed. The UI reads this to warn that play is not being saved. */
+let saveHealth: { ok: boolean; error?: string } = { ok: true };
+/** Whether the last write to disk succeeded. The UI polls this so a failing autosave cannot stay silent. */
+export function getSaveHealth(): { ok: boolean; error?: string } { return saveHealth; }
+
+/** Slots with a write in flight, so a delete that races one can re-remove after it lands. */
+const inFlight = new Set<string>();
+
+async function writeSlot(id: string, model: SaveModel): Promise<void> {
+  inFlight.add(id);
+  try { await writeSlotInner(id, model); } finally { inFlight.delete(id); }
+}
+
+async function writeSlotInner(id: string, model: SaveModel): Promise<void> {
+  // A SWALLOWED WRITE IS THE WORST BUG THIS FILE CAN HAVE. This was `void backend.save(...)`: every
+  // rejection became an unhandled rejection the app never saw. No retry, no error state, no warning — and
+  // IndexedDBBackend caches its open promise, so once opening fails (Safari private browsing, a corrupt
+  // DB, a blocked upgrade) EVERY later write rejects for the whole session. The game goes on accepting
+  // moves and reporting success while nothing reaches disk; you close the tab and the evening is gone.
+  try {
+    await backend.save(id, model);
+    if (!saveHealth.ok) saveHealth = { ok: true };
+  } catch (e) {
+    try { await backend.save(id, model); if (!saveHealth.ok) saveHealth = { ok: true }; return; } catch { /* fall through */ }
+    saveHealth = { ok: false, error: (e as Error)?.message ?? String(e) };
+  }
+}
+
 function schedulePersist(): void {
   if (!activeSlotId) return;
   if (persistTimer != null) clearTimeout(persistTimer);
   const id = activeSlotId;
-  persistTimer = setTimeout(() => { persistTimer = null; void backend.save(id, modelBox.model); }, PERSIST_DEBOUNCE_MS);
+  // CAPTURE THE MODEL, NOT JUST THE SLOT. This read `modelBox.model` at FIRE time while capturing `id` at
+  // SCHEDULE time, so a slot swap inside the 500ms debounce wrote the NEW save's contents into the OLD
+  // save's slot. Reproduced: mutate slot A, start a new game, wait — slot A then holds slot B's save and
+  // both dynasties are the same dynasty, with no undo.
+  const model = modelBox.model;
+  persistTimer = setTimeout(() => { persistTimer = null; void writeSlot(id, model); }, PERSIST_DEBOUNCE_MS);
 }
 
 /** Swap the persistence backend (tests inject `createInMemoryBackend()`; real code never needs to). */
@@ -471,9 +530,14 @@ export async function listSaves(): Promise<SaveMeta[]> { return backend.list(); 
 
 /** Start a brand-new game: creates a fresh save, makes it active, and persists it immediately
  *  (not debounced) so it shows up in `listSaves()` right away. Returns the new slot id. */
-export async function newGame(name: string): Promise<string> {
-  const id = crypto.randomUUID();
-  modelBox.model = freshSave(name);
+export async function newGame(name: string, seed?: number, slotId?: string): Promise<string> {
+  // `slotId` is for HARNESSES ONLY. Career seeds are world-mixed through the ACTIVE SLOT ID
+  // (careerSeedFor(..., getActiveSlotId()) in api.ts) so that two saves play out differently — which is
+  // correct and worth keeping, but it means a random UUID here leaks into every succession. Pinning the
+  // world seed alone left qa_branch_switch failing ~1 run in 20; this is the other half.
+  await flushSave();          // settle the outgoing save before its slot stops being active
+  const id = slotId ?? crypto.randomUUID();
+  modelBox.model = freshSave(name, seed);
   activeSlotId = id;
   await backend.save(id, modelBox.model);
   return id;
@@ -481,6 +545,7 @@ export async function newGame(name: string): Promise<string> {
 
 /** Continue an existing save: loads it into the active in-memory model. */
 export async function continueSave(id: string): Promise<SaveModel> {
+  await flushSave();          // ...and before loading another one over it
   const raw = await backend.load(id);
   if (!raw) throw new Error(`save not found: ${id}`);
   const m = migrate(raw);
@@ -491,14 +556,24 @@ export async function continueSave(id: string): Promise<SaveModel> {
 }
 
 export async function deleteSave(id: string): Promise<void> {
+  // CANCEL ANY PENDING WRITE TO THIS SLOT FIRST, or the debounced timer fires after the removal and the
+  // save comes back: "Delete forever" un-deleting itself. Reproduced.
+  if (activeSlotId === id && persistTimer != null) { clearTimeout(persistTimer); persistTimer = null; }
   await backend.remove(id);
+  // ...AND CANCELLING THE TIMER IS NOT ENOUGH. A write already IN FLIGHT when the player hits delete lands
+  // afterwards and re-creates the slot — reproduced at 20ms and 50ms, which is an ordinary IndexedDB write
+  // for a save carrying a full squad and a dynasty's history. Wait for it, then remove again.
+  if (inFlight.has(id)) {
+    for (let i = 0; i < 40 && inFlight.has(id); i++) await new Promise((r) => setTimeout(r, 25));
+    await backend.remove(id);
+  }
   if (activeSlotId === id) activeSlotId = null;
 }
 
 /** Force an immediate (non-debounced) write of the active model — e.g. before the tab closes. */
 export async function flushSave(): Promise<void> {
   if (persistTimer != null) { clearTimeout(persistTimer); persistTimer = null; }
-  if (activeSlotId) await backend.save(activeSlotId, modelBox.model);
+  if (activeSlotId) await writeSlot(activeSlotId, modelBox.model);
 }
 
 /** The one `LocalStore` instance the Phase 3 facade will point `db` at — reads/writes `modelBox.model`,

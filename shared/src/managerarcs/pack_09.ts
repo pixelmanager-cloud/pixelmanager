@@ -380,7 +380,7 @@ export const MGR_ARCS_09: ManagerArc[] = [
   },
   {
     id: 'mgr-p09-taking-it-round', title: 'Taking It Round', icon: '🥇', category: 'triumph',
-    when: { minSeason: 2, maxPos: 0.15 }, weight: 3, first: 'open',
+    when: { minSeason: 2, maxPos: 0.15, requiresTag: 'mgr-community' }, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -594,7 +594,7 @@ export const MGR_ARCS_09: ManagerArc[] = [
   },
   {
     id: 'mgr-p09-scouts-or-subscription', title: 'Eleven Men And A Laptop', icon: '💻', category: 'boardroom',
-    when: { minSeason: 2 }, weight: 4, first: 'open',
+    when: { minSeason: 2, facility: { key: 'scouting', min: 4 } }, weight: 4, first: 'open',
     beats: {
       open: {
         id: 'open',

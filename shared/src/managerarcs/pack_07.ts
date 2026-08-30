@@ -183,7 +183,7 @@ export const MGR_ARCS_07: ManagerArc[] = [
   },
   {
     id: 'mgr-p07-golf-thursdays', title: 'The Golfers', icon: '⛳', category: 'dressing-room',
-    when: { minSeason: 2, needs: 'big-squad' }, temper: ['players-manager','chancer'], weight: 3, first: 'open',
+    when: { minSeason: 2, needs: 'big-squad', forbidsTag: 'mgr-strict' }, temper: ['players-manager','chancer'], weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -198,7 +198,7 @@ export const MGR_ARCS_07: ManagerArc[] = [
   },
   {
     id: 'mgr-p07-gps-numbers', title: 'The Vest Says Otherwise', icon: '📊', category: 'dressing-room',
-    when: { minSeason: 2 }, temper: ['tactician','disciplinarian'], weight: 3, first: 'open',
+    when: { minSeason: 2, facility: { key: 'data', min: 3 } }, temper: ['tactician','disciplinarian'], weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -243,7 +243,7 @@ export const MGR_ARCS_07: ManagerArc[] = [
   },
   {
     id: 'mgr-p07-tactics-board-reading', title: 'He Cannot Read It', icon: '🔤', category: 'dressing-room',
-    when: { minSeason: 1, maxTier: 6 }, weight: 3, first: 'open',
+    when: { minSeason: 1, maxTier: 6, facility: { key: 'data', min: 2 } }, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -288,7 +288,7 @@ export const MGR_ARCS_07: ManagerArc[] = [
   },
   {
     id: 'mgr-p07-digs-fallout', title: 'The Rent', icon: '🏚️', category: 'dressing-room',
-    when: { minSeason: 1, maxTier: 5 }, weight: 3, first: 'open',
+    when: { minSeason: 1, maxTier: 5, facility: { key: 'dorm', min: 2 } }, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -303,7 +303,7 @@ export const MGR_ARCS_07: ManagerArc[] = [
   },
   {
     id: 'mgr-p07-thursday-injuries', title: 'Always A Thursday', icon: '🩺', category: 'dressing-room',
-    when: { minSeason: 2 }, weight: 3, first: 'open',
+    when: { minSeason: 2, facility: { key: 'medical', min: 3 } }, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -318,7 +318,7 @@ export const MGR_ARCS_07: ManagerArc[] = [
   },
   {
     id: 'mgr-p07-shirt-name', title: 'What It Says On The Back', icon: '🅰️', category: 'dressing-room',
-    when: { minSeason: 2 }, weight: 3, first: 'open',
+    when: { minSeason: 2, facility: { key: 'shop', min: 2 } }, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -1125,7 +1125,7 @@ export const MGR_ARCS_07: ManagerArc[] = [
   },
   {
     id: 'mgr-p07-training-ground-floodlights', title: 'The Neighbours', icon: '🏘️', category: 'club',
-    when: { minSeason: 2 }, weight: 3, first: 'open',
+    when: { minSeason: 2, facility: { key: 'training', min: 3 } }, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -1170,7 +1170,7 @@ export const MGR_ARCS_07: ManagerArc[] = [
   },
   {
     id: 'mgr-p07-womens-team-ground', title: 'They Want The Main Pitch', icon: '🏟️', category: 'club',
-    when: { minSeason: 2 }, temper: ['builder','players-manager'], weight: 4, first: 'open',
+    when: { minSeason: 2, facility: { key: 'women', min: 4 } }, temper: ['builder','players-manager'], weight: 4, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -1350,7 +1350,7 @@ export const MGR_ARCS_07: ManagerArc[] = [
   },
   {
     id: 'mgr-p07-drum-argument', title: 'Two Drums', icon: '🥁', category: 'club',
-    when: { minSeason: 2 }, weight: 3, first: 'open',
+    when: { minSeason: 2, facility: { key: 'fanzone', min: 3 } }, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -1455,7 +1455,7 @@ export const MGR_ARCS_07: ManagerArc[] = [
   },
   {
     id: 'mgr-p07-school-holiday-festival', title: 'The Pitches Are Booked', icon: '🎪', category: 'club',
-    when: { minSeason: 2, maxTier: 6 }, weight: 3, first: 'open',
+    when: { minSeason: 2, maxTier: 6, facility: { key: 'community', min: 3 } }, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',

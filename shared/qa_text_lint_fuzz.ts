@@ -96,6 +96,9 @@ const SEASON_EVENTS = ['serious-injury', 'hot-streak', 'slump', 'new-gaffer', 'k
 const KINDS = ['match', 'training', 'social', 'contract', 'loan', 'setback', 'media', 'loyalty', 'role', 'fallout', 'injury_comeback', 'transfer_rumour', 'manager_fallout', 'charity', 'social_storm', 'family_illness', 'romance', 'mentor_crossroads', 'friend_rivalry', 'new_money', 'move_abroad'];
 const TAGS = ['aggression', 'creativity', 'composure', 'teamwork', 'leadership', 'stamina', 'flair', 'keeping'];
 const MILESTONES = [null, 'debut', 'first_goal', 'first_big_win', 'cup_final', 'first_start'];
+// Surnames fed to careerCast's avoidance parameter — deliberately including ones that DO appear inside
+// the cast name banks, so the avoidance loop is actually exercised rather than trivially satisfied.
+const AVOID_SURNAMES = ['Hart', 'Bell', 'Reid', 'Shaw', 'Kane', 'Moore', 'Clarke', 'Doyle'];
 
 // ── 1. scenarioStory + narratePlay + narrateLifeEvent + rival/callup moments + academy scare ──
 {
@@ -104,8 +107,16 @@ const MILESTONES = [null, 'debut', 'first_goal', 'first_big_win', 'cup_final', '
     const rng = mulberry32(s + 1);
     const pick = <T,>(a: readonly T[]): T => a[Math.floor(rng() * a.length)];
     const careerSeed = Math.floor(rng() * 1e9);
-    const cast = careerCast(careerSeed);
+    // PASS THE FAMILY SURNAME. careerCast's second argument is the name to AVOID, so the cast never shares
+    // the player's own surname (PT-602). This was called with one argument, which means the lint has only
+    // ever exercised the no-avoidance path — it was structurally unable to catch a regression in the one
+    // branch the parameter exists for. Now it drives the avoidance loop and asserts the result.
+    const avoid = pick(AVOID_SURNAMES);
+    const cast = careerCast(careerSeed, avoid);
     const names = [cast.gaffer, cast.mentor, cast.captain, cast.rival];
+    for (const nm of names) {
+      if (nm.toLowerCase().includes(avoid.toLowerCase())) log(`careerCast returned "${nm}" despite avoiding surname "${avoid}"`);
+    }
     const chapter = pick(CHAPTERS);
     const age = 10 + Math.floor(rng() * 16);
     const seasonEventId = pick(SEASON_EVENTS) as string | null | undefined;
@@ -163,7 +174,7 @@ const MILESTONES = [null, 'debut', 'first_goal', 'first_big_win', 'cup_final', '
     const rng = mulberry32(s + 51);
     const pick = <T,>(a: readonly T[]): T => a[Math.floor(rng() * a.length)];
     const careerSeed = Math.floor(rng() * 1e9);
-    const cast = careerCast(careerSeed);
+    const cast = careerCast(careerSeed, pick(AVOID_SURNAMES));
     const names = [cast.gaffer, cast.mentor, cast.captain, cast.rival];
     const chapter = pick(CHAPTERS);
     const nextIdx = CHAPTERS.indexOf(chapter) + 1;

@@ -579,7 +579,7 @@ export const DEMAND_G: Bank = {
     'Everything is available if he simply does not rush.',
     'The pressure is designed to produce exactly the mistake he is about to be tempted into.',
     'Stay still, then move.',
-    'It is a test of nerve dressed up as a test of skill.',
+  
     'A settled mind is the whole requirement.',
     'The crowd noise has to become weather rather than instruction.',
     'Nothing dramatic is needed, only nothing careless.',
@@ -725,7 +725,7 @@ export const DEMAND_G: Bank = {
     'It asks for calm in the exact place where calm is hardest to find.',
     'The tension is doing more damage than the opposition.',
     'A cool mind under a hot minute, and no fuss made of it.',
-    'He has to stop the game speeding up inside his own head.',
+  
     'Nothing more than nerve.',
     'It calls for him to look up twice when everything says look up none.',
     'A clear head at the loudest moment of the afternoon.',
@@ -1494,7 +1494,7 @@ export const DEMAND_G: Bank = {
     'It comes down to whether there is a second engine underneath the first one, which most players do not have.',
     'His shirt is heavy, his calves are gone, and there are still ten minutes of this to survive.',
     'A late press against a substitute with thirty fresh minutes in his legs.',
-    'The whole afternoon has been spent running, and the afternoon has not finished asking.',
+  
     'Effort of the kind that gets no applause and decides everything.',
     'Nobody expects another sprint out of him and that is exactly the gap worth exploiting.',
     'A recovery run made from a body that stopped cooperating around the seventieth minute.',
@@ -1512,7 +1512,7 @@ export const DEMAND_G: Bank = {
     'Everything is finished except the requirement, which has not moved an inch.',
     'A run made purely because stopping would be worse than the pain of not stopping.',
     'Nobody carries anybody through the last ten minutes.',
-    'His body has given everything it had and is now being asked for a little past that.',
+  
     'A press that costs him more than it can possibly earn, and has to be made regardless.',
   ],
   flair: [
@@ -1619,7 +1619,7 @@ export const DEMAND_G: Bank = {
     'Something spectacular, and the nerve to begin it.',
     'A volley from an angle that does not deserve one.',
     'It rewards the ambitious and buries the timid.',
-    'The crowd can feel one coming and so can he.',
+  
     'A trick with real risk attached.',
     'It calls for the sort of thing that gets a player remembered rather than rated.',
     'Something that makes the goalkeeper look ordinary.',
@@ -1992,7 +1992,7 @@ export const DEMAND_G: Bank = {
     'A save at full stretch from a shot he has no business reaching.',
     'His whole afternoon reduces to the next second and a half, and none of the rest will matter.',
     'A strong claim in a very physical box, with the referee showing no interest in protecting him.',
-    'It asks him to be brave in a place where bravery reliably gets people hurt.',
+  
     'The rebound will matter more than the save, and both have to be handled in the same movement.',
     'A punch to safety, because a catch here would be greed dressed up as confidence.',
     'Nobody has spoken to the defence in twenty minutes and the shape shows it plainly.',

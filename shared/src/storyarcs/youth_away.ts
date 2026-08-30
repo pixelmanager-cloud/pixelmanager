@@ -76,8 +76,8 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'A tournament in Holland. His first passport, three weeks old, the photograph making him look startled. At the airport he keeps checking the pocket it is in, then checking again, until a lad tells him to give it a rest.',
         choices: [
-          { id: 'stick', label: 'Stick close to the lads he knows', desc: 'Get through the day without anything going wrong', outcome: 'He shadows two mates from gate to gate and arrives having seen nothing but the backs of their heads. It works. It is also a wasted morning he thinks about later.', effect: { meters: { peers: 5 }, attr: { composure: 1 }, tag: 'away-abroad-cautious' }, next: 'field' },
-          { id: 'look', label: 'Look at everything, out loud', desc: 'He has never seen a country before', outcome: 'He is unembarrassed about being amazed — the flat green out of the window, the signs, the coins. Two of the older boys take the mickey and then start pointing things out to him themselves.', effect: { meters: { peers: 3 }, attr: { creativity: 2 }, tag: 'away-abroad-wide-eyed' }, next: 'field' },
+          { id: 'stick', label: 'Stick close to the lads he knows', desc: 'Get through the day without anything going wrong', outcome: 'He shadows two mates from gate to gate and arrives having seen nothing but the backs of their heads. It works. It is also a wasted morning he thinks about later.', effect: { meters: { peers: 5 }, attr: { composure: 1, creativity: -1 }, tag: 'away-abroad-cautious' }, next: 'field' },
+          { id: 'look', label: 'Look at everything, out loud', desc: 'He has never seen a country before', outcome: 'He is unembarrassed about being amazed — the flat green out of the window, the signs, the coins. Two of the older boys take the mickey and then start pointing things out to him themselves.', effect: { meters: { peers: 3 }, attr: { creativity: 2 }, energy: -6, tag: 'away-abroad-wide-eyed' }, next: 'field' },
         ],
       },
       field: {
@@ -137,8 +137,8 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'A final at the end of a tournament weekend, on a pitch nobody in his team had heard of a week ago, in front of a hundred strangers. Nil-nil after extra time. The coach is walking down the line asking for five hands.',
         choices: [
-          { id: 'volunteer', label: 'Put his hand up first', desc: 'Before he can think about it', outcome: 'His arm is up before the question is finished and two others go up after his, which is the only reason he did it. He is given the fourth.', effect: { attr: { leadership: 2, composure: 1 }, meters: { authority: 6 }, tag: 'away-pens-volunteered' }, next: 'walk' },
-          { id: 'wait', label: 'Wait to be asked', desc: 'Let the ones who want it take it', outcome: 'He does not raise his hand, and the coach names him fifth anyway, without looking up. Which answers a question he had not asked.', effect: { attr: { composure: 1 }, tag: 'away-pens-named' }, next: 'walk' },
+          { id: 'volunteer', label: 'Put his hand up first', desc: 'Before he can think about it', outcome: 'His arm is up before the question is finished and two others go up after his, which is the only reason he did it. He is given the fourth.', effect: { attr: { leadership: 2, composure: 1 }, meters: { authority: 6 }, energy: -6, tag: 'away-pens-volunteered' }, next: 'walk' },
+          { id: 'wait', label: 'Wait to be asked', desc: 'Let the ones who want it take it', outcome: 'He does not raise his hand, and the coach names him fifth anyway, without looking up. Which answers a question he had not asked.', effect: { attr: { composure: 1 }, meters: { peers: -4 }, tag: 'away-pens-named' }, next: 'walk' },
         ],
       },
       walk: {
@@ -160,9 +160,9 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'They lost five nil at a place none of them will ever go again, and now there is the drive. Nobody has put music on. The windows have gone opaque with breath and rain and someone at the back is pretending to be asleep.',
         choices: [
-          { id: 'music', label: 'Put something on and get the noise back', desc: 'Silence is making it bigger than it is', outcome: 'He reaches forward and puts on the tinny speaker anyway. It is awful for four minutes and then it is fine, and by the second service station they are laughing about the fourth goal.', effect: { meters: { peers: 8 }, attr: { leadership: 2 }, tag: 'away-drive-broke-silence' } },
-          { id: 'window', label: 'Sit with it and watch the motorway', desc: 'Some things want an hour of nothing', outcome: 'He watches lorries and lit-up towns for two hundred miles and arrives home with the loss filed somewhere it can be looked at rather than felt.', effect: { attr: { composure: 3 }, energy: 4, tag: 'away-drive-thought' } },
-          { id: 'pick', label: 'Start going through what went wrong', desc: 'Out loud, at the back, with whoever will listen', outcome: 'Three of them work it through past Birmingham — the shape, the second goal, who was covering. Two of it is right and one of it is wrong, and it stops feeling like weather and starts feeling like a problem.', effect: { attr: { leadership: 1, teamwork: 2 }, meters: { peers: 3 }, tag: 'away-drive-analysed' } },
+          { id: 'music', label: 'Put something on and get the noise back', desc: 'Silence is making it bigger than it is', outcome: 'He reaches forward and puts on the tinny speaker anyway. It is awful for four minutes and then it is fine, and by the second service station they are laughing about the fourth goal.', effect: { meters: { peers: 8, authority: -4 }, attr: { leadership: 2 }, tag: 'away-drive-broke-silence' } },
+          { id: 'window', label: 'Sit with it and watch the motorway', desc: 'Some things want an hour of nothing', outcome: 'He watches lorries and lit-up towns for two hundred miles and arrives home with the loss filed somewhere it can be looked at rather than felt.', effect: { attr: { composure: 3 }, energy: 4, meters: { peers: -4 }, tag: 'away-drive-thought' } },
+          { id: 'pick', label: 'Start going through what went wrong', desc: 'Out loud, at the back, with whoever will listen', outcome: 'Three of them work it through past Birmingham — the shape, the second goal, who was covering. Two of it is right and one of it is wrong, and it stops feeling like weather and starts feeling like a problem.', effect: { attr: { leadership: 1, teamwork: 2, composure: -1 }, meters: { peers: 3 }, tag: 'away-drive-analysed' } },
         ],
       },
     },
@@ -190,8 +190,8 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'An away trip to a club with a proper building: a corridor of photographs, a laundry that smells of hot cotton, a boot room with names above the pegs. Their own changing room at home is a portakabin with a bucket under one corner.',
         choices: [
-          { id: 'look', label: 'Look at all of it properly', desc: 'Walk the corridor slowly on the way back out', outcome: 'He reads every photograph caption on the way to the pitch, working out how old they were, whether any of them made it. He comes out with something between hunger and vertigo.', effect: { attr: { creativity: 1, composure: 1 }, tag: 'away-facilities-hungry' }, next: 'after' },
-          { id: 'unimpressed', label: 'Act like it is nothing', desc: 'It is a building. The pitch is the same size.', outcome: 'He barely lifts his head walking through, which two of the home lads clock and dislike. It is entirely an act and it works on everyone except him.', effect: { attr: { composure: 1, aggression: 1 }, meters: { peers: 3 }, tag: 'away-facilities-cold' }, next: 'after' },
+          { id: 'look', label: 'Look at all of it properly', desc: 'Walk the corridor slowly on the way back out', outcome: 'He reads every photograph caption on the way to the pitch, working out how old they were, whether any of them made it. He comes out with something between hunger and vertigo.', effect: { attr: { creativity: 1, composure: 1 }, form: -0.04, tag: 'away-facilities-hungry' }, next: 'after' },
+          { id: 'unimpressed', label: 'Act like it is nothing', desc: 'It is a building. The pitch is the same size.', outcome: 'He barely lifts his head walking through, which two of the home lads clock and dislike. It is entirely an act and it works on everyone except him.', effect: { attr: { composure: 1, aggression: 1, creativity: -1 }, meters: { peers: 3 }, tag: 'away-facilities-cold' }, next: 'after' },
         ],
       },
       after: {
@@ -227,8 +227,8 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'The Spanish side in their tournament group do not clear it. Not once. Their keeper rolls it out under pressure, their centre backs pass to each other eight times in their own box, and his team chase shadows for twenty-five minutes and lose four nil.',
         choices: [
-          { id: 'sneer', label: 'Call it soft and move on', desc: 'They would not do that in a proper winter', outcome: 'He says it loudly on the walk back and means about half of it. The half he does not mean sits there all evening, refusing to go.', effect: { attr: { aggression: 1 }, meters: { peers: 3 }, tag: 'away-style-dismissed' }, next: 'watch' },
-          { id: 'study', label: 'Ask if he can watch their next game', desc: 'He wants to see it again from the outside', outcome: 'He stands behind their goal with a warm drink for forty minutes watching a twelve-year-old take the ball on the half-turn under pressure over and over. He is quiet all the way back.', effect: { attr: { creativity: 2, composure: 1 }, tag: 'away-style-studied' }, next: 'watch' },
+          { id: 'sneer', label: 'Call it soft and move on', desc: 'They would not do that in a proper winter', outcome: 'He says it loudly on the walk back and means about half of it. The half he does not mean sits there all evening, refusing to go.', effect: { attr: { aggression: 1 }, meters: { peers: 3, authority: -4 }, tag: 'away-style-dismissed' }, next: 'watch' },
+          { id: 'study', label: 'Ask if he can watch their next game', desc: 'He wants to see it again from the outside', outcome: 'He stands behind their goal with a warm drink for forty minutes watching a twelve-year-old take the ball on the half-turn under pressure over and over. He is quiet all the way back.', effect: { attr: { creativity: 2, composure: 1 }, meters: { peers: -4 }, tag: 'away-style-studied' }, next: 'watch' },
         ],
       },
       watch: {

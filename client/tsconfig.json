@@ -8,5 +8,5 @@
     "noEmit": true,
     "paths": { "@fm/shared": ["../shared/src/index.ts"] }
   },
-  "include": ["src", "../shared/src"]
+  "include": ["src", "qa_*.ts", "../shared/src", "../shared/qa-env.d.ts"]
 }

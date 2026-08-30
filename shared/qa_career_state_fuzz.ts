@@ -18,7 +18,11 @@ const finite = (v: unknown): v is number => typeof v === 'number' && Number.isFi
 
 /** A minimal fake Token satisfying the fields careerState()/careerProfile() actually read. */
 function makeToken(over: Partial<Token>): Token {
-  return {
+  // The base literal below is annotated Token, so every field in it IS checked. Only the final merge is
+  // cast: spreading a Partial<Token> widens each overridable field to `| undefined`, which TypeScript
+  // cannot narrow back on its own. Casting the merge (rather than typing `over` loosely) keeps the
+  // fixture honest while letting callers override any subset.
+  const base: Token = {
     id: 'nft:qa', owner_id: 'owner:qa', generation: 0, state: 'prospect', name: 'Kai Vance',
     genes_json: JSON.stringify({ pace: { floor: 5, ceiling: 15 }, strength: { floor: 5, ceiling: 15 }, stamina: { floor: 5, ceiling: 15 } }),
     pedigree: 0, dev_bonus_json: '{}',
@@ -28,9 +32,9 @@ function makeToken(over: Partial<Token>): Token {
     signed_season: null, length_seasons: null, staked_since: null,
     ach_seasons: 0, ach_apps: 0, ach_league: 0, ach_cup: 0, ach_promotions: 0, ach_tier: 0, morale: 65,
     ach_goals: 0, ach_assists: 0, ach_potm: 0,
-    kit_json: null,
-    ...over,
+    kit_json: null, career_honours_json: null,
   };
+  return { ...base, ...over } as Token;
 }
 
 /** Validate every field careerState() promises, whatever phase it's currently in. */
@@ -137,7 +141,12 @@ function driveCareer(opts: { seed: number; track: Track; agentId?: string; token
     if (st.recap) recapSeen = true;
 
     try {
-      if (st.phase === 'focus') {
+      // STORY ARCS ARE A CAREER PHASE. This dispatch predates them and never handled 'arc', so the first arc
+      // beat fell through to the play branch, read an undefined hand and killed the suite. Deterministic pick
+      // (first choice) so the harness stays reproducible.
+      if (st.phase === 'arc') {
+        c.resolveArc((st as any).arc.choices[0].id);
+      } else if (st.phase === 'focus') {
         const opt = badPlayer ? st.focus[st.focus.length - 1] : st.focus[Math.floor(rng() * st.focus.length)];
         c.chooseFocus(opt.id);
       } else if (st.phase === 'offer') {

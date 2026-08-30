@@ -1,0 +1,13 @@
+{
+  "//": "Typechecks shared/src AND the qa_*.ts harnesses. The harnesses were never typechecked by anything: client/tsconfig.json includes ../shared/src but not shared/ itself, and tsx strips types without checking them. That gap is exactly how a REQUIRED field (`promotions`) went missing from three separate typed AchSnapshot literals unnoticed — a missing field reads undefined, every comparison against it is false, and two achievements silently became unearnable while the suite still reported passing.",
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "strict": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": []
+  },
+  "include": ["src", "*.ts"]
+}

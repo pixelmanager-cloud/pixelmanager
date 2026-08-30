@@ -1,6 +1,6 @@
 // Career-sim harness. Validates: (1) different styles → distinct, specialised players + roles;
 // (2) skill → magnitude; (3) the turn-by-turn engine is deterministic. Run: `npx tsx career_sim.ts`.
-import { Career, simCareer, graduate, ageCurve, careerOverall, prospectValuation, contractCost, contractLength, releaseClause, breederRevenue, legacyBoost, AGENTS, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, STARTER_DECK, cardPower, activeSynergies, type Style, type CareerPlayerAttrs, type Role, type Genes, type PlayerAchievements } from './src/career.js';
+import { Career, simCareer, graduate, ageCurve, careerOverall, prospectValuation, contractCost, contractLength, releaseClause, breederRevenue, legacyBoost, AGENTS, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, STARTER_DECK, cardPower, activeSynergies, type Style, type CareerPlayerAttrs, type Role, type Genes, type PlayerAchievements, type Tag } from './src/career.js';
 
 const STYLES: Style[] = [
   { name: 'Poacher',   pref: { composure: 1, flair: 0.8 },        skill: 0.85 },
@@ -101,7 +101,7 @@ const geneTier = (ceil: number) => (ceil <= 9 ? 'L' : ceil <= 14 ? 'M' : 'H');
 for (let i = 0; i < N; i++) {
   const rng = mulberry32(seedFrom('space', i));
   const goalkeeper = rng() < 0.12;                              // ~1 in 8 players choose the GK track
-  const pool = goalkeeper ? (['keeping'] as typeof OUT) : OUT;
+  const pool: readonly Tag[] = goalkeeper ? (['keeping'] as Tag[]) : OUT;
   const pref: Partial<Record<typeof TAGS[number], number>> = {};
   if (goalkeeper) { pref.keeping = 1; pref.composure = rng() * 0.6; pref.leadership = rng() * 0.6; }
   else for (const t of pool) if (rng() < 0.5) pref[t] = rng();

@@ -18,8 +18,8 @@ export const YOUTH_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'The proper boots — the ones every kid at training already has — sit in the shop window at a price that makes his mum go quiet. She says they\'ll see. He knows what "we\'ll see" costs, and he\'s seen the envelope where the bills live.',
         choices: [
-          { id: 'ask', label: 'Ask for them anyway', desc: 'He wants them badly enough to say it out loud', outcome: 'He asks. She buys them, and skips something of her own to do it — he notices the shoes she doesn\'t replace all winter.', effect: { meters: { family: 8 }, attr: { flair: 1 }, tag: 'boots-bought' }, next: 'wear' },
-          { id: 'quiet', label: 'Say nothing and make do', desc: 'Keep playing in the old ones, hand-me-down studs and all', outcome: 'He tells her the old ones are fine. They aren\'t — but he plays in them all season and never once mentions it.', effect: { meters: { family: 5 }, attr: { stamina: 1, composure: 1 }, tag: 'boots-made-do' }, next: 'wear' },
+          { id: 'ask', label: 'Ask for them anyway', desc: 'He wants them badly enough to say it out loud', outcome: 'He asks. She buys them, and skips something of her own to do it — he notices the shoes she doesn\'t replace all winter.', effect: { greed: 2, meters: { family: 8 }, attr: { flair: 1 }, tag: 'boots-bought' }, next: 'wear' },
+          { id: 'quiet', label: 'Say nothing and make do', desc: 'Keep playing in the old ones, hand-me-down studs and all', outcome: 'He tells her the old ones are fine. They aren\'t — but he plays in them all season and never once mentions it.', effect: { form: -0.05, energy: -6, meters: { family: 5 }, attr: { stamina: 1, composure: 1 }, tag: 'boots-made-do' }, next: 'wear' },
         ],
       },
       wear: {
@@ -71,8 +71,8 @@ export const YOUTH_ARCS: StoryArc[] = [
         id: 'report',
         prompt: 'Report evening. His parents sit between a teacher who thinks football is a distraction and a coach who thinks school is, and look at their son to see which way he wants them to argue.',
         choices: [
-          { id: 'honest', label: 'Tell them the truth', desc: 'Say out loud what he actually wants', outcome: 'He says he wants to be a footballer, and that he knows what happens if it doesn\'t work. The honesty settles the room.', effect: { attr: { leadership: 1, composure: 1 }, meters: { family: 10, authority: 4 } } },
-          { id: 'peace', label: 'Say what keeps the peace', desc: 'Promise everyone what they want to hear', outcome: 'He promises everybody everything, and spends the next year quietly failing to deliver half of it.', effect: { meters: { family: 4, school: 4, authority: 2 }, attr: { teamwork: 1 } } },
+          { id: 'honest', label: 'Tell them the truth', desc: 'Say out loud what he actually wants', outcome: 'He says he wants to be a footballer, and that he knows what happens if it doesn\'t work. The honesty settles the room.', effect: { attr: { leadership: 1, composure: 1 }, meters: { family: 10, authority: 4, school: -6 } } },
+          { id: 'peace', label: 'Say what keeps the peace', desc: 'Promise everyone what they want to hear', outcome: 'He promises everybody everything, and spends the next year quietly failing to deliver half of it.', effect: { energy: -10, meters: { family: 4, school: 4, authority: 2 }, attr: { teamwork: 1 } } },
         ],
       },
     },
@@ -116,7 +116,7 @@ export const YOUTH_ARCS: StoryArc[] = [
         id: 'settle',
         prompt: 'Six weeks in, his mother asks on the phone — carefully, so as not to push — whether he wants to come home for good.',
         choices: [
-          { id: 'stay', label: 'Tell her he\'s staying', desc: 'He\'s homesick and he\'s staying anyway', outcome: 'He says he\'s staying. Saying it out loud is the moment it stops being someone else\'s plan and becomes his.', effect: { attr: { composure: 1, leadership: 1 }, meters: { family: 6, authority: 6 }, form: 0.06 } },
+          { id: 'stay', label: 'Tell her he\'s staying', desc: 'He\'s homesick and he\'s staying anyway', outcome: 'He says he\'s staying. Saying it out loud is the moment it stops being someone else\'s plan and becomes his.', effect: { attr: { composure: 1, leadership: 1 }, meters: { family: 6, authority: 6 }, form: 0.06, energy: -6 } },
           { id: 'honest', label: 'Admit how hard it is', desc: 'Tell her the truth and stay anyway', outcome: 'He tells her exactly how hard it is, and that he isn\'t leaving. She cries after she hangs up; so does he.', effect: { attr: { composure: 2 }, meters: { family: 12 } } },
         ],
       },
@@ -307,7 +307,7 @@ export const YOUTH_ARCS: StoryArc[] = [
         prompt: 'The Sunday-league coach keeps him back after everyone else has gone, sets out cones in the dark, and says — matter-of-fact, no drama — that he\'s the best young player he has seen in thirty years of doing this.',
         choices: [
           { id: 'believe', label: 'Believe him', desc: 'Let it become part of who he is', outcome: 'He carries that sentence for the rest of his life. On the bad days it is the thing he goes back to.', effect: { attr: { composure: 1, leadership: 1 }, form: 0.08, meters: { authority: 12 }, tag: 'coach-faith' }, next: 'later' },
-          { id: 'doubt', label: 'Assume he says that to everyone', desc: 'Don\'t let it go to his head', outcome: 'He nods and says nothing, quietly certain it is the sort of thing coaches say. It isn\'t.', effect: { attr: { composure: 1 }, meters: { authority: 4 }, tag: 'coach-doubted' }, next: 'later' },
+          { id: 'doubt', label: 'Assume he says that to everyone', desc: 'Don\'t let it go to his head', outcome: 'He nods and says nothing, quietly certain it is the sort of thing coaches say. It isn\'t.', effect: { form: -0.05, attr: { composure: 1 }, meters: { authority: 4 }, tag: 'coach-doubted' }, next: 'later' },
         ],
       },
       later: {
@@ -315,7 +315,7 @@ export const YOUTH_ARCS: StoryArc[] = [
         prompt: 'Two years later the old coach turns up at an academy game, stands at the back where he thinks he can\'t be seen, and watches the whole ninety minutes.',
         choices: [
           { id: 'find', label: 'Find him afterwards', desc: 'Go and shake his hand in front of everyone', outcome: 'He walks straight over in front of the whole academy staff and thanks him properly. The old man doesn\'t stop talking about it for a decade.', effect: { attr: { leadership: 2 }, meters: { authority: 8, family: 6 } } },
-          { id: 'play', label: 'Play the best half of his life', desc: 'Let the football be the thank-you', outcome: 'He produces forty-five minutes of everything the old coach ever taught him, and they both know exactly what it was for.', effect: { form: 0.12, attr: { creativity: 1, flair: 1 }, meters: { authority: 8 } } },
+          { id: 'play', label: 'Play the best half of his life', desc: 'Let the football be the thank-you', outcome: 'He produces forty-five minutes of everything the old coach ever taught him, and they both know exactly what it was for.', effect: { form: 0.12, energy: -8, attr: { creativity: 1, flair: 1 }, meters: { authority: 8 } } },
         ],
       },
     },
@@ -328,9 +328,9 @@ export const YOUTH_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'A local sports shop offers to kit him out for nothing — boots, bag, the lot — if he wears their stuff and mentions them. It is not a contract and it is not really money, but it is the first time anyone has offered him something for being good at football.',
         choices: [
-          { id: 'take', label: 'Take the kit', desc: 'Free boots are free boots', outcome: 'He takes it, and the free boots quietly save his parents a few hundred pounds a year they never mention.', effect: { meters: { family: 8, peers: 4 }, attr: { flair: 1 }, tag: 'boot-deal' } },
+          { id: 'take', label: 'Take the kit', desc: 'Free boots are free boots', outcome: 'He takes it, and the free boots quietly save his parents a few hundred pounds a year they never mention.', effect: { greed: 3, meters: { family: 8, peers: 4 }, attr: { flair: 1 }, tag: 'boot-deal' } },
           { id: 'ask', label: 'Ask his parents first', desc: 'This feels like a grown-up decision', outcome: 'He brings it home before saying yes. His dad reads the whole thing twice, asks two good questions, and then lets him take it.', effect: { meters: { family: 12 }, attr: { composure: 1 } } },
-          { id: 'decline', label: 'Say no thanks', desc: 'He doesn\'t want to owe anyone anything yet', outcome: 'He turns it down. Nobody quite understands why, including him — but there is something he likes about owing nothing to anyone.', effect: { attr: { composure: 1, leadership: 1 }, meters: { authority: 4 } } },
+          { id: 'decline', label: 'Say no thanks', desc: 'He doesn\'t want to owe anyone anything yet', outcome: 'He turns it down. Nobody quite understands why, including him — but there is something he likes about owing nothing to anyone.', effect: { attr: { composure: 1, leadership: 1 }, meters: { authority: 4, family: -6, peers: -4 } } },
         ],
       },
     },
@@ -386,7 +386,7 @@ export const YOUTH_ARCS: StoryArc[] = [
         prompt: 'His grandad is at every single game, in the same spot by the corner flag, in the same coat, whatever the weather. He never shouts. He just watches, and afterwards he says one specific thing about the match.',
         choices: [
           { id: 'listen', label: 'Ask him what he saw', desc: 'The old man watched football before any of them were born', outcome: 'He starts asking after every game. The answers are short, unglamorous, and better than most of the coaching he gets.', effect: { attr: { composure: 1, creativity: 1 }, meters: { family: 12 }, tag: 'grandad-watches' } },
-          { id: 'play', label: 'Play for the corner flag', desc: 'Do something today worth the trip', outcome: 'He spends the whole game trying to produce one moment worth the old man\'s bus fare. He gets it, late, and looks straight over.', effect: { form: 0.1, attr: { flair: 1 }, meters: { family: 10 } } },
+          { id: 'play', label: 'Play for the corner flag', desc: 'Do something today worth the trip', outcome: 'He spends the whole game trying to produce one moment worth the old man\'s bus fare. He gets it, late, and looks straight over.', effect: { form: 0.1, energy: -6, attr: { flair: 1 }, meters: { family: 10, peers: -3 } } },
         ],
       },
     },
@@ -473,8 +473,8 @@ export const YOUTH_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'The family moves for his dad\'s work. New house, new school, and a new club where the squad has known each other since they were five and doesn\'t obviously need him.',
         choices: [
-          { id: 'prove', label: 'Let his football introduce him', desc: 'Say nothing, play well, wait', outcome: 'He is quiet for a month and outstanding for all of it. By October nobody remembers he was ever the new boy.', effect: { form: 0.08, attr: { composure: 1 }, meters: { peers: 8, authority: 6 }, tag: 'settled-in' } },
-          { id: 'graft', label: 'Do the unglamorous jobs', desc: 'Carry the nets, chase everything, earn it', outcome: 'He puts the goals away after every session without being asked. It buys him more goodwill than any nutmeg would have.', effect: { attr: { teamwork: 2, stamina: 1 }, meters: { peers: 12, authority: 8 } } },
+          { id: 'prove', label: 'Let his football introduce him', desc: 'Say nothing, play well, wait', outcome: 'He is quiet for a month and outstanding for all of it. By October nobody remembers he was ever the new boy.', effect: { form: 0.08, energy: -5, attr: { composure: 1 }, meters: { peers: 8, authority: 6 }, tag: 'settled-in' } },
+          { id: 'graft', label: 'Do the unglamorous jobs', desc: 'Carry the nets, chase everything, earn it', outcome: 'He puts the goals away after every session without being asked. It buys him more goodwill than any nutmeg would have.', effect: { attr: { teamwork: 2, stamina: 1 }, meters: { peers: 12, authority: 8, family: -4 } } },
         ],
       },
     },
@@ -487,8 +487,8 @@ export const YOUTH_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'One dad on the touchline shouts at his own son for the entire ninety minutes — every mistake, by name, in front of everyone. Today the boy is close to tears at half time and nobody says anything.',
         choices: [
-          { id: 'friend', label: 'Go and stand with the lad', desc: 'Say something ordinary and normal to him', outcome: 'He wanders over and talks nonsense about anything else for two minutes. The boy plays the best half of his season.', effect: { attr: { leadership: 1, teamwork: 1 }, meters: { peers: 12 }, tag: 'stood-with-him' } },
-          { id: 'grateful', label: 'Look at his own parents differently', desc: 'Notice what he\'s actually got', outcome: 'He glances at his own mum and dad, who have never once shouted at him, and understands something he\'d taken for granted.', effect: { attr: { composure: 1 }, meters: { family: 12 } } },
+          { id: 'friend', label: 'Go and stand with the lad', desc: 'Say something ordinary and normal to him', outcome: 'He wanders over and talks nonsense about anything else for two minutes. The boy plays the best half of his season.', effect: { attr: { leadership: 1, teamwork: 1 }, meters: { peers: 12, authority: -5 }, tag: 'stood-with-him' } },
+          { id: 'grateful', label: 'Look at his own parents differently', desc: 'Notice what he\'s actually got', outcome: 'He glances at his own mum and dad, who have never once shouted at him, and understands something he\'d taken for granted.', effect: { form: -0.04, attr: { composure: 1 }, meters: { family: 12 } } },
         ],
       },
     },
@@ -501,8 +501,8 @@ export const YOUTH_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'A letter with a county badge on it. One afternoon, four hundred boys, twelve places, and a hundred parents pretending they aren\'t counting the numbers.',
         choices: [
-          { id: 'nerves', label: 'Play through the nerves', desc: 'He is terrified and going anyway', outcome: 'He is sick with nerves for the first twenty minutes and fine for the rest. He does not make the twelve — and is asked back the year after.', effect: { attr: { composure: 2 }, form: 0.06, meters: { family: 6, authority: 6 }, tag: 'county-trial' } },
-          { id: 'free', label: 'Play like he\'s got nothing to lose', desc: 'Four hundred kids — go and be memorable', outcome: 'He tries the audacious thing early, it comes off, and one of the men with clipboards writes his number down before half time.', effect: { attr: { flair: 2 }, form: 0.1, meters: { authority: 8 }, tag: 'county-trial' } },
+          { id: 'nerves', label: 'Play through the nerves', desc: 'He is terrified and going anyway', outcome: 'He is sick with nerves for the first twenty minutes and fine for the rest. He does not make the twelve — and is asked back the year after.', effect: { attr: { composure: 2 }, form: 0.06, energy: -8, meters: { family: 6, authority: 6 }, tag: 'county-trial' } },
+          { id: 'free', label: 'Play like he\'s got nothing to lose', desc: 'Four hundred kids — go and be memorable', outcome: 'He tries the audacious thing early, it comes off, and one of the men with clipboards writes his number down before half time.', effect: { attr: { flair: 2, teamwork: -1 }, form: 0.1, meters: { authority: 8 }, tag: 'county-trial' } },
         ],
       },
     },

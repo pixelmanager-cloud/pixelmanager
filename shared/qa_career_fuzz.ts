@@ -56,7 +56,10 @@ function playRandom(track: Track, seed: number, agentId?: string): { c: Career; 
     while (!c.finished) {
       if (++guardTurns > HARD_CAP) return { c, ok: false, err: `exceeded ${HARD_CAP} steps without finishing (possible softlock)` };
       const st = c.current();
-      if (st.phase === 'focus') {
+      if (st.phase === 'arc') {
+        const ch = (st as any).arc.choices;
+        c.resolveArc(ch[Math.floor(rng() * ch.length)].id);
+      } else if (st.phase === 'focus') {
         const opt = st.focus[Math.floor(rng() * st.focus.length)];
         c.chooseFocus(opt.id);
       } else if (st.phase === 'offer') {

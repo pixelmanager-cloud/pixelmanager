@@ -146,7 +146,7 @@ export const MGR_ARCS_06: ManagerArc[] = [
   },
   {
     id: 'mgr-p06-stand-naming', title: 'Naming Rights', icon: '🏟️', category: 'boardroom',
-    when: { minSeason: 5, maxCoins: 400 }, weight: 2, rare: true, first: 'open',
+    when: { minSeason: 5, maxCoins: 400, facility: { key: 'stadium', min: 3 } }, weight: 2, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -266,7 +266,7 @@ export const MGR_ARCS_06: ManagerArc[] = [
   },
   {
     id: 'mgr-p06-preseason-tour', title: 'Eleven Days In July', icon: '✈️', category: 'boardroom',
-    when: { minSeason: 3, maxCoins: 300 }, weight: 3, first: 'open',
+    when: { minSeason: 3, maxCoins: 300, facility: { key: 'sponsor', min: 3 } }, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -311,7 +311,7 @@ export const MGR_ARCS_06: ManagerArc[] = [
   },
   {
     id: 'mgr-p06-academy-category', title: 'The Category', icon: '🎓', category: 'boardroom',
-    when: { minSeason: 4, minCoins: 250 }, weight: 3, first: 'open',
+    when: { minSeason: 4, minCoins: 250, facility: { key: 'youth', min: 3 } }, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -763,7 +763,7 @@ export const MGR_ARCS_06: ManagerArc[] = [
   },
   {
     id: 'mgr-p06-video-signing', title: 'On Video Only', icon: '📼', category: 'transfer',
-    when: { minSeason: 3, minCoins: 350 }, weight: 3, first: 'open',
+    when: { minSeason: 3, minCoins: 350, facility: { key: 'data', min: 3 } }, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',

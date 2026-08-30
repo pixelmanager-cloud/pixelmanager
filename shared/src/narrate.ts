@@ -10,15 +10,51 @@ import { BIG_SETTINGS } from './prompts/big_settings.js';
 const HUGE_SETTINGS = ['in the cup final, the whole ground holding its breath', 'with the title on the line', 'on the grandest stage of his young life', 'as sixty thousand roared', 'in the last minute of the biggest game of the season', 'with silverware within touching distance', 'in front of a nation watching at home', 'in the derby to end all derbies', 'with promotion, the title, everything riding on ninety minutes', 'on a European night the whole city will remember', 'with the trophy close enough to touch', 'in a winner-takes-all decider', 'as the whole country stopped to watch'];
 
 // action verbs by the card's dominant tag (≥6 each so beats rarely repeat)
+// ── WHAT HE ACTUALLY DID ─────────────────────────────────────────────────────────────────────────────
+// The matchday sentence used to splice the CARD'S UI LABEL straight into the prose: "he dovetailed into
+// Hold-up Play and it came off", "he bristled into Streetwise — nothing spectacular". Measured across
+// 7,200 narrated turns, 79.3% of them did this, with 123 distinct labels appearing as nouns. The opening
+// clauses around it are some of the best writing in the game — "against a team who turned up in the wrong
+// colour shirts" — which made the collision worse: the sentence sets up a life and then hands you a
+// card-game token.
+//
+// The off-pitch path already solved this (narrateLifeEvent uses lifeAction().noun), but its nouns are
+// life qualities — "his stubborn streak", "a willingness to have the row" — and the matchday VERBS are
+// transitive on football things, so borrowing that bank gives "he bristled into his stubborn streak",
+// which is worse. This is the on-pitch equivalent: concrete things a player does, written to sit after
+// any verb in the same tag's list. The card is on screen next to the prose either way, so nothing is lost
+// by not naming it.
+const ACTION_NOUN: Record<string, string[]> = {
+  // EVERY ENTRY MUST BE OUTCOME-NEUTRAL. The result clause immediately after supplies the outcome, so a
+  // noun that presupposes success contradicts it: my first draft had "the trick that came off" and "the
+  // save", which produce "he brought the crowd up with the trick that came off and it was a genuine
+  // howler" and "he pulled off the save and the execution let him down". These name the ATTEMPT only.
+  aggression: ['the challenge', 'the fifty-fifty', 'the tackle', 'every loose ball', 'the contact', 'the block', 'the duel', 'the second ball'],
+  creativity: ['the reverse ball', 'the pass through the middle', 'the ball over the top', 'the disguised pass',
+    'the clever one', 'the difficult ball', 'the pass into the channel', 'the flick round the corner'],
+  composure: ['the finish', 'the ball inside', 'the simple option', 'the touch',
+    'the chance when it came', 'the pass under pressure', 'the moment', 'the shot with the goalkeeper closing'],
+  flair: ['the outrageous one', 'the turn', 'the audacious flick', 'something nobody in the ground expected',
+    'the piece of skill', 'the first touch', 'the impudent finish', 'the trick'],
+  leadership: ['the moment', 'the responsibility', 'a word in the right ear', 'the hard yards',
+    'the job nobody wanted', 'the decision', 'the tone of the whole afternoon', 'the game by the scruff'],
+  teamwork: ['the one-two', 'the overlap', 'the exchange', 'the extra pass', 'the simple option',
+    'the move', 'the give-and-go', 'the pass before the pass'],
+  stamina: ['one more lung-burster', 'the run nobody else was making', 'the ninety-fifth minute', 'every blade of grass',
+    'the sprint back', 'the last ten minutes', 'the second effort', 'the yard nobody else would chase'],
+  keeping: ['the shot', 'the cross', 'the one-on-one', 'the ball at his feet',
+    'the corner', 'the effort from six yards', 'the point-blank one', 'the low one to his left'],
+};
+
 const VERBS: Record<string, string[]> = {
   aggression: ['flew into', 'threw himself into', 'crunched into', 'went in hard for', 'snapped into', 'bristled into', 'stood his ground for'],
-  creativity: ['conjured', 'threaded', 'dreamed up', 'engineered', 'invented', 'sketched out', 'unpicked the lock with'],
+  creativity: ['went for', 'threaded', 'dreamed up', 'engineered', 'tried to invent', 'sketched out', 'went at the lock with'],
   composure: ['calmly produced', 'coolly executed', 'took his time over', 'nervelessly played', 'unhurriedly slotted in', 'kept his head and delivered', 'measured out'],
-  flair: ['lit up the moment with', 'produced a piece of magic —', 'brought the crowd up with', 'dared to try', 'flicked out', 'brazenly attempted', 'showboated into'],
-  leadership: ['took charge with', 'rallied the lads with', 'demanded the ball and', 'led by example with', 'grabbed the game by the collar with', 'dragged the team forward with'],
-  teamwork: ['linked up for', 'worked the ball into', 'combined for', 'selflessly played', 'dovetailed into', 'knitted the move with', 'played the percentages with'],
+  flair: ['went looking for a moment with', 'reached for a piece of magic —', 'played to the crowd with', 'dared to try', 'flicked out', 'brazenly attempted', 'showboated into'],
+  leadership: ['took charge with', 'rallied the lads with', 'demanded the ball for', 'led by example with', 'grabbed the game by the collar with', 'dragged the team forward with'],
+  teamwork: ['linked up for', 'worked the ball for', 'combined for', 'selflessly played', 'dovetailed into', 'knitted the move with', 'played the percentages with'],
   stamina: ['dug deep for', 'powered through for', 'ran himself into the ground for', 'kept going for', 'gutted out', 'found one last surge for', 'refused to stop for'],
-  keeping: ['pulled off', 'commanded his box with', 'stood tall for', 'threw himself across for', 'clawed out', 'read it early and produced', 'got a strong hand to'],
+  keeping: ['went for', 'commanded his box with', 'stood tall for', 'threw himself across for', 'threw a hand at', 'read it early and went for', 'got across to'],
 };
 
 // (seeded from the career + turn), so a career replays identically and reads like a story. The tone
@@ -467,7 +503,10 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
   const bigBeat = ctx.stakes === 2 && rng() < 0.7
     ? ' ' + (b === 'triumph' ? pick(BIG_BEAT.triumph) : b === 'good' || b === 'mixed' ? pick(BIG_BEAT.good) : pick(BIG_BEAT.bad)) // 'mixed' no longer falls through to nothing (PT-109)
     : '';
-  return `${tension}${milestone}${cap(lead)}, ${action} ${cardName} ${result}. ${reaction}${flavor}${castReact}${aftermath}${bigBeat}${debutFlourish}`;
+  // name the ACT, not the card — see ACTION_NOUN. Strided off the turn like every other repeating surface,
+  // so consecutive turns walk the pool instead of colliding; falls back to the label if a tag has no bank.
+  const act = ACTION_NOUN[tag] ? pickByTurn(ACTION_NOUN[tag], turn, 5, salt) : cardName;
+  return `${tension}${milestone}${cap(lead)}, ${action} ${act} ${result}. ${reaction}${flavor}${castReact}${aftermath}${bigBeat}${debutFlourish}`;
 }
 
 // ── LIFE EVENTS: the resolution beat for a mid-chapter dilemma (see career.ts Scenario.life /

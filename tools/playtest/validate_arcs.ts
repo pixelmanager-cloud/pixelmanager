@@ -1,8 +1,10 @@
 // Story-arc validator — the quality gate for the arc library. Checks every arc for structural + content
 // correctness so a bad arc (invalid tag, dangling beat reference, duplicate id, empty prose) can never ship
 // or brick a career. Run standalone or via `npm run playtest`.  npx tsx tools/playtest/validate_arcs.ts
-import { LIFESTYLE } from '../../shared/src/career.js';
+import { LIFESTYLE, activeMeters, bandAt, TOTAL_TURNS } from '../../shared/src/career.js';
 import { ARCS } from '../../shared/src/storyarc.js';
+import { Career } from '../../shared/src/career.js';
+import { careerState } from '../../shared/src/tokens.js';
 
 const TAGS = new Set(['composure', 'aggression', 'creativity', 'teamwork', 'leadership', 'stamina', 'flair', 'keeping']);
 const METERS = new Set(['authority', 'peers', 'family', 'school', 'agent', 'fans', 'sponsors', 'partner']);
@@ -103,6 +105,51 @@ for (const a of ARCS) {
 if (castFails) process.exitCode = 1;
 else console.log('  ok   {RIVAL} is only ever used as a name');
 
+// AND EVERY FIELD THE CLIENT RENDERS MUST ACTUALLY GET FILLED — asserted against the REAL state builder,
+// not against fillArcText. The bug this guards was never that fillArcText couldn't handle a label; it was
+// that careerState() substituted into `prompt` alone while main.ts renders each choice's `label` and
+// `desc` raw, so three choices shipped a literal "{RIVAL}" on the button the player clicks. A guard that
+// called fillArcText itself would have passed happily before the fix and caught nothing — which is the
+// exact shape of dead check this project keeps finding. Drive careers, take what careerState hands the
+// client, and assert on that.
+let fillFails = 0, arcsSeen = 0;
+for (let seed = 1; seed <= 260 && fillFails < 10; seed++) {
+  const c: any = new (Career as any)(seed * 7919 + 13);
+  const tok: any = {
+    id: `nft:v${seed}`, owner_id: 'owner:v', generation: 0, state: 'prospect', name: 'Kai Vance',
+    genes_json: JSON.stringify({ pace: { floor: 5, ceiling: 15 }, strength: { floor: 5, ceiling: 15 }, stamina: { floor: 5, ceiling: 15 } }),
+    pedigree: 0, dev_bonus_json: '{}', career_seed: seed * 7919 + 13, agent_id: null, track: null,
+    career_actions: null, attrs_json: null, role: null, traits_json: null, personality: null,
+    greed: null, marketability: null, earnings: null, prime_season: null, peak_overall: 0,
+    signed_season: null, length_seasons: null, staked_since: null,
+    ach_seasons: 0, ach_apps: 0, ach_league: 0, ach_cup: 0, ach_promotions: 0, ach_tier: 0, morale: 65,
+    ach_goals: 0, ach_assists: 0, ach_potm: 0, kit_json: null, career_honours_json: null,
+  };
+  let guard = 0;
+  while (!c.finished && guard++ < 3000) {
+    const raw = c.current();
+    if (raw.phase === 'arc') {
+      const st: any = careerState(tok as any, c);
+      if (st.arc) {
+        arcsSeen++;
+        const rendered = [st.arc.prompt, ...(st.arc.choices ?? []).flatMap((ch: any) => [ch.label, ch.desc])];
+        for (const t of rendered) {
+          const m = typeof t === 'string' && t.match(/\{[A-Z_]+\}/);
+          if (m) { console.log(`  FAIL [${st.arc.id ?? '?'}] careerState returned an UNFILLED field: "${String(t).slice(0, 80)}"`); fillFails++; break; }
+        }
+      }
+      c.resolveArc(raw.arc.choices[0].id); continue;
+    }
+    if (raw.phase === 'focus') { c.chooseFocus(raw.focus[0].id); continue; }
+    if (raw.phase === 'offer') { c.resolveOffer('develop'); continue; }
+    if (raw.phase === 'coach') { c.appointCoach(raw.coaches[0].id); continue; }
+    if (raw.phase === 'draft') { c.draft(raw.options[0].id); continue; }
+    c.play(raw.hand[0].id);
+  }
+}
+if (fillFails) process.exitCode = 1;
+else console.log(`  ok   careerState fills every rendered arc field (${arcsSeen} arc states inspected)`);
+
 let ageFails = 0;
 for (const a of ARCS) {
   const body = JSON.stringify(a.beats);
@@ -127,6 +174,32 @@ const ITEM_RULES: Array<{ what: string; minIdx: number; re: RegExp }> = [
   { what: 'gambling (18+)',  minIdx: 4, re: /casino|betting|a flutter/i },
   { what: 'property (18+)',  minIdx: 4, re: /mortgage|his own place|buy(?:s)? a house/i },
 ];
+// AN ARC MUST NOT DESCRIBE A CAREER THIS GAME CANNOT CONTAIN. Same idea as the lifestyle rules below, on
+// the other side of the age gate: a premise that presupposes a long senior career, reachable from a chapter
+// where it cannot be true. Measured before this: tri-hundredth-goal ("ninety-nine career goals") and
+// sig-title-decider firing at 18 in the Youth Team, and crisis-lost-armband stripping a 17-year-old of a
+// captaincy he never held and handing it to "a younger man". Two arcs also claimed "a decade and more in
+// the same shirt" and "a decade ago", which the career — ages 10 to 25, senior debut around 17-19 — cannot
+// hold at ANY turn; those were rewritten rather than re-gated.
+const SENIOR_RULES: Array<{ what: string; minIdx: number; re: RegExp }> = [
+  { what: 'a career century of goals (Establishing)', minIdx: 6, re: /ninety-nine career goals|the hundredth\b/i },
+  { what: 'having held the captaincy (First Team+)',  minIdx: 5, re: /the captaincy is gone/i },
+  { what: 'a senior title race (First Team+)',        minIdx: 5, re: /champions, on the last kick|the last day of the season, level on points/i },
+  { what: 'a long-standing club record (First Team+)', minIdx: 5, re: /club record books for forty years/i },
+  { what: 'a decade at one club — impossible by 25',  minIdx: 7, re: /a decade and more in the same shirt|\bA decade ago\b/i },
+];
+for (const a of ARCS) {
+  const startIdx = bandAt(Math.min(Math.max(0, a.minTurn), TOTAL_TURNS - 1)).index;
+  const text = JSON.stringify(a.beats);
+  for (const rule of SENIOR_RULES) {
+    if (startIdx >= rule.minIdx) continue;
+    if (rule.re.test(text)) {
+      console.log(`  FAIL [${a.id}] can first fire in ${CH[startIdx]} but its premise needs ${rule.what}`);
+      ageFails++;
+    }
+  }
+}
+
 for (const it of LIFESTYLE) {
   for (const rule of ITEM_RULES) {
     if (it.minChapterIdx >= rule.minIdx) continue;
@@ -139,9 +212,35 @@ for (const it of LIFESTYLE) {
 if (ageFails) { console.log(`\n✗ ${ageFails} arc(s) expose adult material to a child`); process.exitCode = 1; }
 else console.log('  ok   no adult material reachable before age 17');
 
+// A METER EFFECT THAT CAN NEVER APPLY. `life()` gates every meter nudge on the meters ACTIVE IN THE
+// CURRENT CHAPTER — correct, because a ten-year-old has no sponsors — and silently discards the rest. That
+// is right for an arc whose window spans chapters where the meter comes and goes, but an arc whose window
+// contains NO chapter where the meter is active declares an outcome the game can never deliver: the text
+// says the sponsors noticed and nothing anywhere moves, on every run, forever. Two shipped like that
+// (tri-young-player nudging `sponsors` from a window covering only Youth Team and Breakthrough).
+let meterFails = 0;
+for (const a of ARCS) {
+  const chapters = new Set<string>();
+  for (let t = Math.max(0, a.minTurn); t <= Math.min(a.maxTurn, TOTAL_TURNS - 1); t++) chapters.add(bandAt(t).band.name);
+  const reachable = new Set<string>();
+  for (const ch of chapters) for (const m of activeMeters(ch)) reachable.add(m.key);
+  for (const b of Object.values(a.beats)) {
+    for (const c of b.choices) {
+      for (const k of Object.keys((c.effect as any)?.meters ?? {})) {
+        if (!reachable.has(k)) {
+          console.log(`  FAIL [${a.id}/${b.id}/${c.id}] nudges meters.${k}, which is active in NO chapter its window (${a.minTurn}-${a.maxTurn}) can reach`);
+          meterFails++;
+        }
+      }
+    }
+  }
+}
+if (meterFails) process.exitCode = 1;
+else console.log('  ok   every arc meter effect can actually apply somewhere in its own window');
+
 // The summary MUST account for age failures too. It used to report only `errors`, so an age violation
 // printed "✗ 1 arc(s) expose adult material to a child" and then "✓ all 414 arcs valid" directly beneath
 // it — anything reading the last line (a person skimming, or a probe tailing the output) saw a pass.
-const total = errors + ageFails + castFails;
-console.log(total ? `\n✗ ${total} arc validation error(s) — ${errors} structural, ${ageFails} age-gating, ${castFails} cast-placeholder` : `\n✓ all ${ARCS.length} arcs valid`);
+const total = errors + ageFails + castFails + fillFails + meterFails;
+console.log(total ? `\n✗ ${total} arc validation error(s) — ${errors} structural, ${ageFails} age-gating, ${castFails} cast-placeholder, ${fillFails} unfilled-placeholder, ${meterFails} unreachable-meter` : `\n✓ all ${ARCS.length} arcs valid`);
 if (total) process.exit(1);

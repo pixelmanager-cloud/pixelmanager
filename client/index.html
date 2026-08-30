@@ -1234,6 +1234,16 @@
       .facility .fac-down { display: block; width: 100%; margin-top: 6px; font-size: 12px; padding: 5px; background: transparent; border: 1px solid var(--line); color: var(--muted); cursor: pointer; }
       .facility .fac-down:hover { color: var(--warn); border-color: var(--warn); }
       .facility .fac-upkeep { font-family: var(--body); font-size: 13px; color: var(--muted); text-align: center; padding: 2px 0 6px; }
+      .tr-marks { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+      .tr-mark { display: flex; align-items: baseline; gap: 10px; padding: 10px 12px; background: rgba(255,255,255,0.03);
+        border-left: 3px solid var(--warn); font-family: var(--body); font-size: 17px; }
+      .tr-mark-ico { font-size: 18px; flex: none; }
+      .tr-mark-text { flex: 1; color: var(--text); }
+      .tr-mark-meta { flex: none; font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+      @media (max-width: 640px) { .tr-mark { flex-wrap: wrap; } .tr-mark-meta { width: 100%; } }
+      #save-broken { position: fixed; left: 0; right: 0; bottom: 0; z-index: 9999; padding: 12px 16px;
+        background: #6b1220; color: #ffe8ec; font-family: var(--body); font-size: 16px; line-height: 1.45;
+        border-top: 2px solid #ff5c7a; text-align: center; }
       #fac-upkeep { font-family: var(--body); font-size: 15px; color: var(--muted); margin-top: 10px; text-align: right; }
       #fac-upkeep b { color: var(--warn); }
 

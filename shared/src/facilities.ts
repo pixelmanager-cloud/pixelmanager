@@ -130,16 +130,43 @@ export function communityStanding(level: number): number { return (level - 1) * 
 // against ~15,100 of income it was 7% of the club's earnings: a rounding error, not a pressure.
 //
 // Upkeep makes a big club something you must keep AFFORDING. It is quadratic in level, so the early
-// levels are nearly free (L2 costs 12 a season) and the top end is a genuine commitment (L10 costs 972).
-// Total to hold all twelve at maximum is 11,664 a season, against roughly 15,100 for a maxed top-flight
-// club — so the summit is sustainable but not comfortable, and NOTHING below the summit can hold all
-// twelve. That is the intended shape: a dynasty picks the six or seven things its club is FOR, and the
-// rest stay modest. It also gives relegation real teeth, because upkeep does not fall with the division
-// while income does.
+// levels are nearly free (L2 costs 7 a season) and the top end is a genuine commitment (L10 costs 567).
+//
+// RECALIBRATED, because the first cut of this was wrong and wrong in the way that matters. It claimed the
+// summit earned "roughly 15,100" a season. MEASURED THROUGH THE ACTUAL SEASON ROLL, a club with all twelve
+// at level 10, winning the top flight, with the sponsor trophy term saturated, earns 10,686:
+//
+//   prize 1,280 + gate 1,223 + sponsor 5,623 + shop 1,061 + women's 562 + sponsor bonus 700 = 10,449
+//
+// The 15,100 was assembled two mistakes deep: it used seasonPlacementReward (2,886) where the real prize
+// is 1,280, and it added 2,810 of per-match WIN/DRAW/LOSS earnings that the manager season roll does not
+// pay at all.
+//
+// AND THE CORRECTION WAS WRONG THE SAME WAY, which is worth recording because it is the second time. It
+// published gate 2,160 — a figure that needs ~34 home-and-away fixtures, when seasonFixtures returns 18 at
+// every tier, so the real gate is 1,223 — and it omitted the 700 sponsor bonus a champion always has
+// (pos <= 3 on a performance deal). The two errors partly cancel, 10,686 against a measured 10,449, so the
+// coefficient fit below survives; but a number assembled from a term that cannot occur plus an omitted
+// real one is exactly the failure this comment block exists to correct. Income was overstated by 45%, and
+// the upkeep coefficient was fitted to it — so the best
+// possible season in the game ran a deficit before a single wage was paid, levels 6-10 were unreachable
+// (a 150-season run of title wins never reached level 10, and an ordinary good top-flight side plateaued
+// at level 5 forever), and a relegated club sat on exactly 0 coins for sixty consecutive seasons with
+// every purchase in the game disabled.
+//
+// Fitted to the real figure: all twelve at maximum now costs 6,804 a season against 10,686 of income, so
+// a champion clears its bill and its wages with something left, a mid-table side has to choose, and
+// nothing below the top flight can hold all twelve. Relegation still has teeth, because upkeep does not
+// fall with the division while income does.
 //
 // Level 1 is free, like every other neutral baseline in this module, so a young club feels none of this.
+export const UPKEEP_COEFF = 7;
 export function facilityUpkeep(level: number): number {
-  return Math.round(12 * Math.pow(Math.max(0, level - 1), 2));
+  // `facLevel` is documented as the defensive clamp, so it has to survive a corrupt save: Math.max(1, NaN)
+  // is NaN, and a NaN bill makes `Math.min(have, due)` NaN and `due > have` false — the club would be
+  // charged NaN coins once and then never billed again.
+  const l = Number.isFinite(level) ? level : 1;
+  return Math.round(UPKEEP_COEFF * Math.pow(Math.max(0, l - 1), 2));
 }
 /** The club's whole upkeep bill for a season. */
 export function seasonUpkeep(fac: Partial<Facilities> | undefined): number {
@@ -167,15 +194,23 @@ export function facilityToDowngrade(fac: Partial<Facilities> | undefined): Facil
   return best;
 }
 /** Cut upkeep toward `budget`. Returns the facilities that lost a level (may repeat a key). Pure. */
-export function applyDisrepair(fac: Facilities, budget: number): FacilityKey[] {
+export function applyDisrepair(fac: Facilities, budget: number): { cut: FacilityKey[]; salvage: number } {
   const cut: FacilityKey[] = [];
+  let salvage = 0;
   for (let i = 0; i < MAX_DISREPAIR && seasonUpkeep(fac) > budget; i++) {
     const k = facilityToDowngrade(fac);
     if (!k) break;
-    (fac as any)[k] = Math.max(1, facLevel(fac, k) - 1);
+    const lv = facLevel(fac, k);
+    // SELLING OFF A LEVEL PAYS THE SAME WHETHER YOU CHOSE IT OR NOT. Disrepair used to pay nothing while
+    // the player's own Scale Back paid 40%, and because the slide is fully deterministic — always the
+    // highest level, ties on fixed key order — anyone who knew that front-ran it. Measured: identical
+    // clubs five seasons apart, the informed one ended 66,524 coins richer for one extra level lost. A
+    // hidden 100% tax on not having read the source is not a difficulty curve.
+    salvage += mothballRefund(lv);
+    (fac as any)[k] = Math.max(1, lv - 1);
     cut.push(k);
   }
-  return cut;
+  return { cut, salvage };
 }
 
 /** SCALING BACK ON PURPOSE — the lever that makes upkeep a decision instead of a trap.

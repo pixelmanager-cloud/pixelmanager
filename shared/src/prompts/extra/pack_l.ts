@@ -226,7 +226,7 @@ export const SETTINGS_L: Bank = {
     "out on a surface that had been laid four months earlier",
     "down the tunnel afterwards past a first-team coach who said nothing",
     "over a fixture rescheduled to a Monday because of a funeral",
-    "the tea urn already on in the clubhouse",
+  
     "with a scout he did not know was a scout",
     "in a game where both teams wore black armbands",
     "on a pitch with a penalty spot painted twice",

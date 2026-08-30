@@ -16,7 +16,7 @@ import {
   mintHeirs, heirCount, familyTrait, nephewCount, BRANCHES_KEPT,
   transferList, transferFee, sellValue, squadSaleValue, incomingBid, MIN_SQUAD, MAX_SQUAD,
   signSquadContract, staggeredContractSeasons, advanceSquad, squadSeasonsLeft, squadRenewCost, squadSeasonWage, squadStorylines,
-  contractDemand, evaluateContractOffer, wageForLength,
+  contractDemand, evaluateContractOffer, wageForLength, lengthPremiumFor,
   FACILITY_KEYS, FACILITY_META, MAX_LEVEL, upgradeCost, effectAt, seasonFacilityIncome, squadMarketability,
   seasonUpkeep, facilityUpkeep, applyDisrepair, mothballRefund, facLevel,
   youthPoolBonus, youthUpgradeChance, dormIntakeBonus, scoutHitMult, scoutCostDiscount, scoutExtraTrips,
@@ -168,6 +168,25 @@ const isFormation = (f: unknown): f is Lineup['formation'] => typeof f === 'stri
 
 /** Load the club with the owner's PRO/RETIRED tokens merged in as fieldable players — read/gameplay
  *  only, mirrors server/src/index.ts's `loadSquad`. Never feed this into `saveClub`/`saveStandingOrders`. */
+/** PRUNE THE SAVED XI of players who no longer exist, backfilling from the rest of the squad.
+ *  Retirements, departures AND SUCCESSION leave dangling ids in the standing orders, and buildXI then
+ *  throws on a player who is not there — the second half of the bricked-save bug (PT-300).
+ *
+ *  This lived inline in advanceSquadSeason and so covered only the rollover. It did NOT cover succession,
+ *  where the outgoing star's token flips from 'pro' back to 'prospect' and he therefore drops out of
+ *  mergedClub() — so EVERY handover left an XI referencing a player who is no longer in the squad, and the
+ *  save's own standing orders were rejected by setStandingOrders from that point on. The lineup editor
+ *  repairs it on screen, but the repair was never written back, so the hand-picked XI and its per-slot
+ *  duties were silently discarded at every generation.
+ */
+function pruneXI(club: Club, so: StandingOrders): StandingOrders {
+  const alive = new Set(club.players.map((p) => p.id));
+  if (!so?.playerIds?.some((id) => !alive.has(id))) return so;
+  const kept = so.playerIds.filter((id) => alive.has(id));
+  const spare = club.players.map((p) => p.id).filter((id) => !kept.includes(id));
+  return { ...so, playerIds: [...kept, ...spare].slice(0, 11) };
+}
+
 function mergedClub(): { club: Club; standingOrders: StandingOrders } {
   const m = getActiveModel();
   const have = new Set(m.club.players.map((p) => p.id));
@@ -263,9 +282,11 @@ function membersOf(model: ReturnType<typeof getActiveModel>): HouseMember[] {
 
 export const api = {
   // ── new game / continue (no server accounts — a "save" IS the local profile) ──
-  register: async (_handle: string, _password: string, clubName?: string) => {
+  /** `worldSeed` is for HARNESSES ONLY — it pins the generated world so a test is reproducible. The game
+   *  never passes it, so a real new game is as random as it ever was. */
+  register: async (_handle: string, _password: string, clubName?: string, worldSeed?: number, slotId?: string) => {
     const name = (clubName && clubName.trim()) || 'My Club';
-    const id = await newGameSlot(name); // freshSave() (save.ts) already builds the starting club + standing orders
+    const id = await newGameSlot(name, worldSeed, slotId); // freshSave() (save.ts) already builds the starting club + standing orders
     // NO auto-mint — the player scouts + PICKS their founding prospect (see scoutProspects/signProspect).
     const model = getActiveModel();
     return { token: id, account: { id: OWNER, handle: id, rating: 1000, coins: model.profile.coins }, ...mergedClub() };
@@ -447,7 +468,7 @@ export const api = {
     if (t.state !== 'pro') throw apiErr('not a pro under contract');
     const ci = tokenContract(t, model.profile.season);
     const p = t.personality ?? undefined;
-    const lengthPremium = (p === 'maverick' || p === 'mercurial') ? 0.14 : (p === 'leader' || p === 'workhorse') ? -0.07 : 0.05;
+    const lengthPremium = lengthPremiumFor(p);   // one copy of the rule, in contracts.ts
     return { baseWage: ci.extendCost, prefLength: ci.lengthSeasons, minLength: 2, maxLength: 6, lengthPremium, seasonsLeft: ci.seasonsLeft, coins: model.profile.coins };
   },
   /** Make a contract OFFER (wage × length) to the star — he accepts / counters / rejects. On accept the
@@ -461,7 +482,7 @@ export const api = {
     const season = model.profile.season;
     const ci = tokenContract(t, season);
     const p = t.personality ?? undefined;
-    const lengthPremium = (p === 'maverick' || p === 'mercurial') ? 0.14 : (p === 'leader' || p === 'workhorse') ? -0.07 : 0.05;
+    const lengthPremium = lengthPremiumFor(p);   // one copy of the rule, in contracts.ts
     const demand = { baseWage: ci.extendCost, prefLength: ci.lengthSeasons, minLength: 2, maxLength: 6, lengthPremium };
     const result = evaluateContractOffer(demand, Math.round(wage), Math.round(length));
     if (result.outcome !== 'accept') return { outcome: result.outcome, askWage: result.askWage, note: result.note, coins: model.profile.coins };
@@ -688,6 +709,15 @@ export const api = {
 
     const fresh = (await localStore.getToken(pid))!;
     const pot = rebornPotential(fresh);
+    // THE OUTGOING STAR IS NO LONGER IN THE SQUAD, so the saved XI now names a player who does not exist.
+    // Write the repair back rather than leaving the save carrying an invalid lineup for the next manager.
+    {
+      const cc = await localStore.getClub(OWNER);
+      if (cc) {
+        const pruned = pruneXI(cc.club, cc.standingOrders);
+        if (pruned !== cc.standingOrders) await localStore.saveClub(OWNER, cc.club, pruned);
+      }
+    }
     return { ok: true as const, legacy, saleFee, testimonial, siblings, familyTrait: familyTrait(parentSeed), coins: getActiveModel().profile.coins, inheritance: inheritance ?? null, prospect: { id: pid, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: fresh.pedigree, careerStarted: false, potentialStars: pot.stars, genes: JSON.parse(fresh.genes_json) } };
   },
   // SP SEASON PRIZE — also where the local season counter advances (see docs note in save.ts's
@@ -795,7 +825,7 @@ export const api = {
     // UPKEEP — charged in the same league roll that pays the facility income, because it is the other half
     // of the same transaction: what the club earns by being a club, minus what it costs to BE one. Only on
     // a league roll, for the same reason the income is (a cup run must not re-bill a per-season cost).
-    let upkeep = 0, fellIn: FacilityKey[] = [];
+    let upkeep = 0, salvage = 0, fellIn: FacilityKey[] = [];
     if (isLeagueRoll) {
       const due = seasonUpkeep(model.facilities);
       const have = getActiveModel().profile.coins;
@@ -807,13 +837,20 @@ export const api = {
       // Cut toward what the club actually earned this season, not toward zero — the target is a bill it can
       // carry next year, so the slide stops as soon as the club fits inside its own means.
       if (due > have) {
-        fellIn = applyDisrepair(model.facilities, Math.max(0, prize + sponsorBonus + facIncome.total));
+        const dis = applyDisrepair(model.facilities, Math.max(0, prize + sponsorBonus + facIncome.total));
+        fellIn = dis.cut;
+        // SELLING OFF A LEVEL PAYS THE SAME WHETHER YOU CHOSE IT OR NOT (see applyDisrepair). This also
+        // gives a club in trouble the cash to arrest the slide, instead of draining it to exactly 0 and
+        // leaving it there — measured, a relegated maxed club sat on 0 coins for SIXTY consecutive
+        // seasons with every purchase in the game disabled.
+        salvage = dis.salvage;
+        if (salvage > 0) await localStore.addCoins(OWNER, salvage);
         // PERSIST each cut. applyDisrepair mutates the in-memory object, which does NOT schedule a write —
         // the club would repair itself on reload and upkeep would be unenforceable.
         for (const k of new Set(fellIn)) await localStore.setFacilityLevel(OWNER, k, facLevel(model.facilities, k as FacilityKey));
       }
     }
-    return { ok: true as const, prize, sponsorBonus, houseMult, tierMult, facilities: facIncome, upkeep, disrepair: fellIn, coins: getActiveModel().profile.coins };
+    return { ok: true as const, prize, sponsorBonus, houseMult, tierMult, facilities: facIncome, upkeep, salvage, disrepair: fellIn, coins: getActiveModel().profile.coins };
   },
   spSponsor: async (deal: string) => {
     await ensureActive();
@@ -851,22 +888,36 @@ export const api = {
     const coinsNow = getActiveModel().profile.coins;
     const charged = Math.max(0, Math.min(coinsNow, Math.round(roll.wageBill)));
     if (charged > 0) await localStore.addCoins(OWNER, -charged);
-    c.club.players = roll.players;
-    // PRUNE THE SAVED XI. Retirements/departures leave dangling ids in the standing orders, and buildXI then
-    // throws on a player who no longer exists — the second half of the bricked-save bug (PT-300).
-    const alive = new Set(c.club.players.map((p) => p.id));
-    const so = c.standingOrders;
-    if (so?.playerIds?.some((id) => !alive.has(id))) {
-      const kept = so.playerIds.filter((id) => alive.has(id));
-      const spare = c.club.players.map((p) => p.id).filter((id) => !kept.includes(id));
-      so.playerIds = [...kept, ...spare].slice(0, 11);   // backfill from the rest of the squad
+    // WAGES CAN FORCE DISREPAIR TOO — and until now nothing could. Disrepair lived only in the league roll,
+    // where it tested `due > have` with `have` read AFTER the season's income had been banked, so it needed
+    // upkeep to exceed the treasury PLUS a whole season's earnings. Measured: 0 disrepair events in 194
+    // seasons, and 0 across 101 more with an aggressive build policy, despite 27 seasons ending under 200
+    // coins and one ending on 1. Meanwhile the bill that actually empties a club is the wage bill, charged
+    // here and absent from that test entirely — so the real failure state was silent permanent poverty
+    // rather than the visible, arrestable slide applyDisrepair was written to be.
+    //
+    // An unpaid wage is the honest trigger: the club has run out of money meeting its obligations, which is
+    // exactly what "living beyond its means" means. It cuts toward the shortfall, pays the same 40% salvage
+    // as every other route out of a level, and is capped per season like the league-roll path.
+    const unpaidWages = Math.max(0, Math.round(roll.wageBill) - charged);
+    let wageCut: FacilityKey[] = [], wageSalvage = 0;
+    if (unpaidWages > 0) {
+      const model = getActiveModel();
+      const dis = applyDisrepair(model.facilities, Math.max(0, seasonUpkeep(model.facilities) - unpaidWages));
+      wageCut = dis.cut;
+      wageSalvage = dis.salvage;
+      if (wageSalvage > 0) await localStore.addCoins(OWNER, wageSalvage);
+      for (const k of new Set(wageCut)) await localStore.setFacilityLevel(OWNER, k, facLevel(model.facilities, k as FacilityKey));
     }
+    c.club.players = roll.players;
+    const so = pruneXI(c.club, c.standingOrders);
     await localStore.saveClub(OWNER, c.club, so);
     const lite = (p: Player) => ({ id: p.id, name: p.name, role: p.role, age: p.age ?? 0, ovr: overall(p) });
     return {
       ok: true as const,
       coins: getActiveModel().profile.coins,
       wageBill: Math.round(roll.wageBill), charged, unpaid: Math.round(roll.wageBill) - charged,
+      disrepair: wageCut, salvage: wageSalvage,
       retired: roll.retired.map(lite),
       departed: roll.departed.map(lite),
       intake: roll.intake.map(lite),
@@ -1073,6 +1124,11 @@ export const api = {
         return {
           id: t.id, name: t.name, generation: t.generation ?? 0,
           parentId: (t as any).parent_id ?? null,
+          // WHOSE SON HE IS. Token.father_name was written at every succession and read by NOTHING — the
+          // succession screen's "Dane's boy" caption comes from a transient field on the response, so the
+          // persisted column had no reader at all and field_wiring.ts flagged it. The Family Record is
+          // where it earns its place: the tree draws lineage as lines, and this says it in words.
+          fatherName: (t as any).father_name ?? null,
           branch: (t as any).branch ?? 'played',
           state: t.state, overall: t.peak_overall ?? 0,
           personality: t.personality ?? null,

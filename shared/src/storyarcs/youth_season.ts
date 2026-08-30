@@ -48,7 +48,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         id: 'one',
         prompt: 'One line on the sheet is his own birthday. He will be playing on it. Somebody\'s mum says that\'s a shame, love.',
         choices: [
-          { id: 'glad', label: 'Say he\'d rather be playing', desc: 'And mean it', outcome: 'He says he\'d rather be playing than anything, and the woman laughs and tells his mother, who repeats it for years as though it explained him.', effect: { form: 0.05, meters: { family: 3 } } },
+          { id: 'glad', label: 'Say he\'d rather be playing', desc: 'And mean it', outcome: 'He says he\'d rather be playing than anything, and the woman laughs and tells his mother, who repeats it for years as though it explained him.', effect: { form: 0.05, meters: { family: 3, peers: -5 } } },
           { id: 'ask', label: 'Quietly wish it were free', desc: 'One year, one Sunday off, at the right time', outcome: 'He doesn\'t say it. But he notices he wanted the day, and files the wanting away somewhere he won\'t look at it again until he is much older.', effect: { attr: { composure: 1 }, meters: { family: 2 } } },
         ],
       },
@@ -62,7 +62,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'The bags come out of the boot of a car and the kit for the year is handed round in the car park, still folded, still smelling of plastic. It is not quite the same as last season\'s — the collar has changed and the sponsor is a different local garage. There are no names on the backs, only numbers.',
         choices: [
-          { id: 'number', label: 'Ask for a particular number', desc: 'Say it out loud before anyone else does', outcome: 'He asks for it in front of everybody, which takes more than he expected. He gets it. He will pretend for years that he wasn\'t bothered either way.', effect: { attr: { leadership: 1, flair: 1 }, meters: { authority: 2, peers: 2 }, tag: 'season-kit-claimed' }, next: 'night' },
+          { id: 'number', label: 'Ask for a particular number', desc: 'Say it out loud before anyone else does', outcome: 'He asks for it in front of everybody, which takes more than he expected. He gets it. He will pretend for years that he wasn\'t bothered either way.', effect: { attr: { leadership: 1, flair: 1 }, meters: { authority: 2, peers: -5 }, tag: 'season-kit-claimed' }, next: 'night' },
           { id: 'take', label: 'Take whatever he\'s given', desc: 'Whichever shirt is left at the bottom', outcome: 'He ends up with a number nobody wants and wears it for the whole year without one word about it, which does him more good than the number would have.', effect: { attr: { teamwork: 2 }, meters: { authority: 3, peers: 3 }, tag: 'season-kit-took' }, next: 'night' },
           { id: 'swap', label: 'Swap with a smaller lad', desc: 'The shirt he wanted, given away in the car park', outcome: 'He hands over the shirt he actually wanted to a boy half a head shorter who wanted it more, and gets nothing for it except the boy\'s face.', effect: { attr: { teamwork: 2, leadership: 1 }, meters: { peers: 5 }, tag: 'season-kit-gave' }, next: 'night' },
         ],
@@ -187,7 +187,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         prompt: 'On the last of the six the coach names an unchanged side and says, without any edge in it, that he can tell everything he needs to know about a lad by what he does in April.',
         choices: [
           { id: 'hear', label: 'Take it as it was meant', desc: 'A sentence to keep', outcome: 'He hears it properly, which most of them don\'t, and repeats it to himself for the rest of his career whenever a fixture looks like it doesn\'t count.', effect: { attr: { composure: 2, leadership: 1 }, meters: { authority: 4 } } },
-          { id: 'shrug', label: 'Let it go past him', desc: 'It\'s a line coaches say', outcome: 'It goes in one ear. He will come back to it at twenty-three, in an entirely different April, and understand it far too late to have used it.', effect: { attr: { composure: 1 } } },
+          { id: 'shrug', label: 'Let it go past him', desc: 'It\'s a line coaches say', outcome: 'It goes in one ear. He will come back to it at twenty-three, in an entirely different April, and understand it far too late to have used it.', effect: { attr: { composure: 1 }, meters: { authority: -5 } } },
         ],
       },
     },
@@ -210,7 +210,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         prompt: 'It comes down to the last Sunday and a result somewhere else that they cannot affect. Twenty of them stand in a car park round one phone waiting for a score to update.',
         choices: [
           { id: 'watch', label: 'Stand and watch the phone with them', desc: 'However it goes, together', outcome: 'The screen refreshes and the car park either erupts or goes completely silent. Either way he is standing in the middle of it, and remembers the waiting more than the answer.', effect: { attr: { teamwork: 2 }, meters: { peers: 5 } } },
-          { id: 'away', label: 'Walk to the car and let someone tell him', desc: 'He can\'t stand there watching', outcome: 'He sits in the passenger seat with the door open and hears the noise from forty yards away, and knows what it means before anybody says a word.', effect: { attr: { composure: 2 }, meters: { family: 3 } } },
+          { id: 'away', label: 'Walk to the car and let someone tell him', desc: 'He can\'t stand there watching', outcome: 'He sits in the passenger seat with the door open and hears the noise from forty yards away, and knows what it means before anybody says a word.', effect: { attr: { composure: 2 }, meters: { family: 3, peers: -6 } } },
         ],
       },
     },
@@ -255,8 +255,8 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         id: 'after',
         prompt: 'On the way out the coach stops him by the door with a hand on the shoulder and says there were about four votes in it, and that he shouldn\'t read anything into a room full of dads with a pen.',
         choices: [
-          { id: 'fuel', label: 'Keep the four votes', desc: 'Carry the number into pre-season', outcome: 'He does not forget the number for a single week of the summer. In August he comes back at a level nobody has seen from him, for a reason he will never explain.', effect: { form: 0.07, attr: { aggression: 1, stamina: 1 }, meters: { authority: 3 } } },
-          { id: 'let', label: 'Let it go before he gets to the car', desc: 'It\'s a night in a room above a pub', outcome: 'He decides in the doorway that it is a raffle, and puts his participation trophy on the shelf with the rest. It is genuinely the healthier choice and it costs him something.', effect: { attr: { composure: 2 }, meters: { family: 3 } } },
+          { id: 'fuel', label: 'Keep the four votes', desc: 'Carry the number into pre-season', outcome: 'He does not forget the number for a single week of the summer. In August he comes back at a level nobody has seen from him, for a reason he will never explain.', effect: { form: 0.07, energy: -8, attr: { aggression: 1, stamina: 1 }, meters: { authority: 3 } } },
+          { id: 'let', label: 'Let it go before he gets to the car', desc: 'It\'s a night in a room above a pub', outcome: 'He decides in the doorway that it is a raffle, and puts his participation trophy on the shelf with the rest. It is genuinely the healthier choice and it costs him something.', effect: { form: -0.05, attr: { composure: 2 }, meters: { family: 3 } } },
         ],
       },
     },
@@ -278,7 +278,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         id: 'after',
         prompt: 'The trophy is heavier than it looks and has last year\'s winner engraved above his name. That boy is not in the room; he left the club in October.',
         choices: [
-          { id: 'sober', label: 'Read the name above his own and go quiet', desc: 'One year, that\'s all', outcome: 'He reads the whole list on the plinth and finds that he knows almost none of the names. It is the first genuinely sobering thing football has ever taught him.', effect: { attr: { composure: 3 }, tag: 'season-poty-sobered' } },
+          { id: 'sober', label: 'Read the name above his own and go quiet', desc: 'One year, that\'s all', outcome: 'He reads the whole list on the plinth and finds that he knows almost none of the names. It is the first genuinely sobering thing football has ever taught him.', effect: { form: -0.05, attr: { composure: 3 }, tag: 'season-poty-sobered' } },
           { id: 'enjoy', label: 'Enjoy it completely for one night', desc: 'Take it to bed, put it on the windowsill', outcome: 'He allows himself the whole night without a single sensible thought, and it is one of about four evenings from that entire decade he can still describe in detail.', effect: { form: 0.06, meters: { family: 4 }, attr: { flair: 1 } } },
         ],
       },
@@ -339,8 +339,8 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         prompt: 'His mother mentions, cooking, that it is a year to the day since his first game for them — she knows because of a photograph on her phone with a date on it. Same pitch this Sunday, roughly the same weather, a different boy in the same shirt.',
         choices: [
           { id: 'compare', label: 'Look at the photo properly', desc: 'Him, twelve months ago, in a shirt too big', outcome: 'He looks at a boy who did not know anything yet and is briefly, uncomfortably fond of him. Then he notices the sleeves fit now, and that is the whole year in one detail.', effect: { attr: { composure: 2 }, meters: { family: 4 }, tag: 'season-anniv-looked' }, next: 'sunday' },
-          { id: 'audit', label: 'Ask himself whether he\'s actually better', desc: 'Honestly, not kindly', outcome: 'He does the sum seriously and decides yes at some things and no at others, which at twelve is an unusually accurate answer and slightly deflating.', effect: { attr: { composure: 1, creativity: 1 }, tag: 'season-anniv-audited' }, next: 'sunday' },
-          { id: 'shrug', label: 'Say it\'s only a year', desc: 'He\'s not interested in looking backwards', outcome: 'He says a year isn\'t anything and goes to get his boots. His mother keeps the photo anyway, and sends it to him on the same date for the next decade.', effect: { form: 0.04, meters: { family: 2 }, tag: 'season-anniv-shrugged' }, next: 'sunday' },
+          { id: 'audit', label: 'Ask himself whether he\'s actually better', desc: 'Honestly, not kindly', outcome: 'He does the sum seriously and decides yes at some things and no at others, which at twelve is an unusually accurate answer and slightly deflating.', effect: { form: -0.05, attr: { composure: 1, creativity: 1 }, tag: 'season-anniv-audited' }, next: 'sunday' },
+          { id: 'shrug', label: 'Say it\'s only a year', desc: 'He\'s not interested in looking backwards', outcome: 'He says a year isn\'t anything and goes to get his boots. His mother keeps the photo anyway, and sends it to him on the same date for the next decade.', effect: { form: 0.04, meters: { family: -5 }, tag: 'season-anniv-shrugged' }, next: 'sunday' },
         ],
       },
       sunday: {
@@ -417,8 +417,8 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         id: 'end',
         prompt: 'On the last home game of the year the man in the next seat says, half-joking, that one of these seasons he\'ll be watching him from up here instead.',
         choices: [
-          { id: 'promise', label: 'Say it like a promise', desc: '"You will."', outcome: 'He says it flatly and the man laughs, and then stops laughing, because the boy is not joking at all. Neither of them mentions it again for years.', effect: { form: 0.05, attr: { leadership: 1 }, meters: { family: 4 } } },
-          { id: 'deflect', label: 'Laugh it off', desc: 'Some things you don\'t say out loud', outcome: 'He laughs and changes the subject, and spends the whole walk to the car thinking about the seat he was sitting in and the pitch he was looking at.', effect: { attr: { composure: 2 }, meters: { family: 2 } } },
+          { id: 'promise', label: 'Say it like a promise', desc: '"You will."', outcome: 'He says it flatly and the man laughs, and then stops laughing, because the boy is not joking at all. Neither of them mentions it again for years.', effect: { form: 0.05, attr: { leadership: 1, composure: -1 }, meters: { family: 4 } } },
+          { id: 'deflect', label: 'Laugh it off', desc: 'Some things you don\'t say out loud', outcome: 'He laughs and changes the subject, and spends the whole walk to the car thinking about the seat he was sitting in and the pitch he was looking at.', effect: { form: -0.03, attr: { composure: 2 }, meters: { family: 2 } } },
         ],
       },
     },

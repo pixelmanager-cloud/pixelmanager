@@ -28,21 +28,43 @@ const seen = new Set<string>();
 let firedTotal = 0;
 for (let career = 0; career < 2000; career++) {
   const fired = new Set<string>();
+  // A CLUB THAT NEVER BUILDS ANYTHING AND NEVER BECOMES ANYTHING cannot exercise the two gates that exist
+  // to notice what it built and became. This passed `tags: new Set()` — always empty — and no `facilities`
+  // at all, so every arc with `when.requiresTag` or `when.facility` was unreachable BY CONSTRUCTION, and
+  // the harness reported them as content bugs. It was structurally incapable of validating the mechanism
+  // it exists to validate: the same shape as the dead probes fixed earlier today.
+  const tags = new Set<string>();
+  const facilities: Record<string, number> = {};
   for (let season = 1; season <= 12; season++) {
+    // facilities climb the way a real club's do — a couple of levels across a career, not all at once
+    for (const k of ['stadium', 'training', 'youth', 'scouting', 'medical', 'sponsor', 'fanzone', 'data', 'shop', 'dorm', 'women', 'community']) {
+      facilities[k] = 1 + Math.min(5, Math.floor(season / 2) + ((career + k.length) % 2));
+    }
     const s: MgrSituation = {
       season, tier: 1 + ((career + season) % 9),
-      posFrac: ((career * 7 + season * 13) % 100) / 100,
+      // A CLUB HAS RUNS, NOT INDEPENDENT DRAWS. Sampling position afresh each season makes two bad years
+      // in a row far rarer than reality, which under-tests every arc gated on a sustained slump — and the
+      // tag arcs that gate on the fallout of one. Drift from a per-career baseline instead.
+      posFrac: Math.max(0, Math.min(1, ((career * 7) % 100) / 100 + Math.sin(career + season) * 0.22)),
       coins: (career * 137 + season * 91) % 1200,
       hasWonderkid: (career + season) % 3 === 0,
       hasVeteran: (career + season) % 2 === 0,
       hasUnhappy: (career + season) % 4 === 0,
       squadSize: 14 + ((career + season) % 9),
-      tags: new Set<string>(),
+      tags,
+      facilities,
       temper: (['disciplinarian','players-manager','tactician','chancer','builder','firefighter'] as const)[career % 6],
     };
     for (let k = 0; k < 5; k++) {          // 4-6 arcs a season
       const id = pickManagerArc(career * 7919 + k * 31, s, fired);
-      if (id) { fired.add(id); seen.add(id); firedTotal++; }
+      if (id) {
+        fired.add(id); seen.add(id); firedTotal++;
+        // and the tags its choices would set, so later arcs can require or forbid them
+        const arc = MANAGER_ARCS.find((a) => a.id === id);
+        for (const b of Object.values(arc?.beats ?? {})) {
+          for (const c of (b as any).choices ?? []) if ((c.effect as any)?.tag) tags.add((c.effect as any).tag);
+        }
+      }
     }
   }
 }

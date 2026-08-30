@@ -61,8 +61,8 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'His maths teacher has a mug, a lanyard and thirty years of allegiance to the club up the road — the one his own town has spent a century resenting. Every Monday after a derby, the man teaches quadratics with a smirk that could strip paint.',
         choices: [
-          { id: 'banter', label: 'Give it back', desc: 'Monday morning is a two-way street', outcome: 'He starts returning fire. Two terms of low-grade needling later they get on better than he does with any other teacher in the building, and his maths quietly improves out of pure competitiveness.', effect: { meters: { school: 10 }, attr: { flair: 1, composure: 1 }, tag: 'world-deakin-banter' }, next: 'letter' },
-          { id: 'ignore', label: 'Keep his head down', desc: 'It is maths. Do the maths.', outcome: 'He lets it wash over him and does the work. Mr Deakin, who was mostly after a reaction, decides he is a serious kid and starts treating him like one.', effect: { meters: { school: 8 }, attr: { composure: 2 }, tag: 'world-deakin-quiet' }, next: 'letter' },
+          { id: 'banter', label: 'Give it back', desc: 'Monday morning is a two-way street', outcome: 'He starts returning fire. Two terms of low-grade needling later they get on better than he does with any other teacher in the building, and his maths quietly improves out of pure competitiveness.', effect: { meters: { school: 10, authority: -4 }, attr: { flair: 1, composure: 1 }, tag: 'world-deakin-banter' }, next: 'letter' },
+          { id: 'ignore', label: 'Keep his head down', desc: 'It is maths. Do the maths.', outcome: 'He lets it wash over him and does the work. Mr Deakin, who was mostly after a reaction, decides he is a serious kid and starts treating him like one.', effect: { meters: { school: 8 }, attr: { composure: 2, flair: -1 }, tag: 'world-deakin-quiet' }, next: 'letter' },
         ],
       },
       letter: {
@@ -91,8 +91,8 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         id: 'fix',
         prompt: 'The history teacher who wrote the line keeps him back and asks, without any edge in it, what he thinks the honest version of that sentence is.',
         choices: [
-          { id: 'truth', label: 'Tell her the honest version', desc: 'He is not absent. He is somewhere else in his head.', outcome: 'He says he is thinking about football in her lessons and that he does not know how to stop. She says that is the most useful thing a boy has told her all year, and moves him to the front.', effect: { meters: { school: 12 }, attr: { composure: 1, leadership: 1 } } },
-          { id: 'promise', label: 'Promise to do better', desc: 'The answer that ends the conversation', outcome: 'He says the right words and she lets him go, and both of them know exactly what has just happened. He does improve a bit, out of embarrassment.', effect: { meters: { school: 4 }, attr: { teamwork: 1 } } },
+          { id: 'truth', label: 'Tell her the honest version', desc: 'He is not absent. He is somewhere else in his head.', outcome: 'He says he is thinking about football in her lessons and that he does not know how to stop. She says that is the most useful thing a boy has told her all year, and moves him to the front.', effect: { meters: { school: 12, peers: -4 }, attr: { composure: 1, leadership: 1 } } },
+          { id: 'promise', label: 'Promise to do better', desc: 'The answer that ends the conversation', outcome: 'He says the right words and she lets him go, and both of them know exactly what has just happened. He does improve a bit, out of embarrassment.', effect: { meters: { school: 4, authority: -4 }, attr: { teamwork: 1 } } },
         ],
       },
     },
@@ -136,8 +136,8 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         id: 'concert',
         prompt: 'The Christmas concert. He is in the audience or in the back row of the brass, and either way there is a moment in the second half where he thinks, clearly and without self-pity, that he is becoming a boy who only does one thing.',
         choices: [
-          { id: 'accept', label: 'Decide that\'s the deal', desc: 'One thing, all the way in', outcome: 'He accepts it as the price and stops mourning it. There is a hardness to that which serves him well and which he will have to unlearn later.', effect: { attr: { composure: 2, stamina: 1 }, form: 0.05 } },
-          { id: 'resist', label: 'Refuse to be only one thing', desc: 'Keep a corner of himself for something else', outcome: 'He promises himself he will always keep something that is not football, and mostly keeps the promise. It makes him harder to knock over than the boys who have nothing else.', effect: { attr: { creativity: 1, composure: 1 }, meters: { school: 6, family: 6 } } },
+          { id: 'accept', label: 'Decide that\'s the deal', desc: 'One thing, all the way in', outcome: 'He accepts it as the price and stops mourning it. There is a hardness to that which serves him well and which he will have to unlearn later.', effect: { attr: { composure: 2, stamina: 1 }, form: 0.05, meters: { school: -6, family: -4 } } },
+          { id: 'resist', label: 'Refuse to be only one thing', desc: 'Keep a corner of himself for something else', outcome: 'He promises himself he will always keep something that is not football, and mostly keeps the promise. It makes him harder to knock over than the boys who have nothing else.', effect: { attr: { creativity: 1, composure: 1 }, meters: { school: 6, family: 6 }, form: -0.03 } },
         ],
       },
     },
@@ -249,8 +249,8 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         id: 'trial',
         prompt: 'Year seven trials, second week of term. A PE teacher with a clipboard and ninety hopeful boys on one bald pitch, and about four minutes each to make an impression.',
         choices: [
-          { id: 'show', label: 'Do the flashy thing', desc: 'Four minutes. Make them memorable.', outcome: 'He does the thing he can do, in front of ninety kids and a man with a whistle. It works, and it also means that from that afternoon on there is an expectation attached to his name.', effect: { form: 0.06, attr: { flair: 2 }, meters: { peers: 8, school: 6 } } },
-          { id: 'simple', label: 'Keep it simple and let it show', desc: 'Two-touch, head up, nothing wasted', outcome: 'He plays it plain and the teacher writes something down anyway. The lads who tried tricks do not get written down.', effect: { attr: { composure: 1, teamwork: 1 }, meters: { school: 8 } } },
+          { id: 'show', label: 'Do the flashy thing', desc: 'Four minutes. Make them memorable.', outcome: 'He does the thing he can do, in front of ninety kids and a man with a whistle. It works, and it also means that from that afternoon on there is an expectation attached to his name.', effect: { form: 0.06, attr: { flair: 2, composure: -1 }, meters: { peers: 8, school: 6 } } },
+          { id: 'simple', label: 'Keep it simple and let it show', desc: 'Two-touch, head up, nothing wasted', outcome: 'He plays it plain and the teacher writes something down anyway. The lads who tried tricks do not get written down.', effect: { attr: { composure: 1, teamwork: 1 }, meters: { school: 8, peers: -4 } } },
         ],
       },
     },
@@ -308,7 +308,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'He is buying plasters in the chemist on the high street when a woman he has never met says his surname, as a question, and then tells him her nephew is in his year and that everyone round here knows who he is now. He is fourteen and holding a box of plasters.',
         choices: [
-          { id: 'polite', label: 'Be polite and get out', desc: 'Thanks, yeah, cheers, bye', outcome: 'He manages four words and leaves with his ears burning, and thinks about it for the rest of the day. It is the first time his name has arrived somewhere before he did.', effect: { attr: { composure: 1 }, meters: { peers: 4 }, tag: 'world-first-recognised' }, next: 'town' },
+          { id: 'polite', label: 'Be polite and get out', desc: 'Thanks, yeah, cheers, bye', outcome: 'He manages four words and leaves with his ears burning, and thinks about it for the rest of the day. It is the first time his name has arrived somewhere before he did.', effect: { attr: { composure: 1 }, meters: { peers: 4 }, energy: -4, tag: 'world-first-recognised' }, next: 'town' },
           { id: 'chat', label: 'Stop and talk to her', desc: 'She is somebody\'s aunt in his own town', outcome: 'He stands in the chemist for ten minutes talking about her nephew\'s team, and she tells three people about it by teatime, and the town decides he is all right.', effect: { attr: { leadership: 1, teamwork: 1 }, meters: { peers: 8, family: 6 }, tag: 'world-town-likes-him' }, next: 'town' },
         ],
       },

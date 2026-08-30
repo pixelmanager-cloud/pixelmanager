@@ -77,12 +77,20 @@ export interface ContractDemand {
   minLength: number; maxLength: number;
   lengthPremium: number; // wage change per season away from pref (+mercenary demands more, −loyal discounts)
 }
+/** How much his wage moves per season away from his preferred length. THE ONE COPY of this rule.
+ *  It was written here and then inlined verbatim at two more sites in api.ts (starContractInfo and
+ *  negotiateStar, which build their demand from tokenContract rather than from raw attributes and so
+ *  cannot call contractDemand itself). Three copies of one negotiation rule, of which exactly one was
+ *  covered by a test — they happened to agree, which is the only reason nothing was broken. */
+export function lengthPremiumFor(personality?: string): number {
+  const merc = personality === 'maverick' || personality === 'mercurial';
+  const loyal = personality === 'leader' || personality === 'workhorse';
+  return merc ? 0.14 : loyal ? -0.07 : 0.05;
+}
 export function contractDemand(overall: number, age: number, greed = 10, personality?: string, earnings = 0, seasonsStaked = 0): ContractDemand {
   const loyalty = clamp(1 - Math.max(0, seasonsStaked) * 0.04, 0.75, 1);
   const baseWage = Math.round(contractCost(overall, age, greed, earnings) * loyalty);
-  const loyal = personality === 'leader' || personality === 'workhorse';
-  const merc = personality === 'maverick' || personality === 'mercurial';
-  return { baseWage, prefLength: contractLength(greed, personality), minLength: 2, maxLength: 6, lengthPremium: merc ? 0.14 : loyal ? -0.07 : 0.05 };
+  return { baseWage, prefLength: contractLength(greed, personality), minLength: 2, maxLength: 6, lengthPremium: lengthPremiumFor(personality) };
 }
 /** The wage he asks for a deal of `length` seasons (his base, adjusted by the length premium). */
 export function wageForLength(d: ContractDemand, length: number): number {

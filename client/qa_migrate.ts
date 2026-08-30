@@ -63,4 +63,28 @@ const before = JSON.stringify(orig.tokens);
 migrate(orig);
 if (JSON.stringify(orig.tokens) !== before) fail('migrate mutated the caller\'s tokens');
 
-if (!process.exitCode) console.log('✓ migration repairs missing collections and leaves its input alone');
+// MALFORMED, NOT MERELY MISSING. `?? []` repairs an absent array and sails straight past one that is an
+// object, a string or a number — after which migrate itself dies ("m.tokens is not iterable"). Each of
+// these was a reproducible, permanently unloadable save with no repair path, which is exactly what the
+// repair block above exists to prevent.
+for (const [label, bad] of [
+  ['tokens as an object', {}], ['tokens as a string', 'corrupt'], ['tokens as a number', 42],
+  ['tokens with a null entry', [null]], ['tokens with junk entries', [null, undefined]],
+] as Array<[string, unknown]>) {
+  const raw: any = { ...freshSave('Bad'), version: 1, tokens: bad };
+  try {
+    const fixed = migrate(raw);
+    if (!Array.isArray(fixed.tokens)) fail(`${label}: tokens is still not an array after migrate`);
+    if (fixed.tokens.some((t: any) => t == null)) fail(`${label}: a null token survived migrate`);
+  } catch (e: any) { fail(`${label}: migrate threw ${e?.message}`); }
+}
+// and the same for every other collection, since they share the one repair
+for (const key of ['injuries', 'legacies', 'honours', 'awards', 'missions', 'loanees', 'retiredNumbers', 'playerStats']) {
+  const raw: any = { ...freshSave('Bad2'), version: 1, [key]: 'not an array' };
+  try {
+    const fixed: any = migrate(raw);
+    if (!Array.isArray(fixed[key])) fail(`${key} as a string: not repaired to an array`);
+  } catch (e: any) { fail(`${key} as a string: migrate threw ${e?.message}`); }
+}
+
+if (!process.exitCode) console.log('✓ migration repairs missing AND malformed collections, and leaves its input alone');

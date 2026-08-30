@@ -42,7 +42,7 @@ export const MGR_ARCS_08: ManagerArc[] = [
   },
   {
     id: 'mgr-p08-supporter-director', title: 'One Of Ours Upstairs', icon: '🧣', category: 'boardroom',
-    when: { minSeason: 3 }, temper: ['builder', 'players-manager', 'chancer'], weight: 3, first: 'open',
+    when: { minSeason: 3, requiresTag: 'mgr-open' }, temper: ['builder', 'players-manager', 'chancer'], weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -207,7 +207,7 @@ export const MGR_ARCS_08: ManagerArc[] = [
   },
   {
     id: 'mgr-p08-club-doctor-agency', title: 'The Doctor On A Contract', icon: '🩺', category: 'boardroom',
-    when: { minSeason: 3, maxCoins: 400 }, weight: 3, first: 'open',
+    when: { minSeason: 3, maxCoins: 400, facility: { key: 'medical', min: 3 } }, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -237,7 +237,7 @@ export const MGR_ARCS_08: ManagerArc[] = [
   },
   {
     id: 'mgr-p08-community-trust-time', title: 'Tuesday Mornings', icon: '🫱', category: 'boardroom',
-    when: { minSeason: 2 }, weight: 3, first: 'open',
+    when: { minSeason: 2, facility: { key: 'community', min: 3 } }, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -1449,7 +1449,7 @@ export const MGR_ARCS_08: ManagerArc[] = [
   },
   {
     id: 'mgr-p08-youngster-not-coping', title: 'He Is Not Coping', icon: '🫥', category: 'crisis',
-    when: { minSeason: 2, minPos: 0.5, needs: 'wonderkid' }, weight: 3, first: 'open',
+    when: { minSeason: 2, minPos: 0.5, needs: 'wonderkid', facility: { key: 'dorm', min: 2 } }, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',

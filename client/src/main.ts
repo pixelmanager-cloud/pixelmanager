@@ -7,6 +7,7 @@ import {
   type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type Trialist, type MissionsData, type ContractInfo } from './api';
+import { flushSave, getSaveHealth } from './save';
 import { sprite } from './sprites';
 import { crest, crestColors } from './crest';
 import { portraitImg, bandForAge } from './portrait';
@@ -1241,7 +1242,7 @@ class Game {
     $('me-rating').textContent = ''; // PvP ELO — hidden: the game is single-player (multiplayer removed, see direction.md)
     if (this.account.coins != null) {
       $('me-coins').innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${this.account.coins}`;
-      $('hub-club-sub').textContent = `💰 ${this.account.coins.toLocaleString()} to invest — facilities, youth & scouting. Levels are permanent.`;
+      $('hub-club-sub').textContent = `💰 ${this.account.coins.toLocaleString()} to invest — facilities, youth & scouting. Every level costs upkeep each season.`;
     }
     void this.refreshPrestige();
     void this.refreshDiary();
@@ -1357,6 +1358,36 @@ class Game {
   }
   private savePlan() { try { localStorage.setItem(this.planKey(), JSON.stringify([...this.draftPlan])); } catch { /* ignore */ } }
   private clearMgr() { try { localStorage.removeItem(this.mgrKey()); } catch { /* ignore */ } }
+  /** THE HANDOVER RESET. What ends at a succession is the SEASON and the MAN; what the family built is the
+   *  whole point of the game and carries.
+   *
+   *  This used to be `clearMgr()` — a blanket removeItem — and it threw the dynasty away every generation.
+   *  Measured over 20 generations: the club fell from tier 1 back to tier 9 at EVERY handover (19 of 19),
+   *  and titles, continental and World-Finals wins, hired staff, arcPrestige, clubLegacy, arcFired, arcTags
+   *  and lastRankIdx were all destroyed with it. Three separate comments in this file promise the opposite —
+   *  arcPrestige is "permanent, because standing is", clubLegacy is "permanent marks on the club, surviving
+   *  the manager and every succession", and renderHandoff's spread says "what the family built is the whole
+   *  point of the game and carries". That spread was spreading an empty object.
+   *
+   *  It also made `founding` (renderHandoff) true at every succession, because it tests for the very
+   *  defaults clearMgr had just produced — so the heir was re-baselined into a new club at the bottom of
+   *  the pyramid, and the qualification earned in his father's last season was deleted before the cup could
+   *  be played. One root cause under all of it. */
+  private resetMgrForHeir() {
+    const prior = this.loadMgr();
+    this.saveMgr({
+      ...prior,
+      // the season, the man, and everything scoped to the career just ended
+      season: 1, results: [], starId: undefined, starName: undefined, starAge: undefined,
+      sponsor: undefined, lastBoard: undefined, lastFinishPos: undefined, lastTierMove: undefined,
+      arcNow: null, arcLastMd: undefined, arcBoard: 0,
+      squadReport: undefined, squadReportSeason: undefined,
+      contElig: undefined, contRound: 0, contOut: false, contBlurb: undefined,
+      wcStage: undefined, wcEdition: undefined, wcRun: undefined,
+      // titles, contTitles, wcWins, staff, arcPrestige, clubLegacy, arcFired, arcTags, lastRankIdx,
+      // temper and feed all carry, because they are the dynasty rather than the season.
+    } as MgrState);
+  }
   /** manager phase = you've handed off and are now managing the club with a bloodline star on the pitch */
   /** Guarantee the bloodline star starts (manager phase). autoPickXI is generic and can drop him on a
    *  formation change / auto-pick / stale standing orders; this swaps him into the weakest same-role slot
@@ -1676,6 +1707,10 @@ class Game {
       `<b>Spend coins</b> on the Transfer Market and club facilities to strengthen the side over the seasons.`,
       // PT-500 — the wage bill was a save-wide recurring cost no screen forecast
       `<b>💷 Wages.</b> Everyone on your books draws a wage, players you sign included. The whole bill is charged once, when the season ends — you'll see it on the squad report. Keep a reserve back for it: if the coins aren't there the shortfall is left unpaid and the books are stretched. A bigger, better squad costs more, and climbing a division is what pays for it. The season header shows roughly what you're on the hook for.`,
+      // PT-2803 — upkeep is the SECOND recurring bill and the only one that can destroy owned assets, and
+      // the explainer named neither it nor the lever against it. Wages and morale each had a bullet; the
+      // thing that can take a facility off you did not.
+      `<b>🏛️ Upkeep.</b> Every facility level costs coins <b>every season</b>, and the cost climbs steeply — all twelve at level 5 runs about <b>1,344c</b> a season, at level 10 about <b>6,804c</b>, against a top-flight title prize of 1,280c. If the club can't pay, a facility <b>falls into disrepair and loses a level</b>. You can also <b>Scale back</b> a facility yourself on the Club screen to cut the bill and recover 40% of what the level cost. Climbing a division is what makes a big club affordable.`,
       // PT-501 — morale drives renew cost and sale value, and nothing said what moved it
       `<b>🙂 Morale.</b> How settled a man is. Playing him lifts it, and so does winning something; leaving him out drops it, and letting his contract run down drops it further. It shows up at the deal table — an unsettled player holds out for up to <b>30% more</b> to re-sign, and sells for up to <b>20% less</b>. Rotating the fringe men into the XI is what keeps them cheap to keep.`,
     ];
@@ -2256,16 +2291,17 @@ class Game {
       if (fi?.total) {
         const parts = [fi.gate && `🎟️ gate ${fi.gate.toLocaleString()}c`, fi.sponsor && `🤝 sponsors ${fi.sponsor.toLocaleString()}c`,
           fi.shop && `🛍️ shop ${fi.shop.toLocaleString()}c`, fi.womens && `⚽ women's team ${fi.womens.toLocaleString()}c`].filter(Boolean);
-        this.pushFeed('🏟️', `The club earned <b>${fi.total.toLocaleString()}c</b> off the pitch this season — ${parts.join(' · ')}.`);
+        this.pushFeed('🏟️', `The club earned <b>${fi.total.toLocaleString()}c</b> off the pitch this season — ${parts.join(' · ')}.`, m.season + 1);
       }
       // AND WHAT IT COST TO RUN. Reported next to the income and in the same breath, because upkeep is only
       // a decision if the player sees both halves of the ledger together.
       const up = (r as any).upkeep as number | undefined;
-      if (up) this.pushFeed('🧾', `Running the club cost <b>${up.toLocaleString()}c</b> in upkeep — wages, upkeep, the lights, the lot.`);
+      if (up) this.pushFeed('🧾', `Keeping the club's facilities running cost <b>${up.toLocaleString()}c</b> this season — the upkeep on every stand, pitch and department you have built. Wages are billed separately.`, m.season + 1);
       const dis = ((r as any).disrepair ?? []) as string[];
       if (dis.length) {
         const names = [...new Set(dis)].map((k) => FACILITY_META[k as FacilityKey]?.name ?? k);
-        this.pushFeed('🚧', `<b>The club could not pay its bills.</b> ${names.join(' and ')} fell into disrepair — ${dis.length} level${dis.length > 1 ? 's' : ''} lost. Something has to give: scale back what the club is for, or climb far enough to afford it.`);
+        const sal = (r as any).salvage as number | undefined;
+        this.pushFeed('🚧', `<b>The club could not pay its bills.</b> ${names.join(' and ')} fell into disrepair — ${dis.length} level${dis.length > 1 ? 's' : ''} lost${sal ? `, and the sale of what was stripped out raised <b>${sal.toLocaleString()}c</b>` : ''}. Something has to give: scale back what the club is for, or climb far enough to afford it.`, m.season + 1);
         toast(`🚧 ${names[0]} fell into disrepair — the club is living beyond its means`);
       }
     } catch { /* offline: no prize */ }
@@ -2324,6 +2360,24 @@ class Game {
         if (this.account?.coins != null) this.account.coins = sq.coins;
         this.setMe(await api.me());
         this.pendingSquadReport = sq;
+        // A WAGE BILL THE CLUB COULD NOT MEET NOW COSTS IT A FACILITY. Say so where the player will read
+        // it — filed under the season about to start, like every other rollover line, because the feed
+        // renders the CURRENT season and these are written while the counter still reads the old one.
+        const wd = ((sq as any).disrepair ?? []) as string[];
+        if (wd.length) {
+          const names = [...new Set(wd)].map((k) => FACILITY_META[k as FacilityKey]?.name ?? k);
+          const sal = (sq as any).salvage as number | undefined;
+          this.pushFeed('🚧', `<b>The wages could not be paid in full.</b> ${names.join(' and ')} fell into disrepair — ${wd.length} level${wd.length > 1 ? 's' : ''} lost${sal ? `, raising <b>${sal.toLocaleString()}c</b> from what was stripped out` : ''}. The squad costs more than the club earns: sell, let a contract run down, or scale the club back.`, m.season + 1);
+        }
+        // RUNNING ON EMPTY — checked HERE, after wages, not at the season roll. It used to sit immediately
+        // after spSeasonReward credited the season's income, which is the richest instant of the whole
+        // cycle, while the bill its own text blames is charged in advanceSquadSeason right here. Measured
+        // over 60 seasons of a relegated club: the warning fired 0 times against 24 seasons that genuinely
+        // ended on exactly 0 coins. Salvage made it worse, by guaranteeing a positive balance at the old
+        // checkpoint on every disrepair season.
+        if ((sq.coins ?? 0) === 0) {
+          this.pushFeed('⚠️', `<b>The club is running on empty.</b> Everything coming in is going straight back out on upkeep and wages, and there is nothing left to spend. Scale a facility back on the <b>Club</b> screen to cut the bill and recover some of what it cost, or climb a division to earn more.`, m.season + 1);
+        }
         const mm = this.loadMgr(); this.saveMgr({ ...mm, squadReport: sq, squadReportSeason: mm.season });
       } catch { /* offline — squad rollover is best-effort, never blocks the season */ }
     }
@@ -2362,7 +2416,14 @@ class Game {
     const qualified = tier === 1 && t.pos <= 3; // only the TOP flight's top-3 book a Continental Cup place
     if (qualified) toast('🌍 Top-3 in the top flight — qualified for the Continental Cup!');
     // new season → fresh sponsor; drop any unfinished World-Finals run (it belongs to its staging season)
-    this.saveMgr({ ...m, season: m.season + 1, results: [], starAge: age, titles, sponsor: undefined, contElig: qualified, contRound: 0, contOut: false, contBlurb: undefined, wcStage: undefined, wcEdition: undefined, wcRun: undefined, lastBoard, lastFinishPos: t.pos, lastTierMove: promoted ? 'promoted' : relegated ? 'relegated' : undefined, arcBoard: 0 });
+    // ...this.loadMgr(), NOT the `m` captured at the top of this function. Everything written to the save
+    // BETWEEN that snapshot and here — every pushFeed, the prestige rank-up, the squad report — lives in
+    // the store, and spreading a stale `m` over it puts the old values straight back. Two earlier saves in
+    // this same function were already re-reading for exactly this reason (lastRankIdx, squadReport), which
+    // is the tell: the cause was never fixed, only the two symptoms someone noticed. Measured effect: the
+    // upkeep bill, the disrepair announcement, the running-on-empty warning, the promotion/relegation
+    // narration and the prestige rank-up were ALL deleted before the player could read any of them.
+    this.saveMgr({ ...this.loadMgr(), season: m.season + 1, results: [], starAge: age, titles, sponsor: undefined, contElig: qualified, contRound: 0, contOut: false, contBlurb: undefined, wcStage: undefined, wcEdition: undefined, wcRun: undefined, lastBoard, lastFinishPos: t.pos, lastTierMove: promoted ? 'promoted' : relegated ? 'relegated' : undefined, arcBoard: 0 });
     this.checkAchievements(); // titles / seasons / prestige milestones
     this.showSeason();
   }
@@ -2502,7 +2563,7 @@ class Game {
       const r = await api.succeed(m.starId!, { seasons, titles, cups, mentorship, inheritance, saleFee });
       if (this.account && typeof r.coins === 'number') this.account.coins = r.coins; // the sale fee + legacy are banked atomically inside succeed (PT-60)
       this.recordHeirloom(r.prospect.generation, `${w.icon} ${w.label}`); // remembered against the heir's generation
-      this.clearMgr(); // back to player phase — the heir's card-career begins
+      this.resetMgrForHeir(); // back to player phase — the heir's card-career begins, the club stays his father's
       this.setMe(await api.me());
       this.checkAchievements(); // a legend retired → new generation / legends / rating milestones
       toast(`${w.icon} The heir inherits ${w.label}${(r as any).testimonial ? ` · 🎗️ +${(r as any).testimonial.toLocaleString()}c testimonial` : ''}${r.saleFee ? ` · 💰 +${r.saleFee.toLocaleString()}c from the sale` : ''}${r.legacy ? ` · +${r.legacy.toLocaleString()}c legacy` : ''}`);
@@ -2696,7 +2757,7 @@ class Game {
         : `<div class="fac-next">Next: <b>${f.nextEffect ?? ''}</b></div>`
           + (f.nextUpkeep != null && f.nextUpkeep > f.upkeep
             ? `<div class="fac-upkeep">Upkeep ${f.upkeep.toLocaleString()}c ▸ <b>${f.nextUpkeep.toLocaleString()}c</b> a season</div>` : '')
-          + `<button class="fac-up" data-key="${f.key}" ${f.canAfford ? '' : 'disabled'}>Upgrade · 💰 ${f.upgradeCost} ▶</button>`;
+          + `<button class="fac-up" data-key="${f.key}" ${f.canAfford ? '' : `disabled title="Not enough coins — you need ${(f.upgradeCost ?? 0).toLocaleString()}c"`}>${f.canAfford ? `Upgrade · 💰 ${f.upgradeCost} ▶` : `Need 💰 ${(f.upgradeCost ?? 0).toLocaleString()}c`}</button>`;
       const scaleBack = f.level > 1
         ? `<button class="fac-down" data-down="${f.key}" title="Scale back a level and recover part of what it cost">Scale back ▾</button>` : '';
       return `<div class="facility ${maxed ? 'maxed' : ''}">`
@@ -2872,6 +2933,22 @@ class Game {
         ? `<h4 class="scout-h4" style="margin-top:24px;">🎽 RETIRED NUMBERS</h4><div class="scout-sub">Shirts hung up forever for the club's immortals — no future player wears these.</div>`
           + `<div class="tr-cabinet">` + retired.map((r) => `<div class="tr-trophy"><div class="tr-trophy-ico">#${r.n}</div><div class="tr-trophy-name">${r.name}</div><div class="tr-trophy-sub">retired</div></div>`).join('') + `</div><div class="troom-shelf"></div>`
         : '';
+      // WHAT THE FAMILY LEFT ON THE PLACE ITSELF. 283 manager-arc choices set a `clubLegacy` — a stand
+      // renamed, a number retired, a rivalry started, the borehole under the training pitch — and its own
+      // doc-comment calls it "A PERMANENT mark on the club, surviving the manager and every succession —
+      // the dynasty accumulates a history you can read back". It was written to the save at main.ts:3199,
+      // carefully preserved across successions, and READ BY NOTHING. The player could never read it back.
+      // This is the room whose whole job is the record, so it belongs here.
+      const KIND_ICON: Record<string, string> = { stand: '🏟️', rivalry: '⚔️', number: '🎽', reputation: '📣', tradition: '🕯️' };
+      const KIND_LABEL: Record<string, string> = { stand: 'the ground', rivalry: 'a rivalry', number: 'a shirt', reputation: 'the club\'s name', tradition: 'a tradition' };
+      const marks = (this.loadMgr()?.clubLegacy ?? []).slice().sort((a, b) => a.season - b.season);
+      const legacySection = marks.length
+        ? `<h4 class="scout-h4" style="margin-top:24px;">🏛️ WHAT THE FAMILY CHANGED</h4>`
+          + `<div class="scout-sub">Marks left on the club itself. These outlast every manager who made them.</div>`
+          + `<div class="tr-marks">` + marks.map((m) => `<div class="tr-mark"><span class="tr-mark-ico">${KIND_ICON[m.kind] ?? '🏛️'}</span>`
+            + `<span class="tr-mark-text">${m.label}</span>`
+            + `<span class="tr-mark-meta">${KIND_LABEL[m.kind] ?? m.kind} · season ${m.season}</span></div>`).join('') + `</div>`
+        : '';
       const seasons = honours.length ? Math.max(...honours.map((h) => h.season_number)) : 0;
       // THE MASTHEAD. This was an emoji sentence — "🏆 2 titles · 🌳 1 bloodline · ⭐ 3 legends" — which is
       // the same information a status bar carries, in a room whose entire job is to make the record feel
@@ -2907,6 +2984,7 @@ class Game {
         + `<h4 class="scout-h4">🏆 TROPHY CABINET</h4>` + cabinet
         + `<h4 class="scout-h4" style="margin-top:24px;">🌳 BLOODLINES</h4><div class="scout-sub">The dynasties you've built — each line is a bloodline across the generations, newest at the bottom.</div>` + bloodlines
         + retiredSection
+        + legacySection
         + achSection;
       const hsHost = document.getElementById('houses-host');
       if (hsHost) void this.renderHouses(hsHost);       // async; the rest of the room renders immediately
@@ -3116,10 +3194,14 @@ class Game {
       personality: p.personality,
     };
   }
-  private pushFeed(icon: string, text: string) {
+  /** `season` overrides which season's screen the line is filed under. Rollover narration is written while
+   *  the counter still reads the season just PLAYED, but it is read on the screen for the season about to
+   *  start — so without the override those lines are stamped N, the screen filters for N+1, and they are
+   *  invisible even once the clobber above is fixed. Two independent bugs, the same silence. */
+  private pushFeed(icon: string, text: string, season?: number) {
     if (!text) return;
     const m = this.loadMgr();
-    const feed = [...(m.feed ?? []), { season: m.season, icon, text }];
+    const feed = [...(m.feed ?? []), { season: season ?? m.season, icon, text }];
     this.saveMgr({ ...m, feed: feed.slice(-Game.FEED_MAX) });
   }
   /** The feed for the CURRENT season, newest first. */
@@ -3366,7 +3448,11 @@ class Game {
       const yrs = n.honours?.turnsPlayed ? `${n.honours.caps ? `${n.honours.caps} caps` : "no caps"}` : (n.state === "prospect" ? "yet to play" : "");
       const sub = n.legend?.tier ? n.legend.tier : yrs;
       const cls = n.branch === "sibling" ? " fr-sib" : "";
+      // `<title>` is the SVG tooltip AND what a screen reader announces for the node — the natural home for
+      // the parentage the tree otherwise expresses only as a line between two ovals.
+      const who = n.fatherName ? `${n.name} — ${n.fatherName}'s boy` : `${n.name} — the founder of the line`;
       return `<g class="fr-node${cls}" transform="translate(${p.x},${p.y})">`
+        + `<title>${who}</title>`
         + `<ellipse rx="30" ry="34" class="fr-oval"/><ellipse rx="24" ry="28" class="fr-oval-inner"/>`
         + `<text y="5" class="fr-init">${String(n.name ?? "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2)}</text>`
         + `<rect x="-66" y="38" width="132" height="17" class="fr-banner"/>`
@@ -3444,7 +3530,15 @@ class Game {
         // flatly contradicting the comment on clubTier() that the tier "survives the bloodline hand-off, so
         // the dynasty climbs one pyramid". The heir inherits the club his father left, not a new one.
         const prior = this.loadMgr();
-        const founding = prior.starId == null && (prior.season ?? 1) <= 1;
+        // FOUNDING MEANS "THIS SAVE HAS NEVER HAD A CLUB", NOT "THE MANAGER STATE LOOKS FRESH". This tested
+        // starId == null && season <= 1 — precisely the state a succession produces — so it was true at
+        // EVERY handover, and the heir was re-baselined into a new club at the bottom of the pyramid: 19 of
+        // 19 successions measured, tier 1 back to tier 9 every time. `fm_starttier_` is written once, at the
+        // real founding, and lives outside the manager save, so it still answers the question after the
+        // handover reset. Reading it directly (not through startTier(), which falls back to clubTier()).
+        let everFounded = false;
+        try { everFounded = !!localStorage.getItem('fm_starttier_' + (this.account?.handle ?? 'x')); } catch { /* treat as unfounded */ }
+        const founding = !everFounded;
         const startTier = founding ? this.startingTierFor(s, player) : this.clubTier();
         if (founding) { this.setClubTier(startTier); this.setStartTier(startTier); }
         // AND BRING THE SQUAD WITH IT. The tier came from his career but the ROSTER was minted at quality 6
@@ -4982,10 +5076,40 @@ requestAnimationFrame(matchFrame);
 // not just a display — so a match left in a background tab froze mid-game and resumed from the same
 // minute. Keep it ticking on a timer while hidden. Browsers throttle background timers to roughly 1s,
 // so the step ceiling is raised to match: it advances at about the same rate rather than 10x slower.
+// SETTLE THE SAVE WHEN THE TAB GOES AWAY. Writes are debounced 500ms, and flushSave() was written for
+// exactly this ("e.g. before the tab closes") and then wired to nothing — so closing, refreshing or
+// backgrounding the tab within half a second of an action silently dropped it. `pagehide` is the reliable
+// one on mobile Safari, where `beforeunload` often never fires; both are cheap and idempotent.
+const settleSave = () => { void flushSave(); };
+// AND SAY SO IF THE DISK IS REFUSING US. A failing autosave used to be completely silent — the game kept
+// accepting moves and reporting success while nothing reached storage. Warn once, and keep the banner up:
+// the honest advice when the browser will not store anything is to stop playing, not to play on.
+// AND IT HAS TO COME DOWN AGAIN. `saveWarned` latched and nothing ever removed #save-broken, so a single
+// transient hiccup — one failed write that the very next one recovers from — pinned a permanent full-width
+// banner telling the player to stop playing, while the game was saving perfectly well.
+let saveWarned = false;
+setInterval(() => {
+  const h = getSaveHealth();
+  if (h.ok) {
+    if (saveWarned) { document.getElementById('save-broken')?.remove(); saveWarned = false; }
+    return;
+  }
+  if (saveWarned) return;
+  saveWarned = true;
+  const el = document.createElement('div');
+  el.id = 'save-broken';
+  el.innerHTML = `<b>⚠️ THE GAME IS NOT BEING SAVED.</b> Your browser refused to store this save${h.error ? ` (${h.error})` : ''}. `
+    + `Progress since you started playing will be lost when you close this tab. This usually means private browsing, a full disk, or blocked site data.`;
+  document.body.appendChild(el);
+}, 4000);
+window.addEventListener('pagehide', settleSave);
+window.addEventListener('beforeunload', settleSave);
+
 // (PT-1409)
 let hiddenTick: ReturnType<typeof setInterval> | undefined;
 document.addEventListener('visibilitychange', () => {
   if (document.hidden) {
+    void flushSave();   // a backgrounded tab can be killed without ever firing pagehide
     lastFrameMs = performance.now();
     hiddenTick ??= setInterval(() => matchStep(performance.now(), 1000), 200);
   } else if (hiddenTick !== undefined) {

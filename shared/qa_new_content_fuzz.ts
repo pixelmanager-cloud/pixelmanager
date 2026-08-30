@@ -47,13 +47,21 @@ function playAndTally(seed: number, track: Track, agentId: string | undefined): 
   while (!c.finished) {
     if (++guard > HARD_CAP) throw new Error(`softlock: exceeded ${HARD_CAP} steps without finishing  ${ctxBase}`);
     const st = c.current();
+    // STORY ARCS ARE A CAREER PHASE. This dispatch predates them and never handled 'arc', so the first arc
+    // beat fell through to the play branch, read an undefined hand and killed the suite. Deterministic pick
+    // (first choice) so the harness stays reproducible.
+    if (st.phase === 'arc') { c.resolveArc((st as any).arc.choices[0].id); continue; }
     if (st.phase === 'focus') {
       chapterFocusSeen.add(st.chapter);
       for (const f of st.focus) { focusIdSeen.add(f.id); if (f.tag) focusTagSeen.add(f.tag); }
       // occasionally exercise a lifestyle purchase alongside the focus pick (buyLifestyle is a side action,
       // not phase-gated) to reach the 3 new lifestyle items too
-      if (st.lifestyle.length && rng() < 0.5) {
-        const item = st.lifestyle[Math.floor(rng() * st.lifestyle.length)];
+      // lifestyleOffer DELIBERATELY includes items he cannot yet afford (the client greys them out rather
+      // than hiding them), so buying a random offered item legitimately throws. Buy only what he can pay
+      // for; a throw here is then a real defect rather than the harness misreading the offer.
+      const affordable = st.lifestyle.filter((i) => st.earnings >= i.cost);
+      if (affordable.length && rng() < 0.5) {
+        const item = affordable[Math.floor(rng() * affordable.length)];
         try { c.buyLifestyle(item.id); lifestyleIdSeen.add(item.id); }
         catch (err) { log(`EXCEPTION buyLifestyle(${item.id}): ${(err as Error).stack ?? err}  ${ctxBase}`); }
       }
@@ -144,6 +152,9 @@ console.log('\n[qa-new-content] determinism replay focused on new-content career
     let guard = 0;
     while (!cA.finished && guard++ < TOTAL_TURNS * 20 + 2000) {
       const st = cA.current();
+      // the replay loop needs the same 'arc' branch as the sweep above — without it st.scenario is
+      // undefined on an arc state and this dies on `.life`
+      if (st.phase === 'arc') { cA.resolveArc((st as any).arc.choices[0].id); continue; }
       if (st.phase === 'focus') { if (st.lifestyle.length && rngA() < 0.5) { try { cA.buyLifestyle(st.lifestyle[Math.floor(rngA() * st.lifestyle.length)].id); } catch { /* ignore */ } } cA.chooseFocus(st.focus[Math.floor(rngA() * st.focus.length)].id); continue; }
       if (st.phase === 'offer') { cA.resolveOffer(st.offers[Math.floor(rngA() * st.offers.length)].id); continue; }
       if (st.phase === 'coach') { cA.appointCoach(st.coaches[Math.floor(rngA() * st.coaches.length)].id); continue; }

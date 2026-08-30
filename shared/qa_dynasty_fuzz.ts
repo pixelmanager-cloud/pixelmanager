@@ -66,7 +66,8 @@ function playFullCareer(seed: number, track: Track, agentId: string | undefined)
   while (!c.finished) {
     if (++guard > HARD_CAP) throw new Error(`softlock: exceeded ${HARD_CAP} steps without finishing`);
     const st = c.current();
-    if (st.phase === 'focus') c.chooseFocus(st.focus[Math.floor(rng() * st.focus.length)].id);
+    if (st.phase === 'arc') c.resolveArc((st as any).arc.choices[Math.floor(rng() * (st as any).arc.choices.length)].id);
+    else if (st.phase === 'focus') c.chooseFocus(st.focus[Math.floor(rng() * st.focus.length)].id);
     else if (st.phase === 'offer') c.resolveOffer(st.offers[Math.floor(rng() * st.offers.length)].id);
     else if (st.phase === 'coach') c.appointCoach(st.coaches[Math.floor(rng() * st.coaches.length)].id);
     else if (st.phase === 'draft') c.draft(st.options[Math.floor(rng() * st.options.length)].id);

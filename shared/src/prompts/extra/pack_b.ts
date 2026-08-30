@@ -514,7 +514,7 @@ export const DEMAND_B: Bank = {
   ],
   stamina: [
     'Legs, and nothing else.',
-    'The engine is the test.',
+  
     'One more run.',
     'Everybody is finished.',
     'Work, plain and boring.',
@@ -721,7 +721,7 @@ export const DEMAND_B: Bank = {
     'A cross is coming.',
     'Everything behind him is net.',
     'Come, or stay.',
-    'One touch decides it.',
+  
     'A clean take, no fuss.',
     'The wall needs setting.',
     'Bodies everywhere.',

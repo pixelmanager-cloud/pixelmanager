@@ -167,7 +167,7 @@ console.log('\n[qa-boundary] computeOffPitch() temptation-gate empirical rate...
     const turn = i % 50;
     // force a clearly edgy or clearly clean reputation via tags, half and half
     const edgy = i % 2 === 0;
-    const tags = edgy ? { aggression: 20, flair: 20 } : { teamwork: 20, leadership: 20, composure: 20 };
+    const tags: Record<string, number> = edgy ? { aggression: 20, flair: 20 } : { teamwork: 20, leadership: 20, composure: 20 };
     const op = computeOffPitch({ careerScore: 300, caps: 2, seed, turn, tags, bigWins: 1, flair: edgy ? 10 : 0 });
     if (op.reputation.edge === 'edgy') { edgyTotal++; if (op.temptation) edgyTempted++; }
     else { cleanTotal++; if (op.temptation) cleanTempted++; }

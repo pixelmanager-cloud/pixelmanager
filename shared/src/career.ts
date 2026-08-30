@@ -854,6 +854,29 @@ export function makeScenario(rng: () => number, i: number, track: Track = 'outfi
   const n = 1 + Math.floor(rng() * Math.min(3, bias.length));
   const pool = [...new Set(shuffleSeeded(bias, rng))].slice(0, n);
   const raw = pool.map(() => 0.3 + rng());
+  // KIND_BIAS IS STILL DEAD, DELIBERATELY, AND THIS IS THE SECOND TIME IT HAS BEEN LEFT THAT WAY.
+  //
+  // The defect is real: KIND_BIAS describes which tags each kind of scenario should ask for, nothing reads
+  // it, and 75% of social and training scenarios demand a tag their own kind excludes — a media scrum
+  // asking an outfielder for `keeping`. I fixed it by substituting off-kind tags through pureHash01,
+  // verified that the rng DRAW STREAM was byte-identical, and concluded stored careers were safe.
+  //
+  // THE DRAW STREAM WAS NEVER WHAT WAS AT RISK. An adversarial replay found it: changing `demand` changes
+  // `fit`, which changes `success`, which changes energy and injuries, which changes the PHASE SEQUENCE —
+  // so a stored action list no longer matches the career it is replayed into. loadCareer's tolerant path
+  // does not throw, it silently TRUNCATES: of six recorded careers, four diverged, and one lost 108 of its
+  // 120 turns — a finished 25-year-old reloading as a 13-year-old. Byte-identical rng protected nothing,
+  // and my verifying it is what stopped anyone looking further.
+  //
+  // The substitution also collapsed distinct drawn tags onto the same allowed tag, taking single-tag
+  // social scenarios from 29.9% to 41.8% — directly against PT-700, which exists to make moments test the
+  // deck rather than hand you a gimme.
+  //
+  // Fixing this properly needs the demand to change WITHOUT the replay diverging: either a save-version
+  // gate that replays pre-existing careers on the old rule, or making replay tolerant of a changed demand
+  // by re-deriving success from the stored choice rather than recomputing it. Both are real work. Until
+  // then the wrong-flavoured demand stays, because a wrong tag in a prompt is a blemish and a silently
+  // truncated dynasty is not.
   const demand: Partial<Record<Tag, number>> = {};
   pool.forEach((t, k) => { demand[t] = raw[k]; });
   if (demandBias) demand[demandBias] = (demand[demandBias] ?? 0) + 0.6;  // the gaffer wants more of this
@@ -1233,7 +1256,9 @@ export class Career {
       this.pendingOffer = rollOffer(this.seed, this.turn);
     }
   }
-  /** Lifestyle upgrades affordable + unlocked RIGHT NOW (offered at the between-chapter focus screen).
+  /** Lifestyle upgrades UNLOCKED right now (offered at the between-chapter focus screen). Note this
+   *  includes ones he cannot yet afford — see the comment on the return below; they are shown locked, not
+   *  hidden. It previously said "affordable + unlocked", contradicting its own implementation two lines down.
    *  Meter-gated items only appear once the relevant standing actually earns (or costs) them — see
    *  LifestyleItem.minMeter/maxMeter: relationships gate real opportunities and real trouble, not just flavour. */
   get lifestyleOffer(): LifestyleItem[] {
@@ -1810,7 +1835,15 @@ export function deriveStats(log: Choice[], seed: number, genes: Genes = rollGene
   const out = {} as CareerPlayerAttrs;
   for (const stat of Object.keys(STAT_SOURCES) as (keyof typeof STAT_SOURCES)[]) {
     const src = STAT_SOURCES[stat];
-    const shape = src.length ? src.reduce((s, t) => s + norm[t], 0) / src.length : 0;
+    // SHAPE CANNOT GO NEGATIVE. `freq` accumulates card power x stakes AND the focus lean
+    // (attrFocus[t] * FOCUS_TAG_WEIGHT), and neither term is sign-guarded — a negative contribution drives
+    // freq[t] below zero, and maxFreq's `Math.max(1, ...)` floor only guards the DIVISOR, not the numerator.
+    // A negative shape then hits `Math.pow(shape, 1.5)`, and a negative base with a fractional exponent is
+    // NaN. That NaN lands straight in a graduated player's attrs, and NaN attrs are the exact input the
+    // match engine warns about (norm(NaN) -> NaN fitness -> NaN positions -> invisible players).
+    // Measured on goalkeeper careers: stamina and durability both NaN.
+    // Clamping at 0 is a no-op for every well-formed career, so existing careers are unchanged.
+    const shape = Math.max(0, src.length ? src.reduce((s, t) => s + norm[t], 0) / src.length : 0);
     const peaked = Math.pow(shape, PEAK);
     const noise = (rng() - 0.5) * 3;
     if (innate.has(stat)) {

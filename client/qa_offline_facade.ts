@@ -121,8 +121,11 @@ assert(reward.prize === Math.round(800 * reward.tierMult * reward.houseMult),
 // facility is level 1 — the neutral baseline — so this is 0 here, and asserting the sum rather than the
 // prize alone is what will catch it if that ever silently stops being true.
 assert(reward.facilities.total >= 0, 'facility income is never negative');
-assert(reward.coins === coinsBeforeReward + reward.prize + reward.sponsorBonus + reward.facilities.total,
-  `season prize + facility income banked (${reward.prize} + ${reward.sponsorBonus} + ${reward.facilities.total})`);
+// UPKEEP is the other side of this ledger — what the club earns off the pitch, minus what it costs to run.
+// It is charged in the same league roll that pays the income, so the banked total has to net it off.
+assert(reward.upkeep >= 0, 'upkeep is never negative');
+assert(reward.coins === coinsBeforeReward + reward.prize + reward.sponsorBonus + reward.facilities.total - reward.upkeep,
+  `season prize + facility income banked, less upkeep (${reward.prize} + ${reward.sponsorBonus} + ${reward.facilities.total} - ${reward.upkeep})`);
 const meAfterReward = await api.me();
 assert(meAfterReward.season === 1, 'spSeasonReward advances the local season counter');
 

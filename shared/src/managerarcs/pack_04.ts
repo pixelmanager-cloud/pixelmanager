@@ -149,7 +149,7 @@ export const MGR_ARCS_04: ManagerArc[] = [
   // ── the academy and its kids ─────────────────────────────────────────────────────────────────────────
   {
     id: 'mgr-academy-release-day', title: 'The Letters', icon: '✉️', category: 'club',
-    when: { minSeason: 2 }, weight: 3, first: 'open',
+    when: { minSeason: 2, facility: { key: 'youth', min: 3 } }, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -232,7 +232,7 @@ export const MGR_ARCS_04: ManagerArc[] = [
   },
   {
     id: 'mgr-academy-category-audit', title: 'The Audit', icon: '📋', category: 'club',
-    when: { minSeason: 3, minTier: 1, maxTier: 3 }, weight: 2, first: 'open',
+    when: { minSeason: 3, minTier: 1, maxTier: 3, facility: { key: 'youth', min: 4 } }, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -247,7 +247,7 @@ export const MGR_ARCS_04: ManagerArc[] = [
   },
   {
     id: 'mgr-academy-schoolboy-poach', title: 'The Boy And The Big Club', icon: '🕊️', category: 'club',
-    when: { minSeason: 2, minTier: 3 }, weight: 3, first: 'open',
+    when: { minSeason: 2, minTier: 3, facility: { key: 'youth', min: 3 } }, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -339,7 +339,7 @@ export const MGR_ARCS_04: ManagerArc[] = [
   },
   {
     id: 'mgr-safe-standing-rail', title: 'The Singing Section', icon: '📣', category: 'club',
-    when: { minSeason: 3, minTier: 1, maxTier: 3 }, weight: 2, first: 'open',
+    when: { minSeason: 3, minTier: 1, maxTier: 3, facility: { key: 'fanzone', min: 3 } }, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -356,7 +356,7 @@ export const MGR_ARCS_04: ManagerArc[] = [
   // ── the town ─────────────────────────────────────────────────────────────────────────────────────────
   {
     id: 'mgr-food-bank-car-park', title: 'The Van In The Car Park', icon: '🥫', category: 'club',
-    when: { minSeason: 2 }, weight: 3, first: 'open',
+    when: { minSeason: 2, facility: { key: 'community', min: 2 } }, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -570,7 +570,7 @@ export const MGR_ARCS_04: ManagerArc[] = [
   // ── the women's team ─────────────────────────────────────────────────────────────────────────────────
   {
     id: 'mgr-womens-team-training', title: 'Sharing The Training Ground', icon: '🤝', category: 'club',
-    when: { minSeason: 2 }, weight: 3, first: 'open',
+    when: { minSeason: 2, facility: { key: 'women', min: 2 } }, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -585,7 +585,7 @@ export const MGR_ARCS_04: ManagerArc[] = [
   },
   {
     id: 'mgr-womens-final-clash', title: 'Two Games, One Saturday', icon: '📅', category: 'club',
-    when: { minSeason: 3 }, weight: 2, first: 'open',
+    when: { minSeason: 3, facility: { key: 'women', min: 3 } }, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -600,7 +600,7 @@ export const MGR_ARCS_04: ManagerArc[] = [
   },
   {
     id: 'mgr-womens-badge-parity', title: 'The Same Shirt', icon: '👕', category: 'club',
-    when: { minSeason: 3, minTier: 1, maxTier: 4 }, weight: 2, first: 'open',
+    when: { minSeason: 3, minTier: 1, maxTier: 4, facility: { key: 'women', min: 3 } }, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -739,7 +739,7 @@ export const MGR_ARCS_04: ManagerArc[] = [
   },
   {
     id: 'mgr-corporate-box-conversion', title: 'The Family Corner', icon: '🍽️', category: 'club',
-    when: { minSeason: 3, minTier: 1, maxTier: 3 }, weight: 2, first: 'open',
+    when: { minSeason: 3, minTier: 1, maxTier: 3, facility: { key: 'stadium', min: 3 } }, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -908,7 +908,7 @@ export const MGR_ARCS_04: ManagerArc[] = [
   },
   {
     id: 'mgr-scout-network-old-boys', title: 'The Old Scouts', icon: '🔍', category: 'club',
-    when: { minSeason: 3, minTier: 3 }, weight: 2, first: 'open',
+    when: { minSeason: 3, minTier: 3, facility: { key: 'scouting', min: 3 } }, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -1514,7 +1514,7 @@ export const MGR_ARCS_04: ManagerArc[] = [
   },
   {
     id: 'mgr-community-trust-split', title: 'The Community Arm', icon: '🌳', category: 'club',
-    when: { minSeason: 3, minTier: 1, maxTier: 4 }, weight: 2, first: 'open',
+    when: { minSeason: 3, minTier: 1, maxTier: 4, facility: { key: 'community', min: 5 } }, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
