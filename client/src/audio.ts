@@ -46,6 +46,8 @@ class AudioManager {
   private unlocked = false;              // browsers block audio until a user gesture
   private pending: MusicContext | null = null; // context requested before unlock
   private current: MusicContext | null = null;
+  /** Monotonic request id — the LATEST play() wins, whatever order the loads happen to resolve in. */
+  private reqSeq = 0;
   private deck: HTMLAudioElement | null = null;      // the playing loop
   private tracked: HTMLAudioElement[] = [];          // every element we've started (so none can linger/overlap)
   private fadeTimer: number | null = null;
@@ -95,6 +97,27 @@ class AudioManager {
 
   private lastIdx: Partial<Record<MusicContext, number>> = {}; // last track played per context (avoid immediate repeats)
 
+  /** A short one-shot cue played OVER the current music, without changing context.
+   *
+   *  `triumph` was being requested as a looping context and then immediately superseded by the season
+   *  screen's own `play('hub')` in the same tick, so the victory theme was loaded, faded in and killed
+   *  within one JavaScript tick — every trophy in the game was scored with the office ambient loop. It is
+   *  also 3.65 seconds long against 37-188s for every other file: a fanfare, not a bed. Looping it would
+   *  have replaced silence with a jingle repeating until the player changed screens.
+   */
+  sting(context: MusicContext): void {
+    if (!this.unlocked || this.settings.muted) return;
+    const pool = MANIFEST[context];
+    if (!pool || pool.length === 0) return;
+    try {
+      const a = new Audio(pool[Math.floor(frac01() * pool.length)]);
+      a.loop = false;
+      a.volume = this.effectiveVolume();
+      a.addEventListener('ended', () => { try { a.pause(); } catch { /* done */ } });
+      void a.play().catch(() => { /* silent, like every other load here */ });
+    } catch { /* never let a cue break a celebration */ }
+  }
+
   /** Crossfade to a loop for `context`. No-op if already playing that context, or if its playlist is empty
    *  (graceful — silent, for slots whose track isn't chosen yet). A multi-track context rotates. Safe to
    *  call on every screen change. */
@@ -103,6 +126,12 @@ class AudioManager {
     if (this.current === context && this.deck && !this.deck.paused) return;
     const pool = MANIFEST[context];
     if (!pool || pool.length === 0) return; // no track for this context yet — leave whatever's playing
+    // ORDER-AUTHORITATIVE. This committed `this.current` before the load was known to succeed and let
+    // whichever element's play() promise RESOLVED LAST win the crossfade — so the winner was decided by
+    // file size and cache state, not by call order. A 240KB cue requested first lost to a 7.6MB loop
+    // requested second; a failed load left `current` naming a context that was not playing, and the
+    // early-return above then suppressed every attempt to correct it for the rest of the session.
+    const req = ++this.reqSeq;
     this.current = context;
     let i = Math.floor(frac01() * pool.length);
     if (pool.length > 1 && i === this.lastIdx[context]) i = (i + 1) % pool.length; // avoid immediate repeat
@@ -114,7 +143,16 @@ class AudioManager {
     next.volume = 0; // fade in
     this.tracked.push(next);
     // if the file is missing / fails to load, silently give up (keeps the game running audio-less)
-    next.play().then(() => this.crossfadeTo(next)).catch(() => { this.tracked = this.tracked.filter((a) => a !== next); /* no track or autoplay blocked — silent */ });
+    next.play()
+      .then(() => {
+        if (req !== this.reqSeq) { try { next.pause(); } catch { /* already gone */ } this.tracked = this.tracked.filter((a) => a !== next); return; }
+        this.crossfadeTo(next);
+      })
+      .catch(() => {
+        this.tracked = this.tracked.filter((a) => a !== next);
+        // Do not strand `current` on a context that never started, or the guard above locks it in for good.
+        if (req === this.reqSeq) this.current = null;
+      });
   }
 
   /** Fade the new deck in and EVERY other tracked element out — so rapid screen changes can never leave two

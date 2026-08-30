@@ -333,6 +333,20 @@ export const api = {
     return { account: { id: OWNER, handle: getActiveSlotId() ?? OWNER, rating: 1000, coins: model.profile.coins }, ...mergedClub(), injuries, contracts, season };
   },
 
+  /** Tick the treatment room WITHOUT rolling new injuries — for a fixture the player did not watch.
+   *
+   *  settleInjuries only runs on the live-played league path: the cup branches return before it and
+   *  simRemainingFixtures never reached it at all. So a manager who simmed the rest of a season left an
+   *  injured man in the treatment room permanently — nothing else in the game clears an injury, and the
+   *  Medical Centre, 14,000 coins to max, bought him nothing. Matches he did not watch still pass. */
+  tickInjuries: async (matches = 1) => {
+    await ensureActive();
+    const before = await localStore.getInjuries(OWNER);
+    for (let i = 0; i < Math.max(1, Math.min(60, matches)); i++) await localStore.decrementInjuries(OWNER);
+    const still = new Set((await localStore.getInjuries(OWNER)).map((x) => x.player_id));
+    return { returned: before.filter((x) => !still.has(x.player_id)).map((x) => x.player_id) };
+  },
+
   /** Tick every existing knock down one match and report who is FIT AGAIN, then roll the XI that just
    *  played for fresh injuries.
    *
@@ -524,7 +538,10 @@ export const api = {
     const cups = Math.max(0, Math.min(40, Math.floor(Number(body?.cups) || 0))); // continental + World-Finals silverware, banked onto the permanent legend card (PT-113)
     const mentorship = Math.max(0, Math.min(10, Math.floor(Number(body?.mentorship) || 0)));
     const inheritance = body?.inheritance; // the will/heirloom decision (see client's showWillDecision)
-    await localStore.updateToken(pid, { ach_seasons: (t.ach_seasons ?? 0) + seasons, ach_apps: (t.ach_apps ?? 0) + seasons * 18, ach_league: (t.ach_league ?? 0) + titles, ach_cup: (t.ach_cup ?? 0) + cups });
+    // ONLY THE CUPS ARE BANKED HERE NOW. Seasons, apps and league titles accrue at each season roll (see
+    // spSeasonReward), so adding them again at the succession counted every campaign twice.
+    await localStore.updateToken(pid, { ach_cup: (t.ach_cup ?? 0) + cups });
+    void seasons; void titles;
     const decorated = (await localStore.getToken(pid))!;
     // SNAPSHOT THE LEGEND before the token is reborn — this is what populates the Bloodline Tree / Hall of
     // Legends. Keyed with a :g<gen> suffix so every generation is a distinct node (legends() groups by the
@@ -675,7 +692,7 @@ export const api = {
   // rollover that used to write honours is gone; this is the one call-per-season-end main.ts makes).
   /** A coin-only prize (no honour, no season bump) — for escalating cup-round rewards (PT-96). */
   cupPrize: async (amount: number) => { await ensureActive(); const a = Math.max(0, Math.round(Number(amount) || 0)); await localStore.addCoins(OWNER, a); return { ok: true as const, coins: getActiveModel().profile.coins, prize: a }; },
-  spSeasonReward: async (body: { pos: number; size: number; sponsor?: string; wins?: number; draws?: number; losses?: number; tier?: number; kind?: 'league' | 'continental' | 'world' }) => {
+  spSeasonReward: async (body: { pos: number; size: number; sponsor?: string; wins?: number; draws?: number; losses?: number; tier?: number; starId?: string; promoted?: boolean; kind?: 'league' | 'continental' | 'world' }) => {
     await ensureActive();
     const model = getActiveModel();
     // THE COMMERCIAL PULL OF A FAMOUS HOUSE — sponsorship and gate follow the name, so the season's money
@@ -727,7 +744,14 @@ export const api = {
     const isLeagueRoll = body?.kind !== 'continental' && body?.kind !== 'world';
     const facIncome = !isLeagueRoll ? { gate: 0, sponsor: 0, shop: 0, womens: 0, total: 0 } : seasonFacilityIncome(
       model.facilities, tierIdx,
-      (honoursSoFar as any[]).filter((h) => h.title && h.kind === 'league').length,
+      // A SUNDAY LEAGUE TITLE DOES NOT PRICE A SPONSORSHIP DEAL. This passed a raw count, and the trophy
+      // term inside sponsorIncome has no tier scaling — so a club that never left the basement banked the
+      // same +4,500 as a top-flight champion, while winning 47 titles in the time the top flight yields 1.
+      // Measured, refusing to climb out-earned the summit by 40% over fifty seasons. Each title is now
+      // weighted by the division it was won in, so five top-flight titles are worth twenty Sunday League
+      // ones and the cap is reached by winning things that are hard to win.
+      (honoursSoFar as any[]).filter((h) => h.title && h.kind === 'league')
+        .reduce((n, h) => { const ct = Number(h.tier); const idx = ct >= 1 && ct <= TIERS ? TIERS - ct : 0; return n + 1 + idx * 0.35; }, 0),
       squadMarketability(model.club.players),
       { wins: clampN(body?.wins), draws: clampN(body?.draws), losses: clampN(body?.losses) },
     );
@@ -740,6 +764,29 @@ export const api = {
     // distinctly-kinded honour but must not bump profile.season or it desyncs the ledger and files a phantom
     // LEAGUE title mid-season (PT-94).
     if (kind === 'league') model.profile.season = season + 1;
+    // THE HOUSE'S RECORD ACCRUES AS THE SEASON HAPPENS, not only at the succession. `membersOf()` scores
+    // renown from `ach_seasons` / `ach_league` on the star's token, and those were written in exactly one
+    // place — succeed(). So the Houses table was frozen for an ENTIRE GENERATION: measured, a manager won
+    // the league with 24 wins and his renown stayed at 47 across all six seasons, moving only when he
+    // retired. The game's whole meta-progression was inert for nine or ten seasons at a time, in a panel
+    // whose own copy reads "every family climbing the same ladder".
+    if (isLeagueRoll) {
+      const starId = body?.starId;
+      const st = starId ? await localStore.getToken(String(starId)) : null;
+      if (st) await localStore.updateToken(st.id, {
+        ach_seasons: (st.ach_seasons ?? 0) + 1,
+        ach_apps: (st.ach_apps ?? 0) + 18,
+        ach_league: (st.ach_league ?? 0) + (pos === 1 ? 1 : 0),
+        // THE TIER HE DID IT IN, and every division he climbed. Neither was ever written — the only
+        // writers, recordPlayerSeason and setAchievements, have no callers — so tokenAch() always returned
+        // highestTierIdx 0, and legacyCard's `tierMult = 1 + highestTierIdx * 0.3` was permanently 1
+        // instead of up to 3.7. Every legend card in the game was deflated: a career of four league titles
+        // and two cups scored 64 where the design intends 100, one point short of even qualifying as an
+        // Icon, and `testimonial` was capped at 600 against a 2,000 ceiling.
+        ach_tier: Math.max(st.ach_tier ?? 0, tierIdx),
+        ach_promotions: (st.ach_promotions ?? 0) + (body?.promoted ? 1 : 0),
+      });
+    }
     await localStore.addCoins(OWNER, prize + sponsorBonus + facIncome.total); // also schedules the persist that banks the season bump above
     return { ok: true as const, prize, sponsorBonus, houseMult, tierMult, facilities: facIncome, coins: getActiveModel().profile.coins };
   },
@@ -876,10 +923,14 @@ export const api = {
     await localStore.updateToken(pid, { attrs_json: JSON.stringify(attrs), peak_overall: Math.max(t.peak_overall ?? 0, overall(player)) });
     return { ok: true as const, player, overall: overall(player) };
   },
-  hireStaff: async (staffId: string) => {
+  hireStaff: async (staffId: string, alreadyHired: string[] = []) => {
     await ensureActive();
     const cost = STAFF_COSTS[staffId];
     if (cost == null) throw apiErr('unknown staff');
+    // The UI hides the button once he is hired, but a double click races it and the facade charged again
+    // without a murmur. The roster lives in MgrState (localStorage) so the facade cannot see it on its own
+    // — the caller passes it, which is weaker than owning the state but closes the door that costs coins.
+    if (alreadyHired.includes(staffId)) throw apiErr('already on the payroll', {}, 409);
     const coins = getActiveModel().profile.coins;
     if (coins < cost) throw apiErr(`not enough coins — ${staffId} costs ${cost}`, {}, 409);
     await localStore.addCoins(OWNER, -cost);

@@ -1180,6 +1180,14 @@
       @media (max-width: 640px) { #facilities-grid { grid-template-columns: 1fr; } }
       /* backroom staff — deterministic per-save cast, flavour only */
       #club-staff { margin-top: 20px; }
+      .cr-body { font-family: var(--body); font-size: 17px; line-height: 1.6; padding: 4px 2px 8px; }
+      .cr-sec { font-family: var(--display); font-size: 12px; letter-spacing: 0.12em; color: var(--room, var(--cyan));
+        margin: 18px 0 6px; }
+      .cr-sec:first-child { margin-top: 4px; }
+      .cr-line { color: var(--text); }
+      .cr-url { color: var(--muted); font-size: 15px; }
+      .cr-note { color: var(--muted); font-size: 15px; margin-top: 6px; line-height: 1.5; }
+      #club-staff .cs-sub { font-family: var(--body); font-size: 15px; color: var(--muted); margin: -4px 0 12px; }
       #club-staff .cs-title { font-family: var(--display); font-size: 12px; color: var(--cyan); margin-bottom: 10px; letter-spacing: 0.5px; }
       #club-staff .cs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
       @media (max-width: 640px) { #club-staff .cs-grid { grid-template-columns: 1fr; } }

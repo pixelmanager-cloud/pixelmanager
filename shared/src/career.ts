@@ -1088,6 +1088,13 @@ export class Career {
    *  between routine moments and leaves lasting marks (see storyarc.ts). Purely additive to the turn flow. */
   pendingArc: { arcId: string; beatId: string } | null = null;
   private firedArcs = new Set<string>();   // arcs already lived this career (no repeats)
+  /** STATE FLAGS SET BY ARC CHOICES. `ArcEffect.tag` is documented as "a short state flag remembered on
+   *  the career (opens/closes later beats)" and is written on 732 of 1,650 arc options — 44% — and was
+   *  discarded on arrival, because applyArcEffect had no branch for it. `ArcChoice.requires` was marked
+   *  "(reserved)" and evaluated nowhere. Both are live now, so a choice can genuinely close a door later.
+   *  Safe for replay: zero arcs currently use `requires`, so nothing that exists changes behaviour until
+   *  content is written against it. Consumes no rng — arc selection is a pure hash, not a draw. */
+  arcTags = new Set<string>();
   /** When set, the career pauses at a chapter break for a FOCUS choice: how to spend the summer. */
   pendingFocus: FocusOption[] | null = null;
   /** The chapter whose smaller SIDE focus round is currently on offer (Breakthrough onward, once per chapter). */
@@ -1182,7 +1189,10 @@ export class Career {
       const arc = arcByIdOf(this.pendingArc.arcId), beat = arc?.beats[this.pendingArc.beatId];
       if (arc && beat) return { phase: 'arc' as const, age: this.age, chapter: this.chapter, deck: this.deck, energy: this.energy, finished: this.finished,
         arc: { id: arc.id, title: arc.title, icon: arc.icon, category: arc.category, prompt: beat.prompt, // {RIVAL} filled in careerState (has the seeded rival name)
-          choices: beat.choices.map((c) => ({ id: c.id, label: c.label, desc: c.desc })) } };
+          // A choice gated on a flag the career never earned is not offered. Nothing filters today — zero
+          // arcs carry `requires` — so this changes no existing content; it makes the gate usable.
+          choices: beat.choices.filter((c) => !c.requires || this.arcTags.has(c.requires))
+            .map((c) => ({ id: c.id, label: c.label, desc: c.desc })) } };
       this.pendingArc = null; // corrupt reference → drop the arc, fall through
     }
     if (this.pendingFocus) return { phase: 'focus' as const, age: this.age, chapter: this.chapter, focus: this.pendingFocus, side: this.sideFocusFor === this.chapter, lifestyle: this.lifestyleOffer, earnings: this.earnings, seasonEvent: this.seasonEvent, consequences: this.chapterConsequences, energy: this.energy, deck: this.deck, finished: this.finished };
@@ -1296,6 +1306,7 @@ export class Career {
     if (e.injury) this.seriousInjuries++;
     if (e.meters) for (const [k, v] of Object.entries(e.meters)) this.life(k as MeterKey, v ?? 0);
     if (e.attr) for (const [t, v] of Object.entries(e.attr)) this.attrFocus[t as Tag] = (this.attrFocus[t as Tag] ?? 0) + (v ?? 0);
+    if (e.tag) this.arcTags.add(e.tag);
   }
 
   /** APPOINT a mentor/coach for the coming chapter; then proceed to the card draft. */

@@ -2,7 +2,7 @@ import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
   TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry, tierName, TIERS, tierStrength,
   FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, moodFromScore, boardMessageFor, deriveExpectation, PRESTIGE_LEVELS, prestigeRankUpBlurb, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition, contTieBlurb, wcGroupDramaBlurb, wcKnockoutDramaBlurb, worldCupFinishBlurb,
-  transferList, wageForLength, sellValue, squadSeasonWage, moraleEffects, incomingBid, MIN_SQUAD, MAX_SQUAD, type Listing,
+  transferList, wageForLength, sellValue, squadSaleValue, squadSeasonWage, moraleEffects, incomingBid, MIN_SQUAD, MAX_SQUAD, type Listing,
   ACHIEVEMENTS, evaluateAchievements, achievementById, type AchSnapshot, lifeAction,
   type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 } from '@fm/shared';
@@ -560,11 +560,17 @@ class Game {
       // PT-504: the onboarding explainers are dismiss-forever, so give them a permanent way back
       + `<div class="set-row"><div class="set-lbl"><span>How to play</span><button id="set-help">📖 Read the rules</button></div>`
       + `<div class="set-hint">The explainers you were shown once, kept here to re-read any time.</div></div>`
+      // CREDITS ARE A LICENSING OBLIGATION, not a courtesy. CREDITS.md says in terms that the music credit
+      // "MUST appear in the shipped game's credits", and the game had no credits screen at all — zero
+      // references to the word anywhere in the client. That is legal exposure on a paid release.
+      + `<div class="set-row"><div class="set-lbl"><span>Credits</span><button id="set-credits">🎬 Who made this</button></div>`
+      + `<div class="set-hint">The people whose work is in the game.</div></div>`
       + `</div>`;
     document.body.appendChild(ov);
     const close = () => { ov.remove(); document.removeEventListener('keydown', onEsc); }; // clean up the ESC listener on EVERY close path (PT-81)
     ov.addEventListener('click', (e) => { if (e.target === ov) close(); }); // click backdrop to dismiss
     ov.querySelector('.set-x')!.addEventListener('click', close);
+    ov.querySelector('#set-credits')!.addEventListener('click', () => { close(); this.showCredits(); });
     // music volume — live (mute stays a separate, authoritative switch: dragging volume never un-mutes)
     const vol = ov.querySelector('#set-vol') as HTMLInputElement;
     vol.addEventListener('input', () => { audio.setVolume(Number(vol.value) / 100); $('set-volval').textContent = `${vol.value}%`; });
@@ -791,6 +797,7 @@ class Game {
       // best division reached: the honours-derived high (lags a season) OR the live tier, so a promotion
       // registers the moment the club goes up (TIERS - clubTier maps tier 1→top idx, tier 10→0) (PT-121)
       topTier: Math.max(pr?.highestTierIdx ?? 0, TIERS - this.clubTier()),
+      promotions: Math.max(0, this.startTier() - this.clubTier()),
     };
   }
   /** Re-evaluate achievements after a progress event; toast (and chime) anything newly earned. Idempotent. */
@@ -1377,6 +1384,10 @@ class Game {
   // bloodline hand-off (stored apart from the per-generation manager save), so the dynasty climbs one pyramid.
   private clubTier(): number { try { const t = Number(localStorage.getItem('fm_tier_' + (this.account?.handle ?? 'x'))); return t >= 1 && t <= TIERS ? Math.round(t) : TIERS; } catch { return TIERS; } }
   private setClubTier(t: number): void { try { localStorage.setItem('fm_tier_' + (this.account?.handle ?? 'x'), String(Math.max(1, Math.min(TIERS, Math.round(t))))); } catch { /* ignore */ } }
+  /** Where the club STARTED. Recorded once at the founding handoff so promotion achievements can be
+   *  measured against it — without it "promotion out of your starting division" has nothing to diff. */
+  private startTier(): number { try { const v = Number(localStorage.getItem('fm_starttier_' + (this.account?.handle ?? 'x'))); return v >= 1 && v <= TIERS ? v : this.clubTier(); } catch { return this.clubTier(); } }
+  private setStartTier(t: number): void { try { localStorage.setItem('fm_starttier_' + (this.account?.handle ?? 'x'), String(Math.max(1, Math.min(TIERS, Math.round(t))))); } catch { /* ignore */ } }
   /** the club's raw squad strength = weighted average overall of the best XI (1-20 scale).
    *  The BLOODLINE STAR carries extra weight. As a flat mean of eleven he was worth at most +1.09 club
    *  strength — an OVR-20 star dropped into an 8.55 squad moved it to 9.64, and a same-level star moved it
@@ -1485,7 +1496,7 @@ class Game {
         + `<span class="tm-name">${l.player.name}${house ? ` <b class="tm-crest" title="${house.blurb.replace(/"/g, '&quot;')}">👑 of the ${house.name}s</b>` : ''}</span>`
         + `<span class="tm-ov">OV ${l.ov} · age ${l.age}</span><button class="tm-buy primary" data-buy="${l.player.id}" title="${reason}" ${cantAfford || squadFull ? 'disabled' : ''}>Buy · ${l.fee.toLocaleString()}c</button></div>`;
     }).join('') : '<div class="muted">The market has cleared for this season.</div>';
-    const sellList = sellable.map((p) => { const ov = overall(p), v = sellValue(ov); return `<div class="tm-row"><span class="tm-pos tm-${p.role}">${p.role}</span><span class="tm-name">${p.name}</span><span class="tm-ov">OV ${ov}</span><button class="tm-sell" data-sell="${p.id}" title="${squadMin ? `Can't sell below ${MIN_SQUAD} players` : `Sell for +${v.toLocaleString()}c`}" ${squadMin ? 'disabled' : ''}>Sell · +${v.toLocaleString()}c</button></div>`; }).join('');
+    const sellList = sellable.map((p) => { const ov = overall(p), v = squadSaleValue(ov, p.age ?? 26); return `<div class="tm-row"><span class="tm-pos tm-${p.role}">${p.role}</span><span class="tm-name">${p.name}</span><span class="tm-ov">OV ${ov}</span><button class="tm-sell" data-sell="${p.id}" title="${squadMin ? `Can't sell below ${MIN_SQUAD} players` : `Sell for +${v.toLocaleString()}c`}" ${squadMin ? 'disabled' : ''}>Sell · +${v.toLocaleString()}c</button></div>`; }).join('');
     const wageBill = squad.reduce((n, p) => n + squadSeasonWage(overall(p)), 0); // PT-500: the recurring cost of the squad, visible BEFORE you add to it
     body.innerHTML = `<div class="tm-head"><span class="tm-coins"><span class="ico-inline">${sprite('coin')}</span> ${coins.toLocaleString()}c</span> · Squad <b>${squad.length}</b>/${MAX_SQUAD} · ${tierName(tier)} · 💷 wages <b>~${wageBill.toLocaleString()}c</b> a season</div>`
       + `<div class="tm-sub">Buy players to strengthen the squad and climb — the market's quality is scaled to your division. Squad must stay between <b>${MIN_SQUAD}</b> and <b>${MAX_SQUAD}</b>. A signing costs a one-off fee <i>and</i> a wage every season after it, so leave yourself room for the bill.</div>`
@@ -1514,7 +1525,11 @@ class Game {
   }
   private async sellPlayerFlow(playerId: string) {
     const p = this.club.players.find((x) => x.id === playerId);
-    this.openConfirm(`Sell <b>${p?.name ?? 'this player'}</b> for +${sellValue(p ? overall(p) : 0).toLocaleString()}c?`, 'Sell', async () => {
+    // THE NUMBER THE GAME PAYS, not a different one. The button and this dialog both quoted `sellValue`,
+    // which has no age term, while the credit is `squadSaleValue` — −12%/yr past 30, floored at 20%. A
+    // 35-year-old advertised at "Sell · +380c" banked 152c, and at 38 it was 76c. The game told the player
+    // a price twice and then paid a fifth of it.
+    this.openConfirm(`Sell <b>${p?.name ?? 'this player'}</b> for +${(p ? squadSaleValue(overall(p), p.age ?? 26) : 0).toLocaleString()}c?`, 'Sell', async () => {
       try { const r = await api.sellPlayer(playerId); if (this.account) this.account.coins = r.coins; this.setMe(await api.me()); toast(`💸 Sold · +${r.value.toLocaleString()}c`); if (p) this.feedEvent('transfer_out', '💸', this.personCtx(p, false), { fee: r.value }); this.renderTransferMarket(); }
       catch (e: any) { toast(e?.body?.error ?? 'Could not sell'); }
     });
@@ -1625,6 +1640,28 @@ class Game {
         this.showSeason();
       } catch (e: any) { toast(e?.body?.error ?? 'Could not release'); }
     });
+  }
+
+  /** The credits screen. Kept in step with CREDITS.md, which is the source of truth and states that the
+   *  music credit is a licensing requirement — so this text is not free copy to trim. */
+  private showCredits(): void {
+    const ov = document.createElement('div'); ov.id = 'settings-ov';
+    ov.innerHTML = `<div class="tt-card cn-card"><div class="set-head"><div class="tt-title">🎬 CREDITS</div>`
+      + `<button class="set-x" aria-label="Close">✕</button></div>`
+      + `<div class="cr-body">`
+      + `<div class="cr-sec">FOOTBALL ROYALTY</div>`
+      + `<div class="cr-line">Design, code and writing — CK</div>`
+      + `<div class="cr-sec">MUSIC &amp; SOUND</div>`
+      + `<div class="cr-line">Music by <b>Bit By Bit Sound</b> — Robert “Bert” Cole</div>`
+      + `<div class="cr-line cr-url">bitbybitsound.com</div>`
+      + `<div class="cr-note">Used under a Synchronisation + Master Use license (royalty-free, commercial). A credit, not an endorsement.</div>`
+      + `<div class="cr-sec">WITH THANKS</div>`
+      + `<div class="cr-line">To everyone who plays a whole dynasty through.</div>`
+      + `</div></div>`;
+    document.body.appendChild(ov);
+    const close = this.dialogify(ov);
+    ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
+    ov.querySelector('.set-x')!.addEventListener('click', close);
   }
 
   /** The manager explainer's bullets. Kept separate from the card so Settings → How to play can re-show
@@ -1849,12 +1886,13 @@ class Game {
       return `<div class="sf-staff-row${has ? ' owned' : ''}"><span class="sf-staff-ico">${s.icon}</span><div class="sf-staff-body"><div class="sf-staff-name">${s.name}${has ? ' ✓' : ''}</div><div class="sf-staff-desc">${s.desc}</div></div>`
         + (has ? '' : hireBtn) + `</div>`;
     }).join('');
-    return `<h4 class="scout-h4" style="margin-top:18px;">🧑‍🏫 BACKROOM STAFF</h4>${rows}`;
+    return `<h4 class="scout-h4" style="margin-top:18px;">🧑‍🏫 SPECIALISTS YOU CAN HIRE</h4>`
+      + `<div class="scout-sub">Paid for once, yours for good — these are on top of the club's existing staff.</div>${rows}`;
   }
   private async hireStaff(id: string) {
     const s = BACKROOM_STAFF.find((x) => x.id === id); if (!s) return;
     try {
-      const r = await api.hireStaff(id);
+      const r = await api.hireStaff(id, this.loadMgr().staff ?? []);
       if (this.account?.coins != null) this.account.coins = r.coins;
       const m = this.loadMgr(); this.saveMgr({ ...m, staff: [...(m.staff ?? []), id] });
       toast(`🧑‍🏫 Hired ${s.name} (−${r.cost.toLocaleString()}c)`);
@@ -1924,7 +1962,7 @@ class Game {
         const contTitles = (m.contTitles ?? 0) + 1;
         this.saveMgr({ ...m, contRound: 3, contTitles, contBlurb });
         this.checkAchievements(); // continental cup won
-        audio.chime('triumph');
+        audio.sting('triumph'); audio.chime('triumph');   // Continental Cup — a trophy deserves the fanfare too
         toast(`🏆 CONTINENTAL CHAMPIONS! ${this.club?.name} win the cup${pens ? ' on penalties' : ''}`);
         // the flagship cup pays a clear PREMIUM over a league title: the honour (800c) + a 1000c winners' bonus (PT-96)
         api.spSeasonReward({ pos: 1, size: 10, sponsor: undefined,   /* no tier: a cup is its own competition, not a division — see spSeasonReward */ kind: 'continental' }).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; }).catch(() => {}); // kind:'continental' — a cup, not a league title, and doesn't bump the season (PT-94)
@@ -2054,7 +2092,7 @@ class Game {
     }
     if (stage === 'final') { // champions!
       this.saveMgr({ ...m, wcStage: 'done', wcSeen: m.wcEdition, wcWins: (m.wcWins ?? 0) + 1, wcFinals: (m.wcFinals ?? 0) + 1, wcRun: run });
-      audio.chime('triumph');
+      audio.sting('triumph'); audio.chime('triumph');   // World Finals
       toast(`🏆 WORLD CHAMPIONS! ${homeNation(this.starSurname())} win the final${pens ? ' on penalties' : ''}`);
       this.concludeWorldCup('Champions', oppName); return;
     }
@@ -2185,6 +2223,10 @@ class Game {
     return { strDelta, homeTerm };
   }
   private simRemainingFixtures() {
+    // Matches the manager did not watch still pass for the injured — see api.tickInjuries. Without this a
+    // simmed season froze the treatment room and an injury became permanent.
+    const toSim = Math.max(0, seasonFixtures(this.club.name, this.leagueSeed(), this.clubTier()).length - this.loadMgr().results.length);
+    if (toSim > 0) void api.tickInjuries(toSim).then(async () => this.setMe(await api.me())).catch(() => { /* never block the sim */ });
     const seed = this.leagueSeed(), clubName = this.club.name;
     const fixtures = seasonFixtures(clubName, seed, this.clubTier()), opps = seededOpponents(clubName, seed, this.clubTier());
     const m = this.loadMgr(), myStr = this.clubLeagueStrength();
@@ -2205,7 +2247,7 @@ class Game {
     // this season's W/D/L (fed to the lifetime manager record that powers prestige)
     const rec = (m.results ?? []).reduce((a, r) => { r.myGoals > r.oppGoals ? a.wins++ : r.myGoals < r.oppGoals ? a.losses++ : a.draws++; return a; }, { wins: 0, draws: 0, losses: 0 });
     // bank the season prize money (coins → reinvest in facilities), closing the manager economy loop
-    try { const r = await api.spSeasonReward({ pos: t.pos, size: t.size, sponsor: m.sponsor, tier: this.clubTier(), ...rec }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 Season prize: +${r.prize.toLocaleString()}c${r.sponsorBonus ? ` + 📣 ${r.sponsorBonus.toLocaleString()}c sponsor bonus` : ''}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ` · ${this.ordinal(t.pos)}`}`);
+    try { const r = await api.spSeasonReward({ pos: t.pos, size: t.size, sponsor: m.sponsor, tier: this.clubTier(), starId: m.starId, promoted: t.pos <= 2 && this.clubTier() > 1, ...rec })   /* the same test the tier move below uses; it is computed after this call */; if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 Season prize: +${r.prize.toLocaleString()}c${r.sponsorBonus ? ` + 📣 ${r.sponsorBonus.toLocaleString()}c sponsor bonus` : ''}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ` · ${this.ordinal(t.pos)}`}`);
       // WHAT THE CLUB EARNED BY BEING A CLUB, itemised. The facilities pay for the first time, and an income
       // the player cannot see is exactly the invisible effect this fix exists to end — so the gate, the
       // sponsors, the shop and the women's team each report what they brought in.
@@ -2274,7 +2316,7 @@ class Game {
         const mm = this.loadMgr(); this.saveMgr({ ...mm, squadReport: sq, squadReportSeason: mm.season });
       } catch { /* offline — squad rollover is best-effort, never blocks the season */ }
     }
-    if (t.pos === 1) { audio.play('triumph'); audio.chime('triumph'); } // league champions — the victory cue
+    if (t.pos === 1) { audio.sting('triumph'); audio.chime('triumph'); } // league champions — a cue OVER the music, not a context switch that the next screen stomps
     // PROMOTION / RELEGATION — the pyramid climb: top-2 go up, bottom-2 go down (club property, survives the heir)
     const tier = this.clubTier();
     const promoted = t.pos <= 2 && tier > 1;
@@ -2282,7 +2324,7 @@ class Game {
     const newTier = promoted ? tier - 1 : relegated ? tier + 1 : tier;
     if (newTier !== tier) this.setClubTier(newTier);
     if (promoted) {
-      toast(`⬆️ PROMOTED to ${tierName(newTier)}!`); audio.chime('triumph');
+      toast(`⬆️ PROMOTED to ${tierName(newTier)}!`); audio.sting('triumph'); audio.chime('triumph');
       this.feedEvent('promotion', '⬆️', undefined, { from: tierName(tier), to: tierName(newTier) });
     } else if (relegated) {
       toast(`⬇️ Relegated to ${tierName(newTier)}.`);
@@ -2618,7 +2660,12 @@ class Game {
             return `<div class="cs-hired-row">${meta?.icon ?? '🧑‍🏫'} <b>${meta?.name ?? h}</b> — ${EFF[h] ?? 'working away'}</div>`;
           }).join('') + `</div>`
       : '';
-    el.innerHTML = `<div class="cs-title">🧑‍🏫 YOUR BACKROOM STAFF</div><div class="cs-grid">`
+    // TWO DIFFERENT THINGS WITH THE SAME JOB TITLES. This cast is the club's existing staff — flavour, four
+    // recurring faces — and it listed a "Fitness Coach" by name while the season screen offered to HIRE a
+    // Fitness Coach for 350 coins. A playtester reasonably concluded he already had one, and paid anyway.
+    // The two lists are now named for what they actually are.
+    el.innerHTML = `<div class="cs-title">🧑‍🏫 THE PEOPLE ALREADY HERE</div>`
+      + `<div class="cs-sub">The club's own staff — they came with the building. The specialists you can hire are on the season screen.</div><div class="cs-grid">`
       + card(roster.assistant) + card(roster.scout) + card(roster.fitnessCoach) + card(roster.goalkeepingCoach)
       + `</div>` + hiredHtml;
   }
@@ -3358,7 +3405,7 @@ class Game {
         const prior = this.loadMgr();
         const founding = prior.starId == null && (prior.season ?? 1) <= 1;
         const startTier = founding ? this.startingTierFor(s, player) : this.clubTier();
-        if (founding) this.setClubTier(startTier);
+        if (founding) { this.setClubTier(startTier); this.setStartTier(startTier); }
         // AND BRING THE SQUAD WITH IT. The tier came from his career but the ROSTER was minted at quality 6
         // when the save was created, before a single career turn — so a Continental finalist took over a pub
         // team and was the best player at his own club by a mile. The club he inherits should be the club
@@ -4205,7 +4252,25 @@ class Game {
   }
 
   private updateEditorInsight() {
-    $('lineup-insight').innerHTML = squadInsight(buildXI(this.club, this.draftLineup), this.loadMgr().starId);
+    // "YOU JUST BOUGHT HIM AND HE IS ON THE BENCH." The saved XI is reused whenever it is still valid,
+    // which is right — a manager's team selection should not be silently overwritten — but a player who
+    // pays 386 coins for a better keeper and is then handed a sheet starting the worse one has been
+    // quietly wasted. So the editor SAYS so, and leaves the decision where it belongs.
+    const inXI = new Set(this.draftLineup?.playerIds ?? []);
+    const upgrades = this.availableClub().players
+      .filter((b) => !inXI.has(b.id))
+      .map((b) => {
+        const starter = (this.draftLineup?.playerIds ?? [])
+          .map((id) => this.club.players.find((x) => x.id === id))
+          .find((x) => x && x.role === b.role && overall(x) < overall(b));
+        return starter ? { bench: b, starter } : null;
+      })
+      .filter(Boolean)
+      .sort((a, b) => (overall(b!.bench) - overall(b!.starter!)) - (overall(a!.bench) - overall(a!.starter!)))[0];
+    const benchTip = upgrades
+      ? `<div class="li-tip">🪑 <b>${upgrades.bench.name}</b> (${upgrades.bench.role}, OVR ${overall(upgrades.bench)}) is on the bench and outrates <b>${upgrades.starter!.name}</b> (OVR ${overall(upgrades.starter!)}) in the XI.</div>`
+      : '';
+    $('lineup-insight').innerHTML = squadInsight(buildXI(this.club, this.draftLineup), this.loadMgr().starId) + benchTip;
   }
 
   private async saveTeam() {
@@ -4293,6 +4358,9 @@ class Game {
     if (this.spFixture) {
       const s = this.engine!.state;
       const myGoals = s.score[this.mySide], oppGoals = s.score[1 - this.mySide];
+      // A CUP TIE IS STILL NINETY MINUTES. Both branches below returned before settleInjuries, so a knock
+      // never healed across a European run and none was ever picked up in one either.
+      if (this.spFixture.comp === 'cont' || this.spFixture.comp === 'wc') await this.settleInjuries();
       if (this.spFixture.comp === 'cont') {
         const oppStrength = this.spFixture.oppStrength;
         this.showFullTimeCard();               // show the result card, then resolve the tie on dismiss
