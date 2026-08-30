@@ -42,10 +42,17 @@ export const DEFAULT_TACTICS: Tactics = {
 export const TACTIC_PRESETS: Record<string, Tactics> = {
   Balanced: { formation: '4-4-2', mentality: 0, line: 0, press: 0, tempo: 0, width: 0 },
   'Gegenpress': { formation: '4-3-3', mentality: 1, line: 2, press: 2, tempo: 1, width: 1 },
-  'Park the Bus': { formation: '4-4-2', mentality: -2, line: -2, press: -1, tempo: 0, width: -1 },
+  // A DEFENSIVE PRESET THAT LOSES IS A TRAP, AND THIS ONE WAS NAMED TO ATTRACT EXACTLY THE PLAYER WHO
+  // SHOULD NEVER PICK IT. Measured across the full preset matrix it was last at every quality gap — as an
+  // 11-v-15 underdog it took 0.03 points a game where Balanced took 0.17 — and the reason was not its
+  // defending but its attack: `mentality: -2` makes `attackPush` exactly zero, so the side never came out,
+  // never relieved pressure, and conceded MORE (2.08 a game, the worst in the table) as well as scoring
+  // almost nothing. Sitting deep and narrow is the identity; refusing to leave the box is not a tactic.
+  'Park the Bus': { formation: '4-4-2', mentality: -1, line: -2, press: 0, tempo: 1, width: -1 },
   'Tiki-Taka': { formation: '4-3-3', mentality: 1, line: 1, press: 1, tempo: -2, width: -1 },
   'Route One': { formation: '4-4-2', mentality: 1, line: 0, press: 0, tempo: 2, width: 1 },
-  'Counter': { formation: '4-2-3-1', mentality: 0, line: -1, press: -1, tempo: 2, width: 0 },
+  // Same fault, milder: a counter-attacking side sits off the ball, it does not decline to contest it.
+  'Counter': { formation: '4-2-3-1', mentality: 0, line: -1, press: 0, tempo: 2, width: 0 },
 };
 
 /** Numeric modifiers derived from tactics, consumed by the engine. */

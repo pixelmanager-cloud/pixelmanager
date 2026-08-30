@@ -203,6 +203,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'grace', label: 'Kill them with class', desc: 'Smile, thank the doubters for the fuel', outcome: 'He thanks his critics warmly for the motivation and walks off. Gracious, devastating, unanswerable.', effect: { form: 0.09, market: -2, attr: { composure: 1, leadership: 1 }, meters: { authority: 8, fans: 10 } } },
           { id: 'receipts', label: 'Read the receipts', desc: 'Quote their own words back at them', outcome: 'He recites the old headline line by line, live on air, and lets the silence do the rest. The clip goes everywhere.', effect: { form: 0.07, market: 3, attr: { aggression: 1 }, meters: { fans: 14, sponsors: 4, authority: -10 } } },
+          { id: 'name-the-room', label: 'Turn it on the man in his own dressing room', desc: 'The loudest doubter was never the pundit', outcome: 'He tells the camera that the pundit never mattered, because the man who really wrote him off is currently sat forty feet away in his own dressing room. It is the most watched clip of the week, and he has to walk back into that room on Monday morning.', effect: { form: 0.07, market: 4, attr: { aggression: 2 }, meters: { fans: 14, peers: -16, authority: -8 } }, requires: 'at-war' },
         ],
       },
     },
@@ -317,6 +318,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'town', label: 'Give it to the town', desc: 'Lift it toward the away end and the whole place', outcome: 'He carries the cup to the corner where his hometown crammed in and holds it there until his arms shake. Theirs forever.', effect: { form: 0.1, energy: -8, meters: { fans: 18, authority: 6 }, attr: { teamwork: 1 } } },
           { id: 'proof', label: 'Call it a warning', desc: 'Tell the big clubs the little ones are coming', outcome: 'He grins down the camera and says the giants should sleep lighter now. Cheeky, defiant, and the underdogs love it.', effect: { form: 0.08, market: 3, greed: 2, attr: { aggression: 1 }, meters: { fans: 14, sponsors: 4, authority: -6 } } },
+          { id: 'find-him-first', label: 'Find his mate before anyone else', desc: 'Two of them started this run together', outcome: 'Before the medals, before the cameras, before the cup even reaches him, he goes looking through the bodies for the one man he started this ridiculous run beside, and they hold onto each other in the middle of it saying nothing at all. The club’s official photographer gets nothing usable.', effect: { energy: -6, form: 0.09, market: -4, attr: { teamwork: 2 }, meters: { fans: 12, peers: 18, sponsors: -8 } }, requires: 'brothers' },
         ],
       },
     },
@@ -523,6 +525,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'elders', label: 'Call up the old fans', desc: 'Bring the oldest supporters onto the pitch', outcome: 'He waves the club\'s most ancient season-ticket holders down to lift it with him. They touch the silver with shaking hands and sob. Perfect.', effect: { form: 0.11, meters: { fans: 20, authority: -6 }, attr: { leadership: 1 } } },
           { id: 'first', label: 'Vow it is the first', desc: 'Promise the empty cabinet fills from here', outcome: 'He lifts it and roars that the drought ends tonight and never returns. A captain who just rewrote a century, and means to write more.', effect: { form: 0.1, market: 4, greed: 3, attr: { aggression: 1, leadership: 1 }, meters: { fans: 16, sponsors: 6, peers: -6 } } },
+          { id: 'lift-it-together', label: 'Lift it with the man he came through with', desc: 'Neither of them does this alone', outcome: 'He waves away the cameras and the ceremony and waits, arm out, until the one man he came through all of it with has his hands on the handle too. They lift the first trophy in the club’s history together and the picture makes nobody’s front page, because there is no single hero in it.', effect: { form: 0.09, market: -5, attr: { teamwork: 2, leadership: 1 }, meters: { peers: 18, fans: 14, sponsors: -8 } }, requires: 'brothers' },
         ],
       },
     },
