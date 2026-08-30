@@ -129,5 +129,25 @@ check(linesA.every((l) => /[.!]$/.test(l)), 'every storyline is a complete sente
 const calm = advanceSquad([signSquadContract({ ...mintSquadPlayer('calm', 'MF', 12, 4), age: 27, morale: 65 }, 1)], 1, 1, { xi: new Set(['calm']), goodSeason: true });
 check(squadStorylines(calm, 1).length === 0, 'an ordinary season for an ordinary player produces no story');
 
+console.log('=== 6. a duplicate id in the squad bricks the team sheet, permanently ===');
+// `advanceSquad` minted youth as `youth-${season}-${i}` and never checked it against the roster. Two
+// intakes under ONE season counter is reachable: `spSeasonReward` is the only call that bumps
+// `profile.season`, only for `kind: 'league'`, and it sits inside a `try { } catch { }` in the rollover
+// while `advanceSquadSeason` runs regardless. The repeat mints the same id, the duplicate reaches the
+// saved XI, `validateLineup` rejects it, and `setStandingOrders` fails from then on — every kickoff
+// toasts "Couldn't save your team sheet", with no way back from inside the game.
+{
+  const thin = Array.from({ length: 12 }, (_, i) => signSquadContract({ ...mintSquadPlayer(`d${i}`, 'MF', 10, 500 + i), age: 24 }, 0));
+  const first = advanceSquad(thin, 0, 1, { quality: 8 });
+  const youth = first.players.filter((p) => String(p.id).startsWith('youth'));
+  const rest = first.players.filter((p) => !String(p.id).startsWith('youth'));
+  check(youth.length > 0, 'a short squad gets a youth intake at all');
+  // short again, with last season's intake still on the books, under the SAME season number
+  const second = advanceSquad([...youth, ...rest.slice(0, Math.max(0, 12 - youth.length))], 0, 1, { quality: 8 });
+  const ids = second.players.map((p) => p.id);
+  const dupes = [...new Set(ids.filter((id, i) => ids.indexOf(id) !== i))];
+  check(dupes.length === 0, `two intakes under one season number mint distinct ids${dupes.length ? ` (got ${dupes.join(', ')})` : ''}`);
+}
+
 console.log(failures ? `\n✗ ${failures} squad-lifecycle check(s) failed` : '\n✓ all squad-lifecycle checks passed');
 process.exit(failures ? 1 : 0);

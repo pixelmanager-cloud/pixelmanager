@@ -148,10 +148,22 @@ export function advanceSquad(players: Player[], season: number, trainingLvl = 1,
   // it just costs you quality instead of the game.
   const intake: Player[] = [];
   const q = Math.max(4, Math.round(ctx.quality ?? 8));
+  // A DUPLICATE ID IN THE SQUAD BRICKS THE TEAM SHEET PERMANENTLY. `youth-${season}-${i}` was never checked
+  // against the roster, and two intakes under one season counter is reachable: `spSeasonReward` — the only
+  // call that bumps `profile.season`, and only for `kind: 'league'` — sits inside a `try { } catch { }` in
+  // the rollover, while `advanceSquadSeason` runs regardless. A repeat then mints `youth-0-0` a second
+  // time, the duplicate reaches the saved XI, and `validateLineup` rejects it — so `setStandingOrders`
+  // fails from that moment on, every kickoff toasts "Couldn't save your team sheet", and there is no way
+  // back from inside the game.
+  const taken = new Set(out.map((p) => p.id));
+  const uniqueId = (base: string): string => {
+    if (!taken.has(base)) { taken.add(base); return base; }
+    for (let n = 2; ; n++) { const id = `${base}-${n}`; if (!taken.has(id)) { taken.add(id); return id; } }
+  };
   for (let i = 0; out.length + intake.length < MIN_SQUAD; i++) {
     const roles = ['GK', 'DF', 'DF', 'MF', 'MF', 'FW'] as const;
     const seed = (((season * 7919) ^ ((out.length + i) * 104729)) >>> 0);
-    const kid = mintSquadPlayer(`youth-${season}-${i}`, roles[i % roles.length], Math.max(4, q - 3), seed, 17 + (i % 3));
+    const kid = mintSquadPlayer(uniqueId(`youth-${season}-${i}`), roles[i % roles.length], Math.max(4, q - 3), seed, 17 + (i % 3));
     intake.push(signSquadContract(kid, season, staggeredContractSeasons(kid.id)));
     if (i > 40) break; // guard: never spin
   }
