@@ -28,7 +28,8 @@ import {
   rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, foundingNameFor, nameFor,
   type FacilityKey, type MissionRow, type Token, type CareerAction,
   FORMATIONS,
-} from '@fm/shared';
+
+  reconcileSheet, isDutyForRole, defaultDuty,} from '@fm/shared';
 import {
   localStore, getActiveModel, getActiveSlotId, newGame as newGameSlot, continueSave, listSaves, deleteSave as deleteSaveSlot, setSaveBackend, type SaveBackend,
 } from './save';
@@ -210,18 +211,30 @@ const isFormation = (f: unknown): f is Lineup['formation'] =>
  *  repairs it on screen, but the repair was never written back, so the hand-picked XI and its per-slot
  *  duties were silently discarded at every generation.
  */
-function pruneXI(club: Club, so: StandingOrders): StandingOrders {
-  const alive = new Set(club.players.map((p) => p.id));
-  if (!so?.playerIds?.some((id) => !alive.has(id))) return so;
-  const kept = so.playerIds.filter((id) => alive.has(id));
-  const spare = club.players.map((p) => p.id).filter((id) => !kept.includes(id));
-  return { ...so, playerIds: [...kept, ...spare].slice(0, 11) };
+/** Repair a stored team sheet against the squad that now exists, or leave it alone if it cannot be.
+ *
+ *  Replaces `pruneXI`, which kept the surviving ids and COMPACTED them while leaving `duties`,
+ *  `captainIdx` and `takers` pinned to the old slot numbers — so every designation slid onto a different
+ *  man. Measured over 20 seasons of ordinary play: 18 scrambled the sheet, the armband moved 17 times, 52
+ *  taker reassignments, 118 illegal duties, and none of it was ever reported because the result is a VALID
+ *  sheet. `reconcileSheet` is in shared/src/teamsheet.ts and is unit-tested by shared/qa_teamsheet.ts. */
+function reconciled(club: Club, so: StandingOrders): StandingOrders {
+  const squad = fieldablePlayers(club).map((p) => ({ id: p.id, role: p.role as string, ovr: overall(p) }));
+  const fixed = reconcileSheet(so as any, squad, (role, duty) => isDutyForRole(role as any, duty as any),
+    (sp) => defaultDuty(club.players.find((p) => p.id === sp.id) ?? ({ role: sp.role } as any)));
+  return (fixed as StandingOrders | null) ?? so;
 }
 
-function mergedClub(): { club: Club; standingOrders: StandingOrders } {
+/** club.players PLUS the merged pro/retired tokens — the squad a team sheet is allowed to name.
+ *
+ *  Factored out of `mergedClub` because passing the RAW club to the sheet code was a live defect: the
+ *  bloodline star is a Token and is never in `club.players`, so every season he counted as departed, was
+ *  evicted from the saved XI, and the armband moved to someone else. Measured over three seasons with no
+ *  squad churn at all: ejected 3 of 3. */
+function fieldablePlayers(club: Club): Player[] {
   const m = getActiveModel();
-  const have = new Set(m.club.players.map((p) => p.id));
-  const merged = [...m.club.players];
+  const have = new Set(club.players.map((p) => p.id));
+  const merged = [...club.players];
   for (const t of m.tokens) {
     if (t.state !== 'pro' && t.state !== 'retired') continue;
     if (have.has(t.id)) continue;
@@ -240,7 +253,12 @@ function mergedClub(): { club: Club; standingOrders: StandingOrders } {
     if (!t.attrs_json || !/[0-9]/.test(t.attrs_json)) continue;
     merged.push(tokenToPlayer(t)); have.add(t.id);
   }
-  return { club: { ...m.club, players: merged }, standingOrders: m.standingOrders };
+  return merged;
+}
+
+function mergedClub(): { club: Club; standingOrders: StandingOrders } {
+  const m = getActiveModel();
+  return { club: { ...m.club, players: fieldablePlayers(m.club) }, standingOrders: m.standingOrders };
 }
 
 /** Mint a brand-new 10-year-old prospect (fresh genes, generation 0) — lifted from server/src/tokens.ts's
@@ -486,7 +504,8 @@ export const api = {
     const value = squadSaleValue(overall(p), p.age ?? 26); // a fading veteran is worth less — the SELL column now means something (PT-90)
     await localStore.addCoins(OWNER, value);
     c.club.players = c.club.players.filter((x) => x.id !== playerId);
-    await localStore.saveClub(OWNER, c.club, c.standingOrders);
+    // ...and repair the sheet, or the next editor open rebuilds it and the next kickoff COMMITS the wipe
+    await localStore.saveClub(OWNER, c.club, reconciled(c.club, c.standingOrders));
     return { ok: true as const, coins: getActiveModel().profile.coins, value, squadSize: c.club.players.length };
   },
   /** The bloodline star's contract-demand shape (for the negotiation UI). baseWage = the loyalty-adjusted
@@ -749,7 +768,7 @@ export const api = {
     {
       const cc = await localStore.getClub(OWNER);
       if (cc) {
-        const pruned = pruneXI(cc.club, cc.standingOrders);
+        const pruned = reconciled(cc.club, cc.standingOrders);
         if (pruned !== cc.standingOrders) await localStore.saveClub(OWNER, cc.club, pruned);
       }
     }
@@ -979,7 +998,7 @@ export const api = {
       }
     }
     c.club.players = roll.players;
-    const so = pruneXI(c.club, c.standingOrders);
+    const so = reconciled(c.club, c.standingOrders);
     await localStore.saveClub(OWNER, c.club, so);
     const lite = (p: Player) => ({ id: p.id, name: p.name, role: p.role, age: p.age ?? 0, ovr: overall(p) });
     return {
@@ -1037,7 +1056,8 @@ export const api = {
       await localStore.addCoins(OWNER, -payoff);
     }
     c.club.players = c.club.players.filter((x) => x.id !== playerId);
-    await localStore.saveClub(OWNER, c.club, c.standingOrders);
+    // ...and repair the sheet, or the next editor open rebuilds it and the next kickoff COMMITS the wipe
+    await localStore.saveClub(OWNER, c.club, reconciled(c.club, c.standingOrders));
     return { ok: true as const, squadSize: c.club.players.length, payoff, coins: getActiveModel().profile.coins };
   },
   developPlayer: async (pid: string, body: { focus: string; age: number }) => {

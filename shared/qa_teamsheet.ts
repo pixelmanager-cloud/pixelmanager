@@ -62,3 +62,55 @@ console.log('\n[qa-teamsheet] and the manager overruling the stand-in...');
 
 console.log(fails ? `\n✗ ${fails} team-sheet check(s) failed` : '\n✓ an injury costs the manager one slot for one match, not his team sheet');
 if (fails) process.exit(1);
+
+// ── reconcileSheet: designations follow the man, not the slot ────────────────────────────────────────
+import { reconcileSheet, type TeamSheet } from './src/teamsheet.js';
+
+const legal = (role: string, duty: string) => duty.startsWith(role.toLowerCase());
+const dflt = (p: SheetPlayer) => `${p.role.toLowerCase()}-default`;
+const baseSheet = (): TeamSheet => ({
+  playerIds: [...saved],
+  duties: ROLES.map((r) => `${r.toLowerCase()}-set`),
+  captainIdx: 5,                       // s5, a midfielder
+  takers: { pen: 9, fk: 5, corner: 10 },   // s9, s5, s10
+});
+
+console.log('\n[qa-teamsheet] reconcileSheet — a changed squad must not move the armband...');
+{
+  const s = baseSheet();
+  check(reconcileSheet(s, squad, legal, dflt) === s, 'an unchanged squad returns the SAME object (write-skips still work)');
+
+  // the bloodline star was being evicted every season because the RAW club was passed; here the man is
+  // genuinely gone
+  const gone = squad.filter((p) => p.id !== 's3');
+  const r = reconcileSheet(baseSheet(), gone, legal, dflt)!;
+  check(!!r, 'a departed player is repaired rather than refused');
+  check(r.playerIds.length === 11 && new Set(r.playerIds).size === 11, 'the XI is still eleven distinct men');
+  check(r.playerIds[3] !== 's3' && r.playerIds.filter((_, i) => i !== 3).join() === saved.filter((_, i) => i !== 3).join(),
+    'ONLY the vacated slot changed — no compaction');
+  check(r.captainIdx === 5 && r.playerIds[5] === 's5', 'the armband stayed on the same man');
+  check(r.takers!.pen === 9 && r.takers!.fk === 5 && r.takers!.corner === 10, 'all three takers stayed on their men');
+  check(r.duties!.filter((d, i) => i !== 3 && d !== baseSheet().duties![i]).length === 0, 'untouched slots keep their duties');
+  check(legal(squad.find((p) => p.id === r.playerIds[3])!.role, r.duties![3]), "the refilled slot's duty is legal for the man who came in");
+}
+
+console.log('\n[qa-teamsheet] ...and a designated man leaving drops HIS designation, not someone else\'s...');
+{
+  const noCaptain = squad.filter((p) => p.id !== 's5');          // the captain AND the fk taker
+  const r = reconcileSheet(baseSheet(), noCaptain, legal, dflt)!;
+  check(r.captainIdx === undefined, 'the captain leaving DROPS the armband rather than handing it to a stranger');
+  check(r.takers?.fk === undefined, '...and his free-kick duty with it');
+  check(r.takers?.pen === 9 && r.takers?.corner === 10, 'the other two takers are untouched');
+}
+
+console.log('\n[qa-teamsheet] ...and it refuses rather than writing something invalid');
+{
+  check(reconcileSheet(baseSheet(), squad.slice(0, 9), legal, dflt) === null, 'a squad of nine is refused, not truncated to a nine-man XI');
+  check(reconcileSheet({ playerIds: saved.slice(0, 6) } as TeamSheet, squad, legal, dflt) === null, 'a six-man sheet is refused');
+  check(reconcileSheet(null, squad, legal, dflt) === null, 'a missing sheet is refused');
+  check(reconcileSheet({ playerIds: 'nope' } as unknown as TeamSheet, squad, legal, dflt) === null, 'a malformed sheet is refused');
+  // a duplicate id used to reach the saved XI and make setStandingOrders reject forever
+  const dup = { ...baseSheet(), playerIds: ['s0', 's1', 's1', 's3', 's4', 's5', 's6', 's7', 's8', 's9', 's10'] };
+  const r = reconcileSheet(dup, squad, legal, dflt)!;
+  check(!!r && new Set(r.playerIds).size === 11, 'a duplicated id is refilled, not persisted');
+}

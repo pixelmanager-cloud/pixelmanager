@@ -57,3 +57,95 @@ export function resolveMatchXI(savedIds: readonly string[], squad: readonly Shee
 export function intentOf(todaysIds: readonly string[], subs: ReadonlyMap<number, Cover>): string[] {
   return todaysIds.map((id, i) => { const c = subs.get(i); return c && c.in === id ? c.out : id; });
 }
+
+// ── RECONCILING A SAVED SHEET AGAINST A SQUAD THAT HAS CHANGED ───────────────────────────────────────
+//
+// `pruneXI` kept the surviving ids and COMPACTED them, leaving `duties`, `captainIdx` and `takers` pinned
+// to the old slot numbers. Every designation therefore slid onto a different man. A census of the eleven
+// paths that mutate the squad found this fires far more often than anyone thought, and the worst instance
+// needs no transfer at all:
+//
+//   `advanceSquadSeason` handed `pruneXI` the RAW club — and the bloodline star is a Token, merged in for
+//   reads and never present in `club.players`. So the star counted as dead EVERY SEASON, was evicted from
+//   the saved XI every season, and the armband walked to a different man every season. Measured over three
+//   seasons with zero squad churn: star ejected 3 of 3, nine of eleven slots rewritten each time, all three
+//   set-piece takers reassigned. And the result is a VALID sheet, so nothing anywhere reported it.
+//
+// Hence two rules. Designations follow the MAN, not the index — so a departure refills that one slot and
+// leaves every other slot, and its duty, exactly where it was. And the caller must pass the FIELDABLE
+// squad, tokens included; passing the raw club is the bug above.
+export interface TeamSheet {
+  playerIds: string[];
+  duties?: string[];
+  captainIdx?: number;
+  takers?: { pen?: number; fk?: number; corner?: number };
+}
+
+/** Reconcile a saved sheet against the squad that now exists.
+ *
+ *  Returns the SAME object when nothing needed changing, so a caller's `if (next !== so)` write-skip still
+ *  works and a rollover that changed nothing writes nothing. Returns `null` when the sheet cannot be
+ *  repaired — too few players, a malformed sheet — in which case the caller must leave the save exactly as
+ *  it is and let the editor rebuild, rather than persisting something `validateLineup` would reject.
+ *  `pruneXI` used to emit nine-man XIs with a `takers.pen` index past the end of the array. */
+export function reconcileSheet<S extends TeamSheet>(
+  sheet: S | null | undefined,
+  squad: readonly SheetPlayer[],
+  isDutyLegal?: (role: string, duty: string) => boolean,
+  defaultDutyFor?: (p: SheetPlayer) => string,
+): S | null {
+  if (!sheet || !Array.isArray(sheet.playerIds) || sheet.playerIds.length !== 11) return null;
+  if (squad.length < 11) return null;
+
+  const byId = new Map(squad.map((p) => [p.id, p]));
+  const seen = new Set<string>();
+  // a duplicate id is a vacancy, not a player: keep the first, refill the rest
+  const vacant: number[] = [];
+  const ids = sheet.playerIds.map((id, i) => {
+    if (byId.has(id) && !seen.has(id)) { seen.add(id); return id; }
+    vacant.push(i);
+    return '';
+  });
+  if (!vacant.length) return sheet;                       // nothing changed — same object, by design
+
+  const bench = squad.filter((p) => !seen.has(p.id)).sort((a, b) => b.ovr - a.ovr);
+  for (const i of vacant) {
+    const out = byId.get(sheet.playerIds[i]);             // undefined when the man has actually left
+    const pick = bench.find((p) => !seen.has(p.id) && (!out || p.role === out.role)) ?? bench.find((p) => !seen.has(p.id));
+    if (!pick) return null;                               // cannot field eleven — refuse rather than truncate
+    seen.add(pick.id);
+    ids[i] = pick.id;
+  }
+
+  // A DUTY BELONGS TO THE SLOT'S MAN. Untouched slots keep theirs untouched; a refilled slot keeps the old
+  // duty only if it is legal for whoever came in.
+  const duties = sheet.duties
+    ? ids.map((id, i) => {
+      const old = sheet.duties![i];
+      if (!vacant.includes(i)) return old;
+      const p = byId.get(id) ?? squad.find((q) => q.id === id)!;
+      return old && (!isDutyLegal || isDutyLegal(p.role, old)) ? old : (defaultDutyFor ? defaultDutyFor(p) : old);
+    })
+    : undefined;
+
+  // The armband and the set-piece takers follow the MAN. If he has left, the designation is DROPPED rather
+  // than handed to whoever happens to occupy his old slot — `buildXI` already falls back to the best leader,
+  // and an empty captain slot asks the manager a question instead of inventing an answer for him.
+  const idxOfMan = (slot?: number): number | undefined => {
+    if (slot == null) return undefined;
+    const man = sheet.playerIds[slot];
+    const at = ids.indexOf(man);
+    return at >= 0 ? at : undefined;
+  };
+  const takers = sheet.takers
+    ? { pen: idxOfMan(sheet.takers.pen), fk: idxOfMan(sheet.takers.fk), corner: idxOfMan(sheet.takers.corner) }
+    : undefined;
+
+  return {
+    ...sheet,
+    playerIds: ids,
+    ...(duties ? { duties } : {}),
+    captainIdx: idxOfMan(sheet.captainIdx),
+    ...(takers && (takers.pen != null || takers.fk != null || takers.corner != null) ? { takers } : { takers: undefined }),
+  } as S;
+}
