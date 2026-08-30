@@ -5,6 +5,17 @@
 //   • does progress feel earned (strength → higher finish) rather than random?
 //   • do you get stuck / yo-yo forever?
 //   • once at the top, are titles a real but hard prize (not a coin-flip, not impossible)?
+// ⚠ THIS PROBE DOES NOT DRIVE THE GAME. `strengthAt` below is a hand-written straight line; there is no
+// such formula anywhere in the code. The club's real league strength is the weighted average overall of its
+// best eleven, out of a squad bought with coins it actually earned, that ages, needs re-signing, and decays
+// if the training ground is not paid for. Modelling that as `7 + season * invest` is why this file reported
+// a 31% top-flight title rate where the real economy gives 23-26%, and why it saw a healthy climb in a mode
+// whose facility ladder had an unreachable top and whose dynasty ran out of things to buy.
+//
+// It is kept because it is fast and its SHAPE questions (does the climb converge, does anyone get stuck)
+// are still worth asking cheaply. The number that counts is tools/playtest/manager_career_real.ts, which
+// drives client/src/api.ts against an in-memory backend and measures the same questions for real.
+//
 // Deterministic, browser-free. Run: npx tsx tools/playtest/analyze_manager_career.ts [N] [SEASONS]
 import { seededLeague, seasonTable, TIERS } from '../../shared/src/clubseason.js';
 
