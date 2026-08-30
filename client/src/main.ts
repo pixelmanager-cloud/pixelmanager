@@ -2518,11 +2518,13 @@ class Game {
         return `<div class="ach ${got ? 'got' : 'locked'}"><span class="ach-ico">${got ? a.icon : '🔒'}</span><div class="ach-txt"><div class="ach-name">${a.name}</div><div class="ach-desc">${a.desc}</div></div></div>`;
       }).join('') + `</div>`;
       const achSection = `<h4 class="scout-h4" style="margin-top:24px;">🏅 ACHIEVEMENTS <span class="ach-count">${gotCount}/${ACHIEVEMENTS.length}</span></h4>` + achGrid;
-      $('trophies-body').innerHTML = summary
+      $('trophies-body').innerHTML = `<div id="family-record-host"></div>` + summary
         + `<h4 class="scout-h4">🏆 TROPHY CABINET</h4>` + cabinet
         + `<h4 class="scout-h4" style="margin-top:24px;">🌳 BLOODLINES</h4><div class="scout-sub">The dynasties you've built — each line is a bloodline across the generations, newest at the bottom.</div>` + bloodlines
         + retiredSection
         + achSection;
+      const frHost = document.getElementById('family-record-host');
+      if (frHost) void this.renderFamilyTree(frHost);   // async; the rest of the room renders immediately
       $('trophies-body').querySelectorAll('.tr-retire').forEach((el) => el.addEventListener('click', () => {
         const n = Number((el as HTMLElement).dataset.num); const name = (el as HTMLElement).dataset.name!;
         let cur: Array<{ n: number; name: string }>; try { cur = JSON.parse(localStorage.getItem(rKey) || '[]'); } catch { cur = []; }
@@ -2852,6 +2854,64 @@ class Game {
         this.showProspectCard(pick, true);
       } catch { this.showProspectCard(played, true); }
     });
+  }
+  /** ── THE FAMILY RECORD ──────────────────────────────────────────────────────────────────────────
+   *  An illuminated genealogy, after the "Lancaster & York" manuscript the user picked as the reference:
+   *  aged parchment, a painted tree, oval portrait medallions, name banners, a decorative border.
+   *
+   *  The one structural decision worth stating: THE FOUNDER SITS AT THE BASE and descendants climb, exactly
+   *  as Edward III does in that reference. Most family trees hang downward; this is a dynasty you BUILD, so
+   *  it grows upward. Generations are ranks, siblings share a rank, and a curve joins each son to his
+   *  father — so a branch reads as a branch at a glance.
+   */
+  private async renderFamilyTree(host: HTMLElement) {
+    let nodes: any[] = [];
+    try { nodes = (await api.bloodline()).nodes ?? []; } catch { host.innerHTML = ""; return; }
+    if (!nodes.length) { host.innerHTML = ""; return; }
+    const byGen = new Map<number, any[]>();
+    for (const n of nodes) { const g = n.generation ?? 0; (byGen.get(g) ?? byGen.set(g, []).get(g)!).push(n); }
+    const gens = [...byGen.keys()].sort((a, b) => a - b);
+    // The page grows with the family. A one-generation record sized for a full tree is mostly empty
+    // parchment, which reads as a rendering failure rather than as room to grow.
+    const W = 900, ROW = 150, PAD = 60;
+    const H = PAD + Math.max(0, gens.length - 1) * ROW + 130;
+    const pos = new Map<string, { x: number; y: number }>();
+    gens.forEach((g, gi) => {
+      const row = byGen.get(g)!;
+      // founder at the BASE: the highest generation index sits nearest the top of the image
+      const y = H - 78 - gi * ROW;
+      row.forEach((n, i) => pos.set(n.id, { x: (W / (row.length + 1)) * (i + 1), y }));
+    });
+    // The trunk only makes sense once the line has actually grown — with a single founder it renders as a
+    // stalk sprouting out of his head. One generation gets a short root instead.
+    const trunk = gens.length > 1
+      ? `<path d="M ${W / 2} ${H - PAD + 20} C ${W / 2 - 26} ${H * 0.66}, ${W / 2 + 26} ${H * 0.4}, ${W / 2} ${PAD - 12}" class="fr-trunk"/>`
+      : `<path d="M ${W / 2} ${H - PAD + 24} L ${W / 2} ${H - PAD - 4}" class="fr-trunk"/>`;
+    const links = nodes.filter((n) => n.parentId && pos.has(n.parentId) && pos.has(n.id)).map((n) => {
+      const a = pos.get(n.parentId)!, b = pos.get(n.id)!;
+      return `<path d="M ${a.x} ${a.y - 26} C ${a.x} ${(a.y + b.y) / 2}, ${b.x} ${(a.y + b.y) / 2}, ${b.x} ${b.y + 26}" class="fr-branch"/>`;
+    }).join("");
+    const medallions = nodes.map((n) => {
+      const p = pos.get(n.id)!;
+      const yrs = n.honours?.turnsPlayed ? `${n.honours.caps ? `${n.honours.caps} caps` : "no caps"}` : (n.state === "prospect" ? "yet to play" : "");
+      const sub = n.legend?.tier ? n.legend.tier : yrs;
+      const cls = n.branch === "sibling" ? " fr-sib" : "";
+      return `<g class="fr-node${cls}" transform="translate(${p.x},${p.y})">`
+        + `<ellipse rx="30" ry="34" class="fr-oval"/><ellipse rx="24" ry="28" class="fr-oval-inner"/>`
+        + `<text y="5" class="fr-init">${String(n.name ?? "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2)}</text>`
+        + `<rect x="-66" y="38" width="132" height="17" class="fr-banner"/>`
+        + `<text y="50" class="fr-name">${String(n.name ?? "").slice(0, 20)}</text>`
+        + (sub ? `<text y="68" class="fr-sub">${sub}</text>` : "")
+        + `</g>`;
+    }).join("");
+    host.innerHTML = `<div class="family-record"><div class="fr-frame">`
+      + `<div class="fr-title">The Family Record</div>`
+      + `<svg viewBox="0 0 ${W} ${H}" class="fr-svg" role="img" aria-label="An illuminated family tree of the bloodline, the founder at the base.">`
+      + trunk + links + medallions + `</svg>`
+      + `<div class="fr-foot">${gens.length > 1
+          ? 'The founder stands at the root. Sons who were passed over are shown paler — their line can still be taken up.'
+          : 'The first of the line. The record fills as the name is carried on.'}</div>`
+      + `</div></div>`;
   }
   private handoffKey(pid: string): string { return `fm_handoff_defer_${pid}`; }
   private handoffDeferredAt(pid: string): number {

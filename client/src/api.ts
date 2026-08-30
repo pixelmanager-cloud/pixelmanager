@@ -764,6 +764,32 @@ export const api = {
     await localStore.updateToken(pid, { kit_json: JSON.stringify(clamped) });
     return { ok: true as const, kit: clamped };
   },
+  /** THE BLOODLINE FOREST — every member of the family, with the edge that makes it a tree.
+   *  Used by the Family Record. Returns the played line AND the brothers who were passed over, because a
+   *  tree with only the chosen sons on it is a chain with decoration. */
+  bloodline: async () => {
+    await ensureActive();
+    const tokens = getActiveModel().tokens;
+    const legs = await localStore.legaciesFor(OWNER).catch(() => [] as any[]);
+    const legendBy = new Map<string, any>();
+    for (const l of (legs as any[])) {
+      try { legendBy.set(String(l.player_id ?? l.playerId ?? '').split(':g')[0], JSON.parse(l.card_json ?? l.cardJson ?? '{}')); } catch { /* skip */ }
+    }
+    return {
+      nodes: tokens.map((t) => {
+        let honours: any = null;
+        try { honours = t.career_honours_json ? JSON.parse(t.career_honours_json) : null; } catch { /* none */ }
+        return {
+          id: t.id, name: t.name, generation: t.generation ?? 0,
+          parentId: (t as any).parent_id ?? null,
+          branch: (t as any).branch ?? 'played',
+          state: t.state, overall: t.peak_overall ?? 0,
+          personality: t.personality ?? null,
+          honours, legend: legendBy.get(t.id) ?? null,
+        };
+      }),
+    };
+  },
   legends: async () => {
     await ensureActive();
     const rows = await localStore.legaciesFor(OWNER);

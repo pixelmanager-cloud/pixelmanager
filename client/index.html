@@ -1365,6 +1365,34 @@
       .cg-heir-card.on { border-color: var(--good); background: rgba(255,255,255,0.06); }
       .cg-heir-stars { margin-top: 8px; font-size: 13px; }
       .cg-heir-note { font-size: 10.5px; opacity: 0.6; }
+      /* THE FAMILY RECORD — an illuminated genealogy after the Lancaster & York manuscript: parchment,
+         a painted tree, oval medallions, name banners, a decorative border. Deliberately its own visual
+         world; it should not look like the rest of the UI. */
+      .family-record { margin: 20px 0; }
+      .fr-frame { position: relative; padding: 26px 22px 20px; border-radius: 2px;
+        background: radial-gradient(ellipse at 50% 30%, #f2e2bd 0%, #e6d2a6 55%, #d8c08a 100%);
+        box-shadow: inset 0 0 60px rgba(120,86,40,0.35), 0 3px 18px rgba(0,0,0,0.45);
+        border: 10px solid transparent;
+        border-image: repeating-linear-gradient(45deg, #8d6b32 0 8px, #b9924a 8px 16px, #6f5227 16px 24px) 10; }
+      /* A DOCUMENT, not a UI. The pixel display face fights the parchment — the reference is an illuminated
+         manuscript, so the Family Record uses a serif stack. Local faces only: the game is offline-first, so
+         no web font is loaded. */
+      .family-record { font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, 'Times New Roman', serif; }
+      .fr-title { text-align: center; font-family: inherit; font-size: 26px; font-weight: 600; letter-spacing: 0.06em;
+        color: #6b2b20; text-shadow: 0 1px 0 rgba(255,255,255,0.4); margin-bottom: 6px; }
+      .fr-svg { width: 100%; height: auto; display: block; }
+      .fr-trunk { fill: none; stroke: #6b4a22; stroke-width: 16; stroke-linecap: round; opacity: 0.55; }
+      .fr-branch { fill: none; stroke: #6b4a22; stroke-width: 3.5; opacity: 0.7; }
+      .fr-oval { fill: #f6ecd2; stroke: #a87f3c; stroke-width: 3; }
+      .fr-oval-inner { fill: #fbf5e4; stroke: #c9a24d; stroke-width: 1.5; }
+      .fr-init { text-anchor: middle; font-family: 'Iowan Old Style', Palatino, Georgia, serif; font-size: 20px; font-weight: 600; fill: #6b2b20; }
+      .fr-banner { fill: #f3e7c8; stroke: #a87f3c; stroke-width: 1.2; }
+      .fr-name { text-anchor: middle; font-size: 11.5px; fill: #4a3418; font-weight: 600; font-family: 'Iowan Old Style', Palatino, Georgia, serif; }
+      .fr-sub { text-anchor: middle; font-size: 9.5px; fill: #6b5330; font-style: italic; }
+      .fr-node.fr-sib .fr-oval { fill: #ece0c4; }
+      .fr-node.fr-sib { opacity: 0.72; }
+      .fr-foot { text-align: center; font-size: 11px; color: #6b5330; margin-top: 10px; font-style: italic; }
+      @media (max-width: 640px) { .fr-frame { padding: 14px 8px; border-width: 6px; } .fr-title { font-size: 16px; } }
       #toast { position: fixed; top: 18px; left: 50%; transform: translateX(-50%); z-index: 10000;
         pointer-events: none; font-family: var(--display); font-size: 14px; color: #04140b;
         background: var(--good); border: 2px solid #000; box-shadow: 3px 3px 0 rgba(0,0,0,0.6);
