@@ -29,7 +29,7 @@ check(evaluateAchievements(MAX).length === ACHIEVEMENTS.length, 'a maxed snapsho
 function rngSnap(seed: number): AchSnapshot {
   let h = (seed * 2654435761) >>> 0;
   const nx = (n: number) => { h = (h ^ (h << 13)) >>> 0; h = (h ^ (h >>> 17)) >>> 0; h = (h ^ (h << 5)) >>> 0; return h % n; };
-  return { leagueTitles: nx(12), contTitles: nx(5), wcWins: nx(4), wcFinals: nx(5), seasons: nx(60), wins: nx(400), prestigeIdx: nx(9), generation: nx(7), legends: nx(8), topLegendRating: nx(101), graduated: nx(8), topTier: nx(11) };
+  return { leagueTitles: nx(12), contTitles: nx(5), wcWins: nx(4), wcFinals: nx(5), seasons: nx(60), wins: nx(400), prestigeIdx: nx(9), generation: nx(7), legends: nx(8), topLegendRating: nx(101), graduated: nx(8), topTier: nx(11), promotions: nx(9) };
 }
 let monoOk = true;
 for (let s = 0; s < 3000 && monoOk; s++) {

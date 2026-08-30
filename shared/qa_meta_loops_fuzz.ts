@@ -182,7 +182,6 @@ console.log('\n[qa-meta] worldCup + playerPath fuzz...');
       if (!((wc.final.a === sfWinners[0] && wc.final.b === sfWinners[1]) || (wc.final.a === sfWinners[1] && wc.final.b === sfWinners[0])))
         log(`worldCup: final participants [${wc.final.a},${wc.final.b}] don't match SF winners [${sfWinners.join(',')}]  ${ctx}`);
       if (wc.champion !== wc.final.winner) log(`worldCup: champion "${wc.champion}" != final.winner "${wc.final.winner}"  ${ctx}`);
-      if (!wc.final.neutral === undefined) { /* no neutral field on WCTie, skip */ }
       if (!finite(wc.legacyMult) || wc.legacyMult < 1 || wc.legacyMult > 2.01) log(`worldCup: legacyMult=${wc.legacyMult} out of expected [1,2]  ${ctx}`);
 
       // myFinish consistency with actual bracket participation

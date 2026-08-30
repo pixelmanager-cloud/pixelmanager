@@ -3,6 +3,7 @@
 // veterans fade, deals expire and wages cost money — so these checks guard the properties that make
 // that feel true and fair. Pure + deterministic: no rng, no wall-clock.
 import { mintSquadPlayer, overall } from './src/teams.js';
+import type { Player } from './src/types.js';
 import {
   advanceSquad, advanceSquadPlayer, signSquadContract, staggeredContractSeasons, squadSeasonsLeft, squadRetireAge, SQUAD_GROWTH_AGE, squadStorylines,
 } from './src/squad.js';
@@ -72,7 +73,7 @@ check(JSON.stringify(roll) === JSON.stringify(rollAgain), 'the rollover is deter
 check(squad.every((x, i) => x.age === 22 + i * 2), 'the rollover does not mutate the squad it was given');
 
 console.log('=== 6. a squad ROTS if you never refresh it ===');
-let aging = Array.from({ length: 6 }, (_, i) => ({ ...mintSquadPlayer(`r${i}`, 'DF', 13, 500 + i), age: 29 }));
+let aging: Player[] = Array.from({ length: 6 }, (_, i) => ({ ...mintSquadPlayer(`r${i}`, 'DF', 13, 500 + i), age: 29 }));
 const startOv = aging.reduce((s, x) => s + overall(x), 0) / aging.length;
 for (let s = 1; s <= 6; s++) aging = advanceSquad(aging, s, 1).players;
 const endOv = aging.length ? aging.reduce((s, x) => s + overall(x), 0) / aging.length : 0;
