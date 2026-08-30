@@ -1328,6 +1328,7 @@ class Game {
       if (this.account) this.account.coins = r.coins;
       try { const b = JSON.parse(localStorage.getItem(boughtKey) || '[]'); b.push(l.player.id); localStorage.setItem(boughtKey, JSON.stringify(b)); } catch { /* ignore */ }
       this.setMe(await api.me()); audio.chime('confirm');
+      this.feedEvent('transfer_in', '✍️', { name: l.player.name, seasonsAtClub: 0, age: l.age, overall: l.ov }, { fee: l.fee });
       toast(`✍️ Signed ${l.player.name} (OV ${l.ov}) · −${l.fee.toLocaleString()}c fee · ~${squadSeasonWage(l.ov).toLocaleString()}c a season in wages`);
       this.renderTransferMarket();
     } catch (e: any) { toast(e?.body?.error ?? 'Could not sign him'); }
@@ -1371,6 +1372,7 @@ class Game {
       rows.push(`<div class="sq-row ret"><span class="sq-lbl">🚪 Left</span><span class="sq-list">`
         + r.departed.map((x: any) => nm(x)).join(' · ') + ` — their deals ran out and weren't renewed.</span></div>`);
     }
+    if (r.intake?.length) this.feedEvent('youth_intake', '🌱', undefined, { n: r.intake.length });
     if (r.intake?.length) {
       rows.push(`<div class="sq-row up"><span class="sq-lbl">🌱 Academy</span><span class="sq-list">`
         + r.intake.map((x: any) => nm(x)).join(' · ')
@@ -1416,6 +1418,7 @@ class Game {
         { const mm = this.loadMgr(); this.saveMgr({ ...mm, squadReport: this.pendingSquadReport }); }
         this.setMe(await api.me()); audio.chime('confirm');
         toast(`✍️ ${name} re-signs · −${r.cost.toLocaleString()}c`);
+        { const rp = this.club?.players.find((x) => x.id === playerId); if (rp) this.feedEvent('contract_renewed', '✍️', this.personCtx(rp, rp.id === this.loadMgr().starId), { n: 'another spell' }); }
         this.showSeason();
       } catch (e: any) { toast(e?.body?.error ?? 'Could not renew'); }
     });
@@ -1577,7 +1580,7 @@ class Game {
     $('sf-transfers')?.addEventListener('click', () => this.openTransferMarket());
     if (bid) {
       $('sf-bid-accept')?.addEventListener('click', () => this.acceptStarBid(bid, m));
-      $('sf-bid-reject')?.addEventListener('click', () => { try { localStorage.setItem(bidKey, '1'); } catch { /* ignore */ } toast('Bid rejected — he stays.'); this.showSeason(); });
+      $('sf-bid-reject')?.addEventListener('click', () => { try { localStorage.setItem(bidKey, '1'); } catch { /* ignore */ } toast('Bid rejected — he stays.'); { const sp = this.club?.players.find((x) => x.id === this.loadMgr().starId); this.feedEvent('bid_rejected', '🤝', sp ? this.personCtx(sp, true) : undefined); } this.showSeason(); });
     }
     // PT-505: it eats every remaining fixture in one click, so it gets the same guard as selling a player
     $('sf-sim')?.addEventListener('click', () => this.openConfirm(
@@ -1654,6 +1657,7 @@ class Game {
       if (this.account?.coins != null) this.account.coins = r.coins;
       const m = this.loadMgr(); this.saveMgr({ ...m, staff: [...(m.staff ?? []), id] });
       toast(`🧑‍🏫 Hired ${s.name} (−${r.cost.toLocaleString()}c)`);
+      this.feedEvent('staff_hired', '🧑‍🏫', undefined, {});
       this.showSeason();
     } catch (e: any) { toast(e?.status === 409 ? 'Not enough coins' : 'Could not hire'); }
   }
@@ -3381,6 +3385,7 @@ class Game {
       const r = await api.dispatchScout(destination);
       this.account.coins = r.coins;
       toast(`Scout dispatched to ${r.mission.destName} 🌍`);
+      this.feedEvent('scout_dispatched', '🔭', undefined, { to: r.mission.destName });
       await this.loadMissions();
     } catch (e: any) {
       const msg = String(e?.body?.error ?? '');
@@ -3392,6 +3397,7 @@ class Game {
     try {
       const r = await api.signMission(id);
       toast(`Signed ${r.player.name} ✓`);
+      this.feedEvent('scout_found', '🌍', { name: r.player.name, seasonsAtClub: 0, age: (r.player as any).age }, {});
       this.setMe(await api.me());
       await this.showScouting();
     } catch (e: any) {
