@@ -163,3 +163,60 @@ export function houseOf(name: string): RivalHouse | null {
   const surname = (name || '').trim().split(/\s+/).slice(-1)[0];
   return RIVAL_HOUSES.find((h) => h.name === surname) ?? null;
 }
+
+/** Plant a rival family's son into an opponent's XI.
+ *
+ *  Signing one off the transfer market makes the Houses table a shop. Running into one — a name you are
+ *  chasing up that table, wearing someone else's shirt, scoring against you — is what makes it a RIVALRY.
+ *  It costs nothing to do: the opponent squad is already generated per fixture from a seed, so this swaps
+ *  one generated body for a named one at the same ability, and the match engine never knows the difference.
+ *
+ *  Rare, and rare in a way the player can feel: about one fixture in nine, so across a season you meet a
+ *  great family two or three times rather than every other week. Returns the club unchanged when no house
+ *  turns out — callers should not branch on it. */
+export function seedHouseIntoSquad<T extends { players: Player[] }>(club: T, seed: number, oppSeed: number, generation: number, quality: number): { club: T; guest: { house: RivalHouse; name: string } | null } {
+  const roll = frac(hash32(seed, oppSeed * 3079, 0x5eed));
+  if (roll > 0.11) return { club, guest: null };
+  // Only families whose current man belongs at this level. A 19-rated Vasquez in a Sunday League side
+  // would win the match on his own and read as a bug rather than as a cameo.
+  const pool = RIVAL_HOUSES.filter((h) => Math.abs(houseQualityAt(h, generation, seed) - quality) <= 3);
+  if (!pool.length) return { club, guest: null };
+  const h = pool[hash32(seed, oppSeed, 11) % pool.length];
+  // Replace a player of the SAME role, so the opponent's shape is untouched — swapping a striker for a
+  // keeper would quietly wreck a side the player has to play against.
+  const slot = hash32(seed, oppSeed * 17, 3) % club.players.length;
+  const victim = club.players[slot];
+  const man = houseManAsPlayer(h, generation, seed, victim.id, victim.role, 20 + (hash32(seed, oppSeed, 5) % 12));
+  const players = club.players.slice();
+  players[slot] = { ...man, id: victim.id };
+  return { club: { ...club, players }, guest: { house: h, name: man.name } };
+}
+
+/** What a rival family DID this season, as a line of news.
+ *
+ *  Without this the Houses table moves in silence: you open the Trophy Room one generation later and the
+ *  order has changed, with no memory of it changing. A standing you never watched move is a scoreboard,
+ *  not a rivalry — so the families report in, and what they report is derived from the same numbers the
+ *  table is scored on, never invented separately.
+ *
+ *  At most one house speaks per season. Twelve families all reporting every season is noise, and noise is
+ *  how a feed teaches the player to stop reading it. */
+export function houseNews(seed: number, season: number, generation: number, yourRenown: number): string | null {
+  const roll = frac(hash32(seed, season * 7717, 0x11ee5));
+  if (roll > 0.45) return null;                                  // most seasons, nobody makes news
+  const table = rivalStandings(seed, generation);
+  const h = table[hash32(seed, season, 23) % table.length];
+  const man = h.latest;
+  const above = h.renown > yourRenown;
+  const lines: string[] = [];
+  // Tied to what the family actually IS this generation, so the news and the table can never disagree.
+  if (man.peakOverall >= 18) lines.push(`${man.name} is being called the best of his generation. The ${h.house.name}s have produced another one.`);
+  if (man.leagueTitles >= 2) lines.push(`${man.name} lifts another title. That is ${man.leagueTitles} for him, and the ${h.house.name} name is on all of them.`);
+  if (h.house.arc === 'fallen' && man.peakOverall >= 14) lines.push(`The ${h.house.name}s are back. ${man.name} has dragged the family out of the wilderness.`);
+  if (h.house.arc === 'rising') lines.push(`Nobody had heard of the ${h.house.name}s two generations ago. ${man.name} has made sure everybody has now.`);
+  if (h.house.arc === 'ancient' && man.peakOverall <= 12) lines.push(`Quiet years for the ${h.house.name}s. ${man.name} is a professional, and that is all anyone will say of him.`);
+  if (man.peakOverall <= 10) lines.push(`${man.name} has been released. The ${h.house.name} line is thinner than it was.`);
+  if (above) lines.push(`The ${h.house.name}s are still ahead of you, and they know it.`);
+  else lines.push(`You have passed the ${h.house.name}s. They will have noticed.`);
+  return lines[hash32(seed, season * 31, 7) % lines.length];
+}

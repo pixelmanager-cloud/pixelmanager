@@ -19,7 +19,7 @@ import { narrateManager, type PersonCtx } from '../../shared/src/managerNarrate.
 import { pickManagerArc, managerArcById, MGR_TEMPERS, applyMorale, type MgrSituation, type MgrArcEffect, type MgrTemper } from '../../shared/src/managerarc.js';
 import { facilityLevelStory, FACILITY_META, type FacilityKey } from '../../shared/src/facilities.js';
 import { nextHouseTier, renownBidMult, renownPedigree, renownIncomeMult } from '../../shared/src/renown.js';
-import { houseListings, houseOf } from '../../shared/src/houses.js';
+import { houseListings, houseOf, seedHouseIntoSquad, houseNews } from '../../shared/src/houses.js';
 
 // Topbar speaker icons — same 24×24 viewBox for both states so the button never changes shape on toggle.
 const ICON_SPEAKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3.5l4.5-3.5v13L7.5 15H4z"/><path d="M16 9.2a4 4 0 0 1 0 5.6M18.6 6.6a7.5 7.5 0 0 1 0 10.8"/></svg>';
@@ -2081,6 +2081,13 @@ class Game {
       // marking — it is the one finish that stings, and it had no line at all.
       this.feedEvent('near_miss', '😖', undefined, { n: t.pos, from: tierName(tier), to: tierName(tier - 1) });
     }
+    // THE OTHER FAMILIES REPORT IN. The Houses table used to move in silence: you opened the Trophy Room a
+    // generation later and the order had changed, with no memory of it changing. A standing you never
+    // watched move is a scoreboard, not a rivalry.
+    void api.houses().then((d) => {
+      const news = houseNews(this.leagueSeed(), m.season, m.starGen ?? 0, d.mine.renown);
+      if (news) this.pushFeed('👑', news);
+    }).catch(() => { /* the season must never fail on a news line */ });
     const titles = (m.titles ?? 0) + (t.pos === 1 ? 1 : 0);
     const age = (m.starAge ?? 22) + 1;
     // his playing days are over — the heir comes through. Carry any final-season promotion/relegation into
@@ -2257,7 +2264,12 @@ class Game {
     const f = fixtures[idx];
     const opp = seededOpponents(clubName, seed, this.clubTier()).find((o) => o.name === f.oppName)!;
     const short = (opp.name.match(/[A-Z]/g) ?? ['O', 'P', 'P']).join('').slice(0, 3);
-    const oppClub = generateClub('sp-' + opp.seed, opp.name, short, 0xcc4444, opp.strength, opp.seed, true);
+    const rawOpp = generateClub('sp-' + opp.seed, opp.name, short, 0xcc4444, opp.strength, opp.seed, true);
+    // A RIVAL FAMILY'S SON IN THE OTHER SHIRT. Signing one off the market makes the Houses table a shop;
+    // running into one — a name you are chasing up that table, playing against you — makes it a rivalry.
+    const planted = seedHouseIntoSquad(rawOpp, this.leagueSeed(), opp.seed, this.loadMgr().starGen ?? 0, opp.strength);
+    const oppClub = planted.club;
+    if (planted.guest) this.pushFeed('👑', `${planted.guest.name} of the ${planted.guest.house.name}s lines up for ${opp.name} today.`);
     const venue: 'home' | 'away' = f.venue === 'H' ? 'home' : 'away';
     const oppTactics = seededOpponentTactics(opp.seed);
     this.spFixture = { idx, oppClub, oppName: opp.name, oppStrength: opp.strength, venue, oppLineup: autoPickXI(oppClub, oppTactics.formation), oppTactics };

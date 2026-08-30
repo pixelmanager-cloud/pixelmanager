@@ -92,8 +92,7 @@
       .legacy-menu:hover { color: #fff; border-color: var(--muted); }
       #hub-legacy, #hub-club { margin-top: 18px; }
       #hub-legacy .legacy-btn, #hub-club .legacy-btn { width: 100%; }
-      #hub-club .legacy-ico { color: var(--cyan); }
-      #hub-club .legacy-title { color: var(--cyan); }
+      /* (the door's colour now comes from the room it leads to — see THE CHASSIS at the end of this sheet) */
       .hub-sub { font-family: var(--body); font-size: 13px; color: var(--muted); font-weight: normal; }
       .hub-link { float: right; font-family: var(--display); font-size: 12px; letter-spacing: 0.5px; cursor: pointer;
         background: color-mix(in srgb, var(--cyan) 12%, transparent); color: var(--cyan); border: 1px solid color-mix(in srgb, var(--cyan) 40%, transparent); border-radius: 8px; padding: 5px 12px; }
@@ -1549,6 +1548,173 @@
       #ft-potm .potm-lbl { font-family: var(--display); font-size: 11px; letter-spacing: 1px; display: block; opacity: 0.8; }
       @keyframes ftfade { from { opacity: 0; } to { opacity: 1; } }
       @keyframes ftpop { 0% { opacity: 0; transform: scale(0.7); } 60% { transform: scale(1.05); } 100% { opacity: 1; transform: scale(1); } }
+
+      /* ══ THE CHASSIS ══════════════════════════════════════════════════════════════════════════════
+         Six accent colours were fighting on every screen with no hierarchy — cyan headings, pink labels,
+         green buttons, purple menus, gold coins — so nothing on a screen could be more important than
+         anything else. Colour was decoration.
+
+         Here it becomes INFORMATION. Each room owns exactly ONE hue, set as --room on its panel, and
+         everything that wants to be coloured takes it from there: the heading, the primary action, the
+         focus ring, the rules. Walk into a room and its colour tells you where you are before you have
+         read a word. Nothing else is allowed to be tinted — which is what kills the scattering, because
+         only one hue can ever be on screen at a time.
+
+         The exception is SEMANTIC colour, which is reserved and never decorative: green means good, red
+         means bad, amber means take care. Those keep their meaning precisely because they are no longer
+         used to make things look nice.
+
+         Written as an override layer at the end of the sheet rather than as edits threaded through nine
+         hundred lines of existing rules — a game with thirty screens is not a place to do a find-and-
+         replace on colour, and this way the whole pass can be lifted out again in one piece. */
+      :root {
+        /* Neutral grounds. Hue-free on purpose: a ground with its own colour argues with the room's. */
+        --plate:   #14141f;
+        --plate-2: #1c1c2b;
+        --rule:    #33334d;
+        --room:     var(--cyan);      /* every panel overrides this */
+        --room-ink: #06131a;          /* text ON a --room fill; each room sets its own */
+      }
+      /* ── the room hues ── chosen against the scene art already sitting behind each screen ── */
+      #login    { --room: #46cfe6; --room-ink: #04161c; }  /* stadium under lights */
+      #hub      { --room: #46cfe6; --room-ink: #04161c; }  /* home; the game's own colour */
+      #season   { --room: #59c46a; --room-ink: #06170a; }  /* the pitch */
+      #lineup   { --room: #6f9ae0; --room-ink: #050d1a; }  /* the dressing room */
+      #scouting { --room: #a98ce8; --room-ink: #100722; }  /* far-off places */
+      #academy  { --room: #7fb2ef; --room-ink: #04101d; }  /* the academy */
+      #club     { --room: #dfa74e; --room-ink: #1c1104; }  /* brick and scaffolding */
+      #trophies { --room: #e6c76a; --room-ink: #191203; }  /* the hall's gold */
+
+      /* ── THE ART SHOWS THROUGH ──
+         Eight painted rooms were sitting at 16% behind fully opaque panels, doing nothing. The panel is
+         now a pane of dark glass over its room: the scene reads at the edges and through the ground,
+         while every piece of text sits on a solid plate above it so nothing becomes hard to read. */
+      #scene-backdrop { opacity: 0.42; }
+      #scene-backdrop::after {
+        content: ''; position: absolute; inset: 0;
+        background: radial-gradient(ellipse 75% 65% at 50% 45%, transparent 0%, rgba(6,6,12,0.55) 60%, rgba(6,6,12,0.9) 100%);
+      }
+      .panel {
+        background:
+          linear-gradient(180deg, rgba(28,28,43,0.90), rgba(16,16,26,0.94)),
+          radial-gradient(ellipse 90% 50% at 50% 0%, color-mix(in srgb, var(--room) 10%, transparent), transparent 70%);
+        border-color: color-mix(in srgb, var(--room) 30%, var(--rule));
+        box-shadow: 0 0 0 2px #000, 6px 6px 0 rgba(0,0,0,0.45),
+                    inset 0 1px 0 color-mix(in srgb, var(--room) 22%, transparent);
+      }
+      /* Headings and section rules take the room's colour — this is the bulk of the old scattering. */
+      h3 { color: var(--room); }
+      .scout-h4 { color: var(--room); }
+      /* ── PLATES ──
+         One elevation language, and a chunky one: a hard 2px bottom edge rather than a soft blur, which
+         is the idiom pixel art actually uses. Content sits ON something instead of being a rectangle
+         drawn on a rectangle, and it stays readable over the scene art behind it. */
+      .plate, .tr-trophy, .ach, .bloodtree, .mode-card {
+        background: linear-gradient(180deg, var(--plate-2), var(--plate));
+        border: 1px solid var(--rule);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 0 rgba(0,0,0,0.55);
+      }
+      /* ── BUTTONS ──
+         Neutral by default; the room's colour marks the ONE action the room is for. Purple-for-everything
+         meant the primary action and a back link were the same weight. */
+      button { background: linear-gradient(180deg, var(--plate-2), var(--plate)); border-color: #000; }
+      button.primary { background: var(--room); color: var(--room-ink); border-color: #000; }
+      button.active  { background: var(--room); color: var(--room-ink); }
+      /* Semantic, and reserved: these three keep their meaning because nothing decorative uses them. */
+      button.good   { background: var(--good); color: #04140b; }
+      button.danger { background: var(--home); color: #1a0410; border-color: #000; }
+      button.warn   { background: var(--warn); color: #1a1404; }
+      button:focus-visible, select:focus-visible, input:focus-visible, a:focus-visible,
+      [tabindex]:focus-visible, [role="button"]:focus-visible { outline-color: var(--room); }
+      /* The main menu is the game's front door: its buttons are the one place the room hue should fill. */
+      #mm-buttons button.primary, #mm-newgame button.primary { background: var(--room); color: var(--room-ink); border-color: #000; }
+
+      /* ── DOORS ──
+         A tile that leads somewhere is tinted with the colour of the room it LEADS TO, not the room it
+         sits in. That looks like an exception to "one hue per room" and is really the same rule doing more
+         work: if a colour tells you where you are, then a door wearing another room's colour tells you
+         where it goes, and the hub reads as a building rather than a menu. The hub's three doors were
+         already three different colours — they were just arbitrary ones. */
+      .legacy-btn {
+        background: color-mix(in srgb, var(--room) 9%, transparent);
+        border-color: color-mix(in srgb, var(--room) 32%, transparent);
+      }
+      .legacy-btn:hover { border-color: color-mix(in srgb, var(--room) 60%, transparent); }
+      .legacy-btn .legacy-title, .legacy-btn .legacy-go, .legacy-btn .legacy-ico { color: var(--room); }
+      #hub-club   { --room: #dfa74e; }   /* → the facilities: brick and scaffolding */
+      #hub-legacy { --room: #e6c76a; }   /* → the trophy hall: gold */
+      .hub-link   { --room: #7fb2ef;     /* → the academy */
+        background: color-mix(in srgb, var(--room) 12%, transparent); color: var(--room);
+        border-color: color-mix(in srgb, var(--room) 40%, transparent); }
+      .hub-link:hover { background: color-mix(in srgb, var(--room) 22%, transparent); }
+
+      /* ── THE TEAM SHEET ──
+         Every row of the lineup editor was a saturated pastel block, which made the busiest screen in the
+         game the loudest one. The cause is a bare `.role-GK { background }` rule written for the 36px
+         position CHIP — and the row carries the same class, so an eleven-row team sheet was inheriting a
+         fill meant for a badge.
+         The position colour is real information and it stays; it just belongs on the EDGE. Each row is now
+         a plate with a coloured left border, exactly as `.slot` was already written to do before the chip
+         rule overrode it. The chips keep their fill, because on a chip that is the point. */
+      .slot.role-GK, .slot.role-DF, .slot.role-MF, .slot.role-FW {
+        background: linear-gradient(180deg, var(--plate-2), var(--plate));
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 2px 0 rgba(0,0,0,0.45); }
+      /* out of position keeps its amber wash — a warning that has to survive the plate */
+      .slot.slot-oop { background: linear-gradient(180deg,
+        color-mix(in srgb, var(--warn) 14%, var(--plate-2)), var(--plate)) !important; }
+
+      /* ── THE SCOREBOARD ──
+         The score was green, glowing, and pulsing — which used a SEMANTIC colour decoratively. A scoreline
+         is not "good", it is neutral information, and green-with-a-glow reads as an arcade high score
+         rather than as football. It is now a broadcast scoreboard: one plate, the two kit colours
+         identifying the sides (the same colours the possession bar already uses, so a glance tells you
+         which half of the bar is yours), and the numbers in plain white with tabular figures so they stop
+         shifting as the score changes. The pulse survives — a goal SHOULD hit — but it scales rather than
+         flaring green, so it still lands without borrowing a meaning it does not have. */
+      #hud { gap: 0; background: linear-gradient(180deg, var(--plate-2), var(--plate));
+        border: 1px solid var(--rule); box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 0 rgba(0,0,0,0.55);
+        padding: 0 0 0 0; overflow: hidden; }
+      #hud #home-name, #hud #away-name { font-size: 22px; padding: 10px 16px; position: relative; }
+      /* the kit stripe: which side is which, without a legend */
+      #hud #home-name::before, #hud #away-name::before {
+        content: ''; position: absolute; top: 0; bottom: 0; width: 5px; }
+      #hud #home-name::before { left: 0; background: var(--home); }
+      #hud #away-name::before { right: 0; background: var(--away); }
+      #hud .score { color: #fff; background: rgba(0,0,0,0.45); border: none;
+        border-left: 1px solid var(--rule); border-right: 1px solid var(--rule);
+        text-shadow: none; font-variant-numeric: tabular-nums; padding: 10px 18px; }
+      #hud .score.pulse { animation: scorepop 0.55s ease-out; }
+      @keyframes scorepop { 0% { transform: scale(1); } 30% { transform: scale(1.28); } 100% { transform: scale(1); } }
+      #hud #clock { padding: 0 14px; color: var(--muted); font-variant-numeric: tabular-nums; }
+      #hud button { margin: 0 4px; }
+      #hud button:first-of-type { margin-left: 8px; }
+
+      /* ── THE DECISION ──
+         A manager arc is the best writing in the game and the moment the season turns on, and it was
+         rendering as three hairline rectangles — the same weight as a list row. A choice you will live
+         with for several seasons should look like something you pick UP. Each option is a plate with a
+         real edge, it lifts under the cursor, and the room's colour arrives only on the one you are
+         about to take, so the screen reads as a decision rather than as a form. */
+      .mgr-arc { border-color: color-mix(in srgb, var(--room) 55%, transparent);
+        background: linear-gradient(180deg, color-mix(in srgb, var(--room) 7%, transparent), transparent 60%); }
+      .mgr-arc-head { color: var(--room); opacity: 1; }
+      .mgr-arc-choice {
+        background: linear-gradient(180deg, var(--plate-2), var(--plate));
+        border: 1px solid var(--rule);
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 0 rgba(0,0,0,0.55);
+        padding: 11px 14px;
+        transition: transform .1s ease, border-color .1s ease, box-shadow .1s ease; }
+      .mgr-arc-choice:hover {
+        border-color: var(--room);
+        background: linear-gradient(180deg, color-mix(in srgb, var(--room) 12%, var(--plate-2)), var(--plate));
+        transform: translateY(-2px);
+        box-shadow: inset 0 1px 0 color-mix(in srgb, var(--room) 30%, transparent), 0 4px 0 rgba(0,0,0,0.55); }
+      .mgr-arc-choice:active { transform: translateY(0); box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 1px 0 rgba(0,0,0,0.55); }
+
+      /* The trophy hall sets its own ground; it is a room with a floor, not a pane of glass. */
+      #trophies { background:
+          radial-gradient(ellipse 120% 60% at 50% -10%, rgba(230,199,106,0.10) 0%, transparent 60%),
+          linear-gradient(rgba(18,15,23,0.94), rgba(12,10,16,0.96)); }
     </style>
   </head>
   <body>
