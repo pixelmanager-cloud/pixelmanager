@@ -1365,6 +1365,27 @@
       .cg-heir-card.on { border-color: var(--good); background: rgba(255,255,255,0.06); }
       /* A cousin is an alternative to the direct line, not another son, so the grid breaks for a label
          rather than mixing the two into one undifferentiated row of names. */
+      /* ── The Houses of the Game — a standing, so it reads as a table, not a card grid ── */
+      .houses { margin-bottom: 26px; }
+      .hs-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin: 10px 0 6px; }
+      .hs-mine { font-family: var(--display); font-size: 20px; color: var(--good); }
+      .hs-sub { font-family: var(--body); font-size: 15px; opacity: 0.72; }
+      .hs-bar { height: 6px; background: rgba(255,255,255,0.10); margin-bottom: 12px; }
+      .hs-bar > b { display: block; height: 100%; background: var(--good); }
+      .hs-table { display: flex; flex-direction: column; }
+      .hs-row { display: grid; grid-template-columns: 32px 1fr auto 88px; gap: 10px; align-items: center;
+        padding: 7px 10px; font-family: var(--body); font-size: 16px;
+        border-bottom: 1px solid rgba(255,255,255,0.07); }
+      /* Your own house has to be findable at a glance in a table of thirteen, without turning the row
+         into a different component — a left rule and a lift of the ground is enough. */
+      .hs-row.me { background: rgba(255,255,255,0.07); box-shadow: inset 3px 0 0 var(--good); }
+      .hs-rank { opacity: 0.5; text-align: right; font-variant-numeric: tabular-nums; }
+      .hs-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      .hs-you { color: var(--good); font-size: 13px; letter-spacing: 0.06em; text-transform: uppercase; }
+      .hs-tier { opacity: 0.7; font-size: 14px; white-space: nowrap; }
+      .hs-renown { text-align: right; font-variant-numeric: tabular-nums; }
+      .hs-foot { font-family: var(--body); font-size: 15px; opacity: 0.7; margin-top: 10px; }
+      @media (max-width: 560px) { .hs-row { grid-template-columns: 26px 1fr 78px; } .hs-tier { display: none; } }
       .cg-heir-split { grid-column: 1 / -1; font-family: var(--body); font-size: 15px; opacity: 0.62;
         text-align: center; letter-spacing: 0.04em; margin: 4px 0 -2px; }
       .cg-cousin { opacity: 0.85; }

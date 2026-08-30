@@ -22,6 +22,7 @@ import {
   generatePool, trialistAt, LOANEE_CAP, DESTINATIONS, destinationById, rollMission, travelMs as travelMsPure, previewOdds,
   gaffersDiaryEntry,
   rollGenes, updateMorale, moraleEffects, rollMatchInjuries,
+  houseRenown, branchCareer, rivalStandings, type HouseMember,
   tokenToPlayer, tokenContract, legendCardOf, loadCareer, actWithNarration, careerState, graduatedFields, careerCast, fillArcText,
   rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, foundingNameFor,
   type FacilityKey, type MissionRow, type Token, type CareerAction,
@@ -895,6 +896,48 @@ export const api = {
       }),
     };
   },
+  /** THE HOUSES OF THE GAME — your family's standing, and the twelve rival dynasties it is measured
+   *  against. The rivals are derived from the save seed rather than stored, so nothing needs persisting or
+   *  migrating and a save opened five generations later reconstructs their entire history exactly. Both
+   *  sides go through the same `houseRenown`, because a table where the rivals are graded on a different
+   *  curve is a table that means nothing. */
+  houses: async () => {
+    await ensureActive();
+    const model = getActiveModel();
+    const members: HouseMember[] = model.tokens.map((t) => {
+      let hon: any = null;
+      try { hon = t.career_honours_json ? JSON.parse(t.career_honours_json) : null; } catch { /* none */ }
+      const played = ((t as any).branch ?? 'played') !== 'sibling';
+      if (!played && !hon) {
+        // He played somewhere; the game just never watched. Without this the branches sit at zero and
+        // contribute nothing, in the one place the design says they should count.
+        const c = branchCareer(((t as any).branch_seed ?? 0) >>> 0, t.pedigree ?? 0);
+        return { name: t.name, generation: t.generation ?? 0, played: false, ...c };
+      }
+      return {
+        name: t.name, generation: t.generation ?? 0, played,
+        peakOverall: hon?.peakOverall ?? t.peak_overall ?? 0,
+        caps: hon?.caps ?? 0,
+        leagueTitles: t.ach_league ?? 0,
+        cups: t.ach_cup ?? 0,
+        seasons: t.ach_seasons ?? 0,
+        bigNights: hon?.bigNights?.length ?? 0,
+      };
+    });
+    const mine = houseRenown(members);
+    const generations = Math.max(0, ...model.tokens.map((t) => t.generation ?? 0));
+    // The same derivation main.ts uses for the league, so the rival families belong to THIS save's world
+    // rather than to a second, unrelated one.
+    const handle = getActiveSlotId() ?? OWNER;
+    const seed = [...handle].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) >>> 0;
+    const rivals = rivalStandings(seed, generations);
+    const table = [
+      ...rivals.map((r) => ({ name: r.house.name, blurb: r.house.blurb, arc: r.house.arc, renown: r.renown, tier: r.tier, latest: r.latest.name, latestPeak: r.latest.peakOverall, you: false })),
+      { name: model.profile.name, blurb: 'Your house.', arc: 'yours', renown: mine.renown, tier: mine.tier, latest: mine.greatest?.name ?? '—', latestPeak: 0, you: true },
+    ].sort((a, b) => b.renown - a.renown);
+    return { mine, table, generations };
+  },
+
   legends: async () => {
     await ensureActive();
     const rows = await localStore.legaciesFor(OWNER);

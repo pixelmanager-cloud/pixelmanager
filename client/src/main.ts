@@ -18,6 +18,7 @@ import { commentaryExtra, fillCm, type CommentaryBranch } from '../../shared/src
 import { narrateManager, type PersonCtx } from '../../shared/src/managerNarrate.js';
 import { pickManagerArc, managerArcById, MGR_TEMPERS, applyMorale, type MgrSituation, type MgrArcEffect, type MgrTemper } from '../../shared/src/managerarc.js';
 import { facilityLevelStory, FACILITY_META, type FacilityKey } from '../../shared/src/facilities.js';
+import { nextHouseTier } from '../../shared/src/renown.js';
 
 // Topbar speaker icons — same 24×24 viewBox for both states so the button never changes shape on toggle.
 const ICON_SPEAKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3.5l4.5-3.5v13L7.5 15H4z"/><path d="M16 9.2a4 4 0 0 1 0 5.6M18.6 6.6a7.5 7.5 0 0 1 0 10.8"/></svg>';
@@ -2543,11 +2544,13 @@ class Game {
         return `<div class="ach ${got ? 'got' : 'locked'}"><span class="ach-ico">${got ? a.icon : '🔒'}</span><div class="ach-txt"><div class="ach-name">${a.name}</div><div class="ach-desc">${a.desc}</div></div></div>`;
       }).join('') + `</div>`;
       const achSection = `<h4 class="scout-h4" style="margin-top:24px;">🏅 ACHIEVEMENTS <span class="ach-count">${gotCount}/${ACHIEVEMENTS.length}</span></h4>` + achGrid;
-      $('trophies-body').innerHTML = `<div id="family-record-host"></div>` + summary
+      $('trophies-body').innerHTML = `<div id="houses-host"></div><div id="family-record-host"></div>` + summary
         + `<h4 class="scout-h4">🏆 TROPHY CABINET</h4>` + cabinet
         + `<h4 class="scout-h4" style="margin-top:24px;">🌳 BLOODLINES</h4><div class="scout-sub">The dynasties you've built — each line is a bloodline across the generations, newest at the bottom.</div>` + bloodlines
         + retiredSection
         + achSection;
+      const hsHost = document.getElementById('houses-host');
+      if (hsHost) void this.renderHouses(hsHost);       // async; the rest of the room renders immediately
       const frHost = document.getElementById('family-record-host');
       if (frHost) void this.renderFamilyTree(frHost);   // async; the rest of the room renders immediately
       $('trophies-body').querySelectorAll('.tr-retire').forEach((el) => el.addEventListener('click', () => {
@@ -2910,6 +2913,42 @@ class Game {
    *  it grows upward. Generations are ranks, siblings share a rank, and a curve joins each son to his
    *  father — so a branch reads as a branch at a glance.
    */
+  /** THE HOUSES OF THE GAME. A dynasty needs somebody to be a dynasty against: renown on its own is a
+   *  number that goes up, but renown with twelve other families climbing the same ladder is a STANDING —
+   *  and a standing is what you play for across generations the way a league table is what you play for
+   *  across a season. Your own house sits in the table on the same terms as the rest. */
+  private async renderHouses(host: HTMLElement) {
+    let d: any;
+    try { d = await api.houses(); } catch { host.innerHTML = ''; return; }
+    if (!d?.table?.length) { host.innerHTML = ''; return; }
+    const me = d.table.find((r: any) => r.you);
+    const myPlace = d.table.findIndex((r: any) => r.you) + 1;
+    const next = nextHouseTier(d.mine.renown);
+    const rows = d.table.map((r: any, i: number) => {
+      const rank = i + 1;
+      return `<div class="hs-row${r.you ? ' me' : ''}" title="${r.blurb.replace(/"/g, '&quot;')}">`
+        + `<span class="hs-rank">${rank}</span>`
+        + `<span class="hs-name">${r.name}${r.you ? ' <b class="hs-you">you</b>' : ''}</span>`
+        + `<span class="hs-tier">${r.tier.icon} ${r.tier.name}</span>`
+        + `<span class="hs-renown">${r.renown.toLocaleString()}</span></div>`;
+    }).join('');
+    // The header states the two things a standing is: where you are, and what it would take to move.
+    const head = `<div class="hs-head"><span class="hs-mine">${d.mine.tier.icon} ${d.mine.tier.name}</span>`
+      + `<span class="hs-sub">${d.mine.renown.toLocaleString()} renown · ${myPlace}${myPlace === 1 ? 'st' : myPlace === 2 ? 'nd' : myPlace === 3 ? 'rd' : 'th'} of ${d.table.length}`
+      + (next ? ` · ${next.need.toLocaleString()} to ${next.tier.name}` : ' · nothing above this') + `</span></div>`;
+    const bar = next ? `<div class="hs-bar"><b style="width:${Math.round(next.progress * 100)}%"></b></div>` : '';
+    // What the branches contributed is worth saying out loud — it is the one number that tells the player
+    // the brothers he passed over were not wasted.
+    const foot = d.mine.greatest
+      ? `<div class="hs-foot">The name rests on <b>${d.mine.greatest.name}</b>${d.mine.fromBranches > 0
+          ? `, and ${Math.round((d.mine.fromBranches / Math.max(1, d.mine.renown)) * 100)}% of it was earned by the sons you passed over.` : '.'}</div>`
+      : '';
+    host.innerHTML = `<div class="houses"><h4 class="scout-h4">👑 THE HOUSES OF THE GAME</h4>`
+      + `<div class="scout-sub">Every family climbing the same ladder. Renown never falls — a quiet generation adds little, it never takes anything back.</div>`
+      + head + bar + `<div class="hs-table">${rows}</div>` + foot + `</div>`;
+    void me;
+  }
+
   private async renderFamilyTree(host: HTMLElement) {
     let nodes: any[] = [];
     try { nodes = (await api.bloodline()).nodes ?? []; } catch { host.innerHTML = ""; return; }

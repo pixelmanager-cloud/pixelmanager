@@ -7,6 +7,8 @@ export * from './teams.js';
 export * from './engine.js';
 export * from './contracts.js';
 export * from './prestige.js';
+export * from './renown.js';
+export * from './houses.js';
 export * from './morale.js';
 export * from './legacy.js';
 export * from './staking.js';
