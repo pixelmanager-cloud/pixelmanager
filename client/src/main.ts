@@ -2881,6 +2881,22 @@ class Game {
         ? `<h4 class="scout-h4" style="margin-top:24px;">🎽 RETIRED NUMBERS</h4><div class="scout-sub">Shirts hung up forever for the club's immortals — no future player wears these.</div>`
           + `<div class="tr-cabinet">` + retired.map((r) => `<div class="tr-trophy"><div class="tr-trophy-ico">#${r.n}</div><div class="tr-trophy-name">${r.name}</div><div class="tr-trophy-sub">retired</div></div>`).join('') + `</div><div class="troom-shelf"></div>`
         : '';
+      // WHAT THE FAMILY LEFT ON THE PLACE ITSELF. 283 manager-arc choices set a `clubLegacy` — a stand
+      // renamed, a number retired, a rivalry started, the borehole under the training pitch — and its own
+      // doc-comment calls it "A PERMANENT mark on the club, surviving the manager and every succession —
+      // the dynasty accumulates a history you can read back". It was written to the save at main.ts:3199,
+      // carefully preserved across successions, and READ BY NOTHING. The player could never read it back.
+      // This is the room whose whole job is the record, so it belongs here.
+      const KIND_ICON: Record<string, string> = { stand: '🏟️', rivalry: '⚔️', number: '🎽', reputation: '📣', tradition: '🕯️' };
+      const KIND_LABEL: Record<string, string> = { stand: 'the ground', rivalry: 'a rivalry', number: 'a shirt', reputation: 'the club\'s name', tradition: 'a tradition' };
+      const marks = (this.loadMgr()?.clubLegacy ?? []).slice().sort((a, b) => a.season - b.season);
+      const legacySection = marks.length
+        ? `<h4 class="scout-h4" style="margin-top:24px;">🏛️ WHAT THE FAMILY CHANGED</h4>`
+          + `<div class="scout-sub">Marks left on the club itself. These outlast every manager who made them.</div>`
+          + `<div class="tr-marks">` + marks.map((m) => `<div class="tr-mark"><span class="tr-mark-ico">${KIND_ICON[m.kind] ?? '🏛️'}</span>`
+            + `<span class="tr-mark-text">${m.label}</span>`
+            + `<span class="tr-mark-meta">${KIND_LABEL[m.kind] ?? m.kind} · season ${m.season}</span></div>`).join('') + `</div>`
+        : '';
       const seasons = honours.length ? Math.max(...honours.map((h) => h.season_number)) : 0;
       // THE MASTHEAD. This was an emoji sentence — "🏆 2 titles · 🌳 1 bloodline · ⭐ 3 legends" — which is
       // the same information a status bar carries, in a room whose entire job is to make the record feel
@@ -2916,6 +2932,7 @@ class Game {
         + `<h4 class="scout-h4">🏆 TROPHY CABINET</h4>` + cabinet
         + `<h4 class="scout-h4" style="margin-top:24px;">🌳 BLOODLINES</h4><div class="scout-sub">The dynasties you've built — each line is a bloodline across the generations, newest at the bottom.</div>` + bloodlines
         + retiredSection
+        + legacySection
         + achSection;
       const hsHost = document.getElementById('houses-host');
       if (hsHost) void this.renderHouses(hsHost);       // async; the rest of the room renders immediately
