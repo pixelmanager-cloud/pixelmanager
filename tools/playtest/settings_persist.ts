@@ -145,6 +145,41 @@ function sheetWrite(owner: ts.MethodDeclaration | undefined): ts.ObjectLiteralEx
   return found;
 }
 
+// A3a / A3b — THE TWO THINGS READING ONE NODE CANNOT SEE.
+//
+// `sheetWrite` finds the FIRST `setStandingOrders` call in the body. A mutation kept the correct write and
+// then immediately made a second one with a bare sheet: last write wins, 12/12 ok. Another wrapped the
+// correct writer in `if (this.editorMode === 'standing')` — the branch that is never true on a matchday,
+// which is the original defect bit-for-bit — and it also passed, because the literal it reads was perfect.
+function writeCalls(owner: ts.MethodDeclaration | undefined): ts.CallExpression[] {
+  const out: ts.CallExpression[] = [];
+  if (!owner?.body) return out;
+  const visit = (n: ts.Node): void => {
+    if (ts.isCallExpression(n) && ts.isPropertyAccessExpression(n.expression)
+      && n.expression.name.text === 'setStandingOrders') out.push(n);
+    ts.forEachChild(n, visit);
+  };
+  visit(owner.body);
+  return out;
+}
+/** Is this call gated on a condition mentioning `editorMode`? */
+function gatedOnEditorMode(node: ts.Node): boolean {
+  let cur: ts.Node | undefined = node;
+  while (cur) {
+    if (ts.isIfStatement(cur) && /editorMode/.test(cur.expression.getText(src))) return true;
+    if (ts.isConditionalExpression(cur) && /editorMode/.test(cur.condition.getText(src))) return true;
+    if (ts.isMethodDeclaration(cur)) return false;
+    cur = cur.parent;
+  }
+  return false;
+}
+
+const writes = writeCalls(persist);
+check(writes.length === 1,
+  `persistTeamSheet writes the sheet exactly once (found ${writes.length}) — a later write would silently win`);
+check(writes.every((c) => !gatedOnEditorMode(c)),
+  'the write is not gated on editorMode — that branch is never true on a matchday, which is the original defect');
+
 const written = sheetWrite(persist);
 check(!!written, 'persistTeamSheet() hands an object literal to api.setStandingOrders');
 const props = new Set<string>();

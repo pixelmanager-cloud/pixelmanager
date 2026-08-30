@@ -40,6 +40,36 @@ function methodBody(name: string): string {
   return found;
 }
 
+/** Dynasty fields that `resetMgrForHeir` MUTATES on the source object before spreading it.
+ *
+ *  Reading only the written literal is not enough. A mutation set `prior.titles = 0` and seven siblings
+ *  three lines ABOVE the spread, left the literal untouched, and this probe printed
+ *  `ok resetMgrForHeir carries \`titles\` across the handover` — the whole dynasty wipe restored, certified.
+ *  A field is carried only if nothing resets it on EITHER side of the spread. */
+function mutatedBeforeSpread(): Set<string> {
+  const hit = new Set<string>();
+  const visit = (n: ts.Node): void => {
+    if (ts.isMethodDeclaration(n) && n.name && ts.isIdentifier(n.name) && n.name.text === 'resetMgrForHeir' && n.body) {
+      const seek = (m: ts.Node): void => {
+        // `prior.titles = 0`, `prior.staff.length = 0`, `delete prior.titles`
+        if (ts.isBinaryExpression(m) && m.operatorToken.kind === ts.SyntaxKind.EqualsToken
+          && ts.isPropertyAccessExpression(m.left)) {
+          let root: ts.Expression = m.left.expression;
+          while (ts.isPropertyAccessExpression(root)) root = root.expression;
+          if (ts.isIdentifier(root) && root.text !== 'this') hit.add(m.left.name.text);
+        }
+        if (ts.isDeleteExpression(m) && ts.isPropertyAccessExpression(m.expression)) hit.add(m.expression.name.text);
+        ts.forEachChild(m, seek);
+      };
+      seek(n.body);
+      return;
+    }
+    ts.forEachChild(n, visit);
+  };
+  visit(ast);
+  return hit;
+}
+
 /** The property names actually SET in the object literal `resetMgrForHeir` writes back. */
 function resetKeys(): { keys: Set<string>; emptied: Set<string> } {
   const keys = new Set<string>(); const emptied = new Set<string>();
@@ -77,10 +107,12 @@ check(!/\bthis\.clearMgr\(\)/.test(succBody),
 // 2. the reset must PRESERVE every field the dynasty accumulates
 const reset = methodBody('resetMgrForHeir');
 const { keys: resetSets, emptied: resetEmptied } = resetKeys();
+const mutatedFields = mutatedBeforeSpread();
 check(/\.\.\.prior/.test(reset), 'resetMgrForHeir spreads the prior state rather than replacing it');
 for (const field of ['titles', 'contTitles', 'wcWins', 'staff', 'arcPrestige', 'clubLegacy', 'arcTags', 'lastRankIdx']) {
   // a preserved field must NOT appear as an explicit reset key inside the object literal
-  check(!resetSets.has(field), `resetMgrForHeir carries \`${field}\` across the handover`);
+  check(!resetSets.has(field) && !mutatedFields.has(field),
+    `resetMgrForHeir carries \`${field}\` across the handover` + (mutatedFields.has(field) ? ' (it is reset by mutating the source before the spread)' : ''));
 }
 
 // 3. `founding` must not be derived from the very state the reset produces
