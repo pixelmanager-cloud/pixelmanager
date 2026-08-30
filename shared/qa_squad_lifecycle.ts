@@ -28,6 +28,30 @@ const young = { ...mintSquadPlayer('q2', 'FW', 10, 77), age: 20 };
 const grown = advanceSquadPlayer(young, 3);
 check(grown.age === 21, 'age advances by one season');
 check(overall(grown) >= overall(young), `a 20yo does not get worse (${overall(young)} -> ${overall(grown)})`);
+// ...WHICH IS A TIE, AND A TIE SATISFIES `>=`. On the unmutated tree that check prints `13 -> 13`, and it
+// passed with youth development REMOVED ENTIRELY and again with the training-ground level ignored. Growth
+// is about +0.2 a season and `overall()` is an integer, so one player over one season is below the
+// resolution of the thing being measured: over 200 youngsters, 146 show no change in `overall` at all.
+//
+// A cohort makes it exact rather than sampled — `advanceSquadPlayer` is pure and draws no rng, so this is
+// arithmetic, not statistics.
+{
+  const ROLES = ['GK', 'DF', 'MF', 'FW'] as const;
+  const COHORT = 200, SEASONS = 4;
+  let poorTotal = 0, richTotal = 0, outgrown = 0, developed = 0;
+  for (let i = 0; i < COHORT; i++) {
+    const kid = { ...mintSquadPlayer(`ydev${i}`, ROLES[i % 4], 6 + (i % 12), 1000 + i * 7919), age: 17 + (i % 5) };
+    let poor: Player = kid, rich: Player = kid;
+    for (let s = 0; s < SEASONS; s++) { poor = advanceSquadPlayer(poor, 1); rich = advanceSquadPlayer(rich, 5); }
+    poorTotal += overall(poor); richTotal += overall(rich);
+    if (overall(rich) > overall(poor)) outgrown++;
+    if (overall(poor) > overall(kid)) developed++;
+  }
+  const gap = (richTotal - poorTotal) / COHORT;
+  check(developed >= 80, `youth actually develops over ${SEASONS} seasons (${developed}/${COHORT} improved)`);
+  check(outgrown >= 60, `a level-5 training ground outgrows a level-1 (${outgrown}/${COHORT} youngsters)`);
+  check(gap >= 0.4, `...and by a real margin (+${gap.toFixed(2)} overall a head)`);
+}
 const vet = { ...mintSquadPlayer('q3', 'DF', 14, 88), age: 33 };
 const faded = advanceSquadPlayer(vet, 1);
 check(overall(faded) <= overall(vet), `a 33yo declines (${overall(vet)} -> ${overall(faded)})`);
