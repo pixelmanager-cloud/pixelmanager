@@ -440,7 +440,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
     beats: {
       reunion: {
         id: 'reunion',
-        prompt: 'A decade ago a title slipped away, a dressing-room blame-storm turned ugly, and he and his old strike partner said things that ended a brotherhood. Now a testimonial throws them into the same room for the first time since. The old friend catches his eye across the buffet and doesn’t look away.',
+        prompt: 'Years ago now, back when they were both coming through, a title slipped away, a dressing-room blame-storm turned ugly, and he and his old strike partner said things that ended a brotherhood. Now a testimonial throws them into the same room for the first time since. The old friend catches his eye across the buffet and doesn’t look away.',
         choices: [
           { id: 'cross-room', label: 'Cross the room first', desc: 'Be the bigger man, offer the hand', outcome: 'He walks over before he can talk himself out of it and says the sorry he’s owed for ten years. The old friend’s face crumples, and two stubborn men finally put it down.', effect: { meters: { peers: 14, fans: 4 }, attr: { leadership: 2, composure: 1 }, tag: 'olive-branch' }, next: 'rebuild' },
           { id: 'stay-cold', label: 'Keep his distance', desc: 'Ten years of silence don’t undo in an evening', outcome: 'He nods once, coldly, and keeps to his side of the room, pride still sitting where the friendship used to. He leaves early, and the knot in his chest travels home with him.', effect: { meters: { peers: -4 }, attr: { aggression: 1, composure: 1 }, tag: 'still-cold' }, next: 'rebuild' },
@@ -580,7 +580,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
   // 24 — a SECOND CHILD arriving in the middle of a title run
   {
     id: 'rel-second-child', title: 'Two Under Three, Top of the League', icon: '🍼', category: 'relationship',
-    minTurn: 56, maxTurn: 110, weight: 3, first: 'due',
+    minTurn: 100, maxTurn: 110, weight: 3, first: 'due',
     beats: {
       due: {
         id: 'due',

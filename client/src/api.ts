@@ -16,7 +16,7 @@ import {
   mintHeirs, heirCount, familyTrait, nephewCount, BRANCHES_KEPT,
   transferList, transferFee, sellValue, squadSaleValue, incomingBid, MIN_SQUAD, MAX_SQUAD,
   signSquadContract, staggeredContractSeasons, advanceSquad, squadSeasonsLeft, squadRenewCost, squadSeasonWage, squadStorylines,
-  contractDemand, evaluateContractOffer, wageForLength,
+  contractDemand, evaluateContractOffer, wageForLength, lengthPremiumFor,
   FACILITY_KEYS, FACILITY_META, MAX_LEVEL, upgradeCost, effectAt, seasonFacilityIncome, squadMarketability,
   seasonUpkeep, facilityUpkeep, applyDisrepair, mothballRefund, facLevel,
   youthPoolBonus, youthUpgradeChance, dormIntakeBonus, scoutHitMult, scoutCostDiscount, scoutExtraTrips,
@@ -468,7 +468,7 @@ export const api = {
     if (t.state !== 'pro') throw apiErr('not a pro under contract');
     const ci = tokenContract(t, model.profile.season);
     const p = t.personality ?? undefined;
-    const lengthPremium = (p === 'maverick' || p === 'mercurial') ? 0.14 : (p === 'leader' || p === 'workhorse') ? -0.07 : 0.05;
+    const lengthPremium = lengthPremiumFor(p);   // one copy of the rule, in contracts.ts
     return { baseWage: ci.extendCost, prefLength: ci.lengthSeasons, minLength: 2, maxLength: 6, lengthPremium, seasonsLeft: ci.seasonsLeft, coins: model.profile.coins };
   },
   /** Make a contract OFFER (wage × length) to the star — he accepts / counters / rejects. On accept the
@@ -482,7 +482,7 @@ export const api = {
     const season = model.profile.season;
     const ci = tokenContract(t, season);
     const p = t.personality ?? undefined;
-    const lengthPremium = (p === 'maverick' || p === 'mercurial') ? 0.14 : (p === 'leader' || p === 'workhorse') ? -0.07 : 0.05;
+    const lengthPremium = lengthPremiumFor(p);   // one copy of the rule, in contracts.ts
     const demand = { baseWage: ci.extendCost, prefLength: ci.lengthSeasons, minLength: 2, maxLength: 6, lengthPremium };
     const result = evaluateContractOffer(demand, Math.round(wage), Math.round(length));
     if (result.outcome !== 'accept') return { outcome: result.outcome, askWage: result.askWage, note: result.note, coins: model.profile.coins };

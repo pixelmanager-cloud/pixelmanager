@@ -70,7 +70,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-hundredth-goal', title: 'The Hundredth', icon: '💯', category: 'triumph',
-    minTurn: 56, maxTurn: 116, weight: 2, first: 'open',
+    minTurn: 104, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -92,7 +92,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-first-cap', title: 'The First Cap', icon: '🎽', category: 'triumph',
-    minTurn: 46, maxTurn: 99, weight: 2, first: 'open',
+    minTurn: 66, maxTurn: 99, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -136,7 +136,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
   },
   {
     id: 'tri-club-record', title: 'Into the Books', icon: '📖', category: 'triumph',
-    minTurn: 62, maxTurn: 116, weight: 2, first: 'open',
+    minTurn: 96, maxTurn: 116, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -162,7 +162,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
     beats: {
       open: {
         id: 'open',
-        prompt: 'A decade and more in the same shirt, and the club grants him a testimonial — a whole evening in his honour, old teammates flying in, the ground selling out to say thank you. What does he want the night to be?',
+        prompt: 'Boy and man in the same shirt — the whole of him, from the academy gates to now — and the club grants him a testimonial — a whole evening in his honour, old teammates flying in, the ground selling out to say thank you. What does he want the night to be?',
         choices: [
           { id: 'charity', label: 'Give it all away', desc: 'Send every penny to the local hospital', outcome: 'He donates the entire gate to the children’s ward down the road. The city loves him more than ever, and rightly.', effect: { attr: { leadership: 1, teamwork: 1 }, meters: { fans: 18, authority: 6 }, tag: 'giver' }, next: 'lap' },
           { id: 'reunion', label: 'Make it a reunion', desc: 'Fill the pitch with every old friend', outcome: 'He gathers the whole cast of his career for one last kickabout, laughter echoing round the old ground.', effect: { form: 0.05, meters: { peers: 16, family: 8 }, attr: { composure: 1 }, tag: 'reunion' }, next: 'lap' },

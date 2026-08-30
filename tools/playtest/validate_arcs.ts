@@ -174,6 +174,32 @@ const ITEM_RULES: Array<{ what: string; minIdx: number; re: RegExp }> = [
   { what: 'gambling (18+)',  minIdx: 4, re: /casino|betting|a flutter/i },
   { what: 'property (18+)',  minIdx: 4, re: /mortgage|his own place|buy(?:s)? a house/i },
 ];
+// AN ARC MUST NOT DESCRIBE A CAREER THIS GAME CANNOT CONTAIN. Same idea as the lifestyle rules below, on
+// the other side of the age gate: a premise that presupposes a long senior career, reachable from a chapter
+// where it cannot be true. Measured before this: tri-hundredth-goal ("ninety-nine career goals") and
+// sig-title-decider firing at 18 in the Youth Team, and crisis-lost-armband stripping a 17-year-old of a
+// captaincy he never held and handing it to "a younger man". Two arcs also claimed "a decade and more in
+// the same shirt" and "a decade ago", which the career — ages 10 to 25, senior debut around 17-19 — cannot
+// hold at ANY turn; those were rewritten rather than re-gated.
+const SENIOR_RULES: Array<{ what: string; minIdx: number; re: RegExp }> = [
+  { what: 'a career century of goals (Establishing)', minIdx: 6, re: /ninety-nine career goals|the hundredth\b/i },
+  { what: 'having held the captaincy (First Team+)',  minIdx: 5, re: /the captaincy is gone/i },
+  { what: 'a senior title race (First Team+)',        minIdx: 5, re: /champions, on the last kick|the last day of the season, level on points/i },
+  { what: 'a long-standing club record (First Team+)', minIdx: 5, re: /club record books for forty years/i },
+  { what: 'a decade at one club — impossible by 25',  minIdx: 7, re: /a decade and more in the same shirt|\bA decade ago\b/i },
+];
+for (const a of ARCS) {
+  const startIdx = bandAt(Math.min(Math.max(0, a.minTurn), TOTAL_TURNS - 1)).index;
+  const text = JSON.stringify(a.beats);
+  for (const rule of SENIOR_RULES) {
+    if (startIdx >= rule.minIdx) continue;
+    if (rule.re.test(text)) {
+      console.log(`  FAIL [${a.id}] can first fire in ${CH[startIdx]} but its premise needs ${rule.what}`);
+      ageFails++;
+    }
+  }
+}
+
 for (const it of LIFESTYLE) {
   for (const rule of ITEM_RULES) {
     if (it.minChapterIdx >= rule.minIdx) continue;

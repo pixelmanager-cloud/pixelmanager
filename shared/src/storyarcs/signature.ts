@@ -46,7 +46,7 @@ export const SIGNATURE_ARCS: StoryArc[] = [
   },
   {
     id: 'sig-title-decider', title: 'Champions by a Whisker', icon: '🏆', category: 'signature',
-    minTurn: 56, maxTurn: 119, weight: 1, rare: true, first: 'open',
+    minTurn: 86, maxTurn: 119, weight: 1, rare: true, first: 'open',
     beats: {
       open: {
         id: 'open',

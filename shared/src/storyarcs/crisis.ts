@@ -139,7 +139,7 @@ export const CRISIS_ARCS: StoryArc[] = [
   },
   {
     id: 'crisis-lost-armband', title: 'Stripped of the Stripes', icon: '🎗️', category: 'crisis',
-    minTurn: 50, maxTurn: 113, weight: 2, first: 'open',
+    minTurn: 96, maxTurn: 113, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',

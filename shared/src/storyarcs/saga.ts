@@ -87,7 +87,7 @@ export const SAGA_ARCS: StoryArc[] = [
   },
   {
     id: 'saga-title-race', title: 'The Final Day', icon: '🏆', category: 'saga',
-    minTurn: 46, maxTurn: 110, weight: 3, first: 'open',
+    minTurn: 86, maxTurn: 110, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
