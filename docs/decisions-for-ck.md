@@ -543,3 +543,67 @@ error) and a home-advantage disagreement where **both models are wrong** — the
 (indistinguishable from zero; it has no home-advantage term at all at level-1 facilities) and the sim's is
 +0.685, against real football's ~0.33. The agent's fitted constants are in its report; I have not applied
 them, because they were measured against the engine I have since reverted.
+
+---
+
+# ROUND 5 — an adversarial pass over my own fixes. It found real faults in three of them.
+
+## ~~25. My standing-orders fix made the loss PERMANENT~~ — FIXED
+
+The worst thing in the night, and it was mine. Before the fix, `openLineup`'s reconstruction was transient —
+the orders were immutable after the handoff, so a wipe lasted one screen. Persisting at kickoff turned the
+same reconstruction into a committed write.
+
+The trigger is **one injury**. Validity was checked against `availableClub()`, so a single knock made the
+saved sheet "invalid" and the editor rebuilt from `autoPickXI`, taking the eleven duties, the captain and the
+three set-piece takers with it. Measured: an injury on matchday 2, none afterwards, and **0 of the 17
+remaining matchdays** opened with the manager's own sheet.
+
+Fixed by correcting the model, not the check: squad **membership** decides whether a sheet is valid;
+**availability** is a per-match concern. Only the slots whose man cannot play are substituted, and they are
+handed back on save. Extracted to `shared/src/teamsheet.ts` as a pure function with real tests.
+
+## ~~26. The browser-safety gate did not work~~ — FIXED
+
+A poisoned tree with two module-scope `process.env` reads made it print "clean" and exit 0. Six defects in
+its text scanner, including the sharpest: its only live allow-rule, `process && process.env`, has no
+`typeof` and waved through the exact crash it exists to stop — while the documented `typeof` rule was dead
+code. Measured, **15.8% of `client/src/main.ts` was invisible to it**. Rewritten on the TypeScript parser
+and proved against all seven poisons.
+
+## 27. Still open in my own fixes — I will keep going at these
+
+- **Replay: a physically truncated action array is NOT detected.** The check is `applied < actions.length` —
+  against what is *stored*, with no length invariant. Drop the tail and 8/8 careers load reporting perfect
+  health at turn ~61 of 120. Malformed payloads set `applied = 0, stored = 0`, so `0 < 0` is false and the
+  refusal never fires.
+- **`api.ts:1128` still fabricates turns.** `loadCareer` was fixed; the write path was not. With
+  `career_actions = '"corrupt"'` the next move writes `["c","o","r","r","u","p","t",{...}]` — seven invented
+  turns, permanently.
+- **`careerHandoff` has no replay guard** and will graduate a truncated career at age 18 instead of 25, with
+  62-72% less in earnings, irreversibly.
+- **`saveHealth` regression I introduced:** with no IndexedDB it can now never return to healthy even for a
+  working backend, which re-breaks the banner it was meant to serve.
+- **`division_balance` has three logic holes** — `worst` starts at a placeholder, so an engine that wins 5-0
+  in every division and never by 6 passes both checks; the margin check reads the worst-*thrashing* tier
+  rather than the worst margin; and it does not sample tier 6, which is where the real peak is.
+- **3 of 11 formations are rejected by `isFormation`**, so saving a sheet with `4-1-4-1`, `5-4-1` or
+  `4-2-2-2` throws into a bare `catch {}` and silently saves nothing.
+- **`pruneXI` shifts `playerIds` but leaves `duties`, `captainIdx` and `takers` pinned to old indices** —
+  after a sale the armband and the penalties move to different men. Pre-existing, but my fix made those
+  fields live for the first time.
+
+## 28. And two corrections against me
+
+- **Division merit does not leave the ladder to climb.** I said seven of twelve facilities would still be
+  unbuilt at season 130; measured, **11.1 of 12 are at maximum** and cumulative income passes the 514,800
+  cost of maxing everything at **season 52.6**, after which the balance grows ~2,000/season with nothing to
+  spend it on. Level 9 arrives at season 28 as claimed; level 10 at 43, not 66.
+- **"The shipped engine was fine" is only true on the axis I re-measured.** The revert is a net win — 5.0%
+  vs 51.6% of top-vs-bottom fixtures won by six or more — but every defect the rebuild was chasing is real
+  and is back: pass completion 63%, median possession spell **one second**, median shot distance **45.9m**,
+  **2.5%** of shots from inside the box, and the shooting attribute **statistically inert on goals**
+  (+0.082, CI [−0.008, +0.172]). The reverted engine is the better league; the rebuilt one was the better
+  match. **One piece of that is cheap and carries no engine risk: the defensive presets are player-traps —
+  as an underdog, Park the Bus scores 0.025 ppg and Counter 0.008 against Balanced's 0.417 — and the fix is
+  data in `shared/src/tactics.ts`.** Say the word and I will do that one on its own.
