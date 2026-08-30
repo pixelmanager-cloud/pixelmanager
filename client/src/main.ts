@@ -17,7 +17,7 @@ import { audio } from './audio';
 import { commentaryExtra, fillCm, type CommentaryBranch } from '../../shared/src/commentary/extra.js';
 import { narrateManager, type PersonCtx } from '../../shared/src/managerNarrate.js';
 import { pickManagerArc, managerArcById, MGR_TEMPERS, applyMorale, type MgrSituation, type MgrArcEffect, type MgrTemper } from '../../shared/src/managerarc.js';
-import { facilityLevelStory } from '../../shared/src/facilities.js';
+import { facilityLevelStory, FACILITY_META, type FacilityKey } from '../../shared/src/facilities.js';
 
 // Topbar speaker icons — same 24×24 viewBox for both states so the button never changes shape on toggle.
 const ICON_SPEAKER = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3.5l4.5-3.5v13L7.5 15H4z"/><path d="M16 9.2a4 4 0 0 1 0 5.6M18.6 6.6a7.5 7.5 0 0 1 0 10.8"/></svg>';
@@ -33,6 +33,10 @@ interface MgrState { season: number; results: PlayedResult[]; starId?: string; s
   // World-Finals national tournament — the star's nation's knockout run is playable
   wcSeen?: number; wcWins?: number; wcFinals?: number; wcEdition?: number; wcStage?: 'qf' | 'sf' | 'final' | 'done';
   wcRun?: { round: string; my: number; opp: number; oppName: string; won: boolean }[];
+  // Keys of feed events that have already fired. Several events are raised from RENDER paths (the squad
+  // report, the scouting board, the season screen), which re-run on every refresh and every navigation
+  // back — without a ledger the same retirement is announced half a dozen times.
+  feedFired?: string[];
   // The Living Squad season report. It used to live ONLY in a class field, so a refresh between the
   // rollover and the renew decision silently discarded every keep-or-lose call the player still had to
   // make — the decisions were gone and the panel came back empty. It belongs in the save. (PT-605)
@@ -1349,6 +1353,7 @@ class Game {
     const r = this.pendingSquadReport;
     if (!r) return '';
     const nm = (x: any) => `${x.name} <span class="sq-meta">${x.role} · ${x.age}</span>`;
+    const m0 = this.loadMgr();
     const rows: string[] = [];
     if (r.storylines?.length) {
       // the human headline of the season, above the numbers (Phase 4)
@@ -1365,14 +1370,23 @@ class Game {
         + (r.fallers.length > 5 ? ` <i>+${r.fallers.length - 5} more</i>` : '') + `</span></div>`);
     }
     if (r.retired?.length) {
+      // Their careers end HERE, in your squad — the one moment a squad player earns a line of his own.
+      for (const x of r.retired as any[]) {
+        const rp = this.club?.players.find((q) => q.id === x.id);
+        this.feedOnce(`ret:${m0.season}:${x.id}`, 'retirement', '🎽', rp ? this.personCtx(rp) : { name: x.name, seasonsAtClub: 0, age: x.age }, { n: x.age });
+      }
       rows.push(`<div class="sq-row ret"><span class="sq-lbl">🎽 Retired</span><span class="sq-list">`
         + r.retired.map((x: any) => `${nm(x)}`).join(' · ') + ` — thanks for the service.</span></div>`);
     }
     if (r.departed?.length) {
+      for (const x of r.departed as any[]) {
+        const dp = this.club?.players.find((q) => q.id === x.id);
+        this.feedOnce(`exp:${m0.season}:${x.id}`, 'contract_expired', '📄', dp ? this.personCtx(dp) : { name: x.name, seasonsAtClub: 0, age: x.age });
+      }
       rows.push(`<div class="sq-row ret"><span class="sq-lbl">🚪 Left</span><span class="sq-list">`
         + r.departed.map((x: any) => nm(x)).join(' · ') + ` — their deals ran out and weren't renewed.</span></div>`);
     }
-    if (r.intake?.length) this.feedEvent('youth_intake', '🌱', undefined, { n: r.intake.length });
+    if (r.intake?.length) this.feedOnce(`intake:${m0.season}`, 'youth_intake', '🌱', undefined, { n: r.intake.length });
     if (r.intake?.length) {
       rows.push(`<div class="sq-row up"><span class="sq-lbl">🌱 Academy</span><span class="sq-list">`
         + r.intake.map((x: any) => nm(x)).join(' · ')
@@ -1427,6 +1441,7 @@ class Game {
   private async releaseSquadFlow(playerId: string, name: string) {
     this.openConfirm(`Let <b>${name}</b> leave on a free? He walks and you save his wages.`, 'Let him go', async () => {
       try {
+        { const rp = this.club?.players.find((x) => x.id === playerId); if (rp) this.feedEvent('released', '👋', this.personCtx(rp, rp.id === this.loadMgr().starId)); }
         await api.releaseSquadPlayer(playerId);
         this.pendingSquadReport = { ...this.pendingSquadReport, expiring: (this.pendingSquadReport?.expiring ?? []).filter((x: any) => x.id !== playerId) };
         { const mm = this.loadMgr(); this.saveMgr({ ...mm, squadReport: this.pendingSquadReport }); }
@@ -1512,6 +1527,9 @@ class Game {
     const bidKey = 'fm_biddismiss_' + (this.account?.handle ?? 'x') + '_' + m.season;
     const bidGone = (() => { try { return localStorage.getItem(bidKey) === '1'; } catch { return false; } })();
     const bid = (starP && m.starAge && !bidGone && !done) ? incomingBid(this.leagueSeed(), m.season, overall(starP), m.starAge) : null;
+    // The REJECTION was in the feed and the offer itself was not, so a save read back a season later
+    // recorded a decision with nothing to decide about.
+    if (bid && starP) this.feedOnce(`bid:${m.season}`, 'bid_received', '🤝', this.personCtx(starP, true), { fee: bid.fee, name: bid.club });
     const bidLead = bid ? [
       `<b>🤝 ${bid.club}</b> have tabled a <b>${bid.fee.toLocaleString()}c</b> bid for ${m.starName}.`,
       `<b>🤝 ${bid.club}</b> come calling with <b>${bid.fee.toLocaleString()}c</b> for ${m.starName}.`,
@@ -2040,6 +2058,10 @@ class Game {
       this.feedEvent('relegation', '⬇️', undefined, { from: tierName(tier), to: tierName(newTier) });
     } else if (t.pos === 1) {
       this.feedEvent('title', '🏆', undefined, { from: tierName(tier), to: tierName(tier) });
+    } else if (tier > 1 && t.pos <= 4) {
+      // Missed the top two and the climb by a place or two. The season the dynasty nearly moved is worth
+      // marking — it is the one finish that stings, and it had no line at all.
+      this.feedEvent('near_miss', '😖', undefined, { n: t.pos, from: tierName(tier), to: tierName(tier - 1) });
     }
     const titles = (m.titles ?? 0) + (t.pos === 1 ? 1 : 0);
     const age = (m.starAge ?? 22) + 1;
@@ -2193,7 +2215,7 @@ class Game {
       toast(`${w.icon} The heir inherits ${w.label}${(r as any).testimonial ? ` · 🎗️ +${(r as any).testimonial.toLocaleString()}c testimonial` : ''}${r.saleFee ? ` · 💰 +${r.saleFee.toLocaleString()}c from the sale` : ''}${r.legacy ? ` · +${r.legacy.toLocaleString()}c legacy` : ''}`);
       // A generation produces 1-3 sons. With brothers, the player CHOOSES which one carries the name;
       // with one, we say so in words rather than letting a choice-less succession read as a bug.
-      const sibs = (r as any).siblings as Array<{ id: string; name: string; temper: string; familyTrait: string }> | undefined;
+      const sibs = (r as any).siblings as Array<{ id: string; name: string; temper: string; familyTrait: string; fatherName?: string; cousin?: boolean }> | undefined;
       if (sibs?.length) this.showHeirChoice(r.prospect, sibs, (r as any).familyTrait);
       else this.showProspectCard(r.prospect, true);
     } catch (e: any) {
@@ -2388,6 +2410,9 @@ class Game {
       // that happened to a place rather than a number going up
       const story = facilityLevelStory(key as any, r.level);
       if (story) this.pushFeed('🏗️', story);
+      // The specific line above says what CHANGED about the place; this one is the club noticing. Both,
+      // because the general bank had over a hundred authored lines and no call site at all.
+      this.feedEvent('facility_upgraded', '🏗️', undefined, { n: r.level, name: FACILITY_META[key as FacilityKey]?.name ?? key });
       this.renderFacilities(await api.facilities());
     } catch (e: any) {
       toast(e?.status === 409 ? (String(e?.body?.error ?? '').includes('max') ? 'Already at max level' : 'Not enough coins') : 'Could not upgrade');
@@ -2709,6 +2734,16 @@ class Game {
     });
     if (line) this.pushFeed(icon, line);
   }
+  /** feedEvent, but at most once for a given key. For events raised from a render path, where the same
+   *  moment would otherwise be re-announced every time the screen is drawn. */
+  private feedOnce(key: string, event: Parameters<typeof narrateManager>[0], icon: string, person?: PersonCtx, vars?: Record<string, unknown>) {
+    const m = this.loadMgr();
+    const fired = m.feedFired ?? [];
+    if (fired.includes(key)) return;
+    // bounded like the feed itself — a twenty-season save shouldn't carry every key it ever fired
+    this.saveMgr({ ...m, feedFired: [...fired, key].slice(-400) });
+    this.feedEvent(event, icon, person, vars);
+  }
   /** Build the person context for a squad player — seasons at the club and morale are what the tiers key on. */
   private personCtx(p: Player, isStar = false): PersonCtx {
     const m = this.loadMgr();
@@ -2823,22 +2858,33 @@ class Game {
   /** THE HEIR CHOICE. Scouted, with uncertainty (user decision): his temperament, the attribute that runs
    *  in the family, and a star-rated sense of his ceiling — never raw genes. The choice should have weight
    *  without being solvable by picking the biggest number. */
-  private showHeirChoice(played: any, siblings: Array<{ id: string; name: string; temper: string; familyTrait: string }>, trait: string) {
+  private showHeirChoice(played: any, siblings: Array<{ id: string; name: string; temper: string; familyTrait: string; fatherName?: string; cousin?: boolean }>, trait: string) {
     this.showScreen('academy');
-    const all = [{ id: played.id, name: played.name, temper: played.personality ?? '—', familyTrait: trait }, ...siblings];
+    const all: Array<{ id: string; name: string; temper: string; familyTrait: string; fatherName?: string; cousin?: boolean }> =
+      [{ id: played.id, name: played.name, temper: played.personality ?? '—', familyTrait: trait }, ...siblings];
+    // Your own sons first, then the cousins — a nephew is an alternative to the direct line, so the screen
+    // should read as "or" rather than mixing the two into an undifferentiated row of names.
+    const direct = all.filter((h) => !h.cousin);
+    const cousins = all.filter((h) => h.cousin);
     const stars = (id: string) => { let h = 0; for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) + id.charCodeAt(i)) | 0; return 2 + (Math.abs(h) % 4); };
-    const cards = all.map((h, i) => {
+    const card = (h: typeof all[number], on: boolean) => {
       const n = stars(h.id);
-      return `<div class="cg-heir-card${i === 0 ? ' on' : ''}" data-heir="${h.id}">`
+      return `<div class="cg-heir-card${on ? ' on' : ''}" data-heir="${h.id}">`
         + `<div class="cg-cname">${h.name}</div>`
+        + (h.cousin && h.fatherName ? `<div class="cg-cdescr cg-cousin">👨‍👦 ${h.fatherName}'s boy</div>` : '')
         + `<div class="cg-cdescr">🧠 ${h.temper}</div>`
         + `<div class="cg-cdescr">🧬 the family ${h.familyTrait}</div>`
         + `<div class="cg-heir-stars">${'★'.repeat(n)}${'☆'.repeat(5 - n)} <span class="cg-heir-note">what the scouts can see so far</span></div></div>`;
-    }).join('');
+    };
+    const cards = direct.map((h, i) => card(h, i === 0)).join('')
+      + (cousins.length ? `<div class="cg-heir-split">or, from the brother you passed over</div>` + cousins.map((h) => card(h, false)).join('') : '');
     $('academy-body').innerHTML = `<div class="cg-graduation">`
-      + `<div class="cg-grad-title">🌳 ${all.length === 1 ? 'The next of the line' : `${all.length} sons`}</div>`
+      + `<div class="cg-grad-title">🌳 ${all.length === 1 ? 'The next of the line'
+          : cousins.length ? `${all.length} of the family` : `${all.length} sons`}</div>`
       + `<div class="cg-epilogue">${all.length === 1
           ? 'One son, and the name goes with him.'
+          : cousins.length
+          ? 'Your own boys, and a cousin from the brother you let go a generation ago. The name is the same either way — but the line you take is the one that carries it, and the others will make their own way.'
           : 'Brothers. They have their father in them somewhere, and they are not the same boy. Whichever one you take, the others will make their own way — and you may come back for a nephew one day.'}</div>`
       + `<div class="cg-heirs">${cards}</div>`
       + `<button id="cg-heir-go" class="primary">Take him on →</button></div>`;
@@ -2873,14 +2919,28 @@ class Game {
     const gens = [...byGen.keys()].sort((a, b) => a - b);
     // The page grows with the family. A one-generation record sized for a full tree is mostly empty
     // parchment, which reads as a rendering failure rather than as room to grow.
-    const W = 900, ROW = 150, PAD = 60;
+    // A rank has to hold the name banner (132px) with air around it, and a branching generation can put
+    // six or seven brothers and cousins on one rank — at a fixed width they overlapped into an unreadable
+    // smear. The page widens to the broadest generation instead.
+    const widest = Math.max(...gens.map((g) => byGen.get(g)!.length));
+    const W = Math.max(900, (widest + 1) * 150), ROW = 150, PAD = 60;
     const H = PAD + Math.max(0, gens.length - 1) * ROW + 130;
     const pos = new Map<string, { x: number; y: number }>();
     gens.forEach((g, gi) => {
-      const row = byGen.get(g)!;
-      // founder at the BASE: the highest generation index sits nearest the top of the image
-      const y = H - 78 - gi * ROW;
-      row.forEach((n, i) => pos.set(n.id, { x: (W / (row.length + 1)) * (i + 1), y }));
+      // THE TRUNK IS THE LINE YOU PLAYED, so the played man of each generation is placed at the centre and
+      // his brothers spread outward around him. Without this the trunk runs down the middle of the page
+      // while the line it is supposed to represent wanders off to one side — which reads as a drawing bug
+      // rather than as a dynasty, and matters far more now that the line can move onto a cousin.
+      const row = byGen.get(g)!.slice();
+      const playedAt = row.findIndex((n) => n.branch !== 'sibling');
+      const ordered: any[] = [];
+      if (playedAt >= 0) {
+        const rest = row.filter((_, i) => i !== playedAt);
+        const mid = Math.floor(rest.length / 2);
+        ordered.push(...rest.slice(0, mid), row[playedAt], ...rest.slice(mid));
+      } else ordered.push(...row);
+      const y = H - 78 - gi * ROW;   // founder at the BASE: later generations sit nearer the top
+      ordered.forEach((n, i) => pos.set(n.id, { x: (W / (ordered.length + 1)) * (i + 1), y }));
     });
     // The trunk only makes sense once the line has actually grown — with a single founder it renders as a
     // stalk sprouting out of his head. One generation gets a short root instead.
@@ -3401,6 +3461,7 @@ class Game {
           + `<span class="m-prospect m-status"><span class="m-spinner">⚙️</span> Scout travelling — returns in <b class="m-count">${humanizeMs(m.readyInMs)}</b></span></div>`;
       }
       if (!m.found || !m.player) {
+        this.feedOnce(`scout:${m.id}`, 'scout_empty', '🔭', undefined, { to: m.destName });
         return `<div class="mission miss" data-id="${m.id}">`
           + `<span class="m-dest">🌍 ${m.destName}</span>`
           + `<span class="m-prospect"><span class="muted">Came back empty-handed — no one worth signing.</span></span></div>`;
@@ -3825,11 +3886,9 @@ class Game {
   }
 
   private lastGate = 0;
-  private lastInjuries: Array<{ name: string; matches: number }> = [];
   private startMatch(payload: MatchPayload) {
     this.mySide = payload.mySide;
     this.lastGate = payload.gateIncome ?? 0;
-    this.lastInjuries = payload.injuries ?? [];
     this.homeName = payload.home.handle;
     this.awayName = payload.away.handle;
     // guarantee the two kits clearly contrast on the pitch even if the clubs' colours are similar
@@ -3887,18 +3946,42 @@ class Game {
       const m = this.loadMgr();
       m.results.push({ myGoals, oppGoals });
       this.saveMgr(m);
+      await this.settleInjuries();
       this.showFullTimeCard();
       return;
     }
     try { this.setMe(await api.me()); } catch { /* keep old rating */ }
-    // surface any injuries picked up this match (staggered so they don't overlap the result toast)
-    this.lastInjuries.forEach((inj, i) => setTimeout(() => {
-      toast(`🤕 ${inj.name} injured — out ${inj.matches} match${inj.matches > 1 ? 'es' : ''}`);
-      // the injury record carries a NAME, not an id, so the squad lookup matches on that
-      const ip = this.club?.players.find((x) => x.name === inj.name);
-      if (ip) this.feedEvent(inj.matches >= 6 ? 'injury_long' : 'injury', '🤕', this.personCtx(ip, ip.id === this.loadMgr().starId), { n: inj.matches });
-    }, 800 * (i + 1)));
+    // NOTE: this branch handled injuries carried on the match PAYLOAD — a server-era shape that nothing
+    // has ever populated, and which matched the squad by NAME rather than id. Every fixture in the manager
+    // game takes the single-player path above, which now settles injuries against the real store.
     this.showFullTimeCard();
+  }
+
+  /** Tick the treatment room after a league fixture: who is back, and who has just gone down.
+   *
+   *  Every match in the manager game is a single-player fixture, and this branch simply never touched
+   *  injuries — nothing in the project called `rollMatchInjuries`, `addInjury` or `decrementInjuries`, so
+   *  the injured list was permanently empty and every screen that reads it showed nothing. Availability
+   *  only: a knock never edits a stat, it just takes the man out of the side for a few matches, which is
+   *  what makes squad depth and the Medical Centre mean anything. */
+  private async settleInjuries() {
+    if (!this.engine || !this.club) return;
+    const side = this.mySide;
+    const team = this.engine.teams[side];
+    const fitness = this.engine.state.players[side].map((ps) => ps.fitness);
+    try {
+      const { fresh, returned } = await api.settleInjuries(team, fitness, this.matchSeed);
+      await this.setMe(await api.me());
+      for (const id of returned) {
+        const rp = this.club.players.find((x) => x.id === id);
+        if (rp) this.feedEvent('injury_return', '💪', this.personCtx(rp, rp.id === this.loadMgr().starId));
+      }
+      fresh.forEach((n, i) => setTimeout(() => {
+        toast(`🤕 ${n.playerName} injured — out ${n.matches} match${n.matches > 1 ? 'es' : ''}`);
+        const ip = this.club?.players.find((x) => x.id === n.playerId);
+        if (ip) this.feedEvent(n.matches >= 3 ? 'injury_long' : 'injury', '🤕', this.personCtx(ip, ip.id === this.loadMgr().starId), { n: n.matches });
+      }, 800 * (i + 1)));
+    } catch { /* a knock going unrecorded must never cost the player his result */ }
   }
 
   /** Deterministic post-match report: a result narrative, scorers, red cards, and player of the match. */

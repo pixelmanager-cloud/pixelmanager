@@ -21,13 +21,43 @@ A generation with a single son is deliberate: it is lifelike, and it makes the g
 choice feel like an event. It must never feel like a bug, so a one-heir succession says so in words ("one
 son, and the name goes with him").
 
-## 2. Branch switching — FREE
+## 2. Branch switching — BUILT (2026-08-30)
 
-At succession the player is offered the heirs of the line he just played AND any living unplayed branch that
-has produced heirs. A branch stays selectable while anyone in it is young enough to start a career.
+At succession the player is offered the sons of the line he just played AND the sons of the branches he
+passed over a generation ago — his nephews. The screen groups them: his own boys, then a rule, then "or,
+from the brother you passed over". Taking one is what moves the trunk: every candidate is minted as
+`branch: 'sibling'` and `startCareer` promotes the chosen one to `'played'`.
 
-Implication: the save holds a forest. `Token` gains `parent_id` (see §6). Nothing may assume the previous
-generation's played heir is the next one's father.
+**A brother is never selectable himself.** He is the retiring star's age — a man in his thirties, not a boy
+to take on. What carries a passed-over branch forward is his SON, which is also what the succession copy
+had already promised ("you may come back for a nephew one day").
+
+### Bounding the forest — the part that needed measuring
+
+The first cut let every passed-over branch father sons at a probability chosen by eye. That is wrong, and
+`shared/qa_branching.ts` caught it: every *unchosen candidate* is itself a branch that can carry on, so the
+population feeds back on itself. With sons averaging 2.2 and each branch fathering 0.75, the steady state
+is ~5 live branches with a long tail — over 300 ten-generation dynasties, one succession offered **21
+candidates**. That is not a choice, it is a phone book.
+
+Two rules fix it by construction rather than by hoping the distribution behaves:
+
+- `BRANCHES_KEPT = 2` — at most two passed-over branches are swept, nearest the trunk first (sons before
+  cousins). The family keeps in touch with two branches and loses the rest.
+- `nephewCount` weighted **70/25/5** — most branches leave the game entirely. A line quietly ending is what
+  makes the tree read as a family rather than a bracket.
+
+Measured over 300 dynasties × 10 generations: **2.69 candidates per succession, max 6**; 12% of successions
+offer a single heir and no choice; 97% of dynasties are offered a cousin at some point.
+
+Every branch of the retiring generation is then RETIRED, swept or not — those men are the star's age. Before
+this, siblings were minted as prospects and left there, so a fifth-generation save was quietly offering a
+great-great-uncle in the prospect pool as a boy to take on.
+
+Implication: the save holds a forest. `Token` gains `parent_id`, `branch_seed` (a branch's own heir seed —
+it cannot be recomputed later, because the played line reuses its token id and overwrites `career_seed`
+each generation) and `father_name`. Nothing may assume the previous generation's played heir is the next
+one's father.
 
 ## 3. The brothers are FULL PLAYERS — not summary rows
 
@@ -66,8 +96,11 @@ different temperaments; 0 identical brothers.
 
 ## 6. Save model
 
-- `Token.parent_id: string | null` — the forest edge. NEW; needs `SAVE_VERSION` 1 → 2 and a migration that
-  sets `parent_id` from the existing `legacies.rebornId` chain so old saves become a valid single-branch forest.
+- `Token.parent_id: string | null` — the forest edge. DONE, with `SAVE_VERSION` 1 → 2 (`migrate()` in
+  save.ts, covered by `client/qa_migrate.ts`). The migration recovers the chain from the GENERATION counter
+  rather than `legacies.rebornId`: before branching there was exactly one heir per generation, so each
+  token's father is simply the one generation above it. Without it an existing multi-generation save
+  rendered as a row of orphan trunks on the Family Record.
 - `Token.branch_state` — whether this person was played, is an unplayed brother, or is a dead branch.
 - The existing `tokens` array is already a list, and `main.ts:1084` already picks the active prospect from
   several, so the storage layer needs less work than expected.

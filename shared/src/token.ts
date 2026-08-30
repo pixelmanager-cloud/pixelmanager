@@ -26,4 +26,10 @@ export interface Token {
   /** 'played' = a line the player has taken; 'sibling' = a brother who exists but was not chosen. A sibling
    *  is a FULL player (mintSquadPlayer) who ages, can be signed, and can father the next generation. */
   branch?: 'played' | 'sibling';
+  /** An unplayed brother's own heir seed, kept so his sons can be derived at the NEXT succession. It cannot
+   *  be recomputed from his father: the played line reuses its token id and `career_seed` is overwritten
+   *  each generation, so by the time the nephews are due the derivation is gone. */
+  branch_seed?: number;
+  /** Whose son he is, for the succession screen — "Dane's boy" is the whole point of a cousin appearing. */
+  father_name?: string;
 }

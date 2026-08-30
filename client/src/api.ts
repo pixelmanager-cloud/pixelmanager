@@ -13,7 +13,7 @@ import {
   makeClub as _makeClub, // re-exported nowhere — freshSave() (save.ts) already calls this; kept for reference
   validateLineup, cleanDuties,
   overall, managerPrestige, signContract, graduationEpilogue, clubInvestOf, TIERS, tierStrength, mintSquadPlayer,
-  mintHeirs, heirCount, familyTrait,
+  mintHeirs, heirCount, familyTrait, nephewCount, BRANCHES_KEPT,
   transferList, transferFee, sellValue, squadSaleValue, incomingBid, MIN_SQUAD, MAX_SQUAD,
   signSquadContract, staggeredContractSeasons, advanceSquad, squadSeasonsLeft, squadRenewCost, squadSeasonWage, squadStorylines,
   contractDemand, evaluateContractOffer, wageForLength,
@@ -21,7 +21,7 @@ import {
   youthPoolBonus, youthUpgradeChance, scoutHitMult, scoutCostDiscount, scoutExtraTrips,
   generatePool, trialistAt, LOANEE_CAP, DESTINATIONS, destinationById, rollMission, travelMs as travelMsPure, previewOdds,
   gaffersDiaryEntry,
-  rollGenes, updateMorale, moraleEffects,
+  rollGenes, updateMorale, moraleEffects, rollMatchInjuries,
   tokenToPlayer, tokenContract, legendCardOf, loadCareer, actWithNarration, careerState, graduatedFields, careerCast, fillArcText,
   rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, foundingNameFor,
   type FacilityKey, type MissionRow, type Token, type CareerAction,
@@ -282,6 +282,29 @@ export const api = {
     return { account: { id: OWNER, handle: getActiveSlotId() ?? OWNER, rating: 1000, coins: model.profile.coins }, ...mergedClub(), injuries, contracts, season };
   },
 
+  /** Tick every existing knock down one match and report who is FIT AGAIN, then roll the XI that just
+   *  played for fresh injuries.
+   *
+   *  The whole injury system was built and then never connected. `addInjury`, `decrementInjuries` and
+   *  `rollMatchInjuries` had no callers anywhere in the project, so `me().injuries` was permanently empty
+   *  and everything downstream of it was dead code: the lineup editor's "🤕 Injured" panel, the
+   *  auto-selection that skips the unavailable, the squad screen's injury list, and the Medical Centre,
+   *  a facility whose entire advertised effect is on a roll that never happened. A player narrated as
+   *  "out for six matches" played the next one. */
+  settleInjuries: async (team: Team, endFitness: number[], matchSeed: number) => {
+    await ensureActive();
+    const model = getActiveModel();
+    const before = await localStore.getInjuries(OWNER);
+    await localStore.decrementInjuries(OWNER);
+    const still = new Set((await localStore.getInjuries(OWNER)).map((i) => i.player_id));
+    const returned = before.filter((i) => !still.has(i.player_id)).map((i) => i.player_id);
+    // A man already in the treatment room did not play, so he cannot pick up a second knock today.
+    const fresh = rollMatchInjuries(team, endFitness, model.facilities.medical, matchSeed >>> 0)
+      .filter((n) => !still.has(n.playerId));
+    for (const n of fresh) await localStore.addInjury(OWNER, n.playerId, n.matches);
+    return { fresh, returned };
+  },
+
   extendContract: async (playerId: string) => {
     await ensureActive();
     const model = getActiveModel();
@@ -475,6 +498,22 @@ export const api = {
     // abandoning the will screen credits nothing and leaves the star owned (no free-money loop) (PT-60).
     const saleFee = Math.max(0, Math.round(Number(body?.saleFee) || 0));
     if (saleFee > 0) await localStore.addCoins(OWNER, saleFee);
+    // CAPTURED BEFORE rebornFields, and that ordering is the whole ballgame. `getToken` hands back the
+    // live object out of the in-memory model, not a copy, so `updateToken(pid, rf)` MUTATES `decorated`
+    // underneath us — after which its career_seed reads null and its generation has already advanced.
+    // Every dynasty in the game therefore fell through to the `generation * K` fallback below, which is a
+    // constant: heirCount saw the same number for every save at every playthrough, and it happens to be 1
+    // at generations 1 and 2. The branching bloodline was inert in the shipping game, and the pure-maths
+    // harness could never have seen it — only driving the real facade did.
+    const parentGenes = JSON.parse(decorated.genes_json);
+    const parentGen = decorated.generation ?? 0;
+    // Same reason: rebornFields RENAMES the token to the heir, so reading it later gives the son's name
+    // where the father's belongs and a cousin would be captioned with his own boy's name.
+    const parentName = decorated.name;
+    // A career that ended without a seed still needs one, and it must be stable across replays and unique
+    // per person: careerSeedFor is exactly that, and is what startCareer would have used.
+    const parentSeed = ((decorated.career_seed ?? 0) >>> 0) || (careerSeedFor(decorated.id, parentGen) >>> 0);
+
     const rf = rebornFields(decorated);
     const dev = JSON.parse(rf.dev_bonus_json ?? '{}');
     if (mentorship > 0) { const b = Math.min(3, Math.ceil(mentorship / 2)); dev.composure = (dev.composure ?? 0) + b; dev.leadership = (dev.leadership ?? 0) + b; }
@@ -493,22 +532,83 @@ export const api = {
     // A brother is a FULL PLAYER, not a summary row — the user was explicit. He is minted through the same
     // path every rich squad player takes, so he can be scouted, signed, played against, and can father the
     // next generation himself.
-    const parentGenes = JSON.parse(decorated.genes_json);
-    const parentSeed = (decorated.career_seed ?? 0) >>> 0 || ((decorated.generation ?? 0) * 2654435761) >>> 0;
-    const nHeirs = heirCount(parentSeed, decorated.generation ?? 0);
+    // TWO BROTHERS CALLED MILO. The played heir is named by rebornFields and the brothers by
+    // foundingNameFor, independently, out of the same first-name pool — so a sibling set could and did
+    // come out with duplicates, which on the succession screen reads as a rendering fault rather than as
+    // a family. Names are drawn against everyone already on this rank.
+    const takenNames = new Set<string>([String(rf.name ?? '')]);
+    const distinctName = (seed: number) => {
+      for (let salt = 0; salt < 24; salt++) {
+        const nm = foundingNameFor((seed ^ Math.imul(salt, 0x9e3779b1)) >>> 0, getActiveModel().profile.name);
+        if (!takenNames.has(nm)) { takenNames.add(nm); return nm; }
+      }
+      return foundingNameFor(seed, getActiveModel().profile.name);   // pool exhausted; a repeat beats a hang
+    };
+
+    const nHeirs = heirCount(parentSeed, parentGen);
     const heirs = mintHeirs(parentGenes, parentSeed, nHeirs);
-    const siblings: Array<{ id: string; name: string; temper: string; familyTrait: string }> = [];
+    const siblings: Array<{ id: string; name: string; temper: string; familyTrait: string; fatherName: string; cousin: boolean }> = [];
     for (let i = 1; i < heirs.length; i++) {
       const h = heirs[i];
-      const sid = `${pid}:b${(decorated.generation ?? 0) + 1}.${i}`;
-      const nm = foundingNameFor(h.seed, getActiveModel().profile.name);
+      const sid = `${pid}:b${parentGen + 1}.${i}`;
+      const nm = distinctName(h.seed);
       await localStore.createToken({
-        id: sid, owner_id: OWNER, generation: (decorated.generation ?? 0) + 1, state: 'prospect', name: nm,
+        id: sid, owner_id: OWNER, generation: parentGen + 1, state: 'prospect', name: nm,
         genes_json: JSON.stringify(h.genes), pedigree: rf.pedigree ?? 0, dev_bonus_json: rf.dev_bonus_json ?? '{}',
       });
-      await localStore.updateToken(sid, { parent_id: pid, branch: 'sibling', personality: h.personality } as any);
-      siblings.push({ id: sid, name: nm, temper: h.personality, familyTrait: h.familyTrait });
+      await localStore.updateToken(sid, { parent_id: pid, branch: 'sibling', personality: h.personality, branch_seed: h.seed, father_name: parentName } as any);
+      siblings.push({ id: sid, name: nm, temper: h.personality, familyTrait: h.familyTrait, fatherName: parentName, cousin: false });
     }
+
+    // ── THE COUSINS ────────────────────────────────────────────────────────────────────────────────
+    // The brother you passed over a generation ago had a life. Some of those lives produced a boy who can
+    // play, and at THIS succession he stands alongside your own sons — which is what makes passing a
+    // brother over a decision with a future rather than a discard.
+    //
+    // Only the retiring star's OWN generation is swept. A branch gets exactly one chance to carry on, at
+    // the succession where its sons would be the right age; after that the generation counter has moved
+    // past it and it is never revisited. That is both the spec's "no branches older than the grandfather"
+    // and the thing that stops the forest growing without bound.
+    // Sons of the retiring star before cousins, then BRANCHES_KEPT of them. Both halves matter: every
+    // unchosen candidate is itself a branch that could carry on, so without the cap the population feeds
+    // back on itself — measured over 300 ten-generation dynasties, one succession offered twenty-one
+    // candidates. The family keeps in touch with the branches nearest the trunk and loses the rest.
+    // NOT filtered on branch === 'sibling'. When the player switched the line onto a cousin last time, the
+    // son he passed over is a token marked 'played' sitting in the prospect pool — he is a passed-over
+    // branch in every sense that matters here, and excluding him would both deny his sons a chance and
+    // leave him in the pool for ever. The star's own brothers sort first (same father), cousins after.
+    const starParent = (decorated as any).parent_id ?? null;
+    const sameGen = getActiveModel().tokens
+      .filter((t) => t.id !== pid && (t.generation ?? 0) === parentGen && t.state === 'prospect')
+      .sort((a, b) => Number((b as any).parent_id === starParent) - Number((a as any).parent_id === starParent));
+    const uncles = sameGen.slice(0, BRANCHES_KEPT);
+    for (const uncle of uncles) {
+      const useed = ((uncle as any).branch_seed ?? 0) >>> 0;
+      if (!useed) continue;                                  // pre-branching token: nothing to derive from
+      const n = nephewCount(useed);
+      if (!n) continue;                                      // his line ends here, and that is normal
+      const kids = mintHeirs(JSON.parse(uncle.genes_json), useed, n);
+      for (let i = 0; i < kids.length; i++) {
+        const k = kids[i];
+        const nid = `${uncle.id}.n${i}`;
+        const nnm = distinctName(k.seed);
+        await localStore.createToken({
+          id: nid, owner_id: OWNER, generation: parentGen + 1, state: 'prospect', name: nnm,
+          genes_json: JSON.stringify(k.genes), pedigree: uncle.pedigree ?? 0, dev_bonus_json: uncle.dev_bonus_json ?? '{}',
+        });
+        await localStore.updateToken(nid, { parent_id: uncle.id, branch: 'sibling', personality: k.personality, branch_seed: k.seed, father_name: uncle.name } as any);
+        siblings.push({ id: nid, name: nnm, temper: k.personality, familyTrait: k.familyTrait, fatherName: uncle.name, cousin: true });
+      }
+    }
+    // Every branch of the retiring star's generation is settled now, swept or not — those men are his age,
+    // far too old to begin a career. Retiring them keeps them on the Family Record while taking them out of
+    // the prospect pool, which they were never leaving before: siblings were minted as prospects and left
+    // there, so a fifth-generation save was offering a great-great-uncle as a boy to take on.
+    for (const t of sameGen) await localStore.updateToken(t.id, { state: 'retired' } as any);
+
+    // The played line needs a branch seed of its own: if the player takes a cousin at some later succession,
+    // THIS is the branch that was passed over, and without a seed his sons could never be derived.
+    await localStore.updateToken(pid, { branch_seed: heirs[0].seed, father_name: parentName } as any);
 
     const fresh = (await localStore.getToken(pid))!;
     const pot = rebornPotential(fresh);
@@ -698,6 +798,11 @@ export const api = {
     if (!t) throw apiErr('no such token', {}, 404);
     if (t.state !== 'prospect') throw apiErr('not a prospect', {}, 409);
     if (t.career_seed == null) await localStore.updateToken(pid, { career_seed: careerSeedFor(t.id, t.generation), agent_id: agentId ?? null, track: trackFor(t.role ?? 'MF'), career_actions: '[]' });
+    // TAKING HIM ON IS WHAT MAKES A BRANCH THE LINE. If the player chose a brother or a cousin, this is the
+    // moment the trunk moves onto him — every candidate is minted as 'sibling' precisely because which one
+    // becomes the played line is not decided until here. The brothers he was picked over keep 'sibling',
+    // which is what the Family Record draws paler: present, and visibly a road not taken.
+    if ((t as any).branch !== 'played') await localStore.updateToken(pid, { branch: 'played' } as any);
     const fresh = (await localStore.getToken(pid))!;
     const clubName = getActiveModel().club.name ?? null;
     return { ok: true as const, state: careerState(fresh, loadCareer(fresh), clubName) };

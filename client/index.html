@@ -1363,6 +1363,11 @@
       .cg-heirs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin: 14px 0; }
       .cg-heir-card { padding: 12px; border: 2px solid rgba(255,255,255,0.16); cursor: pointer; text-align: left; }
       .cg-heir-card.on { border-color: var(--good); background: rgba(255,255,255,0.06); }
+      /* A cousin is an alternative to the direct line, not another son, so the grid breaks for a label
+         rather than mixing the two into one undifferentiated row of names. */
+      .cg-heir-split { grid-column: 1 / -1; font-family: var(--body); font-size: 15px; opacity: 0.62;
+        text-align: center; letter-spacing: 0.04em; margin: 4px 0 -2px; }
+      .cg-cousin { opacity: 0.85; }
       .cg-heir-stars { margin-top: 8px; font-size: 13px; }
       .cg-heir-note { font-size: 10.5px; opacity: 0.6; }
       /* THE FAMILY RECORD — an illuminated genealogy after the Lancaster & York manuscript: parchment,

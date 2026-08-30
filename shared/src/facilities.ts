@@ -68,9 +68,16 @@ export function scoutCostDiscount(level: number): number { return (level - 1) * 
 /** Scouting HQ: extra scouting trips per season (0 at L1-2, 1 at L3-4, 2 at L5). */
 export function scoutExtraTrips(level: number): number { return Math.floor((level - 1) / 2); }
 /** Medical Centre: injury-chance multiplier (1.0 at L1 → 0.40 at L5). */
-export function injuryChanceMult(level: number): number { return 1 - (level - 1) * 0.15; }
+// A LINE written for the old five-level cap. When MAX_LEVEL went to 10 this was not rescaled, so it
+// crossed zero at level 8: a maxed Medical Centre made injuries mathematically impossible (measured — 0.0
+// per season against 7.8 at level 1), deleting squad depth, the treatment room and the injury feed
+// outright, and the effect string offered the player "−135% injury chance". Decay instead of a line, so
+// every level is worth buying and none of them ends the system: L1 1.00 → L5 0.63 → L10 0.35.
+export function injuryChanceMult(level: number): number { return Math.pow(0.89, Math.max(0, level - 1)); }
 /** Medical Centre: matches shaved off a fresh injury's recovery (0 at L1 → 2 at L5). */
-export function recoveryCut(level: number): number { return Math.floor((level - 1) / 2); }
+// Capped at 2 for the same reason: at the 10-level cap this reached 4, which is the longest injury the
+// roll can produce, so every knock healed before the next match.
+export function recoveryCut(level: number): number { return Math.min(2, Math.floor((level - 1) / 3)); }
 /** Commercial Dept: per-season sponsorship income (division- and trophy-scaled), lifted by the squad's
  *  MARKETABILITY — a fan-favourite/brand-name squad pulls bigger sponsors, so a marketable star helps pay
  *  his own wages. marketabilityAvg is centred at 10 (neutral), so an all-ordinary squad earns as before. */

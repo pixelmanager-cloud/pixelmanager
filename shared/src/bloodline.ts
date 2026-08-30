@@ -36,6 +36,34 @@ export function heirCount(parentSeed: number, generation = 0): number {
   return r < 20 ? 1 : r < 60 ? 2 : 3;
 }
 
+/** At most this many passed-over branches are swept for sons at a succession.
+ *
+ *  This is a HARD cap and it has to be, because the probabilistic version did not work. Every unchosen
+ *  candidate — a brother, and also a cousin the player did not take — becomes a branch that can carry on,
+ *  so the population feeds back on itself: with sons averaging 2.2 and each branch fathering 0.75, the
+ *  steady state is ~5 unplayed branches and the tail runs long. Measured over 300 dynasties of 10
+ *  generations, one succession offered TWENTY-ONE candidates. That is not a choice, it is a phone book.
+ *
+ *  So: the family keeps in touch with the two branches nearest the trunk, and loses the rest. Sons first,
+ *  then cousins. With MAX_HEIRS at 3 this bounds a succession at 3 + 2 × 2 = 7 candidates by construction
+ *  rather than by hoping the distribution behaves. */
+export const BRANCHES_KEPT = 2;
+
+/** How many sons a passed-over branch fathers — 0, 1 or 2, and 0 is much the commonest.
+ *
+ *  A brother is a life the player did not live, and most of those lives leave the game: he has daughters,
+ *  or a boy who never plays, or the family drifts out of football entirely. A branch quietly ending is
+ *  part of what makes a family tree read as a family rather than a bracket — and it is the second half of
+ *  keeping the succession screen to a size a person can hold in their head.
+ *
+ *  Keyed off the branch's OWN seed, so which lines carry on is fixed the moment that son is born. */
+export function nephewCount(brotherSeed: number): number {
+  let h = (brotherSeed ^ 0x7f4a7c15) >>> 0;
+  h = Math.imul(h ^ (h >>> 15), 0x2545f491) >>> 0;
+  const r = ((h ^ (h >>> 13)) >>> 0) % 100;
+  return r < 70 ? 0 : r < 95 ? 1 : 2;
+}
+
 /** Deterministic per-child seed. Mixed hard rather than added, so sibling 0 and sibling 1 do not land on
  *  neighbouring seeds and produce near-identical rolls. */
 export function heirSeed(parentSeed: number, childIndex: number): number {

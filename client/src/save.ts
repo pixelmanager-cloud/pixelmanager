@@ -17,7 +17,7 @@ const OWNER = 'local';
 
 // ── the SaveModel — everything that persists (see docs/offline-savestore-design.md) ──
 export interface SaveModel {
-  version: number; // save-format version, for future migrations (starts at 1 — none needed yet)
+  version: number; // save-format version; see migrate() below
   profile: { name: string; coins: number; createdAt: number; season: number; wins?: number; draws?: number; losses?: number }; // season = local counter; W/D/L = lifetime manager record (accrued at each season-end, powers prestige)
   club: Club;
   standingOrders: StandingOrders;
@@ -36,7 +36,31 @@ export interface SaveModel {
   playerStats: PlayerSeasonStat[];
 }
 
-export const SAVE_VERSION = 1;
+// 2 — the bloodline became a FOREST. Token gained `parent_id` and `branch`, so a save written before
+// branching has neither and every generation would render as its own separate trunk on the Family Record.
+export const SAVE_VERSION = 2;
+
+/** Bring an older save up to SAVE_VERSION. Pure and idempotent — running it twice must be a no-op. */
+export function migrate(m: SaveModel): SaveModel {
+  if ((m.version ?? 1) >= SAVE_VERSION) return m;
+  // v1 → v2. Before branching there was exactly one heir per generation, so the forest is recoverable
+  // from the generation counter alone: each token's father is the one generation above it. Anyone with
+  // no generation above is a root, which is correct for the founder.
+  const byGen = new Map<number, Token[]>();
+  for (const t of m.tokens) {
+    const g = t.generation ?? 0;
+    (byGen.get(g) ?? byGen.set(g, []).get(g)!).push(t);
+  }
+  for (const t of m.tokens) {
+    const anyT = t as any;
+    if (anyT.branch == null) anyT.branch = 'played';   // every pre-branching token was a played line
+    if (anyT.parent_id === undefined) {
+      const parents = byGen.get((t.generation ?? 0) - 1) ?? [];
+      anyT.parent_id = parents.length === 1 ? parents[0].id : null;
+    }
+  }
+  return { ...m, version: SAVE_VERSION };
+}
 
 /** An empty new-game save. `Date.now()`/`Math.random()` here are fine — this is client, not @fm/shared. */
 export function freshSave(name: string): SaveModel {
@@ -418,9 +442,11 @@ export async function newGame(name: string): Promise<string> {
 
 /** Continue an existing save: loads it into the active in-memory model. */
 export async function continueSave(id: string): Promise<SaveModel> {
-  const m = await backend.load(id);
-  if (!m) throw new Error(`save not found: ${id}`);
+  const raw = await backend.load(id);
+  if (!raw) throw new Error(`save not found: ${id}`);
+  const m = migrate(raw);
   modelBox.model = m;
+  if (m.version !== raw.version) await backend.save(id, m);   // write the upgrade back once
   activeSlotId = id;
   return m;
 }
