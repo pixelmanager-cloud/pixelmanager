@@ -13,6 +13,7 @@ export const SAGA_ARCS: StoryArc[] = [
           { id: 'push', label: 'Force the move', desc: 'Hand in a transfer request — burn the bridge, chase the dream', outcome: 'He tells the club he wants out. The fans turn; the move edges closer.', effect: { market: 3, greed: 2, meters: { fans: -18, authority: -8 }, tag: 'pushed' }, next: 'pushed' },
           { id: 'loyal', label: 'Stay loyal', desc: 'Publicly commit to the club — turn the giants down', outcome: 'He kisses the badge and stays. The terraces roar his name.', effect: { form: 0.06, meters: { fans: 16, authority: 6 }, attr: { leadership: 1 }, tag: 'stayed' }, next: 'stayed' },
           { id: 'leverage', label: 'Use it for leverage', desc: 'Let it drag on — angle for a bumper new deal to stay', outcome: 'The saga rumbles on. The club, twitchy, tables a huge renewal to keep him.', effect: { earnings: 700, greed: 1, market: 2, meters: { fans: -4 }, tag: 'leveraged' }, next: 'leveraged' },
+          { id: 'crossed-once', label: 'Refuse — he has crossed a divide before', desc: 'He knows exactly what a badge is worth to the people in that stand', outcome: 'He has already pulled on colours he was raised to hate and heard what it does to a city, and he decides once is enough for any career. He stays, and says so plainly.', effect: { attr: { leadership: 1, composure: 1 }, meters: { fans: 18, authority: 8, agent: -6 }, form: 0.05, tag: 'stayed' }, next: 'stayed', requires: 'defected' },
         ],
       },
       pushed: {
@@ -95,6 +96,7 @@ export const SAGA_ARCS: StoryArc[] = [
         choices: [
           { id: 'front', label: 'Front the cameras', desc: 'Stand up in the pre-match press room and shoulder the expectation', outcome: 'He looks the nation in the eye and promises nothing but everything. The dressing room stands taller for it.', effect: { attr: { leadership: 2, composure: 1 }, meters: { fans: 12, authority: 6 }, energy: -8, form: -0.03, tag: 'talisman' }, next: 'kickoff' },
           { id: 'insulate', label: 'Shut out the noise', desc: 'Go quiet — phone off, curtains drawn, save every drop for Saturday', outcome: 'He vanishes from the circus and turns up on the day with cold, clear eyes.', effect: { attr: { composure: 2 }, form: 0.05, meters: { peers: 6, fans: -6, authority: -4 }, tag: 'ice' }, next: 'kickoff' },
+          { id: 'said-it-before', label: 'Say what he said before the playoff', desc: 'He has spoken to a room with a club’s whole future on one match', outcome: 'He gathers them and repeats, almost word for word, what he told a terrified dressing room the last time everything came down to a single afternoon. It steadied them then, too.', effect: { attr: { leadership: 2, composure: 2 }, meters: { peers: 12, authority: 8 }, energy: -6, tag: 'talisman' }, next: 'kickoff', requires: 'playoff-calm' },
         ],
       },
       kickoff: {
@@ -111,6 +113,7 @@ export const SAGA_ARCS: StoryArc[] = [
         choices: [
           { id: 'humble', label: 'Hand it to the badge', desc: 'Give every ounce of it to the fans and the fallen', outcome: 'He dedicates the lot to the supporters who never stopped singing. A club immortal, and a humble one.', effect: { attr: { leadership: 1 }, meters: { fans: 20, authority: 8, sponsors: -6 }, earnings: 400 } },
           { id: 'roar', label: 'Let it all out', desc: 'Rip the shirt off and bellow into the away end', outcome: 'He tears his jersey off and screams at {RIVAL}’s emptying stand. Iconic, feral, and utterly unforgettable.', effect: { attr: { aggression: 1, flair: 1, composure: -1 }, meters: { fans: 16, sponsors: 8, authority: -6 }, market: 3 } },
+          { id: 'give-the-mic', label: 'Hand the microphone to the youngest man', desc: 'He fronted every camera all week so that nobody else had to', outcome: 'He has taken every question and every flashbulb of this run-in, so he pulls the teenager in beside him, puts the microphone in the boy’s hand, and steps out of the shot.', effect: { attr: { leadership: 2, teamwork: 1 }, meters: { peers: 18, fans: 14, authority: 8, sponsors: -6 } }, requires: 'talisman' },
         ],
       },
     },
@@ -141,6 +144,7 @@ export const SAGA_ARCS: StoryArc[] = [
         choices: [
           { id: 'stay', label: 'Stay for the run', desc: 'Wave the vultures off — see this fairytale to the final', outcome: 'He tells the agents to wait until summer; some stories are worth more than money. The town falls in love.', effect: { attr: { leadership: 1 }, meters: { fans: 18, authority: 6 }, form: 0.04 } },
           { id: 'cashin', label: 'Ride the momentum', desc: 'Let his agent shop the highlight reel while it’s hot', outcome: 'He lets the offers stack up, his valuation ballooning on ninety famous minutes. Business is business.', effect: { market: 4, greed: 1, earnings: 500, meters: { fans: -6, agent: 8 } } },
+          { id: 'all-of-us', label: 'Make them value the whole team, not just him', desc: 'He told that coach they could all do it — he meant all of them', outcome: 'He tells the sporting directors that any conversation about him begins with the two teammates nobody has called about, and the little club suddenly has three valuable players instead of one.', effect: { attr: { leadership: 2, teamwork: 1 }, meters: { peers: 18, fans: 12, agent: -6 }, market: 1 }, requires: 'believers' },
         ],
       },
     },
@@ -193,6 +197,7 @@ export const SAGA_ARCS: StoryArc[] = [
         choices: [
           { id: 'craft', label: 'Out-think him', desc: 'Use every trick a decade of pace once taught him', outcome: 'He shepherds the kid into blind alleys all night, reading him like a book he wrote. Cunning beats quick.', effect: { attr: { composure: 2, creativity: 1 }, meters: { peers: 12, fans: 10, family: -6 }, form: 0.07 } },
           { id: 'graft', label: 'Out-run him anyway', desc: 'Dig into the tank and simply refuse to be beaten', outcome: 'He matches the boy stride for stride to the whistle, lungs screaming, and earns a standing ovation for sheer bloody-mindedness.', effect: { attr: { stamina: 2, aggression: 1 }, meters: { fans: 14, authority: 6 }, form: 0.05, energy: -16 } },
+          { id: 'proper-defender', label: 'Defend it like a full-back', desc: 'He learned the position properly instead of faking his way through it', outcome: 'He shows the boy the line, closes the angle, and takes the ball off him with a defender’s footwork he did not own a year ago. The new trade, paid off in a single duel.', effect: { form: 0.09, attr: { teamwork: 2, composure: 1 }, meters: { authority: 10, peers: 8 }, energy: -8 }, requires: 'converted' },
         ],
       },
     },
@@ -223,6 +228,7 @@ export const SAGA_ARCS: StoryArc[] = [
         choices: [
           { id: 'fight', label: 'Vow to fight on', desc: 'Tell the gaffer he’ll rip the shirt back off the kid', outcome: 'He refuses the role of elder statesman and swears he’ll start every week on merit. The manager can’t help but admire it.', effect: { attr: { aggression: 1, leadership: 1 }, meters: { authority: 6 }, form: 0.06, energy: -10 } },
           { id: 'terms', label: 'Ask for a fair exit', desc: 'Request a move where he’ll still be first name on the sheet', outcome: 'He asks, with dignity, to be let go somewhere he’ll play — no drama, no burnt bridges.', effect: { market: 2, meters: { agent: 8, fans: -10 }, earnings: 200 } },
+          { id: 'share-it', label: 'Propose sharing the shirt openly', desc: 'He welcomed the lad in; neither of them has to be the loser here', outcome: 'He suggests, in front of both of them, a rotation neither man need be ashamed of — and because he was decent to the boy from day one, the boy agrees before the manager does.', effect: { attr: { teamwork: 2, leadership: 1 }, meters: { peers: 14, authority: 8, fans: 6 }, form: 0.05 }, requires: 'gracious' },
         ],
       },
     },
@@ -297,6 +303,7 @@ export const SAGA_ARCS: StoryArc[] = [
         choices: [
           { id: 'seize', label: 'Seize the moment', desc: 'Play like a man who may never get another minute', outcome: 'He detonates off the bench, turning the match on its head and reminding a full stadium exactly who he is.', effect: { form: 0.13, attr: { creativity: 1, composure: 1 }, meters: { fans: 20, authority: 8 }, energy: -13 }, next: 'reclaim' },
           { id: 'steady', label: 'Do the ugly work', desc: 'Forget the highlights — just be flawless and reliable', outcome: 'No fireworks, just a shift so disciplined the manager can’t leave it out again. Trust, rebuilt in ninety minutes.', effect: { attr: { teamwork: 2, composure: 1 }, meters: { authority: 10, peers: 8 }, form: 0.07, market: -2 }, next: 'reclaim' },
+          { id: 'never-stopped', label: 'Play like a man who never stopped', desc: 'Months of empty training pitches left him the fittest man out there', outcome: 'While everyone waits to see whether the rust shows, he simply runs the legs off the pitch — he has not missed a session in months, and it is obvious inside ten minutes.', effect: { form: 0.11, attr: { stamina: 2, aggression: 1 }, meters: { authority: 9, fans: 14 }, energy: -10 }, next: 'reclaim', requires: 'grinder' },
         ],
       },
       reclaim: {
@@ -343,6 +350,7 @@ export const SAGA_ARCS: StoryArc[] = [
         choices: [
           { id: 'legend', label: 'Live the legend', desc: 'Lean into it — become the club’s derby talisman for good', outcome: 'He accepts the mantle of the man who owns this fixture, and the terraces will sing about these months for a generation.', effect: { attr: { leadership: 1 }, meters: { fans: 18, authority: 8 } } },
           { id: 'humble', label: 'Keep it on the grass', desc: 'Turn the money down and let the results speak', outcome: 'He waves the tabloid off; the goals are the only story he wants told. The dressing room respects him all the more for it.', effect: { attr: { composure: 1 }, meters: { peers: 12, fans: 8 }, earnings: -100 } },
+          { id: 'sell-and-give', label: 'Sell the story and give the money away', desc: 'He made himself the villain; he gets to decide what the villain is for', outcome: 'He takes the tabloid’s money for the feud he stoked all year and hands every penny to the supporters’ trust, and the city cannot decide whether to boo him or build him a statue.', effect: { attr: { leadership: 1, aggression: 1 }, meters: { fans: 20, sponsors: 6, peers: 8 }, earnings: -200 }, requires: 'derby-firebrand' },
         ],
       },
     },
@@ -381,6 +389,7 @@ export const SAGA_ARCS: StoryArc[] = [
         choices: [
           { id: 'stay', label: 'Finish what he started', desc: 'Keep building the club into a regular on this stage', outcome: 'He pockets the card and says not yet; there are bigger nights to bring home to this town first. The fans crown him one of their own forever.', effect: { attr: { leadership: 1 }, meters: { fans: 18, authority: 8 }, form: 0.04 } },
           { id: 'chase', label: 'Chase the bright lights', desc: 'Let his agent open the door the run has unlocked', outcome: 'He takes the leap toward the elite, the European nights his calling card. A small club’s greatest export walks into a bigger world.', effect: { market: 4, greed: 1, earnings: 800, meters: { fans: -6, agent: 10 } } },
+          { id: 'come-back-in-a-year', label: 'Tell the scout to come back in a year', desc: 'He asked for the big nights, and has not finished having them here', outcome: 'He hands the card back and says the man should watch them again next season, when this club is further along — the same ambition he stated out loud, pointed at a longer horizon.', effect: { attr: { leadership: 2, composure: 1 }, meters: { fans: 14, authority: 10, agent: -5 }, form: 0.05, market: 1 }, requires: 'euro-leader' },
         ],
       },
     },
@@ -419,6 +428,7 @@ export const SAGA_ARCS: StoryArc[] = [
         choices: [
           { id: 'clean', label: 'Leave the right way', desc: 'Take a fair move and depart with a handshake, not a grudge', outcome: 'He goes with a lump in his throat and a guard of honour from the youth team he mentored. Ambition and grace, in the end.', effect: { attr: { composure: 1 }, meters: { fans: 12, peers: 8 }, earnings: 500, market: 2 } },
           { id: 'maximise', label: 'Cash the leverage', desc: 'Let his agent squeeze every last pound from the situation', outcome: 'He extracts a signing bonus that raises eyebrows across the game and a contract to match. The saga ends with his bank the clear winner.', effect: { earnings: 900, greed: 2, market: 2, meters: { agent: 10, fans: -6 } } },
+          { id: 'the-handshake', label: 'Hold them to the handshake', desc: 'He did this the grown-up way and they promised him a blessing', outcome: 'He never burned anything down and never briefed a reporter, so he simply reminds the room what was agreed across this desk. There is nothing they can decently say but yes.', effect: { attr: { composure: 2, leadership: 1 }, meters: { fans: 14, authority: 8, peers: 8 }, earnings: 400 }, requires: 'requested-quiet' },
         ],
       },
     },
@@ -449,6 +459,7 @@ export const SAGA_ARCS: StoryArc[] = [
         choices: [
           { id: 'buyin', label: 'Buy into the vision', desc: 'Commit fully to the manager who finally stuck around', outcome: 'He signs on as the cornerstone of a new era, the survivor of the revolving door made its foundation stone. Stability, at last.', effect: { attr: { leadership: 1, teamwork: 1 }, meters: { authority: 8, fans: 12 }, earnings: 300 } },
           { id: 'wary', label: 'Keep his options open', desc: 'Nod politely but let his agent listen to the market', outcome: 'He smiles and says the right things, but a season of upheaval has taught him to trust no promise fully. He keeps one eye on the door.', effect: { market: 2, greed: 1, meters: { agent: 8, authority: -2 } } },
+          { id: 'a-say-in-it', label: 'Sign — and ask for a say in what comes next', desc: 'He has remade his game for three managers and has earned an opinion', outcome: 'He commits, then asks the board for the one thing no player normally gets: to be in the room, for an hour at least, the next time they choose a manager. To his surprise, they agree.', effect: { attr: { leadership: 2, teamwork: 1 }, meters: { authority: 12, peers: 8 }, earnings: 200, form: 0.04 }, requires: 'adaptable' },
         ],
       },
     },
@@ -471,6 +482,7 @@ export const SAGA_ARCS: StoryArc[] = [
         choices: [
           { id: 'battle', label: 'Play through it', desc: 'Grit his teeth and refuse to leave his team a man down', outcome: 'He hobbles through the last half-hour on one good leg and heads clear the corner that saves the game. Talismanic, and reckless.', effect: { form: 0.1, attr: { aggression: 1, stamina: -1 }, meters: { fans: 18, authority: 8 } }, next: 'final-hurdle' },
           { id: 'off', label: 'Protect himself', desc: 'Signal the bench — no promotion is worth the final day', outcome: 'He takes himself off to save his body for the match that truly decides it, trusting the squad to hold the fort tonight.', effect: { attr: { composure: 1 }, meters: { peers: 6 }, form: 0.03 }, next: 'final-hurdle' },
+          { id: 'own-standards', label: 'Stay on — he demanded this of them', desc: 'He tore a strip off them for less; he cannot be the one who walks', outcome: 'He remembers every word he shouted at them a month ago and understands he has made it impossible to come off, so he limps out the ninety and says nothing about it afterwards.', effect: { form: 0.09, energy: -12, attr: { aggression: 1, leadership: 1, stamina: -1 }, meters: { peers: 14, authority: 8 } }, next: 'final-hurdle', requires: 'enforcer' },
         ],
       },
       'final-hurdle': {
@@ -509,6 +521,7 @@ export const SAGA_ARCS: StoryArc[] = [
         choices: [
           { id: 'statement', label: 'Announce he’s back', desc: 'Go for a moment that erases every doubt in one instant', outcome: 'He wins it late with a finish of pure defiance and sinks to his knees where the injury happened. The stadium weeps with him.', effect: { form: 0.12, attr: { composure: 1, flair: 1 }, meters: { fans: 24, authority: 8 }, energy: -14 } },
           { id: 'careful', label: 'Just feel the grass again', desc: 'Play it safe, get the minutes, and be grateful to be whole', outcome: 'No heroics — just twenty clean, careful minutes and a long exhale at the whistle. Sometimes surviving is the victory.', effect: { attr: { composure: 2, teamwork: 1 }, meters: { fans: 14, family: 8 }, form: 0.05, market: -2 } },
+          { id: 'trust-the-work', label: 'Trust the work and play his normal game', desc: 'He attacked every session of this rehab and knows what the knee holds', outcome: 'There is no gingerness and no theatre; he plays the way he always played, because he has spent a whole year finding out exactly what this leg will and will not do.', effect: { form: 0.1, attr: { stamina: 1, composure: 2 }, meters: { fans: 18, authority: 8, family: 5 }, energy: -8 }, requires: 'rehab-warrior' },
         ],
       },
     },
@@ -523,6 +536,7 @@ export const SAGA_ARCS: StoryArc[] = [
         choices: [
           { id: 'players', label: 'Side with the players', desc: 'Confront the board and demand they stop gutting the team', outcome: 'He marches upstairs and reads the directors the riot act on behalf of the room. The board bristles; the dressing room finds a leader worth following.', effect: { attr: { leadership: 2, aggression: 1 }, meters: { peers: 14, authority: -4 }, tag: 'captain-rebel' }, next: 'showdown' },
           { id: 'bridge', label: 'Broker between them', desc: 'Try to hold squad and board together before it all fractures', outcome: 'He becomes a diplomat in shin pads, carrying honest messages both ways to stop the whole thing collapsing into open war.', effect: { attr: { composure: 2, teamwork: 1 }, meters: { authority: 6, peers: 8 }, tag: 'captain-diplomat' }, next: 'showdown' },
+          { id: 'over-their-heads', label: 'Go over the board to the owners themselves', desc: 'He has learned that directors are only ever the messengers', outcome: 'He has watched a boardroom quietly dismantle a dressing room once before, so he stops arguing with the messengers and gets himself into a room with the people who actually decide.', effect: { attr: { leadership: 2, aggression: 1 }, meters: { peers: 12, authority: -6, agent: 5 }, tag: 'captain-rebel' }, next: 'showdown', requires: 'takeover-resist' },
         ],
       },
       showdown: {
@@ -531,6 +545,7 @@ export const SAGA_ARCS: StoryArc[] = [
         choices: [
           { id: 'sacrifice', label: 'Take the bullet', desc: 'Agree to go so the money keeps the team alive', outcome: 'He accepts the move for the good of a club that’s selling him, walking away a martyr the supporters will canonise for years.', effect: { attr: { leadership: 1 }, meters: { fans: 20, peers: 12 }, earnings: 400, market: 2 }, next: 'aftershock' },
           { id: 'stay-fight', label: 'Refuse to be sold', desc: 'Dig in and force the board to keep its captain', outcome: 'He invokes every right he has and simply will not go, staking his career on dragging this club off the rocks himself.', effect: { attr: { aggression: 1, leadership: 1 }, meters: { fans: 16, authority: -6 }, form: 0.05 }, next: 'aftershock' },
+          { id: 'put-it-to-them', label: 'Put it to the dressing room', desc: 'He already fronted the board for them — now let them share the call', outcome: 'He calls the players together, lays the board’s offer out honestly, and tells them he will do whatever the room decides. They decide it together, and it binds them.', effect: { attr: { leadership: 2, teamwork: 1 }, meters: { peers: 16, authority: 4, fans: 10 } }, next: 'aftershock', requires: 'captain-rebel' },
         ],
       },
       aftershock: {
@@ -553,6 +568,7 @@ export const SAGA_ARCS: StoryArc[] = [
         choices: [
           { id: 'loyalty', label: 'Stay for love', desc: 'Take the pay cut and finish where his heart lives', outcome: 'He signs for a fraction of his worth to end it at home, and the terraces understand exactly what the gesture cost him.', effect: { attr: { leadership: 1 }, meters: { fans: 20, family: 8, authority: 6 }, earnings: -300, tag: 'stayed-for-love' }, next: 'twilight-home' },
           { id: 'payday', label: 'Take the payday', desc: 'Cash the last big cheque his career will ever offer', outcome: 'He signs the mega-deal with clear eyes; sentiment doesn’t pay the mortgage, and he’s earned the right to be paid what he’s worth once more.', effect: { earnings: 1000, greed: 1, market: 1, meters: { fans: -8, agent: 8 }, tag: 'took-payday' }, next: 'twilight-away' },
+          { id: 'write-in-the-after', label: 'Take the cut — if they write in what comes after', desc: 'He turned the giants down for this badge once already', outcome: 'He agrees to the reduced money on one condition: a role at the club for when the boots come off, in ink. Loyalty, he has decided, should be a two-way document this time.', effect: { attr: { leadership: 1, composure: 1 }, meters: { fans: 16, authority: 8, agent: 4 }, earnings: -150, tag: 'stayed-for-love' }, next: 'twilight-home', requires: 'stayed' },
         ],
       },
       'twilight-home': {
@@ -591,6 +607,7 @@ export const SAGA_ARCS: StoryArc[] = [
         choices: [
           { id: 'decisive', label: 'Win it late', desc: 'Be the ruthless finisher the role demands', outcome: 'He arrives like a specialist, reads the tiring game in seconds, and buries the winner. The whole bench mobs the wise old head.', effect: { form: 0.11, attr: { composure: 1, flair: 1 }, meters: { fans: 18, authority: 8, peers: -6 }, energy: -6 } },
           { id: 'orchestrate', label: 'Calm the storm', desc: 'Slow the chaos and pull the young team back into shape', outcome: 'He doesn’t score but he settles everything, dictating the closing minutes like a conductor and turning panic into control. Priceless.', effect: { attr: { leadership: 1, teamwork: 1, composure: 1 }, meters: { authority: 10, peers: 8 }, form: 0.05, market: -2 } },
+          { id: 'camp-routine', label: 'Fall back on the finisher’s routine', desc: 'He learned this precise craft in an international camp', outcome: 'He does what a national squad taught him — the long warm-up, the cold read of the game from the touchline, the single decisive intervention — and it works exactly as it was designed to.', effect: { form: 0.1, attr: { composure: 2, teamwork: 1 }, meters: { authority: 9, peers: 8 }, energy: -5 }, requires: 'nation-finisher' },
         ],
       },
       proving: {
@@ -629,6 +646,7 @@ export const SAGA_ARCS: StoryArc[] = [
         choices: [
           { id: 'glory', label: 'Seize the glory', desc: 'Back himself to be the hero the day was made for', outcome: 'He shifts it onto his stronger foot and lashes it into the roof of the net. Cup won, city rejoicing, his name carved into the club forever.', effect: { form: 0.14, attr: { flair: 1, composure: 1 }, meters: { fans: 26, sponsors: 10, authority: 8 }, market: 3, energy: -12 } },
           { id: 'team', label: 'Trust the team', desc: 'Draw two men and square it for the simple, certain finish', outcome: 'He commits the defenders and rolls it to a teammate for the tap-in that wins the cup. His assist, their glory, everyone’s day.', effect: { form: 0.1, attr: { teamwork: 2, creativity: 1 }, meters: { peers: 16, fans: 18, sponsors: -6 }, market: -3 } },
+          { id: 'the-outrageous', label: 'Try the outrageous thing again', desc: 'Playing without fear is what knocked the giant out in the first place', outcome: 'He does the thing nobody sane attempts in a final — the same fearless swing that beat the favourites in the quarters — and it drops in off the underside of the bar.', effect: { form: 0.14, attr: { flair: 2, aggression: 1 }, meters: { fans: 24, sponsors: 8, peers: -6 }, market: 3, energy: -10 }, requires: 'cup-cavalier' },
         ],
       },
     },
@@ -689,6 +707,7 @@ export const SAGA_ARCS: StoryArc[] = [
         choices: [
           { id: 'blessing', label: 'Hand it over with grace', desc: 'Publicly bless the succession and become the kid’s mentor for life', outcome: 'He stands beside the boy at the unveiling and tells the cameras the shirt is in the right hands. A dynasty, secured by an act of grace.', effect: { attr: { leadership: 2 }, meters: { fans: 16, peers: 12, authority: 8 }, market: -3 } },
           { id: 'lastyear', label: 'Squeeze out one more', desc: 'Fight for one final season at the top before he yields', outcome: 'He isn’t ready to be a footnote yet, and backs his body for twelve more months of relevance before he lets the future have it all.', effect: { attr: { stamina: 1, aggression: 1 }, meters: { authority: 4, fans: 8 }, form: 0.06, energy: -14 } },
+          { id: 'go-with-him', label: 'Ask to stay beside the boy', desc: 'He built this player; he would like to see the rest of it', outcome: 'He asks the club for a role that keeps him near the young man he made, and signs a deal that is half footballer and half something nobody has a name for yet.', effect: { attr: { leadership: 2, teamwork: 1 }, meters: { peers: 14, authority: 10, fans: 12 }, form: -0.05, tag: 'coach-track' }, requires: 'heir-mentor' },
         ],
       },
     },
@@ -891,6 +910,7 @@ export const SAGA_ARCS: StoryArc[] = [
         choices: [
           { id: 'clipboard', label: 'Lean into the coaching', desc: 'Throw himself at the badges and the tactics board', outcome: 'He spends his evenings drawing shapes and his weekends still playing, a bridge between the old world and the new one already forming.', effect: { attr: { leadership: 2, creativity: 1 }, meters: { authority: 8, peers: 6, family: -8 }, form: -0.04, tag: 'coach-track' }, next: 'authority' },
           { id: 'player', label: 'Stay a player first', desc: 'Take the title but guard his place in the eleven fiercely', outcome: 'He accepts the badge but refuses to stop competing, determined to earn his minutes before he ever earns his authority.', effect: { attr: { stamina: 1, aggression: 1 }, meters: { peers: 10, authority: 2 }, form: 0.04, energy: -12, tag: 'still-playing' }, next: 'dressing-room' },
+          { id: 'already-doing-it', label: 'Take it — he has been doing the job for free', desc: 'He has already spent seasons teaching the club’s next one', outcome: 'He points out, mildly, that he has been coaching a young player through every session for two seasons already, and asks only that they call the thing what it is.', effect: { attr: { leadership: 2, creativity: 1 }, meters: { authority: 10, peers: 10 }, form: -0.03, tag: 'coach-track' }, next: 'authority', requires: 'heir-mentor' },
         ],
       },
       authority: {
@@ -951,6 +971,7 @@ export const SAGA_ARCS: StoryArc[] = [
         choices: [
           { id: 'grace', label: 'Hand it over willingly', desc: 'Offer the armband to the kid before he’s asked to give it up', outcome: 'He walks into the manager’s office and volunteers to step aside, choosing dignity over a fight he’d one day lose anyway.', effect: { attr: { leadership: 1, teamwork: 1 }, meters: { authority: 6, peers: 12 }, tag: 'handed-over' }, next: 'mentor' },
           { id: 'fight', label: 'Refuse to give it up', desc: 'Insist the armband is earned, not inherited, and hold on', outcome: 'He tells them the young pretender can take it off him on merit, not seniority, and grips the captaincy tighter than ever.', effect: { attr: { aggression: 1, leadership: 1 }, meters: { authority: 4, peers: -2 }, form: 0.04, tag: 'held-on' }, next: 'rivalry' },
+          { id: 'as-it-was-done', label: 'Hand it over and stay at his shoulder', desc: 'Somebody did exactly this for him when he was the young one', outcome: 'He gives the band up and asks the manager for one thing in return — that he stands beside the boy for a season, the way an older man once stood beside him.', effect: { attr: { leadership: 2, teamwork: 1 }, meters: { authority: 8, peers: 14, fans: 6 }, tag: 'handed-over' }, next: 'mentor', requires: 'captain' },
         ],
       },
       mentor: {

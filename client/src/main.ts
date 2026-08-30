@@ -2297,13 +2297,6 @@ class Game {
       // a decision if the player sees both halves of the ledger together.
       const up = (r as any).upkeep as number | undefined;
       if (up) this.pushFeed('🧾', `Keeping the club's facilities running cost <b>${up.toLocaleString()}c</b> this season — the upkeep on every stand, pitch and department you have built. Wages are billed separately.`, m.season + 1);
-      // RUNNING ON EMPTY. Disrepair only fires when the club cannot pay its UPKEEP, but a relegated club
-      // with a big ground can often just cover upkeep and then be stripped to nothing by wages — measured,
-      // 44 seasons out of 60 ending on exactly 0 coins with no facility ever falling in. Nothing is broken
-      // and nothing warns you; you simply cannot buy anything, ever, and the reason is never stated. Say it.
-      if ((this.account?.coins ?? 0) === 0) {
-        this.pushFeed('⚠️', `<b>The club is running on empty.</b> Everything coming in is going straight back out on upkeep and wages, and there is nothing left to spend. Scale a facility back on the <b>Club</b> screen to cut the bill and recover some of what it cost, or climb a division to earn more.`, m.season + 1);
-      }
       const dis = ((r as any).disrepair ?? []) as string[];
       if (dis.length) {
         const names = [...new Set(dis)].map((k) => FACILITY_META[k as FacilityKey]?.name ?? k);
@@ -2375,6 +2368,15 @@ class Game {
           const names = [...new Set(wd)].map((k) => FACILITY_META[k as FacilityKey]?.name ?? k);
           const sal = (sq as any).salvage as number | undefined;
           this.pushFeed('🚧', `<b>The wages could not be paid in full.</b> ${names.join(' and ')} fell into disrepair — ${wd.length} level${wd.length > 1 ? 's' : ''} lost${sal ? `, raising <b>${sal.toLocaleString()}c</b> from what was stripped out` : ''}. The squad costs more than the club earns: sell, let a contract run down, or scale the club back.`, m.season + 1);
+        }
+        // RUNNING ON EMPTY — checked HERE, after wages, not at the season roll. It used to sit immediately
+        // after spSeasonReward credited the season's income, which is the richest instant of the whole
+        // cycle, while the bill its own text blames is charged in advanceSquadSeason right here. Measured
+        // over 60 seasons of a relegated club: the warning fired 0 times against 24 seasons that genuinely
+        // ended on exactly 0 coins. Salvage made it worse, by guaranteeing a positive balance at the old
+        // checkpoint on every disrepair season.
+        if ((sq.coins ?? 0) === 0) {
+          this.pushFeed('⚠️', `<b>The club is running on empty.</b> Everything coming in is going straight back out on upkeep and wages, and there is nothing left to spend. Scale a facility back on the <b>Club</b> screen to cut the bill and recover some of what it cost, or climb a division to earn more.`, m.season + 1);
         }
         const mm = this.loadMgr(); this.saveMgr({ ...mm, squadReport: sq, squadReportSeason: mm.season });
       } catch { /* offline — squad rollover is best-effort, never blocks the season */ }
@@ -5082,10 +5084,17 @@ const settleSave = () => { void flushSave(); };
 // AND SAY SO IF THE DISK IS REFUSING US. A failing autosave used to be completely silent — the game kept
 // accepting moves and reporting success while nothing reached storage. Warn once, and keep the banner up:
 // the honest advice when the browser will not store anything is to stop playing, not to play on.
+// AND IT HAS TO COME DOWN AGAIN. `saveWarned` latched and nothing ever removed #save-broken, so a single
+// transient hiccup — one failed write that the very next one recovers from — pinned a permanent full-width
+// banner telling the player to stop playing, while the game was saving perfectly well.
 let saveWarned = false;
 setInterval(() => {
   const h = getSaveHealth();
-  if (h.ok || saveWarned) return;
+  if (h.ok) {
+    if (saveWarned) { document.getElementById('save-broken')?.remove(); saveWarned = false; }
+    return;
+  }
+  if (saveWarned) return;
   saveWarned = true;
   const el = document.createElement('div');
   el.id = 'save-broken';

@@ -196,7 +196,7 @@ export const MGR_ARCS_02: ManagerArc[] = [
   },
   {
     id: 'mgr-sell-the-training-ground', title: 'The Land At The Back', icon: '🚜', category: 'boardroom',
-    when: { minSeason: 4, maxCoins: 350 }, weight: 2, first: 'open',
+    when: { minSeason: 4, maxCoins: 350, facility: { key: 'training', min: 3 } }, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -858,7 +858,7 @@ export const MGR_ARCS_02: ManagerArc[] = [
   },
   {
     id: 'mgr-bad-reputation-striker', title: 'Twenty Goals, One Problem', icon: '🚩', category: 'transfer',
-    when: { minSeason: 2 }, weight: 4, temper: ['disciplinarian', 'players-manager', 'firefighter'], first: 'open',
+    when: { minSeason: 2, requiresTag: 'mgr-strict' }, weight: 4, temper: ['disciplinarian', 'players-manager', 'firefighter'], first: 'open',
     beats: {
       open: {
         id: 'open',

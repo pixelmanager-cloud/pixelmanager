@@ -12,6 +12,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'calm', label: 'Embrace the nerves', desc: 'Accept the fear, breathe, trust the work', outcome: 'He makes peace with it. By kickoff he’s ice — this is exactly where he wants to be.', effect: { energy: -6, attr: { composure: 1 }, meters: { authority: 4 }, tag: 'ready' }, next: 'moment' },
           { id: 'hype', label: 'Channel the fire', desc: 'Let the adrenaline build — go out snarling', outcome: 'He arrives at the ground bouncing off the walls, ready to run through one.', effect: { energy: -12, attr: { aggression: 1, composure: -1 }, form: 0.03, tag: 'fired' }, next: 'moment' },
+          { id: 'the-ritual', label: 'Run the old ritual', desc: 'Same order, same laces, since he was ten', outcome: 'He does the same things in the same order he has done since he was ten — same sock first, same last long look at a ceiling — and the night shrinks back down to a size a man can hold. He sleeps four hours and wakes up ready, and tells nobody why.', effect: { energy: -6, form: 0.05, attr: { composure: 2 }, meters: { peers: -5, authority: 4 } }, next: 'moment', requires: 'ritual-kept' },
         ],
       },
       moment: {
@@ -20,6 +21,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'bury', label: 'Bury it', desc: 'First-time, no hesitation', outcome: 'He lashes it home and lifts the cup as the confetti falls. A day that outlives him.', effect: { form: 0.12, market: 4, energy: -12, attr: { composure: 1, aggression: 1 }, meters: { fans: 22, authority: 8 } } },
           { id: 'dink', label: 'Dink the keeper', desc: 'Audacity on the biggest stage', outcome: 'He chips it, impossibly cool, and the ball floats in. Some men are built for this.', effect: { form: 0.12, market: 4, attr: { flair: 2 }, meters: { fans: 20, peers: -8 } } },
+          { id: 'like-the-first', label: 'Finish it like his first ever', desc: 'Scruffy, ugly, whatever it takes', outcome: 'His first senior goal went in off a shin in front of a half-empty stand, and it taught him that nobody ever asks how. He does not try to be beautiful; he gets a foot to it and it is in, and the confetti does not care in the slightest.', effect: { energy: -14, form: 0.12, market: 3, attr: { teamwork: 1, aggression: 1 }, meters: { fans: 20, sponsors: -6 } }, requires: 'first-goal' },
         ],
       },
     },
@@ -34,6 +36,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'lead', label: 'Give the speech', desc: 'Stand up, look each man in the eye, demand it', outcome: 'His voice fills the room and grown men nod like schoolboys. They walk out believing.', effect: { energy: -8, attr: { leadership: 1 }, meters: { peers: 8, authority: 5 }, tag: 'voice' }, next: 'whistle' },
           { id: 'quiet', label: 'Let his boots talk', desc: 'Say nothing, lace up, lead by doing', outcome: 'He says not a word, only tightens his laces. The others read the calm and match it.', effect: { attr: { composure: 1 }, form: 0.04, meters: { authority: -4 }, tag: 'still' }, next: 'whistle' },
+          { id: 'terrace-song', label: 'Sing them the terrace song', desc: 'He learned every word of it from the stands', outcome: 'He learned every word of that song standing on a terrace before he was tall enough to see over the barrier, and he starts it in the dressing room until twenty grown men are bellowing it back. They walk out sounding exactly like the crowd they play for.', effect: { energy: -10, form: 0.05, attr: { leadership: 2, composure: -1 }, meters: { peers: 12, fans: 8, authority: -5 } }, next: 'whistle', requires: 'world-terrace-sang' },
         ],
       },
       whistle: {
@@ -42,6 +45,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'humble', label: 'Credit the club', desc: 'Point to the badge, the fans, the grind', outcome: 'He talks only of the tea ladies and the away-day faithful. The terraces adore him for it.', effect: { form: 0.08, meters: { fans: 18, authority: 6, sponsors: -6 }, attr: { teamwork: 1 } } },
           { id: 'hungry', label: 'Aim higher already', desc: 'Say this division was never the ceiling', outcome: 'Champagne in his hair, he vows this is only base camp. The chairman raises an eyebrow, and smiles.', effect: { form: 0.1, market: 3, greed: 2, meters: { sponsors: 8, fans: 10, peers: -6 }, attr: { aggression: 1 } } },
+          { id: 'the-drivers', label: 'Name the people who drove him', desc: 'Every early morning, every long road', outcome: 'He does not talk about himself at all. He names the people who got up at six on Sundays to take a boy to games they had no interest in, live on national television, and half the country goes quiet. The sponsors wanted a soundbite and got a thank-you list.', effect: { form: 0.07, market: -3, meters: { family: 16, fans: 16, sponsors: -8 }, attr: { teamwork: 1, leadership: 1 } }, requires: 'said-thanks' },
         ],
       },
     },
@@ -56,6 +60,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'gracious', label: 'Salute {RIVAL}', desc: 'Name his rival from the podium, mean it', outcome: 'He thanks {RIVAL} for dragging the best from him all year. The room warms; even his rival applauds.', effect: { attr: { leadership: 1 }, meters: { peers: 12, fans: 8, sponsors: -5 }, tag: 'class' }, next: 'after' },
           { id: 'relish', label: 'Savour every second', desc: 'Milk the ovation, let it wash over him', outcome: 'He lingers at the microphone, drinking it in, and the cameras love the glint in his eye.', effect: { form: 0.06, market: 3, greed: 3, meters: { sponsors: 10, fans: 10, peers: -8 }, tag: 'shine' }, next: 'after' },
+          { id: 'the-better-boy', label: 'Name the boy who was better than him', desc: 'There was a kid at twelve nobody could touch', outcome: 'From the podium he names a boy nobody in the room has ever heard of — the one who was better than all of them at twelve and never got out of it — and says plainly that the difference was luck, not merit. The room does not know where to look.', effect: { form: -0.04, market: -3, attr: { composure: 2, leadership: 1 }, meters: { peers: 14, fans: 10, sponsors: -8 } }, next: 'after', requires: 'youth-rival' },
         ],
       },
       after: {
@@ -64,6 +69,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'stay', label: 'Keep the head down', desc: 'Bin the noise, back to the training pitch', outcome: 'He drives to the ground before dawn and runs the extra laps alone. Awards, he decides, are earned again each week.', effect: { form: 0.09, attr: { stamina: 1, composure: 1 }, meters: { authority: 6 } } },
           { id: 'cash', label: 'Cash the moment', desc: 'Let the agent chase the boot deals', outcome: 'The endorsements roll in and his face goes up on billboards. Comfortable, lucrative, and a touch distracting.', effect: { earnings: 5, market: 4, meters: { sponsors: 14, agent: 8 }, form: -0.03 } },
+          { id: 'old-coach', label: 'Drive to the coach who believed first', desc: 'The one who kept picking him when nobody else would', outcome: 'He ignores both phones and spends the whole day with the coach who kept naming a scrawny kid in the side when there was no earthly reason to, sat in a kitchen with a cold cup of tea and the trophy on the table. He trains alone that evening.', effect: { energy: -10, earnings: -4, form: 0.07, attr: { composure: 1, stamina: 1 }, meters: { authority: 6, agent: -8, sponsors: -6 } }, requires: 'coach-faith' },
         ],
       },
     },
@@ -188,6 +194,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'ice', label: 'Play it stone cold', desc: 'No celebration, just a long hard stare', outcome: 'He refuses to celebrate, only fixes {RIVAL} with a look that says everything words could not. Chilling.', effect: { attr: { composure: 1, aggression: 1 }, meters: { peers: 8, authority: 6, fans: -6 }, tag: 'cold' }, next: 'mic' },
           { id: 'roar', label: 'Roar it out', desc: 'Cup the ears at the away end, let it fly', outcome: 'He cups his ears at the doubters and roars until his throat is raw. Every doubt, screamed back at them.', effect: { form: 0.08, energy: -5, attr: { aggression: 1 }, meters: { fans: 14, authority: -8 }, tag: 'loud' }, next: 'mic' },
+          { id: 'called-lazy', label: 'Say the word they used on him at fourteen', desc: 'Lazy. He has carried it around for years', outcome: 'A coach called him lazy in front of a full room when he was fourteen, and he has never once let go of the word. He plays the ninety like a man settling exactly that, then says the word out loud into a camera and lets everyone work out who it belongs to.', effect: { energy: -12, form: 0.08, attr: { aggression: 2, stamina: 1 }, meters: { fans: 12, authority: -8, peers: -4 } }, next: 'mic', requires: 'lazy-rejected' },
         ],
       },
       mic: {
@@ -210,6 +217,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'earned', label: 'Point to the graft', desc: 'Name the winter nights and the aching mornings', outcome: 'He talks of the pre-season hills and the games nobody watched. A champion who never forgot the climb.', effect: { attr: { teamwork: 1, leadership: 1 }, meters: { peers: 12, authority: 8, sponsors: -5 }, tag: 'grafter' }, next: 'parade' },
           { id: 'kings', label: 'Declare them kings', desc: 'Let it rip — the best in the land, say it loud', outcome: 'He roars that nobody can touch them now, champagne stinging his eyes. The city believes every word.', effect: { form: 0.08, market: 3, greed: 3, meters: { fans: 16, sponsors: 6, peers: -8 }, tag: 'anointed' }, next: 'parade' },
+          { id: 'the-bench-years', label: 'Speak for the men who never got on', desc: 'He knows exactly what a bench feels like in April', outcome: 'He spent a season clawing his way back from being nobody’s first choice, so he spends his first words as a champion on the four lads who did not get a minute all spring. They will remember it long after the medal has gone in a drawer.', effect: { energy: -6, market: -3, attr: { leadership: 2, teamwork: 1 }, meters: { peers: 18, authority: 6, sponsors: -8 } }, next: 'parade', requires: 'grinder' },
         ],
       },
       parade: {
@@ -218,6 +226,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'soak', label: 'Drink it all in', desc: 'Learn every face, remember it forever', outcome: 'He leans over the rail and shakes every hand he can reach, burning the day into memory. Some mornings never fade.', effect: { form: 0.1, energy: -10, meters: { fans: 18, authority: 6 }, attr: { composure: 1 } } },
           { id: 'again', label: 'Vow to defend it', desc: 'Tell the crowd one is never enough', outcome: 'Trophy aloft, he promises the parade will run again next May. The fans chant his name till they are hoarse.', effect: { form: 0.09, market: 4, greed: 3, attr: { aggression: 1 }, meters: { fans: 14, sponsors: 8, family: -6 } } },
+          { id: 'ride-with-him', label: 'Ride it with his mate', desc: 'The one he came through the whole thing with', outcome: 'He spends the entire parade with an arm round the one man who has been beside him since the day they met, saying almost nothing, both of them grinning like idiots. The photographers wanted the trophy and got two friends instead.', effect: { energy: -10, market: -2, form: 0.09, attr: { teamwork: 2 }, meters: { peers: 18, fans: 12, sponsors: -6 } }, requires: 'brothers' },
         ],
       },
     },
@@ -276,6 +285,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'hunt', label: 'Hunt the goal', desc: 'Chase every scrap, gamble on the shoulder', outcome: 'He plays on the last defender\'s toes all afternoon and pounces twice. {RIVAL} blanks; the Boot is his alone.', effect: { form: 0.1, energy: -10, greed: 2, attr: { aggression: 1, flair: 1 }, meters: { fans: 14, peers: -10 }, tag: 'sharpshooter' }, next: 'boot' },
           { id: 'team', label: 'Play for the win', desc: 'Forget the tally, do the job the team needs', outcome: 'He drops deep, creates two and taps in a third almost by accident. The Boot lands his way, honestly earned.', effect: { form: 0.08, energy: -8, attr: { teamwork: 1, composure: 1 }, meters: { peers: 12, authority: 4 }, tag: 'complete' }, next: 'boot' },
+          { id: 'knows-the-hunger', label: 'Chase it the way he chased the third', desc: 'He knows what hunting one more goal does to a man', outcome: 'He has spent a whole second half hunting a third goal before, and he knows precisely how it warps a player, so he sets himself a rule at kickoff: two chances, then he plays for the team. He scores on the second and gives every other sniff away.', effect: { energy: -10, form: 0.09, market: -2, attr: { composure: 2, teamwork: 1 }, meters: { peers: 12, fans: 10, sponsors: -6 } }, next: 'boot', requires: 'hat-trick' },
         ],
       },
       boot: {
@@ -298,6 +308,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'believe', label: 'Preach belief', desc: 'Tell the lads the story is theirs to write', outcome: 'He gathers the youngsters and swears fairytales are won, not wished for. They walk out with fire in their boots.', effect: { energy: -8, attr: { leadership: 2 }, meters: { peers: 12, authority: 6 }, tag: 'believer' }, next: 'giant' },
           { id: 'loose', label: 'Play with freedom', desc: 'No pressure, no fear, just express it', outcome: 'He tells them nobody expected this, so swing free and enjoy it. The looseness turns them lethal.', effect: { form: 0.06, attr: { flair: 1, composure: 1 }, meters: { peers: 8, authority: -6 }, tag: 'fearless' }, next: 'giant' },
+          { id: 'won-one-before', label: 'Tell them he has done this before', desc: 'A tin cup on a Sunday, and it counted', outcome: 'He tells a dressing room of frightened boys that he has already won a final in his life — a tin cup on a municipal pitch in front of twelve people — and that the size of a crowd changes nothing at all about ninety minutes. They believe him because he obviously means it.', effect: { energy: -8, form: 0.05, attr: { leadership: 2, composure: 1 }, meters: { peers: 12, authority: -5 } }, next: 'giant', requires: 'first-trophy' },
         ],
       },
       giant: {
@@ -320,6 +331,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'run', label: 'Run to the family', desc: 'Sprint straight to where they always sit', outcome: 'He tears off toward the little cluster who drove him to every trial and points until they see him. All of it, for that look on their faces.', effect: { attr: { composure: 1 }, meters: { family: 14, fans: 6, peers: -5 }, tag: 'first-goal' }, next: 'after' },
           { id: 'roar', label: 'Roar it out', desc: 'Slide on the knees, let the relief explode', outcome: 'He slides across the wet turf screaming, months of doubt pouring out at once. The bench mobs him grinning.', effect: { form: 0.06, energy: -6, attr: { aggression: 1, composure: -1 }, meters: { peers: 8 }, tag: 'first-goal' }, next: 'after' },
+          { id: 'imagined-it', label: 'Do the celebration he invented aged nine', desc: 'He has rehearsed this in an empty garden for years', outcome: 'He has scored this goal a thousand times in an empty garden with his own commentary running in his head, and he knows exactly what happens next. He performs a celebration nobody has ever seen, alone, in front of a half-empty stand, and it is perfect and faintly ridiculous.', effect: { energy: -6, form: 0.06, market: 2, attr: { flair: 1, composure: 1 }, meters: { fans: 10, family: 8, peers: -6 } }, next: 'after', requires: 'imagined-crowd' },
         ],
       },
       after: {
@@ -328,6 +340,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'hundreds', label: 'Promise hundreds more', desc: 'Look him dead-on, mean every word', outcome: 'He says this is goal one of hundreds and does not blink. The old pro nods slowly; he has seen that look before, in the good ones.', effect: { form: 0.08, greed: 3, attr: { aggression: 1, composure: 1 }, meters: { peers: 8, authority: 4 } } },
           { id: 'humble', label: 'Just savour today', desc: 'Refuse to look past this one moment', outcome: 'He says he only wants to enjoy tonight and worry about tomorrow tomorrow. Wise beyond the years, and the room warms to him.', effect: { form: 0.06, market: -2, attr: { composure: 1, teamwork: 1 }, meters: { peers: 10, family: 6 } } },
+          { id: 'no-fallback', label: 'Tell him there was never a plan B', desc: 'A teacher once told him to have one. He did not.', outcome: 'He tells the old pro that a teacher sat him down at fifteen and told him to have something to fall back on, and that he never bothered, because falling back was not on the list. The veteran stops joking and looks at him properly for the first time.', effect: { form: 0.07, greed: 2, attr: { aggression: 1, composure: 1 }, meters: { peers: 6, authority: 4, family: -6 } }, requires: 'no-plan-b' },
         ],
       },
     },
@@ -342,6 +355,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'earned', label: 'Own the promotion', desc: 'Tell himself the wait made him ready', outcome: 'He decides the long apprenticeship was the making of him and strides into the XI like he has always belonged. No stage fright now.', effect: { attr: { composure: 1, leadership: 1, aggression: -1 }, meters: { authority: 6, peers: 8 }, tag: 'starter' }, next: 'perform' },
           { id: 'prove', label: 'Treat it as a trial', desc: 'One start is nothing without a performance', outcome: 'He refuses to celebrate a place he might lose, pouring the nerves into preparation. The shirt will have to be prised off him.', effect: { form: 0.05, energy: -10, attr: { stamina: 1 }, meters: { authority: 4 }, tag: 'hungry-start' }, next: 'perform' },
+          { id: 'just-another-day', label: 'Treat it as another Tuesday', desc: 'Assessment day taught him that fuss loses shirts', outcome: 'He learned on an assessment day as a boy that the lads who treated it as an occasion played like strangers, so he does nothing differently at all — same warm-up, same breakfast, same walk in. The shirt is still his a month later and nobody can say quite why.', effect: { energy: -8, form: 0.05, attr: { composure: 2, flair: -1 }, meters: { authority: 6, fans: -5 } }, next: 'perform', requires: 'assessment-normal' },
         ],
       },
       perform: {
@@ -408,6 +422,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'loyal', label: 'Cherish the one badge', desc: 'Reflect on a lifetime given to one club', outcome: 'He thinks of the offers turned down and does not regret one, pressing the crest to his lips as the stadium roars. Home is home.', effect: { market: -3, attr: { teamwork: 1, composure: 1 }, meters: { fans: 16, authority: 8 }, tag: 'one-club' }, next: 'walk' },
           { id: 'body', label: 'Salute his own body', desc: 'Marvel quietly at every mile in the legs', outcome: 'He thinks of the ice baths and the physios and the mornings he could barely walk. Five hundred games; every one paid for in sweat.', effect: { form: 0.05, energy: -12, attr: { stamina: 2 }, meters: { peers: 8 }, tag: 'ironman' }, next: 'walk' },
+          { id: 'played-hurt', label: 'Admit how many he played hurt', desc: 'He learned to hide a limp at thirteen', outcome: 'He says plainly that a good number of the five hundred were played on a leg he had no business using, and that he learned to hide a limp before he learned to shave. It is not the line the club wanted for the occasion, and every player in the ground nods.', effect: { form: -0.05, energy: -8, market: -3, attr: { stamina: 2 }, meters: { peers: 14, authority: -6, sponsors: -6 } }, next: 'walk', requires: 'run-hurt' },
         ],
       },
       walk: {
@@ -430,6 +445,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'thank', label: 'Thank the ones who rebuilt him', desc: 'Name the physios and the dark mornings', outcome: 'He reads out the names of the medics and rehab staff who dragged him back from nothing. Not a dry eye among them.', effect: { market: -2, attr: { composure: 1, teamwork: 1 }, meters: { peers: 12, authority: 6 }, tag: 'reborn' }, next: 'lesson' },
           { id: 'defiant', label: 'Answer the doubters', desc: 'Remind the room he was written off', outcome: 'He holds the trophy up and says softly that he read every obituary of his career — and here he is. The room erupts.', effect: { form: 0.07, market: 3, attr: { aggression: 1 }, meters: { fans: 14, sponsors: 4, authority: -6 }, tag: 'defiant-return' }, next: 'lesson' },
+          { id: 'done-it-before', label: 'Say he has been here before, smaller', desc: 'A scare at sixteen taught him how a comeback works', outcome: 'He tells the room that the first time a doctor frightened him he was sixteen and nobody wrote a word about it, and that he learned the entire trick then: do the boring thing every day for months while everybody forgets you exist. There is no better speech all night.', effect: { energy: -6, market: -2, form: 0.06, attr: { composure: 2, stamina: 1 }, meters: { peers: 12, authority: 6, sponsors: -6 } }, next: 'lesson', requires: 'rehab-properly' },
         ],
       },
       lesson: {
@@ -460,6 +476,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'fund', label: 'Fund the next generation', desc: 'Pledge to rebuild the pitches he grew up on', outcome: 'He promises new pitches, boots and coaching for every kid on the estate, and signs it there and then. The town will never forget.', effect: { form: 0.08, earnings: -3, meters: { fans: 18, authority: 6 }, attr: { leadership: 1 } } },
           { id: 'mentor', label: 'Take the boy under his wing', desc: 'Hand him his own boots, promise to watch him', outcome: 'He unlaces his boots on the spot and gives them to the boy, vowing to follow his progress himself. A moment the child will chase forever.', effect: { form: 0.07, meters: { fans: 14, family: 8 }, attr: { leadership: 1, teamwork: 1 } } },
+          { id: 'boots-for-all', label: 'Buy every kid on the estate boots', desc: 'He knows exactly what the wrong boots feel like', outcome: 'He played a whole season as a boy in boots that were not really boots, and he has never forgotten the specific shame of it. He sets up a standing order so no child on that estate plays in the wrong pair again, and asks that his name is kept off every bit of it.', effect: { earnings: -18, form: 0.06, attr: { leadership: 2 }, meters: { fans: 16, family: 8, sponsors: -6 } }, requires: 'boots-made-do' },
         ],
       },
     },
@@ -482,6 +499,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'stay', label: 'Stay till the last one', desc: 'Sign and photograph every last supporter', outcome: 'He tells the bus to wait and works down the whole line in the dark, signing every scrap. The fans who chose him love him twice over.', effect: { form: 0.08, energy: -12, meters: { fans: 18, sponsors: 4, peers: -8 }, attr: { teamwork: 1 } } },
           { id: 'shirt', label: 'Give away the shirt', desc: 'Hand his match shirt to a young supporter', outcome: 'He peels off the shirt he won it in and drapes it over a shivering kid at the front. The photograph makes every local paper.', effect: { form: 0.07, market: 2, meters: { fans: 16, family: 4, sponsors: -5 }, attr: { composure: 1 } } },
+          { id: 'stood-there', label: 'Go and stand in the queue with them', desc: 'He waited in that same cold once a fortnight', outcome: 'He stood in that exact queue in that exact cold as a boy with his own scarf and his own frozen hands, so he refuses to sign from behind a barrier. He gets in among them and the bus waits an hour and a half. The club fines him and he pays it happily.', effect: { energy: -14, earnings: -8, form: 0.07, attr: { teamwork: 2 }, meters: { fans: 20, authority: -8, peers: -6 } }, requires: 'season-ticket-goes' },
         ],
       },
     },
@@ -496,6 +514,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'history', label: 'Invoke the ghosts', desc: 'Play for every fan who never saw silver', outcome: 'He speaks of the grandfathers who died waiting and the boys they can make immortal today. The room walks out on fire.', effect: { attr: { leadership: 2, composure: -1 }, meters: { peers: 12, fans: 8 }, tag: 'history-maker' }, next: 'lift' },
           { id: 'calm', label: 'Keep them calm', desc: 'Strip the weight of a century away', outcome: 'He tells them to forget the hundred barren years and just play the game in front of them. The pressure drains from the room.', effect: { form: 0.06, attr: { composure: 1, teamwork: 1, aggression: -1 }, meters: { peers: 10 }, tag: 'unburdened' }, next: 'lift' },
+          { id: 'for-the-old-man', label: 'Play it for the old man in the stand', desc: 'One person watched every game he ever played', outcome: 'He tells them about a man who stood at the side of a pitch in every kind of weather for years and never missed a game, and says every one of them has somebody like that. Then he plays as though a hundred barren years weigh nothing next to one old face.', effect: { energy: -10, form: 0.05, attr: { leadership: 2, composure: 1 }, meters: { peers: 10, family: 12, fans: -4 } }, next: 'lift', requires: 'grandad-watches' },
         ],
       },
       lift: {
@@ -614,6 +633,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'home', label: 'Take it to his family', desc: 'Carry it straight to the people who believed', outcome: 'He drives it home that night and sets it on the mantelpiece beside old boyhood trophies. The ones who ferried him to training get the first look.', effect: { form: 0.07, market: -2, attr: { composure: 1 }, meters: { family: 14, fans: 6 } } },
           { id: 'giveaway', label: 'Toss it to the terrace', desc: 'Fling the ball into the delirious stand', outcome: 'On impulse he hurls it into the arms of the singing supporters, deciding the memory is enough. The gesture makes him theirs for good.', effect: { form: 0.06, market: 2, attr: { flair: 1 }, meters: { fans: 14, sponsors: 4, family: -8 } } },
+          { id: 'shelf-space', label: 'Put it beside the first one', desc: 'There is a ball at home nobody is allowed to touch', outcome: 'There is a ball on a shelf at home that he has not let a single person touch since he was a boy, and tonight it finally gets company. He carries the new one home under his arm and says nothing about it to anybody, least of all the press officer.', effect: { form: 0.06, market: -3, attr: { composure: 1 }, meters: { family: 14, fans: -4, sponsors: -5 } }, requires: 'first-ball-kept' },
         ],
       },
     },
@@ -628,6 +648,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'perfection', label: 'Marvel at the standard', desc: 'Reflect on a discipline sustained for a year', outcome: 'He speaks of the concentration it takes to never once slip in ten long months, and says the achievement is about relentlessness, not flair. Awe, quietly earned.', effect: { market: -2, attr: { composure: 1, stamina: 1 }, meters: { peers: 14, authority: 8 }, tag: 'invincible' }, next: 'record' },
           { id: 'defiant', label: 'Throw it at the doubters', desc: 'Remind everyone they were written off in August', outcome: 'He recalls the pundits who tipped them for mid-table and asks how the unbeaten side looks now. Defiant, and the terraces roar their agreement.', effect: { form: 0.09, attr: { aggression: 1 }, meters: { fans: 16, sponsors: 4, authority: -6 }, tag: 'invincible' }, next: 'record' },
+          { id: 'the-hammering', label: 'Remember the day they got hammered', desc: 'He was on the wrong end of one and never stopped running', outcome: 'He tells them about a Sunday when he was a boy and his team shipped nine, and how he ran the same in the ninetieth minute as the first, and that an unbeaten year is only that habit repeated for ten months. It is not a boast, and it lands harder than one.', effect: { energy: -8, market: -2, attr: { stamina: 2, teamwork: 1 }, meters: { peers: 14, authority: 6, fans: -5 } }, next: 'record', requires: 'never-stopped' },
         ],
       },
       record: {
@@ -680,6 +701,7 @@ export const TRIUMPH_ARCS: StoryArc[] = [
         choices: [
           { id: 'work', label: 'Bury himself in the work', desc: 'Ignore the circus, live on the training pitch', outcome: 'He switches the phone off and stays behind for extra finishing every evening, letting his football answer the hype. The coaches quietly adore him for it.', effect: { form: 0.08, attr: { stamina: 1, composure: 1 }, meters: { authority: 6, peers: 6 } } },
           { id: 'brand', label: 'Build the profile', desc: 'Let the agent turn the buzz into deals', outcome: 'He signs the boot contract and the magazine covers, cashing in while the light shines brightest. Lucrative and dazzling, if a touch dizzying for one so young.', effect: { earnings: 4, market: 4, attr: { flair: 1 }, meters: { agent: 14 }, form: -0.03 } },
+          { id: 'read-it-himself', label: 'Read every line of it himself', desc: 'He signed a bad one of these once already', outcome: 'He signed a scrap of paper for a bag of free boots at fifteen and only worked out later what he had given away, so this time he reads every clause himself and makes them wait a fortnight for an answer. The agent is furious. The deal comes back twice as good.', effect: { earnings: 6, market: 2, form: -0.04, attr: { composure: 2 }, meters: { agent: -12 } }, requires: 'boot-deal' },
         ],
       },
     },

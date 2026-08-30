@@ -852,21 +852,31 @@ export function makeScenario(rng: () => number, i: number, track: Track = 'outfi
   const kind = KIND_POOL[Math.floor(rng() * KIND_POOL.length)];
   const bias = track === 'goalkeeper' ? GK_BIAS : (band ? band.demand : OUTFIELD_TAGS);
   const n = 1 + Math.floor(rng() * Math.min(3, bias.length));
-  const drawn = [...new Set(shuffleSeeded(bias, rng))].slice(0, n);
-  const raw = drawn.map(() => 0.3 + rng());
-  // KEEP THE DEMAND IN KEEPING WITH THE MOMENT. KIND_BIAS has always described which tags each kind of
-  // scenario should ask for — a dressing-room or media moment wants leadership/composure/teamwork, a
-  // training session wants the tools — and nothing ever read it. Measured, 75% of social and training
-  // scenarios demanded at least one tag their own kind excludes: a media scrum asking an outfielder for
-  // `keeping`, a training drill asking for `teamwork`.
+  const pool = [...new Set(shuffleSeeded(bias, rng))].slice(0, n);
+  const raw = pool.map(() => 0.3 + rng());
+  // KIND_BIAS IS STILL DEAD, DELIBERATELY, AND THIS IS THE SECOND TIME IT HAS BEEN LEFT THAT WAY.
   //
-  // Substituted rather than filtered, and mapped through pureHash01 rather than rng(), because BOTH the
-  // shuffle and the `raw` map consume draws proportional to the array length — filtering here would change
-  // the number of rng draws and invalidate every stored career. This keeps the stream byte-identical and
-  // only changes which tag the moment ends up asking for.
-  const allow = KIND_BIAS[kind];
-  const pool = allow === TAGS ? drawn
-    : drawn.map((t, k) => (allow.includes(t) ? t : allow[Math.floor(pureHash01(seed ?? 0, i, 0x4b1d + k) * allow.length)]));
+  // The defect is real: KIND_BIAS describes which tags each kind of scenario should ask for, nothing reads
+  // it, and 75% of social and training scenarios demand a tag their own kind excludes — a media scrum
+  // asking an outfielder for `keeping`. I fixed it by substituting off-kind tags through pureHash01,
+  // verified that the rng DRAW STREAM was byte-identical, and concluded stored careers were safe.
+  //
+  // THE DRAW STREAM WAS NEVER WHAT WAS AT RISK. An adversarial replay found it: changing `demand` changes
+  // `fit`, which changes `success`, which changes energy and injuries, which changes the PHASE SEQUENCE —
+  // so a stored action list no longer matches the career it is replayed into. loadCareer's tolerant path
+  // does not throw, it silently TRUNCATES: of six recorded careers, four diverged, and one lost 108 of its
+  // 120 turns — a finished 25-year-old reloading as a 13-year-old. Byte-identical rng protected nothing,
+  // and my verifying it is what stopped anyone looking further.
+  //
+  // The substitution also collapsed distinct drawn tags onto the same allowed tag, taking single-tag
+  // social scenarios from 29.9% to 41.8% — directly against PT-700, which exists to make moments test the
+  // deck rather than hand you a gimme.
+  //
+  // Fixing this properly needs the demand to change WITHOUT the replay diverging: either a save-version
+  // gate that replays pre-existing careers on the old rule, or making replay tolerant of a changed demand
+  // by re-deriving success from the stored choice rather than recomputing it. Both are real work. Until
+  // then the wrong-flavoured demand stays, because a wrong tag in a prompt is a blemish and a silently
+  // truncated dynasty is not.
   const demand: Partial<Record<Tag, number>> = {};
   pool.forEach((t, k) => { demand[t] = raw[k]; });
   if (demandBias) demand[demandBias] = (demand[demandBias] ?? 0) + 0.6;  // the gaffer wants more of this
@@ -892,7 +902,7 @@ export function makeScenario(rng: () => number, i: number, track: Track = 'outfi
     const want = stakes >= 3 ? 3 : 2;
     let guard = 0;
     while (Object.keys(demand).length < want && guard < 8) {
-      const extras = (allow === TAGS ? bias : allow).filter((t) => !(t in demand));
+      const extras = bias.filter((t) => !(t in demand));
       if (!extras.length) break;
       demand[extras[Math.floor(pureHash01(seed, i, 0x71b12 + guard) * extras.length)]] = 0.6 - guard * 0.08;
       guard++;

@@ -12,6 +12,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'learn', label: 'Soak it all up', desc: 'Extra hours, every drill, hang on his every word', outcome: 'He becomes the old man’s shadow — and it shows in the little details of his game.', effect: { attr: { composure: 1, teamwork: 1 }, meters: { authority: 8 }, tag: 'protege' }, next: 'goodbye' },
           { id: 'polite', label: 'Politely decline', desc: 'He’d rather find his own way', outcome: 'He nods, says thanks, and goes his own road. Independent — for better or worse.', effect: { attr: { creativity: 1 }, meters: { authority: -2 } } },
+          { id: 'ask-to-lead', label: 'Ask him how to lead a room', desc: 'He wore an armband at twelve and never knew what to do with it', outcome: 'He tells the old man about an armband he was handed as a boy that he had no idea what to do with, and asks to be taught the part of the job nobody ever coaches. They spend a winter on it, and it costs him every evening he had.', effect: { energy: -14, attr: { leadership: 2, composure: 1 }, meters: { authority: 8, family: -8, peers: -4 } }, next: 'goodbye', requires: 'first-captain' },
         ],
       },
       goodbye: {
@@ -116,6 +117,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'set-free', label: 'Tell him to go', desc: 'Push his brother toward the bigger stage', outcome: 'He tells him to take it, because that’s what you do for family. They embrace at the airport and swear the friendship outlasts any transfer.', effect: { meters: { peers: 14 }, attr: { leadership: 1, teamwork: 1 } } },
           { id: 'beg-stay', label: 'Beg him to stay', desc: 'Finish what they started, together', outcome: 'He makes the case for one more year, one more crack at it together — and the lad stays. Selfish, maybe. But some things are worth being selfish for.', effect: { meters: { peers: 10, authority: -2 }, attr: { teamwork: 2 }, form: 0.05 } },
+          { id: 'been-here', label: 'Tell him how the other side of it felt', desc: 'He once sat with a mate who got released', outcome: 'He tells him about sitting on a wall with a lad who had just been released, and how the worst part was everybody pretending it had not happened. Then he helps his friend pack and stays a fortnight in a strange city, and comes back to preseason a yard off it.', effect: { energy: -14, form: -0.05, attr: { teamwork: 2, leadership: 1 }, meters: { peers: 16, authority: -5 } }, requires: 'stood-by-mate' },
         ],
       },
     },
@@ -132,6 +134,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'stand-up', label: 'Stand his ground', desc: 'Chest to chest, let the room see he won’t fold', outcome: 'He fronts up in front of everyone, and the dressing room splits down the middle. Nobody doubts his bottle now — but the air stays poisonous.', effect: { meters: { peers: -8, authority: 4 }, attr: { aggression: 2, leadership: 1 }, tag: 'at-war' }, next: 'resolution' },
           { id: 'ice-him', label: 'Freeze him right back', desc: 'Kill him with cold professionalism', outcome: 'He answers every dig with silence and every snub with a better performance. The feud simmers, quiet and vicious, all season.', effect: { meters: { peers: -4 }, attr: { composure: 2 }, form: 0.05, tag: 'at-war' }, next: 'resolution' },
+          { id: 'get-in-first', label: 'Get in first, the way he had to', desc: 'The smallest lad on the pitch learns to strike early', outcome: 'He was the smallest boy on every pitch he ever played on, and he learned that you do not wait to be picked on — you move first and you make it memorable. He does exactly that in front of the whole room, and the senior pro never tries him again. Half the squad decides he is a problem.', effect: { meters: { peers: -14, authority: 6 }, attr: { aggression: 2, leadership: 1 }, form: 0.05, tag: 'at-war' }, next: 'resolution', requires: 'small-tough' },
         ],
       },
       resolution: {
@@ -140,6 +143,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'truce', label: 'Broker a truce', desc: 'Not friends — but professionals, for the badge', outcome: 'They shake hands like men defusing a bomb, and go out and dismantle the opposition together. Respect, hard-won, is worth more than warmth.', effect: { meters: { peers: 12, authority: 6 }, attr: { teamwork: 2, leadership: 1 }, form: 0.06 } },
           { id: 'no-surrender', label: 'Refuse to bend', desc: 'He’d rather win alone than smile at a snake', outcome: 'He won’t give an inch, so the manager benches the pair of them and the club goes down fighting shorthanded. Principle, at a brutal price.', effect: { meters: { peers: -10, authority: -6 }, attr: { aggression: 2 }, form: -0.06 } },
+          { id: 'apologise-first', label: 'Apologise first, and properly', desc: 'He was made to give a real one once, and it stuck', outcome: 'A coach once stood over him until he produced a real apology rather than a mumbled one, and it is the only thing from that year he still uses. He gives the senior man the whole thing — no excuses, no conditions — and watches a grown man run clean out of anger.', effect: { meters: { peers: 14, authority: -6 }, attr: { composure: 2, teamwork: 1 }, form: -0.03 }, requires: 'apologised-clean' },
         ],
       },
     },
@@ -156,6 +160,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'confront', label: 'Confront him head-on', desc: 'Look him in the eye and demand the truth', outcome: 'He drives to the office and lays the papers on the desk. The agent’s excuses curdle in the air, and a decade of trust cracks clean down the middle.', effect: { meters: { agent: -14 }, attr: { leadership: 1, aggression: 1 }, tag: 'betrayed' }, next: 'decision' },
           { id: 'lawyer-up', label: 'Say nothing, lawyer up', desc: 'Gather everything before he tips his hand', outcome: 'He keeps smiling down the phone while a solicitor quietly builds the file. Cold, calculated — the way you deal with someone who taught you to be it.', effect: { meters: { agent: -8 }, attr: { composure: 2 }, tag: 'betrayed' }, next: 'decision' },
+          { id: 'ring-the-mate', label: 'Ring the mate he never hired', desc: 'The friend he deliberately kept out of the business', outcome: 'He rings the friend he once refused to make his agent, the one man in his life with no cut in any of it, and reads him the numbers down the phone at midnight. His mate goes quiet, then says the thing he already knew. It costs him a week of sleep and the last of his illusions.', effect: { energy: -10, meters: { agent: -12, peers: 8 }, attr: { composure: 2 }, form: -0.04, tag: 'betrayed' }, next: 'decision', requires: 'kept-mate' },
         ],
       },
       decision: {
@@ -164,6 +169,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'cut-loose', label: 'Cut him loose', desc: 'Terminate the deal, walk away clean', outcome: 'He tears up the contract and hands his career to someone new. It aches like a bereavement — but a man who lies once will lie again.', effect: { meters: { agent: -18, sponsors: 4 }, attr: { leadership: 2, composure: 1 } } },
           { id: 'second-chance', label: 'Give him one last rope', desc: 'New terms, full transparency, zero more slips', outcome: 'He keeps him on the tightest of leashes, every penny audited. Loyalty, or foolishness — only the next scandal will tell which.', effect: { meters: { agent: 8, family: 2 }, attr: { composure: 1 } } },
+          { id: 'pay-it-back', label: 'Make him pay it into the boys’ club', desc: 'He remembers exactly what having nothing cost', outcome: 'He tells the agent there is one way out of this: every stolen penny goes to the little club where a boy once played in boots that were not really boots, publicly, with the man’s own name on the paperwork. He agrees because he has nothing left to bargain with, and the friendship never recovers.', effect: { earnings: -10, meters: { agent: -14, fans: 10 }, attr: { leadership: 2, composure: 1 } }, requires: 'boots-made-do' },
         ],
       },
     },
@@ -180,6 +186,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'reply', label: 'Agree to meet', desc: 'A café, neutral ground, one hour, no promises', outcome: 'He sits across from a stranger with his own eyes and his own frown, and years of resentment loosen by a single, painful notch.', effect: { meters: { family: 8 }, attr: { composure: 2 }, tag: 'reaching-out' }, next: 'reckoning' },
           { id: 'burn-it', label: 'Bin the letter', desc: 'He didn’t come when it mattered — too late now', outcome: 'He throws it in the fire and tells himself he feels nothing. He plays with a fury that weekend that says otherwise.', effect: { meters: { family: -4 }, attr: { aggression: 2 }, form: 0.05 } },
+          { id: 'ask-the-old-man', label: 'Ask the man who actually turned up', desc: 'Someone else stood on those touchlines for years', outcome: 'Before he answers a word of it he goes to the man who stood at the side of every pitch in all weathers while the letter-writer was elsewhere, and asks him what to do. The old boy tells him to forgive, which is not remotely what he wanted to hear, and it takes him three months to manage it.', effect: { energy: -8, form: -0.05, meters: { family: 10 }, attr: { composure: 2 }, tag: 'reaching-out' }, next: 'reckoning', requires: 'grandad-watches' },
         ],
       },
       reckoning: {
@@ -188,6 +195,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'give-ticket', label: 'Hand him the ticket', desc: 'Let him fill the seat that was empty for years', outcome: 'He looks up mid-match and finds him there, weeping in the away end. Some wounds don’t heal — but this one, at last, stops bleeding.', effect: { meters: { family: 14, fans: 2 }, attr: { composure: 2, leadership: 1 }, form: -0.04, energy: -5 } },
           { id: 'not-yet', label: 'Tell him not yet', desc: 'Coffee’s one thing; the stand is sacred', outcome: 'He says maybe one day, and keeps the ticket in his drawer. Forgiveness, he decides, is a road you walk in your own time.', effect: { meters: { family: 6 }, attr: { composure: 1 }, form: -0.03 } },
+          { id: 'name-the-seat', label: 'Tell him exactly what the empty seat did', desc: 'He stopped looking for him in the stand years ago', outcome: 'He tells him plainly that there was a season as a boy when he checked the same spot every single game and then, one Saturday, simply stopped checking — and that the stopping was worse than the looking. The old man has no answer at all. They sit with it, and something true finally exists between them.', effect: { form: -0.06, energy: -6, meters: { family: 10, peers: -4 }, attr: { composure: 2, aggression: 1 } }, requires: 'fam-stopped-looking' },
         ],
       },
     },
@@ -204,6 +212,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'take-under-wing', label: 'Take him under his wing', desc: 'Extra sessions, hard truths, a steady hand', outcome: 'He becomes the boy’s old head, staying back to drill the same things a veteran once drilled into him. The circle closes, and it feels right.', effect: { meters: { authority: 8, peers: 6 }, attr: { leadership: 2, teamwork: 1 }, tag: 'mentoring' }, next: 'debut' },
           { id: 'tough-love', label: 'Send him to sink or swim', desc: 'Toughen up — the game won’t coddle him', outcome: 'He tells the kid to figure it out like everyone else did, and the boy shrinks a little. Maybe it builds him. Maybe it breaks something.', effect: { meters: { authority: 2, peers: -2 }, attr: { aggression: 1 }, tag: 'mentoring' }, next: 'debut' },
+          { id: 'pass-it-on', label: 'Pass on exactly what he was given', desc: 'An old head once did this for him, every single day', outcome: 'An old pro once stayed behind with him every day of a season and asked nothing back except that it got handed on. He hands it on to the letter — same drills, same hard truths, same hour after everyone else has gone home — and it eats every evening he has.', effect: { energy: -14, meters: { authority: 8, peers: 8, family: -8 }, attr: { leadership: 2, teamwork: 1 }, tag: 'mentoring' }, next: 'debut', requires: 'protege' },
         ],
       },
       debut: {
@@ -324,6 +333,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'take-chance', label: 'Take a chance on him', desc: 'Loyalty over polish — help him get qualified', outcome: 'He fronts the cost of the licence and hands his mate a shot nobody else would. It’s a gamble on a friendship, and the whole estate is watching to see if it pays.', effect: { meters: { agent: 10, peers: 6 }, earnings: -6, attr: { teamwork: 1 }, tag: 'mate-as-agent' }, next: 'firstdeal' },
           { id: 'stay-pro', label: 'Keep business and mates apart', desc: 'Love him too much to risk it on a contract', outcome: 'He tells him, kindly, that he’d rather keep him as the friend who’ll be at his funeral than the agent who might not be. The lad’s gutted — but he understands.', effect: { meters: { peers: 8, agent: 2 }, attr: { composure: 2 }, tag: 'kept-mate' }, next: 'firstdeal' },
+          { id: 'make-him-qualify', label: 'Fund it — but make him qualify first', desc: 'He knows what having no fallback actually costs', outcome: 'He went at this with no fallback of his own and it worked, barely, and he is not letting his mate gamble the identical way. He pays for the licence and refuses to sign a thing until it is framed on a wall, which costs his friend a year he cannot really afford.', effect: { earnings: -12, meters: { agent: 6, peers: -6 }, attr: { leadership: 2, composure: 1 }, tag: 'kept-mate' }, next: 'firstdeal', requires: 'no-plan-b' },
         ],
       },
       firstdeal: {
@@ -396,6 +406,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'open-up', label: 'Let him in', desc: 'Trust the old man, take the guidance', outcome: 'He starts staying behind to talk, really talk, and finds himself steadier for it than any drill ever made him. The gaffer becomes the steadying voice he never had.', effect: { meters: { authority: 12, family: 4, peers: -6 }, attr: { composure: 2, leadership: 1 }, form: 0.06, tag: 'gaffer-bond' }, next: 'sacking' },
           { id: 'stay-guarded', label: 'Keep his guard up', desc: 'He’s been let down before — trust is earned', outcome: 'He keeps it professional and gives the warmth a wide berth, having learned the hard way what happens when you rely on people. The gaffer, patient, just leaves the door open.', effect: { meters: { authority: 4, family: -4 }, attr: { composure: 1, aggression: 1 }, tag: 'gaffer-wary' }, next: 'sacking' },
+          { id: 'knows-the-type', label: 'Recognise it, and give him everything at once', desc: 'One coach kept faith in him when nobody else did', outcome: 'He has met exactly one other man who asked how he was rather than how he played, and that man carried him through the worst year of his childhood. He does not make this one wait: he tells him everything inside a month, which leaves him nowhere at all to hide when it goes wrong.', effect: { energy: -6, meters: { authority: 14, peers: -10 }, attr: { composure: 2, leadership: 1 }, form: 0.06, tag: 'gaffer-bond' }, next: 'sacking', requires: 'coach-faith' },
         ],
       },
       sacking: {
@@ -404,6 +415,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'walk-him-out', label: 'Walk him out the front door', desc: 'Defy the club, honour the man', outcome: 'He ignores the memo, carries the old man’s boxes to the car in front of the cameras, and shakes his hand where everyone can see. Some debts you pay loudly, board or no board.', effect: { meters: { authority: -8, peers: 10, fans: 8 }, attr: { leadership: 2, composure: 1 } } },
           { id: 'private-goodbye', label: 'Say goodbye behind closed doors', desc: 'Keep the peace, keep the bond private', outcome: 'He finds him in the empty office, thanks him for everything out of the cameras’ reach, and promises to visit. The gratitude is no less real for being quiet.', effect: { meters: { authority: 4, family: 6 }, attr: { composure: 2 } } },
+          { id: 'say-it-out-loud', label: 'Say the thank-you out loud, on camera', desc: 'He learned young to say it while the person can hear', outcome: 'He learned as a boy, on a long road home, that a thank-you left unsaid stays unsaid forever. So he stands in front of the cameras the club told him to avoid and says exactly what the man did for him, by name, at length. The incoming manager watches every second of it.', effect: { energy: -5, earnings: -6, meters: { authority: -12, peers: 10, fans: 10 }, attr: { leadership: 2, composure: 1 } }, requires: 'said-thanks' },
         ],
       },
     },
@@ -468,6 +480,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'adopt-him', label: 'Take him on personally', desc: 'Vouch for him, pull him close, be accountable', outcome: 'He stands up in front of the manager and stakes his own name on the boy, then drags him to breakfast every morning whether he likes it or not. A reckless gamble on a kid worth saving.', effect: { meters: { authority: -4, peers: 8 }, attr: { leadership: 2, teamwork: 1 }, tag: 'saving-kid' }, next: 'relapse' },
           { id: 'warn-once', label: 'Give him one straight warning', desc: 'Tell him the truth once, then let it be his choice', outcome: 'He pulls the lad aside and tells him exactly where this road ends, having half-walked it himself, then steps back. You can hold a door open; you can’t shove someone through it.', effect: { meters: { peers: 4 }, attr: { leadership: 1, composure: 1 }, tag: 'warned-kid' }, next: 'relapse' },
+          { id: 'back-to-the-cage', label: 'Take him back to the cage', desc: 'He came out of exactly that, and only just', outcome: 'He drives the boy to the caged pitch he grew up on and makes him play three hours against men twice his age who could not care less who he is, then buys him chips and says nothing whatsoever about the headlines. Something in the lad goes quiet for the first time in a year.', effect: { energy: -12, form: -0.04, meters: { peers: 8, authority: -6 }, attr: { leadership: 2, teamwork: 1 }, tag: 'saving-kid' }, next: 'relapse', requires: 'cage-kid' },
         ],
       },
       relapse: {
@@ -540,6 +553,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'lean-in', label: 'Cling to the familiar', desc: 'Home cooking, home tongue, a brother abroad', outcome: 'They cook the food of home in a foreign kitchen and rattle away in dialect nobody around can follow. For the first time since he landed, the homesickness loosens its grip.', effect: { meters: { peers: 12, family: 6, authority: -6 }, attr: { composure: 2, teamwork: 1 }, form: 0.05, tag: 'homesick-eased' }, next: 'adapt' },
           { id: 'stay-brave', label: 'Force himself to integrate', desc: 'Lean on the countryman, but push into the new', outcome: 'He takes the comfort but makes himself sit with the local lads too, wrestling the language a phrase at a time. Harder, lonelier some nights — but he’s building a life, not a bubble.', effect: { meters: { peers: 8, authority: 4 }, attr: { composure: 1, leadership: 1 }, energy: -8, form: -0.04, tag: 'integrating' }, next: 'adapt' },
+          { id: 'let-the-ball-talk', label: 'Do what worked when he was fourteen', desc: 'He has been the boy who could not speak before', outcome: 'He was fourteen on a tour once with nobody he could talk to, and he found out then that a ball bouncing off a corridor wall is a language everyone in a football club already speaks. He starts a two-touch game after training every day, and it takes every scrap of energy he had left.', effect: { energy: -14, meters: { peers: 14, authority: 6, family: -6 }, attr: { teamwork: 2, composure: 1 }, form: -0.03, tag: 'integrating' }, next: 'adapt', requires: 'away-language-ball' },
         ],
       },
       adapt: {
@@ -548,6 +562,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'send-home', label: 'Tell him to go home', desc: 'Family over friendship — send him back', outcome: 'He tells him to take it, that no mate is worth another man’s homesickness, and hides how much he’ll miss the only voice from home. The bigger the love, the easier the letting go.', effect: { meters: { peers: 14, family: 4 }, attr: { leadership: 1, composure: 2 }, form: -0.05 } },
           { id: 'ask-stay', label: 'Admit he needs him here', desc: 'Be honest about how much it would hurt', outcome: 'He swallows his pride and tells the truth — that he’s not sure he’d cope without him — and the lad chooses to stay one more year. It’s selfish, and it’s human, and he’s grateful.', effect: { meters: { peers: 10, family: 2 }, attr: { teamwork: 2, leadership: -1 }, form: 0.05 } },
+          { id: 'tell-him-the-truth', label: 'Tell him what the homesick boy needed to hear', desc: 'He rang home every night once and told nobody', outcome: 'He tells him about a fortnight as a boy when he rang home every single night and lied about being fine, and that no man should stay anywhere out of loyalty to a friend. Saying it out loud costs him considerably more than the goodbye does.', effect: { energy: -8, form: -0.05, meters: { peers: 14, family: 6 }, attr: { leadership: 2, composure: 1 } }, requires: 'rang-home' },
         ],
       },
     },
@@ -612,6 +627,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'build-around-her', label: 'Rebuild his life around the access days', desc: 'Structure the whole season so he never misses one', outcome: 'He hands his agent a hard rule — no move, no camp, no commitment that eats a weekend with his girl — and reorders a career around a six-year-old’s diary. It costs him options; it saves him his daughter.', effect: { meters: { family: 18, partner: 6, agent: -6 }, attr: { leadership: 2, composure: 1 }, tag: 'coparenting' }, next: 'handover' },
           { id: 'money-not-time', label: 'Provide from a distance', desc: 'Pay for everything, see her when football allows', outcome: 'He tells himself the best thing he can do is earn, and lets the maintenance stand in for the mornings. The bank balance grows; the little voice on the phone gets a fraction more distant each week.', effect: { meters: { family: -6 }, earnings: 12, attr: { aggression: 1 }, tag: 'coparenting' }, next: 'handover' },
+          { id: 'the-two-bags', label: 'Do it the way he wished theirs had been done', desc: 'He was the child with a bag at two front doors', outcome: 'He was a boy with a bag by two different front doors, and he remembers every clumsy, cold handover of it. He sits down with her and writes out every rule he wishes somebody had written for him — and it means turning down the club’s winter camp and a fee he badly wanted.', effect: { earnings: -14, energy: -8, meters: { family: 16, partner: 10, agent: -8 }, attr: { composure: 2, leadership: 1 }, tag: 'coparenting' }, next: 'handover', requires: 'fam-two-bags' },
         ],
       },
       handover: {
@@ -660,6 +676,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'set-standard', label: 'Hold him to the same line', desc: 'Same rules for the star as the kids — quietly, firmly', outcome: 'He pulls the superstar aside and lays it out man to man: greatness earns respect, it doesn’t buy a pass on the graft. The star bristles, then stays for the warm-down, and the room exhales.', effect: { meters: { authority: 8, peers: 12 }, attr: { leadership: 2, composure: 1 }, tag: 'captain-line' }, next: 'clash' },
           { id: 'let-him-be', label: 'Let the genius be a genius', desc: 'Different rules for a different animal — pick battles', outcome: 'He decides a talent like that runs on its own rails and lets the small stuff slide to keep him sweet. The magic flows on Saturdays — and a few of the younger lads quietly wonder what the rules are actually for.', effect: { meters: { peers: -4, authority: -2 }, attr: { composure: 1 }, form: 0.05, tag: 'captain-soft' }, next: 'clash' },
+          { id: 'been-the-boy', label: 'Meet him as someone who has been that', desc: 'He was the anointed one himself, once', outcome: 'He was the bright young thing on every back page once, and he remembers precisely how much of it was noise and how little of it was help. He skips the captain’s speech entirely and just tells the man the truth about what is coming — which earns him nothing at all with a room that wanted a line drawn.', effect: { meters: { peers: -8, authority: -4, agent: 4 }, attr: { composure: 2, leadership: 1 }, form: 0.05, tag: 'captain-soft' }, next: 'clash', requires: 'wonderkid' },
         ],
       },
       clash: {
@@ -668,6 +685,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'call-out', label: 'Check him in front of everyone', desc: 'The team is bigger than any name — say it out loud', outcome: 'He tells the star, in front of the room, that the badge doesn’t bend for anyone, and backs the wounded youngster to his face. The superstar sulks for a week, then plays the most selfless month of his career.', effect: { meters: { peers: 16, authority: -6 }, attr: { leadership: 2, aggression: 1 }, form: 0.06 } },
           { id: 'protect-star', label: 'Manage him behind closed doors', desc: 'Keep the peace publicly, have the word privately', outcome: 'He shields the star from the room and takes it up with him alone, keeping the machine running smoothly. It works, mostly — but the young lad learns that some names get protected and files it away.', effect: { meters: { peers: -6, authority: 8 }, attr: { composure: 2, leadership: 1 } } },
+          { id: 'run-with-them', label: 'Make him run the session he once had to', desc: 'He clawed his way back from being nobody’s choice', outcome: 'He does not shout at all. He puts the star through the exact session he did alone for months when he was nobody’s first choice, and does every rep alongside him. The superstar finishes it grey-faced, says nothing, and turns up early for the rest of the season — and it takes a fortnight out of the captain’s legs.', effect: { energy: -18, form: -0.05, meters: { peers: 14, authority: 6 }, attr: { stamina: 2, leadership: 2 } }, requires: 'grinder' },
         ],
       },
     },
@@ -684,6 +702,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'fight-for-terry', label: 'Go to the board for him', desc: 'Spend his own capital to save the old man’s job', outcome: 'He walks into the director’s office and makes Terry’s job the hill he’ll die on, reminding them what loyalty actually costs to replace. It ruffles feathers he needs unruffled — and Terry keeps his pegs.', effect: { meters: { authority: -6, peers: 10, fans: 4 }, attr: { leadership: 2, composure: 1 }, tag: 'saved-terry' }, next: 'testimonial' },
           { id: 'soft-landing', label: 'Arrange a soft landing', desc: 'Can’t save the job — sort the man out instead', outcome: 'He can’t stop the modernising machine, so he quietly tops up Terry’s pension and throws him a send-off the players actually turn up to. Not the win he wanted — but the old man leaves with his head high.', effect: { meters: { peers: 8, family: 2 }, earnings: -6, attr: { composure: 2 }, tag: 'terry-retired' }, next: 'testimonial' },
+          { id: 'own-name-on-it', label: 'Put his own place on the line', desc: 'He has been the one nobody thought worth keeping', outcome: 'There was a year when he was the name on a list like that, and it never really leaves a man. He tells the director in writing that if the old man goes, he goes with him, and lets a copy reach the dressing room. Terry keeps his pegs; the board never quite trusts him again.', effect: { energy: -6, earnings: -10, meters: { authority: -14, peers: 14, fans: 6 }, attr: { leadership: 2, aggression: 1 }, tag: 'saved-terry' }, next: 'testimonial', requires: 'grinder' },
         ],
       },
       testimonial: {
@@ -756,6 +775,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'confront-gently', label: 'Have it out, honestly', desc: 'Name the jealousy, offer a hand not a fist', outcome: 'He sits his mate down and says the quiet thing out loud — that he misses him and the resentment is eating them both. The lad breaks, admits he’s been drowning in envy, and something twenty years old gets a chance to mend.', effect: { meters: { peers: 12, family: 4 }, attr: { composure: 2, leadership: 1 }, tag: 'mate-confronted' }, next: 'test' },
           { id: 'buy-peace', label: 'Try to smooth it with generosity', desc: 'Sort him a job, a loan, make the gap go away', outcome: 'He tries to fix the friendship with his wallet — a job for the lad, a hand with the rent — hoping money can close a wound that money opened. It quiets the digs for now, but it doesn’t touch what’s underneath.', effect: { meters: { peers: 4 }, earnings: -8, attr: { composure: 1 }, tag: 'mate-bought' }, next: 'test' },
+          { id: 'go-back-properly', label: 'Go back and stay a while', desc: 'He has walked back to old mates once before', outcome: 'He did this once as a boy — walked back to the lads who had stopped coming round and simply stayed among them until it was normal again — and it is the only thing he has ever known to work. He spends a fortnight of his summer on the estate with his phone off, and turns up to preseason unfit and forgiven.', effect: { energy: -16, form: -0.06, earnings: -6, meters: { peers: 14, family: 6, sponsors: -6 }, attr: { teamwork: 2 }, tag: 'mate-confronted' }, next: 'test', requires: 'mates-went-back' },
         ],
       },
       test: {
@@ -780,6 +800,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'pick-him-up', label: 'Pick the boy up', desc: 'Extra sessions, drill the demons out, rebuild his head', outcome: 'He starts staying behind to fire shots at the kid long after everyone’s gone, teaching him that the great ones are the ones who forget the last mistake fastest. Slowly, the flinch leaves the boy’s hands.', effect: { meters: { peers: 10, authority: 6, family: -5 }, attr: { keeping: 2, leadership: 1 }, energy: -9, tag: 'keeper-mentor' }, next: 'debut' },
           { id: 'toughen-up', label: 'Tell him to grow a skin', desc: 'The internet’s cruel — learn to not care, fast', outcome: 'He tells the lad bluntly that keepers get remembered for their worst day and he’d better get used to it, then leaves him to it. It’s a hard lesson honestly given — and the boy either hardens or hides.', effect: { meters: { peers: -5, authority: 4 }, attr: { keeping: 1, aggression: 1 }, tag: 'keeper-warned' }, next: 'debut' },
+          { id: 'gloves-on', label: 'Put the gloves on himself', desc: 'He kept goal once, and remembers the loneliness of it', outcome: 'He pulled the gloves on and went in goal for a whole session as a boy, and he has never forgotten how lonely a six-yard box is when it goes wrong. He does it again now, in front of the entire academy, and lets the kid batter shots at him until they are both laughing.', effect: { energy: -12, form: -0.04, meters: { peers: 12, authority: 4, family: -5 }, attr: { keeping: 2, teamwork: 1 }, tag: 'keeper-mentor' }, next: 'debut', requires: 'went-in-goal' },
         ],
       },
       debut: {

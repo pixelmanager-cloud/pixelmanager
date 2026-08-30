@@ -136,11 +136,19 @@ export function communityStanding(level: number): number { return (level - 1) * 
 // summit earned "roughly 15,100" a season. MEASURED THROUGH THE ACTUAL SEASON ROLL, a club with all twelve
 // at level 10, winning the top flight, with the sponsor trophy term saturated, earns 10,686:
 //
-//   prize 1,280 + gate 2,160 + sponsor 5,623 + shop 1,061 + women's 562 = 10,686
+//   prize 1,280 + gate 1,223 + sponsor 5,623 + shop 1,061 + women's 562 + sponsor bonus 700 = 10,449
 //
 // The 15,100 was assembled two mistakes deep: it used seasonPlacementReward (2,886) where the real prize
 // is 1,280, and it added 2,810 of per-match WIN/DRAW/LOSS earnings that the manager season roll does not
-// pay at all. Income was overstated by 41%, and the upkeep coefficient was fitted to it — so the best
+// pay at all.
+//
+// AND THE CORRECTION WAS WRONG THE SAME WAY, which is worth recording because it is the second time. It
+// published gate 2,160 — a figure that needs ~34 home-and-away fixtures, when seasonFixtures returns 18 at
+// every tier, so the real gate is 1,223 — and it omitted the 700 sponsor bonus a champion always has
+// (pos <= 3 on a performance deal). The two errors partly cancel, 10,686 against a measured 10,449, so the
+// coefficient fit below survives; but a number assembled from a term that cannot occur plus an omitted
+// real one is exactly the failure this comment block exists to correct. Income was overstated by 45%, and
+// the upkeep coefficient was fitted to it — so the best
 // possible season in the game ran a deficit before a single wage was paid, levels 6-10 were unreachable
 // (a 150-season run of title wins never reached level 10, and an ordinary good top-flight side plateaued
 // at level 5 forever), and a relegated club sat on exactly 0 coins for sixty consecutive seasons with

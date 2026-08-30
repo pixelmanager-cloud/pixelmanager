@@ -237,7 +237,7 @@ export const MGR_ARCS_03: ManagerArc[] = [
   },
   {
     id: 'mgr-p03-fans-protest', title: 'The Banner', icon: '🪧', category: 'crisis',
-    when: { minPos: 0.78, minSeason: 2 }, weight: 4, first: 'open',
+    when: { minPos: 0.78, minSeason: 2, forbidsTag: 'mgr-fans-favourite' }, weight: 4, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -327,7 +327,7 @@ export const MGR_ARCS_03: ManagerArc[] = [
   },
   {
     id: 'mgr-p03-board-sounding-out', title: 'A Name On A List', icon: '📋', category: 'crisis',
-    when: { minPos: 0.8, minSeason: 3 }, weight: 4, first: 'open',
+    when: { minPos: 0.8, minSeason: 3, requiresTag: 'mgr-under-siege' }, weight: 4, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -462,7 +462,7 @@ export const MGR_ARCS_03: ManagerArc[] = [
   },
   {
     id: 'mgr-p03-sponsor-pulls-out', title: 'The Sponsor Goes Under', icon: '🧾', category: 'crisis',
-    when: { minPos: 0.7, minSeason: 2 }, weight: 3, first: 'open',
+    when: { minPos: 0.7, minSeason: 2, facility: { key: 'shop', min: 2 } }, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -717,7 +717,7 @@ export const MGR_ARCS_03: ManagerArc[] = [
   },
   {
     id: 'mgr-p03-ultras-boycott', title: 'The Empty Corner', icon: '🕳️', category: 'crisis',
-    when: { minPos: 0.8, minSeason: 3 }, weight: 2, first: 'open',
+    when: { minPos: 0.8, minSeason: 3, requiresTag: 'mgr-under-siege' }, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -1203,7 +1203,7 @@ export const MGR_ARCS_03: ManagerArc[] = [
   },
   {
     id: 'mgr-p03-tradition-begins', title: 'Something They Started Doing', icon: '🎵', category: 'triumph',
-    when: { maxPos: 0.3, minSeason: 3 }, weight: 3, first: 'open',
+    when: { maxPos: 0.3, minSeason: 3, requiresTag: 'mgr-fans-favourite' }, weight: 3, first: 'open',
     beats: {
       open: {
         id: 'open',
@@ -1308,7 +1308,7 @@ export const MGR_ARCS_03: ManagerArc[] = [
   },
   {
     id: 'mgr-p03-supporters-fund-something', title: 'They Raised It Themselves', icon: '🪣', category: 'triumph',
-    when: { maxPos: 0.35, minSeason: 3 }, weight: 2, first: 'open',
+    when: { maxPos: 0.35, minSeason: 3, requiresTag: 'mgr-fans-favourite' }, weight: 2, first: 'open',
     beats: {
       open: {
         id: 'open',

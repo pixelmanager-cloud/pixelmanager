@@ -60,7 +60,19 @@ export function migrate(m: SaveModel): SaveModel {
   // the player as "may be corrupted" with no repair path — which is precisely the outcome the comment
   // above says one absent array should never cost. A structured-clone failure or a truncated write is all
   // it takes. Anything that is not a usable array becomes an empty one; junk entries are dropped.
-  const arr = <T,>(v: unknown): T[] => (Array.isArray(v) ? (v.filter((x) => x != null) as T[]) : []);
+  // ARRAY-LIKE FIRST, EMPTY ONLY AS A LAST RESORT. Coercing straight to [] destroys data that was fully
+  // recoverable: `{0:{…},1:{…},length:2}` — what a truncated structured clone or a sparse-array round-trip
+  // yields — has two intact men in it. Before the malformed-save fix that shape THREW, and the bytes
+  // survived on disk as "may be corrupted", recoverable by hand. After it, the save loaded clean and the
+  // first ordinary action's autosave overwrote the recoverable data with the emptied version. Repair by
+  // deletion plus write-back is permanent loss, and is a worse outcome than the crash it replaced.
+  const arr = <T,>(v: unknown): T[] => {
+    if (Array.isArray(v)) return v.filter((x) => x != null) as T[];
+    if (v && typeof v === 'object' && typeof (v as { length?: unknown }).length === 'number') {
+      try { return Array.from(v as ArrayLike<T>).filter((x) => x != null); } catch { return []; }
+    }
+    return [];
+  };
   const repaired: SaveModel = {
     ...m,
     tokens: arr<Token>(m.tokens), injuries: arr(m.injuries), legacies: arr(m.legacies),
@@ -474,7 +486,15 @@ let saveHealth: { ok: boolean; error?: string } = { ok: true };
 /** Whether the last write to disk succeeded. The UI polls this so a failing autosave cannot stay silent. */
 export function getSaveHealth(): { ok: boolean; error?: string } { return saveHealth; }
 
+/** Slots with a write in flight, so a delete that races one can re-remove after it lands. */
+const inFlight = new Set<string>();
+
 async function writeSlot(id: string, model: SaveModel): Promise<void> {
+  inFlight.add(id);
+  try { await writeSlotInner(id, model); } finally { inFlight.delete(id); }
+}
+
+async function writeSlotInner(id: string, model: SaveModel): Promise<void> {
   // A SWALLOWED WRITE IS THE WORST BUG THIS FILE CAN HAVE. This was `void backend.save(...)`: every
   // rejection became an unhandled rejection the app never saw. No retry, no error state, no warning — and
   // IndexedDBBackend caches its open promise, so once opening fails (Safari private browsing, a corrupt
@@ -540,6 +560,13 @@ export async function deleteSave(id: string): Promise<void> {
   // save comes back: "Delete forever" un-deleting itself. Reproduced.
   if (activeSlotId === id && persistTimer != null) { clearTimeout(persistTimer); persistTimer = null; }
   await backend.remove(id);
+  // ...AND CANCELLING THE TIMER IS NOT ENOUGH. A write already IN FLIGHT when the player hits delete lands
+  // afterwards and re-creates the slot — reproduced at 20ms and 50ms, which is an ordinary IndexedDB write
+  // for a save carrying a full squad and a dynasty's history. Wait for it, then remove again.
+  if (inFlight.has(id)) {
+    for (let i = 0; i < 40 && inFlight.has(id); i++) await new Promise((r) => setTimeout(r, 25));
+    await backend.remove(id);
+  }
   if (activeSlotId === id) activeSlotId = null;
 }
 

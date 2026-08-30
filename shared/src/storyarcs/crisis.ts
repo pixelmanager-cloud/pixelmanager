@@ -21,6 +21,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         choices: [
           { id: 'brave', label: 'Fly into it', desc: 'Show the knee — and himself — there’s no fear left', outcome: 'He wins it clean, and the ground erupts. The demons are buried. He is back.', effect: { form: 0.1, energy: -10, attr: { aggression: 1, composure: 1 }, meters: { fans: 14, authority: 6, family: -6, partner: -5 } } },
           { id: 'guard', label: 'Protect himself', desc: 'Ease back in — no heroics on day one', outcome: 'He plays it safe and comes through unscathed — the sharpness will return in time.', effect: { form: 0.03, market: -4, meters: { fans: 4, authority: -5 } } },
+          { id: 'tested-daily', label: 'Go in without thinking about it', desc: 'Months of rehab already asked this knee the question, every day', outcome: 'He has tested this joint every single day for the better part of a year and knows precisely what it will take, so he goes in the way he always did, without a thought.', effect: { form: 0.12, energy: -8, attr: { aggression: 1, stamina: 1 }, meters: { fans: 12, authority: 8 } }, requires: 'grinder' },
         ],
       },
     },
@@ -43,6 +44,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         choices: [
           { id: 'statement', label: 'Make a statement', desc: 'Play the game of his life and shame the doubters', outcome: 'He runs the show and silences the lot of them. You can’t drop him now.', effect: { form: 0.1, energy: -12, attr: { composure: 1, creativity: 1 }, meters: { fans: 12, authority: 6, agent: -5 } } },
           { id: 'move-on', label: 'Play for a move', desc: 'A tidy game — enough to remind other clubs he exists', outcome: 'Solid, professional, and the scouts in the stand take note. The exit door beckons.', effect: { market: 3, form: 0.03, meters: { fans: -7, authority: -5 } } },
+          { id: 'his-system', label: 'Play the gaffer’s system to the letter', desc: 'Weeks of grafting taught him exactly what this manager wants', outcome: 'He has spent his exile learning what this manager actually asks for, and delivers it so precisely that the gaffer sees his own ideas walking about in somebody else’s boots.', effect: { form: 0.08, attr: { teamwork: 2, composure: 1 }, meters: { authority: 12, peers: 5 } }, requires: 'grafted' },
         ],
       },
     },
@@ -88,6 +90,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         choices: [
           { id: 'accept', label: 'Accept the ban, serve it clean', desc: 'Take the three, train hard, come back sharper', outcome: 'He does the time without a murmur, runs himself into the ground in training, and returns leaner and calmer.', effect: { attr: { stamina: 1, composure: 1 }, form: 0.05, energy: -8, meters: { authority: 7, fans: -6 } } },
           { id: 'gamble', label: 'Roll the dice on appeal', desc: 'Fight it and free himself for the big one', outcome: 'The panel buys the argument by a whisker — dismissal rescinded. He’s cleared for the derby, and he does not waste it.', effect: { form: 0.08, earnings: -4, attr: { aggression: 1 }, meters: { fans: 11, authority: 4, sponsors: -5 } } },
+          { id: 'mitigation', label: 'Let the club plead mitigation', desc: 'His public apology gives the panel something to work with', outcome: 'The club goes to the panel holding his apology rather than an excuse, and the ban comes down to two games. The contrition did that, not the lawyer.', effect: { attr: { composure: 2 }, form: 0.06, meters: { authority: 8, fans: 5, sponsors: 4 } }, requires: 'contrite' },
         ],
       },
     },
@@ -110,6 +113,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         choices: [
           { id: 'partnership', label: 'Turn it into a partnership', desc: 'Run the legs off each other — for each other', outcome: 'They combine for the winner, the grudge alchemised into something fierce and useful. The bust-up becomes a bonding story.', effect: { form: 0.1, energy: -10, attr: { teamwork: 2 }, meters: { peers: 12, fans: 8 } } },
           { id: 'professional', label: 'Keep it strictly professional', desc: 'No warmth, but no war — just do the job', outcome: 'Cold but competent, they get through it without a flashpoint. Not friends — but the manager’s faith isn’t betrayed.', effect: { form: 0.04, attr: { composure: 1 }, meters: { authority: 5, peers: -6 } } },
+          { id: 'already-dead', label: 'Tell the gaffer it is already settled', desc: 'They shook on it by the cars before any of this reached him', outcome: 'He tells the manager the truth — that the pair of them buried it days ago where no camera was watching — and the gaffer names them both without another thought.', effect: { form: 0.08, attr: { teamwork: 2, leadership: 1 }, meters: { peers: 10, authority: 8 } }, requires: 'peacemaker' },
         ],
       },
     },
@@ -133,6 +137,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         choices: [
           { id: 'stay', label: 'Stay and conquer it', desc: 'Plant a flag — make this strange place his own', outcome: 'He turns the transfer down, doubles down on the life he’s building, and repays the faith with the best half-season of his career.', effect: { form: 0.11, attr: { composure: 2, leadership: 1 }, meters: { fans: 12, authority: 8 } } },
           { id: 'return', label: 'Go home', desc: 'Some things matter more than the adventure', outcome: 'He chooses the people over the project and heads back to familiar rain. Lighter in spirit, if the ambition stings a little.', effect: { form: 0.05, meters: { family: 14, partner: 10, fans: -4 } } },
+          { id: 'easy-no', label: 'Turn it down without needing to think', desc: 'This is not a strange place any more; it is where he lives', outcome: 'He thanks the club back home and says no before the call has properly finished, because somewhere along the way this city stopped being an ordeal and started being his.', effect: { form: 0.09, attr: { composure: 1, teamwork: 1 }, meters: { peers: 12, fans: 10, partner: 6 } }, requires: 'settled' },
         ],
       },
     },
@@ -236,6 +241,7 @@ export const CRISIS_ARCS: StoryArc[] = [
           { id: 'own-it', label: 'Volunteer for the next one', desc: 'Get straight back on the horse — take the very next spot-kick', outcome: 'He tells the manager he wants the ball the instant they’re awarded a penalty, no hiding, no delay.', effect: { attr: { composure: 2 }, meters: { authority: 6 }, tag: 'facing-it' }, next: 'retake' },
           { id: 'rebuild', label: 'Drill it in private first', desc: 'Rebuild the technique in the dark, away from the cameras', outcome: 'He stays behind night after night, one keeper, one routine, hammering the doubt out of the run-up.', effect: { energy: -8, attr: { composure: 1, stamina: 1 }, tag: 'rebuilding' }, next: 'retake' },
           { id: 'avoid', label: 'Ask to be taken off the list', desc: 'Let someone else carry it while the wound is raw', outcome: 'He quietly hands the duty away, and the relief is real — but so is the whisper that he’s hiding.', effect: { form: -0.06, meters: { fans: -5, authority: -4 }, tag: 'shirking' }, next: 'retake' },
+          { id: 'same-specialist', label: 'Ring the specialist who fixed him before', desc: 'He has had a broken skill rebuilt by a professional once already', outcome: 'He wastes no months pretending he can think his way out of it, and phones the specialist who rewired his game once before to book the first session.', effect: { attr: { composure: 2 }, meters: { authority: 5 }, tag: 'rebuilding' }, next: 'retake', requires: 'rewiring' },
         ],
       },
       retake: {
@@ -266,6 +272,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         choices: [
           { id: 'header', label: 'Attack it like his life depends on it', desc: 'Rise higher than everyone and bury it — the right net this time', outcome: 'He climbs above the pack and thunders it in at the correct end, and the same crowd that jeered him roars his name to the rafters.', effect: { form: 0.13, energy: -9, attr: { aggression: 1, composure: 1 }, meters: { fans: 16, authority: 7 } } },
           { id: 'clear', label: 'Just get it clear and safe', desc: 'No heroics — head it away, protect the point, take no risks', outcome: 'He heads it to safety and settles for the draw, the error not erased but at least not doubled. A quiet, unglamorous peace.', effect: { form: 0.04, market: -3, attr: { composure: 1 }, meters: { authority: 3, fans: -7 } } },
+          { id: 'organise-it', label: 'Take charge of the whole box', desc: 'He has demanded the ball since the error, and they listen to him now', outcome: 'He has spent the whole tie refusing to hide, so the box arranges itself around his voice — and when the ball drops he is exactly where he told everyone he would be.', effect: { form: 0.11, energy: -7, attr: { leadership: 2, composure: 1 }, meters: { peers: 12, fans: 12, authority: 8 } }, requires: 'defiant-goat' },
         ],
       },
     },
@@ -310,6 +317,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         choices: [
           { id: 'graft-back', label: 'Let his football do the talking', desc: 'Not a word about the exile — just be undroppable again', outcome: 'He slots back in and plays out of his skin, the freeze-out made to look like the mistake it always was. The point is made in goals.', effect: { form: 0.11, attr: { composure: 1, flair: 1 }, meters: { fans: 12, authority: 6 } } },
           { id: 'terms', label: 'Return only on his own terms', desc: 'Back in — but with guarantees, in writing, this time', outcome: 'He agrees to play but extracts assurances first, no longer the trusting soul who got burned. Colder, wiser, and impossible to bully.', effect: { form: 0.06, greed: 4, meters: { agent: 8, authority: 3 } } },
+          { id: 'remind-them', label: 'Remind them what he turned down for this club', desc: 'He said no to a giant to stay here, and they froze him out anyway', outcome: 'He says it once, calmly, into a microphone — that he turned down the move of a lifetime for this badge and was bombed out with the kids for his trouble — and then never mentions it again.', effect: { form: 0.09, attr: { composure: 1, leadership: 1 }, meters: { fans: 14, authority: -4, peers: 6 } }, requires: 'clause-honoured' },
         ],
       },
     },
@@ -332,6 +340,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         choices: [
           { id: 'report', label: 'Report the approach at once', desc: 'Ring the integrity line before the sun comes up — no hesitation', outcome: 'He calls it in that night, names the contact, and refuses to let his weakness become a crime. The debt stays; his honour survives whole.', effect: { form: 0.08, attr: { leadership: 1, composure: 1 }, meters: { authority: 10, fans: 8 } } },
           { id: 'refuse-quiet', label: 'Refuse but stay silent', desc: 'Say no, block the number, tell nobody about any of it', outcome: 'He turns it down flat and blocks the man, but keeps it to himself, hoping the shadow never comes knocking twice.', effect: { attr: { composure: 1 }, greed: -2, meters: { family: 4 } } },
+          { id: 'call-welfare', label: 'Ring the welfare officer who already knows', desc: 'Somebody at this club has heard all of it before — use them', outcome: 'He calls the one person at the club who already knows the whole of it, and lets them make the difficult call alongside him rather than deciding alone at four in the morning.', effect: { attr: { composure: 2, teamwork: 1 }, meters: { authority: 8, family: 6, fans: 4 } }, requires: 'in-recovery' },
         ],
       },
     },
@@ -346,6 +355,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         choices: [
           { id: 'honesty', label: 'Tell the manager the truth', desc: 'Admit he’s cooked and ask to be managed, not flogged', outcome: 'He knocks on the office door and admits he’s empty, trusting the gaffer to rest him rather than punish the honesty.', effect: { energy: 10, attr: { composure: 1 }, meters: { authority: 5 }, tag: 'managed' }, next: 'crossroad' },
           { id: 'mask', label: 'Play through and mask it', desc: 'Say nothing, strap up, drag the carcass out there every week', outcome: 'He hides the exhaustion behind a professional’s mask and keeps starting, the reserves burning down to nothing.', effect: { energy: -12, form: -0.08, meters: { partner: -5 }, tag: 'burning-out' }, next: 'crossroad' },
+          { id: 'early-flag', label: 'Flag it to the medics before the manager', desc: 'A season lost to a body taught him that warnings come early', outcome: 'He goes to the physios with the numbers rather than to the gaffer with an excuse, because a season spent in a treatment room taught him what an ignored warning turns into.', effect: { energy: 8, attr: { composure: 1, stamina: 1 }, meters: { authority: 4, family: 5 }, tag: 'managed' }, next: 'crossroad', requires: 'rehab-warrior' },
         ],
       },
       crossroad: {
@@ -368,6 +378,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         choices: [
           { id: 'own-words', label: 'Own the words to the manager first', desc: 'Straight to the gaffer’s office before the day’s training — face to face', outcome: 'He gets to the manager before anyone else can poison it, admits he sent it in a strop, and asks to clear the air man to man.', effect: { attr: { composure: 1, leadership: 1 }, meters: { authority: 6 }, tag: 'straight-up' }, next: 'fallout' },
           { id: 'deny', label: 'Claim it was doctored', desc: 'Deny, deny, deny — insist the screenshot is a fake', outcome: 'He puts out a statement calling it fabricated, gambling that no one can prove otherwise as the doubt curdles around him.', effect: { meters: { authority: -6, peers: -4 }, tag: 'denier' }, next: 'fallout' },
+          { id: 'chase-the-leak', label: 'Put the lawyers on whoever leaked it', desc: 'He has weathered a press storm with a legal team before', outcome: 'He admits the words are his and then, coldly, sets the same lawyers who once cleared his name on the question of who screenshotted a private message and sold it.', effect: { attr: { composure: 2 }, meters: { agent: 8, authority: 4, peers: -4 }, tag: 'straight-up' }, next: 'fallout', requires: 'lawyered' },
         ],
       },
       fallout: {
@@ -420,6 +431,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         choices: [
           { id: 'trust', label: 'Play the simple ball with conviction', desc: 'No overthinking — just roll it, exactly as he’s practised', outcome: 'He plays it clean and crisp to feet without a flicker, the yips broken by a pass no one else would notice. He nearly weeps at how ordinary it felt.', effect: { form: 0.1, energy: -6, attr: { composure: 2 }, meters: { authority: 7, peers: 6 } } },
           { id: 'safe', label: 'Just hoof it clear', desc: 'Take no chances — belt it into row Z and live to fight on', outcome: 'He hammers it into the stand rather than risk the pass, the lead protected but the demon still crouched inside him for another day.', effect: { form: 0.02, attr: { aggression: 1, composure: -1 }, meters: { fans: 3, peers: -5 } } },
+          { id: 'the-cue', label: 'Run the cue the specialist gave him', desc: 'Breathe, name the target, play it — exactly as drilled', outcome: 'He runs the small private ritual he was taught, three seconds of it, and the pass leaves his foot like it belongs to a man who never had a problem in his life.', effect: { form: 0.12, attr: { composure: 2, teamwork: 1 }, meters: { authority: 8, peers: 7 } }, requires: 'rewiring' },
         ],
       },
     },
@@ -478,6 +490,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         choices: [
           { id: 'mentor-on', label: 'Keep mentoring him anyway', desc: 'Swallow the ego — help the lad thrive in the role he took', outcome: 'He keeps whispering the tips and holding the standards, coaching from the shadows the boy who displaced him. Selfless, and it costs him.', effect: { attr: { leadership: 2, teamwork: 1 }, meters: { peers: 10, authority: 6 }, tag: 'grace-in-decline' }, next: 'twilight' },
           { id: 'reignite', label: 'Use it as fuel to win the shirt back', desc: 'No charity — outwork the kid and take the place back', outcome: 'He turns the hurt into fire, trains like a rookie again, and sets out to prove he isn’t finished by beating his own pupil to the shirt.', effect: { energy: -8, attr: { stamina: 1, aggression: 1 }, meters: { authority: 4 }, tag: 'raging-back' }, next: 'twilight' },
+          { id: 'make-it-official', label: 'Ask the club to make the teaching his job', desc: 'He has given something up before and knows it did not shrink him', outcome: 'He walks into the office and asks for the coaching role outright, having already learned that handing something on costs him nothing he actually wanted to keep.', effect: { attr: { leadership: 2, creativity: 1 }, meters: { authority: 8, peers: 8 }, form: -0.04, tag: 'coach-track' }, next: 'twilight', requires: 'handed-over' },
         ],
       },
       twilight: {
@@ -500,6 +513,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         choices: [
           { id: 'respect', label: 'Answer with respect, not war', desc: 'Acknowledge the legend, disagree with the man, keep it classy', outcome: 'He speaks warmly of what the icon gave the club before politely, firmly rejecting the verdict on him. Grown-up, and it plays well.', effect: { attr: { composure: 2 }, meters: { fans: 6, authority: 5 }, tag: 'dignified' }, next: 'showdown' },
           { id: 'clapback', label: 'Remind him whose team it is now', desc: 'Fire back — the legend’s day is done, this era is his', outcome: 'He hits back sharply that the great man should watch instead of whine, and a generational war erupts across the airwaves.', effect: { attr: { aggression: 1 }, meters: { fans: 4, sponsors: -4 }, tag: 'at-war-legend' }, next: 'showdown' },
+          { id: 'wear-the-costume', label: 'Play the villain on purpose', desc: 'He has worn this costume before and knows what it sells', outcome: 'He gives the old hero the pantomime the cameras want, calculated to the syllable, because he has been a city’s favourite villain before and it never once cost him a football match.', effect: { attr: { aggression: 1, composure: 1 }, meters: { fans: 8, sponsors: -6 }, tag: 'at-war-legend' }, next: 'showdown', requires: 'derby-firebrand' },
         ],
       },
       showdown: {
@@ -522,6 +536,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         choices: [
           { id: 'sacrifice', label: 'Take the cut and rally the squad', desc: 'Lead from the front — sign the reduction, keep the club alive', outcome: 'He’s first to sign away a chunk of his wages and stands up in the meeting to ask the others to follow. The club steadies; the debt of gratitude is his.', effect: { earnings: -8, attr: { leadership: 2 }, meters: { fans: 12, authority: 9, peers: 8 }, tag: 'sacrificed' }, next: 'aftermath' },
           { id: 'refuse', label: 'Refuse to subsidise the board’s mess', desc: 'It’s not the players’ job to pay for boardroom failure', outcome: 'He declines to take the hit, arguing the mismanagement wasn’t his, and holds his contract to the letter. Principled to some, greedy to others.', effect: { greed: 5, meters: { fans: -8, authority: -4, agent: 6 }, tag: 'held-firm' }, next: 'aftermath' },
+          { id: 'counter-offer', label: 'Go back upstairs with a counter', desc: 'He has stood between a board and a dressing room before', outcome: 'He refuses both the yes and the no and carries a third number up the stairs instead — deferrals rather than cuts — the way he learned to do it the last time a club came for its players.', effect: { earnings: -3, attr: { composure: 2, leadership: 1 }, meters: { peers: 10, authority: 6, agent: 4 }, tag: 'sacrificed' }, next: 'aftermath', requires: 'captain-diplomat' },
         ],
       },
       aftermath: {
@@ -566,6 +581,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         choices: [
           { id: 'specialist', label: 'Chase a radical fix abroad', desc: 'See the surgeon everyone whispers about, whatever it costs', outcome: 'He flies out to the clinic that patched up half a generation of broken athletes, and bets his savings on a scalpel and a second chance.', effect: { earnings: -6, energy: -8, attr: { composure: 1 }, tag: 'patched-up' }, next: 'verdict' },
           { id: 'remould', label: 'Rebuild his game around the fragility', desc: 'Less running, more brain — reinvent himself to survive', outcome: 'He accepts the joint will never be whole and remoulds his whole game to spare it, trading yards for cunning and position.', effect: { attr: { creativity: 2, composure: 1 }, meters: { authority: 4 }, tag: 'reinvented' }, next: 'verdict' },
+          { id: 'known-road', label: 'Do the long rehab again, eyes open', desc: 'He has lived a rehab like this before — he knows every hour of it', outcome: 'He has been down this road once already and walks back into the gym without flinching, counting the weeks the way a man counts loose change.', effect: { energy: -8, attr: { stamina: 1, composure: 1 }, meters: { authority: 7, family: -4 }, tag: 'grinder' }, next: 'verdict', requires: 'grinder' },
         ],
       },
       verdict: {
@@ -574,6 +590,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         choices: [
           { id: 'protect', label: 'Signal to come off and live to fight on', desc: 'A career is longer than a fixture — protect what’s left', outcome: 'He raises his hand and walks off on his own two feet, unbeaten by the day, refusing to gamble the years he has left on ninety minutes.', effect: { attr: { composure: 2 }, form: 0.04, meters: { family: 8, authority: 5 } } },
           { id: 'defy', label: 'Push through for one last surge', desc: 'The team needs him now — the body can complain later', outcome: 'He drives on through the warning and drags the side over the line, but the joint pays the bill and the fragility deepens for good.', effect: { injury: true, form: -0.06, attr: { aggression: 1 }, meters: { fans: 10, authority: 6 } } },
+          { id: 'no-dark-again', label: 'Come off — he knows what the dark months cost', desc: 'The last long lay-off nearly broke him; he will not gamble on another', outcome: 'He remembers the nights the last lay-off gave him and signals the bench before the joint can decide for him. There will be no second winter like that one.', effect: { attr: { composure: 2 }, form: 0.03, meters: { family: 10, partner: 6, fans: -5 } }, requires: 'shaken' },
         ],
       },
     },
@@ -618,6 +635,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         choices: [
           { id: 'stay-in', label: 'Turn the phone off and prepare right', desc: 'Early night, clear head — be the professional he can be', outcome: 'He silences the phone, sleeps like a pro, and tears into the match fresh, proving the man who wants it more than the drink is still in there.', effect: { form: 0.11, attr: { composure: 1, stamina: 1 }, meters: { authority: 8, family: 6 } } },
           { id: 'relapse', label: 'Tell himself one won’t hurt', desc: 'Just a couple, just to take the edge off — he can handle it', outcome: 'One becomes six and he plays the biggest game half a yard slow and grey-faced, the whole ground able to see something is badly wrong.', effect: { form: -0.12, energy: -10, meters: { fans: -8, authority: -6, partner: -5 } } },
+          { id: 'ring-the-help', label: 'Ring the man from the welfare team', desc: 'He is not doing this on willpower alone any more', outcome: 'He does not test himself against the group chat; he rings the number he was given, talks for an hour, and goes to bed. The morning arrives clean and unremarkable.', effect: { form: 0.09, energy: 6, attr: { composure: 2 }, meters: { family: 10, authority: 7, partner: 6 } }, requires: 'on-the-wagon' },
         ],
       },
     },
@@ -728,6 +746,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         choices: [
           { id: 'hero-save', label: 'Own the spotlight and save the day', desc: 'Read it, spring, and turn the villain’s tale on its head', outcome: 'He guesses right, flies, and claws {RIVAL}’s penalty out of the top corner, then keeps out another — the goat reborn as the hero.', effect: { form: 0.13, energy: -9, attr: { keeping: 2, composure: 1 }, meters: { fans: 15, authority: 8 } } },
           { id: 'solid-keeper', label: 'Just be steady and let the takers miss', desc: 'No showboating — sound positioning, force the error', outcome: 'He makes himself big and calm, saves nothing spectacular but rattles the takers into missing, and comes through it quietly redeemed.', effect: { form: 0.08, market: -4, attr: { keeping: 1, composure: 2 }, meters: { authority: 6, fans: -6 } } },
+          { id: 'did-the-homework', label: 'Use the week he spent on their takers', desc: 'He never shrank, so he spent the week working instead of doubting', outcome: 'He went to the analysts rather than to his own doubt, and he dives the right way three times because he already knew where every one of them was going.', effect: { form: 0.12, attr: { keeping: 2, composure: 2 }, meters: { authority: 9, peers: 8, fans: 12 } }, requires: 'unshaken-keeper' },
         ],
       },
     },
@@ -750,6 +769,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         choices: [
           { id: 'for-them', label: 'Win it and give the grief somewhere to go', desc: 'Pour the sorrow into a performance the lost would be proud of', outcome: 'He plays as if the missing are watching, scores, and lifts his shirt to the empty seats, giving a broken support one pure moment to hold onto.', effect: { form: 0.12, attr: { leadership: 1, composure: 1 }, meters: { fans: 16, authority: 6 } } },
           { id: 'honour-quiet', label: 'Honour them with quiet, honest effort', desc: 'No theatrics — just heart, sweat, and respect for the day', outcome: 'He asks for nothing showy of himself, only that every man leaves everything out there, and applauds the bereaved long after the whistle.', effect: { form: 0.06, attr: { teamwork: 2 }, meters: { fans: 10, peers: 6 } } },
+          { id: 'the-names', label: 'Play for the names he has learned', desc: 'He sat with those families; he knows what each of them was called', outcome: 'He carries the names he was given in front rooms all week out onto the grass with him, and afterwards he goes back to the same doors to tell them how it went.', effect: { form: 0.1, attr: { leadership: 2, composure: 1 }, meters: { fans: 14, family: 8, peers: 8 } }, requires: 'mourning-leader' },
         ],
       },
     },
