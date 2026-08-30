@@ -196,3 +196,74 @@ about what "development" means, not a bug with an obvious right answer. Options,
   the Stadium is at level 1**, because it multiplies a gate that is zero.
 - **`analyze_manager_career.ts` measures a model the game does not have** — it reports a 31% title rate
   where the real one is 57–74%.
+
+---
+
+# OVERNIGHT LOG — 2026-08-31, second half
+
+## 10. THE ONE YOU SHOULD READ FIRST — the game did not run in a browser
+
+I merged the engine rebuild to `main` with a fully green gate, and then opened the game. Black screen, one
+console line:
+
+    ReferenceError: process is not defined   at shared/src/engine.ts:13
+
+The rebuild made forty tuning constants overridable from the environment (`Number(process.env.TS ?? 0.15)`),
+which is genuinely how the calibration defects in that file were found. They are evaluated at **module
+scope**, and `process` does not exist in a browser, so importing the engine threw before a single frame
+rendered. The pre-rebuild engine had zero references to `process`. **This was mine.**
+
+It shipped green because **nothing in the gate runs the page**:
+
+- `npm run verify` builds the client with `tsc --noEmit && vite build` — a type-check and a bundle. Neither
+  executes a line of the output.
+- all sixty-six harnesses across verify, playtest and qa run under `tsx` in **Node**, where `process` exists
+  and every constant resolves perfectly.
+
+Sixty-six passing checks and a black rectangle. **FIXED** (constants now read through a `typeof`-guarded
+accessor), and confirmed by playing it: new save → family name → academy trial → agent → card career, five
+screens, no errors; then a full 90-minute match driven in the browser console — 10,800 ticks, 0-3, 32 shot
+attempts, 842 events.
+
+**`tools/playtest/browser_safe.ts` is the gate that would have caught it**, now in `verify`. Proved by
+reintroducing the exact line that shipped the bug and watching it fail. It is the cheap half; the expensive
+half is a real headless page load, and it says so rather than implying coverage it does not have.
+
+**Worth your attention as a process point, not just a bug:** the reason this survived is the same reason
+everything else this week survived — a check that cannot fail. I would suggest a real browser smoke test in
+CI before launch. That is a decision for you: it means adding Playwright or similar as a dev dependency.
+
+## 11. The anchor duty does not do what its card says, and now we know for certain
+
+"Pure destroyer — sits, screens the back four, and never strays from his zone." At n=900 paired matches:
+
+| claim | measured | 95% CI |
+|---|---|---|
+| anchor concedes less than ball-winner | **+0.021** | [-0.092, 0.134] |
+| anchor concedes less than box-to-box | **+0.038** | [-0.074, 0.149] |
+
+Not "unresolved" — at this sample the effect is genuinely zero. I gave the duty a real `mark` field tonight
+(marking and pressing were one number, so the screener had to be given a low press to make him sit, which
+also made him the loosest marker in the game) and it moved the sweeper (-0.176 [-0.287, -0.064], now a
+confirmed effect) but not the anchor. I have a specific suspicion about why and am working it: marks are
+assigned in player-index order, so the back four claim the nearest attackers first and a deep-sitting
+midfielder is left marking whoever remains — possibly dragging him AWAY from the space he is meant to screen.
+
+## 12. Content items — authoring projects, not bugs. Your call on whether they are worth the days.
+
+- **614 near-duplicate line pairs** at similarity >= 0.6. A reader notices "this again" long before an
+  exact-match probe fires.
+- **27 player story beats ask for a decision and charge nothing for it** — a choice with no cost is a prompt,
+  not a decision.
+- **`when.maxSeason`** — a late-window gate that is implemented, correct, and used by **zero** of the 819
+  manager arcs. Built and unreachable.
+
+## 13. Small UI things I saw with my own eyes, which no source-reading agent would find
+
+- A **long family name wraps mid-word** in the academy cards ("Sam Wolstenholme-" / "Bak"). The game
+  generates names this long itself.
+- The **succession toast renders over the app header** and is clipped by it.
+- At a short viewport (800x450) the menu's primary buttons **scroll out of view**, leaving what looks like an
+  empty screen.
+- The agent-selection screen says **"No wrong pick here"** while the agent demonstrably changes draft luck,
+  wages and transfer fees. Either the choice is fake or the copy is wrong — that is a design call, not a bug.
