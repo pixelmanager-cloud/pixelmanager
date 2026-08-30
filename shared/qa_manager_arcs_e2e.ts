@@ -11,6 +11,7 @@ const CAREERS = 600;
 let coinSwings: number[] = [], moraleSwings: number[] = [], legacies = 0, tags = 0, beats2 = 0;
 let picked = 0;
 const endMorale: number[] = [], endCoins: number[] = [];
+let repeats = 0, misfits = 0;
 for (let c = 0; c < CAREERS; c++) {
   const fired = new Set<string>();
   let coins = 600, morale = 65, board = 0;
@@ -25,8 +26,27 @@ for (let c = 0; c < CAREERS; c++) {
     for (let k = 0; k < 5; k++) {
       const id = pickManagerArc(c * 7919 + k * 31 + season, s, fired);
       if (!id) continue;
+      // THE HARNESS HANDED THE PICKER A SITUATION AND A SEEN-LIST AND NEVER ASKED IF IT USED THEM.
+      // Mutations that made `arcFits` return true for everything, and that dropped `!fired.has(a.id)` from
+      // the picker, both passed all nine checks — the second producing 5.4% repeat picks, which is the
+      // arc-library defect from §6 in a different costume. Checked here against the situation directly
+      // rather than by re-calling `arcFits`, which would be the filter vouching for itself.
+      if (fired.has(id)) repeats++;
       fired.add(id); picked++;
       const arc = managerArcById(id)!;
+      {
+        const w = arc.when;
+        const okNeeds = !w?.needs || (w.needs === 'wonderkid' ? s.hasWonderkid : w.needs === 'veteran' ? s.hasVeteran
+          : w.needs === 'unhappy-player' ? s.hasUnhappy : w.needs === 'big-squad' ? s.squadSize >= 20
+          : w.needs === 'thin-squad' ? s.squadSize <= 14 : true);
+        const okSeason = (w?.minSeason == null || s.season >= w.minSeason) && (w?.maxSeason == null || s.season <= w.maxSeason);
+        const okTier = (w?.minTier == null || s.tier >= w.minTier) && (w?.maxTier == null || s.tier <= w.maxTier);
+        const okPos = (w?.minPos == null || s.posFrac >= w.minPos) && (w?.maxPos == null || s.posFrac <= w.maxPos);
+        const okCoins = (w?.minCoins == null || s.coins >= w.minCoins) && (w?.maxCoins == null || s.coins <= w.maxCoins);
+        const okTag = (!w?.requiresTag || s.tags.has(w.requiresTag)) && (!w?.forbidsTag || !s.tags.has(w.forbidsTag));
+        const okTemper = !s.temper || ((!arc.temper || arc.temper.includes(s.temper)) && (!w?.temper || w.temper.includes(s.temper)));
+        if (!(okNeeds && okSeason && okTier && okPos && okCoins && okTag && okTemper)) misfits++;
+      }
       // walk the arc, always taking a deterministic choice, following `next` beats
       let beat = arc.beats[arc.first], depth = 0;
       while (beat && depth < 4) {
@@ -50,6 +70,8 @@ console.log(`  coin effects: ${coinSwings.length}, mean ${avg(coinSwings).toFixe
 console.log(`  morale effects: ${moraleSwings.length}, mean ${avg(moraleSwings).toFixed(1)}`);
 console.log(`  club legacies earned: ${legacies} · tags set: ${tags} · second beats reached: ${beats2}`);
 
+ok('no arc fires twice in one career', repeats === 0, `${repeats} of ${picked} picks`);
+ok('every arc that fired was applicable to the club it fired at', misfits === 0, `${misfits}/${picked}`);
 ok('arcs resolve without crashing', picked > 0, `${picked} resolved`);
 ok('coin effects are not a money printer (mean <= +60)', avg(coinSwings) <= 60, avg(coinSwings).toFixed(0));
 ok('coin effects are not ruinous (mean >= -120)', avg(coinSwings) >= -120, avg(coinSwings).toFixed(0));
