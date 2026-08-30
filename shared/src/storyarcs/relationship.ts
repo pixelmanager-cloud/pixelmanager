@@ -21,6 +21,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'honour', label: 'Honour him', desc: 'Vow to lead the way the old man taught him', outcome: 'He picks up the torch. Everything the veteran gave him now runs through the side.', effect: { attr: { leadership: 2, teamwork: 1 }, meters: { authority: 10, peers: 8, family: -6 }, form: 0.05, energy: -9 } },
           { id: 'own-path', label: 'Make it his own', desc: 'Respect the past, but do it his way', outcome: 'He keeps the lessons, drops the rest, and builds his own kind of leader.', effect: { attr: { leadership: 1, creativity: 1 }, meters: { peers: 6, authority: -5 } } },
+          { id: 'bind-the-room', label: 'Use it to bind a room he has seen split', desc: 'He has watched a dressing room tear itself in half', outcome: 'He has watched a room split down the middle over one feud and he never wants to stand in one again, so he takes the armband and spends the season on other people — the sulkers, the fringe men, the ones nobody asks after. The team holds together. His own football quietly suffers for it.', effect: { attr: { leadership: 2, teamwork: 2 }, meters: { peers: 16, authority: 8, family: -8 }, form: -0.06, energy: -14 }, requires: 'at-war' },
         ],
       },
     },
@@ -109,6 +110,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'build-it', label: 'Build the partnership', desc: 'Extra sessions, telepathy, two minds one move', outcome: 'They stay behind to drill one-twos until the floodlights die. By month’s end defenders can’t tell where one of them ends and the other begins.', effect: { meters: { peers: 16, family: -6 }, attr: { teamwork: 2, creativity: 1 }, form: 0.06, energy: -12, tag: 'brothers' }, next: 'loyalty' },
           { id: 'keep-light', label: 'Keep it to the banter', desc: 'Great mate, but keep football football', outcome: 'They’re thick as thieves in the canteen and merely fine on the pitch. A good friendship — and a partnership left on the table.', effect: { meters: { peers: 8 }, attr: { teamwork: 1 }, form: -0.03, tag: 'brothers' }, next: 'loyalty' },
+          { id: 'all-in-now', label: 'Go all in on him from day one', desc: 'He has shared a room with a man who hated him', outcome: 'He has spent a season in a dressing room with someone who would not pass to him, so he knows exactly what a man like this is worth and refuses to be casual about it. He gives the partnership everything from the first week — every extra hour, every night off — and his home life quietly pays for it.', effect: { meters: { peers: 18, family: -12, partner: -6 }, attr: { teamwork: 2, creativity: 1 }, form: 0.07, energy: -16, tag: 'brothers' }, next: 'loyalty', requires: 'at-war' },
         ],
       },
       loyalty: {
@@ -342,6 +344,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'back-him', label: 'Back his mate to the hilt', desc: 'Sit beside him, learn together, sink or swim', outcome: 'He refuses to undercut his friend and coaches him through it in the evenings. The deal comes in rougher than a shark would’ve got — but it’s theirs, and it holds.', effect: { meters: { agent: 12, peers: 10 }, market: -6, attr: { leadership: 1, teamwork: 1 } } },
           { id: 'bring-shark', label: 'Bring in a heavyweight', desc: 'Protect the deal, keep the mate on the team', outcome: 'He hires a big-name negotiator and finds his friend a real role beside them, salvaging the friendship and the fee both. Pragmatism, dressed as kindness — and maybe it is.', effect: { meters: { agent: 4, peers: -2 }, market: 8, attr: { composure: 2 } } },
+          { id: 'bring-his-mate', label: 'Put his best mate in the room too', desc: 'The one man in football he trusts completely', outcome: 'He asks the one teammate he trusts without reservation to sit in on the negotiation, purely so there are two sets of honest ears in a room full of sharks. It is unorthodox, it embarrasses his agent, and it saves him from a clause nobody else spotted.', effect: { meters: { agent: -8, peers: 12 }, market: -4, attr: { teamwork: 2, composure: 1 } }, requires: 'brothers' },
         ],
       },
     },
@@ -751,6 +754,7 @@ export const RELATIONSHIP_ARCS: StoryArc[] = [
         choices: [
           { id: 'keep-distance', label: 'Keep a respectful distance', desc: 'Grateful, loyal — but his own man, not a mascot', outcome: 'He thanks the owner warmly and then quietly declines the third yacht weekend, making sure the lads see him graft like one of them. The chairman is faintly wounded; the dressing room quietly welcomes him back.', effect: { meters: { authority: 4, peers: 10 }, attr: { composure: 2, leadership: 1 }, tag: 'own-man' }, next: 'ask' },
           { id: 'embrace-favour', label: 'Embrace the patronage', desc: 'Take the ear of power — use it for good, he tells himself', outcome: 'He leans into the friendship, enjoying the access and the whispered promises of a boardroom seat. The privileges pile up, and so does the quiet distance between him and the men he shares a bench with.', effect: { meters: { authority: 12, peers: -6, sponsors: 6 }, attr: { leadership: 1 }, tag: 'chairmans-man' }, next: 'ask' },
+          { id: 'in-writing', label: 'Ask the old man to put it in writing', desc: 'Someone who called himself family emptied his pockets once', outcome: 'A man who called himself family has already gone through his money once, and he is not doing that twice. He thanks the owner warmly and then asks, pleasantly, for the board-seat talk to be put on paper by a solicitor. The warmth in the room drops about ten degrees and never fully returns.', effect: { meters: { authority: -12, agent: -6, peers: 8 }, attr: { composure: 2, leadership: 1 }, earnings: -6, tag: 'own-man' }, next: 'ask', requires: 'betrayed' },
         ],
       },
       ask: {

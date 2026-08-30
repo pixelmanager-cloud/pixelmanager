@@ -19,9 +19,11 @@ const BOX_RUN_TRIGGER = 35;
 /** The duty `push` at or above which a midfielder joins the run. Forwards always go. */
 const BOX_RUN_PUSH = 1;
 /** How much of a runner's natural width he keeps as he attacks the box (1 = keeps his flank entirely). */
-const BOX_RUN_WIDTH = Number(process.env.BW ?? 0.55);
+const BOX_RUN_WIDTH = Number(process.env.BW ?? 0.25);
 /** Distance off centre at which a player's anchor makes him a touchline outlet rather than a box runner. */
-const WIDE_ANCHOR = Number(process.env.WA ?? 99);      // 99 == nobody is excluded from box runs, i.e. OFF
+const WIDE_ANCHOR = Number(process.env.WA ?? 15);      // above this, a player overlaps instead of attacking the box
+/** How far up the flank an overlapping wide player pushes — metres short of the goal line. */
+const OVERLAP_DEPTH = Number(process.env.OD ?? 14);
 /** Base pass-completion probability before passer quality, distance and pressure.
  *  MEASURED AT 59.2% COMPLETION against roughly 80% in real football, and that gap was the engine's real
  *  structural defect. A pass failed almost two times in five, so the median possession spell was TWO TICKS
@@ -36,41 +38,41 @@ const PASS_BASE = 0.75;
  *  range rolled a ~19% chance EVERY TICK, so with two defenders near the ball a carrier lost it about a
  *  third of the time each second. This — not the finish, and not off-ball movement — is why possession
  *  never lasted, why nothing that takes time could occur, and why the box stayed empty. */
-const TACKLE_SCALE = 0.13;
+const TACKLE_SCALE = Number(process.env.TS ?? 0.13);
 /** Scales how readily a carrier inside SHOOT_RANGE pulls the trigger. With the through-ball shot removed
  *  this branch is now the game's ONLY finish, so it carries all the shot volume; at the old value carriers
  *  dribbled to the goal line before shooting (median shot distance 2.2m) instead of striking from range. */
-const SHOOT_SCALE = 5;
-const GP_BASE = 0.08;
-const GP_Q = 0.38;
+const SHOOT_SCALE = Number(process.env.SS ?? 5);
+const GP_BASE = Number(process.env.GB ?? 0.08);
+const GP_Q = Number(process.env.GQ ?? 0.40);
 /** How much likelier a tackle is on the goal line than outside the final third. */
-const BOX_DEFENCE = 3;
+const BOX_DEFENCE = Number(process.env.BD ?? 3);
 /** How strongly a tactic's press intensity converts into tackles won. The old flat tackle probability
  *  SATURATED against its 0.8 clamp, which quietly compressed every press difference; once the rate is
  *  realistic nothing saturates, the full press advantage expresses, and Gegenpress dominates the field at
  *  68%. Sub-linear scaling restores a beatable press. */
-const PRESS_EXP = Number(process.env.PE ?? 0.5);
+const PRESS_EXP = Number(process.env.PE ?? 1.4);
 /** How far out a wide player will deliver a cross, and how far off-centre counts as "wide". */
 const CROSS_RANGE = Number(process.env.CR ?? 34);
 const CROSS_WIDE_Y = Number(process.env.CW ?? 13);
 /** Base per-tick rate a wide carrier in range whips one in. */
-const CROSS_RATE = Number(process.env.CX ?? 0);        // OFF by default — the delivery works, the supply does not
+const CROSS_RATE = Number(process.env.CX ?? 0.07);
 /** Radius from goal counted as "attacking the box" for both the runner and the defenders contesting it. */
 const BOX_ATTACK_RADIUS = Number(process.env.BAR ?? 16);
 /** How heavily a pass option's progress-toward-goal and its freedom-from-pressure weigh against each other. */
 const GAIN_W = Number(process.env.GW ?? 1);
 const PRESSURE_W = Number(process.env.PW ?? 3);
 /** Distance from goal beyond which a carrier keeps his own channel rather than drifting to the centre. */
-const LANE_HOLD_RANGE = Number(process.env.LH ?? 0);   // 0 == aim at the goal spot, i.e. the original dribble
+const LANE_HOLD_RANGE = Number(process.env.LH ?? 40);
 /** How strongly a free wide option in the final third is sought as a switch of play. */
 /** How much of `gain` is measured up the pitch rather than toward the goal spot. 0 == the original. */
-const UPFIELD_W = Number(process.env.UW ?? 0);
-const WIDTH_PULL = Number(process.env.WP ?? 0);        // OFF by default — see the part-3 commit message
+const UPFIELD_W = Number(process.env.UW ?? 0.65);
+const WIDTH_PULL = Number(process.env.WP ?? 3);
 const WIDTH_ZONE = Number(process.env.WZ ?? 40);
 /** How unpressured a wide team-mate must be for a lateral switch to him to be allowed at all, and how much
  *  ground such a switch may concede. */
 const SWITCH_FREEDOM = Number(process.env.SF ?? 0.35);
-const SWITCH_TOLERANCE = Number(process.env.ST ?? 6);  // 6 == the original absolute veto, i.e. OFF
+const SWITCH_TOLERANCE = Number(process.env.ST ?? 22);
 const BASE_DRAIN = 0.000034; // fitness lost per tick by a working outfielder (tuned via harness)
 
 const norm = (stat: number) => stat / 20;
@@ -435,10 +437,24 @@ export class MatchEngine {
         // area they were running into. The flank and the box are different jobs: a player anchored wide
         // HOLDS the touchline as the crossing outlet, and everyone else attacks the six-yard space.
         const heldWide = Math.abs(a.y - 34) > WIDE_ANCHOR;
+        const inFinalThird = Math.abs(s.ball.x - goalX) < BOX_RUN_TRIGGER;
         const runner = attacking && p.role !== 'GK' && p.role !== 'DF' && !heldWide
           && (p.role === 'FW' || dm.push >= BOX_RUN_PUSH)
-          && Math.abs(s.ball.x - goalX) < BOX_RUN_TRIGGER;
-        if (runner) {
+          && inFinalThird;
+        // THE OVERLAP. Supply and box-attack are different jobs and the engine modelled neither, which is
+        // what defeated the last two attempts. Letting everyone break for the box put the wide men in it
+        // too — 16 crossing positions a match but 72% of them with NOBODY left to aim at. Excluding the
+        // wide men from the runs instead left them sitting at their anchor, and crossing positions fell to
+        // 3 a match, because a player who never advances is never in a position to deliver.
+        //
+        // A wide anchor now does the third thing a real wide player does: he goes UP, and he stays OUT. He
+        // is the outlet, level with the box and on the touchline, while the central runners attack the six-
+        // yard space in front of him.
+        const overlap = attacking && heldWide && p.role !== 'GK' && inFinalThird;
+        if (overlap) {
+          tx = goalX - dir * OVERLAP_DEPTH;
+          ty = a.y;                                   // full width: he is the width, not a second striker
+        } else if (runner) {
           // THE RUN KEEPS THE PLAYER'S SIDE. Fanning runners into three fixed central lanes funnelled every
           // attack through the middle and erased the whole point of a wide shape — the formation width
           // assertions inverted on exactly that. A wide player attacks the near or far post from HIS flank;
