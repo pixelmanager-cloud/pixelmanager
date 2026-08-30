@@ -84,7 +84,22 @@ export function transferList(seed: number, season: number, tier: number, size = 
   // season took every simulated career to the top flight. (PT-903)
   // Top-flight clubs keep a little more reach (2 vs 0): with headroom trimmed everywhere the title rate at
   // tier 1 collapsed to 4% — reaching the summit but being unable to ever win there is its own dead end.
-  const headroom = tier <= 2 ? 2 : 0;
+  // RAISED 2/0 -> 7/5 when the club's own rating was put on the same scale as its opponents'.
+  // `clubLeagueStrength` was a mean of `overall()` measured against opponents expressed as a QUALITY, and
+  // `generateClub(q)` yields an XI measuring q + 2.35 — so the club carried ~2.35 unearned points, nearly
+  // two divisions, in every simmed fixture and in its own row of the table. Correcting that took a dynasty
+  // from reaching the top flight in 100% of 30-season runs to 17%, ending at tier 3.5 with no titles: the
+  // climb had been resting on the bug.
+  //
+  // The compensation belongs HERE rather than in `tierStrength`, and that is not a preference. Lowering the
+  // pyramid moves the opposition and the shop together — `tierStrength` feeds both `seededOpponents` and
+  // this line — so it cancels exactly; measured, intercepts of 16.8, 15.9, 15.6 and 15.3 all produce the
+  // same 17%. Headroom is the only lever that lets a club outgrow its division, and it is the better place
+  // for the difference to live anyway: strength now has to be BOUGHT with coins the club earned, instead of
+  // being handed over by a scale mismatch nobody could see. Measured at 7/5: 90% of dynasties reach the top
+  // flight after ~19 seasons, ending tier 1.8, titles 11% of top-flight seasons, and one manager's tenure
+  // still ends at tier 5.5 having never got there — the family arrives, no single generation does.
+  const headroom = tier <= 2 ? 7 : 5;
   const quality = clamp(tierStrength(tier) + headroom, 4, 18);
   // generate a couple of squads' worth at this quality, then take a spread across positions
   // rich=true: market players are FULL characters (15 stats + personality + traits) — you're signing a

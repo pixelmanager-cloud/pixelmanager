@@ -495,3 +495,51 @@ The repetition is **concentrated, twice over**, so this is a morning's work rath
 Scoped: **~2 days of authoring and 90 minutes of code.** If only one thing gets done, it is expanding the
 banks in `narrate.ts` — 4-6 hours, and it is the difference between the first repeat at minute twenty and
 the first repeat in hour three.
+
+## ~~24. The club was rating itself on a different scale from its opponents~~ — FIXED, and it changes the difficulty
+
+`clubLeagueStrength()` is a mean of `overall()`. Every opponent it was compared against — `seededOpponents`,
+`tie.oppStrength`, `spFixture.oppStrength` — is a **quality**, the number handed to `generateClub`. Measured,
+`generateClub(q)` produces an XI whose mean `overall()` is **q + 2.35**, flat across the whole range the game
+uses:
+
+    q=4 → 6.35    q=8 → 10.35    q=12 → 14.34    (tapers only at 16-18, where overall clamps at 20)
+
+So the club carried **~2.35 unearned points — nearly two divisions** — in every simmed fixture, in its own row
+of the league table, in continental shootout odds, and in the full-time "you were favourites" line. The
+played path never had it, because `startSpMatchWith` builds the opponent with `generateClub(opp.strength)`
+and on the pitch he really is 2.35 stronger. That gap is a large part of why simming outperformed playing.
+
+**And the climb was resting on it.** Correcting the comparison took a 30-season dynasty from reaching the top
+flight in 100% of runs to **17%**, ending tier 3.5, with no titles at all.
+
+**The compensation is in the transfer market, and that is not a preference.** Lowering `tierStrength` cannot
+work: it feeds both `seededOpponents` and the shop, so the two move together and cancel exactly — measured,
+intercepts of 16.8 / 15.9 / 15.6 / 15.3 all give the same 17%. Market **headroom** is the only lever that
+lets a club outgrow its division, and it is the better home for the difference anyway: strength now has to
+be **bought** with coins the club earned, instead of being handed over by a scale mismatch nobody could see.
+
+Headroom 2/0 → **7/5**. Measured over 30-season dynasties through the real facade:
+
+| | before the fix (with the bug) | fix only | fix + headroom |
+|---|---|---|---|
+| reach the top flight | 100% | 17% | **90%**, after ~19 seasons |
+| avg tier at career end | 1.3 | 3.5 | **1.8** |
+| titles while in the top flight | 23% | 0% | **11%** |
+| one manager's tenure (12 seasons) | tier 4.9 | tier 7.3 | **tier 5.5, never arrives** |
+
+All five checks in `manager_career_real.ts` pass, and the dynasty shape is intact: the family reaches the
+summit, no single generation does.
+
+**A note on my own probe.** The first run after the fix returned numbers identical to before, because
+`manager_career_real.ts` mirrors the strength formula rather than driving `main.ts` — the same defect I had
+just criticised in `analyze_manager_career.ts`. It is fixed and flagged in the file, but `main.ts` is
+DOM-coupled and offers no seam, so the duplication remains and has to move whenever `clubLeagueStrength`
+does. That is a real fragility, not a solved problem.
+
+**Still open from the same report (PT-42xx), and yours to call:** the remaining sim-vs-played gap is a
+facility-scale collision (maxed facilities are worth +0.238 ppg in the engine and +1.13 in the sim, a 4.7x
+error) and a home-advantage disagreement where **both models are wrong** — the engine's is −0.025 ppg
+(indistinguishable from zero; it has no home-advantage term at all at level-1 facilities) and the sim's is
++0.685, against real football's ~0.33. The agent's fitted constants are in its report; I have not applied
+them, because they were measured against the engine I have since reverted.

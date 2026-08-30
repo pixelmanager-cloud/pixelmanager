@@ -42,7 +42,12 @@ function leagueStrength(players: { id: string; ov: number }[], starId: string | 
   for (const p of xi) { const k = starId && p.id === starId ? STAR_WEIGHT : 1; sum += p.ov * k; w += k; }
   const age = starAge;
   const mod = age <= 27 ? 0.5 : age <= 30 ? 0 : age <= 33 ? -0.7 : -1.6;
-  return sum / w + mod;
+  // ...ON THE QUALITY SCALE, mirroring `clubLeagueStrength`. `generateClub(q)` yields an XI measuring
+  // q + 2.35, and every opponent this is compared against is a quality, not an overall. Duplicating the
+  // formula here at all is a smell — it is the same shape of defect as the probe this file replaced, which
+  // modelled club strength with a straight line — but `main.ts` is DOM-coupled and offers no seam, so the
+  // mirror is what is available. It must move whenever `clubLeagueStrength` does.
+  return sum / w + mod - 2.35;
 }
 
 const FAC_ORDER = ['sponsor', 'stadium', 'shop', 'training', 'fanzone', 'women', 'data', 'youth', 'scouting', 'medical', 'dorm', 'community'];

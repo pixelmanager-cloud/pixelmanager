@@ -1448,10 +1448,27 @@ class Game {
   }
   /** the strength the LEAGUE sees — the squad, shifted by the bloodline star's age curve: he peaks in his
    *  mid-20s and declines toward retirement, so the club's results rise then fade over his managed career. */
+  /** How good a squad of nominal QUALITY q actually measures once built. `generateClub(q)` produces an XI
+   *  whose mean `overall()` is q + 2.35 — flat across the whole range the game uses (measured at q = 4, 6,
+   *  8, 10 and 12; it only tapers at 16-18 where `overall` clamps at 20).
+   *
+   *  This matters because the two scales were being compared directly. `squadStrength()` is a mean of
+   *  `overall()`; every opponent it is measured against — `seededOpponents().strength`, `tie.oppStrength`,
+   *  `spFixture.oppStrength` — is a QUALITY, the number handed to `generateClub`. So the club was credited
+   *  with ~2.35 points it had not earned in every simmed fixture, in its own row of the league table, in
+   *  continental shootout odds, and in the full-time "you were favourites" line. That is nearly two
+   *  divisions of the pyramid (tierStrength' slope is 1.3 a tier), silently, forever.
+   *
+   *  Note the played path never had this problem: `startSpMatchWith` builds the opponent with
+   *  `generateClub(opp.strength)`, so on the pitch he really is 2.35 stronger than the sim believed. That
+   *  gap is a large part of why simming a fixture outperformed playing it. */
+  private static readonly XI_QUALITY_OFFSET = 2.35;
+
   private clubLeagueStrength(): number {
     const age = this.loadMgr().starAge ?? 24;
     const mod = age <= 27 ? 0.5 : age <= 30 ? 0 : age <= 33 ? -0.7 : -1.6;
-    return this.squadStrength() + mod;
+    // returned on the QUALITY scale, because that is what every consumer compares it against
+    return this.squadStrength() + mod - Game.XI_QUALITY_OFFSET;
   }
   private ordinal(n: number): string { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]); }
   private facLevels: Record<string, number> = {}; // cached club-facility levels — applied to single-player matches
@@ -2122,7 +2139,8 @@ class Game {
     const opp = this.wcStageOpp(path, stage);
     // World-Finals ties are neutral: no home term (was an unearned +0.25), but training/staff still count (PT-129/130)
     const { strDelta } = this.simEdge('away');
-    const r = this.simFixtureResult(this.starOverall() + strDelta, opp.oppStrength, ((this.leagueSeed() >>> 0) ^ ((m.wcEdition * 977 + stage.length * 131) >>> 0)) >>> 0, 0);
+    // starOverall() is an `overall()`; opp.oppStrength is a quality — same scale mismatch as above
+    const r = this.simFixtureResult(this.starOverall() - Game.XI_QUALITY_OFFSET + strDelta, opp.oppStrength, ((this.leagueSeed() >>> 0) ^ ((m.wcEdition * 977 + stage.length * 131) >>> 0)) >>> 0, 0);
     this.resolveWorldCup(r.myGoals, r.oppGoals, opp.opp);
   }
   /** Apply a knockout result: win → next round (or lift the trophy); level → seeded shootout; loss → out. */
