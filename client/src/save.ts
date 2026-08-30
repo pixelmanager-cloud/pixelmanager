@@ -472,7 +472,14 @@ export class IndexedDBBackend implements SaveBackend {
   }
 }
 
-const defaultBackend: SaveBackend = typeof indexedDB !== 'undefined' ? new IndexedDBBackend() : createInMemoryBackend();
+// NOTHING PERSISTS WITHOUT INDEXEDDB, AND THE GAME USED TO SAY IT WAS FINE. When `indexedDB` is absent —
+// a webview, a worker, a hardened Steam wrapper, storage disabled, some private modes — this falls back to
+// an in-memory store held in module scope. Every write "succeeds", `listSaves()` returns the save, and
+// `saveHealth` stays green forever, so the player builds a dynasty for an evening and closes the tab on it.
+// `writeSlotInner`'s own comment calls a silent failed write "the worst bug this file can have"; this was
+// the same bug through a different door, and the only door with no warning at all.
+const HAS_IDB = typeof indexedDB !== 'undefined';
+const defaultBackend: SaveBackend = HAS_IDB ? new IndexedDBBackend() : createInMemoryBackend();
 
 // ── the save-slot manager (replaces the `fm_saves` localStorage concept) ──
 let backend: SaveBackend = defaultBackend;
@@ -481,8 +488,12 @@ const modelBox: { model: SaveModel } = { model: freshSave('New Manager') };
 let persistTimer: ReturnType<typeof setTimeout> | null = null;
 const PERSIST_DEBOUNCE_MS = 500;
 
-/** Set when the last write to disk failed. The UI reads this to warn that play is not being saved. */
-let saveHealth: { ok: boolean; error?: string } = { ok: true };
+/** Set when the last write to disk failed. The UI reads this to warn that play is not being saved.
+ *  Starts UNHEALTHY when there is no IndexedDB at all, because in that state nothing will ever be written
+ *  no matter how many times a write reports success. */
+let saveHealth: { ok: boolean; error?: string } = HAS_IDB
+  ? { ok: true }
+  : { ok: false, error: 'This browser is not letting the game store saves, so your progress will be lost when you close it.' };
 /** Whether the last write to disk succeeded. The UI polls this so a failing autosave cannot stay silent. */
 export function getSaveHealth(): { ok: boolean; error?: string } { return saveHealth; }
 
@@ -502,9 +513,9 @@ async function writeSlotInner(id: string, model: SaveModel): Promise<void> {
   // moves and reporting success while nothing reaches disk; you close the tab and the evening is gone.
   try {
     await backend.save(id, model);
-    if (!saveHealth.ok) saveHealth = { ok: true };
+    if (!saveHealth.ok && HAS_IDB) saveHealth = { ok: true };
   } catch (e) {
-    try { await backend.save(id, model); if (!saveHealth.ok) saveHealth = { ok: true }; return; } catch { /* fall through */ }
+    try { await backend.save(id, model); if (!saveHealth.ok && HAS_IDB) saveHealth = { ok: true }; return; } catch { /* fall through */ }
     saveHealth = { ok: false, error: (e as Error)?.message ?? String(e) };
   }
 }
@@ -522,7 +533,12 @@ function schedulePersist(): void {
 }
 
 /** Swap the persistence backend (tests inject `createInMemoryBackend()`; real code never needs to). */
-export function setSaveBackend(b: SaveBackend): void { backend = b; }
+export function setSaveBackend(b: SaveBackend): void { backend = b;
+  // Choosing a backend deliberately is not the "no storage available" failure state, so clear the warning
+  // that `HAS_IDB === false` raises at module load. Without this every Node harness would run with a
+  // permanently unhealthy save flag, which would mask a real regression rather than reveal one.
+  saveHealth = { ok: true };
+}
 export function getActiveSlotId(): string | null { return activeSlotId; }
 export function getActiveModel(): SaveModel { return modelBox.model; }
 
@@ -549,9 +565,19 @@ export async function continueSave(id: string): Promise<SaveModel> {
   const raw = await backend.load(id);
   if (!raw) throw new Error(`save not found: ${id}`);
   const m = migrate(raw);
+  // SWAP THE MODEL AND THE SLOT ID IN THE SAME BREATH. These used to be separated by an `await` — the
+  // version-upgrade write below — so any failure or even any suspension between them left `modelBox.model`
+  // holding the NEW save while `activeSlotId` still named the OLD one. The next `touch()` from any ordinary
+  // action then scheduled a write of the new dynasty INTO THE OLD DYNASTY'S SLOT. Reproduced with a quota
+  // error on the upgrade write: slot-A ("House Alba", 9,500 coins) came back as a copy of slot-B, and
+  // `saveHealth` read `{ok:true}` throughout. The player opens an old save, sees an error, loads a
+  // different one, plays five minutes, and the first dynasty is gone.
+  //
+  // This is the same defect the `schedulePersist` fix addressed from the other side: capturing the model at
+  // schedule time closed one door and left this one open, because the pair was still updated across an await.
   modelBox.model = m;
-  if (m.version !== raw.version) await backend.save(id, m);   // write the upgrade back once
   activeSlotId = id;
+  if (m.version !== raw.version) await backend.save(id, m);   // write the upgrade back once
   return m;
 }
 
