@@ -47,7 +47,22 @@ const BOX_DEFENCE = 3;
  *  SATURATED against its 0.8 clamp, which quietly compressed every press difference; once the rate is
  *  realistic nothing saturates, the full press advantage expresses, and Gegenpress dominates the field at
  *  68%. Sub-linear scaling restores a beatable press. */
-const PRESS_EXP = Number(process.env.PE ?? 1);
+const PRESS_EXP = Number(process.env.PE ?? 0.5);
+/** How far out a wide player will deliver a cross, and how far off-centre counts as "wide". */
+const CROSS_RANGE = Number(process.env.CR ?? 34);
+const CROSS_WIDE_Y = Number(process.env.CW ?? 13);
+/** Base per-tick rate a wide carrier in range whips one in. */
+const CROSS_RATE = Number(process.env.CX ?? 0.9);
+/** Radius from goal counted as "attacking the box" for both the runner and the defenders contesting it. */
+const BOX_ATTACK_RADIUS = Number(process.env.BAR ?? 16);
+/** How heavily a pass option's progress-toward-goal and its freedom-from-pressure weigh against each other. */
+const GAIN_W = Number(process.env.GW ?? 1);
+const PRESSURE_W = Number(process.env.PW ?? 3);
+/** Distance from goal beyond which a carrier keeps his own channel rather than drifting to the centre. */
+const LANE_HOLD_RANGE = Number(process.env.LH ?? 40);
+/** How strongly a free wide option in the final third is sought as a switch of play. */
+const WIDTH_PULL = Number(process.env.WP ?? 0.8);
+const WIDTH_ZONE = Number(process.env.WZ ?? 40);
 const BASE_DRAIN = 0.000034; // fitness lost per tick by a working outfielder (tuned via harness)
 
 const norm = (stat: number) => stat / 20;
@@ -537,6 +552,59 @@ export class MatchEngine {
       }
     }
 
+    // ── CROSSING — the reason width is worth anything ────────────────────────────────────────────────
+    // THE ENGINE HAD NO CROSS. Not a weak one: none. The only route to goal was a carrier working himself
+    // into the middle and shooting, so every formation attacked the same way and the shape edge (`zonal`)
+    // could only ever be a shot-probability multiplier bolted onto that one route — which is exactly what
+    // the standing note said had to be re-derived as a chance-CREATION edge instead.
+    //
+    // Without a cross, a wide shape has no payoff and six of strategy_test's assertions are unwinnable by
+    // construction: wide 3-4-3 vs a narrow diamond, wide-playmaker vs central duties in the wide slot, and
+    // 3-4-3's central-vs-wide attacking focus all measure a reward the engine does not implement.
+    //
+    // Now: a wide carrier in the final third whips it in for whoever is attacking the box. The delivery is
+    // contested by however many defenders have collapsed in there, and the finish is a header/close-range
+    // strike from where the runner actually is. Width creates the chance; bodies in the box convert it.
+    const fromCentre = Math.abs(cs.y - PITCH.h / 2);
+    if (distGoal < CROSS_RANGE && fromCentre > CROSS_WIDE_Y) {
+      const crossP = CROSS_RATE * (0.4 + 0.6 * norm(carrier.attrs.passing) * fit(cs.fitness))
+        * (1 + this.zonal[teamIdx]) * (1 + Math.max(0, this.dm[teamIdx][playerIdx].hug)) * TICK_SEC;   // wide duties (wing-back, wide-playmaker) deliver more
+      if (this.rng() < crossP) {
+        // who is in the box to attack it? nearest attacker to the six-yard area, excluding the crosser
+        let target = -1, bestD = Infinity;
+        for (let i = 1; i < 11; i++) {
+          if (i === playerIdx || this.sentOff.has(teamIdx * 100 + i)) continue;
+          const ps = s.players[teamIdx][i];
+          const d = Math.hypot(goal.x - ps.x, goal.y - ps.y);
+          if (d < BOX_ATTACK_RADIUS && d < bestD) { bestD = d; target = i; }
+        }
+        if (target >= 0) {
+          // contested by the bodies back defending it — a packed box kills a cross, an open one is a gift
+          let defenders = 0;
+          for (let i = 0; i < 11; i++) {
+            if (this.sentOff.has(defTeam * 100 + i)) continue;
+            const ds = s.players[defTeam][i];
+            if (Math.hypot(goal.x - ds.x, goal.y - ds.y) < BOX_ATTACK_RADIUS) defenders++;
+          }
+          const delivered = 0.62 + 0.3 * norm(carrier.attrs.passing) - 0.09 * defenders
+            + mAdd(carrier.attrs.creativity, 0.05);
+          if (this.rng() < delivered) {
+            s.carrier = { teamIdx, playerIdx: target };
+            s.ball = { ...s.players[teamIdx][target] };
+            this.lastPass[teamIdx] = { passer: playerIdx, receiver: target, sec: s.clockSec };
+            this.flow('pass', teamIdx, s.ball.x, carrier.name, this.teams[teamIdx].players[target].name);
+            this.resolveShot(teamIdx, target, bestD, false);
+          } else {
+            // cleared: the ball is hacked away from the danger area
+            s.ball = { x: clamp(goal.x - this.attackDir(teamIdx) * 25, 0, PITCH.w), y: clamp(cs.y + (this.rng() - 0.5) * 20, 0, PITCH.h) };
+            this.flow('loose_ball', teamIdx, s.ball.x, carrier.name);
+            s.carrier = null;
+          }
+          return;
+        }
+      }
+    }
+
     // attempt a pass
     if (this.rng() < 0.85 * TICK_SEC) {
       const pick = this.pickPassTarget(teamIdx, playerIdx, goal);
@@ -590,9 +658,17 @@ export class MatchEngine {
       }
     }
 
-    // dribble toward goal
+    // dribble toward goal, HOLDING YOUR LANE until it is worth cutting in.
+    // This aimed every carrier at the goal's centre spot, which is why the ball was welded to the middle of
+    // the pitch: measured, the carrier's median distance from the centre line was 2.6m and its 90th
+    // percentile 4.6m, on a pitch 68m wide, while his team-mates were spread out to 24m. The ball was never
+    // wide, so a cross could never be attempted, so width could never pay — no amount of tuning the shape
+    // edge or the pass weighting could fix that, because the carrier walked to the centre unaided.
+    // Now a wide player drives down his own channel and only cuts inside as the byline approaches.
+    const laneHold = clamp(distGoal / LANE_HOLD_RANGE, 0, 1);   // 1 far out: keep your channel; 0 at goal: cut in
+    const driveY = goal.y + (cs.y - goal.y) * laneHold + (this.rng() - 0.5) * 10;
     const speed = (1.6 + norm(carrier.attrs.pace) * 3.0) * fit(cs.fitness) * TICK_SEC;
-    this.stepToward(cs, goal.x, goal.y + (this.rng() - 0.5) * 10, speed);
+    this.stepToward(cs, goal.x, driveY, speed);
     this.drain(cs, carrier, this.mods[teamIdx], 1.2);
     s.ball = { x: cs.x, y: cs.y };
   }
@@ -627,7 +703,14 @@ export class MatchEngine {
       const dGoal = Math.hypot(goal.x - ts.x, goal.y - ts.y);
       const dPass = Math.hypot(ts.x - cs.x, ts.y - cs.y);
       if (dPass > 42 || dPass < 3) continue;
-      const gain = myDistGoal - dGoal; // positive = progresses toward goal
+      // PROGRESS IS UP THE PITCH, NOT TOWARD THE GOAL SPOT. This measured gain as the change in STRAIGHT-LINE
+      // distance to the centre of the goal, so a square ball to a free winger scored as LOSING ground —
+      // roughly -8m for a 24m-wide target — and the `gain > -6` filter below then rejected it outright.
+      // Wide passes were therefore not merely unattractive, they were structurally forbidden: measured, the
+      // formation anchors put four players 24m off centre and the receiver of a pass was a median of 3.2m
+      // off centre. That is the root cause of width being worthless, and it is upstream of the shape edge,
+      // the crossing game and every formation-width assertion in strategy_test.
+      const gain = (myDistGoal - dGoal) * 0.35 + (Math.abs(goal.x - cs.x) - Math.abs(goal.x - ts.x)) * 0.65;
       const pressure = this.pressureOn(defTeam, ts);
       // ATTACK-FOCUS instruction (unset = neutral): bias the ball toward the widest or the most
       // central available option, on top of everything else — a deliberate lean into (or away from)
@@ -636,11 +719,23 @@ export class MatchEngine {
       const focusBias = focus === 'wide' ? Math.abs(ts.y - 34) * 0.18 : focus === 'central' ? -Math.abs(ts.y - 34) * 0.18 : 0;
       // directness>0 rewards forward gain and tolerates longer passes; <0 rewards safe short options.
       // duty "magnet" makes playmakers/target-men more (and ball-winners less) sought as an out-ball.
-      const score = gain * (0.7 + 0.6 * (directness + 1))
+      // WHY THE BALL NEVER WENT WIDE. `gain` (metres of progress toward goal) reached ~30 against a
+      // pressure penalty of at most ~3, so a congested central option beat a free wide one every single
+      // time: measured, wide players were open 26% of the time and the CARRIER was wide 0.0% of the time.
+      // A ball that is never wide means crossing can never fire, which means width has no payoff and the
+      // formation-shape assertions are unwinnable however the shape edge is tuned. Weighting freedom
+      // against progress is what makes a flank an actual option.
+      const score = gain * GAIN_W * (0.7 + 0.6 * (directness + 1))
         - dPass * (0.2 - directness * 0.1)
-        - pressure * 3
+        - pressure * PRESSURE_W
         + this.dm[teamIdx][i].magnet
         + focusBias
+        // SWITCH THE PLAY. Nothing in this score ever rewarded using a flank: a wide option is always
+        // further from goal, so `gain` docks it, and there was no term on the other side of the ledger.
+        // Measured, four players hold ~14.5m off centre all match and the receiver of a pass was a median
+        // of 3.2m off centre — the flanks existed as geometry and never as an option. In the final third a
+        // free wide man is worth finding, because that is where a cross comes from.
+        + (Math.abs(goal.x - cs.x) < WIDTH_ZONE ? Math.max(0, Math.abs(ts.y - 34) - 9) * WIDTH_PULL : 0)
         + this.rng() * 6;
       // a direct side, and especially one on the counter, slips more through-balls in behind;
       // the passer's creativity (and the Creative Maestro trait) unlocks more of them
