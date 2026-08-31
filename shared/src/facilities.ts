@@ -17,7 +17,16 @@ export interface Facilities {
   data?: number; shop?: number; dorm?: number; women?: number; community?: number;
 }
 /** Level of a facility, defaulting to 1 — the five newer keys are absent from older saves. */
-export const facLevel = (f: Partial<Facilities> | undefined, k: FacilityKey): number => Math.max(1, Number(f?.[k] ?? 1));
+/** THE DEFENSIVE CLAMP, and it did not clamp. `Math.max(1, Number('abc'))` is NaN, so a save carrying a
+ *  corrupt facility level propagated NaN to every consumer: seasonFacilityIncome().total became NaN (a NaN
+ *  treasury credit), that facility was billed 0 upkeep for ever, upgradeCost returned null so the UI showed
+ *  it maxed and permanently un-upgradeable, and its card read "Home gate ~ NaN-NaN coins per match".
+ *  `facilityUpkeep` carries its own guard and its comment explains exactly why — the hole was patched at
+ *  that one call site instead of here, so every other consumer stayed exposed. */
+export const facLevel = (f: Partial<Facilities> | undefined, k: FacilityKey): number => {
+  const n = Number(f?.[k] ?? 1);
+  return Number.isFinite(n) ? Math.max(1, n) : 1;
+};
 export const FACILITY_KEYS: FacilityKey[] = ['stadium', 'training', 'youth', 'scouting', 'medical', 'sponsor', 'fanzone', 'data', 'shop', 'dorm', 'women', 'community'];
 export const MAX_LEVEL = 10;
 export const DEFAULT_FACILITIES: Facilities = { stadium: 1, training: 1, youth: 1, scouting: 1, medical: 1, sponsor: 1, fanzone: 1, data: 1, shop: 1, dorm: 1, women: 1, community: 1 };
@@ -30,7 +39,12 @@ const COST_TO_REACH: Record<number, number> = {
 };
 /** Coins to go from `level` to `level+1`, or null if already maxed. */
 export function upgradeCost(level: number): number | null {
-  return level >= MAX_LEVEL ? null : COST_TO_REACH[level + 1] ?? null;
+  // A NaN level compares false against MAX_LEVEL and then indexes COST_TO_REACH[NaN], so it returned null
+  // — which the UI reads as "already at maximum". A corrupt save therefore showed a facility as maxed AND
+  // permanently un-upgradeable, with no way back. Treat an unreadable level as level 1, which is what
+  // facLevel does everywhere else.
+  const l = Number.isFinite(level) ? level : 1;
+  return l >= MAX_LEVEL ? null : COST_TO_REACH[l + 1] ?? null;
 }
 
 export const FACILITY_META: Record<FacilityKey, { icon: string; name: string; blurb: string }> = {
@@ -257,6 +271,9 @@ export function mothballRefund(level: number): number {
 
 /** A short human description of a facility's effect AT a given level (for the UI). */
 export function effectAt(key: FacilityKey, level: number): string {
+  // ...and the same for the card the player reads. A NaN level rendered "Home gate ≈ NaN–NaN coins per
+  // match" straight into the facilities screen.
+  level = Number.isFinite(level) ? level : 1;
   switch (key) {
     // DERIVED FROM stadiumIncome, NOT A COPY OF IT. This still printed the pre-recalibration formula sixty
     // lines below the function it describes — promising "≈ 200–705 coins per match" at level 10 against an
@@ -347,15 +364,19 @@ export function seasonFacilityIncome(
   record: { wins: number; draws: number; losses: number },
 ): SeasonIncome {
   const homeOf = (n: number) => Math.round(n / 2);
-  const gatePer = (outcome: 'win' | 'draw' | 'loss') => stadiumIncome(fac.stadium, tierIdx, outcome);
+  // EVERY level goes through facLevel. Three of these read the field RAW while the newer two used `?? 1`,
+  // so a save carrying a corrupt stadium/sponsor/fanzone level produced a NaN season income — a NaN
+  // treasury credit — even after facLevel itself was taught to clamp. A defensive helper only defends the
+  // callers that use it.
+  const gatePer = (outcome: 'win' | 'draw' | 'loss') => stadiumIncome(facLevel(fac, 'stadium'), tierIdx, outcome);
   const gate = Math.round(
     (homeOf(record.wins) * gatePer('win') + homeOf(record.draws) * gatePer('draw') + homeOf(record.losses) * gatePer('loss'))
-    * fanIncomeMult(fac.fanzone));
-  const sponsor = sponsorIncome(fac.sponsor, tierIdx, trophies, marketabilityAvg);
+    * fanIncomeMult(facLevel(fac, 'fanzone')));
+  const sponsor = sponsorIncome(facLevel(fac, 'sponsor'), tierIdx, trophies, marketabilityAvg);
   // The five newer facilities are optional on the interface, so a save written before they existed reads
   // undefined here — level 1 is the neutral baseline and pays nothing, which is the right default.
-  const shop = shopIncome(fac.shop ?? 1, tierIdx);
-  const womens = womensIncome(fac.women ?? 1, tierIdx);
+  const shop = shopIncome(facLevel(fac, 'shop'), tierIdx);
+  const womens = womensIncome(facLevel(fac, 'women'), tierIdx);
   // tierIdx runs 0 (bottom) .. TIERS-1 (top flight), which is already the number of divisions climbed.
   const merit = Math.max(0, Math.round(tierIdx)) * DIVISION_MERIT;
   return { gate, sponsor, shop, womens, merit, total: gate + sponsor + shop + womens + merit };

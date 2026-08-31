@@ -105,7 +105,17 @@ const TABLE: Record<Duty, DutyMods> = {
   'target-man':     { ...NEUTRAL, come: 0.05, shoot: 0.95, magnet: 5 },
   // ── FM-style named roles (still small nudges — calibration-safe) ──
   'ball-playing-defender': { ...NEUTRAL, push: 0.9, come: 0.05, shoot: 0.7, magnet: 3, press: -0.2 }, // brings it out, links play
-  'inverted-fullback':     { ...NEUTRAL, push: 1.0, come: 0.08, magnet: 2, press: 0.1 },              // tucks into midfield
+  // hug: -0.55 — THE MIRROR OF THE WING-BACK'S +0.55, and it was missing entirely. `hug` is the only field
+  // that moves a player laterally (DutyMods: "stretches (+) or narrows (-) the lateral anchor offset");
+  // `come` is added to pullX, the along-the-pitch axis. All three of this duty's lateral siblings set it —
+  // wing-back +0.55, wide-playmaker +0.65, inverted-winger -0.60 — and this one shipped at NEUTRAL's 0, so
+  // the duty called "Inverted FB", whose own comment says "tucks into midfield" and whose tooltip promises
+  // "tucks infield into midfield in possession instead of hugging the touchline", did not tuck at all.
+  // Measured lateral offset of the two wide defenders while attacking, anchored 24.0m off centre:
+  // cover 15.328m, inverted-fullback 15.143m (a 0.185m difference, from push/come/press, not from any
+  // lateral term), wing-back 19.420m. The duty was not INERT — push/come/magnet/press all moved it — it
+  // simply did not do the one thing its name is.
+  'inverted-fullback':     { ...NEUTRAL, push: 1.0, come: 0.08, magnet: 2, press: 0.1, hug: -0.55 },  // tucks into midfield
   'wing-back':             { ...NEUTRAL, push: 1.4, come: 0.05, magnet: 1.5, press: -0.15, hug: 0.55 }, // bombs on as an auxiliary winger
   'sweeper':               { ...NEUTRAL, push: 0.75, come: 0.1, shoot: 0.4, magnet: 2, press: -0.45 }, // covers rather than engages, steps forward to sweep up
   'deep-lying-playmaker':  { ...NEUTRAL, push: 0.7, come: 0.12, shoot: 0.6, magnet: 6, press: -0.2 }, // deep regista, sprays it
