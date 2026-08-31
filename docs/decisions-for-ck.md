@@ -1615,6 +1615,58 @@ measured 44–48m from goal. That is the same defect class this document is full
 invokes), introduced by me during the fix for it. Implementing it changed nothing measurable, which is its
 own finding, but it should not have shipped as a comment describing work that did not exist.
 
+### CORRECTIONS — 2026-09-01, from an adversarial re-read of this section against the code
+
+Four things above were wrong or understated. They do not change the decision (CK chose the redesign), but
+three of them change what the redesign has to *achieve*, and one was a process failure worth naming.
+
+**1. The branch was nine commits behind main, and merging it would have reverted shipped fixes.**
+`engine/rebuild-2` still carried `const norm = (stat) => stat / 20`, i.e. the unbeatable-goalkeeper bug,
+undone. It also lacked the trait-ordering fix and the loanee squad cap, and — because
+`scripts/run-playtest.mjs` GLOBS the probe directory — it was two probe files short, which silently removes
+two gates. Every measurement I took on that branch was taken on an engine with a known bug in it. Rebased
+onto main; all three fixes and both gates verified present afterwards.
+
+**2. `attack_reach.ts` was never on main.** I wrote it, committed it to the branch, then spent the rest of
+the session working on main — so the instrument built to watch this defect was absent from every gate run
+on the shipped engine. Now ported.
+
+**3. Seven `strategy_test` assertions fail on the branch, not four — and three are not about volume.**
+They are the tactical-layer INVERSION that killed the previous rebuild, the one `engine.ts`'s own note at
+:547-549 records:
+
+| assertion | main | branch |
+|---|---|---|
+| wide 3-4-3 vs narrow diamond | 36W-14L | **4W-36L** (inverted) |
+| 4-2-2-2 vs 4-1-4-1 | 23W-20L | **5W-43L** (inverted) |
+| attack-focus, central vs wide | 23.7 v 18.8 shots | **2.0 v 2.0** (inert) |
+
+Saying they failed "for one reason, and it is not tuning" was the same overstatement pattern this document
+exists to catch. The cause is provable by grep: `this.zonal[teamIdx]`, `homeBoost` and `dm[...].shoot` are
+read in **exactly one place** — the shoot-from-range probability at `engine.ts:507`. On main, ~70 shots a
+match all funnel through that line, so a ±0.18 shape edge is worth 22 wins. Make chances rare and correct,
+and that line's influence collapses, taking the whole tactical layer with it — and the centrality term
+`(0.35 + 0.65 * central)` on the same line then actively punishes a wide shape.
+
+**4. Main is worse than this section implied, not better.** Measured with the newly-ported probe: main's
+league fixture gives the weaker side **4.5 shots a match to 34.5 — a 7.6:1 ratio**, closer to real
+football's 1.8:1 than the branch's 26:1. But its underdog reaches the penalty area **0.0% of the time**.
+Those 4.5 shots are hopeful efforts from ~45m that the old geometry counted because distance barely entered
+the conversion. So "ship main as-is" is not avoiding the defect; it is shipping a league whose bottom club
+scores about once every ten games. Judge by box share, not shot count.
+
+### WHAT THE REDESIGN MUST DO — sharpened by the above
+
+Two goals, not one, and the second is the one that killed the last two attempts:
+1. **An underdog must be able to reach the box.** Success criterion, now measured by `attack_reach.ts`:
+   the weaker side in a league fixture brings **15-25%** of its possessions inside 18m (today: 0.0%).
+2. **Tactics must reach the scoreline by a route that does not depend on shot volume.** Formation, duty and
+   attack-focus have to shape **chance CREATION** — where and how often a side gets into the box — instead
+   of multiplying a shoot-from-range probability. `engine.ts:558` already prescribes exactly this
+   ("`computeZonal` re-derived as a chance-CREATION edge rather than a shot-probability multiplier").
+   Any redesign that fixes goal geometry without moving the tactical layer off `engine.ts:507` will invert
+   the shape tests again, which is what happened both previous times.
+
 ### The decision
 Your rule was **"the league wins, always"** — tune the match down until the pyramid holds. I have done that,
 and the honest result is that the pyramid holds *only* at 0.58 goals a match. So the rule now has a cost you
