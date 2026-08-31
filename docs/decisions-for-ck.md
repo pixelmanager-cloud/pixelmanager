@@ -1425,6 +1425,41 @@ neutral, the armband is never a penalty, AND tier 10 still reads as poorly led.)
   never move is a real amount of the game held still. Either wire it into the season rollover or delete it;
   leaving a written-but-uncalled mechanic in place is the exact defect class this document tracks.
 
+## 67. NINE OF THE NINETEEN TRAITS DO NOTHING — found 2026-09-01, logged not fixed
+
+Auditing the trait catalogue after the ordering fix: a trait can only reach the game two ways — the engine
+reads it by id (`hasTrait`), or it carries an `apply` hook that bumps a stat when the player locks it in.
+`hasTrait` appears in exactly one file, `engine.ts`, for exactly five ids: `clinical`, `ballwinner`,
+`metronome`, `maestro`, `wall`. Seven traits carry an `apply`. **Nine carry neither**, so they cannot
+affect anything at all:
+
+`leader` · `livewire` · `ironman` · `biggame` · `spark` · `general2` · `showstopper` · `ironwill` · `utility`
+
+They are shown on the player's card with mechanical promises — *"Iron Man: Runs all day, every day"*,
+*"Iron Will: Never seems to get injured"*, *"Born Leader: Lifts the whole team"*, *"Utility Man: Can play
+almost anywhere and do a job"*. Some are pointed: an injury system exists (`injuryChanceMult`) and Iron
+Will does not touch it; marketability exists and feeds sponsor income, and Showstopper does not feed it;
+Utility Man describes positional flexibility the game does not model.
+
+Measured over 16,800 generated players: **62.2% hold at least one trait, 58.2% hold one that does
+anything, and 18.4% of all filled trait slots are spent on a trait with no effect.** Forwards fare worst —
+16.4% of trait-holding forwards hold *only* cosmetic ones.
+
+**Why I did not just fix it.** The tempting fix is to rank functional traits ahead of inert ones in
+`eligibleTraits`. That is a straight buff to player quality — a balance change — and it would also *hide*
+the content gap rather than close it, leaving nine cards still promising things the game does not do.
+Three honest options, and the choice is yours:
+1. **Give them effects.** Six of the nine describe mechanics that already exist somewhere (`ironwill` →
+   `injuryChanceMult`, `showstopper` → marketability/sponsor income, `livewire` → the pace term, `leader` →
+   `teamLeadership`, `ironman`/`general2` → the fitness drain). This is the version that makes the cards
+   true, and it is a day's work, not a project.
+2. **Cut them to a smaller, honest catalogue** of ten that all bite.
+3. **Re-word the cards** so they read as flavour and character rather than as mechanics.
+
+Related, and the reason this matters more than it looks: §64 shows the mental layer is worth 4.64 goals a
+match, and traits are the other half of what makes a squad player feel like a person rather than a stat
+line.
+
 ## 64. The measurement that settles §16 — and it is BIGGER on the path the game ships
 
 **The mental layer is worth exactly nothing outside a played match, and it is now quantified on both
