@@ -19,6 +19,10 @@ const OWNER = 'local';
 // ── the SaveModel — everything that persists (see docs/offline-savestore-design.md) ──
 export interface SaveModel {
   version: number; // save-format version; see migrate() below
+  /** Collections that arrived in a shape `migrate()` could not read as an array, kept VERBATIM. Repair by
+   *  deletion plus write-back is PERMANENT loss; parking the original bytes here means a save that loads
+   *  diminished can still be repaired later — by hand or by a tool — instead of simply being gone. */
+  __unreadable?: Record<string, unknown>;
   profile: { name: string; coins: number; createdAt: number; season: number; wins?: number; draws?: number; losses?: number }; // season = local counter; W/D/L = lifetime manager record (accrued at each season-end, powers prestige)
   club: Club;
   standingOrders: StandingOrders;
@@ -67,18 +71,53 @@ export function migrate(m: SaveModel): SaveModel {
   // survived on disk as "may be corrupted", recoverable by hand. After it, the save loaded clean and the
   // first ordinary action's autosave overwrote the recoverable data with the emptied version. Repair by
   // deletion plus write-back is permanent loss, and is a worse outcome than the crash it replaced.
-  const arr = <T,>(v: unknown): T[] => {
-    if (Array.isArray(v)) return v.filter((x) => x != null) as T[];
-    if (v && typeof v === 'object' && typeof (v as { length?: unknown }).length === 'number') {
-      try { return Array.from(v as ArrayLike<T>).filter((x) => x != null); } catch { return []; }
+  // THIS COULD NOT TELL "ABSENT" FROM "UNREADABLE" AND ANSWERED BOTH WITH `[]`. The comment above is
+  // right that one missing array should never cost a dynasty — but answering an UNREADABLE array with an
+  // empty one, and then writing that back at the next autosave, destroys data a refusal would have kept.
+  // Measured on the shipping version, against a `tokens` collection holding two intact men: a record
+  // keyed by id (`{'nft:1':…}`), a Set, a Map, `{0,1,length:'2'}`, a JSON string of the array and a JSON
+  // string of a record ALL returned 0 men and were then persisted as empty. Six shapes, every one of
+  // which still had every man in it.
+  //
+  // So: recover every shape whose rows are unambiguous, and park the ORIGINAL bytes for anything else
+  // rather than deleting them. Nothing ever refuses, so the comment's principle is fully preserved;
+  // nothing is ever destroyed, so a refusal's one real benefit is preserved too. Every recovering branch
+  // ALSO quarantines, deliberately — a recovery guess costs a few duplicated bytes and can be undone, a
+  // wrong guess with the original deleted cannot. Only a genuine plain array skips it.
+  const quarantine: Record<string, unknown> = { ...(m.__unreadable ?? {}) };
+  const arr = <T,>(key: string, v: unknown): T[] => {
+    const clean = (xs: unknown[]) => xs.filter((x) => x != null) as T[];
+    const park = (): T[] => { quarantine[key] = v; return []; };
+    if (v == null) return [];                                        // ABSENT — nothing was there to lose
+    if (Array.isArray(v)) return clean(v);
+    if (v instanceof Map) { quarantine[key] = v; return clean([...v.values()]); }
+    if (v instanceof Set) { quarantine[key] = v; return clean([...v]); }
+    if (typeof v === 'string') {
+      if (v === '') return [];
+      let parsed: unknown;
+      try { parsed = JSON.parse(v); } catch { return park(); }        // not JSON — keep the bytes
+      if (parsed == null || typeof parsed !== 'object') return park();
+      quarantine[key] = v;
+      return arr<T>(key + ':parsed', parsed);
     }
-    return [];
+    if (typeof v !== 'object') return [];                            // a number/boolean held no rows
+    const o = v as Record<string, unknown> & { length?: unknown };
+    if (typeof o.length === 'number') {
+      try { quarantine[key] = v; return clean(Array.from(v as ArrayLike<unknown>)); } catch { return park(); }
+    }
+    if (typeof (o as { [Symbol.iterator]?: unknown })[Symbol.iterator] === 'function') {
+      try { quarantine[key] = v; return clean(Array.from(v as Iterable<unknown>)); } catch { return park(); }
+    }
+    // a RECORD keyed by row id — `{ 'nft:1': {…}, 'nft:2': {…} }` holds every man intact
+    const vals = Object.values(o);
+    if (vals.length && vals.every((x) => x != null && typeof x === 'object')) { quarantine[key] = v; return clean(vals); }
+    return vals.length ? park() : [];                                // an empty object held no rows
   };
   const repaired: SaveModel = {
     ...m,
-    tokens: arr<Token>(m.tokens), injuries: arr(m.injuries), legacies: arr(m.legacies),
-    honours: arr(m.honours), awards: arr(m.awards), missions: arr(m.missions),
-    loanees: arr(m.loanees), retiredNumbers: arr(m.retiredNumbers), playerStats: arr(m.playerStats),
+    tokens: arr<Token>('tokens', m.tokens), injuries: arr('injuries', m.injuries), legacies: arr('legacies', m.legacies),
+    honours: arr('honours', m.honours), awards: arr('awards', m.awards), missions: arr('missions', m.missions),
+    loanees: arr('loanees', m.loanees), retiredNumbers: arr('retiredNumbers', m.retiredNumbers), playerStats: arr('playerStats', m.playerStats),
     facilities: { ...DEFAULT_FACILITIES, ...(m.facilities && typeof m.facilities === 'object' ? m.facilities : {}) },
     // THE ONE COLLECTION THIS REPAIR SKIPPED. Every array above is guarded and `facilities` is defaulted,
     // but `standingOrders` was passed through untouched — so a save that lost it loads with the field
@@ -90,6 +129,8 @@ export function migrate(m: SaveModel): SaveModel {
       ? m.standingOrders
       : { formation: '4-4-2', playerIds: autoPickXI(m.club, '4-4-2').playerIds, tactics: { ...TACTIC_PRESETS.Balanced } },
   };
+  // attached only when something was actually unreadable, so a clean save passes through untouched
+  if (Object.keys(quarantine).length) repaired.__unreadable = quarantine;
   m = repaired;
   if ((m.version ?? 1) >= SAVE_VERSION) return m;
   // v1 → v2. Before branching there was exactly one heir per generation, so the forest is recoverable
@@ -120,6 +161,10 @@ export function migrate(m: SaveModel): SaveModel {
       const sib = /^(.*):b\d+\.\d+$/.exec(t.id);
       parent_id = sib && m.tokens.some((o) => o.id === sib[1]) ? sib[1] : null;
     }
+    // NEVER SPREAD A PRIMITIVE. `{ ...'{"id":"a"}' }` becomes a character map and `{ ...1 }` becomes an
+    // empty object with the number gone — api.ts:173 already names and guards this exact hazard, and this
+    // line had the same bug unfixed. Wrong-shaped ELEMENTS survive arr() above; they were destroyed here.
+    if (t == null || typeof t !== 'object') return t as Token;
     return { ...t, branch, parent_id } as Token;
   });
   return { ...m, tokens, version: SAVE_VERSION };
