@@ -45,7 +45,14 @@ export const FACILITY_META: Record<FacilityKey, { icon: string; name: string; bl
   dorm:      { icon: '🛏️', name: 'Academy Digs',    blurb: 'Somewhere for the young ones to live. Keeps the boys you would otherwise lose to the travel, and widens the intake.' },
   women:     { icon: '⚽', name: "Women's Team",     blurb: 'A second side sharing the training ground and the badge. Standing, income, and a whole other set of people at the club.' },
   community: { icon: '🤝', name: 'Community Trust',  blurb: 'Schools, a food bank, a hundred small things in the town. It does not win matches; it decides what the club is for.' },
-  fanzone:  { icon: '🎉', name: 'Fan Zone',         blurb: 'A roaring home crowd. Gives your side a real edge in home matches and swells the gate on matchday.' },
+  // "SWELLS THE GATE" IS A MULTIPLIER ON A NUMBER THAT IS ZERO UNTIL THE GROUND IS BUILT. `gate` is
+  // `stadiumIncome(...) * fanIncomeMult(fanzone)`, and stadiumIncome is `2.5 * (level - 1) * ...` — so at
+  // Stadium level 1 it is 0, and 0 x 1.32 is still 0. That zero is deliberate (level 1 is the neutral
+  // baseline where every facility pays nothing, and paying at L1 was a calibration bug fixed earlier), so
+  // the arithmetic is right and the SENTENCE was wrong: a player could take the Fan Zone to level 5, be
+  // told it swells the gate, and bank precisely nothing. The home-match edge is real at any stadium level,
+  // so the fix is to say which half depends on the ground.
+  fanzone:  { icon: '🎉', name: 'Fan Zone',         blurb: 'A roaring home crowd — a real edge in home matches at any ground. It also multiplies your matchday gate, so it pays nothing on that side until the Stadium is out of its first level.' },
 };
 
 // ── Effects (pure functions of level; level 1 is always the neutral baseline) ──
