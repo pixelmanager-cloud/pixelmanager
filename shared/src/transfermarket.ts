@@ -7,6 +7,7 @@ import type { Player } from './types.js';
 import { overall } from './teams.js';
 import { generateClub } from './teams.js';
 import { tierStrength } from './clubseason.js';
+import { makeRng } from './rng.js';
 
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 function hash32(...nums: number[]): number { let h = 2166136261 >>> 0; for (const n of nums) { h ^= (n >>> 0); h = Math.imul(h, 16777619); } return h >>> 0; }
@@ -105,7 +106,50 @@ export function transferList(seed: number, season: number, tier: number, size = 
   // rich=true: market players are FULL characters (15 stats + personality + traits) — you're signing a
   // person into your squad, not a stat line, so the card must read as richly as the bloodline star's.
   const club = generateClub(`market-${season}-${tier}`, 'Free Agents', 0x888888, quality, hash32(seed, season * 7919, tier * 131), true);
-  const pool = club.players.slice();
+  // A SPREAD ACROSS POSITIONS, WHICH THE LINE ABOVE HAS CLAIMED SINCE IT WAS WRITTEN AND THE CODE DID NOT DO.
+  // `club.players` comes back in ROSTER_ROLES order — GK,GK, DF x7, MF x7, FW x4 — and this loop took a
+  // PREFIX of it. At TRANSFER_LIST_SIZE = 12 that is exactly 2 GK + 7 DF + 3 MF, stopping four short of the
+  // midfielders and three short of the forwards. Measured over 4,000 markets and 48,000 listings: 16.7% GK,
+  // 58.3% DF, 25.0% MF and ZERO forwards. Not "rarely" — never, in any seed, season or tier, in a
+  // squad-building football game. The only way to sign a striker was a rival house's son, offered in about
+  // 3% of season-windows.
+  //
+  // The existing harness could not catch it: qa_transfer_fuzz asserts every listing's role is one of the
+  // four valid roles, which a market of pure defenders satisfies perfectly.
+  //
+  // PROPORTIONAL to the roster, with a floor of one per position. Round-robin was the first fix and it
+  // over-corrected: drawing one of each per round gives the SHORTEST queue the highest share, so forwards
+  // came out at 33% against a roster that is 20% of them. Largest-remainder allocation keeps the market
+  // looking like a real squad (roughly 1 GK, 4 DF, 4 MF, 2-3 FW at size 12) while guaranteeing that no
+  // position is ever absent — which is the property that was actually broken.
+  const byRole = new Map<string, Player[]>();
+  for (const p of club.players) { const k = p.role ?? 'MF'; if (!byRole.has(k)) byRole.set(k, []); byRole.get(k)!.push(p); }
+  const ROLES = ['GK', 'DF', 'MF', 'FW'] as const;
+  const avail = ROLES.map((r) => byRole.get(r) ?? []);
+  const total = avail.reduce((n, q) => n + q.length, 0) || 1;
+  const want = avail.map((q) => (q.length ? Math.max(1, Math.floor((size * q.length) / total)) : 0));
+  // hand out any rounding shortfall to the roles with the largest remainder, so the sizes always add up
+  for (let guard = 0; guard < size && want.reduce((a, b) => a + b, 0) < size; guard++) {
+    let best = -1, bestRem = -1;
+    for (let i = 0; i < ROLES.length; i++) {
+      const rem = (size * avail[i].length) / total - want[i];
+      if (want[i] < avail[i].length && rem > bestRem) { bestRem = rem; best = i; }
+    }
+    if (best < 0) break;
+    want[best]++;
+  }
+  // A SEEDED JITTER, so the shop is not the identical position mix in every window of every save. Straight
+  // proportional allocation is deterministic in (size, roster), which made every market in the game
+  // 1 GK / 4 DF / 4 MF / 3 FW — a fixed shop is the same flatness the prefix bug had, just balanced. Move
+  // one slot from one position to another, seeded, never below the floor of one and never above supply.
+  const jr = makeRng(hash32(seed, season * 31337, tier * 7717));
+  for (let k = 0; k < 2; k++) {
+    const from = Math.floor(jr() * ROLES.length), to = Math.floor(jr() * ROLES.length);
+    if (from !== to && want[from] > 1 && want[to] < avail[to].length) { want[from]--; want[to]++; }
+  }
+  const pool: Player[] = [];
+  for (let i = 0; i < ROLES.length; i++) pool.push(...avail[i].slice(0, want[i]));
+  for (let i = 0; i < ROLES.length; i++) pool.push(...avail[i].slice(want[i]));   // the rest, if size > sum
   const out: Listing[] = [];
   for (let i = 0; i < size && i < pool.length; i++) {
     const p = pool[i];
