@@ -1496,3 +1496,106 @@ falls through; there is no per-index skew; no duplicate ids in any pool or acros
 the tier and Youth Academy dials genuinely move; `hasTrait` handles missing/null lists correctly and its
 casing is strict-but-correct; all five engine-read trait ids exist and are reachable; and PT-303's
 loanee-expiry hole is genuinely fixed.
+
+## 66. THE ENGINE REBUILD — the geometry is fixed, and it uncovered a bigger one underneath. Needs your call.
+
+**Branch `engine/rebuild-2`. `main` is untouched and still ships.**
+
+### What is fixed
+The geometry defect is genuinely gone. Shots used to resolve the instant a through-ball landed, from
+wherever the receiver happened to be standing — a median of **45.8 metres**, with **2.4%** of all shots
+taken from inside the box. A ball played in behind is now a *chance*, not a strike: the receiver carries it
+and the ordinary shooting logic decides the finish when he actually arrives. Measured after:
+
+| | before | after |
+|---|---|---|
+| median shot distance | 45.8m | **15.7m** |
+| shots taken inside 18m | 2.4% | **57%** |
+| median possession spell | 2 ticks (1s) | **5 ticks** |
+
+The root cause was tackle volume — 144 tackles won and 142 loose balls a match against real football's ~40
+— which left a median possession of one second when a carrier needs about eleven ticks to run from 46m into
+the box. Nobody could carry the ball anywhere, so the only chance the engine could express was one resolved
+instantly from midfield. `TACKLE_RATE` now scales that, and `division_balance` is **green with headroom**
+(9% thrashings against a 15% bar, 2.78 margin against 4.0).
+
+### What it uncovered
+Holding the league green forces goals down to **0.58 a match**. That is not football, and three gates say
+so — `shot_geometry` (3.7 shots against a floor of 12), `duty_power` (0.57 goals conceded against a floor of
+0.65), and four of `strategy_test`'s assertions. They all fail for one reason, and it is not tuning.
+
+**The weaker side in a league fixture cannot attack at all.** On the fixture the pyramid stages every week
+(a six-point quality gap inside one division) it takes **0.08 to 0.7 shots a match** against the stronger
+side's 8-9. Real football's top-vs-bottom is about **1.8:1**. That is *why* volume cannot be raised: a side
+that never scores turns every extra goal the other side gets into pure margin, so at football-level shot
+counts **89%** of top-vs-bottom fixtures become a thrashing. The league gate is currently being satisfied by
+keeping goals too low for anyone to win by six, not by a genuine contest.
+
+I could not fix it by tuning, and I want to be plain about how thoroughly that was tested. Eight mechanisms
+were dialled across orders of magnitude — duel quality sensitivity and pass-completion sensitivity (both
+**nulled to zero entirely**), the `beatsLastDefender` pace step (smoothed from a hard step function to a
+probability), chase-down rate for beaten defenders, `CHANCE_RANGE`, tackle rate, shot appetite, clear-run
+appetite. **The weak side's shot count never left 0.1–0.7 in any configuration.** Only pace compression
+moved the ratio, and it did so by suppressing the strong side (8.8 shots to 4.3), not by freeing the weak
+one. A defect that survives having every candidate cause nulled is structural.
+
+### Where it actually lives
+Both sides get the **same number of possessions** — 432 v 432, a 0.1% skew. They differ entirely in what a
+possession becomes:
+
+| closest approach | ≤18m | ≤25m | ≤35m | >60m |
+|---|---|---|---|---|
+| stronger side | **47.0%** | 15.5% | 10.8% | 13.4% |
+| weaker side | **0.9%** | 4.1% | 14.1% | **48.2%** |
+
+**CORRECTION — I tested this claim and it is wrong.** I first wrote that the amplifier was *how many*
+defenders reach the carrier per tick. Capping challenges per tick refutes it: a cap of 2 produces
+**byte-identical** results to no cap at all (26.1:1 and 106.6:1 either way), because at most two defenders
+are ever within `tackleRange`. A cap of 1 makes the ratio slightly *worse*. Nobody is being swarmed. I am
+recording this rather than quietly deleting it because the write-up would otherwise have sent you into a
+redesign aimed at a mechanism that does not exist.
+
+**What the evidence actually supports.** No single term dominates; the ratio is the product of several
+per-event quality terms compounded over a long possession chain:
+- Nulling duel AND pass sensitivity *together* roughly halves it (tier 2: 25:1 → 12.2:1; tier 5: 60:1 →
+  26.9:1). Substantial — I understated this earlier, having first tested the two dials separately, where
+  each alone looks negligible.
+- `speed = 1.8 + norm(pace) * 3.6` is a **3:1 speed range** across the stat scale where real footballers
+  differ by about 1.3:1, applied to every player every tick. Compressing it moves the ratio more than
+  anything else — but by suppressing the strong side (8.8 shots → 4.3), not by freeing the weak one.
+- Neither the clear-run gate nor its distance threshold matters: cutting `CHANCE_RANGE` from 40m to 22m
+  left strong-side shots unchanged, so the ordinary carry, not the chance mechanism, carries the traffic.
+
+So the shape of the problem is **compounding, not a bad constant**: scoring requires surviving a long chain
+of independent quality-weighted events, and any such chain turns a small per-event edge into a large
+end-to-end one. That is why every single dial failed — each is one factor in a product.
+
+This is now measured permanently by `tools/playtest/attack_reach.ts`, including a real (currently passing)
+assertion that possessions stay near-equal — if that ever breaks, this diagnosis is wrong and needs redoing.
+
+### One thing I should flag about my own work here
+The rebuild's own comment in `beatsLastDefender` states *"A CLEAR CHANCE HAS TO BE NEAR THE GOAL"* and names
+a `CHANCE_RANGE` constant — **which was never defined or applied**. Clear runs were still being granted a
+measured 44–48m from goal. That is the same defect class this document is full of (a mechanism nothing
+invokes), introduced by me during the fix for it. Implementing it changed nothing measurable, which is its
+own finding, but it should not have shipped as a comment describing work that did not exist.
+
+### The decision
+Your rule was **"the league wins, always"** — tune the match down until the pyramid holds. I have done that,
+and the honest result is that the pyramid holds *only* at 0.58 goals a match. So the rule now has a cost you
+should see before I go further:
+
+1. **Redesign how possession advances** (my recommendation, and the correction above does not change it —
+   it sharpens what the redesign has to achieve). Make advancement a bounded, quality-weighted event rather
+   than a chain of many independent per-tick rolls, so the end-to-end ratio is something you SET (~1.8:1)
+   rather than something that emerges as the product of a dozen small edges. Then volume and the league
+   stop fighting and both gates go green honestly. This is a multi-day engine project, not an overnight
+   fix — I do not want to start it unattended.
+2. **Ship `main` as-is** and treat the match engine as good enough for now. `main` is green and shippable;
+   the geometry defect stays, but no player has complained about a stat they cannot see.
+3. **Compress player pace** (`PACE_SPAN`) to something physical. Cheap, and it is a real bug — but it fixes
+   the ratio by making the strong side worse, and it flattens how much buying a quicker player matters,
+   which cuts against the whole progression fantasy.
+
+I have left the branch at the known-good point: geometry fixed, `division_balance` green, the three
+volume-dependent gates failing for the one documented reason. Nothing is half-tuned.
