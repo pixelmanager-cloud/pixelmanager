@@ -47,7 +47,7 @@ export function backfillAttrs(p: Player): Player {
  * quality ~ team strength on the 1-20 stat scale (11-15 typical).
  */
 export function generateTeam(
-  id: string, name: string, shortName: string, shirtColor: number,
+  id: string, name: string, shirtColor: number,
   quality: number, seed: number, formation: Formation = '4-4-2',
 ): Team {
   const rng = makeRng(seed);
@@ -59,7 +59,7 @@ export function generateTeam(
     attrs: rollAttrs(rng, slot.role, quality),
     anchor: { x: slot.x, y: slot.y },
   }));
-  return { id, name, shortName, shirtColor, players };
+  return { id, name, shirtColor, players };
 }
 
 /** Overall rating 1-20: weighted average of the stats that matter for the role. */
@@ -153,7 +153,7 @@ export function mintSquadPlayer(id: string, role: Role, quality: number, seed: n
  *  chasing — varying mentals around 10 destabilises the engine far more than centring them — but it is a
  *  balance investigation, not a default change, and production already runs on rich squads. Pass the flag
  *  explicitly in new harnesses rather than relying on either default. */
-export function generateClub(id: string, name: string, shortName: string, shirtColor: number, quality: number, seed: number, rich = false): Club {
+export function generateClub(id: string, name: string, shirtColor: number, quality: number, seed: number, rich = false): Club {
   const rng = makeRng(seed);
   // `rich` = a full character (15 stats + personality + traits + age) rather than the 10 physical/technical
   // stats alone. Originally only the MANAGER'S squad was rich, on the reasoning that opponents are
@@ -172,7 +172,7 @@ export function generateClub(id: string, name: string, shortName: string, shirtC
       attrs: rollAttrs(rng, role, quality),
       anchor: { x: 0, y: 0 }, // assigned when placed into a lineup
     });
-  return { id, name, shortName, shirtColor, players };
+  return { id, name, shirtColor, players };
 }
 
 /**
@@ -236,5 +236,5 @@ export function buildXI(club: Club, lineup: Lineup): Team {
   // bench: the best squad players outside the XI (up to 7), for the engine's late-game subs
   const used = new Set(lineup.playerIds);
   const bench = club.players.filter((p) => !used.has(p.id)).sort((a, b) => overall(b) - overall(a)).slice(0, 7);
-  return { id: club.id, name: club.name, shortName: club.shortName, shirtColor: club.shirtColor, players, bench };
+  return { id: club.id, name: club.name, shirtColor: club.shirtColor, players, bench };
 }

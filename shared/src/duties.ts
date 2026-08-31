@@ -10,7 +10,17 @@ import type { Duty, Player, Role } from './types.js';
 
 /** Duties a position can be assigned; first entry is the neutral default. */
 export const DUTIES_BY_ROLE: Record<Role, Duty[]> = {
-  GK: ['keeper', 'sweeper-keeper'],
+  // ONE DUTY. 'sweeper-keeper' was retired: it was read into a mechanism with no way to matter. `gkStep`
+  // only WIDENED a clamp rail the keeper's own target equation can never reach — measured over 857,896 GK
+  // movement ticks, the clamp fired ZERO times, so keeper and sweeper-keeper produced byte-identical
+  // matches (same score, same events, same final position for all 22 players) at a neutral line AND at
+  // the high line the duty's own description named. Wiring it would have meant inventing a keeper
+  // positioning model the engine does not have, and the three obvious one-line wirings DISAGREED IN SIGN
+  // at that high line; the best of them was a free +3.5 pts/season with no possible downside, because a
+  // keeper's position is not an input to any save. A dead dial is a disappointment; a strictly dominant
+  // one is a balance defect that also makes 'keeper' a trap. The sweeper-keeper idea survives where it is
+  // real — career.ts's 'sweeper-elite' card and 'sweeper' story moment, neither of which touches tactics.
+  GK: ['keeper'],
   DF: ['cover', 'stopper', 'ball-playing-defender', 'inverted-fullback', 'wing-back', 'sweeper'],
   MF: ['box-to-box', 'playmaker', 'ball-winner', 'deep-lying-playmaker', 'anchor', 'wide-playmaker'],
   FW: ['poacher', 'target-man', 'pressing-forward', 'false-9', 'inverted-winger'],
@@ -19,7 +29,6 @@ export const DUTIES_BY_ROLE: Record<Role, Duty[]> = {
 /** Short human label for UI. */
 export const DUTY_LABEL: Record<Duty, string> = {
   'keeper': 'Keeper',
-  'sweeper-keeper': 'Sweeper-K',
   'cover': 'Cover',
   'stopper': 'Stopper',
   'ball-playing-defender': 'Ball-Playing DF',
@@ -46,7 +55,6 @@ export const DUTY_LABEL: Record<Duty, string> = {
  */
 export const DUTY_DESC: Record<Duty, string> = {
   'keeper': 'Stays on his line — shot-stopping first, distribution second.',
-  'sweeper-keeper': 'An auxiliary defender — sweeps up behind a high line and starts attacks with quick distribution.',
   'cover': 'Sits off, reads the game, and covers space rather than diving into duels.',
   'stopper': 'Steps up to engage and win the ball — meets attackers head-on.',
   'ball-playing-defender': 'Comfortable in possession — brings it out of defence and starts attacks from deep.',
@@ -77,20 +85,17 @@ export interface DutyMods {
   magnet: number;
   /** press eagerness: + closes down and tackles more readily, - sits off. */
   press: number;
-  /** for a GK only: extra metres the keeper will advance off the line (sweeper-keeper). */
-  gkStep: number;
   /** while attacking, stretches (+) or narrows (-) the player's lateral anchor offset from the
    *  centre — a wing-back hugs the touchline as an auxiliary winger instead of tucking infield. */
   hug: number;
 }
 
-const NEUTRAL: DutyMods = { push: 1, come: 0, shoot: 1, magnet: 0, press: 0, gkStep: 0, hug: 0 };
+const NEUTRAL: DutyMods = { push: 1, come: 0, shoot: 1, magnet: 0, press: 0, hug: 0 };
 
 // Magnitudes are deliberately small — duties are nudges, not overrides, so the
 // engine's goals/possession calibration holds (see shared/strategy_test.ts).
 const TABLE: Record<Duty, DutyMods> = {
   'keeper':         { ...NEUTRAL },
-  'sweeper-keeper': { ...NEUTRAL, gkStep: 7 },
   'cover':          { ...NEUTRAL, push: 0.8, press: -0.3 },
   'stopper':        { ...NEUTRAL, push: 1.2, press: 0.6 },
   'box-to-box':     { ...NEUTRAL, push: 1.1, come: 0.03, press: 0.2 },
@@ -128,7 +133,7 @@ export function isDutyForRole(role: Role, d: unknown): d is Duty {
 export function defaultDuty(p: Player): Duty {
   const a = p.attrs;
   switch (p.role) {
-    case 'GK': return a.pace + a.positioning >= 28 ? 'sweeper-keeper' : 'keeper';
+    case 'GK': return 'keeper';        // the only GK duty; see DUTIES_BY_ROLE above
     case 'DF': return a.tackling >= a.positioning + 1 ? 'stopper' : 'cover';
     case 'MF':
       if (a.passing >= a.tackling + 2 && a.passing >= a.workrate) return 'playmaker';

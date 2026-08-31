@@ -1145,3 +1145,100 @@ they have existed.
 systemic. The GK duty is grandfathered into the census as `KNOWN_INERT` with a bar that fires if the list
 ever *grows* — and keeps passing if somebody fixes it. The player is currently offered a choice the engine
 never reads.
+
+---
+
+# ROUND 11 — the six "bugs I can fix" turned out to be three
+
+You asked me to fix the six. Scoped properly, **three were real bugs, one was not a bug at all, and two
+needed your call** — which you then gave. Recorded honestly because my own artifact got the count wrong.
+
+## ~~57. Three real bugs, fixed~~
+
+- **The shipped save backend was exercised by nothing.** `IndexedDBBackend` was never even *constructed*
+  under Node. Sabotaging it two ways — `list()` returning `[]`, `load()` returning the storage wrapper —
+  **typechecks**, and left all four existing save harnesses green. New `client/qa_idb_backend.ts` catches
+  it with five failures. One dev dependency, `fake-indexeddb` (Apache-2.0, **zero transitive deps**).
+- **`migrate()` destroyed six recoverable save shapes.** A record keyed by id, a Set, a Map, a JSON string
+  of the array — each still holding every man — all returned 0 rows and were then persisted as empty.
+  Now recovered, with anything genuinely unreadable parked verbatim in `__unreadable` rather than deleted.
+  Also fixed the element spread that turned a JSON-string token into a character map: `api.ts` already
+  forbids exactly that, one file away.
+- **A phantom stat.** `communityStanding()` computed a "standing" quantity that exists nowhere in the game.
+  The Community Trust facility's *only* advertised effect was *"+27 standing in the town"*.
+
+## 58. NOT A BUG — and this one was my error
+
+**"Nine of twelve facilities produce bit-identical seasons"** reproduces exactly, and the interpretation is
+wrong. It measured league **scorelines**, and only three facilities are wired to a scoreline by design — a
+Club Shop is not supposed to change one. **Eleven of twelve move real game state**: income, injuries,
+tryout pool size and quality, scouting trips. I put it on your list as a defect; it is not one.
+
+## ~~59. §56 — the goalkeeper duty dial, RETIRED at your instruction~~
+
+`gkStep` *was* read — but only to widen a clamp rail the keeper's own target equation can never reach.
+Measured over **857,896 GK movement ticks, the clamp fired zero times**. Wiring it meant inventing a keeper
+positioning model the engine does not have, and the three obvious one-line wirings **disagreed in sign** at
+the high line the duty's own description named. The best of them was a free **+3.5 points a season with no
+possible downside**, because a keeper's position is not an input to any save — which would have turned a
+dead dial into a strictly dominant one, and made plain `keeper` a trap.
+
+Retired. `DUTIES_BY_ROLE.GK` is now `['keeper']`, `gkStep` is gone, the clamp rail stays. The wiring census
+in `tactics_matrix` drops 26 dials → 24 and its `KNOWN_INERT` list is now **empty**: every dial the tactics
+screen still offers does something. The sweeper-keeper idea survives where it is real — `career.ts`'s
+`sweeper-elite` card and `sweeper` story moment, neither of which touched the tactics dial.
+
+## ~~60. §39 — dead code, done, but not as written~~
+
+- **`shortName` deleted.** Required on every club, never once read — one declaration, two parameters, three
+  copies and **42 call sites each forced to invent a value nothing consumed**. The only apparent read was
+  it copying itself forward. Same class as the phantom `standing` above. Compiler-enforced refactor; it
+  caught the four sites my regex missed. The orphaned `short()` helper went with it.
+- **The promotion banner now uses its own commissioned art.** `trophy-promotion.png` shipped in
+  `client/public/trophies` and rendered nowhere while the banner used an emoji.
+- **Two bullets were stale**: `houseRenownNow` and `starBid` no longer exist, and `'cup'` is genuinely read
+  in `prestige.ts`.
+- **The award trophies stay, deliberately.** They are not leftovers — the season-awards *store layer*
+  (`Award`, `addAward`, `awardsFor`) exists and is also uncalled. That is an unshipped feature, not dead
+  weight, and deleting the art while the store remains would be the worst of both. **Either both go or
+  neither, and that is a content decision, not a cleanup.**
+- **Still open, one sub-decision:** should the player be able to open the lineup editor from the hub between
+  matches and save standing orders without kicking off? Today kickoff is the commit point. `saveTeam()`
+  is the unreachable scaffold for the other answer.
+
+## 61. §9 SYNERGIES — you asked whether to tune or remove. Neither, yet.
+
+I measured what each synergy's reward is actually worth, n=150 careers each, applied exactly as the game
+applies it:
+
+| synergy | tags | Δ overall |
+|---|---|---|
+| sweeper-gk | keeping + composure | +0.207 |
+| general | aggression + composure | +0.180 |
+| entertainer | flair + composure | +0.120 |
+| talisman | leadership + creativity | +0.047 |
+| enforcer | aggression + leadership | +0.027 |
+| flanker | stamina + flair | **−0.027** |
+| playmaker | creativity + teamwork | **−0.053** |
+| engine-room | stamina + teamwork | **−0.173** |
+
+**Three of the eight make the player worse.** A player who successfully builds Engine-Room Chemistry — the
+thing the game congratulates him for — is punished for it. And the best of them, +0.207, is invisible
+against the **1.185 of seed noise** recorded in §20.
+
+**Do not tune it:** the sign is inconsistent, so raising the reward makes the three negative ones *more*
+negative. Each would have to be re-tagged first, which is design work, not tuning.
+**Do not build the UI:** showing the player a goal that might punish him is worse than hiding it.
+**Do not remove it either:** §20 says the card career has no decisions and the draft is one of the three
+screens measured within noise. Synergy is the best-shaped *candidate* for giving the draft a real decision
+— a visible goal, incremental progress, a payoff. Deleting it throws away the most promising fix for the
+biggest problem in the game.
+
+**It pays into the attribute-focus channel, and §20 is about to move that channel.** Tuning now is tuning
+against a baseline that is about to change. Do §20 first; the negative signs will probably resolve with it,
+and only then is the magnitude question answerable.
+
+*(A correction against myself: I first guessed the three composure-bearing synergies would be the harmful
+ones, because §8 records that awarding composure makes a player worse. Measured, they are the three BEST.
+§8's finding is about tag frequency in the career log; synergy pays through the attribute-focus channel.
+Different mechanisms — I conflated them, and the measurement says the opposite of my guess.)*

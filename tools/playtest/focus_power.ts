@@ -71,7 +71,7 @@ function paired(formation: any, fa: 'wide' | 'central', fb: 'wide' | 'central') 
   const d: number[] = [];
   let changed = 0, shotTotal = 0;
   for (let i = 0; i < N; i++) {
-    const mk = () => [generateTeam('a', 'A', 'A', 0x1, 13, i * 7 + 1, formation), generateTeam('b', 'B', 'B', 0x2, 13, i * 11 + 3, '4-4-2')] as any;
+    const mk = () => [generateTeam('a', 'A', 0x1, 13, i * 7 + 1, formation), generateTeam('b', 'B', 0x2, 13, i * 11 + 3, '4-4-2')] as any;
     const run = (f: 'wide' | 'central') => {
       const [a, b] = mk();
       const m = new MatchEngine([a, b], i * 31 + 5, [{ ...DEFAULT_TACTICS, formation, attackFocus: f }, DEFAULT_TACTICS]);

@@ -42,8 +42,8 @@ console.log('\n[qa-match] extreme quality mismatch (1 vs 20) across formations..
       const seed = (checked * 97) >>> 0;
       const ctx = `extreme-quality fA=${fA} fB=${fB} seed=${seed}`;
       try {
-        const teamA = generateTeam('A', 'A', 'AAA', 0xff0000, 1, seed, fA);   // worst possible
-        const teamB = generateTeam('B', 'B', 'BBB', 0x0000ff, 20, seed + 1, fB); // best possible
+        const teamA = generateTeam('A', 'A', 0xff0000, 1, seed, fA);   // worst possible
+        const teamB = generateTeam('B', 'B', 0x0000ff, 20, seed + 1, fB); // best possible
         const tA: Tactics = { formation: fA, mentality: -2, line: -2, press: -2, tempo: -2, width: -2 };
         const tB: Tactics = { formation: fB, mentality: 2, line: 2, press: 2, tempo: 2, width: 2 };
         const m = new MatchEngine([teamA, teamB], seed, [tA, tB]);
@@ -71,8 +71,8 @@ console.log('\n[qa-match] out-of-range tactic sliders...');
     const seed = 555 + checked;
     const ctx = `extreme-slider=${slider} seed=${seed}`;
     try {
-      const teamA = generateTeam('A', 'A', 'AAA', 0xff0000, 12, seed, '4-4-2');
-      const teamB = generateTeam('B', 'B', 'BBB', 0x0000ff, 12, seed + 1, '4-4-2');
+      const teamA = generateTeam('A', 'A', 0xff0000, 12, seed, '4-4-2');
+      const teamB = generateTeam('B', 'B', 0x0000ff, 12, seed + 1, '4-4-2');
       const tA: Tactics = { formation: '4-4-2', mentality: slider, line: slider, press: slider, tempo: slider, width: slider };
       const tB: Tactics = { formation: '4-4-2', mentality: 0, line: 0, press: 0, tempo: 0, width: 0 };
       const m = new MatchEngine([teamA, teamB], seed, [tA, tB]);
@@ -104,8 +104,8 @@ console.log('\n[qa-match] determinism replay (same inputs twice)...');
     const rng = makeRng(seed);
     const q = 3 + Math.floor(rng() * 18);
     const buildOne = () => {
-      const teamA = generateTeam('A', 'A', 'AAA', 0xff0000, q, seed, formation);
-      const teamB = generateTeam('B', 'B', 'BBB', 0x0000ff, q, seed + 1, formation);
+      const teamA = generateTeam('A', 'A', 0xff0000, q, seed, formation);
+      const teamB = generateTeam('B', 'B', 0x0000ff, q, seed + 1, formation);
       const t: Tactics = { formation, mentality: 1, line: -1, press: 2, tempo: 0, width: -2 };
       const m = new MatchEngine([teamA, teamB], seed, [t, t]);
       runToEnd(m);
@@ -129,10 +129,10 @@ console.log('\n[qa-match] input-team immutability...');
     checked++;
     const seed = (i * 7919) >>> 0;
     const formation = FORMATION_NAMES[i % FORMATION_NAMES.length];
-    const club = generateClub('C', 'C', 'CCC', 0x33aa55, 10 + (i % 10), seed);
+    const club = generateClub('C', 'C', 0x33aa55, 10 + (i % 10), seed);
     const lineup = autoPickXI(club, formation);
     const teamA = buildXI(club, lineup);
-    const teamB = generateTeam('B', 'B', 'BBB', 0x0000ff, 12, seed + 1, formation);
+    const teamB = generateTeam('B', 'B', 0x0000ff, 12, seed + 1, formation);
     const beforeA = JSON.stringify(teamA);
     const beforeB = JSON.stringify(teamB);
     const m = new MatchEngine([teamA, teamB], seed, [
@@ -152,8 +152,8 @@ console.log('\n[qa-match] input-team immutability...');
 console.log('\n[qa-match] tactics-are-not-ignored sanity...');
 {
   const seed = 0xC0FFEE;
-  const teamA = generateTeam('A', 'A', 'AAA', 0xff0000, 13, seed, '4-4-2');
-  const teamB = generateTeam('B', 'B', 'BBB', 0x0000ff, 13, seed + 1, '4-4-2');
+  const teamA = generateTeam('A', 'A', 0xff0000, 13, seed, '4-4-2');
+  const teamB = generateTeam('B', 'B', 0x0000ff, 13, seed + 1, '4-4-2');
   const ultraAttack: Tactics = { formation: '4-4-2', mentality: 2, line: 2, press: 2, tempo: 2, width: 2 };
   const ultraDefend: Tactics = { formation: '4-4-2', mentality: -2, line: -2, press: -2, tempo: -2, width: -2 };
   const runWith = (tA: Tactics) => {

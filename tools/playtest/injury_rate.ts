@@ -17,7 +17,7 @@ const rates: { med: number; per: number; out: number }[] = [];
 for (const med of [1, 5, 10]) {
   let outMatches = 0, count = 0, seasons = 200;
   for (let s = 0; s < seasons; s++) {
-    const club = generateClub(`inj-${s}`, 'Test', 'TST', 0x445566, 12, s * 7919 + 13, true);
+    const club = generateClub(`inj-${s}`, 'Test', 0x445566, 12, s * 7919 + 13, true);
     const xi = { ...club, players: club.players.slice(0, 11) };
     const busy: Record<string, number> = {};
     for (let match = 0; match < 38; match++) {

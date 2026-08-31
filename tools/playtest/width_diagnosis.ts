@@ -52,7 +52,7 @@ const MIN_WIDE_CHOSEN_PCT = 0.80;       // [known-bad] measured 1.31% (40 passes
 const MIN_CARRIER_OFFSET_P90_M = 3.5;   // [known-bad] measured 4.72m on a pitch 68m wide. A cross needs ~25m.
 
 const mk = (s: number): Team => {
-  const t = generateTeam(`t${s}`, 'T', 'T', 0x445566, 12, s);
+  const t = generateTeam(`t${s}`, 'T', 0x445566, 12, s);
   return buildXI(t, autoPickXI(t, '4-4-2'), '4-4-2');
 };
 

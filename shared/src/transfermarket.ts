@@ -104,7 +104,7 @@ export function transferList(seed: number, season: number, tier: number, size = 
   // generate a couple of squads' worth at this quality, then take a spread across positions
   // rich=true: market players are FULL characters (15 stats + personality + traits) — you're signing a
   // person into your squad, not a stat line, so the card must read as richly as the bloodline star's.
-  const club = generateClub(`market-${season}-${tier}`, 'Free Agents', 'FA', 0x888888, quality, hash32(seed, season * 7919, tier * 131), true);
+  const club = generateClub(`market-${season}-${tier}`, 'Free Agents', 0x888888, quality, hash32(seed, season * 7919, tier * 131), true);
   const pool = club.players.slice();
   const out: Listing[] = [];
   for (let i = 0; i < size && i < pool.length; i++) {

@@ -82,8 +82,8 @@ function stat(d: number[], label: string, changed: number) {
 }
 
 const concede = (duty: Duty, i: number) => {
-  const def = withMfDuty(generateTeam('d', 'D', 'D', 0x1, 13, i * 7 + 1, '4-4-2'), duty);
-  const atk = generateTeam('a', 'A', 'A', 0x2, 13, i * 11 + 3, '4-3-3');
+  const def = withMfDuty(generateTeam('d', 'D', 0x1, 13, i * 7 + 1, '4-4-2'), duty);
+  const atk = generateTeam('a', 'A', 0x2, 13, i * 11 + 3, '4-3-3');
   const m = new MatchEngine([def, atk], i * 31 + 5, [DEFAULT_TACTICS, direct]);
   while (!m.state.finished) m.tick();
   return { ga: m.state.score[1], sig: sig(m) };
@@ -110,8 +110,8 @@ const po: number[] = [], poss: number[] = [];
 let cPo = 0, offGa = 0;
 for (let i = 0; i < N; i++) {
   const run = (on: boolean) => {
-    const a = generateTeam('a', 'A', 'A', 0x1, 13, i * 7 + 1, '4-4-2');
-    const b = generateTeam('b', 'B', 'B', 0x2, 13, i * 11 + 3, '4-4-2');
+    const a = generateTeam('a', 'A', 0x1, 13, i * 7 + 1, '4-4-2');
+    const b = generateTeam('b', 'B', 0x2, 13, i * 11 + 3, '4-4-2');
     const m = new MatchEngine([a, b], i * 31 + 5, [{ ...DEFAULT_TACTICS, playOutOfDefence: on } as any, hp]);
     while (!m.state.finished) m.tick();
     const tot = m.state.possession[0] + m.state.possession[1] || 1;

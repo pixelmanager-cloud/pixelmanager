@@ -23,7 +23,7 @@ function play(teamA: Team, teamB: Team, tA: Tactics, tB: Tactics, seed: number):
 
 const N = 60;
 const mk = (id: string, q: number, seed: number, formation: any = '4-4-2') =>
-  generateTeam(id, id, id.toUpperCase(), 0xff0000, q, seed, formation);
+  generateTeam(id, id, 0xff0000, q, seed, formation);
 
 // Collected metrics + assertions so this doubles as a CI regression gate:
 // any violation prints FAIL lines and exits non-zero.

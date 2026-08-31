@@ -49,8 +49,8 @@ const rows: { q: number; gpm: number }[] = [];
 for (const q of QS) {
   let g = 0;
   for (let i = 0; i < N; i++) {
-    const a = generateTeam(`a${i}`, 'A', 'A', 0x1, q, i * 7 + 1, '4-4-2');
-    const b = generateTeam(`b${i}`, 'B', 'B', 0x2, q, i * 11 + 3, '4-4-2');
+    const a = generateTeam(`a${i}`, 'A', 0x1, q, i * 7 + 1, '4-4-2');
+    const b = generateTeam(`b${i}`, 'B', 0x2, q, i * 11 + 3, '4-4-2');
     const m = new MatchEngine([a, b], i * 31 + 5, [DEFAULT_TACTICS, DEFAULT_TACTICS]);
     while (!m.state.finished) m.tick();
     g += m.state.score[0] + m.state.score[1];

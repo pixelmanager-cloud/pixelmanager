@@ -46,7 +46,7 @@ function expectHigher(label: string, d: Diff) {
   if (!ok) fails++;
 }
 
-const mk = (q: number, s: number, f: any = '4-4-2') => generateTeam(`t${s}`, 'T', 'T', 0x1, q, s, f);
+const mk = (q: number, s: number, f: any = '4-4-2') => generateTeam(`t${s}`, 'T', 0x1, q, s, f);
 const withDuty = (t: Team, role: Role, duty: Duty): Team => ({ ...t, players: t.players.map((p) => (p.role === role ? { ...p, duty } : p)) });
 const run = (a: Team, b: Team, ta: Tactics, tb: Tactics, seed: number) => {
   const m = new MatchEngine([a, b], seed, [ta, tb]);

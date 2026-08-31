@@ -355,7 +355,9 @@ export class MatchEngine {
 
         tx = clamp(tx, 2, 103);
         ty = clamp(ty, 3, 65);
-        if (p.role === 'GK') tx = clamp(tx, teamIdx === 0 ? 2 : 89 - dm.gkStep, teamIdx === 0 ? 16 + dm.gkStep : 103);
+        // the keeper's safety rail. It used to be widened by the retired sweeper-keeper duty's `gkStep`,
+        // which was the duty's ONLY effect — and the clamp never once bound in 857,896 measured ticks.
+        if (p.role === 'GK') tx = clamp(tx, teamIdx === 0 ? 2 : 89, teamIdx === 0 ? 16 : 103);
 
         const moved = this.stepToward(ps, tx, ty, speed);
         if (moved > 0.3) this.drain(ps, p, mods, 1, cond);

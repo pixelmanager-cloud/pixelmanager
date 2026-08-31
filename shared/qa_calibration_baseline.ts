@@ -24,7 +24,7 @@ function play(teamA: Team, teamB: Team, tA: Tactics, tB: Tactics, seed: number):
   const shots = (idx: 0 | 1) => s.events.filter((e) => e.teamIdx === idx && (e.type === 'goal' || e.type.startsWith('shot'))).length;
   return { score: [s.score[0], s.score[1]], shots: [shots(0), shots(1)] };
 }
-const mk = (id: string, q: number, seed: number, formation: any = '4-4-2') => generateTeam(id, id, id.toUpperCase(), 0xff0000, q, seed, formation);
+const mk = (id: string, q: number, seed: number, formation: any = '4-4-2') => generateTeam(id, id, 0xff0000, q, seed, formation);
 
 // NOTE: a full 90' match on this engine costs ~35-40ms (measured on this machine), so N is kept modest
 // enough for the whole baseline to finish in a few minutes while still giving tight-enough confidence

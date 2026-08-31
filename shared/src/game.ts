@@ -13,7 +13,6 @@ import type { Duty, Team, MatchEvent } from './types.js';
 // players come only from owned PlayerNFTs, which merge in on top (see loadSquad/nft.ts).
 const BASE_QUALITY = 6;
 
-const short = (h: string) => (h.replace(/[^A-Za-z0-9]/g, '').slice(0, 3).toUpperCase() || 'FC');
 
 /** A fresh club + sensible default standing orders for a new account. `seed` and
  *  `shirtColor` are the caller's job to pick (a fresh random draw server-side, or a
@@ -24,7 +23,7 @@ export function makeClub(
   const name = clubName?.trim() || `${handle}'s Club`;
   // rich=true — this is the MANAGER'S OWN squad, so every player is a full character the manager can get
   // attached to (15 stats + personality + traits + age), not filler (Living Squad).
-  const club = generateClub(accountId, name, short(clubName?.trim() || handle), shirtColor, BASE_QUALITY, seed, true);
+  const club = generateClub(accountId, name, shirtColor, BASE_QUALITY, seed, true);
   const lineup = autoPickXI(club, '4-4-2');
   return { club, standingOrders: { formation: '4-4-2', playerIds: lineup.playerIds, tactics: { ...TACTIC_PRESETS.Balanced } } };
 }

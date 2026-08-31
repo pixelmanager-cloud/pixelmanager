@@ -365,12 +365,11 @@ const CENSUS: Array<{ label: string; from: Side; to: Side }> = [
   { label: 'duty MF box-to-box -> playmaker', from: { tac: NEUTRAL, duty: ['MF', 'box-to-box'] }, to: { tac: NEUTRAL, duty: ['MF', 'playmaker'] } },
   { label: 'duty FW poacher -> target-man', from: { tac: NEUTRAL, duty: ['FW', 'poacher'] }, to: { tac: NEUTRAL, duty: ['FW', 'target-man'] } },
   { label: 'duty FW poacher -> pressing-forward', from: { tac: NEUTRAL, duty: ['FW', 'poacher'] }, to: { tac: NEUTRAL, duty: ['FW', 'pressing-forward'] } },
-  { label: 'duty GK keeper -> sweeper-keeper (on line +2)', from: { tac: HIGH, duty: ['GK', 'keeper'] }, to: { tac: HIGH, duty: ['GK', 'sweeper-keeper'] } },
-  { label: 'duty GK keeper -> sweeper-keeper (neutral line)', from: { tac: NEUTRAL, duty: ['GK', 'keeper'] }, to: { tac: NEUTRAL, duty: ['GK', 'sweeper-keeper'] } },
 ];
 
 const census: Array<{ label: string; diff: number; pairs: number }> = [];
-let gkPaired = { n: 0, score: 0, events: 0, pos: 0, maxDx: 0 };
+// kept only so the reporting block below has something to skip; the GK duty it measured is retired.
+let gkPaired: { n: number; score: number; events: number; pos: number; maxDx: number } | null = null;
 
 if (want('gk')) {
   // Bit-for-bit divergence is a yes/no fact about a seed, not an average with an error bar, so this needs
@@ -397,28 +396,11 @@ if (want('gk')) {
       `${r.diff === 0 ? '<<<< INERT — this control does nothing' : ''}`);
   }
 
-  // The original section 6, kept verbatim in what it measures: the keeper's own end position under the
-  // high line the duty is written for. It is the number that has been printed on green builds for days.
-  const N = n(400);
-  let diffScore = 0, diffPos = 0, diffEvents = 0, maxDx = 0;
-  for (let i = 0; i < N; i++) {
-    const base = mk('a', 13, i * 7 + 1), opp = mk('b', 13, i * 11 + 3);
-    const A = play(withDuty(base, 'GK', 'keeper'), opp, HIGH, DEFAULT_TACTICS, i * 31 + 5);
-    const B = play(withDuty(base, 'GK', 'sweeper-keeper'), opp, HIGH, DEFAULT_TACTICS, i * 31 + 5);
-    matchCount += 2;
-    if (A.score[0] !== B.score[0] || A.score[1] !== B.score[1]) diffScore++;
-    if (A.events.length !== B.events.length) diffEvents++;
-    const ka = A.players[0][0], kb = B.players[0][0];
-    const dx = Math.hypot(ka.x - kb.x, ka.y - kb.y);
-    if (dx > 1e-9) diffPos++;
-    maxDx = Math.max(maxDx, dx);
-  }
-  gkPaired = { n: N, score: diffScore, events: diffEvents, pos: diffPos, maxDx };
-  console.log(`\n  6.x sweeper-keeper in close-up — ${N} paired matches, high line (line=+2, mentality=+1)`);
-  console.log(`  matches whose SCORE differs:            ${diffScore} / ${N}`);
-  console.log(`  matches whose EVENT COUNT differs:      ${diffEvents} / ${N}`);
-  console.log(`  matches whose KEEPER END POSITION moved:${diffPos} / ${N}   (max displacement ${maxDx.toFixed(6)} m)`);
-  console.log(`  VERDICT: ${diffScore + diffPos + diffEvents === 0 ? 'sweeper-keeper is a BIT-FOR-BIT NO-OP' : 'sweeper-keeper changes the match'}`);
+  // SECTION 6.x REMOVED. It played `keeper` against `sweeper-keeper` and printed
+  //   VERDICT: sweeper-keeper is a BIT-FOR-BIT NO-OP
+  // on every green build for days. That verdict was correct, it was acted on, and the duty has been
+  // retired — so there is no longer a second GK duty to compare against. The census above is what
+  // watches this ground now: it would fail if a dial that still EXISTS went inert.
 }
 
 console.log(`\n${'-'.repeat(96)}\n${matchCount} matches in ${((Date.now() - started) / 1000).toFixed(0)}s (scale ${SCALE})`);
@@ -481,7 +463,7 @@ const CEILING: Record<string, number> = {
   '1.3 presets @ 15v11 favourite': 0.72,        // 22.2 pts/38 today. KNOWN BAD — see above.
   '2. formations @ 11v15 underdog': 0.38,
   '2. formations @ 13v13 even': 0.88,           // 26.2 pts/38 today. KNOWN BAD — see above.
-  '3. GK duties @ 13v13 even': 0.15,            // measures 0.000 today: the GK duty is inert, see KNOWN_INERT.
+  '3. GK duties @ 13v13 even': 0.15,            // one duty now; the table is a single row and cannot spread.
   '3. DF duties @ 13v13 even': 0.15,
   '3. MF duties @ 13v13 even': 0.20,
   '3. FW duties @ 13v13 even': 0.22,
@@ -514,7 +496,10 @@ const WIRED_FLOOR = 0.50;
 /** How many dials the census must still cover. Pinned so that deleting a row from CENSUS cannot be used
  *  to make a red run green — the only honest ways out are to fix the dial or to move it to KNOWN_INERT
  *  in a commit somebody has to justify. */
-const CENSUS_MIN_DIALS = 26;
+// 24, not 26: the two GK-duty rows were REMOVED, not hidden — the sweeper-keeper duty itself was
+// retired (it was byte-for-byte inert and wiring it would have been a free win). Lowering this to
+// silence a dead dial would be the dishonest move; deleting the dial and the rows together is not.
+const CENSUS_MIN_DIALS = 24;
 
 /** Dials that are ALREADY no-ops on this engine. This list is a confession, not a specification.
  *
@@ -526,10 +511,9 @@ const CENSUS_MIN_DIALS = 26;
  *  something to do was reverted, and section 1 — the shot-geometry branch it lives on is unmerged).
  *  Grandfathering it here is what lets the rest of this file gate at all. It is not an endorsement, and
  *  if it is ever wired up the bar keeps passing, because the bar only forbids the list GROWING. */
-const KNOWN_INERT: string[] = [
-  'duty GK keeper -> sweeper-keeper (on line +2)',
-  'duty GK keeper -> sweeper-keeper (neutral line)',
-];
+// EMPTY, and that is the point: every dial the tactics screen still offers now does something. The two
+// entries that used to live here were the GK duty, which has been retired rather than grandfathered.
+const KNOWN_INERT: string[] = [];
 
 /** How far behind the best preset the two defensive presets may sit at 11-v-15, PPG, noise-corrected.
  *  See bar 2b. At scale 1 this fixture measures 0.206 (7.9 pts/38); docs/decisions-for-ck.md section 35
@@ -584,9 +568,9 @@ if (census.length) {
   check(feeble.length === 0,
     `every wired dial still changes at least ${(100 * WIRED_FLOOR).toFixed(0)}% of paired matches` +
     `${feeble.length ? ` — fading toward inert: ${feeble.map((c) => `${c.label} ${c.diff}/${c.pairs}`).join(', ')}` : ''}`);
-  if (gkPaired.n) {
-    console.log(`  note sweeper-keeper close-up stands at score ${gkPaired.score}/${gkPaired.n}, events ${gkPaired.events}/${gkPaired.n}, ` +
-      `keeper moved ${gkPaired.pos}/${gkPaired.n} (max ${gkPaired.maxDx.toFixed(6)} m) — INERT, and the bar above says only that nothing else joined it`);
+  if (gkPaired && gkPaired.n) {
+    console.log(`  note GK close-up stands at score ${gkPaired.score}/${gkPaired.n}, events ${gkPaired.events}/${gkPaired.n}, ` +
+      `keeper moved ${gkPaired.pos}/${gkPaired.n} (max ${gkPaired.maxDx.toFixed(6)} m)`);
   }
 }
 

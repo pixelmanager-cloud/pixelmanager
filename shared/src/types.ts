@@ -7,7 +7,7 @@ export type Role = 'GK' | 'DF' | 'MF' | 'FW';
  * player's strengths by default; a manager may override it later.
  */
 export type Duty =
-  | 'keeper' | 'sweeper-keeper'
+  | 'keeper'
   | 'cover' | 'stopper' | 'ball-playing-defender' | 'inverted-fullback' | 'wing-back' | 'sweeper'
   | 'box-to-box' | 'playmaker' | 'ball-winner' | 'deep-lying-playmaker' | 'anchor' | 'wide-playmaker'
   | 'poacher' | 'target-man' | 'pressing-forward' | 'false-9' | 'inverted-winger';
@@ -93,7 +93,10 @@ export interface Player {
 export interface Team {
   id: string;
   name: string;
-  shortName: string;
+  // `shortName` REMOVED. It was required on every club in the game and never once read — one declaration,
+  // two parameters, three copies, and forty-two call sites each forced to invent a value that nothing
+  // consumed. The only apparent "read" was `shortName: club.shortName` copying it forward into a Team.
+  // Same class as the phantom `standing` stat in facilities.ts: a field the game demanded and never used.
   shirtColor: number;
   players: Player[]; // exactly 11, players[0] is GK
   /** Training-ground conditioning: a fitness-drain multiplier (1 = normal, <1 = fades less).

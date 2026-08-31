@@ -66,7 +66,7 @@ let setupError = '';
 for (let iter = 0; iter < N; iter++) {
   const seed = (iter * 7919 + 13) >>> 0;
   const mk = (s: number, q: number): Team => {
-    const t = generateTeam(`t${s}`, 'Team', 'TM', 0x445566, q, s);
+    const t = generateTeam(`t${s}`, 'Team', 0x445566, q, s);
     const xi = buildXI(t, autoPickXI(t, '4-4-2'), '4-4-2');
     return xi;
   };

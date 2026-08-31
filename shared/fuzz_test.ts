@@ -76,7 +76,7 @@ function withRandomDuties(team: Team, rng: () => number): Team {
 
 /** Build a match-ready Team via generateClub -> autoPickXI -> buildXI, with random per-slot duties. */
 function clubTeam(id: string, q: number, seed: number, formation: Formation, rng: () => number): Team {
-  const club = generateClub(id, id, id.toUpperCase(), 0x33aa55, q, seed);
+  const club = generateClub(id, id, 0x33aa55, q, seed);
   const base = autoPickXI(club, formation);
   const duties: Duty[] = FORMATIONS[formation].map((slot) => pick(rng, DUTIES_BY_ROLE[slot.role]));
   const lineup: Lineup = { ...base, duties };
@@ -108,9 +108,9 @@ function buildTeams(s: Setup): [Team, Team] {
   const rngB = makeRng((s.teamSeedB ^ 0x85ebca6b) >>> 0);
   const teamA = s.viaClub
     ? clubTeam('hom', s.qA, s.teamSeedA, s.fA, rngA)
-    : withRandomDuties(generateTeam('hom', 'Home', 'HOM', 0xff0000, s.qA, s.teamSeedA, s.fA), rngA);
+    : withRandomDuties(generateTeam('hom', 'Home', 0xff0000, s.qA, s.teamSeedA, s.fA), rngA);
   const teamB = s.viaClub
-    ? withRandomDuties(generateTeam('awy', 'Away', 'AWY', 0x0000ff, s.qB, s.teamSeedB, s.fB), rngB)
+    ? withRandomDuties(generateTeam('awy', 'Away', 0x0000ff, s.qB, s.teamSeedB, s.fB), rngB)
     : clubTeam('awy', s.qB, s.teamSeedB, s.fB, rngB);
   return [teamA, teamB];
 }

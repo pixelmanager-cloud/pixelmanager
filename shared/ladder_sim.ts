@@ -8,8 +8,8 @@ import { DEFAULT_TACTICS } from './src/tactics.js';
 const TIER = { filler: 6, common: 12, rare: 14, epic: 17, legendary: 19 };
 
 function play(qA: number, qB: number, seed: number): [number, number] {
-  const A = generateTeam('a', 'A', 'AAA', 0xff0000, qA, seed * 7 + 1, '4-4-2');
-  const B = generateTeam('b', 'B', 'BBB', 0x0000ff, qB, seed * 13 + 3, '4-4-2');
+  const A = generateTeam('a', 'A', 0xff0000, qA, seed * 7 + 1, '4-4-2');
+  const B = generateTeam('b', 'B', 0x0000ff, qB, seed * 13 + 3, '4-4-2');
   const m = new MatchEngine([A, B], seed * 31 + 5, [DEFAULT_TACTICS, DEFAULT_TACTICS]);
   while (!m.state.finished) m.tick();
   return [m.state.score[0], m.state.score[1]];

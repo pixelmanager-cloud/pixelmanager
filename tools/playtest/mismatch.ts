@@ -23,8 +23,8 @@ type Pair = { win: number; draw: number; gd: number; gf: number; ga: number; big
 const pair = (qa: number, qb: number): Pair => {
   let win = 0, draw = 0, gd = 0, gf = 0, ga = 0, big = 0;
   for (let i = 0; i < N; i++) {
-    const a = generateTeam(`a${i}`, 'A', 'A', 0x1, qa, i * 7 + 1, '4-4-2');
-    const b = generateTeam(`b${i}`, 'B', 'B', 0x2, qb, i * 11 + 3, '4-4-2');
+    const a = generateTeam(`a${i}`, 'A', 0x1, qa, i * 7 + 1, '4-4-2');
+    const b = generateTeam(`b${i}`, 'B', 0x2, qb, i * 11 + 3, '4-4-2');
     const m = new MatchEngine([a, b], i * 31 + 5, [DEFAULT_TACTICS, DEFAULT_TACTICS]);
     while (!m.state.finished) m.tick();
     if (m.state.score[0] > m.state.score[1]) win++;

@@ -1902,7 +1902,10 @@ class Game {
             promoted ? 'Up among better sides now — savour it, then go again.' : 'A setback for the club. Regroup, and win it back.',
             promoted ? 'The hard yards paid off. New level, new challenge.' : "Relegated, and it stings — this is where a club's character shows.",
           ][((this.leagueSeed() ^ Math.imul(m.season + 1, 2654435761)) >>> 0) % 4];
-          return `<div class="sf-tiermove sf-tiermove-${m.lastTierMove}">${promoted ? `⬆️ PROMOTED — up to <b>${tierName(tier)}</b>.` : `⬇️ RELEGATED — down to <b>${tierName(tier)}</b>.`} ${line}</div>`;
+          // trophy-promotion.png was commissioned, shipped in client/public/trophies, and rendered
+          // nowhere while this line used an emoji. trophyImg() hides itself if the file is missing, so the
+          // emoji stays as the fallback rather than being replaced by a broken image.
+          return `<div class="sf-tiermove sf-tiermove-${m.lastTierMove}">${promoted ? `${trophyImg('promotion', 28)} PROMOTED — up to <b>${tierName(tier)}</b>.` : `⬇️ RELEGATED — down to <b>${tierName(tier)}</b>.`} ${line}</div>`;
         })()
       : '';
     const remaining = fixtures.length - nextIdx;
@@ -2067,7 +2070,7 @@ class Game {
     const tie = contOpponent(this.leagueSeed(), m.season, round as 0 | 1 | 2);
     const short = (tie.oppName.match(/[A-Z]/g) ?? ['C', 'O', 'N']).join('').slice(0, 3);
     const oppSeed = (this.leagueSeed() ^ (round * 131)) >>> 0;
-    const oppClub = generateClub('cont-' + m.season + '-' + round, tie.oppName, short, 0x8844cc, tie.oppStrength, oppSeed, true);
+    const oppClub = generateClub('cont-' + m.season + '-' + round, tie.oppName, 0x8844cc, tie.oppStrength, oppSeed, true);
     const venue: 'home' | 'away' = tie.neutral ? 'home' : (round % 2 === 0 ? 'home' : 'away'); // final on neutral ground, else alternate
     const oppTactics = seededOpponentTactics(oppSeed);
     this.spFixture = { idx: -1, oppClub, oppName: tie.oppName, oppStrength: tie.oppStrength, venue, neutral: tie.neutral, oppLineup: autoPickXI(oppClub, oppTactics.formation), oppTactics, comp: 'cont', contRound: round }; // neutral final: no fan-zone home bonus (PT-130)
@@ -2191,7 +2194,7 @@ class Game {
     const opp = this.wcStageOpp(path, stage);
     const short = (opp.opp.match(/[A-Z]/g) ?? ['N', 'A', 'T']).join('').slice(0, 3);
     const oppSeed = (this.leagueSeed() ^ ([...opp.opp].reduce((a, c) => a + c.charCodeAt(0), 0) * 131)) >>> 0;
-    const oppClub = generateClub('wc-' + m.wcEdition + '-' + stage, opp.opp, short, 0x3a7bd5, opp.oppStrength, oppSeed, true);
+    const oppClub = generateClub('wc-' + m.wcEdition + '-' + stage, opp.opp, 0x3a7bd5, opp.oppStrength, oppSeed, true);
     void nation;
     const oppTactics = seededOpponentTactics(oppSeed);
     this.spFixture = { idx: -1, oppClub, oppName: opp.opp, oppStrength: opp.oppStrength, venue: 'home', neutral: true, oppLineup: autoPickXI(oppClub, oppTactics.formation), oppTactics, comp: 'wc' }; // World-Finals ties are on neutral ground → no fan-zone home bonus (PT-130)
@@ -2709,7 +2712,7 @@ class Game {
     const f = fixtures[idx];
     const opp = seededOpponents(clubName, seed, this.clubTier()).find((o) => o.name === f.oppName)!;
     const short = (opp.name.match(/[A-Z]/g) ?? ['O', 'P', 'P']).join('').slice(0, 3);
-    const rawOpp = generateClub('sp-' + opp.seed, opp.name, short, 0xcc4444, opp.strength, opp.seed, true);
+    const rawOpp = generateClub('sp-' + opp.seed, opp.name, 0xcc4444, opp.strength, opp.seed, true);
     // A RIVAL FAMILY'S SON IN THE OTHER SHIRT. Signing one off the market makes the Houses table a shop;
     // running into one — a name you are chasing up that table, playing against you — makes it a rivalry.
     const planted = seedHouseIntoSquad(rawOpp, this.leagueSeed(), opp.seed, this.loadMgr().starGen ?? 0, opp.strength);
