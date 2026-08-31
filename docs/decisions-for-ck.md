@@ -474,7 +474,45 @@ with it (empty box, through-ball-dependent chances, ~70 shots/match). **Re-attem
 option and is your call** — the difference is that `division_balance` now exists and would have refused it
 on day one.
 
-## 20. YOUR CALL — the card career has no decisions. This is the biggest finding of the project.
+## 20. DOES NOT REPRODUCE — re-measured 2026-08-31 before starting the rebuild it asked for
+
+> **I was about to spend multiple days rebuilding `deriveStats` on the strength of this section, and it
+> does not hold.** Re-measured on HEAD, 150 careers per policy, driving the real `Career` class:
+>
+> | | this section claims | measured |
+> |---|---|---|
+> | spread across reasonable policies | 0.300 | **4.807** |
+> | seed noise | 1.185 | **1.246** ✓ |
+>
+> The seed-noise figure reproduces almost exactly; the skill figure is out by a factor of **sixteen**.
+> Reading the moment is worth **+4.8 overall against 1.25 of noise** — roughly a 4:1 ratio in favour of
+> skill. Per policy: read-the-moment 15.13, first card 12.07, rotate 11.06, chase-composure 11.05,
+> chase-teamwork 10.67, last card 10.32, deliberately-worst 8.97.
+>
+> **How the original probably went wrong:** the policies that do NOT read the demand cluster tightly
+> (10.3–12.1, close to noise). If all eleven "reasonable policies" were variations of *how to pick a card
+> without reading the moment*, they would legitimately measure a 0.300 spread. That is a real and much
+> smaller finding — *"only one axis of play matters"* — and it is not the same claim as *"the career has
+> no decisions."* I made exactly this mistake myself while re-measuring: my first probe's "highest power"
+> and "lowest power" policies both silently fell through to `hand[0]`, because hand cards expose only
+> `id`, `name` and `tags`. Three policies, identical to three decimals. That is almost certainly the shape
+> of the original error.
+>
+> **§8's numbers do not reproduce either.** Adding composure to a finished career: +2 gives **+0.137**
+> (claimed −0.130), +5 gives **+0.013** (claimed −0.333), +10 gives −0.603 (claimed −0.643). So the
+> max-normaliser's perverse effect is real only at HIGH doses of an already-dominant tag — diminishing
+> returns turning negative — not "awarding composure makes the player worse". And the premise is wrong
+> too: composure is the most-frequent tag in **29%** of careers, not "essentially every" one. Teamwork
+> leads at 32%.
+>
+> **And builds DO steer.** §8 claims a midfielder build produces a midfielder 7% of the time. Measured
+> with a tag-hunting policy over 200 careers: **midfielder build → MF 62%, defender → DF 78%, forward →
+> FW 88%.**
+>
+> **WHAT IS STILL WORTH ASKING**, and it is a design question rather than a defect: the career has ONE
+> axis of skill — read the demand — and it pays 4.8. Every other way of choosing is within noise of every
+> other. Whether one axis is enough to carry 120 turns is a real question. But it is not the emergency
+> this section describes, and `deriveStats` should not be rebuilt on these numbers.
 
 Six independent measurement families, all adversarially verified:
 
