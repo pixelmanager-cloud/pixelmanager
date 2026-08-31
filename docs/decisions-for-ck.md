@@ -1030,3 +1030,57 @@ gate with a hole, because the hole at least does not claim to have looked.
 
 **You chose to re-attempt the engine work.** Arming those 13 probes is in progress as the prerequisite, so
 that this time the rebuild is measured rather than guessed at — which is precisely what went wrong before.
+
+## 51. YOUR CALL — scouting is gated behind wall-clock time, and the answer is already in your save
+
+`api.ts` rolls the mission outcome **at dispatch** and writes `found`, `player_json` and `band` into the
+save row, then sets `ready_at = now + travelMs(dest)` — up to twelve hours. So the wait protects nothing:
+the result is sitting in the save file for the whole duration, and the timer reads the system clock, which
+on an offline single-player game is whatever the player wants it to be.
+
+This is a free-to-play pacing mechanic in a game with no monetisation behind it.
+
+**Three options, and it is your call which:**
+1. **Drop the timer.** Resolve on dispatch. Simplest, and it costs nothing but the theatre.
+2. **Move it to game time.** Resolve at the next matchday or season rollover, so a scouting trip costs
+   something the player actually feels (a fixture's worth of not knowing) rather than something he waits out
+   or edits around.
+3. **Keep it, but stop pre-computing.** Roll at reveal instead of dispatch. `rollMission` is pure in
+   `(missionId, dest, tier, hqMult, hqLevel)`, so the result is identical — it just stops living in the
+   save during the wait.
+
+**I did not do (3) unilaterally even though it is the smallest**, because it needs the facility level
+snapshotted onto the mission row (otherwise upgrading the Scouting HQ mid-trip retroactively improves a
+trip already paid for), and that is a **save-format change**. Given §18 lists nine ways to lose a dynasty,
+I am not touching the save schema while you are asleep. **My recommendation is (2)** — it is the only one
+that makes the scouting HQ feel like part of the football calendar rather than a phone-game timer.
+
+## 52. A correction to §23 — the fix it names cannot be actioned as written
+
+§23 tells you the single highest-value prose job is *"expanding the 17-line `CHARLINE` bank"*. **There is
+no `CHARLINE` identifier in the codebase.** Its only two occurrences are inside comments in
+`tools/playtest/analyze_text_repetition.ts`, which describe a bank that has since been renamed or absorbed.
+So the one instruction in §23 you could have handed to someone is not executable. The rest of §23 is
+sound — `narrate.ts` really is ~937 lines of hard-coded banks and really does carry the repetition the
+player feels.
+
+**Two of those banks are now expanded** (see below), which is a start on §23 rather than a completion of it.
+
+## ~~53. The game described an eleven-year-old as a consummate professional~~ — FIXED
+
+`narratePlay` builds each line from five banks. Three were given `CHILD_CHAPTERS` gates over time — the
+setting, the reaction pool (PT-103) and the cast reaction (PT-133). **Two never were, and they sit in the
+same sentence as the three that were.** So a boy on a park pitch, with a jumper for a flag and his dad on
+the touchline, was told:
+
+> *"Consummate, as ever."* · *"Professional to his boots."* · *"Nothing about his career will ever be an
+> accident."* · *"…and it was worth the admission alone"* (nobody paid) · *"…and it will be on a screen
+> somewhere for years"* (there are no cameras) · *"…and the away end applauded"* (there is no away end).
+
+`CHILD_PERSONALITY` now covers all thirteen temperaments in a child's register, and `CHILD_RESULTS` the
+five outcome bands. `TAG_TRIUMPH` is suppressed for children rather than duplicated twenty times — its
+whole purpose is professional colour per attribute.
+
+Measured over 1,300 generated lines per chapter: Grassroots and Academy fall to **1.15%** adult-register
+phrasing against First Team's **33.15%** (which is correct — that IS the adult voice). The 1.15% residual
+is one deliberate line: *"He celebrated that like a cup final. It was a Tuesday."*

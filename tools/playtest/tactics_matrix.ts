@@ -29,6 +29,12 @@
 //   pts/38   the PPG gap expressed as league points across a 38-match season — the unit a player feels.
 // A balanced layer is one where no option's PPG sits more than ~2 SE from the middle of its own table,
 // and where the underdog columns do not rank the defensive options last.
+//
+// IT CAN NOW FAIL. Everything above was true of this file before, and it still exited 0 while printing
+// `VERDICT: sweeper-keeper is a BIT-FOR-BIT NO-OP`. Section 6 is now a wiring census over every dial on
+// the tactics screen, and THE BARS at the foot of the file turn the tables into ratchets: they hold the
+// layer to what it measures today and exit 1 if it gets worse. Read the comment block above the bars
+// before you touch a constant — several of the numbers they permit are bad ones, recorded on purpose.
 
 import { MatchEngine } from '../../shared/src/engine.js';
 import { generateTeam } from '../../shared/src/teams.js';
