@@ -4129,6 +4129,11 @@ class Game {
       $('trips-used').textContent = String(d.tripsUsed);
       $('scout-coins').innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${d.coins}`;
       const haveTrips = d.tripsLeft > 0;
+      // The loanee cap is the OTHER budget, and it used to be invisible here: the trip budget runs to 7 a
+      // season at a maxed HQ against a cap of 3, and free walk-up trialists eat the same slots. A player
+      // could pay for trips that were guaranteed to bring back nobody. Now the button says so before he
+      // spends, rather than the facade refusing after the coins are gone.
+      const haveSlots = (d.loaneeCount ?? 0) < (d.loaneeCap ?? Infinity);
       $('scout-destinations').innerHTML = d.destinations.map((dest, i) => {
         const risk = Math.min(4, i); // 0 (parks) … 5 (wonderkid) → escalating frame (capped at 4)
         const hit = Math.round(dest.hitRate * 100);
@@ -4137,8 +4142,8 @@ class Game {
         const seg = (k: string) => `<i class="b-${k}" style="width:${Math.round((w[k] ?? 0) * 100)}%"></i>`;
         const upPill = up > 0 ? `<span class="pill up">↑ ${up}% upgrade</span>` : '';
         const afford = d.coins >= dest.cost;
-        const canSend = haveTrips && afford;
-        const label = !haveTrips ? 'No trips left' : !afford ? `Need 💰 ${dest.cost}` : `Send scout · 💰 ${dest.cost} ▶`;
+        const canSend = haveTrips && afford && haveSlots;
+        const label = !haveSlots ? `All ${d.loaneeCap} loanee places filled` : !haveTrips ? 'No trips left' : !afford ? `Need 💰 ${dest.cost}` : `Send scout · 💰 ${dest.cost} ▶`;
         return `<div class="dest risk-${risk}">`
           + `<div class="dh"><span class="d-name">${dest.name}</span><span class="d-travel">🕓 ${this.travelLabel(dest.travelMins)}</span></div>`
           + `<div class="d-blurb">${dest.blurb}</div>`
@@ -4243,10 +4248,23 @@ class Game {
       gold: 'Full intel: ratings, likely XI, and a <b>tactical read</b>.',
     };
     const playerDesc: Record<string, string> = {
-      base: 'Trialists: <b>62</b>/30/7/<b>1%</b> raw/squad/quality/gem. Market shows ratings only.',
-      bronze: 'Better trialists (45/38/14/3) + <b>2 key stats</b> shown on listings.',
-      silver: 'Better trialists (28/44/22/6) + <b>5 stats</b> shown on listings.',
-      gold: 'Best trialists (12/43/33/12) + the <b>full stat sheet</b> on listings.',
+      base: 'Trialists: <b>73</b>/20/7/<b>1%</b> raw/squad/quality/gem. Market shows ratings only.',
+      // THESE USED TO QUOTE `SCOUT_TIERS` VERBATIM, AND THE GENERATOR DOES NOT DELIVER IT. That table is the
+      // input distribution for the ROLL; the badge the player then sees is re-derived from the realised
+      // overall, and the two disagree at every tier. Measured over 20,000 draws per tier:
+      //     declared        delivered
+      //   base    62/30/ 7/ 1   ->  73/20/ 7/1
+      //   bronze  45/38/14/ 3   ->  59/27/12/2
+      //   silver  28/44/22/ 6   ->  44/33/19/3
+      //   gold    12/43/33/12   ->  28/37/29/6
+      // Gold advertised a 12% gem rate and hands over 6%, and advertised 12% raw and hands over 28%. The
+      // roll itself is clean — it matches its table to within 0.25pp — so this is a display that quotes the
+      // wrong end of the pipeline. Numbers below are the DELIVERED ones, rounded, which is what the player
+      // will actually experience. (Making the generator hit the declared table instead would be a buff to
+      // prospect quality, i.e. a balance change — logged for CK rather than taken here.)
+      bronze: 'Better trialists (59/27/12/2) + <b>2 key stats</b> shown on listings.',
+      silver: 'Better trialists (44/33/19/3) + <b>5 stats</b> shown on listings.',
+      gold: 'Best trialists (28/37/29/6) + the <b>full stat sheet</b> on listings.',
     };
     const chip = (id: string, tier: string) => { const el = $(id); el.textContent = tier.toUpperCase(); el.className = `sn-tier tier-${tier}`; };
     chip('opp-tier', opp); chip('player-tier', player);

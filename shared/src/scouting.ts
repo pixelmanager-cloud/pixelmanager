@@ -60,7 +60,13 @@ export function generatePool(accountId: string, seasonNumber: number, tier = 'ba
   });
 }
 export function trialistAt(accountId: string, seasonNumber: number, index: number, tier = 'base', extraSlots = 0, youthUpgrade = 0): Player | null {
-  if (index < 0 || index >= POOL_SIZE + extraSlots) return null;
+  // NOT `index < 0 || index >= cap`: NaN fails BOTH comparisons, so trialistAt(..., NaN) used to return a
+  // real player with the id `loan-s5-NaN` who appears in no pool. And `rollAt` seeds with
+  // `Math.imul(index + 1, ...)`, which truncates to int32 while the id template interpolates the raw
+  // index — so 0, 0.1, 0.25 and 0.9 all returned the SAME man under four different ids, which defeats the
+  // duplicate-signing guard in api.ts (`players.some(p => p.id === player.id)`). An index is a slot number
+  // or it is nothing.
+  if (!Number.isInteger(index) || index < 0 || index >= POOL_SIZE + extraSlots) return null;
   return rollAt(accountId, seasonNumber, index, tier, youthUpgrade).player;
 }
 

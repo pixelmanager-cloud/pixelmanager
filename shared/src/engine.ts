@@ -295,6 +295,13 @@ export class MatchEngine {
     const a = t === 0 ? outP.anchor : mirroredAnchor(outP.anchor);
     s.players[t][outI] = { x: a.x, y: a.y, fitness: 0.9 }; // fresh legs
     this.subsUsed[t]++;
+    // RECOMPUTED, because the XI just changed. `leadershipBonus` was set once in the constructor from the
+    // STARTING eleven and never touched again, so a captain substituted off kept his armband bonus for the
+    // rest of the match and his replacement never earned one. Note the swap above deliberately carries the
+    // outgoing man's `anchor` and `duty` but NOT his `captain` flag — so after a captain goes off nobody on
+    // the pitch wears it, and teamLeadership correctly falls back to the best natural leader still on.
+    // Pure and rng-free, so this consumes no draws and cannot desync a replay.
+    this.leadershipBonus[t] = teamLeadership(this.teams[t].players);
     if (injured) s.events.push({ minute: min, type: 'injury', teamIdx: t, playerName: outP.name });
     s.events.push({ minute: min, type: 'sub', teamIdx: t, playerName: inP.name, playerName2: outP.name });
   }

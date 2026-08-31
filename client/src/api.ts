@@ -1405,6 +1405,17 @@ export const api = {
     const seasonId = String(model.profile.season);
     const tripsPerSeason = TRIPS_PER_SEASON + scoutExtraTrips(fac.scouting);
     if ((await localStore.countMissionsInSeason(OWNER, seasonId)) >= tripsPerSeason) throw apiErr(`you can dispatch at most ${tripsPerSeason} scouting trips a season`, {}, 409);
+    // REFUSE BEFORE TAKING THE MONEY. The cap was enforced at SIGNING and nowhere else, while the trip
+    // budget is far larger than it: 3 + scoutExtraTrips(MAX_LEVEL) = 7 paid trips a season against
+    // LOANEE_CAP = 3, and the 3-11 FREE walk-up trialists compete for the same three slots through the same
+    // counter. So a player who signed three free trialists could pay for all seven trips — 64 coins each at
+    // a maxed HQ — and every one of them was guaranteed dead money, refused at the end by a rule nothing
+    // had mentioned at dispatch. Worse, section 51's roll happens HERE, so the save already contained the
+    // prospect at the moment the fee was taken: the game charged for a sealed result its own rules would
+    // then refuse to hand over.
+    if ((await localStore.countLoanees(OWNER, seasonId)) >= LOANEE_CAP) {
+      throw apiErr(`your ${LOANEE_CAP} loanee places are already filled this season — a scouting trip could not bring anyone back`, {}, 409);
+    }
     const cost = Math.round(dest.cost * (1 - scoutCostDiscount(fac.scouting)));
     if (model.profile.coins < cost) throw apiErr(`not enough coins — ${dest.name} costs ${cost}`, {}, 409);
     await localStore.addCoins(OWNER, -cost);

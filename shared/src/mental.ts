@@ -5,7 +5,13 @@
 import type { Player } from './types.js';
 
 const NEUTRAL = 0.5; // norm(10)
-const norm = (v: number | undefined) => (v ?? 10) / 20;
+// GUARDED AGAINST NON-FINITE INPUT, which `?? 10` does not catch. NaN passed straight through here and
+// poisoned teamLeadership (Math.max with NaN stays NaN) -> finish -> goalProb, and `rng() < NaN` is false
+// for ever: measured, ONE outfielder with a NaN leadership took a side from ~78 goals in 60 matches to 4,
+// with no throw, no log, and the match completing normally. `overall()` in teams.ts already guards exactly
+// this class, and its own comment records that it once "permanently poisoned the wallet" — the lesson was
+// learned twelve files away and never applied here.
+const norm = (v: number | undefined) => (Number.isFinite(v as number) ? (v as number) : 10) / 20;
 
 /** Centred multiplier: 1.0 at stat=10, 1±k*0.5 at the extremes. */
 export const mMul = (stat: number | undefined, k: number) => 1 + k * (norm(stat) - NEUTRAL);
