@@ -3006,6 +3006,187 @@ function ageFraming(turn: number, salt: number, age?: number, chapter?: string):
 // came out of them at 1.0% of everything a player reads. They are functions rather than consts because
 // every line interpolates the seeded cast. A child on a park pitch has a coach, parents on the touchline
 // and rival kids — never a club captain or a veteran mentor (PT-133, cf PT-46/103).
+// The recurring cast reacting to a PLAY. Anonymous inline arrays of 10 each before; every line
+// interpolates the seeded cast, so these are functions rather than consts.
+const CAST_REACT_PLAY_CHILD = (cast: CareerCast): string[] => [
+  `Coach ${cast.gaffer} gave him a nod.`,
+  `His dad cheered louder than anyone.`,
+  `His teammates mobbed him.`,
+  `One in the eye for ${cast.rival}.`,
+  `Coach ${cast.gaffer} pretended not to be pleased.`,
+  `Someone's parent shouted his name.`,
+  `The touchline made a noise it hadn't all morning.`,
+  `${cap(cast.rival)} didn't look over. He'd seen it.`,
+  `He was still buzzing about it on the walk home.`,
+  `His dad said nothing, and grinned the whole way back.`,
+  `The pen stayed where it was. Coach ${cast.gaffer} watched the next one instead.`,
+  `Somebody's mum made a noise and then pretended she hadn't.`,
+  `${cap(cast.rival)} shouted something at his own defence about it.`,
+  `The subs stopped kicking their ball and looked over.`,
+  `Coach ${cast.gaffer} said his name once, flat, and moved on.`,
+  `Afterwards, his mum asked what that bit was for.`,
+  `Two of his mates copied it, badly, within about five minutes.`,
+  `Nobody on the touchline knew what to do with their hands.`,
+  `His dad talked about it the whole drive home.`,
+  `The other team's coach laughed, which was worse than anything.`,
+  `Somebody's little brother did a commentary of it.`,
+  `Coach ${cast.gaffer} turned to the parents and said something he did not catch.`,
+  `He replayed it in his head all the way through tea.`,
+  `${cap(cast.rival)} did not react at all, and that cost him something.`,
+  `By the restart his mates were arguing about who had done what.`,
+  `On Monday, three people who were not there had heard about it.`,
+  `Both hands went to Coach ${cast.gaffer}'s head and stayed there.`,
+  `A clap arrived from his nan, at the wrong thing and slightly late.`,
+  `Advice arrived from somebody's dad far too late to be any use.`,
+  `He looked straight over for his dad and found him.`,
+  `${cap(cast.rival)}'s dad found something to look at in the other direction.`,
+  `The park went briefly, oddly quiet.`,
+  `Coach ${cast.gaffer} called him over at the break and kept it short.`,
+  `He told it twice in the car and his mum let him.`,
+  `Two lads on the other team knew his name by the end.`,
+  `The bloke who put the corner flags out gave him a thumbs up.`,
+  `His dad did not mention it on the way back, which said plenty.`,
+  `Three of his mates chanted his name at him, once, badly.`,
+  `Coach ${cast.gaffer} carried on as though nothing had happened.`,
+];
+const CAST_REACT_PLAY_ADULT = (cast: CareerCast): string[] => [
+  `${cap(cast.gaffer)} said nothing, but noted it.`,
+  `${cap(cast.mentor)} allowed himself a smile.`,
+  `${cap(cast.captain)} clapped him on the back.`,
+  `One in the eye for ${cast.rival}.`,
+  `${cap(cast.gaffer)} made a mark on his sheet.`,
+  `${cap(cast.mentor)} had seen that coming for weeks.`,
+  `${cap(cast.captain)} said his name in the huddle.`,
+  `The bench were up before the ball landed.`,
+  `${cap(cast.gaffer)} let the staff know about that one later.`,
+  `Somewhere behind him, ${cast.gaffer} said four words to his assistant.`,
+  `Across the pitch, ${cast.mentor} watched it the way he watches everything.`,
+  `A hand went up from ${cast.captain}, pointing at the space he had left.`,
+  `${cap(cast.rival)} will have heard about it before the week is out.`,
+  `The bench had opinions. All of them at once.`,
+  `Whatever it was, ${cast.gaffer} said it to the man beside him and not to him.`,
+  `${cap(cast.mentor)} tilted his head at it and said something to himself.`,
+  `There and then, ${cast.captain} got hold of him about it.`,
+  `Somebody up in the staff seats wrote the minute down.`,
+  `${cap(cast.gaffer)} will put that up on the screen on Monday, twice.`,
+  `${cap(cast.rival)} went and stood somewhere else.`,
+  `The lads mentioned it in the dressing room and then let it go.`,
+  `${cap(cast.mentor)} caught his eye across the pitch, and that was the whole conversation.`,
+  `Two of them came over. Neither said the obvious thing.`,
+  `${cap(cast.captain)} took it upon himself to say something.`,
+  `${cap(cast.gaffer)} did not look up from his notes.`,
+  `It came up twice in the debrief and once in the car park.`,
+  `Asked about it later, ${cast.rival} chose his words carefully.`,
+  `The physio said something to the kit man and they both looked over.`,
+  `Days later, out of nowhere, ${cast.mentor} brought it up.`,
+  `Somebody shouted his name and got no answer.`,
+  `${cap(cast.captain)} said nothing until the whistle and then said plenty.`,
+  `On the walk in, ${cast.gaffer} let the silence do the talking.`,
+  `That one went round the training ground by Tuesday.`,
+  `Off to one side, ${cast.rival} did the sums and did not enjoy the total.`,
+  `The staff exchanged a look he was not meant to see.`,
+  `${cap(cast.mentor)} laughed, and he does not do that for free.`,
+  `The touchline staff stopped what they were doing.`,
+  `It got filed, the way ${cast.gaffer} files everything.`,
+  `In the huddle, ${cast.captain} raised it without using his name.`,
+];
+const CAST_REACT_LIFE_CHILD = (cast: CareerCast): string[] => [
+  `Coach ${cast.gaffer} appreciates how he handled it.`,
+  `His mates are impressed.`,
+  `Coach ${cast.gaffer} tells someone about it that evening.`,
+  `Nobody expected him to handle it that well.`,
+  `${cap(cast.rival)} has gone quiet about it.`,
+  `His mum hears a version of it twice.`,
+  `It goes down rather better than he'd feared.`,
+  `Coach ${cast.gaffer} mentions it to another coach, not knowing he is stood there.`,
+  `His mum tells his nan on the phone that evening, at length.`,
+  `Two of his mates take his side without being asked.`,
+  `${cap(cast.rival)} hears about it and cannot find an angle on it.`,
+  `His dad tells it wrong to somebody at work and makes him sound better.`,
+  `Nobody at school makes anything of it. That is the best available outcome.`,
+  `Coach ${cast.gaffer} says he is surprised, then says he is not.`,
+  `It gets him a nod from a lad who has never spoken to him.`,
+  `A teacher hears a version of it and is quietly pleased.`,
+  `Even ${cast.rival}'s dad mentions it.`,
+  `The story comes back to him from his mates with the good bits made bigger.`,
+  `The parents have their own version of it by Sunday.`,
+  `The younger ones get told about it by Coach ${cast.gaffer}.`,
+  `Over tea, his mum keeps looking at him as though he has grown.`,
+  `It goes down well with people whose opinion he had never considered.`,
+  `${cap(cast.rival)} tries the same thing a week later and it does not work.`,
+  `Somebody's mum tells his mum, and his mum keeps it to herself for two days.`,
+  `He gets away with a great deal more than usual for a couple of days.`,
+  `His dad puts a hand on his shoulder and leaves it at that.`,
+  `Coach ${cast.gaffer} texts his mum, and he never texts anyone.`,
+  `The story reaches the year above, slightly improved.`,
+  `Two pounds off his nan, which is her highest form of praise.`,
+  `He is asked to explain it three times and enjoys it less each time.`,
+  `${cap(cast.rival)} was told about it by somebody else, which is the best part.`,
+  `Nobody expected it of him, least of all the people who see him daily.`,
+  `By Wednesday his mates are still going on about it.`,
+  `Coach ${cast.gaffer} does the thing where he says nothing and nods twice.`,
+  `It changes the way one or two of them look at him.`,
+  `His dad tells the story at Christmas. Then every Christmas after that.`,
+  `A parent he has never spoken to says well done as they leave.`,
+  `It gets him out of a job at home he had been dreading.`,
+  `${cap(cast.rival)} would not have got away with it, and knows it.`,
+];
+const CAST_REACT_LIFE_ADULT = (cast: CareerCast): string[] => [
+  `${cap(cast.gaffer)} appreciates how he handled it.`,
+  `Even ${cast.rival} would admit that was well played.`,
+  `His agent breathes a quiet sigh of relief.`,
+  `${cap(cast.gaffer)} noted the way he dealt with it.`,
+  `It reflects well on him in rooms he wasn't in.`,
+  `${cap(cast.rival)} would not have handled it as neatly.`,
+  `The staff mention it approvingly.`,
+  `That will have been noticed upstairs.`,
+  `${cap(cast.mentor)} tells him he did it the right way and does not elaborate.`,
+  `${cap(cast.captain)} brings it up in front of other people, deliberately.`,
+  `Two players he barely knows are noticeably warmer with him afterwards.`,
+  `The club secretary is relieved and does not hide it.`,
+  `Within a day, ${cast.gaffer} is repeating it as though it were his own idea.`,
+  `It buys him a fortnight of goodwill he did not have on Monday.`,
+  `${cap(cast.mentor)} says he has watched a lot of lads get that wrong.`,
+  `Somebody senior asks who advised him. Nobody did.`,
+  `${cap(cast.captain)} stops treating him quite like a young player after it.`,
+  `The press get a version of it that is broadly true, for once.`,
+  `${cap(cast.rival)} is asked about it and manages to be gracious.`,
+  `${cap(cast.gaffer)} does not mention it, which is how he says well done.`,
+  `It is repeated in a meeting he will never hear about.`,
+  `His agent stops phoning quite so often.`,
+  `${cap(cast.mentor)} tells it to the young lads as a lesson, without using his name.`,
+  `The staff who deal with the difficult things make a point of finding him.`,
+  `A journalist he has never met starts spelling his name correctly.`,
+  `${cap(cast.captain)} asks his opinion on something unrelated a week later.`,
+  `It gets him a seat at a table nobody had invited him to before.`,
+  `${cap(cast.gaffer)} tells the chairman a version with the numbers rounded up.`,
+  `Nobody at the training ground says anything, and everybody knows.`,
+  `A year ago ${cast.rival} handled the same thing badly, and it is remembered.`,
+  `Somebody says he would have done exactly the same. Nobody believes him.`,
+  `The physio, who hears everything, is impressed.`,
+  `${cap(cast.mentor)} allows that it was better than he would have managed at that age.`,
+  `He is asked to have a word with a younger lad about something similar.`,
+  `It ages well. Most of these do not.`,
+  `${cap(cast.gaffer)} uses the word professional, which he does not spend lightly.`,
+  `Two clubs' worth of people know about it by the weekend.`,
+  `The version told back to him in a year will be better than what happened.`,
+  `His name comes up in a conversation about character, and stays there.`,
+];
+const CAST_REACT_CALLUP = (cast: CareerCast): string[] => [
+  `In the tunnel afterwards, ${cast.gaffer} found him and kept it brief.`,
+  `${cap(cast.gaffer)} will have his own view of it. He always does.`,
+  `Whatever else, ${cast.gaffer} now knows what happens when he asks.`,
+  `${cap(cast.captain)} got to him before anybody else did.`,
+  `The staff talked about it on the way back and did not agree.`,
+  `${cap(cast.gaffer)} said the three words to him that he says to everyone.`,
+  `${cap(cast.mentor)} was thrown in cold himself once, a long time ago.`,
+  `Nobody in that dressing room would have wanted the phone call either.`,
+  `A decision made at short notice, and ${cast.gaffer} has his answer now.`,
+  `It will come up the next time a name is needed in a hurry.`,
+  `${cap(cast.captain)} put an arm round him and steered him away from it.`,
+  `Whatever happens next, he was the one they phoned.`,
+];
+
 const CAST_SETUP_CHILD = (cast: CareerCast): string[] => [
   `Coach ${cast.gaffer} wants to see how he handles it.`,
   `Beat ${cast.rival} to it and he'll never hear the end of it.`,
@@ -3372,14 +3553,7 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
   // a recurring character sometimes reacts
   const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed, ctx.castAvoid) : null;
   const castReact = cast && rng() < 0.25
-    ? ' ' + (CHILD_CHAPTERS.has(ctx.chapter)
-        // park-football cast, no senior captain/mentor (PT-133); widened from 4 (PT-403)
-        ? pick([`Coach ${cast.gaffer} gave him a nod.`, `His dad cheered louder than anyone.`, `His teammates mobbed him.`, `One in the eye for ${cast.rival}.`,
-            `Coach ${cast.gaffer} pretended not to be pleased.`, `Someone's parent shouted his name.`, `The touchline made a noise it hadn't all morning.`,
-            `${cap(cast.rival)} didn't look over. He'd seen it.`, `He was still buzzing about it on the walk home.`, `His dad said nothing, and grinned the whole way back.`])
-        : pick([`${cap(cast.gaffer)} said nothing, but noted it.`, `${cap(cast.mentor)} allowed himself a smile.`, `${cap(cast.captain)} clapped him on the back.`, `One in the eye for ${cast.rival}.`,
-            `${cap(cast.gaffer)} made a mark on his sheet.`, `${cap(cast.mentor)} had seen that coming for weeks.`, `${cap(cast.captain)} said his name in the huddle.`,
-            `${cap(cast.rival)} watched it and said nothing.`, `The bench were up before the ball landed.`, `${cap(cast.gaffer)} let the staff know about that one later.`]))
+    ? ' ' + pickByTurn(CHILD_CHAPTERS.has(ctx.chapter) ? CAST_REACT_PLAY_CHILD(cast) : CAST_REACT_PLAY_ADULT(cast), turn, 7, salt)
     : '';
   // MILESTONE went from one flourish per milestone to a bank of them, so it needs picking. Strided on the
   // turn like its neighbours, so the same career does not open every first with the same words.
@@ -3954,13 +4128,7 @@ export function narrateLifeEvent(kind: string, cardName: string, success: number
   const lead = pick(LIFE_APPROACH);
   // a child at Grassroots/Academy has no agent — use park-appropriate reactions, mirroring PT-133 (PT-143)
   const castReact = cast && rng() < 0.3 && good
-    ? ' ' + (CHILD_CHAPTERS.has(ctx.chapter)
-        ? pick([`Coach ${cast.gaffer} appreciates how he handled it.`, `Even ${cast.rival} would admit that was well played.`, `His mates are impressed.`,
-            `Coach ${cast.gaffer} tells someone about it that evening.`, `Nobody expected him to handle it that well.`, `${cap(cast.rival)} has gone quiet about it.`,
-            `His mum hears a version of it twice.`, `It goes down rather better than he'd feared.`])
-        : pick([`${cap(cast.gaffer)} appreciates how he handled it.`, `Even ${cast.rival} would admit that was well played.`, `His agent breathes a quiet sigh of relief.`,
-            `${cap(cast.gaffer)} noted the way he dealt with it.`, `It reflects well on him in rooms he wasn't in.`, `${cap(cast.rival)} would not have handled it as neatly.`,
-            `The staff mention it approvingly.`, `That will have been noticed upstairs.`]))
+    ? ' ' + pick(CHILD_CHAPTERS.has(ctx.chapter) ? CAST_REACT_LIFE_CHILD(cast) : CAST_REACT_LIFE_ADULT(cast))
     : '';
   // Splice a tag-derived quality ("his cool head"), NOT the on-pitch card name — an off-pitch moment isn't
   // resolved by "a defence-splitting pass" (PT-43). Fall back to the raw name only if tags weren't supplied.
@@ -4108,9 +4276,9 @@ export function narrateCallupMoment(cardName: string, success: number, ctx: Narr
   const good = band(success) === 'triumph' || band(success) === 'good';
   const resline = pick(good ? CALLUP_RESOLUTION.good : CALLUP_RESOLUTION.bad);
   const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed, ctx.castAvoid) : null;
-  const reax = cast && rng() < 0.3
-    ? ' ' + (good ? `${cap(cast.gaffer)} could not have asked for more.` : `${cap(cast.gaffer)} will give him another chance — everyone gets one bad night.`)
-    : '';
+  // was two hard-coded sentences, one for good and one for bad, on the single highest-stakes beat
+  // in a career. Now a bank of twelve.
+  const reax = cast && rng() < 0.3 ? ' ' + pick(CAST_REACT_CALLUP(cast)) : '';
   return `Thrown in cold, he goes to work on ${cardName} ${resline}${reax}`;
 }
 
