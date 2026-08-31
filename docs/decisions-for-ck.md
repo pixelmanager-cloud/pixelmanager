@@ -31,7 +31,11 @@ than re-derives, and `tools/playtest/shot_geometry.ts` + `width_diagnosis.ts` re
 
 ---
 
-## 2. 1,505 arc tags that gate nothing — an authoring job, not a bug
+## 2. Arc tags — STALE AS WRITTEN, and about a fifth the size it claims
+
+> Re-measured on HEAD: **116 player arcs and 9 manager arcs gate on tags, and 30 gate on a facility.**
+> Only `when.maxSeason` is genuinely unused — one dead gate, not four. The tag economy is thin, not dead.
+> The numbers below are the original claim and are wrong; kept so the correction has something to point at.
 
 `gate_content.ts` reports this every playtest run.
 
@@ -197,13 +201,13 @@ about what "development" means, not a bug with an obvious right answer. Options,
   0.000; meanwhile unspent earnings raise the dynasty's wages 31% via `contractCost`.
 - **Six of eight meter downside branches never fire** under competent play, and `sponsors` is a dead meter
   whose only consumer is a branch that fires 0.3% of the time.
-- **7 of the 8 deck synergies are structurally impossible** on whichever track you are on; a perfect
-  omniscient synergy-hunting drafter activates one in 29.8% of careers.
-- **Nine of twelve facilities produce bit-identical seasons** at every level — 2,000 seasons each, zero
-  difference. Only training, fanzone and data change a result. And **Fan Zone returns exactly zero while
-  the Stadium is at level 1**, because it multiplies a gate that is zero.
-- **`analyze_manager_career.ts` measures a model the game does not have** — it reports a 31% title rate
-  where the real one is 57–74%.
+- ~~**7 of the 8 deck synergies are structurally impossible**~~ — measured and answered in **§61**: they are,
+  but three of the eight also make the player WORSE, so this is deferred behind §20 rather than fixed.
+- ~~**Nine of twelve facilities produce bit-identical seasons**~~ — **NOT A DEFECT, see §58.** It measured
+  scorelines, and only three facilities are wired to a scoreline by design. Eleven of twelve move real game
+  state. The Fan Zone half WAS real and is fixed: it multiplied a gate that is zero below Stadium L2.
+- ~~**`analyze_manager_career.ts` measures a model the game does not have**~~ — confirmed still true, and the
+  probe has been reduced to the half that is real rather than given a bar on a fiction (§54).
 
 ---
 
@@ -241,7 +245,7 @@ half is a real headless page load, and it says so rather than implying coverage 
 everything else this week survived — a check that cannot fail. I would suggest a real browser smoke test in
 CI before launch. That is a decision for you: it means adding Playwright or similar as a dev dependency.
 
-## 11. The anchor duty does not do what its card says, and now we know for certain
+## ~~11. The anchor duty~~ — SUPERSEDED by §40, which carries the current measurement and my correction
 
 "Pure destroyer — sits, screens the back four, and never strays from his zone." At n=900 paired matches:
 
@@ -259,14 +263,19 @@ midfielder is left marking whoever remains — possibly dragging him AWAY from t
 
 ## 12. Content items — authoring projects, not bugs. Your call on whether they are worth the days.
 
-- **614 near-duplicate line pairs** at similarity >= 0.6. A reader notices "this again" long before an
-  exact-match probe fires.
+- **614 near-duplicate line pairs** at similarity >= 0.6. **240 of them are now cut** — `pack_d`'s real
+  paraphrases. NOTE the recommendation in this section's own source was to delete `PART_TWO` wholesale;
+  measured, only 25% of it was paraphrase and **717 lines were genuinely distinct**, so that would have
+  binned three quarters of a working pack. The rest of the 614 sit in `narrate.ts`, which is the live job.
 - **27 player story beats ask for a decision and charge nothing for it** — a choice with no cost is a prompt,
   not a decision.
 - **`when.maxSeason`** — a late-window gate that is implemented, correct, and used by **zero** of the 819
   manager arcs. Built and unreachable.
 
-## 13. Small UI things I saw with my own eyes, which no source-reading agent would find
+## ~~13. Small UI things I saw with my own eyes~~ — ALL FOUR FIXED
+
+> Name-wrap, clipped toast and the 800x450 menu all fixed and measured live in a browser (§ROUND 10);
+> the agent screen's "No wrong pick here" was rewritten in the copy sweep.
 
 - A **long family name wraps mid-word** in the academy cards ("Sam Wolstenholme-" / "Bak"). The game
   generates names this long itself.
@@ -302,7 +311,7 @@ passing tactics straight into the engine, while the screen the player actually u
 before the next match. The tactical layer has never been played as designed. Fixed; guarded by
 `tools/playtest/settings_persist.ts`.
 
-## 15. YOUR CALL — the anchor duty. You asked; here is the measurement.
+## ~~15. The anchor duty~~ — SUPERSEDED by §40
 
 You asked whether to remove it. **My recommendation is to keep it for now, and I'd like to correct myself
 first:** I earlier read the duty matrix as showing the anchor with the best goals-against in the game
@@ -355,7 +364,7 @@ I have not touched this. It is two systems disagreeing about what a football mat
 canonical is your call: make Sim a fast run of the real engine, or accept it as a separate cheaper model and
 re-scale it. I would make Sim run the engine.
 
-## 17. YOUR CALL — the player cannot see the number that decides his season
+## ~~17. The player cannot see the number that decides his season~~ — DONE, see §48
 
 - **97% of the variance in a league finish is the seed.** A +1.0 strength swing explains 2.4-3.0%.
 - The same club, unchanged, ranges over **8.2 league places** across 30 seasons.
@@ -403,7 +412,11 @@ thing that should inform whether you ship a Steam beta before it is closed.
 
 # ROUND 4 — the overnight run. Read section 19 first.
 
-## 19. I REVERTED THE MATCH-ENGINE REBUILD. I shipped a worse game and misread my own evidence.
+## 19. I REVERTED THE MATCH-ENGINE REBUILD — kept as the record of how it went wrong
+
+> **The re-attempt is live** on branch `engine/rebuild-2`; §50 carries the current numbers. Read this one
+> for the failure mode, not the status. **Two of its claims are corrected elsewhere:** `offsideTrap` is
+> NOT inert on the shipped engine (§55), and the box figure is 2.43%, not 0.2% (§54).
 
 **What I told you was wrong.** I reported that the shipped game produced 0.19 goals/match at the bottom of
 the pyramid and 6.22 at the top — "the pyramid was three different games". **That measurement was taken on
@@ -458,7 +471,11 @@ Six independent measurement families, all adversarially verified:
 104 of the first 170 screens and roughly two hours — the entire Steam refund window. It cannot be fixed
 cosmetically: compressing the grade display to honest size just makes the loop visibly empty.
 
-## 21. YOUR CALL — the succession is decorated with two fabricated numbers
+## ~~21. The succession is decorated with two fabricated numbers~~ — FIXED
+
+> Both numbers are real now: stars come from `rebornPotential` (the same function the prospect card uses,
+> re-bucketed so sibling ties fall 73.6% → 33.2%), and the temperament is computed from the seed the
+> career will actually roll.
 
 `main.ts:3334` — `stars()` hashes the **heir's token id string**. It never reads `h.genes`. Correlation with
 actual inherited gene quality **r = 0.019**. Because the played line reuses the parent's token id, **the
@@ -467,7 +484,10 @@ pre-selected default son shows five stars. The sibling temperament shown is wron
 `bloodline.ts` calls this "a real decision". It is the emotional centre of the game, and the evidence under
 it is invented.
 
-## 22. Fixable by me — queued for tomorrow unless you say otherwise
+## ~~22. Fixable by me — queued~~ — ALL DISPATCHED
+
+> Pause-menu CSS was already fixed; the false "reins again" copy and the "🎯 Right card" chip are fixed;
+> scouting became §51 (your call); `defSkill` is moot after the revert.
 
 - **The pause menu has no CSS at all.** `#pause-ov` is the only one of 11 overlays with no stylesheet rule:
   `position: static`, no backdrop, `#app` not inert. On the Trophy Room it renders at document y=2,511 and
@@ -598,7 +618,7 @@ and proved against all seven poisons.
   after a sale the armband and the penalties move to different men. Pre-existing, but my fix made those
   fields live for the first time.
 
-## 28. And two corrections against me
+## ~~28. Two corrections against me~~ — the live half is now §35 (the defensive presets)
 
 - **Division merit does not leave the ladder to climb.** I said seven of twelve facilities would still be
   unbuilt at season 130; measured, **11.1 of 12 are at maximum** and cumulative income passes the 514,800
@@ -748,7 +768,7 @@ sheet. `reconcileSheet` replaces it — designations follow the **man**, not the
 - **Three of eleven formations silently saved nothing**; **a truncated career record was undetectable**;
   **`careerHandoff` had no replay guard** (67–76% of earnings lost, irreversibly).
 
-## 39. Open — dead code, low player value, your call whether it is worth the churn
+## ~~39. Dead code~~ — DONE, see §60 (and two of its five bullets were stale)
 
 > **Two of these five are now stale and are struck below.** Verified 2026-08-31.
 
@@ -809,7 +829,10 @@ evidence now genuinely supports removal if you want it, and I was wrong to call 
 **Three of those were byte-window gates, all three written by me, all three defeated by a comment.** The
 lesson is not "use a bigger window."
 
-## 42. Still open from the mutation pass — queued
+## 42. Still open from the mutation pass — ONE BULLET LEFT
+
+> ~~`qa_squad_lifecycle`~~, ~~`qa_manager_arcs_e2e`~~, ~~`qa_offline_facade`~~, ~~`qa_branching`~~ and
+> ~~`IndexedDBBackend`~~ are all closed (§45, §54, §57). What remains is the coverage number below.
 
 - **`qa_squad_lifecycle` passes with youth development removed entirely**, and with the training-ground
   effect removed. Its checks are `>=` on a single player over one season, where growth is +0.2 and
@@ -826,7 +849,7 @@ lesson is not "use a bigger window."
 - **`IndexedDBBackend` is exercised by no harness.** `qa_savestore` only ever drives the in-memory backend,
   which uses a plain clone; the one that ships has structured-clone semantics that drop `undefined`.
 
-## 43. Two probes report real defects into scrollback with no failure path
+## ~~43. Two probes report real defects into scrollback with no failure path~~ — DONE, and it was 13, not 2. See §54.
 
 - `tactics_matrix` ends with **"VERDICT: sweeper-keeper is a BIT-FOR-BIT NO-OP"** — 0 of 400 matches differ,
   keeper displacement 0.000000 m.
@@ -882,7 +905,7 @@ players into slots matching their role, leaving the men themselves alone.
   candidates and the average from 2.69 to 2.78 — `nephewCount` returning zero for ~7 uncles in 10 does the
   real bounding. Worth knowing before anyone tunes it expecting an effect.
 
-## 46. YOUR CALL — one dev dependency would close the last big hole
+## ~~46. One dev dependency would close the last big hole~~ — APPROVED AND DONE, see §57
 
 **`IndexedDBBackend` — the backend that actually ships — is never even constructed under Node.**
 `typeof indexedDB` is undefined there, so `defaultBackend` always takes the in-memory branch, and every
@@ -982,7 +1005,7 @@ stakes from `squadStrength()` against an opponent's `oppStrength` — a mean-of-
 quality, so about 2.35 apart. The club read as nearly two divisions stronger than it is, and the press
 framed genuinely hard fixtures as routine. That is the same defect as §24, in a call site that fix missed.
 
-## 49. A correction to how I have been reporting all of this
+## 49. A correction to how I have been reporting all of this — NOT AN ACTION ITEM
 
 An adversarial audit of my own status report found real errors in it, and you should have them.
 
@@ -1055,7 +1078,7 @@ trip already paid for), and that is a **save-format change**. Given §18 lists n
 I am not touching the save schema while you are asleep. **My recommendation is (2)** — it is the only one
 that makes the scouting HQ feel like part of the football calendar rather than a phone-game timer.
 
-## 52. A correction to §23 — the fix it names cannot be actioned as written
+## 52. A correction to §23 — NOT AN ACTION ITEM
 
 §23 tells you the single highest-value prose job is *"expanding the 17-line `CHARLINE` bank"*. **There is
 no `CHARLINE` identifier in the codebase.** Its only two occurrences are inside comments in
@@ -1132,7 +1155,7 @@ Three ways out, and they are genuinely different games:
    sometimes goes clean through) makes the existing copy true and removes a free win. **My recommendation.**
 3. **Leave both.** Not defensible: the game is currently lying to steer players away from a real advantage.
 
-## 56. The whole goalkeeper duty dial is dead, not just sweeper-keeper
+## ~~56. The whole goalkeeper duty dial is dead~~ — RETIRED at your instruction, see §59
 
 §43 recorded *"sweeper-keeper is a bit-for-bit no-op"*. The new wiring census in `tactics_matrix` — a paired
 bit-for-bit A/B over all **26 dials** on the tactics screen — shows it is worse than that: **`keeper`,
@@ -1167,7 +1190,7 @@ needed your call** — which you then gave. Recorded honestly because my own art
 - **A phantom stat.** `communityStanding()` computed a "standing" quantity that exists nowhere in the game.
   The Community Trust facility's *only* advertised effect was *"+27 standing in the town"*.
 
-## 58. NOT A BUG — and this one was my error
+## 58. NOT A BUG — and this one was my error (no action)
 
 **"Nine of twelve facilities produce bit-identical seasons"** reproduces exactly, and the interpretation is
 wrong. It measured league **scorelines**, and only three facilities are wired to a scoreline by design — a
