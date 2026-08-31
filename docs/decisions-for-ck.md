@@ -1384,12 +1384,20 @@ neutral, the armband is never a penalty, AND tier 10 still reads as poorly led.)
   **goalkeeper is 3.3× more likely to be badged GEM than a defender** drawn from the identical band
   distribution (GK gem 12.9%, DF gem 3.9%). The quality signal you pay the Youth Academy to move is
   dominated by which role slot came up.
-- **`LOANEE_CAP` gates signing but not dispatching or spending.** `dispatchScout` checks trips and coins
+- **~~`LOANEE_CAP` gates signing but not dispatching or spending~~ — FIXED, both halves.** `dispatchScout` checks trips and coins
   only. Budgets: **7 paid trips a season** (3 + 4 from a maxed HQ) against a **cap of 3**, and the 3–11
   free walk-ups compete for the same slots. Sign three free trialists first and all seven paid trips are
   **guaranteed dead money, with no warning at dispatch** — 64 coins each at HQ L10. Separately, `signTrial`
   and `signMission` push into `club.players` with no size check, so loanees can carry a squad past
   `MAX_SQUAD = 28`.
+  **Both now closed.** `dispatchScout` refuses before taking the money when the season's loanee places are
+  already filled, and `signTrial`/`signMission` enforce `MAX_SQUAD` — the bound the transfer UI shows the
+  player as "Squad full (max 28)" and which only `buyPlayer` had ever checked. The offline-facade harness
+  fills a squad through the public `buyPlayer` path and then asserts the trialist route is refused **for
+  being full specifically**, not merely that it throws: `signTrial` also throws "no such trialist" and the
+  loanee-cap message, either of which would have let a bare throws-check pass while the bound stayed
+  unenforced. Mutation-tested — with the guard disabled (and the mutation typechecking clean) the harness
+  reports "no throw" and fails.
 - **The traits the engine reads are unreachable below tier 4, and ~~The Wall gets RARER as keepers improve~~
   (the ordering half is FIXED — see below).**
   Measured over 30 clubs/tier: `clinical` 39/25/13/0/0/0% at tiers 1/2/3/6/8/10; `ballwinner` 59/43/25/0%.

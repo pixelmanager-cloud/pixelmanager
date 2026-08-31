@@ -1325,6 +1325,11 @@ export const api = {
     const c = await localStore.getClub(OWNER);
     if (!c) throw apiErr('club not found', {}, 404);
     if (c.club.players.some((p) => p.id === player.id)) throw apiErr('already signed', {}, 409);
+    // MAX_SQUAD, the same bound `buyPlayer` enforces. LOANEE_CAP limits how many loanees a SEASON,
+    // which is a different question from how many players a squad may hold -- so the cap the UI shows
+    // the player ("Squad full (max 28)") was enforced on the buy path and nowhere else, and a free
+    // walk-up trialist or a scouted loanee walked straight past it.
+    if (c.club.players.length >= MAX_SQUAD) throw apiErr(`your squad is full (max ${MAX_SQUAD})`, {}, 409);
     c.club.players.push(player);
     await localStore.saveClub(OWNER, c.club, c.standingOrders);
     await localStore.addLoanee(OWNER, seasonId, player.id);
@@ -1462,6 +1467,11 @@ export const api = {
     const player = JSON.parse(m.player_json) as Player;
     const c = await localStore.getClub(OWNER);
     if (!c) throw apiErr('club not found', {}, 404);
+    // MAX_SQUAD, the same bound `buyPlayer` enforces. LOANEE_CAP limits how many loanees a SEASON,
+    // which is a different question from how many players a squad may hold -- so the cap the UI shows
+    // the player ("Squad full (max 28)") was enforced on the buy path and nowhere else, and a free
+    // walk-up trialist or a scouted loanee walked straight past it.
+    if (c.club.players.length >= MAX_SQUAD) throw apiErr(`your squad is full (max ${MAX_SQUAD})`, {}, 409);
     if (!c.club.players.some((p) => p.id === player.id)) c.club.players.push(player);
     await localStore.saveClub(OWNER, c.club, c.standingOrders);
     await localStore.addLoanee(OWNER, seasonId, player.id);

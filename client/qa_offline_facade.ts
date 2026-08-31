@@ -6,7 +6,7 @@
 // this is about the WIRING: does every reachable api.ts call run in-process end to end.
 import { api, __setBackendForTests, setToken } from './src/api.js';
 import { createInMemoryBackend } from './src/save.js';
-import { transferList, wageForLength, TIERS } from '@fm/shared';
+import { transferList, wageForLength, TIERS, mintSquadPlayer } from '@fm/shared';
 
 __setBackendForTests(createInMemoryBackend());
 
@@ -234,6 +234,30 @@ for (const [tier, wantMult] of [[TIERS, 0.4], [1, 1.6]] as const) {
   assert(Math.abs(r.tierMult - wantMult) < 1e-6, `tier ${tier} pays x${wantMult} (got x${r.tierMult})`);
   assert(r.prize === Math.round(800 * wantMult * r.houseMult),
     `tier ${tier} champion prize is 800 x ${wantMult} x renown (got ${r.prize})`);
+}
+
+console.log('\n=== MAX_SQUAD is a squad bound, not a purchase bound ===');
+{
+  // LOANEE_CAP limits how many loanees you may sign in a SEASON. MAX_SQUAD limits how many players a
+  // squad may HOLD. Different questions, and only `buyPlayer` enforced the second — so a squad already
+  // full from the transfer market could still take a free walk-up trialist or a scouted loanee and end up
+  // at 29, past the bound the transfer UI shows the player as "Squad full (max 28)".
+  //
+  // The squad is filled through the PUBLIC api (buyPlayer at fee 0) rather than by writing to the backend,
+  // because the facade caches its active model and a direct write would not be the state the code reads.
+  let bought = 0;
+  for (let i = 0; i < 60 && bought < 60; i++) {
+    try { await api.buyPlayer(mintSquadPlayer(`cap-${i}`, 'MF', 10, i * 31 + 5), 0); bought++; }
+    catch { break; }
+  }
+  assert(bought > 0, `filled the squad through buyPlayer until it refused (${bought} signings)`);
+
+  // ASSERT THE REASON, NOT MERELY A THROW. `signTrial` also throws 'no such trialist' and
+  // 'you can sign at most N loanees a season'; either would make a bare assertThrows pass while the
+  // squad bound stayed unenforced — a check that cannot fail is the defect this repo is full of.
+  let msg = '';
+  try { await api.signTrial(0); } catch (e) { msg = String((e as Error)?.message ?? e); }
+  assert(/squad is full/i.test(msg), `signTrial into a full squad is refused FOR BEING FULL (got: ${msg || 'no throw'})`);
 }
 
 console.log(failures === 0 ? `\n✓ all offline-facade checks passed` : `\n✗ ${failures} offline-facade check(s) FAILED`);
