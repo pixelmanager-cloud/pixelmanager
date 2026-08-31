@@ -2990,14 +2990,83 @@ const CHILD_CHAPTERS = new Set(['Grassroots', 'Academy']);
 
 /** Weave the age/chapter into the situation so a 12-year-old on a park pitch reads unlike a 23-year-old.
  *  Turn-strided (not random) so the frame walks the whole bank before repeating within a chapter (PT-9). */
+// AGE FRAMING — the FALLBACK for a chapter with no frame bank of its own, and CURRENTLY UNREACHABLE.
+// I expanded these from three lines a band to ten, re-measured, and the scenario surface did not move by a
+// single sentence — which is how the real finding turned up: `FRAME_BY_CHAPTER` covers all seven chapters
+// the game has, so the guard on the line below always returns and nothing after it ever runs. The original
+// three-line arrays were dead too; nobody had noticed because a dead branch costs nothing and says nothing.
+//
+// Kept and expanded rather than deleted, because it IS the correct fallback the moment anyone adds a
+// chapter (or a save arrives carrying a chapter name this build does not know), and ten lines is the right
+// size for it if it ever fires. But do not read this bank as work that improved anything today.
+const AGE_FRAME: Record<string, string[]> = {
+  age10to12: [
+    'Barely up to the crossbar, ',
+    'A boy among boys, ',
+    'Still finding his feet in the game, ',
+    'Shin pads over the knee and sleeves past the fingers, ',
+    'Ten years old and made mostly of elbows, ',
+    'With his dad on the touchline and school in the morning, ',
+    'Small, quick and entirely certain of himself, ',
+    'Still the youngest one out there, ',
+    'Playing the way boys play, which is all of him at once, ',
+    'A head shorter than the rest and unbothered by it, ',
+  ],
+  age13to15: [
+    'A gangly teenager with a lot to prove, ',
+    'Growing into his frame, ',
+    'Hungry and a little raw, ',
+    'All legs and no ballast yet, ',
+    'Fourteen, and growing faster than he can steer, ',
+    'Old enough now to be embarrassed by his own mistakes, ',
+    'With most of the game still to learn and no patience for that fact, ',
+    'Half-formed and already stubborn about it, ',
+    'Learning the difference between quick and clever, ',
+    'Still the one his coach shouts at most, ',
+  ],
+  age16to18: [
+    'On the cusp of the first team, ',
+    'A prospect the club is watching carefully, ',
+    'With the academy behind him and the real thing ahead, ',
+    'A year or two from finding out either way, ',
+    'With the older lads watching how he trains, ',
+    'Nearly a professional and not one yet, ',
+    'Carrying the weight of being talked about, ',
+    'On the edge of the thing he has wanted since he was ten, ',
+    'Old enough to be judged properly now, ',
+    'Still borrowing confidence and hoping nobody notices, ',
+  ],
+  age19to21: [
+    'Establishing himself now, ',
+    'No longer a kid, expectations rising, ',
+    'A young man with a reputation to build, ',
+    'Twenty, and no longer excused anything, ',
+    'With a season behind him and nowhere left to hide, ',
+    'Past the point where potential counts for much, ',
+    'Watched now by people who decide things, ',
+    'Old enough to be the problem or the answer, ',
+    'Halfway between promise and proof, ',
+    'With a reputation forming whether he likes it or not, ',
+  ],
+  age22plus: [
+    'A senior figure in the making, ',
+    'In his pomp, ',
+    'With the experience to know exactly what this is, ',
+    'No longer anybody’s prospect, ',
+    'With nothing left about a Saturday that surprises him, ',
+    'Long past needing anybody to explain the stakes, ',
+    'A man now, and treated like one, ',
+    'Carrying the sort of calm that comes only from having got it wrong before, ',
+    'With the best of it, in all likelihood, still ahead, ',
+    'Knowing exactly what a season costs now, ',
+  ],
+};
+
 function ageFraming(turn: number, salt: number, age?: number, chapter?: string): string {
   if (chapter && FRAME_BY_CHAPTER[chapter]) return pickByTurn(FRAME_BY_CHAPTER[chapter], turn, 7, salt);
   if (age == null) return '';
-  if (age <= 12) return pickByTurn(['Barely up to the crossbar, ', 'A boy among boys, ', 'Still finding his feet in the game, '], turn, 7, salt);
-  if (age <= 15) return pickByTurn(['A gangly teenager with a lot to prove, ', 'Growing into his frame, ', 'Hungry and a little raw, '], turn, 7, salt);
-  if (age <= 18) return pickByTurn(['On the cusp of the first team, ', 'A prospect the club is watching carefully, ', 'With the academy behind him and the real thing ahead, '], turn, 7, salt);
-  if (age <= 21) return pickByTurn(['Establishing himself now, ', 'No longer a kid, expectations rising, ', 'A young man with a reputation to build, '], turn, 7, salt);
-  return pickByTurn(['A senior figure in the making, ', 'In his pomp, ', 'With the experience to know exactly what this is, '], turn, 7, salt);
+  const band = age <= 12 ? 'age10to12' : age <= 15 ? 'age13to15' : age <= 18 ? 'age16to18' : age <= 21 ? 'age19to21' : 'age22plus';
+  return pickByTurn(AGE_FRAME[band], turn, 7, salt);
 }
 
 /** A narrative description of the moment the player is living through, from the scenario. */
@@ -4613,35 +4682,93 @@ export function rivalNews(seed: number, chapter: string, turn = 0): string {
 }
 
 // ── NON-PLAY CHOICES: a flavour beat when he appoints a coach, drafts a card, or takes an offer ──
+// The BETWEEN-TURN narrators. Each was a 4-line anonymous inline array, and narrateDraft alone fires
+// about 19.5 times a career — five reads per line, as bad as the worst per-turn bank in the file. All
+// interpolate their subject, so they are functions.
+const COACH_LINES = (name: string, role: string, spec: string): string[] => [
+  `He’s put himself under ${name}, a ${role} who’ll sharpen his ${spec}.`,
+  `${name} takes him on — the kind of ${role} who lives and breathes ${spec}.`,
+  `A new voice in his ear: ${name}, brought in to hone his ${spec}.`,
+  `Under ${name} now — every session bent towards ${spec}.`,
+  `${name} has him now. The brief is simple enough: ${spec}.`,
+  `He has gone looking for help and found ${name}, a ${role} with strong views on ${spec}.`,
+  `Tuesday and Thursday evenings with ${name}, both of them given over to ${spec}.`,
+  `${name} is the sort of ${role} who talks in specifics. ${spec}, mostly.`,
+  `He asked around and everybody gave him the same name. ${name}, for the ${spec}.`,
+  `Somebody had to tell him the truth about ${spec}, and ${name} was the one who did.`,
+  `${name} it is, and a winter of nothing else but ${spec}.`,
+  `He is working with ${name} now, an hour after everyone else has gone home, on ${spec}.`,
+  `The appointment of ${name} says exactly what he thinks the problem is: ${spec}.`,
+  `${name} has been brought in. Whether he enjoys it is beside the point; ${spec} is the point.`,
+];
+const DRAFT_LINES = (cardName: string): string[] => [
+  `He’s added ${cardName} to his game — another string to his bow.`,
+  `${cardName}, drilled and drilled until it’s second nature.`,
+  `A new weapon in the locker: ${cardName} is part of who he is now.`,
+  `Hours on the training ground pay off — ${cardName} is his to call on.`,
+  `${cardName} is in the locker now, after more repetitions than anyone would sit through.`,
+  `Something new: ${cardName}, and the small satisfaction of a thing that used to be hard.`,
+  `He has been working on ${cardName} since before anybody noticed.`,
+  `${cardName}, learned properly, which is not at all the same as learned.`,
+  `A month of doing ${cardName} badly, and now he does it without looking.`,
+  `He can do ${cardName} now. He could not do it in September.`,
+  `${cardName} joins the list of things he no longer has to think about.`,
+  `Six weeks of it, and the staff have signed off on ${cardName}. That takes some doing.`,
+  `Nobody taught him ${cardName}. He watched somebody else do it and went away and worked.`,
+  `Repetition is the only way a thing becomes yours. ${cardName} is his.`,
+];
+const OFFER_MONEY = (name: string): string[] => [
+  `He took the money — ${name}. The bank balance swells; the purists wince.`,
+  `${name}: he cashed in. Who could blame a young man from where he started?`,
+  `The chequebook won out. ${name}, signed.`,
+  `${name}. He has seen what happens to a family when the money stops arriving.`,
+  `${name}: he signed for the wage and said so, which saved everybody a fortnight of guessing.`,
+  `${name} it is. His mother will not worry about a bill again, and that was always the plan.`,
+  `A decision made with a calculator: ${name}.`,
+  `${name}, and a fee behind it that nobody involved will confirm.`,
+  `He took the offer. ${name} pays better than the alternative and he is not pretending otherwise.`,
+  `${name}. Somebody will call it a lack of ambition. Somebody always does.`,
+];
+const OFFER_DEV = (name: string): string[] => [
+  `He turned down the payday to keep growing — ${name}. The long game.`,
+  `Patience over pounds — ${name}. A mature head on young shoulders.`,
+  `${name}: the harder road, chosen on purpose.`,
+  `He turned down more money for more football. ${name}.`,
+  `${name}. He will be paid properly in three years or not at all, and he knows both numbers.`,
+  `The money was better elsewhere. ${name} was better for him.`,
+  `He picked minutes over wages. ${name}, and a fortnight of people telling him he was mad.`,
+  `He wants to be a footballer more than he wants to be comfortable. ${name}.`,
+  `${name}. Ask him at thirty whether the money would have been worth it.`,
+];
+const OFFER_NEUTRAL = (name: string): string[] => [
+  `A big call off the pitch: ${name}.`,
+  `${name} — a decision that will shape more than his bank balance.`,
+  `${name}. Nobody outside one small room will ever know what it cost him.`,
+  `He slept on it twice and then signed. ${name}.`,
+  `${name}: a fork in the road, taken without much ceremony.`,
+  `The decision was ${name}, and it was his, whatever anybody advised.`,
+  `He made the call himself. ${name}.`,
+  `${name}. Ask him in ten years whether it was the right one.`,
+  `A quiet afternoon, a pen, and ${name}.`,
+];
+
 export function narrateCoach(name: string, kind: string, specialty: string[], ctx: NarrateCtx): string {
   const rng = mulberry32(ctx.seed >>> 0);
   const role = kind === 'mentor' ? 'mentor' : 'coach';
   const spec = specialty.slice(0, 2).join(' and ') || 'his all-round game';
   const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed, ctx.castAvoid) : null;
   const nod = cast && rng() < 0.35 ? ` ${cast.gaffer} approves of the appointment.` : '';
-  return pickFrom(rng, [
-    `He’s put himself under ${name}, a ${role} who’ll sharpen his ${spec}.`,
-    `${name} takes him on — the kind of ${role} who lives and breathes ${spec}.`,
-    `A new voice in his ear: ${name}, brought in to hone his ${spec}.`,
-    `Under ${name} now — every session bent towards ${spec}.`,
-  ]) + nod;
+  return pickFrom(rng, COACH_LINES(name, role, spec)) + nod;
 }
 export function narrateDraft(cardName: string, _tags: string[], ctx: NarrateCtx): string {
-  const rng = mulberry32(ctx.seed >>> 0);
-  return pickFrom(rng, [
-    `He’s added ${cardName} to his game — another string to his bow.`,
-    `${cardName}, drilled and drilled until it’s second nature.`,
-    `A new weapon in the locker: ${cardName} is part of who he is now.`,
-    `Hours on the training ground pay off — ${cardName} is his to call on.`,
-  ]);
+  return pickFrom(mulberry32(ctx.seed >>> 0), DRAFT_LINES(cardName));
 }
 export function narrateOffer(name: string, effs: { earn: number; greed: number; market: number; form: number }, ctx: NarrateCtx): string {
   const rng = mulberry32(ctx.seed >>> 0);
-  const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed, ctx.castAvoid) : null;
   const money = effs.earn > 0, dev = effs.form > 0;
-  if (money && !dev) return pickFrom(rng, [`He took the money — ${name}. The bank balance swells; the purists wince.`, `${name}: he cashed in. Who could blame a young man from where he started?`, `The chequebook won out. ${name}, signed.`]);
-  if (dev && !money) return pickFrom(rng, [`He turned down the payday to keep growing — ${name}. The long game.`, `${name}: development over dollars. ${cast ? cast.gaffer + ' nodded.' : 'The staff nodded.'}`, `Patience over pounds — ${name}. A mature head on young shoulders.`]);
-  return pickFrom(rng, [`A big call off the pitch: ${name}.`, `${name} — a decision that will shape more than his bank balance.`, `Off the field, ${name} — the kind of choice that defines a career.`]);
+  if (money && !dev) return pickFrom(rng, OFFER_MONEY(name));
+  if (dev && !money) return pickFrom(rng, OFFER_DEV(name));
+  return pickFrom(rng, OFFER_NEUTRAL(name));
 }
 
 // ── CHAPTER RECAP + GRADUATION EPILOGUE (the story-so-far beats) ──
