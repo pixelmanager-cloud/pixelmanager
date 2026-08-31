@@ -33,8 +33,8 @@ interface Expected { turn: number; finished: boolean; replayShortfall: unknown; 
 const short = (v: unknown) => { const s = JSON.stringify(v) ?? 'undefined'; return s.length > 42 ? s.slice(0, 39) + '...' : s; };
 
 /** Drive a career to the end, answering every phase, and return the record the game would store. */
-function drive(seed: number, track: Track) {
-  const c = new Career(seed, track);
+function drive(seed: number, track: Track, agentId?: string) {
+  const c = new Career(seed, track, agentId);
   let step = 0;
   while (!c.finished && step < 600) {
     const st = c.current() as any;
@@ -62,10 +62,11 @@ function drive(seed: number, track: Track) {
  *  `string` — through an `any`, so the compiler never saw it. All four committed careers recorded
  *  `"personality": null`, and the check named in the pass message had never compared anything.
  *  A projection you maintain by hand drifts from the thing it projects. Pin the real function. */
-function outcome(seed: number, track: Track, actions: CareerAction[]) {
+function outcome(seed: number, track: Track, actions: CareerAction[], agentId?: string, devBonus?: Record<string, number>) {
   const token = {
     id: 'g', name: 'Golden Player', state: 'prospect', career_seed: seed, track,
-    genes_json: JSON.stringify(rollGenes(seed)), dev_bonus_json: '{}',
+    agent_id: agentId ?? null,
+    genes_json: JSON.stringify(rollGenes(seed)), dev_bonus_json: JSON.stringify(devBonus ?? {}),
     career_actions: JSON.stringify(actions), career_action_count: actions.length,
   } as unknown as Token;
   const c = loadCareer(token);
@@ -75,7 +76,15 @@ function outcome(seed: number, track: Track, actions: CareerAction[]) {
   };
 }
 
-const TRACKS: Array<{ seed: number; track: Track }> = [
+// PINNING THE OUTPUT IS NOT ENOUGH IF THE INPUT IS FROZEN. Every fixture career used to be built with
+// `agent_id: null` and `dev_bonus_json: '{}'`, and none graduated above 14. So three things graduation
+// writes to a real save were untestable by construction, and an audit confirmed all three walk through the
+// whole gate: zeroing the agent's effect on greed and marketability (no career had an agent), zeroing the
+// bloodline legacyBonus (no career had a dev bonus), and zeroing elite international caps (careerHonours'
+// `peakOverall >= 15` branch was unreachable at a maximum of 14). The last three entries exist to make
+// each of those a live comparison, and the coverage gate below refuses a fixture that loses them.
+const LEGACY: Record<string, number> = { composure: 3, leadership: 3, positioning: 2, passing: 2, shooting: 2, pace: 2, strength: 2, stamina: 2 };
+const TRACKS: Array<{ seed: number; track: Track; agentId?: string; devBonus?: Record<string, number> }> = [
   { seed: 1, track: 'outfield' },    // FW, Workhorse, 2 traits
   { seed: 4, track: 'outfield' },    // DF, Workhorse, 1 trait
   { seed: 9, track: 'outfield' },    // MF, The Stoic, 2 traits
@@ -84,6 +93,10 @@ const TRACKS: Array<{ seed: number; track: Track }> = [
   { seed: 3, track: 'outfield' },    // FW, Showman, 3 traits
   { seed: 5, track: 'outfield' },    // DF, Model Professional, 3 traits
   { seed: 14, track: 'outfield' },   // DF, Big-Game Player, 3 traits
+  // the three that unfreeze the inputs
+  { seed: 2, track: 'goalkeeper', agentId: 'super', devBonus: LEGACY },  // peak 17 + 24 caps + a greedy agent
+  { seed: 20, track: 'outfield', agentId: 'family' },                    // the OTHER end of the agent axis (greed -5)
+  { seed: 12, track: 'outfield', devBonus: LEGACY },                     // an inherited legacy bonus, no agent
 ];
 
 // NO ESCAPE HATCH. This used to be `if (WRITE || !existsSync(FIXTURE))` — a missing fixture regenerated
@@ -100,18 +113,19 @@ if (!WRITE && !existsSync(FIXTURE)) {
 }
 
 if (WRITE) {
-  const golden = TRACKS.map(({ seed, track }) => {
-    const c = drive(seed, track);
-    return { seed, track, actions: c.actions, expected: outcome(seed, track, c.actions as CareerAction[]) };
+  const golden = TRACKS.map(({ seed, track, agentId, devBonus }) => {
+    const c = drive(seed, track, agentId);
+    return { seed, track, agentId, devBonus, actions: c.actions,
+             expected: outcome(seed, track, c.actions as CareerAction[], agentId, devBonus) };
   });
   writeFileSync(FIXTURE, JSON.stringify(golden, null, 2) + '\n');
   console.log(`[golden] wrote ${golden.length} careers to tools/playtest/fixtures/golden-careers.json`);
   console.log('[golden] REGENERATED — if this was not deliberate, every existing save just changed meaning.');
 } else {
-  const golden = JSON.parse(readFileSync(FIXTURE, 'utf8')) as Array<{ seed: number; track: Track; actions: CareerAction[]; expected: Expected }>;
+  const golden = JSON.parse(readFileSync(FIXTURE, 'utf8')) as Array<{ seed: number; track: Track; agentId?: string; devBonus?: Record<string, number>; actions: CareerAction[]; expected: Expected }>;
   console.log(`[golden] replaying ${golden.length} committed careers against this build\n`);
   for (const g of golden) {
-    const got = outcome(g.seed, g.track, g.actions);
+    const got = outcome(g.seed, g.track, g.actions, g.agentId, g.devBonus);
     const label = `seed ${g.seed} (${g.track}), ${g.actions.length} actions`;
     check(got.turn === g.expected.turn && got.finished === g.expected.finished,
       `${label}: replays to turn ${g.expected.turn}, finished ${g.expected.finished} (got ${got.turn}/${got.finished})`);
@@ -141,6 +155,22 @@ if (WRITE) {
     'every committed career recorded a real personality (this read `null` for four careers, and nobody noticed)');
   check(grads.some(g => Number(g.earnings ?? 0) > 0),
     'at least one committed career recorded non-zero earnings (0 everywhere means finContext() is not being passed)');
+
+  // ── AND THE INPUTS, which pinning the outputs does not cover ────────────────────────────────────────
+  // Each of these was untestable by construction until the fixture carried the input that reaches it, and
+  // an audit confirmed a mutation zeroing each one passed the entire gate.
+  const withAgent = golden.filter(g => g.agentId).length;
+  const withLegacy = golden.filter(g => g.devBonus && Object.keys(g.devBonus).length).length;
+  const peaks = grads.map(g => Number(g.peak_overall ?? 0));
+  const caps = grads.map(g => { try { return Number((JSON.parse(String(g.career_honours_json ?? '{}')) as { caps?: number }).caps ?? 0); } catch { return 0; } });
+  console.log(`[inputs] ${withAgent} careers signed an agent · ${withLegacy} inherited a legacy bonus · peak overall ${Math.min(...peaks)}-${Math.max(...peaks)} · caps up to ${Math.max(...caps)}`);
+  check(withAgent >= 2, `at least two committed careers signed an agent (got ${withAgent}) — with none, zeroing the agent's effect on greed and marketability changes nothing here`);
+  check(withLegacy >= 1, `at least one committed career inherited a legacy bonus (got ${withLegacy}) — with none, zeroing the bloodline's dev_bonus changes nothing here`);
+  check(Math.max(...peaks) >= 15, `at least one committed career graduates at peak overall >= 15 (max ${Math.max(...peaks)}) — careerHonours' elite-caps branch is unreachable below it`);
+  check(Math.max(...caps) > 0, `at least one committed career earned international caps (max ${Math.max(...caps)})`);
+  const greeds = grads.map(g => Number(g.greed ?? 0));
+  check(Math.max(...greeds) - Math.min(...greeds) >= 8,
+    `the committed careers span a real range of agent greed (${Math.min(...greeds)}-${Math.max(...greeds)}) — a narrow spread means the agent axis is barely exercised`);
 }
 
 console.log(fails

@@ -449,16 +449,20 @@ const netSpread = (m: Measured) => Math.max(0, m.spread - RANGE_SIGMA * m.maxSe)
  *  many points a season". Every entry is a CEILING THAT MUST NOT RISE, not a target, and four of them
  *  are frankly bad numbers that are recorded here because they are what the shipped engine does today.
  *
- *  HOW THEY WERE SET. From a full scale-0.25 run of this exact file (29,548 matches, logged), as
- *  `max(0.15, 1.10 x (printed spread - the table's largest +/-SE))`. The +/-SE term is there because the
- *  bar is on the NOISE-CORRECTED spread, which RISES toward the printed spread as the scale goes up —
- *  a ceiling set on the corrected figure at one scale would go red at a larger one. The 0.15 floor
- *  (5.7 pts/38) keeps the ceiling off zero for the tables that currently measure a flat nothing, so
- *  that WIRING UP A DEAD DIAL — the GK duty, most of all — cannot turn the gate red.
+ *  HOW THEY WERE SET. From a SCALE-1 run of this exact file — the default, ~112k matches, taken in two
+ *  halves and logged — as `max(0.15, 1.05 x the table's printed SPREAD)`, cross-checked against a full
+ *  scale-0.25 run. Note what is on each side of that: the bar is on the spread with the expected noise
+ *  range SUBTRACTED, while the ceiling is 5% over the spread as PRINTED. That gap is deliberate. The
+ *  corrected figure RISES toward the printed one as the scale goes up (the correction shrinks with n),
+ *  so a ceiling set on the corrected figure at one scale goes red at a larger one; setting it just over
+ *  the printed spread makes the bar hold at every scale, at the cost of only tripping once a table's
+ *  printed spread grows by roughly a fifth. The 0.15 floor (5.7 pts/38) keeps the ceiling off zero for
+ *  the tables that currently measure a flat nothing, so that WIRING UP A DEAD DIAL — the GK duty, most
+ *  of all — cannot turn the gate red.
  *
- *  THE FOUR BAD ONES, named rather than buried. At scale 0.25 the choice of preset is worth 25.6 league
- *  points a season at 13-v-13 and 23.2 as the favourite; the choice of FORMATION, with every slider held
- *  neutral, is worth 24.0. A tactical layer in which the shape you pick before kick-off is worth two
+ *  THE FOUR BAD ONES, named rather than buried. At scale 1 the choice of preset is worth 28.1 league
+ *  points a season at 13-v-13 and 22.2 as the favourite; the choice of FORMATION, with every slider held
+ *  neutral, is worth 26.2. A tactical layer in which the shape you pick before kick-off is worth two
  *  thirds of a title race is not balanced, and this file's own header says so: "no option's PPG sits
  *  more than ~2 SE from the middle of its own table". These four sit twenty and thirty SE out. They are
  *  a KNOWN OPEN ITEM — docs/decisions-for-ck.md section 19 (the match-engine rebuild was reverted, and
@@ -466,31 +470,31 @@ const netSpread = (m: Measured) => Math.max(0, m.spread - RANGE_SIGMA * m.maxSe)
  *  gives a low press and a deep line no defensive value at all, which is what ranks the shapes). The
  *  bars below say ONLY that they must not get worse. They are not an endorsement of any of it. */
 const CEILING: Record<string, number> = {
-  '1.1 presets @ 11v15 underdog': 0.25,
-  '1.2 presets @ 13v13 even': 0.89,             // 25.6 pts/38 today. KNOWN BAD — see above.
-  '1.3 presets @ 15v11 favourite': 0.81,        // 23.2 pts/38 today. KNOWN BAD — see above.
-  '2. formations @ 11v15 underdog': 0.30,
-  '2. formations @ 13v13 even': 0.89,           // 24.0 pts/38 today. KNOWN BAD — see above.
+  '1.1 presets @ 11v15 underdog': 0.29,
+  '1.2 presets @ 13v13 even': 0.89,             // 28.1 pts/38 today. KNOWN BAD — see above.
+  '1.3 presets @ 15v11 favourite': 0.72,        // 22.2 pts/38 today. KNOWN BAD — see above.
+  '2. formations @ 11v15 underdog': 0.38,
+  '2. formations @ 13v13 even': 0.88,           // 26.2 pts/38 today. KNOWN BAD — see above.
   '3. GK duties @ 13v13 even': 0.15,            // measures 0.000 today: the GK duty is inert, see KNOWN_INERT.
-  '3. DF duties @ 13v13 even': 0.17,
-  '3. MF duties @ 13v13 even': 0.18,
-  '3. FW duties @ 13v13 even': 0.15,
+  '3. DF duties @ 13v13 even': 0.15,
+  '3. MF duties @ 13v13 even': 0.20,
+  '3. FW duties @ 13v13 even': 0.22,
   '3. GK duties @ 11v15 underdog': 0.15,        // 0.000 today, same reason.
-  '3. DF duties @ 11v15 underdog': 0.20,
+  '3. DF duties @ 11v15 underdog': 0.15,
   '3. MF duties @ 11v15 underdog': 0.15,
   '3. FW duties @ 11v15 underdog': 0.15,
   '3.x whole-squad duty policies @ 13v13': 0.15,
-  '4. mentality @ 13v13 even': 0.29,
-  '4. line @ 13v13 even': 0.46,                 // 11.1 pts/38 today; section 35 says line 0 is optimal
-  '4. press @ 13v13 even': 0.47,                // 11.6 pts/38 today; section 35 says press < 0 is a pure penalty
-  '4. tempo @ 13v13 even': 0.43,
-  '4. width @ 13v13 even': 0.15,                // 0.073 raw — width barely does anything, see section 1
-  '4. mentality @ 11v15 underdog': 0.22,
-  '4. line @ 11v15 underdog': 0.24,
-  '4. press @ 11v15 underdog': 0.36,
+  '4. mentality @ 13v13 even': 0.37,
+  '4. line @ 13v13 even': 0.46,                 // 12.7 pts/38 today; section 35 says line 0 is optimal at every gap
+  '4. press @ 13v13 even': 0.46,                // 12.8 pts/38 today; section 35 says press < 0 is a pure penalty
+  '4. tempo @ 13v13 even': 0.30,
+  '4. width @ 13v13 even': 0.15,                // raw 0.084 — the width slider barely does anything, see section 1
+  '4. mentality @ 11v15 underdog': 0.15,
+  '4. line @ 11v15 underdog': 0.26,
+  '4. press @ 11v15 underdog': 0.32,
   '4. tempo @ 11v15 underdog': 0.15,
   '4. width @ 11v15 underdog': 0.15,
-  '5. instructions @ 13v13': 0.33,
+  '5. instructions @ 13v13': 0.36,
 };
 /** A table with no line above has never been calibrated, so it is judged against the loosest ceiling
  *  any table has — never a free pass, and the output says which tables landed here. Derived, not typed,
@@ -522,18 +526,20 @@ const KNOWN_INERT: string[] = [
 ];
 
 /** How far behind the best preset the two defensive presets may sit at 11-v-15, PPG, noise-corrected.
- *  See bar 2b. This run measures 0.147 (5.6 pts/38) at scale 0.25, but the binding number is not this
- *  file's: docs/decisions-for-ck.md section 35 measured the same gap at 0.310 PPG paired over n=3000,
- *  and a bar set below a figure the project has already measured would be red the moment anyone raised
- *  the scale. So the ceiling is 1.15x that: 0.36 PPG, 13.7 league points a season, which is what it
- *  costs a player to reach for Park the Bus when he is outmatched. It is a ceiling on a KNOWN TRAP. */
-const TRAP_CEILING = 0.36;
+ *  See bar 2b. At scale 1 this fixture measures 0.206 (7.9 pts/38); docs/decisions-for-ck.md section 35
+ *  measures the same idea at 0.310 PPG on a different fixture (paired, both orderings, n=3000), so the
+ *  ceiling is set above BOTH — a bar under a figure the project has already published would be red the
+ *  first time anyone reproduced it. 0.32 PPG is 12.2 league points a season, which is what it costs a
+ *  player to reach for Park the Bus when he is outmatched. It is a ceiling on a KNOWN TRAP, not a
+ *  statement that the trap is acceptable; section 35 says the fix is an engine mechanism that rewards
+ *  sitting deep, and until that exists no bar here can do anything but stop it deepening. */
+const TRAP_CEILING = 0.32;
 
 /** Goals per match, per table. Not a balance bar — a "the engine is still playing football" bar, and it
  *  is here because UPPER BOUNDS CANNOT SEE THE WORST FAILURE. `division_balance.ts` was passed cleanly
  *  by a mutation that disabled one of the engine's four goal paths and left 80% of matches goalless: no
  *  goals, no gaps between options, every spread ceiling satisfied. Across the two calibration runs
- *  (scales 0.02 and 0.25) every table in this file sits between 2.12 and 4.49 goals a match; the band
+ *  (scale 0.02, 0.25 and 1) every table in this file sits between 2.12 and 4.49 goals a match; the band
  *  is that, opened out by about a quarter at each end. */
 const GOALS_FLOOR = 1.7, GOALS_CEIL = 5.7;
 
