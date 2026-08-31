@@ -87,6 +87,18 @@ class Acc {
 let matchCount = 0;
 const started = Date.now();
 
+// ---------------------------------------------------------------- the bars (see THE BARS at the foot)
+
+let fails = 0;
+const check = (ok: boolean, msg: string) => { if (ok) console.log(`  ok   ${msg}`); else { console.log(`  FAIL ${msg}`); fails++; } };
+
+/** Every table this run printed, kept so the bars at the foot judge the SAME numbers the reader just
+ *  read rather than a second, re-derived measurement. `division_balance.ts` learned this the hard way:
+ *  a gate that re-computes its own version of the printed figure can pass while the printed figure is a
+ *  catastrophe, and then nobody can tell which of the two numbers the verdict line refers to. */
+interface Measured { title: string; rows: Array<[string, Acc]>; spread: number; maxSe: number; goals: number; n: number }
+const MEASURED: Measured[] = [];
+
 /** Ranked table with the spread converted into league points over a 38-match season. */
 function table(title: string, rows: Array<[string, Acc]>, note = '') {
   console.log(`\n${title}${note ? `  — ${note}` : ''}`);
@@ -102,8 +114,11 @@ function table(title: string, rows: Array<[string, Acc]>, note = '') {
       `${(a.gf / a.n).toFixed(2)}  ${(a.ga / a.n).toFixed(2)}  ${((a.ppg - worst) * 38).toFixed(1).padStart(6)}  ${a.n}`,
     );
   }
+  const maxSe = Math.max(...rows.map((r) => r[1].se));
   console.log(`  SPREAD ${(best - worst).toFixed(3)} PPG = ${((best - worst) * 38).toFixed(1)} league points a season` +
-    `   (largest ±SE in table ${Math.max(...rows.map((r) => r[1].se)).toFixed(3)})`);
+    `   (largest ±SE in table ${maxSe.toFixed(3)})`);
+  const n = rows.reduce((a, r) => a + r[1].n, 0);
+  MEASURED.push({ title, rows: sorted, spread: best - worst, maxSe, n, goals: n ? rows.reduce((a, r) => a + r[1].gf + r[1].ga, 0) / n : 0 });
 }
 
 function section(name: string, matches: number) {
@@ -286,17 +301,104 @@ if (want('instructions')) {
   table('5. instructions @ 13v13', rows, 'against a fully neutral opponent');
 }
 
-// ---------------------------------------------------------------- 6. sweeper-keeper
+// ---------------------------------------------------------------- 6. wiring census
+
+/** A bit-for-bit fingerprint of a finished match: the score, how many events it produced, and where all
+ *  22 players ended up. Two runs on the same seed that agree on this agree on everything a player could
+ *  ever see. Comparing SCORES alone is not enough in either direction — a change that moves ten players
+ *  a metre and flips no result is still wired, and a change that moves nobody is a dead control on the
+ *  tactics screen no matter what the PPG table says, because a PPG table with n behind it can print a
+ *  gap that is pure sampling noise. This is the one measurement in the file with no error bar on it. */
+const fingerprint = (s: any): string =>
+  `${s.score[0]}-${s.score[1]}|${s.events.length}|` +
+  s.players.map((side: any[]) => side.map((p) => `${p.x.toFixed(4)},${p.y.toFixed(4)}`).join(';')).join('|');
+
+type Side = { tac: Tactics; formation?: Formation; duty?: [Role, Duty | undefined] };
+const build = (seed: number, s: Side): Team => {
+  const t = mk('a', 13, seed, s.formation ?? DEFAULT_TACTICS.formation);
+  return s.duty ? withDuty(t, s.duty[0], s.duty[1]) : t;
+};
+
+const NEUTRAL = DEFAULT_TACTICS;
+/** The setup the sweeper-keeper duty is written for — its doc comment says line >= 1. */
+const HIGH: Tactics = { ...DEFAULT_TACTICS, line: 2, mentality: 1 };
+
+/** EVERY dial a manager can touch, each as a paired A/B on identical seeds against an identical
+ *  opponent. One representative setting per dial: this asks "is this control connected to anything?",
+ *  not "is it good", which is what the PPG tables above are for. */
+const CENSUS: Array<{ label: string; from: Side; to: Side }> = [
+  { label: 'preset Balanced -> Park the Bus', from: { tac: TACTIC_PRESETS['Balanced'] }, to: { tac: TACTIC_PRESETS['Park the Bus'] } },
+  { label: 'preset Balanced -> Gegenpress', from: { tac: TACTIC_PRESETS['Balanced'] }, to: { tac: TACTIC_PRESETS['Gegenpress'], formation: TACTIC_PRESETS['Gegenpress'].formation } },
+  { label: 'formation 4-4-2 -> 3-5-2', from: { tac: NEUTRAL }, to: { tac: { ...NEUTRAL, formation: '3-5-2' }, formation: '3-5-2' } },
+  { label: 'formation 4-4-2 -> 4-1-4-1', from: { tac: NEUTRAL }, to: { tac: { ...NEUTRAL, formation: '4-1-4-1' }, formation: '4-1-4-1' } },
+  { label: 'slider mentality 0 -> +2', from: { tac: NEUTRAL }, to: { tac: { ...NEUTRAL, mentality: 2 } } },
+  { label: 'slider mentality 0 -> -2', from: { tac: NEUTRAL }, to: { tac: { ...NEUTRAL, mentality: -2 } } },
+  { label: 'slider line 0 -> +2', from: { tac: NEUTRAL }, to: { tac: { ...NEUTRAL, line: 2 } } },
+  { label: 'slider line 0 -> -2', from: { tac: NEUTRAL }, to: { tac: { ...NEUTRAL, line: -2 } } },
+  { label: 'slider press 0 -> +2', from: { tac: NEUTRAL }, to: { tac: { ...NEUTRAL, press: 2 } } },
+  { label: 'slider press 0 -> -2', from: { tac: NEUTRAL }, to: { tac: { ...NEUTRAL, press: -2 } } },
+  { label: 'slider tempo 0 -> +2', from: { tac: NEUTRAL }, to: { tac: { ...NEUTRAL, tempo: 2 } } },
+  { label: 'slider tempo 0 -> -2', from: { tac: NEUTRAL }, to: { tac: { ...NEUTRAL, tempo: -2 } } },
+  { label: 'slider width 0 -> +2', from: { tac: NEUTRAL }, to: { tac: { ...NEUTRAL, width: 2 } } },
+  { label: 'slider width 0 -> -2', from: { tac: NEUTRAL }, to: { tac: { ...NEUTRAL, width: -2 } } },
+  // offsideTrap is tested ON TOP OF the high line it needs, because that is the only place it claims to
+  // do anything. Section 19 of docs/decisions-for-ck.md records it as "exactly inert" on the rebuild
+  // branch that was reverted; on the shipped engine it must be measured, not assumed either way.
+  { label: 'instruction offsideTrap (on line +2)', from: { tac: HIGH }, to: { tac: { ...HIGH, offsideTrap: true } } },
+  { label: 'instruction playOutOfDefence', from: { tac: NEUTRAL }, to: { tac: { ...NEUTRAL, playOutOfDefence: true } } },
+  { label: 'instruction attackFocus wide', from: { tac: NEUTRAL }, to: { tac: { ...NEUTRAL, attackFocus: 'wide' } } },
+  { label: 'instruction attackFocus central', from: { tac: NEUTRAL }, to: { tac: { ...NEUTRAL, attackFocus: 'central' } } },
+  // BOTH SIDES NAMED, never `undefined`. The first draft of this census compared auto-duty against a
+  // forced duty and reported `duty FW auto -> poacher  1 / 8 pairs differ`, one pair off being called a
+  // dead control. It is not: 3.y shows defaultDuty() already picks poacher for 716 of 800 generated
+  // forwards, so the comparison was mostly a squad against itself. A wiring test whose baseline is
+  // sometimes the thing under test measures the generator, not the dial.
+  { label: 'duty DF cover -> stopper', from: { tac: NEUTRAL, duty: ['DF', 'cover'] }, to: { tac: NEUTRAL, duty: ['DF', 'stopper'] } },
+  { label: 'duty DF cover -> sweeper', from: { tac: NEUTRAL, duty: ['DF', 'cover'] }, to: { tac: NEUTRAL, duty: ['DF', 'sweeper'] } },
+  { label: 'duty MF box-to-box -> anchor', from: { tac: NEUTRAL, duty: ['MF', 'box-to-box'] }, to: { tac: NEUTRAL, duty: ['MF', 'anchor'] } },
+  { label: 'duty MF box-to-box -> playmaker', from: { tac: NEUTRAL, duty: ['MF', 'box-to-box'] }, to: { tac: NEUTRAL, duty: ['MF', 'playmaker'] } },
+  { label: 'duty FW poacher -> target-man', from: { tac: NEUTRAL, duty: ['FW', 'poacher'] }, to: { tac: NEUTRAL, duty: ['FW', 'target-man'] } },
+  { label: 'duty FW poacher -> pressing-forward', from: { tac: NEUTRAL, duty: ['FW', 'poacher'] }, to: { tac: NEUTRAL, duty: ['FW', 'pressing-forward'] } },
+  { label: 'duty GK keeper -> sweeper-keeper (on line +2)', from: { tac: HIGH, duty: ['GK', 'keeper'] }, to: { tac: HIGH, duty: ['GK', 'sweeper-keeper'] } },
+  { label: 'duty GK keeper -> sweeper-keeper (neutral line)', from: { tac: NEUTRAL, duty: ['GK', 'keeper'] }, to: { tac: NEUTRAL, duty: ['GK', 'sweeper-keeper'] } },
+];
+
+const census: Array<{ label: string; diff: number; pairs: number }> = [];
+let gkPaired = { n: 0, score: 0, events: 0, pos: 0, maxDx: 0 };
 
 if (want('gk')) {
+  // Bit-for-bit divergence is a yes/no fact about a seed, not an average with an error bar, so this needs
+  // a couple of dozen pairs rather than the hundreds the PPG tables need. Capped so the census stays a
+  // rounding error on the run time even at scale 1.
+  const P = Math.max(6, Math.min(24, n(400)));
+  section('6. WIRING CENSUS — which tactical dials are bit-for-bit no-ops? paired on identical seeds', CENSUS.length * P * 2);
+
+  for (const c of CENSUS) {
+    let diff = 0;
+    for (let i = 0; i < P; i++) {
+      const opp = mk('b', 13, i * 11 + 3), seed = i * 31 + 5;
+      const A = play(build(i * 7 + 1, c.from), opp, c.from.tac, DEFAULT_TACTICS, seed);
+      const B = play(build(i * 7 + 1, c.to), opp, c.to.tac, DEFAULT_TACTICS, seed);
+      matchCount += 2;
+      if (fingerprint(A) !== fingerprint(B)) diff++;
+    }
+    census.push({ label: c.label, diff, pairs: P });
+  }
+  const w = Math.max(...CENSUS.map((c) => c.label.length));
+  console.log(`\n  ${P} paired matches per dial; a dial is INERT when not one pair diverges by so much as a metre\n`);
+  for (const r of [...census].sort((x, y) => x.diff - y.diff)) {
+    console.log(`  ${r.label.padEnd(w)}  ${String(r.diff).padStart(3)} / ${r.pairs} pairs differ  ` +
+      `${r.diff === 0 ? '<<<< INERT — this control does nothing' : ''}`);
+  }
+
+  // The original section 6, kept verbatim in what it measures: the keeper's own end position under the
+  // high line the duty is written for. It is the number that has been printed on green builds for days.
   const N = n(400);
-  section('6. SWEEPER-KEEPER — is the duty a no-op? bit-for-bit comparison on identical seeds', N * 2);
   let diffScore = 0, diffPos = 0, diffEvents = 0, maxDx = 0;
-  const tacHigh: Tactics = { ...DEFAULT_TACTICS, line: 2, mentality: 1 };
   for (let i = 0; i < N; i++) {
     const base = mk('a', 13, i * 7 + 1), opp = mk('b', 13, i * 11 + 3);
-    const A = play(withDuty(base, 'GK', 'keeper'), opp, tacHigh, DEFAULT_TACTICS, i * 31 + 5);
-    const B = play(withDuty(base, 'GK', 'sweeper-keeper'), opp, tacHigh, DEFAULT_TACTICS, i * 31 + 5);
+    const A = play(withDuty(base, 'GK', 'keeper'), opp, HIGH, DEFAULT_TACTICS, i * 31 + 5);
+    const B = play(withDuty(base, 'GK', 'sweeper-keeper'), opp, HIGH, DEFAULT_TACTICS, i * 31 + 5);
     matchCount += 2;
     if (A.score[0] !== B.score[0] || A.score[1] !== B.score[1]) diffScore++;
     if (A.events.length !== B.events.length) diffEvents++;
@@ -305,7 +407,8 @@ if (want('gk')) {
     if (dx > 1e-9) diffPos++;
     maxDx = Math.max(maxDx, dx);
   }
-  console.log(`  ${N} paired matches, high line (line=+2, mentality=+1) — the setup the duty is written for`);
+  gkPaired = { n: N, score: diffScore, events: diffEvents, pos: diffPos, maxDx };
+  console.log(`\n  6.x sweeper-keeper in close-up — ${N} paired matches, high line (line=+2, mentality=+1)`);
   console.log(`  matches whose SCORE differs:            ${diffScore} / ${N}`);
   console.log(`  matches whose EVENT COUNT differs:      ${diffEvents} / ${N}`);
   console.log(`  matches whose KEEPER END POSITION moved:${diffPos} / ${N}   (max displacement ${maxDx.toFixed(6)} m)`);
@@ -313,3 +416,232 @@ if (want('gk')) {
 }
 
 console.log(`\n${'-'.repeat(96)}\n${matchCount} matches in ${((Date.now() - started) / 1000).toFixed(0)}s (scale ${SCALE})`);
+
+// ================================================================================================
+// THE BARS — why this file now exits non-zero
+// ================================================================================================
+//
+// This file used to print `VERDICT: sweeper-keeper is a BIT-FOR-BIT NO-OP` and exit 0. It had found a
+// dead control on the tactics screen, said so in plain English, and then told the runner everything was
+// fine. A gate that reports a catastrophe and exits 0 is worse than a gate with a hole, because the hole
+// at least does not claim to have looked.
+//
+// WHAT THESE BARS ARE AND ARE NOT. They are RATCHETS, calibrated against what this engine measures
+// TODAY. Several of the numbers they bless are bad — see the constants, each of which names its own
+// figure. Passing them does not mean the tactical layer is balanced or that every dial works. It means
+// the layer has not got WORSE than the state recorded in docs/decisions-for-ck.md sections 19 (the
+// reverted match-engine rebuild), 35 (the defensive presets are traps) and 11/15 (the duties are
+// defensively indistinguishable). Tighten them when the engine work in section 1 is done; do not widen
+// them to make a red run green.
+//
+// SCALE. This file is a research run excluded from `npm run playtest` for cost (47.7 min at scale 1),
+// and it takes `scale` as argv[2]. Every bar below therefore has to hold at 0.05 and at 1 alike, and a
+// PPG spread does not: with four matches behind an option the printed spread is mostly sampling noise
+// and shrinks as n grows. So the spread bars (a) are skipped entirely on any table whose largest ±SE is
+// above SE_GATE, because such a table cannot support a claim about balance in either direction, and
+// (b) judge the spread with the expected noise range subtracted. Both are stated in the output.
+
+const SE_GATE = 0.15;          // PPG. Above this a table is a smoke test, not evidence.
+const RANGE_SIGMA = 2.5;       // E[range] of k~6 equal options each measured with error s is about 2.5s.
+const netSpread = (m: Measured) => Math.max(0, m.spread - RANGE_SIGMA * m.maxSe);
+
+/** PER-TABLE CEILINGS on the noise-corrected PPG spread — "no single dial may be worth more than this
+ *  many points a season". Every entry is a CEILING THAT MUST NOT RISE, not a target, and four of them
+ *  are frankly bad numbers that are recorded here because they are what the shipped engine does today.
+ *
+ *  HOW THEY WERE SET. From a full scale-0.25 run of this exact file (29,548 matches, logged), as
+ *  `max(0.15, 1.10 x (printed spread - the table's largest +/-SE))`. The +/-SE term is there because the
+ *  bar is on the NOISE-CORRECTED spread, which RISES toward the printed spread as the scale goes up —
+ *  a ceiling set on the corrected figure at one scale would go red at a larger one. The 0.15 floor
+ *  (5.7 pts/38) keeps the ceiling off zero for the tables that currently measure a flat nothing, so
+ *  that WIRING UP A DEAD DIAL — the GK duty, most of all — cannot turn the gate red.
+ *
+ *  THE FOUR BAD ONES, named rather than buried. At scale 0.25 the choice of preset is worth 25.6 league
+ *  points a season at 13-v-13 and 23.2 as the favourite; the choice of FORMATION, with every slider held
+ *  neutral, is worth 24.0. A tactical layer in which the shape you pick before kick-off is worth two
+ *  thirds of a title race is not balanced, and this file's own header says so: "no option's PPG sits
+ *  more than ~2 SE from the middle of its own table". These four sit twenty and thirty SE out. They are
+ *  a KNOWN OPEN ITEM — docs/decisions-for-ck.md section 19 (the match-engine rebuild was reverted, and
+ *  with it the chance creation that would have changed which shapes work) and section 35 (the engine
+ *  gives a low press and a deep line no defensive value at all, which is what ranks the shapes). The
+ *  bars below say ONLY that they must not get worse. They are not an endorsement of any of it. */
+const CEILING: Record<string, number> = {
+  '1.1 presets @ 11v15 underdog': 0.25,
+  '1.2 presets @ 13v13 even': 0.89,             // 25.6 pts/38 today. KNOWN BAD — see above.
+  '1.3 presets @ 15v11 favourite': 0.81,        // 23.2 pts/38 today. KNOWN BAD — see above.
+  '2. formations @ 11v15 underdog': 0.30,
+  '2. formations @ 13v13 even': 0.89,           // 24.0 pts/38 today. KNOWN BAD — see above.
+  '3. GK duties @ 13v13 even': 0.15,            // measures 0.000 today: the GK duty is inert, see KNOWN_INERT.
+  '3. DF duties @ 13v13 even': 0.17,
+  '3. MF duties @ 13v13 even': 0.18,
+  '3. FW duties @ 13v13 even': 0.15,
+  '3. GK duties @ 11v15 underdog': 0.15,        // 0.000 today, same reason.
+  '3. DF duties @ 11v15 underdog': 0.20,
+  '3. MF duties @ 11v15 underdog': 0.15,
+  '3. FW duties @ 11v15 underdog': 0.15,
+  '3.x whole-squad duty policies @ 13v13': 0.15,
+  '4. mentality @ 13v13 even': 0.29,
+  '4. line @ 13v13 even': 0.46,                 // 11.1 pts/38 today; section 35 says line 0 is optimal
+  '4. press @ 13v13 even': 0.47,                // 11.6 pts/38 today; section 35 says press < 0 is a pure penalty
+  '4. tempo @ 13v13 even': 0.43,
+  '4. width @ 13v13 even': 0.15,                // 0.073 raw — width barely does anything, see section 1
+  '4. mentality @ 11v15 underdog': 0.22,
+  '4. line @ 11v15 underdog': 0.24,
+  '4. press @ 11v15 underdog': 0.36,
+  '4. tempo @ 11v15 underdog': 0.15,
+  '4. width @ 11v15 underdog': 0.15,
+  '5. instructions @ 13v13': 0.33,
+};
+/** A table with no line above has never been calibrated, so it is judged against the loosest ceiling
+ *  any table has — never a free pass, and the output says which tables landed here. Derived, not typed,
+ *  so adding a row above cannot silently widen it. */
+const DEFAULT_CEILING = Math.max(...Object.values(CEILING));
+
+/** Fraction of paired matches a WIRED dial must still diverge in. A dial that changes the match in two
+ *  seeds out of twenty-four is most of the way to being another sweeper-keeper. */
+const WIRED_FLOOR = 0.50;
+
+/** How many dials the census must still cover. Pinned so that deleting a row from CENSUS cannot be used
+ *  to make a red run green — the only honest ways out are to fix the dial or to move it to KNOWN_INERT
+ *  in a commit somebody has to justify. */
+const CENSUS_MIN_DIALS = 26;
+
+/** Dials that are ALREADY no-ops on this engine. This list is a confession, not a specification.
+ *
+ *  THE GK DUTY DOES NOTHING. Not "does little" — keeper and sweeper-keeper produce byte-identical
+ *  matches on every seed tried, at a neutral line and at the high line the duty's own doc comment says
+ *  it needs, and section 3's GK duty table prints SPREAD 0.000 PPG as a result. The player is offered a
+ *  choice on the tactics screen that the engine never reads. This is a KNOWN OPEN ITEM
+ *  (docs/decisions-for-ck.md section 19 — the match-engine rebuild that would have given the keeper
+ *  something to do was reverted, and section 1 — the shot-geometry branch it lives on is unmerged).
+ *  Grandfathering it here is what lets the rest of this file gate at all. It is not an endorsement, and
+ *  if it is ever wired up the bar keeps passing, because the bar only forbids the list GROWING. */
+const KNOWN_INERT: string[] = [
+  'duty GK keeper -> sweeper-keeper (on line +2)',
+  'duty GK keeper -> sweeper-keeper (neutral line)',
+];
+
+/** How far behind the best preset the two defensive presets may sit at 11-v-15, PPG, noise-corrected.
+ *  See bar 2b. This run measures 0.147 (5.6 pts/38) at scale 0.25, but the binding number is not this
+ *  file's: docs/decisions-for-ck.md section 35 measured the same gap at 0.310 PPG paired over n=3000,
+ *  and a bar set below a figure the project has already measured would be red the moment anyone raised
+ *  the scale. So the ceiling is 1.15x that: 0.36 PPG, 13.7 league points a season, which is what it
+ *  costs a player to reach for Park the Bus when he is outmatched. It is a ceiling on a KNOWN TRAP. */
+const TRAP_CEILING = 0.36;
+
+/** Goals per match, per table. Not a balance bar — a "the engine is still playing football" bar, and it
+ *  is here because UPPER BOUNDS CANNOT SEE THE WORST FAILURE. `division_balance.ts` was passed cleanly
+ *  by a mutation that disabled one of the engine's four goal paths and left 80% of matches goalless: no
+ *  goals, no gaps between options, every spread ceiling satisfied. Across the two calibration runs
+ *  (scales 0.02 and 0.25) every table in this file sits between 2.12 and 4.49 goals a match; the band
+ *  is that, opened out by about a quarter at each end. */
+const GOALS_FLOOR = 1.7, GOALS_CEIL = 5.7;
+
+console.log(`\n${'='.repeat(96)}\nTHE BARS   (SE gate ${SE_GATE.toFixed(2)} PPG, noise allowance ${RANGE_SIGMA}x the table's largest ±SE)\n${'='.repeat(96)}\n`);
+
+// A run that measured nothing must not pass. `want()` takes an arbitrary comma list, so a typo in the
+// sections argument silently selects no section at all — and every bar below is written as "for each
+// thing measured", which is vacuously true over an empty list. This is the defect `division_balance.ts`
+// found in its own worst-tier records: a gate whose happy path is reachable by not looking.
+if (matchCount === 0 || (MEASURED.length === 0 && census.length === 0)) {
+  console.log(`  FAIL nothing was measured (matchCount ${matchCount}, ${MEASURED.length} tables, ${census.length} dials).`);
+  console.log(`       sections argument was "${process.argv[3] ?? 'all'}" — valid: presets,formations,duties,sliders,instructions,gk`);
+  process.exit(1);
+}
+
+// ---- 1. the wiring census: no dial may join the ones that already do nothing --------------------
+if (census.length) {
+  // NOT `census.length === CENSUS.length` — that compares a list to itself and is true however short the
+  // list gets, so the cheapest way to make a red census green would be to delete the offending row. The
+  // count is pinned to what the tactics screen actually offers today.
+  check(census.length >= CENSUS_MIN_DIALS && census.every((c) => c.pairs >= 6),
+    `the census still covers all ${CENSUS_MIN_DIALS} dials at ${census[0].pairs} pairs each (found ${census.length})`);
+  const inert = census.filter((c) => c.diff === 0);
+  const newlyInert = inert.filter((c) => !KNOWN_INERT.includes(c.label));
+  // READ THIS BEFORE TRUSTING THE ok. Passing means "no NEW dead control appeared". The GK duty is dead
+  // RIGHT NOW: keeper and sweeper-keeper produce byte-identical matches, the same 22 end positions and
+  // the same events, and section 3's GK table prints SPREAD 0.000 because of it. That is a known open
+  // item (docs/decisions-for-ck.md §19, and §1 — the engine rebuild that would have given the keeper
+  // something to do was reverted). It is grandfathered here so the rest of the file can gate; it is not
+  // blessed, and if it is ever fixed this check keeps passing, which is the correct direction.
+  check(newlyInert.length === 0,
+    `no NEW dead control on the tactics screen — ${inert.length} dial(s) inert, all known` +
+    `${newlyInert.length ? `; REGRESSION, these are new: ${newlyInert.map((c) => c.label).join(', ')}` : ''}` +
+    `  [known-inert today: ${KNOWN_INERT.length ? KNOWN_INERT.join(' | ') : 'none'}]`);
+  const feeble = census.filter((c) => c.diff > 0 && c.diff / c.pairs < WIRED_FLOOR);
+  check(feeble.length === 0,
+    `every wired dial still changes at least ${(100 * WIRED_FLOOR).toFixed(0)}% of paired matches` +
+    `${feeble.length ? ` — fading toward inert: ${feeble.map((c) => `${c.label} ${c.diff}/${c.pairs}`).join(', ')}` : ''}`);
+  if (gkPaired.n) {
+    console.log(`  note sweeper-keeper close-up stands at score ${gkPaired.score}/${gkPaired.n}, events ${gkPaired.events}/${gkPaired.n}, ` +
+      `keeper moved ${gkPaired.pos}/${gkPaired.n} (max ${gkPaired.maxDx.toFixed(6)} m) — INERT, and the bar above says only that nothing else joined it`);
+  }
+}
+
+// ---- 2. no dial may be worth more of the season than it already is ------------------------------
+let judged = 0;
+for (const m of MEASURED) {
+  const known = m.title in CEILING;
+  const ceil = known ? CEILING[m.title] : DEFAULT_CEILING;
+  const net = netSpread(m);
+  if (m.maxSe > SE_GATE) {
+    console.log(`  skip ${m.title}: ±SE ${m.maxSe.toFixed(3)} > ${SE_GATE} — too few matches to judge balance (raise scale)`);
+    continue;
+  }
+  judged++;
+  check(net <= ceil,
+    `${m.title}: ${(38 * net).toFixed(1)} pts/38 of real spread, ceiling ${(38 * ceil).toFixed(1)}${known ? '' : ' (UNCALIBRATED table — loosest ceiling in the file)'}` +
+    `   [raw ${m.spread.toFixed(3)} - ${RANGE_SIGMA}x${m.maxSe.toFixed(3)} = ${net.toFixed(3)} vs ${ceil.toFixed(3)} PPG]`);
+}
+if (MEASURED.length && judged === 0) {
+  console.log(`  note every table was below the SE gate — this run is a smoke test of the plumbing, not a`);
+  console.log(`       measurement of balance. Run at scale 0.25 or higher for the spread bars to mean anything.`);
+}
+
+// ---- 2b. the underdog column: the defensive presets are traps, and must not become worse traps ---
+// The file's own header says a balanced layer is one "where the underdog columns do not rank the
+// defensive options last". They ARE last: docs/decisions-for-ck.md §35 measured Park the Bus at 0.074
+// PPG and Counter at 0.125 against Balanced's 0.384 at 11-v-15, n=3000 — because the engine gives a low
+// press and a deep line no defensive value at all, so both presets are built out of the two settings
+// that measure as pure penalties. This cannot be asserted away; it is an engine mechanism that does not
+// exist yet. What CAN be held is the size of the trap.
+const underdog = MEASURED.find((m) => m.title.endsWith('presets @ 11v15 underdog'));
+if (underdog && underdog.maxSe <= SE_GATE) {
+  const ppg = (name: string) => underdog.rows.find(([r]) => r === name)?.[1].ppg ?? NaN;
+  const best = Math.max(...underdog.rows.map(([, a]) => a.ppg));
+  const worstDef = Math.min(ppg('Park the Bus'), ppg('Counter'));
+  const gap = best - worstDef - RANGE_SIGMA * underdog.maxSe;
+  check(Number.isFinite(gap) && gap <= TRAP_CEILING,
+    `reaching for a defensive preset when outmatched costs at most ${(38 * TRAP_CEILING).toFixed(1)} pts/38 ` +
+    `(today ${(38 * Math.max(0, gap)).toFixed(1)}: best ${best.toFixed(3)}, worst of Park the Bus/Counter ${worstDef.toFixed(3)} PPG) ` +
+    `— they are still the worst options in the table, which is §35, not a regression`);
+}
+
+// ---- 3. the game is still a game of football ----------------------------------------------------
+// UPPER BOUNDS ALONE ARE NOT A GATE. An engine that stopped scoring would sail through every spread
+// ceiling above — with no goals there are no gaps between options — and `division_balance.ts` was passed
+// by exactly that mutation before it grew this floor. Every table in this file reports GF and GA, so the
+// cheapest honest floor is the one they already print.
+// PER TABLE, not pooled. A pooled average is dragged back over the line by the sections that still
+// score, so one dead cell in the matrix would hide inside it — and the 11-v-15 preset tables run at
+// 4.5 goals a match while the duty tables run at 2.4, which is a spread a single pooled bar cannot
+// bracket tightly enough to catch anything.
+if (MEASURED.length) {
+  const bad = MEASURED.filter((m) => m.goals < GOALS_FLOOR || m.goals > GOALS_CEIL);
+  const lo = MEASURED.reduce((a, m) => (m.goals < a.goals ? m : a));
+  const hi = MEASURED.reduce((a, m) => (m.goals > a.goals ? m : a));
+  check(bad.length === 0,
+    `every table is still playing football: ${lo.goals.toFixed(2)} (${lo.title}) to ${hi.goals.toFixed(2)} (${hi.title}) goals a match, band ${GOALS_FLOOR}-${GOALS_CEIL}` +
+    `${bad.length ? ` — OUTSIDE: ${bad.map((m) => `${m.title} ${m.goals.toFixed(2)}`).join(', ')}` : ''}`);
+}
+
+// The pass line has to keep saying what is wrong, or the next reader takes a green run as a clean bill
+// of health — which is exactly how `VERDICT: sweeper-keeper is a BIT-FOR-BIT NO-OP` came to be printed
+// on green builds for days without anyone acting on it.
+const stillInert = census.filter((c) => c.diff === 0).length;
+console.log(fails
+  ? `\n✗ ${fails} tactics-matrix bar(s) failed — the tactical layer moved, and not in the direction the ratchet allows`
+  : `\n✓ ${judged} table(s) judged, ${census.length} dial(s) censused, ${stillInert} still inert` +
+    `${stillInert ? ' (the GK duty does nothing — known, docs/decisions-for-ck.md §19/§1)' : ''}` +
+    ` — no worse than the state recorded in docs/decisions-for-ck.md §19/§35, which is all this file claims`);
+if (fails) process.exit(1);

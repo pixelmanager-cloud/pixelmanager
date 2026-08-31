@@ -73,9 +73,15 @@ function summarise(label: string, rows: Row[]) {
     r.successes.forEach((sc, t) => { run += sc * 8 * (r.stakes[t] ?? 1); if (Math.abs(run - rivalScoreAt(t + 1, rate)) <= 60) close++; });
     return close / Math.max(1, r.successes.length) >= 0.25;   // a quarter of the career still in the balance
   }));
-  // repetition: back-to-back identical scenario labels, and avg distinct labels per career
-  let b2b = 0, tot = 0, distinct = 0;
-  for (const r of rows) { for (let k = 1; k < r.labels.length; k++) { tot++; if (r.labels[k] === r.labels[k - 1]) b2b++; } distinct += new Set(r.labels).size; }
+  // repetition: back-to-back identical scenario labels, and avg distinct labels per career.
+  // FRESHNESS IS CARRIED AS A SHARE OF TURNS, not as a raw count. "94 distinct scenarios" only means
+  // anything next to how many moments the career actually contains; shortening the career would drop the
+  // count without the game repeating itself once, and an absolute bar would flag that as a content
+  // regression. Same reasoning as the Brilliant-vs-decent ratio below (PT-706).
+  let b2b = 0, tot = 0, distinct = 0, turns = 0;
+  for (const r of rows) { for (let k = 1; k < r.labels.length; k++) { tot++; if (r.labels[k] === r.labels[k - 1]) b2b++; } distinct += new Set(r.labels).size; turns += r.labels.length; }
+  const b2bPct = 100 * b2b / Math.max(1, tot);
+  const freshness = distinct / Math.max(1, turns);   // 1.0 = every moment of the career is a new scenario
   console.log(`\n[${label}]  avg success ${avg(allSucc).toFixed(2)}`);
   console.log(`  grades:   Solid+ ${solidPlus}%   Brilliant ${brilliant}%   Poor ${poor}%`);
   console.log(`  bad hand (no fair-fit card available): ${badHand}% of turns`);
@@ -94,8 +100,8 @@ function summarise(label: string, rows: Row[]) {
   // growth curve as a bug and push me to flatten the one part of the curve that should not be flat. The
   // late-career ceiling is held separately by "Brilliant stays special".
   const drift = Math.max(...q.slice(1).map((x) => x.br)) - Math.min(...q.slice(1).map((x) => x.br));
-  console.log(`  back-to-back same scenario: ${(100 * b2b / Math.max(1, tot)).toFixed(1)}%   avg distinct scenarios/career: ${(distinct / rows.length).toFixed(0)}`);
-  return { drift, solidPlus: +solidPlus, brilliant: +brilliant, poor: +poor, rivalBeat: +rivalBeat, contested: +contested, badHand: +badHand, avgSucc: avg(allSucc) };
+  console.log(`  back-to-back same scenario: ${b2bPct.toFixed(1)}%   avg distinct scenarios/career: ${(distinct / rows.length).toFixed(0)} of ${(turns / rows.length).toFixed(0)} turns (${(100 * freshness).toFixed(0)}% fresh)`);
+  return { drift, solidPlus: +solidPlus, brilliant: +brilliant, poor: +poor, rivalBeat: +rivalBeat, contested: +contested, badHand: +badHand, avgSucc: avg(allSucc), b2bPct, freshness, turns: turns / Math.max(1, rows.length) };
 }
 
 console.log(`=== Player-career playtest probe — ${N} careers/policy (skilled = always best-fit) ===`);
@@ -143,7 +149,24 @@ const checks: Array<[string, boolean, string]> = [
   ['the rival STAYS a contest, not just beatable (≥ 40%)', sk.contested >= 40, `${sk.contested}%`],
   ['rival is NOT trivial for random play (< 55%)', rn.rivalBeat < 55, `${rn.rivalBeat}%`],
   ['few forced bad hands (< 25% of turns)', sk.badHand < 25, `${sk.badHand}%`],
+  // THE FOURTH QUESTION IN THIS FILE'S OWN HEADER — "is content repetitive?" — was measured, printed, and
+  // asserted by nothing. It is the one player-facing property here that a CONTENT edit can break without
+  // touching a line of engine code: collapse the scenario bank, or make one label dominate the draw, and
+  // every balance number above stays exactly where it is while the career turns into the same moment
+  // ninety times. Today: 0.7% back-to-back, 79% fresh. Both bars are ratchets on those.
+  ['the same moment does not repeat back-to-back (≤ 5% of turns)', sk.b2bPct <= 5, `${sk.b2bPct.toFixed(1)}%`],
+  ['a career keeps finding new moments (≥ 60% of turns are a scenario not yet seen)',
+    sk.freshness >= 0.60, `${(100 * sk.freshness).toFixed(0)}% fresh, ${sk.turns.toFixed(0)} turns`],
+  // ...and the freshness ratio needs a real denominator. A Career that ended after three turns would score
+  // 100% fresh, no back-to-back repeats, and would keep every rate-based bar above perfectly green.
+  ['careers are still a full career long (≥ 60 turns)', sk.turns >= 60, `${sk.turns.toFixed(0)} turns`],
 ];
 let fails = 0;
 for (const [name, ok, val] of checks) { console.log(`  ${ok ? 'OK  ' : 'FLAG'} ${name}  (${val})`); if (!ok) fails++; }
-console.log(fails ? `\n⚠ ${fails} concern(s) flagged` : `\n✓ player-career balance reads healthy`);
+console.log(fails ? `\n✗ ${fails} player-career concern(s) — the card career no longer plays the way it was tuned to` : `\n✓ player-career balance reads healthy`);
+// A PROBE THAT CANNOT FAIL IS SCROLLBACK, NOT A GATE. This file computed all twelve verdicts correctly,
+// printed a `⚠`, and exited 0 whatever it said — so `npm run playtest`, which is an `&&` chain over exit
+// status and never reads stdout, counted it as a pass while it reported concerns. Same defect §36 of
+// docs/decisions-for-ck.md found in manager_career_real.ts, settings_persist.ts, objectives.ts and
+// arc_windows.ts. Measured before this line existed: forcing three checks to FLAG still gave EXIT=0.
+if (fails) process.exit(1);
