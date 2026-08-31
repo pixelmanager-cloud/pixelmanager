@@ -50,7 +50,10 @@ start persisting across a career. Worth doing, but it is a content project with 
 
 ---
 
-## 3. Pre-fix saves lost their history — accept, or attempt a backfill?
+## ~~3. Pre-fix saves lost their history~~ — CK CHOSE: ACCEPT (2026-08-31)
+
+> No backfill. A migration that credits a save with titles it cannot prove is the fabricated-parentage
+> mistake `migrate()` already made once and had to have torn out. The club TIER recovers on its own.
 
 Successions used to call `clearMgr()`, a blanket `removeItem`, so every generation destroyed the club's
 titles, continental/World-Finals wins, hired staff, `arcPrestige`, `arcFired`, `arcTags` and `clubLegacy`.
@@ -796,7 +799,16 @@ sheet. `reconcileSheet` replaces it — designations follow the **man**, not the
 > A critic broke 24 subjects in a copy of the tree and watched the harness pass each time. Seven are closed
 > below; the rest are queued. **Most of the survivors were mine.**
 
-## 40. YOUR ANCHOR QUESTION — the answer has changed, and it moves toward you
+## ~~40. The anchor duty~~ — CK CHOSE: LEAVE IT (2026-08-31)
+
+> Kept. It is one symptom of §35's missing mechanism rather than a defect of its own: five of six midfield
+> duties are defensively identical, so removing one leaves four and fixes nothing. Revisit if §35 gets the
+> engine mechanism that makes sitting deep worth anything.
+>
+> Two things recorded for whoever picks this up later: the effect never changed, only my sample size did
+> (~+0.2 throughout; I wrongly told CK the evidence had moved). And `'anchor'` lives in TWO namespaces —
+> it is a midfield duty AND a card id at `career.ts:51` that sits in `STARTER_IDS`, so a careless removal
+> would break the opening hand of every career.
 
 When you asked whether to remove the anchor duty, I argued against it: measured at n=260 across six opposing
 presets it was **+0.081 [-0.113, 0.275]** against a ball-winner — no difference. `tactical_power` was one of
@@ -858,7 +870,11 @@ lesson is not "use a bigger window."
 
 Both need an assertion, not just a slot in the chain.
 
-## 44. Your existing dev saves carry a scrambled team sheet — new ones do not
+## ~~44. Existing dev saves carry a scrambled team sheet~~ — CK CHOSE: ACCEPT (2026-08-31)
+
+> No auto-repair migration. The lineup editor already badges all six out-of-position slots with a ⚠ and
+> the tooltip "Out of position", so a player can see and fix it in a few clicks. A save created now is
+> 0 of 11 out of position — the damage is stopped, only the old dev saves carry it.
 
 I played the game after tonight's fixes rather than reading the diff, and the save on this machine had
 **6 of 11 slots holding a player of the wrong role**, including a **goalkeeper in midfield with a keeper
