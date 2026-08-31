@@ -127,7 +127,24 @@ for (let i = 0; i < N; i++) {
   roles[p.role] = (roles[p.role] ?? 0) + 1;
 }
 const pct = (r: string) => `${Math.round((roles[r] ?? 0) / N * 100)}%`;
-console.log(`  role spread: GK ${pct('GK')}  DF ${pct('DF')}  MF ${pct('MF')}  FW ${pct('FW')}  (outfield DF/MF/FW should be roughly balanced)`);
+const share = (r: string) => (roles[r] ?? 0) / N;
+console.log(`  role spread: GK ${pct('GK')}  DF ${pct('DF')}  MF ${pct('MF')}  FW ${pct('FW')}  (NOT balanced — FW-heavy; see the reachability note below)`);
+
+// ── ROLE REACHABILITY — which is a different defect from role BALANCE ─────────────────────────────────
+// The spread above is not balanced, and this line used to claim it "should be roughly balanced" while the
+// note at the bottom of this file admitted it isn't. The imbalance is a known open design item (the
+// `deriveStats` normaliser) logged for CK, and it stays deliberately unasserted: a tuning question does
+// not belong in a red build.
+//
+// Reachability does. A mutation restricting `deriveRole` to ['DF','FW'] — so that no career in the game
+// could ever graduate a midfielder — printed `MF 0%` into this very line and exited 0. A probe that
+// reports a real defect into scrollback with no failure path is not a gate, it is a log. The floor is 2%,
+// well under the measured MF share of 6% (about 720 of 12,000 careers), so ordinary tuning drift will not
+// trip it while a role going unreachable trips it at once.
+for (const r of ['GK', 'DF', 'MF', 'FW']) {
+  simCheck(share(r) >= 0.02, `${r} is still a reachable role (${pct(r)} of ${N} careers, floor 2%)`);
+}
+simCheck(share('FW') <= 0.75, `no single role has eaten the game (FW ${pct('FW')}, ceiling 75%)`);
 // trait distribution
 const traitCount: Record<string, number> = {}; let withTrait = 0;
 for (let i = 0; i < N; i++) {
@@ -326,10 +343,12 @@ const hi = Number(avgOvr(0.9)), mid = Number(avgOvr(0.6)), lo = Number(avgOvr(0.
 simCheck(hi > lo, `playing better produces a better player (skill .90 → ${hi}, .30 → ${lo})`);
 simCheck(hi >= mid && mid >= lo, `and it is monotone (${hi} ≥ ${mid} ≥ ${lo})`);
 
-// NOT asserted, deliberately, and worth stating rather than quietly omitting: the role spread printed
-// above is NOT balanced — measured FW ~86% / DF ~14% / MF ~0.4% — and `ROLE_BASELINE`'s own comment claims
-// it is. That is a known open design item (the deriveStats normaliser), logged for CK rather than turned
-// into a red build.
+// The role spread printed above is NOT balanced, and `ROLE_BASELINE`'s own comment claims it is. That
+// remains a known open design item (the deriveStats normaliser), logged for CK rather than turned into a
+// red build. What this note used to say — "measured FW ~86% / DF ~14% / MF ~0.4%" — is now stale by a
+// wide margin: today it measures FW 54% / DF 28% / MF 6% / GK 12%. Midfield went from a rounding error to
+// one career in sixteen, so the item is smaller than it was, not gone. Reachability IS asserted, up where
+// the spread is printed; balance still is not.
 
 console.log(simFailures ? `\n✗ ${simFailures} career-sim invariant(s) failed` : '\n✓ career-sim invariants hold');
 if (simFailures) process.exit(1);
