@@ -131,7 +131,7 @@ export const DECK: Card[] = [
   { id: 'counter-press', name: 'Counter-Press',       tags: ['stamina', 'aggression'] },
   { id: 'up-and-down', name: 'Up and Down',           tags: ['stamina', 'teamwork'] },
   // rare / epic signatures
-  { id: 'maestro',     name: 'Midfield Maestro',      tags: ['creativity', 'composure'], rarity: 'epic' },
+  { id: 'maestro', name: 'Midfield Maestro',      tags: ['creativity', 'composure'], rarity: 'epic' },
   { id: 'destroyer',   name: 'The Destroyer',         tags: ['aggression', 'stamina'], rarity: 'epic' },
   { id: 'fox-box',     name: 'Fox in the Box',        tags: ['composure', 'flair'], rarity: 'rare' },
   { id: 'set-piece',   name: 'Set-Piece Specialist',  tags: ['creativity', 'composure'], rarity: 'rare' },
@@ -1911,32 +1911,56 @@ export function careerOverall(a: CareerPlayerAttrs, role: Role): number {
 // ELIGIBLE for a trait by how it developed; the player locks in up to MAX_TRAITS (the client lets a
 // human choose; the sim auto-picks). Some traits also nudge a stat.
 export const MAX_TRAITS = 2;
-export interface Trait { id: string; name: string; desc: string; eligible: (a: CareerPlayerAttrs, log: Choice[]) => boolean; apply?: (a: CareerPlayerAttrs) => void }
+export interface Trait { id: string; roles?: Role[]; name: string; desc: string; eligible: (a: CareerPlayerAttrs, log: Choice[]) => boolean; apply?: (a: CareerPlayerAttrs) => void }
 export const TRAITS: Trait[] = [
-  { id: 'clinical',  name: 'Clinical Finisher',    desc: 'Ice-cold in front of goal',        eligible: (a) => a.shooting >= 15 && a.composure >= 14, apply: (a) => { a.shooting = clamp(a.shooting + 1, 1, 20); } },
-  { id: 'ballwinner', name: 'Ball-Winner',         desc: 'Wins it back relentlessly',        eligible: (a) => a.tackling >= 15 && a.aggression >= 13, apply: (a) => { a.tackling = clamp(a.tackling + 1, 1, 20); } },
-  { id: 'metronome', name: 'Metronome',            desc: 'Never misplaces a pass',           eligible: (a) => a.passing >= 15 && a.teamwork >= 13 },
-  { id: 'maestro',   name: 'Creative Maestro',     desc: 'Unlocks the tightest defences',    eligible: (a) => a.creativity >= 16 },
+  { id: 'clinical', roles: ['FW'],  name: 'Clinical Finisher',    desc: 'Ice-cold in front of goal',        eligible: (a) => a.shooting >= 15 && a.composure >= 14, apply: (a) => { a.shooting = clamp(a.shooting + 1, 1, 20); } },
+  { id: 'ballwinner', roles: ['DF', 'MF'], name: 'Ball-Winner',         desc: 'Wins it back relentlessly',        eligible: (a) => a.tackling >= 15 && a.aggression >= 13, apply: (a) => { a.tackling = clamp(a.tackling + 1, 1, 20); } },
+  { id: 'metronome', roles: ['MF', 'DF'], name: 'Metronome',            desc: 'Never misplaces a pass',           eligible: (a) => a.passing >= 15 && a.teamwork >= 13 },
+  { id: 'maestro', roles: ['MF', 'FW'],   name: 'Creative Maestro',     desc: 'Unlocks the tightest defences',    eligible: (a) => a.creativity >= 16 },
   { id: 'leader',    name: 'Born Leader',          desc: 'Lifts the whole team',             eligible: (a) => a.leadership >= 15 },
-  { id: 'livewire',  name: 'Livewire',             desc: 'Blistering, frightening pace',     eligible: (a) => a.pace >= 16 },
+  { id: 'livewire', roles: ['FW', 'MF'],  name: 'Livewire',             desc: 'Blistering, frightening pace',     eligible: (a) => a.pace >= 16 },
   { id: 'ironman',   name: 'Iron Man',             desc: 'Runs all day, every day',          eligible: (a) => a.stamina >= 15 && a.strength >= 13 },
   { id: 'deadball',  name: 'Dead-Ball Specialist', desc: 'Lethal from set pieces',           eligible: (a) => a.setPiece >= 15, apply: (a) => { a.setPiece = clamp(a.setPiece + 1, 1, 20); } },
-  { id: 'wall',      name: 'The Wall',             desc: 'Unbeatable between the sticks',     eligible: (a) => a.keeping >= 16 },
+  { id: 'wall', roles: ['GK'],      name: 'The Wall',             desc: 'Unbeatable between the sticks',     eligible: (a) => a.keeping >= 16 },
   { id: 'biggame',   name: 'Big-Game Player',      desc: 'Turns up when it matters most',    eligible: (_a, log) => log.filter((c) => c.stakes >= 2 && c.success >= 0.75).length >= 5 },
-  { id: 'engine',    name: 'Box-to-Box Engine',    desc: 'Covers every blade of grass',      eligible: (a) => a.stamina >= 14 && a.teamwork >= 14, apply: (a) => { a.stamina = clamp(a.stamina + 1, 1, 20); } },
-  { id: 'rock',      name: 'Defensive Rock',       desc: 'Immovable at the back',            eligible: (a) => a.tackling >= 14 && a.strength >= 14, apply: (a) => { a.strength = clamp(a.strength + 1, 1, 20); } },
-  { id: 'spark',     name: 'The Spark',            desc: 'Makes something from nothing',     eligible: (a) => a.creativity >= 14 && a.pace >= 14 },
-  { id: 'aerial',    name: 'Aerial Threat',        desc: 'Wins everything in the air',       eligible: (a) => a.strength >= 14 && a.pace <= 10, apply: (a) => { a.strength = clamp(a.strength + 1, 1, 20); } },
-  { id: 'general2',  name: 'Engine-Room General',  desc: 'Drags the team through matches by will alone', eligible: (a) => a.stamina >= 14 && a.leadership >= 13 },
-  { id: 'showstopper', name: 'Showstopper',        desc: 'The player fans pay to watch',     eligible: (a) => a.creativity >= 15 && a.setPiece >= 13 },
+  { id: 'engine', roles: ['MF'],    name: 'Box-to-Box Engine',    desc: 'Covers every blade of grass',      eligible: (a) => a.stamina >= 14 && a.teamwork >= 14, apply: (a) => { a.stamina = clamp(a.stamina + 1, 1, 20); } },
+  { id: 'rock', roles: ['DF'],      name: 'Defensive Rock',       desc: 'Immovable at the back',            eligible: (a) => a.tackling >= 14 && a.strength >= 14, apply: (a) => { a.strength = clamp(a.strength + 1, 1, 20); } },
+  { id: 'spark', roles: ['MF', 'FW'],     name: 'The Spark',            desc: 'Makes something from nothing',     eligible: (a) => a.creativity >= 14 && a.pace >= 14 },
+  { id: 'aerial', roles: ['DF', 'FW'],    name: 'Aerial Threat',        desc: 'Wins everything in the air',       eligible: (a) => a.strength >= 14 && a.pace <= 10, apply: (a) => { a.strength = clamp(a.strength + 1, 1, 20); } },
+  { id: 'general2', roles: ['MF'],  name: 'Engine-Room General',  desc: 'Drags the team through matches by will alone', eligible: (a) => a.stamina >= 14 && a.leadership >= 13 },
+  { id: 'showstopper', roles: ['FW', 'MF'], name: 'Showstopper',        desc: 'The player fans pay to watch',     eligible: (a) => a.creativity >= 15 && a.setPiece >= 13 },
   { id: 'ironwill',  name: 'Iron Will',            desc: 'Never seems to get injured',       eligible: (a) => a.durability >= 16 },
-  { id: 'quarterback', name: 'The Quarterback',    desc: 'Picks locks from forty yards with a single pass', eligible: (a) => a.passing >= 16, apply: (a) => { a.passing = clamp(a.passing + 1, 1, 20); } },
+  { id: 'quarterback', roles: ['MF', 'DF'], name: 'The Quarterback',    desc: 'Picks locks from forty yards with a single pass', eligible: (a) => a.passing >= 16, apply: (a) => { a.passing = clamp(a.passing + 1, 1, 20); } },
   { id: 'utility',   name: 'Utility Man',          desc: 'Can play almost anywhere and do a job', eligible: (a) => a.teamwork >= 13 && a.positioning >= 13 && a.stamina >= 13 },
 ];
 
-/** Which traits a finished career qualifies for (before the player locks any in). */
-export function eligibleTraits(attrs: CareerPlayerAttrs, log: Choice[]): Trait[] {
-  return TRAITS.filter((t) => t.eligible(attrs, log));
+/** Which traits a finished career qualifies for (before the player locks any in).
+ *
+ *  ROLE AFFINITY FIRST, then catalogue order. Both callers take `.slice(0, MAX_TRAITS)` off the front of
+ *  this list, so whatever sits earliest in TRAITS won — and the catalogue is ordered by nothing in
+ *  particular. `wall` is ninth, behind `metronome` (passing) and `leader` (leadership), which a good
+ *  keeper also qualifies for. Measured over 4,200 generated keepers: 71.3% were ELIGIBLE for The Wall and
+ *  only 59.9% of those got it — and the effect INVERTED with quality, because a better keeper qualifies
+ *  for more of the traits ahead of it. Elite keepers (quality >= 15) held it just 21.7% of the time: the
+ *  better the goalkeeper, the less likely he was to have the goalkeeping trait. The match engine reads
+ *  `hasTrait(gk, 'wall')` directly, so this was a live effect on saves, not a cosmetic card detail.
+ *
+ *  Sorting is STABLE and role-matching traits merely move ahead of role-neutral ones, so a player's
+ *  eligibility is unchanged and untagged traits (leader, ironman, deadball, biggame, ironwill, utility)
+ *  keep their relative order. Passing no role reproduces the old ordering exactly. */
+export function eligibleTraits(attrs: CareerPlayerAttrs, log: Choice[], role?: Role): Trait[] {
+  const eligible = TRAITS.filter((t) => t.eligible(attrs, log));
+  if (!role) return eligible;
+  // PRIMARY role beats SECONDARY beats untagged. A flat includes() test was not enough: `ballwinner`
+  // (['DF','MF']) and `metronome` (['MF','DF']) are both DF-tagged and both sit earlier than `rock`
+  // (['DF']), so a defender still took the first two and lost his own signature trait 49.7% of the time,
+  // rising to 73% for elite defenders. Ordering `roles` puts a trait's home role first, so a trait that
+  // is mainly a midfield one ranks below a defender's own.
+  const fit = (t: Trait) => (t.roles?.[0] === role ? 0 : t.roles?.includes(role) ? 1 : 2);
+  return eligible
+    .map((t, i) => ({ t, i, f: fit(t) }))
+    .sort((a, b) => a.f - b.f || a.i - b.i)
+    .map((x) => x.t);
 }
 
 /** Finish a career log into a complete Player (attrs + role + overall + traits). Genes default to a
@@ -1961,7 +1985,7 @@ export function graduate(log: Choice[], seed: number, genes: Genes = rollGenes(s
   const starTurns = log.filter((c) => c.stakes >= 2 && c.success >= 0.7).length;
   const flair = personality.id === 'maverick' || personality.id === 'mercurial' ? 3 : personality.id === 'biggame' ? 2 : 0;
   const marketability = clamp(Math.round(5 + starTurns * 0.6 + flair + (agentExposure - 1) * 8 + marketBonus + (gRng() - 0.5) * 2), 1, 20);
-  const eligible = eligibleTraits(attrs, log);
+  const eligible = eligibleTraits(attrs, log, deriveRole(attrs)); // role-relevant traits first (see eligibleTraits)
   const chosen = (pickTraits ? pickTraits(eligible) : eligible.slice(0, MAX_TRAITS)).slice(0, MAX_TRAITS);
   for (const t of chosen) t.apply?.(attrs); // trait bonuses apply before role/overall
   const flaws = attrs.durability <= 6 ? ['injury_prone'] : []; // a flaw flag, separate from earned perks

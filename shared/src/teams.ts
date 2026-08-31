@@ -127,7 +127,7 @@ export function mintSquadPlayer(id: string, role: Role, quality: number, seed: n
   // reuse the career trait gates: a squad player earns a trait only if his stats genuinely qualify, so a
   // trait always means something. `log` is empty — play-history traits (e.g. Big-Game Player) need a real
   // career and are reserved for the bloodline star.
-  const earned = eligibleTraits(attrs as unknown as CareerPlayerAttrs, []).slice(0, MAX_TRAITS);
+  const earned = eligibleTraits(attrs as unknown as CareerPlayerAttrs, [], role).slice(0, MAX_TRAITS);
   // A trait has to BITE, not just decorate the card: apply the same stat bump the bloodline star gets when he
   // locks a trait in at graduation, so a squad "Clinical Finisher" really does finish better. The engine has no
   // trait hook of its own, so stats are how a trait reaches the pitch — and the bumps are the tuned +1s the
