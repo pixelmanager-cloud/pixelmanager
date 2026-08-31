@@ -84,14 +84,22 @@ const METER_NAME: Record<string, string> = { authority: 'Coach', peers: 'Teammat
  *  described them only in aggregate ("a strong meter unlocks better summer opportunities") — and it is
  *  permanently dismissible, three chapters before Fans, Sponsors and Partner first appear, so those three
  *  could never be explained to anybody. A tooltip on the bar cannot be dismissed early. (PT-510) */
+// EVERY LINE HERE NAMES WHAT `computeConsequences` ACTUALLY DOES (career.ts:1562). It used to name
+// things it does not. `authority` promised "better coaching offers" — `rollCoaches` takes rng and track
+// and has never read a meter. `family` promised it "steadies you when things go badly" — it pays energy,
+// unconditionally, and resilience-under-pressure is the personality's job. `agent` promised "better
+// moves" — there is no transfer path that reads it. `fans` promised forgiveness and a big-day lift —
+// it pays 120 coins and unlocks one purchase. `school` promised a high-side benefit that has no branch
+// at all. A meter the player is asked to spend turns on has to describe its own effect truthfully, or
+// he is optimising against a description rather than a game.
 const METER_WHAT: Record<string, string> = {
-  authority: 'How your coach rates you. High: better coaching offers and more trust in big moments.',
-  peers: 'How the dressing room sees you. High: teammates back you up when a season turns.',
-  family: 'The people at home. High: a settled head — it steadies you when things go badly.',
-  school: 'Your education. High: a safety net, and a level head the papers can’t rattle.',
-  agent: 'How well your agent is working for you. High: better money and better moves.',
-  fans: 'The terraces. High: they forgive a bad run and lift you on the big days.',
-  sponsors: 'Commercial interest. High: bigger endorsement money between seasons.',
+  authority: 'How the coach rates you. High: first name on the teamsheet, and you start the next season sharp. Low: in and out of the side.',
+  peers: 'How the dressing room sees you. High: you play with the lads behind you. Low: it drags on your form.',
+  family: 'The people at home. High: he comes back from the summer with more in the tank.',
+  school: 'Your education. Let it collapse and the academy starts to worry about him.',
+  agent: 'How well your agent is working for you. High: his profile rises — and that is what he is eventually worth.',
+  fans: 'The terraces. High: a loyalty bonus in the summer, and doors that open off the pitch. Low: it starts to weigh on his form.',
+  sponsors: 'Commercial interest. High: endorsement money between seasons, and a bigger name in the market.',
   partner: 'Life at home as an adult. High: you play with a clear head; low, and it follows you out.',
 };
 // Normalize a typed family name at the source: strip anything that isn't a letter/space/'/- (kills the
@@ -3087,7 +3095,7 @@ class Game {
         return `<div class="cg-coach" data-agent="${a.id}"><div class="cg-cname"><span class="ico-inline">${sprite('briefcase')}</span> ${a.name}</div><div class="cg-cdesc">${a.desc}</div>${effs}</div>`;
       }).join('');
       $('academy-body').innerHTML = `<button id="acad-back2" style="margin-bottom:10px;">← Prospects</button>`
-        + `<div class="cg-prompt">Sign an <b>agent</b> to represent this prospect — it flavours his whole career. <span class="cg-reassure">No wrong pick here: the tags below (big-stage moments, draft luck, wages, transfer value) play out slowly over the years — a first-timer can happily go with whoever fits the story you want.</span></div>` + opts;
+        + `<div class="cg-prompt">Sign an <b>agent</b> to represent this prospect — he is with him for the whole career. <span class="cg-reassure">This is a real trade-off, not a trap. The flashy agencies roughly <b>double</b> his big-stage moments and put better cards in front of him at drafts — but he will want about <b>twice the wage</b> to keep, and will only sign <b>two-season</b> deals. The steady ones give a quieter career and a cheap, loyal pro on four-year terms. The tags on each card say which way it leans.</span></div>` + opts;
       $('acad-back2').addEventListener('click', () => this.showAcademy());
       this.makeActivatable($('academy-body').querySelectorAll('[data-agent]')); // keyboard a11y for the agent picks
       $('academy-body').querySelectorAll('[data-agent]').forEach((b) => b.addEventListener('click', async () => {
@@ -3137,7 +3145,7 @@ class Game {
       else hint = '🎯 Keep answering what each moment asks. The more you play to his strengths, the closer he gets to his potential.';
     } else if (s.phase === 'focus') hint = '🌅 <b>Between seasons</b> — choose how he spends the summer to steer his relationships before the next chapter.';
     else if (s.phase === 'draft') hint = '🃏 <b>Draft cards</b> to build his identity — these are the moves he’ll bring to future moments.';
-    else if (s.phase === 'coach') hint = '🧑‍🏫 <b>Appoint a coach</b> — they sharpen the work you do in their specialty, compounding his growth.';
+    else if (s.phase === 'coach') hint = '🧑‍🏫 <b>Appoint a coach</b> — he rescues moments in his specialty that your deck cannot answer cleanly.';
     if (turn >= 11) localStorage.setItem(this.onbKey('fm_tut_done'), '1'); // graduate the tutorial after chapter 1
     return hint ? `<div class="cg-tut" id="cg-tut">${hint} <button class="cg-tut-x" id="cg-tut-x">Got it ✕</button></div>` : '';
   }
@@ -3706,7 +3714,7 @@ class Game {
       // the demand — what the moment is asking for. The top tag (biggest weight) is the primary thing to
       // match; render as distinct highlighted pills, labelled, so it never reads like just another card tag.
       const demandTags = Object.entries(s.scenario.demand).sort((a, b) => b[1] - a[1]);
-      const tags = demandTags.map(([t], i) => `<span class="cg-dtag${i === 0 ? ' primary' : ''}" title="${i === 0 ? 'Best match — a card with this tag reads the moment perfectly' : 'Also helps — a card with this tag is a partial match'}">${t}</span>`).join('');
+      const tags = demandTags.map(([t], i) => `<span class="cg-dtag${i === 0 ? ' primary' : ''}" title="${i === 0 ? 'The main thing this moment asks for. Matching it is good — but covering a second tag as well is what makes a play great' : 'Also asked for — cover this one too and the play reads far better'}">${t}</span>`).join('');
       // legend so the green/amber pill colours aren't a mystery: green is the ideal card, amber ones still help (PT-44)
       const demandHint = demandTags.length > 1
         ? '— <b class="cg-h-green">green</b> is the best match, <b class="cg-h-amber">amber</b> also helps; a rarer card develops him more when it fits'
@@ -3745,10 +3753,10 @@ class Game {
         + `<div class="cg-prompt">${prompt}${s.coach ? ` · <b>${s.coach.name}</b> is coaching him` : ''}</div>`
         + `<div class="cg-cards">` + (() => { const used = new Set<string>(); return (s.hand ?? []).map((c) => this.cardHtml(c, 'play', mk === 'life', used, s.turn ?? 0)).join(''); })() + `</div>`;
     } else if (s.phase === 'coach' && s.coaches) {
-      body = `<div class="cg-prompt">Appoint a mentor or coach for the coming chapter — they sharpen the work you do in their specialty:</div>`
+      body = `<div class="cg-prompt">Appoint a mentor or coach for the coming chapter — he rescues the moments in his specialty that your deck can't already answer well. He adds nothing to a play that fits perfectly, so cover a <b>gap</b> rather than doubling down on a strength:</div>`
         + s.coaches.map((c) => `<div class="cg-coach" data-act="coach" data-id="${c.id}"><div class="cg-cname">${c.kind === 'mentor' ? '🧭' : '📋'} ${c.name}</div><div class="cg-cdesc">${c.desc} · <i>${c.specialty.join(', ')}</i></div></div>`).join('');
     } else if (s.phase === 'draft' && s.options) {
-      body = `<div class="cg-prompt">Draft <b>${s.picksLeft}</b> card${s.picksLeft === 1 ? '' : 's'} into his deck — the cards you keep decide which moments he can answer well, so they shape the player he becomes. <span class="cg-reassure">Rarity = power: <b>rare</b> and <b>epic</b> cards develop him more when they fit the moment. Cards you don't pick are discarded.</span></div>`
+      body = `<div class="cg-prompt">Draft <b>${s.picksLeft}</b> card${s.picksLeft === 1 ? '' : 's'} into his deck — the cards you keep decide which moments he can answer well, so they shape the player he becomes. <span class="cg-reassure">Rarity = power: <b>rare</b> and <b>epic</b> cards develop him more when they fit the moment. Cards you don't pick go back in the pool — you may well see them again at a later draft.</span></div>`
         + `<div class="cg-cards">` + s.options.map((c) => this.cardHtml(c, 'draft')).join('') + `</div>`;
     } else if (s.phase === 'offer' && s.offers) {
       body = `<div class="cg-prompt">A decision off the pitch — money now, or development?</div>`
@@ -4313,7 +4321,7 @@ class Game {
       return `<div class="th-item"><b>${label}</b> <span class="th-cur">— you've set ${cur}</span><br>${TAC_NOTE[k]}</div>`;
     });
     items.push(`<div class="th-item"><b>Offside Trap</b>${lineHigh ? '' : ' <span class="th-cur">— needs a High or Very High line to do anything</span>'}<br>The back line steps up together as the ball is played through, catching the receiver offside. Mistimed, he's clean through on your keeper.</div>`);
-    items.push(`<div class="th-item"><b>Play Out From Back</b><br>The keeper always takes the short option instead of hitting it long. It draws the opponent's press onto you and opens space behind them — at the cost of losing the ball in dangerous areas when it goes wrong.</div>`);
+    items.push(`<div class="th-item"><b>Play Out From Back</b><br>Biases the keeper towards the shorter, safer option rather than hitting it long. It draws the opponent's press onto you and opens space behind them — at the cost of losing the ball in dangerous areas when it goes wrong.</div>`);
     items.push(`<div class="th-item"><b>Attack Focus</b> <span class="th-cur">— you've set ${this.draftTactics.attackFocus === 'wide' ? 'Wing Focus' : this.draftTactics.attackFocus === 'central' ? 'Central Focus' : 'Balanced'}</span><br>Who gets the ball. Wing Focus floods the flanks for crosses and overlaps; Central Focus works it through the middle for cutbacks and one-twos. Use it to lean into your formation's natural shape, or to correct it.</div>`);
     items.push(`<div class="th-item"><b>Duties</b><br>Each man in the XI also has a duty — the job he does within the shape. The one you've picked is spelled out under his name below, and it's worth changing when a player's strengths don't match his slot.</div>`);
     host.innerHTML = `<details id="tac-help-d"${open ? ' open' : ''}><summary>What do these do?</summary>${items.join('')}</details>`;
@@ -4331,7 +4339,7 @@ class Game {
     // a through-ball, catching a receiver without a real pace edge — fewer clean breakaways conceded.
     const lineHigh = this.draftTactics.line >= 1;
     tac.push(`<label class="tac-toggle" title="${lineHigh ? "The back line steps up together to spring the trap — mistime it and they're through." : 'Only bites with a High or Very High defensive line — the back four needs room to step up together.'}"><span>Offside Trap${lineHigh ? '' : ' (needs high line)'}</span><input type="checkbox" id="e-offside" ${this.draftTactics.offsideTrap ? 'checked' : ''} /></label>`);
-    tac.push(`<label class="tac-toggle" title="Always the safest short option out of the keeper's hands, drawing the opponent's press forward and opening space in behind it — even under pressure, never force a hopeful long ball."><span>Play Out From Back</span><input type="checkbox" id="e-playout" ${this.draftTactics.playOutOfDefence ? 'checked' : ''} /></label>`);
+    tac.push(`<label class="tac-toggle" title="Leans the keeper's distribution towards the short, safe option, drawing the opponent's press forward and opening space in behind it."><span>Play Out From Back</span><input type="checkbox" id="e-playout" ${this.draftTactics.playOutOfDefence ? 'checked' : ''} /></label>`);
     const focus = this.draftTactics.attackFocus ?? 'balanced';
     tac.push(`<label title="Bias who gets the ball — lean into (or correct) your formation's natural width. Wide floods the flanks for crosses; Central packs it through the mixer for cutbacks and one-twos.">Attack Focus<select id="e-focus"><option value="balanced" ${focus === 'balanced' ? 'selected' : ''}>Balanced</option><option value="wide" ${focus === 'wide' ? 'selected' : ''}>Wing Focus</option><option value="central" ${focus === 'central' ? 'selected' : ''}>Central Focus</option></select></label>`);
     $('tac-row').innerHTML = tac.join('');

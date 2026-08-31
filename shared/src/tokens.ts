@@ -57,9 +57,21 @@ export const agentsList = () => AGENTS.map((a) => ({
   id: a.id, name: a.name, desc: a.desc,
   effects: [
     a.exposure >= 1.3 ? '⭐ more big-stage moments' : a.exposure <= 0.9 ? '🛡️ steadier, fewer big stages' : '⚖️ balanced exposure',
-    a.draftLuck >= 1.25 ? '🃏 better card options at drafts' : a.draftLuck <= 1.0 ? '🃏 standard draft luck' : '🃏 slightly better drafts',
-    a.greed >= 3 ? '💷 will want big wages' : a.greed <= -3 ? '🤝 modest wages, loyal' : '💷 fair wage demands',
-    a.valueMod >= 1.15 ? '📈 higher transfer value' : a.valueMod <= 0.95 ? '📉 lower fees' : '📊 standard value',
+    // THRESHOLD THE LABEL ON THE REAL BAG WEIGHTS, NOT THE RAW FLOAT. `career.ts` turns draftLuck into
+    // INTEGER weights — `max(1, round(epic ? luck*luck : rare ? 3*luck : 6))` — which collapses eleven
+    // agents into three distinct profiles. The Showman (1.1) and The Grafter's Agent (1.15) were sold as
+    // "slightly better drafts" while producing bag weights bit-identical to "standard": measured epic-offer
+    // share 2.33% / 2.28% against standard's 2.26%. Do NOT instead de-quantise the weights to make the
+    // floats matter — that changes the size of the draft bag, so a replayed career lands on different
+    // cards and every save in flight drifts onto a different deck.
+    Math.round(a.draftLuck * a.draftLuck) >= 2 ? '🃏 far better card options at drafts'
+      : Math.round(3 * a.draftLuck) >= 4 ? '🃏 more rare cards at drafts' : '🃏 standard draft luck',
+    a.greed >= 3 ? '💷 will want big wages, on short deals' : a.greed <= -3 ? '🤝 modest wages, signs long' : '💷 fair wage demands',
+    // `valueMod` USED TO BE ADVERTISED HERE AND IS WIRED TO NOTHING. Its single read in the whole repo is
+    // the decorative "scouted ceiling ★★★" on the in-career profile card; the money he actually sells for
+    // is `releaseClause(overall, marketability, greed)`, which never sees it. Fees DO vary by agent — by a
+    // measured 1.52x — but entirely through exposure and greed, which the two pills above already describe.
+    // Advertising a fourth independent dial that does not exist made the screen less legible, not more.
   ] as string[],
 }));
 
