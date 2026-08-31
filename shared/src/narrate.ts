@@ -141,6 +141,19 @@ const TAG_TRIUMPH: Record<string, string[]> = {
 // results + reactions by outcome band (≥6 each)
 // register spread within each band so a long career doesn't read one emotional note throughout — wry,
 // tender, tense and flatly matter-of-fact lines sit alongside the straightforwardly triumphant/dismal ones.
+// SAME DEFECT AS CHILD_PERSONALITY, ONE BANK OVER. The result clause and the per-tag triumph clause were
+// also ungated, so a boy playing on a park pitch with a jumper for a flag produced lines like "it was worth
+// the admission alone" (nobody paid), "it will be on a screen somewhere for years" (there are no cameras)
+// and "the away end applauded" (there is no away end). TAG_TRIUMPH is suppressed for children rather than
+// duplicated twenty times over: its whole purpose is professional-register colour per attribute, and the
+// child equivalent of that is simply the child triumph bank.
+const CHILD_RESULTS: Record<string, string[]> = {
+  triumph: ['and it was the best thing anyone did all morning', 'and it came off perfectly', 'and he made it look far easier than it is', 'and everyone on the touchline saw it', 'and it was the moment of the game', 'and he will be telling that one at school', 'and for a second nobody said anything', '— and that, really, was that'],
+  good: ['and it came off', 'and it did the job', '— a good, clean bit of play', 'and it worked', 'and it was tidy stuff', 'and he did it without any fuss', 'and it was exactly the right idea', '— nothing fancy, just right'],
+  mixed: ['with mixed results', '— not quite clean, but it held up', 'and he just about got away with it', 'in fits and starts', '— the right idea, roughly done', 'and it half-worked', '— the ambition was ahead of the ability', 'and somewhere between the two, a shrug will do'],
+  poor: ["but it didn't come off", 'and it fell flat', 'only for it to unravel', 'and the moment slipped away', 'but he could not quite do it', 'and it came to nothing', 'and the chance disappeared', 'and, quietly, he knows exactly why'],
+  dismal: ['and it went badly wrong', '— a moment to forget', 'and it fell apart completely', 'and his face went bright red', 'and it was a total mess', 'and somebody on the touchline groaned', 'and it was a proper howler', 'and there is a funny side, which he will find later'],
+};
 const RESULTS: Record<string, string[]> = {
   triumph: ['and it was sublime', 'and it came off brilliantly', '— pure, unarguable quality', 'and it was worth the admission alone', 'and the whole thing was a joy to watch', 'and he made it look absurdly easy', 'and jaws hit the floor', 'and it was the moment of the match', '— and that, really, is that', 'and there’s something almost tender in how easy he makes it look'],
   good: ['and it came off', 'and it did the job well', '— a good, clean piece of play', 'and it worked a treat', 'and it was tidy, assured stuff', 'and he executed it without fuss', 'and it drew a ripple of approval', 'and it was exactly the right call', '— nothing spectacular, just correct', 'and it’s the kind of moment nobody but the coaches will ever mention again'],
@@ -167,6 +180,26 @@ const CHILD_REACTIONS: Record<string, string[]> = {
 // per-personality VOICE: colours the beat throughout. Multiple OUTCOME-NEUTRAL variants per temperament so
 // it doesn't recycle one line every game, and reads fine on a win OR a loss (observations about the player,
 // never praise for a poor result). Playtest fix PT-3.
+// THE PERSONALITY CLOSER HAD NO CHILD GATE, so the game called an eleven-year-old "Consummate, as ever",
+// "Professional to his boots" and "Nothing about his career will ever be an accident" on park pitches in
+// Grassroots. Its two neighbours in the same sentence — the reaction pool and the cast reaction — were
+// both given CHILD_CHAPTERS gates (PT-103, PT-133); this one was simply missed. Same temperament, same
+// thirteen keys, told in a voice that fits a boy playing on a Sunday morning with his dad on the touchline.
+const CHILD_PERSONALITY: Record<string, string[]> = {
+  maverick: ['He does it his own way, and no coach has talked him out of it yet.', 'Told to pass, he dribbles. It keeps working.', 'He plays like the instructions were for somebody else.', 'You can see the coach deciding not to say anything.', 'He has his own idea about football and he is sticking to it.', 'Nobody taught him that. That is rather the point.', 'He listens politely and then does the other thing.', 'There is a stubborn streak in him you could build a career on.'],
+  fragile: ['He plays like he is worried it will be taken away.', 'A word from the touchline and his head drops.', 'He needs telling he did well, and then he is fine.', 'The confidence comes and goes with the weather.', 'When it goes wrong he takes it home with him.', 'He looks over to check somebody saw.', 'A bad five minutes can become a bad morning.', 'He is still learning that a mistake is only a mistake.'],
+  leader: ['The others already look to him and he is not the oldest.', 'He organises them before the coach can.', 'When his head goes up, so do theirs.', 'He picked the quiet one first for the drill.', 'Somehow he ended up captain without anyone deciding it.', 'He tells them where to stand, and they go.', 'The smaller lads stand next to him on the walk out.', 'He drags the whole group along without seeming to try.'],
+  biggame: ['The bigger the morning, the more he wants the ball.', 'Cup day, and he grew about a foot.', 'He is at his best when it actually counts.', 'The crowd doubled and so did he.', 'Nerves seem to make him better, which is not normal.', 'He asked for it at 1-1. Of course he did.', 'The big ones find him.', 'He plays his best football when someone is watching.'],
+  workhorse: ['He did not stop running all morning.', 'Last one still going when the whistle went.', 'He chased a lost cause and nearly got there.', 'Effort has never once been the question.', 'He ran until his socks were round his ankles.', 'First to every drill, and it is not close.', 'He came off the pitch redder than anyone.', 'You never have to ask him twice to work.'],
+  mercurial: ['You never quite know which lad is turning up.', 'Brilliant one week, invisible the next.', 'Two players in the same shirt.', 'Wonderful and baffling, sometimes in the same minute.', 'The coach has stopped trying to predict him.', 'He can win it on his own or vanish entirely.', 'On his day there is nobody near him. Some days are not his day.', 'A puzzle, and everyone has given up solving it.'],
+  pro: ['His boots were clean before anyone asked.', 'He does the simple things properly, every time.', 'Kit folded, laces done, ready before the rest.', 'No fuss with him. He just gets on with it.', 'He listened to the whole team talk, which is rarer than it sounds.', 'The coach never has to think about him twice.', 'He is the one the others get told to copy.', 'Nothing flashy. Nothing wrong, either.'],
+  latebloom: ['Better every single week, this one.', 'Still growing into himself, and it shows.', 'The best of him is a long way off yet.', 'He is a bit further on than he was last month.', 'The penny drops a little more each time.', 'He was nowhere near this a season ago.', 'Give him time. He is going somewhere.', 'A work in progress, and progressing.'],
+  showman: ['He played the last minute for the four people watching.', 'A grin, and one eye on the touchline.', 'He wants to entertain nearly as much as he wants to win.', 'There is a bit of theatre in everything he does.', 'He tried the difficult one because the easy one is boring.', 'Never happier than with an audience, however small.', 'He celebrated that like a cup final. It was a Tuesday.', 'The showing off is not separate from the talent. It is the same thing.'],
+  stoic: ['You would never know from his face whether it went well.', 'Same expression, whatever happens.', 'He scored, nodded, and jogged back.', 'Calm as anything, this one.', 'Nothing seems to rattle him and nothing seems to thrill him.', 'He gave away nothing at all, as usual.', 'The others were shouting. He was not.', 'Unreadable, at eleven years old.'],
+  hothead: ['It could go off at any moment and everyone knows it.', 'The fuse was short again this morning.', 'He argued with a decision that had gone his way.', 'Passion and trouble, never far apart.', 'The referee already knows his name, which is quite an achievement.', 'One moment from brilliant, one moment from sent off.', 'He plays on the edge because he does not know where else to stand.', 'Channel it and he is frightening. Do not, and he is walking.'],
+  perfectionist: ['He will be thinking about the one he misplaced, not the rest of it.', 'Never satisfied, this lad.', 'His own harshest critic, by a distance.', 'Praise slides straight off him.', 'He asked to do the drill again. Nobody made him.', 'By his own standard there is always more.', 'He was annoyed about a pass, in a game he won.', 'Good is a word he does not seem to accept.'],
+  joker: ['He had them laughing before the coach finished talking.', 'A grin is never far away with him.', 'He keeps it light, whatever the score.', 'The others gravitate to wherever he is standing.', 'Nothing seems to weigh on him for long.', 'He turned a heavy defeat into a joke on the walk back.', 'The messing about is how he handles it, and the coach worked that out early.', 'Morale goes up wherever he is, which counts for something.'],
+};
 const PERSONALITY: Record<string, string[]> = {
   maverick: ['He never does it the easy way.', 'Always the unexpected with him.', 'He’d find a hard way through an open door.', 'Predictable is the one thing he’ll never be.', 'The coaching manual doesn’t have a page for him.', 'He sees a pass nobody else is even looking for.', 'Method to the madness, usually.', 'You don’t coach that out of a player — you just hope he aims it well.', 'He\'d rather be wrong his own way than right someone else\'s.', 'The staff have stopped trying to standardise him.', 'There is always a simpler option, and he is rarely interested in it.', 'Watching him is never dull, whatever else it is.'],
   fragile: ['The nerves were written all over him.', 'You could see the doubt flicker.', 'He carries the weight visibly.', 'Confidence comes and goes with this one.', 'One kind word away from his best, one harsh one from his worst.', 'The talent has never been the question with him.', 'He feels every moment twice as hard as most.', 'A settled head would unlock so much more.', 'He needs an arm round him more than a rollicking.', 'The head goes before the legs ever do.', 'On a good day you forget he was ever in doubt.', 'He believes the bad reviews and not the good ones.'],
@@ -458,7 +491,10 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
     : pickByTurn(SETTINGS[ctx.chapter] ?? SETTINGS.Academy, turn, 7, salt);
   const verb = pick(VERBS[tag]);
   // per-tag result colour on a big success; otherwise the generic band result
-  const result = b === 'triumph' && TAG_TRIUMPH[tag] && rng() < 0.55 ? pickByTurn(TAG_TRIUMPH[tag], turn, 11, salt) : pickByTurn(RESULTS[b], turn, 11, salt);
+  const child = CHILD_CHAPTERS.has(ctx.chapter);
+  const resultPool = child && CHILD_RESULTS[b] ? CHILD_RESULTS[b] : RESULTS[b];
+  const result = !child && b === 'triumph' && TAG_TRIUMPH[tag] && rng() < 0.55
+    ? pickByTurn(TAG_TRIUMPH[tag], turn, 11, salt) : pickByTurn(resultPool, turn, 11, salt);
   // the youngest chapters get park/school reactions, not stadium/scout/bench vocabulary (PT-103)
   const reactionPool = CHILD_CHAPTERS.has(ctx.chapter) && CHILD_REACTIONS[b] ? CHILD_REACTIONS[b] : REACTIONS[b];
   const reaction = pickByTurn(reactionPool, turn, 13, salt);
@@ -471,7 +507,12 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
   // the personality closer is a positive-leaning observation, so only append it on a GOOD outcome — on a
   // failed one it read as praise for the moment that just went wrong (e.g. "the engine doesn't cut out"
   // right after "it fell apart completely") (PT-102). The temperament is still felt via the adverb above.
-  const flavor = (b === 'triumph' || b === 'good') && rng() < 0.6 && PERSONALITY[ctx.personalityId] ? ' ' + pickByTurn(PERSONALITY[ctx.personalityId], turn, 3, salt) : ''; // strided so the small persona bank doesn't recycle one line (PT-104)
+  // the youngest chapters get their own voice for this too — see CHILD_PERSONALITY. Its two neighbours in
+  // this same sentence were child-gated long ago and this one was missed, so a Grassroots boy was being
+  // described as a consummate professional whose career would never be an accident.
+  const personaPool = CHILD_CHAPTERS.has(ctx.chapter) && CHILD_PERSONALITY[ctx.personalityId]
+    ? CHILD_PERSONALITY[ctx.personalityId] : PERSONALITY[ctx.personalityId];
+  const flavor = (b === 'triumph' || b === 'good') && rng() < 0.6 && personaPool ? ' ' + pickByTurn(personaPool, turn, 3, salt) : ''; // strided so the small persona bank doesn't recycle one line (PT-104)
   // a recurring character sometimes reacts
   const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed, ctx.castAvoid) : null;
   const castReact = cast && rng() < 0.25
