@@ -4647,23 +4647,158 @@ export function narrateOffer(name: string, effs: { earn: number; greed: number; 
 // ── CHAPTER RECAP + GRADUATION EPILOGUE (the story-so-far beats) ──
 export interface RecapCtx { chapter: string; nextChapter?: string | null; age: number; careerSeed: number; personalityId?: string; overall?: number; seasonEventId?: string | null; castAvoid?: string }
 /** A short "the story so far" passage shown at an age-chapter boundary. */
+// CHAPTER RECAP banks, hoisted out of the function. `openers` was a local Record rebuilt on every
+// call; `middle` and `ahead` were anonymous inline arrays of 6 and 4. A dynasty reads this seven times
+// a generation, so the same four "what comes next" lines carried every chapter transition of every
+// career in the family. The two that interpolate are functions, for the same reason the cast banks are.
+const RECAP_OPENERS: Record<string, string[]> = {
+  Grassroots: [
+    'The park-pitch years are behind him now.',
+    'It began, as these things do, on a cold Sunday morning.',
+    'Muddy knees and orange segments at half-time — that was the start of it.',
+    'Nobody scouted him then. Nobody needed to.',
+    'Two winters of frozen pitches and a bag of balls that never had enough air in them.',
+    'His dad stood on the same stretch of touchline every Sunday, in the same coat.',
+    'The goalposts were jumpers, and then one day they were not, and nobody wrote the date down.',
+    'It was cold hands, a long walk to the car, and chips on the way home.',
+    'He was ten. That is most of the story, really.',
+    'Somewhere in a drawer at home there is a medal on a ribbon gone stiff.',
+    'A rec, a slope, and a hedge that swallowed one ball a month.',
+    'He played every day, which is the only part of any of this that anybody planned.',
+    'There were mornings his mum sat in the car with the engine running, and he never once minded.',
+    'The football was the easy part. He has already forgotten everything else about those years.',
+  ],
+  Academy: [
+    'The academy has shaped him.',
+    'Two seasons of drills, van journeys and hard lessons.',
+    'Cones, ladders, video sessions — the academy grind, day after day.',
+    'He learned the game properly here, whether he liked it or not.',
+    'Cold van windows, a bag in his lap, and school the next morning.',
+    'Somebody had to tell him he was allowed to be tired.',
+    'He did the drills so often he stopped noticing he was doing them.',
+    'Two years of being told, patiently, what he was not yet.',
+    'His mum drove eleven thousand miles across those seasons and counted none of them.',
+    'For a while, everything he owned smelled faintly of the same laundry room.',
+    'Nine of the lads he started with are not here any more. He counted.',
+    'He was good. He was also thirteen, which nobody in the building said out loud.',
+    'Homework in the back of a minibus, and a coach who at least said his name properly.',
+    'They kept some and let others go, and he has never once asked why he was in the first group.',
+  ],
+  Scholar: [
+    'The scholarship years tested more than his football.',
+    'A scholar now — the game got serious, and so did he.',
+    'Digs, homework, double sessions — the sacrifices started to add up.',
+    'The letters after his name changed. So did the expectations.',
+    'Digs with a family who were kind, and a room that was never quite his.',
+    'He signed the forms in a corridor and went straight back out to train.',
+    'Football stopped being the thing he did and started being the thing he was.',
+    'Boots to clean, floors to sweep, and one lad who never once did his share.',
+    'Two seasons of learning that talent is the entry fee, not the prize.',
+    'A hamstring, a Christmas, and a conversation he did not enjoy.',
+    'Somewhere in there he stopped ringing home every night.',
+    'Two sessions a day for two years, and the staff took his silence about it as progress.',
+    'His first contract of any kind, and it fitted in a jacket pocket.',
+    'He will tell people this was the making of him. He is mostly right.',
+  ],
+  'Youth Team': [
+    'The youth team taught him the game has teeth.',
+    'Reserve football is unglamorous — and it has toughened him.',
+    'Empty stands, cold Tuesday nights, and men twice his age kicking lumps out of him.',
+    'The kid gloves came off in the youth ranks.',
+    'Tuesday nights under four floodlights, and a wind that came straight off the car park.',
+    'He learned what a professional foul is by being on the end of one.',
+    'Somebody twice his age explained the game to him with an elbow.',
+    'The reserves are where a player finds out whether he actually likes this.',
+    'A season of long coach journeys and results nobody wrote down anywhere.',
+    'Nobody watched, which turned out to be the useful part.',
+    'He stopped playing like a boy somewhere that winter and could not tell you when.',
+    'Half of it was football. The other half was learning who to sit next to.',
+    'He put on a stone, lost a yard, and got the yard back by March.',
+    'There is a photograph from that year in which he looks about forty.',
+  ],
+  Breakthrough: [
+    'The breakthrough came, as it had to.',
+    'The first-team door has creaked open.',
+    'A phone call, a training-ground nod, and suddenly he belonged with the big boys.',
+    'The gap between reserve and first team closed faster than anyone expected.',
+    'A door opened because somebody else got hurt, which is how most of them open.',
+    'He was named on a team sheet and read it three times.',
+    'The step up is not the football. It is everything either side of the football.',
+    'One Saturday he was a name in small print, and then he was not.',
+    'He found out he was starting from a lad in the car park.',
+    'His mother watched from a seat somebody else usually sits in.',
+    'Suddenly the mistakes were expensive, and he made three of them before Christmas.',
+    'It arrived the way these things do, all at once and slightly too early.',
+    'A first season of being looked at rather than looked past.',
+    'Twenty years from now this is the bit he will tell badly.',
+  ],
+  'First Team': [
+    'He is a first-team regular now — the shirt his to keep.',
+    'Week after week, he answered the bell.',
+    'The name on the team sheet stopped being a surprise.',
+    'He stopped looking over his shoulder and started setting the standard.',
+    'Thirty-odd Saturdays, and he was there for very nearly all of them.',
+    'The shirt stopped being a reward and started being a job.',
+    'He learned what a bad run feels like from the inside of one.',
+    'Nobody claps a player for being available, which is a shame, because he always was.',
+    'A season measured out in strapping, ice baths and Tuesday mornings.',
+    'His name goes on the sheet first now and the rest is arranged around it.',
+    'He has a chant. He pretends not to know the words to it.',
+    'The crowd stopped waiting to see whether he could do it.',
+    'Somewhere in the middle of it he stopped being the young one.',
+    'There was a stretch of eleven games nobody else will remember and he always will.',
+  ],
+  Establishing: [
+    'He belongs here now.',
+    'No longer the kid — a fixture, a name.',
+    'The dressing room defers to him a little more with each passing month.',
+    'Younger lads watch how he trains now. That tells you everything.',
+    'The young ones use his surname without thinking about it.',
+    'He knows every ground in the division by which way the wind comes in.',
+    'Three seasons in the same shirt, which at his age is a long time.',
+    'He arrives first. That has not changed since he was fifteen.',
+    'Nobody asks whether he can do it any more. They ask what else he has.',
+    'His knees tell him what sort of week it has been.',
+    'Two of the young lads have started strapping their ankles the way he does.',
+    'A new signing asked how long he had been here, and the answer surprised them both.',
+    'He is the one they put next to the new lad at lunch.',
+  ],
+};
+const RECAP_MIDDLE = (cast: CareerCast): string[] => [
+  `${cap(cast.gaffer)} has pushed him hard.`,
+  `${cap(cast.mentor)} has taken him under his wing.`,
+  `He’s measured himself against ${cast.rival} at every step.`,
+  `${cap(cast.captain)} says the makings are there.`,
+  `${cap(cast.gaffer)} has told him almost nothing, which is how that works.`,
+  `${cap(cast.mentor)} keeps answering the phone, whatever the hour.`,
+  `${cap(cast.rival)} is a season ahead on paper and neither of them believes it.`,
+  `${cap(cast.captain)} has started leaving him things to do.`,
+  `${cap(cast.gaffer)} changed one small thing about him and it stuck.`,
+  `${cap(cast.mentor)} was right about the bit he ignored.`,
+  `He has spent the whole stretch a step behind ${cast.rival}, or a step in front.`,
+  `${cap(cast.captain)} pulled him aside once and it did more than a month of sessions.`,
+  `${cap(cast.gaffer)} put him in when nobody else would have.`,
+  `${cap(cast.mentor)} watched more of it than anybody realises.`,
+  `${cap(cast.captain)} tells people he was never worried.`,
+  `${cap(cast.rival)} has had the better headlines and the worse year.`,
+];
+const RECAP_AHEAD = (ctx: { nextChapter?: string | null }): string[] => [
+  ` Now comes the ${ctx.nextChapter} chapter — and the pressure that comes with it.`,
+  ` The ${ctx.nextChapter} stage awaits, tougher than the last.`,
+  ` ${ctx.nextChapter} is next, and it does not care what he has done so far.`,
+  ` The ${ctx.nextChapter} chapter is a different question entirely.`,
+  ` Ahead of him: ${ctx.nextChapter}, and a room full of people who were also the best where they came from.`,
+  ` The ${ctx.nextChapter} chapter starts on a Monday, like everything else does.`,
+  ` Next comes ${ctx.nextChapter}. Nobody gets a run-up.`,
+  ` He goes into ${ctx.nextChapter} with rather more to lose than he had.`,
+];
+
 export function chapterRecap(ctx: RecapCtx): string {
   const rng = mulberry32(((ctx.careerSeed >>> 0) ^ Math.imul(ctx.age, 2654435761)) >>> 0);
   const cast = careerCast(ctx.careerSeed, ctx.castAvoid);
-  const openers: Record<string, string[]> = {
-    Grassroots: ['The park-pitch years are behind him now.', 'It began, as these things do, on a cold Sunday morning.', 'Muddy knees and orange segments at half-time — that was the start of it.', 'Nobody scouted him then. Nobody needed to.'],
-    Academy: ['The academy has shaped him.', 'Two seasons of drills, van journeys and hard lessons.', 'Cones, ladders, video sessions — the academy grind, day after day.', 'He learned the game properly here, whether he liked it or not.'],
-    Scholar: ['The scholarship years tested more than his football.', 'A scholar now — the game got serious, and so did he.', 'Digs, homework, double sessions — the sacrifices started to add up.', 'The letters after his name changed. So did the expectations.'],
-    'Youth Team': ['The youth team taught him the game has teeth.', 'Reserve football is unglamorous — and it has toughened him.', 'Empty stands, cold Tuesday nights, and men twice his age kicking lumps out of him.', 'The kid gloves came off in the youth ranks.'],
-    Breakthrough: ['The breakthrough came, as it had to.', 'The first-team door has creaked open.', 'A phone call, a training-ground nod, and suddenly he belonged with the big boys.', 'The gap between reserve and first team closed faster than anyone expected.'],
-    'First Team': ['He is a first-team regular now — the shirt his to keep.', 'Week after week, he answered the bell.', 'The name on the team sheet stopped being a surprise.', 'He stopped looking over his shoulder and started setting the standard.'],
-    Establishing: ['He belongs here now.', 'No longer the kid — a fixture, a name.', 'The dressing room defers to him a little more with each passing month.', 'Younger lads watch how he trains now. That tells you everything.'],
-  };
-  const open = pickFrom(rng, openers[ctx.chapter] ?? openers.Academy);
-  const middle = pickFrom(rng, [`${cap(cast.gaffer)} has pushed him hard.`, `${cap(cast.mentor)} has taken him under his wing.`, `He’s measured himself against ${cast.rival} at every step.`, `${cap(cast.captain)} says the makings are there.`]);
-  const ahead = ctx.nextChapter
-    ? pickFrom(rng, [` Now comes the ${ctx.nextChapter} chapter — and the pressure that comes with it.`, ` The ${ctx.nextChapter} stage awaits, tougher than the last.`])
-    : '';
+  const open = pickFrom(rng, RECAP_OPENERS[ctx.chapter] ?? RECAP_OPENERS.Academy);
+  const middle = pickFrom(rng, RECAP_MIDDLE(cast));
+  const ahead = ctx.nextChapter ? pickFrom(rng, RECAP_AHEAD(ctx)) : '';
   return `${open} ${middle}${ahead}`;
 }
 /** Capitalise a sentence-initial name. The ONE helper — see PT-810. */
@@ -4680,39 +4815,177 @@ function momentPhrase(m: string): string {
 
 export interface EpilogueCtx { name: string; careerSeed: number; personalityId?: string; overall: number; topTraits?: string[]; role?: string; castAvoid?: string }
 /** An evocative summary of the whole 10→25 journey, shown at graduation before the pro reveal. */
+// GRADUATION EPILOGUE banks. This is the emotional payoff of a whole 10->25 career and a dynasty reads
+// it once a generation, so the same handful of sentences carried every graduation in the family. persLine
+// was ONE fixed sentence per temperament and the tier verdict was a bare ternary; both are banks now.
+const EPI_PERS: Record<string, string[]> = {
+  maverick: [
+    'They never could tame the flair in him — and stopped trying.',
+    'Every coach he had tried to make him simpler. Not one of them managed it.',
+    'He was never going to do it the way it is drawn on a whiteboard.',
+    'The staff have a private word for what he does. It is not a compliment, and they love him for it.',
+    'He has cost sides goals and won them more, and everybody involved knew the deal.',
+  ],
+  fragile: [
+    'The nerves never fully left, but he learned to play through them.',
+    'He was sick before the big ones for years, and went out and played anyway.',
+    'Confidence came and went like weather. He built a career in the gaps.',
+    'Some players never feel it. He felt all of it, every week, and stayed.',
+    'What looks like doubt in him is mostly just paying attention.',
+  ],
+  leader: [
+    'Somewhere along the way, the others started following him.',
+    'He was organising people before anybody thought to give him permission.',
+    'Nobody voted. It simply became obvious.',
+    'He has spent ten years making other players braver than they actually are.',
+    'A room settles when he speaks, and that is not a thing anyone can coach.',
+  ],
+  biggame: [
+    'The bigger the day, the more he seemed to want the ball.',
+    'On the quiet Saturdays he is fine. On the loud ones he is something else.',
+    'He has always played best in front of people who came to watch somebody else.',
+    'Ask him about a routine away game and he will not remember a minute of it.',
+    'The occasion never once made him smaller.',
+  ],
+  workhorse: [
+    'Nobody outworked him. Nobody ever will.',
+    'He has run further in fifteen years than anybody ever bothered to measure.',
+    'Last man off the training pitch for fifteen years, in all weathers.',
+    'Talent was never the point with him, and he would tell you so himself.',
+    'He finished every session as though somebody were still watching.',
+  ],
+  mercurial: [
+    'Brilliant one week, baffling the next — but never boring.',
+    'There are two performances in him and no way of knowing which one has come.',
+    'He has produced afternoons nobody could explain, in both directions.',
+    'You picked him and found out afterwards whether you had been right.',
+    'The good days paid for the bad ones. Mostly.',
+  ],
+  pro: [
+    'He has never once been late, and quietly thinks less of those who are.',
+    'Sleep, food, gym, sleep. It is not interesting and it has worked.',
+    'Fifteen years and not one conversation about his attitude.',
+    'He treats a Tuesday in February exactly as he treats a final.',
+  ],
+  latebloom: [
+    'He was never the best kid in the room — until, quietly, he was.',
+    'Everybody ahead of him got there faster and stopped sooner.',
+    'Three coaches had him down as a squad player. All three were wrong.',
+    'He grew late, learned late, and arrived anyway.',
+    'Nobody who watched him at fourteen would have put money on this.',
+  ],
+  showman: [
+    'He always played with a grin, and the crowd always grinned back.',
+    'He has never seen a full stand and thought anything but good.',
+    'Half of what he does is for the eleven people in the front row.',
+    'He plays like a man who cannot quite believe he is allowed to.',
+    'The applause was never the reward. It was the reason.',
+  ],
+  stoic: [
+    'Nobody ever quite worked out what was going on behind those eyes. Maybe that was the point.',
+    'He has celebrated goals the way other men acknowledge a delivery.',
+    'You would not know from his face whether it was a final or a five-a-side.',
+    'He says about nine words a week and every one of them lands.',
+    'Whatever it cost him, he never put it down anywhere anybody could see.',
+  ],
+  hothead: [
+    'The temper cost him as much as it won him — and it won him plenty.',
+    'Three referees know his name and none of them by choice.',
+    'He has apologised to more team-mates than most players have played with.',
+    'The fire is why he is here and why he very nearly was not.',
+    'Take the temper out and you take the player out. They all tried anyway.',
+  ],
+  perfectionist: [
+    'He was never once satisfied. It’s exactly why he got this far.',
+    'He came off after the best game of his life annoyed about a pass in the first half.',
+    'Nobody has ever told him it was good enough and been believed.',
+    'He watches his own worst moments on a loop, and the staff have stopped fighting it.',
+    'A win with a mistake in it is, to him, a defeat with a better result.',
+  ],
+  joker: [
+    'He never took himself too seriously. Everyone else took him plenty seriously enough.',
+    'He kept a dressing room laughing through two relegation runs.',
+    'The messing about stops at the white line, which is the whole trick of it.',
+    'Every club he has been at has a story about him and a wheelie bin.',
+    'He has never been the best player at a club and has always been the one they miss.',
+  ],
+};
+const EPI_TIER: Record<string, string[]> = {
+  overall17plus: [
+    'a genuine star in the making',
+    'the sort of player a club builds a decade around',
+    'a footballer the rest of the division will have to plan for',
+  ],
+  overall14to16: [
+    'a real player, ready for the step up',
+    'ready, by any honest measure, for the level above',
+    'a player with nothing much left to prove at this age',
+  ],
+  overall11to13: [
+    'a dependable pro with more to give',
+    'a proper professional with the best of it still ahead',
+    'a footballer who will have a career, and will know he earned it',
+  ],
+  overallBelow11: [
+    'a grafter who has earned his shot',
+    'a hard-working lad who has been given his chance',
+    'a player nobody is certain about, including the people who trained him',
+  ],
+};
+const EPI_START: string[] = [
+  'It started on a park pitch with jumpers for goalposts.',
+  'Fifteen years ago he was the smallest kid on a muddy rec.',
+  'From a scatter of parents on a touchline to this.',
+  'A school report once said he needed to concentrate less on football and more on his times tables.',
+  'He can still remember the exact colour of his first proper boots.',
+  'Somewhere there’s a photo of him, aged ten, grinning with a medal too big for a ten-year-old’s neck.',
+  'His first team had a sponsor who ran a carpet shop and a kit that never once matched.',
+  'For an entire season he was the smallest boy in his year and the best player in it.',
+  'There is a video somewhere, shot on somebody’s phone, of a goal in a game that did not matter.',
+  'Fifteen years ago the great question of his life was whether he would be picked.',
+  'The first pitch he played on had a slope you could see from the road.',
+  'He learned to strike a ball against a garage door that still carries the mark.',
+  'Nobody in four generations of his family had done this. There is still only him.',
+  'He started out in a shirt three sizes too big, with the sleeves turned up twice.',
+  'Once, at eleven, a man told him he was too small, and he has never forgotten the face.',
+  'From orange segments and a whistle borrowed off a teacher, to this.',
+  'The part nobody films is the fifteen years of Tuesday nights that got him here.',
+  'He was never the quickest. He simply never stopped turning up.',
+];
+const EPI_CLOSE = (cast: CareerCast): string[] => [
+  `${cap(cast.gaffer)} always said he’d make it. He was right.`,
+  `${cap(cast.mentor)} — the same voice at the end of the phone through every crossroads — shook his hand and said little. He didn’t need to.`,
+  `Somewhere, ${cast.rival} — the mate turned rival turned, somehow, still a friend — is watching, and wondering.`,
+  `His family were there for every step of it — and they’re still there now.`,
+  `${cap(cast.captain)} is already talking about a dressing room with him in it.`,
+  `Fifteen years of Sunday mornings and van journeys, and it was worth every single one.`,
+  `He and ${cast.rival} came up together, fell out, and came out the other side still able to look each other in the eye. That, in the end, might be the real story.`,
+  `${cap(cast.mentor)}’s advice is still in his head, all these years on — even the bits of it he eventually chose to ignore.`,
+  `${cap(cast.gaffer)} will take some of the credit for this, and has earned a little of it.`,
+  `${cap(cast.mentor)} told him once that the game owes nobody anything. It has stayed with him.`,
+  `${cap(cast.rival)} got there first, and neither of them mentions it any more.`,
+  `${cap(cast.captain)} rang to say well done and talked for about forty seconds.`,
+  `His father has kept every programme, in order, in a box he will not be throwing out.`,
+  `${cap(cast.gaffer)} is already thinking about next season. That is the whole of the job.`,
+  `A coach from a park pitch is telling people, right now, that he always knew.`,
+  `${cap(cast.mentor)} is retired and watches more football than he ever did.`,
+  `${cap(cast.captain)} has said, more than once, that the dressing room is better with him in it.`,
+  `He and ${cast.rival} will be asked about each other for the next fifteen years.`,
+  `The people who mattered sat in the same three seats every time. They are sitting there today.`,
+  `${cap(cast.gaffer)} shook his hand and got his brother’s name wrong again.`,
+  `There are fifteen years of this ahead of him, and he has the sense to know it.`,
+  `Nothing about the next ten years is promised. That was always true, and he has always known it.`,
+  `${cap(cast.mentor)} said one sentence to him at the door and he has repeated it to nobody.`,
+  `There will be people who write him off from here. He tends to find that useful.`,
+];
+
 export function graduationEpilogue(ctx: EpilogueCtx): string {
   const rng = mulberry32(((ctx.careerSeed >>> 0) ^ 0x5f3759df) >>> 0);
   const cast = careerCast(ctx.careerSeed, ctx.castAvoid);
-  const tier = ctx.overall >= 17 ? 'a genuine star in the making' : ctx.overall >= 14 ? 'a real player, ready for the step up' : ctx.overall >= 11 ? 'a dependable pro with more to give' : 'a grafter who has earned his shot';
-  const persLine: Record<string, string> = {
-    maverick: 'They never could tame the flair in him — and stopped trying.',
-    fragile: 'The nerves never fully left, but he learned to play through them.',
-    leader: 'Somewhere along the way, the others started following him.',
-    biggame: 'The bigger the day, the more he seemed to want the ball.',
-    workhorse: 'Nobody outworked him. Nobody ever will.',
-    mercurial: 'Brilliant one week, baffling the next — but never boring.',
-    pro: 'Professional to his boots, from the very first session.',
-    latebloom: 'He was never the best kid in the room — until, quietly, he was.',
-    showman: 'He always played with a grin, and the crowd always grinned back.',
-    stoic: 'Nobody ever quite worked out what was going on behind those eyes. Maybe that was the point.',
-    hothead: 'The temper cost him as much as it won him — and it won him plenty.',
-    perfectionist: 'He was never once satisfied. It’s exactly why he got this far.',
-    joker: 'He never took himself too seriously. Everyone else took him plenty seriously enough.',
-  };
-  const pers = ctx.personalityId && persLine[ctx.personalityId] ? ' ' + persLine[ctx.personalityId] : '';
-  const start = pickFrom(rng, [
-    'It started on a park pitch with jumpers for goalposts.', 'Fifteen years ago he was the smallest kid on a muddy rec.', 'From a scatter of parents on a touchline to this.',
-    'A school report once said he needed to concentrate less on football and more on his times tables.', 'He can still remember the exact colour of his first proper boots.',
-    'Somewhere there’s a photo of him, aged ten, grinning with a medal too big for a ten-year-old’s neck.',
-  ]);
-  const close = pickFrom(rng, [
-    `${cap(cast.gaffer)} always said he’d make it. He was right.`,
-    `${cap(cast.mentor)} — the same voice at the end of the phone through every crossroads — shook his hand and said little. He didn’t need to.`,
-    `Somewhere, ${cast.rival} — the mate turned rival turned, somehow, still a friend — is watching, and wondering.`,
-    `His family were there for every step of it — and they’re still there now.`, `${cap(cast.captain)} is already talking about a dressing room with him in it.`,
-    `Fifteen years of Sunday mornings and van journeys, and it was worth every single one.`,
-    `He and ${cast.rival} came up together, fell out, and came out the other side still able to look each other in the eye. That, in the end, might be the real story.`,
-    `${cap(cast.mentor)}’s advice is still in his head, all these years on — even the bits of it he eventually chose to ignore.`,
-  ]);
+  const band = ctx.overall >= 17 ? 'overall17plus' : ctx.overall >= 14 ? 'overall14to16' : ctx.overall >= 11 ? 'overall11to13' : 'overallBelow11';
+  const tier = pickFrom(rng, EPI_TIER[band]);
+  const pers = ctx.personalityId && EPI_PERS[ctx.personalityId] ? ' ' + pickFrom(rng, EPI_PERS[ctx.personalityId]) : '';
+  const start = pickFrom(rng, EPI_START);
+  const close = pickFrom(rng, EPI_CLOSE(cast));
   return `${start} At twenty-five, ${ctx.name} emerges as ${tier}.${pers} ${close}`;
 }

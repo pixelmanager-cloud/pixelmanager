@@ -153,7 +153,7 @@ const checks: Array<[string, boolean, string]> = [
   // ── the four bars that hold §23's actual findings. A count of 12x cannot see a bank being halved: cut
   //    CHARLINE from 17 lines to 8 and the worst line goes from 9x to maybe 14x, but uniqueness and
   //    first-repeat move immediately and unmistakably. These are the ones that catch a content EDIT.
-  [`REGRESSION BAR — the first repeat arrives no earlier than line ${MIN_FIRST_REPEAT_LINE} (§23 known-bad: 47 today, and 47 is already too soon)`,
+  [`REGRESSION BAR — the first repeat arrives no earlier than line ${MIN_FIRST_REPEAT_LINE} (was 47 when this bar was written; the §23 authoring pass took it to 132)`,
     medFirst >= MIN_FIRST_REPEAT_LINE, `line ${medFirst}`],
   [`a career's prose stays >= ${MIN_CAREER_UNIQUE_PCT}% distinct (median career)`, medUnique >= MIN_CAREER_UNIQUE_PCT, `${medUnique.toFixed(1)}%`],
   [`even the worst-served career stays >= ${MIN_WORST_CAREER_UNIQUE_PCT}% distinct`, worstUnique >= MIN_WORST_CAREER_UNIQUE_PCT, `${worstUnique.toFixed(1)}%`],
