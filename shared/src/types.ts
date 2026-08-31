@@ -133,6 +133,15 @@ export interface MatchEvent {
   playerName?: string;
   /** second player involved (e.g. the receiver of a pass) */
   playerName2?: string;
+  /** STABLE IDENTITY, because the NAME is not one. `deriveMatchStats` keyed every stat by player name, and
+   *  `generateClub` draws from 18 first names x 18 surnames = 324 combinations for a twenty-man roster —
+   *  so 40% of matchday squads contain two men called the same thing. Measured over 400 matches: 378
+   *  players who took the field got no row in the report at all, 150 rows credited an unused substitute
+   *  with an appearance he never made, and 18 of those handed him goals or Player of the Match. One had a
+   *  bench player credited with FOUR GOALS while the man who actually scored them was absent from the
+   *  report. Names are for reading; ids are for counting. */
+  playerId?: string;
+  playerId2?: string;
   /** rough pitch zone the action happened in, from the acting team's perspective */
   zone?: 'def' | 'mid' | 'att';
   /** the acting move sprang from a fast counter-attack (commentary colour only) */

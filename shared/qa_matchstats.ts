@@ -59,22 +59,37 @@ interface Fixture {
 
 /** One real match, played out, with real benches (buildXI supplies them) and the stats derived from
  *  the finished state — the exact pipeline the post-match screen would use. */
+/** Resolve a roster id from a display name. Only for building SYNTHETIC fixtures — the engine emits ids
+ *  directly, and the whole point of this file is that a name is not an identity. */
+const idOf = (t: Team, who: string) => [...t.players, ...(t.bench ?? [])].find((p) => p.name === who)?.id;
+
 function playFixture(i: number, homeQ: number, awayQ: number): Fixture {
   const ch = generateClub('hom', 'Home', 0x1, homeQ, i * 7919 + 1, true);
   const ca = generateClub('awy', 'Away', 0x2, awayQ, i * 104729 + 3, true);
   const home = buildXI(ch, autoPickXI(ch, '4-4-2'));
   const away = buildXI(ca, autoPickXI(ca, '4-4-2'));
+  // SNAPSHOT THE STARTING ELEVEN BEFORE KICK-OFF. `makeSub` REPLACES teams[t].players[outI], so by full
+  // time the XI array holds whoever finished and every substituted player has vanished from it.
+  const startXI: [Player[], Player[]] = [[...home.players], [...away.players]];
   const m = new MatchEngine([home, away], i * 31 + 5, [DEFAULT_TACTICS, DEFAULT_TACTICS]);
   while (!m.state.finished) m.tick();
   const s = m.state;
   const teams: [Team, Team] = [home, away];
-  const onField: [Player[], Player[]] = [[...home.players], [...away.players]];
+  // BY ID, NOT BY NAME — this builder had the exact defect the file exists to catch. It resolved the
+  // substitute off the bench with `find(p => p.name === e.playerName)`, so on a squad with two men called
+  // the same thing it picked whichever came first, and it seeded from the POST-match XI, which no longer
+  // contains anyone who was substituted. Between them that reported 13 men on the field for a side that
+  // played 14 (eleven starters and three substitutes), and blamed the discrepancy on deriveMatchStats.
+  const onField: [Player[], Player[]] = [[...startXI[0]], [...startXI[1]]];
   const subsOn: [number, number] = [0, 0];
+  const seen: [Set<string>, Set<string>] = [new Set(startXI[0].map((p) => p.id)), new Set(startXI[1].map((p) => p.id))];
   for (const e of s.events) {
-    if (e.type !== 'sub' || !e.playerName) continue;
+    if (e.type !== 'sub' || !e.playerId) continue;
     subsOn[e.teamIdx]++;
-    const b = (teams[e.teamIdx].bench ?? []).find((p) => p.name === e.playerName);
-    if (b) onField[e.teamIdx].push(b);
+    if (seen[e.teamIdx].has(e.playerId)) continue;
+    const b = (teams[e.teamIdx].bench ?? []).find((p) => p.id === e.playerId)
+      ?? teams[e.teamIdx].players.find((p) => p.id === e.playerId);
+    if (b) { onField[e.teamIdx].push(b); seen[e.teamIdx].add(b.id); }
   }
   return {
     i, teams, score: [s.score[0], s.score[1]], events: s.events,
@@ -172,7 +187,11 @@ console.log('\n=== 2. player of the match ===');
     })),
   });
   const H = flat('H'), A = flat('A');
-  const goal = (teamIdx: 0 | 1, who: string): MatchEvent => ({ minute: 10, type: 'goal', teamIdx, playerName: who });
+  // SYNTHETIC EVENTS NOW CARRY AN ID, because that is the contract deriveMatchStats reads. These fixtures
+  // were written against the name-keyed version; an event with a name and no id is exactly what the engine
+  // no longer emits, and asserting on it would be testing a shape nothing produces.
+  const goal = (teamIdx: 0 | 1, who: string): MatchEvent =>
+    ({ minute: 10, type: 'goal', teamIdx, playerName: who, playerId: idOf(teamIdx === 0 ? H : A, who) });
   const potmOf = (e: MatchEvent[], r: [number, number]) => {
     const [h, a] = deriveMatchStats(H, A, e, r);
     const w = [...h, ...a].filter((x) => x.potm === 1);
@@ -216,10 +235,12 @@ console.log('\n=== 3. a row in the report is a PLAYER ===');
       played += field.length;
       reported += rows.length;
 
-      // EXACT, not approximate: the function collapses the match onto NAMES, so the row count is the
-      // number of distinct names that took the field. If it ever stops being exactly that, the loss has
-      // a second cause and this check goes red instead of the damage silently changing shape.
-      if (rows.length !== fieldNames.size) rowsVsNames.push(`m${f.i} side${side} ${rows.length} rows for ${fieldNames.size} distinct on-field names`);
+      // EXACT, and now keyed on MEN rather than names. This used to assert `rows.length === fieldNames.size`
+      // — the right check while the function collapsed the match onto names, and precisely the wrong one
+      // once it stopped. MatchEvent carries playerId now and deriveMatchStats keys on it, so two players
+      // sharing a name correctly get TWO rows: the assertion fired at "14 rows for 13 distinct on-field
+      // names", which is the fix working. One row per man who took the field, no more and no fewer.
+      if (rows.length !== fieldIds.size) rowsVsNames.push(`m${f.i} side${side} ${rows.length} rows for ${fieldIds.size} men on the field`);
 
       const rowIds = new Set(rows.map((r) => r.id));
       const missing = field.filter((p) => !rowIds.has(p.id));
@@ -286,7 +307,7 @@ console.log('\n=== 4. degenerate input ===');
   ok('...and a saved shot is not a goal', nil[0].every((r) => r.goals === 0) && nil[1].every((r) => r.goals === 0));
 
   // One side never touches the ball: it is still a team of eleven who played.
-  const oneSided: MatchEvent[] = [0, 1, 2, 3].map((k) => ({ minute: 10 + 10 * k, type: 'goal', teamIdx: 0, playerName: 'H Player9', playerName2: 'H Player7' }));
+  const oneSided: MatchEvent[] = [0, 1, 2, 3].map((k) => ({ minute: 10 + 10 * k, type: 'goal', teamIdx: 0, playerName: 'H Player9', playerId: idOf(H, 'H Player9'), playerName2: 'H Player7', playerId2: idOf(H, 'H Player7') }));
   const os = deriveMatchStats(H, A, oneSided, [4, 0]);
   ok('a side that never touched the ball still gets its eleven appearances', os[1].length === 11 && zero(os[1]), `${os[1].length} rows`);
   ok('...and not one goal or assist', os[1].every((r) => r.goals === 0 && r.assists === 0));
@@ -298,7 +319,7 @@ console.log('\n=== 4. degenerate input ===');
   // Same name on BOTH teams — legal, and common in a 324-name pool. Must not cross the halfway line.
   const twin = mk('T', 11);
   const clash: Team = { ...twin, id: 'T', players: twin.players.map((p, i) => ({ ...p, name: `H Player${i}` })) };
-  const cross = deriveMatchStats(H, clash, [{ minute: 5, type: 'goal', teamIdx: 1, playerName: 'H Player9' }], [0, 1]);
+  const cross = deriveMatchStats(H, clash, [{ minute: 5, type: 'goal', teamIdx: 1, playerName: 'H Player9', playerId: idOf(clash, 'H Player9') }], [0, 1]);
   ok('a name shared by both teams does not leak across sides',
     cross[0].every((r) => r.goals === 0) && cross[1].reduce((a, r) => a + r.goals, 0) === 1 && cross[1].every((r) => r.id.startsWith('T-')),
     `home ${cross[0].reduce((a, r) => a + r.goals, 0)}g, away ${cross[1].reduce((a, r) => a + r.goals, 0)}g`);

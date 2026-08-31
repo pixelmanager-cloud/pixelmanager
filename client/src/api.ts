@@ -20,7 +20,7 @@ import {
   FACILITY_KEYS, FACILITY_META, MAX_LEVEL, upgradeCost, effectAt, seasonFacilityIncome, squadMarketability,
   seasonUpkeep, facilityUpkeep, applyDisrepair, mothballRefund, facLevel,
   youthPoolBonus, youthUpgradeChance, dormIntakeBonus, scoutHitMult, scoutCostDiscount, scoutExtraTrips,
-  generatePool, trialistAt, LOANEE_CAP, DESTINATIONS, destinationById, rollMission, travelMs as travelMsPure, previewOdds,
+  generatePool, trialistAt, LOANEE_CAP, DESTINATIONS, destinationById, rollMission, travelMs as travelMsPure, travelMatchdays, previewOdds,
   gaffersDiaryEntry,
   rollGenes, updateMorale, moraleEffects, rollMatchInjuries, developAttrs,
   houseRenown, branchCareer, rivalStandings, renownPedigree, renownBidMult, renownIncomeMult, type HouseMember,
@@ -132,7 +132,7 @@ export interface Trialist { index: number; id: string; name: string; role: strin
 export interface ScoutDestination { id: string; name: string; blurb: string; hitRate: number; upgradeChance: number; weights: Record<string, number>; travelMins: number; cost: number }
 export interface MissionProspect { id: string; name: string; role: string; overall: number; attrs: Record<string, number> }
 export interface Mission {
-  id: string; destination: string; destName: string; dispatchedAt: number; readyAt: number; readyInMs: number;
+  id: string; destination: string; destName: string; dispatchedAt: number; readyAt: number; readyInMs: number; matchdaysLeft: number;
   revealed: boolean; status: string; found: boolean | null; band: string | null; player: MissionProspect | null;
 }
 export interface MissionsData {
@@ -289,13 +289,29 @@ async function bumpMoraleLocal(tokenId: string, event: Parameters<typeof updateM
 
 /** Serialise a stored scouting trip, hiding the outcome until travel completes — lifted from
  *  server/src/index.ts's `missionView`. */
-function missionView(m: MissionRow, now: number) {
+/** Matches this dynasty has played, ever. The lifetime W/D/L on the profile only ever increments and is
+ *  not reset at a season rollover or a succession, which makes it the one counter a scouting trip can be
+ *  measured against without a season-boundary special case. */
+function matchesPlayed(): number {
+  const p = getActiveModel().profile;
+  return (p.wins ?? 0) + (p.draws ?? 0) + (p.losses ?? 0);
+}
+
+/** `ready_at` IS NOW A MATCHDAY ORDINAL, NOT A TIMESTAMP. The unit changed; the column did not, so no save
+ *  migration is needed — a legacy value is a millisecond timestamp and therefore astronomically larger than
+ *  any matchday count, which is exactly how the two are told apart below. A trip dispatched under the old
+ *  wall-clock rule is treated as already home rather than left unreachable for ever. */
+const LEGACY_TIMESTAMP = 1e12;
+function missionView(m: MissionRow, played: number) {
   const dest = destinationById(m.destination);
-  const revealed = now >= m.ready_at || m.status === 'signed';
+  const legacy = m.ready_at > LEGACY_TIMESTAMP;
+  const revealed = legacy || played >= m.ready_at || m.status === 'signed';
   const player = revealed && m.found && m.player_json ? (JSON.parse(m.player_json) as Player) : null;
   return {
     id: m.id, destination: m.destination, destName: dest?.name ?? m.destination,
-    dispatchedAt: m.dispatched_at, readyAt: m.ready_at, readyInMs: Math.max(0, m.ready_at - now),
+    dispatchedAt: m.dispatched_at, readyAt: m.ready_at,
+    readyInMs: 0,                                            // kept for shape; the wall clock no longer gates anything
+    matchdaysLeft: legacy ? 0 : Math.max(0, m.ready_at - played),
     revealed, status: m.status, found: revealed ? !!m.found : null, band: revealed ? m.band : null,
     player: player ? { id: player.id, name: player.name, role: player.role, overall: overall(player), attrs: player.attrs as unknown as Record<string, number> } : null,
   };
@@ -1393,7 +1409,7 @@ export const api = {
     return {
       season: model.profile.season, tier: TIER, tripsPerSeason, tripsUsed: count,
       tripsLeft: Math.max(0, tripsPerSeason - count), loaneeCap: LOANEE_CAP, loaneeCount, coins: model.profile.coins,
-      destinations, missions: trips.map((m) => missionView(m, now)),
+      destinations, missions: trips.map((m) => missionView(m, matchesPlayed())),
     };
   },
   dispatchScout: async (destination: string) => {
@@ -1424,12 +1440,12 @@ export const api = {
     const now = Date.now();
     const row: MissionRow = {
       id, account_id: OWNER, season_id: seasonId, destination: dest.id,
-      dispatched_at: now, ready_at: now + travelMs(dest),
+      dispatched_at: now, ready_at: matchesPlayed() + travelMatchdays(dest),
       found: outcome.found ? 1 : 0, player_json: outcome.player ? JSON.stringify(outcome.player) : null,
       band: outcome.band, status: 'travelling',
     };
     await localStore.createMission(row);
-    return { ok: true as const, mission: missionView(row, now), coins: getActiveModel().profile.coins };
+    return { ok: true as const, mission: missionView(row, matchesPlayed()), coins: getActiveModel().profile.coins };
   },
   signMission: async (id: string) => {
     await ensureActive();
@@ -1438,7 +1454,9 @@ export const api = {
     const m = await localStore.missionById(id);
     if (!m) throw apiErr('no such trip', {}, 404);
     if (m.status === 'signed') throw apiErr('already signed', {}, 409);
-    if (Date.now() < m.ready_at) throw apiErr('the scout is still travelling', {}, 409);
+    if (m.ready_at <= LEGACY_TIMESTAMP && matchesPlayed() < m.ready_at) {
+      throw apiErr(`the scout is still travelling — ${m.ready_at - matchesPlayed()} more matchday(s)`, {}, 409);
+    }
     if (!m.found || !m.player_json) throw apiErr('that trip came back empty-handed', {}, 409);
     if ((await localStore.countLoanees(OWNER, seasonId)) >= LOANEE_CAP) throw apiErr(`you can field at most ${LOANEE_CAP} loanees a season`, {}, 409);
     const player = JSON.parse(m.player_json) as Player;

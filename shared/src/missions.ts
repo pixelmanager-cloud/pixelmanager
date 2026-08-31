@@ -101,3 +101,18 @@ export function rollMission(missionId: string, dest: Destination, playerTier: st
  *  to test the reveal quickly) — callers that honour a runtime override (env var, etc.)
  *  pass it in; pure by default (scale=1, i.e. real travel time). */
 export function travelMs(dest: Destination, scale = 1): number { return Math.round(dest.travelMins * 60_000 * scale); }
+
+/** HOW MANY MATCHDAYS A SCOUTING TRIP TAKES, replacing the wall-clock wait.
+ *
+ *  The trip used to reveal after `travelMins` of REAL TIME — one to twelve hours — in an offline,
+ *  single-player, premium game with no monetisation. That is a free-to-play pacing mechanic with nothing
+ *  behind it, and it protected nothing: `rollMission` computes the outcome AT DISPATCH and writes it into
+ *  the save, so the result was already sitting in the file for the whole wait, gated on a system clock the
+ *  player controls.
+ *
+ *  A trip now costs matchdays instead, proportional to how far the scout has gone — so the Wonderkid
+ *  Circuit really is a commitment and the local parks really are a quick look. `travelMins / 80` keeps the
+ *  six destinations distinct (1, 2, 3, 5, 6, 9) and caps the longest at half of an 18-game season. */
+export function travelMatchdays(dest: Destination): number {
+  return Math.max(1, Math.min(9, Math.round(dest.travelMins / 80)));
+}

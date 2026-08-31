@@ -304,13 +304,6 @@ function timeAgo(ts: number): string {
 }
 
 // "2d 4h" / "5h 12m" style countdown for the season banner.
-function humanizeMs(ms: number): string {
-  if (ms <= 0) return 'now';
-  const m = Math.floor(ms / 60000), h = Math.floor(m / 60), d = Math.floor(h / 24);
-  if (d > 0) return `${d}d ${h % 24}h`;
-  if (h > 0) return `${h}h ${m % 60}m`;
-  return `${m}m`;
-}
 
 function statColor(v: number): string {
   if (v >= 17) return '#3ad07a';
@@ -4158,10 +4151,13 @@ class Game {
     } catch { /* leave missions empty on error */ }
   }
 
+  /** A trip is priced in MATCHDAYS now, not wall-clock hours. It used to gate the result behind one to
+   *  twelve hours of real time in an offline single-player game with no monetisation — and the outcome was
+   *  rolled at dispatch and written into the save, so the wait protected a result that was already in the
+   *  file, on a clock the player controls. */
   private travelLabel(mins: number): string {
-    if (mins < 60) return `${mins}m`;
-    const h = mins / 60;
-    return Number.isInteger(h) ? `${h}h` : `${h.toFixed(1)}h`;
+    const md = Math.max(1, Math.min(9, Math.round(mins / 80)));
+    return `${md} matchday${md === 1 ? '' : 's'}`;
   }
 
   private renderMissions(d: MissionsData) {
@@ -4171,7 +4167,7 @@ class Game {
       if (!m.revealed) {
         return `<div class="mission travelling" data-ready="${m.readyAt}" data-id="${m.id}">`
           + `<span class="m-dest">🌍 ${m.destName}</span>`
-          + `<span class="m-prospect m-status"><span class="m-spinner">⚙️</span> Scout travelling — returns in <b class="m-count">${humanizeMs(m.readyInMs)}</b></span></div>`;
+          + `<span class="m-prospect m-status"><span class="m-spinner">⚙️</span> Scout travelling — back in <b class="m-count">${m.matchdaysLeft} more match${m.matchdaysLeft === 1 ? '' : 'es'}</b></span></div>`;
       }
       if (!m.found || !m.player) {
         this.feedOnce(`scout:${m.id}`, 'scout_empty', '🔭', undefined, { to: m.destName });
@@ -4197,21 +4193,13 @@ class Game {
   }
 
   /** Live-count the travelling trips; when one lands, reload to reveal the prospect. */
+  /** THERE IS NOTHING TO TICK ANY MORE. A trip is measured in matchdays, so it advances when the player
+   *  plays football, not when the wall clock moves — and this used to re-render once a second against
+   *  Date.now(). Left as a clear-only stub rather than deleted, because a stale timer from a previous
+   *  render would now compare a matchday ordinal against a millisecond timestamp, decide every trip had
+   *  landed, and call loadMissions() every second for ever. */
   private startMissionTicker(_now: number) {
     if (this.missionTimer) { clearInterval(this.missionTimer); this.missionTimer = null; }
-    const travelling = Array.from(document.querySelectorAll('.mission.travelling')) as HTMLElement[];
-    if (!travelling.length) return;
-    this.missionTimer = window.setInterval(() => {
-      const t = Date.now();
-      let anyLanded = false;
-      for (const el of Array.from(document.querySelectorAll('.mission.travelling')) as HTMLElement[]) {
-        const ready = Number(el.dataset.ready);
-        const rem = ready - t;
-        if (rem <= 0) { anyLanded = true; continue; }
-        const c = el.querySelector('.m-count'); if (c) c.textContent = humanizeMs(rem);
-      }
-      if (anyLanded) { clearInterval(this.missionTimer!); this.missionTimer = null; this.loadMissions(); }
-    }, 1000);
   }
 
   private async dispatchScout(destination: string) {

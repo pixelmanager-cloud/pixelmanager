@@ -244,7 +244,7 @@ export class MatchEngine {
         const p = this.teams[t].players[i];
         if (s.players[t][i].fitness < 0.56 && norm(p.attrs.workrate) > 0.5) {
           this.fatigueFlagged.add(key);
-          s.events.push({ minute: min, type: 'fatigue', teamIdx: t, playerName: p.name });
+          s.events.push({ minute: min, type: 'fatigue', teamIdx: t, playerName: p.name, playerId: p.id });
           break; // at most one per side per minute
         }
       }
@@ -302,8 +302,8 @@ export class MatchEngine {
     // the pitch wears it, and teamLeadership correctly falls back to the best natural leader still on.
     // Pure and rng-free, so this consumes no draws and cannot desync a replay.
     this.leadershipBonus[t] = teamLeadership(this.teams[t].players);
-    if (injured) s.events.push({ minute: min, type: 'injury', teamIdx: t, playerName: outP.name });
-    s.events.push({ minute: min, type: 'sub', teamIdx: t, playerName: inP.name, playerName2: outP.name });
+    if (injured) s.events.push({ minute: min, type: 'injury', teamIdx: t, playerName: outP.name, playerId: outP.id });
+    s.events.push({ minute: min, type: 'sub', teamIdx: t, playerName: inP.name, playerId: inP.id, playerName2: outP.name, playerId2: outP.id });
   }
 
   // ---- movement ----
@@ -524,7 +524,7 @@ export class MatchEngine {
           s.ball = { ...recS };
           // through-ball that springs a fast forward behind a high line => clear chance
           if (pick.through && this.beatsLastDefender(teamIdx, pick.idx)) {
-            s.events.push({ minute: this.minute(), type: 'chance', teamIdx, playerName: rec.name, counter: this.onCounter(teamIdx) });
+            s.events.push({ minute: this.minute(), type: 'chance', teamIdx, playerName: rec.name, playerId: rec.id, counter: this.onCounter(teamIdx) });
             // NOTE — A MEASURED, UNFIXED DEFECT, and a REBALANCE THAT WAS DESIGNED AND REJECTED.
             //
             // A full two-sided rebalance was measured over ~1,600 mirrored matches and DOES fix this axis:
@@ -685,7 +685,7 @@ export class MatchEngine {
         // a small deterministic slice of high-quality off-target efforts rattle the woodwork —
         // pure commentary relabel (still no goal, keeper still restarts): consumes NO rng.
         const frame = quality > 0.5 && (((minute * 131 + playerIdx * 17 + teamIdx * 7) >>> 0) % 6 === 0);
-        s.events.push({ minute, type: frame ? 'woodwork' : 'shot_missed', teamIdx, playerName: shooter.name });
+        s.events.push({ minute, type: frame ? 'woodwork' : 'shot_missed', teamIdx, playerName: shooter.name, playerId: shooter.id });
       }
     } else {
       // composure (+ Clinical Finisher, + a calm well-led side) lifts conversion; The Wall keeper resists it.
@@ -697,14 +697,14 @@ export class MatchEngine {
         s.score[teamIdx]++;
         // assist = the player who played the last pass to this scorer, if recent (<=8s) and not himself
         const lp = this.lastPass[teamIdx];
-        const assist = lp && lp.receiver === playerIdx && lp.passer !== playerIdx && s.clockSec - lp.sec <= 8
-          ? this.teams[teamIdx].players[lp.passer].name : undefined;
-        s.events.push({ minute, type: 'goal', teamIdx, playerName: shooter.name, playerName2: assist });
+        const assistP = lp && lp.receiver === playerIdx && lp.passer !== playerIdx && s.clockSec - lp.sec <= 8
+          ? this.teams[teamIdx].players[lp.passer] : undefined;
+        s.events.push({ minute, type: 'goal', teamIdx, playerName: shooter.name, playerId: shooter.id, playerName2: assistP?.name, playerId2: assistP?.id });
         this.lastPass[teamIdx] = null;
         this.giveKickoff(defTeam);
         return;
       }
-      s.events.push({ minute, type: 'shot_saved', teamIdx, playerName: shooter.name });
+      s.events.push({ minute, type: 'shot_saved', teamIdx, playerName: shooter.name, playerId: shooter.id });
       // the keeper can only parry — the ball spills to a lurking attacker for a follow-up (one only)
       if (allowRebound && this.rng() < 0.05) {
         let poacher = playerIdx, pd = Infinity; // nearest forward-ish teammate to the goal
@@ -715,7 +715,7 @@ export class MatchEngine {
           const d = Math.hypot(this.goalOf(teamIdx).x - s.players[teamIdx][i].x, this.goalOf(teamIdx).y - s.players[teamIdx][i].y);
           if (d < pd) { pd = d; poacher = i; }
         }
-        s.events.push({ minute, type: 'chance', teamIdx, playerName: this.teams[teamIdx].players[poacher].name });
+        s.events.push({ minute, type: 'chance', teamIdx, playerName: this.teams[teamIdx].players[poacher].name, playerId: this.teams[teamIdx].players[poacher].id });
         this.resolveShot(teamIdx, poacher, Math.max(11, Math.min(distGoal, 14)), false, false); // rushed follow-up, no further rebound
         return;
       }
@@ -731,7 +731,7 @@ export class MatchEngine {
   private takeCorner(atkTeam: 0 | 1, defTeam: 0 | 1, minute: number) {
     const s = this.state;
     const taker = this.bestSetPiece(atkTeam, 'corner');
-    s.events.push({ minute, type: 'corner', teamIdx: atkTeam, playerName: taker.p.name });
+    s.events.push({ minute, type: 'corner', teamIdx: atkTeam, playerName: taker.p.name, playerId: taker.p.id });
     // aerial target = best strength+positioning outfielder on the pitch
     let hi = 1, best = -Infinity;
     for (let i = 1; i < 11; i++) {
@@ -750,11 +750,12 @@ export class MatchEngine {
       s.score[atkTeam]++;
       // the corner delivery is the assist (unless the taker headed it in himself)
       const assist = taker.i !== hi ? taker.p.name : undefined;
-      s.events.push({ minute, type: 'goal', teamIdx: atkTeam, playerName: header.name, playerName2: assist });
+      const assistId = taker.i !== hi ? taker.p.id : undefined;
+      s.events.push({ minute, type: 'goal', teamIdx: atkTeam, playerName: header.name, playerId: header.id, playerName2: assist, playerId2: assistId });
       this.giveKickoff(defTeam);
       return;
     }
-    if (r < goalP + 0.10) s.events.push({ minute, type: 'shot_saved', teamIdx: atkTeam, playerName: header.name }); // header on target, kept out
+    if (r < goalP + 0.10) s.events.push({ minute, type: 'shot_saved', teamIdx: atkTeam, playerName: header.name, playerId: header.id }); // header on target, kept out
     s.carrier = { teamIdx: defTeam, playerIdx: 0 };
     s.ball = { ...gks };
   }
@@ -793,7 +794,7 @@ export class MatchEngine {
     const minute = this.minute();
     const fouler = this.teams[defTeam].players[defIdx];
     const zone = this.zoneOf(defTeam, at.x);
-    s.events.push({ minute, type: 'foul', teamIdx: defTeam, playerName: fouler.name, zone });
+    s.events.push({ minute, type: 'foul', teamIdx: defTeam, playerName: fouler.name, playerId: fouler.id, zone });
 
     // discipline: aggression drives card risk; a foul on a clear break (carrier already in the
     // final third) is a candidate professional foul → rare straight red. Second yellow = red.
@@ -805,7 +806,7 @@ export class MatchEngine {
       this.sendOff(defTeam, defIdx, minute, 'red');
     } else if (cardRoll < 0.10 + aggr * 0.14) {
       if (this.booked.has(key)) this.sendOff(defTeam, defIdx, minute, 'second-yellow');
-      else { this.booked.add(key); s.events.push({ minute, type: 'yellow_card', teamIdx: defTeam, playerName: fouler.name }); }
+      else { this.booked.add(key); s.events.push({ minute, type: 'yellow_card', teamIdx: defTeam, playerName: fouler.name, playerId: fouler.id }); }
     }
 
     // restart — not every foul in the box is given; the ref often waves it on / the keeper gathers
@@ -827,7 +828,7 @@ export class MatchEngine {
   private sendOff(teamIdx: 0 | 1, playerIdx: number, minute: number, kind: 'red' | 'second-yellow') {
     this.sentOff.add(teamIdx * 100 + playerIdx);
     const p = this.teams[teamIdx].players[playerIdx];
-    this.state.events.push({ minute, type: 'red_card', teamIdx, playerName: p.name, zone: kind === 'second-yellow' ? 'mid' : undefined });
+    this.state.events.push({ minute, type: 'red_card', teamIdx, playerName: p.name, playerId: p.id, zone: kind === 'second-yellow' ? 'mid' : undefined });
     // send him to the touchline, out of the play — every sim loop skips sent-off players, and
     // this keeps his position in-bounds (a legitimate engine invariant checked by the fuzz harness).
     const ps = this.state.players[teamIdx][playerIdx];
@@ -838,14 +839,14 @@ export class MatchEngine {
     const s = this.state;
     const { p: taker } = this.bestSetPiece(atkTeam, 'pen');
     const gk = this.teams[defTeam].players[0], gks = s.players[defTeam][0];
-    s.events.push({ minute, type: 'penalty', teamIdx: atkTeam, playerName: taker.name });
+    s.events.push({ minute, type: 'penalty', teamIdx: atkTeam, playerName: taker.name, playerId: taker.id });
     const convP = clamp(0.70 + norm(taker.attrs.setPiece ?? 8) * 0.14 + mAdd(taker.attrs.composure, 0.08) - norm(gk.attrs.keeping) * fit(gks.fitness) * 0.14, 0.5, 0.93);
     if (this.rng() < convP) {
       s.score[atkTeam]++;
-      s.events.push({ minute, type: 'goal', teamIdx: atkTeam, playerName: taker.name });
+      s.events.push({ minute, type: 'goal', teamIdx: atkTeam, playerName: taker.name, playerId: taker.id });
       this.giveKickoff(defTeam);
     } else {
-      s.events.push({ minute, type: 'penalty_missed', teamIdx: atkTeam, playerName: taker.name });
+      s.events.push({ minute, type: 'penalty_missed', teamIdx: atkTeam, playerName: taker.name, playerId: taker.id });
       s.carrier = { teamIdx: defTeam, playerIdx: 0 };
       s.ball = { ...gks };
     }
@@ -855,19 +856,19 @@ export class MatchEngine {
     const s = this.state;
     const { p: taker } = this.bestSetPiece(atkTeam, 'fk');
     const gk = this.teams[defTeam].players[0], gks = s.players[defTeam][0];
-    s.events.push({ minute, type: 'free_kick', teamIdx: atkTeam, playerName: taker.name, zone: 'att' });
+    s.events.push({ minute, type: 'free_kick', teamIdx: atkTeam, playerName: taker.name, playerId: taker.id, zone: 'att' });
     const goal = this.goalOf(atkTeam);
     const dist = Math.hypot(goal.x - at.x, goal.y - at.y);
     const quality = clamp(norm(taker.attrs.setPiece ?? 8) * (1 - dist / 34), 0, 1);
     const scoreP = clamp(0.03 + quality * 0.11 - norm(gk.attrs.keeping) * fit(gks.fitness) * 0.08, 0.01, 0.15);
     if (this.rng() < scoreP) {
       s.score[atkTeam]++;
-      s.events.push({ minute, type: 'goal', teamIdx: atkTeam, playerName: taker.name });
+      s.events.push({ minute, type: 'goal', teamIdx: atkTeam, playerName: taker.name, playerId: taker.id });
       this.giveKickoff(defTeam);
       return;
     }
     // off target vs saved — either way the keeper restarts
-    s.events.push({ minute, type: this.rng() < 0.5 ? 'shot_saved' : 'shot_missed', teamIdx: atkTeam, playerName: taker.name });
+    s.events.push({ minute, type: this.rng() < 0.5 ? 'shot_saved' : 'shot_missed', teamIdx: atkTeam, playerName: taker.name, playerId: taker.id });
     s.carrier = { teamIdx: defTeam, playerIdx: 0 };
     s.ball = { ...gks };
   }
