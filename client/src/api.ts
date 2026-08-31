@@ -25,7 +25,7 @@ import {
   rollGenes, updateMorale, moraleEffects, rollMatchInjuries, developAttrs,
   houseRenown, branchCareer, rivalStandings, renownPedigree, renownBidMult, renownIncomeMult, type HouseMember,
   tokenToPlayer, tokenContract, legendCardOf, loadCareer, actWithNarration, careerState, graduatedFields, careerCast, fillArcText,
-  rebornFields, rebornPotential, careerSeedFor, trackFor, agentsList, foundingNameFor, nameFor,
+  rebornFields, rebornPotential, prospectTemper, careerSeedFor, trackFor, agentsList, foundingNameFor, nameFor,
   type FacilityKey, type MissionRow, type Token, type CareerAction,
   FORMATIONS,
 
@@ -682,7 +682,7 @@ export const api = {
 
     const nHeirs = heirCount(parentSeed, parentGen);
     const heirs = mintHeirs(parentGenes, parentSeed, nHeirs);
-    const siblings: Array<{ id: string; name: string; temper: string; familyTrait: string; fatherName: string; cousin: boolean }> = [];
+    const siblings: Array<{ id: string; name: string; temper: string; potentialStars: number; familyTrait: string; fatherName: string; cousin: boolean }> = [];
     for (let i = 1; i < heirs.length; i++) {
       const h = heirs[i];
       const sid = `${pid}:b${parentGen + 1}.${i}`;
@@ -691,8 +691,11 @@ export const api = {
         id: sid, owner_id: OWNER, generation: parentGen + 1, state: 'prospect', name: nm,
         genes_json: JSON.stringify(h.genes), pedigree: rf.pedigree ?? 0, dev_bonus_json: rf.dev_bonus_json ?? '{}',
       });
-      await localStore.updateToken(sid, { parent_id: pid, branch: 'sibling', personality: h.personality, branch_seed: h.seed, father_name: parentName } as any);
-      siblings.push({ id: sid, name: nm, temper: h.personality, familyTrait: h.familyTrait, fatherName: parentName, cousin: false });
+      // The temperament the screen promises has to be the one the career will roll — `h.personality` is a
+      // roll off `heirSeed` that nothing downstream ever reads again (91% mismatch, measured).
+      const sTemper = prospectTemper({ id: sid, generation: parentGen + 1, career_seed: null } as unknown as Token, getActiveSlotId() ?? OWNER);
+      await localStore.updateToken(sid, { parent_id: pid, branch: 'sibling', personality: sTemper, branch_seed: h.seed, father_name: parentName } as any);
+      siblings.push({ id: sid, name: nm, temper: sTemper, potentialStars: rebornPotential({ genes_json: JSON.stringify(h.genes), pedigree: rf.pedigree ?? 0 } as unknown as Token).stars, familyTrait: h.familyTrait, fatherName: parentName, cousin: false });
     }
 
     // ── THE COUSINS ────────────────────────────────────────────────────────────────────────────────
@@ -731,8 +734,9 @@ export const api = {
           id: nid, owner_id: OWNER, generation: parentGen + 1, state: 'prospect', name: nnm,
           genes_json: JSON.stringify(k.genes), pedigree: uncle.pedigree ?? 0, dev_bonus_json: uncle.dev_bonus_json ?? '{}',
         });
-        await localStore.updateToken(nid, { parent_id: uncle.id, branch: 'sibling', personality: k.personality, branch_seed: k.seed, father_name: uncle.name } as any);
-        siblings.push({ id: nid, name: nnm, temper: k.personality, familyTrait: k.familyTrait, fatherName: uncle.name, cousin: true });
+        const nTemper = prospectTemper({ id: nid, generation: parentGen + 1, career_seed: null } as unknown as Token, getActiveSlotId() ?? OWNER);
+        await localStore.updateToken(nid, { parent_id: uncle.id, branch: 'sibling', personality: nTemper, branch_seed: k.seed, father_name: uncle.name } as any);
+        siblings.push({ id: nid, name: nnm, temper: nTemper, potentialStars: rebornPotential({ genes_json: JSON.stringify(k.genes), pedigree: uncle.pedigree ?? 0 } as unknown as Token).stars, familyTrait: k.familyTrait, fatherName: uncle.name, cousin: true });
       }
     }
     // Every branch of the retiring star's generation is settled now, swept or not — those men are his age,
@@ -756,7 +760,7 @@ export const api = {
         if (pruned !== cc.standingOrders) await localStore.saveClub(OWNER, cc.club, pruned);
       }
     }
-    return { ok: true as const, legacy, saleFee, testimonial, siblings, familyTrait: familyTrait(parentSeed), coins: getActiveModel().profile.coins, inheritance: inheritance ?? null, prospect: { id: pid, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: fresh.pedigree, careerStarted: false, potentialStars: pot.stars, genes: JSON.parse(fresh.genes_json) } };
+    return { ok: true as const, legacy, saleFee, testimonial, siblings, familyTrait: familyTrait(parentSeed), coins: getActiveModel().profile.coins, inheritance: inheritance ?? null, prospect: { id: pid, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: fresh.pedigree, careerStarted: false, potentialStars: pot.stars, temper: prospectTemper(fresh, getActiveSlotId() ?? OWNER), genes: JSON.parse(fresh.genes_json) } };
   },
   // SP SEASON PRIZE — also where the local season counter advances (see docs note in save.ts's
   // profile.season) and where a league finish is banked as an honour (the old pod/wall-clock season

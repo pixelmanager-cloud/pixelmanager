@@ -92,6 +92,10 @@ const METER_NAME: Record<string, string> = { authority: 'Coach', peers: 'Teammat
 // it pays 120 coins and unlocks one purchase. `school` promised a high-side benefit that has no branch
 // at all. A meter the player is asked to spend turns on has to describe its own effect truthfully, or
 // he is optimising against a description rather than a game.
+/** id → the name the player is shown. The succession screen printed the raw slug ("🧠 workhorse"), because
+ *  this map was a local const inside `characterHtml` and no other screen could reach it. */
+const PERSONALITY_LABEL: Record<string, string> = { pro: 'Model Pro', biggame: 'Big-Game Player', fragile: 'Fragile', leader: 'Born Leader', workhorse: 'Workhorse', mercurial: 'Mercurial', maverick: 'Maverick', latebloom: 'Late Bloomer', showman: 'Showman', stoic: 'The Stoic', hothead: 'Hothead', perfectionist: 'Perfectionist', joker: 'Dressing-Room Joker' };
+
 const METER_WHAT: Record<string, string> = {
   authority: 'How the coach rates you. High: first name on the teamsheet, and you start the next season sharp. Low: in and out of the side.',
   peers: 'How the dressing room sees you. High: you play with the lads behind you. Low: it drags on your form.',
@@ -1093,14 +1097,13 @@ class Game {
     if (!pers && !traits.length && greed == null) return ''; // nothing to show (e.g. a legacy save's filler)
     // every personality the game can roll — squad players are full characters now, so an unmapped id would
     // surface as a raw slug on their card (Living Squad)
-    const PERS: Record<string, string> = { pro: 'Model Pro', biggame: 'Big-Game Player', fragile: 'Fragile', leader: 'Born Leader', workhorse: 'Workhorse', mercurial: 'Mercurial', maverick: 'Maverick', latebloom: 'Late Bloomer', showman: 'Showman', stoic: 'The Stoic', hothead: 'Hothead', perfectionist: 'Perfectionist', joker: 'Dressing-Room Joker' };
     const TRAIT: Record<string, string> = { clinical: 'Clinical Finisher', ballwinner: 'Ball-Winner', metronome: 'Metronome', maestro: 'Creative Maestro', leader: 'Born Leader', livewire: 'Livewire', ironman: 'Iron Man', deadball: 'Dead-Ball Spec.', wall: 'The Wall', biggame: 'Big-Game', engine: 'Box-to-Box Engine', rock: 'Defensive Rock', spark: 'The Spark', aerial: 'Aerial Threat', general2: 'Engine-Room General', showstopper: 'Showstopper', ironwill: 'Iron Will', quarterback: 'The Quarterback', utility: 'Utility Man', injury_prone: 'Injury-Prone', mercenary: 'Mercenary', loyal: 'One-Club Man', marketable: 'Marketable' };
     const flaws = new Set(['injury_prone', 'mercenary', 'loyal', 'marketable']);
     const perks = traits.filter((t) => !flaws.has(t)).map((t) => `<span class="pc-trait perk">${TRAIT[t] ?? t}</span>`);
     const flags = traits.filter((t) => flaws.has(t)).map((t) => `<span class="pc-trait flag">${TRAIT[t] ?? t}</span>`);
     const bar = (label: string, v: number, cls: string) => `<span class="pc-cbar"><i>${label}</i><span class="pc-cbg"><b class="${cls}" style="width:${v * 5}%"></b></span></span>`;
     return `<div class="pc-char">`
-      + (pers ? `<div class="pc-crow2">🧠 <b>${PERS[pers] ?? pers}</b></div>` : '')
+      + (pers ? `<div class="pc-crow2">🧠 <b>${PERSONALITY_LABEL[pers] ?? pers}</b></div>` : '')
       + (perks.length || flags.length ? `<div class="pc-traits2">${perks.join('')}${flags.join('')}</div>` : '')
       + `<div class="pc-cbars">${greed != null ? bar('greed', greed, 'g') : ''}${market != null ? bar('fame', market, 'm') : ''}</div>`
       + (earnings ? `<div class="pc-earn">💷 ${earnings.toLocaleString()}c career earnings</div>` : '')
@@ -2638,7 +2641,7 @@ class Game {
       toast(`${w.icon} The heir inherits ${w.label}${(r as any).testimonial ? ` · 🎗️ +${(r as any).testimonial.toLocaleString()}c testimonial` : ''}${r.saleFee ? ` · 💰 +${r.saleFee.toLocaleString()}c from the sale` : ''}${r.legacy ? ` · +${r.legacy.toLocaleString()}c legacy` : ''}`);
       // A generation produces 1-3 sons. With brothers, the player CHOOSES which one carries the name;
       // with one, we say so in words rather than letting a choice-less succession read as a bug.
-      const sibs = (r as any).siblings as Array<{ id: string; name: string; temper: string; familyTrait: string; fatherName?: string; cousin?: boolean }> | undefined;
+      const sibs = (r as any).siblings as Array<{ id: string; name: string; temper: string; potentialStars: number; familyTrait: string; fatherName?: string; cousin?: boolean }> | undefined;
       if (sibs?.length) this.showHeirChoice(r.prospect, sibs, (r as any).familyTrait);
       else this.showProspectCard(r.prospect, true);
     } catch (e: any) {
@@ -3373,21 +3376,27 @@ class Game {
   /** THE HEIR CHOICE. Scouted, with uncertainty (user decision): his temperament, the attribute that runs
    *  in the family, and a star-rated sense of his ceiling — never raw genes. The choice should have weight
    *  without being solvable by picking the biggest number. */
-  private showHeirChoice(played: any, siblings: Array<{ id: string; name: string; temper: string; familyTrait: string; fatherName?: string; cousin?: boolean }>, trait: string) {
+  private showHeirChoice(played: any, siblings: Array<{ id: string; name: string; temper: string; potentialStars: number; familyTrait: string; fatherName?: string; cousin?: boolean }>, trait: string) {
     this.showScreen('academy');
-    const all: Array<{ id: string; name: string; temper: string; familyTrait: string; fatherName?: string; cousin?: boolean }> =
-      [{ id: played.id, name: played.name, temper: played.personality ?? '—', familyTrait: trait }, ...siblings];
+    const all: Array<{ id: string; name: string; temper: string; potentialStars: number; familyTrait: string; fatherName?: string; cousin?: boolean }> =
+      [{ id: played.id, name: played.name, temper: played.temper ?? '—', potentialStars: played.potentialStars, familyTrait: trait }, ...siblings];
     // Your own sons first, then the cousins — a nephew is an alternative to the direct line, so the screen
     // should read as "or" rather than mixing the two into an undifferentiated row of names.
     const direct = all.filter((h) => !h.cousin);
     const cousins = all.filter((h) => h.cousin);
-    const stars = (id: string) => { let h = 0; for (let i = 0; i < id.length; i++) h = (Math.imul(h, 31) + id.charCodeAt(i)) | 0; return 2 + (Math.abs(h) % 4); };
+    // THE STAR RATING WAS A HASH OF THE TOKEN ID STRING. It never read the boy's genes — it could not,
+    // because the payload carried none. Correlation with real inherited quality was r = -0.006; 58% of all
+    // cards showed five stars; 1 star was unreachable; and because the played line REUSES the retiring
+    // star's token id, the pre-selected son showed an identical rating in every generation of a save
+    // (`nft:1` hashes to 5, so a normal new game shows five stars for ever). One click later the prospect
+    // card renders an honest rating from `rebornPotential`, so the game contradicted itself between two
+    // adjacent screens about the same child. Now both screens read the same number.
     const card = (h: typeof all[number], on: boolean) => {
-      const n = stars(h.id);
+      const n = h.potentialStars;
       return `<div class="cg-heir-card${on ? ' on' : ''}" data-heir="${h.id}">`
         + `<div class="cg-cname">${h.name}</div>`
         + (h.cousin && h.fatherName ? `<div class="cg-cdescr cg-cousin">👨‍👦 ${h.fatherName}'s boy</div>` : '')
-        + `<div class="cg-cdescr">🧠 ${h.temper}</div>`
+        + `<div class="cg-cdescr">🧠 ${PERSONALITY_LABEL[h.temper] ?? h.temper}</div>`
         + `<div class="cg-cdescr">🧬 the family ${h.familyTrait}</div>`
         + `<div class="cg-heir-stars">${'★'.repeat(n)}${'☆'.repeat(5 - n)} <span class="cg-heir-note">what the scouts can see so far</span></div></div>`;
     };
