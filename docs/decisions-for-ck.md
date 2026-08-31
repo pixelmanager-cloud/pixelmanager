@@ -264,7 +264,24 @@ confirmed effect) but not the anchor. I have a specific suspicion about why and 
 assigned in player-index order, so the back four claim the nearest attackers first and a deep-sitting
 midfielder is left marking whoever remains — possibly dragging him AWAY from the space he is meant to screen.
 
-## 12. Content items — authoring projects, not bugs. Your call on whether they are worth the days.
+## ~~12. Content items~~ — ONE DONE, TWO ARE NOT DEFECTS (verified 2026-08-31)
+
+> **240 of the 614 near-duplicate pairs are cut** (see the pack_d note below), and the rest were the
+> `narrate.ts` banks, now done — first repeat line 48 → **132**.
+>
+> **The 27 costless beats are not a defect.** Enumerated: six are `youth-joy-*`, which §5 records as
+> costless *on purpose*; the rest are childhood-wonder arcs of the same kind — plus `crisis-fan-tragedy`,
+> which is *"A Minute's Silence"*, a coachload of supporters killed in a crash and the player choosing how
+> to carry the club's grief. Charging energy or coins for sitting with bereaved families would be
+> grotesque. `arc_stakes` warns rather than fails for exactly this reason and passes at 3.7% against a
+> 5.5% ceiling. **Nothing to fix.**
+>
+> **`when.maxSeason` is not a defect either.** It is declared, correctly implemented and used by zero of
+> 819 arcs — but that makes it an unused authoring affordance, not a dead mechanism. I searched for the
+> case that would justify it (an arc whose prose reads early-career but which can fire in season 30) and
+> found five candidates, **all false positives**: "just arrived" refers to a *player* in every one. No
+> content currently needs the bound, and deleting a correct two-line gate to tidy the count would be
+> worse than leaving it.
 
 - **614 near-duplicate line pairs** at similarity >= 0.6. **240 of them are now cut** — `pack_d`'s real
   paraphrases. NOTE the recommendation in this section's own source was to delete `PART_TWO` wholesale;
