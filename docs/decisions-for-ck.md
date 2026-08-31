@@ -1477,7 +1477,19 @@ is the part still worth your attention.
  `NaN` fails both comparisons in the guard, so it returns a player
   with id `loan-s5-NaN` who appears in no pool; fractional indices mint **id-distinct clones** of the same
   man, defeating the duplicate-signing guard. Not reachable through the shipped UI today.
-- **`OPP_REVEAL` has zero consumers — STILL TRUE, and now the clearest example in the file.** A provably well-formed ladder (total, strictly monotone, no un-reveal) that nothing climbs. The opposition-scout tiers a player can pay for reveal nothing, because the constant describing what each tier unlocks is read by no code at all.
+- **`OPP_REVEAL` has zero consumers — STILL TRUE, and it is the visible tip of a whole unbuilt feature.**
+  *(I first wrote here that players "pay for tiers that reveal nothing". That was wrong and I checked it:
+  nothing is charged. The accurate version is worse in a different way.)* `api.scoutTiers()` returns
+  `{ opp: TIER, player: TIER }` where **`TIER` is the hardcoded constant `'base'`** in `api.ts`, and there
+  is no upgrade button or price anywhere in the Scout Network panel. So the whole tier ladder is inert:
+  `OPP_REVEAL`'s bronze/silver/gold rows are read by no code; `SCOUT_TIERS`' bronze/silver/gold rows are
+  never selected, because `trials()` and `signTrial()` both pass the same constant to `generatePool` and
+  `trialistAt`; and the three carefully-measured description strings for those tiers (the ones corrected
+  earlier in §63 to quote delivered rather than declared rates) are never rendered, because only the
+  current tier's description is shown and the current tier is always `base`.
+  What the player sees is two chips reading **BASE** that can never change — a progression system that
+  looks stuck rather than absent. Deciding whether to build it, or to remove the ladder from the screen so
+  it stops implying progression, is a product call and yours.
 
 **And what was checked and CLEARED**, so nobody re-opens it: the scouting band RNG is unbiased and no row
 falls through; there is no per-index skew; no duplicate ids in any pool or across a 40-season dynasty; both
