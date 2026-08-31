@@ -8,7 +8,7 @@ import { mMul, mAdd, hasTrait, teamLeadership } from './mental.js';
 
 export const TICK_SEC = 0.5; // game-seconds per tick
 const MATCH_SEC = 90 * 60;
-const SHOOT_RANGE = 18; // metres from goal a player will attempt a shot
+const SHOOT_RANGE = 30; // metres from goal a player will attempt a shot
 /** The distance at which shot quality falls to zero. SEPARATE from SHOOT_RANGE, which is the trigger
  *  radius — one constant was doing both jobs via `SHOOT_RANGE + 8`, so re-tuning when a player shoots
  *  silently re-tuned how well he finishes. Same value as before (18 + 8), so behaviour is unchanged. */
@@ -59,6 +59,20 @@ interface Goal { x: number; y: number }
 //
 // The trap is off by default and no preset sets it, so this rng draw only occurs in matches where the
 // player turned it on: every existing calibration number is untouched.
+/** How near the goal the BALL must be before attackers start running into the area, and how hard they
+ *  are pulled in when it is. Swept against both panels; see the block in the movement step. */
+const BOX_RUN_TRIGGER = 45;
+const BOX_RUN = 0.35;
+
+/** Multiplier on the carrier's shot probability. Swept against BOTH panels; the league is the hard
+ *  constraint, so this rises only as far as division_balance stays green. */
+/** Scales every tackle attempt. Swept against BOTH panels — the league is the hard constraint. */
+const TACKLE_RATE = 0.3;
+
+const SHOT_APPETITE = 1;
+/** ...and for a man played clean through, who is not going to dawdle on the ball. */
+const CLEAR_RUN_APPETITE = 12;
+
 /** Pace edge an attacker needs to spring a SET trap cleanly. */
 const TRAP_BEATS = 0.12;
 /** How often the line's step-up is mistimed, sending through a receiver who would have been caught. */
@@ -91,6 +105,9 @@ export class MatchEngine {
   private booked = new Set<number>();  // key = team*100+idx already on a yellow (second yellow = red)
   private subsUsed: [number, number] = [0, 0];
   private benchLeft: [Player[], Player[]] = [[], []]; // remaining substitutes per side
+  /** the player currently clean through on goal, per side (-1 = nobody). A man put in behind
+   *  shoots when he arrives rather than waiting for the ordinary range roll. */
+  private clearRun: [number, number] = [-1, -1];
   private lastBenchMin = -1;
   // last completed pass per side, for crediting assists (deterministic, no rng)
   private lastPass: Array<{ passer: number; receiver: number; sec: number } | null> = [null, null];
@@ -400,10 +417,29 @@ export class MatchEngine {
         // on a counter, the winning side's forwards burst upfield into the space
         const counterPush = attacking && p.role === 'FW' && this.onCounter(teamIdx) ? 1.3 : 1;
         if (attacking && p.role !== 'GK') tx += dir * mods.attackPush * PUSH_BY_ROLE[p.role] * dm.push * counterPush;
-        const pullX = clamp((p.role === 'GK' ? 0.04 : attacking ? 0.22 : 0.34) + (attacking ? dm.come : 0), 0, 0.6);
-        const pullY = p.role === 'GK' ? 0.25 : attacking ? 0.30 : 0.46;
+        // STEP 2 OF THE REBUILD: BOX RUNS — the mechanism the game has never had.
+        // Measured before this existed: 0.0162 attackers in the penalty area on average while attacking,
+        // and forwards sitting a median 36.3m from the goal they are attacking — outside the 18-yard line,
+        // permanently. With nobody in the box there is nothing to pass to in the box, which is why the only
+        // chance the engine could manufacture was a through-ball fired from midfield.
+        //
+        // ORDER MATTERS HERE, and my first attempt got it wrong: applying the run BEFORE the ball-pull
+        // below moved forwards by 0.3m, because `tx += (ball.x - tx) * pullX` immediately dragged them back
+        // toward a ball that is usually BEHIND them. A player making a run into the box is deliberately not
+        // tracking the ball — that is what a run is — so the run both damps the ball-pull and is applied
+        // after it.
+        const boxRun = attacking && (p.role === 'FW' || p.role === 'MF')
+          ? BOX_RUN * (1 - Math.min(1, Math.hypot(this.goalOf(teamIdx).x - s.ball.x, this.goalOf(teamIdx).y - s.ball.y) / BOX_RUN_TRIGGER)) * (p.role === 'FW' ? 1 : 0.5)
+          : 0;
+        const pullX = clamp((p.role === 'GK' ? 0.04 : attacking ? 0.22 : 0.34) + (attacking ? dm.come : 0), 0, 0.6) * (1 - boxRun);
+        const pullY = (p.role === 'GK' ? 0.25 : attacking ? 0.30 : 0.46) * (1 - boxRun * 0.5);
         tx += (s.ball.x - tx) * pullX;
         ty += (s.ball.y - ty) * pullY;
+        if (boxRun > 0) {
+          const g = this.goalOf(teamIdx);
+          tx += (g.x - tx) * boxRun;
+          ty += (g.y - ty) * boxRun * 0.6;
+        }
 
         tx = clamp(tx, 2, 103);
         ty = clamp(ty, 3, 65);
@@ -482,7 +518,15 @@ export class MatchEngine {
           * mMul(def.attrs.aggression, 0.18) * (hasTrait(def, 'ballwinner') ? 1.08 : 1);
         const retain = (norm(carrier.attrs.strength) * 0.5 + norm(carrier.attrs.pace) * 0.3 + norm(carrier.attrs.passing) * 0.2) * fit(cs.fitness)
           * mMul(carrier.attrs.creativity, 0.2) * (hasTrait(carrier, 'maestro') ? 1.06 : 1);
-        const pTackle = clamp(0.12 + 0.5 * (defEff / (defEff + retain)), 0.05, 0.8) * defMods.pressIntensity
+        // TACKLE_RATE — THE ROOT OF THE GEOMETRY DEFECT, and the thing to fix before anything downstream.
+        // Every defender within range rolled this EVERY TICK, which produced 144 tackles won and 142 loose
+        // balls a match against real football's ~40, and a median possession spell of TWO TICKS — one
+        // second. A carrier needs roughly eleven ticks to run from 46m into the penalty area, and the p90
+        // spell is four. So nobody could carry the ball anywhere, and the only chance the engine could
+        // express was one resolved INSTANTLY, from wherever the receiver happened to be standing: hence
+        // 97.6% of shots coming off a through-ball at a median of 45.8 metres.
+        // Box runs, clear runs and a real finish are all downstream of being able to keep the ball.
+        const pTackle = TACKLE_RATE * clamp(0.12 + 0.5 * (defEff / (defEff + retain)), 0.05, 0.8) * defMods.pressIntensity
           * (1 + Math.max(0, this.dm[defTeam][i].press) * 0.25) * TICK_SEC;
         const roll = this.rng();
         if (roll < pTackle) {
@@ -513,7 +557,13 @@ export class MatchEngine {
       const closeness = 1 - distGoal / SHOOT_RANGE; // 0 at the edge of range, 1 at the goal
       const central = 1 - Math.abs(cs.y - PITCH.h / 2) / (PITCH.h / 2); // 1 dead-central, 0 at the touchline
       const homeBoost = this.teams[teamIdx].homeBoost ?? 1; // Fan Zone home advantage (only teams[0] carries it)
-      const shootP = (0.0022 + norm(carrier.attrs.shooting) * 0.004) * closeness * (0.35 + 0.65 * central) * this.dm[teamIdx][playerIdx].shoot * (1 + this.zonal[teamIdx]) * homeBoost * TICK_SEC;
+      // STEP 3: THE FINISH, UNCLAMPED — and only now, because unclamping it while the through-ball gate
+      // still fired 67 times a match was measured and REVERTED once already (26 goals and 72 shots a
+      // match). With chances gated on proximity and the box actually occupied, this is the mechanism that
+      // has to carry shot volume, and at its old value it could not: shootP peaked near 0.004 per tick, so
+      // a player standing in front of goal shot about once every 250 ticks. SHOT_APPETITE scales it.
+      const onClearRun = this.clearRun[teamIdx] === playerIdx;
+      const shootP = (onClearRun ? CLEAR_RUN_APPETITE : SHOT_APPETITE) * (0.0022 + norm(carrier.attrs.shooting) * 0.004) * closeness * (0.35 + 0.65 * central) * this.dm[teamIdx][playerIdx].shoot * (1 + this.zonal[teamIdx]) * homeBoost * TICK_SEC;
       if (this.rng() < shootP) {
         this.resolveShot(teamIdx, playerIdx, distGoal, false);
         return;
@@ -543,6 +593,7 @@ export class MatchEngine {
           if (this.zoneOf(teamIdx, recS.x) !== 'def') this.flow('pass', teamIdx, recS.x, carrier.name, rec.name);
           this.lastPass[teamIdx] = { passer: playerIdx, receiver: pick.idx, sec: s.clockSec }; // for assist credit
           s.carrier = { teamIdx, playerIdx: pick.idx };
+          this.clearRun[teamIdx] = -1;
           s.ball = { ...recS };
           // through-ball that springs a fast forward behind a high line => clear chance
           if (pick.through && this.beatsLastDefender(teamIdx, pick.idx)) {
@@ -580,7 +631,17 @@ export class MatchEngine {
             // clear chances RARE first (tighten `beatsLastDefender` / the through-ball gate to a handful a
             // match), then unclamping the finish — a balance project, not a one-line change. Shipping the
             // half of it that raises conversion would be far worse than the defect.
-            this.resolveShot(teamIdx, pick.idx, Math.hypot(goal.x - recS.x, goal.y - recS.y), true);
+            // NO LONGER A SHOT FROM HERE. This fired resolveShot from wherever the receiver was STANDING
+            // when the pass arrived — a median of 45.8 metres, past the halfway line — which is the single
+            // root of the whole geometry defect: 97.6% of every shot in the game came through this line,
+            // 2.4% of them from inside the box, and `quality` clamps the shooting term to zero at that
+            // range so a 20-rated finisher converted like a 5-rated one.
+            //
+            // A ball played in behind is a CHANCE, not a strike. The receiver already has possession (set
+            // above), so he now carries it at the goal and the ordinary shoot-from-range logic decides the
+            // finish when he actually arrives. Volume is preserved — the gate still fires as often — while
+            // the shot itself happens where a shot happens.
+            this.clearRun[teamIdx] = pick.idx;
           }
         } else {
           // Intercepted/loose ball scatters near the midpoint of the attempted pass;
@@ -683,6 +744,17 @@ export class MatchEngine {
     // edge to spring it clean — a marginal one just gets caught. Bounded to this one decision, so a
     // side without a genuine outlet threat gets far fewer clear breakaways; a side with real pace
     // (e.g. a poacher/pressing-forward with a big gap) still tears the trap open exactly as before.
+    // STEP 1 OF THE REBUILD: A CLEAR CHANCE HAS TO BE NEAR THE GOAL.
+    // This gate asked only "is the receiver past the last defender, and faster?" — never "is he anywhere
+    // dangerous?" — and it fires about 67 times a match, supplying 97.6% of every shot in the game. The
+    // shot then resolves from wherever the receiver was STANDING when the pass arrived: a median of 45.8
+    // metres, past the halfway line, with 2.4% of all shots taken from inside the box. That is the whole
+    // shape of the defect, and every downstream symptom (an inflated shoot-from-range constant, `shooting`
+    // clamped inert on 97% of attempts, an empty penalty area) hangs off it.
+    //
+    // A ball played in behind at 46 metres is a pass into space, not a chance. CHANCE_RANGE says how close
+    // the receiver must be to the goal he is attacking for it to count as one. Rarity FIRST, exactly as
+    // engine.ts's own note prescribes — the finish cannot be unclamped while the gate fires 67 times.
     const trap = !!this.tactics[defTeam].offsideTrap && this.tactics[defTeam].line >= 1;
     if (!trap) return behind && paceGap > 0;
     if (paceGap > TRAP_BEATS) return behind;              // real pace tears a set trap open, as before
