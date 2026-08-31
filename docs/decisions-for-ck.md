@@ -119,7 +119,7 @@ I have **fixed** the items marked FIXED. The rest are design calls that are your
   level 1. The offer is now re-run when the levels land.
 - **`clearMgr()`** — dead since the succession fix. Deleted.
 
-## ~~7. Fixed, and it changes the balance~~ — DONE, but tell me if you disagree with the two marked arguable
+## 7. PARTLY REVERTED — the Park the Bus / Counter retune in here was undone by the engine revert
 
 **The pyramid was three different games.** The calibration gate measures goals/match at ONE squad quality
 and asserts it lands in [1.6, 3.6]. It passed for months. Across the strengths the game actually generates:
@@ -145,7 +145,12 @@ the constraint (a summit club earns 10,428 against 6,804 of upkeep; the 14,000 c
 cannot do). **If you want the top of the ladder to stay out of reach as a deliberate choice, say so and I
 will revert this one** — it is the only balance change here I would call arguable.
 
-**Park the Bus and Counter were traps.** Both measured LAST at every quality gap; as an 11-v-15 underdog
+**Park the Bus and Counter were traps — AND THIS FIX NO LONGER EXISTS.** The retune (`cc4292b`) was
+undone by the engine revert (`de643ad`). `shared/src/tactics.ts` on disk today reads
+`'Park the Bus': { mentality: -2, line: -2, press: -1, width: -1 }` and `'Counter': { line: -1, press: -1,
+tempo: 2 }` — the original trap values. §35 re-reports them at 0.074 and 0.125 PPG against Balanced's
+0.384 without anyone noticing this section still claimed them fixed. **Struck through in error; it is open.**
+Both measured LAST at every quality gap; as an 11-v-15 underdog
 Park the Bus took 0.03 points a game where Balanced took 0.17. The cause was not their defending but their
 attack: `mentality: -2` sets the attacking push to exactly zero, so the side never came out, never relieved
 pressure, and conceded *more* than anyone. Retuned. Sitting deep is an identity; refusing to leave the box
