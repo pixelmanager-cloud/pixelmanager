@@ -1013,7 +1013,7 @@ run on HEAD:
 
     matches=200  shots/match=65.3  goals/match=2.84
     shot distance  p10 40.7  median 45.8  p90 48.8   (metres from goal)
-    shots inside 18m: 0.2%
+    shots inside 18m: 2.4%   (318 of 13,070 — see the correction below)
     possession spell ticks: median 2  (TICK_SEC=0.5)  ->  1.0 second
     attackers in box: 0.02 players on average while attacking
 
@@ -1084,3 +1084,64 @@ whole purpose is professional colour per attribute.
 Measured over 1,300 generated lines per chapter: Grassroots and Academy fall to **1.15%** adult-register
 phrasing against First Team's **33.15%** (which is correct — that IS the adult voice). The 1.15% residual
 is one deliberate line: *"He celebrated that like a cup final. It was a Tuesday."*
+
+## ~~54. All 13 blind probes now have failure paths~~ — DONE, and it corrected two things I told you
+
+`npm run gate` is green on all three legs with every probe armed: **verify 0, playtest 0 (41 probes),
+qa 0 (31 harnesses)**. Each bar was proved by breaking it and restoring it, and each is a *ratchet* set from
+today's measurement, so nothing turned red — but a catastrophe can no longer get quietly worse, and the
+green lines now say so out loud (*"A green run here means 'no new damage', not 'this is fine'"*).
+
+**CORRECTION 1 — the 0.2% figure I gave you was wrong, by about twelve times.** `shot_geometry` was
+re-deriving each shot's distance from `state.carrier`, but the rebound path calls `resolveShot` for a
+player who is *not* the carrier, so every close-range rebound was logged at the carrier's distance. Using
+the engine's own `distGoal`, shots from inside the box are **2.43% (318 of 13,070)**, not 0.2%. Against
+real football's >40% that is still a catastrophe — but I quoted you a number that was wrong, and the probe
+I was quoting was measuring the wrong thing.
+
+`width_diagnosis` had the same class of bug: its headline veto rate came from a
+`(myD - tD) * 0.35 + ... * 0.65` blend that **does not exist in the engine**, whose rule is plainly
+`myDistGoal - dGoal`. Corrected, the wide-pass veto rate is **74.1%**, not the 72.5% in §43 — and the
+sharper statement is the new one: the veto kills **74.1% of wide candidates against 58.95% of central
+ones**, a 15-point anti-width bias, which is the defect itself rather than a symptom.
+
+**CORRECTION 2 — §19 was wrong about the offside trap, and it matters.** §19 records `offsideTrap` as
+"exactly inert". That was measured on the rebuild branch that was reverted. **On the engine you actually
+ship it is wired, and it is the strongest tactical toggle in the game.** I measured it independently at
+n=400 per cell: with a High line it is worth **−0.770 goals conceded and +0.482 points per game** — about
+8.7 league points a season, for one free tick. The census in `tactics_matrix` agrees (18 of 24 paired
+matches diverge). Meanwhile the tooltip warns *"mistime it and they're through"* — **there is no mistime
+branch in the engine.** So the copy steers players away from the best toggle available to them.
+
+**I have not touched that copy**, because making it honest is a balance change by disclosure: it would tell
+every player to tick a free +0.48 PPG. The honest resolution is probably the opposite one — implement the
+downside the copy already promises — and that is yours to call. **See §55.**
+
+## 55. YOUR CALL — the offside trap is the best toggle in the game and the game hides it
+
+| line setting | Δ goals conceded with the trap on | Δ points per game |
+|---|---|---|
+| Balanced (0) | 0.000 — correctly inert, it requires a high line | +0.000 |
+| **High (+1)** | **−0.770** | **+0.482** |
+| Very High (+2) | −0.367 | +0.155 |
+
+Three ways out, and they are genuinely different games:
+1. **Fix the copy.** One line. Players learn to tick it, and the game gets easier by ~8.7 points a season.
+2. **Implement the mistime.** `engine.ts` already has the single point to do it — the trap currently only
+   *raises* the pace edge an attacker needs, one-directionally. Making it two-sided (a marginal attacker
+   sometimes goes clean through) makes the existing copy true and removes a free win. **My recommendation.**
+3. **Leave both.** Not defensible: the game is currently lying to steer players away from a real advantage.
+
+## 56. The whole goalkeeper duty dial is dead, not just sweeper-keeper
+
+§43 recorded *"sweeper-keeper is a bit-for-bit no-op"*. The new wiring census in `tactics_matrix` — a paired
+bit-for-bit A/B over all **26 dials** on the tactics screen — shows it is worse than that: **`keeper`,
+`sweeper-keeper` and `defaultDuty()` produce byte-identical matches.** Same score, same event count, same
+final position for all 22 players, at a neutral line *and* at the high line the duty's own doc comment says
+it needs. Section 3's own tables have been printing `GK duties SPREAD 0.000 PPG` on every run for as long as
+they have existed.
+
+**22 of the 26 dials are properly wired** (they diverge in 24/24 paired matches), so this is specific, not
+systemic. The GK duty is grandfathered into the census as `KNOWN_INERT` with a bar that fires if the list
+ever *grows* — and keeps passing if somebody fixes it. The player is currently offered a choice the engine
+never reads.
