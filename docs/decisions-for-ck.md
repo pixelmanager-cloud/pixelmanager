@@ -1281,3 +1281,99 @@ and only then is the magnitude question answerable.
 ones, because §8 records that awarding composure makes a player worse. Measured, they are the three BEST.
 §8's finding is about tag frequency in the career log; synergy pays through the attribute-focus channel.
 Different mechanisms — I conflated them, and the measurement says the opposite of my guess.)*
+
+---
+
+# ROUND 12 — the four never-tested modules, and the nineteen defects in them
+
+`scouting.ts`, `mental.ts`, `standingOrders.ts` and `matchstats.ts` were at **100% untested** — five days
+old, never imported by any harness. They are not untestable and they were not new. The suite here is
+**incident-driven**: every harness in the repo was written because something had already broken, so the
+untested 42.6% is simply the part that has not failed loudly yet. That is a selection effect, not a quality
+signal, and this is what was in it. QA is now 32 → 36 harnesses.
+
+## ~~62. Fixed immediately — naming a captain was a penalty~~
+
+`teamLeadership`'s own comment promises *"Naming your best leader = strictly best."* It was false, and
+backwards exactly where it matters. The armband was applied by raising the **coefficient** (0.045 → 0.05),
+and `mAdd` is centred — it returns `k * (lead/20 - 0.5)`, which is **negative below 10**. Multiplying a
+negative by a larger k makes it worse. Measured on real minted squads: **30% of tier-7 clubs and 100% of
+tiers 8, 9 and 10**. Every dynasty starts at the bottom of the pyramid.
+
+Also fixed: `teamLeadership([])` returned −0.0225, the worst value the function can produce, where neutral
+is the only defensible answer. *(And a bug I introduced fixing it — seeding the reduce at 10 makes it a
+FLOOR, erasing the lower divisions' weakness. Caught by my own probe. The harness now asserts empty is
+neutral, the armband is never a penalty, AND tier 10 still reads as poorly led.)*
+
+## 63. LIVE and player-facing — five that need your call
+
+- **The scout tiers advertise numbers the generator does not deliver.** `main.ts` prints the declared
+  triples to the player as literal strings — *"Best trialists (12/43/33/12)"*. Over 12,000 draws a gold
+  pool actually delivers **raw 28.0% / squad 37.2% / quality 28.9% / gem 6.0%**. Gold advertises 12% gem
+  and 12% raw; it hands over **6% and 28%**. The band roll itself is clean (matches the table to within
+  0.25pp) — the mismatch is that the displayed badge is re-derived from the realised overall. Same class as
+  the copy sweep: a number shown to the player that the code does not honour.
+- **The rarity badge measures the POSITION, not the prospect.** `bandOf` thresholds `overall()`, whose
+  per-role formula is not neutral, and the bands are only 2 OVR wide. Measured at gold over 60,000 draws: a
+  **goalkeeper is 3.3× more likely to be badged GEM than a defender** drawn from the identical band
+  distribution (GK gem 12.9%, DF gem 3.9%). The quality signal you pay the Youth Academy to move is
+  dominated by which role slot came up.
+- **`LOANEE_CAP` gates signing but not dispatching or spending.** `dispatchScout` checks trips and coins
+  only. Budgets: **7 paid trips a season** (3 + 4 from a maxed HQ) against a **cap of 3**, and the 3–11
+  free walk-ups compete for the same slots. Sign three free trialists first and all seven paid trips are
+  **guaranteed dead money, with no warning at dispatch** — 64 coins each at HQ L10. Separately, `signTrial`
+  and `signMission` push into `club.players` with no size check, so loanees can carry a squad past
+  `MAX_SQUAD = 28`.
+- **The traits the engine reads are unreachable below tier 4, and The Wall gets RARER as keepers improve.**
+  Measured over 30 clubs/tier: `clinical` 39/25/13/0/0/0% at tiers 1/2/3/6/8/10; `ballwinner` 59/43/25/0%.
+  And keepers carrying `wall`: **tier 3 100%, tier 2 87%, tier 1 47%** — it goes *down*, because
+  `eligibleTraits(...).slice(0, MAX_TRAITS)` takes catalogue order and `wall` sits ninth, so an elite keeper
+  who also qualifies for four other traits loses the only one the engine reads for keepers. The trait
+  bonuses are a top-flight-only mechanic the bottom of the pyramid never sees.
+- **A substituted-off captain keeps his armband bonus.** `leadershipBonus` is computed once in the
+  `MatchEngine` constructor from the starting XI and never recomputed; a replacement leader never earns
+  one. *Related:* nothing in the manager game ever changes a mental stat after graduation, and `ageCurve()`
+  — written to raise composure/leadership into a player's 30s — **has no production caller at all**.
+
+## 64. The measurement that settles §16
+
+**The mental layer is worth exactly nothing outside a played match, and it is now quantified on both
+sides.** `overall()` moves **0.0000** between a min-mental (all 1) and a max-mental (all 20) XI; +3 pace
+moves it 0.3636. `squadStrength()` is a weighted mean of `overall()`, and `LeagueClub` carries only
+`strength`. So two squads that differ by **3.07 goals a match in the engine** are *literally identical* to
+the league table, the transfer market, `incomingBid` and the Sim button. §16 asserted this; this measures
+both halves — the 3.07 and the 0.0000.
+
+## 65. LATENT — real, but nothing calls them today
+
+Worth knowing before anyone wires them up, not worth fixing unattended.
+
+- **`standingOrders.ts` has SEVEN defects and ZERO call sites.** `parseRoles` **throws** on any corrupt row
+  — `'undefined'`, whitespace, a truncated write like `'{"captainIdx":'` (exactly what an interrupted save
+  looks like), trailing garbage. A throw on the load path is the documented mechanism by which a club
+  becomes permanently unmanageable. It also returns values that violate its own declared type (`'null'` →
+  `null`, `'[1,2,3]'` → an array), and `rolesJson` is not stable for equal inputs. The correct pattern
+  already exists 175 lines into `api.ts` as `parseActions()`.
+- **`matchstats.ts` loses players and credits goals to men who never played** — and has zero callers.
+  It keys every stat by player NAME, and `nameId` lets a BENCH player overwrite an XI player of the same
+  name. `generateClub` draws from 324 name combinations for a 20-man roster, so collisions are constant.
+  Measured over 400 matches: **40% of matchday squads contain two men with the same name; 378 players who
+  took the field get no row at all; 150 rows credit an unused substitute with an appearance**, 18 of those
+  with goals or Player of the Match. One worked example hands an unused sub **4 goals and POTM** while the
+  man who actually scored them has no row. The real fix is upstream — put player ids in `MatchEvent`.
+- **One NaN attribute silently stops a team scoring.** `norm()` catches null/undefined and passes NaN
+  straight through; it poisons `teamLeadership` → `finish` → `goalProb`, and `rng() < NaN` is false for
+  ever. Measured: **4 goals in 60 matches against a baseline of ~78**, no throw, no log, match completes
+  normally. `overall()` guards this exact class and its comment records that it once "permanently poisoned
+  the wallet" — the lesson was learned twelve files away and not applied here.
+- **`trialistAt`'s bound is not total.** `NaN` fails both comparisons in the guard, so it returns a player
+  with id `loan-s5-NaN` who appears in no pool; fractional indices mint **id-distinct clones** of the same
+  man, defeating the duplicate-signing guard. Not reachable through the shipped UI today.
+- **`OPP_REVEAL` has zero consumers** — a provably well-formed ladder (total, strictly monotone, no
+  un-reveal) that nothing climbs.
+
+**And what was checked and CLEARED**, so nobody re-opens it: the scouting band RNG is unbiased and no row
+falls through; there is no per-index skew; no duplicate ids in any pool or across a 40-season dynasty; both
+the tier and Youth Academy dials genuinely move; `hasTrait` handles missing/null lists correctly and its
+casing is strict-but-correct; all five engine-read trait ids exist and are reachable; and PT-303's
+loanee-expiry hole is genuinely fixed.
