@@ -25,7 +25,7 @@
 import { hasTrait, mAdd, mMul, teamLeadership } from './src/mental.js';
 import { MatchEngine } from './src/engine.js';
 import { generateTeam, generateClub, overall } from './src/teams.js';
-import { DEFAULT_TACTICS } from './src/tactics.js';
+import { DEFAULT_TACTICS, seededOpponentTactics } from './src/tactics.js';
 import { TRAITS } from './src/career.js';
 import { TIERS, tierStrength } from './src/clubseason.js';
 import type { MatchEvent, Player, Team } from './src/types.js';
@@ -215,11 +215,15 @@ const FIXTURES = Array.from({ length: N }, (_, i) => {
   const q = 8 + (i % 9);
   return { a: generateTeam('a', 'A', 1, q, i * 7919 + 1, '4-4-2'), b: generateTeam('b', 'B', 2, q, i * 7919 + 1, '4-4-2'), seed: i * 104729 + 3 };
 });
-function sweep(mut: (a: Team, b: Team) => void): { sigs: string[]; gd: number; gf: number } {
+function sweep(mut: (a: Team, b: Team) => void, shipped = false): { sigs: string[]; gd: number; gf: number } {
   const sigs: string[] = []; let gd = 0, gf = 0;
   for (const f of FIXTURES) {
     const a = clone(f.a), b = clone(f.b); mut(a, b);
-    const m = new MatchEngine([a, b], f.seed, [DEFAULT_TACTICS, DEFAULT_TACTICS]);
+    // `shipped` mirrors the fixture the GAME stages: the manager's tactics against a seeded opponent's,
+    // not DEFAULT_TACTICS on both sides. Every measurement in this file was taken on the symmetric
+    // default, which is a fixture the player never actually plays.
+    const oppT = shipped ? seededOpponentTactics(f.seed) : DEFAULT_TACTICS;
+    const m = new MatchEngine([a, b], f.seed, [DEFAULT_TACTICS, oppT]);
     while (!m.state.finished) m.tick();
     const score = m.state.score as [number, number];
     sigs.push(sig(m.state.events, score)); gd += score[0] - score[1]; gf += score[0];
@@ -244,6 +248,16 @@ const BASE = sweep(() => {});
   const lo = sweep((a, b) => { setAll(a, 1); setAll(b, 20); });
   const swing = hi.gd - lo.gd;
   ok('max-mental XI vs min-mental XI swings goal difference by 2+ a match', swing >= 2, `${swing.toFixed(2)} goals/match (GD ${hi.gd.toFixed(2)} vs ${lo.gd.toFixed(2)})`);
+  // ON THE PATH THE GAME ACTUALLY SHIPS. The swing above is measured with DEFAULT_TACTICS on both sides;
+  // a real fixture is the manager's tactics against `seededOpponentTactics(seed)`, which sets a different
+  // press, line and directness and could plausibly wash the mental layer out. §16's claim — that a squad
+  // the league table cannot tell apart plays measurably differently — only means something if it holds
+  // where the player lives, so it is asserted there too rather than inferred from the symmetric case.
+  const hiS = sweep((a, b) => { setAll(a, 20); setAll(b, 1); }, true);
+  const loS = sweep((a, b) => { setAll(a, 1); setAll(b, 20); }, true);
+  const swingS = hiS.gd - loS.gd;
+  ok('...and the same swing survives against SEEDED opponent tactics, the fixture the game stages',
+     swingS >= 2, `${swingS.toFixed(2)} goals/match on the shipped path (vs ${swing.toFixed(2)} on the symmetric default)`);
 }
 {
   // EVERY STAT, INDIVIDUALLY. Dropping `mMul(def.attrs.aggression, …)` leaves the other four working and

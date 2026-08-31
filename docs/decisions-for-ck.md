@@ -1401,7 +1401,7 @@ neutral, the armband is never a penalty, AND tier 10 still reads as poorly led.)
   one. *Related:* nothing in the manager game ever changes a mental stat after graduation, and `ageCurve()`
   — written to raise composure/leadership into a player's 30s — **has no production caller at all**.
 
-## 64. The measurement that settles §16
+## 64. The measurement that settles §16 — and it is BIGGER on the path the game ships
 
 **The mental layer is worth exactly nothing outside a played match, and it is now quantified on both
 sides.** `overall()` moves **0.0000** between a min-mental (all 1) and a max-mental (all 20) XI; +3 pace
@@ -1409,6 +1409,14 @@ moves it 0.3636. `squadStrength()` is a weighted mean of `overall()`, and `Leagu
 `strength`. So two squads that differ by **3.07 goals a match in the engine** are *literally identical* to
 the league table, the transfer market, `incomingBid` and the Sim button. §16 asserted this; this measures
 both halves — the 3.07 and the 0.0000.
+
+**Re-measured on the shipped path, and the effect is LARGER, not smaller.** The 3.07 was taken with
+`DEFAULT_TACTICS` on both sides — a symmetric fixture the player never actually plays. A real match is the
+manager's tactics against `seededOpponentTactics(seed)`, which sets a different press, line and directness
+and could plausibly have washed the mental layer out. It does not: the swing there is **4.64 goals a
+match**. So the gap §16 describes is wider than first reported — the league table, the transfer market,
+`incomingBid` and the Sim button are all blind to a difference worth nearly five goals a game. `qa_mental`
+now asserts both, so the claim can no longer rest on the symmetric case alone.
 
 ## 65. LATENT — ~~four fixed~~, the rest still latent
 
