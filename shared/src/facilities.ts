@@ -173,16 +173,35 @@ export function womensIncome(level: number, tierIdx: number): number { return Ma
 //
 // Level 1 is free, like every other neutral baseline in this module, so a young club feels none of this.
 export const UPKEEP_COEFF = 7;
-export function facilityUpkeep(level: number): number {
+export function facilityUpkeep(level: number, weight = 1): number {
   // `facLevel` is documented as the defensive clamp, so it has to survive a corrupt save: Math.max(1, NaN)
   // is NaN, and a NaN bill makes `Math.min(have, due)` NaN and `due > have` false — the club would be
   // charged NaN coins once and then never billed again.
   const l = Number.isFinite(level) ? level : 1;
-  return Math.round(UPKEEP_COEFF * Math.pow(Math.max(0, l - 1), 2));
+  const w = Number.isFinite(weight) ? weight : 1;
+  return Math.round(UPKEEP_COEFF * w * Math.pow(Math.max(0, l - 1), 2));
 }
 /** The club's whole upkeep bill for a season. */
+/** NOT EVERY FACILITY COSTS THE SAME TO RUN, and charging one flat quadratic for all twelve is what made
+ *  two of them punish the player for finishing their ladder.
+ *
+ *  Income is LINEAR in level and upkeep is QUADRATIC, so every facility eventually loses money. In the
+ *  lower divisions that is deliberate — a maxed ground is meant to be a millstone after relegation, which
+ *  is what gives relegation teeth. But it should never happen in the division the facility was built for,
+ *  and for the Women's Team it did: measured net at level 10 in the TOP FLIGHT, sponsor +556, shop +494,
+ *  stadium +144, women **-5**. Level 10 cost 41,000 coins to reach and left the club poorer than level 9.
+ *
+ *  The cause is that the curve is indifferent to what the thing IS. A second side sharing the training
+ *  ground and the badge does not cost what a forty-thousand-seat stadium costs to run, and a community
+ *  trust has no building to maintain at all — its own header calls it "local goodwill". These weights say
+ *  so. Everything unlisted stays at 1.0, so the relegation teeth are untouched for the nine facilities
+ *  that are genuinely infrastructure. */
+export const UPKEEP_WEIGHT: Partial<Record<FacilityKey, number>> = {
+  women: 0.45,       // shares the training ground and the badge; its own blurb says so
+  community: 0.25,   // goodwill, not a building — there is nothing to maintain
+};
 export function seasonUpkeep(fac: Partial<Facilities> | undefined): number {
-  return FACILITY_KEYS.reduce((t, k) => t + facilityUpkeep(facLevel(fac, k)), 0);
+  return FACILITY_KEYS.reduce((t, k) => t + facilityUpkeep(facLevel(fac, k), UPKEEP_WEIGHT[k] ?? 1), 0);
 }
 /** When the club cannot pay, facilities fall into disrepair until the bill is one the club could meet.
  *
@@ -253,8 +272,15 @@ export function effectAt(key: FacilityKey, level: number): string {
     case 'data':      return level === 1 ? 'No analysts yet' : `+${(dataEdge(level) * 100).toFixed(1)}% edge in tight matches from opposition prep`;
     case 'shop':      return level === 1 ? 'A table and a cash box' : `≈ ${shopIncome(level, 4)}+ coins/season, more as the crowd grows`;
     case 'dorm':      return level === 1 ? 'The boys live at home' : `+${dormIntakeBonus(level)} academy intake place(s), and fewer lost to the travel`;
-    case 'women':     return level === 1 ? 'No second side yet' : `≈ ${womensIncome(level, 4)} coins/season, and a second side with stories of its own`;
-    case 'community': return level === 1 ? 'Nothing organised' : 'Opens local stories the club could not tell before — more of them the deeper the trust runs';
+    case 'women':     return level === 1 ? 'No second side yet' : `≈ ${womensIncome(level, 4)} coins/season, and a second side with stories of its own`;   // mid-table figure; the ladder now pays more at every level in the division it was built for
+    // I WROTE THE OLD LINE THIS MORNING AND IT WAS FALSE ABOVE LEVEL 5. "More of them the deeper the trust
+    // runs" describes a ladder that does not exist: the Community Trust has NO numeric effect function at
+    // all, and its only wiring is `when.facility` arc gates, which run out at level 5. Levels 6-10 unlock
+    // nothing. The upkeep weight above stops them costing 1,785 coins a season for that, but the honest
+    // card has to say the stories stop — authoring arcs at 6-10 is the real fix and is content work.
+    case 'community': return level === 1 ? 'Nothing organised'
+      : level <= 5 ? 'Opens local stories the club could not tell before — more of them the deeper the trust runs'
+      : 'Every local story this club can tell is already open to it — the trust runs deep enough';
     case 'fanzone':  return level === 1 ? 'No home edge yet' : `+${Math.round((fanHomeBoost(level) - 1) * 100)}% home attack, +${Math.round((fanIncomeMult(level) - 1) * 100)}% gate`;
   }
 }

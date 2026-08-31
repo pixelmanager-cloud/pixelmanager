@@ -38,7 +38,7 @@
 // everyone. They are recomputed on every run so they cannot rot quietly, and they are written up.
 import {
   FACILITY_KEYS, FACILITY_META, MAX_LEVEL, MAX_DISREPAIR, MOTHBALL_REFUND, UPKEEP_COEFF, DIVISION_MERIT,
-  DEFAULT_FACILITIES, facLevel, upgradeCost, mothballRefund, facilityUpkeep, seasonUpkeep,
+  DEFAULT_FACILITIES, facLevel, upgradeCost, mothballRefund, facilityUpkeep, UPKEEP_WEIGHT, seasonUpkeep,
   facilityToDowngrade, applyDisrepair, effectAt, facilityLevelStory, seasonFacilityIncome,
   stadiumIncome, sponsorIncome, shopIncome, womensIncome, squadMarketability,
   trainingConditioning, youthPoolBonus, youthUpgradeChance, scoutHitMult, scoutCostDiscount,
@@ -373,9 +373,15 @@ console.log('\n=== 7. Upkeep: free at the baseline, monotone, NaN-proof, and pay
   ok('a corrupt level cannot produce a NaN bill',
     facilityUpkeep(NaN) === 0 && facilityUpkeep(Infinity) === 0 && facilityUpkeep(-Infinity) === 0
     && Number.isFinite(seasonUpkeep({ stadium: 'x' as unknown as number })));
-  ok('seasonUpkeep is exactly the sum over the twelve keys, and 6,804 at the summit',
-    seasonUpkeep(allAt(MAX_LEVEL)) === FACILITY_KEYS.length * facilityUpkeep(MAX_LEVEL)
-    && seasonUpkeep(allAt(MAX_LEVEL)) === 6804 && seasonUpkeep(undefined) === 0,
+  // 6,067 not 6,804: facilities now carry a per-TYPE upkeep weight (UPKEEP_WEIGHT), because one flat
+  // quadratic for all twelve was charging a women's team that shares the training ground, and a community
+  // trust with no building at all, exactly what a forty-thousand-seat stadium costs to run. That is what
+  // made the Women's Team net NEGATIVE at level 10 in the top flight — the one division it was built for.
+  // The invariant being asserted is unchanged and is the point: the bill is the sum over the twelve keys
+  // and nothing else.
+  ok('seasonUpkeep is exactly the sum over the twelve keys, and 6,067 at the summit',
+    seasonUpkeep(allAt(MAX_LEVEL)) === FACILITY_KEYS.reduce((t, k) => t + facilityUpkeep(MAX_LEVEL, UPKEEP_WEIGHT[k] ?? 1), 0)
+    && seasonUpkeep(allAt(MAX_LEVEL)) === 6067 && seasonUpkeep(undefined) === 0,
     fmt(seasonUpkeep(allAt(MAX_LEVEL))));
   ok('seasonUpkeep rises monotonically as the club is built',
     LEVELS.slice(1).every((l) => seasonUpkeep(allAt(l)) > seasonUpkeep(allAt(l - 1))));
