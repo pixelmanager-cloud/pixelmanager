@@ -127,9 +127,15 @@ const MAX_B2B_OUTCOME_PCT = 1;        // measured 0.00% (pre-existing bar, kept)
 const MAX_B2B_PROMPT_PCT = 2;         // measured 0.00% (pre-existing bar, kept)
 const MAX_LINE_IN_ONE_CAREER = 12;    // measured 9x    (pre-existing bar, kept)
 const MAX_MEDIAN_LINE_IN_CAREER = 9;  // measured 6x    (pre-existing bar, kept)
-const MIN_FIRST_REPEAT_LINE = 36;     // measured 47 — KNOWN BAD, see the block above. Floor, not target.
-const MIN_CAREER_UNIQUE_PCT = 74;     // measured 82.7% median (§23 quotes 75.8% across five generations)
-const MIN_WORST_CAREER_UNIQUE_PCT = 70; // measured 78.7% in the worst-served career
+// RAISED after the §23 authoring pass landed, which is what the block above says to do. narrate.ts's banks
+// went from ~590 hard-coded lines to ~3,600, and the anonymous inline cast arrays — which held the single
+// most-repeated PROMPT string in the game at 1.0% of everything a player read — were extracted and taken
+// from 7 and 10 lines to 40 each. Measured after: first repeat at line 109 (was 48), median career 92.6%
+// distinct (was 83.4%), worst-served career 90.1% (was 79.5%), top prompt line 0.2% (was 1.0%). Bars set
+// with a real margin under those, because the point is to stop it regressing, not to pin today's number.
+const MIN_FIRST_REPEAT_LINE = 85;     // measured 109 — no longer a floor under a hole
+const MIN_CAREER_UNIQUE_PCT = 88;     // measured 92.6% median
+const MIN_WORST_CAREER_UNIQUE_PCT = 85; // measured 90.1% in the worst-served career
 const MAX_CAREER_LINE_SHARE_PCT = 2.5;  // measured 1.3% in the worst-served career
 const MIN_PROMPT_BANK = 8000;         // measured 10,400 distinct prompt sentences (9,989 at 150 careers)
 const BANK_BAR_NEEDS = 150;           // careers below which the prompt corpus has not saturated
