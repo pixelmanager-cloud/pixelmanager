@@ -31,7 +31,7 @@ than re-derives, and `tools/playtest/shot_geometry.ts` + `width_diagnosis.ts` re
 
 ---
 
-## 2. Arc tags — STALE AS WRITTEN, and about a fifth the size it claims
+## ~~2. Arc tags~~ — STALE AS WRITTEN; a fifth the size it claims, and not a defect
 
 > Re-measured on HEAD: **116 player arcs and 9 manager arcs gate on tags, and 30 gate on a facility.**
 > Only `when.maxSeason` is genuinely unused — one dead gate, not four. The tag economy is thin, not dead.
@@ -522,7 +522,13 @@ it is invented.
 - **`defSkill` is never recomputed after a substitution**, though its comment says it is. (Moot after the
   revert; noted for any re-attempt.)
 
-## 23. The prose — good news, and a precise two-day job
+## ~~23. The prose~~ — DONE (2026-08-31)
+
+> First repeat **line 48 → line 132**; median career distinct 83.4% → **94.4%**; worst-served career
+> 79.5% → **92.3%**; most-repeated prompt line 1.0% → **0.2%**. The ratchet is raised from 36 to 85.
+> All 13 inline banks extracted. NOTE the honest caveat from the editor: this bought SIZE, not
+> concreteness — numeral density in the new lines is 27.3 against 31.3 in the file they joined. The next
+> prose pass has to be about concreteness and metre, and you cannot buy your way out of it twice.
 
 The repetition is **concentrated, twice over**, so this is a morning's work rather than a rewrite:
 
@@ -1173,7 +1179,12 @@ branch in the engine.** So the copy steers players away from the best toggle ava
 every player to tick a free +0.48 PPG. The honest resolution is probably the opposite one — implement the
 downside the copy already promises — and that is yours to call. **See §55.**
 
-## 55. YOUR CALL — the offside trap is the best toggle in the game and the game hides it
+## ~~55. The offside trap~~ — DONE: the mistime is implemented (2026-08-31)
+
+> The free win goes from **+18.2 pts/38 to +5.9**, and the tooltip's promise — *"mistime it and they're
+> through"* — is true for the first time. A MITIGATION, not the full fix: the engine can only express a
+> mistimed trap as an ordinary clear chance, so it cannot yet be MORE dangerous than the one it replaces.
+> That needs the chance-creation rework (§1).
 
 | line setting | Δ goals conceded with the trap on | Δ points per game |
 |---|---|---|
@@ -1322,7 +1333,7 @@ is the only defensible answer. *(And a bug I introduced fixing it — seeding th
 FLOOR, erasing the lower divisions' weakness. Caught by my own probe. The harness now asserts empty is
 neutral, the armband is never a penalty, AND tier 10 still reads as poorly led.)*
 
-## 63. LIVE and player-facing — five that need your call
+## 63. LIVE and player-facing — ~~three fixed~~, two still need your call
 
 - **The scout tiers advertise numbers the generator does not deliver.** `main.ts` prints the declared
   triples to the player as literal strings — *"Best trialists (12/43/33/12)"*. Over 12,000 draws a gold
@@ -1361,7 +1372,7 @@ moves it 0.3636. `squadStrength()` is a weighted mean of `overall()`, and `Leagu
 the league table, the transfer market, `incomingBid` and the Sim button. §16 asserted this; this measures
 both halves — the 3.07 and the 0.0000.
 
-## 65. LATENT — real, but nothing calls them today
+## 65. LATENT — ~~four fixed~~, the rest still latent
 
 Worth knowing before anyone wires them up, not worth fixing unattended.
 
