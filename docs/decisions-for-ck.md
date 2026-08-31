@@ -905,3 +905,45 @@ equality by structural walk rather than `JSON.stringify`.
 
 **I have not installed it.** Adding a dependency is a supply-chain decision, however small and however
 standard the package, and you have been clear that decisions are yours. Say the word and it is an hour.
+
+---
+
+# ROUND 10 — 2026-08-31, while you slept
+
+## ~~47a. "🎯 Right card" fired on every skilled play, including the hands that held no right card~~ — FIXED
+
+`answeredAsk` is `fit >= bestFit - 0.05`, and `bestFit` is the maximum fit **across your hand**. So for
+anyone who reads the green tag and plays the best card available, `fit === bestFit` by construction and the
+test is tautologically true. It never consulted the moment's demand.
+
+Measured over 28,800 play turns across 240 careers: **14.3% of hands contain no card that answers the
+moment at all** (`bestFit` below the 0.78 `TOP_DEMAND` threshold), and on those turns success falls from
+0.707 to 0.551. The game congratulated the player on all of them. Median `bestFit` is exactly 0.780, which
+confirms `TOP_DEMAND` as the right cut.
+
+The chip now asks whether a right card EXISTED before asking whether it was played, and says
+*"🃏 Nothing fit — best of a bad hand"* when it did not. That is the difference between *play better* and
+*draft better*, and the player could not previously tell them apart.
+
+## 47b. YOUR CALL — the handoff button is a one-way door and used to promise it was not
+
+`main.ts` told the player: *"He'll keep playing to 25. You'll be offered the reins again at the next
+stage."* **The second sentence was false.** A re-offer needs a fresh `handoff` payload, and one is only
+built at a chapter boundary that also passes `firstTeamReady` and 11+ apps — but **turn 104 is the last
+band boundary in the game**. Past it, no further offer can ever be constructed. Meanwhile §22 prices the
+button at 3.13 divisions, and it delivers the manager phase through a repair path written for corrupted
+saves.
+
+**I have fixed the copy** — it now says this is the only offer — because a ghost button with an undisclosed
+price is strictly worse than an honest one, and that much is not a design question.
+
+**The design question is yours:** should there be a second door? The argument for is that the Academy
+screen sells the career as *"age 10 → 25"*, and a player who wants to finish the story currently pays
+1–7 divisions, the temperament choice, the tier-aligned squad and the achievement baseline for the
+privilege. The argument against is that `tokens.ts` states the intent explicitly — *"Offered once, at the
+boundary"* — so scarcity may be the point.
+
+If you want it, the shape is known: extract the `#cg-takereins` handler into an `enterManagerPhase(...)`
+that takes an already-graduated player, and make graduation a second entrance to it. Note the graduation
+branch must NOT call `api.careerHandoff` — that throws `not a prospect, 409` for a graduate, and the same
+work is already done elsewhere. Roughly half a day, and it touches the most save-sensitive path in the game.

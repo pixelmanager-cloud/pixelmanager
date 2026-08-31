@@ -3563,7 +3563,14 @@ class Game {
           `<div class="cg-temper${i === 0 ? ' on' : ''}" data-temper="${t.id}"><div class="cg-cname">${t.name}</div><div class="cg-cdescr">${t.blurb}</div></div>`).join('') + `</div>`
       + `<button id="cg-takereins" class="primary">🧢 Take the reins as manager →</button>`
       + `<button id="cg-playon" class="ghost">Play on — finish his career first</button>`
-      + `<div class="cg-handoff-note">He'll keep playing to 25. You'll be offered the reins again at the next stage.</div></div>`;
+      // "You'll be offered the reins again at the next stage" WAS FALSE. A re-offer needs a fresh `handoff`
+      // payload, which is only built at a CHAPTER BOUNDARY that also passes firstTeamReady and 11+ apps —
+      // and turn 104 is the last band boundary there is. Past it, no further offer can ever be
+      // constructed. The button is therefore a one-way door, and it is an expensive one: it routes the
+      // founder through a path that costs divisions. Say what it costs instead of promising a second
+      // chance the code cannot give. (Whether there SHOULD be a second door is a design question, logged
+      // for CK — see docs/decisions-for-ck.md section 47.)
+      + `<div class="cg-handoff-note">He'll keep playing to 25 — and this is the only time you'll be offered the reins, so taking them later is not an option.</div></div>`;
     $('cg-playon').addEventListener('click', async () => {
       try { localStorage.setItem(this.handoffKey(s.prospectId), String(s.turn)); } catch { /* ignore */ }
       try { const cur = await api.getCareer(s.prospectId); if (cur?.state) this.renderCareer(cur.state); } catch { /* ignore */ }
@@ -3935,13 +3942,31 @@ class Game {
     if (!o) return '';
     // Two separate things, labelled so they never read as a contradiction:
     // CHOICE — did you pick the card the moment asked for? (about your decision)
-    const read = o.answeredAsk
-      ? { cls: 'great', label: '🎯 Right card' }
-      : o.matchedAsk
-        ? { cls: 'good', label: '◑ Partial match' }        // played a called-for (secondary) tag — not wrong, just not the best (PT-44)
-        : o.fit >= o.bestFit - 0.18
-          ? { cls: 'good', label: '◑ Fair choice' }
-          : { cls: 'poor', label: '✗ Wrong card' };
+    //
+    // "🎯 Right card" USED TO FIRE ON 100% OF SKILLED PLAYS, including the ~19% of hands that contain no
+    // right card at all — where success collapses from 0.707 to 0.551. The cause is that `answeredAsk` is
+    // `fit >= bestFit - 0.05` and `bestFit` is the max fit ACROSS THE HAND, so for anyone who reads the
+    // green tag and plays the best card available, `fit === bestFit` by construction and the test is
+    // tautologically true. It never consults the moment's demand.
+    //
+    // A right card is one that actually clears the demand. `makeScenario` normalises the top-demanded tag
+    // to exactly TOP_DEMAND (0.78), so `bestFit >= 0.78` is precisely "the hand held a card that answers
+    // this moment". Asking that FIRST separates the two cases the chip was collapsing: you misread the
+    // moment, versus your deck could not answer it. The second is real information the player was denied,
+    // and it is the difference between "play better" and "draft better".
+    const RIGHT_CARD_FIT = 0.78;                          // keep in step with TOP_DEMAND in shared/src/career.ts
+    const hadRightCard = o.bestFit >= RIGHT_CARD_FIT - 1e-9;
+    const read = !hadRightCard
+      ? (o.answeredAsk
+          ? { cls: 'good', label: '🃏 Nothing fit — best of a bad hand' }
+          : { cls: 'poor', label: '🃏 Nothing fit — and not the best of it' })
+      : o.answeredAsk
+        ? { cls: 'great', label: '🎯 Right card' }
+        : o.matchedAsk
+          ? { cls: 'good', label: '◑ Partial match' }      // played a called-for (secondary) tag — not wrong, just not the best (PT-44)
+          : o.fit >= o.bestFit - 0.18
+            ? { cls: 'good', label: '◑ Fair choice' }
+            : { cls: 'poor', label: '✗ Wrong card' };
     // RESULT — how the moment actually went (fit + nerve + coaching − fatigue). When the CHOICE was right
     // but the result still dipped, frame it as bad luck on the day, not bad play (reconciles the two pills).
     // Cut points lifted with the demand/nerve retune (PT-700) so "Brilliant" stays a genuine standout rather
