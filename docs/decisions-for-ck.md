@@ -1441,33 +1441,42 @@ match**. So the gap §16 describes is wider than first reported — the league t
 `incomingBid` and the Sim button are all blind to a difference worth nearly five goals a game. `qa_mental`
 now asserts both, so the claim can no longer rest on the symmetric case alone.
 
-## 65. LATENT — ~~four fixed~~, the rest still latent
+## 65. LATENT — re-verified 2026-09-01; the defects are fixed, the WIRING is what is still missing
 
 Worth knowing before anyone wires them up, not worth fixing unattended.
 
-- **`standingOrders.ts` has SEVEN defects and ZERO call sites.** `parseRoles` **throws** on any corrupt row
+**Re-checked every bullet in this section against the code on 2026-09-01, because a stale defect list is
+worse than none — it sends the next person hunting for bugs that are gone.** Four of the five defects
+described below are now FIXED. What survives is not a set of broken functions; it is that three of these
+modules are correct and *nothing calls them*. That is the same defect class in a different costume, and it
+is the part still worth your attention.
+
+- **~~`standingOrders.ts` has SEVEN defects and~~ ZERO call sites — the defects are FIXED, the wiring is not.** `parseRoles` now returns `{}` for every corrupt shape instead of throwing, and `isIdx` validates shape rather than range. But `parseRoles` and `rolesJson` still have no caller anywhere outside this module; the `StandingOrders` *type* is used throughout `api.ts`, the two functions are not. Original report follows:
+ `parseRoles` **throws** on any corrupt row
   — `'undefined'`, whitespace, a truncated write like `'{"captainIdx":'` (exactly what an interrupted save
   looks like), trailing garbage. A throw on the load path is the documented mechanism by which a club
   becomes permanently unmanageable. It also returns values that violate its own declared type (`'null'` →
   `null`, `'[1,2,3]'` → an array), and `rolesJson` is not stable for equal inputs. The correct pattern
   already exists 175 lines into `api.ts` as `parseActions()`.
-- **`matchstats.ts` loses players and credits goals to men who never played** — and has zero callers.
+- **~~`matchstats.ts` loses players and credits goals to men who never played~~ — FIXED; still zero production callers.** It keys by `playerId` now, and `MatchEvent` carries `playerId`/`playerId2` on every named event, so the name-collision class is gone. Its only importer remains `qa_matchstats.ts`. Original report follows:
+
   It keys every stat by player NAME, and `nameId` lets a BENCH player overwrite an XI player of the same
   name. `generateClub` draws from 324 name combinations for a 20-man roster, so collisions are constant.
   Measured over 400 matches: **40% of matchday squads contain two men with the same name; 378 players who
   took the field get no row at all; 150 rows credit an unused substitute with an appearance**, 18 of those
   with goals or Player of the Match. One worked example hands an unused sub **4 goals and POTM** while the
   man who actually scored them has no row. The real fix is upstream — put player ids in `MatchEvent`.
-- **One NaN attribute silently stops a team scoring.** `norm()` catches null/undefined and passes NaN
+- **~~One NaN attribute silently stops a team scoring~~ — FIXED 2026-09-01, and it was worse than described.** `engine.ts` has its own `norm`, separate from `mental.ts`'s; hardening the mental layer closed only half the hole and left the ten PHYSICAL stats bare. Measured: a keeper with NaN `keeping` conceded **0 goals in 40 matches** against a baseline of 52 — an unbeatable goalkeeper from one bad number in a save. Now guarded the way `overall()` always was, and asserted by `tools/playtest/nan_resilience.ts`, which checks NaN resolves to *exactly* 10 rather than merely not crashing. Original report follows:
+ `norm()` catches null/undefined and passes NaN
   straight through; it poisons `teamLeadership` → `finish` → `goalProb`, and `rng() < NaN` is false for
   ever. Measured: **4 goals in 60 matches against a baseline of ~78**, no throw, no log, match completes
   normally. `overall()` guards this exact class and its comment records that it once "permanently poisoned
   the wallet" — the lesson was learned twelve files away and not applied here.
-- **`trialistAt`'s bound is not total.** `NaN` fails both comparisons in the guard, so it returns a player
+- **~~`trialistAt`'s bound is not total~~ — FIXED.** The guard is `!Number.isInteger(index) || index < 0 || index >= POOL_SIZE + extraSlots`, so NaN and fractional indices are both rejected. Original report follows:
+ `NaN` fails both comparisons in the guard, so it returns a player
   with id `loan-s5-NaN` who appears in no pool; fractional indices mint **id-distinct clones** of the same
   man, defeating the duplicate-signing guard. Not reachable through the shipped UI today.
-- **`OPP_REVEAL` has zero consumers** — a provably well-formed ladder (total, strictly monotone, no
-  un-reveal) that nothing climbs.
+- **`OPP_REVEAL` has zero consumers — STILL TRUE, and now the clearest example in the file.** A provably well-formed ladder (total, strictly monotone, no un-reveal) that nothing climbs. The opposition-scout tiers a player can pay for reveal nothing, because the constant describing what each tier unlocks is read by no code at all.
 
 **And what was checked and CLEARED**, so nobody re-opens it: the scouting band RNG is unbiased and no row
 falls through; there is no per-index skew; no duplicate ids in any pool or across a 40-season dynasty; both
