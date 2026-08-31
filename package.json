@@ -10,12 +10,13 @@
     "typecheck:shared": "tsc -p shared",
     "test:engine": "tsx shared/strategy_test.ts",
     "fuzz": "tsx shared/fuzz_test.ts",
-    "verify": "npm run build --workspace=client && npm run typecheck:shared && tsx tools/playtest/browser_safe.ts && npm run test:engine && npm run fuzz && tsx shared/career_sim.ts && tsx client/qa_savestore.ts && tsx client/qa_migrate.ts && tsx client/qa_branch_switch.ts && tsx client/qa_offline_facade.ts && tsx tools/playtest/golden_replay.ts && tsx shared/qa_replay_contract.ts && tsx shared/qa_squad_lifecycle.ts && tsx shared/qa_bloodline.ts && tsx shared/qa_branching.ts && tsx shared/qa_manager_narrate.ts && tsx shared/qa_manager_arcs_e2e.ts",
+    "verify": "npm run build --workspace=client && npm run typecheck:shared && tsx tools/playtest/browser_safe.ts && npm run test:engine && npm run fuzz && tsx shared/career_sim.ts && tsx client/qa_idb_backend.ts && tsx client/qa_savestore.ts && tsx client/qa_migrate.ts && tsx client/qa_branch_switch.ts && tsx client/qa_offline_facade.ts && tsx tools/playtest/golden_replay.ts && tsx shared/qa_replay_contract.ts && tsx shared/qa_squad_lifecycle.ts && tsx shared/qa_bloodline.ts && tsx shared/qa_branching.ts && tsx shared/qa_manager_narrate.ts && tsx shared/qa_manager_arcs_e2e.ts",
     "qa": "node scripts/run-qa.mjs",
     "playtest": "node scripts/run-playtest.mjs",
     "gate": "npm run verify && npm run playtest && npm run qa"
   },
   "devDependencies": {
+    "fake-indexeddb": "^6.2.5",
     "tsx": "^4.19.0"
   }
 }

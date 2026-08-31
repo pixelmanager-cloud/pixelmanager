@@ -43,7 +43,7 @@ export const FACILITY_META: Record<FacilityKey, { icon: string; name: string; bl
   data:      { icon: '📊', name: 'Data Department', blurb: 'Analysts, video, and numbers nobody used to keep. Sharper opposition scouting and a small edge in every tight match.' },
   shop:      { icon: '🛍️', name: 'Club Shop',       blurb: 'Shirts, scarves and a queue on matchday. Steady commercial income that grows with the crowd.' },
   dorm:      { icon: '🛏️', name: 'Academy Digs',    blurb: 'Somewhere for the young ones to live. Keeps the boys you would otherwise lose to the travel, and widens the intake.' },
-  women:     { icon: '⚽', name: "Women's Team",     blurb: 'A second side sharing the training ground and the badge. Standing, income, and a whole other set of people at the club.' },
+  women:     { icon: '⚽', name: "Women's Team",     blurb: 'A second side sharing the training ground and the badge. Income, and a whole other set of people at the club.' },
   community: { icon: '🤝', name: 'Community Trust',  blurb: 'Schools, a food bank, a hundred small things in the town. It does not win matches; it decides what the club is for.' },
   // "SWELLS THE GATE" IS A MULTIPLIER ON A NUMBER THAT IS ZERO UNTIL THE GROUND IS BUILT. `gate` is
   // `stadiumIncome(...) * fanIncomeMult(fanzone)`, and stadiumIncome is `2.5 * (level - 1) * ...` — so at
@@ -113,6 +113,13 @@ export function squadMarketability(players: Array<{ marketability?: number }>): 
 }
 /** Fan Zone: home-side attacking edge in the match engine (1.0 at L1 → 1.08 at L5). */
 export function fanHomeBoost(level: number): number { return 1 + (level - 1) * 0.02; }
+// THERE IS NO "STANDING" IN THIS GAME. `womensStanding` and `communityStanding` computed a number that
+// existed nowhere else: no field on the club, no facade call, nothing in prestige.ts — their only callers
+// were the two effect strings below, which printed it to the player. The Community Trust card's ONLY
+// stated effect was "+27 standing in the town" at level 10: a facility sold entirely on a stat the game
+// does not have. Both functions are deleted and the two strings now name what those facilities really do
+// (income for the women's team; four gated manager arcs for community). If a real standing/reputation
+// quantity is ever added, wire it to something before advertising it.
 /** Fan Zone: matchday (gate) income multiplier (1.0 at L1 → 1.32 at L5). */
 export function fanIncomeMult(level: number): number { return 1 + (level - 1) * 0.08; }
 
@@ -124,10 +131,8 @@ export function shopIncome(level: number, tierIdx: number): number { return Math
 /** Academy Digs: extra youth intake places, and fewer promising kids lost to the travel. */
 export function dormIntakeBonus(level: number): number { return Math.floor((level - 1) / 2); }
 /** Women's Team: standing and a second income stream. */
-export function womensStanding(level: number): number { return (level - 1) * 2; }
 export function womensIncome(level: number, tierIdx: number): number { return Math.round((level - 1) * 30 * (1 + tierIdx * 0.12)); }
 /** Community Trust: local goodwill. Does not win matches; changes what the club is worth to the town. */
-export function communityStanding(level: number): number { return (level - 1) * 3; }
 
 // ── UPKEEP — the recurring cost of BEING a big club ────────────────────────────────────────────────
 // Facilities were a one-way ratchet: you bought a level and it was yours forever, free. Measured over a
@@ -248,8 +253,8 @@ export function effectAt(key: FacilityKey, level: number): string {
     case 'data':      return level === 1 ? 'No analysts yet' : `+${(dataEdge(level) * 100).toFixed(1)}% edge in tight matches from opposition prep`;
     case 'shop':      return level === 1 ? 'A table and a cash box' : `≈ ${shopIncome(level, 4)}+ coins/season, more as the crowd grows`;
     case 'dorm':      return level === 1 ? 'The boys live at home' : `+${dormIntakeBonus(level)} academy intake place(s), and fewer lost to the travel`;
-    case 'women':     return level === 1 ? 'No second side yet' : `+${womensStanding(level)} standing, ≈ ${womensIncome(level, 4)} coins/season`;
-    case 'community': return level === 1 ? 'Nothing organised' : `+${communityStanding(level)} standing in the town`;
+    case 'women':     return level === 1 ? 'No second side yet' : `≈ ${womensIncome(level, 4)} coins/season, and a second side with stories of its own`;
+    case 'community': return level === 1 ? 'Nothing organised' : 'Opens local stories the club could not tell before — more of them the deeper the trust runs';
     case 'fanzone':  return level === 1 ? 'No home edge yet' : `+${Math.round((fanHomeBoost(level) - 1) * 100)}% home attack, +${Math.round((fanIncomeMult(level) - 1) * 100)}% gate`;
   }
 }
