@@ -24,6 +24,33 @@ const PUSH_BY_ROLE: Record<Role, number> = { GK: 0, DF: 0.35, MF: 0.8, FW: 1.0 }
 
 interface Goal { x: number; y: number }
 
+// ── THE OFFSIDE TRAP, AND WHY IT HAS A DOWNSIDE NOW ──────────────────────────────────────────────────
+// The trap used to be one-directional: it RAISED the pace edge an attacker needed to get behind, and
+// nothing else. A receiver who would have been through was sometimes caught; one who would have been
+// caught was never let through. So it was a free win, and a large one — measured paired at n=2000, a High
+// line plus the trap was worth +18.2 points over a 38-game season [13.2, 23.2]. Meanwhile the tooltip and
+// the glossary both warned "mistime it and they're through", describing a branch that did not exist.
+//
+// Rather than delete the promise, implement it: a step-up is a timing act, and when it goes wrong the
+// line is committed and the receiver is away. TRAP_MISTIME is the rate at which that happens to an
+// attacker who would otherwise have been caught. Swept paired at n=2000 per cell:
+//     0.00 (shipped)  +18.2 pts/38 [13.2, 23.2]      a free win
+//     0.30             +7.0        [4.2, 9.7]
+//     0.35             +5.9        [3.2, 8.6]        <- chosen
+//     0.55             +1.2        [-1.5, 3.9]       neutral: no reason to ever tick it
+// 0.35 keeps it a real choice for a side that commits to a high line while removing two thirds of the
+// free win. THIS IS A MITIGATION, NOT THE FULL FIX: the engine can only express a mistimed trap as an
+// ordinary clear chance, so it cannot yet be MORE dangerous than the chance it replaces, which is what
+// "clean through on your keeper" actually means. That needs the chance-creation rework — see
+// docs/decisions-for-ck.md sections 1 and 19.
+//
+// The trap is off by default and no preset sets it, so this rng draw only occurs in matches where the
+// player turned it on: every existing calibration number is untouched.
+/** Pace edge an attacker needs to spring a SET trap cleanly. */
+const TRAP_BEATS = 0.12;
+/** How often the line's step-up is mistimed, sending through a receiver who would have been caught. */
+const TRAP_MISTIME = 0.35;
+
 export class MatchEngine {
   readonly state: MatchState;
   tactics: [Tactics, Tactics];
@@ -628,8 +655,11 @@ export class MatchEngine {
     // side without a genuine outlet threat gets far fewer clear breakaways; a side with real pace
     // (e.g. a poacher/pressing-forward with a big gap) still tears the trap open exactly as before.
     const trap = !!this.tactics[defTeam].offsideTrap && this.tactics[defTeam].line >= 1;
-    const faster = paceGap > (trap ? 0.12 : 0);
-    return behind && faster;
+    if (!trap) return behind && paceGap > 0;
+    if (paceGap > TRAP_BEATS) return behind;              // real pace tears a set trap open, as before
+    // ...and otherwise he is caught — UNLESS the step-up is mistimed, which is the risk the instruction's
+    // own description has always promised and the engine never implemented. See TRAP_MISTIME.
+    return behind && this.rng() < TRAP_MISTIME;
   }
 
   private resolveShot(teamIdx: 0 | 1, playerIdx: number, distGoal: number, clear: boolean, allowRebound = true) {
