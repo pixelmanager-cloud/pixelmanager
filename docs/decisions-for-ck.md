@@ -947,3 +947,30 @@ If you want it, the shape is known: extract the `#cg-takereins` handler into an 
 that takes an already-graduated player, and make graduation a second entrance to it. Note the graduation
 branch must NOT call `api.careerHandoff` — that throws `not a prospect, 409` for a graduate, and the same
 work is already done elsewhere. Roughly half a day, and it touches the most save-sensitive path in the game.
+
+## ~~48. The player can now see the number that decides his season~~ — DONE (§17)
+
+You said "say the word and I'll do it" was the cheapest fix in the document. It is done.
+
+`squadStrength()` and `clubLeagueStrength()` had **zero render sites in the entire client** — the one
+input the league table turns on was never shown to the player, while the *opponent's* rating is printed
+twice on every match card. With 97% of the variance in a finish coming from the seed, and the same club
+unchanged ranging over 8.2 places in 30 seasons, he was reading noise with no instrument.
+
+The season rollover now says, once a year:
+
+> 📊 You finished **4th** of 10. Ashcombe rate **12** — the same scale as the "squad rating" on every
+> opponent's scout card — and at that strength the Championship expects about **5.6** on average (a season
+> swings a couple of places either way). You are **+0.9** stronger than last season.
+
+The expectation is not a curve: it predicts against the club's own nine seeded opponents, and folds in the
+facility/staff edge the sim actually applies. That last part is not optional — without it the error against
+the game's own engine grows from 0.3 places to **4.4** at maxed facilities, because `strDelta` reaches
++5.66. K = 0.60 was fitted over 4,800 tier × strength × facility × seed cells (**MAE 0.23 places**, bias
+≤ 0.03) and is the minimum of the sweep. Sanity-checked independently: a club at its division's baseline
+predicts mid-table in all ten divisions, ±3 strength moves it about three places, monotone throughout.
+
+**One more scale mismatch found while scoping it, and fixed.** The pre-match press conference computed its
+stakes from `squadStrength()` against an opponent's `oppStrength` — a mean-of-`overall()` against a
+quality, so about 2.35 apart. The club read as nearly two divisions stronger than it is, and the press
+framed genuinely hard fixtures as routine. That is the same defect as §24, in a call site that fix missed.

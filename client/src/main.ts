@@ -32,6 +32,10 @@ const ICON_MUTED = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3.
 interface MgrState { season: number; results: PlayedResult[]; starId?: string; starName?: string; starAge?: number; starGen?: number; retireAge?: number; titles?: number; trainFocus?: string; staff?: string[]; sponsor?: string;
   // board verdict on the season just gone + that finishing position (feeds next season's expectation)
   lastBoard?: { message: string; mood: BoardMood; expectation: string }; lastFinishPos?: number;
+  /** The club's league strength at the last rollover, so "stronger than last season" has something to
+   *  diff against. On the QUALITY scale (clubLeagueStrength), stored UNROUNDED — the interesting deltas
+   *  are fractional, and rounding both ends first would hide the drift the line exists to reveal. */
+  lastStrength?: number;
   lastTierMove?: 'promoted' | 'relegated'; // set the season after a promotion/relegation, for the reveal banner
   // international: continental club cup (qualified by a top-3 finish the previous season)
   contElig?: boolean; contRound?: number; contOut?: boolean; contTitles?: number; contBlurb?: string;
@@ -1494,6 +1498,32 @@ class Game {
     // returned on the QUALITY scale, because that is what every consumer compares it against
     return this.squadStrength() + mod - Game.XI_QUALITY_OFFSET;
   }
+  /** THE NUMBER THAT DECIDES THE SEASON, and what it is worth in this division.
+   *
+   *  `squadStrength()` and `clubLeagueStrength()` had ZERO render sites in the entire client: the one
+   *  input the league table turns on was never shown, while the OPPONENT's rating is printed twice on
+   *  every match card. 97% of the variance in a league finish is the seed, and the same club unchanged
+   *  ranges over 8.2 places across 30 seasons — so without this number the player is reading noise with
+   *  no instrument, and cannot tell a good season from a lucky one.
+   *
+   *  `rating` is on the QUALITY scale — the same number the scout card prints as "squad rating ~N" for
+   *  every opponent — so the two can be held up against each other. `expected` additionally folds in what
+   *  the sim really applies: simEdge's venue-independent strDelta (training ground + data dept + coaches)
+   *  and the fan-zone home bonus averaged over a symmetric fixture list (homeTerm carries (boost-1)*3 in
+   *  `diff` units on half the games, and diff is strength*0.10, hence *15). Including that edge is not
+   *  optional: without it the prediction's error against the real engine grows from 0.3 places to 4.4 at
+   *  maxed facilities, because strDelta reaches +5.66.
+   *
+   *  P(a rival finishes above you) is a logistic on the gap. K = 0.60 was FITTED against the game's own
+   *  engine over 4,800 tier x strength x facility x seed cells — overall MAE 0.23 places, bias <= 0.03,
+   *  and it is the minimum of the sweep (0.40 -> 0.47, 0.50 -> 0.28, 0.60 -> 0.23, 0.70 -> 0.26) as well
+   *  as the only value with no bias drift across facility levels. */
+  private expectedFinish(tier = this.clubTier()): { raw: number; rating: number; expected: number } {
+    const raw = this.clubLeagueStrength();
+    const eff = raw + this.simEdge('home').strDelta + (fanHomeBoost(this.facLevels.fanzone ?? 1) - 1) * 15;
+    const opps = seededOpponents(this.club!.name, this.leagueSeed(), tier);
+    return { raw, rating: Math.round(raw), expected: 1 + opps.reduce((a, o) => a + 1 / (1 + Math.exp(0.6 * (eff - o.strength))), 0) };
+  }
   private ordinal(n: number): string { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]); }
   private facLevels: Record<string, number> = {}; // cached club-facility levels — applied to single-player matches
   /** A player's retirement age varies with him: keepers last longest, pace-reliant forwards fade earliest;
@@ -2485,6 +2515,20 @@ class Game {
     // his playing days are over — the heir comes through. Carry any final-season promotion/relegation into
     // the send-off so it's acknowledged (the reveal banner would be stale for the heir a generation later, PT-27).
     if (age >= (m.retireAge ?? 34)) { this.retireStar(titles, m.contTitles ?? 0, undefined, (promoted || relegated) ? { move: promoted ? 'promoted' : 'relegated', tier: tierName(newTier) } : undefined); return; }
+    // THE NUMBER THAT DECIDES THE SEASON, said out loud once a year. Placed AFTER the retirement early
+    // return above, so it is only written for a season that will actually render it, and BEFORE the final
+    // saveMgr, which re-reads loadMgr() and therefore preserves this feed write. `tier` is the division
+    // just PLAYED — setClubTier has already moved on, so a bare clubTier() here would draw next season's
+    // opponents after a promotion and be wrong by about a place on exactly the season the player is
+    // paying most attention.
+    const ef = this.expectedFinish(tier);
+    const dS = m.lastStrength == null ? null : ef.raw - m.lastStrength;
+    this.pushFeed('📊',
+      `You finished <b>${this.ordinal(t.pos)}</b> of ${t.size}. ${this.club!.name} rate <b>${ef.rating}</b> — the same scale as the "squad rating" on every opponent's scout card — and at that strength ${tierName(tier)} expects about <b>${ef.expected.toFixed(1)}</b> on average (a season swings a couple of places either way). `
+      + (dS == null ? 'Next season this line will tell you whether the club got stronger.'
+        : Math.abs(dS) < 0.05 ? 'You are as strong as you were last season.'
+        : `You are <b>${dS > 0 ? '+' : ''}${dS.toFixed(1)}</b> ${dS > 0 ? 'stronger' : 'weaker'} than last season.`),
+      m.season + 1);
     const qualified = tier === 1 && t.pos <= 3; // only the TOP flight's top-3 book a Continental Cup place
     if (qualified) toast('🌍 Top-3 in the top flight — qualified for the Continental Cup!');
     // new season → fresh sponsor; drop any unfinished World-Finals run (it belongs to its staging season)
@@ -2495,7 +2539,7 @@ class Game {
     // is the tell: the cause was never fixed, only the two symptoms someone noticed. Measured effect: the
     // upkeep bill, the disrepair announcement, the running-on-empty warning, the promotion/relegation
     // narration and the prestige rank-up were ALL deleted before the player could read any of them.
-    this.saveMgr({ ...this.loadMgr(), season: m.season + 1, results: [], starAge: age, titles, sponsor: undefined, contElig: qualified, contRound: 0, contOut: false, contBlurb: undefined, wcStage: undefined, wcEdition: undefined, wcRun: undefined, lastBoard, lastFinishPos: t.pos, lastTierMove: promoted ? 'promoted' : relegated ? 'relegated' : undefined, arcBoard: 0 });
+    this.saveMgr({ ...this.loadMgr(), season: m.season + 1, results: [], starAge: age, titles, sponsor: undefined, contElig: qualified, contRound: 0, contOut: false, contBlurb: undefined, wcStage: undefined, wcEdition: undefined, wcRun: undefined, lastBoard, lastFinishPos: t.pos, lastStrength: ef.raw, lastTierMove: promoted ? 'promoted' : relegated ? 'relegated' : undefined, arcBoard: 0 });
     this.checkAchievements(); // titles / seasons / prestige milestones
     this.showSeason();
   }
@@ -4290,7 +4334,14 @@ class Game {
       const recent = (this.loadMgr().results ?? []).slice(-5);
       const pts = recent.reduce((n, r) => n + (r.myGoals > r.oppGoals ? 3 : r.myGoals === r.oppGoals ? 1 : 0), 0);
       const preForm: PressForm = recent.length < 3 ? 'level' : pts >= 9 ? 'hot' : pts <= 3 ? 'cold' : 'level';
-      const preStakes: 1 | 2 | 3 = this.spFixture.oppStrength >= this.squadStrength() + 2 ? 3 : this.spFixture.oppStrength >= this.squadStrength() ? 2 : 1;
+      // ONE OF THE SCALE MISMATCHES THE SECTION-24 FIX MISSED. `oppStrength` is a QUALITY, but
+      // `squadStrength()` is a mean of `overall()`, which runs about 2.35 higher for the same side — so
+      // the press conference read the club as nearly two divisions stronger than it is and framed
+      // genuinely hard fixtures as routine. `clubLeagueStrength()` is the corrected, like-for-like number
+      // every other consumer uses, and its star-age modifier belongs here too: a fixture really is harder
+      // when the talisman is 34.
+      const myStr = this.clubLeagueStrength();
+      const preStakes: 1 | 2 | 3 = this.spFixture.oppStrength >= myStr + 2 ? 3 : this.spFixture.oppStrength >= myStr ? 2 : 1;
       const preLine = pressConferenceLine(this.leagueSeed(),
         (this.loadMgr().results?.length ?? 0) * 31 + 7, { timing: 'pre', competition: 'league', stakes: preStakes, form: preForm });
       sc.innerHTML = `<div class="scout-head">🔍 ${this.spFixture.oppName}</div><div class="scout-sub">${this.spFixture.venue === 'away' ? 'Away' : 'Home'} fixture · squad rating ~${this.spFixture.oppStrength} <span style="color:#e6c76a">${stars}</span></div>`
