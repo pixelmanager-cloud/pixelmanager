@@ -17,5 +17,14 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - name: Build + engine regression tests
+      # CI RAN `verify` AND NOTHING ELSE, and `verify` is 15 of the project's 75 harnesses (20%).
+      # The other 60 — every qa fuzz harness and 39 of the 41 playtest probes — ran only when a human
+      # remembered to type `npm run gate` locally. Every gate repair made this week protected a command
+      # nobody was obliged to run. All three legs run here now; they are separate steps so a failure
+      # names which leg broke rather than a single opaque red cross.
+      - name: Build + engine regression tests (verify)
         run: npm run verify
+      - name: Playtest probes
+        run: npm run playtest
+      - name: QA fuzz harnesses
+        run: npm run qa

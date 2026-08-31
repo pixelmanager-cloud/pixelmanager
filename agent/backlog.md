@@ -18,8 +18,10 @@ implements it on a branch, and opens a PR for you to review.
 > **CAREER-GAME CONTENT EXPANSION (priority).** The Career sim (breeder card game) must feel like living
 > a real person's life and NEVER feel repetitive. These tasks add breadth. HARD RULES for every one:
 > (1) it's a small, self-contained, ADDITIVE PR (add content, don't restructure); (2) fully DETERMINISTIC
-> — no `Date.now`/`Math.random` anywhere in `shared/` (seed everything); (3) `npm run verify` MUST pass
-> (client build + engine + fuzz) — the mental/engine calibration must stay green; (4) run
+> — no `Date.now`/`Math.random` anywhere in `shared/` (seed everything); (3) `npm run gate` MUST pass
+> (verify + playtest + qa) — the mental/engine calibration must stay green. NOTE: `npm run verify` is the
+> fast inner-loop check and covers only 15 of the project's 75 harnesses, so it is NOT the finish line;
+> `gate` adds the 41 playtest probes and the 31 qa harnesses. (4) run
 > `npx tsx shared/career_sim.ts` and confirm the diversity/role-balance/determinism checks still hold;
 > (5) match the existing code style/format in the file you edit. Files: cards/coaches/agents/traits/
 > personalities/scenarios in `shared/src/career.ts`; narration vocab in `shared/src/narrate.ts`. When you
@@ -56,7 +58,7 @@ implements it on a branch, and opens a PR for you to review.
 > **CAREER STORY-MODE DEPTH.** Story mode (shared/src/narrate.ts `scenarioStory` + play narration, and
 > `CARD_DESC` in career.ts) makes each turn a described *situation* he lives through, with each card a
 > clear *action*. Deepen it so it reads like a novel, never repetitive. Same HARD RULES as above
-> (additive, deterministic/seeded, `npm run verify` green, `npx tsx shared/career_sim.ts` checks hold).
+> (additive, deterministic/seeded, `npm run gate` green, `npx tsx shared/career_sim.ts` checks hold).
 > The scenario story + card descs are surfaced via `server/src/tokens.ts` `careerState` — if you add
 > new fields, thread them there and render in `client/src/main.ts` `renderCareer`/`cardHtml`.
 
@@ -94,7 +96,7 @@ implements it on a branch, and opens a PR for you to review.
 > first for full context). Priority is **readability**: the game must be easier to read and
 > look at while KEEPING the retro-arcade identity (Press Start 2P + VT323 + CRT palette).
 > These are all **client-only** (`client/index.html` CSS + `client/src/main.ts`/`pixelart.ts`),
-> deterministic, no `shared/` changes. Each is ONE small PR. Always run `npm run verify` (must
+> deterministic, no `shared/` changes. Each is ONE small PR. Always run `npm run gate` (must
 > pass) and take a before/after look at the affected screen. Do them top-down, one at a time.
 
 > **MATCH PIVOT — 2D pitch → TEXT COMMENTARY.** The game is moving from the 2D pixel pitch to a

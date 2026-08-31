@@ -15,7 +15,7 @@ prove it works, and commit — nothing more.**
    rename things, or start other backlog items. Small, focused diffs.
 2. **Stay on your branch.** Do NOT run `git push`, do NOT open PRs, do NOT touch
    `main`, do NOT merge. The runner owns push + PR. You only edit + commit.
-3. **Prove it.** Before you finish you MUST run `npm run verify` (build +
+3. **Prove it.** Before you finish you MUST run `npm run gate` (build +
    engine regression tests) and it MUST pass. If you can't make it pass, make
    NO commit and explain why in your final message.
 4. **Keep the engine deterministic.** The match engine in `shared/src` must stay
@@ -38,7 +38,10 @@ prove it works, and commit — nothing more.**
 3. If you changed match-engine behaviour, keep `npm run test:engine` green. If a
    change is a deliberate balance shift, update the assertion bounds in
    `shared/strategy_test.ts` thoughtfully and say so in your summary.
-4. Run `npm run verify` and confirm it passes.
+4. Run `npm run gate` and confirm it passes. (`npm run verify` is the fast inner-loop check —
+   use it while you work — but it covers only 15 of the 75 harnesses, so it is NOT the finish line.
+   `gate` adds the 41 playtest probes and the 31 qa harnesses. Budget several minutes: qa's slowest
+   single harness, `shared/qa_calibration_baseline.ts`, is about 208 seconds on its own.)
 5. In `agent/backlog.md`, change this task's `- [ ]` to `- [x]`.
 6. `git add -A` and `git commit` with a clear message: `agent: <task>`.
 7. End with a short summary: what you changed, which files, how you verified, and
