@@ -576,7 +576,7 @@ its text scanner, including the sharpest: its only live allow-rule, `process && 
 code. Measured, **15.8% of `client/src/main.ts` was invisible to it**. Rewritten on the TypeScript parser
 and proved against all seven poisons.
 
-## 27. Still open in my own fixes — I will keep going at these
+## ~~27. Still open in my own fixes~~ — ALL SEVEN NOW DONE (verified 2026-08-31 by re-reading the code)
 
 - **Replay: a physically truncated action array is NOT detected.** The check is `applied < actions.length` —
   against what is *stored*, with no length invariant. Drop the tail and 8/8 careers load reporting perfect
@@ -670,7 +670,7 @@ shapes, and a failed save tells the player.
 division** pass, a margin check reading the wrong tier, and a five-tier sample that missed tier 6 where the
 widest margin actually is.
 
-## 34. Still open
+## ~~34. Still open~~ — BOTH DONE (verified 2026-08-31)
 
 - **`pruneXI` rotates the designations my fix made live.** Measured on one retirement at slot 2: the armband
   moves to the free-kick taker, the penalties go to a youth-intake player, and 9 of 11 duties describe a
@@ -750,12 +750,19 @@ sheet. `reconcileSheet` replaces it — designations follow the **man**, not the
 
 ## 39. Open — dead code, low player value, your call whether it is worth the churn
 
+> **Two of these five are now stale and are struck below.** Verified 2026-08-31.
+
 - **`Team.shortName` is required on every club in the game and read nowhere** — one declaration, two
   parameters, three copies, zero reads. Every caller is forced to invent a value.
 - **13 of 31 pixel sprites (42%) are unreachable**, and 8 of 12 trophy images; the `kind === 'cup'` branch
   in `trophyFor` can never be true because `addHonour` constrains `kind` to three other values.
 - **Four facade methods have zero callers** (`awards`, `houseRenownNow`, `login`, `starBid` — the last is a
   second, unused implementation of the bid path the client already does inline).
+- ~~**Four facade methods have zero callers**~~ — `houseRenownNow`, `starBid` and `login` now have **0**
+  hits anywhere in `client/`; only the store's `awardsFor` survives, which is a different thing and is used.
+- ~~**10 probes are in no gate at all**~~ — `run-playtest.mjs` auto-globs now; **41 of 43** probes run, and
+  the 2 exclusions are declared in its `TOO_SLOW` map with a stated cost reason. See §49 for the real
+  remaining problem, which is not that probes are ungated but that 13 of them cannot fail.
 - **`saveTeam()` is unreachable** and holds the editor's only "save failed" message. Deleting it is easy;
   **wiring a standing-orders editor reachable outside a matchday is a design question**, and that is why I
   have not touched it.
@@ -974,3 +981,52 @@ predicts mid-table in all ten divisions, ±3 strength moves it about three place
 stakes from `squadStrength()` against an opponent's `oppStrength` — a mean-of-`overall()` against a
 quality, so about 2.35 apart. The club read as nearly two divisions stronger than it is, and the press
 framed genuinely hard fixtures as routine. That is the same defect as §24, in a call site that fix missed.
+
+## 49. A correction to how I have been reporting all of this
+
+An adversarial audit of my own status report found real errors in it, and you should have them.
+
+- **"verify is green" is not "the project is green".** `verify` runs **15 of the project's 75 distinct
+  harnesses — 20%**. And CI ran `npm run verify` and *nothing else*, so the other 60 executed only when a
+  human remembered `npm run gate`. Every gate repair I made this week protected a command nobody was
+  obliged to run. **Fixed:** all three legs now run in CI, and `AGENT.md` plus the backlog standing rules
+  now say `gate` rather than `verify` (they said `verify` 19 times between them — that is most of the
+  explanation for everything below).
+- **My "24/24, 9/9, 15/16 — the hit rate has not moved" was bad arithmetic.** I summed *survivor* counts
+  from the first two waves and presented them as *run* counts. Wave 1 was roughly 23 survivors of ~36 run —
+  a 36% kill rate, not 100% survival. A ratio built that way cannot move by construction. The qualitative
+  finding stands and needed no ratio: **three consecutive waves found new survivors, on the first attempt,
+  in gates repaired within the previous ninety minutes.**
+- **"16 of 24 survivors closed" was inflated** — nearer 13 of 23, and about nine wave-1 survivors appear
+  nowhere in this document, neither closed nor queued.
+- **§40's anchor answer did not change, and I told you it had.** Re-running the *same* probe at n=260 today
+  gives **+0.212 [-0.015, 0.339]**; the effect has always been about +0.16 to +0.22 on this engine and only
+  the interval narrowed. The old +0.081 came from a different harness on the since-reverted rebuild. I
+  presented a sample-size artefact as new evidence — **the same class of error as §19, in the same
+  document.** Also worth knowing before you spend a decision on it: `tactical_power`, the probe that
+  produces that number, runs in **no gate**, so nobody would notice if it drifted.
+
+## 50. THE ONE THAT MATTERS — the match engine is not simulating football, at HEAD, right now
+
+I spent a night on test-suite epistemology and did not tell you this. `tools/playtest/shot_geometry.ts`,
+run on HEAD:
+
+    matches=200  shots/match=65.3  goals/match=2.84
+    shot distance  p10 40.7  median 45.8  p90 48.8   (metres from goal)
+    shots inside 18m: 0.2%
+    possession spell ticks: median 2  (TICK_SEC=0.5)  ->  1.0 second
+    attackers in box: 0.02 players on average while attacking
+
+Sixty-five shots a match from a median of **forty-six metres**, two in a thousand from inside the box, and
+the penalty area essentially empty at all times. That is what the player watches. It arrived when I
+reverted the rebuild (§19), §28 recorded it, and I then dropped it out of every summary I gave you.
+
+**And that probe runs in every green build and cannot fail.** It has no exit path, so `npm run playtest`
+prints those numbers and then prints `✓ all 41 probes passed`. **13 of the 43 probes are in that state** —
+`analyze_manager_career`, `analyze_player_career`, `analyze_text_repetition`, `arc_dupes`, `arc_stakes`,
+`duty_power`, `focus_power`, `gate_content`, `mismatch`, `quality_curve`, `shot_geometry`, `tactics_matrix`,
+`width_diagnosis`. §43 named 2 of the 13. A gate that reports a catastrophe and exits 0 is worse than a
+gate with a hole, because the hole at least does not claim to have looked.
+
+**You chose to re-attempt the engine work.** Arming those 13 probes is in progress as the prerequisite, so
+that this time the rebuild is measured rather than guessed at — which is precisely what went wrong before.
