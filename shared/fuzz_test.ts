@@ -203,6 +203,8 @@ let totalGoals = 0;
 let zeroZero = 0;
 let equalQ = 0, equalHomeWins = 0, equalAwayWins = 0;
 let maxTicks = 0;
+let minTicks = Number.POSITIVE_INFINITY;
+let fullTime = 0;
 
 for (let iter = 0; iter < N && failures.length < MAX_LOGGED; iter++) {
   const setup = buildSetup(iter);
@@ -239,6 +241,8 @@ for (let iter = 0; iter < N && failures.length < MAX_LOGGED; iter++) {
 
   // aggregates (only for clean matches)
   maxTicks = Math.max(maxTicks, ticks);
+  minTicks = Math.min(minTicks, ticks);
+  if (ticks >= EXPECTED_TICKS) fullTime++;
   const [a, b] = m.state.score;
   totalGoals += a + b;
   if (a === 0 && b === 0) zeroZero++;
@@ -254,7 +258,7 @@ const played = N - failures.length; // matches that completed (approx; good enou
 // ---- batch-aggregate sanity checks (only meaningful when no per-match failures) ----
 if (failures.length === 0) {
   const goalsPerMatch = totalGoals / N;
-  console.log(`[fuzz] matches=${N}  goals/match=${goalsPerMatch.toFixed(2)}  0-0 rate=${(zeroZero / N * 100).toFixed(1)}%  maxTicks=${maxTicks}`);
+  console.log(`[fuzz] matches=${N}  goals/match=${goalsPerMatch.toFixed(2)}  0-0 rate=${(zeroZero / N * 100).toFixed(1)}%  ticks ${minTicks}-${maxTicks}  full time ${(fullTime / played * 100).toFixed(1)}%`);
   if (equalQ > 0) {
     const hw = equalHomeWins / equalQ, aw = equalAwayWins / equalQ;
     console.log(`[fuzz] equal-quality matches=${equalQ}  home win=${(hw * 100).toFixed(0)}%  away win=${(aw * 100).toFixed(0)}%`);
@@ -266,14 +270,20 @@ if (failures.length === 0) {
     failures.push(`goals/match ${goalsPerMatch.toFixed(2)} outside sane range [0.8, 6.0]`);
   if (zeroZero >= N)
     failures.push(`every match ended 0-0 — engine is not scoring`);
+  // ── EVERY match, not the longest one ────────────────────────────────────────────────────────────────
+  // This was an upper bound on `maxTicks`, then an upper AND lower bound on `maxTicks`. Both are extrema
+  // standing in for a population, and a single 90-minute match satisfies either while the rest of the
+  // batch ends early. A mercy rule that stopped a match at |GD| >= 5 proved it: 42% of matches never
+  // reached full time and the gate printed `maxTicks=10800` and passed, because one blowout-free match is
+  // all an extremum needs. Every goals/match and 0-0 figure measured off that batch is understated by
+  // however much football went unplayed, and nothing here would say so.
+  //
+  // The engine has no mercy rule, no early exit and no variable stoppage: a match is 10800 ticks or it is
+  // broken. So this is exact, not a tolerance — the observed spread across 2000 matches is 10800 to 10800.
   if (maxTicks > EXPECTED_TICKS)
     failures.push(`a match ran ${maxTicks} ticks (> expected ${EXPECTED_TICKS})`);
-  // ...AND A LOWER BOUND. This was an upper bound only, so a mutation that ended every match at half-time
-  // (`clockSec >= MATCH_SEC / 2`) sailed through: 2000 matches, all invariants "held", with maxTicks=5400
-  // printed on the same line as the tick. A match that stops at forty-five minutes is not a match, and
-  // every goals/match figure measured off it is half of what it claims to be.
-  if (maxTicks < EXPECTED_TICKS)
-    failures.push(`no match reached full time — longest was ${maxTicks} ticks of an expected ${EXPECTED_TICKS}`);
+  if (fullTime < played)
+    failures.push(`${played - fullTime} of ${played} matches (${((played - fullTime) / played * 100).toFixed(1)}%) ended before full time — shortest ${minTicks} of ${EXPECTED_TICKS} ticks (~${Math.round(minTicks * TICK_SEC / 60)}'). Every aggregate above is measured off matches that were cut short.`);
 }
 
 // ---- verdict ----
