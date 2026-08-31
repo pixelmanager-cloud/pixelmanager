@@ -1390,16 +1390,31 @@ neutral, the armband is never a penalty, AND tier 10 still reads as poorly led.)
   **guaranteed dead money, with no warning at dispatch** — 64 coins each at HQ L10. Separately, `signTrial`
   and `signMission` push into `club.players` with no size check, so loanees can carry a squad past
   `MAX_SQUAD = 28`.
-- **The traits the engine reads are unreachable below tier 4, and The Wall gets RARER as keepers improve.**
+- **The traits the engine reads are unreachable below tier 4, and ~~The Wall gets RARER as keepers improve~~
+  (the ordering half is FIXED — see below).**
   Measured over 30 clubs/tier: `clinical` 39/25/13/0/0/0% at tiers 1/2/3/6/8/10; `ballwinner` 59/43/25/0%.
   And keepers carrying `wall`: **tier 3 100%, tier 2 87%, tier 1 47%** — it goes *down*, because
   `eligibleTraits(...).slice(0, MAX_TRAITS)` takes catalogue order and `wall` sits ninth, so an elite keeper
   who also qualifies for four other traits loses the only one the engine reads for keepers. The trait
   bonuses are a top-flight-only mechanic the bottom of the pyramid never sees.
-- **A substituted-off captain keeps his armband bonus.** `leadershipBonus` is computed once in the
-  `MatchEngine` constructor from the starting XI and never recomputed; a replacement leader never earns
-  one. *Related:* nothing in the manager game ever changes a mental stat after graduation, and `ageCurve()`
-  — written to raise composure/leadership into a player's 30s — **has no production caller at all**.
+  **Ordering fixed.** Traits now carry a role affinity and `eligibleTraits` sorts by it before the slice,
+  primary role ahead of secondary — so a keeper takes The Wall ahead of `metronome`, and a defender takes
+  `rock` ahead of `ballwinner`. All four roles now hold their signature trait 100% of the time when
+  eligible, at every quality. `tools/playtest/trait_relevance.ts` asserts it, including the inversion
+  specifically (a flat pass-rate could hide it). **The reachability half is still open and is a design
+  question, not a bug:** the eligibility thresholds are absolute, so a tier-8 squad qualifies for nothing
+  and the trait layer is invisible for the whole bottom of the pyramid — which is where every dynasty
+  starts. Making thresholds relative to tier would fix it; whether a basement player *should* earn traits
+  is your call.
+- **~~A substituted-off captain keeps his armband bonus~~ — FIXED.** `leadershipBonus` is now recomputed
+  in `makeSub`, so the armband follows the XI. *Still open, and it needs your call:* nothing in the manager
+  game ever changes a mental stat after graduation, and `ageCurve()` — written to raise composure and
+  leadership into a player's 30s — **has no production caller at all**. This is a contradiction rather than
+  a bug: the Living Squad plan deliberately freezes mentals as "career-forged identity", which makes
+  `ageCurve` dead by design, yet the function exists and reads as an intended mechanic. §64 raises the
+  stakes — the mental layer is worth **4.64 goals a match** on the shipped path — so a squad whose mentals
+  never move is a real amount of the game held still. Either wire it into the season rollover or delete it;
+  leaving a written-but-uncalled mechanic in place is the exact defect class this document tracks.
 
 ## 64. The measurement that settles §16 — and it is BIGGER on the path the game ships
 

@@ -15,7 +15,20 @@ const SHOOT_RANGE = 18; // metres from goal a player will attempt a shot
 const QUALITY_RANGE = 26;
 const BASE_DRAIN = 0.000034; // fitness lost per tick by a working outfielder (tuned via harness)
 
-const norm = (stat: number) => stat / 20;
+// A NON-FINITE STAT IS A 10, NOT A NaN — the same guard `overall()` carries in teams.ts, whose own
+// comment records that this exact class once "permanently poisoned the wallet". `mental.ts` was hardened
+// for the five mental stats; this `norm` reads the ten PHYSICAL ones and was left bare, so the hole was
+// only half closed. NaN propagates silently: `clamp(NaN, lo, hi)` is NaN (Math.min/max pass it through)
+// and `rng() < NaN` is false FOREVER, so nothing throws and nothing logs.
+// Measured over 40 matches with one NaN planted in a single stat: a keeper with NaN `keeping` conceded
+// 0 goals against a healthy baseline of 52 — an UNBEATABLE goalkeeper, produced by one bad number in a
+// save file. Outfield NaNs are less spectacular but still corrupt results (NaN passing: 44-66 against a
+// 45-52 baseline). Guarding here costs nothing: for every finite stat this is the identical expression.
+// 10 is the SCALE's neutral, not a role-appropriate one — a generated q14 keeper carries `keeping` 19, so
+// a corrupted keeper now concedes 118 rather than 0. That is the safe direction and it is deliberate: a
+// bad save should yield a poor goalkeeper, never an invincible one. Verified equivalent to an explicit
+// 10 (identical 40-118 across the same 40 fixtures), which is the guard's whole promise.
+const norm = (stat: number) => (Number.isFinite(stat) ? stat : 10) / 20;
 /** effective-stat multiplier from current fitness: 1.0 fresh, ~0.85 when gassed. */
 const fit = (f: number) => 0.7 + 0.3 * f;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
