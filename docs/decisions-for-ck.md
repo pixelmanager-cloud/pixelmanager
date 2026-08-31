@@ -1371,15 +1371,16 @@ is the only defensible answer. *(And a bug I introduced fixing it — seeding th
 FLOOR, erasing the lower divisions' weakness. Caught by my own probe. The harness now asserts empty is
 neutral, the armband is never a penalty, AND tier 10 still reads as poorly led.)*
 
-## 63. LIVE and player-facing — ~~three fixed~~, two still need your call
+## 63. LIVE and player-facing — re-verified 2026-09-01: all the BUGS are fixed; what is left is three design calls
 
-- **The scout tiers advertise numbers the generator does not deliver.** `main.ts` prints the declared
+- **~~The scout tiers advertise numbers the generator does not deliver~~ — FIXED (display, per your call).** The tier cards now quote the MEASURED delivery — gold reads (28/37/29/6) against the 28.0/37.2/28.9/6.0 it actually hands over — instead of quoting `SCOUT_TIERS` verbatim. Original report follows:
+ `main.ts` prints the declared
   triples to the player as literal strings — *"Best trialists (12/43/33/12)"*. Over 12,000 draws a gold
   pool actually delivers **raw 28.0% / squad 37.2% / quality 28.9% / gem 6.0%**. Gold advertises 12% gem
   and 12% raw; it hands over **6% and 28%**. The band roll itself is clean (matches the table to within
   0.25pp) — the mismatch is that the displayed badge is re-derived from the realised overall. Same class as
   the copy sweep: a number shown to the player that the code does not honour.
-- **The rarity badge measures the POSITION, not the prospect.** `bandOf` thresholds `overall()`, whose
+- **The rarity badge measures the POSITION, not the prospect** — *you said leave it; recorded, not actioned.* `bandOf` thresholds `overall()`, whose
   per-role formula is not neutral, and the bands are only 2 OVR wide. Measured at gold over 60,000 draws: a
   **goalkeeper is 3.3× more likely to be badged GEM than a defender** drawn from the identical band
   distribution (GK gem 12.9%, DF gem 3.9%). The quality signal you pay the Youth Academy to move is
