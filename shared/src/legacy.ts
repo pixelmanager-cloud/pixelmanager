@@ -13,7 +13,6 @@ import type { PlayerAchievements } from './career.js';
 export { Career, graduate, AGENTS, TOTAL_TURNS, bandAt, AGE_BANDS, type Agent, type CareerSnapshot, type CareerPlayer, type Track } from './career.js';
 export { prospectValuation, deriveStats, eligibleTraits, cardName, CARD_DESC, clubInvestOf, type ProspectValue, type CareerPlayerAttrs, type Personality } from './career.js';
 export { LIFE_KINDS, LIFE_LABEL, type LifeKind } from './career.js';
-export { SYNERGIES, activeSynergies, type Synergy } from './career.js';
 export { narratePlay, narrateLifeEvent, scenarioStory, chapterRecap, graduationEpilogue, careerCast, narrateCoach, narrateDraft, narrateOffer, type NarrateCtx, type ScenarioCtx, type RecapCtx, type EpilogueCtx, type CareerCast } from './narrate.js';
 export { rivalMomentStory, narrateRivalMoment, rivalNews, lifeAction, type RivalPayoff } from './narrate.js';
 

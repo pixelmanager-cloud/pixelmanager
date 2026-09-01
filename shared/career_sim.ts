@@ -1,6 +1,6 @@
 // Career-sim harness. Validates: (1) different styles → distinct, specialised players + roles;
 // (2) skill → magnitude; (3) the turn-by-turn engine is deterministic. Run: `npx tsx career_sim.ts`.
-import { Career, simCareer, graduate, careerOverall, prospectValuation, contractCost, contractLength, releaseClause, breederRevenue, legacyBoost, AGENTS, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, STARTER_DECK, cardPower, activeSynergies, type Style, type CareerPlayerAttrs, type Role, type Genes, type PlayerAchievements, type Tag } from './src/career.js';
+import { Career, simCareer, graduate, careerOverall, prospectValuation, contractCost, contractLength, releaseClause, breederRevenue, legacyBoost, AGENTS, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, STARTER_DECK, cardPower, type Style, type CareerPlayerAttrs, type Role, type Genes, type PlayerAchievements, type Tag } from './src/career.js';
 
 const STYLES: Style[] = [
   { name: 'Poacher',   pref: { composure: 1, flair: 0.8 },        skill: 0.85 },
@@ -180,8 +180,6 @@ console.log('\n=== deck-building — drafts grow your deck (pick first offer for
   console.log('  coaches appointed:', coaches.join(', '));
   offers.forEach((o, i) => console.log(`  draft ${i + 1} offered:`, o.join('  |  ')));
   console.log(`  final deck (${dc.deck.length}):`, dc.deck.map((c) => c.name + (cardPower(c) > 1 ? `*${cardPower(c)}` : '')).join(', '));
-  const chem = activeSynergies(dc.deck);
-  console.log(`  deck chemistry active: ${chem.length ? chem.map((s) => s.name).join(', ') : '(none)'}`);
 }
 
 // a life: age chapters, events, big moments over one development (age 10→25)

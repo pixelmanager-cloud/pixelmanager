@@ -89,7 +89,6 @@ export interface CareerState {
   arc?: { id: string; title: string; icon: string; category: string; prompt: string; rivalName?: string; choices: Array<{ id: string; label: string; desc: string }> };
   age: number; chapter: string; turn: number; totalTurns: number; finished: boolean;
   seasonEvent?: { id: string; name: string; desc: string } | null; earnings?: number; deck?: CareerCard[];
-  chemistry?: { id: string; name: string; tags: string[]; desc: string }[];
   scenario?: { id: string; kind: string; demand: Record<string, number>; label: string; stakes: number };
   story?: string; recap?: string; lifeEvent?: string; lastLifeOutcome?: string | null;
   energy?: number; meters?: Array<{ key: string; icon: string; label: string; value: number }>;

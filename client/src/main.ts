@@ -4043,12 +4043,7 @@ class Game {
   private deckHtml(s: import('./api').CareerState): string {
     const deck = s.deck ?? [];
     if (!deck.length) return '';
-    const chem = s.chemistry?.length
-      ? `<div class="cg-chemistry"><div class="cg-conseq-lbl">⚗️ Deck chemistry active</div>`
-        + s.chemistry.map((c) => `<div class="cg-chem-row"><b>${c.name}</b> <span class="cg-chem-tags">(${c.tags.join(' + ')})</span> — ${c.desc}</div>`).join('') + `</div>`
-      : '';
     return `<div class="cg-prompt cg-shop-h">🃏 <b>Your deck</b> — the ${deck.length} cards that define how he plays:</div>`
-      + chem
       + `<div class="cg-cards deck">` + deck.map((c) => this.cardHtml(c, 'view')).join('') + `</div>`;
   }
 
