@@ -1372,7 +1372,7 @@ refuted.
    at founding to 3.20 by season 12, tier 9 to 1.84, tier 10 to 1.60. The basement sees the trait layer —
    it earns it, which is the better version of the mechanic anyway.
 
-## 61. §9 SYNERGIES — you asked whether to tune or remove. Neither, yet.
+## 61. ~~§9 SYNERGIES~~ — RESOLVED 2026-09-01: REMOVED, and the UI it was not supposed to have went too
 
 I measured what each synergy's reward is actually worth, n=150 careers each, applied exactly as the game
 applies it:
