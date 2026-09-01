@@ -101,7 +101,7 @@ const CLEAR_RUN_APPETITE = 12;
 // term": max(quality-scaled natural gain, ADVANCE_FLOOR).
 // 0 disables it entirely and restores the pre-change engine tick-for-tick -- this is the A/B switch.
 const RANGE_APPETITE = 0.55; // willingness to shoot from the EDGE of range; 0 = old behaviour
-const OUTCOME_SENS = 0.5;   // 1 = the old engine exactly; below 1 compresses quality's grip on a chance
+const OUTCOME_SENS = 0.45;   // 1 = the old engine exactly; below 1 compresses quality's grip on a chance
 const ADVANCE_FLOOR = 8;
 // The floor is about REACHING the box, not about what happens inside it. Past this radius it stops
 // topping up, so it cannot become a goal-magnet that walks a carrier onto the six-yard line.

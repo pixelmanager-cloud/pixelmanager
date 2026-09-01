@@ -59,7 +59,16 @@ const TIERS: Array<[label: string, qa: number, qb: number]> = [
 ];
 
 const mk = (id: string, q: number, seed: number, formation: Formation = '4-4-2'): Team =>
-  generateTeam(id, id, id.toUpperCase(), 0xff0000, q, seed, formation);
+  // SEVEN ARGUMENTS AGAINST A SIX-ARGUMENT SIGNATURE. `generateTeam` used to take a `shortName` between
+  // `name` and `shirtColor`; types.ts records it being removed as a field "required on every club in the
+  // game and never once read". This caller was never updated, so every argument after it shifted by one:
+  // `formation` received the SEED, `FORMATIONS[<a number>]` came back undefined, and the probe died on its
+  // first match with "Cannot read properties of undefined (reading 'map')".
+  //
+  // It went unnoticed because run-playtest SKIPS this file for being a 47.7-minute research run, so the
+  // only round-robin that measures formation balance in this project has been dead since that removal --
+  // which is precisely why formations were free to drift out of balance without any gate objecting.
+  generateTeam(id, id, 0xff0000, q, seed, formation);
 
 function play(a: Team, b: Team, ta: Tactics, tb: Tactics, seed: number) {
   const m = new MatchEngine([a, b], seed, [ta, tb]);
