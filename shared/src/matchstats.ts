@@ -29,6 +29,25 @@ export function deriveMatchStats(
     return m;
   };
   const nameOf: [Map<string, string>, Map<string, string>] = [rosterName(homeTeam), rosterName(awayTeam)];
+  // A SUBSTITUTED PLAYER IS ON NEITHER LIST BY FULL TIME. `makeSub` overwrites `players[outI]` with the
+  // man coming on, and the man going off is not added to the bench -- so the roster maps above cannot
+  // resolve him, and `deriveSide`'s `if (!name) continue` then dropped his whole row: his appearance, his
+  // assists and his GOALS. Substitutions land around the hour mark, so this quietly deleted a large share
+  // of every match's scoring. Measured over 12 seeded matches, 2 finished with the rows disagreeing with
+  // the scoreline -- in one, a man who scored at 55' and came off at 58' was simply not in the report.
+  //
+  // It became a correctness problem the day season awards shipped, because the Golden Boot is derived from
+  // exactly these rows: a striker taken off after scoring lost the goal from his tally.
+  //
+  // The event is the only surviving source of his name, so it is used as a FALLBACK ONLY. The roster still
+  // wins wherever it can resolve an id, which preserves the reason names were abandoned as keys in the
+  // first place: two men on one teamsheet are routinely called the same thing.
+  for (const e of events) {
+    if (e.type !== 'sub') continue;
+    const m = nameOf[e.teamIdx];
+    if (e.playerId && e.playerName && !m.has(e.playerId)) m.set(e.playerId, e.playerName);
+    if (e.playerId2 && e.playerName2 && !m.has(e.playerId2)) m.set(e.playerId2, e.playerName2);
+  }
 
   const stats = new Map<string, { goals: number; assists: number }>();
   const bump = (side: 0 | 1, id: string, k: 'goals' | 'assists') => {

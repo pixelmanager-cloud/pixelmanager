@@ -2376,6 +2376,62 @@ class Game {
     const homeTerm = venue === 'home' ? 0.25 + (fanHomeBoost(fanLvl) - 1) * 3 : -0.25;
     return { strDelta, homeTerm };
   }
+  /** One simmed league fixture, played by the REAL engine with nobody watching.
+   *
+   *  Sim used to roll a scoreline from a strength difference (`simFixtureResult`) rather than play the
+   *  match, which had two costs. The small one is that a simmed season came from a different model than a
+   *  played one, so the table a manager simmed his way through did not describe the game he had been
+   *  playing. The large one only appeared when season awards shipped: honours are derived from per-player
+   *  match stats, and a scoreline has no players in it -- so a manager who simmed his season won nothing,
+   *  ever, and could not have been told why.
+   *
+   *  A full ninety minutes costs about 27ms headless, so a whole remaining season is well under a second.
+   *  Returns null when the fixture cannot be built at all (a squad too thin for an XI); the caller falls
+   *  back to the old roll rather than stranding the player mid-season. */
+  private simOneFixture(idx: number, seed: number): { myGoals: number; oppGoals: number; rows: any[] } | null {
+    try {
+      const clubName = this.club.name;
+      const f = seasonFixtures(clubName, seed, this.clubTier())[idx];
+      const opp = seededOpponents(clubName, seed, this.clubTier()).find((o) => o.name === f.oppName);
+      if (!opp) return null;
+      const venue: 'home' | 'away' = f.venue === 'H' ? 'home' : 'away';
+      // The opponent is built exactly as the played path builds him -- same generator, same seed, same
+      // planted rival-house son -- or a simmed fixture would face a different club than a played one.
+      const rawOpp = generateClub('sp-' + opp.seed, opp.name, 0xcc4444, opp.strength, opp.seed, true);
+      const oppClub = seedHouseIntoSquad(rawOpp, this.leagueSeed(), opp.seed, this.loadMgr().starGen ?? 0, opp.strength).club;
+      const oppTactics = seededOpponentTactics(opp.seed);
+      const oppTeam = buildXI(oppClub, autoPickXI(oppClub, oppTactics.formation));
+
+      // My side plays the standing orders -- which is the point of having them. If they no longer name a
+      // valid XI (sales, injuries), fall back to the auto pick rather than refusing to play.
+      const avail = this.availableClub();
+      const ids = new Set(avail.players.map((p) => p.id));
+      const so = this.standingOrders;
+      const soOk = so?.playerIds?.length === 11 && so.playerIds.every((id) => ids.has(id));
+      const myLineup = soOk
+        ? this.starGuarded({ formation: so.formation, playerIds: so.playerIds, duties: so.duties ?? [], ...(so.captainIdx != null ? { captainIdx: so.captainIdx } : {}), ...(so.takers ? { takers: so.takers } : {}) } as Lineup)
+        : autoPickXI(avail, so?.formation ?? '4-4-2');
+      const myTeam = buildXI(avail, myLineup);
+
+      // The same facility edges the played path applies, through the same shared curves. The team talk has
+      // no simmed equivalent, so the neutral "just play your game" edge stands in for it.
+      myTeam.homeBoost = 1.04;
+      myTeam.conditioning = (myTeam.conditioning ?? 1) * trainingConditioning(this.facLevels.training ?? 1);
+      if (venue === 'home') myTeam.homeBoost *= fanHomeBoost(this.facLevels.fanzone ?? 1);
+      myTeam.homeBoost *= 1 + dataEdge(this.facLevels.data ?? 1);
+
+      const iAmHome = venue === 'home';
+      const teams = iAmHome ? [myTeam, oppTeam] : [oppTeam, myTeam];
+      const tac = iAmHome ? [this.standingOrders.tactics, oppTactics] : [oppTactics, this.standingOrders.tactics];
+      const e = new MatchEngine(teams as any, seed >>> 0, tac as any);
+      let guard = 0;
+      while (!e.state.finished && guard++ < 40000) e.tick();
+      const mine = iAmHome ? 0 : 1;
+      const rows = deriveMatchStats(e.teams[0], e.teams[1], e.state.events, e.state.score as [number, number])[mine];
+      return { myGoals: e.state.score[mine], oppGoals: e.state.score[1 - mine], rows };
+    } catch { return null; }
+  }
+
   private simRemainingFixtures() {
     // Matches the manager did not watch still pass for the injured — see api.tickInjuries. Without this a
     // simmed season froze the treatment room and an injury became permanent.
@@ -2384,12 +2440,23 @@ class Game {
     const seed = this.leagueSeed(), clubName = this.club.name;
     const fixtures = seasonFixtures(clubName, seed, this.clubTier()), opps = seededOpponents(clubName, seed, this.clubTier());
     const m = this.loadMgr(), myStr = this.clubLeagueStrength();
+    const simRows: any[] = []; let rolled = 0;
     for (let i = m.results.length; i < fixtures.length; i++) {
       const opp = opps.find((o) => o.name === fixtures[i].oppName)!;
       const { strDelta, homeTerm } = this.simEdge(fixtures[i].venue === 'H' ? 'home' : 'away'); // fold in facilities/staff + the correct venue edge
-      m.results.push(this.simFixtureResult(myStr + strDelta, opp.strength, ((seed >>> 0) ^ ((m.season * 131 + i) >>> 0)) >>> 0, homeTerm));
+      const mseed = ((seed >>> 0) ^ ((m.season * 131 + i) >>> 0)) >>> 0;
+      // PLAY it, don't roll it -- see simOneFixture. The old roll stays as the fallback for a squad too
+      // thin to field an XI, so a sim can never strand the player mid-season.
+      const played = this.simOneFixture(i, seed);
+      if (played) { m.results.push({ myGoals: played.myGoals, oppGoals: played.oppGoals }); simRows.push(...played.rows); }
+      else { rolled++; m.results.push(this.simFixtureResult(myStr + strDelta, opp.strength, mseed, homeTerm)); }
     }
     this.saveMgr(m);
+    // THE HONOURS DEPEND ON THESE. Without recording who played and scored in the simmed matches, a
+    // manager who sims his season reaches the league roll with no per-player stats and wins nothing.
+    if (simRows.length) void api.recordMatchStats({ rows: simRows }).catch(() => { /* a stat row is worth less than the season */ });
+    if (rolled) console.warn(`[sim] ${rolled} fixture(s) fell back to a rolled scoreline — squad too thin to field an XI`);
+    this.seasonLeaders = null;
     this.showSeason();
   }
 

@@ -1,0 +1,45 @@
+// A SIMMED MATCH MUST LEAVE THE SAME TRACE AS A PLAYED ONE. Sim used to roll a scoreline from a strength
+// difference instead of playing the match. That was survivable until season awards shipped: honours are
+// derived from per-player match stats, and a scoreline has no players in it, so a manager who simmed his
+// season won nothing and could not have been told why. Sim now runs the real engine headlessly.
+//
+// This guards the contract that makes it work -- deriveMatchStats must hand back rows that
+// api.recordMatchStats will actually store (it drops any row without an `id`), and the goals in those rows
+// must reconcile with the scoreline, or the Golden Boot would be awarded off a different match than the
+// one the table recorded.
+import { MatchEngine, generateClub, autoPickXI, buildXI, seededOpponentTactics, deriveMatchStats } from '@fm/shared';
+
+let fails = 0;
+const ok = (c: boolean, m: string) => { console.log(`  ${c ? 'ok  ' : 'FAIL'} ${m}`); if (!c) fails++; };
+
+console.log('=== A simmed fixture leaves recordable per-player stats ===');
+let totalRows = 0, reconciled = 0, ms = 0, expectedRows = 0, appsOk = 0;
+const N = 12;
+for (let i = 0; i < N; i++) {
+  const a = generateClub('sim-m' + i, 'Mine', 0x3b6bd2, 11, 5000 + i, true);
+  const b = generateClub('sp-' + (7000 + i), 'Them', 0xcc4444, 10, 7000 + i, true);
+  const ta = seededOpponentTactics(5000 + i), tb = seededOpponentTactics(7000 + i);
+  const t0 = Date.now();
+  const e = new MatchEngine([buildXI(a, autoPickXI(a, ta.formation)), buildXI(b, autoPickXI(b, tb.formation))], (4242 ^ i) >>> 0, [ta, tb] as any);
+  let guard = 0;
+  while (!e.state.finished && guard++ < 40000) e.tick();
+  ms += Date.now() - t0;
+  const rows: any[] = deriveMatchStats(e.teams[0], e.teams[1], e.state.events, e.state.score as [number, number])[0];
+  totalRows += rows.length;
+  // Everyone who took the field: the XI plus every man brought on. A substituted player is on neither
+  // roster list by full time, and used to lose his whole row -- goals included.
+  const subsOn = e.state.events.filter((v: any) => v.type === 'sub' && v.teamIdx === 0).length;
+  expectedRows += 11 + subsOn;
+  if (rows.filter((r) => r.apps).length === 11 + subsOn) appsOk++;
+  if (rows.reduce((s, r) => s + (r.goals ?? 0), 0) === e.state.score[0]) reconciled++;
+  if (!rows.every((r) => r.id && r.name)) { ok(false, `match ${i}: every row carries the id recordMatchStats keys on`); break; }
+}
+ok(totalRows === expectedRows, `a row for everyone who took the field, subs included (${totalRows}, expected ${expectedRows})`);
+ok(appsOk === N, `and each of them is credited with the appearance (${appsOk}/${N} matches)`);
+ok(reconciled === N, `the goals in the rows reconcile with the scoreline (${reconciled}/${N})`);
+// The whole point of simming is that it is fast. A remaining season is ~20 fixtures; if one match costs
+// more than ~150ms the button stops being a shortcut and starts being a wait.
+const each = ms / N;
+ok(each < 150, `a full ninety minutes sims fast enough to loop over a season (${each.toFixed(0)}ms each)`);
+console.log(fails ? `\n✗ ${fails} sim-stats check(s) failed` : `\n✓ a simmed season records what the honours are derived from`);
+if (fails) process.exitCode = 1;
