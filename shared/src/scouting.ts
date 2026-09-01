@@ -10,6 +10,27 @@ export const LOANEE_CAP = 3;   // max loanees a club can field per season (share
 export const POOL_SIZE = 3;    // local-tryout walk-ups shown per season (kept small now the scouting network is the main path)
 
 // probability of each band per scout tier (rows sum to 1)
+// RETIRED LADDER — READ THIS BEFORE WIRING ANYTHING TO THESE TABLES.
+// `SCOUT_TIERS` and `OPP_REVEAL` below describe a four-rung bronze/silver/gold scout ladder that the game
+// NO LONGER HAS. It was the web3-era model; scout quality now comes from the Scouting HQ facility, and
+// `api.ts` hardcodes `TIER = 'base'` with a dated note recording that migration (2026-08-30). The engine
+// side moved that day; the UI was finally removed 2026-09-01, so the two chips reading BASE that could
+// never change are gone.
+//
+// Only the `base` row is ever selected. The other three are unreachable in production. They are kept
+// deliberately, for two reasons that are cheaper than deleting them:
+//   1. THE TIER STRING IS INSIDE THE RNG SEED (see `seedFrom` below, and the same pattern in missions.ts).
+//      Removing it re-rolls every future trialist draw. The pool is derived and only SIGNED ids persist,
+//      so a live save mid-season would show three fresh unsigned trialists while its counter still said
+//      the cap was filled.
+//   2. `shared/qa_scouting.ts` gates the SHAPE of both tables in thirteen places — that they are total,
+//      contiguous, strictly climbing, and that OPP_REVEAL is a monotone ladder with no un-reveal. Those
+//      are good properties and the harness is worth more than the forty lines it guards.
+// Measured before retiring it, so nobody re-litigates: the mission half was not merely redundant but
+// DOMINATED — `HIT_MULT.gold` 1.4 equals `scoutHitMult(9)` 1.40, `UPGRADE.gold` 0.45 is BELOW
+// `hqUpgradeChance(10)` 0.495, and both consumers combine them with `Math.max`, so at a maxed HQ a gold
+// scout was a literal no-op. The trial half was a parallel ladder on the same number: scout base-to-gold
+// moved mean walk-up OVR +2.31, the Youth Academy L1-to-L10 moves it +1.75.
 export const SCOUT_TIERS: Record<string, Record<ScoutBand, number>> = {
   base:   { raw: 0.62, squad: 0.30, quality: 0.07, gem: 0.01 },
   bronze: { raw: 0.45, squad: 0.38, quality: 0.14, gem: 0.03 },

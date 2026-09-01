@@ -833,6 +833,8 @@ export const api = {
     // comment as "a small payoff" banked 1,890 coins of sponsorship the club had already been paid.
     // Same `kind === 'league'` guard the season counter one block below already uses.
     const isLeagueRoll = body?.kind !== 'continental' && body?.kind !== 'world';
+    const starTok = body?.starId ? await localStore.getToken(String(body.starId)) : null;
+    const starMarketability = starTok?.marketability ?? 10;
     const facIncome = !isLeagueRoll ? { gate: 0, sponsor: 0, shop: 0, womens: 0, merit: 0, total: 0 } : seasonFacilityIncome(
       model.facilities, tierIdx,
       // A SUNDAY LEAGUE TITLE DOES NOT PRICE A SPONSORSHIP DEAL. This passed a raw count, and the trophy
@@ -843,7 +845,20 @@ export const api = {
       // ones and the cap is reached by winning things that are hard to win.
       (honoursSoFar as any[]).filter((h) => h.title && h.kind === 'league')
         .reduce((n, h) => { const ct = Number(h.tier); const idx = ct >= 1 && ct <= TIERS ? TIERS - ct : 0; return n + 1 + idx * 0.35; }, 0),
-      squadMarketability(model.club.players),
+      // COMMERCIAL INCOME FOLLOWS YOUR STAR, NOT A SQUAD AVERAGE.
+      // This was `squadMarketability(model.club.players)`, and it returned EXACTLY 10 for every club in
+      // every season of every save. Two reasons, and both had to be true: no mint path sets
+      // `marketability` on a squad player, and the one man who has it -- the bloodline star, whose brand
+      // is built through his card career -- is not in `club.players` at all. He lives as a Token and is
+      // merged in only for reads. So `brandMult` was pinned at 1.0 and the whole commercial layer was a
+      // constant. career.ts's own note says this stat exists so "a fan-favourite helps pay his own wages,
+      // giving greed a genuine upside instead of being a pure tax" -- and greed was a pure tax.
+      //
+      // Including the star in the AVERAGE was measured and rejected: diluted across twenty players he
+      // moves sponsor income from 1197 to 1215, about 1.5%, which is a fix that looks like one and is not.
+      // Real commercial income follows the biggest name at the club, so it reads him directly. A club with
+      // no star reads the neutral 10 and is unchanged.
+      starMarketability,
       { wins: clampN(body?.wins), draws: clampN(body?.draws), losses: clampN(body?.losses) },
     );
 

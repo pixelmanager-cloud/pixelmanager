@@ -1957,6 +1957,7 @@ export function eligibleTraits(attrs: CareerPlayerAttrs, log: Choice[], role?: R
 /** Finish a career log into a complete Player (attrs + role + overall + traits). Genes default to a
  *  fresh genesis roll; pass inherited genes (lineage). `pickTraits` chooses among the eligible traits
  *  (the client lets a human pick; defaults to the first MAX_TRAITS for the sim). */
+const MARKET_BONUS_WEIGHT = 0.35;
 export function graduate(log: Choice[], seed: number, genes: Genes = rollGenes(seed), pickTraits?: (eligible: Trait[]) => Trait[], ctx: GraduateCtx = {}): CareerPlayer {
   const { seriousInjuries = 0, agentGreed = 0, agentExposure = 1, greedBonus = 0, marketBonus = 0, earnings = 0, legacyBonus, attrFocus } = ctx;
   const attrs = deriveStats(log, seed, genes, attrFocus);
@@ -1970,12 +1971,18 @@ export function graduate(log: Choice[], seed: number, genes: Genes = rollGenes(s
   // signed with, his nature, and the money he chased in-career. High → mercenary; low → a loyal one-club man.
   const gRng = mulberry32(seed ^ 0x9e3779b9);
   const greed = clamp(Math.round(9 + agentGreed + greedBonus + (PERSONALITY_GREED[personality.id] ?? 0) + (gRng() - 0.5) * 4), 1, 20);
+  // MARKET_BONUS_WEIGHT — `marketBonus` accumulates uncapped from items, offers and events across a
+  // 202-turn career and MEASURES 12-23, which swamped every other term here: 5 + ~18 pinned this stat at
+  // its cap of 20 for 83% of careers (50 of 60, at every playstyle tested). A stat whose median IS its
+  // maximum carries no information, so the brand layer had nothing to say even once it was wired up.
+  // At 0.35 the distribution is p10 ~10, p50 ~14, p90 ~19 with about 10% at the cap — a stat again.
+  // (`starTurns` is only 1-6 across a career, not the dominant term it looks like.)
   // MARKETABILITY (brand/fame): star turns on the big stage, a flashy temperament, agent exposure and
   // brand deals build it. The Manager game turns it into COMMERCIAL income — so a fan-favourite helps
   // pay his own wages, giving greed a genuine upside instead of being a pure tax.
   const starTurns = log.filter((c) => c.stakes >= 2 && c.success >= 0.7).length;
   const flair = personality.id === 'maverick' || personality.id === 'mercurial' ? 3 : personality.id === 'biggame' ? 2 : 0;
-  const marketability = clamp(Math.round(5 + starTurns * 0.6 + flair + (agentExposure - 1) * 8 + marketBonus + (gRng() - 0.5) * 2), 1, 20);
+  const marketability = clamp(Math.round(5 + starTurns * 0.6 + flair + (agentExposure - 1) * 8 + marketBonus * MARKET_BONUS_WEIGHT + (gRng() - 0.5) * 2), 1, 20);
   const eligible = eligibleTraits(attrs, log, deriveRole(attrs)); // role-relevant traits first (see eligibleTraits)
   const chosen = (pickTraits ? pickTraits(eligible) : eligible.slice(0, MAX_TRAITS)).slice(0, MAX_TRAITS);
   for (const t of chosen) t.apply?.(attrs); // trait bonuses apply before role/overall

@@ -795,7 +795,7 @@
         "traits_json": "[\"mercenary\",\"marketable\"]",
         "personality": "workhorse",
         "greed": 16,
-        "marketability": 20,
+        "marketability": 15,
         "earnings": 11925,
         "peak_overall": 9,
         "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"A Cup Semi Under the Lights\",\"Title Decider\"],\"peakOverall\":9,\"careerScore\":285,\"turnsPlayed\":120}"
@@ -1586,7 +1586,7 @@
         "traits_json": "[\"biggame\"]",
         "personality": "workhorse",
         "greed": 11,
-        "marketability": 9,
+        "marketability": 8,
         "earnings": 9475,
         "peak_overall": 11,
         "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[\"The Game Your Whole Career Gets Judged On\",\"Title Decider\",\"A Derby With the Title on the Line\"],\"peakOverall\":11,\"careerScore\":382,\"turnsPlayed\":120}"
@@ -2385,7 +2385,7 @@
         "traits_json": "[\"mercenary\",\"marketable\"]",
         "personality": "stoic",
         "greed": 18,
-        "marketability": 20,
+        "marketability": 15,
         "earnings": 9775,
         "peak_overall": 9,
         "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"A Continental Final\"],\"peakOverall\":9,\"careerScore\":241,\"turnsPlayed\":120}"
@@ -3188,7 +3188,7 @@
         "traits_json": "[\"biggame\",\"injury_prone\",\"mercenary\",\"marketable\"]",
         "personality": "workhorse",
         "greed": 16,
-        "marketability": 20,
+        "marketability": 19,
         "earnings": 12365,
         "peak_overall": 14,
         "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"bigNights\":[\"The Game Your Whole Career Gets Judged On\",\"A Derby With the Title on the Line\"],\"peakOverall\":14,\"careerScore\":546,\"turnsPlayed\":120}"
@@ -3979,7 +3979,7 @@
         "traits_json": "[\"mercenary\",\"marketable\"]",
         "personality": "perfectionist",
         "greed": 19,
-        "marketability": 20,
+        "marketability": 15,
         "earnings": 9685,
         "peak_overall": 10,
         "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[],\"peakOverall\":10,\"careerScore\":281,\"turnsPlayed\":120}"
@@ -4779,10 +4779,10 @@
         "state": "pro",
         "attrs_json": "{\"pace\":9,\"strength\":3,\"stamina\":11,\"passing\":5,\"shooting\":9,\"tackling\":6,\"positioning\":7,\"workrate\":5,\"keeping\":4,\"setPiece\":9,\"composure\":11,\"aggression\":7,\"creativity\":5,\"teamwork\":4,\"leadership\":6,\"durability\":4}",
         "role": "FW",
-        "traits_json": "[\"injury_prone\",\"mercenary\",\"marketable\"]",
+        "traits_json": "[\"injury_prone\",\"mercenary\"]",
         "personality": "showman",
         "greed": 20,
-        "marketability": 20,
+        "marketability": 12,
         "earnings": 10069,
         "peak_overall": 9,
         "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"A Derby With the Title on the Line\"],\"peakOverall\":9,\"careerScore\":244,\"turnsPlayed\":120}"
@@ -5598,10 +5598,10 @@
         "state": "pro",
         "attrs_json": "{\"pace\":7,\"strength\":5,\"stamina\":4,\"passing\":6,\"shooting\":8,\"tackling\":7,\"positioning\":10,\"workrate\":8,\"keeping\":3,\"setPiece\":9,\"composure\":13,\"aggression\":8,\"creativity\":5,\"teamwork\":6,\"leadership\":8,\"durability\":4}",
         "role": "DF",
-        "traits_json": "[\"injury_prone\",\"mercenary\",\"marketable\"]",
+        "traits_json": "[\"injury_prone\",\"mercenary\"]",
         "personality": "pro",
         "greed": 15,
-        "marketability": 20,
+        "marketability": 14,
         "earnings": 10450,
         "peak_overall": 9,
         "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"A Comeback From the Brink\"],\"peakOverall\":9,\"careerScore\":241,\"turnsPlayed\":120}"
@@ -6388,7 +6388,7 @@
         "traits_json": "[\"biggame\",\"loyal\",\"marketable\"]",
         "personality": "biggame",
         "greed": 2,
-        "marketability": 20,
+        "marketability": 17,
         "earnings": 9995,
         "peak_overall": 13,
         "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"bigNights\":[\"The Biggest Game in the Club’s History\",\"A Derby With the Title on the Line\",\"Title Decider\"],\"peakOverall\":13,\"careerScore\":391,\"turnsPlayed\":120}"
@@ -8006,7 +8006,7 @@
         "traits_json": "[]",
         "personality": "workhorse",
         "greed": 11,
-        "marketability": 1,
+        "marketability": 4,
         "earnings": 10550,
         "peak_overall": 9,
         "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"The Match That Decides Who Goes Down\",\"Promotion Play-Off Final\",\"A Continental Final\"],\"peakOverall\":9,\"careerScore\":295,\"turnsPlayed\":120}"
@@ -8824,10 +8824,10 @@
         "state": "pro",
         "attrs_json": "{\"pace\":13,\"strength\":9,\"stamina\":7,\"passing\":7,\"shooting\":12,\"tackling\":6,\"positioning\":11,\"workrate\":5,\"keeping\":6,\"setPiece\":8,\"composure\":15,\"aggression\":8,\"creativity\":5,\"teamwork\":6,\"leadership\":9,\"durability\":7}",
         "role": "FW",
-        "traits_json": "[\"mercenary\",\"marketable\"]",
+        "traits_json": "[\"mercenary\"]",
         "personality": "workhorse",
         "greed": 15,
-        "marketability": 19,
+        "marketability": 11,
         "earnings": 9564,
         "peak_overall": 11,
         "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[\"A Cup Semi Under the Lights\",\"A Continental Final\"],\"peakOverall\":11,\"careerScore\":351,\"turnsPlayed\":120}"

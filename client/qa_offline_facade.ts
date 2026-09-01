@@ -91,6 +91,10 @@ console.log('=== 6. the graduated token is now a fieldable pro ===');
 const me2 = await api.me();
 assert(me2.club.players.some((p) => p.id === prospectId), 'the pro-state token is merged into the club as a fieldable player');
 assert(!!me2.contracts[prospectId], 'the new pro has a contract entry');
+// Captured here because the star is SUCCEEDED later in this harness and leaves `club.players`; the
+// brand-economy check at the end needs the value while it is still reachable.
+const starBrand = (me2.club.players as any[]).find((p) => p.id === prospectId)?.marketability;
+assert(typeof starBrand === 'number', `the graduated star carries a marketability (got ${starBrand})`);
 assert(me2.contracts[prospectId].available === true, 'freshly graduated + staked -> available for selection');
 
 console.log('=== 7. setStandingOrders accepts the merged squad (NFT pro included) ===');
@@ -186,6 +190,31 @@ const stakeOff = await api.stake(prospectId, false);
 assert(stakeOff.contract.staked === false, 'unstake clears staked');
 const stakeOn = await api.stake(prospectId, true);
 assert(stakeOn.contract.staked === true, 'stake re-arms it');
+
+console.log('\n=== commercial income follows the bloodline star ===');
+{
+  // `squadMarketability(club.players)` returned EXACTLY 10 for every club in every save: no mint path sets
+  // marketability on a squad player, and the one man who has it -- the star, whose brand is built through
+  // his card career -- is not in `club.players` at all, he is a Token merged in for reads. So `brandMult`
+  // was pinned at 1.0 and the commercial layer was a constant, while career.ts promised this stat gives
+  // greed "a genuine upside instead of being a pure tax".
+  // Including him in an AVERAGE was measured and rejected (1197 -> 1215, ~1.5%); income reads him directly.
+  // sponsorIncome pays nothing below level 2, so the Commercial Dept has to exist before the brand term
+  // can be observed at all. (That is also why this was so easy to leave broken: on a fresh save the whole
+  // commercial layer is legitimately zero, so a pinned brandMult looks identical to a working one.)
+  try { await api.upgradeFacility('sponsor'); } catch { /* not enough coins is fine; asserted below */ }
+  const facs = await api.facilities();
+  const sponsorLvl = facs.facilities.find((f) => f.key === 'sponsor')?.level ?? 1;
+  assert(sponsorLvl >= 2, `the Commercial Dept is built, so sponsorship is non-zero (level ${sponsorLvl})`);
+  const args = { pos: 4, size: 10, wins: 18, draws: 10, losses: 10 } as any;
+  const withStar: any = await api.spSeasonReward({ ...args, starId: prospectId });
+  const without: any = await api.spSeasonReward({ ...args });
+  const a = withStar.facilities?.sponsor, b = without.facilities?.sponsor;
+  assert(typeof a === 'number' && typeof b === 'number', `spSeasonReward reports a sponsor figure (${a} / ${b})`);
+  if (starBrand > 10) assert(a > b, `a marketable star (${starBrand}) earns MORE sponsorship than none (${a} v ${b})`);
+  else if (starBrand < 10) assert(a < b, `an unmarketable star (${starBrand}) earns LESS than none (${a} v ${b})`);
+  else assert(a === b, `a neutral star (10) is indistinguishable from none (${a} v ${b})`);
+}
 
 console.log('=== 12. succeed(): fold a managed career into achievements, then reborn ===');
 const succ = await api.succeed(prospectId, { seasons: 5, titles: 1, mentorship: 2 });
