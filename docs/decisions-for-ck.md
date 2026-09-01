@@ -1521,6 +1521,16 @@ Related, and the reason this matters more than it looks: §64 shows the mental l
 match, and traits are the other half of what makes a squad player feel like a person rather than a stat
 line.
 
+
+### The brand economy — RESOLVED 2026-09-01
+
+`squadMarketability` returned exactly 10 for every club in every save, so `brandMult` was pinned at 1.0 and
+`career.ts`'s promise that this stat gives greed "a genuine upside instead of being a pure tax" was false.
+Three fixes, not one: the star is not in `club.players` (he is a Token), an AVERAGE dilutes him to 1.5%
+(measured, rejected), and the stat itself was at its cap for 83% of careers because `marketBonus`
+accumulates uncapped to 12-23 and swamps everything. Commercial income now follows the star directly:
+1197 neutral, 1341 at a median star, 1520 at p90. Covered by a mutation-tested facade check.
+
 ## 64. The measurement that settles §16 — and it is BIGGER on the path the game ships
 
 **The mental layer is worth exactly nothing outside a played match, and it is now quantified on both
@@ -1573,7 +1583,15 @@ is the part still worth your attention.
  `NaN` fails both comparisons in the guard, so it returns a player
   with id `loan-s5-NaN` who appears in no pool; fractional indices mint **id-distinct clones** of the same
   man, defeating the duplicate-signing guard. Not reachable through the shipped UI today.
-- **`OPP_REVEAL` has zero consumers — STILL TRUE, and it is the visible tip of a whole unbuilt feature.**
+- **~~`OPP_REVEAL` has zero consumers~~ — RESOLVED 2026-09-01.** The UI came off the screen (the two chips
+  reading BASE that could never change), and the tables were deliberately KEPT with the retirement recorded
+  at the tables themselves in `scouting.ts`. Not removed because the tier string is inside the RNG seed —
+  dropping it re-rolls every future trialist draw, and since the pool is derived while only signed ids
+  persist, a live save would show fresh unsigned trialists while its counter said the cap was filled — and
+  because `qa_scouting` gates their shape in thirteen places. Cost: a harness rewrite plus save-compat
+  risk. Benefit: forty fewer lines. What actually cost future time was a reader not knowing they were
+  retired, and that is what got fixed. Original report follows:
+
   *(I first wrote here that players "pay for tiers that reveal nothing". That was wrong and I checked it:
   nothing is charged. The accurate version is worse in a different way.)* `api.scoutTiers()` returns
   `{ opp: TIER, player: TIER }` where **`TIER` is the hardcoded constant `'base'`** in `api.ts`, and there
