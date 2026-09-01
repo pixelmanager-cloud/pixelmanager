@@ -796,7 +796,7 @@
         "personality": "workhorse",
         "greed": 16,
         "marketability": 15,
-        "earnings": 11925,
+        "earnings": 11805,
         "peak_overall": 9,
         "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"A Cup Semi Under the Lights\",\"Title Decider\"],\"peakOverall\":9,\"careerScore\":285,\"turnsPlayed\":120}"
       }
@@ -2386,7 +2386,7 @@
         "personality": "stoic",
         "greed": 18,
         "marketability": 15,
-        "earnings": 9775,
+        "earnings": 9655,
         "peak_overall": 12,
         "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[\"A Continental Final\"],\"peakOverall\":12,\"careerScore\":241,\"turnsPlayed\":120}"
       }
@@ -5602,7 +5602,7 @@
         "personality": "pro",
         "greed": 15,
         "marketability": 14,
-        "earnings": 10450,
+        "earnings": 10330,
         "peak_overall": 11,
         "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[\"A Comeback From the Brink\"],\"peakOverall\":11,\"careerScore\":241,\"turnsPlayed\":120}"
       }
@@ -6388,8 +6388,8 @@
         "traits_json": "[\"biggame\",\"loyal\",\"marketable\"]",
         "personality": "biggame",
         "greed": 2,
-        "marketability": 17,
-        "earnings": 9995,
+        "marketability": 16,
+        "earnings": 9875,
         "peak_overall": 11,
         "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[\"The Biggest Game in the Club’s History\",\"A Derby With the Title on the Line\",\"Title Decider\"],\"peakOverall\":11,\"careerScore\":391,\"turnsPlayed\":120}"
       }
@@ -8006,8 +8006,8 @@
         "traits_json": "[\"deadball\"]",
         "personality": "workhorse",
         "greed": 11,
-        "marketability": 4,
-        "earnings": 10550,
+        "marketability": 3,
+        "earnings": 10430,
         "peak_overall": 13,
         "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"bigNights\":[\"The Match That Decides Who Goes Down\",\"Promotion Play-Off Final\",\"A Continental Final\"],\"peakOverall\":13,\"careerScore\":295,\"turnsPlayed\":120}"
       }
@@ -8828,7 +8828,7 @@
         "personality": "workhorse",
         "greed": 15,
         "marketability": 11,
-        "earnings": 9564,
+        "earnings": 9444,
         "peak_overall": 14,
         "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"bigNights\":[\"A Cup Semi Under the Lights\",\"A Continental Final\"],\"peakOverall\":14,\"careerScore\":351,\"turnsPlayed\":120}"
       }

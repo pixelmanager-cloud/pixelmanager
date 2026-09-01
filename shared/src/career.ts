@@ -1534,7 +1534,19 @@ export class Career {
     this.life('school',    Math.round((social ? 1.2 : -1.0) + rev('school')));                // study time vs football-obsessed
     this.life('agent',     Math.round(Math.max(0, perf) * 0.6 + rev('agent')));               // an agent loves a rising asset
     this.life('fans',      Math.round(perf * (kind === 'match' ? 1.1 : 0.6) + rev('fans')));
-    this.life('sponsors',  Math.round(Math.max(0, perf) * 0.5 + rev('sponsors') * 0.5));
+    // THIS METER COULD NOT FALL FOR ANY REASON THE PLAYER CONTROLLED. `Math.max(0, perf)` meant a bad
+    // season contributed ZERO rather than a loss, so performance only ever pushed it up; and the halved
+    // mean-reversion (which pushes UP whenever the meter sits below 50) removed the force that would
+    // otherwise have carried it back down from a peak. The commercial standing of a player having a
+    // terrible year still climbed. Only arc effects could lower it, and those award +845 against -445.
+    //
+    // Both halves are fixed here. Performance now cuts both ways, slightly harder down than up because a
+    // brand leaves faster than it arrives, and the reversion runs at full strength like every other meter.
+    // Measured over 150 careers each way, this is what makes the meter worth managing rather than either
+    // decoration or noise: a careful player brushes the sub-30 penalty in 37% of careers and a careless one
+    // in 63%, and neither bottoms the meter out. (Restoring the full reversion, not the asymmetry, is what
+    // keeps it stable -- at half strength the same coefficients put 136 of 150 careful careers under 30.)
+    this.life('sponsors',  Math.round((perf >= 0 ? perf * 0.5 : perf * 0.6) + rev('sponsors')));
     if (social) this.life('partner', Math.round(perf * 1.3 + rev('partner')));                // personal life tended in social moments
     this.energy = clamp(this.energy - (choice.stakes >= 3 ? 7 : big ? 5 : 3), 0, 100); // bigger moments drain more — energy is a running resource across the chapter (eased with the summer-restore fix, PT-158)
   }
@@ -1570,7 +1582,13 @@ export class Career {
       if (v.fans > 72) { earn += 120; notes.push('📣 The terraces worship you — a loyalty bonus lands.'); }
       else if (v.fans < 28) { form -= 0.03; notes.push('📣 The fans are on your back.'); }
     }
-    if (active.has('sponsors') && v.sponsors > 68) { earn += 200; market += 1; notes.push('📸 Sponsors are queuing up — the brand pays out.'); }
+    // EVERY OTHER METER BITES WHEN IT IS LOW; this one only ever paid out. A player could watch his
+    // commercial standing slide for five seasons and the game would not once mention it, which made the
+    // meter decoration rather than a thing to manage.
+    if (active.has('sponsors')) {
+      if (v.sponsors > 68) { earn += 200; market += 1; notes.push('📸 Sponsors are queuing up — the brand pays out.'); }
+      else if (v.sponsors < 30) { earn -= 120; market -= 1; notes.push('📉 A shoot is cancelled and a logo quietly disappears from the boot — the brands have gone cold on you.'); }
+    }
     return { notes, form, energy, earn, market };
   }
 
