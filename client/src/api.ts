@@ -20,7 +20,7 @@ import {
   FACILITY_KEYS, FACILITY_META, MAX_LEVEL, upgradeCost, effectAt, seasonFacilityIncome, squadMarketability,
   seasonUpkeep, facilityUpkeep, applyDisrepair, mothballRefund, facLevel,
   youthPoolBonus, youthUpgradeChance, dormIntakeBonus, scoutHitMult, scoutCostDiscount, scoutExtraTrips,
-  generatePool, trialistAt, LOANEE_CAP, DESTINATIONS, destinationById, rollMission, travelMs as travelMsPure, travelMatchdays, previewOdds,
+  generatePool, trialistAt, LOANEE_CAP, DESTINATIONS, destinationById, rollMission, travelMatchdays, previewOdds,
   gaffersDiaryEntry,
   rollGenes, updateMorale, moraleEffects, rollMatchInjuries, developAttrs,
   deriveMatchStats, type MatchPlayerStat,
@@ -318,7 +318,6 @@ function missionView(m: MissionRow, played: number) {
   };
 }
 
-const travelMs = (dest: Parameters<typeof travelMsPure>[0]) => travelMsPure(dest);
 
 /** Everyone the house is scored on, drawn straight off the tokens. Module-level because both the Houses
  *  table and the places renown OPENS DOORS need it, and a second derivation would be a second thing to

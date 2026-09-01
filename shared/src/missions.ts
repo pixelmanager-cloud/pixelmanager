@@ -97,12 +97,9 @@ export function rollMission(missionId: string, dest: Destination, playerTier: st
   return { found: true, player, band: bandOf(ovr), overall: ovr };
 }
 
-/** Travel time in ms for a destination. `scale` compresses every travel time (e.g. 0.01
- *  to test the reveal quickly) — callers that honour a runtime override (env var, etc.)
- *  pass it in; pure by default (scale=1, i.e. real travel time). */
-export function travelMs(dest: Destination, scale = 1): number { return Math.round(dest.travelMins * 60_000 * scale); }
-
-/** HOW MANY MATCHDAYS A SCOUTING TRIP TAKES, replacing the wall-clock wait.
+/** HOW MANY MATCHDAYS A SCOUTING TRIP TAKES. It replaced a wall-clock wait, and `travelMs` -- the
+ *  function that produced that wait -- was REMOVED on 2026-09-02 rather than left exported and tested
+ *  with no production caller. `dest.travelMins` survives as the ladder's ordering, read below.
  *
  *  The trip used to reveal after `travelMins` of REAL TIME — one to twelve hours — in an offline,
  *  single-player, premium game with no monetisation. That is a free-to-play pacing mechanic with nothing

@@ -140,7 +140,8 @@ console.log('\n[qa-scout-kit] signMission — unknown id, still-travelling, doub
   console.log(`[qa-scout-kit] signMission: unknown-id + still-travelling guards clean, no state mutation on rejection`);
 
   // ── successful sign + double-sign + loanee-cap enforcement ──
-  // Travel time is real-world-clock-gated (ready_at = dispatched_at + travelMs); force it to "now" via
+  // Travel time is GAME-clock-gated (ready_at = matchesPlayed() + travelMatchdays(dest)); the
+  // wall-clock version this line used to describe was replaced, and `travelMs` removed 2026-09-02; force it to "now" via
   // direct localStore access (white-box, test-only — mirrors how the in-memory backend is already
   // injected for headless testing) so the full sign/double-sign/cap path can be driven without a
   // real-time wait.

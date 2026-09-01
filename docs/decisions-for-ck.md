@@ -1614,14 +1614,16 @@ neutral, the armband is never a penalty, AND tier 10 still reads as poorly led.)
   starts. Making thresholds relative to tier would fix it; whether a basement player *should* earn traits
   is your call.
 - **~~A substituted-off captain keeps his armband bonus~~ — FIXED.** `leadershipBonus` is now recomputed
-  in `makeSub`, so the armband follows the XI. *Still open, and it needs your call:* nothing in the manager
-  game ever changes a mental stat after graduation, and `ageCurve()` — written to raise composure and
-  leadership into a player's 30s — **has no production caller at all**. This is a contradiction rather than
-  a bug: the Living Squad plan deliberately freezes mentals as "career-forged identity", which makes
-  `ageCurve` dead by design, yet the function exists and reads as an intended mechanic. §64 raises the
-  stakes — the mental layer is worth **4.64 goals a match** on the shipped path — so a squad whose mentals
-  never move is a real amount of the game held still. Either wire it into the season rollover or delete it;
-  leaving a written-but-uncalled mechanic in place is the exact defect class this document tracks.
+  in `makeSub`, so the armband follows the XI. *~~Still open, and it needs your call~~ — **ANSWERED 2026-09-02: mentals stay
+  frozen.** Career-forged identity, per the Living Squad plan. `ageCurve()` was the written-but-uncalled
+  half of the contradiction and it is already gone — `grep -rn ageCurve` returns one hit, the tombstone at
+  `shared/src/career.ts:2054`. So the contradiction is closed in the direction of the design, and this
+  paragraph is the last thing that described it as open.*
+
+  Worth keeping in view rather than acting on: §64 measures the mental layer at **4.64 goals a match**, so
+  a squad whose mentals never move is a real amount of the game deliberately held still. That is the price
+  of the design, not an argument against it — but if the Living Squad work ever makes squad players feel
+  static, this is the first place to look.
 
 ## 67. ~~NINE OF THE NINETEEN TRAITS DO NOTHING~~ — FIXED 2026-09-01: seven wired, two cut   ·  **[VERIFIED FIXED 2026-09-01 — no action]**
 
@@ -2228,8 +2230,10 @@ The reason is structural and not obviously wrong: a bad draft costs almost nothi
 the card. It dilutes the deck, and dilution is cheap. So the draft currently decides *who you become*, not
 *how good you get*.
 
-- **Leave it** — the draft is identity, the card play is skill. Coherent, and it is what the code comment
-  ("identity-building") already claims.
+- **~~Leave it~~ — CHOSEN 2026-09-02.** The draft is identity, the card play is skill; that is what the
+  code comment ("identity-building") already claims, and the measurement is now the *reason* rather than a
+  defect. Closed, not deferred. `ensurePlayableHand` at `career.ts:1681` stays as it is — the mercy search
+  that makes dilution cheap is what keeps a bad draft from being punishing, which is the point.
 - **Give it teeth** — make dilution bite, so a deck of off-identity cards means your hand often lacks a
   good answer. This is a real design change to how hands are drawn, not a tuning pass, so I have not done
   it unilaterally.

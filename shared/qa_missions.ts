@@ -25,7 +25,7 @@
 // WHAT IS ONLY MEASURED (the D-sections at the end) are the defects found while writing this file. They
 // are deliberately NOT gated, for the reason `qa_mental.ts` states: pinning today's broken numbers into a
 // bar turns this harness red the day somebody fixes them. They print on every run so they stay visible.
-import { DESTINATIONS, destinationById, hqUpgradeChance, previewOdds, rollMission, travelMs } from './src/missions.js';
+import { DESTINATIONS, destinationById, hqUpgradeChance, previewOdds, rollMission } from './src/missions.js';
 import type { Destination, ScoutBand } from './src/missions.js';
 import { overall } from './src/teams.js';
 import { scoutCostDiscount, scoutHitMult } from './src/facilities.js';
@@ -113,32 +113,13 @@ console.log('\n=== 2. destinationById ===');
   ok('destinationById covers the whole table — nothing is unreachable by id', DESTINATIONS.every((d) => destinationById(d.id) !== undefined));
 }
 
-// ── §3  travelMs — a reveal timer that must never be already-elapsed ─────────────────────────────────
-// api.ts:1427 writes `ready_at = now + travelMs(dest)` and missionView reveals when `now >= ready_at`. A
-// zero or negative return would reveal the prospect instantly; a NaN would make `now >= NaN` false
-// FOREVER and strand the trip. Neither would throw and neither would log.
-console.log('\n=== 3. travelMs ===');
-{
-  let positive = 0, integral = 0, matches = 0;
-  for (const d of DESTINATIONS) {
-    const ms = travelMs(d);
-    if (Number.isFinite(ms) && ms > 0) positive++;
-    if (Number.isInteger(ms)) integral++;
-    if (ms === d.travelMins * 60_000) matches++;   // stated contract: minutes → ms, default scale = 1
-  }
-  const n = DESTINATIONS.length;
-  ok('travel time is finite and strictly positive at every destination', positive === n, `${positive}/${n}`);
-  ok('travel time is a whole number of ms', integral === n, `${integral}/${n}`);
-  ok('travel time is exactly travelMins × 60000 at the default scale', matches === n, `${matches}/${n}`);
-  let up = 0;
-  for (let i = 1; i < n; i++) if (travelMs(DESTINATIONS[i]) > travelMs(DESTINATIONS[i - 1])) up++;
-  ok('travel time is monotone along the ladder', up === n - 1, `${up}/${n - 1}`);
-  const hours = DESTINATIONS.map((d) => travelMs(d) / 3_600_000);
-  ok('every trip sits inside a sane 1 minute … 24 hour window', hours.every((h) => h >= 1 / 60 && h <= 24), hours.map((h) => `${h}h`).join(' '));
-  // `scale` is exercised for shape only: no production caller passes it (see D4), so this pins the
-  // documented contract rather than a live path.
-  ok('a positive scale scales linearly and stays positive', travelMs(DESTINATIONS[0], 0.5) === travelMs(DESTINATIONS[0]) / 2 && travelMs(DESTINATIONS[0], 0.5) > 0);
-}
+// ── §3  REMOVED 2026-09-02 ─────────────────────────────────────────────────────────────────────────
+// This section tested `travelMs`, the wall-clock reveal timer. Its own header asserted that
+// "api.ts:1427 writes `ready_at = now + travelMs(dest)`" -- which had stopped being true: the timer moved
+// to game time (`matchesPlayed() + travelMatchdays(dest)`) and `travelMs` was left exported, imported,
+// aliased in api.ts and thoroughly tested with NO production caller at all. Six assertions guarding a
+// function the game no longer ran, under a comment describing a line that no longer existed.
+// The function is gone; `travelMatchdays` is what the trip costs now, and §2 covers the ladder it reads.
 
 // ── §4  rollMission — sealed, deterministic, and self-consistent ─────────────────────────────────────
 // "Same (missionId, destination, playerTier) → same result forever" is the whole reason the outcome can
@@ -395,12 +376,10 @@ console.log('\n=== MEASURED — defects, deliberately not gated ===');
       + Object.entries(agg).map(([r, v]) => `${r} ${(v.gem / v.n * 100).toFixed(1)}% (mean ovr ${(v.ovr / v.n).toFixed(2)})`).join('  '));
   }
 
-  // D5 — travelMs's `scale` parameter is unguarded and unused. Its doc says "callers that honour a
-  // runtime override (env var, etc.) pass it in"; no caller in the repo passes anything. If one ever
-  // did, these are the values it would write into ready_at.
-  const d0 = DESTINATIONS[0];
-  console.log(`  D5  travelMs(parks, scale): 0 → ${travelMs(d0, 0)}  |  -1 → ${travelMs(d0, -1)}  |  NaN → ${travelMs(d0, NaN)}`
-    + '  — 0 and negative reveal instantly, NaN makes `now >= ready_at` false forever. No production caller passes `scale`.');
+  // D5 — REMOVED with §3: it printed what `travelMs`'s unused `scale` parameter would write into
+  // `ready_at`, for a function that no longer exists and a field no longer computed that way.
+
+  const d0 = DESTINATIONS[0]; // was declared by the removed D5; D6 still needs it
 
   // D6 — previewOdds and rollMission disagree on a non-finite HQ level: the card quotes NaN%, the roll
   // silently behaves as 0 (`rng() < NaN` is false). facilities.ts only produces 1..10, so this is latent.
