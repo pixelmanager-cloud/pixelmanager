@@ -280,6 +280,24 @@ function scan(shape: Shape, sources: Map<string, { text: string; code: string[];
   return report;
 }
 
+/** Does this write line assign a CONSTANT to the field — `x: 0`, `x = null`, `x: false`?
+ *
+ *  A field can have live, reachable writers and still never accumulate anything, because every one of them
+ *  is an initialiser. `ach_goals` / `ach_assists` / `ach_potm` were exactly this: declared on Token, read in
+ *  `tokenAch`, rendered on the legend card, and written in precisely two places, both `ach_goals: 0`. Every
+ *  guard in this probe passed them -- a constant zero is a write -- so the card read "0 goals · 0 assists ·
+ *  0 ★" for every player forever while this file reported the field wired. The guard for the project's
+ *  signature defect was green on a live instance of it.
+ *
+ *  Deliberately conservative: only an unmistakable literal counts. Anything with an identifier, a call or an
+ *  operator in it is treated as a real write, because a false FAIL here costs more than a miss. */
+function assignsConstant(field: string, line: string): boolean {
+  const m = line.match(new RegExp(`(?:\\.${field}\\s*=(?!=)|(?:^|[\\s{,(\\[])${field}\\s*:(?!:))\\s*([^,;}]*)`));
+  if (!m) return false;
+  const rhs = (m[1] ?? '').trim().replace(/\s*\/\/.*$/, '').trim();
+  return /^(?:-?\d+(?:\.\d+)?|null|undefined|false|true|''|""|``|\[\]|\{\})$/.test(rhs);
+}
+
 // ── run ──────────────────────────────────────────────────────────────────────────────────────────────
 const allFiles = [...walk(join(ROOT, 'shared')), ...walk(join(ROOT, 'client'))];
 const prodFiles = allFiles.filter((p) => !isTest(rel(p)));
@@ -320,6 +338,7 @@ for (const shape of shapes) {
 
   const deadFns = deadFunctions(sources);
   const report = scan(shape, sources, deadFns);
+  const constOnly: string[] = [];
   const dead: string[] = [], unreachable: string[] = [], weakOnly: string[] = [], unread: string[] = [], weakRead: string[] = [];
   for (const [f, { writes, reads }] of report) {
     const sw = writes.filter((h) => h.strong), sr = reads.filter((h) => h.strong);
@@ -356,7 +375,21 @@ for (const shape of shapes) {
       for (const h of hits) console.log(`    ${h.strong ? 'strong' : ' weak '} ${h.live ? '    ' : 'DEAD'} ${label} ${h.file}:${h.line} in ${h.fn ?? '<top level>'}()  ${h.text}`);
   }
 
-  if (dead.length || unreachable.length) {
+  // A field can be written, reachably, everywhere it is written -- and still never accumulate, because
+  // every write is a constant. See assignsConstant.
+  for (const [f, { writes, reads }] of report) {
+    const live = writes.filter((h) => h.live && h.strong);
+    if (!live.length || !reads.length) continue;
+    if (live.every((h) => assignsConstant(f, h.text))) {
+      constOnly.push(`${f} — ${live.length} live writer(s), every one assigns a constant: ${live.map((h) => `${h.file}:${h.line}`).join(', ')}`);
+    }
+  }
+  if (constOnly.length) {
+    console.log(`\n  ✗ ${constOnly.length} field(s) are READ but only ever assigned a CONSTANT — initialised and abandoned:`);
+    for (const f of constOnly) console.log(`      ${f}`);
+  }
+
+  if (dead.length || unreachable.length || constOnly.length) {
     failed++;
     if (dead.length) {
       console.log(`  ✗ ${dead.length} field(s) have NO writer anywhere in production — every reader gets undefined forever:`);

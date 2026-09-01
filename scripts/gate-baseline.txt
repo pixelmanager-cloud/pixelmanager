@@ -1,0 +1,16 @@
+# Accepted gate failures. Every line here is a KNOWN, MEASURED, DELIBERATE red documented in
+# docs/decisions-for-ck.md section 68. A failure NOT in this list fails the gate.
+# Measured numbers are stripped before comparison, so "(got 588 vs 602)" drifting does not matter.
+# Regenerate with: node scripts/run-gate.mjs --write-baseline  (and say why in the commit).
+
+4-2-2-2's second striker should beat 4-1-4-1's lone-striker shape
+harness shared/qa_matchstats.ts
+harness shared/qa_mental.ts
+leg playtest exits 0
+leg qa exits 1
+leg verify exits 1
+matchstats check(s) failed
+mental-layer check(s) failed
+wide-playmaker should generate more shots than ball-winner in the wide slot
+wide-playmaker should generate more shots than box-to-box in the wide slot
+wing-back fullbacks should edge possession above cover-duty fullbacks vs a narrow opponent

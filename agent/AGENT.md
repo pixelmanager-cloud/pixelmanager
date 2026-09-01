@@ -39,8 +39,8 @@ prove it works, and commit — nothing more.**
    change is a deliberate balance shift, update the assertion bounds in
    `shared/strategy_test.ts` thoughtfully and say so in your summary.
 4. Run `npm run gate` and confirm it passes. (`npm run verify` is the fast inner-loop check —
-   use it while you work — but it covers only 15 of the 75 harnesses, so it is NOT the finish line.
-   `gate` adds the 41 playtest probes and the 31 qa harnesses. Budget several minutes: qa's slowest
+   use it while you work — but it covers only 18 of the 112 harnesses, so it is NOT the finish line.
+   `gate` adds the 53 playtest probes and the 41 qa harnesses. Budget several minutes: qa's slowest
    single harness, `shared/qa_calibration_baseline.ts`, is about 208 seconds on its own.)
 5. In `agent/backlog.md`, change this task's `- [ ]` to `- [x]`.
 6. `git add -A` and `git commit` with a clear message: `agent: <task>`.

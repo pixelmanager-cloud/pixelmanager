@@ -17,14 +17,18 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      # CI RAN `verify` AND NOTHING ELSE, and `verify` is 15 of the project's 75 harnesses (20%).
-      # The other 60 — every qa fuzz harness and 39 of the 41 playtest probes — ran only when a human
+      # CI RAN `verify` AND NOTHING ELSE, and `verify` is 18 of the project's 112 harnesses (16%).
+      # The other 94 — every qa fuzz harness and 52 of the 53 playtest probes — ran only when a human
       # remembered to type `npm run gate` locally. Every gate repair made this week protected a command
-      # nobody was obliged to run. All three legs run here now; they are separate steps so a failure
-      # names which leg broke rather than a single opaque red cross.
-      - name: Build + engine regression tests (verify)
-        run: npm run verify
-      - name: Playtest probes
-        run: npm run playtest
-      - name: QA fuzz harnesses
-        run: npm run qa
+      # nobody was obliged to run.
+      #
+      # They were then added as three separate steps -- which still did not run. GitHub stops a job at the
+      # first failing step unless told otherwise, and `verify` ends in shared/strategy_test.ts, which exits 1
+      # BY DESIGN on four assertions section 68 documents as permanently red. So the playtest and qa steps
+      # never executed once on a red-verify tree, under a comment claiming all three legs ran.
+      #
+      # `npm run gate` now runs all three unconditionally and judges the result against
+      # scripts/gate-baseline.txt: an accepted failure is not a gate failure, a NEW one is. It prints each
+      # leg's exit code, so a break still names its leg.
+      - name: Gate (verify + playtest + qa, judged against the accepted-failure baseline)
+        run: npm run gate

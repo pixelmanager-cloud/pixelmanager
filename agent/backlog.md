@@ -20,8 +20,8 @@ implements it on a branch, and opens a PR for you to review.
 > (1) it's a small, self-contained, ADDITIVE PR (add content, don't restructure); (2) fully DETERMINISTIC
 > — no `Date.now`/`Math.random` anywhere in `shared/` (seed everything); (3) `npm run gate` MUST pass
 > (verify + playtest + qa) — the mental/engine calibration must stay green. NOTE: `npm run verify` is the
-> fast inner-loop check and covers only 15 of the project's 75 harnesses, so it is NOT the finish line;
-> `gate` adds the 41 playtest probes and the 31 qa harnesses. (4) run
+> fast inner-loop check and covers only 18 of the project's 112 harnesses, so it is NOT the finish line;
+> `gate` adds the 53 playtest probes and the 41 qa harnesses. (4) run
 > `npx tsx shared/career_sim.ts` and confirm the diversity/role-balance/determinism checks still hold;
 > (5) match the existing code style/format in the file you edit. Files: cards/coaches/agents/traits/
 > personalities/scenarios in `shared/src/career.ts`; narration vocab in `shared/src/narrate.ts`. When you

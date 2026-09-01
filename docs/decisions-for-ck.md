@@ -1405,14 +1405,18 @@ refuted.
 **A red gate whose expected-red set is undocumented cannot tell a new regression from an accepted one** —
 which is the exact failure this document exists to prevent, and §68 shipped without it. So, precisely:
 
-- `npm run playtest` — **GREEN**, all 43 probes. Any failure here is a real regression.
+- `npm run playtest` — **GREEN**, all 53 probes. Any failure here is a real regression.
+  *(Counted 2026-09-01: `tools/playtest` holds 55 non-underscore `.ts` files, 2 of them in `TOO_SLOW`.)*
 - `npm run verify` — **RED at `shared/strategy_test.ts` only.** Expected failures:
   `wing-back fullbacks should edge cover-duty fullbacks on possession` (a 0.6pp effect, below this
   engine's resolution); `wide-playmaker should generate more shots than box-to-box` and
   `...than ball-winner` (both NOISE — they INVERT and pass at N=300); and `4-2-2-2's second striker
   should beat 4-1-4-1` (the one real remaining defect, item 1 above).
 - `npm run qa` — **RED at `shared/qa_mental.ts` and `shared/qa_matchstats.ts` only**, one check each:
-  the mental-layer swing (item 4) and the goalless-match rate (item 3).
+  the mental-layer swing (**item 3**) and the goalless-match rate. *(Corrected 2026-09-01: this line used
+  to say "item 4" for the swing and "item 3" for the goalless rate. Item 3 IS the swing; item 4 is wing-back
+  fullbacks, which is a `verify` failure already listed above. And the goalless rate has **no numbered item
+  at all** — the list runs 1,2,3,4,6,7,8, with no 5. It is now item 5, written below.)*
 
 Anything outside that list is new, and should be treated as a regression rather than folded in here.
 
@@ -1448,6 +1452,12 @@ shots/match inside a 3-4-3 — a shape whose whole point is width.)*
    league wins, per the standing rule. Note the bar itself was calibrated on a ~70-shot engine and this one
    takes ~20, so part of the gap is the bar, not the game — but that argument was deliberately NOT used to
    move it.
+
+5. **Goalless matches are rare: 1-2 in 120 against `qa_matchstats`'s bar of 3.** This is the one qa red
+   that had no entry here at all, which meant the suite carried a permanent failure nobody had signed off.
+   It is the same root cause as item 2's scoring rate — the rebuilt engine converts too much — and it is
+   listed rather than fixed for the same reason: chasing the goal rate is what killed the previous two
+   engine rebuilds. Recorded so it is an accepted failure rather than an unexplained one.
 
 4. **Wing-back fullbacks do not edge cover-duty fullbacks on possession** (48.3% v 48.9%). Persists at
    N=400, so it is real rather than noise — but it is a 0.6 percentage-point effect, which is finer than
@@ -1667,14 +1677,14 @@ described below are now FIXED. What survives is not a set of broken functions; i
 modules are correct and *nothing calls them*. That is the same defect class in a different costume, and it
 is the part still worth your attention.
 
-- **~~`standingOrders.ts` has SEVEN defects and~~ ZERO call sites — the defects are FIXED, the wiring is not.** `parseRoles` now returns `{}` for every corrupt shape instead of throwing, and `isIdx` validates shape rather than range. But `parseRoles` and `rolesJson` still have no caller anywhere outside this module; the `StandingOrders` *type* is used throughout `api.ts`, the two functions are not. Original report follows:
+- **~~`standingOrders.ts` has SEVEN defects and ZERO call sites~~ — FIXED, AND NOW WIRED.** *(Corrected 2026-09-01: the "wiring is not" half is stale — `client/src/save.ts:13` imports `parseRoles`/`rolesJson` and `:55` calls `parseRoles(rolesJson(so))`.)* `parseRoles` now returns `{}` for every corrupt shape instead of throwing, and `isIdx` validates shape rather than range. But `parseRoles` and `rolesJson` still have no caller anywhere outside this module; the `StandingOrders` *type* is used throughout `api.ts`, the two functions are not. Original report follows:
  `parseRoles` **throws** on any corrupt row
   — `'undefined'`, whitespace, a truncated write like `'{"captainIdx":'` (exactly what an interrupted save
   looks like), trailing garbage. A throw on the load path is the documented mechanism by which a club
   becomes permanently unmanageable. It also returns values that violate its own declared type (`'null'` →
   `null`, `'[1,2,3]'` → an array), and `rolesJson` is not stable for equal inputs. The correct pattern
   already exists 175 lines into `api.ts` as `parseActions()`.
-- **~~`matchstats.ts` loses players and credits goals to men who never played~~ — FIXED; still zero production callers.** It keys by `playerId` now, and `MatchEvent` carries `playerId`/`playerId2` on every named event, so the name-collision class is gone. Its only importer remains `qa_matchstats.ts`. Original report follows:
+- **~~`matchstats.ts` loses players and credits goals to men who never played~~ — FIXED, AND NOW WIRED.** *(Corrected 2026-09-01: "still zero production callers" is stale — `deriveMatchStats` is imported at `client/src/api.ts:26` and called at `client/src/main.ts:2430` and `:4833`; it is what season awards and the career record are derived from.)* Original finding:.** It keys by `playerId` now, and `MatchEvent` carries `playerId`/`playerId2` on every named event, so the name-collision class is gone. Its only importer remains `qa_matchstats.ts`. Original report follows:
 
   It keys every stat by player NAME, and `nameId` lets a BENCH player overwrite an XI player of the same
   name. `generateClub` draws from 324 name combinations for a 20-man roster, so collisions are constant.

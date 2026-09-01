@@ -899,9 +899,23 @@ export const api = {
       } catch { /* never let an honour cost the player his season */ }
       const starId = body?.starId;
       const st = starId ? await localStore.getToken(String(starId)) : null;
+      // HIS ACTUAL SEASON, not a flat assumption. `ach_goals`, `ach_assists` and `ach_potm` were declared
+      // (token.ts:23), read (tokens.ts:95) and RENDERED (main.ts careerRecordHtml) but written nowhere
+      // except as the literal 0 in two initialisers -- while `ach_apps` WAS written, as a flat +18. The
+      // strip shows as soon as apps are non-zero, so from the star's first completed season every legend
+      // card in the game permanently read "0 goals · 0 assists · 0 ★ · 18 apps", under a doc comment
+      // promising a record "banked across matches". The data was being thrown away three lines above this,
+      // where the awards read the very same rows back.
+      const mine = st ? (await localStore.seasonPlayerStats(String(season), [OWNER])
+        .catch(() => [] as any[])).find((r: any) => r.player_id === st.id) : undefined;
       if (st) await localStore.updateToken(st.id, {
         ach_seasons: (st.ach_seasons ?? 0) + 1,
-        ach_apps: (st.ach_apps ?? 0) + 18,
+        // Fall back to the old flat +18 only when no per-player rows exist for the season -- a save that
+        // predates match-stat recording, or a season the manager never played a fixture in.
+        ach_apps: (st.ach_apps ?? 0) + (mine?.apps ?? 18),
+        ach_goals: (st.ach_goals ?? 0) + (mine?.goals ?? 0),
+        ach_assists: (st.ach_assists ?? 0) + (mine?.assists ?? 0),
+        ach_potm: (st.ach_potm ?? 0) + (mine?.potm ?? 0),
         ach_league: (st.ach_league ?? 0) + (pos === 1 ? 1 : 0),
         // THE TIER HE DID IT IN, and every division he climbed. Neither was ever written — the only
         // writers, recordPlayerSeason and setAchievements, have no callers — so tokenAch() always returned

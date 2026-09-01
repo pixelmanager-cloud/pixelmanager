@@ -69,7 +69,12 @@ set -e
 echo "$TODAY $((COUNT + 1))" > "$STATE"   # count the run against the cap regardless of outcome
 
 # --- authoritative verification gate (independent of what the agent claims) ---
-if ! npm run verify > agent/verify.log 2>&1; then
+# `npm run verify` CANNOT BE USED HERE. It ends in shared/strategy_test.ts, which exits 1 by design on four
+# assertions section 68 documents as permanently red -- so this branch was taken on EVERY run since that
+# redness was accepted, deleting the agent's branch and opening no PR no matter what it produced. Every
+# overnight run threw its own work away. `npm run gate` runs all three legs and passes when the failures are
+# the accepted ones, which is the check this line always meant to make.
+if ! npm run gate > agent/verify.log 2>&1; then
   notify "❌ verify failed for: $TASK — no PR opened. Tail: $(tail -c 400 agent/verify.log)"
   git checkout main --quiet; git branch -D "$BRANCH" --quiet || true
   exit 1

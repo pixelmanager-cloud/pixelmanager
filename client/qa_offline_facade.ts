@@ -242,13 +242,23 @@ console.log('\n=== a bloodline player\u2019s honours land on his family-tree nod
     const rows: any = [];
     for (let m = 0; m < 20; m++) rows.push({ id: tok.id, name: tok.name, goals: 1, assists: 1, apps: 1, potm: 1, rating: 8 });
     await api.recordMatchStats({ rows });
-    await api.spSeasonReward({ pos: 3, size: 10, sponsor: undefined, tier: 5 });
+    // starId matters: without it spSeasonReward never looks the token up, so nothing about his career
+    // record is written and every assertion below would pass vacuously on zeroes.
+    await api.spSeasonReward({ pos: 3, size: 10, sponsor: undefined, tier: 5, starId: tok.id } as any);
     const node = (await api.bloodline()).nodes.find((n: any) => n.id === tok.id) as any;
     assert(!!node, 'the bloodline still lists the token we just decorated');
     assert((node?.awards ?? []).length > 0,
       `his honours reach his family-tree node (got ${(node?.awards ?? []).length})`);
     assert((node?.awards ?? []).every((a: any) => a.label && typeof a.season === 'number'),
       'each node honour carries the label and season the medallion renders');
+    // AND HIS CAREER RECORD, which the legend card renders. ach_goals/ach_assists/ach_potm were declared,
+    // read and rendered but written nowhere except as a literal 0, while ach_apps was written as a flat
+    // +18 -- so every legend card permanently read "0 goals · 0 assists · 0 ★ · 18 apps".
+    const after = getActiveModel().tokens.find((t: any) => t.id === tok.id) as any;
+    assert((after?.ach_goals ?? 0) === 20, `his goals reach his career record (got ${after?.ach_goals}, scored 20)`);
+    assert((after?.ach_assists ?? 0) === 20, `and his assists (got ${after?.ach_assists})`);
+    assert((after?.ach_potm ?? 0) === 20, `and his player-of-the-match awards (got ${after?.ach_potm})`);
+    assert((after?.ach_apps ?? 0) === 20, `and the appearances are his real ones, not a flat +18 (got ${after?.ach_apps})`);
   }
 }
 
