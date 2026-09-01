@@ -1407,7 +1407,10 @@ which is the exact failure this document exists to prevent, and §68 shipped wit
 
 - `npm run playtest` — **GREEN**, all 53 probes. Any failure here is a real regression.
   *(Counted 2026-09-01: `tools/playtest` holds 55 non-underscore `.ts` files, 2 of them in `TOO_SLOW`.)*
-- `npm run verify` — **RED at `shared/strategy_test.ts` only.** Expected failures:
+- `npm run verify` — **RED at `shared/strategy_test.ts` only.** *(Rewritten 2026-09-02 — see §70. The
+  suite now reports effect sizes with 95% CIs and fails ONLY on a REFUTED claim, so the expected-red set is
+  **two** items, not four: wing-back possession and 4-2-2-2. The two below that were noise now report as
+  "no measurable effect".)* Historical expected failures:
   `wing-back fullbacks should edge cover-duty fullbacks on possession` (a 0.6pp effect, below this
   engine's resolution); `wide-playmaker should generate more shots than box-to-box` and
   `...than ball-winner` (both NOISE — they INVERT and pass at N=300); and `4-2-2-2's second striker
@@ -2238,3 +2241,49 @@ describing it as live. The lean now runs through `AWARD_WEIGHT` (0.07), a much s
 the arc rebalance moved graduates by only 0.38 composure despite moving the library by nine points.** If you
 want identity to differentiate harder, the lever is `deriveStats`, not more content edits — and that is its
 own measured project, because the last change to this channel broke the role split badly.
+
+## 70. `strategy_test` NOW REPORTS EFFECTS, NOT VERDICTS — done 2026-09-02, your call
+
+**The problem, measured rather than argued.** The suite was 26 booleans over aggregate counts at N=60,
+printing only its failures. A boolean has nowhere to put uncertainty, so an assertion passing by 40% and one
+passing by 0.3% read identically. I swept three sample sizes:
+
+| assertion | N=60 | N=300 | N=600 |
+|---|---|---|---|
+| wing-back possession | ✗ | ✗ | ✗ |
+| 4-2-2-2 v 4-1-4-1 | ✗ | ✗ | ✗ |
+| wide-playmaker v box-to-box | ✗ | passes | passes |
+| wide formation on flanks | passes | ✗ | ✗ |
+| diamond with wide focus | passes | ✗ | passes |
+
+**Only two of twenty-six were stable.** N=60 raised a false alarm *and* hid two real failures; N=300 then
+raised a false alarm of its own that vanished again at 600. Raising N does not converge — it reshuffles
+which coin-flips land badly — and N=600 already costs thirteen minutes. I proposed N=300 as the fix and the
+N=600 run refuted me; the data is above.
+
+**What shipped.** The 17 A-vs-B comparisons now report a paired mean difference with a 95% CI and one of
+three verdicts. Only **REFUTED** (the interval lies entirely on the wrong side) fails the gate;
+**inconclusive** (the interval straddles zero) reports and never fails — your call, and the right one. The 9
+remaining `assert`s are absolute bounds or bit-for-bit determinism checks, which are not statistical and
+correctly stay hard.
+
+At n=60: **8 confirmed · 7 no measurable effect · 2 refuted**, in 92s. The two refuted are exactly the two
+the N-sweep found stable, which is an independent confirmation that the method works.
+
+**And it immediately pays into the open engine questions.** The three width claims all come back
+indistinguishable from nothing — a wide formation's advantage on the flanks is **+0.083 goals, 95% CI
+[−0.442, +0.609]**. That is a real answer to §69's "does width pay?", and the old suite could only ever have
+said "passes" or "fails".
+
+**Re-run at n=300 it is stable and sharper: 10 confirmed · 5 no measurable effect · 2 refuted — the SAME
+two refuted.** That stability is the whole point; the old suite's failure set changed at every sample size.
+And the width answer tightens into something conclusive:
+
+- *a wide formation beats a narrow diamond on the flanks* — **−0.030, 95% CI [−0.238, +0.178]**. Dead flat,
+  and now tightly bounded. Width does not pay; this is no longer a suspicion.
+- *a wide 3-4-3 shoots more with CENTRAL focus* — **CONFIRMED, +1.130, 95% CI [0.646, 1.614]**. A wide
+  formation is measurably better off going central, which is the anti-width bias showing up from the other
+  side.
+
+Taken with `width_diagnosis.ts` (the `gain > -6` veto kills 82% of wide pass candidates against 74.1% of
+central), §69's question 2 now has an evidence base rather than a hunch.

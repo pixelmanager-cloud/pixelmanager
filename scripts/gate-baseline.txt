@@ -3,12 +3,13 @@
 # Measured numbers are stripped before comparison, so "(got 588 vs 602)" drifting does not matter.
 # Regenerate with: node scripts/run-gate.mjs --write-baseline  (and say why in the commit).
 
-4-2-2-2's second striker should beat 4-1-4-1's lone-striker shape
+4-2-2-2's second striker beats 4-1-4-1's lone-striker shape -0.900 95% CI [-1.283, -0.517] n=60
+4-2-2-2's second striker beats 4-1-4-1's lone-striker shape — the engine does the OPPOSITE: -0.900, 95% CI [-1.283, -0.517] at n=60
 harness shared/qa_mental.ts
 leg playtest exits 0
 leg qa exits 1
 leg verify exits 1
 max-mental XI vs min-mental XI swings goal difference by 2+ a match
 mental-layer check(s) failed
-wide-playmaker should generate more shots than box-to-box in the wide slot
-wing-back fullbacks should edge possession above cover-duty fullbacks vs a narrow opponent
+wing-back fullbacks edge possession over cover-duty fullbacks -0.007 95% CI [-0.012, -0.002] n=60
+wing-back fullbacks edge possession over cover-duty fullbacks — the engine does the OPPOSITE: -0.007, 95% CI [-0.012, -0.002] at n=60

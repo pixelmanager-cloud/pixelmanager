@@ -39,6 +39,50 @@ const mk = (id: string, q: number, seed: number, formation: any = '4-4-2') =>
 const failures: string[] = [];
 const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
 
+// ── EFFECTS, NOT VERDICTS ────────────────────────────────────────────────────────────────────────────
+// This suite used to be twenty-six booleans over aggregate counts, printing only its failures. A boolean
+// has nowhere to put uncertainty, so an assertion passing by 40% and one passing by 0.3% read identically,
+// and the gate could not tell a defect from a coin landing badly.
+//
+// Measured across three sample sizes on 2026-09-02, only TWO of the twenty-six were stable:
+//   N=60   wing-back possession ✗   wide-playmaker v box-to-box ✗   4-2-2-2 ✗
+//   N=300  wing-back possession ✗   wide formation on flanks ✗      4-2-2-2 ✗   diamond+wide focus ✗
+//   N=600  wing-back possession ✗   wide formation on flanks ✗      4-2-2-2 ✗
+// N=60 raised a false alarm (wide-playmaker) AND hid two real failures; N=300 then raised a false alarm of
+// its own (the diamond) that vanished again at 600. Raising N does not converge, it reshuffles which
+// coin-flips land badly -- and N=600 already costs thirteen minutes. So the fix is error bars, not samples.
+//
+// A comparison now reports a paired mean difference with a 95% CI and one of three verdicts:
+//   CONFIRMED     the interval sits entirely on the expected side  -> the effect is real
+//   inconclusive  the interval straddles zero -> NO MEASURABLE EFFECT. Reported, never failed. This is the
+//                 honest answer for most of these fixtures, and it is more useful than a green tick,
+//                 because a design question like "does width pay?" is answered by the interval, not by a
+//                 pass. (CK's call, 2026-09-02: report only.)
+//   REFUTED       the interval sits entirely on the WRONG side -> the model asserts something the engine
+//                 does not do. Only this fails the gate.
+type Verdict = 'confirmed' | 'inconclusive' | 'refuted';
+const tally = { confirmed: 0, inconclusive: 0, refuted: 0 };
+
+/** `diffs` are PAIRED per-match differences (same seed, one thing changed), oriented so that a POSITIVE
+ *  number means the claim held for that match. */
+function compare(diffs: number[], claim: string): Verdict {
+  const n = diffs.length;
+  if (!n) { console.log(`  [nodata] ${claim}`); return 'inconclusive'; }
+  const mean = diffs.reduce((a, b) => a + b, 0) / n;
+  const sd = Math.sqrt(diffs.reduce((a, b) => a + (b - mean) ** 2, 0) / Math.max(1, n - 1));
+  const se = sd / Math.sqrt(n);
+  const lo = mean - 1.96 * se, hi = mean + 1.96 * se;
+  const verdict: Verdict = lo > 0 ? 'confirmed' : hi < 0 ? 'refuted' : 'inconclusive';
+  tally[verdict]++;
+  const mark = verdict === 'confirmed' ? 'ok  ' : verdict === 'refuted' ? 'FAIL' : '  · ';
+  console.log(`  ${mark} ${claim.padEnd(62)} ${mean >= 0 ? '+' : ''}${mean.toFixed(3)}  95% CI [${lo.toFixed(3)}, ${hi.toFixed(3)}]  n=${n}`);
+  // Only a REFUTED claim fails. An inconclusive one is a measurement, not a regression.
+  if (verdict === 'refuted') {
+    failures.push(`${claim} — the engine does the OPPOSITE: ${mean.toFixed(3)}, 95% CI [${lo.toFixed(3)}, ${hi.toFixed(3)}] at n=${n}`);
+  }
+  return verdict;
+}
+
 // ---- 1. Calibration: even sides, default tactics ----
 {
   let g = 0, sh = 0; const scores: string[] = [];
@@ -68,33 +112,36 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
 
 // ---- 3. Pressing: high press should win more possession (equal squads) ----
 {
-  let possHi = 0, fitHi = 0, fitLo = 0;
+  let possHi = 0, fitHi = 0, fitLo = 0; const dTire: number[] = [];
   const hi: Tactics = { ...DEFAULT_TACTICS, press: 2 };
   const lo: Tactics = { ...DEFAULT_TACTICS, press: -2 };
   for (let i = 0; i < N; i++) {
     const r = play(mk('hip', 13, i * 7 + 1), mk('lop', 13, i * 11 + 3), hi, lo, i * 31 + 5);
     possHi += r.poss[0]; fitHi += r.fitEnd[0]; fitLo += r.fitEnd[1];
+    dTire.push(r.fitEnd[1] - r.fitEnd[0]); // + when the high press ends the match more tired
   }
   const possHiPct = possHi / N, fitHiAvg = fitHi / N, fitLoAvg = fitLo / N;
   console.log(`[press]     high-press possession=${(possHiPct * 100).toFixed(0)}%  end-fitness high=${fitHiAvg.toFixed(2)} low=${fitLoAvg.toFixed(2)}`);
   assert(possHiPct >= 0.6, `high press possession ${(possHiPct * 100).toFixed(0)}% below 60% — pressing no longer wins the ball`);
-  assert(fitHiAvg < fitLoAvg, `high press should tire more than low press (got ${fitHiAvg.toFixed(2)} vs ${fitLoAvg.toFixed(2)})`);
+  compare(dTire, 'a high press tires a side more than a low block');
 }
 
 // ---- 4. High line vs fast forwards: should concede more than a deep line ----
 {
-  let concededHigh = 0, concededDeep = 0;
+  let concededHigh = 0, concededDeep = 0; const dLine: number[] = [];
   const highLine: Tactics = { ...DEFAULT_TACTICS, line: 2 };
   const deepLine: Tactics = { ...DEFAULT_TACTICS, line: -2 };
   const fastAttack: Tactics = { ...DEFAULT_TACTICS, tempo: 2, mentality: 1 };
   for (let i = 0; i < N; i++) {
     const def = mk('def', 13, i * 7 + 1);
     const atk = mk('atk', 14, i * 11 + 3, '4-3-3');
-    concededHigh += play(def, atk, highLine, fastAttack, i * 31 + 5).score[1];
-    concededDeep += play(def, atk, deepLine, fastAttack, i * 31 + 5).score[1];
+    const gh = play(def, atk, highLine, fastAttack, i * 31 + 5).score[1];
+    const gd = play(def, atk, deepLine, fastAttack, i * 31 + 5).score[1];
+    concededHigh += gh; concededDeep += gd;
+    dLine.push(gh - gd); // + when the high line concedes more, which is the claim
   }
   console.log(`[line]      goals conceded vs direct attack: HIGH line=${(concededHigh / N).toFixed(2)}  DEEP line=${(concededDeep / N).toFixed(2)}`);
-  assert(concededHigh > concededDeep, `high line should concede more than deep line vs a direct attack (got ${concededHigh} vs ${concededDeep})`);
+  compare(dLine, 'a high line concedes more than a deep line vs a direct attack');
 }
 
 // ---- 5. Preset head-to-heads (informational) ----
@@ -114,30 +161,32 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
 {
   const withDuty = (t: Team, role: Role, duty: Duty): Team =>
     ({ ...t, players: t.players.map((p) => (p.role === role ? { ...p, duty } : p)) });
-  let shotsPoacher = 0, shotsTarget = 0;
+  let shotsPoacher = 0, shotsTarget = 0; const dFw: number[] = [];
   for (let i = 0; i < N; i++) {
     const base = mk('atk', 14, i * 7 + 1, '4-3-3');
     const opp = mk('def', 13, i * 11 + 3);
-    shotsPoacher += play(withDuty(base, 'FW', 'poacher'), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).shots[0];
-    shotsTarget += play(withDuty(base, 'FW', 'target-man'), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).shots[0];
+    const sp = play(withDuty(base, 'FW', 'poacher'), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).shots[0];
+    const st = play(withDuty(base, 'FW', 'target-man'), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).shots[0];
+    shotsPoacher += sp; shotsTarget += st; dFw.push(sp - st);
   }
   console.log(`[duty]      forward shots: POACHER line=${(shotsPoacher / N).toFixed(1)}  TARGET-MAN line=${(shotsTarget / N).toFixed(1)}`);
-  assert(shotsPoacher > shotsTarget, `poacher forwards should shoot more than target-men (got ${shotsPoacher} vs ${shotsTarget})`);
+  compare(dFw, 'a poacher shoots more than a target-man');
 }
 
 // ---- 6b. Wing-back duty: bombing fullbacks (extra flank presence) edge possession vs cover-duty fullbacks ----
 {
   const withDefDuty = (t: Team, duty: Duty): Team =>
     ({ ...t, players: t.players.map((p) => (p.role === 'DF' ? { ...p, duty } : p)) });
-  let possWingBack = 0, possCover = 0;
+  let possWingBack = 0, possCover = 0; const dFb: number[] = [];
   for (let i = 0; i < N; i++) {
     const base = mk('atk', 14, i * 7 + 1, '4-4-2');
     const opp = mk('def', 13, i * 11 + 3, '4-1-2-1-2'); // narrow opponent — most exposed to the extra flank presence
-    possWingBack += play(withDefDuty(base, 'wing-back'), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).poss[0];
-    possCover += play(withDefDuty(base, 'cover'), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).poss[0];
+    const pw = play(withDefDuty(base, 'wing-back'), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).poss[0];
+    const pc = play(withDefDuty(base, 'cover'), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).poss[0];
+    possWingBack += pw; possCover += pc; dFb.push(pw - pc);
   }
   console.log(`[duty]      possession vs a narrow back four: WING-BACK fullbacks=${(possWingBack / N * 100).toFixed(1)}%  COVER fullbacks=${(possCover / N * 100).toFixed(1)}%`);
-  assert(possWingBack > possCover, `wing-back fullbacks should edge possession above cover-duty fullbacks vs a narrow opponent (got ${(possWingBack / N * 100).toFixed(1)}% vs ${(possCover / N * 100).toFixed(1)}%)`);
+  compare(dFb, 'wing-back fullbacks edge possession over cover-duty fullbacks');
 }
 
 // ---- 6c. Sweeper DF duty: covers rather than engages — concedes fewer goals to a direct attack ----
@@ -145,19 +194,22 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
   const withDefDuty = (t: Team, duty: Duty): Team =>
     ({ ...t, players: t.players.map((p) => (p.role === 'DF' ? { ...p, duty } : p)) });
   const direct: Tactics = { ...DEFAULT_TACTICS, formation: '4-3-3', mentality: 1, tempo: 2 };
+  // Per-match, so the three duties can be compared PAIRED -- same fixture, same seed, one duty changed.
   const concedeWithDuty = (duty: Duty) => {
-    let ga = 0;
+    const per: number[] = [];
     for (let i = 0; i < N; i++) {
       const def = withDefDuty(mk('def', 13, i * 7 + 1, '4-4-2'), duty);
       const atk = mk('atk', 13, i * 11 + 3, '4-3-3');
-      ga += play(def, atk, DEFAULT_TACTICS, direct, i * 31 + 5).score[1];
+      per.push(play(def, atk, DEFAULT_TACTICS, direct, i * 31 + 5).score[1]);
     }
-    return ga;
+    return per;
   };
-  const gaSweeper = concedeWithDuty('sweeper'), gaStopper = concedeWithDuty('stopper'), gaCover = concedeWithDuty('cover');
+  const perSweeper = concedeWithDuty('sweeper'), perStopper = concedeWithDuty('stopper'), perCover = concedeWithDuty('cover');
+  const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
+  const gaSweeper = sum(perSweeper), gaStopper = sum(perStopper), gaCover = sum(perCover);
   console.log(`[duty]      conceded vs direct attack: SWEEPER=${(gaSweeper / N).toFixed(2)}  STOPPER=${(gaStopper / N).toFixed(2)}  COVER=${(gaCover / N).toFixed(2)}`);
-  assert(gaSweeper < gaStopper, `sweeper should concede fewer goals than stopper vs a direct attack (got ${gaSweeper} vs ${gaStopper})`);
-  assert(gaSweeper < gaCover, `sweeper should concede fewer goals than cover vs a direct attack (got ${gaSweeper} vs ${gaCover})`);
+  compare(perStopper.map((v, i) => v - perSweeper[i]), 'a sweeper concedes fewer than a stopper vs a direct attack');
+  compare(perCover.map((v, i) => v - perSweeper[i]), 'a sweeper concedes fewer than a cover duty vs a direct attack');
 }
 
 // ---- 6d. Anchor MF duty: pure destroyer — never strays, so it concedes least of the MF duties ----
@@ -197,15 +249,16 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
       // 3-4-3 anchors: y=11/57 are the wide FW slots, y=34 the central one — assign the wide pair.
       return Math.abs(p.anchor.y - 34) > 15 ? { ...p, duty } : { ...p, duty: 'poacher' as Duty };
     }) });
-  let possIW = 0, possPoacher = 0;
+  let possIW = 0, possPoacher = 0; const dIw: number[] = [];
   for (let i = 0; i < N; i++) {
     const base = mk('atk', 14, i * 7 + 1, '3-4-3');
     const opp = mk('def', 13, i * 11 + 3, '4-4-2');
-    possIW += play(withWideFwDuty(base, 'inverted-winger'), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).poss[0];
-    possPoacher += play(withWideFwDuty(base, 'poacher'), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).poss[0];
+    const pi = play(withWideFwDuty(base, 'inverted-winger'), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).poss[0];
+    const pp = play(withWideFwDuty(base, 'poacher'), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).poss[0];
+    possIW += pi; possPoacher += pp; dIw.push(pi - pp);
   }
   console.log(`[duty]      possession with wide FWs cutting inside: INVERTED-WINGER=${(possIW / N * 100).toFixed(1)}%  POACHER(wide)=${(possPoacher / N * 100).toFixed(1)}%`);
-  assert(possIW > possPoacher, `inverted wingers cutting inside should edge possession above wide poachers (got ${(possIW / N * 100).toFixed(1)}% vs ${(possPoacher / N * 100).toFixed(1)}%)`);
+  compare(dIw, 'inverted wingers edge possession over wide poachers');
 }
 
 // ---- 6f. Wide-playmaker MF duty: hugs the touchline but dictates — more shots than box-to-box/ball-winner ----
@@ -217,18 +270,20 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
       return Math.abs(p.anchor.y - 34) > 15 ? { ...p, duty } : { ...p, duty: 'box-to-box' as Duty };
     }) });
   const shotsWithDuty = (duty: Duty) => {
-    let sh = 0;
+    const per: number[] = [];
     for (let i = 0; i < N; i++) {
       const base = mk('atk', 14, i * 7 + 1, '4-4-2');
       const opp = mk('def', 13, i * 11 + 3, '4-4-2');
-      sh += play(withWideMfDuty(base, duty), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).shots[0];
+      per.push(play(withWideMfDuty(base, duty), opp, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).shots[0]);
     }
-    return sh;
+    return per;
   };
-  const shotsWP = shotsWithDuty('wide-playmaker'), shotsB2B = shotsWithDuty('box-to-box'), shotsBW = shotsWithDuty('ball-winner');
+  const perWP = shotsWithDuty('wide-playmaker'), perB2B = shotsWithDuty('box-to-box'), perBW = shotsWithDuty('ball-winner');
+  const tot = (a: number[]) => a.reduce((x, y) => x + y, 0);
+  const shotsWP = tot(perWP), shotsB2B = tot(perB2B), shotsBW = tot(perBW);
   console.log(`[duty]      shots with wide MF duty: WIDE-PLAYMAKER=${(shotsWP / N).toFixed(1)}  BOX-TO-BOX=${(shotsB2B / N).toFixed(1)}  BALL-WINNER=${(shotsBW / N).toFixed(1)}`);
-  assert(shotsWP > shotsB2B, `wide-playmaker should generate more shots than box-to-box in the wide slot (got ${shotsWP} vs ${shotsB2B})`);
-  assert(shotsWP > shotsBW, `wide-playmaker should generate more shots than ball-winner in the wide slot (got ${shotsWP} vs ${shotsBW})`);
+  compare(perWP.map((v, k) => v - perB2B[k]), 'a wide-playmaker generates more shots than a box-to-box in the wide slot');
+  compare(perWP.map((v, k) => v - perBW[k]), 'a wide-playmaker generates more shots than a ball-winner in the wide slot');
 }
 
 // ---- 7. Anti-spam: no single tactic may dominate the field (equal stats) ----
@@ -264,53 +319,58 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
 {
   const wide: Tactics = { ...DEFAULT_TACTICS, formation: '3-4-3' };
   const narrow: Tactics = { ...DEFAULT_TACTICS, formation: '4-1-2-1-2' };
-  let w = 0, l = 0;
+  let w = 0, l = 0; const gd: number[] = [];
   for (let i = 0; i < N; i++) {
     const r = play(mk('w', 12, i * 7 + 1, '3-4-3'), mk('n', 12, i * 11 + 3, '4-1-2-1-2'), wide, narrow, i * 31 + 5);
+    gd.push(r.score[0] - r.score[1]);
     if (r.score[0] > r.score[1]) w++; else if (r.score[1] > r.score[0]) l++;
   }
   console.log(`[shape]     wide 3-4-3 vs narrow diamond: wide ${w}W-${l}L (want wide > narrow)`);
-  assert(w > l, `a wide formation should beat a narrow one on the flanks (got ${w} vs ${l})`);
+  compare(gd, 'a wide formation (3-4-3) beats a narrow diamond on the flanks');
 }
 
 // ---- 8b. New formation 4-1-4-1: extra central mid should beat an equally narrow rival (the diamond) ----
 {
-  let w = 0, l = 0;
+  let w = 0, l = 0; const gd: number[] = [];
   for (let i = 0; i < N; i++) {
     const r = play(mk('a', 12, i * 7 + 1, '4-1-4-1'), mk('b', 12, i * 13 + 3, '4-1-2-1-2'), DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5);
+    gd.push(r.score[0] - r.score[1]);
     if (r.score[0] > r.score[1]) w++; else if (r.score[1] > r.score[0]) l++;
   }
   console.log(`[shape]     4-1-4-1 vs 4-1-2-1-2 diamond: ${w}W-${l}L (want the extra central body to win the middle)`);
-  assert(w > l, `4-1-4-1's extra central midfielder should beat an equally narrow diamond (got ${w} vs ${l})`);
+  compare(gd, "4-1-4-1's extra central midfielder beats an equally narrow diamond");
 }
 
 // ---- 8c. New formation 5-4-1: a real extra defender should concede fewer goals to a direct attack ----
 {
   const direct: Tactics = { ...DEFAULT_TACTICS, formation: '4-3-3', mentality: 1, tempo: 2 };
   const concedeVsDirect = (defFormation: any) => {
-    let ga = 0;
+    const per: number[] = [];
     for (let i = 0; i < N; i++) {
       const def = mk('def', 13, i * 7 + 1, defFormation);
       const atk = mk('atk', 13, i * 11 + 3, '4-3-3');
-      ga += play(def, atk, { ...DEFAULT_TACTICS, formation: defFormation }, direct, i * 31 + 5).score[1];
+      per.push(play(def, atk, { ...DEFAULT_TACTICS, formation: defFormation }, direct, i * 31 + 5).score[1]);
     }
-    return ga;
+    return per;
   };
-  const ga541 = concedeVsDirect('5-4-1'), ga442 = concedeVsDirect('4-4-2'), ga451 = concedeVsDirect('4-5-1');
+  const per541 = concedeVsDirect('5-4-1'), per442 = concedeVsDirect('4-4-2'), per451 = concedeVsDirect('4-5-1');
+  const add = (a: number[]) => a.reduce((x, y) => x + y, 0);
+  const ga541 = add(per541), ga442 = add(per442), ga451 = add(per451);
   console.log(`[shape]     conceded vs direct attack: 5-4-1=${(ga541 / N).toFixed(2)}  4-4-2=${(ga442 / N).toFixed(2)}  4-5-1=${(ga451 / N).toFixed(2)}`);
-  assert(ga541 < ga442, `5-4-1's extra real defender should concede fewer goals than 4-4-2 vs a direct attack (got ${ga541} vs ${ga442})`);
-  assert(ga541 < ga451, `5-4-1 should concede fewer goals than the lone-striker 4-5-1 vs a direct attack (got ${ga541} vs ${ga451})`);
+  compare(per442.map((v, k) => v - per541[k]), "5-4-1's extra defender concedes fewer than 4-4-2 vs a direct attack");
+  compare(per451.map((v, k) => v - per541[k]), "5-4-1 concedes fewer than the lone-striker 4-5-1 vs a direct attack");
 }
 
 // ---- 8d. New formation 4-2-2-2: a very narrow box midfield beats the equally-narrow 4-1-4-1 ----
 {
-  let w = 0, l = 0;
+  let w = 0, l = 0; const gd: number[] = [];
   for (let i = 0; i < N; i++) {
     const r = play(mk('a', 12, i * 7 + 1, '4-2-2-2'), mk('b', 12, i * 13 + 3, '4-1-4-1'), DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5);
+    gd.push(r.score[0] - r.score[1]);
     if (r.score[0] > r.score[1]) w++; else if (r.score[1] > r.score[0]) l++;
   }
   console.log(`[shape]     4-2-2-2 vs 4-1-4-1: ${w}W-${l}L (want two strikers to beat one, other things equal)`);
-  assert(w > l, `4-2-2-2's second striker should beat 4-1-4-1's lone-striker shape (got ${w} vs ${l})`);
+  compare(gd, "4-2-2-2's second striker beats 4-1-4-1's lone-striker shape");
 }
 
 // ---- 8e. Play-out-of-defence instruction: off-by-default, neutral when off, concedes fewer to a high press ----
@@ -342,13 +402,13 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
 // naturally offer. Same instruction, opposite correct answer depending on the shape underneath it.
 {
   const shotsWithFocus = (formation: any, focus: 'wide' | 'central') => {
-    let sh = 0;
+    const per: number[] = [];
     for (let i = 0; i < N; i++) {
       const a = mk('a', 13, i * 7 + 1, formation);
       const b = mk('b', 13, i * 11 + 3, '4-4-2');
-      sh += play(a, b, { ...DEFAULT_TACTICS, formation, attackFocus: focus }, DEFAULT_TACTICS, i * 31 + 5).shots[0];
+      per.push(play(a, b, { ...DEFAULT_TACTICS, formation, attackFocus: focus }, DEFAULT_TACTICS, i * 31 + 5).shots[0]);
     }
-    return sh;
+    return per;
   };
   // neutrality: attackFocus unset must be bit-for-bit identical to the field never existing at all
   let shotsUnset = 0, shotsBase = 0;
@@ -359,11 +419,14 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
     shotsBase += play(a, b, DEFAULT_TACTICS, DEFAULT_TACTICS, i * 31 + 5).shots[0];
   }
   assert(shotsUnset === shotsBase, `attackFocus unset should be bit-for-bit identical to the field being absent (got ${shotsUnset} vs ${shotsBase})`);
-  const wideFormWide = shotsWithFocus('3-4-3', 'wide'), wideFormCentral = shotsWithFocus('3-4-3', 'central');
-  const narrowFormWide = shotsWithFocus('4-1-2-1-2', 'wide'), narrowFormCentral = shotsWithFocus('4-1-2-1-2', 'central');
+  const perWideW = shotsWithFocus('3-4-3', 'wide'), perWideC = shotsWithFocus('3-4-3', 'central');
+  const perNarW = shotsWithFocus('4-1-2-1-2', 'wide'), perNarC = shotsWithFocus('4-1-2-1-2', 'central');
+  const agg = (a: number[]) => a.reduce((x, y) => x + y, 0);
+  const wideFormWide = agg(perWideW), wideFormCentral = agg(perWideC);
+  const narrowFormWide = agg(perNarW), narrowFormCentral = agg(perNarC);
   console.log(`[instr]     attack-focus x shape: 3-4-3(wide fmn) central-focus=${(wideFormCentral / N).toFixed(1)} vs wide-focus=${(wideFormWide / N).toFixed(1)}  |  diamond(narrow fmn) wide-focus=${(narrowFormWide / N).toFixed(1)} vs central-focus=${(narrowFormCentral / N).toFixed(1)}`);
-  assert(wideFormCentral > wideFormWide, `a wide formation (3-4-3) should shoot more with CENTRAL focus, consolidating its natural width (got ${wideFormCentral} vs ${wideFormWide})`);
-  assert(narrowFormWide > narrowFormCentral, `a narrow formation (diamond) should shoot more with WIDE focus, finding space it lacks natively (got ${narrowFormWide} vs ${narrowFormCentral})`);
+  compare(perWideC.map((v, k) => v - perWideW[k]), "a wide formation (3-4-3) shoots more with CENTRAL focus");
+  compare(perNarW.map((v, k) => v - perNarC[k]), "a narrow formation (diamond) shoots more with WIDE focus");
 }
 
 // ---- 9. Seeded opponent tactical profiles: stable per-seed identity, but varied across opponents ----
@@ -389,25 +452,34 @@ const assert = (ok: boolean, msg: string) => { if (!ok) failures.push(msg); };
   const trapLine: Tactics = { ...highLine, offsideTrap: true };
   const attack: Tactics = { ...DEFAULT_TACTICS, formation: '4-3-3', mentality: 1, tempo: 2 }; // direct, springs through-balls
   const runWith = (t: Tactics) => {
-    let concededChances = 0;
+    const per: number[] = [];
     for (let i = 0; i < N; i++) {
       const def = mk('def', 13, i * 7 + 1, '4-4-2');
       const atk = mk('atk', 13, i * 11 + 3, '4-3-3');
       const m = new MatchEngine([def, atk], i * 31 + 5, [t, attack]);
       while (!m.state.finished) m.tick();
-      concededChances += m.state.events.filter((e) => e.teamIdx === 1 && e.type === 'chance').length;
+      per.push(m.state.events.filter((e) => e.teamIdx === 1 && e.type === 'chance').length);
     }
-    return concededChances;
+    return per;
   };
-  const noTrap = runWith(highLine);
-  const withTrap = runWith(trapLine);
+  const perNoTrap = runWith(highLine);
+  const perTrap = runWith(trapLine);
+  const tot2 = (a: number[]) => a.reduce((x, y) => x + y, 0);
+  const noTrap = tot2(perNoTrap), withTrap = tot2(perTrap);
   console.log(`[offside]   high line clear-cut chances conceded: no trap=${noTrap}  with trap=${withTrap}`);
-  assert(withTrap < noTrap, `offside trap should concede fewer clear breakaways than a plain high line (got ${withTrap} vs ${noTrap})`);
+  compare(perNoTrap.map((v, k) => v - perTrap[k]), "an offside trap concedes fewer clear breakaways than a plain high line");
 }
 
 // ---- verdict ----
+console.log(`\n[effects]   ${tally.confirmed} confirmed · ${tally.inconclusive} no measurable effect · ${tally.refuted} refuted`
+  + `   (n=${N}; raise with STRATEGY_N)`);
+if (tally.inconclusive) {
+  console.log(`[effects]   "no measurable effect" is a RESULT, not a failure -- at this n the fixture cannot`);
+  console.log(`[effects]   separate those claims from chance. That is the honest answer, and it is the input`);
+  console.log(`[effects]   the open engine questions need: an interval, not a tick.`);
+}
 if (failures.length) {
-  console.error('\nENGINE REGRESSION — assertions failed:');
+  console.error('\nENGINE REGRESSION — the engine contradicts a claim, or a hard invariant broke:');
   for (const f of failures) console.error(`  ✗ ${f}`);
   process.exit(1);
 }
