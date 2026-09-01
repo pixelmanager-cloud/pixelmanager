@@ -2439,3 +2439,57 @@ they can be overturned cheaply):
 - **One axis of skill, and the defensive half of duties, are FEATURES, not fixes.** Measured and documented
   overnight, not built — adding a second skill axis or a defensive-positioning term is a design project.
 - **Steam capsule art untouched** — needs CK and the Retro Diffusion key, which never appears in the repo.
+
+## 74. FORMATION DOMINANCE — mechanism found, two fixes built, both backed out
+
+**It is not "one shape is overpowered".** A full ordered round-robin (11 shapes, home and away, 1200
+matches each, CI ±0.12) shows a gradient with a clean rule: the three best are all lone-striker (5-4-1
++0.562, 4-1-4-1 +0.465, 4-5-1 +0.334), the three worst all two-striker (4-1-2-1-2 −0.347, 4-4-2 −0.364,
+4-2-2-2 −0.468). Spread 1.03 goals/match. §68's "4-2-2-2 loses to 4-1-4-1" is just the two extremes.
+
+### The mechanism
+
+Every two-striker shape anchors **both forwards at identical x**, 10–14m apart in y. That makes a strike
+partner a permanently legal square pass — `gain ≈ 0`, `dPass` 10–14m inside the [3,42] window — so he
+clears the `gain > -6` veto and usually top-scores. And completing that pass runs `clearRun = -1`, which
+**cancels the ×12 breakaway state**.
+
+Measured: a striker clean through found a legal out-ball on **23–26%** of clear-run ticks in a two-striker
+shape against **0.0%** for 5-4-1 and 4-5-1. Clear-run ticks per match: 57–63 against 149–151. That column's
+ordering is the results table's ordering. The engine wasn't punishing a second striker — it was letting him
+talk his partner out of a shot.
+
+Not defensive (goals against are flat ~1.75 across all eleven) and not possession (the diamond has the
+*highest* possession and the third-worst GD).
+
+### Why neither fix shipped
+
+| | spread | striker gap | division_balance |
+|---|---|---|---|
+| as it is | 1.015 | 0.640 | 12% |
+| stagger 2m | 0.785 | 0.295 | **21% FAILS** |
+| stagger 4m | 0.696 | 0.098 | **27% FAILS** |
+| appetite 3 | 0.741 | 0.466 | 7% |
+| **appetite 3 + stagger 2m** | **0.500** | **0.171** | **12%** |
+
+The last row was the best configuration found — it halved the spread, removed 73% of the gradient, kept the
+league guard unchanged, resolved §68's headline item (4-2-2-2 went REFUTED → inconclusive) and made
+`qa_matchstats` fully green.
+
+**The gate caught what it cost.** At appetite 3 `focus_power` fails outright; at appetite 5 `qa_mental` goes
+from one accepted failure to three, the new ones being *"each of the five mental stats measurably changes
+real matches"* and *"each of the five engine-read traits measurably changes real matches"* — and
+`division_balance` sits exactly on its bar. The setting that balances formations stops player attributes
+and traits from mattering.
+
+### The finding that matters, and it is shared with width
+
+The ×12 breakaway is the **single dominant term in the shot model** — the channel nearly all scoring flows
+through, and therefore the channel that makes attributes, traits and formations visible at all. Shrink it
+for formations and you shrink it for everything. Width fails for the mirror reason: no crossing or cutback
+model, so a wide ball cannot become a chance.
+
+**Both questions have one answer: the engine needs a second scoring channel that does not run through the
+breakaway.** Until it has one, neither width nor formation spread is independently fixable, and I would not
+spend more on either. That is now the highest-value engine project on the list, and it subsumes two of the
+open design questions rather than adding a third.
