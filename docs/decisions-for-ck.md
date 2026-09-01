@@ -82,9 +82,13 @@ and the trailer are the critical path** — the store copy is the easy half.
 
 ## 5. Smaller things I chose not to do alone
 
-- **`youth_joy.ts` stays 64% costless on purpose.** The shirt with his name on the back, commentating his
-  own goals in the garden. If you want those priced, say so — I think pricing them would make the game
-  worse, and `arc_stakes.ts` warns rather than fails for exactly this reason.
+- ~~**`youth_joy.ts` stays 64% costless on purpose.**~~ — **PRICED, per your call.** I argued against this
+  and was wrong about the reason: I read "no agents, no money, no transfers — children" as meaning a child
+  has nothing to spend. He spends standing and attention. All 41 choices across those 16 beats now trade
+  something against the meter its opposite gains — trying the trick at nil-nil buys your mates and spends
+  the coach; commentating every game costs school. The arc stays net-positive (mean net meter movement per
+  choice 2.38 → 0.84), so it reads as a spread of trades, not a punishment. `choice_cost.ts` now guards
+  the library at a loose 30% per file; it sits at 2.2%, worst file 14%.
 - ~~`Token.father_name` write-only~~ — DONE: now read in the Family Record as each medallion's tooltip
   and screen-reader label ("Kai Vance — Dane's boy").
 - ~~13 stale `worktree-agent-*` branches~~ — DONE: deleted.
@@ -1373,13 +1377,17 @@ screen still offers does something. The sweeper-keeper idea survives where it is
   `client/public/trophies` and rendered nowhere while the banner used an emoji.
 - **Two bullets were stale**: `houseRenownNow` and `starBid` no longer exist, and `'cup'` is genuinely read
   in `prestige.ts`.
-- **The award trophies stay, deliberately.** They are not leftovers — the season-awards *store layer*
-  (`Award`, `addAward`, `awardsFor`) exists and is also uncalled. That is an unshipped feature, not dead
-  weight, and deleting the art while the store remains would be the worst of both. **Either both go or
-  neither, and that is a content decision, not a cleanup.**
-- **Still open, one sub-decision:** should the player be able to open the lineup editor from the hub between
-  matches and save standing orders without kicking off? Today kickoff is the commit point. `saveTeam()`
-  is the unreachable scaffold for the other answer.
+- ~~**The award trophies stay, deliberately.**~~ — **SHIPPED, per your call.** Four honours are decided at
+  the league roll (Golden Boot, Playmaker, Player of the Season, Ever Present) from the per-player match
+  stats `deriveMatchStats` now records, read out on the season screen, and — per your addition — hung on a
+  bloodline player's family-tree node as a gold medallion. The store layer that had sat uncalled since the
+  server era is now the thing behind them.
+- ~~**Still open: save standing orders without kicking off?**~~ — **DONE.** `openLineup('standing')` turned
+  out to have no caller at all — every one of its three call sites passed `'match'` — so the team-sheet
+  editor, `saveTeam()` and one of the two `api.setStandingOrders` sites were unreachable, and kickoff was
+  the commit point because it was the *only* point. The season screen now offers **Team Sheet** beside
+  Transfer Market. `wired.ts` was extended to catch this class: a method can be called and still have a
+  dead half.
 
 ## 68. KNOWN AND ACCEPTED — shipped deliberately, not a bug list
 
