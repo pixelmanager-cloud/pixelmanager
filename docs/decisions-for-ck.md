@@ -2143,3 +2143,73 @@ should see before I go further:
 
 I have left the branch at the known-good point: geometry fixed, `division_balance` green, the three
 volume-dependent gates failing for the one documented reason. Nothing is half-tuned.
+
+## 69. YOUR SEVEN DECISIONS — what shipped, and the one new question
+
+Everything you answered on 2026-09-01 is done. Each is committed with its measurement; this is the summary
+and the two things I need you to look at.
+
+**Shipped:**
+
+1. **Season awards** — Golden Boot, Playmaker, Player of the Season, Ever Present, decided at the league
+   roll from real per-player match stats, read out on the season screen, and (your addition) hung on a
+   bloodline player's family-tree node as a gold medallion. The end-to-end test caught a bug in my own
+   wiring: the award block read `profile.season`, but that counter is advanced fifteen lines above it, so
+   it judged the season that had not been played yet and awarded nothing, every time.
+2. **Standing orders** — bigger than "wire `saveTeam()`". `openLineup('standing')` had **no caller at
+   all**; the team-sheet editor was unreachable and kickoff was the commit point because it was the only
+   point. Season screen now offers **Team Sheet**. `wired.ts` extended to catch dead *modes*, not just
+   dead methods.
+3. **`youth_joy` priced** — I argued against this and my reason was wrong. I read "no agents, no money, no
+   transfers — children" as meaning a child has nothing to spend; he spends standing and attention. 41
+   choices across 16 beats now trade against the meter their opposite gains. Still net-positive.
+4. **Arc library rebalanced** — composure 36.4% → 27.6% of all leans, creativity 5.5% → 8.7%, outfield
+   spread 6.6x → 3.9x. **Weight-only**: I tried keyword-matching prose to pick better tags and the
+   verdicts were plainly wrong ("Not *spectacular*" → flair, "steadier than any *drill*" → stamina, both on
+   composure text), so the regex only protects, never relabels.
+5. **Sim plays the real engine** — see the warning below.
+6. **Sponsors meter** — it could not fall for any reason you controlled, and it was the only meter with no
+   downside branch. Both fixed; a careful player now brushes the sub-30 penalty in 37% of careers, a
+   careless one in 63%.
+7. **Coach screen** — the appointment produced a byte-identical player in 106 of 120 careers. A specialty
+   now leans development, so a finishing coach makes a finisher. Identical falls to 36/120.
+
+**⚠️ Read this before you next hit Sim.** Sim used to roll a scoreline from a strength difference rather
+than play the match, and the engine's curve is far steeper than that roll's. Measured over 300 matches per
+gap:
+
+| strength gap | old Sim (rolled) | new Sim (played) |
+|---|---|---|
+| level | 51%W, ~67pts | 39%W, ~52pts |
+| four ahead | 69%W, ~86pts | 90%W, ~106pts |
+| four behind | 33%W, ~46pts | **4%W, ~7pts** |
+
+Simming used to be markedly kinder than playing, especially as an underdog. That divergence *was* the
+defect — a manager who played his fixtures always faced the steep curve — and awards are derived from
+per-player stats a rolled scoreline does not contain, so a manager who simmed won nothing. But it is a real
+change in feel. **If you want Sim to keep a softer hand than playing, say so** and I will damp it; the
+honest default is that they agree.
+
+**❓ THE ONE OPEN QUESTION: is the draft a skill test or a flavour choice?**
+
+Measured over 120 careers, drafting the best-fitting card instead of the worst-fitting one changes the
+graduate in 77% of careers but barely changes his **quality**: 0.133 overall, with the best pick winning
+53/120 against the worst's ~40. Near a coin flip.
+
+The reason is structural and not obviously wrong: a bad draft costs almost nothing because you never play
+the card. It dilutes the deck, and dilution is cheap. So the draft currently decides *who you become*, not
+*how good you get*.
+
+- **Leave it** — the draft is identity, the card play is skill. Coherent, and it is what the code comment
+  ("identity-building") already claims.
+- **Give it teeth** — make dilution bite, so a deck of off-identity cards means your hand often lacks a
+  good answer. This is a real design change to how hands are drawn, not a tuning pass, so I have not done
+  it unilaterally.
+
+**Also worth knowing, because it caps every content lever:** `FOCUS_TAG_WEIGHT` was dead, and it was my
+doing — the season-awards fix moved `attrFocus` out of `freq` (correctly; adding to a tag there raises the
+normalising divisor and shrinks every other stat) and left the constant referenced only by comments still
+describing it as live. The lean now runs through `AWARD_WEIGHT` (0.07), a much smaller lever. **This is why
+the arc rebalance moved graduates by only 0.38 composure despite moving the library by nine points.** If you
+want identity to differentiate harder, the lever is `deriveStats`, not more content edits — and that is its
+own measured project, because the last change to this channel broke the role split badly.
