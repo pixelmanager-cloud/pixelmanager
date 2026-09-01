@@ -2417,3 +2417,25 @@ useless (1.12/0.94 was indistinguishable from 1.12/1.00), so home advantage here
 happened: the calibration (symmetric without the edge, a real one with it, not an absurd one) and the wiring
 (both match paths hand the edge to the host, from the one shared constant). Note the gate's own engine
 fixtures never set `homeBoost`, so this probe is the only thing that can catch a regression here.
+
+## 73. FOUR DECISIONS, 2026-09-02 — answered before an overnight run
+
+1. **Traits at the bottom of the pyramid → MAKE THRESHOLDS RELATIVE TO TIER.** A basement club earns traits
+   appropriate to its level, so the layer is visible from generation 1 instead of invisible for the whole
+   early game every dynasty starts in.
+2. **The card draft → LEAVE IT AS FLAVOUR.** Identity, not a skill test — which is what `career.ts`'s own
+   comment already claims. Closed, not deferred; the measurement (best-vs-worst 0.133 overall) stands as the
+   reason rather than as a defect.
+3. **Mentals after graduation → KEEP THEM FROZEN.** Career-forged identity, per the Living Squad plan. The
+   contradiction gets closed by removing the stale note about `ageCurve()`, not by overturning the design.
+4. **Scouting timer → MOVE IT TO GAME TIME.** Resolve at the next matchday or season rollover, so the cost
+   is a fixture's worth of not knowing rather than real seconds a player waits out or edits around.
+
+**Defaults taken on the questions NOT asked** (CK was going to sleep; these are reversible and recorded so
+they can be overturned cheaply):
+
+- **Sim keeps no softer hand than playing.** Asked twice, unanswered; consistency with the played match is
+  the honest default and the divergence was the original defect.
+- **One axis of skill, and the defensive half of duties, are FEATURES, not fixes.** Measured and documented
+  overnight, not built — adding a second skill axis or a defensive-positioning term is a design project.
+- **Steam capsule art untouched** — needs CK and the Retro Diffusion key, which never appears in the repo.
