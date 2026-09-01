@@ -73,6 +73,20 @@ const SHOT_APPETITE = 1;
 /** ...and for a man played clean through, who is not going to dawdle on the ball. */
 const CLEAR_RUN_APPETITE = 12;
 
+// ── DESIGN D: A FLOOR UNDER PROGRESS ────────────────────────────────────────────────────────────────
+// Reaching the box is a chain of per-tick survival rolls, so P(box) = q^(D/lambda): q is the odds of
+// keeping the ball through one tick and D/lambda is how many ticks it takes to cover the ground. Every
+// dial tried so far moved q. This moves lambda -- the metres a SURVIVING link is worth -- by putting a
+// hard floor under it, so a possession that lives makes real ground regardless of who is carrying it.
+// The natural advance already carries the quality term (a quick carrier out-runs the floor, a good
+// passer finds a longer forward option), so flooring it yields exactly "a constant plus a small quality
+// term": max(quality-scaled natural gain, ADVANCE_FLOOR).
+// 0 disables it entirely and restores the pre-change engine tick-for-tick -- this is the A/B switch.
+const ADVANCE_FLOOR = 8;
+// The floor is about REACHING the box, not about what happens inside it. Past this radius it stops
+// topping up, so it cannot become a goal-magnet that walks a carrier onto the six-yard line.
+const ADVANCE_FLOOR_STOP = SHOOT_RANGE;
+
 /** Pace edge an attacker needs to spring a SET trap cleanly. */
 const TRAP_BEATS = 0.12;
 /** How often the line's step-up is mistimed, sending through a receiver who would have been caught. */
@@ -481,6 +495,25 @@ export class MatchEngine {
     return step;
   }
 
+  /** DESIGN D. Top a surviving link's forward gain up to ADVANCE_FLOOR metres toward the attacked goal,
+   *  by re-seeding the man on the ball (and the ball with him). Re-seeding positions abstractly is this
+   *  engine's existing idiom -- giveKickoff, takeCorner, takePenalty and awardFoul all do it -- and the
+   *  client never draws a pitch, so this costs nothing visually. Consumes NO rng, so with ADVANCE_FLOOR
+   *  at 0 the whole engine is bit-identical to before. */
+  private advanceFloor(teamIdx: 0 | 1, ps: PlayerState, gained: number): void {
+    if (ADVANCE_FLOOR <= 0) return;
+    const deficit = ADVANCE_FLOOR - gained;
+    if (deficit <= 0) return;                       // the natural, quality-scaled gain already cleared it
+    const g = this.goalOf(teamIdx);
+    const dx = g.x - ps.x, dy = g.y - ps.y;
+    const d = Math.hypot(dx, dy);
+    const step = Math.min(deficit, d - ADVANCE_FLOOR_STOP);
+    if (step <= 0 || d < 0.01) return;              // already inside the box-approach radius: leave it alone
+    ps.x = clamp(ps.x + (dx / d) * step, 0, PITCH.w);
+    ps.y = clamp(ps.y + (dy / d) * step, 0, PITCH.h);
+    this.state.ball = { x: ps.x, y: ps.y };
+  }
+
   private closestToBall(teamIdx: 0 | 1): number {
     const s = this.state;
     let best = 1, bestD = Infinity; // skip GK for chases
@@ -595,6 +628,9 @@ export class MatchEngine {
           s.carrier = { teamIdx, playerIdx: pick.idx };
           this.clearRun[teamIdx] = -1;
           s.ball = { ...recS };
+          // DESIGN D -- LINK 1 OF 2: a completed pass. Applied BEFORE the ball-in-behind gate below, so
+          // beatsLastDefender reads the position the receiver actually ends up in.
+          this.advanceFloor(teamIdx, recS, distGoal - Math.hypot(goal.x - recS.x, goal.y - recS.y));
           // through-ball that springs a fast forward behind a high line => clear chance
           if (pick.through && this.beatsLastDefender(teamIdx, pick.idx)) {
             s.events.push({ minute: this.minute(), type: 'chance', teamIdx, playerName: rec.name, playerId: rec.id, counter: this.onCounter(teamIdx) });
@@ -663,6 +699,9 @@ export class MatchEngine {
     this.stepToward(cs, goal.x, goal.y + (this.rng() - 0.5) * 10, speed);
     this.drain(cs, carrier, this.mods[teamIdx], 1.2);
     s.ball = { x: cs.x, y: cs.y };
+    // DESIGN D -- LINK 2 OF 2: a carry. Note the y-jitter above means a pace-3.0 dribble is worth well
+    // under its own step length in ground actually GAINED, which is why the floor bites hardest here.
+    this.advanceFloor(teamIdx, cs, distGoal - Math.hypot(goal.x - cs.x, goal.y - cs.y));
   }
 
   /** Count of opponents within 4m of a spot (passing/receiving pressure, 0..~3). */
