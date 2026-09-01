@@ -2012,8 +2012,41 @@ export const TRAITS: Trait[] = [
  *  Sorting is STABLE and role-matching traits merely move ahead of role-neutral ones, so a player's
  *  eligibility is unchanged and untagged traits (leader, ironman, deadball, biggame, ironwill, utility)
  *  keep their relative order. Passing no role reproduces the old ordering exactly. */
-export function eligibleTraits(attrs: CareerPlayerAttrs, log: Choice[], role?: Role): Trait[] {
-  const eligible = TRAITS.filter((t) => t.eligible(attrs, log));
+/** The quality a trait gate was written for. `eligibleTraits` reads absolute attributes, so at the bottom
+ *  of the pyramid nobody clears any gate: measured over 500 mints per level, players with at least one
+ *  trait ran 0.0% at quality 4 and 6, 7.0% at 8, 29.4% at 10 — against 100% from 14 up. The trait layer was
+ *  invisible for the whole bottom of the pyramid, which is where every dynasty starts and where a new
+ *  player spends his first hours. (CK's call, 2026-09-02: make it relative to tier.) */
+const TRAIT_REF_QUALITY = 13;
+/** How much of the gap to close. Measured, players with at least one trait by squad quality:
+ *
+ *      relative   q4     q6     q8     q10    q12    q14+
+ *      0 (old)    0.0%   0.0%   7.0%   29.4%  83.0%  100%
+ *      0.30      26.4%  21.0%  29.4%   58.0%  83.0%  100%   <- shipped
+ *      0.45      61.2%  47.8%  50.8%   58.0%  83.0%  100%
+ *      0.60      87.4%  72.4%  72.4%   79.6%  83.0%  100%
+ *      0.75      95.6%  92.2%  88.8%   83.0%  83.0%  100%
+ *
+ *  Above 0.3 the curve INVERTS -- a basement squad ends up more trait-rich than a mid-table one, which
+ *  erases a real difference between divisions and makes climbing feel like nothing. At 0.3 roughly one
+ *  player in four has a trait at the bottom, rising steadily to every player at the top: visible from
+ *  generation 1, still plainly better higher up. */
+const TRAIT_RELATIVE = 0.3;
+
+export function eligibleTraits(attrs: CareerPlayerAttrs, log: Choice[], role?: Role, quality?: number): Trait[] {
+  // RELATIVE TO HIS OWN LEVEL. Scaling every attribute by the same factor leaves the player's SHAPE
+  // untouched, so he still qualifies only for the traits he is genuinely best at -- a basement club's
+  // sharpest finisher earns Clinical Finisher, and its journeyman still earns nothing. What changes is that
+  // "sharpest at this level" can clear a gate at all.
+  const scaled = quality && quality > 0 && quality < TRAIT_REF_QUALITY
+    ? (() => {
+        const k = 1 + ((TRAIT_REF_QUALITY / quality) - 1) * TRAIT_RELATIVE;
+        const out: any = {};
+        for (const [key, v] of Object.entries(attrs)) out[key] = typeof v === 'number' ? Math.min(20, v * k) : v;
+        return out as CareerPlayerAttrs;
+      })()
+    : attrs;
+  const eligible = TRAITS.filter((t) => t.eligible(scaled, log));
   if (!role) return eligible;
   // PRIMARY role beats SECONDARY beats untagged. A flat includes() test was not enough: `ballwinner`
   // (['DF','MF']) and `metronome` (['MF','DF']) are both DF-tagged and both sit earlier than `rock`
