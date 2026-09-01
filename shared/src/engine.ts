@@ -29,6 +29,24 @@ const BASE_DRAIN = 0.000034; // fitness lost per tick by a working outfielder (t
 // bad save should yield a poor goalkeeper, never an invincible one. Verified equivalent to an explicit
 // 10 (identical 40-118 across the same 40 fixtures), which is the guard's whole promise.
 const norm = (stat: number) => (Number.isFinite(stat) ? stat : 10) / 20;
+
+// ── OUTCOME_SENS: HOW DECISIVELY QUALITY DECIDES A MATCH ────────────────────────────────────────────
+// Measured across three independent attempts to raise shot volume — pace compression, the deep-turnover
+// build-out, and a shooting floor at range — every one of them was rejected for the SAME reason: added
+// volume is amplified into MARGIN, because the better side both shoots more often AND converts better, so
+// the two multiply. The league gate (or, in the last case, the competitiveness gate) broke every time.
+//
+// So the target is not volume, it is the exponent's partner: the strength with which quality decides an
+// OUTCOME once a chance exists. Measured here, the underdog takes about 8% off the favourite against real
+// football's 25-30% — quality is far more decisive in this engine than in the sport.
+//
+// `qz` compresses a quality input toward the scale's midpoint WITHOUT moving the midpoint, so a neutral
+// player is completely unaffected and 1.0 reproduces the old engine exactly. It is applied ONLY to the two
+// terms that decide what happens to a chance — how often a man shoots, and whether the shot goes in —
+// and deliberately NOT to `overall()`, price, squad strength, the league-table sim or the transfer market,
+// so a better striker still costs more, still lifts the club's rating, and still wins you the league. What
+// compresses is only how ruthlessly he punishes a worse defence on the day.
+const qz = (v: number) => 0.5 + OUTCOME_SENS * (v - 0.5);
 /** effective-stat multiplier from current fitness: 1.0 fresh, ~0.85 when gassed. */
 const fit = (f: number) => 0.7 + 0.3 * f;
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
@@ -82,6 +100,8 @@ const CLEAR_RUN_APPETITE = 12;
 // passer finds a longer forward option), so flooring it yields exactly "a constant plus a small quality
 // term": max(quality-scaled natural gain, ADVANCE_FLOOR).
 // 0 disables it entirely and restores the pre-change engine tick-for-tick -- this is the A/B switch.
+const RANGE_APPETITE = 0.55; // willingness to shoot from the EDGE of range; 0 = old behaviour
+const OUTCOME_SENS = 0.5;   // 1 = the old engine exactly; below 1 compresses quality's grip on a chance
 const ADVANCE_FLOOR = 8;
 // The floor is about REACHING the box, not about what happens inside it. Past this radius it stops
 // topping up, so it cannot become a goal-magnet that walks a carrier onto the six-yard line.
@@ -587,7 +607,18 @@ export class MatchEngine {
     // shoot from range — likelier the closer/more central and the better the shooter,
     // so players rarely waste hopeful long shots (which keeps shot volume realistic)
     if (distGoal < SHOOT_RANGE) {
-      const closeness = 1 - distGoal / SHOOT_RANGE; // 0 at the edge of range, 1 at the goal
+      // RANGE_APPETITE — A MAN AT THE EDGE OF RANGE IS ALLOWED TO HIT IT.
+      // This was `1 - distGoal / SHOOT_RANGE`, EXACTLY ZERO at 30m, so a carrier arriving at the edge of
+      // range had a literally impossible shot and had to keep running in. Hence a 7.6m median against real
+      // football's ~16m and 79% of shots from inside the box against a real 50-60%: too few shots,
+      // converted at double the real rate, all of them tap-ins. It also starved the mental layer, because
+      // composure, leadership, Clinical Finisher and The Wall are additive terms on the FINISH and need
+      // shots to act on.
+      // Built once BEFORE `OUTCOME_SENS` and reverted: it fixed the distribution exactly as predicted and
+      // halved underdog wins (4.0% -> 2.0%, seven divisions -> three), because volume was still being
+      // amplified into margin. Compressing quality's grip on a chance first is what makes it affordable.
+      // 0 reproduces the old expression exactly.
+      const closeness = RANGE_APPETITE + (1 - RANGE_APPETITE) * (1 - distGoal / SHOOT_RANGE);
       const central = 1 - Math.abs(cs.y - PITCH.h / 2) / (PITCH.h / 2); // 1 dead-central, 0 at the touchline
       const homeBoost = this.teams[teamIdx].homeBoost ?? 1; // Fan Zone home advantage (only teams[0] carries it)
       // STEP 3: THE FINISH, UNCLAMPED — and only now, because unclamping it while the through-ball gate
@@ -596,7 +627,7 @@ export class MatchEngine {
       // has to carry shot volume, and at its old value it could not: shootP peaked near 0.004 per tick, so
       // a player standing in front of goal shot about once every 250 ticks. SHOT_APPETITE scales it.
       const onClearRun = this.clearRun[teamIdx] === playerIdx;
-      const shootP = (onClearRun ? CLEAR_RUN_APPETITE : SHOT_APPETITE) * (0.0022 + norm(carrier.attrs.shooting) * 0.004) * closeness * (0.35 + 0.65 * central) * this.dm[teamIdx][playerIdx].shoot * (1 + this.zonal[teamIdx]) * homeBoost * TICK_SEC;
+      const shootP = (onClearRun ? CLEAR_RUN_APPETITE : SHOT_APPETITE) * (0.0022 + qz(norm(carrier.attrs.shooting)) * 0.004) * closeness * (0.35 + 0.65 * central) * this.dm[teamIdx][playerIdx].shoot * (1 + this.zonal[teamIdx]) * homeBoost * TICK_SEC;
       if (this.rng() < shootP) {
         this.resolveShot(teamIdx, playerIdx, distGoal, false);
         return;
@@ -809,7 +840,7 @@ export class MatchEngine {
     const defTeam = (1 - teamIdx) as 0 | 1;
     const gk = this.teams[defTeam].players[0];
     const gks = s.players[defTeam][0];
-    const quality = clamp(norm(shooter.attrs.shooting) * fit(ss.fitness) * (1 - distGoal / QUALITY_RANGE) + (clear ? 0.15 : 0), 0, 1);
+    const quality = clamp(qz(norm(shooter.attrs.shooting)) * fit(ss.fitness) * (1 - distGoal / QUALITY_RANGE) + (clear ? 0.15 : 0), 0, 1);
     const minute = this.minute();
     const onTarget = this.rng() < 0.5 + quality * 0.45;
     if (!onTarget) {
@@ -839,7 +870,7 @@ export class MatchEngine {
       // nothing (0 of 24 fixtures). Conversion is where a poor chance can still become a goal, which is
       // also the more honest reading of the trait: he scores the one nobody else would have.
       const spark = hasTrait(shooter, 'spark') && quality < 0.35 ? 0.035 : 0;
-      const goalProb = clamp(0.13 + quality * 0.55 - norm(gk.attrs.keeping) * fit(gks.fitness) * 0.2 + (clear ? 0.12 : 0) + finish + spark - wall, 0.03, 0.9);
+      const goalProb = clamp(0.13 + quality * 0.55 - qz(norm(gk.attrs.keeping)) * fit(gks.fitness) * 0.2 + (clear ? 0.12 : 0) + finish + spark - wall, 0.03, 0.9);
       if (this.rng() < goalProb) {
         s.score[teamIdx]++;
         // assist = the player who played the last pass to this scorer, if recent (<=8s) and not himself
