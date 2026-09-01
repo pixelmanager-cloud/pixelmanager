@@ -790,8 +790,8 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":6,\"strength\":3,\"stamina\":8,\"passing\":7,\"shooting\":11,\"tackling\":8,\"positioning\":12,\"workrate\":8,\"keeping\":4,\"setPiece\":8,\"composure\":13,\"aggression\":8,\"creativity\":6,\"teamwork\":8,\"leadership\":7,\"durability\":8}",
-        "role": "FW",
+        "attrs_json": "{\"pace\":7,\"strength\":4,\"stamina\":9,\"passing\":9,\"shooting\":9,\"tackling\":8,\"positioning\":12,\"workrate\":11,\"keeping\":4,\"setPiece\":8,\"composure\":10,\"aggression\":7,\"creativity\":6,\"teamwork\":12,\"leadership\":8,\"durability\":8}",
+        "role": "MF",
         "traits_json": "[\"mercenary\",\"marketable\"]",
         "personality": "workhorse",
         "greed": 16,
@@ -1581,15 +1581,15 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":7,\"strength\":10,\"stamina\":11,\"passing\":7,\"shooting\":10,\"tackling\":9,\"positioning\":13,\"workrate\":8,\"keeping\":7,\"setPiece\":11,\"composure\":12,\"aggression\":10,\"creativity\":6,\"teamwork\":9,\"leadership\":9,\"durability\":11}",
+        "attrs_json": "{\"pace\":10,\"strength\":11,\"stamina\":12,\"passing\":9,\"shooting\":13,\"tackling\":14,\"positioning\":13,\"workrate\":9,\"keeping\":6,\"setPiece\":11,\"composure\":12,\"aggression\":15,\"creativity\":7,\"teamwork\":11,\"leadership\":9,\"durability\":11}",
         "role": "DF",
         "traits_json": "[\"biggame\"]",
         "personality": "workhorse",
         "greed": 11,
         "marketability": 8,
         "earnings": 9475,
-        "peak_overall": 11,
-        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[\"The Game Your Whole Career Gets Judged On\",\"Title Decider\",\"A Derby With the Title on the Line\"],\"peakOverall\":11,\"careerScore\":382,\"turnsPlayed\":120}"
+        "peak_overall": 13,
+        "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"bigNights\":[\"The Game Your Whole Career Gets Judged On\",\"Title Decider\",\"A Derby With the Title on the Line\"],\"peakOverall\":13,\"careerScore\":382,\"turnsPlayed\":120}"
       }
     }
   },
@@ -2380,15 +2380,15 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":4,\"strength\":5,\"stamina\":12,\"passing\":7,\"shooting\":8,\"tackling\":7,\"positioning\":8,\"workrate\":7,\"keeping\":6,\"setPiece\":9,\"composure\":13,\"aggression\":5,\"creativity\":6,\"teamwork\":5,\"leadership\":8,\"durability\":7}",
+        "attrs_json": "{\"pace\":7,\"strength\":7,\"stamina\":15,\"passing\":11,\"shooting\":11,\"tackling\":12,\"positioning\":11,\"workrate\":11,\"keeping\":6,\"setPiece\":12,\"composure\":15,\"aggression\":9,\"creativity\":9,\"teamwork\":9,\"leadership\":10,\"durability\":9}",
         "role": "MF",
         "traits_json": "[\"mercenary\",\"marketable\"]",
         "personality": "stoic",
         "greed": 18,
         "marketability": 15,
         "earnings": 9775,
-        "peak_overall": 9,
-        "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"A Continental Final\"],\"peakOverall\":9,\"careerScore\":241,\"turnsPlayed\":120}"
+        "peak_overall": 12,
+        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[\"A Continental Final\"],\"peakOverall\":12,\"careerScore\":241,\"turnsPlayed\":120}"
       }
     }
   },
@@ -3183,15 +3183,15 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":6,\"strength\":3,\"stamina\":8,\"passing\":7,\"shooting\":13,\"tackling\":9,\"positioning\":12,\"workrate\":7,\"keeping\":14,\"setPiece\":10,\"composure\":16,\"aggression\":8,\"creativity\":7,\"teamwork\":7,\"leadership\":8,\"durability\":5}",
+        "attrs_json": "{\"pace\":5,\"strength\":3,\"stamina\":8,\"passing\":7,\"shooting\":10,\"tackling\":7,\"positioning\":9,\"workrate\":7,\"keeping\":16,\"setPiece\":7,\"composure\":10,\"aggression\":7,\"creativity\":6,\"teamwork\":6,\"leadership\":6,\"durability\":5}",
         "role": "GK",
-        "traits_json": "[\"biggame\",\"injury_prone\",\"mercenary\",\"marketable\"]",
+        "traits_json": "[\"wall\",\"biggame\",\"injury_prone\",\"mercenary\",\"marketable\"]",
         "personality": "workhorse",
         "greed": 16,
         "marketability": 19,
         "earnings": 12365,
-        "peak_overall": 14,
-        "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"bigNights\":[\"The Game Your Whole Career Gets Judged On\",\"A Derby With the Title on the Line\"],\"peakOverall\":14,\"careerScore\":546,\"turnsPlayed\":120}"
+        "peak_overall": 12,
+        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[\"The Game Your Whole Career Gets Judged On\",\"A Derby With the Title on the Line\"],\"peakOverall\":12,\"careerScore\":546,\"turnsPlayed\":120}"
       }
     }
   },
@@ -3974,15 +3974,15 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":13,\"strength\":7,\"stamina\":8,\"passing\":8,\"shooting\":10,\"tackling\":6,\"positioning\":10,\"workrate\":8,\"keeping\":6,\"setPiece\":9,\"composure\":14,\"aggression\":5,\"creativity\":4,\"teamwork\":10,\"leadership\":9,\"durability\":8}",
+        "attrs_json": "{\"pace\":14,\"strength\":10,\"stamina\":10,\"passing\":11,\"shooting\":11,\"tackling\":9,\"positioning\":13,\"workrate\":12,\"keeping\":6,\"setPiece\":10,\"composure\":15,\"aggression\":8,\"creativity\":5,\"teamwork\":15,\"leadership\":11,\"durability\":10}",
         "role": "FW",
         "traits_json": "[\"mercenary\",\"marketable\"]",
         "personality": "perfectionist",
         "greed": 19,
         "marketability": 15,
         "earnings": 9685,
-        "peak_overall": 10,
-        "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[],\"peakOverall\":10,\"careerScore\":281,\"turnsPlayed\":120}"
+        "peak_overall": 11,
+        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[],\"peakOverall\":11,\"careerScore\":281,\"turnsPlayed\":120}"
       }
     }
   },
@@ -4777,15 +4777,15 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":9,\"strength\":3,\"stamina\":11,\"passing\":5,\"shooting\":9,\"tackling\":6,\"positioning\":7,\"workrate\":5,\"keeping\":4,\"setPiece\":9,\"composure\":11,\"aggression\":7,\"creativity\":5,\"teamwork\":4,\"leadership\":6,\"durability\":4}",
+        "attrs_json": "{\"pace\":13,\"strength\":5,\"stamina\":14,\"passing\":7,\"shooting\":11,\"tackling\":9,\"positioning\":7,\"workrate\":8,\"keeping\":4,\"setPiece\":10,\"composure\":8,\"aggression\":10,\"creativity\":8,\"teamwork\":7,\"leadership\":7,\"durability\":5}",
         "role": "FW",
         "traits_json": "[\"injury_prone\",\"mercenary\"]",
         "personality": "showman",
         "greed": 20,
         "marketability": 12,
         "earnings": 10069,
-        "peak_overall": 9,
-        "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"A Derby With the Title on the Line\"],\"peakOverall\":9,\"careerScore\":244,\"turnsPlayed\":120}"
+        "peak_overall": 10,
+        "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"A Derby With the Title on the Line\"],\"peakOverall\":10,\"careerScore\":244,\"turnsPlayed\":120}"
       }
     }
   },
@@ -5596,15 +5596,15 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":7,\"strength\":5,\"stamina\":4,\"passing\":6,\"shooting\":8,\"tackling\":7,\"positioning\":10,\"workrate\":8,\"keeping\":3,\"setPiece\":9,\"composure\":13,\"aggression\":8,\"creativity\":5,\"teamwork\":6,\"leadership\":8,\"durability\":4}",
+        "attrs_json": "{\"pace\":11,\"strength\":9,\"stamina\":7,\"passing\":8,\"shooting\":11,\"tackling\":11,\"positioning\":10,\"workrate\":10,\"keeping\":3,\"setPiece\":10,\"composure\":13,\"aggression\":11,\"creativity\":7,\"teamwork\":6,\"leadership\":7,\"durability\":6}",
         "role": "DF",
         "traits_json": "[\"injury_prone\",\"mercenary\"]",
         "personality": "pro",
         "greed": 15,
         "marketability": 14,
         "earnings": 10450,
-        "peak_overall": 9,
-        "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"A Comeback From the Brink\"],\"peakOverall\":9,\"careerScore\":241,\"turnsPlayed\":120}"
+        "peak_overall": 11,
+        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[\"A Comeback From the Brink\"],\"peakOverall\":11,\"careerScore\":241,\"turnsPlayed\":120}"
       }
     }
   },
@@ -6383,15 +6383,15 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":14,\"strength\":14,\"stamina\":11,\"passing\":11,\"shooting\":13,\"tackling\":13,\"positioning\":12,\"workrate\":9,\"keeping\":5,\"setPiece\":9,\"composure\":14,\"aggression\":11,\"creativity\":7,\"teamwork\":14,\"leadership\":11,\"durability\":12}",
+        "attrs_json": "{\"pace\":14,\"strength\":13,\"stamina\":11,\"passing\":13,\"shooting\":12,\"tackling\":11,\"positioning\":11,\"workrate\":10,\"keeping\":5,\"setPiece\":9,\"composure\":10,\"aggression\":9,\"creativity\":9,\"teamwork\":14,\"leadership\":9,\"durability\":12}",
         "role": "DF",
         "traits_json": "[\"biggame\",\"loyal\",\"marketable\"]",
         "personality": "biggame",
         "greed": 2,
         "marketability": 17,
         "earnings": 9995,
-        "peak_overall": 13,
-        "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"bigNights\":[\"The Biggest Game in the Club’s History\",\"A Derby With the Title on the Line\",\"Title Decider\"],\"peakOverall\":13,\"careerScore\":391,\"turnsPlayed\":120}"
+        "peak_overall": 11,
+        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[\"The Biggest Game in the Club’s History\",\"A Derby With the Title on the Line\",\"Title Decider\"],\"peakOverall\":11,\"careerScore\":391,\"turnsPlayed\":120}"
       }
     }
   },
@@ -7185,15 +7185,15 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":15,\"strength\":8,\"stamina\":9,\"passing\":11,\"shooting\":16,\"tackling\":7,\"positioning\":15,\"workrate\":9,\"keeping\":15,\"setPiece\":11,\"composure\":20,\"aggression\":6,\"creativity\":6,\"teamwork\":11,\"leadership\":14,\"durability\":8}",
+        "attrs_json": "{\"pace\":15,\"strength\":8,\"stamina\":8,\"passing\":10,\"shooting\":12,\"tackling\":7,\"positioning\":11,\"workrate\":8,\"keeping\":19,\"setPiece\":9,\"composure\":17,\"aggression\":6,\"creativity\":6,\"teamwork\":9,\"leadership\":12,\"durability\":7}",
         "role": "GK",
-        "traits_json": "[\"clinical\",\"biggame\",\"mercenary\",\"marketable\"]",
+        "traits_json": "[\"wall\",\"biggame\",\"mercenary\",\"marketable\"]",
         "personality": "perfectionist",
         "greed": 20,
         "marketability": 20,
         "earnings": 10325,
-        "peak_overall": 17,
-        "career_honours_json": "{\"caps\":24,\"nation\":\"Trentino\",\"bigNights\":[\"A Comeback From the Brink\"],\"peakOverall\":17,\"careerScore\":681,\"turnsPlayed\":120}"
+        "peak_overall": 16,
+        "career_honours_json": "{\"caps\":24,\"nation\":\"Trentino\",\"bigNights\":[\"A Comeback From the Brink\"],\"peakOverall\":16,\"careerScore\":681,\"turnsPlayed\":120}"
       }
     }
   },
@@ -8001,15 +8001,15 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":7,\"strength\":12,\"stamina\":4,\"passing\":6,\"shooting\":7,\"tackling\":6,\"positioning\":9,\"workrate\":7,\"keeping\":4,\"setPiece\":10,\"composure\":12,\"aggression\":7,\"creativity\":6,\"teamwork\":7,\"leadership\":6,\"durability\":10}",
-        "role": "DF",
-        "traits_json": "[]",
+        "attrs_json": "{\"pace\":13,\"strength\":14,\"stamina\":12,\"passing\":12,\"shooting\":11,\"tackling\":8,\"positioning\":13,\"workrate\":13,\"keeping\":4,\"setPiece\":16,\"composure\":14,\"aggression\":9,\"creativity\":14,\"teamwork\":11,\"leadership\":8,\"durability\":13}",
+        "role": "FW",
+        "traits_json": "[\"deadball\"]",
         "personality": "workhorse",
         "greed": 11,
         "marketability": 4,
         "earnings": 10550,
-        "peak_overall": 9,
-        "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"The Match That Decides Who Goes Down\",\"Promotion Play-Off Final\",\"A Continental Final\"],\"peakOverall\":9,\"careerScore\":295,\"turnsPlayed\":120}"
+        "peak_overall": 13,
+        "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"bigNights\":[\"The Match That Decides Who Goes Down\",\"Promotion Play-Off Final\",\"A Continental Final\"],\"peakOverall\":13,\"careerScore\":295,\"turnsPlayed\":120}"
       }
     }
   },
@@ -8822,15 +8822,15 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":13,\"strength\":9,\"stamina\":7,\"passing\":7,\"shooting\":12,\"tackling\":6,\"positioning\":11,\"workrate\":5,\"keeping\":6,\"setPiece\":8,\"composure\":15,\"aggression\":8,\"creativity\":5,\"teamwork\":6,\"leadership\":9,\"durability\":7}",
-        "role": "FW",
+        "attrs_json": "{\"pace\":15,\"strength\":16,\"stamina\":10,\"passing\":12,\"shooting\":13,\"tackling\":13,\"positioning\":13,\"workrate\":9,\"keeping\":6,\"setPiece\":11,\"composure\":14,\"aggression\":15,\"creativity\":11,\"teamwork\":10,\"leadership\":9,\"durability\":10}",
+        "role": "DF",
         "traits_json": "[\"mercenary\"]",
         "personality": "workhorse",
         "greed": 15,
         "marketability": 11,
         "earnings": 9564,
-        "peak_overall": 11,
-        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[\"A Cup Semi Under the Lights\",\"A Continental Final\"],\"peakOverall\":11,\"careerScore\":351,\"turnsPlayed\":120}"
+        "peak_overall": 14,
+        "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"bigNights\":[\"A Cup Semi Under the Lights\",\"A Continental Final\"],\"peakOverall\":14,\"careerScore\":351,\"turnsPlayed\":120}"
       }
     }
   }

@@ -1812,19 +1812,43 @@ const BASELINE = 7, SPREAD = 12, PEAK = 1.5;
 // without overriding the card-driven "earned, not chosen" development.
 const FOCUS_TAG_WEIGHT = 6;
 
+const AWARD_WEIGHT = 0.07;
 export function deriveStats(log: Choice[], seed: number, genes: Genes = rollGenes(seed), attrFocus?: Partial<Record<Tag, number>>): CareerPlayerAttrs {
   const rng = mulberry32(seed ^ 0x9e3779b9);
   const innate = new Set<keyof CareerPlayerAttrs>(INNATE);
   const freq = Object.fromEntries(TAGS.map((t) => [t, 0])) as Record<Tag, number>;
   // weight by card power AND stakes: a great play in a cup final shapes you more than a training drill
   for (const c of log) for (const t of c.tags) freq[t] += c.power * c.stakes;
-  if (attrFocus) for (const t of TAGS) freq[t] += (attrFocus[t] ?? 0) * FOCUS_TAG_WEIGHT; // the soft skill-tree lean
+  // AWARDS NO LONGER GO THROUGH `freq`, BECAUSE THE SHAPE IS ZERO-SUM AND THAT MADE THEM A PENALTY.
+  // `norm` divides every tag by the career's OWN strongest (`maxFreq`), so adding to a tag raises the
+  // divisor and shrinks every OTHER stat with it. Measured over 150 real careers, an award delivered this
+  // way LOWERED the player's overall whenever it landed on a tag he was already good at:
+  //     +2 composure -0.227   +5 composure -0.800   +10 composure -1.533   +5 creativity -1.073
+  // and only helped on a tag he was weak in (+5 teamwork +0.600). Composure is the most-awarded attribute
+  // in the arc library -- a career accumulates a mean +22.6 of it -- so the game's commonest reward was
+  // its commonest punishment. (Section 20 of the decisions doc declared this "does not reproduce"; it
+  // reproduces exactly, and that dismissal is what kept it alive.)
+  //
+  // Fixing the NORMALISER was tried first and rejected on measurement: making the shape absolute removes
+  // the zero-sum, but max-normalisation is also what guarantees every career HAS a peak, so removing it
+  // left mediocre careers with no strong area and they collapsed onto the lowest role baseline -- the
+  // outfield role split went DF 20%/MF 37%/FW 43% to DF 47.5%/MF 28%/FW 24.5%. Identity is what the shape
+  // is FOR.
+  // So the shape keeps its job and the award is applied where it belongs: as a direct bonus on the stats
+  // that tag feeds, after the shape has decided who the player is. An award is now strictly positive,
+  // monotonic in size, and cannot touch any stat it does not name.
   const maxFreq = Math.max(1, ...TAGS.map((t) => freq[t]));
   const norm = Object.fromEntries(TAGS.map((t) => [t, freq[t] / maxFreq])) as Record<Tag, number>;
   // MAGNITUDE = how well you actually played (avg success across the career). With a capped flywheel
   // this spreads by skill: a player who plays high-fit cards banks more success → higher stats.
   const avgSuccess = log.reduce((s, c) => s + c.success, 0) / Math.max(1, log.length);
   const magnitude = 0.5 + 0.7 * avgSuccess; // ~0.5x (played poorly) .. ~1.2x (played superbly)
+
+  // How much of the attribute-focus award reaches a stat: the mean award across the tags that stat is
+  // built from, at AWARD_WEIGHT points per unit. A stat fed by two tags, one of them awarded, gets half.
+  const award = (src: readonly Tag[]): number =>
+    !attrFocus || !src.length ? 0
+      : (src.reduce((a, t) => a + (attrFocus[t] ?? 0), 0) / src.length) * AWARD_WEIGHT;
 
   const out = {} as CareerPlayerAttrs;
   for (const stat of Object.keys(STAT_SOURCES) as (keyof typeof STAT_SOURCES)[]) {
@@ -1844,10 +1868,11 @@ export function deriveStats(log: Choice[], seed: number, genes: Genes = rollGene
       // INNATE: the career only decides how far up your genetic band [floor, ceiling] you realise.
       const band = genes[stat as 'pace' | 'strength' | 'stamina'];
       const realised = clamp(peaked * magnitude, 0, 1); // 0 = never trained it, 1 = maxed your potential
-      out[stat] = clamp(Math.round(band.floor + realised * (band.ceiling - band.floor) + noise * 0.4), 1, 20);
+      // an award still cannot break the genetic band -- innate stats are gene-capped by design
+      out[stat] = clamp(Math.round(band.floor + realised * (band.ceiling - band.floor) + noise * 0.4 + award(src)), 1, band.ceiling);
     } else {
       // DEVELOPED: technical/mental grow freely with play.
-      out[stat] = clamp(Math.round((BASELINE + peaked * SPREAD) * magnitude + noise), 1, 20);
+      out[stat] = clamp(Math.round((BASELINE + peaked * SPREAD) * magnitude + noise + award(src)), 1, 20);
     }
   }
   out.durability = clamp(Math.round(5 + 0.3 * out.strength + 0.3 * out.stamina + (rng() - 0.5) * 3), 1, 20); // ~11-12 for a healthy career; injury penalty applied at graduate

@@ -163,7 +163,37 @@ attack: `mentality: -2` sets the attacking push to exactly zero, so the side nev
 pressure, and conceded *more* than anyone. Retuned. Sitting deep is an identity; refusing to leave the box
 is not a tactic.
 
-## 8. YOUR CALL — the card career's core progression
+## 8. ~~YOUR CALL — the card career's core progression~~ — FIXED 2026-09-01, and §20's dismissal was wrong
+
+**Fixed. And §20 declared this "does not reproduce" — §20 is the one that does not reproduce.**
+
+Re-measured over 150 real careers driven to completion: an award delivered through the story-arc channel
+LOWERED the player's overall whenever it landed on a tag he was already good at. +2 composure **-0.227**,
++5 **-0.800**, +10 **-1.533**, +5 creativity **-1.073**. Only a tag he was WEAK in came out positive
+(+5 teamwork +0.600). Composure is the most-awarded attribute in the arc library — a career accumulates a
+mean **+22.6** of it against creativity's +3.7 — so the game's commonest reward was its commonest
+punishment, and §20's dismissal is what kept it alive for weeks.
+
+The cause: `norm[t] = freq[t] / maxFreq` divides every tag by the career's OWN strongest, so the shape is
+zero-sum. Raising your best tag raises the divisor and shrinks every other stat with it.
+
+**Two fixes were built and rejected on measurement before the third worked.** Mean-normalising flipped the
+sign at small doses but stayed negative at +10, because the `min(1,…)` cap re-coupled the tags. Making the
+shape ABSOLUTE fixed awards completely and then broke something else: max-normalisation is what guarantees
+every career HAS a peak, so without it a mediocre career has no strong area and collapses onto the lowest
+role baseline — the outfield split went DF 20%/MF 37%/FW 43% to **DF 47.5%/MF 28%/FW 24.5%**, and the
+golden fixture set stopped covering midfielders at all. Identity is what the shape is FOR.
+
+What shipped keeps the shape exactly as it was and applies the award AFTER it, as a direct bonus to the
+stats that tag feeds (`AWARD_WEIGHT` 0.07). Awards are now strictly positive and monotonic (+0.047 at +5,
++0.393 at +10), cannot touch a stat they do not name, and innate stats stay gene-capped so an award still
+cannot break a genetic ceiling. The 200-career role split is byte-identical to before, and golden replay's
+role coverage still reads DF/FW/GK/MF.
+
+*Remaining, and genuinely §8's original question: whether the arc library should keep awarding composure
+six times more often than creativity. That is a content-balance call, not a defect — the mechanism is now
+honest either way.*
+
 
 This is the biggest finding of the four and I have deliberately not touched it.
 
@@ -474,7 +504,7 @@ with it (empty box, through-ball-dependent chances, ~70 shots/match). **Re-attem
 option and is your call** — the difference is that `division_balance` now exists and would have refused it
 on day one.
 
-## 20. DOES NOT REPRODUCE — re-measured 2026-08-31 before starting the rebuild it asked for
+## 20. ~~DOES NOT REPRODUCE~~ — **PARTLY WRONG: §8's defect DOES reproduce, see §8 (2026-09-01)**
 
 > **I was about to spend multiple days rebuilding `deriveStats` on the strength of this section, and it
 > does not hold.** Re-measured on HEAD, 150 careers per policy, driving the real `Career` class:
