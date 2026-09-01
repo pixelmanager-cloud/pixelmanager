@@ -1739,6 +1739,54 @@ Two goals, not one, and the second is the one that killed the last two attempts:
    Any redesign that fixes goal geometry without moving the tactical layer off `engine.ts:507` will invert
    the shape tests again, which is what happened both previous times.
 
+### THE PLAN — CK chose the redesign 2026-09-01; this is what gets built
+
+**The shape.** Replace the unbounded chain of per-tick survival rolls with **at most K = 3 zone contests**
+per possession. A possession holds a zone (0 own third, 1 middle, 2 final third). One contest fires when
+the ball crosses a boundary toward goal; success promotes the zone and re-seeds ball and carrier into it,
+failure is a turnover. Inside zone 2, `resolveShot` and the shot-rate logic stay exactly as they are — the
+geometry fix already works there (median 15.7m, 57% inside the box).
+
+**Why this and not another dial: the ratio becomes something you SET.** End-to-end box reach is
+`(P_HI / P_LO)^K`. With K fixed at 3 for both sides, 1.8:1 needs `P_HI/P_LO = 1.22` across the six-point
+in-division quality span — say 0.55 for the weaker side against 0.67 for the stronger. Today the exponent
+is **3.4 for the strong side and 6.6 for the weak one**, on a base of 0.77 vs 0.57. Every dial I tried
+moved the base. Fixing K is what removes the per-side exponent, and it is the only move that can.
+
+**Six steps, in order.**
+1. Hang a possession record off the turnover branch `tick()` already computes (`prevTeam` vs `now`, the
+   same place `counterTeam`/`counterUntil` live). The pattern is established in the file.
+2. Resolve advancement as the zone contest: `p = clamp(BASE + Kq*(attack − defence) + tactics, P_LO, P_HI)`.
+   Re-seeding positions abstractly is already this engine's idiom — `giveKickoff`, `takeCorner`,
+   `takePenalty` and `awardFoul` all resolve an abstract event with a few draws and re-seed carrier and
+   ball. And it costs nothing visually, because the client draws no positions.
+3. **Floor the loser's start zone.** A turnover in the final third gives the loser zone 1, not zone 0.
+   This is what kills the territorial runaway (the stronger side wins 54.2% of its balls in the opponent's
+   final third; the weaker side wins 55.6% of its own in its own). It is the first mechanism found that
+   helps the weak side *without* suppressing the strong one.
+4. **Re-hang the three inert dials — NOT OPTIONAL.** `computeZonal`, `homeBoost` and the duty `shoot`
+   multiplier are all read in exactly one place, the shoot-from-range probability at `engine.ts:507`. They
+   move to the zone-2 advance term, which is what `engine.ts:558` has prescribed all along
+   ("`computeZonal` re-derived as a chance-CREATION edge rather than a shot-probability multiplier"). Skip
+   this and the shape inversion is guaranteed — it is what killed both previous attempts.
+5. Keep the shot logic inside zone 2 unchanged.
+6. Build it behind a constant so it can be A/B'd against the current path rather than replacing it blind.
+
+**Acceptance — all four, or it does not ship.**
+- `attack_reach`: the weaker side reaches the box **15–25%** of possessions (today 0.0%).
+- `division_balance`: green, with the thrashing rate and margin bars unmoved.
+- `strategy_test`: all ~35 assertions, especially the four shape ones and attack-focus. This is the axis
+  that failed twice before, and `tactics_matrix`'s 24-dial inertness census is the wider net — attack-focus
+  already sits at the edge.
+- `shot_geometry` and `duty_power`: their goal-volume floors met honestly, not by re-baselining.
+
+**What this costs.** Roughly a day to build the ladder and get `engine_panel` green on both axes; then
+several more re-hanging the tactical dials and re-deriving ratchets, because 20 files import `engine.js`,
+`strategy_test` carries ~35 assertions of which 30+ are tactical, and `tactics_matrix` alone takes 47.7
+minutes per run. The ratchets are the delicate part: re-deriving a "known-bad" bar is indistinguishable
+from moving the goalposts unless each move is justified against a measured before-and-after, so every one
+of them gets its number written down.
+
 ### The decision
 Your rule was **"the league wins, always"** — tune the match down until the pyramid holds. I have done that,
 and the honest result is that the pyramid holds *only* at 0.58 goals a match. So the rule now has a cost you
