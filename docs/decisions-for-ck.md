@@ -1425,7 +1425,7 @@ neutral, the armband is never a penalty, AND tier 10 still reads as poorly led.)
   never move is a real amount of the game held still. Either wire it into the season rollover or delete it;
   leaving a written-but-uncalled mechanic in place is the exact defect class this document tracks.
 
-## 67. NINE OF THE NINETEEN TRAITS DO NOTHING — found 2026-09-01, logged not fixed
+## 67. ~~NINE OF THE NINETEEN TRAITS DO NOTHING~~ — FIXED 2026-09-01: seven wired, two cut
 
 Auditing the trait catalogue after the ordering fix: a trait can only reach the game two ways — the engine
 reads it by id (`hasTrait`), or it carries an `apply` hook that bumps a stat when the player locks it in.
@@ -1477,7 +1477,7 @@ match**. So the gap §16 describes is wider than first reported — the league t
 `incomingBid` and the Sim button are all blind to a difference worth nearly five goals a game. `qa_mental`
 now asserts both, so the claim can no longer rest on the symmetric case alone.
 
-## 65. LATENT — re-verified 2026-09-01; the defects are fixed, the WIRING is what is still missing
+## 65. LATENT — re-verified 2026-09-01; defects fixed, and the two unwired modules are now WIRED
 
 Worth knowing before anyone wires them up, not worth fixing unattended.
 
