@@ -2287,3 +2287,81 @@ And the width answer tightens into something conclusive:
 
 Taken with `width_diagnosis.ts` (the `gain > -6` veto kills 82% of wide pass candidates against 74.1% of
 central), §69's question 2 now has an evidence base rather than a hunch.
+
+## 71. WIDTH — BUILT, MEASURED, BACKED OUT. The documented cause was wrong, and so was mine.
+
+You asked me to build and measure a width fix. I did, it worked on its own terms, and it made the game
+worse, so it is not in the tree. This is what it cost and what it bought.
+
+### The documented diagnosis is wrong
+
+§19 and `width_diagnosis.ts` name the `gain > -6` veto as "the defect" and the 7.8pt wide/central kill-rate
+gap as "the anti-width bias". Decomposed, the veto takes wide from 40.6% of candidates to **32.2% of
+survivors**; the SCORING then takes 32.2% to 1.31%. The scoring does ~96% of the work.
+
+Also: **the 1.31% is fixture-specific.** It is one match with both sides on `DEFAULT_TACTICS`. Across varied
+seeded tactics it is **13.5%** — still under real football's 20-35%, but not the catastrophe the headline
+number implies. `attackFocus: 'wide'` is worth ±4.3 on a score whose noise term spans 0-6, and it masks the
+problem wherever tactics vary.
+
+### The real cause was two layers further up
+
+At neutral tactics the wide/central score gap is **7.39 against a noise range of 0-6** — wider than the
+entire random range, so a wide pass was not unlikely, it was unreachable. 6.30 of that is the `gain` term,
+which measures straight-line progress toward goal, and a wide ball is sideways.
+
+But fixing the passing side is impossible, because:
+
+- when the ball is in the attacking third, a wide man sits a median **38.4m behind it**
+- **0.0%** of attacking ticks have any wide man level with the ball
+- an "advanced wide" candidate has median gain **−34m**: those are switches backward, not crosses
+
+**Crossing positions did not exist in the simulation.** Three lines cause it: `pullY` 0.30 drags everyone
+toward a ball that hugs the centre line (carrier median 1.9m off), so a man anchored 24m wide holds at
+15-17m; `pullX` 0.22 is too weak to bring him alongside the ball; and `boxRun`, the only forward-run
+mechanism, excludes wide-anchored players and pulls toward the goal's centre.
+
+### What I built
+
+A wide overlap run — the flank equivalent of `boxRun` — carrying wide-anchored players forward and holding
+their width against the centre-ward pull, plus (only once that put someone there) a wide-outlet bonus in the
+pass score and a relaxed veto floor to reach him. Tuned across a grid. At the best setting:
+
+| | before | after |
+|---|---|---|
+| passes played wide | 1.49% | **11.63%** |
+| attacking ticks with a wide man level with the ball | 0.0% | 17.3% |
+| wide man behind the ball | 38.4m | 28.2m |
+| `division_balance` worst thrashing | 12% | **5%** |
+| goals/match | 2.70 | 2.95 |
+
+Width became real, and the league guard *improved*.
+
+### Why it is not in the tree
+
+`strategy_test` turned **"a wide formation beats a narrow diamond on the flanks" from inconclusive to
+REFUTED** (−0.683, 95% CI [−1.091, −0.276]). Splitting that fixture into attack and defence over 200
+matches:
+
+| | scored | conceded | GD |
+|---|---|---|---|
+| with the wide run | 0.80 | 1.37 | −0.57 |
+| without | 0.82 | 1.22 | −0.40 |
+
+**No attacking benefit whatsoever, and +0.15 conceded.** Eight times the wide passes, genuine crossing
+positions, and not one extra goal.
+
+### What that actually tells us
+
+**The wide ball has no value model.** A pass to a man wide in the final third does not become a chance,
+because nothing rewards what happens next — there is no cross, no cutback, no near-post run. So width is not
+one defect with one fix; the passing side, the positioning side and the FINISHING side each have to exist
+before any of them pays, and only the third is missing now that I know what the other two need.
+
+Note also that the 3-4-3 **already loses** to the diamond (GD −0.40) with no wide run at all. That assertion
+was false before I touched anything; at n=60 the noise hid it. Whatever we do about width, that is a
+separate and pre-existing balance problem.
+
+**My recommendation:** do not chase width again until there is a crossing/cutback mechanic to receive it.
+The positioning work above is real and reproducible, and this section is enough to rebuild it in an hour —
+but shipped alone it is a pure defensive tax.
