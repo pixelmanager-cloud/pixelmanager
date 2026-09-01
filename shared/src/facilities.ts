@@ -126,6 +126,28 @@ export function squadMarketability(players: Array<{ marketability?: number }>): 
   return players.reduce((s, p) => s + (p.marketability ?? 10), 0) / players.length;
 }
 /** Fan Zone: home-side attacking edge in the match engine (1.0 at L1 → 1.08 at L5). */
+/** PLAYING AT HOME, before any facility is built. `fanHomeBoost` is a Fan Zone UPGRADE on top of this, and
+ *  at level 1 it returns exactly 1.0 — so with this absent there was no venue effect in the game at all.
+ *
+ *  Worse, it was not merely missing: `myTeam.homeBoost` is set to 1.04-1.08 by the team talk in EVERY match
+ *  home or away, and `oppTeam.homeBoost` is never set at all, so the player carried a shot-volume edge
+ *  everywhere and a host never did. That is not a missing home advantage, it is a permanent player one.
+ *
+ *  Calibrated with IDENTICAL elevens on both sides, n=800, gaps quoted with a 95% interval. The engine is
+ *  symmetric to begin with, which is what makes the rest of the row meaningful:
+ *      1.00 -> home 1.364 ppg, away 1.379, gap -0.015 +/- 0.205   (295W-206D-299L: a coin flip)
+ *      1.18 -> 1.474 / 1.279, gap +0.195 +/- 0.205                (interval still touches zero)
+ *      1.40 -> 1.555 / 1.199, gap +0.356 +/- 0.204                (349W-197D-254L)
+ *
+ *  1.40 it is. The multiplier looks large, but it is calibrated on the OUTCOME rather than on its own size:
+ *  43.6% home / 24.6% draw / 31.8% away against real football's roughly 45/26/29, and +0.356 ppg against a
+ *  real +0.33 to +0.40. My first pass set this to 1.18 off a noisy 400-match read that appeared to show
+ *  +0.26; at n=800 that setting is +0.195 with an interval that includes zero, so it would have shipped an
+ *  edge indistinguishable from none.
+ *
+ *  An away-conditioning penalty was tried as a second channel and measured inside noise (1.12/0.94 was
+ *  indistinguishable from 1.12/1.00), so this is a single-channel effect on shot volume. */
+export const HOME_EDGE = 1.40;
 export function fanHomeBoost(level: number): number { return 1 + (level - 1) * 0.02; }
 // THERE IS NO "STANDING" IN THIS GAME. `womensStanding` and `communityStanding` computed a number that
 // existed nowhere else: no field on the club, no facade call, nothing in prestige.ts — their only callers

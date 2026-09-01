@@ -2365,3 +2365,55 @@ separate and pre-existing balance problem.
 **My recommendation:** do not chase width again until there is a crossing/cutback mechanic to receive it.
 The positioning work above is real and reproducible, and this section is enough to rebuild it in an hour —
 but shipped alone it is a pure defensive tax.
+
+## 72. HOME ADVANTAGE — SHIPPED. It was not missing, it was a player advantage wearing its name.
+
+### What was actually wrong
+
+I told you earlier that home advantage was *inverted* (home 40% / away 47% in the fuzz line). **That was
+wrong and I withdraw it** — that fixture puts different teams on each side, so the gap was team quality.
+With genuinely identical elevens on both sides the engine is symmetric: 295W-206D-299L over 800 matches, a
+ppg gap of −0.015 ± 0.205. There is no geometry bias. Home advantage was simply **absent**.
+
+But absent understates it. Three facts together:
+
+- `fanHomeBoost(1)` returns **exactly 1.0**, so it is a Fan Zone *upgrade*, not a venue effect. An
+  unimproved club got nothing for hosting.
+- the team talk sets `myTeam.homeBoost` to 1.04–1.08 in **every** match, home or away
+- `oppTeam.homeBoost` was **never assigned anywhere in the codebase**
+
+So the player carried a shot-volume edge in every fixture of his career, and a host never carried one. That
+is not a missing home advantage; it is a permanent player advantage using its name. Playing away was, if
+anything, mechanically easier than it should have been.
+
+**And the two models disagreed with each other.** The rolled model behind the rivals' league
+(`main.ts` `simEdge`) has always had `venue === 'home' ? +0.25 : -0.25`. So nine clubs in every division
+played with home advantage while the player's own matches had none.
+
+### What shipped
+
+`HOME_EDGE = 1.40` in `shared/src/facilities.ts`, applied to whichever side is actually hosting, in both the
+played and the simmed path, and to nobody in a neutral cup final. The team-talk edge is unchanged and still
+travels with the player, as a talk should.
+
+Calibrated on identical elevens, n=800, 95% intervals:
+
+| boost | home ppg | away ppg | gap |
+|---|---|---|---|
+| 1.00 | 1.364 | 1.379 | −0.015 ± 0.205 |
+| 1.18 | 1.474 | 1.279 | +0.195 ± 0.205 (touches zero) |
+| **1.40** | **1.555** | **1.199** | **+0.356 ± 0.204** |
+
+At 1.40 the split is 43.6% / 24.6% / 31.8% against real football's roughly 45 / 26 / 29, and +0.356 ppg
+against a real +0.33 to +0.40. The multiplier looks large; it is calibrated on the outcome, not on its own
+size.
+
+**I nearly shipped 1.18.** A 400-match read appeared to show +0.26 and I set the constant to it; at n=800
+that setting measures +0.195 with an interval including zero, so it would have been an edge indistinguishable
+from none. The 400-match figure had also been contaminated by an away-conditioning term I then measured as
+useless (1.12/0.94 was indistinguishable from 1.12/1.00), so home advantage here is single-channel.
+
+`tools/playtest/home_advantage.ts` guards both halves, because fixing one without the other is how this
+happened: the calibration (symmetric without the edge, a real one with it, not an absurd one) and the wiring
+(both match paths hand the edge to the host, from the one shared constant). Note the gate's own engine
+fixtures never set `homeBoost`, so this probe is the only thing that can catch a regression here.

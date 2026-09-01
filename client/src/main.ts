@@ -20,7 +20,7 @@ import { commentaryExtra, fillCm, type CommentaryBranch } from '../../shared/src
 import { narrateManager, type PersonCtx } from '../../shared/src/managerNarrate.js';
 import { pickManagerArc, managerArcById, MGR_TEMPERS, applyMorale, type MgrSituation, type MgrArcEffect, type MgrTemper } from '../../shared/src/managerarc.js';
 import { goalPair, mixSeed } from '../../shared/src/clubseason.js';
-import { facilityLevelStory, FACILITY_META, facilityUpkeep, mothballRefund, trainingConditioning, fanHomeBoost, dataEdge, dormIntakeBonus, type FacilityKey } from '../../shared/src/facilities.js';
+import { HOME_EDGE, facilityLevelStory, FACILITY_META, facilityUpkeep, mothballRefund, trainingConditioning, fanHomeBoost, dataEdge, dormIntakeBonus, type FacilityKey } from '../../shared/src/facilities.js';
 import { nextHouseTier, renownBidMult, renownPedigree, renownIncomeMult } from '../../shared/src/renown.js';
 import { houseListings, houseOf, seedHouseIntoSquad, houseNews } from '../../shared/src/houses.js';
 
@@ -2457,7 +2457,11 @@ class Game {
       // no simmed equivalent, so the neutral "just play your game" edge stands in for it.
       myTeam.homeBoost = 1.04;
       myTeam.conditioning = (myTeam.conditioning ?? 1) * trainingConditioning(this.facLevels.training ?? 1);
-      if (venue === 'home') myTeam.homeBoost *= fanHomeBoost(this.facLevels.fanzone ?? 1);
+      // THE HOST GETS THE VENUE EDGE, whoever the host is. `myTeam.homeBoost` above is the team-talk
+      // edge and applies wherever the match is played; without this line's `else`, an away fixture gave
+      // the player that edge and the actual home side nothing at all.
+      if (venue === 'home') myTeam.homeBoost *= HOME_EDGE * fanHomeBoost(this.facLevels.fanzone ?? 1);
+      else oppTeam.homeBoost = (oppTeam.homeBoost ?? 1) * HOME_EDGE;
       myTeam.homeBoost *= 1 + dataEdge(this.facLevels.data ?? 1);
 
       const iAmHome = venue === 'home';
@@ -2964,7 +2968,7 @@ class Game {
     // injuryChanceMult ended up crossing zero and making injuries impossible at a maxed Medical Centre.
     const trainLvl = this.facLevels.training ?? 1, fanLvl = this.facLevels.fanzone ?? 1;
     myTeam.conditioning = (myTeam.conditioning ?? 1) * trainingConditioning(trainLvl);
-    if (sp.venue === 'home' && !sp.neutral) myTeam.homeBoost = (myTeam.homeBoost ?? 1) * fanHomeBoost(fanLvl); // fan-zone edge only at a true home game, never a neutral-ground decider (PT-130)
+    if (sp.venue === 'home' && !sp.neutral) myTeam.homeBoost = (myTeam.homeBoost ?? 1) * HOME_EDGE * fanHomeBoost(fanLvl);
     // DATA DEPARTMENT — opposition prep, so it applies home AND away, unlike the fan-zone edge. It was
     // computed only to render its own description string and applied to nothing.
     myTeam.homeBoost = (myTeam.homeBoost ?? 1) * (1 + dataEdge(this.facLevels.data ?? 1));
@@ -2977,6 +2981,11 @@ class Game {
     // THE OCCASION. 0 (absent) for a league week, rising through a cup run to 1 for a final. Both sides
     // get it: a big game is big for everyone on the pitch, and giving it to one side only would be the
     // PT-305 asymmetry again. Read solely by the Big-Game Player trait in `resolveShot`.
+    // THE HOST GETS THE VENUE EDGE, whoever the host is. The `myTeam.homeBoost` set above is the TEAM TALK,
+    // which applies wherever the match is played -- so without this the player carried a shot-volume edge in
+    // every fixture of his career while an actual home side never carried one. A neutral tie (a cup final)
+    // gives it to nobody, which is what `!sp.neutral` is for.
+    if (sp.venue !== 'home' && !sp.neutral) oppTeam.homeBoost = (oppTeam.homeBoost ?? 1) * HOME_EDGE;
     if (sp.stakes != null) { myTeam.stakes = sp.stakes; oppTeam.stakes = sp.stakes; }
     const oppTactics: Tactics = sp.oppTactics;
     const iAmHome = sp.venue === 'home';
