@@ -1898,6 +1898,44 @@ Two decisions for CK, and I have deliberately not taken either:
 - **Should duties get a defensive positioning term at all?** Finding 1 says the defensive half of the duty
   system does not exist. That is a feature decision, not a bug fix.
 
+### 4-2-2-2 — INVESTIGATED, NOT FIXED, AND THE ASSERTION IS ITSELF UNDERPOWERED
+
+This was the one `strategy_test` failure judged REAL and untouched by all four tactical approaches. I chased
+it and did not fix it. What is established:
+
+**On `main` the assertion is a coin flip.** 4-2-2-2 v 4-1-4-1 measures **23W-17D-20L** at N=60, with shots
+dead level (53.1 v 52.5). A three-game margin out of sixty. So it passes on `main` by luck, exactly like the
+six noise failures — the difference is only that its luck currently runs the right way.
+
+**On the branch it is decisively lost:** 8W-41L, with a 2.7:1 shot deficit (6.1 v 16.4). That is not noise,
+so the rebuild did change something real, even though the bar was never powered to prove it either way.
+
+**It is NOT caused by any of today's changes.** Bisected: with `ADVANCE_FLOOR=0`, `OUTCOME_SENS=1` and
+`RANGE_APPETITE=0` — every one of today's three engine changes disabled — it still reads **5W-43L**. The
+defect arrived with the original geometry rebuild, before any of this session's work.
+
+**And it is not one constant.** `BOX_RUN=0` gives 13W-38L; `CLEAR_RUN_APPETITE=1` gives 11W-35L. Each helps,
+neither fixes. It is emergent across the new geometry.
+
+**Three wrong hypotheses, recorded so they are not retried.** (1) That the advance floor made territory
+worthless so two strikers were a wasted body — scaling the floor by how many men are ahead of the ball made
+it WORSE (8W-41L to 4W-45L), because 4-1-4-1 fields four advanced midfielders plus a striker and therefore
+commits MORE men forward than 4-2-2-2, not fewer. I had mis-read it as a defensive shape. (2) That
+`RANGE_APPETITE` rewarded midfield-heavy shapes by making 25-30m shots viable — identical result at 0 and
+0.55. (3) That it was the shape edge in `computeZonal` — the numbers do not support a −0.055 edge producing
+a 5:1 win rate.
+
+**What is actually true:** 4-1-4-1's five-midfielder shape dominates every two-striker shape on the rebuilt
+engine. 4-4-2 loses to it 9W-35L as well, so this is not about 4-2-2-2 specifically. A single formation
+beating the field 5:1 is a real balance problem whatever the assertion's power.
+
+**Recommended, and deliberately not done here:** re-derive formation balance against the rebuilt engine as a
+piece of work in its own right, with a properly powered probe rather than N=60. That may end with the
+FORMATION coordinates changing rather than the engine — `formations.ts` positions were laid out for an
+engine where every shot resolved instantly from midfield, and 4-1-4-1's four midfielders at x=46-50 sit
+exactly where the new geometry rewards. Fixing it by nudging an engine constant until a 60-match coin flip
+lands the right way would be the same mistake this document has now caught four times.
+
 ### The decision
 Your rule was **"the league wins, always"** — tune the match down until the pyramid holds. I have done that,
 and the honest result is that the pyramid holds *only* at 0.58 goals a match. So the rule now has a cost you
