@@ -932,7 +932,9 @@ class Game {
     // ('set-team' lives in the manager layer, unlinked from the home for now — see linear-life note in showHub)
     $('autopick').addEventListener('click', () => { this.draftLineup = this.starGuarded(autoPickXI(this.availableClub(), this.draftTactics.formation)); this.rebuildDuties(); this.renderLineupEditor(); });
     $('save-team').addEventListener('click', () => (this.editorMode === 'standing' ? this.saveTeam() : this.kickOffMatch()));
-    $('lineup-back').addEventListener('click', () => this.showHub());
+    $('lineup-back').addEventListener('click', () => {
+      if (this.lineupReturn === 'season') { this.lineupReturn = 'hub'; this.showSeason(); } else void this.showHub();
+    });
     $('toggle-squad').addEventListener('click', () => {
       const panel = $('squad-panel');
       const show = panel.classList.contains('hidden');
@@ -1942,7 +1944,7 @@ class Game {
       + this.sponsorHtml()
       + this.worldCupHtml()
       + this.continentalHtml()
-      + (m.starName ? `<div class="sf-tm"><button id="sf-transfers">💰 Transfer Market</button> <span class="sf-tm-hint">buy/sell players to strengthen the squad</span></div>` : '')
+      + (m.starName ? `<div class="sf-tm"><button id="sf-transfers">💰 Transfer Market</button> <button id="sf-teamsheet">📋 Team Sheet</button> <span class="sf-tm-hint">buy/sell players to strengthen the squad</span></div>` : '')
       + `<div class="season-cols"><div class="season-fixtures"><h4 class="scout-h4">FIXTURES</h4>${fxRows}${records}${focusSel}${simBtn}</div>`
       + `<div class="season-table-wrap"><h4 class="scout-h4">LEAGUE TABLE — ${tierName(tier).toUpperCase()}</h4>${this.spTableHtml(t, tier)}${this.staffHtml()}</div></div>`;
     // Keyboard/controller access for the decision the game turns on — see makeActivatable. It exists and
@@ -1962,6 +1964,11 @@ class Game {
     $('sf-wc-sim')?.addEventListener('click', () => this.simWorldCupTie());
     $('sf-play')?.addEventListener('click', () => this.playNextSpFixture());
     $('sf-transfers')?.addEventListener('click', () => this.openTransferMarket());
+    // STANDING ORDERS WERE UNREACHABLE. `openLineup('standing')` had no caller anywhere -- all three sites
+    // pass 'match' -- so `saveTeam()`, the whole 'standing' editor mode and one of the two
+    // `api.setStandingOrders` call sites were dead, and the only way to change your team sheet was to walk
+    // into a fixture and change it there. This is the door.
+    $('sf-teamsheet')?.addEventListener('click', () => { this.lineupReturn = 'season'; this.openLineup('standing'); });
     if (bid) {
       $('sf-bid-accept')?.addEventListener('click', () => this.acceptStarBid(bid, m));
       $('sf-bid-reject')?.addEventListener('click', () => { try { localStorage.setItem(bidKey, '1'); } catch { /* ignore */ } toast('Bid rejected — he stays.'); { const sp = this.club?.players.find((x) => x.id === this.loadMgr().starId); this.feedEvent('bid_rejected', '🤝', sp ? this.personCtx(sp, true) : undefined); } this.showSeason(); });
@@ -4297,6 +4304,9 @@ class Game {
   // ---- lineup editor (my standing orders) ----
   // Opens the pixel lineup editor either to save your standing orders, or to set a
   // one-off lineup + tactics for a specific match (prefilled from your standing orders).
+  /** Where to go back to when the team sheet is saved or abandoned -- the hub, or the season screen
+   *  the manager opened it from. */
+  private lineupReturn: 'hub' | 'season' = 'hub';
   private openLineup(mode: 'standing' | 'match', opp?: { id: string; handle: string; venue: 'home' | 'away' }) {
     this.editorMode = mode;
     this.draftPlan = this.loadPlan(); // armed conditional match-plan orders
@@ -4634,7 +4644,7 @@ class Game {
     await this.persistTeamSheet();
     if (this.standingOrders === before) { $('lineup-insight').innerHTML = '<span style="color:var(--home)">Could not save — check your XI.</span>'; return; }
     toast('Team saved ✓');
-    await this.showHub();
+    if (this.lineupReturn === 'season') { this.lineupReturn = 'hub'; this.showSeason(); } else await this.showHub();
   }
 
   // ---- match ----
