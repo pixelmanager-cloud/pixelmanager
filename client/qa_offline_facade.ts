@@ -260,5 +260,30 @@ console.log('\n=== MAX_SQUAD is a squad bound, not a purchase bound ===');
   assert(/squad is full/i.test(msg), `signTrial into a full squad is refused FOR BEING FULL (got: ${msg || 'no throw'})`);
 }
 
+console.log('\n=== per-player season stats survive a round trip ===');
+{
+  // The chain deriveMatchStats -> bumpPlayerStats -> seasonPlayerStats -> SaveModel.playerStats existed in
+  // full and was connected at no point; deriveMatchStats' only importer was its own QA harness. This
+  // covers the facade half: what onFullTime records must come back out, and must ACCUMULATE across
+  // matches rather than overwrite -- a season total that silently reset every week would look plausible
+  // and be wrong, which is the failure mode this repo specialises in.
+  const before = (await api.seasonStats()).stats.length;
+  await api.recordMatchStats({ rows: [
+    { id: 'p-1', name: 'A Striker', goals: 2, assists: 0, apps: 1, potm: 1 },
+    { id: 'p-2', name: 'A Winger', goals: 0, assists: 1, apps: 1, potm: 0 },
+  ] });
+  await api.recordMatchStats({ rows: [
+    { id: 'p-1', name: 'A Striker', goals: 1, assists: 1, apps: 1, potm: 0 },
+  ] });
+  const after = (await api.seasonStats()).stats;
+  assert(after.length === before + 2, `two players recorded (${before} -> ${after.length})`);
+  const striker = after.find((r) => r.player_id === 'p-1');
+  assert(striker?.goals === 3 && striker?.assists === 1 && striker?.apps === 2 && striker?.potm === 1,
+    `totals ACCUMULATE across matches (3g 1a 2apps 1potm, got ${striker?.goals}g ${striker?.assists}a ${striker?.apps}apps ${striker?.potm}potm)`);
+  // a row with no id is not a player; recording it would create a ghost in the table
+  await api.recordMatchStats({ rows: [{ id: '', name: 'Nobody', goals: 9, assists: 9, apps: 9, potm: 9 } as any] });
+  assert((await api.seasonStats()).stats.length === after.length, 'an id-less row is ignored, not stored as a ghost');
+}
+
 console.log(failures === 0 ? `\n✓ all offline-facade checks passed` : `\n✗ ${failures} offline-facade check(s) FAILED`);
 if (failures > 0) process.exit(1);

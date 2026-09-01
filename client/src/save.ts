@@ -10,7 +10,7 @@ import {
   type Club, type StandingOrders, type Token,
   type GameStore, type HonourRow, type MissionRow, type ProspectRow, type PlayerSeasonStat, type Award,
 
-  autoPickXI, TACTIC_PRESETS,} from '@fm/shared';
+  autoPickXI, TACTIC_PRESETS, parseRoles, rolesJson,} from '@fm/shared';
 
 // The whole save belongs to one local profile — server-era `ownerId`/`accountId` params are accepted
 // (for signature-compatibility with lifted server logic, see GameStore doc-comment) but ignored.
@@ -49,6 +49,13 @@ export interface SaveModel {
 export const SAVE_VERSION = 2;
 
 /** Bring an older save up to SAVE_VERSION. Pure and idempotent — running it twice must be a no-op. */
+/** Re-derive `captainIdx`/`takers` through the hardened parser, dropping anything malformed. Both keys are
+ *  written explicitly (even as undefined) so a corrupt value is REMOVED rather than merely not replaced. */
+function normaliseRoles(so: StandingOrders): { captainIdx?: number; takers?: { pen?: number; fk?: number; corner?: number } } {
+  const clean = parseRoles(rolesJson(so));
+  return { captainIdx: clean.captainIdx, takers: clean.takers };
+}
+
 export function migrate(m: SaveModel): SaveModel {
   // BACKFILL EVERY COLLECTION FIRST, unconditionally — before the version gate, because a save that is
   // already v2 can still be missing an array. This repaired only tokens: a save with no `injuries` threw
@@ -126,7 +133,14 @@ export function migrate(m: SaveModel): SaveModel {
     // TypeError. Permanently: the club can never be managed again. A sheet whose `playerIds` is not an
     // array is the same shape, so both get a usable default rather than a crash.
     standingOrders: (m.standingOrders && Array.isArray((m.standingOrders as any).playerIds))
-      ? m.standingOrders
+      // AND THE ROLES INSIDE IT NOW GET THE PARSER THAT WAS WRITTEN FOR THEM. `parseRoles`' own doc-comment
+      // opens "THIS IS ON THE LOAD PATH, so it must never throw" — and it was not on the load path. It and
+      // `rolesJson` were the serializers for the server's `so_roles` column; the server was removed in
+      // phase 4, and since then the whole sheet persists as one JSON object with nothing validating the
+      // roles inside it. So the hardening — a corrupt `captainIdx` cannot fabricate a designation, and a
+      // string, an array or a null is dropped rather than trusted — sat one call away from the only place
+      // it could ever matter, with a 310-line harness proving it worked. This applies it.
+      ? { ...m.standingOrders, ...normaliseRoles(m.standingOrders as StandingOrders) }
       : { formation: '4-4-2', playerIds: autoPickXI(m.club, '4-4-2').playerIds, tactics: { ...TACTIC_PRESETS.Balanced } },
   };
   // attached only when something was actually unreadable, so a clean save passes through untouched

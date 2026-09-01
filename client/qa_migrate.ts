@@ -119,4 +119,42 @@ for (const [label, bad] of [
   if (JSON.stringify(fixed.standingOrders) !== before) fail('a valid team sheet was rewritten by the repair');
 }
 
+
+// ── A CORRUPT ROLE DESIGNATION MAY NOT SURVIVE THE LOAD ─────────────────────────────────────────────
+// `parseRoles`' doc-comment opens "THIS IS ON THE LOAD PATH, so it must never throw" — and until now it
+// was not on the load path at all. It and `rolesJson` were the serializers for the server's `so_roles`
+// column, and the server went away in phase 4; since then `migrate` validated only that `playerIds` is an
+// array, so a `captainIdx` of the wrong SHAPE — a string, an array, a null — loaded untouched and reached
+// `buildXI`, where `lineup.captainIdx === i` silently never matches and the armband quietly vanishes.
+// These assert the hardening now actually runs, and that a legitimate designation is left alone.
+{
+  const mk = (roles: any) => {
+    const m: any = freshSave('Roles');
+    m.standingOrders = { ...m.standingOrders, ...roles };
+    return migrate({ ...m, version: SAVE_VERSION }) as any;
+  };
+  for (const [label, bad] of [
+    ['a string captain', { captainIdx: '3' }],
+    ['a null captain', { captainIdx: null }],
+    ['an array captain', { captainIdx: [1, 2] }],
+    ['a NaN captain', { captainIdx: NaN }],
+    ['a string taker', { takers: { pen: 'x' } }],
+    ['an array of takers', { takers: [1, 2, 3] }],
+  ] as Array<[string, any]>) {
+    const so = mk(bad).standingOrders;
+    if (so.captainIdx != null && typeof so.captainIdx !== 'number') fail(`${label}: captainIdx survived as ${typeof so.captainIdx}`);
+    if (so.captainIdx != null && !Number.isFinite(so.captainIdx)) fail(`${label}: a non-finite captainIdx survived`);
+    if (so.takers != null && (typeof so.takers !== 'object' || Array.isArray(so.takers))) fail(`${label}: takers survived as a non-object`);
+    for (const k of ['pen', 'fk', 'corner'] as const) {
+      const v = so.takers?.[k];
+      if (v != null && !Number.isFinite(v)) fail(`${label}: taker ${k} survived as ${typeof v}`);
+    }
+  }
+  // ...and the honest case is untouched, because dropping a good designation would be silent loss —
+  // exactly the failure the module was hardened against in the first place.
+  const kept = mk({ captainIdx: 4, takers: { pen: 2, fk: 7, corner: 9 } }).standingOrders;
+  if (kept.captainIdx !== 4) fail(`a valid captain was dropped (got ${kept.captainIdx})`);
+  if (kept.takers?.pen !== 2 || kept.takers?.fk !== 7 || kept.takers?.corner !== 9) fail('valid set-piece takers were dropped');
+}
+
 if (!process.exitCode) console.log('✓ migration repairs missing AND malformed collections, and leaves its input alone');

@@ -23,6 +23,7 @@ import {
   generatePool, trialistAt, LOANEE_CAP, DESTINATIONS, destinationById, rollMission, travelMs as travelMsPure, travelMatchdays, previewOdds,
   gaffersDiaryEntry,
   rollGenes, updateMorale, moraleEffects, rollMatchInjuries, developAttrs,
+  deriveMatchStats, type MatchPlayerStat,
   houseRenown, branchCareer, rivalStandings, renownPedigree, renownBidMult, renownIncomeMult, type HouseMember,
   tokenToPlayer, tokenContract, legendCardOf, loadCareer, actWithNarration, careerState, graduatedFields, careerCast, fillArcText,
   rebornFields, rebornPotential, prospectTemper, careerSeedFor, trackFor, agentsList, foundingNameFor, nameFor,
@@ -1493,5 +1494,30 @@ export const api = {
     return { entry };
   },
   honours: async (limit?: number) => { await ensureActive(); return { honours: await localStore.honoursFor(OWNER, limit) }; },
+  /** Record one finished match into the season's per-player stat table.
+   *
+   *  THE LAST WIRE IN A FOUR-PIECE CHAIN THAT WAS NEVER CONNECTED. `deriveMatchStats` turns an event
+   *  stream into per-player rows, `bumpPlayerStats` accumulates them, `seasonPlayerStats` reads them back
+   *  and `SaveModel.playerStats` persists them — four pieces, all built, all hardened, all tested, and
+   *  none of them ever calling another. `deriveMatchStats`' only importer was its own QA harness.
+   *
+   *  Only the manager's own side is recorded: opponents are regenerated per fixture from a seed and their
+   *  ids do not survive the match, so accumulating them would grow the save with rows nothing can read. */
+  recordMatchStats: async (body: { rows: MatchPlayerStat[] }) => {
+    await ensureActive();
+    const seasonId = String(getActiveModel().profile.season);
+    for (const r of body.rows ?? []) {
+      if (!r?.id) continue;
+      await localStore.bumpPlayerStats(seasonId, OWNER, r.id, r.name,
+        { goals: r.goals, assists: r.assists, apps: r.apps, potm: r.potm });
+    }
+    return { ok: true as const };
+  },
+  /** This season's per-player totals for the manager's squad. */
+  seasonStats: async () => {
+    await ensureActive();
+    const seasonId = String(getActiveModel().profile.season);
+    return { season: getActiveModel().profile.season, stats: await localStore.seasonPlayerStats(seasonId, [OWNER]) };
+  },
   scoutTiers: async () => ({ opp: TIER, player: TIER, nft: { address: '', chainId: 0, enabled: false } }),
 };

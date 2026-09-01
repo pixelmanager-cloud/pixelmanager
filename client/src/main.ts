@@ -1,6 +1,6 @@
 import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, resolveMatchXI, intentOf, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
-  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry, tierName, TIERS, tierStrength,
+  TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, deriveMatchStats, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry, tierName, TIERS, tierStrength,
   FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, moodFromScore, boardMessageFor, deriveExpectation, PRESTIGE_LEVELS, prestigeRankUpBlurb, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition, contTieBlurb, wcGroupDramaBlurb, wcKnockoutDramaBlurb, worldCupFinishBlurb,
   transferList, wageForLength, sellValue, squadSaleValue, squadSeasonWage, moraleEffects, incomingBid, MIN_SQUAD, MAX_SQUAD, type Listing,
   ACHIEVEMENTS, evaluateAchievements, achievementById, type AchSnapshot, lifeAction,
@@ -429,6 +429,7 @@ class Game {
   /** The last squad-rollover report (Living Squad) — shown on the season screen after a rollover so the
    *  manager sees who grew, who faded, who retired and whose deal is up. */
   pendingSquadReport: any = null;
+  seasonLeaders: any[] | null = null; // this season's per-player rows (api.seasonStats)
   draftPlan = new Set<string>();          // armed conditional match-plan rule ids (single-player)
   planFired = new Set<string>();          // rules already triggered this match
   planBaseTactics: Tactics | null = null; // the kickoff tactics — shifts apply relative to this
@@ -1808,6 +1809,12 @@ class Game {
     // page load, all thirty `when.facility` arc gates read level 1 and the arcs they gate cannot be offered.
     // Re-running the offer after the levels arrive costs nothing when one has already been picked
     // (`maybeOfferArc` returns immediately if `arcNow` is set) and closes the window when it has not.
+    if (this.seasonLeaders == null) {
+      api.seasonStats().then((d) => {
+        this.seasonLeaders = d.stats ?? [];
+        if (!$('season').classList.contains('hidden')) this.showSeason();
+      }).catch(() => { this.seasonLeaders = []; });
+    }
     api.facilities().then((d) => {
       this.facLevels = Object.fromEntries(d.facilities.map((f) => [f.key, f.level]));
       if (!$('season').classList.contains('hidden') && !this.loadMgr().arcNow) this.maybeOfferArc();
@@ -1931,6 +1938,7 @@ class Game {
       + this.managerArcHtml()
       + this.seasonFeedHtml()
       + this.squadReportHtml()
+      + this.seasonLeadersHtml()
       + this.sponsorHtml()
       + this.worldCupHtml()
       + this.continentalHtml()
@@ -4236,6 +4244,21 @@ class Game {
     }
   }
 
+  /** This season's leading players, from the rows recorded at full time. */
+  private seasonLeadersHtml(): string {
+    const rows = this.seasonLeaders;
+    if (!rows?.length) return '';
+    const top = [...rows].sort((a, b) =>
+      (b.goals - a.goals) || (b.assists - a.assists) || (b.potm - a.potm) || (b.apps - a.apps)).slice(0, 5);
+    if (!top.some((r) => r.goals || r.assists || r.potm)) return ''; // appearances only — no headline yet
+    const cell = (r: any) => {
+      const bits = [r.goals ? `<b>${r.goals}</b> ⚽` : '', r.assists ? `<b>${r.assists}</b> 🅰️` : '', r.potm ? `<b>${r.potm}</b> ⭐` : '']
+        .filter(Boolean).join(' ');
+      return `<div class="sq-row"><span class="sq-lbl">${r.player_name}</span><span class="sq-list">${bits} <i>${r.apps} apps</i></span></div>`;
+    };
+    return `<div class="sf-leaders"><h4 class="scout-h4">📊 THIS SEASON</h4>${top.map(cell).join('')}</div>`;
+  }
+
   private renderTrialPool(pool: Trialist[], capReached: boolean): string {
     const label: Record<string, string> = { raw: 'Raw', squad: 'Squad', quality: 'Quality', gem: 'Gem' };
     return pool.map((t) => {
@@ -4715,6 +4738,14 @@ class Game {
     if (this.spFixture) {
       const s = this.engine!.state;
       const myGoals = s.score[this.mySide], oppGoals = s.score[1 - this.mySide];
+      // RECORDED BEFORE THE CUP BRANCHES BELOW RETURN. Both of them exit early, so anything written after
+      // them would silently miss every continental and World-Finals tie — the matches a player actually
+      // remembers. Failures are swallowed: a stat row is worth less than the result card.
+      try {
+        const rows = deriveMatchStats(this.engine!.teams[0], this.engine!.teams[1], s.events, s.score as [number, number]);
+        await api.recordMatchStats({ rows: rows[this.mySide] });
+        this.seasonLeaders = null; // recompute on the next season screen
+      } catch { /* a stat row must never cost the player his result */ }
       // A CUP TIE IS STILL NINETY MINUTES. Both branches below returned before settleInjuries, so a knock
       // never healed across a European run and none was ever picked up in one either.
       if (this.spFixture.comp === 'cont' || this.spFixture.comp === 'wc') await this.settleInjuries();
