@@ -1786,6 +1786,60 @@ several more re-hanging the tactical dials and re-deriving ratchets, because 20 
 minutes per run. The ratchets are the delicate part: re-deriving a "known-bad" bar is indistinguishable
 from moving the goalposts unless each move is justified against a measured before-and-after, so every one
 of them gets its number written down.
+### WHERE THE ENGINE ACTUALLY IS NOW — 2026-09-01, after the advance floor
+
+The advance floor (design D of four, built independently and judged) is on `engine/rebuild-2` and it is
+the first change in three attempts that is ADDITIVE rather than a trade:
+
+| | before | after |
+|---|---|---|
+| weak-side box reach | 0.9% | **21.4%** |
+| strong-side shots | 9.0 | **12.0** (up, not suppressed) |
+| goals/match | 0.75 | **2.77** — real football |
+| `strategy_test` | 7 fail, 2 shape inversions | **6 fail, 2 shape assertions REPAIRED** |
+
+The shape repair is the important part: wide 3-4-3 v narrow diamond goes 4W-36L to 35W-18L and attack-focus
+goes from a dead 118-118 tie to live and correctly signed. That inversion is what killed both previous
+rebuilds, and it is now fixed rather than traded away.
+
+### THE REMAINING DEFECT IS ONE THING, AND IT IS NOT VOLUME
+
+Goals are now RIGHT (2.77 against a real ~2.7) while shots are half of real (12 against ~25) at a median
+7.6m against ~16m, with 79% inside the box against a real 50-60%. Too few shots, converted at about double
+the real rate, because they are all tap-ins. That single distribution is also what starves the mental
+layer: composure, leadership, Clinical Finisher and The Wall are additive terms on the FINISH, so they need
+shots to act on, and `qa_mental` measures their combined swing at 1.07 goals here against 3.07 on main —
+which takes ~70 shots a match to get there.
+
+**The obvious fix was built and REJECTED on measurement.** `closeness` is `1 - distGoal / SHOOT_RANGE`,
+exactly zero at 30m, so a carrier arriving at the edge of range has a literally impossible shot and must
+keep running in. Giving shooting a floor of willingness at range fixes the distribution precisely as
+predicted — but it costs the league:
+
+| at ADVANCE_FLOOR=8 | shots | median | in box | mental swing | underdog wins |
+|---|---|---|---|---|---|
+| range appetite 0 | 12.0 | 7.6m | 79% | 1.07 | **4.0%, 7 divisions of 10** |
+| range appetite 0.35 | 17.5 | 13.3m | 63% | 1.57 | 2.0%, 3 divisions |
+| range appetite 0.40 | ~18 | ~14m | ~61% | **2.07 (passes)** | thrashing 17% (fails) |
+
+The bars cross between 0.35 and 0.40 and no value satisfies both. Raising the floor instead is worse on
+both counts (F=12: swing 0.86, thrashing 33%). Reverted, on the standing rule that the league wins.
+
+**Note which gate caught it.** `division_balance` passed at every one of those settings. The regression was
+only visible to `league_competitiveness`, added the same day — underdog wins halving from 4.0% to 2.0% and
+from seven divisions to three. Without that probe this would have shipped looking like a clean win.
+
+### SO THE NEXT STEP IS NOT MORE VOLUME
+
+Three separate routes to more shots (pace compression, the build-out, range appetite) have now each been
+measured and each cost the league, for the same reason every time: **quality is still too decisive, so any
+added volume is amplified into margin.** The underdog takes about 8% off the favourite here against real
+football's 25-30%, before and after every change so far.
+
+The next thing to build is therefore a compression of how strongly quality determines the OUTCOME — the
+conversion term and the shot-taking term — so that volume can rise without margin rising with it. That is
+a different target from everything tried so far, and the evidence for it is now three independent
+measurements pointing the same way rather than a hypothesis.
 
 ### The decision
 Your rule was **"the league wins, always"** — tune the match down until the pyramid holds. I have done that,
