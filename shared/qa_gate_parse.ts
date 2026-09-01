@@ -83,6 +83,16 @@ console.log('=== the gate parser sees every leg\'s failure shape ===');
   ok(!/[()]/.test(a), `and no parenthesised measurement survives (${a})`);
 }
 
+// 6c. strategy_test's CI output. The measurement must be PARENTHESISED, because the normaliser strips
+//     parentheses and not square brackets -- a bare "95% CI [-0.012, -0.002]  n=60" tail survives and rots
+//     the baseline the first time the engine moves by a thousandth.
+{
+  const a = norm('wing-back fullbacks edge possession (-0.007 mean, 95% CI -0.012 to -0.002, n=60)');
+  const b = norm('wing-back fullbacks edge possession (-0.009 mean, 95% CI -0.014 to -0.004, n=300)');
+  ok(a === b, 'a CI measurement is stripped, so the same refuted claim is one identity at any n');
+  ok(!/\d/.test(a), `and no measurement survives it (${a})`);
+}
+
 // 7. Two DIFFERENT assertions must not collapse together -- otherwise a new failure could hide behind an
 //    accepted one.
 {

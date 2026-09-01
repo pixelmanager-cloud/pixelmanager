@@ -75,10 +75,15 @@ function compare(diffs: number[], claim: string): Verdict {
   const verdict: Verdict = lo > 0 ? 'confirmed' : hi < 0 ? 'refuted' : 'inconclusive';
   tally[verdict]++;
   const mark = verdict === 'confirmed' ? 'ok  ' : verdict === 'refuted' ? 'FAIL' : '  · ';
-  console.log(`  ${mark} ${claim.padEnd(62)} ${mean >= 0 ? '+' : ''}${mean.toFixed(3)}  95% CI [${lo.toFixed(3)}, ${hi.toFixed(3)}]  n=${n}`);
+  // THE MEASUREMENT GOES IN PARENTHESES, deliberately. The gate baseline strips parenthesised groups
+  // containing digits so a drifting number cannot make an accepted failure look like a new one -- but it
+  // strips PARENTHESES, not square brackets, so a bare `95% CI [lo, hi]  n=60` tail survives normalising
+  // and rots the baseline the moment the engine moves by a thousandth. (Same trap as qa_mental's nested
+  // measurement, one layer along.)
+  console.log(`  ${mark} ${claim.padEnd(62)} (${mean >= 0 ? '+' : ''}${mean.toFixed(3)} mean, 95% CI ${lo.toFixed(3)} to ${hi.toFixed(3)}, n=${n})`);
   // Only a REFUTED claim fails. An inconclusive one is a measurement, not a regression.
   if (verdict === 'refuted') {
-    failures.push(`${claim} — the engine does the OPPOSITE: ${mean.toFixed(3)}, 95% CI [${lo.toFixed(3)}, ${hi.toFixed(3)}] at n=${n}`);
+    failures.push(`${claim} — the engine does the OPPOSITE (${mean.toFixed(3)} mean, 95% CI ${lo.toFixed(3)} to ${hi.toFixed(3)}, n=${n})`);
   }
   return verdict;
 }
