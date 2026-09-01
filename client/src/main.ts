@@ -423,7 +423,7 @@ class Game {
   private draftSubs = new Map<number, import('@fm/shared').Cover>();
   editorMode: 'standing' | 'match' = 'standing';
   squadSort: SquadSort | null = null;
-  spFixture: { idx: number; oppClub: Club; oppName: string; oppStrength: number; venue: 'home' | 'away'; neutral?: boolean; oppLineup: Lineup; oppTactics: Tactics; comp?: 'league' | 'cont' | 'wc'; contRound?: number } | null = null; // the single-player fixture being played (neutral = a neutral-ground decider: no fan-zone home bonus, PT-130)
+  spFixture: { idx: number; oppClub: Club; oppName: string; oppStrength: number; venue: 'home' | 'away'; neutral?: boolean; stakes?: number; oppLineup: Lineup; oppTactics: Tactics; comp?: 'league' | 'cont' | 'wc'; contRound?: number } | null = null; // the single-player fixture being played (neutral = a neutral-ground decider: no fan-zone home bonus, PT-130)
   pendingCont: { myGoals: number; oppGoals: number; oppStrength: number } | null = null; // a continental tie awaiting resolution once the full-time card is dismissed
   pendingWc: { myGoals: number; oppGoals: number; oppName: string } | null = null; // a World-Finals knockout tie awaiting resolution
   /** The last squad-rollover report (Living Squad) — shown on the season screen after a rollover so the
@@ -2072,7 +2072,7 @@ class Game {
     const oppClub = generateClub('cont-' + m.season + '-' + round, tie.oppName, 0x8844cc, tie.oppStrength, oppSeed, true);
     const venue: 'home' | 'away' = tie.neutral ? 'home' : (round % 2 === 0 ? 'home' : 'away'); // final on neutral ground, else alternate
     const oppTactics = seededOpponentTactics(oppSeed);
-    this.spFixture = { idx: -1, oppClub, oppName: tie.oppName, oppStrength: tie.oppStrength, venue, neutral: tie.neutral, oppLineup: autoPickXI(oppClub, oppTactics.formation), oppTactics, comp: 'cont', contRound: round }; // neutral final: no fan-zone home bonus (PT-130)
+    this.spFixture = { idx: -1, oppClub, oppName: tie.oppName, oppStrength: tie.oppStrength, venue, neutral: tie.neutral, stakes: [0.5, 0.75, 1][round] ?? 0.5, oppLineup: autoPickXI(oppClub, oppTactics.formation), oppTactics, comp: 'cont', contRound: round }; // neutral final: no fan-zone home bonus (PT-130)
     this.openLineup('match', { id: 'cont-opp', handle: tie.oppName, venue });
   }
   private simContinentalTie() {
@@ -2196,7 +2196,7 @@ class Game {
     const oppClub = generateClub('wc-' + m.wcEdition + '-' + stage, opp.opp, 0x3a7bd5, opp.oppStrength, oppSeed, true);
     void nation;
     const oppTactics = seededOpponentTactics(oppSeed);
-    this.spFixture = { idx: -1, oppClub, oppName: opp.opp, oppStrength: opp.oppStrength, venue: 'home', neutral: true, oppLineup: autoPickXI(oppClub, oppTactics.formation), oppTactics, comp: 'wc' }; // World-Finals ties are on neutral ground → no fan-zone home bonus (PT-130)
+    this.spFixture = { idx: -1, oppClub, oppName: opp.opp, oppStrength: opp.oppStrength, venue: 'home', neutral: true, stakes: stage === 'final' ? 1 : stage === 'sf' ? 0.8 : 0.6, oppLineup: autoPickXI(oppClub, oppTactics.formation), oppTactics, comp: 'wc' }; // World-Finals ties are on neutral ground → no fan-zone home bonus (PT-130)
     this.openLineup('match', { id: 'wc-opp', handle: opp.opp, venue: 'home' });
   }
   private playWorldCupTie() { const s = this.loadMgr().wcStage; if (s === 'qf' || s === 'sf' || s === 'final') this.wcTie(s); }
@@ -2813,6 +2813,10 @@ class Game {
     if (staff.includes('attack')) myTeam.homeBoost = (myTeam.homeBoost ?? 1) * 1.03;
     if (staff.includes('assistant')) { myTeam.homeBoost = (myTeam.homeBoost ?? 1) * 1.02; myTeam.conditioning = (myTeam.conditioning ?? 1) * 0.98; }
     const oppTeam = buildXI(sp.oppClub, sp.oppLineup);
+    // THE OCCASION. 0 (absent) for a league week, rising through a cup run to 1 for a final. Both sides
+    // get it: a big game is big for everyone on the pitch, and giving it to one side only would be the
+    // PT-305 asymmetry again. Read solely by the Big-Game Player trait in `resolveShot`.
+    if (sp.stakes != null) { myTeam.stakes = sp.stakes; oppTeam.stakes = sp.stakes; }
     const oppTactics: Tactics = sp.oppTactics;
     const iAmHome = sp.venue === 'home';
     const me = { id: 'me', handle: this.club.name, team: myTeam, tactics: this.draftTactics };

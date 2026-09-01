@@ -375,7 +375,12 @@ export class MatchEngine {
         if (s.carrier && s.carrier.teamIdx === teamIdx && s.carrier.playerIdx === i) return; // carrier handled separately
         const p = this.teams[teamIdx].players[i];
         const eff = fit(ps.fitness);
-        const speed = (1.8 + norm(p.attrs.pace) * 3.6) * eff * TICK_SEC;
+        // LIVEWIRE ("blistering, frightening pace") lifts how fast he actually moves. Deliberately NOT
+        // hooked into `beatsLastDefender`'s paceGap: measured, a 1.06x on all three pace terms is +25.1%
+        // goals a match at q=17 and the paceGap term alone accounts for +24.4% of that, because it is a
+        // threshold on a difference rather than a rate. The two speed terms together are +7.2%, which is a
+        // trait being worth something rather than a trait rewriting the match.
+        const speed = (1.8 + norm(p.attrs.pace) * 3.6) * (hasTrait(p, 'livewire') ? 1.06 : 1) * eff * TICK_SEC;
 
         // pressers/loose-ball chasers (and the emergency box defender) run at the ball
         if (pressSet.has(i) || i === emergency) {
@@ -420,7 +425,11 @@ export class MatchEngine {
     // stamina stat existed — otherwise norm(undefined)=NaN corrupts fitness → NaN
     // positions → invisible players.
     const staminaFactor = 1.3 - 0.6 * norm(p.attrs.stamina ?? 10);
-    ps.fitness = Math.max(0, ps.fitness - BASE_DRAIN * mods.staminaDrain * (0.7 + 0.6 * norm(p.attrs.workrate)) * staminaFactor * effort * conditioning);
+    // IRON MAN ("runs all day") and ENGINE-ROOM GENERAL ("drags the team through matches by will alone")
+    // are both endurance claims, and this is the only place endurance is spent. They stack deliberately —
+    // a player who has earned both really should still be running in the 90th minute.
+    const willToRun = (hasTrait(p, 'ironman') ? 0.88 : 1) * (hasTrait(p, 'general2') ? 0.93 : 1);
+    ps.fitness = Math.max(0, ps.fitness - BASE_DRAIN * mods.staminaDrain * (0.7 + 0.6 * norm(p.attrs.workrate)) * staminaFactor * effort * conditioning * willToRun);
   }
 
   private stepToward(ps: PlayerState, tx: number, ty: number, maxStep: number): number {
@@ -589,7 +598,7 @@ export class MatchEngine {
     }
 
     // dribble toward goal
-    const speed = (1.6 + norm(carrier.attrs.pace) * 3.0) * fit(cs.fitness) * TICK_SEC;
+    const speed = (1.6 + norm(carrier.attrs.pace) * 3.0) * (hasTrait(carrier, 'livewire') ? 1.06 : 1) * fit(cs.fitness) * TICK_SEC;
     this.stepToward(cs, goal.x, goal.y + (this.rng() - 0.5) * 10, speed);
     this.drain(cs, carrier, this.mods[teamIdx], 1.2);
     s.ball = { x: cs.x, y: cs.y };
@@ -703,9 +712,23 @@ export class MatchEngine {
     } else {
       // composure (+ Clinical Finisher, + a calm well-led side) lifts conversion; The Wall keeper resists it.
       // all centred → a neutral shooter/keeper/team scores exactly as before.
-      const finish = mAdd(shooter.attrs.composure, 0.1) + (hasTrait(shooter, 'clinical') ? 0.04 : 0) + this.leadershipBonus[teamIdx];
+      // BIG-GAME PLAYER ("turns up when it matters most"). Held by 57.5% of graduated bloodline stars —
+      // the most common trait in the game, and on the hero path specifically — while doing nothing at all.
+      // It reads `Team.stakes`, which is 0 for a league fixture and rises for a cup round, so the trait is
+      // inert in the ordinary week and only speaks on the occasion it is named for. It is 0.00 per XI on
+      // squad players (their gate reads a career log they do not have), so this affects exactly one man
+      // per save: yours.
+      const occasion = hasTrait(shooter, 'biggame') ? 0.035 * (this.teams[teamIdx].stakes ?? 0) : 0;
+      const finish = mAdd(shooter.attrs.composure, 0.1) + (hasTrait(shooter, 'clinical') ? 0.04 : 0) + occasion + this.leadershipBonus[teamIdx];
       const wall = hasTrait(gk, 'wall') ? 0.06 : 0;
-      const goalProb = clamp(0.13 + quality * 0.55 - norm(gk.attrs.keeping) * fit(gks.fitness) * 0.2 + (clear ? 0.12 : 0) + finish - wall, 0.03, 0.9);
+      // THE SPARK ("makes something from nothing") — a bonus that applies ONLY to a poor chance. Hooking it
+      // to the distance term instead was tried and measured as a no-op: `quality` is
+      // `(1 - distGoal / QUALITY_RANGE)` clamped at 0, and shots in this engine come from a median ~45m, so
+      // that expression is already pinned at zero for almost every attempt and widening the range moved
+      // nothing (0 of 24 fixtures). Conversion is where a poor chance can still become a goal, which is
+      // also the more honest reading of the trait: he scores the one nobody else would have.
+      const spark = hasTrait(shooter, 'spark') && quality < 0.35 ? 0.035 : 0;
+      const goalProb = clamp(0.13 + quality * 0.55 - norm(gk.attrs.keeping) * fit(gks.fitness) * 0.2 + (clear ? 0.12 : 0) + finish + spark - wall, 0.03, 0.9);
       if (this.rng() < goalProb) {
         s.score[teamIdx]++;
         // assist = the player who played the last pass to this scorer, if recent (<=8s) and not himself

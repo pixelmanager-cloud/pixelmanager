@@ -1912,6 +1912,18 @@ export function careerOverall(a: CareerPlayerAttrs, role: Role): number {
 // human choose; the sim auto-picks). Some traits also nudge a stat.
 export const MAX_TRAITS = 2;
 export interface Trait { id: string; roles?: Role[]; name: string; desc: string; eligible: (a: CareerPlayerAttrs, log: Choice[]) => boolean; apply?: (a: CareerPlayerAttrs) => void }
+// CUT 2026-09-01 — `utility` ("can play almost anywhere and do a job") and `showstopper` ("the player
+// fans pay to watch"). Both were inert, and unlike the other seven they had nowhere to land:
+//   - utility described relief from an out-of-position penalty that does not exist. `buildXI` reassigns
+//     only the anchor and keeps every player's own role; nothing anywhere punishes a mis-slotted man. The
+//     trait could not be given an effect, only a penalty invented for it to remove.
+//   - showstopper's natural hook is `squadMarketability` -> `sponsorIncome`, and that chain is BROKEN
+//     upstream: no mint path sets `marketability` on a squad player and the bloodline star is not in
+//     `club.players`, so `squadMarketability` returns exactly 10 for every club forever and `brandMult`
+//     is pinned at 1.0. Wiring the trait would have hooked it to a dead number. Repair that chain first
+//     and showstopper is the obvious trait to hang off it.
+// The client keeps display names for both (main.ts's TRAIT map is deliberately a superset of this
+// catalogue) so a save that already carries one still renders it properly instead of a raw slug.
 export const TRAITS: Trait[] = [
   { id: 'clinical', roles: ['FW'],  name: 'Clinical Finisher',    desc: 'Ice-cold in front of goal',        eligible: (a) => a.shooting >= 15 && a.composure >= 14, apply: (a) => { a.shooting = clamp(a.shooting + 1, 1, 20); } },
   { id: 'ballwinner', roles: ['DF', 'MF'], name: 'Ball-Winner',         desc: 'Wins it back relentlessly',        eligible: (a) => a.tackling >= 15 && a.aggression >= 13, apply: (a) => { a.tackling = clamp(a.tackling + 1, 1, 20); } },
@@ -1928,10 +1940,8 @@ export const TRAITS: Trait[] = [
   { id: 'spark', roles: ['MF', 'FW'],     name: 'The Spark',            desc: 'Makes something from nothing',     eligible: (a) => a.creativity >= 14 && a.pace >= 14 },
   { id: 'aerial', roles: ['DF', 'FW'],    name: 'Aerial Threat',        desc: 'Wins everything in the air',       eligible: (a) => a.strength >= 14 && a.pace <= 10, apply: (a) => { a.strength = clamp(a.strength + 1, 1, 20); } },
   { id: 'general2', roles: ['MF'],  name: 'Engine-Room General',  desc: 'Drags the team through matches by will alone', eligible: (a) => a.stamina >= 14 && a.leadership >= 13 },
-  { id: 'showstopper', roles: ['FW', 'MF'], name: 'Showstopper',        desc: 'The player fans pay to watch',     eligible: (a) => a.creativity >= 15 && a.setPiece >= 13 },
   { id: 'ironwill',  name: 'Iron Will',            desc: 'Never seems to get injured',       eligible: (a) => a.durability >= 16 },
   { id: 'quarterback', roles: ['MF', 'DF'], name: 'The Quarterback',    desc: 'Picks locks from forty yards with a single pass', eligible: (a) => a.passing >= 16, apply: (a) => { a.passing = clamp(a.passing + 1, 1, 20); } },
-  { id: 'utility',   name: 'Utility Man',          desc: 'Can play almost anywhere and do a job', eligible: (a) => a.teamwork >= 13 && a.positioning >= 13 && a.stamina >= 13 },
 ];
 
 /** Which traits a finished career qualifies for (before the player locks any in).

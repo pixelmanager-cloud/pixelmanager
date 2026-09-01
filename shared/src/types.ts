@@ -108,6 +108,10 @@ export interface Team {
   /** Substitutes available from the bench (best squad players outside the XI). When present the
    *  engine makes deterministic fitness-driven subs late on; absent (tests/CPU) => no subs. */
   bench?: Player[];
+  /** HOW BIG THE OCCASION IS: 0 for an ordinary league fixture, rising toward 1 for a cup final. Read
+   *  only by the Big-Game Player trait in `resolveShot`. Optional, and absent everywhere by default, so
+   *  every existing fixture and every test behaves exactly as before. */
+  stakes?: number;
 }
 
 export interface PlayerState {

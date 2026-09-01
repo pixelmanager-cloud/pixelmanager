@@ -43,5 +43,13 @@ export function teamLeadership(players: Player[]): number {
   const leads = players.map((p) => p.attrs.leadership ?? 10);
   const best = leads.length ? Math.max(...leads) : 10;
   const lead = cap ? (cap.attrs.leadership ?? 10) : best;
-  return mAdd(lead, 0.045) + (cap ? Math.max(0, mAdd(lead, 0.005)) : 0); // ±small to teammates' finishing composure
+  // BORN LEADER, which until now was the most-held trait in the game that did nothing. "Lifts the whole
+  // team" is exactly what this function computes, so the trait belongs here and nowhere else. It is a flat
+  // bonus on top of the leadership the side already has, and it is bounded: a leaderless XI cannot conjure
+  // one, because the man carrying it still has to be the captain or the best natural leader on the pitch.
+  const bearer = cap ?? (players.length
+    ? players.reduce((a, b) => ((b.attrs.leadership ?? 10) > (a.attrs.leadership ?? 10) ? b : a), players[0])
+    : undefined);
+  const born = bearer ? hasTrait(bearer, 'leader') : false;
+  return mAdd(lead, 0.045) + (cap ? Math.max(0, mAdd(lead, 0.005)) : 0) + (born ? 0.012 : 0);
 }

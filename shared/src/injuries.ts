@@ -6,6 +6,7 @@
 // replays identically and can never be Math.random. Injuries are AVAILABILITY only —
 // never a stat edit — so on-chain NFT stats are untouched.
 import type { Team } from './types.js';
+import { hasTrait } from './mental.js';
 import { injuryChanceMult, recoveryCut } from './facilities.js';
 
 const BASE_INJURY = 0.03;             // ~one injury every 3-4 matches for a club (occasional)
@@ -35,7 +36,10 @@ export function rollMatchInjuries(team: Team, endFitness: number[], medicalLevel
     // injury resistance: the explicit `durability` (from the Career Sim) when present, else stamina —
     // so an injury-prone career-built player breaks down more, and existing players are unchanged.
     const durability = 1.4 - 0.8 * norm(p.attrs.durability ?? p.attrs.stamina ?? 10);
-    const chance = BASE_INJURY * fatigue * durability * medMult;
+    // IRON WILL ("never seems to get injured") — the claim is about injuries and this is the injury roll.
+    // It stacks with `durability` rather than replacing it, so a fragile player who somehow earned it is
+    // still fragile, just less so.
+    const chance = BASE_INJURY * fatigue * durability * medMult * (hasTrait(p, 'ironwill') ? 0.6 : 1);
     if (rng() < chance) {
       const r = rng();                                     // severity, weighted toward short knocks
       let matches = r < 0.5 ? 1 : r < 0.8 ? 2 : r < 0.95 ? 3 : 4;
