@@ -92,6 +92,40 @@ export interface DutyMods {
 
 const NEUTRAL: DutyMods = { push: 1, come: 0, shoot: 1, magnet: 0, press: 0, hug: 0 };
 
+// ── SWEEPER_COME: THE ONE DUTY NUMBER THE REBUILT DISTRIBUTION ACTUALLY INVALIDATED ─────────────────
+// 0.1 restores the shipped table exactly — this is the A/B switch, and both states are measured below.
+//
+// `come` is documented four lines above as "+ drops the player toward the ball to link play, - holds
+// their line", and it is the ONLY field in this table that survives contact with the rebuilt engine as a
+// defensive dial. Measured on the 6c fixture (whole back line on one duty, conceded vs a direct 4-3-3),
+// n=500 paired, against a noise floor of +-0.14 established by a null in which perturbing a `push` value
+// by one part in a thousand — five millimetres of player position — moved conceded goals by 0.128:
+//     come  -0.20 vs +0.10 (shipped sweeper)   -0.302 goals/match  95% CI [-0.439, -0.165]
+//     press +0.60 vs -0.45 (stopper v sweeper) -0.148              95% CI [-0.286, -0.010]
+//     push   0.60 vs  1.20                     +0.040              95% CI [-0.104,  0.184]   inert
+//     hug   -0.40 vs  0.00                     -0.008              95% CI [-0.149,  0.133]   inert
+//     shoot  0.40 vs  1.00                     +0.003              95% CI [-0.014,  0.019]   inert
+// `push` is arithmetically dead for a defender and always was: attackPush is 6 and PUSH_BY_ROLE.DF is
+// 0.35, so this table's whole 0.75-1.4 push range moves a centre-back under two metres.
+//
+// THE MECHANISM. `come` is added to `pullX` only while the player's own team is ATTACKING, so it decides
+// how far the back line follows the ball upfield when you have it. At +0.1 a defender's attacking
+// ball-pull is 0.32; at -0.20 it is 0.02, i.e. he stays pinned to his anchor. The engine that was
+// replaced could not care: every shot resolved instantly from wherever a through-ball receiver stood, a
+// median of 45.8 metres out, so where your defenders were standing when you lost it was irrelevant.
+// Now that a possession is a real carry, a back line caught upfield on the turnover gets run at, and
+// this is the single largest defensive effect any duty field can produce.
+//
+// WHY THIS IS A RE-DERIVATION AND NOT A NUDGE-UNTIL-GREEN. The sweeper's tooltip is "covers rather than
+// engages, stepping forward to sweep up loose balls" — the shipped +0.1 encodes the second clause onto
+// the ball-pull axis, which is the axis whose own documentation calls the negative direction "holds
+// their line". A libero is the one defender in this table whose entire identity is depth held behind the
+// line; every other DF duty belongs to a flat four that shuffles across to the ball, so they stay at
+// 0.00-0.10 and the sweeper alone uses the negative half of the axis. He keeps `press: -0.45`, so he
+// still pays for not engaging (worth +0.148 goals/match against a stopper) — the duty is a real
+// trade-off, not a free win.
+const SWEEPER_COME = -0.20;
+
 // Magnitudes are deliberately small — duties are nudges, not overrides, so the
 // engine's goals/possession calibration holds (see shared/strategy_test.ts).
 const TABLE: Record<Duty, DutyMods> = {
@@ -117,7 +151,7 @@ const TABLE: Record<Duty, DutyMods> = {
   // simply did not do the one thing its name is.
   'inverted-fullback':     { ...NEUTRAL, push: 1.0, come: 0.08, magnet: 2, press: 0.1, hug: -0.55 },  // tucks into midfield
   'wing-back':             { ...NEUTRAL, push: 1.4, come: 0.05, magnet: 1.5, press: -0.15, hug: 0.55 }, // bombs on as an auxiliary winger
-  'sweeper':               { ...NEUTRAL, push: 0.75, come: 0.1, shoot: 0.4, magnet: 2, press: -0.45 }, // covers rather than engages, steps forward to sweep up
+  'sweeper':               { ...NEUTRAL, push: 0.75, come: SWEEPER_COME, shoot: 0.4, magnet: 2, press: -0.45 }, // covers rather than engages — holds his depth (see SWEEPER_COME)
   'deep-lying-playmaker':  { ...NEUTRAL, push: 0.7, come: 0.12, shoot: 0.6, magnet: 6, press: -0.2 }, // deep regista, sprays it
   'anchor':                { ...NEUTRAL, push: 0.4, come: -0.08, shoot: 0.5, magnet: -4, press: 0.75 }, // pure destroyer — sits, screens, never strays
   'wide-playmaker':        { ...NEUTRAL, push: 0.75, come: 0.1, shoot: 0.55, magnet: 7, press: -0.2, hug: 0.65 }, // hugs the touchline but dictates from out there — more shots for the team than box-to-box/ball-winner in the same slot (see strategy_test.ts)

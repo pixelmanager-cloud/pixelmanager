@@ -1841,6 +1841,63 @@ conversion term and the shot-taking term — so that volume can rise without mar
 a different target from everything tried so far, and the evidence for it is now three independent
 measurements pointing the same way rather than a hypothesis.
 
+### THE TACTICAL LAYER — and the discovery that the GATE is the defect
+
+Four approaches to re-hanging the tactical layer were built independently and measured. **None cleared the
+bar, and the reason is more useful than a fix would have been: `strategy_test` is measuring noise.**
+
+It runs at **N=60** on effects of 0.1-0.2 goals a match against a per-match standard deviation near 1.75.
+Of its eight failures on the rebuilt engine, **one was real**. The rest are coin flips.
+
+**And this project already knew.** `tools/playtest/tactical_power.ts` opens with the heading *"THE
+ASSERTIONS THAT WERE MEASURING NOISE"*. `tools/playtest/duty_power.ts` goes further: measured at n=900 the
+anchor concedes **more** than a ball-winner, +0.217 with a 95% CI of [0.101, 0.333], and it says in as many
+words that writing `anchor < ball-winner` as a bar "would be asserting a model the game does not have".
+`strategy_test` asserts exactly that ordering, twice. So the suite is gating on a model the repo's own
+better-powered tool has already refuted — and any engine change is scored against it.
+
+That is very likely how both previous rebuilds died. An agent sent at "eight failing assertions" will burn
+its entire run chasing six coin flips, and will happily accept a change that flips them by luck while
+quietly damaging something real. Which is exactly what happened here:
+
+- One approach reported the best headline (8 failures to 5) while moving the shot geometry **backwards**
+  8-9% — undoing the rebuild — and its own assessment admitted four of its five gains were seed luck.
+- Two approaches "repaired" the 5-4-1 assertion. Four independent high-n measurements agree 5-4-1 **was
+  never broken**; they had repaired a bad seed. Scoring on failure count would have rewarded that.
+- One approach was a **literal no-op** — byte-identical output — and produced the single most valuable
+  result in the set (below).
+
+**What was actually taken: one number.** The sweeper's `come` goes +0.1 to -0.20. `come` is added to a
+player's ball-pull ONLY while his team is attacking, so it governs how far the back line follows the ball
+upfield when you have it: at +0.1 a defender's attacking pull is 0.32, at -0.20 it is 0.02. A sweeper stops
+getting caught upfield on the turnover, which is precisely what that field's own documentation says it does
+("- holds their line"). Measured at **-0.302 goals/match, CI [-0.439, -0.165]**, against a noise floor of
+±0.14 established by a null test. `strategy_test` goes 8 failures to 6.
+
+### TWO STRUCTURAL FINDINGS FROM THE NO-OP, AND THE SECOND IS ABOUT MY OWN CHANGE
+
+1. **No duty has any defensive positioning at all.** `push`, `come` and `hug` are every one of them read
+   inside `if (attacking)`. A defensive duty can only act by *not* going forward. There is no mechanism by
+   which a stopper positions himself differently from a cover defender while the opponent has the ball.
+2. **`ADVANCE_FLOOR` makes territory worthless, so defending high is now strictly dominant.** If every
+   surviving link gains at least 8m regardless, then conceding ground costs an attacker nothing, and there
+   is no reason to sit deep. That is a direct consequence of the advance floor committed earlier today, and
+   **nothing currently measures it.**
+
+### WHAT THIS MEANS FOR THE REMAINING WORK
+
+Six assertions still fail. On the evidence, four are noise, one (5-4-1) is a bad seed at N=60, and **one is
+real and untouched by all four approaches**: 4-2-2-2's second striker losing to 4-1-4-1's lone striker,
+8W-41L. That is the honest remaining defect in the tactical layer, and it is one item, not eight.
+
+Two decisions for CK, and I have deliberately not taken either:
+- **Should `strategy_test` be re-powered?** Raising N, or moving these assertions to the CI-based method
+  `duty_power`/`tactical_power` already use, would stop the suite scoring noise. I did not touch it: every
+  agent was forbidden from editing a bar to make its numbers look better, and that rule applies to me most
+  of all. But a gate that measures noise is worse than no gate, because it launders luck as evidence.
+- **Should duties get a defensive positioning term at all?** Finding 1 says the defensive half of the duty
+  system does not exist. That is a feature decision, not a bug fix.
+
 ### The decision
 Your rule was **"the league wins, always"** — tune the match down until the pyramid holds. I have done that,
 and the honest result is that the pyramid holds *only* at 0.58 goals a match. So the rule now has a cost you
