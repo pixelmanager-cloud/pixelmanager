@@ -29,6 +29,7 @@ export * from './missions.js';
 export * from './injuries.js';
 export * from './scouting.js';
 export * from './matchstats.js';
+export * from './awards.js';
 export * from './market.js';
 export * from './game.js';
 export * from './lifecycle.js';

@@ -126,7 +126,21 @@ I have **fixed** the items marked FIXED. The rest are design calls that are your
   level 1. The offer is now re-run when the levels land.
 - **`clearMgr()`** — dead since the succession fix. Deleted.
 
-## 7. PARTLY REVERTED — the Park the Bus / Counter retune in here was undone by the engine revert
+## 7. ~~PARTLY REVERTED~~ — RESOLVED 2026-09-01: merit payment KEPT, the rest superseded
+
+**CK's call: keep `DIVISION_MERIT = 600`.** It is the best-evidenced number in the economy. The top of the
+facility ladder was unreachable without it — measured across 130 seasons of top-flight dominance under
+every purchasing policy tried, the peak treasury a club ever held while also buying players was 8,668,
+against level 9 and 10 costing 10,000 and 14,000. No dynasty reached level 9 in four seeds. Cutting top-end
+costs empties the ladder by season 91; flattening upkeep does nothing (a summit club earns 10,428 against
+6,804 of upkeep, so running cost was never the constraint). Only income scaling with the CLIMB moved it.
+It also fixes the incentive's shape: the climb used to pay off through prize money, which is *won*; this
+pays for *being there*, which is what promotion is actually worth.
+
+The other two bullets are closed: the "pyramid was three different games" table was measured on a branch
+rather than the shipped engine (see §19) and is void, and the Park the Bus / Counter question is answered
+in §35 — it was a `pressCount` cliff, now fixed.
+
 
 **The pyramid was three different games.** The calibration gate measures goals/match at ONE squad quality
 and asserts it lands in [1.6, 3.6]. It passed for months. Across the strengths the game actually generates:
@@ -1420,18 +1434,14 @@ shots/match inside a 3-4-3 — a shape whose whole point is width.)*
    fragile thing in the engine: any future change that adds scoring will break it, and the last three that
    did were each reverted for exactly that. Treat a green `division_balance` as "just barely", not "fine".
 
-3. **Goal variance is too low.** One goalless match in 120 where Poisson at 2.82 goals/match predicts about
-   seven. The engine reliably produces goals rather than sometimes producing none, so `qa_matchstats`'
-   no-award path is under-exercised. Real, small, and not worth engine risk to chase.
-
-4. **The mental-layer swing is 1.21 against `qa_mental`'s 2.0 bar.** It reached 2.50 earlier and was spent
+3. **The mental-layer swing is 1.21 against `qa_mental`'s 2.0 bar.** It reached 2.50 earlier and was spent
    deliberately: the formation rebalance raised scoring, which broke the league bar, and the only lever
    that buys that back (`OUTCOME_SENS`) also flattens the finishing terms the mental layer rides on. The
    league wins, per the standing rule. Note the bar itself was calibrated on a ~70-shot engine and this one
    takes ~20, so part of the gap is the bar, not the game — but that argument was deliberately NOT used to
    move it.
 
-5. **Wing-back fullbacks do not edge cover-duty fullbacks on possession** (48.3% v 48.9%). Persists at
+4. **Wing-back fullbacks do not edge cover-duty fullbacks on possession** (48.3% v 48.9%). Persists at
    N=400, so it is real rather than noise — but it is a 0.6 percentage-point effect, which is finer than
    this engine resolves. Accepted as below the resolution of the simulation.
 

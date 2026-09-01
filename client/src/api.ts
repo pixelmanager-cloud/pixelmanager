@@ -24,6 +24,7 @@ import {
   gaffersDiaryEntry,
   rollGenes, updateMorale, moraleEffects, rollMatchInjuries, developAttrs,
   deriveMatchStats, type MatchPlayerStat,
+  seasonAwards, AWARD_LABEL, type AwardKind,
   houseRenown, branchCareer, rivalStandings, renownPedigree, renownBidMult, renownIncomeMult, type HouseMember,
   tokenToPlayer, tokenContract, legendCardOf, loadCareer, actWithNarration, careerState, graduatedFields, careerCast, fillArcText,
   rebornFields, rebornPotential, prospectTemper, careerSeedFor, trackFor, agentsList, foundingNameFor, nameFor,
@@ -876,7 +877,26 @@ export const api = {
     // the league with 24 wins and his renown stayed at 47 across all six seasons, moving only when he
     // retired. The game's whole meta-progression was inert for nine or ten seasons at a time, in a panel
     // whose own copy reads "every family climbing the same ladder".
+    // Reported back so the season screen can READ THE HONOURS OUT. Writing an award the player never
+    // hears about would repeat the exact defect this whole wiring exists to fix.
+    const wonAwards: Array<{ kind: string; player_name: string; value: number; label: string }> = [];
     if (isLeagueRoll) {
+      // SEASON AWARDS. The Award row and its store methods have existed since the server era with nothing
+      // ever calling them -- and for a simpler reason than the usual: there was no per-player season data
+      // to derive an award FROM, because `deriveMatchStats` was itself unwired. Now that matches record
+      // who scored, the honours are derivable. Computed from the season being closed, before the season
+      // counter advances. Failures are swallowed: an honour is worth less than the result card.
+      try {
+        // `season`, NOT profile.season: the counter was already advanced ~15 lines up, so reading it back
+        // here would score the honours against the empty season that has not been played yet -- awarding
+        // nothing, every time. The stats being judged belong to the season that just CLOSED.
+        const closingId = String(season);
+        const rows = await localStore.seasonPlayerStats(closingId, [OWNER]);
+        for (const a of seasonAwards(rows, {
+          seasonId: closingId, seasonNumber: season,
+          tier: String(tierIdx), accountId: OWNER, awardedAt: season,
+        })) { await localStore.addAward(a); wonAwards.push({ ...a, label: AWARD_LABEL[a.kind as AwardKind] ?? a.kind }); }
+      } catch { /* never let an honour cost the player his season */ }
       const starId = body?.starId;
       const st = starId ? await localStore.getToken(String(starId)) : null;
       if (st) await localStore.updateToken(st.id, {
@@ -930,7 +950,7 @@ export const api = {
         for (const k of new Set(fellIn)) await localStore.setFacilityLevel(OWNER, k, facLevel(model.facilities, k as FacilityKey));
       }
     }
-    return { ok: true as const, prize, sponsorBonus, houseMult, tierMult, facilities: facIncome, upkeep, salvage, disrepair: fellIn, coins: getActiveModel().profile.coins };
+    return { ok: true as const, awards: wonAwards, prize, sponsorBonus, houseMult, tierMult, facilities: facIncome, upkeep, salvage, disrepair: fellIn, coins: getActiveModel().profile.coins };
   },
   spSponsor: async (deal: string) => {
     await ensureActive();
@@ -1245,12 +1265,22 @@ export const api = {
     for (const l of (legs as any[])) {
       try { legendBy.set(String(l.player_id ?? l.playerId ?? '').split(':g')[0], JSON.parse(l.card_json ?? l.cardJson ?? '{}')); } catch { /* skip */ }
     }
+    // HONOURS FOLLOW THE MAN ONTO THE TREE. An award won by a bloodline player is part of his record,
+    // not just the club's, so the Family Record shows it against him. Squad players still win awards --
+    // they simply have no node to hang them on.
+    const wonBy = new Map<string, Array<{ kind: string; label: string; season: number; value: number }>>();
+    for (const a of await localStore.awardsFor(OWNER, 500)) {
+      const list = wonBy.get(a.player_id) ?? [];
+      list.push({ kind: a.kind, label: AWARD_LABEL[a.kind as AwardKind] ?? a.kind, season: a.season_number, value: a.value });
+      wonBy.set(a.player_id, list);
+    }
     return {
       nodes: tokens.map((t) => {
         let honours: any = null;
         try { honours = t.career_honours_json ? JSON.parse(t.career_honours_json) : null; } catch { /* none */ }
         return {
           id: t.id, name: t.name, generation: t.generation ?? 0,
+          awards: wonBy.get(t.id) ?? [],
           parentId: (t as any).parent_id ?? null,
           // WHOSE SON HE IS. Token.father_name was written at every succession and read by NOTHING — the
           // succession screen's "Dane's boy" caption comes from a transient field on the response, so the
@@ -1526,6 +1556,12 @@ export const api = {
         { goals: r.goals, assists: r.assists, apps: r.apps, potm: r.potm });
     }
     return { ok: true as const };
+  },
+  /** Every honour won across the dynasty, newest first, with display labels resolved. */
+  awards: async () => {
+    await ensureActive();
+    const rows = await localStore.awardsFor(OWNER, 200);
+    return { awards: rows.map((a) => ({ ...a, label: AWARD_LABEL[a.kind as AwardKind] ?? a.kind })) };
   },
   /** This season's per-player totals for the manager's squad. */
   seasonStats: async () => {

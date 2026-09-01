@@ -2407,6 +2407,13 @@ class Game {
       }
       // AND WHAT IT COST TO RUN. Reported next to the income and in the same breath, because upkeep is only
       // a decision if the player sees both halves of the ledger together.
+      // THE HONOURS. A season where a man scored twenty and nobody said his name is a season the player
+      // has no reason to remember. Read out with the number that earned it, so the claim is checkable.
+      const aw = ((r as any).awards ?? []) as Array<{ label: string; player_name: string; value: number }>;
+      if (aw.length) {
+        this.pushFeed('🏅', `<b>End-of-season awards.</b> ${aw.map((a) => `${a.label} — <b>${a.player_name}</b> (${a.value})`).join(' · ')}`);
+        toast(`🏅 ${aw[0].label}: ${aw[0].player_name}`);
+      }
       const up = (r as any).upkeep as number | undefined;
       if (up) this.pushFeed('🧾', `Keeping the club's facilities running cost <b>${up.toLocaleString()}c</b> this season — the upkeep on every stand, pitch and department you have built. Wages are billed separately.`, m.season + 1);
       const dis = ((r as any).disrepair ?? []) as string[];
@@ -3586,13 +3593,22 @@ class Game {
       // `<title>` is the SVG tooltip AND what a screen reader announces for the node — the natural home for
       // the parentage the tree otherwise expresses only as a line between two ovals.
       const who = n.fatherName ? `${n.name} — ${n.fatherName}'s boy` : `${n.name} — the founder of the line`;
+      // HONOURS BELONG TO THE MAN, NOT JUST THE CLUB. An award won by a bloodline player is part of his
+      // record, so it shows against him here — a count on the medallion, the full list in the tooltip
+      // (which is also what a screen reader reads out).
+      const won: Array<{ label: string; season: number; value: number }> = (n as any).awards ?? [];
+      const honourLine = won.length
+        ? ` · ${won.map((a) => `${a.label} (S${a.season}, ${a.value})`).join('; ')}`
+        : '';
       return `<g class="fr-node${cls}" transform="translate(${p.x},${p.y})">`
-        + `<title>${who}</title>`
+        + `<title>${who}${honourLine}</title>`
         + `<ellipse rx="30" ry="34" class="fr-oval"/><ellipse rx="24" ry="28" class="fr-oval-inner"/>`
         + `<text y="5" class="fr-init">${String(n.name ?? "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2)}</text>`
         + `<rect x="-66" y="38" width="132" height="17" class="fr-banner"/>`
         + `<text y="50" class="fr-name">${String(n.name ?? "").slice(0, 20)}</text>`
         + (sub ? `<text y="68" class="fr-sub">${sub}</text>` : "")
+        + (won.length ? `<g class="fr-honours" transform="translate(26,-26)"><circle r="11" class="fr-hon-dot"/>`
+            + `<text y="4" class="fr-hon-n">${won.length > 9 ? '9+' : won.length}</text></g>` : "")
         + `</g>`;
     }).join("");
     host.innerHTML = `<div class="family-record"><div class="fr-frame">`

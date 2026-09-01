@@ -5,7 +5,7 @@
 // does NOT re-verify game rules (shared/career_sim.ts and client/qa_savestore.ts already do that) —
 // this is about the WIRING: does every reachable api.ts call run in-process end to end.
 import { api, __setBackendForTests, setToken } from './src/api.js';
-import { createInMemoryBackend } from './src/save.js';
+import { createInMemoryBackend, getActiveModel } from './src/save.js';
 import { transferList, wageForLength, TIERS, mintSquadPlayer } from '@fm/shared';
 
 __setBackendForTests(createInMemoryBackend());
@@ -230,6 +230,28 @@ const legendsAfter = await api.legends();
 assert(legendsAfter.legends.length >= 1, 'succeed() records a legend — the bloodline tree / legends now populate');
 assert(legendsAfter.legends.some((l) => l.playerId === prospectId && !!l.card), 'the recorded legend is this bloodline, with a legend card');
 
+console.log('\n=== a bloodline player\u2019s honours land on his family-tree node ===');
+{
+  // The join is award.player_id -> token.id, which holds only because the star sits in club.players under
+  // his TOKEN id (api.ts looks him up with getToken(starId)). If that ever drifts the tree goes quietly
+  // blank, so assert the join on a real token. This lives HERE, not down in the awards section, because
+  // section 16 resumes a different save and leaves no tokens to hang an honour on.
+  const tok = getActiveModel().tokens[0];
+  assert(!!tok, `there is a bloodline token to decorate (${getActiveModel().tokens.length} tokens)`);
+  if (tok) {
+    const rows: any = [];
+    for (let m = 0; m < 20; m++) rows.push({ id: tok.id, name: tok.name, goals: 1, assists: 1, apps: 1, potm: 1, rating: 8 });
+    await api.recordMatchStats({ rows });
+    await api.spSeasonReward({ pos: 3, size: 10, sponsor: undefined, tier: 5 });
+    const node = (await api.bloodline()).nodes.find((n: any) => n.id === tok.id) as any;
+    assert(!!node, 'the bloodline still lists the token we just decorated');
+    assert((node?.awards ?? []).length > 0,
+      `his honours reach his family-tree node (got ${(node?.awards ?? []).length})`);
+    assert((node?.awards ?? []).every((a: any) => a.label && typeof a.season === 'number'),
+      'each node honour carries the label and season the medallion renders');
+  }
+}
+
 console.log('=== 13. missions + trials wiring ===');
 const missions = await api.missions();
 assert(missions.destinations.length > 0, 'scouting destinations listed');
@@ -312,6 +334,53 @@ console.log('\n=== per-player season stats survive a round trip ===');
   // a row with no id is not a player; recording it would create a ghost in the table
   await api.recordMatchStats({ rows: [{ id: '', name: 'Nobody', goals: 9, assists: 9, apps: 9, potm: 9 } as any] });
   assert((await api.seasonStats()).stats.length === after.length, 'an id-less row is ignored, not stored as a ghost');
+}
+
+console.log('\n=== season awards, and honours reaching the family tree ===');
+{
+  // The Award row and its store methods existed since the server era with NOTHING calling them -- and for
+  // a simpler reason than usual: there was no per-player season data to derive an award from, because
+  // deriveMatchStats was itself unwired. Wiring that made these derivable.
+  const { seasonAwards } = await import('@fm/shared');
+  const rows: any = [
+    { season_id: '0', account_id: 'local', player_id: 'z-striker', player_name: 'Z', goals: 12, assists: 2, apps: 30, potm: 4 },
+    { season_id: '0', account_id: 'local', player_id: 'a-striker', player_name: 'A', goals: 12, assists: 1, apps: 20, potm: 1 },
+    { season_id: '0', account_id: 'local', player_id: 'c-winger',  player_name: 'C', goals: 3,  assists: 9, apps: 34, potm: 2 },
+  ];
+  const ctx = { seasonId: '0', seasonNumber: 0, tier: '5', accountId: 'local', awardedAt: 0 };
+  const got = seasonAwards(rows, ctx);
+  assert(got.length === 4, `four honours from a full season (got ${got.length})`);
+  // A TIE MUST NOT DEPEND ON ARRAY ORDER. Two men level on 12 goals is a common season, and resolving it
+  // by whichever row came back first would differ between runs and platforms.
+  assert(got.find((a: any) => a.kind === 'golden_boot')?.player_id === 'a-striker',
+    'a tie on goals resolves by stable player id, not array order');
+  // An honour for two goals is not an honour; a bad season should award nothing.
+  const thin = seasonAwards([{ ...rows[0], goals: 1, assists: 0, apps: 3, potm: 0 }] as any, ctx);
+  assert(thin.length === 0, `a season nobody performed in awards nothing (got ${thin.length})`);
+  // and the store round-trips them, which is the half that was never called
+  const read = await api.awards();
+  assert(Array.isArray(read.awards), 'api.awards() reads the store back');
+
+  // THE INTEGRATION, which is the half that actually breaks: recorded matches -> season stats -> the roll.
+  // Asserting only the pure function would be exactly the "check that cannot fail" this project keeps
+  // finding, since seasonAwards is trivially correct and the WIRING is what was missing.
+  {
+    const season = String(getActiveModel().profile.season);
+    const rows: any = [];
+    for (let m = 0; m < 20; m++) rows.push({
+      id: 'qa-hotshot', name: 'Hotshot', goals: m % 2 === 0 ? 1 : 0,
+      assists: m % 4 === 0 ? 1 : 0, apps: 1, potm: m % 5 === 0 ? 1 : 0, rating: 7,
+    });
+    await api.recordMatchStats({ rows });
+    const before = (await api.awards()).awards.length;
+    const roll: any = await api.spSeasonReward({ pos: 4, size: 10, sponsor: undefined, tier: 5 });
+    const won = (roll.awards ?? []) as any[];
+    assert(won.length > 0, `a real recorded season produces honours at the league roll (got ${won.length})`);
+    assert(won.some((a) => a.player_name === 'Hotshot'), 'the man who actually scored them wins one');
+    assert(won.every((a) => a.label && a.label !== a.kind), 'every honour carries its readable label for the feed');
+    assert((await api.awards()).awards.length > before, 'and the roll persisted them, not just returned them');
+  }
+
 }
 
 console.log(failures === 0 ? `\n✓ all offline-facade checks passed` : `\n✗ ${failures} offline-facade check(s) FAILED`);
