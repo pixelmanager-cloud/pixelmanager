@@ -95,7 +95,18 @@ export function deriveMods(t: Tactics): TacticMods {
   return {
     attackPush: 6 + mentality * 3.0,
     lineShift: line * 4.5,
-    pressCount: press >= 2 ? 3 : press >= 0 ? 2 : 1,
+    // A CLIFF AT ZERO, AND IT WAS THE WHOLE DEFENSIVE-PRESET TRAP. This read
+    // `press >= 2 ? 3 : press >= 0 ? 2 : 1`, so ONE notch below neutral did not press slightly less — it
+    // deleted a presser outright, halving the bodies contesting the ball. Park the Bus and Counter both
+    // carry press -1, and both measured as the worst picks in the game: 0.137 and 0.083 ppg against
+    // Balanced's 0.429, conceding 4.77 and 4.68 a match against 3.01. The two presets the interface
+    // offers as the DEFENSIVE choices were the two that lost hardest.
+    // Fixing the presets instead was measured and rejected: setting press 0 made Park the Bus the BEST
+    // preset in the game and took the spread at even quality from 23.7 to 39.8 league points a season,
+    // trading a trap for a dominant pick. Moving the cliff down one notch is the smaller change: press -1
+    // now keeps its second presser and expresses "press less" through pressIntensity (0.76x) as intended,
+    // while press -2 still commits a single man.
+    pressCount: press >= 2 ? 3 : press >= -1 ? 2 : 1,
     pressIntensity: 1 + press * 0.24,
     directness: tempo * 0.32,
     widthScale: 1 + width * 0.10,

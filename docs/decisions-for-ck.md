@@ -7,7 +7,7 @@ Last updated: 2026-08-30, end of the overnight session.
 
 ---
 
-## 1. The match engine rebuild — the big one
+## 1. The match engine rebuild — the big one   ·  **[SUPERSEDED 2026-09-01 — no action]**
 
 **Branch:** `engine/shot-geometry` (3 commits, deliberately NOT merged; every mechanism defaults OFF)
 
@@ -401,7 +401,7 @@ instrument. The cheapest fix in this whole document is one line on the rollover:
 squad strength this division expects 4.2; you are +0.9 stronger than last season."* That converts a slot
 machine into a game without touching a balance constant. **Say the word and I'll do it.**
 
-## 18. YOUR CALL — nine ways to lose a dynasty, and one is unrecoverable
+## 18. YOUR CALL — nine ways to lose a dynasty, and one is unrecoverable   ·  **[VERIFIED FIXED 2026-09-01 — no action]**
 
 A save is twenty hours of someone's life, offline, with no server backup. Worst first:
 
@@ -432,7 +432,7 @@ thing that should inform whether you ship a Steam beta before it is closed.
 
 # ROUND 4 — the overnight run. Read section 19 first.
 
-## 19. I REVERTED THE MATCH-ENGINE REBUILD — kept as the record of how it went wrong
+## 19. I REVERTED THE MATCH-ENGINE REBUILD — kept as the record of how it went wrong   ·  **[HISTORICAL — the rebuild landed successfully on 2026-09-01, see §66]**
 
 > **The re-attempt is live** on branch `engine/rebuild-2`; §50 carries the current numbers. Read this one
 > for the failure mode, not the status. **Two of its claims are corrected elsewhere:** `offsideTrap` is
@@ -765,7 +765,33 @@ widest margin actually is.
   `resolve the story beat first`, so 5 of the 7 action types are never exercised. It needs to drive off
   `c.current().phase` the way `simCareer` does.
 
-## 35. YOUR CALL — why the defensive presets are traps, now with the cause
+## 35. ~~YOUR CALL — why the defensive presets are traps~~ — FIXED 2026-09-01, and the stated cause was WRONG
+
+**Fixed, but not the way this section argues, and its central claim was refuted by measurement.**
+
+The defect was real and reproduced on the rebuilt engine: Park the Bus 0.137 ppg and Counter 0.083 against
+Balanced's 0.429 when outmatched, conceding 4.77 and 4.68 a match against 3.01. The two presets the
+interface offers as the DEFENSIVE choices were the two that lost hardest.
+
+But this section says a retune would be *"a plaster: it would make them non-losing by making them less
+defensive"*, and that is false on today's engine. The deep line now PAYS — `line -2` measures as the best
+single slider setting in the set — and **the entire penalty was one term**: `deriveMods` read
+`pressCount: press >= 2 ? 3 : press >= 0 ? 2 : 1`, a CLIFF at zero. Both presets carry `press: -1`, so one
+notch below neutral did not press slightly less, it **deleted a presser outright**, halving the bodies
+contesting the ball.
+
+Two fixes were measured. Setting `press: 0` on both presets works but OVERCORRECTS — it makes Park the Bus
+the best preset in the game and takes the spread at even quality from 23.7 to 39.8 league points a season,
+trading a trap for a dominant pick. Moving the cliff instead (`press >= -1 ? 2 : 1`) fixes the trap and
+leaves the balance alone: the underdog preset spread falls **8.4 → 0.0 pts/38** while the even-quality
+spread is unchanged (16.8 → 16.2). That is what shipped.
+
+**Do NOT build the interception/lane-blocking mechanism this section proposes.** Its premise was that deep
+defending cannot pay without one. It pays.
+
+*This also corrects §68 item 7, which claimed defending high is strictly dominant: `line +2` is now the
+WORST single slider setting (0.156 ppg) and `line -2` the best (0.404).*
+
 
 Measured at 11-v-15, both orderings, n=3000 per preset: **Park the Bus 0.074 PPG, Counter 0.125, against
 Balanced's 0.384.** Paired, Park the Bus is **−0.261 PPG [−0.299, −0.223]** against Balanced.
@@ -902,7 +928,7 @@ evidence now genuinely supports removal if you want it, and I was wrong to call 
 **Three of those were byte-window gates, all three written by me, all three defeated by a comment.** The
 lesson is not "use a bigger window."
 
-## 42. Still open from the mutation pass — ONE BULLET LEFT
+## 42. Still open from the mutation pass — ONE BULLET LEFT   ·  **[SUPERSEDED 2026-09-01 — no action]**
 
 > ~~`qa_squad_lifecycle`~~, ~~`qa_manager_arcs_e2e`~~, ~~`qa_offline_facade`~~, ~~`qa_branching`~~ and
 > ~~`IndexedDBBackend`~~ are all closed (§45, §54, §57). What remains is the coverage number below.
@@ -1106,7 +1132,7 @@ An adversarial audit of my own status report found real errors in it, and you sh
   document.** Also worth knowing before you spend a decision on it: `tactical_power`, the probe that
   produces that number, runs in **no gate**, so nobody would notice if it drifted.
 
-## 50. THE ONE THAT MATTERS — the match engine is not simulating football, at HEAD, right now
+## 50. THE ONE THAT MATTERS — the match engine is not simulating football, at HEAD, right now   ·  **[VERIFIED FIXED 2026-09-01 — no action]**
 
 I spent a night on test-suite epistemology and did not tell you this. `tools/playtest/shot_geometry.ts`,
 run on HEAD:
@@ -1131,7 +1157,7 @@ gate with a hole, because the hole at least does not claim to have looked.
 **You chose to re-attempt the engine work.** Arming those 13 probes is in progress as the prerequisite, so
 that this time the rebuild is measured rather than guessed at — which is precisely what went wrong before.
 
-## 51. YOUR CALL — scouting is gated behind wall-clock time, and the answer is already in your save
+## 51. YOUR CALL — scouting is gated behind wall-clock time, and the answer is already in your save   ·  **[VERIFIED FIXED 2026-09-01 — no action]**
 
 `api.ts` rolls the mission outcome **at dispatch** and writes `found`, `player_json` and `band` into the
 save row, then sets `ready_at = now + travelMs(dest)` — up to twelve hours. So the wait protects nothing:
@@ -1322,6 +1348,35 @@ The bar for re-opening any of these is a MEASUREMENT showing the fix helps, not 
 looks wrong. Three separate people-or-agents have now produced confident arguments here that measurement
 refuted.
 
+### THE GATE IS DELIBERATELY RED. THIS IS THE EXPECTED SET.
+
+**A red gate whose expected-red set is undocumented cannot tell a new regression from an accepted one** —
+which is the exact failure this document exists to prevent, and §68 shipped without it. So, precisely:
+
+- `npm run playtest` — **GREEN**, all 43 probes. Any failure here is a real regression.
+- `npm run verify` — **RED at `shared/strategy_test.ts` only.** Expected failures:
+  `wing-back fullbacks should edge cover-duty fullbacks on possession` (a 0.6pp effect, below this
+  engine's resolution); `wide-playmaker should generate more shots than box-to-box` and
+  `...than ball-winner` (both NOISE — they INVERT and pass at N=300); and `4-2-2-2's second striker
+  should beat 4-1-4-1` (the one real remaining defect, item 1 above).
+- `npm run qa` — **RED at `shared/qa_mental.ts` and `shared/qa_matchstats.ts` only**, one check each:
+  the mental-layer swing (item 4) and the goalless-match rate (item 3).
+
+Anything outside that list is new, and should be treated as a regression rather than folded in here.
+
+**AND THE FAILURE SET IS UNSTABLE UNDER N, which matters more than the count.** `strategy_test` now takes
+`STRATEGY_N` (default unchanged at 60). At N=300 two of the four failures above invert and PASS, while two
+assertions that PASS at 60 FAIL: `wide 3-4-3 v narrow diamond` (26W-24L at 60 → 115W-122L at 300) and the
+diamond's attack-focus. A suite whose failure set changes when you only add samples is not measuring what
+it claims to. Re-powering it is no longer a nicety — the knob exists, and the shipped N both invents
+failures and hides real ones. That is a decision for CK, and it is the honest version of "just tweak the
+assertions".
+
+*(Also unaccepted anywhere and worth naming: `tools/playtest/width_diagnosis.ts` measures 1.31% of chosen
+passes as wide, against real football's 20-35%. It is ratcheted known-bad but sits in no list. Width does
+not pay in this engine, and `focus_power.ts` measures central focus beating wide focus by +1.098
+shots/match inside a 3-4-3 — a shape whose whole point is width.)*
+
 ### Accepted, in the match engine
 
 1. **4-2-2-2 loses to 4-1-4-1, 7W-34L.** The one remaining `strategy_test` failure that is real and large.
@@ -1358,7 +1413,13 @@ refuted.
    the defensive duties feel the same", and fixing it means new terms in the movement code — every match,
    every duty, every formation, which is the exact surface that produces three new defects for one fixed.
 
-7. **`ADVANCE_FLOOR` makes territory worthless, so defending high is strictly dominant.** If every
+7. **`ADVANCE_FLOOR` makes territory worthless** — ~~so defending high is strictly dominant~~. **THE
+   SECOND HALF OF THIS IS WRONG AND WAS CORRECTED THE SAME DAY.** Measured per-slider on the shipped
+   engine, `line -2` is the BEST single setting in the set (0.404 ppg) and `line +2` the WORST (0.156), so
+   defending deep pays and defending high does not. What survives is the first half: the floor does make
+   ground cheap to concede, and nothing measures that directly. I wrote the "strictly dominant" claim from
+   the mechanism rather than from a measurement, which is the error this document exists to catch.
+   Original note follows: If every
    surviving link gains at least 8m regardless of support, conceding ground costs an attacker nothing.
    This is a direct consequence of the change that FIXED the engine — weak-side box reach went 0.9% to 21%
    because of it — so it is not separable from the fix. Nothing currently measures it. An attempt to scale
@@ -1372,7 +1433,7 @@ refuted.
    at founding to 3.20 by season 12, tier 9 to 1.84, tier 10 to 1.60. The basement sees the trait layer —
    it earns it, which is the better version of the mechanic anyway.
 
-## 61. ~~§9 SYNERGIES~~ — RESOLVED 2026-09-01: REMOVED, and the UI it was not supposed to have went too
+## 61. ~~§9 SYNERGIES~~ — RESOLVED 2026-09-01: REMOVED, and the UI it was not supposed to have went too   ·  **[SUPERSEDED 2026-09-01 — no action]**
 
 I measured what each synergy's reward is actually worth, n=150 careers each, applied exactly as the game
 applies it:
@@ -1432,7 +1493,7 @@ is the only defensible answer. *(And a bug I introduced fixing it — seeding th
 FLOOR, erasing the lower divisions' weakness. Caught by my own probe. The harness now asserts empty is
 neutral, the armband is never a penalty, AND tier 10 still reads as poorly led.)*
 
-## 63. LIVE and player-facing — re-verified 2026-09-01: all the BUGS are fixed; what is left is three design calls
+## 63. LIVE and player-facing — re-verified 2026-09-01: all the BUGS are fixed; what is left is three design calls   ·  **[SUPERSEDED 2026-09-01 — no action]**
 
 - **~~The scout tiers advertise numbers the generator does not deliver~~ — FIXED (display, per your call).** The tier cards now quote the MEASURED delivery — gold reads (28/37/29/6) against the 28.0/37.2/28.9/6.0 it actually hands over — instead of quoting `SCOUT_TIERS` verbatim. Original report follows:
  `main.ts` prints the declared
@@ -1486,7 +1547,7 @@ neutral, the armband is never a penalty, AND tier 10 still reads as poorly led.)
   never move is a real amount of the game held still. Either wire it into the season rollover or delete it;
   leaving a written-but-uncalled mechanic in place is the exact defect class this document tracks.
 
-## 67. ~~NINE OF THE NINETEEN TRAITS DO NOTHING~~ — FIXED 2026-09-01: seven wired, two cut
+## 67. ~~NINE OF THE NINETEEN TRAITS DO NOTHING~~ — FIXED 2026-09-01: seven wired, two cut   ·  **[VERIFIED FIXED 2026-09-01 — no action]**
 
 Auditing the trait catalogue after the ordering fix: a trait can only reach the game two ways — the engine
 reads it by id (`hasTrait`), or it carries an `apply` hook that bumps a stat when the player locks it in.
@@ -1531,7 +1592,7 @@ Three fixes, not one: the star is not in `club.players` (he is a Token), an AVER
 accumulates uncapped to 12-23 and swamps everything. Commercial income now follows the star directly:
 1197 neutral, 1341 at a median star, 1520 at p90. Covered by a mutation-tested facade check.
 
-## 64. The measurement that settles §16 — and it is BIGGER on the path the game ships
+## 64. The measurement that settles §16 — and it is BIGGER on the path the game ships   ·  **[SUPERSEDED 2026-09-01 — no action]**
 
 **The mental layer is worth exactly nothing outside a played match, and it is now quantified on both
 sides.** `overall()` moves **0.0000** between a min-mental (all 1) and a max-mental (all 20) XI; +3 pace
@@ -1548,7 +1609,7 @@ match**. So the gap §16 describes is wider than first reported — the league t
 `incomingBid` and the Sim button are all blind to a difference worth nearly five goals a game. `qa_mental`
 now asserts both, so the claim can no longer rest on the symmetric case alone.
 
-## 65. LATENT — re-verified 2026-09-01; defects fixed, and the two unwired modules are now WIRED
+## 65. LATENT — re-verified 2026-09-01; defects fixed, and the two unwired modules are now WIRED   ·  **[VERIFIED FIXED 2026-09-01 — no action]**
 
 Worth knowing before anyone wires them up, not worth fixing unattended.
 
@@ -1611,7 +1672,7 @@ the tier and Youth Academy dials genuinely move; `hasTrait` handles missing/null
 casing is strict-but-correct; all five engine-read trait ids exist and are reachable; and PT-303's
 loanee-expiry hole is genuinely fixed.
 
-## 66. THE ENGINE REBUILD — the geometry is fixed, and it uncovered a bigger one underneath. Needs your call.
+## 66. THE ENGINE REBUILD — the geometry is fixed, and it uncovered a bigger one underneath. Needs your call.   ·  **[SUPERSEDED 2026-09-01 — no action]**
 
 **Branch `engine/rebuild-2`. `main` is untouched and still ships.**
 
