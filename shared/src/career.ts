@@ -1950,8 +1950,18 @@ export function deriveRole(a: CareerPlayerAttrs): Role {
 
 /** Role-weighted overall (each role values the stats that matter to it). */
 export function careerOverall(a: CareerPlayerAttrs, role: Role): number {
+  // A KEEPER IS JUDGED ON FIVE THINGS, LIKE EVERYONE ELSE. This averaged GK over THREE stats against five
+  // for DF and MF and four for FW, and averaging fewer stats regresses to the mean less -- none of the
+  // three was a gene-capped physical either. So the track chosen on the FIRST SCREEN, before the player
+  // knows anything about the game, was worth +3.125 overall (95% CI [2.972, 3.278], 400 matched seeds:
+  // GK 16.36 against outfield 13.24). It was the single largest lever in the career, and it was hidden in
+  // a menu that reads as pure flavour.
+  //
+  // Commanding the area and distribution are what the modern game actually asks of a keeper, and adding
+  // them closes it: measured on the same matched seeds, the gap falls to +0.115, 95% CI [-0.020, +0.250] --
+  // indistinguishable from zero. (Adding a sixth overshoots: aggression takes it to -0.820.)
   const core: Record<Role, (keyof CareerPlayerAttrs)[]> = {
-    GK: ['keeping', 'positioning', 'composure'],
+    GK: ['keeping', 'positioning', 'composure', 'leadership', 'passing'],
     DF: ['tackling', 'strength', 'positioning', 'aggression', 'composure'],
     MF: ['passing', 'creativity', 'teamwork', 'stamina', 'composure'],
     FW: ['shooting', 'pace', 'composure', 'creativity'],

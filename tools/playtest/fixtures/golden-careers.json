@@ -3190,8 +3190,8 @@
         "greed": 17,
         "marketability": 20,
         "earnings": 12365,
-        "peak_overall": 12,
-        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[\"The Game Your Whole Career Gets Judged On\",\"A Derby With the Title on the Line\"],\"peakOverall\":12,\"careerScore\":555,\"turnsPlayed\":120}"
+        "peak_overall": 10,
+        "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"The Game Your Whole Career Gets Judged On\",\"A Derby With the Title on the Line\"],\"peakOverall\":10,\"careerScore\":555,\"turnsPlayed\":120}"
       }
     }
   },
@@ -7188,8 +7188,8 @@
         "greed": 20,
         "marketability": 20,
         "earnings": 10325,
-        "peak_overall": 16,
-        "career_honours_json": "{\"caps\":24,\"nation\":\"Trentino\",\"bigNights\":[\"A Comeback From the Brink\"],\"peakOverall\":16,\"careerScore\":688,\"turnsPlayed\":120}"
+        "peak_overall": 14,
+        "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"bigNights\":[\"A Comeback From the Brink\"],\"peakOverall\":14,\"careerScore\":688,\"turnsPlayed\":120}"
       }
     }
   },
