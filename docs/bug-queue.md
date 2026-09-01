@@ -8,33 +8,41 @@ picked up cold.
 
 ---
 
-## TIER 1 — one line or one argument (nine items)
+## ~~TIER 1 — one line or one argument (nine items)~~ — ALL NINE FIXED 2026-09-01
 
-1. `[A]` **Season-award feed lines never render.** `client/src/main.ts:2488` — `pushFeed('🏅', …)` omits the
+1. `[A]` ~~**Season-award feed lines never render.**~~ **FIXED.** `client/src/main.ts:2488` — `pushFeed('🏅', …)` omits the
    third argument, so it files under `m.season` while every sibling line passes `m.season + 1`; the counter
    bumps twelve lines later and `seasonFeedHtml()` filters on the new value. **Fix:** add `, m.season + 1`.
-2. `[A]` **The squad report can never rehydrate.** `client/src/main.ts:2574` — saved as
+2. `[A]` ~~**The squad report can never rehydrate.**~~ **FIXED.** `client/src/main.ts:2574` — saved as
    `squadReportSeason: mm.season`, incremented at 2633, so `loadMgr`'s `=== m.season` test never passes.
    It is the only surface emitting `data-renew` / `data-release`, so contracts run down and players walk
    free. **Fix:** store `mm.season + 1`.
-3. `[A]` **Match-plan note breaks its own tooltip.** `client/src/main.ts:4479` — `hold-lead`'s note starts
+3. `[A]` ~~**Match-plan note breaks its own tooltip.**~~ **FIXED.** `client/src/main.ts:4479` — `hold-lead`'s note starts
    with `"`, terminating the `title=""` attribute; two sibling interpolations escape, this one doesn't.
    **Fix:** `.replace(/"/g, '&quot;')`.
-4. `[A]` **The Player tab contradicts the number beside it.** `shared/src/tokens.ts:242` — `careerProfile`
+4. `[A]` ~~**The Player tab contradicts the number beside it.**~~ **FIXED.** `shared/src/tokens.ts:242` — `careerProfile`
    calls `deriveStats(log, seed, genes)` with no `attrFocus`, while graduation passes it. Role disagreed in
    5 of 60 careers, forming-traits in 27. **Fix:** pass `c.attrFocus` as the fourth argument.
-5. `[A]` **The heir never sees the World Finals.** `client/src/main.ts:2141` — `resetMgrForHeir` clears
+5. `[A]` ~~**The heir never sees the World Finals.**~~ **FIXED.** `client/src/main.ts:2141` — `resetMgrForHeir` clears
    `wcStage`/`wcEdition`/`wcRun` but not `wcSeen`, so the father's edition suppresses the heir's.
    **Fix:** add `wcSeen: undefined`.
-6. `[V]` **The pause menu never pauses.** `client/src/main.ts:701` — `openPauseMenu` touches `this.running`
+6. `[V]` ~~**The pause menu never pauses.**~~ **FIXED.** `client/src/main.ts:701` — `openPauseMenu` touches `this.running`
    zero times (only writers: spacebar, `startMatch`, `onFullTime`, `skipToEnd`). The match plays on behind
    the dialog. **Fix:** set `running = false` on open, restore on close.
-7. `[A]` **A substitute is sent off for a yellow he never got.** `shared/src/engine.ts:357` — `booked` is
+7. `[V]` ~~**A substitute is sent off for a yellow he never got.**~~ **FIXED.** `shared/src/engine.ts:357` — `booked` is
    keyed by team*100 + *slot index*, and `makeSub` never clears the slot. **Fix:** `booked.delete(t*100+outI)`.
-8. `[A]` **The heir reads his father's news.** `client/src/main.ts:1420` — `resetMgrForHeir` clears
+8. `[A]` ~~**The heir reads his father's news.**~~ **FIXED.** `client/src/main.ts:1420` — `resetMgrForHeir` clears
    `arcFired` and `feedFired` but not `feed`; `FEED_MAX = 240` outlives a career. **Fix:** clear `feed`.
-9. `[A]` **Prestige card has no Escape and no focus trap.** `client/src/main.ts:1229` — reuses
+9. `[A]` ~~**Prestige card has no Escape and no focus trap.**~~ **FIXED.** `client/src/main.ts:1229` — reuses
    `player-card-ov` without `dialogify`. **Fix:** `const close = this.dialogify(el)`.
+
+**Tier 1 notes.** #1 was mine, shipped with the awards the day before: the line omitted the `m.season + 1`
+its two siblings pass. #8's fix is generation-stamping rather than clearing the feed — `resetMgrForHeir`'s
+own comment says the feed carries across a succession *deliberately*, as the dynasty's record; the collision
+was that the season counter resets to 1 and the filter was season-only. #7 is guarded by the new
+`tools/playtest/sub_identity.ts`; its first version measured **0 of 0** second yellows and reported a pass —
+a check that could not fail — so it now asserts that substitutions and second yellows both actually occur.
+Against the unfixed engine it catches 1 unearned dismissal in 10 (my measurement; the sweep claimed 26%).
 
 ## TIER 2 — small and local (eight items)
 

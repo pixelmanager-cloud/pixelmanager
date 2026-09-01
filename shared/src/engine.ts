@@ -358,6 +358,10 @@ export class MatchEngine {
     this.dm[t][outI] = dutyMods(effectiveDuty(this.teams[t].players[outI]));
     const a = t === 0 ? outP.anchor : mirroredAnchor(outP.anchor);
     s.players[t][outI] = { x: a.x, y: a.y, fitness: 0.9 }; // fresh legs
+    // THE CARD BELONGS TO THE MAN, NOT THE SHIRT. `booked` is keyed team*100+SLOT INDEX, and this slot
+    // now holds a different player -- so without this the fresh man's first bookable foul reads as a
+    // second yellow and he is sent off for a caution he never received.
+    this.booked.delete(t * 100 + outI);
     this.subsUsed[t]++;
     // RECOMPUTED, because the XI just changed. `leadershipBonus` was set once in the constructor from the
     // STARTING eleven and never touched again, so a captain substituted off kept his armband bonus for the

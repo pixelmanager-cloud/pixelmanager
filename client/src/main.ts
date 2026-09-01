@@ -63,7 +63,7 @@ interface MgrState { season: number; results: PlayedResult[]; starId?: string; s
    *  board mutterings, arc outcomes — and are rendered down the season screen. Before this, the manager's
    *  entire dramatic life was toasts that vanished in two seconds and left nothing to look back at: a
    *  promotion got less text than a throw-in. Capped so a long dynasty cannot bloat the save. */
-  feed?: Array<{ season: number; icon: string; text: string }>;
+  feed?: Array<{ season: number; icon: string; text: string; gen?: number }>;
   /** MANAGER ARCS. `arcFired` is every arc this career has seen (never repeated); `arcNow` is the one
    *  awaiting a decision, with the beat it is on. `arcTags` are flags set by past choices, which other
    *  arcs can require or forbid — that is how a consequence outlives the season it happened in. */
@@ -700,13 +700,21 @@ class Game {
    *  order); quitting mid-match confirms first so progress isn't lost by accident. */
   private openPauseMenu() {
     document.getElementById('pause-ov')?.remove();
+    // ACTUALLY PAUSE. This menu said "⏸ PAUSED" and stopped nothing: `this.running` is written in exactly
+    // four places (spacebar, startMatch, onFullTime, skipToEnd) and none of them is here, while `#matchwrap`
+    // stays visible so `onFrame` keeps ticking. At ×12, reading the three options for forty-five seconds
+    // played out the rest of the match behind the dialog -- goals, full time, the result card shown and
+    // auto-dismissed -- and "▶ Resume" returned the player to a finished game.
+    // The PRIOR value is restored, not `true`: a match already paused with the spacebar must stay paused.
+    const wasRunning = this.running;
+    this.running = false;
     const ov = document.createElement('div'); ov.id = 'pause-ov'; // id must match the remove() above so reopening replaces, not stacks (PT-79)
     ov.innerHTML = `<div class="tt-card"><div class="set-head"><div class="tt-title">⏸ PAUSED</div><button class="set-x" aria-label="Close">✕</button></div>`
       + `<button class="tt-opt" id="pm-resume"><b>▶ Resume</b><span>Back to the game</span></button>`
       + `<button class="tt-opt" id="pm-settings"><b>⚙ Settings</b><span>Music, motion, screen effects</span></button>`
       + `<button class="tt-opt" id="pm-quit"><b>≡ Quit to menu</b><span>Your progress is saved</span></button></div>`;
     document.body.appendChild(ov);
-    const close = () => { ov.remove(); document.removeEventListener('keydown', onEsc); }; // clean up the ESC listener on every close path (PT-81)
+    const close = () => { this.running = wasRunning; ov.remove(); document.removeEventListener('keydown', onEsc); }; // clean up the ESC listener on every close path (PT-81)
     ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
     ov.querySelector('.set-x')!.addEventListener('click', close);
     ov.querySelector('#pm-resume')!.addEventListener('click', close);
@@ -1236,8 +1244,12 @@ class Game {
       + (pr.nextTitle ? `<div class="pc-cbars"><span class="pc-cbar" style="flex:1"><i>→ ${pr.nextTitle}</i><span class="pc-cbg" style="width:80px"><b class="m" style="width:${Math.round(pr.progress * 100)}%"></b></span></span></div>` : `<div class="pc-earn">the pinnacle — an immortal gaffer</div>`)
       + `</div><div class="pc-foot">Earned across your whole managerial career — and it's what the board measures you against: the more you've won, the more they expect of next season.</div>`
       + `<button class="pc-close">Close</button></div>`;
-    el.addEventListener('click', (e) => { const t = e.target as HTMLElement; if (t === el || t.classList.contains('pc-close')) el.remove(); });
+    // The same treatment its two siblings get. Without dialogify there is no Escape, no focus trap and
+    // `#app` is not inert, so a keyboard player must Tab through the entire hub beneath the card to reach
+    // its Close button -- and this card shares `player-card-ov` with two others that DO trap focus.
     document.body.appendChild(el);
+    const closePrestige = this.dialogify(el);
+    el.addEventListener('click', (e) => { const t = e.target as HTMLElement; if (t === el || t.classList.contains('pc-close')) closePrestige(); });
   }
 
   // ---- hub ----
@@ -1406,7 +1418,10 @@ class Game {
       arcNow: null, arcLastMd: undefined, arcBoard: 0,
       squadReport: undefined, squadReportSeason: undefined,
       contElig: undefined, contRound: 0, contOut: false, contBlurb: undefined,
-      wcStage: undefined, wcEdition: undefined, wcRun: undefined,
+      // `wcSeen` belongs here too. Without it the father's edition suppresses the heir's: worldCupHtml
+      // returns '' when `wcSeen === edition`, the season counter resets to 1, and the heir reaching the
+      // same staging season gets no teaser, no button and no explanation.
+      wcStage: undefined, wcEdition: undefined, wcRun: undefined, wcSeen: undefined,
       // THE STORY LIBRARY RESETS WITH THE MAN. `arcFired` is this career's seen-list — `pickManagerArc`
       // filters on it and never repeats — so carrying it across successions spends the 819-arc library
       // ONCE, across the whole dynasty, and then runs dry. Measured over 10-season generations at the
@@ -2485,7 +2500,10 @@ class Game {
       // has no reason to remember. Read out with the number that earned it, so the claim is checkable.
       const aw = ((r as any).awards ?? []) as Array<{ label: string; player_name: string; value: number }>;
       if (aw.length) {
-        this.pushFeed('🏅', `<b>End-of-season awards.</b> ${aw.map((a) => `${a.label} — <b>${a.player_name}</b> (${a.value})`).join(' · ')}`);
+        // `m.season + 1`, like every sibling line in this function. The counter is bumped twelve lines below
+        // and `seasonFeedHtml` filters on the NEW value, so a line filed under the season just played is
+        // written and then never rendered. Shipped that way with the awards themselves.
+        this.pushFeed('🏅', `<b>End-of-season awards.</b> ${aw.map((a) => `${a.label} — <b>${a.player_name}</b> (${a.value})`).join(' · ')}`, m.season + 1);
         toast(`🏅 ${aw[0].label}: ${aw[0].player_name}`);
       }
       const up = (r as any).upkeep as number | undefined;
@@ -2571,7 +2589,12 @@ class Game {
         if ((sq.coins ?? 0) === 0) {
           this.pushFeed('⚠️', `<b>The club is running on empty.</b> Everything coming in is going straight back out on upkeep and wages, and there is nothing left to spend. Scale a facility back on the <b>Club</b> screen to cut the bill and recover some of what it cost, or climb a division to earn more.`, m.season + 1);
         }
-        const mm = this.loadMgr(); this.saveMgr({ ...mm, squadReport: sq, squadReportSeason: mm.season });
+        // `mm.season + 1`: this runs BEFORE the counter is incremented at the end of nextSeason, and the
+        // spread carries both fields forward -- so the save always ended on `season: N+1,
+        // squadReportSeason: N` and loadMgr's `=== m.season` rehydration test could never pass. The squad
+        // report is the ONLY surface that emits the data-renew / data-release buttons, so a refresh on the
+        // planning screen lost them permanently and expiring contracts ran down unattended.
+        const mm = this.loadMgr(); this.saveMgr({ ...mm, squadReport: sq, squadReportSeason: mm.season + 1 });
       } catch { /* offline — squad rollover is best-effort, never blocks the season */ }
     }
     if (t.pos === 1) { audio.sting('triumph'); audio.chime('triumph'); } // league champions — a cue OVER the music, not a context switch that the next screen stomps
@@ -3411,13 +3434,20 @@ class Game {
   private pushFeed(icon: string, text: string, season?: number) {
     if (!text) return;
     const m = this.loadMgr();
-    const feed = [...(m.feed ?? []), { season: season ?? m.season, icon, text }];
+    // STAMPED WITH THE GENERATION, because the season number alone does not identify a season. The feed
+    // carries across a succession deliberately (see resetMgrForHeir -- it is the dynasty's record, not the
+    // manager's), but `season` resets to 1 with the heir, so a season-only filter showed him his father's
+    // first year: a bid for a man who retired a generation ago, injuries to players long gone.
+    const feed = [...(m.feed ?? []), { season: season ?? m.season, gen: m.starGen ?? 0, icon, text }];
     this.saveMgr({ ...m, feed: feed.slice(-Game.FEED_MAX) });
   }
   /** The feed for the CURRENT season, newest first. */
   private seasonFeedHtml(): string {
     const m = this.loadMgr();
-    const rows = (m.feed ?? []).filter((f) => f.season === m.season);
+    // Entries written before generations were stamped have no `gen`; treat them as this generation's so
+    // an existing save does not lose its current-season feed on upgrade.
+    const gen = m.starGen ?? 0;
+    const rows = (m.feed ?? []).filter((f) => f.season === m.season && (f.gen ?? gen) === gen);
     if (!rows.length) return '';
     const items = rows.slice().reverse().map((f) => `<div class="sf-feed-row"><span class="sf-feed-ico">${f.icon}</span><span>${f.text}</span></div>`).join('');
     return `<details class="sf-feed" open><summary>📰 Your season so far <span class="sf-feed-n">${rows.length}</span></summary>${items}</details>`;
@@ -4476,7 +4506,7 @@ class Game {
     if (this.editorMode !== 'match' || !this.spFixture) { host.innerHTML = ''; return; }
     const rows = MATCH_PLAN_RULES.map((r) => {
       const on = this.draftPlan.has(r.id);
-      return `<div class="mp-rule${on ? ' on' : ''}" data-plan="${r.id}"${r.note ? ` title="${r.note}"` : ''}><span class="mp-check">✓</span><span class="mp-ico">${r.ico}</span>`
+      return `<div class="mp-rule${on ? ' on' : ''}" data-plan="${r.id}"${r.note ? ` title="${r.note.replace(/"/g, '&quot;')}"` : ''}><span class="mp-check">✓</span><span class="mp-ico">${r.ico}</span>`
         + `<span class="mp-body"><span class="mp-if">If ${r.ifText}</span> <span class="mp-then">→ ${r.thenText}</span></span></div>`;
     }).join('');
     host.innerHTML = `<div class="mp-head">📋 MATCH PLAN — conditional orders</div>`

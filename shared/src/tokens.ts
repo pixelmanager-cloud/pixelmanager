@@ -239,7 +239,12 @@ export function actWithNarration(c: Career, a: CareerAction): string | null {
 }
 export function careerProfile(t: Token, c: Career) {
   const genes = JSON.parse(t.genes_json);
-  const attrs = deriveStats(c.log, (c as any).seed, genes);
+  // `c.attrFocus` -- the fourth argument -- or this grid is derived differently from the one graduation
+  // produces (which goes through `c.finContext()`, and DOES include it). The Player tab then shows an
+  // attribute grid whose role-weighted overall disagrees with the headline overall printed beside it,
+  // and the pro card jumps by up to three points from the last numbers the player was ever shown.
+  // attrFocus is not a rounding-scale quantity: it accumulates every turn a coach's specialty is hit.
+  const attrs = deriveStats(c.log, (c as any).seed, genes, c.attrFocus);
   const val = prospectValuation(c, genes);
   return {
     role: val.role, currentOverall: val.currentOverall, potential: val.potential, stars: val.stars, physicalCeiling: val.physicalCeiling, attrs,
