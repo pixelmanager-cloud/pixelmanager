@@ -1655,6 +1655,78 @@ Those 4.5 shots are hopeful efforts from ~45m that the old geometry counted beca
 the conversion. So "ship main as-is" is not avoiding the defect; it is shipping a league whose bottom club
 scores about once every ten games. Judge by box share, not shot count.
 
+### THE PROOF THAT TUNING CANNOT WORK — measured 2026-09-01, and it is arithmetic, not judgement
+
+Everything above says "I tried eight dials and none worked", which is evidence but not proof. This is the
+proof, and it is the number to put in front of anyone who wants to try one more constant.
+
+Reaching the box is a chain of independent survival rolls, so P(reach box) ≈ p^(D/λ) — per-link survival
+raised to the number of links needed. **Both terms are asymmetric.** Measured on the league fixture:
+
+| | spells/match | ticks/spell | completed links | starts at | reaches ≤18m |
+|---|---|---|---|---|---|
+| stronger side | 433 | 15.21 | 2.69 | 50.8m | **46.8%** |
+| weaker side | 432 | 5.76 | 1.15 | 81.6m | **0.9%** |
+
+Implied per-link survival: **0.77 strong, 0.57 weak**. Links needed to reach the box: **3.4 strong, 6.6
+weak** — because the weak side starts 30 metres further out. So 0.77^3.4 = 0.41 (measured 0.47) and
+0.57^6.6 = 0.017 (measured 0.009).
+
+**The exponent is per-side, and that is what every dial missed.** All eight mechanisms I nulled move the
+*base* p. None of them moves the exponent. And the arithmetic closes it: for the weak side to hit 1.8:1 it
+must convert ~26% of possessions into a box entry, which at 6.6 links needs per-link survival of **0.81** —
+better than the strong side manages today. No tuning of per-event odds can get there. Only cutting the
+exponent can.
+
+Why the weak side starts 30m further out is itself a runaway: turnovers happen where the ball already is,
+so territory begets turnovers in good areas begets territory. Measured — the stronger side wins the ball in
+the opponent's final third **54.2%** of the time and in its own third 8.8%; the weaker side, 5.5% and 55.6%.
+
+And the volume knob proves the trade is unsatisfiable rather than merely untuned. Sweeping `SHOT_APPETITE`:
+
+| | q13 v q13 | the league fixture |
+|---|---|---|
+| 1 | 4.3 shots, 0.90 goals | 2.08 – 0.00 |
+| 4 | 14.8 shots, 2.03 goals | 7.88 – 0.00 |
+| 8 | **26.5 shots, 3.63 goals — real football** | **12.48 – 0.04** |
+
+At 8 the "is it football" axis is solved outright and the league is a 12-0 every week, because the knob
+scales both sides' box-reach equally and therefore multiplies the MARGIN linearly. There is no value that
+satisfies both gates.
+
+### THE FACT THAT CHANGES WHAT A REDESIGN IS ALLOWED TO BE
+
+**The client never renders player positions.** Searching the whole client for `state.players`,
+`state.ball` or `state.carrier` returns exactly one hit — and it reads `.fitness`. The match HUD consumes
+the score, the clock, `possession[]` tick counts, average fitness and the event stream. `runMatch` returns
+only the result, both sides' fitness, and events.
+
+So the 2D spatial simulation — every position, every metre, the whole tick-by-tick geometry this document
+has spent thousands of words on — **is invisible to the player. It exists solely to produce an event
+stream.** That is not an argument for keeping it or for throwing it away, but it does mean the redesign is
+constrained by the events it must emit and by the gates, and by nothing else. A bounded phase ladder that
+produces the same events is not a downgrade in fidelity the player can perceive; it is the same film shot
+with a cheaper camera.
+
+### COST, HONESTLY
+
+Option 1 is **a multi-day project**, and the days are not where you would guess. Roughly one day to build
+the ladder behind a flag and get both axes of `engine_panel` green. Then **several more** re-hanging the
+tactical dials onto the new phase terms and re-deriving every calibration ratchet — 20 files import
+`engine.js`, `strategy_test` carries ~35 assertions of which 30+ are tactical, and `tactics_matrix` alone
+takes 47.7 minutes to run, so each iteration of the census is slow.
+
+**Step 5 is not optional.** All three of `computeZonal`, `homeBoost` and the duty `shoot` multiplier ride
+on the single line at `engine.ts:507`, whose volume the redesign changes by an order of magnitude. If the
+tactical layer is not re-hung onto chance creation in the same change, the shape inversion is **guaranteed,
+not risked** — that is what killed both previous attempts.
+
+Option 3 (compress pace) was measured on both branches and **fails a gate on each**: on main it takes shots
+to 84.5 against `shot_geometry`'s ceiling of 75, for a weak-side gain of 0.04 goals a match; on the rebuild
+branch it drops the fixture to 0.48 goals, breaking the one ratchet that branch still holds. It is a real
+bug worth fixing — a 3:1 speed range where footballers differ by 1.3:1 — but it belongs *inside* option 1,
+once the speed term has stopped being the amplifier.
+
 ### WHAT THE REDESIGN MUST DO — sharpened by the above
 
 Two goals, not one, and the second is the one that killed the last two attempts:
