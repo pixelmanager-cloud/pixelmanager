@@ -1311,6 +1311,67 @@ screen still offers does something. The sweeper-keeper idea survives where it is
   matches and save standing orders without kicking off? Today kickoff is the commit point. `saveTeam()`
   is the unreachable scaffold for the other answer.
 
+## 68. KNOWN AND ACCEPTED — shipped deliberately, not a bug list
+
+**Read this before "fixing" anything below.** Each item is measured, understood, and left in on purpose.
+None is an unknown defect; every one was found by a probe that now guards it. Chasing them without reading
+the reasoning is how the previous two engine rebuilds died — and twice this session a "fix" for one of them
+was measured and turned out to make the game worse.
+
+The bar for re-opening any of these is a MEASUREMENT showing the fix helps, not an argument that the number
+looks wrong. Three separate people-or-agents have now produced confident arguments here that measurement
+refuted.
+
+### Accepted, in the match engine
+
+1. **4-2-2-2 loses to 4-1-4-1, 7W-34L.** The one remaining `strategy_test` failure that is real and large.
+   NOT caused by any of the current engine constants — bisected with `ADVANCE_FLOOR=0`, `OUTCOME_SENS=1`
+   and `RANGE_APPETITE=0` and it still reads 5W-43L. It is emergent across the whole rebuilt geometry.
+   Formation rebalancing narrowed the *field* spread from 37.5 to 25.6 league points a season but did not
+   move this specific head-to-head. Three hypotheses were built and measured and all three failed; they are
+   recorded in the 4-2-2-2 section so nobody retries them.
+
+2. **`division_balance` sits exactly on its 15% thrashing bar.** No headroom. This is the single most
+   fragile thing in the engine: any future change that adds scoring will break it, and the last three that
+   did were each reverted for exactly that. Treat a green `division_balance` as "just barely", not "fine".
+
+3. **Goal variance is too low.** One goalless match in 120 where Poisson at 2.82 goals/match predicts about
+   seven. The engine reliably produces goals rather than sometimes producing none, so `qa_matchstats`'
+   no-award path is under-exercised. Real, small, and not worth engine risk to chase.
+
+4. **The mental-layer swing is 1.21 against `qa_mental`'s 2.0 bar.** It reached 2.50 earlier and was spent
+   deliberately: the formation rebalance raised scoring, which broke the league bar, and the only lever
+   that buys that back (`OUTCOME_SENS`) also flattens the finishing terms the mental layer rides on. The
+   league wins, per the standing rule. Note the bar itself was calibrated on a ~70-shot engine and this one
+   takes ~20, so part of the gap is the bar, not the game — but that argument was deliberately NOT used to
+   move it.
+
+5. **Wing-back fullbacks do not edge cover-duty fullbacks on possession** (48.3% v 48.9%). Persists at
+   N=400, so it is real rather than noise — but it is a 0.6 percentage-point effect, which is finer than
+   this engine resolves. Accepted as below the resolution of the simulation.
+
+### Accepted, structural — and MORE USEFUL DOCUMENTED THAN FIXED
+
+6. **No duty has any defensive positioning at all.** `push`, `come` and `hug` are every one of them read
+   inside `if (attacking)`. A defensive duty can only act by *not* going forward; nothing positions a
+   stopper differently from a cover defender while the opponent has the ball. This is the answer to "why do
+   the defensive duties feel the same", and fixing it means new terms in the movement code — every match,
+   every duty, every formation, which is the exact surface that produces three new defects for one fixed.
+
+7. **`ADVANCE_FLOOR` makes territory worthless, so defending high is strictly dominant.** If every
+   surviving link gains at least 8m regardless of support, conceding ground costs an attacker nothing.
+   This is a direct consequence of the change that FIXED the engine — weak-side box reach went 0.9% to 21%
+   because of it — so it is not separable from the fix. Nothing currently measures it. An attempt to scale
+   the floor by men-ahead-of-the-ball was built and measured and made things WORSE (8W-41L to 4W-45L),
+   because the lone-striker shapes commit more men forward than the two-striker ones, not fewer.
+
+### CLOSED — was on this list, is not any more
+
+8. ~~Traits are unreachable at the bottom of the pyramid.~~ **Fixed and measured.** The earnable-traits
+   change means a squad now grows into traits rather than being minted with them: tier 8 goes 0.00 traits
+   at founding to 3.20 by season 12, tier 9 to 1.84, tier 10 to 1.60. The basement sees the trait layer —
+   it earns it, which is the better version of the mechanic anyway.
+
 ## 61. §9 SYNERGIES — you asked whether to tune or remove. Neither, yet.
 
 I measured what each synergy's reward is actually worth, n=150 careers each, applied exactly as the game
