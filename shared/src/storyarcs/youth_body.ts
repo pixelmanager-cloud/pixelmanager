@@ -74,7 +74,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
         choices: [
           { id: 'cut', label: 'Put the phone on the landing', desc: 'Out of the room entirely, every night, starting tonight', outcome: 'The first four nights are unbearably boring. By the second week he is asleep by eleven and waking before the alarm, and Thursday stops being something to survive. He misses the quiet hour and does not get it back.', effect: { energy: 10, attr: { composure: 2 }, tag: 'body-sleeps' } },
           { id: 'half', label: 'Keep it, but only on non-training nights', desc: 'A rule he sets himself and mostly keeps', outcome: 'He mostly keeps it. Mostly turns out to be about two nights in three, which is enough to fix half the problem and leave the other half exactly where it was.', effect: { energy: 4 } },
-          { id: 'keep', label: 'Keep the hour', desc: 'It is the only part of the day that belongs to him', outcome: 'He keeps it, and pays for it in the last twenty minutes of every session for a year. He does not regret it, and that is a separate thing from it not costing him anything.', effect: { energy: -8, attr: { creativity: 1, flair: 1 } } },
+          { id: 'keep', label: 'Keep the hour', desc: 'It is the only part of the day that belongs to him', outcome: 'He keeps it, and pays for it in the last twenty minutes of every session for a year. He does not regret it, and that is a separate thing from it not costing him anything.', effect: { energy: -8, attr: { creativity: 2, flair: 2 } } },
         ],
       },
     },
@@ -90,7 +90,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
         choices: [
           { id: 'rest', label: 'Sit the week out', desc: 'Two days on the sofa and come back clean', outcome: 'Two days of daytime television and a strange guilt. He comes back on Saturday breathing properly and slightly behind everyone, and is level with them again inside a fortnight.', effect: { energy: 8, form: -0.06, attr: { composure: 1 } } },
           { id: 'push', label: 'Train through it', desc: 'Nobody remembers who trained with a cold; they remember who was there', outcome: 'He trains, badly, twice. The cold goes down into his chest and stays for three weeks, and he spends February at about seventy per cent of himself, coughing on the walk home.', effect: { energy: -12, form: -0.1, attr: { aggression: 1 }, tag: 'body-chesty' } },
-          { id: 'half', label: 'Go, but only do the ball work', desc: 'Skip the running, stay in the room', outcome: 'He does the technical half and stands out of the shuttles with his hood up, feeling neither ill enough to be excused nor well enough to be useful. It is the right call and it feels like nothing.', effect: { energy: 2, attr: { composure: 1, teamwork: 1 } } },
+          { id: 'half', label: 'Go, but only do the ball work', desc: 'Skip the running, stay in the room', outcome: 'He does the technical half and stands out of the shuttles with his hood up, feeling neither ill enough to be excused nor well enough to be useful. It is the right call and it feels like nothing.', effect: { energy: 2, attr: { teamwork: 1 } } },
         ],
       },
     },
@@ -104,9 +104,9 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'The warm-up is the part he does with his eyes somewhere else — jog to the cone, jog back, the same swinging leg thing everyone does badly. Then one Saturday he goes into a tackle in the first minute cold and something in his groin gives a warning shot, and for ten minutes he cannot lengthen his stride.',
         choices: [
-          { id: 'learn', label: 'Start doing it properly', desc: 'Actually feel where the stretch goes, every single time', outcome: 'It is deeply boring for about three months, and then it stops being boring because he can feel the difference in the first five minutes of a game. He is one of two boys in the squad who ever gets there.', effect: { attr: { stamina: 2, composure: 1 }, energy: 4, tag: 'body-warms-up' } },
-          { id: 'own', label: 'Build his own version', desc: 'Ignore the group one, work out what his body actually needs', outcome: 'He arrives fifteen minutes early and does his own odd sequence in the corner, which looks like showing off and is not. It works, mostly, and it is his, entirely.', effect: { attr: { stamina: 1, creativity: 1 }, meters: { authority: -2 } } },
-          { id: 'ignore', label: 'Carry on as he is', desc: 'It was a twinge. Bodies do that', outcome: 'It was a twinge, and bodies do that, and he gets away with it for two more years — which is exactly long enough to be certain the warm-up does not matter.', effect: { attr: { flair: 1 }, energy: -3 } },
+          { id: 'learn', label: 'Start doing it properly', desc: 'Actually feel where the stretch goes, every single time', outcome: 'It is deeply boring for about three months, and then it stops being boring because he can feel the difference in the first five minutes of a game. He is one of two boys in the squad who ever gets there.', effect: { attr: { stamina: 2 }, energy: 4, tag: 'body-warms-up' } },
+          { id: 'own', label: 'Build his own version', desc: 'Ignore the group one, work out what his body actually needs', outcome: 'He arrives fifteen minutes early and does his own odd sequence in the corner, which looks like showing off and is not. It works, mostly, and it is his, entirely.', effect: { attr: { stamina: 1, creativity: 2 }, meters: { authority: -2 } } },
+          { id: 'ignore', label: 'Carry on as he is', desc: 'It was a twinge. Bodies do that', outcome: 'It was a twinge, and bodies do that, and he gets away with it for two more years — which is exactly long enough to be certain the warm-up does not matter.', effect: { attr: { flair: 2 }, energy: -3 } },
         ],
       },
     },
@@ -121,7 +121,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
         prompt: 'Something has happened to the changing room this season. Half of them have shoulders now and one has to shave. He is the same shape he was in Year Six and has started doing his shirt off and on in one movement, facing the wall, timing it so nobody is looking.',
         choices: [
           { id: 'wall', label: 'Keep facing the wall', desc: 'It is nobody\'s business and it will pass', outcome: 'It passes, eventually, the way these things do. In the meantime he becomes the quietest person in a loud room, and finds he can hear a lot from there.', effect: { attr: { composure: 2 }, meters: { peers: -2 } } },
-          { id: 'joke', label: 'Get the joke in first', desc: 'Say it about himself before anyone else can', outcome: 'He calls himself something unflattering while pulling the shirt over his head and the room laughs with him rather than at him. It costs a little to say and buys a whole season of being left alone.', effect: { meters: { peers: 6 }, attr: { flair: 1, composure: 1 } } },
+          { id: 'joke', label: 'Get the joke in first', desc: 'Say it about himself before anyone else can', outcome: 'He calls himself something unflattering while pulling the shirt over his head and the room laughs with him rather than at him. It costs a little to say and buys a whole season of being left alone.', effect: { meters: { peers: 6 }, attr: { flair: 2, composure: 1 } } },
           { id: 'gym', label: 'Decide to do something about it', desc: 'Press-ups on his bedroom floor, every night, badly', outcome: 'Forty press-ups a night on a carpet that burns his palms. Nothing visible happens for eight months. Then, quite suddenly, something does — and by then the habit is older than the reason for it.', effect: { attr: { stamina: 2 }, energy: -2, tag: 'body-press-ups' } },
         ],
       },
@@ -152,8 +152,8 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
         prompt: 'A routine appointment he had no feelings about. He gets to the bottom two lines of the chart and guesses, confidently, and the room goes quiet in a particular way. It turns out the far post has been slightly soft-edged his entire life and he had assumed everyone\'s was.',
         choices: [
           { id: 'contacts', label: 'Learn to put lenses in', desc: 'Twenty minutes a morning of poking himself in the eye', outcome: 'Ten days of watering eyes and swearing at a mirror. Then a Tuesday session where he sees a runner make the far post before the runner does, and has to stand still for a second at how much of it he had been guessing.', effect: { attr: { creativity: 2, composure: 1 }, form: 0.08, tag: 'body-lenses' } },
-          { id: 'glasses', label: 'Glasses off the pitch, squint on it', desc: 'Wear them for homework, manage without for football', outcome: 'His schoolwork gets easier almost overnight. It is a strange sort of consolation. On the pitch he goes on playing the game he built for a blurry world: close, quick, and never quite trusting the long ball.', effect: { meters: { school: 6 }, attr: { flair: 1 } } },
-          { id: 'hide', label: 'Tell nobody at the club', desc: 'It is not a thing until somebody makes it a thing', outcome: 'He keeps it to himself and gets very good at reading shoulders and hips instead of watching the ball travel. It is a real skill, learned for a bad reason, and it never leaves him.', effect: { attr: { creativity: 1, composure: 1 }, meters: { authority: -2 } } },
+          { id: 'glasses', label: 'Glasses off the pitch, squint on it', desc: 'Wear them for homework, manage without for football', outcome: 'His schoolwork gets easier almost overnight. It is a strange sort of consolation. On the pitch he goes on playing the game he built for a blurry world: close, quick, and never quite trusting the long ball.', effect: { meters: { school: 6 }, attr: { flair: 2 } } },
+          { id: 'hide', label: 'Tell nobody at the club', desc: 'It is not a thing until somebody makes it a thing', outcome: 'He keeps it to himself and gets very good at reading shoulders and hips instead of watching the ball travel. It is a real skill, learned for a bad reason, and it never leaves him.', effect: { attr: { creativity: 2 }, meters: { authority: -2 } } },
         ],
       },
     },
@@ -175,7 +175,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
         id: 'after',
         prompt: 'He wakes on Wednesday unable to properly bend at the hips and laughs out loud at how much stairs hurt. There is a session on Thursday.',
         choices: [
-          { id: 'go', label: 'Go on Thursday anyway', desc: 'Move it out, even if it is rubbish', outcome: 'He is rubbish for the first twenty minutes and then, oddly, better than usual. He learns that soreness is weather rather than injury, which is one of the more useful things he will ever learn.', effect: { attr: { stamina: 1, composure: 1 }, energy: -3 } },
+          { id: 'go', label: 'Go on Thursday anyway', desc: 'Move it out, even if it is rubbish', outcome: 'He is rubbish for the first twenty minutes and then, oddly, better than usual. He learns that soreness is weather rather than injury, which is one of the more useful things he will ever learn.', effect: { attr: { stamina: 1 }, energy: -3 } },
           { id: 'rest', label: 'Give it a day', desc: 'Let the legs come back before asking again', outcome: 'He gives it the day and comes back fresh on Saturday. It is the sensible call, and a small part of him files it away as the day he did not go.', effect: { energy: 6 } },
         ],
       },
@@ -190,9 +190,9 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'The doorframe at home has pencil marks on it, and this year\'s is barely above last year\'s. Boys he was taller than in September now head balls he cannot reach jumping. Nothing has gone wrong with him. He is simply waiting for something that has already happened to everyone else.',
         choices: [
-          { id: 'adapt', label: 'Play the game his size can play', desc: 'Get it down, get it moving, stop trying to win headers', outcome: 'He becomes a nuisance at knee height — first to the second ball, impossible to shoulder off because there is nothing to get hold of. When the height finally arrives it lands on top of a skill set the big lads never had to build.', effect: { meters: { peers: 5 }, attr: { creativity: 2, flair: 1 }, tag: 'body-small-skills' }, next: 'later' },
+          { id: 'adapt', label: 'Play the game his size can play', desc: 'Get it down, get it moving, stop trying to win headers', outcome: 'He becomes a nuisance at knee height — first to the second ball, impossible to shoulder off because there is nothing to get hold of. When the height finally arrives it lands on top of a skill set the big lads never had to build.', effect: { meters: { peers: 5 }, attr: { creativity: 2, flair: 2 }, tag: 'body-small-skills' }, next: 'later' },
           { id: 'fight', label: 'Refuse to be moved off it', desc: 'Go into everything, give away nothing', outcome: 'He gets flattened a lot and gets up faster than anyone expects, and the flattening stops being worth their while. He also spends the season covered in bruises he does not mention at home.', effect: { meters: { family: 5 }, attr: { aggression: 2 }, energy: -5, tag: 'body-small-fight' }, next: 'later' },
-          { id: 'shrink', label: 'Stop going where the contact is', desc: 'Find the space instead of the collision', outcome: 'He drifts to where nobody is, which keeps him on the ball and out of trouble, and slowly teaches him a habit of avoidance that will take years to unpick.', effect: { attr: { creativity: 1 }, form: -0.06, tag: 'body-small-avoid' }, next: 'later' },
+          { id: 'shrink', label: 'Stop going where the contact is', desc: 'Find the space instead of the collision', outcome: 'He drifts to where nobody is, which keeps him on the ball and out of trouble, and slowly teaches him a habit of avoidance that will take years to unpick.', effect: { attr: { creativity: 2 }, form: -0.06, tag: 'body-small-avoid' }, next: 'later' },
         ],
       },
       later: {
@@ -223,7 +223,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
         id: 'after',
         prompt: 'By March the compensating has spread: the other hip is tight now, and he lands slightly wrong on that side. Someone would only have to ask the right question.',
         choices: [
-          { id: 'own', label: 'Tell the truth about all of it', desc: 'Four months of it, all at once', outcome: 'It is an embarrassing conversation, mostly because of how long the list is. It is also over in ten minutes, and the relief of not carrying it lasts far longer than the two weeks he sits out.', effect: { energy: 8, meters: { authority: 4 }, attr: { leadership: 1, composure: 1 } } },
+          { id: 'own', label: 'Tell the truth about all of it', desc: 'Four months of it, all at once', outcome: 'It is an embarrassing conversation, mostly because of how long the list is. It is also over in ten minutes, and the relief of not carrying it lasts far longer than the two weeks he sits out.', effect: { energy: 8, meters: { authority: 4 }, attr: { leadership: 1 } } },
           { id: 'carry', label: 'Carry it to the end of the season', desc: 'He has got this far. It is eleven weeks', outcome: 'He gets to the end of the season carrying two things instead of one, playing a slightly smaller version of his own game, and everyone agrees it was a solid if unremarkable year for him.', effect: { energy: -8, form: -0.08, attr: { aggression: 1 } } },
         ],
       },
@@ -240,7 +240,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
         choices: [
           { id: 'proper', label: 'Eat properly, three times a day, boringly', desc: 'Breakfast he does not want. Something after training, always', outcome: 'Eating when he is not hungry turns out to be genuinely difficult and completely unglamorous. Over eleven months he puts on the better part of a stone, none of it dramatic, all of it useful.', effect: { attr: { stamina: 2 }, energy: 6, tag: 'body-filled-out' } },
           { id: 'stuff', label: 'Eat everything he can, quickly', desc: 'Volume. Whatever is in the cupboard, twice', outcome: 'He gets heavier in about six weeks and slower in about seven. It takes him most of a year to work out that the two were the same fact, and to undo it.', effect: { energy: -4, form: -0.06 } },
-          { id: 'refuse', label: 'Decide slight is a way of playing, not a fault', desc: 'Get better at not being touched instead', outcome: 'He builds a game around never being where the shoulder is: half a yard earlier on everything, first touch always away from the contact. Some weeks it is beautiful. Some weeks he gets knocked off it in the first minute and stays off it.', effect: { attr: { creativity: 2, flair: 1 }, form: -0.02 } },
+          { id: 'refuse', label: 'Decide slight is a way of playing, not a fault', desc: 'Get better at not being touched instead', outcome: 'He builds a game around never being where the shoulder is: half a yard earlier on everything, first touch always away from the contact. Some weeks it is beautiful. Some weeks he gets knocked off it in the first minute and stays off it.', effect: { attr: { creativity: 2, flair: 2 }, form: -0.02 } },
         ],
       },
     },
@@ -287,7 +287,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
         prompt: 'Nothing was trained for it. He goes away in July as one of the tidy ones and comes back in August and finds, in the first minute of the first session, that he arrives at things before he expects to. It is not a small change. It is a different body doing the same job.',
         choices: [
           { id: 'lean', label: 'Use it — go past people, over and over', desc: 'Find out where the ceiling of this new thing is', outcome: 'He spends September running at defenders for the joy of it, and beating most of them, and it is the most fun football has ever been. He also stops passing for about a month. People notice.', effect: { attr: { flair: 2, aggression: 1 }, form: 0.12, meters: { peers: -2 }, tag: 'body-got-quick' }, next: 'after' },
-          { id: 'fold', label: 'Fold it into what he already does', desc: 'Same game, half a yard earlier', outcome: 'He does not change a thing on the outside. Everything he already did simply starts working, because he is arriving early enough to have a choice. It is much less exciting and much harder to defend against.', effect: { attr: { composure: 2, creativity: 1 }, form: 0.08, tag: 'body-got-quick' }, next: 'after' },
+          { id: 'fold', label: 'Fold it into what he already does', desc: 'Same game, half a yard earlier', outcome: 'He does not change a thing on the outside. Everything he already did simply starts working, because he is arriving early enough to have a choice. It is much less exciting and much harder to defend against.', effect: { attr: { composure: 1, creativity: 2 }, form: 0.08, tag: 'body-got-quick' }, next: 'after' },
         ],
       },
       after: {
@@ -295,7 +295,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
         prompt: 'By November the others have grown too, and the yard is not free any more. He is fast among fast boys instead of fast among boys.',
         choices: [
           { id: 'work', label: 'Keep the speed by working at it', desc: 'It was given once. It has to be earned from here', outcome: 'He starts doing the dull specific things that keep a body quick, and is quick for the next fifteen years. Nobody who meets him later believes it was ever a gift.', effect: { attr: { stamina: 2 }, energy: -3 } },
-          { id: 'skill', label: 'Go back to being the clever one', desc: 'The pace was a loan. The rest is his', outcome: 'He goes back to the game he had before, carrying the pace as a spare rather than a plan, and is a harder player to play against than either version was alone.', effect: { attr: { creativity: 2, composure: 1 } } },
+          { id: 'skill', label: 'Go back to being the clever one', desc: 'The pace was a loan. The rest is his', outcome: 'He goes back to the game he had before, carrying the pace as a spare rather than a plan, and is a harder player to play against than either version was alone.', effect: { attr: { creativity: 2 } } },
         ],
       },
     },
@@ -311,7 +311,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
         choices: [
           { id: 'sort', label: 'Get it all sorted, appointments and all', desc: 'Miss two sessions for a dentist. Feel ridiculous about it', outcome: 'He misses two Thursdays for something with no glamour in it whatsoever. He also sleeps properly for the first time since spring, and stops noticing his own head — a head is meant to do exactly that.', effect: { energy: 8, form: 0.04, attr: { composure: 1 } } },
           { id: 'delay', label: 'Put it off until after the season', desc: 'Six weeks. He can chew on one side for six weeks', outcome: 'He puts it off, and chews on one side, and carries a low grey headache into every game in April without ever once connecting the two.', effect: { energy: -6, form: -0.06 } },
-          { id: 'guard', label: 'Get a mouthguard while he is there', desc: 'Since he is in the chair anyway', outcome: 'A moulded guard that tastes of nothing and makes him talk like an idiot for the first week. He goes into contact very slightly differently afterwards, the way you do when a thing is protected.', effect: { attr: { aggression: 1, composure: 1 } } },
+          { id: 'guard', label: 'Get a mouthguard while he is there', desc: 'Since he is in the chair anyway', outcome: 'A moulded guard that tastes of nothing and makes him talk like an idiot for the first week. He goes into contact very slightly differently afterwards, the way you do when a thing is protected.', effect: { attr: { aggression: 1 } } },
         ],
       },
     },
@@ -327,7 +327,7 @@ export const YOUTH_BODY_ARCS: StoryArc[] = [
         choices: [
           { id: 'drill', label: 'Rebuild it from scratch, slowly', desc: 'Cone, ball, an hour on his own, until the new legs learn it', outcome: 'Six weeks of doing something badly that he used to do without thinking, alone, after everyone has gone in. In October it comes back, and it is faster than it ever was, because it is being done by a bigger boy.', effect: { attr: { flair: 2, stamina: 1 }, energy: -4, tag: 'body-rebuilt-the-turn' } },
           { id: 'shelve', label: 'Shelve it and play the simple stuff', desc: 'Two touches, right choices, wait for the body to settle', outcome: 'He plays a plain, tidy, useful autumn and lets his body get on with its business. The turn returns on its own in the spring, unannounced, in a game that did not matter.', effect: { attr: { composure: 2, teamwork: 1 }, form: -0.04 } },
-          { id: 'force', label: 'Keep trying it in games', desc: 'He is not giving up the best thing he does', outcome: 'He tries it eleven times in four games and it comes off twice, and both times it is worth it. The other nine are turnovers, and he is quietly moved to a part of the pitch where turnovers matter less.', effect: { attr: { flair: 1, aggression: 1 }, form: -0.1, meters: { authority: -3 } } },
+          { id: 'force', label: 'Keep trying it in games', desc: 'He is not giving up the best thing he does', outcome: 'He tries it eleven times in four games and it comes off twice, and both times it is worth it. The other nine are turnovers, and he is quietly moved to a part of the pitch where turnovers matter less.', effect: { attr: { flair: 2, aggression: 1 }, form: -0.1, meters: { authority: -3 } } },
         ],
       },
     },

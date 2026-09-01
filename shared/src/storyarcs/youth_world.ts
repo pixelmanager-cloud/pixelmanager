@@ -18,7 +18,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         choices: [
           { id: 'football', label: 'Say no to the cricket', desc: 'One thing, done properly', outcome: 'He tells the cricket master no. The man takes it well, says the door stays open, and never mentions it again — which is somehow worse than if he had argued.', effect: { meters: { school: -4, authority: 6 }, attr: { composure: 1 }, tag: 'world-one-sport' }, next: 'summer' },
           { id: 'both', label: 'Try to keep both going', desc: 'It is one summer. He can have one summer.', outcome: 'He does both for a term, and by July he is sunburnt, shattered, and slightly worse at each of them than he was in April.', effect: { energy: -12, meters: { school: 8, peers: 6 }, attr: { stamina: 1 }, tag: 'world-two-sports' }, next: 'summer' },
-          { id: 'cricket', label: 'Go to the cricket trial', desc: 'Just to see. Just to know.', outcome: 'He goes, takes three wickets, and gets a card with a phone number on it. He puts it in a drawer and does not throw it away for years.', effect: { meters: { school: 10, authority: -6 }, attr: { creativity: 1 }, tag: 'world-cricket-card' }, next: 'summer' },
+          { id: 'cricket', label: 'Go to the cricket trial', desc: 'Just to see. Just to know.', outcome: 'He goes, takes three wickets, and gets a card with a phone number on it. He puts it in a drawer and does not throw it away for years.', effect: { meters: { school: 10, authority: -6 }, attr: { creativity: 2 }, tag: 'world-cricket-card' }, next: 'summer' },
         ],
       },
       summer: {
@@ -47,8 +47,8 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         id: 'return',
         prompt: 'They come back full of a week he was or wasn\'t part of — the ferry, the hypermarket, the thing that happened on the coach. In the corridor on Monday there is a whole conversation running that he can only half join in with.',
         choices: [
-          { id: 'own', label: 'Say plainly why', desc: 'No shame in it, no drama about it', outcome: 'He says it cost too much and he had football, in a voice that closes the subject without slamming it. Nobody makes anything of it. He learns something about how to carry a thing.', effect: { attr: { leadership: 1, composure: 1 }, meters: { peers: 6 } } },
-          { id: 'joke', label: 'Turn it into a joke', desc: 'Get in first, laugh loudest', outcome: 'He gets the joke in before anyone else can, and it works, and it costs him a small amount of something he does not have a word for yet.', effect: { attr: { flair: 1 }, meters: { peers: 8, school: -2 } } },
+          { id: 'own', label: 'Say plainly why', desc: 'No shame in it, no drama about it', outcome: 'He says it cost too much and he had football, in a voice that closes the subject without slamming it. Nobody makes anything of it. He learns something about how to carry a thing.', effect: { attr: { leadership: 1 }, meters: { peers: 6 } } },
+          { id: 'joke', label: 'Turn it into a joke', desc: 'Get in first, laugh loudest', outcome: 'He gets the joke in before anyone else can, and it works, and it costs him a small amount of something he does not have a word for yet.', effect: { attr: { flair: 2 }, meters: { peers: 8, school: -2 } } },
         ],
       },
     },
@@ -61,7 +61,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'His maths teacher has a mug, a lanyard and thirty years of allegiance to the club up the road — the one his own town has spent a century resenting. Every Monday after a derby, the man teaches quadratics with a smirk that could strip paint.',
         choices: [
-          { id: 'banter', label: 'Give it back', desc: 'Monday morning is a two-way street', outcome: 'He starts returning fire. Two terms of low-grade needling later they get on better than he does with any other teacher in the building, and his maths quietly improves out of pure competitiveness.', effect: { meters: { school: 10, authority: -4 }, attr: { flair: 1, composure: 1 }, tag: 'world-deakin-banter' }, next: 'letter' },
+          { id: 'banter', label: 'Give it back', desc: 'Monday morning is a two-way street', outcome: 'He starts returning fire. Two terms of low-grade needling later they get on better than he does with any other teacher in the building, and his maths quietly improves out of pure competitiveness.', effect: { meters: { school: 10, authority: -4 }, attr: { flair: 2, composure: 1 }, tag: 'world-deakin-banter' }, next: 'letter' },
           { id: 'ignore', label: 'Keep his head down', desc: 'It is maths. Do the maths.', outcome: 'He lets it wash over him and does the work. Mr Deakin, who was mostly after a reaction, decides he is a serious kid and starts treating him like one.', effect: { meters: { school: 8 }, attr: { composure: 2, flair: -1 }, tag: 'world-deakin-quiet' }, next: 'letter' },
         ],
       },
@@ -107,7 +107,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         choices: [
           { id: 'swing', label: 'Swing', desc: 'Some things you do not stand there and take', outcome: 'It lasts eleven seconds and neither of them wins. He gets three days\' isolation, a split lip, and a reputation he did not entirely want and does not entirely mind.', effect: { meters: { school: -12, peers: 8, family: -6 }, attr: { aggression: 2 }, energy: -6, tag: 'world-fought' }, next: 'after' },
           { id: 'walk', label: 'Walk away', desc: 'Through the ring, out the other side, don\'t look back', outcome: 'He walks. Thirty kids watch him do it and half of them call him something for it. It takes about a fortnight for that to stop mattering, and it does stop.', effect: { attr: { composure: 2 }, meters: { peers: -6, school: 6 }, tag: 'world-walked' }, next: 'after' },
-          { id: 'words', label: 'Answer him with words', desc: 'Say the one thing that ends it without a punch', outcome: 'He says something quiet and precise, and the crowd laughs at the wrong boy, and it is over. He is a bit frightened of how good he was at that.', effect: { attr: { flair: 1, composure: 1 }, meters: { peers: 10 }, tag: 'world-talked' }, next: 'after' },
+          { id: 'words', label: 'Answer him with words', desc: 'Say the one thing that ends it without a punch', outcome: 'He says something quiet and precise, and the crowd laughs at the wrong boy, and it is over. He is a bit frightened of how good he was at that.', effect: { attr: { flair: 2, composure: 1 }, meters: { peers: 10 }, tag: 'world-talked' }, next: 'after' },
         ],
       },
       after: {
@@ -129,15 +129,15 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         prompt: 'He has played the trumpet since he was eight and he is, by the standards of a school band, good at it. Rehearsals have moved to Tuesdays. Everything has moved to Tuesdays. The case has been shut for five weeks.',
         choices: [
           { id: 'quit', label: 'Tell Mrs Hallam he\'s stopping', desc: 'Do it properly, to her face', outcome: 'He goes to the music room and says it. She says she is sorry to lose him and asks him to keep the instrument, in case. It lives under his bed for the next decade.', effect: { meters: { school: -4, authority: 6 }, attr: { composure: 1 }, tag: 'world-trumpet-quit' }, next: 'concert' },
-          { id: 'keep', label: 'Keep it going somehow', desc: 'Practise late, turn up when he can', outcome: 'He plays badly and irregularly and refuses to give it up, and is knackered on Wednesdays for a year. He also has one hour a week that belongs to nobody but him.', effect: { energy: -8, meters: { school: 8 }, attr: { creativity: 1 }, tag: 'world-trumpet-kept' }, next: 'concert' },
+          { id: 'keep', label: 'Keep it going somehow', desc: 'Practise late, turn up when he can', outcome: 'He plays badly and irregularly and refuses to give it up, and is knackered on Wednesdays for a year. He also has one hour a week that belongs to nobody but him.', effect: { energy: -8, meters: { school: 8 }, attr: { creativity: 2 }, tag: 'world-trumpet-kept' }, next: 'concert' },
         ],
       },
       concert: {
         id: 'concert',
         prompt: 'The Christmas concert. He is in the audience or in the back row of the brass, and either way there is a moment in the second half where he thinks, clearly and without self-pity, that he is becoming a boy who only does one thing.',
         choices: [
-          { id: 'accept', label: 'Decide that\'s the deal', desc: 'One thing, all the way in', outcome: 'He accepts it as the price and stops mourning it. There is a hardness to that which serves him well and which he will have to unlearn later.', effect: { attr: { composure: 2, stamina: 1 }, form: 0.05, meters: { school: -6, family: -4 } } },
-          { id: 'resist', label: 'Refuse to be only one thing', desc: 'Keep a corner of himself for something else', outcome: 'He promises himself he will always keep something that is not football, and mostly keeps the promise. It makes him harder to knock over than the boys who have nothing else.', effect: { attr: { creativity: 1, composure: 1 }, meters: { school: 6, family: 6 }, form: -0.03 } },
+          { id: 'accept', label: 'Decide that\'s the deal', desc: 'One thing, all the way in', outcome: 'He accepts it as the price and stops mourning it. There is a hardness to that which serves him well and which he will have to unlearn later.', effect: { attr: { composure: 1, stamina: 1 }, form: 0.05, meters: { school: -6, family: -4 } } },
+          { id: 'resist', label: 'Refuse to be only one thing', desc: 'Keep a corner of himself for something else', outcome: 'He promises himself he will always keep something that is not football, and mostly keeps the promise. It makes him harder to knock over than the boys who have nothing else.', effect: { attr: { creativity: 2 }, meters: { school: 6, family: 6 }, form: -0.03 } },
         ],
       },
     },
@@ -150,7 +150,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'Saturday, three o\'clock, the town\'s ground. Fourteen thousand and a wet stand and a chant he has known longer than he has known his times tables. From this corner the pitch looks enormous, and full of men who are not, when you actually watch them, all that much better than the best boy at his club.',
         choices: [
-          { id: 'watch', label: 'Watch one player all game', desc: 'Ignore the ball. Watch what a man does when he hasn\'t got it.', outcome: 'He spends ninety minutes watching the number eight walk, point, and arrive. He learns more from that afternoon than from a month of drills and cannot explain any of it out loud.', effect: { attr: { creativity: 1, composure: 1 }, meters: { authority: 4 }, tag: 'world-terrace-studied' }, next: 'after' },
+          { id: 'watch', label: 'Watch one player all game', desc: 'Ignore the ball. Watch what a man does when he hasn\'t got it.', outcome: 'He spends ninety minutes watching the number eight walk, point, and arrive. He learns more from that afternoon than from a month of drills and cannot explain any of it out loud.', effect: { attr: { creativity: 2 }, meters: { authority: 4 }, tag: 'world-terrace-studied' }, next: 'after' },
           { id: 'sing', label: 'Sing until his voice goes', desc: 'Be twelve. Be one of fourteen thousand.', outcome: 'He loses his voice by the hour mark and does not care. Something about belonging to a place gets welded on that afternoon and never comes off.', effect: { meters: { peers: 8, family: 8 }, attr: { teamwork: 1 }, energy: -4, tag: 'world-terrace-sang' }, next: 'after' },
         ],
       },
@@ -174,14 +174,14 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         choices: [
           { id: 'route', label: 'Change his route', desc: 'Walk the long way. Twenty minutes. Every day.', outcome: 'He walks the long way for a whole term and tells nobody why. He is never late and never complains, and by spring he is the fittest boy in his year without having tried to be.', effect: { attr: { stamina: 2 }, energy: -6, meters: { peers: -2 }, tag: 'world-bully-avoided' }, next: 'end' },
           { id: 'tell', label: 'Tell someone', desc: 'Say it out loud to an adult he trusts', outcome: 'He tells someone, which costs him more than the shoves did. It gets dealt with in about four days, and he spends longer than that feeling odd about having asked for help.', effect: { meters: { school: 8, family: 8 }, attr: { composure: 1 }, tag: 'world-bully-told' }, next: 'end' },
-          { id: 'stand', label: 'Stand there and take it', desc: 'Same stop, same time, every day, until he gets bored', outcome: 'He keeps turning up at the same stop and refuses to look away, and after five weeks the other lad simply stops. Neither of them ever mentions it again.', effect: { attr: { composure: 2, aggression: 1 }, energy: -6, tag: 'world-bully-outlasted' }, next: 'end' },
+          { id: 'stand', label: 'Stand there and take it', desc: 'Same stop, same time, every day, until he gets bored', outcome: 'He keeps turning up at the same stop and refuses to look away, and after five weeks the other lad simply stops. Neither of them ever mentions it again.', effect: { attr: { composure: 1, aggression: 1 }, energy: -6, tag: 'world-bully-outlasted' }, next: 'end' },
         ],
       },
       end: {
         id: 'end',
         prompt: 'Two years on, the same lad is on the touchline at a Sunday game — his little brother is on the other team — and he looks over and gives a nod, as if none of it ever happened.',
         choices: [
-          { id: 'nod', label: 'Nod back', desc: 'Let it go. It costs nothing.', outcome: 'He nods back and gets on with the warm-up. Letting it go turns out to be a skill, and one he uses a great deal more than he expects to.', effect: { attr: { composure: 2, leadership: 1 }, meters: { peers: 6 } } },
+          { id: 'nod', label: 'Nod back', desc: 'Let it go. It costs nothing.', outcome: 'He nods back and gets on with the warm-up. Letting it go turns out to be a skill, and one he uses a great deal more than he expects to.', effect: { attr: { composure: 1, leadership: 1 }, meters: { peers: 6 } } },
           { id: 'blank', label: 'Look straight through him', desc: 'He remembers. Why pretend otherwise?', outcome: 'He looks through him like glass and plays the best forty-five minutes of his month. Some fuel is cheap and burns very hot.', effect: { form: 0.08, attr: { aggression: 1 }, energy: -4 } },
         ],
       },
@@ -219,8 +219,8 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         prompt: 'The season ended in May and nothing starts again until August. No school, no sessions, no fixtures. Six weeks of a town with one shut leisure centre, a rec with a broken net, and a heat that makes the whole place feel abandoned.',
         choices: [
           { id: 'work', label: 'Get himself a summer job', desc: 'Stacking shelves, washing vans, anything', outcome: 'He does four weeks at a garden centre lifting bags of compost, and comes back to pre-season with forearms and an entirely new understanding of what a long day is.', effect: { attr: { stamina: 2 }, meters: { family: 8 }, energy: -6, tag: 'world-summer-job' }, next: 'august' },
-          { id: 'wall', label: 'Spend it against a wall', desc: 'Same wall, same foot, every afternoon until dark', outcome: 'Six weeks, one wall, and a left foot that comes back in August noticeably less useless than it went away. Nobody sees any of it happen.', effect: { attr: { flair: 1, creativity: 1 }, form: 0.08, tag: 'world-summer-wall' }, next: 'august' },
-          { id: 'nothing', label: 'Do absolutely nothing', desc: 'Be a kid for six weeks. It might be the last chance.', outcome: 'He does nothing at all — the rec, the shop, the long light evenings, lying on the grass talking rubbish. He is never quite this free again and he half knows it at the time.', effect: { energy: 12, meters: { peers: 12 }, attr: { creativity: 1 }, tag: 'world-summer-free' }, next: 'august' },
+          { id: 'wall', label: 'Spend it against a wall', desc: 'Same wall, same foot, every afternoon until dark', outcome: 'Six weeks, one wall, and a left foot that comes back in August noticeably less useless than it went away. Nobody sees any of it happen.', effect: { attr: { flair: 2, creativity: 2 }, form: 0.08, tag: 'world-summer-wall' }, next: 'august' },
+          { id: 'nothing', label: 'Do absolutely nothing', desc: 'Be a kid for six weeks. It might be the last chance.', outcome: 'He does nothing at all — the rec, the shop, the long light evenings, lying on the grass talking rubbish. He is never quite this free again and he half knows it at the time.', effect: { energy: 12, meters: { peers: 12 }, attr: { creativity: 2 }, tag: 'world-summer-free' }, next: 'august' },
         ],
       },
       august: {
@@ -242,7 +242,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         prompt: 'Twelve hundred kids, a blazer bought two sizes too big, and a building where nobody knows that he is the boy who scored forty goals last year. On the first morning he is nothing at all, and the corridors are very loud.',
         choices: [
           { id: 'quiet', label: 'Say nothing about football', desc: 'Let them find out, or not', outcome: 'He gets through six weeks as an anonymous kid at the back, and finds he rather likes the version of himself that exists when nobody is watching for anything.', effect: { attr: { composure: 2 }, meters: { school: 8 }, tag: 'world-anon' }, next: 'trial' },
-          { id: 'stake', label: 'Plant his flag early', desc: 'First break, biggest game on the yard, walk on', outcome: 'He walks onto the biggest game on the yard at first break, uninvited, and by Wednesday twelve hundred kids have a rough idea who he is.', effect: { meters: { peers: 12, school: -2 }, attr: { leadership: 1, flair: 1 }, tag: 'world-flag' }, next: 'trial' },
+          { id: 'stake', label: 'Plant his flag early', desc: 'First break, biggest game on the yard, walk on', outcome: 'He walks onto the biggest game on the yard at first break, uninvited, and by Wednesday twelve hundred kids have a rough idea who he is.', effect: { meters: { peers: 12, school: -2 }, attr: { leadership: 1, flair: 2 }, tag: 'world-flag' }, next: 'trial' },
         ],
       },
       trial: {
@@ -263,7 +263,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'The newsagent on the parade wants someone for the morning round. Half six starts, a bag that cuts into the shoulder, and a wage that would make him the first person in his year with his own money.',
         choices: [
-          { id: 'take', label: 'Take the round', desc: 'Up at six, out in the dark, back for eight', outcome: 'He does it for eleven months, through a winter that is genuinely horrible. He is tired in a new way and he never once has to ask anyone at home for anything again.', effect: { attr: { stamina: 2, composure: 1 }, energy: -10, meters: { family: 10 }, tag: 'world-round-taken' }, next: 'winter' },
+          { id: 'take', label: 'Take the round', desc: 'Up at six, out in the dark, back for eight', outcome: 'He does it for eleven months, through a winter that is genuinely horrible. He is tired in a new way and he never once has to ask anyone at home for anything again.', effect: { attr: { stamina: 2 }, energy: -10, meters: { family: 10 }, tag: 'world-round-taken' }, next: 'winter' },
           { id: 'pass', label: 'Turn it down', desc: 'Sleep is not a luxury when you train four nights a week', outcome: 'He says no, and a lad in his form takes it instead, and turns up to school in January looking like a man who has aged four years. He does not regret it, exactly.', effect: { energy: 8, attr: { composure: 1 }, meters: { authority: 4 }, tag: 'world-round-passed' }, next: 'winter' },
         ],
       },
@@ -271,7 +271,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         id: 'winter',
         prompt: 'January. Dark at half seven in the morning, dark again by four, and a session on Tuesday he can feel coming towards him all day like weather.',
         choices: [
-          { id: 'through', label: 'Get through it without mentioning it', desc: 'Nobody needs the running commentary', outcome: 'He says nothing to anyone about being tired, all winter. It is admirable and it is also how boys learn to be no good at saying when something is wrong.', effect: { attr: { composure: 1, stamina: 1 }, energy: -6, meters: { authority: 4 } } },
+          { id: 'through', label: 'Get through it without mentioning it', desc: 'Nobody needs the running commentary', outcome: 'He says nothing to anyone about being tired, all winter. It is admirable and it is also how boys learn to be no good at saying when something is wrong.', effect: { attr: { stamina: 1 }, energy: -6, meters: { authority: 4 } } },
           { id: 'say', label: 'Admit he\'s knackered', desc: 'Say it out loud to somebody', outcome: 'He admits it, and the world does not end, and something in the week gets rearranged to make it survivable. It is a small and genuinely useful lesson.', effect: { energy: 8, meters: { family: 8, school: 4 }, attr: { composure: 1 } } },
         ],
       },
@@ -295,7 +295,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         prompt: 'One of the clips has a caption saying the boy in it is a year younger than him. He watches it four times and then sits on the edge of his bed doing sums about his own life.',
         choices: [
           { id: 'own', label: 'Measure himself against Saturday', desc: 'The only comparison that means anything is the next game', outcome: 'He decides the only opponent is the version of himself that turned up last Saturday. It is not a cure but it is a way of standing up.', effect: { attr: { composure: 2 }, form: 0.06, meters: { authority: 4 } } },
-          { id: 'chase', label: 'Try to close the gap', desc: 'Do more. Do it now. Do it in the garden in the dark.', outcome: 'He goes out at half ten at night to work on it, in November, on his own. It helps and it also starts a habit of never thinking he has done enough.', effect: { attr: { flair: 1, stamina: 1 }, energy: -10, form: 0.05 } },
+          { id: 'chase', label: 'Try to close the gap', desc: 'Do more. Do it now. Do it in the garden in the dark.', outcome: 'He goes out at half ten at night to work on it, in November, on his own. It helps and it also starts a habit of never thinking he has done enough.', effect: { attr: { flair: 2, stamina: 1 }, energy: -10, form: 0.05 } },
         ],
       },
     },
@@ -316,7 +316,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         id: 'town',
         prompt: 'It keeps happening — the barber, the bloke on the market, someone\'s dad in the queue at the chippy. The town has quietly decided he belongs to it, and has opinions about how he is getting on.',
         choices: [
-          { id: 'carry', label: 'Carry it', desc: 'Let a town have a share in him', outcome: 'He decides it is a good thing to be watched over by a place, and lets them have it. When things go badly later, that same town does not put him down.', effect: { attr: { leadership: 1, composure: 1 }, meters: { peers: 10, family: 8 } } },
+          { id: 'carry', label: 'Carry it', desc: 'Let a town have a share in him', outcome: 'He decides it is a good thing to be watched over by a place, and lets them have it. When things go badly later, that same town does not put him down.', effect: { attr: { leadership: 1 }, meters: { peers: 10, family: 8 } } },
           { id: 'shrink', label: 'Keep his head down in town', desc: 'Hood up, other side of the road, home', outcome: 'He starts taking the back streets and going to the big Tesco two towns over. It works, and it also makes his own high street a slightly smaller place for him.', effect: { attr: { composure: 1 }, meters: { peers: -6 }, energy: -2 } },
         ],
       },
@@ -332,7 +332,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         choices: [
           { id: 'write', label: 'Write it in the box', desc: 'Footballer. In pen. In front of everyone.', outcome: 'He writes it in and hands it in, and half the room sees, and two of them laugh. He hands it in anyway, which is the whole of the thing really.', effect: { attr: { leadership: 2 }, meters: { peers: -2, school: 4 }, tag: 'world-wrote-it' }, next: 'talk' },
           { id: 'sensible', label: 'Tick a sensible one', desc: 'PE teacher. Easier. Nobody asks a follow-up.', outcome: 'He ticks PE teacher and the lesson moves on, and he sits there for forty minutes annoyed at himself in a way he cannot quite justify.', effect: { meters: { school: 6 }, attr: { composure: 1 }, tag: 'world-ticked-safe' }, next: 'talk' },
-          { id: 'joke', label: 'Put down something daft', desc: 'Astronaut. Get a laugh. Move on.', outcome: 'He writes astronaut, gets his laugh, and the woman from the council writes something in her own notes that he does not get to see.', effect: { attr: { flair: 1 }, meters: { peers: 8, school: -4 }, tag: 'world-joked' }, next: 'talk' },
+          { id: 'joke', label: 'Put down something daft', desc: 'Astronaut. Get a laugh. Move on.', outcome: 'He writes astronaut, gets his laugh, and the woman from the council writes something in her own notes that he does not get to see.', effect: { attr: { flair: 2 }, meters: { peers: 8, school: -4 }, tag: 'world-joked' }, next: 'talk' },
         ],
       },
       talk: {
@@ -353,7 +353,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'Somebody filmed him at a Sunday game on a phone. Forty seconds, wobbly, someone\'s dad shouting over it — and by Tuesday break it has gone round the entire year group, with a caption he did not write.',
         choices: [
-          { id: 'enjoy', label: 'Enjoy it', desc: 'It is a good forty seconds. Let it be good.', outcome: 'He lets himself enjoy it for about a week, and it is genuinely one of the better weeks of his school life. Then it stops, the way these things do, in about nine days.', effect: { meters: { peers: 12 }, attr: { flair: 1 }, form: 0.05, tag: 'world-video-enjoyed' }, next: 'after' },
+          { id: 'enjoy', label: 'Enjoy it', desc: 'It is a good forty seconds. Let it be good.', outcome: 'He lets himself enjoy it for about a week, and it is genuinely one of the better weeks of his school life. Then it stops, the way these things do, in about nine days.', effect: { meters: { peers: 12 }, attr: { flair: 2 }, form: 0.05, tag: 'world-video-enjoyed' }, next: 'after' },
           { id: 'cringe', label: 'Want it to stop', desc: 'Forty seconds is not him and he knows it', outcome: 'He asks the lad who filmed it to take it down, which does absolutely nothing, and spends a fortnight being introduced to strangers as a video.', effect: { meters: { peers: -4, school: 4 }, attr: { composure: 2 }, tag: 'world-video-hated' }, next: 'after' },
         ],
       },
@@ -361,7 +361,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         id: 'after',
         prompt: 'The next Sunday there are four phones up behind the goal before kick-off, held by kids from his school who have never watched him play before.',
         choices: [
-          { id: 'ignore', label: 'Play as if they aren\'t there', desc: 'The game does not change because it is being filmed', outcome: 'He plays a completely normal, useful, unspectacular game and does not once look at the touchline. It is the least fun and most professional ninety minutes of his childhood.', effect: { attr: { composure: 2, teamwork: 1 }, meters: { authority: 8 }, form: 0.05 } },
+          { id: 'ignore', label: 'Play as if they aren\'t there', desc: 'The game does not change because it is being filmed', outcome: 'He plays a completely normal, useful, unspectacular game and does not once look at the touchline. It is the least fun and most professional ninety minutes of his childhood.', effect: { attr: { composure: 1, teamwork: 1 }, meters: { authority: 8 }, form: 0.05 } },
           { id: 'perform', label: 'Give them something', desc: 'They came to see it. Let them see it.', outcome: 'He plays for the phones, tries three things that are not on, and pulls one of them off. The clip is superb. The game is not one of his better ones.', effect: { attr: { flair: 2 }, meters: { peers: 10, authority: -6 }, form: -0.03 } },
         ],
       },
@@ -375,7 +375,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'Registration. A lad from the back slides his school planner across the desk and says, deadpan, that he wants it signed before it is worth something. Half the form is watching to see what he does with it.',
         choices: [
-          { id: 'sign', label: 'Sign it', desc: 'Big daft signature, all the way across the page', outcome: 'He signs it enormously, wrong way up, and the room falls apart. The lad keeps the planner. Years later it is still in a drawer at his mum\'s house.', effect: { meters: { peers: 12 }, attr: { flair: 1, leadership: 1 }, tag: 'world-signed-it' }, next: 'later' },
+          { id: 'sign', label: 'Sign it', desc: 'Big daft signature, all the way across the page', outcome: 'He signs it enormously, wrong way up, and the room falls apart. The lad keeps the planner. Years later it is still in a drawer at his mum\'s house.', effect: { meters: { peers: 12 }, attr: { flair: 2, leadership: 1 }, tag: 'world-signed-it' }, next: 'later' },
           { id: 'refuse', label: 'Slide it back', desc: 'He hasn\'t done anything yet and they both know it', outcome: 'He pushes it back and says ask him when he has actually done something. It lands somewhere between humble and cold, and the room cannot decide which.', effect: { attr: { composure: 2 }, meters: { peers: -4, authority: 4 }, tag: 'world-refused-it' }, next: 'later' },
         ],
       },
@@ -383,8 +383,8 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         id: 'later',
         prompt: 'The joke does not go away. For the rest of the term he is "the famous one" in every lesson, said with affection about eighty per cent of the time.',
         choices: [
-          { id: 'lean', label: 'Take the nickname', desc: 'Let them have it. It is only a name.', outcome: 'He answers to it, does the bit, and it wears out by Easter like every school nickname does. Being laughed at fondly turns out to be quite good practice.', effect: { attr: { composure: 1, teamwork: 1 }, meters: { peers: 10 } } },
-          { id: 'weight', label: 'Feel the weight of it', desc: 'Every joke about it is also an expectation', outcome: 'He hears the other thing underneath the joke — that a whole year group is now waiting to find out — and it sits on him for a while. He starts training on Sunday mornings as well.', effect: { attr: { stamina: 1, composure: 1 }, energy: -8, form: 0.06, meters: { authority: 6 } } },
+          { id: 'lean', label: 'Take the nickname', desc: 'Let them have it. It is only a name.', outcome: 'He answers to it, does the bit, and it wears out by Easter like every school nickname does. Being laughed at fondly turns out to be quite good practice.', effect: { attr: { teamwork: 1 }, meters: { peers: 10 } } },
+          { id: 'weight', label: 'Feel the weight of it', desc: 'Every joke about it is also an expectation', outcome: 'He hears the other thing underneath the joke — that a whole year group is now waiting to find out — and it sits on him for a while. He starts training on Sunday mornings as well.', effect: { attr: { stamina: 1 }, energy: -8, form: 0.06, meters: { authority: 6 } } },
         ],
       },
     },
@@ -407,7 +407,7 @@ export const YOUTH_WORLD_ARCS: StoryArc[] = [
         prompt: 'The coach comes back over the hill at nine at night and the town is laid out below in orange lights — the retail park, the two chimneys, the estate, the ground with its floodlights off. Every other lad on the bus is asleep.',
         choices: [
           { id: 'stay', label: 'Decide it is his', desc: 'Whatever anyone says about it', outcome: 'He decides that whatever the place is, it is his, and that he would quite like to be the reason somebody stops making that joke. It is the closest thing to an ambition he has ever had that is not about himself.', effect: { attr: { leadership: 2, teamwork: 1 }, meters: { family: 10, peers: 8 } } },
-          { id: 'leave', label: 'Decide he is getting out', desc: 'Football is the door and he can see it from here', outcome: 'He looks at the orange lights and thinks: not for ever. It is a harder, colder fuel than the other kind, and it burns just as well.', effect: { form: 0.07, attr: { aggression: 1, composure: 1 }, meters: { family: -2 } } },
+          { id: 'leave', label: 'Decide he is getting out', desc: 'Football is the door and he can see it from here', outcome: 'He looks at the orange lights and thinks: not for ever. It is a harder, colder fuel than the other kind, and it burns just as well.', effect: { form: 0.07, attr: { aggression: 1 }, meters: { family: -2 } } },
         ],
       },
     },

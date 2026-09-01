@@ -42,7 +42,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         id: 'crossroads',
         prompt: 'Weeks of exile later, a chance: an injury crisis means he’s needed, away at {RIVAL}’s club, the gaffer with no other option. One game to change everything.',
         choices: [
-          { id: 'statement', label: 'Make a statement', desc: 'Play the game of his life and shame the doubters', outcome: 'He runs the show and silences the lot of them. You can’t drop him now.', effect: { form: 0.1, energy: -12, attr: { composure: 1, creativity: 1 }, meters: { fans: 12, authority: 6, agent: -5 } } },
+          { id: 'statement', label: 'Make a statement', desc: 'Play the game of his life and shame the doubters', outcome: 'He runs the show and silences the lot of them. You can’t drop him now.', effect: { form: 0.1, energy: -12, attr: { composure: 1, creativity: 2 }, meters: { fans: 12, authority: 6, agent: -5 } } },
           { id: 'move-on', label: 'Play for a move', desc: 'A tidy game — enough to remind other clubs he exists', outcome: 'Solid, professional, and the scouts in the stand take note. The exit door beckons.', effect: { market: 3, form: 0.03, meters: { fans: -7, authority: -5 } } },
           { id: 'his-system', label: 'Play the gaffer’s system to the letter', desc: 'Weeks of grafting taught him exactly what this manager wants', outcome: 'He has spent his exile learning what this manager actually asks for, and delivers it so precisely that the gaffer sees his own ideas walking about in somebody else’s boots.', effect: { form: 0.08, attr: { teamwork: 2, composure: 1 }, meters: { authority: 12, peers: 5 } }, requires: 'grafted' },
         ],
@@ -66,7 +66,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         id: 'chance',
         prompt: 'Ninetieth minute, level, and the ball drops to him six yards out with the whole slump balanced on this one swing of his boot. The keeper spreads himself. Everything he’s felt for two months is in his throat.',
         choices: [
-          { id: 'first-time', label: 'Hit it first time', desc: 'No thinking, no flinch — trust the instinct that made him', outcome: 'He lashes it in off the underside before the doubt can whisper. He wheels away roaring, the drought drowned in noise.', effect: { form: 0.14, energy: -9, attr: { flair: 1, composure: 1 }, meters: { fans: 16, authority: 8 } } },
+          { id: 'first-time', label: 'Hit it first time', desc: 'No thinking, no flinch — trust the instinct that made him', outcome: 'He lashes it in off the underside before the doubt can whisper. He wheels away roaring, the drought drowned in noise.', effect: { form: 0.14, energy: -9, attr: { flair: 2, composure: 1 }, meters: { fans: 16, authority: 8 } } },
           { id: 'compose', label: 'Take a touch, pick a corner', desc: 'Slow it down, be certain, roll it home with his head up', outcome: 'One steadying touch, side-foot into the bottom bin. Not spectacular — but the monkey is finally off his back.', effect: { form: 0.09, attr: { composure: 2 }, meters: { fans: 9, authority: -5 } } },
         ],
       },
@@ -180,7 +180,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         id: 'derby',
         prompt: 'The two of them on the same pitch at last, the ground a wall of noise, {RIVAL} snapping and chirping at his heels from the first whistle, trying to drag him into a red. The moment to settle it arrives on the ball.',
         choices: [
-          { id: 'humiliate', label: 'Beat him with the ball', desc: 'Nutmeg, turn, and leave {RIVAL} for dead on the biggest stage', outcome: 'He slips {RIVAL} inside out, sets up the winner past his flailing lunge, and points once to the scoreboard. Answered — in full.', effect: { form: 0.13, attr: { flair: 1, creativity: 1 }, meters: { fans: 15, authority: 6 } } },
+          { id: 'humiliate', label: 'Beat him with the ball', desc: 'Nutmeg, turn, and leave {RIVAL} for dead on the biggest stage', outcome: 'He slips {RIVAL} inside out, sets up the winner past his flailing lunge, and points once to the scoreboard. Answered — in full.', effect: { form: 0.13, attr: { flair: 2, creativity: 2 }, meters: { fans: 15, authority: 6 } } },
           { id: 'baited', label: 'Snap back at him', desc: 'Enough talk — settle it the old-fashioned way', outcome: 'He squares up, foreheads almost touching, and it takes four players to keep them apart. Cathartic — but it’s a fine and a caution he didn’t need.', effect: { form: -0.05, attr: { aggression: 2 }, meters: { fans: 4, authority: -5 } } },
         ],
       },
@@ -202,7 +202,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         id: 'reckoning',
         prompt: 'Next home game, the same stand, the same watching eyes — and late on the ball sits up for him twenty-five yards out with the score level. Hit it well and the banner is forgotten; miss and it’s ammunition. He steadies.',
         choices: [
-          { id: 'thunder', label: 'Let fly and answer them', desc: 'Everything he’s got, top corner, in front of that stand', outcome: 'It flies in off the far post and he sprints straight to the banner’s old spot, arms wide, the whole Kop roaring his name properly now.', effect: { form: 0.13, attr: { flair: 1, composure: 1 }, meters: { fans: 18, sponsors: 4, peers: -7 } } },
+          { id: 'thunder', label: 'Let fly and answer them', desc: 'Everything he’s got, top corner, in front of that stand', outcome: 'It flies in off the far post and he sprints straight to the banner’s old spot, arms wide, the whole Kop roaring his name properly now.', effect: { form: 0.13, attr: { flair: 2, composure: 1 }, meters: { fans: 18, sponsors: 4, peers: -7 } } },
           { id: 'unselfish', label: 'Square it for a tap-in', desc: 'The team over the ego — roll it to the man free inside', outcome: 'He resists the glory-shot and slides in the open man. No highlight for him, but the point is won and the terrace notes the selflessness.', effect: { form: 0.07, market: -4, attr: { teamwork: 2 }, meters: { fans: 10, peers: 6, sponsors: -3 } } },
         ],
       },
@@ -225,7 +225,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         prompt: 'The new manager sweeps in with his own ideas, his own favourites, and a first team-meeting stare that lingers on him a beat too long. This is the audition that decides the next three years. First impressions are everything.',
         choices: [
           { id: 'buyin', label: 'Buy into the new methods', desc: 'Learn the system inside out, be the manager’s man on the grass', outcome: 'He masters the new shape before anyone else, becomes the gaffer’s on-pitch translator, and nails down his place at the heart of it all.', effect: { form: 0.1, attr: { teamwork: 1, leadership: 1 }, meters: { authority: 10, fans: 6, peers: -7 } } },
-          { id: 'prove', label: 'Let his performances do the talking', desc: 'No politics, no charm — just be undroppable', outcome: 'He says little and plays out of his skin, forcing his way into the plans on merit alone. The new boss can’t argue with the numbers.', effect: { form: 0.09, energy: -10, attr: { composure: 1, flair: 1 }, meters: { authority: 6, fans: 5, peers: -3 } } },
+          { id: 'prove', label: 'Let his performances do the talking', desc: 'No politics, no charm — just be undroppable', outcome: 'He says little and plays out of his skin, forcing his way into the plans on merit alone. The new boss can’t argue with the numbers.', effect: { form: 0.09, energy: -10, attr: { composure: 1, flair: 2 }, meters: { authority: 6, fans: 5, peers: -3 } } },
         ],
       },
     },
@@ -248,7 +248,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         id: 'retake',
         prompt: 'Weeks on, a league game, a penalty, and the ground goes quiet in that knowing way — everyone remembering the miss but him. {RIVAL} loiters on the edge of the box with a smirk, muttering about the bar. The ball is on the spot. This is the ghost he has to bury.',
         choices: [
-          { id: 'roof', label: 'Blast it and exorcise it', desc: 'Same corner, more conviction — right through the roof of the net', outcome: 'He batters it high and hard into the exact spot he missed, and wheels away howling at the sky. The ghost is dead.', effect: { form: 0.14, energy: -8, attr: { composure: 1, flair: 1 }, meters: { fans: 15, authority: 8 } } },
+          { id: 'roof', label: 'Blast it and exorcise it', desc: 'Same corner, more conviction — right through the roof of the net', outcome: 'He batters it high and hard into the exact spot he missed, and wheels away howling at the sky. The ghost is dead.', effect: { form: 0.14, energy: -8, attr: { composure: 1, flair: 2 }, meters: { fans: 15, authority: 8 } } },
           { id: 'cool', label: 'Send the keeper the wrong way', desc: 'Ice in the veins — a slow, certain roll into the corner', outcome: 'He waits, waits, and rolls it the opposite way as the keeper dives. Cold, clinical, redemption without the drama.', effect: { form: 0.1, market: -3, attr: { composure: 2 }, meters: { fans: 10 } } },
         ],
       },
@@ -315,7 +315,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         id: 'thaw',
         prompt: 'A striker crisis and a run of defeats later, the manager swallows his pride and calls him back into the fold — the same man who banished him now needs him badly. He walks back into a dressing room that watched him get frozen out. How does he return?',
         choices: [
-          { id: 'graft-back', label: 'Let his football do the talking', desc: 'Not a word about the exile — just be undroppable again', outcome: 'He slots back in and plays out of his skin, the freeze-out made to look like the mistake it always was. The point is made in goals.', effect: { form: 0.11, attr: { composure: 1, flair: 1 }, meters: { fans: 12, authority: 6 } } },
+          { id: 'graft-back', label: 'Let his football do the talking', desc: 'Not a word about the exile — just be undroppable again', outcome: 'He slots back in and plays out of his skin, the freeze-out made to look like the mistake it always was. The point is made in goals.', effect: { form: 0.11, attr: { composure: 1, flair: 2 }, meters: { fans: 12, authority: 6 } } },
           { id: 'terms', label: 'Return only on his own terms', desc: 'Back in — but with guarantees, in writing, this time', outcome: 'He agrees to play but extracts assurances first, no longer the trusting soul who got burned. Colder, wiser, and impossible to bully.', effect: { form: 0.06, greed: 4, meters: { agent: 8, authority: 3 } } },
           { id: 'remind-them', label: 'Remind them what he turned down for this club', desc: 'He said no to a giant to stay here, and they froze him out anyway', outcome: 'He says it once, calmly, into a microphone — that he turned down the move of a lifetime for this badge and was bombed out with the kids for his trouble — and then never mentions it again.', effect: { form: 0.09, attr: { composure: 1, leadership: 1 }, meters: { fans: 14, authority: -4, peers: 6 } }, requires: 'clause-honoured' },
         ],
@@ -466,15 +466,15 @@ export const CRISIS_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'Big move, big fee, big expectations — and on the pitch nothing clicks. The league is quicker in some ways and slower in others, the runs he makes go unseen, the ball arrives a half-beat wrong, and a style that made him a star at home looks lost and ordinary abroad. The word "flop" is starting to appear in the local press.',
         choices: [
-          { id: 'adapt', label: 'Rip up his game and rebuild it', desc: 'Study the tape, remould his movement to fit the new football', outcome: 'He spends hours with the analysts, humbly relearning where to run and when, willing to become a different player to survive.', effect: { energy: -6, attr: { creativity: 1, teamwork: 1 }, meters: { authority: 5 }, tag: 'adapting' }, next: 'moment' },
-          { id: 'impose', label: 'Force them to adapt to him', desc: 'Back his own quality — make the team play his way', outcome: 'He refuses to dilute himself, demanding the ball on his terms and betting that class is class in any country.', effect: { form: -0.04, attr: { flair: 1 }, meters: { peers: -3, authority: 3 }, tag: 'stubborn' }, next: 'moment' },
+          { id: 'adapt', label: 'Rip up his game and rebuild it', desc: 'Study the tape, remould his movement to fit the new football', outcome: 'He spends hours with the analysts, humbly relearning where to run and when, willing to become a different player to survive.', effect: { energy: -6, attr: { creativity: 2, teamwork: 1 }, meters: { authority: 5 }, tag: 'adapting' }, next: 'moment' },
+          { id: 'impose', label: 'Force them to adapt to him', desc: 'Back his own quality — make the team play his way', outcome: 'He refuses to dilute himself, demanding the ball on his terms and betting that class is class in any country.', effect: { form: -0.04, attr: { flair: 2 }, meters: { peers: -3, authority: 3 }, tag: 'stubborn' }, next: 'moment' },
         ],
       },
       moment: {
         id: 'moment',
         prompt: 'A televised game, the doubters watching, and the ball breaks to him in the space he’s finally learned to find, one moment to announce that the fee wasn’t madness after all. The new crowd, still unsure of him, leans in. This is where the move turns.',
         choices: [
-          { id: 'define', label: 'Produce a moment of magic', desc: 'A piece of brilliance that says he belongs here after all', outcome: 'He conjures something out of nothing, a goal that silences the doubt, and the fickle new crowd finally rises to him as one.', effect: { form: 0.12, attr: { flair: 1, creativity: 1 }, market: 3, meters: { fans: 14, peers: -6 } } },
+          { id: 'define', label: 'Produce a moment of magic', desc: 'A piece of brilliance that says he belongs here after all', outcome: 'He conjures something out of nothing, a goal that silences the doubt, and the fickle new crowd finally rises to him as one.', effect: { form: 0.12, attr: { flair: 2, creativity: 2 }, market: 3, meters: { fans: 14, peers: -6 } } },
           { id: 'graft', label: 'Do the unglamorous things well', desc: 'No highlight — just the honest, effective work that wins trust', outcome: 'He puts in a shift of clever selfless running that only the coaches truly value, and quietly turns the corner without fanfare.', effect: { form: 0.07, market: -5, attr: { teamwork: 2 }, meters: { authority: 6, peers: 5, fans: -5 } } },
         ],
       },
@@ -490,7 +490,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         choices: [
           { id: 'mentor-on', label: 'Keep mentoring him anyway', desc: 'Swallow the ego — help the lad thrive in the role he took', outcome: 'He keeps whispering the tips and holding the standards, coaching from the shadows the boy who displaced him. Selfless, and it costs him.', effect: { attr: { leadership: 2, teamwork: 1 }, meters: { peers: 10, authority: 6 }, tag: 'grace-in-decline' }, next: 'twilight' },
           { id: 'reignite', label: 'Use it as fuel to win the shirt back', desc: 'No charity — outwork the kid and take the place back', outcome: 'He turns the hurt into fire, trains like a rookie again, and sets out to prove he isn’t finished by beating his own pupil to the shirt.', effect: { energy: -8, attr: { stamina: 1, aggression: 1 }, meters: { authority: 4 }, tag: 'raging-back' }, next: 'twilight' },
-          { id: 'make-it-official', label: 'Ask the club to make the teaching his job', desc: 'He has given something up before and knows it did not shrink him', outcome: 'He walks into the office and asks for the coaching role outright, having already learned that handing something on costs him nothing he actually wanted to keep.', effect: { attr: { leadership: 2, creativity: 1 }, meters: { authority: 8, peers: 8 }, form: -0.04, tag: 'coach-track' }, next: 'twilight', requires: 'handed-over' },
+          { id: 'make-it-official', label: 'Ask the club to make the teaching his job', desc: 'He has given something up before and knows it did not shrink him', outcome: 'He walks into the office and asks for the coaching role outright, having already learned that handing something on costs him nothing he actually wanted to keep.', effect: { attr: { leadership: 2, creativity: 2 }, meters: { authority: 8, peers: 8 }, form: -0.04, tag: 'coach-track' }, next: 'twilight', requires: 'handed-over' },
         ],
       },
       twilight: {
@@ -520,7 +520,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         id: 'showdown',
         prompt: 'The legend is doing co-commentary on his next home game, microphone hot, ready to narrate any failure to the nation. The stadium hums with the subplot. A moment arrives, on the ball, right under the gantry where the old hero sits watching.',
         choices: [
-          { id: 'silence-him', label: 'Deliver the performance of the season', desc: 'Force the legend to praise him through gritted teeth, live on air', outcome: 'He tears the game apart under the great man’s nose until even the icon has to concede it on air. The verdict overturned in ninety minutes.', effect: { form: 0.13, energy: -12, attr: { flair: 1, composure: 1 }, meters: { fans: 15, authority: 7 } } },
+          { id: 'silence-him', label: 'Deliver the performance of the season', desc: 'Force the legend to praise him through gritted teeth, live on air', outcome: 'He tears the game apart under the great man’s nose until even the icon has to concede it on air. The verdict overturned in ninety minutes.', effect: { form: 0.13, energy: -12, attr: { flair: 2, composure: 1 }, meters: { fans: 15, authority: 7 } } },
           { id: 'humble', label: 'Win, then seek the legend out', desc: 'Play well, then shake the old hero’s hand afterwards', outcome: 'He does the business then climbs to the gantry to shake hands, disarming the feud with grace the old man can’t rebuff. Bridges, not bombs.', effect: { form: 0.08, attr: { leadership: 1, composure: 1 }, meters: { fans: 10, sponsors: 4, peers: -6 } } },
         ],
       },
@@ -565,7 +565,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         id: 'response',
         prompt: 'The next match comes fast, the same reporters in the stand with their knives sharpened, {RIVAL} quoted in the build-up saying he "wouldn’t be surprised if he bottled it again". The whole thing is a referendum on whether the scapegoat can carry the weight or buckle under it.',
         choices: [
-          { id: 'silence-critics', label: 'Produce a man-of-the-match display', desc: 'Bury the narrative under ninety minutes of brilliance', outcome: 'He is imperious from the first whistle, dragging the team to a statement win, and the same pens that buried him scramble to praise him.', effect: { form: 0.13, energy: -11, attr: { flair: 1, composure: 1 }, meters: { fans: 13, authority: 8 } } },
+          { id: 'silence-critics', label: 'Produce a man-of-the-match display', desc: 'Bury the narrative under ninety minutes of brilliance', outcome: 'He is imperious from the first whistle, dragging the team to a statement win, and the same pens that buried him scramble to praise him.', effect: { form: 0.13, energy: -11, attr: { flair: 2, composure: 1 }, meters: { fans: 13, authority: 8 } } },
           { id: 'steady', label: 'Just be dependable and unbreakable', desc: 'No fireworks — a solid, error-free, quietly defiant shift', outcome: 'He puts in a flawless, undramatic performance that gives the critics nothing to feed on, and lets the story starve for want of a mistake.', effect: { form: 0.07, attr: { composure: 2, teamwork: 1 }, meters: { authority: 6, peers: 5, fans: -6, sponsors: -4 } } },
         ],
       },
@@ -612,7 +612,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         prompt: 'Ban served, first match back, and inside ten minutes a stonewall penalty is waved away right in front of him with {RIVAL} sniggering nearby. The referee is already glancing over, half-expecting the eruption. Every camera in the ground is trained on his face, waiting.',
         choices: [
           { id: 'bite-tongue', label: 'Swallow it and jog away', desc: 'Not a flicker — deny them the reaction entirely', outcome: 'He turns his back without a word and simply gets on with the game, and the maturity of it silences every waiting critic.', effect: { form: 0.09, attr: { composure: 2 }, meters: { authority: 8, fans: 8, peers: -6 } } },
-          { id: 'answer-goal', label: 'Answer the injustice with a goal', desc: 'Let the football, not the mouth, do the arguing', outcome: 'He channels the fury into the next attack and buries it, wheeling away with a finger to his lips — the perfect, wordless riposte.', effect: { form: 0.11, earnings: -3, attr: { flair: 1, composure: 1 }, meters: { fans: 12, authority: 5, sponsors: -4 } } },
+          { id: 'answer-goal', label: 'Answer the injustice with a goal', desc: 'Let the football, not the mouth, do the arguing', outcome: 'He channels the fury into the next attack and buries it, wheeling away with a finger to his lips — the perfect, wordless riposte.', effect: { form: 0.11, earnings: -3, attr: { flair: 2, composure: 1 }, meters: { fans: 12, authority: 5, sponsors: -4 } } },
         ],
       },
     },
@@ -678,7 +678,7 @@ export const CRISIS_ARCS: StoryArc[] = [
         id: 'redemption',
         prompt: 'A year of carrying it, and the draw is cruel and kind at once — the same competition, another final, the ghost of last time standing on the touchline in a suit. Late, tied, the ball drops to him in a near-identical spot. The whole story loops back to this single decision.',
         choices: [
-          { id: 'exorcise', label: 'Trust himself and settle it for good', desc: 'This time the touch is sure — write the ending himself', outcome: 'He kills it dead, drives forward, and buries the winner in the exact competition that broke him, roaring a year of pain out of his lungs.', effect: { form: 0.14, energy: -12, attr: { composure: 2, flair: 1 }, meters: { fans: 16, authority: 9 } } },
+          { id: 'exorcise', label: 'Trust himself and settle it for good', desc: 'This time the touch is sure — write the ending himself', outcome: 'He kills it dead, drives forward, and buries the winner in the exact competition that broke him, roaring a year of pain out of his lungs.', effect: { form: 0.14, energy: -12, attr: { composure: 2, flair: 2 }, meters: { fans: 16, authority: 9 } } },
           { id: 'safe-final', label: 'Do the simple, safe thing this time', desc: 'No repeat of the flourish that cost him — clear it, no risk', outcome: 'He takes no chances, hammers it to safety, and lets others chase glory while he simply makes sure the nightmare never repeats.', effect: { form: 0.06, market: -4, attr: { composure: 2 }, meters: { authority: 5, fans: -7 } } },
         ],
       },

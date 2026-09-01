@@ -47,7 +47,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
         id: 'borrowed',
         prompt: 'He plays in boots a size and a half too big, stuffed at the toe with a rolled-up sock. They belong to a boy on the other team who shrugged and said just bring them back.',
         choices: [
-          { id: 'play', label: 'Play in them anyway', desc: 'They are boots. Boots are boots.', outcome: 'He slides about for a half and adapts in the second, shortening his stride, and finds that he can play a completely different way when his feet are not his own. He gives them back cleaned.', effect: { attr: { creativity: 1, composure: 1 }, energy: -6, meters: { peers: 4 } } },
+          { id: 'play', label: 'Play in them anyway', desc: 'They are boots. Boots are boots.', outcome: 'He slides about for a half and adapts in the second, shortening his stride, and finds that he can play a completely different way when his feet are not his own. He gives them back cleaned.', effect: { attr: { creativity: 2 }, energy: -6, meters: { peers: 4 } } },
           { id: 'list', label: 'Make a packing list that night', desc: 'Never once, ever again', outcome: 'He writes fourteen items on the back of the fixture card and tapes it inside the boot bag. It stays there, greyed and soft, for the next four years.', effect: { attr: { composure: 2 }, meters: { authority: 4, family: 3 } } },
         ],
       },
@@ -85,7 +85,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
         prompt: 'The complex has fourteen pitches, all of them flat, all of them the same shade of green, and a clubhouse with a proper canteen. He has never played anywhere that was not on a slope with a fence round it.',
         choices: [
           { id: 'awe', label: 'Let it get to him', desc: 'This is what it looks like somewhere else', outcome: 'He plays the first game two yards off it, still half-looking around. By the second he has stopped seeing the pitches and started seeing the game, but the first is gone.', effect: { form: -0.05, attr: { composure: 1 }, energy: -4 } },
-          { id: 'use', label: 'Use the surface', desc: 'It rolls true here. Play the passes that do not survive at home.', outcome: 'He tries balls he would never risk on a bobbling parks pitch and half of them come off. He goes home with a different idea of what a pass is.', effect: { form: 0.08, attr: { creativity: 2, flair: 1 } } },
+          { id: 'use', label: 'Use the surface', desc: 'It rolls true here. Play the passes that do not survive at home.', outcome: 'He tries balls he would never risk on a bobbling parks pitch and half of them come off. He goes home with a different idea of what a pass is.', effect: { form: 0.08, attr: { creativity: 2, flair: 2 } } },
           { id: 'home', label: 'Miss home, quietly, in the middle of it', desc: 'It is a lot, all at once', outcome: 'Between games he sits on his bag with a foreign chocolate bar feeling flatly, stupidly homesick in the sunshine. It passes by evening and he tells nobody it happened.', effect: { energy: -6, meters: { family: 6 }, attr: { composure: 2 } } },
         ],
       },
@@ -100,7 +100,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
         prompt: 'On tour they are billeted with families from the host club. He gets a house with a dog, a boy his own age called Mattis who plays right back, and a dinner at half five involving something he cannot identify.',
         choices: [
           { id: 'polite', label: 'Be flawlessly polite and eat all of it', desc: 'Say please, say thank you, say nothing else', outcome: 'He clears the plate, says thank you four times, and spends the evening sitting very upright. They think he is lovely. He has never been so tired from doing nothing.', effect: { attr: { composure: 2 }, meters: { family: 4 }, energy: -5, tag: 'away-host-polite' }, next: 'goodbye' },
-          { id: 'friend', label: 'Try to talk to Mattis', desc: 'Twenty words of English between them, and a ball in the garden', outcome: 'They give up on talking within ten minutes and go outside instead. Two hours of one-touch against a garage door does the job that conversation could not.', effect: { meters: { peers: 8 }, attr: { teamwork: 2, flair: 1 }, tag: 'away-host-mattis' }, next: 'goodbye' },
+          { id: 'friend', label: 'Try to talk to Mattis', desc: 'Twenty words of English between them, and a ball in the garden', outcome: 'They give up on talking within ten minutes and go outside instead. Two hours of one-touch against a garage door does the job that conversation could not.', effect: { meters: { peers: 8 }, attr: { teamwork: 2, flair: 2 }, tag: 'away-host-mattis' }, next: 'goodbye' },
           { id: 'retreat', label: 'Go up to the room early', desc: 'It is too much and the bed is right there', outcome: 'He lies on a strange duvet listening to a family being a family in a language he does not have, and feels further from home than the map says he is.', effect: { energy: 4, meters: { family: 6, peers: -4 }, attr: { composure: 1 }, tag: 'away-host-retreated' }, next: 'goodbye' },
         ],
       },
@@ -124,7 +124,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
         choices: [
           { id: 'early', label: 'Get his head down early', desc: 'Two games tomorrow before eleven', outcome: 'He is asleep by ten and awake at one, three, and half four, as the hall breathes and giggles around him. It counts as rest by the loosest possible definition.', effect: { energy: -6, attr: { composure: 1 }, tag: 'away-hall-early' } },
           { id: 'talk', label: 'Talk rubbish until two in the morning', desc: 'The lad next to him is lying awake too', outcome: 'They start on nothing at all and end up on whether you would rather be brilliant for one season or good for fifteen. By breakfast they are inseparable and by Sunday they are picking each other out on the pitch without looking.', effect: { energy: -12, meters: { peers: 12 }, attr: { teamwork: 2 }, tag: 'away-hall-friend' } },
-          { id: 'corner', label: 'Drag his mat to the far corner', desc: 'Behind the stacked benches, out of the light', outcome: 'He finds four square metres of dark behind the vaulting horses and sleeps like the dead. Two lads copy him the following night. He has, accidentally, become useful.', effect: { energy: 6, meters: { peers: 4 }, attr: { creativity: 1 }, tag: 'away-hall-corner' } },
+          { id: 'corner', label: 'Drag his mat to the far corner', desc: 'Behind the stacked benches, out of the light', outcome: 'He finds four square metres of dark behind the vaulting horses and sleeps like the dead. Two lads copy him the following night. He has, accidentally, become useful.', effect: { energy: 6, meters: { peers: 4 }, attr: { creativity: 2 }, tag: 'away-hall-corner' } },
         ],
       },
     },
@@ -137,7 +137,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'A final at the end of a tournament weekend, on a pitch nobody in his team had heard of a week ago, in front of a hundred strangers. Nil-nil after extra time. The coach is walking down the line asking for five hands.',
         choices: [
-          { id: 'volunteer', label: 'Put his hand up first', desc: 'Before he can think about it', outcome: 'His arm is up before the question is finished and two others go up after his, which is the only reason he did it. He is given the fourth.', effect: { attr: { leadership: 2, composure: 1 }, meters: { authority: 6 }, energy: -6, tag: 'away-pens-volunteered' }, next: 'walk' },
+          { id: 'volunteer', label: 'Put his hand up first', desc: 'Before he can think about it', outcome: 'His arm is up before the question is finished and two others go up after his, which is the only reason he did it. He is given the fourth.', effect: { attr: { leadership: 2 }, meters: { authority: 6 }, energy: -6, tag: 'away-pens-volunteered' }, next: 'walk' },
           { id: 'wait', label: 'Wait to be asked', desc: 'Let the ones who want it take it', outcome: 'He does not raise his hand, and the coach names him fifth anyway, without looking up. Which answers a question he had not asked.', effect: { attr: { composure: 1 }, meters: { peers: -4 }, tag: 'away-pens-named' }, next: 'walk' },
         ],
       },
@@ -146,7 +146,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
         prompt: 'The walk from the halfway line is the longest he has ever done. The goal looks the wrong size. Behind it, in a car park, is a minibus that will take five hours to get him home either way.',
         choices: [
           { id: 'corner', label: 'Pick a corner and never look at the keeper', desc: 'Decide on the walk, execute on arrival', outcome: 'He decides at the centre circle and does not change his mind. It goes in off the underside of the bar and he does not remember hitting it.', effect: { form: 0.09, attr: { composure: 3 }, meters: { peers: 6 } } },
-          { id: 'miss', label: 'Change his mind at the last second', desc: 'The keeper moved early', outcome: 'He drags it wide by a foot and stands there while the noise happens to somebody else. On the bus home nobody blames him, which he finds almost unbearable, and he replays it for a month.', effect: { form: -0.1, attr: { composure: 2, aggression: 1 }, energy: -6, meters: { peers: 4 }, tag: 'away-pens-missed' } },
+          { id: 'miss', label: 'Change his mind at the last second', desc: 'The keeper moved early', outcome: 'He drags it wide by a foot and stands there while the noise happens to somebody else. On the bus home nobody blames him, which he finds almost unbearable, and he replays it for a month.', effect: { form: -0.1, attr: { composure: 1, aggression: 1 }, energy: -6, meters: { peers: 4 }, tag: 'away-pens-missed' } },
           { id: 'panenka', label: 'Try something clever', desc: 'The keeper always goes early at this age', outcome: 'He chips it. The keeper stands still. It is the single most humiliating four seconds of his childhood and the lads never, ever let it go — with something like affection.', effect: { form: -0.12, meters: { peers: 6, authority: -8 }, attr: { flair: 2 }, tag: 'away-pens-chipped' } },
         ],
       },
@@ -190,7 +190,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'An away trip to a club with a proper building: a corridor of photographs, a laundry that smells of hot cotton, a boot room with names above the pegs. Their own changing room at home is a portakabin with a bucket under one corner.',
         choices: [
-          { id: 'look', label: 'Look at all of it properly', desc: 'Walk the corridor slowly on the way back out', outcome: 'He reads every photograph caption on the way to the pitch, working out how old they were, whether any of them made it. He comes out with something between hunger and vertigo.', effect: { attr: { creativity: 1, composure: 1 }, form: -0.04, tag: 'away-facilities-hungry' }, next: 'after' },
+          { id: 'look', label: 'Look at all of it properly', desc: 'Walk the corridor slowly on the way back out', outcome: 'He reads every photograph caption on the way to the pitch, working out how old they were, whether any of them made it. He comes out with something between hunger and vertigo.', effect: { attr: { creativity: 2 }, form: -0.04, tag: 'away-facilities-hungry' }, next: 'after' },
           { id: 'unimpressed', label: 'Act like it is nothing', desc: 'It is a building. The pitch is the same size.', outcome: 'He barely lifts his head walking through, which two of the home lads clock and dislike. It is entirely an act and it works on everyone except him.', effect: { attr: { composure: 1, aggression: 1, creativity: -1 }, meters: { peers: 3 }, tag: 'away-facilities-cold' }, next: 'after' },
         ],
       },
@@ -198,8 +198,8 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
         id: 'after',
         prompt: 'They lose narrowly and afterwards there are sandwiches on a table with a cloth on it, and the home lads are just — normal. One of them asks where he plays and what his school is like.',
         choices: [
-          { id: 'talk', label: 'Talk to them like they are just lads', desc: 'Because they are just lads', outcome: 'Twenty minutes of ordinary conversation and the whole building shrinks to the right size. He goes home understanding that the corridor is not the football.', effect: { attr: { composure: 2, teamwork: 1 }, meters: { peers: 5 } } },
-          { id: 'measure', label: 'Measure himself against them all afternoon', desc: 'Am I as good as this? Am I close?', outcome: 'He works out, honestly, that he is somewhere in among them, and that the difference is the building rather than the boys. It is the most useful thing he learns that season and it keeps him up that night.', effect: { attr: { composure: 1, leadership: 1 }, form: 0.05, energy: -4 } },
+          { id: 'talk', label: 'Talk to them like they are just lads', desc: 'Because they are just lads', outcome: 'Twenty minutes of ordinary conversation and the whole building shrinks to the right size. He goes home understanding that the corridor is not the football.', effect: { attr: { composure: 1, teamwork: 1 }, meters: { peers: 5 } } },
+          { id: 'measure', label: 'Measure himself against them all afternoon', desc: 'Am I as good as this? Am I close?', outcome: 'He works out, honestly, that he is somewhere in among them, and that the difference is the building rather than the boys. It is the most useful thing he learns that season and it keeps him up that night.', effect: { attr: { leadership: 1 }, form: 0.05, energy: -4 } },
         ],
       },
     },
@@ -213,7 +213,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
         prompt: 'It starts raining at eight in the morning and does not stop. By the third game the pitch is a brown lake with corner flags in it, kit bags have become sponges, and a gazebo has folded itself over a table of orange squash.',
         choices: [
           { id: 'love', label: 'Absolutely love it', desc: 'Nobody can play. This is the best day of his life.', outcome: 'He slides forty yards on his front after a tackle he did not need to make, comes up unrecognisable, and plays the rest of the day grinning through mud. Two teams refuse to come out. His does not.', effect: { form: 0.06, meters: { peers: 10, authority: 4 }, attr: { aggression: 1, stamina: 1 }, energy: -12, tag: 'away-rain-loved-it' } },
-          { id: 'endure', label: 'Get through it without complaining', desc: 'Everyone is wet. Say nothing about being wet.', outcome: 'He does not moan once, in a squad where everyone else moans constantly, and by the last game two of the younger lads have started copying him. Cold sets into his hands and stays for hours.', effect: { attr: { composure: 2, leadership: 1 }, energy: -14, meters: { authority: 5 }, tag: 'away-rain-endured' } },
+          { id: 'endure', label: 'Get through it without complaining', desc: 'Everyone is wet. Say nothing about being wet.', outcome: 'He does not moan once, in a squad where everyone else moans constantly, and by the last game two of the younger lads have started copying him. Cold sets into his hands and stays for hours.', effect: { attr: { composure: 1, leadership: 1 }, energy: -14, meters: { authority: 5 }, tag: 'away-rain-endured' } },
           { id: 'adapt', label: 'Work out how to play in it', desc: 'The ball stops dead. Change everything.', outcome: 'He stops passing along the floor entirely and starts hitting it early and high, which looks awful and works completely. He scores twice from balls that stick in the mud six yards out.', effect: { form: 0.09, attr: { creativity: 2 }, energy: -10, tag: 'away-rain-adapted' } },
         ],
       },
@@ -235,7 +235,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
         id: 'watch',
         prompt: 'Back home, first session on a pitch he knows, the ball comes to him under pressure with his own goal behind him. The old answer is row Z. The new one is a turn he watched a stranger do in another country.',
         choices: [
-          { id: 'try', label: 'Try the turn', desc: 'Here, now, where it actually matters', outcome: 'It comes off twice and gets him robbed once, and the once is loud and public. He keeps doing it. Within a season nobody remembers him ever being a hoofer.', effect: { attr: { creativity: 2, composure: 1 }, form: -0.03, meters: { authority: -3 }, tag: 'away-style-adopted' } },
+          { id: 'try', label: 'Try the turn', desc: 'Here, now, where it actually matters', outcome: 'It comes off twice and gets him robbed once, and the once is loud and public. He keeps doing it. Within a season nobody remembers him ever being a hoofer.', effect: { attr: { creativity: 2 }, form: -0.03, meters: { authority: -3 }, tag: 'away-style-adopted' } },
           { id: 'clear', label: 'Clear it, like always', desc: 'Some things are for other people\'s football', outcome: 'He belts it forty yards and gets a nod for it. He is right, in the short term, in the way that is easiest to be right.', effect: { attr: { composure: 1 }, meters: { authority: 4 }, form: 0.03, tag: 'away-style-kept' } },
         ],
       },
@@ -309,7 +309,7 @@ export const YOUTH_AWAY_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'An away ground where the parents stand right on the whitewash, four deep, and have decided within ten minutes that he is the one to get at. Every touch draws a noise. His own supporters are forty yards away on the far side and there are eleven of them.',
         choices: [
-          { id: 'ball', label: 'Ask for the ball more, not less', desc: 'Make them keep making the noise', outcome: 'He demands it every single time, including in places he should not, and by the second half the noise has gone flat and tired. He has never enjoyed a nil-nil more.', effect: { attr: { composure: 2, leadership: 1 }, form: 0.06, tag: 'away-touchline-fronted' } },
+          { id: 'ball', label: 'Ask for the ball more, not less', desc: 'Make them keep making the noise', outcome: 'He demands it every single time, including in places he should not, and by the second half the noise has gone flat and tired. He has never enjoyed a nil-nil more.', effect: { attr: { composure: 1, leadership: 1 }, form: 0.06, tag: 'away-touchline-fronted' } },
           { id: 'react', label: 'Say something back', desc: 'They are grown men and he is twelve', outcome: 'He turns and answers one of them, and the whole thing gets ugly and adult very fast. He is subbed for his own protection and sits shaking on a bench, half ashamed and half not.', effect: { meters: { authority: -8, peers: 4 }, attr: { aggression: 2 }, form: -0.07, tag: 'away-touchline-answered' } },
           { id: 'shrink', label: 'Play away from that side of the pitch', desc: 'Just stay out of it for eighty minutes', outcome: 'He drifts to the far touchline and has a quiet, useless game. Nothing happens to him. Nothing happens at all, and the nothing is what he thinks about on the way home.', effect: { form: -0.06, attr: { composure: 1 }, tag: 'away-touchline-hid' } },
         ],

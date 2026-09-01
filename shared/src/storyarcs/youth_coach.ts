@@ -16,7 +16,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'It isn\'t shouting. It is smaller than that. The coach says good morning to every other lad by name and to him he says nothing at all, and has done for eleven weeks. Nobody else has noticed. He has counted.',
         choices: [
-          { id: 'work', label: 'Be impossible to leave out', desc: 'Make the football answer it', outcome: 'He turns up first, does every drill twice and refuses to give the man a single reason. The silence continues, and he stops needing it to end.', effect: { energy: -8, form: 0.06, attr: { stamina: 1, composure: 1 }, meters: { authority: 3 }, tag: 'coach-cold-worked' }, next: 'why' },
+          { id: 'work', label: 'Be impossible to leave out', desc: 'Make the football answer it', outcome: 'He turns up first, does every drill twice and refuses to give the man a single reason. The silence continues, and he stops needing it to end.', effect: { energy: -8, form: 0.06, attr: { stamina: 1 }, meters: { authority: 3 }, tag: 'coach-cold-worked' }, next: 'why' },
           { id: 'ask', label: 'Ask him what he\'s done wrong', desc: 'Straight out, after training, on his own', outcome: 'He asks. The coach looks briefly caught out, says "nothing, son" — and afterwards uses his name, stiffly, like a word he\'s had to learn.', effect: { attr: { leadership: 1 }, meters: { authority: 6 }, tag: 'coach-cold-asked' }, next: 'why' },
           { id: 'shrink', label: 'Go quiet and hope it passes', desc: 'Stop putting his hand up, stop being seen', outcome: 'He makes himself smaller in every session until he is genuinely hard to notice. A habit that takes years to unlearn.', effect: { form: -0.05, attr: { composure: 1 }, meters: { authority: -4, peers: -3 }, tag: 'coach-cold-shrank' }, next: 'why' },
         ],
@@ -39,7 +39,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'The coach who first pulled him out of a Sunday side and told him he could be something is leaving for a job up the road. He tells the group in the changing room in about nine words and then starts the session as normal.',
         choices: [
-          { id: 'thank', label: 'Catch him at the car', desc: 'Say the thing before he drives off', outcome: 'He gets to the car park in time to say thanks. The man shakes his hand like an adult and says he\'ll be watching. He believes him, and it turns out to be true.', effect: { attr: { leadership: 1, composure: 1 }, meters: { authority: 8 }, tag: 'coach-gone-thanked' }, next: 'after' },
+          { id: 'thank', label: 'Catch him at the car', desc: 'Say the thing before he drives off', outcome: 'He gets to the car park in time to say thanks. The man shakes his hand like an adult and says he\'ll be watching. He believes him, and it turns out to be true.', effect: { attr: { leadership: 1 }, meters: { authority: 8 }, tag: 'coach-gone-thanked' }, next: 'after' },
           { id: 'nothing', label: 'Say nothing', desc: 'He wouldn\'t know how to start', outcome: 'He watches the car go from the touchline and doesn\'t wave. He thinks about that particular non-goodbye for a long time.', effect: { attr: { composure: 1 }, meters: { authority: -2 }, form: -0.04, tag: 'coach-gone-silent' }, next: 'after' },
           { id: 'ask-take', label: 'Ask if he can come too', desc: 'A child\'s question, asked seriously', outcome: 'He asks whether he could go with him. The man says it doesn\'t work like that, and that he has to be good enough for whoever walks in next.', effect: { attr: { composure: 1 }, meters: { authority: 4, family: -2 }, tag: 'coach-gone-asked' }, next: 'after' },
         ],
@@ -48,7 +48,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         id: 'after',
         prompt: 'The replacement arrives in September and clearly has no idea who anybody is. On the first Saturday he is named as a substitute for the first time in two years.',
         choices: [
-          { id: 'prove', label: 'Start again from zero', desc: 'Accept that nothing carries over', outcome: 'He treats it as a first day and earns it back over eight weeks. It teaches him the hardest lesson in the game: nobody inherits a place.', effect: { energy: -8, form: 0.08, attr: { stamina: 1, composure: 1 }, meters: { authority: 8 } } },
+          { id: 'prove', label: 'Start again from zero', desc: 'Accept that nothing carries over', outcome: 'He treats it as a first day and earns it back over eight weeks. It teaches him the hardest lesson in the game: nobody inherits a place.', effect: { energy: -8, form: 0.08, attr: { stamina: 1 }, meters: { authority: 8 } } },
           { id: 'resent', label: 'Resent the new man', desc: 'He isn\'t the one who saw it first', outcome: 'He plays the whole autumn comparing him to the last one, and the new coach reads it exactly as what it is.', effect: { form: -0.06, attr: { aggression: 1 }, meters: { authority: -8 } } },
         ],
       },
@@ -94,7 +94,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         choices: [
           { id: 'lead', label: 'Set the pace at the front', desc: 'If they\'re running, run properly', outcome: 'He takes the front and drags the stragglers round. The coach doesn\'t mention it, and puts him on the list for the following month\'s squad.', effect: { energy: -14, attr: { stamina: 1, leadership: 1 }, meters: { authority: 10, peers: 4 } } },
           { id: 'back', label: 'Stay at the back with the lad struggling', desc: 'Run at the pace of the worst runner', outcome: 'He drops back and jogs the last ten with the boy who was crying. It costs him nothing on the pitch and buys him something in that changing room forever.', effect: { energy: -10, attr: { teamwork: 1, stamina: 1 }, meters: { peers: 12, authority: 3 } } },
-          { id: 'confess', label: 'Take the blame to end it', desc: 'It wasn\'t him. Say it was anyway.', outcome: 'He says it was him and the running stops. The coach believes him, thinks less of him for a fortnight, and the group knows exactly what he did.', effect: { energy: -6, attr: { leadership: 1, composure: 1 }, meters: { peers: 12, authority: -6 }, tag: 'took-the-blame' } },
+          { id: 'confess', label: 'Take the blame to end it', desc: 'It wasn\'t him. Say it was anyway.', outcome: 'He says it was him and the running stops. The coach believes him, thinks less of him for a fortnight, and the group knows exactly what he did.', effect: { energy: -6, attr: { leadership: 1 }, meters: { peers: 12, authority: -6 }, tag: 'took-the-blame' } },
         ],
       },
     },
@@ -108,14 +108,14 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         prompt: 'Feedback after a session, done standing up, in front of two other coaches. "Talented. Lazy." Two words, one of them lovely and one of them a brand. He goes home and looks at himself in the mirror trying to see it.',
         choices: [
           { id: 'accept', label: 'Decide he might be right', desc: 'Look honestly at how hard he actually works', outcome: 'He watches himself for a month and finds three places the man was right. Fixing them is unglamorous and changes everything.', effect: { energy: -10, attr: { stamina: 2 }, form: 0.06, meters: { authority: 8 }, tag: 'lazy-accepted' }, next: 'later' },
-          { id: 'reject', label: 'Decide it was unfair', desc: 'He isn\'t lazy — he just makes it look easy', outcome: 'He rejects it flatly. He might even be right, but he loses the chance to find out, and the word follows him up the age groups on a form he never sees.', effect: { attr: { flair: 1, composure: 1 }, meters: { authority: -6 }, tag: 'lazy-rejected' }, next: 'later' },
+          { id: 'reject', label: 'Decide it was unfair', desc: 'He isn\'t lazy — he just makes it look easy', outcome: 'He rejects it flatly. He might even be right, but he loses the chance to find out, and the word follows him up the age groups on a form he never sees.', effect: { attr: { flair: 2 }, meters: { authority: -6 }, tag: 'lazy-rejected' }, next: 'later' },
         ],
       },
       later: {
         id: 'later',
         prompt: 'A year later a different coach, one who has never met the first, uses the same word about him in passing without knowing it has a history.',
         choices: [
-          { id: 'answer', label: 'Answer it with a season', desc: 'Say nothing, run for ten months', outcome: 'He never argues the word again; he just makes it impossible to say. By spring nobody remembers who used it first.', effect: { energy: -12, form: 0.1, attr: { stamina: 1, composure: 1 }, meters: { authority: 8 } } },
+          { id: 'answer', label: 'Answer it with a season', desc: 'Say nothing, run for ten months', outcome: 'He never argues the word again; he just makes it impossible to say. By spring nobody remembers who used it first.', effect: { energy: -12, form: 0.1, attr: { stamina: 1 }, meters: { authority: 8 } } },
           { id: 'carry', label: 'Carry it', desc: 'Let it live in him', outcome: 'The sentence lodges somewhere and never comes loose. Years later, on the thin days, it is still the thing he reaches for.', effect: { attr: { aggression: 1, composure: 1 }, form: 0.04, meters: { authority: -2 } } },
         ],
       },
@@ -144,7 +144,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'The coach stops the drill, calls the whole group in, and makes him do it again while twenty lads stand and watch. It could be praise. From the tone, it could just as easily not be. Nobody yet knows which.',
         choices: [
-          { id: 'perform', label: 'Do it perfectly', desc: 'Nail it with everybody watching', outcome: 'He does it better than the first time. The coach says "that. That is what I want." He walks back into the group with his ears burning and something new in his chest.', effect: { form: 0.08, attr: { composure: 1, flair: 1 }, meters: { authority: 10, peers: -3 }, tag: 'shown-as-good' } },
+          { id: 'perform', label: 'Do it perfectly', desc: 'Nail it with everybody watching', outcome: 'He does it better than the first time. The coach says "that. That is what I want." He walks back into the group with his ears burning and something new in his chest.', effect: { form: 0.08, attr: { flair: 2 }, meters: { authority: 10, peers: -3 }, tag: 'shown-as-good' } },
           { id: 'fluff', label: 'Fluff it', desc: 'Twenty pairs of eyes and it goes wrong', outcome: 'He mishits it completely. The coach lets the silence sit a beat too long before moving on, and he learns exactly how heavy an audience is.', effect: { form: -0.06, attr: { composure: 1 }, meters: { authority: -4, peers: 3 }, tag: 'shown-and-failed' } },
           { id: 'deflect', label: 'Point at the lad who set it up', desc: 'Push the attention onto someone else', outcome: 'He says the pass made it easy. The group laughs, the coach doesn\'t, and the boy who played the pass stands about an inch taller.', effect: { attr: { teamwork: 1, leadership: 1 }, meters: { peers: 10, authority: 4 } } },
         ],
@@ -167,7 +167,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         id: 'letter',
         prompt: 'The envelope has the crest on it. It is thin. He knows before he opens it that thin means one thing, and he opens it in the hall on his own anyway.',
         choices: [
-          { id: 'read-alone', label: 'Read it alone and then go training', desc: 'Whatever it says, go anyway', outcome: 'It says no, in three careful paragraphs signed by a name he does not recognise. He goes to training that night and is the best player there.', effect: { attr: { composure: 2, stamina: 1 }, form: 0.06, meters: { authority: 6, family: -5 }, tag: 'rejected-and-went' } },
+          { id: 'read-alone', label: 'Read it alone and then go training', desc: 'Whatever it says, go anyway', outcome: 'It says no, in three careful paragraphs signed by a name he does not recognise. He goes to training that night and is the best player there.', effect: { attr: { composure: 1, stamina: 1 }, form: 0.06, meters: { authority: 6, family: -5 }, tag: 'rejected-and-went' } },
           { id: 'keep', label: 'Keep it', desc: 'Fold it small and put it somewhere', outcome: 'He folds it into the lid of his boot box. It is still there years later, softened at the creases from being taken out.', effect: { attr: { aggression: 1, composure: 1 }, form: 0.04, tag: 'kept-the-letter' } },
         ],
       },
@@ -196,16 +196,16 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'He finds out by accident that a scout came for him in November and his own coach told the man he wasn\'t ready and to come back in a year. Nobody asked him. Nobody told him. It is May.',
         choices: [
-          { id: 'confront', label: 'Ask him why he did that', desc: 'Straight question, no shouting', outcome: 'The coach says he was protecting him from being a small fish in a big pond at thirteen. He might even be right. It doesn\'t stop it being the first time an adult in football decided something about his life without him.', effect: { attr: { leadership: 1, composure: 1 }, meters: { authority: -5 }, tag: 'shielded-confronted' }, next: 'return' },
-          { id: 'trust', label: 'Trust that he meant well', desc: 'Let it go without a word', outcome: 'He never brings it up. The coach never learns he knew, and works twice as hard for a boy he thinks is unaware of the favour.', effect: { attr: { composure: 2, teamwork: 1 }, meters: { authority: 8 }, tag: 'shielded-trusted' }, next: 'return' },
+          { id: 'confront', label: 'Ask him why he did that', desc: 'Straight question, no shouting', outcome: 'The coach says he was protecting him from being a small fish in a big pond at thirteen. He might even be right. It doesn\'t stop it being the first time an adult in football decided something about his life without him.', effect: { attr: { leadership: 1 }, meters: { authority: -5 }, tag: 'shielded-confronted' }, next: 'return' },
+          { id: 'trust', label: 'Trust that he meant well', desc: 'Let it go without a word', outcome: 'He never brings it up. The coach never learns he knew, and works twice as hard for a boy he thinks is unaware of the favour.', effect: { attr: { composure: 1, teamwork: 1 }, meters: { authority: 8 }, tag: 'shielded-trusted' }, next: 'return' },
         ],
       },
       return: {
         id: 'return',
         prompt: 'The following November the same scout comes back, exactly as promised, and this time asks to speak to him directly with the coach standing there.',
         choices: [
-          { id: 'speak', label: 'Answer for himself', desc: 'Look the man in the eye and talk', outcome: 'He answers every question himself while the coach stands silent behind him. Both men leave thinking he is older than he is.', effect: { attr: { leadership: 2, composure: 1 }, form: 0.06, meters: { authority: 4 } } },
-          { id: 'defer', label: 'Let the coach do the talking', desc: 'He\'s fourteen and the man knows him best', outcome: 'He lets his coach speak for him and stares at the grass. It goes fine, and he spends the drive home wishing he had said one thing of his own.', effect: { attr: { composure: 1, teamwork: 1, leadership: -1 }, meters: { authority: 8 } } },
+          { id: 'speak', label: 'Answer for himself', desc: 'Look the man in the eye and talk', outcome: 'He answers every question himself while the coach stands silent behind him. Both men leave thinking he is older than he is.', effect: { attr: { leadership: 2 }, form: 0.06, meters: { authority: 4 } } },
+          { id: 'defer', label: 'Let the coach do the talking', desc: 'He\'s fourteen and the man knows him best', outcome: 'He lets his coach speak for him and stares at the grass. It goes fine, and he spends the drive home wishing he had said one thing of his own.', effect: { attr: { teamwork: 1, leadership: -1 }, meters: { authority: 8 } } },
         ],
       },
     },
@@ -218,7 +218,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'The coach stops the session, turns to him — not the captain, not the biggest lad, him — and asks what he thinks is going wrong on the left. It is the first time in his life an adult has asked him a football question expecting a real answer.',
         choices: [
-          { id: 'answer', label: 'Say what he actually thinks', desc: 'Even though he might be wrong in front of everyone', outcome: 'He says the winger is standing too close to the touchline for the pass to exist. There is a pause, and then the coach moves the winger five yards. He does not stop thinking about that five yards for years.', effect: { attr: { leadership: 2, creativity: 1 }, meters: { authority: 12 }, form: 0.06, tag: 'asked-and-answered' } },
+          { id: 'answer', label: 'Say what he actually thinks', desc: 'Even though he might be wrong in front of everyone', outcome: 'He says the winger is standing too close to the touchline for the pass to exist. There is a pause, and then the coach moves the winger five yards. He does not stop thinking about that five yards for years.', effect: { attr: { leadership: 2, creativity: 2 }, meters: { authority: 12 }, form: 0.06, tag: 'asked-and-answered' } },
           { id: 'safe', label: 'Give the answer he thinks is wanted', desc: 'Repeat something the coach said last week', outcome: 'He parrots a phrase from a previous session. The coach says "right" in a flat voice and asks somebody else, and he knows exactly what he threw away.', effect: { attr: { teamwork: 1 }, meters: { authority: 2 } } },
           { id: 'shrug', label: 'Shrug', desc: 'Being asked in front of twenty people is unbearable', outcome: 'He shrugs and looks at his boots. The coach moves on without unkindness, and does not ask him again that season.', effect: { attr: { composure: 1 }, meters: { authority: -5, peers: 3 } } },
         ],
@@ -233,7 +233,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'The new academy coach has a system and a folder full of diagrams. Everything he has ever been praised for — the run off the shoulder, the dribble out of the corner — is now described in team meetings as "a decision that breaks the shape".',
         choices: [
-          { id: 'buy-in', label: 'Learn the diagrams', desc: 'Do it exactly his way for a whole season', outcome: 'He plays the shape until it becomes automatic and boring and then, one Tuesday, discovers he can see the whole pitch from inside it.', effect: { attr: { teamwork: 1, creativity: 1 }, form: 0.06, meters: { authority: 12 }, tag: 'bought-the-system' }, next: 'test' },
+          { id: 'buy-in', label: 'Learn the diagrams', desc: 'Do it exactly his way for a whole season', outcome: 'He plays the shape until it becomes automatic and boring and then, one Tuesday, discovers he can see the whole pitch from inside it.', effect: { attr: { teamwork: 1, creativity: 2 }, form: 0.06, meters: { authority: 12 }, tag: 'bought-the-system' }, next: 'test' },
           { id: 'resist', label: 'Keep playing his own way', desc: 'The thing that got him here is the thing that got him here', outcome: 'He keeps doing it and keeps being taken off. Twice in the folder there is a note beside his name that he is never shown.', effect: { attr: { flair: 2 }, form: -0.06, meters: { authority: -10 }, tag: 'resisted-the-system' }, next: 'test' },
         ],
       },
@@ -241,8 +241,8 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         id: 'test',
         prompt: 'A game in March goes badly and the shape is not working. On the touchline the coach looks down the bench and, without much conviction, asks him what he wants to do.',
         choices: [
-          { id: 'break', label: 'Ask to break it', desc: 'Tell him the honest answer', outcome: 'He says the shape is the problem. The coach lets him go and play, it works, and neither of them ever refers to it again — but the folder gets thinner after that.', effect: { attr: { leadership: 1, creativity: 1, flair: 1 }, form: 0.08, meters: { authority: 4 } } },
-          { id: 'hold', label: 'Say hold the shape', desc: 'Back the man in front of the group', outcome: 'He says stick with it. They lose, and the coach never forgets that the boy backed him in public on a bad day.', effect: { attr: { teamwork: 1, composure: 1 }, form: -0.04, meters: { authority: 12 } } },
+          { id: 'break', label: 'Ask to break it', desc: 'Tell him the honest answer', outcome: 'He says the shape is the problem. The coach lets him go and play, it works, and neither of them ever refers to it again — but the folder gets thinner after that.', effect: { attr: { leadership: 1, creativity: 2, flair: 2 }, form: 0.08, meters: { authority: 4 } } },
+          { id: 'hold', label: 'Say hold the shape', desc: 'Back the man in front of the group', outcome: 'He says stick with it. They lose, and the coach never forgets that the boy backed him in public on a bad day.', effect: { attr: { teamwork: 1 }, form: -0.04, meters: { authority: 12 } } },
         ],
       },
     },
@@ -255,7 +255,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'Twice a year they are measured: height, reach, sprint times, a scored game with staff on every side writing on tablets. A whole footballer reduced to a row on a spreadsheet by four o\'clock. Everyone pretends it\'s a normal Wednesday.',
         choices: [
-          { id: 'perform', label: 'Treat it as the biggest day of the year', desc: 'Empty himself into six hours', outcome: 'He goes at it like a cup final and posts numbers he never gets near again. Two staff argue about him at the meeting. It is the best thing that could happen.', effect: { energy: -16, form: 0.08, attr: { stamina: 1, composure: 1 }, meters: { authority: 10 }, tag: 'assessment-big' }, next: 'feedback' },
+          { id: 'perform', label: 'Treat it as the biggest day of the year', desc: 'Empty himself into six hours', outcome: 'He goes at it like a cup final and posts numbers he never gets near again. Two staff argue about him at the meeting. It is the best thing that could happen.', effect: { energy: -16, form: 0.08, attr: { stamina: 1 }, meters: { authority: 10 }, tag: 'assessment-big' }, next: 'feedback' },
           { id: 'normal', label: 'Treat it as a Wednesday', desc: 'Refuse to let a tablet change how he plays', outcome: 'He plays exactly as he always does. The numbers are unremarkable and the game score is the highest on the sheet, and the room disagrees about which matters.', effect: { attr: { composure: 2 }, form: 0.04, meters: { authority: 4 }, tag: 'assessment-normal' }, next: 'feedback' },
         ],
       },
@@ -263,7 +263,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         id: 'feedback',
         prompt: 'The feedback is delivered in a small room with a printed sheet turned around to face him. Two columns. One is headed Strengths. The other one is longer.',
         choices: [
-          { id: 'questions', label: 'Ask about every line', desc: 'Make them explain what each phrase means', outcome: 'He asks what "lacks presence" actually means, and the coach struggles to answer. Making an adult defend a phrase is a skill he keeps for life.', effect: { attr: { leadership: 1, composure: 1 }, meters: { authority: -6 } } },
+          { id: 'questions', label: 'Ask about every line', desc: 'Make them explain what each phrase means', outcome: 'He asks what "lacks presence" actually means, and the coach struggles to answer. Making an adult defend a phrase is a skill he keeps for life.', effect: { attr: { leadership: 1 }, meters: { authority: -6 } } },
           { id: 'take', label: 'Take the sheet and say thank you', desc: 'Read it properly later, on his own', outcome: 'He folds the sheet, says thanks, and reads it four times that night in bed. By the fourth time he has stopped arguing with it.', effect: { attr: { composure: 2 }, form: 0.04, meters: { authority: 4 } } },
         ],
       },
@@ -277,9 +277,9 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'Monday analysis. The lights go down and the coach pauses the clip on him — jogging back, four yards off, while the move goes past him. He rewinds it three times. The third time somebody at the back laughs.',
         choices: [
-          { id: 'own', label: 'Say it out loud: that\'s on me', desc: 'Before the coach has to say it for him', outcome: 'He says it before anyone else can. The coach un-pauses the clip immediately and moves on, which is the closest thing to mercy that room has.', effect: { attr: { leadership: 1, composure: 1 }, meters: { authority: 10, peers: 4 }, tag: 'video-owned-it' } },
-          { id: 'explain', label: 'Explain what he was doing', desc: 'There was a reason and it was a decent one', outcome: 'He explains that he was covering the run inside. Half the room thinks it\'s an excuse; the coach rewinds again, looks, and says "fair enough" in a way that costs him something.', effect: { attr: { creativity: 1, leadership: 1 }, meters: { authority: 3, peers: -3 } } },
-          { id: 'burn', label: 'Sit there and take it', desc: 'Say nothing, look at the screen, go red', outcome: 'He watches himself jog back three times in silence. He is never four yards off again for the rest of his career, which was, presumably, the point.', effect: { attr: { stamina: 1, composure: 1 }, form: 0.06, meters: { authority: 4, peers: -2 } } },
+          { id: 'own', label: 'Say it out loud: that\'s on me', desc: 'Before the coach has to say it for him', outcome: 'He says it before anyone else can. The coach un-pauses the clip immediately and moves on, which is the closest thing to mercy that room has.', effect: { attr: { leadership: 1 }, meters: { authority: 10, peers: 4 }, tag: 'video-owned-it' } },
+          { id: 'explain', label: 'Explain what he was doing', desc: 'There was a reason and it was a decent one', outcome: 'He explains that he was covering the run inside. Half the room thinks it\'s an excuse; the coach rewinds again, looks, and says "fair enough" in a way that costs him something.', effect: { attr: { creativity: 2, leadership: 1 }, meters: { authority: 3, peers: -3 } } },
+          { id: 'burn', label: 'Sit there and take it', desc: 'Say nothing, look at the screen, go red', outcome: 'He watches himself jog back three times in silence. He is never four yards off again for the rest of his career, which was, presumably, the point.', effect: { attr: { stamina: 1 }, form: 0.06, meters: { authority: 4, peers: -2 } } },
         ],
       },
     },
@@ -292,9 +292,9 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'Another club has asked him to come and train with them. Quietly. On a Tuesday, when his own academy is off. The word "quietly" has been said twice, and he is old enough now to know exactly what that word is doing.',
         choices: [
-          { id: 'tell', label: 'Tell his coach first', desc: 'Say it to his face before he goes anywhere', outcome: 'He tells him. The coach is furious for about eleven seconds and then, grudgingly, says go and see. The honesty is worth more than the trial turns out to be.', effect: { attr: { leadership: 1, composure: 1 }, meters: { authority: 10 }, tag: 'trial-declared' }, next: 'after' },
+          { id: 'tell', label: 'Tell his coach first', desc: 'Say it to his face before he goes anywhere', outcome: 'He tells him. The coach is furious for about eleven seconds and then, grudgingly, says go and see. The honesty is worth more than the trial turns out to be.', effect: { attr: { leadership: 1 }, meters: { authority: 10 }, tag: 'trial-declared' }, next: 'after' },
           { id: 'go', label: 'Go quietly', desc: 'Nobody needs to know', outcome: 'He goes and says nothing. It is a good session and he spends the whole ninety minutes looking at the touchline in case somebody who knows somebody is standing there.', effect: { form: 0.06, attr: { composure: 1 }, meters: { authority: -8 }, tag: 'trial-secret' }, next: 'after' },
-          { id: 'decline', label: 'Say no', desc: 'He\'s happy where he is and that\'s allowed', outcome: 'He turns it down without telling anyone he was asked. It is the first loyal decision he ever makes, and nobody will ever know he made it.', effect: { attr: { teamwork: 1, composure: 2 }, meters: { authority: 6 }, tag: 'trial-declined' } },
+          { id: 'decline', label: 'Say no', desc: 'He\'s happy where he is and that\'s allowed', outcome: 'He turns it down without telling anyone he was asked. It is the first loyal decision he ever makes, and nobody will ever know he made it.', effect: { attr: { teamwork: 1, composure: 1 }, meters: { authority: 6 }, tag: 'trial-declined' } },
         ],
       },
       after: {
@@ -302,7 +302,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         prompt: 'By Friday it has got back to his own academy anyway — these things always do — and the coach asks him, in front of the staff room door, whether he wants to be here.',
         choices: [
           { id: 'honest', label: 'Tell him the truth', desc: 'That he wants to play and he\'s scared of being let go', outcome: 'He admits he\'s frightened of the summer. The coach softens completely, and tells him something about his own release at sixteen that he never tells the group.', effect: { form: -0.05, attr: { composure: 2 }, meters: { authority: 12, family: 3 } } },
-          { id: 'commit', label: 'Say yes, flatly', desc: 'No explanation, no apology', outcome: 'He says yes and nothing else. The coach accepts it, and the pair of them never mention Tuesday again.', effect: { attr: { composure: 1, teamwork: 1 }, form: 0.04, meters: { authority: 6 } } },
+          { id: 'commit', label: 'Say yes, flatly', desc: 'No explanation, no apology', outcome: 'He says yes and nothing else. The coach accepts it, and the pair of them never mention Tuesday again.', effect: { attr: { teamwork: 1 }, form: 0.04, meters: { authority: 6 } } },
         ],
       },
     },
@@ -317,7 +317,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         choices: [
           { id: 'ruthless', label: 'Play like his place depends on it', desc: 'Because on some level it does', outcome: 'He goes at fourteen-year-old strangers like it is a final, and the staff see a boy who understands what the day actually is.', effect: { energy: -12, form: 0.08, attr: { aggression: 1, stamina: 1 }, meters: { authority: 8 }, tag: 'open-day-ruthless' } },
           { id: 'kind', label: 'Look after the nervous one', desc: 'One lad is clearly terrified and shaking', outcome: 'He spends the morning talking one frightened boy through it. The lad plays well and gets taken on. He never quite works out whether that cost him something.', effect: { attr: { leadership: 1, teamwork: 1 }, meters: { peers: 8, authority: 4 }, tag: 'open-day-kind' } },
-          { id: 'watch', label: 'Watch the best of them', desc: 'Find the one who\'s a threat and study him', outcome: 'He picks out the dangerous one within ten minutes and spends the rest of the day learning him. Knowing exactly who is coming is its own kind of calm.', effect: { attr: { creativity: 1, composure: 1 }, form: 0.04, meters: { authority: 3 } } },
+          { id: 'watch', label: 'Watch the best of them', desc: 'Find the one who\'s a threat and study him', outcome: 'He picks out the dangerous one within ten minutes and spends the rest of the day learning him. Knowing exactly who is coming is its own kind of calm.', effect: { attr: { creativity: 2, composure: 1 }, form: 0.04, meters: { authority: 3 } } },
         ],
       },
     },
@@ -330,9 +330,9 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'It is May, and everyone in the building knows the meetings have started. Boys go in one at a time and come out with a face that says everything. His slot is Thursday at four. Nobody has told him anything.',
         choices: [
-          { id: 'train', label: 'Train through the week as if nothing is happening', desc: 'Give them nothing to write down', outcome: 'He trains all week like it is October. Two of the staff mention it to each other, which is not why he did it, but it does not hurt.', effect: { energy: -8, attr: { composure: 2, stamina: 1 }, meters: { authority: 8 }, tag: 'may-trained-through' }, next: 'room' },
+          { id: 'train', label: 'Train through the week as if nothing is happening', desc: 'Give them nothing to write down', outcome: 'He trains all week like it is October. Two of the staff mention it to each other, which is not why he did it, but it does not hurt.', effect: { energy: -8, attr: { composure: 1, stamina: 1 }, meters: { authority: 8 }, tag: 'may-trained-through' }, next: 'room' },
           { id: 'ask-early', label: 'Ask on Monday and get it over with', desc: 'He can\'t do four days of this', outcome: 'He asks a coach in the corridor on Monday. The man says he can\'t say, in a tone that gives away nothing at all, and the four days are worse now.', effect: { form: -0.06, energy: -4, meters: { authority: -2 }, tag: 'may-asked-early' }, next: 'room' },
-          { id: 'lads', label: 'Sit with the ones who\'ve already been told no', desc: 'Go and find them instead of avoiding them', outcome: 'He goes and sits with two lads who already know. It is the most useful hour of his year and he understands, finally, that the club is not his family.', effect: { attr: { composure: 1, teamwork: 1 }, meters: { peers: 10, authority: -2 }, tag: 'may-sat-with-them' }, next: 'room' },
+          { id: 'lads', label: 'Sit with the ones who\'ve already been told no', desc: 'Go and find them instead of avoiding them', outcome: 'He goes and sits with two lads who already know. It is the most useful hour of his year and he understands, finally, that the club is not his family.', effect: { attr: { teamwork: 1 }, meters: { peers: 10, authority: -2 }, tag: 'may-sat-with-them' }, next: 'room' },
         ],
       },
       room: {
@@ -340,7 +340,7 @@ export const YOUTH_COACH_ARCS: StoryArc[] = [
         prompt: 'Thursday, four o\'clock, a small room with three chairs and only two people in it. The coach has a folder he does not open, and starts with the words "so, look".',
         choices: [
           { id: 'listen', label: 'Sit still and let him say it', desc: 'Whatever it is, hear all of it', outcome: 'He is kept on, with conditions attached, listed slowly. He hears every one of them and can still recite the list in his thirties.', effect: { attr: { composure: 2 }, form: 0.06, meters: { authority: 10 } } },
-          { id: 'ask-truth', label: 'Ask him for the honest version', desc: 'Not the version they say to parents', outcome: 'He asks what the staff actually say about him when he isn\'t in the room. The coach tells him, and it is harder and more useful than anything on the sheet.', effect: { attr: { composure: 1, leadership: 1 }, form: -0.05, meters: { authority: 8 }, tag: 'heard-the-truth' } },
+          { id: 'ask-truth', label: 'Ask him for the honest version', desc: 'Not the version they say to parents', outcome: 'He asks what the staff actually say about him when he isn\'t in the room. The coach tells him, and it is harder and more useful than anything on the sheet.', effect: { attr: { leadership: 1 }, form: -0.05, meters: { authority: 8 }, tag: 'heard-the-truth' } },
         ],
       },
     },

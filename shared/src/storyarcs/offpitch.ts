@@ -49,7 +49,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
         id: 'reveal',
         prompt: 'Launch day. The boot drops with a slick film of him ghosting past defenders in slow motion. The stock sells out by teatime, and now everyone expects him to play like the advert.',
         choices: [
-          { id: 'deliver', label: 'Let the football answer', desc: 'Wear them Saturday and put on a show', outcome: 'He laces the new boots and turns in a man-of-the-match display. The advert looks like a documentary.', effect: { market: 3, form: 0.1, attr: { flair: 1 }, meters: { fans: 8, sponsors: 5 } } },
+          { id: 'deliver', label: 'Let the football answer', desc: 'Wear them Saturday and put on a show', outcome: 'He laces the new boots and turns in a man-of-the-match display. The advert looks like a documentary.', effect: { market: 3, form: 0.1, attr: { flair: 2 }, meters: { fans: 8, sponsors: 5 } } },
           { id: 'milk', label: 'Ride the hype circuit', desc: 'Store openings, signings, more shoots', outcome: 'He spends the week smiling for phones and misses two proper sessions. The buzz is deafening; the legs are heavy.', effect: { earnings: 350, market: 2, greed: 2, form: -0.15, attr: { stamina: -1 }, meters: { sponsors: 6, authority: -3 } } },
         ],
       },
@@ -439,7 +439,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
         id: 'aftermath',
         prompt: 'The advert is everywhere — brilliant, but now the whole ground sings the jingle at him whenever he touches the ball, opposition fans loudest of all. It’s affectionate, mostly, and just a little bit maddening.',
         choices: [
-          { id: 'embrace-jingle', label: 'Play along with it', desc: 'Celebrate a goal with the keepy-up bit', outcome: 'He answers the chants by scoring and doing the advert’s move as a celebration. The whole thing tips from mockery into legend.', effect: { market: 3, form: 0.1, attr: { flair: 1 }, meters: { fans: 8, peers: 3 } } },
+          { id: 'embrace-jingle', label: 'Play along with it', desc: 'Celebrate a goal with the keepy-up bit', outcome: 'He answers the chants by scoring and doing the advert’s move as a celebration. The whole thing tips from mockery into legend.', effect: { market: 3, form: 0.1, attr: { flair: 2 }, meters: { fans: 8, peers: 3 } } },
           { id: 'let-it-rattle', label: 'Let it get under his skin', desc: 'Snap at the singing, look rattled', outcome: 'He lets the endless jingle needle him and it shows in his touch. A silly advert quietly costing him his rhythm.', effect: { market: 1, form: -0.1, meters: { fans: -2, authority: -2 } } },
         ],
       },
@@ -729,7 +729,7 @@ export const OFFPITCH_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'The squad’s youngest lads have a little dressing-room dance they film after every win, and this week they’ve dragged him into the middle of it, phone already rolling. It’s daft, it’s harmless, and it’s about to be seen by ten million people if he lets it post.',
         choices: [
-          { id: 'go-viral', label: 'Nail the dance', desc: 'Commit, learn the steps, let it fly', outcome: 'He throws himself into the routine with unexpected rhythm and the clip detonates online overnight. Suddenly the veteran is the most relatable man in the league.', effect: { market: 4, greed: 1, meters: { fans: 8, peers: 6 }, attr: { flair: 1 }, tag: 'dance-viral' }, next: 'brand-calls' },
+          { id: 'go-viral', label: 'Nail the dance', desc: 'Commit, learn the steps, let it fly', outcome: 'He throws himself into the routine with unexpected rhythm and the clip detonates online overnight. Suddenly the veteran is the most relatable man in the league.', effect: { market: 4, greed: 1, meters: { fans: 8, peers: 6 }, attr: { flair: 2 }, tag: 'dance-viral' }, next: 'brand-calls' },
           { id: 'awkward-cameo', label: 'Do it, badly, on purpose', desc: 'Shuffle through it, laugh it off', outcome: 'He plants himself and does a deliberately hopeless dad-dance, and the wholesome awkwardness of it charms everyone anyway.', effect: { market: 2, meters: { fans: 4, peers: 4 } } },
           { id: 'wave-off', label: 'Wave the camera away', desc: 'Leave the dancing to the kids', outcome: 'He grins, ruffles a young lad’s hair, and ducks out of frame. No clip, no fuss, dignity fully intact.', effect: { form: 0.05, meters: { peers: 3, authority: 2 } } },
         ],

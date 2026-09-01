@@ -62,7 +62,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'The bags come out of the boot of a car and the kit for the year is handed round in the car park, still folded, still smelling of plastic. It is not quite the same as last season\'s — the collar has changed and the sponsor is a different local garage. There are no names on the backs, only numbers.',
         choices: [
-          { id: 'number', label: 'Ask for a particular number', desc: 'Say it out loud before anyone else does', outcome: 'He asks for it in front of everybody, which takes more than he expected. He gets it. He will pretend for years that he wasn\'t bothered either way.', effect: { attr: { leadership: 1, flair: 1 }, meters: { authority: 2, peers: -5 }, tag: 'season-kit-claimed' }, next: 'night' },
+          { id: 'number', label: 'Ask for a particular number', desc: 'Say it out loud before anyone else does', outcome: 'He asks for it in front of everybody, which takes more than he expected. He gets it. He will pretend for years that he wasn\'t bothered either way.', effect: { attr: { leadership: 1, flair: 2 }, meters: { authority: 2, peers: -5 }, tag: 'season-kit-claimed' }, next: 'night' },
           { id: 'take', label: 'Take whatever he\'s given', desc: 'Whichever shirt is left at the bottom', outcome: 'He ends up with a number nobody wants and wears it for the whole year without one word about it, which does him more good than the number would have.', effect: { attr: { teamwork: 2 }, meters: { authority: 3, peers: 3 }, tag: 'season-kit-took' }, next: 'night' },
           { id: 'swap', label: 'Swap with a smaller lad', desc: 'The shirt he wanted, given away in the car park', outcome: 'He hands over the shirt he actually wanted to a boy half a head shorter who wanted it more, and gets nothing for it except the boy\'s face.', effect: { attr: { teamwork: 2, leadership: 1 }, meters: { peers: 5 }, tag: 'season-kit-gave' }, next: 'night' },
         ],
@@ -71,7 +71,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         id: 'night',
         prompt: 'He wears it round the house that evening for no reason, with socks pulled up, and then does not take it off to eat his tea.',
         choices: [
-          { id: 'keep', label: 'Sleep in it', desc: 'Actually sleep in it', outcome: 'He sleeps in it and it is creased and hot by morning and he does not regret a second. There is one season in a life where a shirt does that, and this is it.', effect: { form: 0.06, attr: { flair: 1 }, meters: { family: 3 } } },
+          { id: 'keep', label: 'Sleep in it', desc: 'Actually sleep in it', outcome: 'He sleeps in it and it is creased and hot by morning and he does not regret a second. There is one season in a life where a shirt does that, and this is it.', effect: { form: 0.06, attr: { flair: 2 }, meters: { family: 3 } } },
           { id: 'fold', label: 'Fold it away for Sunday', desc: 'Keep it new until it counts', outcome: 'He folds it and puts it at the top of the drawer where he can see it, and does not touch it again until the morning of the first game.', effect: { form: 0.04, attr: { composure: 1 } } },
         ],
       },
@@ -109,7 +109,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         prompt: 'A sports hall in the week between the terms. Six teams, seven-minute games, a trestle table selling mince pies and weak tea, tinsel taped to the crossbar. It counts for absolutely nothing and everybody in the building is behaving as though it counts for a great deal.',
         choices: [
           { id: 'serious', label: 'Take it deadly seriously', desc: 'Treat seven minutes like ninety', outcome: 'He plays every one of the seven-minute games as though promotion depended on it, and by the fifth he is the only one still sprinting. They win it. He is unbearable in the car.', effect: { energy: -10, form: 0.07, attr: { aggression: 1, stamina: 1 }, meters: { authority: 3, peers: -2 }, tag: 'season-xmas-serious' }, next: 'end' },
-          { id: 'fun', label: 'Play like it\'s Christmas', desc: 'Try the things he\'d never try in a league game', outcome: 'He tries three ridiculous things, two of which fail hilariously and one of which goes in off the tinsel. It is the most he has enjoyed football since August.', effect: { form: 0.06, attr: { flair: 2, creativity: 1 }, meters: { peers: 5 }, tag: 'season-xmas-fun' }, next: 'end' },
+          { id: 'fun', label: 'Play like it\'s Christmas', desc: 'Try the things he\'d never try in a league game', outcome: 'He tries three ridiculous things, two of which fail hilariously and one of which goes in off the tinsel. It is the most he has enjoyed football since August.', effect: { form: 0.06, attr: { flair: 2, creativity: 2 }, meters: { peers: 5 }, tag: 'season-xmas-fun' }, next: 'end' },
           { id: 'young', label: 'Carry the two youngest through it', desc: 'Two lads a year below have been drafted in', outcome: 'He spends the afternoon feeding two terrified boys the ball in places where they cannot fail. Neither ever forgets it; he barely remembers by February.', effect: { attr: { teamwork: 2, leadership: 1 }, meters: { peers: 4, authority: 3 }, tag: 'season-xmas-carried' }, next: 'end' },
         ],
       },
@@ -154,8 +154,8 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'The part of the season nobody writes about. Dark at four, training under one working floodlight, three games called off in a row and then a fourth played on a pitch that is essentially soup. Nine weeks of this left. Nobody is watching and nothing is being decided.',
         choices: [
-          { id: 'ritual', label: 'Turn up regardless, every single week', desc: 'Make attendance the whole point', outcome: 'He does not miss one. Not the frozen one, not the flooded one, not the one where four turned up. It is the least glamorous thing he ever does and possibly the most important.', effect: { energy: -10, attr: { stamina: 2, composure: 1 }, meters: { authority: 6 }, tag: 'season-feb-never-missed' }, next: 'thaw' },
-          { id: 'sharpen', label: 'Use the dead weeks on one thing', desc: 'Weak foot, in the dark, on his own', outcome: 'He gives the whole of February to his weak foot in a car park with a wall. In April people start saying he\'s two-footed as though he always was.', effect: { energy: -8, attr: { creativity: 1, flair: 1 }, form: 0.05, tag: 'season-feb-sharpened' }, next: 'thaw' },
+          { id: 'ritual', label: 'Turn up regardless, every single week', desc: 'Make attendance the whole point', outcome: 'He does not miss one. Not the frozen one, not the flooded one, not the one where four turned up. It is the least glamorous thing he ever does and possibly the most important.', effect: { energy: -10, attr: { stamina: 2 }, meters: { authority: 6 }, tag: 'season-feb-never-missed' }, next: 'thaw' },
+          { id: 'sharpen', label: 'Use the dead weeks on one thing', desc: 'Weak foot, in the dark, on his own', outcome: 'He gives the whole of February to his weak foot in a car park with a wall. In April people start saying he\'s two-footed as though he always was.', effect: { energy: -8, attr: { creativity: 2, flair: 2 }, form: 0.05, tag: 'season-feb-sharpened' }, next: 'thaw' },
           { id: 'drift', label: 'Let himself drift for a few weeks', desc: 'Everyone else has', outcome: 'He coasts through the dark end of winter like most of them, and in March discovers that the two lads who didn\'t coast are now slightly ahead of him.', effect: { energy: 6, form: -0.07, meters: { authority: -3, peers: 2 }, tag: 'season-feb-drifted' }, next: 'thaw' },
         ],
       },
@@ -186,7 +186,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         id: 'last',
         prompt: 'On the last of the six the coach names an unchanged side and says, without any edge in it, that he can tell everything he needs to know about a lad by what he does in April.',
         choices: [
-          { id: 'hear', label: 'Take it as it was meant', desc: 'A sentence to keep', outcome: 'He hears it properly, which most of them don\'t, and repeats it to himself for the rest of his career whenever a fixture looks like it doesn\'t count.', effect: { attr: { composure: 2, leadership: 1 }, meters: { authority: 4 } } },
+          { id: 'hear', label: 'Take it as it was meant', desc: 'A sentence to keep', outcome: 'He hears it properly, which most of them don\'t, and repeats it to himself for the rest of his career whenever a fixture looks like it doesn\'t count.', effect: { attr: { composure: 1, leadership: 1 }, meters: { authority: 4 } } },
           { id: 'shrug', label: 'Let it go past him', desc: 'It\'s a line coaches say', outcome: 'It goes in one ear. He will come back to it at twenty-three, in an entirely different April, and understand it far too late to have used it.', effect: { attr: { composure: 1 }, meters: { authority: -5 } } },
         ],
       },
@@ -200,7 +200,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'Five games left and everything still possible. The Sunday-morning league has turned, briefly, into something with weight: results elsewhere are being checked on phones in car parks, and grown men who have said nothing all year are suddenly speaking to the referee.',
         choices: [
-          { id: 'front', label: 'Ask for the ball when it\'s heaviest', desc: 'The last twenty minutes of tight games', outcome: 'He wants it when nobody else does, four weeks running. He does not do anything spectacular with it. He simply keeps asking, and it is the reason they hold on.', effect: { energy: -10, form: 0.08, attr: { leadership: 2, composure: 1 }, meters: { authority: 5, peers: 4 }, tag: 'season-runin-wanted-it' }, next: 'final' },
+          { id: 'front', label: 'Ask for the ball when it\'s heaviest', desc: 'The last twenty minutes of tight games', outcome: 'He wants it when nobody else does, four weeks running. He does not do anything spectacular with it. He simply keeps asking, and it is the reason they hold on.', effect: { energy: -10, form: 0.08, attr: { leadership: 2 }, meters: { authority: 5, peers: 4 }, tag: 'season-runin-wanted-it' }, next: 'final' },
           { id: 'calm', label: 'Be the calm one in a squad of screamers', desc: 'Somebody has to be', outcome: 'While the touchline loses it every week he says almost nothing and plays the simple pass. Adults describe him as "old for his age" — half a compliment.', effect: { form: 0.06, attr: { composure: 3 }, meters: { authority: 4 }, tag: 'season-runin-calm' }, next: 'final' },
           { id: 'tight', label: 'Tighten up completely', desc: 'It matters, so he stops playing', outcome: 'The weight gets into his feet. For three weeks he is the safest, smallest version of himself, and he hates every minute of being that boy.', effect: { form: -0.07, attr: { composure: 1 }, meters: { authority: -2 }, tag: 'season-runin-tightened' }, next: 'final' },
         ],
@@ -279,7 +279,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         prompt: 'The trophy is heavier than it looks and has last year\'s winner engraved above his name. That boy is not in the room; he left the club in October.',
         choices: [
           { id: 'sober', label: 'Read the name above his own and go quiet', desc: 'One year, that\'s all', outcome: 'He reads the whole list on the plinth and finds that he knows almost none of the names. It is the first genuinely sobering thing football has ever taught him.', effect: { form: -0.05, attr: { composure: 3 }, tag: 'season-poty-sobered' } },
-          { id: 'enjoy', label: 'Enjoy it completely for one night', desc: 'Take it to bed, put it on the windowsill', outcome: 'He allows himself the whole night without a single sensible thought, and it is one of about four evenings from that entire decade he can still describe in detail.', effect: { form: 0.06, meters: { family: 4 }, attr: { flair: 1 } } },
+          { id: 'enjoy', label: 'Enjoy it completely for one night', desc: 'Take it to bed, put it on the windowsill', outcome: 'He allows himself the whole night without a single sensible thought, and it is one of about four evenings from that entire decade he can still describe in detail.', effect: { form: 0.06, meters: { family: 4 }, attr: { flair: 2 } } },
         ],
       },
     },
@@ -294,7 +294,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         choices: [
           { id: 'sign', label: 'Sign it on the spot', desc: 'Before anyone can change their mind', outcome: 'He has the pen out of the coach\'s hand before the sentence is finished. Something in the man\'s face suggests he was not entirely sure of the answer.', effect: { form: 0.05, meters: { authority: 5, family: 2 }, attr: { teamwork: 1 }, tag: 'season-signon-instant' }, next: 'others' },
           { id: 'think', label: 'Say he\'ll take it home and think', desc: 'Two clubs, one Sunday morning', outcome: 'He asks for a week. The coach says take two, in a voice that has cooled by about a degree, and the form sits on the kitchen table looking at him.', effect: { attr: { composure: 2 }, meters: { authority: -3, family: 3 }, tag: 'season-signon-hesitated' }, next: 'others' },
-          { id: 'ask', label: 'Ask what he\'d be signing on to be', desc: 'Starter, or squad?', outcome: 'He asks the question a twelve-year-old is not supposed to ask. The coach answers it honestly and neither of them enjoys the ten seconds in the middle.', effect: { attr: { leadership: 2, composure: 1 }, meters: { authority: 2 }, tag: 'season-signon-asked' }, next: 'others' },
+          { id: 'ask', label: 'Ask what he\'d be signing on to be', desc: 'Starter, or squad?', outcome: 'He asks the question a twelve-year-old is not supposed to ask. The coach answers it honestly and neither of them enjoys the ten seconds in the middle.', effect: { attr: { leadership: 2 }, meters: { authority: 2 }, tag: 'season-signon-asked' }, next: 'others' },
         ],
       },
       others: {
@@ -316,7 +316,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         prompt: 'Seven weeks without a fixture. Not an injury, not a punishment — the calendar has simply run out. His whole week is built round Sunday and there is no Sunday. By the second week he does not know what to do with an afternoon.',
         choices: [
           { id: 'wall', label: 'Go and find a wall', desc: 'Every day, alone, until the season restarts', outcome: 'He takes a ball to the same wall for seven weeks. Nobody sees a minute of it and it is the single largest jump in his ability that year.', effect: { energy: -8, form: 0.07, attr: { creativity: 2, stamina: 1 }, tag: 'season-gap-wall' }, next: 'return' },
-          { id: 'other', label: 'Do something that isn\'t football', desc: 'Bikes, the pool, the six weeks other kids get', outcome: 'He spends the gap being twelve instead of being a footballer, and comes back rested, brown and slightly slower, laughing more than he has since Christmas.', effect: { energy: 12, form: -0.04, attr: { flair: 1, teamwork: 1 }, meters: { family: 4, peers: 4 }, tag: 'season-gap-lived' }, next: 'return' },
+          { id: 'other', label: 'Do something that isn\'t football', desc: 'Bikes, the pool, the six weeks other kids get', outcome: 'He spends the gap being twelve instead of being a footballer, and comes back rested, brown and slightly slower, laughing more than he has since Christmas.', effect: { energy: 12, form: -0.04, attr: { flair: 2, teamwork: 1 }, meters: { family: 4, peers: 4 }, tag: 'season-gap-lived' }, next: 'return' },
           { id: 'lost', label: 'Rattle round the house not knowing himself', desc: 'Without Sunday there\'s no shape to anything', outcome: 'He is short-tempered and bored for six weeks and cannot explain to anyone why. It is the first time he understands how much of him the season is holding up.', effect: { energy: 4, form: -0.05, attr: { composure: 1 }, meters: { family: -3 }, tag: 'season-gap-adrift' }, next: 'return' },
         ],
       },
@@ -339,7 +339,7 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         prompt: 'His mother mentions, cooking, that it is a year to the day since his first game for them — she knows because of a photograph on her phone with a date on it. Same pitch this Sunday, roughly the same weather, a different boy in the same shirt.',
         choices: [
           { id: 'compare', label: 'Look at the photo properly', desc: 'Him, twelve months ago, in a shirt too big', outcome: 'He looks at a boy who did not know anything yet and is briefly, uncomfortably fond of him. Then he notices the sleeves fit now, and that is the whole year in one detail.', effect: { attr: { composure: 2 }, meters: { family: 4 }, tag: 'season-anniv-looked' }, next: 'sunday' },
-          { id: 'audit', label: 'Ask himself whether he\'s actually better', desc: 'Honestly, not kindly', outcome: 'He does the sum seriously and decides yes at some things and no at others, which at twelve is an unusually accurate answer and slightly deflating.', effect: { form: -0.05, attr: { composure: 1, creativity: 1 }, tag: 'season-anniv-audited' }, next: 'sunday' },
+          { id: 'audit', label: 'Ask himself whether he\'s actually better', desc: 'Honestly, not kindly', outcome: 'He does the sum seriously and decides yes at some things and no at others, which at twelve is an unusually accurate answer and slightly deflating.', effect: { form: -0.05, attr: { creativity: 2 }, tag: 'season-anniv-audited' }, next: 'sunday' },
           { id: 'shrug', label: 'Say it\'s only a year', desc: 'He\'s not interested in looking backwards', outcome: 'He says a year isn\'t anything and goes to get his boots. His mother keeps the photo anyway, and sends it to him on the same date for the next decade.', effect: { form: 0.04, meters: { family: -5 }, tag: 'season-anniv-shrugged' }, next: 'sunday' },
         ],
       },
@@ -361,9 +361,9 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'First session of the new season. Two lads have grown four inches, one has a voice like his father\'s, and a boy who could barely get a game in May is suddenly the quickest in the group. Nothing has been announced and yet the whole pecking order is different.',
         choices: [
-          { id: 'reset', label: 'Accept the year starts from zero', desc: 'Whatever he was in May is gone', outcome: 'He decides last season\'s standing is worthless and behaves accordingly, which spares him three months of the resentment the others carry around all autumn.', effect: { form: 0.05, attr: { composure: 2, teamwork: 1 }, meters: { authority: 3 }, tag: 'season-reset-accepted' }, next: 'place' },
+          { id: 'reset', label: 'Accept the year starts from zero', desc: 'Whatever he was in May is gone', outcome: 'He decides last season\'s standing is worthless and behaves accordingly, which spares him three months of the resentment the others carry around all autumn.', effect: { form: 0.05, attr: { composure: 1, teamwork: 1 }, meters: { authority: 3 }, tag: 'season-reset-accepted' }, next: 'place' },
           { id: 'insist', label: 'Play like he\'s still who he was', desc: 'Rank was earned, not lent', outcome: 'He turns up assuming the standing he left with, and spends six weeks being visibly annoyed that nobody has consulted the previous season\'s table.', effect: { form: -0.06, attr: { aggression: 1 }, meters: { peers: -4, authority: -2 }, tag: 'season-reset-resisted' }, next: 'place' },
-          { id: 'study', label: 'Watch the boy who\'s overtaken him', desc: 'Learn what changed over one summer', outcome: 'Instead of resenting him he spends August working out exactly what the lad now does differently, and steals two of it by October.', effect: { attr: { creativity: 2, composure: 1 }, form: 0.04, meters: { peers: 2 }, tag: 'season-reset-studied' }, next: 'place' },
+          { id: 'study', label: 'Watch the boy who\'s overtaken him', desc: 'Learn what changed over one summer', outcome: 'Instead of resenting him he spends August working out exactly what the lad now does differently, and steals two of it by October.', effect: { attr: { creativity: 2 }, form: 0.04, meters: { peers: 2 }, tag: 'season-reset-studied' }, next: 'place' },
         ],
       },
       place: {
@@ -409,8 +409,8 @@ export const YOUTH_SEASON_ARCS: StoryArc[] = [
         prompt: 'A card in his name arrives in an envelope in July: the same seat, block G, for the next thirty-eight home games. It is renewed every summer without discussion, like a bill. It also clashes, at least six times a year, with his own fixtures.',
         choices: [
           { id: 'own', label: 'Choose his own fixtures every time', desc: 'Six wasted seats a season', outcome: 'He gives the card up whenever the two collide and the seat sits empty or goes to a cousin. Nobody makes him feel bad about it, which somehow makes it worse.', effect: { form: 0.05, meters: { authority: 4, family: -2 }, attr: { stamina: 1 }, tag: 'season-ticket-plays' }, next: 'end' },
-          { id: 'ground', label: 'Keep the six Saturdays for the ground', desc: 'Same seat, same man, since he was six', outcome: 'He keeps the six and watches football instead of playing it, next to the same person he has sat next to since he was six. It is not nothing, and he knows exactly what it costs.', effect: { form: -0.03, meters: { family: 6 }, attr: { creativity: 1 }, tag: 'season-ticket-goes' }, next: 'end' },
-          { id: 'watch', label: 'Go, and watch one player for ninety minutes', desc: 'Not the ball — one man in his position', outcome: 'He spends the whole afternoon watching one player off the ball and comes home with three things to try. It changes what going to the ground is for.', effect: { attr: { creativity: 2, composure: 1 }, form: 0.04, meters: { family: 3 }, tag: 'season-ticket-studies' }, next: 'end' },
+          { id: 'ground', label: 'Keep the six Saturdays for the ground', desc: 'Same seat, same man, since he was six', outcome: 'He keeps the six and watches football instead of playing it, next to the same person he has sat next to since he was six. It is not nothing, and he knows exactly what it costs.', effect: { form: -0.03, meters: { family: 6 }, attr: { creativity: 2 }, tag: 'season-ticket-goes' }, next: 'end' },
+          { id: 'watch', label: 'Go, and watch one player for ninety minutes', desc: 'Not the ball — one man in his position', outcome: 'He spends the whole afternoon watching one player off the ball and comes home with three things to try. It changes what going to the ground is for.', effect: { attr: { creativity: 2 }, form: 0.04, meters: { family: 3 }, tag: 'season-ticket-studies' }, next: 'end' },
         ],
       },
       end: {

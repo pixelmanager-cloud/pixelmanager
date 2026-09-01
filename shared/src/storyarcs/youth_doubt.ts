@@ -52,16 +52,16 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'He has stopped playing the difficult pass. He can still see it — it is there every time, the one through the gap — and every time he rolls it sideways instead and nobody says anything, because sideways is never wrong. He knows exactly why he is doing it and he keeps doing it anyway.',
         choices: [
-          { id: 'try', label: 'Play the hard one and accept the cost', desc: 'Even if it goes straight out for a throw', outcome: 'The first three go astray and he feels every one. The fourth splits them open. He decides the three were the price of the fourth, and starts paying it more willingly.', effect: { attr: { creativity: 2, flair: 1 }, form: -0.03 }, next: 'weeks' },
+          { id: 'try', label: 'Play the hard one and accept the cost', desc: 'Even if it goes straight out for a throw', outcome: 'The first three go astray and he feels every one. The fourth splits them open. He decides the three were the price of the fourth, and starts paying it more willingly.', effect: { attr: { creativity: 2, flair: 2 }, form: -0.03 }, next: 'weeks' },
           { id: 'stay', label: 'Keep it safe until he feels sure again', desc: 'Confidence first, risk after', outcome: 'He plays a hundred easy passes and gets none of them wrong, and the certainty creeps back the slow way. The gap is still there, waiting, unattempted.', effect: { attr: { composure: 2, teamwork: 1 }, form: 0.04 }, next: 'weeks' },
-          { id: 'admit', label: 'Admit to himself it is fear, not tactics', desc: 'Stop dressing it up as a decision', outcome: 'He stops telling himself it is the sensible option. Just naming it properly makes the sideways pass harder to play, which turns out to be the point.', effect: { attr: { composure: 1, creativity: 1 } }, next: 'weeks' },
+          { id: 'admit', label: 'Admit to himself it is fear, not tactics', desc: 'Stop dressing it up as a decision', outcome: 'He stops telling himself it is the sensible option. Just naming it properly makes the sideways pass harder to play, which turns out to be the point.', effect: { attr: { composure: 1, creativity: 2 } }, next: 'weeks' },
         ],
       },
       weeks: {
         id: 'weeks',
         prompt: 'Weeks later, one-nil up with ten to go, the gap opens again and there is a boy in space beyond it. Nobody watching would ever know if he did not see it.',
         choices: [
-          { id: 'through', label: 'Slide it through', desc: 'Because he saw it', outcome: 'He slides it through. It does not lead to a goal and barely anyone notices, but he walks off knowing he did not lie to himself about what he saw.', effect: { attr: { creativity: 1, leadership: 1 }, form: 0.05, meters: { authority: -4 } } },
+          { id: 'through', label: 'Slide it through', desc: 'Because he saw it', outcome: 'He slides it through. It does not lead to a goal and barely anyone notices, but he walks off knowing he did not lie to himself about what he saw.', effect: { attr: { creativity: 2, leadership: 1 }, form: 0.05, meters: { authority: -4 } } },
           { id: 'keep', label: 'Keep the ball and see the game out', desc: 'One-nil is a result', outcome: 'He takes it into the corner instead and they win it, and he is honest enough afterwards to admit he is not sure which of the two reasons made the choice.', effect: { attr: { composure: 2, creativity: -1 }, meters: { authority: 4 } } },
         ],
       },
@@ -91,7 +91,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
         prompt: 'Someone has cut a clip of him from the weekend and it goes round the group chat: forty seconds, music over the top, three touches that looked better from the touchline than they felt. He watches it eleven times and hates every version of himself in it — the way he runs, the way his head drops, how slow it all looks.',
         choices: [
           { id: 'delete', label: 'Watch it once more and leave it alone', desc: 'Nothing good is coming from the twelfth time', outcome: 'He shuts the phone in a drawer and goes outside. The clip is exactly as good or bad as it was before he memorised it, and he never watches it again.', effect: { attr: { composure: 2 }, energy: 3 } },
-          { id: 'study', label: 'Watch it properly, coldly, for the useful bits', desc: 'Stop looking at how he looks', outcome: 'He forces himself past how he looks and into what he did, and finds two genuinely useful things about his first touch buried under all the embarrassment.', effect: { attr: { composure: 1, creativity: 1 }, form: 0.04, tag: 'studies-clips' } },
+          { id: 'study', label: 'Watch it properly, coldly, for the useful bits', desc: 'Stop looking at how he looks', outcome: 'He forces himself past how he looks and into what he did, and finds two genuinely useful things about his first touch buried under all the embarrassment.', effect: { attr: { composure: 1, creativity: 2 }, form: 0.04, tag: 'studies-clips' } },
           { id: 'spiral', label: 'Keep watching', desc: 'Find every flaw and hold onto them', outcome: 'He watches it until it stops meaning anything and takes all forty seconds to bed with him. He plays the next game trying not to look like the boy in the clip.', effect: { form: -0.05, energy: -5, attr: { composure: 1 } } },
         ],
       },
@@ -121,7 +121,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
         prompt: 'He played the best game of his life last Saturday and has spent all week being reminded of it. Now it is Friday and the only thought in his head is that he cannot possibly do that again, and that everyone is going to turn up expecting him to.',
         choices: [
           { id: 'reset', label: 'Treat it as a completely new game', desc: 'Last week is not owed to anybody', outcome: 'He decides last Saturday belongs to last Saturday. He plays a perfectly ordinary game and is not troubled by it. A rarer skill than the good game was.', effect: { attr: { composure: 2 }, form: 0.05 } },
-          { id: 'repeat', label: 'Try to reproduce it exactly', desc: 'Same runs, same shots, same everything', outcome: 'He spends the first half trying to recreate a thing that only happened because he was not thinking, and the harder he reaches for it the further away it gets.', effect: { form: -0.05, energy: -5, attr: { flair: 1 } } },
+          { id: 'repeat', label: 'Try to reproduce it exactly', desc: 'Same runs, same shots, same everything', outcome: 'He spends the first half trying to recreate a thing that only happened because he was not thinking, and the harder he reaches for it the further away it gets.', effect: { form: -0.05, energy: -5, attr: { flair: 2 } } },
           { id: 'quiet', label: 'Ask people to stop mentioning it', desc: 'Kindly, but genuinely', outcome: 'He tells them, embarrassed, that it makes it worse rather than better. They are surprised, and they stop, and the Friday gets slightly easier to stand in.', effect: { attr: { composure: 1 }, meters: { family: 4, peers: 3 } } },
         ],
       },
@@ -228,7 +228,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
         choices: [
           { id: 'narrow', label: 'Shrink the game down to the next pass', desc: 'The touchline is not in it', outcome: 'He teaches himself to make the world about four yards wide for ninety minutes. It takes half a season and it holds, mostly, on the days he remembers to do it.', effect: { attr: { composure: 2 }, form: 0.05, tag: 'narrows-the-world' }, next: 'test' },
           { id: 'expose', label: 'Deliberately play where people watch', desc: 'The cage, the park, the games with an audience', outcome: 'He starts choosing the pitch with people round it instead of the quiet one. It is horrible for a month and then it is simply normal, which was the whole idea.', effect: { attr: { composure: 1, flair: 2 }, energy: -4 }, next: 'test' },
-          { id: 'perform', label: 'Try to play for them', desc: 'Give the touchline something worth watching', outcome: 'He plays to the crowd and finds it makes everything both louder and worse, because now every touch has an audience he has personally invited.', effect: { attr: { flair: 1 }, form: -0.04, meters: { peers: 3 } }, next: 'test' },
+          { id: 'perform', label: 'Try to play for them', desc: 'Give the touchline something worth watching', outcome: 'He plays to the crowd and finds it makes everything both louder and worse, because now every touch has an audience he has personally invited.', effect: { attr: { flair: 2 }, form: -0.04, meters: { peers: 3 } }, next: 'test' },
         ],
       },
       test: {
@@ -236,7 +236,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
         prompt: 'Then a game with three deep along one side and a man with a clipboard who is almost certainly there for somebody else entirely.',
         choices: [
           { id: 'same', label: 'Play exactly the game he plays on his own', desc: 'No more, no less', outcome: 'He plays his ordinary game, well, and walks off knowing it was the same one he plays against the wall. That is the whole victory and it is a large one.', effect: { attr: { composure: 2 }, form: 0.06 } },
-          { id: 'extra', label: 'Find another ten per cent for it', desc: 'If they are watching, give them something', outcome: 'He raises it and it comes off, this time. He is aware, walking off, that he has made himself dependent on the touchline being there.', effect: { form: 0.07, attr: { flair: 1 }, energy: -5 } },
+          { id: 'extra', label: 'Find another ten per cent for it', desc: 'If they are watching, give them something', outcome: 'He raises it and it comes off, this time. He is aware, walking off, that he has made himself dependent on the touchline being there.', effect: { form: 0.07, attr: { flair: 2 }, energy: -5 } },
         ],
       },
     },
@@ -264,7 +264,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'A friendly arranged at two days notice against nobody in particular, no league points, no table, half the squad missing and a parent running the line. He realises somewhere around the twentieth minute that he is enjoying himself more than he has all year, and that this is quite a sad thing to realise.',
         choices: [
-          { id: 'notice', label: 'Notice what the difference actually is', desc: 'Nothing about the football has changed', outcome: 'The football is identical. The only missing thing is the part of him that watches himself play. He tries, from then on, to leave that part in the changing room.', effect: { attr: { composure: 2, flair: 1 }, form: 0.06, tag: 'left-the-watcher' } },
+          { id: 'notice', label: 'Notice what the difference actually is', desc: 'Nothing about the football has changed', outcome: 'The football is identical. The only missing thing is the part of him that watches himself play. He tries, from then on, to leave that part in the changing room.', effect: { attr: { composure: 2, flair: 2 }, form: 0.06, tag: 'left-the-watcher' } },
           { id: 'enjoy', label: 'Just have the afternoon', desc: 'No lesson required', outcome: 'He plays two hours of football for no reason whatsoever and goes home filthy and happy, and does not examine it. Possibly the correct response.', effect: { energy: 8, form: 0.05, meters: { peers: 4 } } },
           { id: 'guilt', label: 'Feel guilty for enjoying the easy one', desc: 'Anyone can play well when it does not matter', outcome: 'He talks himself out of the afternoon on the way home on the grounds that it did not count, and arrives back with less than he left with.', effect: { form: -0.03, attr: { composure: 1 } } },
         ],
@@ -303,7 +303,7 @@ export const YOUTH_DOUBT_ARCS: StoryArc[] = [
         prompt: 'There is a version of the game in his head that he plays against every week: the one where every touch is clean and nothing is scruffy. He has never once played that game. He measures every actual Saturday against it and every actual Saturday loses.',
         choices: [
           { id: 'lower', label: 'Change what he is measuring against', desc: 'Last month, not the imaginary version', outcome: 'He starts comparing himself to himself in October rather than to a boy who does not exist. The results are immediately less bleak and considerably more useful.', effect: { attr: { composure: 2 }, form: 0.05, tag: 'measures-against-himself' } },
-          { id: 'keep', label: 'Keep the perfect version', desc: 'It is the only reason he improves', outcome: 'He hangs on to the imaginary game and chases it. It pulls him forward, which is real, and it means he never quite arrives anywhere, which is also real.', effect: { attr: { creativity: 1, aggression: 1 }, form: 0.04, energy: -5, tag: 'chases-perfect' } },
+          { id: 'keep', label: 'Keep the perfect version', desc: 'It is the only reason he improves', outcome: 'He hangs on to the imaginary game and chases it. It pulls him forward, which is real, and it means he never quite arrives anywhere, which is also real.', effect: { attr: { creativity: 2, aggression: 1 }, form: 0.04, energy: -5, tag: 'chases-perfect' } },
           { id: 'scruffy', label: 'Learn to like the scruffy ones', desc: 'A toe-poke counts the same', outcome: 'He makes himself admire an ugly cleared header and a shinned finish, and slowly the game gets bigger than the narrow, beautiful thing he had it down as.', effect: { attr: { teamwork: 2, composure: 1 }, form: 0.04 } },
         ],
       },

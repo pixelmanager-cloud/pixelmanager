@@ -37,7 +37,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'Somebody in the changing room gives him a nickname on his second week. It is not cruel, exactly — it is about the way he runs — and the whole squad is using it by Saturday. Nobody has called him his actual name in a fortnight.',
         choices: [
-          { id: 'own', label: 'Take it and make it his', desc: 'Answer to it louder than anyone says it', outcome: 'He starts answering to it before they finish saying it, and within a month it stops being a joke about him and starts being what he is called. Two of them shorten it to something almost fond.', effect: { meters: { peers: 10 }, attr: { flair: 1, composure: 1 } } },
+          { id: 'own', label: 'Take it and make it his', desc: 'Answer to it louder than anyone says it', outcome: 'He starts answering to it before they finish saying it, and within a month it stops being a joke about him and starts being what he is called. Two of them shorten it to something almost fond.', effect: { meters: { peers: 10 }, attr: { flair: 2 } } },
           { id: 'fight', label: 'Tell them to pack it in', desc: 'Say it once, clearly, and mean it', outcome: 'He says it once, evenly, and most of them stop. One doesn\'t, for a while, until nobody laughs with him any more.', effect: { meters: { peers: -3 }, attr: { leadership: 1 } } },
           { id: 'endure', label: 'Say nothing and wait it out', desc: 'Things that get no reaction usually die', outcome: 'He gives it nothing at all for six weeks and it withers, the way these things do. He is quieter in that room afterwards than he was before.', effect: { meters: { peers: 3 }, attr: { composure: 1 } } },
         ],
@@ -52,9 +52,9 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'His two closest mates in the squad have fallen out over something neither will explain. Both of them find him separately, tell him a version, and wait. The changing room has already split into halves and he is standing in the gap.',
         choices: [
-          { id: 'neither', label: 'Refuse to pick', desc: 'Stay mates with both and take the cost', outcome: 'He keeps sitting with whoever he sat with, and for a fortnight both of them treat him like a traitor. Then it passes, and he is the only one who came out with two friends.', effect: { meters: { peers: 6 }, attr: { composure: 1, leadership: 1 }, tag: 'mates-neutral' }, next: 'after' },
+          { id: 'neither', label: 'Refuse to pick', desc: 'Stay mates with both and take the cost', outcome: 'He keeps sitting with whoever he sat with, and for a fortnight both of them treat him like a traitor. Then it passes, and he is the only one who came out with two friends.', effect: { meters: { peers: 6 }, attr: { leadership: 1 }, tag: 'mates-neutral' }, next: 'after' },
           { id: 'closer', label: 'Back the one he\'s closer to', desc: 'Loyalty means choosing, and he knows who', outcome: 'He picks a side, and it is warm on that side. The other boy stops passing to him in training for a long time, and it shows in the results.', effect: { meters: { peers: -2 }, attr: { aggression: 1 }, tag: 'mates-picked-side' }, next: 'after' },
-          { id: 'right', label: 'Back whoever was actually right', desc: 'Work out what happened, then say so', outcome: 'He asks enough questions to work out the truth and says it out loud to both of them. Neither enjoys it. Both, later, trust him more than they did.', effect: { meters: { peers: 4 }, attr: { leadership: 1, composure: 1 }, tag: 'mates-truth' }, next: 'after' },
+          { id: 'right', label: 'Back whoever was actually right', desc: 'Work out what happened, then say so', outcome: 'He asks enough questions to work out the truth and says it out loud to both of them. Neither enjoys it. Both, later, trust him more than they did.', effect: { meters: { peers: 4 }, attr: { leadership: 1 }, tag: 'mates-truth' }, next: 'after' },
         ],
       },
       after: {
@@ -91,14 +91,14 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
         prompt: 'First away trip with an overnight stay. The rooming list pairs him with the lad nobody rooms with — quiet, from the other end of the county, plays well and says about nine words a season. There is a free bed in the room where everyone wants to be.',
         choices: [
           { id: 'stay', label: 'Stay where he\'s put', desc: 'Room with him and see what happens', outcome: 'They stay up too late with the telly on mute, and the boy talks more in three hours than he has all year. On the pitch next morning they find each other twice without looking.', effect: { meters: { peers: 8 }, attr: { teamwork: 1 }, tag: 'mates-roomed' }, next: 'season' },
-          { id: 'swap', label: 'Swap into the good room', desc: 'It\'s one night and he wants to enjoy it', outcome: 'He swaps, and the night is loud and brilliant. The quiet boy sleeps on his own and is fine about it in a way that is worse than sulking.', effect: { meters: { peers: 4 }, attr: { flair: 1, teamwork: -1 }, tag: 'mates-swapped' }, next: 'season' },
+          { id: 'swap', label: 'Swap into the good room', desc: 'It\'s one night and he wants to enjoy it', outcome: 'He swaps, and the night is loud and brilliant. The quiet boy sleeps on his own and is fine about it in a way that is worse than sulking.', effect: { meters: { peers: 4 }, attr: { flair: 2, teamwork: -1 }, tag: 'mates-swapped' }, next: 'season' },
         ],
       },
       season: {
         id: 'season',
         prompt: 'The trip ends and the season grinds on. By March the squad has hardened into groups — who warms up with who, who saves a seat.',
         choices: [
-          { id: 'mix', label: 'Keep crossing between them', desc: 'Refuse to belong to only one group', outcome: 'He drifts between the cliques all season, welcome everywhere and central nowhere, and ends up the one everyone tells things to.', effect: { energy: -5, meters: { peers: 6 }, attr: { teamwork: 1, composure: 1 } } },
+          { id: 'mix', label: 'Keep crossing between them', desc: 'Refuse to belong to only one group', outcome: 'He drifts between the cliques all season, welcome everywhere and central nowhere, and ends up the one everyone tells things to.', effect: { energy: -5, meters: { peers: 6 }, attr: { teamwork: 1 } } },
           { id: 'settle', label: 'Settle into his group', desc: 'Pick his three and be properly theirs', outcome: 'He picks his three and they become the kind of friends you get once. The rest of the squad is polite to him and nothing more.', effect: { meters: { peers: 8 }, attr: { teamwork: 1, leadership: -1 }, form: 0.04 } },
         ],
       },
@@ -112,7 +112,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'Somebody makes a second group chat — the squad, minus one lad. It is funnier than the real one, because the joke is him. Forty messages in, his phone buzzes with a photo of the boy stretching, captioned in a way that will follow him for years.',
         choices: [
-          { id: 'leave', label: 'Leave the chat', desc: 'Get out, and let them see the name go grey', outcome: 'He leaves without a word. Three of them ask why and he doesn\'t answer, and within a week two others have gone too and the chat dies of embarrassment.', effect: { meters: { peers: -2 }, attr: { leadership: 1, composure: 1 } } },
+          { id: 'leave', label: 'Leave the chat', desc: 'Get out, and let them see the name go grey', outcome: 'He leaves without a word. Three of them ask why and he doesn\'t answer, and within a week two others have gone too and the chat dies of embarrassment.', effect: { meters: { peers: -2 }, attr: { leadership: 1 } } },
           { id: 'warn', label: 'Warn the lad it exists', desc: 'He should hear it from a mate first', outcome: 'He tells him quietly by the gate. The boy goes red and says thanks, and never quite trusts any of the others again — including, a bit, him.', effect: { meters: { peers: 4 }, attr: { leadership: 1 }, tag: 'mates-warned-chat' } },
           { id: 'mute', label: 'Mute it and say nothing', desc: 'He didn\'t start it and he isn\'t adding to it', outcome: 'He mutes it and never types in it once. Months later, when it all comes out, he is technically in the screenshots.', effect: { meters: { peers: 2 }, attr: { composure: 1 } } },
         ],
@@ -141,7 +141,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'Squad tradition: every new lad stands on a bench and sings. His turn comes on a Tuesday with fourteen boys hammering the lockers. He knows one verse of one song and his voice has started doing the thing where it goes both ways in a sentence.',
         choices: [
-          { id: 'sing', label: 'Get up and murder it', desc: 'Loud, awful, all the way through', outcome: 'He is genuinely terrible and does not stop, and they are still shouting the chorus at him in April. He is in, completely, from that Tuesday.', effect: { meters: { peers: 12 }, attr: { flair: 1, composure: 1 } } },
+          { id: 'sing', label: 'Get up and murder it', desc: 'Loud, awful, all the way through', outcome: 'He is genuinely terrible and does not stop, and they are still shouting the chorus at him in April. He is in, completely, from that Tuesday.', effect: { meters: { peers: 12 }, attr: { flair: 2, composure: 1 } } },
           { id: 'refuse', label: 'Refuse', desc: 'Stand there and take the noise instead', outcome: 'He shakes his head and lets them bay at him until they get bored. Nobody makes him. They also don\'t forget he wouldn\'t.', effect: { meters: { peers: -5 }, attr: { composure: 1, leadership: 1 } } },
         ],
       },
@@ -164,7 +164,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
         prompt: 'Last game of the season, three-nil up, and the boy finally gets twenty minutes. He is nervous to the point of being ill with it. Then the ball breaks and there is a chance on — his, or the easy pass.',
         choices: [
           { id: 'pass', label: 'Give it to him', desc: 'Square it and let him have the moment', outcome: 'He rolls it across and the boy puts it in, and the celebration is the loudest thing that has happened all year. Nobody remembers who passed.', effect: { meters: { peers: 12 }, attr: { teamwork: 1 }, form: 0.04 } },
-          { id: 'score', label: 'Take it himself', desc: 'It\'s his shot and he\'s the one who scores', outcome: 'He takes it and scores, properly, and it\'s a good goal. The boy is first to him in the pile-on, and hugs him, and means it, mostly.', effect: { form: 0.08, attr: { flair: 1 }, meters: { peers: -5 } } },
+          { id: 'score', label: 'Take it himself', desc: 'It\'s his shot and he\'s the one who scores', outcome: 'He takes it and scores, properly, and it\'s a good goal. The boy is first to him in the pile-on, and hugs him, and means it, mostly.', effect: { form: 0.08, attr: { flair: 2 }, meters: { peers: -5 } } },
         ],
       },
     },
@@ -199,7 +199,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
         id: 'later',
         prompt: 'Not long after, the same mate wants him to bunk off the end of a session to get to something else. He is already halfway out of his boots and grinning, and he is only going if the two of them go together.',
         choices: [
-          { id: 'go', label: 'Go with him', desc: 'It\'s twenty minutes of cool-down. Who cares', outcome: 'They go, and it is one of the better afternoons of that year, and it is also the first time he learns that getting away with something feels thinner than expected.', effect: { energy: 4, meters: { peers: 8, authority: -6 }, attr: { flair: 1 } } },
+          { id: 'go', label: 'Go with him', desc: 'It\'s twenty minutes of cool-down. Who cares', outcome: 'They go, and it is one of the better afternoons of that year, and it is also the first time he learns that getting away with something feels thinner than expected.', effect: { energy: 4, meters: { peers: 8, authority: -6 }, attr: { flair: 2 } } },
           { id: 'stay', label: 'Stay', desc: 'Tell him to go on without him', outcome: 'He stays and finishes the session on his own. His mate calls him boring for a week and then, quietly, starts staying too.', effect: { energy: -4, meters: { peers: -2, authority: 6 }, attr: { stamina: 1, composure: 1 } } },
         ],
       },
@@ -213,7 +213,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'The kid who plays for the club they are supposed to hate turns out to be all right. They meet at a summer five-a-side and end up talking for an hour about nothing. His own squad has opinions about this, loudly, on Monday.',
         choices: [
-          { id: 'openly', label: 'Be mates with him openly', desc: 'Let them say what they want', outcome: 'He keeps knocking about with him and takes a fortnight of grief for it. It dies down, and he has a friend outside the whole thing, which he needs more than he knows.', effect: { meters: { peers: -3 }, attr: { composure: 1, leadership: 1 }, tag: 'mates-rival-friend' }, next: 'derby' },
+          { id: 'openly', label: 'Be mates with him openly', desc: 'Let them say what they want', outcome: 'He keeps knocking about with him and takes a fortnight of grief for it. It dies down, and he has a friend outside the whole thing, which he needs more than he knows.', effect: { meters: { peers: -3 }, attr: { leadership: 1 }, tag: 'mates-rival-friend' }, next: 'derby' },
           { id: 'quiet', label: 'Keep it to himself', desc: 'Some friendships don\'t need an audience', outcome: 'He keeps it off the pitch and out of the changing room. It works, and it also means he is careful with people in a way he wasn\'t before.', effect: { attr: { composure: 1 }, meters: { peers: 2 }, tag: 'mates-rival-secret' }, next: 'derby' },
         ],
       },
@@ -221,7 +221,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
         id: 'derby',
         prompt: 'They are drawn against each other in the cup. The friend is on the other wing, and his own squad spend the whole warm-up talking about doing him early.',
         choices: [
-          { id: 'hard', label: 'Play him as hard as anyone', desc: 'Friendship stops at the whistle', outcome: 'He goes through him inside two minutes and helps him up. They both play brilliantly and shake hands at the end while their teammates glare.', effect: { attr: { aggression: 1, composure: 1 }, form: 0.06, meters: { peers: 6 } } },
+          { id: 'hard', label: 'Play him as hard as anyone', desc: 'Friendship stops at the whistle', outcome: 'He goes through him inside two minutes and helps him up. They both play brilliantly and shake hands at the end while their teammates glare.', effect: { attr: { aggression: 1 }, form: 0.06, meters: { peers: 6 } } },
           { id: 'soft', label: 'Not go through him', desc: 'He isn\'t doing that to a mate', outcome: 'He pulls out of one tackle and everyone sees. It costs a goal and a week of comments, and he still doesn\'t regret it as much as he probably should.', effect: { form: -0.05, meters: { peers: -5 }, attr: { teamwork: 1 } } },
         ],
       },
@@ -244,7 +244,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
         prompt: 'Next session, the same lads are lining up the same joke on the same boy, laughing before they\'ve started. They want him in on it — being in on it is the whole thing.',
         choices: [
           { id: 'stop', label: 'Stop it', desc: 'Put the boots back on the peg in front of them', outcome: 'He takes the boots down and puts them back without saying much. Somebody calls him a bore. The joke doesn\'t happen again all season.', effect: { meters: { peers: -6 }, attr: { leadership: 2 } } },
-          { id: 'join', label: 'Join in', desc: 'Being outside the joke is its own risk', outcome: 'He joins in and the room loves him for it, and the boy laughs along in the way you do when you have no other option.', effect: { meters: { peers: 8 }, attr: { flair: 1, teamwork: -1 } } },
+          { id: 'join', label: 'Join in', desc: 'Being outside the joke is its own risk', outcome: 'He joins in and the room loves him for it, and the boy laughs along in the way you do when you have no other option.', effect: { meters: { peers: 8 }, attr: { flair: 2, teamwork: -1 } } },
         ],
       },
     },
@@ -259,7 +259,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
         choices: [
           { id: 'lead', label: 'Set the standard on purpose', desc: 'If they\'re copying, give them something worth copying', outcome: 'He starts arriving early because he knows two of them will, and stays late because they will too. The whole group gets better without a word being said about it.', effect: { energy: -6, meters: { peers: 8, authority: 6 }, attr: { leadership: 1, stamina: 1 } } },
           { id: 'ignore', label: 'Pretend not to notice', desc: 'The moment he acknowledges it, it gets weird', outcome: 'He carries on as if he hasn\'t seen it, which is its own kind of leadership. They keep copying anyway.', effect: { meters: { peers: 4 }, attr: { composure: 1 } } },
-          { id: 'awkward', label: 'Make a joke of it', desc: 'Take the mickey out of the lad doing it', outcome: 'He takes the mickey and the boy laughs and stops doing it, and something small closes down between them that never quite opens again.', effect: { meters: { peers: -4 }, attr: { flair: 1 } } },
+          { id: 'awkward', label: 'Make a joke of it', desc: 'Take the mickey out of the lad doing it', outcome: 'He takes the mickey and the boy laughs and stops doing it, and something small closes down between them that never quite opens again.', effect: { meters: { peers: -4 }, attr: { flair: 2 } } },
         ],
       },
     },
@@ -272,7 +272,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'His mate has been off for a month — snappy in drills, no jokes, first out of the room. On the walk to the bus stop the boy says, flatly and without looking up, that things are bad at home, and then immediately talks about something else.',
         choices: [
-          { id: 'ask', label: 'Ask him about it', desc: 'Go back to what he just said', outcome: 'He asks, badly, and his mate tells him more than either of them expected. Nothing is fixed. But the boy is different at training the next week, and it is because somebody asked.', effect: { meters: { peers: 10 }, attr: { leadership: 1, composure: 1 } } },
+          { id: 'ask', label: 'Ask him about it', desc: 'Go back to what he just said', outcome: 'He asks, badly, and his mate tells him more than either of them expected. Nothing is fixed. But the boy is different at training the next week, and it is because somebody asked.', effect: { meters: { peers: 10 }, attr: { leadership: 1 } } },
           { id: 'normal', label: 'Let him change the subject', desc: 'Give him the normal thing to stand in', outcome: 'He follows him onto the other subject and keeps it going the whole way to the stop. Some weeks that is exactly what a mate is for.', effect: { meters: { peers: 8 }, attr: { teamwork: 1 } } },
           { id: 'football', label: 'Just get him playing', desc: 'Drag him to the park and say nothing at all', outcome: 'He knocks for him every day for a fortnight and they play until it\'s dark. Neither mentions anything. It helps more than talking would have.', effect: { energy: -4, meters: { peers: 8 }, attr: { stamina: 1, teamwork: 1 } } },
         ],
@@ -287,7 +287,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
         id: 'open',
         prompt: 'His best mate in the squad is leaving for another club up the road, and wants him to come too. He has it all worked out — same session nights, same lift, the two of them in the same team again by September. He asks in the car park and won\'t stop looking at him.',
         choices: [
-          { id: 'stay', label: 'Stay', desc: 'Tell him the truth: he isn\'t going', outcome: 'He says no on the spot, because dressing it up would be worse. His mate takes it badly for a summer, and rings him in October like nothing ever happened.', effect: { meters: { peers: -3, authority: 6 }, attr: { composure: 1, leadership: 1 }, tag: 'mates-stayed-put' }, next: 'after' },
+          { id: 'stay', label: 'Stay', desc: 'Tell him the truth: he isn\'t going', outcome: 'He says no on the spot, because dressing it up would be worse. His mate takes it badly for a summer, and rings him in October like nothing ever happened.', effect: { meters: { peers: -3, authority: 6 }, attr: { leadership: 1 }, tag: 'mates-stayed-put' }, next: 'after' },
           { id: 'think', label: 'Say he\'ll think about it', desc: 'Because he genuinely will', outcome: 'He says he\'ll think about it and then does, for weeks, badly. His mate builds a whole summer on a maybe, and the letting-down takes longer and hurts more.', effect: { meters: { peers: -2 }, attr: { composure: 1 }, tag: 'mates-dithered' }, next: 'after' },
         ],
       },
@@ -310,7 +310,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
         prompt: 'Somewhere in the middle of a season he becomes the one everyone wants to be near — his name first in the picking, his jokes repeated, a small crowd around his peg. He didn\'t do anything to cause it and he has no idea how to hold it.',
         choices: [
           { id: 'spend', label: 'Spend it on somebody else', desc: 'Use the room\'s attention to pull someone in', outcome: 'He starts putting the quiet lads in his jokes instead of at the end of them, and the shape of the whole squad changes over about six weeks.', effect: { meters: { peers: 10 }, attr: { leadership: 1, teamwork: 1 } } },
-          { id: 'enjoy', label: 'Enjoy it', desc: 'He\'s twelve. Let him have it', outcome: 'He enjoys it enormously for about four months, and is a bit unbearable, and grows out of it on his own the way most of them do.', effect: { meters: { peers: 6 }, attr: { flair: 1 } } },
+          { id: 'enjoy', label: 'Enjoy it', desc: 'He\'s twelve. Let him have it', outcome: 'He enjoys it enormously for about four months, and is a bit unbearable, and grows out of it on his own the way most of them do.', effect: { meters: { peers: 6 }, attr: { flair: 2 } } },
           { id: 'shrink', label: 'Shrink away from it', desc: 'All that looking makes him uncomfortable', outcome: 'He goes quiet and the crowd finds someone louder within a month. He is relieved, and he is also not picked first again for a long time.', effect: { meters: { peers: -3 }, attr: { composure: 1 } } },
         ],
       },
@@ -332,7 +332,7 @@ export const YOUTH_MATES_ARCS: StoryArc[] = [
         id: 'monday',
         prompt: 'Tuesday training. His mate is on the far side of the pitch and has been all night, and the squad has quietly arranged itself so the two of them never end up in the same drill.',
         choices: [
-          { id: 'first', label: 'Speak first', desc: 'Walk over and say something ordinary', outcome: 'He goes over and says something completely mundane about the weather, and that is the apology, and both of them know it. They warm up together.', effect: { meters: { peers: 8 }, attr: { leadership: 1, composure: 1 } } },
+          { id: 'first', label: 'Speak first', desc: 'Walk over and say something ordinary', outcome: 'He goes over and says something completely mundane about the weather, and that is the apology, and both of them know it. They warm up together.', effect: { meters: { peers: 8 }, attr: { leadership: 1 } } },
           { id: 'wait', label: 'Wait for him', desc: 'He said it. He can fix it', outcome: 'He waits. It takes eleven days and comes out as a shove and a grin in a rondo, which is how it works at that age.', effect: { form: -0.05, meters: { peers: 4 }, attr: { aggression: 1 } } },
         ],
       },
