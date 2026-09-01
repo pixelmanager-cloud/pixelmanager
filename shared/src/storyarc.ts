@@ -89,7 +89,13 @@ export const ARCS_PER_CAREER = 20;
 
 /** Should a NEW arc start at this turn? Deterministic per (seed, turn); respects each arc's window, avoids
  *  repeats (fired set), and keeps arcs rare enough to feel special. Returns the arc id, or null. */
-export function pickArcStart(seed: number, turn: number, fired: ReadonlySet<string>, totalTurns = 120): string | null {
+/** `tags` is the career's earned arc-tag set. Passing it lets the scheduler PREFER an arc that pays off a
+ *  flag this career actually set. Without it, a cross-arc payoff needed both the flag-setting arc and the
+ *  paying-off arc to land in the same twenty-arc career, in order, out of a 414-arc library: 88 of the 90
+ *  `requires` choices were offered in under 1% of careers, mean offer rate 0.388%. The content was written
+ *  and then made statistically unreachable by the scheduler. Optional, so callers that do not track tags
+ *  behave exactly as before. */
+export function pickArcStart(seed: number, turn: number, fired: ReadonlySet<string>, totalTurns = 120, tags?: ReadonlySet<string>): string | null {
   const conflictsWithFired = (a: StoryArc): boolean => {
     const mine = [...(a.excludes ?? []), ...(HOME_CONFLICTS[a.id] ?? [])];
     if (mine.some((id) => fired.has(id))) return true;
@@ -130,8 +136,13 @@ export function pickArcStart(seed: number, turn: number, fired: ReadonlySet<stri
   let cat = cats[cats.length - 1];
   for (let i = 0; i < cats.length; i++) { cr -= catW[i]; if (cr <= 0) { cat = cats[i]; break; } }
   const pool = byCat.get(cat)!;
+  // A PAYOFF THIS CAREER HAS EARNED JUMPS THE QUEUE. If any arc in this category contains a choice gated on
+  // a flag already held, weight it heavily -- the whole point of a `requires` choice is that the earlier
+  // decision comes back. Still a weight and not a guarantee, so the drumbeat stays varied.
+  const paysOff = (a: StoryArc) => !!tags?.size
+    && Object.values(a.beats ?? {}).some((b: any) => (b.choices ?? []).some((c: any) => c.requires && tags.has(c.requires)));
   // inside the category, `rare` still means rare — it just no longer suppresses a whole category
-  const weights = pool.map((a) => a.weight * (a.rare ? 0.4 : 1));
+  const weights = pool.map((a) => a.weight * (a.rare ? 0.4 : 1) * (paysOff(a) ? 8 : 1));
   const total = weights.reduce((s, w) => s + w, 0);
   let r = h01(seed >>> 0, turn * 977 + 13, 0x2bd1) * total;
   for (let i = 0; i < pool.length; i++) { r -= weights[i]; if (r <= 0) return pool[i].id; }

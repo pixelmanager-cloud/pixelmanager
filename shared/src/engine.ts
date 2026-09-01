@@ -142,7 +142,15 @@ export class MatchEngine {
   /** the player currently clean through on goal, per side (-1 = nobody). A man put in behind
    *  shoots when he arrives rather than waiting for the ordinary range roll. */
   private clearRun: [number, number] = [-1, -1];
+  private seed = 0;
   private lastBenchMin = -1;
+  /** Last minute each side actually made a tactical change. `lastBenchMin` above is a single global that
+   *  only stops two calls landing in the SAME minute -- with no other spacing, a pressing side dipped under
+   *  the fitness threshold at 58' and then emptied its bench at 58', 59' and 60' in every match. Measured
+   *  over 300 Gegenpress-v-Gegenpress matches: substitutions distributed {58:300, 59:300, 60:300}, zero
+   *  variance, both sides, every match. A manager could never hold a body back for the last twenty minutes,
+   *  and it is also what starved the injury window, since injuries are checked only while subs remain. */
+  private lastSubMin: [number, number] = [-99, -99];
   // last completed pass per side, for crediting assists (deterministic, no rng)
   private lastPass: Array<{ passer: number; receiver: number; sec: number } | null> = [null, null];
 
@@ -170,6 +178,10 @@ export class MatchEngine {
     this.teams = [{ ...teams[0], players: [...teams[0].players] }, { ...teams[1], players: [...teams[1].players] }];
     this.benchLeft = [(teams[0].bench ?? []).slice(), (teams[1].bench ?? []).slice()];
     this.rng = makeRng(seed);
+    // KEPT for the positional hashes below (the injury draw). Mixing the seed into a HASH rather than
+    // taking an rng() draw is deliberate: a draw here would shift the whole random stream and change
+    // every match outcome in the game; a hash changes only what it decides.
+    this.seed = seed >>> 0;
     this.tactics = tactics ?? [{ ...DEFAULT_TACTICS }, { ...DEFAULT_TACTICS }];
     this.mods = [deriveMods(this.tactics[0]), deriveMods(this.tactics[1])];
     this.dm = [teams[0].players.map((p) => dutyMods(effectiveDuty(p))), teams[1].players.map((p) => dutyMods(effectiveDuty(p)))];
@@ -236,6 +248,8 @@ export class MatchEngine {
 
   private giveKickoff(teamIdx: 0 | 1) {
     const s = this.state;
+    // A restart is not a breakaway. `clearRun` survived goals and half-time without this.
+    this.clearRun = [-1, -1];
     s.players = [this.reset(0), this.reset(1)];
     s.ball = { x: PITCH.w / 2, y: PITCH.h / 2 };
     s.players[teamIdx][6] = { ...s.players[teamIdx][6], x: PITCH.w / 2, y: PITCH.h / 2 };
@@ -245,8 +259,13 @@ export class MatchEngine {
   /** Reset positions but preserve fitness (used at goals/kickoffs). */
   private reset(teamIdx: 0 | 1): PlayerState[] {
     return this.teams[teamIdx].players.map((p, i) => {
-      const a = teamIdx === 0 ? p.anchor : mirroredAnchor(p.anchor);
       const prev = this.state?.players?.[teamIdx]?.[i];
+      // A DISMISSED PLAYER STAYS OFF. This rebuilds every slot from its formation anchor and runs from
+      // giveKickoff -- after every goal and at half-time -- so a red-carded man was teleported back into
+      // the shape and played on. He kept his position for the rest of the match, which refunded much of the
+      // card: measured 111,832 on-pitch ticks for dismissed players over 300 matches.
+      if (this.sentOff.has(teamIdx * 100 + i) && prev) return { ...prev };
+      const a = teamIdx === 0 ? p.anchor : mirroredAnchor(p.anchor);
       return { x: a.x, y: a.y, fitness: prev?.fitness ?? 1 };
     });
   }
@@ -328,12 +347,16 @@ export class MatchEngine {
       if (!this.benchLeft[t].length || this.subsUsed[t] >= 3) continue;
       // INJURY (independent of fatigue): a fragile outfielder picks up a knock and is forced off —
       // deterministic hash, kept rare. One hashed candidate per side per minute.
-      const injI = 1 + (((min * 7919 + t * 104729) >>> 0) % 10);
+      // SEEDED. Both the candidate and the trigger below derived from `min` and `t` alone -- no seed, no
+      // match state -- so the whole game had exactly one injury: home team, minute 61, shirt slot 10. The
+      // away side could not be injured at any minute of any match. Measured before this fix: 14 injuries
+      // across 250 matches, 100% of them team0 min61, one distinct (team, minute) pair.
+      const injI = 1 + (((min * 7919 + t * 104729 + Math.imul(this.seed, 2654435761)) >>> 0) % 10);
       if (!this.sentOff.has(t * 100 + injI) && !isCarrier(t, injI)) {
         const inj = this.teams[t].players[injI];
         const durab = norm(inj.attrs.durability ?? inj.attrs.stamina ?? 10);
-        const h = ((min * 2654435761 + t * 40503 + injI * 2246822519) >>> 0) % 10000;
-        if (durab < 0.6 && h < 250) { this.makeSub(t, injI, true); continue; }
+        const h = ((Math.imul(min, 2654435761) + t * 40503 + Math.imul(injI, 2246822519) + Math.imul(this.seed, 40503)) >>> 0) % 10000;
+        if (durab < 0.6 && h < 250) { this.makeSub(t, injI, true); this.lastSubMin[t] = min; continue; }
       }
       // TACTICAL SUB: freshen up the most-gassed outfielder (never the current ball carrier)
       let worstI = -1, worstFit = Infinity;
@@ -342,7 +365,13 @@ export class MatchEngine {
         const f = s.players[t][i].fitness;
         if (f < worstFit) { worstFit = f; worstI = i; }
       }
-      if (worstI >= 0 && worstFit < 0.80) this.makeSub(t, worstI, false);
+      // SPACED, AND NOT ON THE SAME WHISTLE IN EVERY MATCH. A minimum gap per side, plus a seeded offset
+      // on when that side's window opens, so the hour mark stops being a scripted triple substitution.
+      const openAt = 58 + (((Math.imul(this.seed, 2246822519) + t * 7919) >>> 0) % 9);
+      if (worstI >= 0 && worstFit < 0.80 && min >= openAt && min - this.lastSubMin[t] >= 8) {
+        this.makeSub(t, worstI, false);
+        this.lastSubMin[t] = min;
+      }
     }
   }
 
@@ -633,6 +662,9 @@ export class MatchEngine {
       const onClearRun = this.clearRun[teamIdx] === playerIdx;
       const shootP = (onClearRun ? CLEAR_RUN_APPETITE : SHOT_APPETITE) * (0.0022 + qz(norm(carrier.attrs.shooting)) * 0.004) * closeness * (0.35 + 0.65 * central) * this.dm[teamIdx][playerIdx].shoot * (1 + this.zonal[teamIdx]) * homeBoost * TICK_SEC;
       if (this.rng() < shootP) {
+        // The run ends when the shot is taken, or the x12 breakaway appetite persists into whatever
+        // happens next -- see the reset in the interception branch below.
+        this.clearRun[teamIdx] = -1;
         this.resolveShot(teamIdx, playerIdx, distGoal, false);
         return;
       }
@@ -715,6 +747,12 @@ export class MatchEngine {
             this.clearRun[teamIdx] = pick.idx;
           }
         } else {
+          // THE RUN DIES WITH THE POSSESSION. `clearRun` was reset ONLY in the completed-pass branch above,
+          // so a forward played through who then lost the ball stayed flagged: if his side won it back
+          // before completing a pass, `shootP` was still multiplied by CLEAR_RUN_APPETITE (x12) from
+          // anywhere inside 30m. Measured stale contribution: ~0.99 shots and 0.11 goals per match, about
+          // four phantom breakaway goals a season.
+          this.clearRun[teamIdx] = -1;
           // Intercepted/loose ball scatters near the midpoint of the attempted pass;
           // clamp so a scatter next to a touchline/goal line can't leave the pitch.
           const dx = s.players[teamIdx][pick.idx].x;
@@ -744,6 +782,9 @@ export class MatchEngine {
     const s = this.state;
     let n = 0;
     for (let i = 1; i < 11; i++) {
+      // A sent-off man is not a presser. Without this he counted as a body, worth up to -pressure * 0.18
+      // on the opponent's pass completion, for the rest of the match.
+      if (this.sentOff.has(defTeam * 100 + i)) continue;
       if (Math.hypot(s.players[defTeam][i].x - at.x, s.players[defTeam][i].y - at.y) < 4) n++;
     }
     return Math.min(3, n);
@@ -1063,6 +1104,7 @@ export class MatchEngine {
     let best: { teamIdx: 0 | 1; playerIdx: number; eff: number; d: number } | null = null;
     for (const teamIdx of [0, 1] as const) {
       s.players[teamIdx].forEach((ps, i) => {
+        if (this.sentOff.has(teamIdx * 100 + i)) return; // he cannot win a 50/50 from the touchline
         const p = this.teams[teamIdx].players[i];
         const d = Math.hypot(ps.x - s.ball.x, ps.y - s.ball.y);
         const physical = 0.5 * (norm(p.attrs.strength) + norm(p.attrs.pace) - 1); // >0 above the neutral stat

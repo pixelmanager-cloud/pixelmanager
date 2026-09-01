@@ -1453,7 +1453,22 @@ shots/match inside a 3-4-3 — a shape whose whole point is width.)*
    takes ~20, so part of the gap is the bar, not the game — but that argument was deliberately NOT used to
    move it.
 
-5. **Goalless matches are rare: 1-2 in 120 against `qa_matchstats`'s bar of 3.** This is the one qa red
+5. ~~**Goalless matches are rare: 1-2 in 120 against `qa_matchstats`'s bar of 3.**~~ — **RESOLVED
+   2026-09-01, as a side effect of a bug fix, not a tuning pass.** `clearRun` was never cleared on a
+   turnover, so the ×12 breakaway shot appetite leaked into ordinary possession and inflated scoring by
+   about one shot and 0.11 goals a match. With that fixed the rate is **5 in 120** and the check passes.
+   Two other numbers moved with it, both for the better: `division_balance`'s worst thrashing rate went
+   **15% → 12%**, giving it headroom for the first time (it had been sitting exactly on its bar, which was
+   item 2 below), and `wide-playmaker should generate more shots than ball-winner` now passes too.
+
+   **The same fix cost one assertion, and it is accepted here rather than tuned away.**
+   `qa_matchstats`'s *"the strong side at HOME outscores the weak one several times over"* wants a ratio
+   above 3:1 and now measures **164-57 = 2.88:1**, having been **179-56 = 3.20:1**. The bar was already
+   marginal — it passed by 4.7% and now fails by 3% — and the 15 goals that went missing were phantom
+   ones: a strong side completes more through-balls, so it collected more of the stale ×12 appetite than a
+   weak one did. The honest number is the lower one. Recorded, not chased.
+
+   *(Original entry:)* Goalless matches were rare: 1-2 in 120 against a bar of 3. This is the one qa red
    that had no entry here at all, which meant the suite carried a permanent failure nobody had signed off.
    It is the same root cause as item 2's scoring rate — the rebuilt engine converts too much — and it is
    listed rather than fixed for the same reason: chasing the goal rate is what killed the previous two

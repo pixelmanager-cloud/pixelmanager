@@ -5,10 +5,20 @@
 
 // The accepted failures carry measured numbers that move run to run ("got 588 vs 602"), so compare the
 // ASSERTION, not the measurement: drop any parenthesised group containing a digit, and collapse whitespace.
-export const norm = (s) => s
-  .replace(/\([^()]*\d[^()]*\)/gu, '')
-  .replace(/\s+/gu, ' ')
-  .trim();
+export const norm = (s) => {
+  // REPEATEDLY, because measurements nest. qa_mental prints
+  //   "(1.07 goals/match (GD 0.86 vs -0.21))"
+  // and a single pass of a non-nested-paren regex strips only the INNER group, leaving "(1.07 goals/match )"
+  // -- outer parens still carrying a number that drifts run to run. The baseline entry then never matched
+  // again, and the gate reported the same assertion as both "now passes" and "new failure" in one run.
+  let out = String(s);
+  for (let i = 0; i < 6; i++) {
+    const next = out.replace(/\([^()]*\d[^()]*\)/gu, '');
+    if (next === out) break;
+    out = next;
+  }
+  return out.replace(/\s+/gu, ' ').trim();
+};
 
 // The three legs report failure at DIFFERENT granularities, and an earlier version of this file collected
 // only one of them -- so it recorded four strategy_test assertions, missed both qa reds entirely, and would
@@ -22,6 +32,14 @@ export function collect(text) {
     // qa: per-harness verdict — the only place qa names WHICH harness failed
     const h = line.match(/^\s*──\s*(\S+)\s*…\s*FAIL/u);
     if (h) { out.add(`harness ${h[1]}`); continue; }
+    // qa: the ASSERTION that failed. run-qa.mjs echoes the last twelve lines of a failing harness, so the
+    // individual `FAIL <assertion>` lines are in the captured output -- and without reading them the gate
+    // sees a failing harness only as a NAME. That is not enough: qa_matchstats swapped which of its checks
+    // was red (goalless started passing, a lopsidedness check started failing) and the harness-level entry
+    // masked it completely. A gate that cannot tell one failure from another inside the same file is not
+    // measuring what it claims to.
+    const fa = line.match(/^\s*FAIL\s+(\S.*)$/u);
+    if (fa) { const t = norm(fa[1]); if (t) out.add(t); continue; }
     // playtest: per-probe verdict
     const pr = line.match(/^\s*\[playtest\]\s*✗\s*(\S+)\s*FAILED/u);
     if (pr) { out.add(`probe ${pr[1]}`); continue; }

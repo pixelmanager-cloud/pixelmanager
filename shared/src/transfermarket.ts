@@ -52,9 +52,13 @@ export function squadSeasonWage(ov: number, season = 0): number { return Math.ro
 export function squadRenewCost(ov: number, season = 0): number { return squadSeasonWage(ov, season) * SQUAD_CONTRACT_SEASONS; }
 /** Age-adjusted SALE value: a declining veteran is worth progressively less, so there's a real reason to
  *  cash in before he rots (PT-90). -12%/yr past the peak, floored at 20% of the flat value. */
-export function squadSaleValue(ov: number, age: number): number {
+export function squadSaleValue(ov: number, age: number, saleMult = 1): number {
   const mult = age <= SQUAD_PEAK_AGE ? 1 : Math.max(0.2, 1 - (age - SQUAD_PEAK_AGE) * 0.12);
-  return Math.round(sellValue(ov) * mult);
+  // `saleMult` is morale's `sellMult` (morale.ts). It existed, was documented in the squad report as
+  // "unsettled players sell for less (up to 20% less)", and reached no call site -- while the +30% re-sign
+  // half of the same effect WAS wired, which is what made the claim look credible. Defaulted to 1 so the
+  // forced-sale and shop-window paths, which do not know a player's morale, are unchanged.
+  return Math.round(sellValue(ov) * mult * saleMult);
 }
 /** Age a bought player's attributes ONE season (mutating-safe copy). Before the peak he holds; past it,
  *  physical attrs fade fastest, technical ones slowly, mentals untouched (experience). Applied once per

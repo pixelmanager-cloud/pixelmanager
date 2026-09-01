@@ -672,7 +672,14 @@ export function rollFocus(chapter: string, standing?: Record<MeterKey, number>, 
   // still saw "🤝 Sign With an Agent" on the age-15 summer screen with the AGENT meter sitting in his HUD
   // — the clearest "the game isn't tracking me" signal in a live playtest, and it devalues the choice the
   // onboarding made him make. (PT-153)
-  const base = (FOCUS_BY_CHAPTER[chapter] ?? FOCUS_BY_CHAPTER.Establishing).filter((f) => !(hasAgent && f.id === 'agent'));
+  // ONLY THE ONE THAT SIGNS HIM. Three chapters reuse the option id `agent` for three different things --
+  // Scholar's "Sign With an Agent", Youth Team's "Work Your Agent", Breakthrough's "Lean on Your Agent" --
+  // and the client always passes a concrete agent, so `hasAgent` is always true and the filter dropped all
+  // three. From Youth Team onward the AGENT meter is shown on the dashboard, gates the agent-firing item and
+  // pays out above 70, with no summer lever anywhere to move it. Only the signing option is redundant once
+  // he has one.
+  const base = (FOCUS_BY_CHAPTER[chapter] ?? FOCUS_BY_CHAPTER.Establishing)
+    .filter((f) => !(hasAgent && f.id === 'agent' && chapter === 'Scholar'));
   const risk = standing ? riskFocusFor(chapter, standing) : null;
   const tagPicks = (TAG_FOCUS_BY_CHAPTER[chapter] ?? []).map((t) => ({ id: t.id, icon: t.icon, name: t.name, desc: t.desc, energy: TAG_FOCUS_ENERGY, effects: {}, tag: t.tag }));
   const gk = track === 'goalkeeper' ? GK_TAG_FOCUS_BY_CHAPTER[chapter] : null;
@@ -1466,12 +1473,22 @@ export class Career {
     if (this.turn >= TOTAL_TURNS) { this.finished = true; return choice; }
     // at an age-chapter boundary: relationships pay off (or bite), a narrative EVENT fires, then you
     // choose a summer FOCUS, take a financial offer, appoint a coach and draft.
-    if (BAND_ENDS.includes(this.turn)) { this.advanceSeasonEvent(); this.earnings += 40 + this.turn * 20; this.pendingFocus = rollFocus(this.chapter, this.standing, this.track, !!this.agent); }
+    if (BAND_ENDS.includes(this.turn)) {
+      this.advanceSeasonEvent();
+      this.earnings += 40 + this.turn * 20;
+      // THE BAND JUST FINISHED, not the one being entered. `this.turn` was incremented a few lines above and
+      // now equals a band END, so `this.chapter` already reads as the NEXT band -- which meant the summer
+      // after Grassroots offered Academy's options, and Grassroots' own bank was never reachable at all.
+      // Eight authored options died there, including the goalkeeper's age-10-12 keeping focus, the one
+      // moment a keeper gets to choose to be a keeper.
+      const completed = bandAt(Math.max(0, this.turn - 1)).band.name;
+      this.pendingFocus = rollFocus(completed, this.standing, this.track, !!this.agent);
+    }
     else {
       this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure, this.seed); this.ensurePlayableHand();
       // STORY ARC: a branching storyline may interject before the next routine moment (deterministic, no rng
       // draw — so it never perturbs the scenario/draw stream). The arc's beats then play out before this scenario.
-      if (!this.pendingArc) { const arcId = pickArcStart(this.seed, this.turn, this.firedArcs, TOTAL_TURNS); if (arcId) { const a = arcByIdOf(arcId); if (a) this.pendingArc = { arcId, beatId: a.first }; } }
+      if (!this.pendingArc) { const arcId = pickArcStart(this.seed, this.turn, this.firedArcs, TOTAL_TURNS, this.arcTags); if (arcId) { const a = arcByIdOf(arcId); if (a) this.pendingArc = { arcId, beatId: a.first }; } }
     }
     return choice;
   }

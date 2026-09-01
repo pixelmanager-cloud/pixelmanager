@@ -53,6 +53,9 @@ interface MgrState { season: number; results: PlayedResult[]; starId?: string; s
    *  watch nothing move. `arcPrestige` is permanent, because standing is; `arcBoard` is a season's
    *  goodwill and is spent at the verdict. */
   arcPrestige?: number; arcBoard?: number;
+  /** Arc `coins` effects banked until the season roll, where they are actually credited. They used to
+   *  be written straight to `this.account.coins`, a display-only number that `setMe()` overwrites. */
+  arcCoins?: number;
   /** The prestige rank last announced, so crossing INTO a rank is marked once. */
   lastRankIdx?: number;
   // The Living Squad season report. It used to live ONLY in a class field, so a refresh between the
@@ -714,7 +717,10 @@ class Game {
       + `<button class="tt-opt" id="pm-settings"><b>⚙ Settings</b><span>Music, motion, screen effects</span></button>`
       + `<button class="tt-opt" id="pm-quit"><b>≡ Quit to menu</b><span>Your progress is saved</span></button></div>`;
     document.body.appendChild(ov);
-    const close = () => { this.running = wasRunning; ov.remove(); document.removeEventListener('keydown', onEsc); }; // clean up the ESC listener on every close path (PT-81)
+    const close = () => {
+      this.running = wasRunning; ov.remove(); document.removeEventListener('keydown', onEsc);
+      if (--Game.inertDepth <= 0) { Game.inertDepth = 0; document.getElementById('app')?.removeAttribute('inert'); }
+    }; // clean up the ESC listener on every close path (PT-81)
     ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
     ov.querySelector('.set-x')!.addEventListener('click', close);
     ov.querySelector('#pm-resume')!.addEventListener('click', close);
@@ -728,6 +734,10 @@ class Game {
     (ov.querySelector('#pm-resume') as HTMLElement).focus(); // Resume pre-selected, Enter resumes
     const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); } };
     document.addEventListener('keydown', onEsc);
+    // Marks the page inert for the duration, which is what stops the match shortcuts above from firing
+    // through this overlay. Refcounted, so it composes with the confirm the Quit option can stack on top.
+    Game.inertDepth++;
+    document.getElementById('app')?.setAttribute('inert', '');
   }
   private quitToMenu() { $('mm-saves').classList.remove('hidden'); this.showScreen('login'); this.renderMainMenu(); }
 
@@ -913,6 +923,12 @@ class Game {
     document.addEventListener('keydown', (ev) => {
       const k = (ev as KeyboardEvent).key;
       if ($('matchwrap').classList.contains('hidden') || !this.engine || this.engine.state.finished) return;
+      // NOT WHILE A DIALOG IS UP. This gated only on the match being visible, so behind the pause overlay
+      // `s` still skipped to full time and 1/2/3 still changed the speed. Worse, Space is preventDefault-ed
+      // here on keydown while buttons activate on keyUP -- so a keyboard player pressing Space on the
+      // pre-focused "Resume" got a toast and no resume. `inertDepth` is dialogify's refcount, so this
+      // covers every modal in the game rather than the one that happened to be found.
+      if (Game.inertDepth > 0) return;
       const tag = (ev.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
       if (k === '1') setSpeed(1, 'spd1');
@@ -1598,7 +1614,9 @@ class Game {
   private renderTransferMarket() {
     const body = document.getElementById('tm-body'); if (!body) return;
     const m = this.loadMgr(), tier = this.clubTier(), coins = this.account?.coins ?? 0;
-    const boughtKey = 'fm_bought_' + (this.account?.handle ?? 'x') + '_' + m.season;
+    // GENERATION-SCOPED. `season` resets to 1 at a succession, so without the generation every season
+    // number a previous manager used stayed marked for every manager after him.
+    const boughtKey = 'fm_bought_' + (this.account?.handle ?? 'x') + '_g' + (m.starGen ?? 0) + '_' + m.season;
     let bought: string[]; try { bought = JSON.parse(localStorage.getItem(boughtKey) || '[]'); } catch { bought = []; }
     // A RIVAL HOUSE'S SON, occasionally, at a premium. This is what stops the Houses table being a
     // spreadsheet: the name you are chasing up the ladder turns up in your own market, and you can take
@@ -1889,14 +1907,21 @@ class Game {
       : '';
     const tier = this.clubTier();
     // PT-500: forecast the season's wage bill IN the header, so the end-of-season charge is never a surprise
-    const wageBill = this.club.players.reduce((n, p) => n + squadSeasonWage(overall(p), this.season ?? 0), 0);
+    // `this.club` is the MERGED club -- fieldablePlayers appends the pro tokens -- while the rollover
+    // bills the raw `club.players`, which by api.ts's own comment never contains the bloodline star.
+    // So the forecast was overstated by the largest single wage at the club: the exact number the
+    // transfer-market copy tells the manager to budget against.
+    const billed = this.club.players.filter((p) => !p.id.startsWith('nft:'));
+    const wageBill = billed.reduce((n, p) => n + squadSeasonWage(overall(p), this.season ?? 0), 0);
     const wageLine = ` · <span class="sf-wages">💷 wage bill ~${wageBill.toLocaleString()}c, due at season's end</span>`;
     const header = done
       ? `<div class="season-summary done"><span class="ss-crest">${crest(clubName, 20)}</span>✅ Season ${m.season} complete — <b>${clubName}</b> finished <b>${this.ordinal(t.pos)}</b> of ${t.size} in <b>${tierName(tier)}</b>${t.pos === 1 ? ' 🏆 CHAMPIONS!' : (t.pos <= 2 && tier > 1) ? ` ⬆️ PROMOTED to ${tierName(tier - 1)}!` : (t.pos >= t.size - 1 && tier < TIERS) ? ` ⬇️ RELEGATED to ${tierName(tier + 1)}` : ''}. <button class="primary" id="sf-next-season">Next season →</button></div>`
       : `<div class="season-summary"><span class="ss-crest">${crest(clubName, 20)}</span><b>${clubName}</b> · <b>${tierName(tier)}</b> · Season ${m.season} · MD ${nextIdx + 1}/${fixtures.length} · <b>${this.ordinal(t.pos)}</b>/${t.size}${formStrip}${starLine}${wageLine}</div>`;
     // INCOMING BID for the star — a rival's offer this season (deterministic); dismissed once per season
     const starP = m.starId ? this.club.players.find((p) => p.id === m.starId) : undefined;
-    const bidKey = 'fm_biddismiss_' + (this.account?.handle ?? 'x') + '_' + m.season;
+    // Generation-scoped for the same reason as `boughtKey`: a bid the father rejected in his season 4
+    // otherwise permanently disables the incoming-bid decision in every heir's season 4.
+    const bidKey = 'fm_biddismiss_' + (this.account?.handle ?? 'x') + '_g' + (m.starGen ?? 0) + '_' + m.season;
     const bidGone = (() => { try { return localStorage.getItem(bidKey) === '1'; } catch { return false; } })();
     // A BIG CLUB PAYS OVER THE ODDS FOR A NAME its supporters already know, so the house's standing lifts
     // every offer for the star. It is the most legible of renown's effects — the same player is worth more
@@ -2483,7 +2508,7 @@ class Game {
     // this season's W/D/L (fed to the lifetime manager record that powers prestige)
     const rec = (m.results ?? []).reduce((a, r) => { r.myGoals > r.oppGoals ? a.wins++ : r.myGoals < r.oppGoals ? a.losses++ : a.draws++; return a; }, { wins: 0, draws: 0, losses: 0 });
     // bank the season prize money (coins → reinvest in facilities), closing the manager economy loop
-    try { const r = await api.spSeasonReward({ pos: t.pos, size: t.size, sponsor: m.sponsor, tier: this.clubTier(), starId: m.starId, promoted: t.pos <= 2 && this.clubTier() > 1, ...rec })   /* the same test the tier move below uses; it is computed after this call */; if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 Season prize: +${r.prize.toLocaleString()}c${r.sponsorBonus ? ` + 📣 ${r.sponsorBonus.toLocaleString()}c sponsor bonus` : ''}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ` · ${this.ordinal(t.pos)}`}`);
+    try { const r = await api.spSeasonReward({ arcCoins: m.arcCoins ?? 0, pos: t.pos, size: t.size, sponsor: m.sponsor, tier: this.clubTier(), starId: m.starId, promoted: t.pos <= 2 && this.clubTier() > 1, ...rec })   /* the same test the tier move below uses; it is computed after this call */; if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 Season prize: +${r.prize.toLocaleString()}c${r.sponsorBonus ? ` + 📣 ${r.sponsorBonus.toLocaleString()}c sponsor bonus` : ''}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ` · ${this.ordinal(t.pos)}`}`);
       // WHAT THE CLUB EARNED BY BEING A CLUB, itemised. The facilities pay for the first time, and an income
       // the player cannot see is exactly the invisible effect this fix exists to end — so the gate, the
       // sponsors, the shop and the women's team each report what they brought in.
@@ -2628,7 +2653,21 @@ class Game {
     const age = (m.starAge ?? 22) + 1;
     // his playing days are over — the heir comes through. Carry any final-season promotion/relegation into
     // the send-off so it's acknowledged (the reveal banner would be stale for the heir a generation later, PT-27).
-    if (age >= (m.retireAge ?? 34)) { this.retireStar(titles, m.contTitles ?? 0, undefined, (promoted || relegated) ? { move: promoted ? 'promoted' : 'relegated', tier: tierName(newTier) } : undefined); return; }
+    if (age >= (m.retireAge ?? 34)) {
+      // CLOSE THE SEASON BEFORE LEAVING. This `return` skips the only statement that clears `results` and
+      // advances the counter -- and `retireStar` contains no saveMgr of its own -- so on the retirement
+      // season the save was left holding all eighteen fixtures with `starId` still set. The season screen
+      // then read `done = true` and offered "Next season →" again: a second prize, a second sponsor bonus,
+      // a second facility income, a duplicate title honour, the squad aged another year with another wage
+      // bill, and another setClubTier promotion. Repeatable until the tier clamp, and reached on a path
+      // every dynasty walks through once a generation.
+      //
+      // `resetMgrForHeir` puts the season back to 1 when the heir is chosen; this only has to make the
+      // state safe in the window between the send-off and that choice.
+      this.saveMgr({ ...this.loadMgr(), season: m.season + 1, results: [], arcCoins: 0, starAge: age, titles, sponsor: undefined, lastFinishPos: t.pos });
+      this.retireStar(titles, m.contTitles ?? 0, undefined, (promoted || relegated) ? { move: promoted ? 'promoted' : 'relegated', tier: tierName(newTier) } : undefined);
+      return;
+    }
     // THE NUMBER THAT DECIDES THE SEASON, said out loud once a year. Placed AFTER the retirement early
     // return above, so it is only written for a season that will actually render it, and BEFORE the final
     // saveMgr, which re-reads loadMgr() and therefore preserves this feed write. `tier` is the division
@@ -2653,7 +2692,7 @@ class Game {
     // is the tell: the cause was never fixed, only the two symptoms someone noticed. Measured effect: the
     // upkeep bill, the disrepair announcement, the running-on-empty warning, the promotion/relegation
     // narration and the prestige rank-up were ALL deleted before the player could read any of them.
-    this.saveMgr({ ...this.loadMgr(), season: m.season + 1, results: [], starAge: age, titles, sponsor: undefined, contElig: qualified, contRound: 0, contOut: false, contBlurb: undefined, wcStage: undefined, wcEdition: undefined, wcRun: undefined, lastBoard, lastFinishPos: t.pos, lastStrength: ef.raw, lastTierMove: promoted ? 'promoted' : relegated ? 'relegated' : undefined, arcBoard: 0 });
+    this.saveMgr({ ...this.loadMgr(), season: m.season + 1, results: [], arcCoins: 0, starAge: age, titles, sponsor: undefined, contElig: qualified, contRound: 0, contOut: false, contBlurb: undefined, wcStage: undefined, wcEdition: undefined, wcRun: undefined, lastBoard, lastFinishPos: t.pos, lastStrength: ef.raw, lastTierMove: promoted ? 'promoted' : relegated ? 'relegated' : undefined, arcBoard: 0 });
     this.checkAchievements(); // titles / seasons / prestige milestones
     this.showSeason();
   }
@@ -2867,6 +2906,11 @@ class Game {
   }
 
   private kickOffSpMatch() {
+    // ONE TEAM TALK. This was the only modal in the file with no preamble remove() and no dialogify, and it
+    // is opened from a button that keeps focus -- so holding Enter stacked two overlays, and picking a tone
+    // on the second built a SECOND MatchEngine with a fresh seed, wiping the score of the match already in
+    // progress. The remove() makes reopening replace, exactly as every sibling dialog does.
+    document.getElementById('teamtalk-ov')?.remove();
     const sp = this.spFixture!;
     const note = this.teamTalkNote();
     const el = document.createElement('div'); el.id = 'teamtalk-ov'; el.className = 'pc-overlay';
@@ -2876,13 +2920,18 @@ class Game {
       + `<button class="tt-opt" data-tt="fire"><b>🔥 Go for the throat</b><span>Attack hard — sharper in front of goal, but the legs tire faster</span></button>`
       + `<button class="tt-opt" data-tt="calm"><b>🧊 Keep your shape</b><span>Stay compact and disciplined — fresher late on, harder to break down</span></button>`
       + `<button class="tt-opt" data-tt="focus"><b>🎯 Just play your game</b><span>A calm, balanced edge</span></button></div>`;
+    // Latched as well as removed: two clicks can land before the first has torn the overlay down, and the
+    // cost of a second one is a rebuilt engine on top of a live match.
+    let taken = false;
     el.addEventListener('click', (e) => {
       const tt = (e.target as HTMLElement).closest('[data-tt]')?.getAttribute('data-tt');
-      if (!tt) return;
-      el.remove();
+      if (!tt || taken) return;
+      taken = true;
+      closeTalk();
       this.startSpMatchWith(tt);
     });
     document.body.appendChild(el);
+    const closeTalk = this.dialogify(el);
   }
   private startSpMatchWith(tone: string) {
     const sp = this.spFixture!;
@@ -3492,6 +3541,10 @@ class Game {
   private applyArcEffect(e: MgrArcEffect | undefined) {
     if (!e) return;
     const m = this.loadMgr();
+    // The display update stays -- the player should see it move -- but `this.account` is rebuilt fresh by
+    // `api.me()` and `setMe()` replaces it after every buy, sell, renew, release, hire and rollover, so
+    // on its own the delta evaporated. 1,031 arc options across the twelve packs carry a coins effect
+    // and not one of them moved a coin, in either direction. Banked like arcPrestige and arcBoard.
     if (e.coins && this.account?.coins != null) { this.account.coins = Math.max(0, this.account.coins + e.coins); }
     if (e.squadMorale && this.club) {
       for (const p of this.club.players) p.morale = applyMorale(p.morale ?? 65, e.squadMorale);
@@ -3506,6 +3559,7 @@ class Game {
       if (pick) pick.morale = applyMorale(pick.morale ?? 65, e.playerMorale.delta);
     }
     const next = { ...this.loadMgr() };
+    if (e.coins) next.arcCoins = (next.arcCoins ?? 0) + e.coins;
     if (e.prestige) next.arcPrestige = (next.arcPrestige ?? 0) + e.prestige;
     if (e.boardMood) next.arcBoard = (next.arcBoard ?? 0) + e.boardMood;
     if (e.tag) next.arcTags = [...new Set([...(next.arcTags ?? []), e.tag])];
@@ -3724,7 +3778,12 @@ class Game {
           : 'The first of the line. The record fills as the name is carried on.'}</div>`
       + `</div></div>`;
   }
-  private handoffKey(pid: string): string { return `fm_handoff_defer_${pid}`; }
+  /** `signProspect` mints `nft:${countTokens()+1}`, so the id is `nft:1` in a fresh save -- and `succeed()`
+   *  REUSES it for every heir. Keyed on the id alone, one deferral silently suppressed the "Take the reins"
+   *  offer for every later generation, and across save slots too. Scoped to the slot and the generation. */
+  private handoffKey(pid: string): string {
+    return `fm_handoff_defer_${this.account?.handle ?? 'x'}_g${this.loadMgr().starGen ?? 0}_${pid}`;
+  }
   private handoffDeferredAt(pid: string): number {
     try { return Number(localStorage.getItem(this.handoffKey(pid)) || '-1'); } catch { return -1; }
   }

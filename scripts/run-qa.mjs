@@ -36,8 +36,14 @@ for (const h of harnesses) {
   } else {
     console.log(`FAIL (${secs}s)`);
     failed.push(h);
-    // surface the tail of the failing harness's output so CI logs show why
-    const out = `${r.stdout || ''}${r.stderr || ''}`.trimEnd().split('\n').slice(-12).join('\n');
+    // Surface the tail of the failing harness's output so CI logs show why -- AND every FAIL line,
+    // wherever it sits. The tail alone is not enough: qa_matchstats prints its failing assertion well
+    // outside the last twelve lines, so `npm run gate` could see only that the HARNESS failed, not which
+    // check. That let a fix and a regression inside one file cancel out invisibly in the gate baseline.
+    const all = `${r.stdout || ''}${r.stderr || ''}`.trimEnd().split('\n');
+    const tail = all.slice(-12);
+    const missed = all.filter((l) => /^\s*FAIL\s+\S/.test(l) && !tail.includes(l));
+    const out = [...missed, ...tail].join('\n');
     console.log(out ? `\n${out}\n` : '(no output)\n');
   }
 }

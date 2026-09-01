@@ -34,6 +34,14 @@ console.log('=== the gate parser sees every leg\'s failure shape ===');
   ok(s.size >= 1, `and a qa failure is never invisible (got ${s.size})`);
 }
 
+// 2b. THE SECOND REGRESSION. Harness-level identity is not enough: qa_matchstats swapped which of its own
+//     checks was red and the gate reported PASSED, because "harness shared/qa_matchstats.ts" was unchanged.
+{
+  const s = collect('── shared/qa_matchstats.ts … FAIL (3.5s)\n  FAIL the strong side at HOME outscores the weak one several times over  (164-57)\n  ok   real goalless matches occur  (5/120)\n');
+  ok(has(s, 'the strong side at HOME outscores'), 'the individual failing assertion inside a qa harness is captured');
+  ok(![...s].some((x) => x.includes('goalless')), 'and a PASSING check in the same output is not');
+}
+
 // 3. playtest names the failing probe
 {
   const s = collect('[playtest] ✗ golden_replay.ts FAILED (exit 1, 0.4s)\n');
@@ -60,6 +68,19 @@ console.log('=== the gate parser sees every leg\'s failure shape ===');
   const b = norm('wide-playmaker should generate more shots than ball-winner in the wide slot (got 591 vs 604)');
   ok(a === b, 'the same assertion with different measurements is one identity');
   ok(a.length > 20, 'and normalising does not gut the text to nothing');
+}
+
+// 6b. MEASUREMENTS NEST. qa_mental prints "(1.07 goals/match (GD 0.86 vs -0.21))". One pass of a
+//     non-nested-paren strip removes only the inner group and leaves "(1.07 goals/match )" -- still holding
+//     a number that drifts -- so the baseline entry never matched again and the gate reported the SAME
+//     assertion as both "now passes" and "new failure" in a single run.
+{
+  const a = norm('swings goal difference by 2+ a match  (1.07 goals/match (GD 0.86 vs -0.21))');
+  const b = norm('swings goal difference by 2+ a match  (1.21 goals/match (GD 0.91 vs -0.30))');
+  ok(a === b, 'a nested measurement is stripped entirely, not just its inner group');
+  // Digits inside the assertion's own words ("by 2+ a match") are text, not measurement -- only the
+  // parenthesised groups are stripped.
+  ok(!/[()]/.test(a), `and no parenthesised measurement survives (${a})`);
 }
 
 // 7. Two DIFFERENT assertions must not collapse together -- otherwise a new failure could hide behind an

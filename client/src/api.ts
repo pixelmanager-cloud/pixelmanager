@@ -511,7 +511,11 @@ export const api = {
     if ((await localStore.loaneeIds(OWNER, String(getActiveModel().profile.season))).includes(playerId)) {
       throw apiErr("he's only here on trial — you can't sell a player you don't own", {}, 409);
     }
-    const value = squadSaleValue(overall(p), p.age ?? 26); // a fading veteran is worth less — the SELL column now means something (PT-90)
+    // A fading veteran is worth less than his rating suggests -- and so is an unsettled one, which is what
+    // the squad report has been telling the manager all along ("unsettled players sell for less, up to 20%
+    // less"). `moraleEffects().sellMult` existed and reached no call site, while the +30% RE-SIGN half of
+    // the same effect was wired, which is exactly what made the claim look credible.
+    const value = squadSaleValue(overall(p), p.age ?? 26, moraleEffects(p.morale ?? 65).sellMult);
     await localStore.addCoins(OWNER, value);
     c.club.players = c.club.players.filter((x) => x.id !== playerId);
     // ...and repair the sheet, or the next editor open rebuilds it and the next kickoff COMMITS the wipe
@@ -784,7 +788,7 @@ export const api = {
   // rollover that used to write honours is gone; this is the one call-per-season-end main.ts makes).
   /** A coin-only prize (no honour, no season bump) — for escalating cup-round rewards (PT-96). */
   cupPrize: async (amount: number) => { await ensureActive(); const a = Math.max(0, Math.round(Number(amount) || 0)); await localStore.addCoins(OWNER, a); return { ok: true as const, coins: getActiveModel().profile.coins, prize: a }; },
-  spSeasonReward: async (body: { pos: number; size: number; sponsor?: string; wins?: number; draws?: number; losses?: number; tier?: number; starId?: string; promoted?: boolean; kind?: 'league' | 'continental' | 'world' }) => {
+  spSeasonReward: async (body: { arcCoins?: number; pos: number; size: number; sponsor?: string; wins?: number; draws?: number; losses?: number; tier?: number; starId?: string; promoted?: boolean; kind?: 'league' | 'continental' | 'world' }) => {
     await ensureActive();
     const model = getActiveModel();
     // THE COMMERCIAL PULL OF A FAMOUS HOUSE — sponsorship and gate follow the name, so the season's money
@@ -895,7 +899,14 @@ export const api = {
         for (const a of seasonAwards(rows, {
           seasonId: closingId, seasonNumber: season,
           tier: String(tierIdx), accountId: OWNER, awardedAt: season,
-        })) { await localStore.addAward(a); wonAwards.push({ ...a, label: AWARD_LABEL[a.kind as AwardKind] ?? a.kind }); }
+        })) {
+          // STAMPED WITH THE GENERATION for a bloodline player, following saveLegacy's `:g<gen>` convention.
+          // Without it every generation's honours pile onto whoever currently holds the reused token id.
+          const tok = a.player_id ? await localStore.getToken(a.player_id).catch(() => null) : null;
+          const row = tok ? { ...a, player_id: `${a.player_id}:g${tok.generation ?? 0}` } : a;
+          await localStore.addAward(row);
+          wonAwards.push({ ...a, label: AWARD_LABEL[a.kind as AwardKind] ?? a.kind });
+        }
       } catch { /* never let an honour cost the player his season */ }
       const starId = body?.starId;
       const st = starId ? await localStore.getToken(String(starId)) : null;
@@ -927,7 +938,12 @@ export const api = {
         ach_promotions: (st.ach_promotions ?? 0) + (body?.promoted ? 1 : 0),
       });
     }
-    await localStore.addCoins(OWNER, prize + sponsorBonus + facIncome.total); // also schedules the persist that banks the season bump above
+    // `arcCoins` is the season's banked manager-arc coin effects (see applyArcEffect). They were applied
+    // to a display-only field and never persisted, so every one of the 1,031 arc options carrying a
+    // coins effect was inert. Clamped so a run of penalties cannot drive the treasury negative.
+    const arcCoins = Number.isFinite(body?.arcCoins) ? Number(body?.arcCoins) : 0;
+    const credit = prize + sponsorBonus + facIncome.total + arcCoins;
+    await localStore.addCoins(OWNER, Math.max(credit, -getActiveModel().profile.coins)); // also schedules the persist that banks the season bump above
 
     // UPKEEP — charged in the same league roll that pays the facility income, because it is the other half
     // of the same transaction: what the club earns by being a club, minus what it costs to BE one. Only on
@@ -981,16 +997,22 @@ export const api = {
     const c = await localStore.getClub(OWNER);
     if (!c) throw apiErr('club not found', {}, 404);
     const season = getActiveModel().profile.season;
+    // THE SEASON THAT CLOSED, not the one just opened. `spSeasonReward` runs first from nextSeason and
+    // advances `profile.season`, so by the time we get here the counter is already N+1 -- while `signTrial`
+    // filed the loanee under N. Asking for N+1's loanees returned nothing, so a trialist NEVER went home:
+    // he was grandfathered onto a real contract by the next line and then freely sellable, and LOANEE_CAP
+    // resets each season, so three free players a year could be signed and sold in perpetuity.
+    const closing = Math.max(0, season - 1);
     // grandfather any player with no deal (a pre-Living-Squad save, or the founding squad) onto one that
     // starts now, so nobody is silently free forever
     // TRIALISTS GO HOME. A loan/trial is documented as expiring at season end, but nothing ever removed
     // them: `deleteLoaneesInSeason` cleared the RECORD and left the player in the squad, and it had no
     // callers anyway. So a free trialist became a permanent, sellable asset — sign, sell, repeat, and the
     // coin economy prints money from nothing. Their trial ends here. (PT-303)
-    const loaneeIds = new Set(await localStore.loaneeIds(OWNER, String(season)));
+    const loaneeIds = new Set(await localStore.loaneeIds(OWNER, String(closing)));
     const stayed = c.club.players.filter((p) => !loaneeIds.has(p.id));
     const wentHome = c.club.players.length - stayed.length;
-    if (wentHome > 0) { c.club.players = stayed; await localStore.deleteLoaneesInSeason(String(season)); }
+    if (wentHome > 0) { c.club.players = stayed; await localStore.deleteLoaneesInSeason(String(closing)); }
     const roster = c.club.players.map((p) => (p.signedSeason == null ? signSquadContract(p, season, staggeredContractSeasons(p.id)) : p));
     // who actually played matters: a man who spent the season in the XI of a winning side is settled, one who
     // never got a game is agitating — that's what makes selection a relationship, not just a number (Phase 3)
@@ -1043,9 +1065,16 @@ export const api = {
           if (!p) break;
           const distressed = Math.round(squadSaleValue(overall(p), p.age ?? 26) * 0.6); // forced sale, forced price
           forcedOut.push(p);
-          owed -= distressed;
+          // THE SALE PAYS THE WAGES. `owed` was decremented here and then never read again, while every
+          // forced sale credited the club the full proceeds -- so a club that could not pay its bill sold
+          // players, kept every coin, and had the shortfall written off. Being insolvent was strictly more
+          // profitable than being solvent: 69c against a 749c bill ended the rollover on ~689c. Only the
+          // surplus above the debt reaches the treasury now.
+          const toDebt = Math.min(distressed, owed);
+          owed -= toDebt;
           wageSalvage += distressed;
-          if (distressed > 0) await localStore.addCoins(OWNER, distressed);
+          const surplus = distressed - toDebt;
+          if (surplus > 0) await localStore.addCoins(OWNER, surplus);
         }
         if (forcedOut.length) roll.players = roll.players.filter((p) => !forcedOut.includes(p));
       }
@@ -1277,7 +1306,11 @@ export const api = {
     const legs = await localStore.legaciesFor(OWNER).catch(() => [] as any[]);
     const legendBy = new Map<string, any>();
     for (const l of (legs as any[])) {
-      try { legendBy.set(String(l.player_id ?? l.playerId ?? '').split(':g')[0], JSON.parse(l.card_json ?? l.cardJson ?? '{}')); } catch { /* skip */ }
+      // KEYED BY THE FULL id, generation suffix included. Stripping `:g<gen>` collapsed every generation
+      // onto one key, and `legaciesFor` sorts NEWEST FIRST -- so last-write-wins left the FOUNDER's card
+      // rendered under his great-grandson's name, permanently, on the one screen the whole dynasty fantasy
+      // is displayed. The suffix is deliberate; saveLegacy writes it for exactly this reason.
+      try { legendBy.set(String(l.player_id ?? l.playerId ?? ''), JSON.parse(l.card_json ?? l.cardJson ?? '{}')); } catch { /* skip */ }
     }
     // HONOURS FOLLOW THE MAN ONTO THE TREE. An award won by a bloodline player is part of his record,
     // not just the club's, so the Family Record shows it against him. Squad players still win awards --
@@ -1294,7 +1327,10 @@ export const api = {
         try { honours = t.career_honours_json ? JSON.parse(t.career_honours_json) : null; } catch { /* none */ }
         return {
           id: t.id, name: t.name, generation: t.generation ?? 0,
-          awards: wonBy.get(t.id) ?? [],
+          // `succeed()` rewrites the retired token IN PLACE and keeps the same id, so a bare id lookup
+          // handed the grandfather's medals to a ten-year-old who has never played -- and the men who
+          // actually won them had no node to sit on. Same generation-qualified key as the legend card.
+          awards: wonBy.get(`${t.id}:g${t.generation ?? 0}`) ?? wonBy.get(t.id) ?? [],
           parentId: (t as any).parent_id ?? null,
           // WHOSE SON HE IS. Token.father_name was written at every succession and read by NOTHING — the
           // succession screen's "Dane's boy" caption comes from a transient field on the response, so the
@@ -1304,7 +1340,9 @@ export const api = {
           branch: (t as any).branch ?? 'played',
           state: t.state, overall: t.peak_overall ?? 0,
           personality: t.personality ?? null,
-          honours, legend: legendBy.get(t.id) ?? null,
+          // Try the generation-qualified key first, then the bare id for rows written before the
+          // suffix existed, so an old save keeps its legend cards.
+          honours, legend: legendBy.get(`${t.id}:g${t.generation ?? 0}`) ?? legendBy.get(t.id) ?? null,
         };
       }),
     };

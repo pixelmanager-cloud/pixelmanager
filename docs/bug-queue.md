@@ -44,61 +44,74 @@ was that the season counter resets to 1 and the filter was season-only. #7 is gu
 a check that could not fail — so it now asserts that substitutions and second yellows both actually occur.
 Against the unfixed engine it catches 1 unearned dismissal in 10 (my measurement; the sweep claimed 26%).
 
-## TIER 2 — small and local (eight items)
+## ~~TIER 2 — small and local (eight items)~~ — ALL EIGHT FIXED 2026-09-01
 
-10. `[A]` **Kick Off can be double-activated,** stacking two team-talk dialogs; the second builds a fresh
+10. `[A]` ~~**Kick Off can be double-activated,**~~ **FIXED.** stacking two team-talk dialogs; the second builds a fresh
     `MatchEngine` and wipes the live score. `client/src/main.ts:2846`. **Fix:** preamble `remove()` + `dialogify`.
-11. `[A]` **Shortcuts stay live behind the pause overlay** and Space swallows Resume.
+11. `[A]` ~~**Shortcuts stay live behind the pause overlay**~~ **FIXED.** and Space swallows Resume.
     `client/src/main.ts:905`. **Fix:** bail when a modal is open; `dialogify` in `openPauseMenu`.
-12. `[V]` **Every injury is the home side, minute 61.** `shared/src/engine.ts:331` — the trigger derives
+12. `[V]` ~~**Every injury is the home side, minute 61.**~~ **FIXED.** `shared/src/engine.ts:331` — the trigger derives
     from minute and team only, no seed. Measured by me: 14 injuries / 250 matches, **100% team0 min61, zero
     away injuries ever.** **Fix:** fold the match seed into the trigger and the candidate.
-13. `[A]` **Red-carded players walk back on at every kickoff.** `shared/src/engine.ts:246` — `reset()`
+13. `[A]` ~~**Red-carded players walk back on at every kickoff.**~~ **FIXED.** `shared/src/engine.ts:246` — `reset()`
     rebuilds slots from formation anchors with no `sentOff` check; `pressureOn` and `chaseLooseBall` have no
     guard. 111k on-pitch ticks for dismissed men over 300 matches. **Fix:** park them; add both guards.
-14. `[A]` **`clearRun` is never cleared on a turnover,** so the ×12 breakaway shot appetite leaks into
+14. `[A]` ~~**`clearRun` is never cleared on a turnover,**~~ **FIXED.** so the ×12 breakaway shot appetite leaks into
     ordinary play — ~0.99 stale shots and 0.11 stale goals per match. `shared/src/engine.ts:660`.
     **Fix:** reset on every possession change and shot.
-15. `[A]` **One deferral suppresses the handoff offer for the whole dynasty.**
+15. `[A]` ~~**One deferral suppresses the handoff offer for the whole dynasty.**~~ **FIXED.**
     `client/src/main.ts:3697` — `fm_handoff_defer_` keys on a prospect id that is `nft:1` in every save.
-16. `[A]` **Rejected-bid keys outlive the manager.** `client/src/main.ts:1884` — `fm_biddismiss_*` /
+16. `[A]` ~~**Rejected-bid keys outlive the manager.**~~ **FIXED.** `client/src/main.ts:1884` — `fm_biddismiss_*` /
     `fm_bought_*` are season-scoped but survive succession while the counter resets to 1.
-17. `[A]` **The wage forecast bills the star, the rollover doesn't.** `client/src/main.ts:1877` — forecast
+17. `[A]` ~~**The wage forecast bills the star, the rollover doesn't.**~~ **FIXED.** `client/src/main.ts:1877` — forecast
     reads `mergedClub()`, `advanceSquadSeason` bills raw `club.players`. Overstated by the biggest wage.
 
-## TIER 3 — needs care (nine items)
+**Tier 2 notes.** The engine fixes paid off beyond their own entries: clearing `clearRun` on turnovers took
+`division_balance`'s worst thrashing rate from **15% (exactly on its bar) to 12%**, and made
+`qa_matchstats`'s goalless check pass — §68 item 5, resolved by a bug fix rather than a tuning pass. It cost
+one assertion (strong-side lopsidedness, 3.20:1 → 2.88:1 against a 3:1 bar); those 15 goals were phantom, so
+that is recorded in §68 rather than chased. Injuries now spread over 13 distinct (team, minute) pairs with 9
+to the away side, against 1 pair and 0 away before. Guarded by two new probes,
+`tools/playtest/red_card_sticks.ts` and `sub_identity.ts`.
 
-18. `[V]` **The season rollover can be re-run on the retirement season.** `client/src/main.ts:2608` — the
+**And the gate got sharper because of this batch.** It reported PASSED on a run where `qa_matchstats` swapped
+which of its checks was red — the collector only recorded the failing harness's *name*, so a fix and a
+regression inside one file cancelled out invisibly. It now reads the individual `FAIL <assertion>` lines
+run-qa echoes, and `shared/qa_gate_parse.ts` covers that case.
+
+## ~~TIER 3 — needs care (nine items)~~ — ALL NINE FIXED 2026-09-01
+
+18. `[V]` ~~**The season rollover can be re-run on the retirement season.**~~ **FIXED.** `client/src/main.ts:2608` — the
     early return precedes the only `results: []` / `season + 1` reset, and I confirmed `retireStar` contains
     **no `saveMgr` call at all**. Re-pays prize, sponsor, facility income, title honour and promotion, ages
     the squad again, on every pass. **Fix:** reset before the early return, or move retirement above the
     reward calls. *Worst one in the list.*
-19. `[A]` **Trialists never leave.** `client/src/api.ts:969` — filed under season N, swept after
+19. `[A]` ~~**Trialists never leave.**~~ **FIXED.** `client/src/api.ts:969` — filed under season N, swept after
     `spSeasonReward` has already advanced to N+1, so `loaneeIds` returns empty. Free players, then sellable.
     Same off-by-one class as the award bug fixed yesterday.
-20. `[A]` **Insolvency pays a dividend.** `client/src/api.ts:1032` — `owed` is decremented then discarded,
+20. `[A]` ~~**Insolvency pays a dividend.**~~ **FIXED.** `client/src/api.ts:1032` — `owed` is decremented then discarded,
     while each forced sale credits `addCoins`. Being unable to pay wages is more profitable than paying them.
-21. `[A]` **Arc `coins` effects never reach the save.** `client/src/main.ts:3465` — written to the
+21. `[A]` ~~**Arc `coins` effects never reach the save.**~~ **FIXED.** `client/src/main.ts:3465` — written to the
     display-only `this.account.coins`, which `setMe()` overwrites. 1,031 arc options carry one; none moves a
     coin. **Fix:** bank as `arcCoins` and settle at rollover, like `arcPrestige`/`arcBoard` already do.
-22. `[A]` **`sellMult` bends no coin.** `client/src/api.ts:514` — the squad report promises unsettled men
+22. `[A]` ~~**`sellMult` bends no coin.**~~ **FIXED.** `client/src/api.ts:514` — the squad report promises unsettled men
     sell for up to 20% less; `squadSaleValue` takes no morale argument. The re-sign half *is* wired.
-23. `[A]` **Awards render against the current heir.** `client/src/api.ts:1283` — `succeed()` reuses the
+23. `[A]` ~~**Awards render against the current heir.**~~ **FIXED.** `client/src/api.ts:1283` — `succeed()` reuses the
     token id, so `wonBy.get(t.id)` hands the grandfather's medals to a child. **Fix:** generation-qualified key.
-24. `[A]` **Legend cards collapse onto the founder.** `client/src/api.ts:1266` — the `:g<gen>` suffix is
+24. `[A]` ~~**Legend cards collapse onto the founder.**~~ **FIXED.** `client/src/api.ts:1266` — the `:g<gen>` suffix is
     stripped and last-write-wins keeps the oldest.
-25. `[A]` **The whole Grassroots focus bank is unreachable.** `shared/src/career.ts:1469` — `rollFocus` is
+25. `[A]` ~~**The whole Grassroots focus bank is unreachable.**~~ **FIXED.** `shared/src/career.ts:1469` — `rollFocus` is
     called after `turn++`, so `Grassroots` is never the chapter passed. Eight authored options, including a
     keeper's age-10-12 keeping focus, are dead.
-26. `[A]` **`hasAgent` keys on an option id three chapters reuse.** `shared/src/career.ts:675` — drops the
+26. `[A]` ~~**`hasAgent` keys on an option id three chapters reuse.**~~ **FIXED.** `shared/src/career.ts:675` — drops the
     agent lever from Scholar, Youth Team and Breakthrough. **Fix:** gate on chapter, not id.
 
-## TIER 4 — design call needed, not just a fix (two items)
+## ~~TIER 4 — design call needed~~ — BOTH DONE 2026-09-01
 
-27. `[A]` **Bench emptied at 58', 59', 60' in 100% of matches.** `shared/src/engine.ts:345` — no spacing
+27. `[A]` ~~**Bench emptied at 58', 59', 60' in 100% of matches.**~~ **FIXED.** `shared/src/engine.ts:345` — no spacing
     rule; 300 matches produced `{58:300, 59:300, 60:300}`, zero variance. Fixing it is engine balance, and
     it currently starves #12. **Needs:** a substitution-spacing decision.
-28. `[A]` **88 of 90 cross-arc `requires` options are offered in under 1% of careers,** and
+28. `[A]` ~~**88 of 90 cross-arc `requires` options are offered in under 1% of careers,**~~ **FIXED.** and
     `tools/playtest/gate_content.ts:111` counts declarations rather than simulating, so it passes forever —
     a check that cannot fail. With `ARCS_PER_CAREER = 20` from a 414-arc library both arcs must land in the
     same 20, in order. **Needs:** a call on whether cross-arc payoffs should be reachable at all.
@@ -110,3 +123,22 @@ short-circuited on a permanently-red leg, so playtest and qa had not run from `n
 `agent/run.sh` deleted every overnight branch); `fuzz_test.ts` and `career_sim.ts` never executed inside
 `verify`; and `ach_goals`/`ach_assists`/`ach_potm` read and rendered but written only as literal `0`, so
 every legend card read "0 goals · 0 assists · 0 ★".
+
+---
+
+## Corrections to the sweep — two of its claims were wrong
+
+**#28's headline number was wrong, and it was wrong for an instructive reason.** It reported "88 of 90
+cross-arc `requires` options offered in under 1% of careers, mean 0.388%". Measured properly, **63.6% of
+careers already saw at least one** before any fix. The career presents an arc choice as a fresh
+`{id, label, desc}` object, so `requires` is not on the object the player sees — counting it there reports
+zero however healthy the mechanism is. My own first probe made exactly the same mistake and I nearly filed
+the same wrong finding. Reachability has to be measured against the arc DEFINITIONS, matching by choice id.
+
+What *was* right is that `gate_content.ts:111` counts declarations and so can never detect unreachability.
+`tools/playtest/arc_payoff_reach.ts` now simulates. And the scheduler now weights an arc up when it pays off
+a flag the career already holds, which takes it **63.6% → 82.3%** of careers.
+
+**#5's rate was overstated.** The sweep said 26% of second-yellow dismissals went to a player never booked;
+measured against the unfixed engine it is 1 in 10. The defect was real either way.
+
