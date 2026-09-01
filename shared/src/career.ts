@@ -622,7 +622,7 @@ const FOCUS_BY_CHAPTER: Record<string, FocusOption[]> = {
 // ── LIGHT ATTRIBUTE FOCUS (a soft skill-tree): from Youth Team on, the summer offers one or two picks
 // that ALSO nudge a specific stat family — a small, player-directed lean layered on top of the
 // card-driven "earned, not chosen" development. No rng, no meter effects of its own beyond the small
-// energy cost — the reward is purely the tag nudge (applied in deriveStats, see FOCUS_TAG_WEIGHT).
+// energy cost — the reward is purely the tag nudge (applied in deriveStats via attrFocus/AWARD_WEIGHT).
 const TAG_FOCUS_BY_CHAPTER: Record<string, Array<{ id: string; icon: string; name: string; desc: string; tag: Tag }>> = {
   Grassroots:     [
     { id: 'focus_flair0',     icon: '🎨', name: 'Try Tricks in the Garden',      desc: 'Keepie-uppies against the shed wall until it’s dark — nobody taught you this, you just love it.', tag: 'flair' },
@@ -1125,7 +1125,7 @@ export class Career {
   /** lifestyle upgrades bought with career earnings (permanent perks). */
   ownedLifestyle: string[] = [];
   /** the soft skill-tree: summer training focuses picked from Youth Team on, tallied per tag — a small,
-   *  deliberate lean applied on top of the card-driven development in deriveStats (see FOCUS_TAG_WEIGHT). */
+   *  deliberate lean applied on top of the card-driven development in deriveStats (see AWARD_WEIGHT). */
   attrFocus: Partial<Record<Tag, number>> = {};
   private energyRecoveryBonus = 0;   // better living → more energy restored each summer
   /** How your relationships PAID OFF (or bit back) over the chapter that just ended — surfaced at the break. */
@@ -1398,6 +1398,15 @@ export class Career {
     // (PT-1303)
     const coachHit = this.coach && card.tags.some((t) => this.coach!.specialty.includes(t));
     const coaching = coachHit ? this.coach!.bonus * (1 - Math.min(1, f)) * 2 : 0;
+    // A COACH SHOULD CHANGE THE PLAYER, NOT JUST THE SCORELINE. The bonus above lifts SUCCESS, and success
+    // barely reaches the graduated attributes -- measured over 120 careers, appointing the best-fitting
+    // coach instead of the worst-fitting one produced an identical player in 106 of them, a mean difference
+    // of 0.117 overall. The screen asked you to pick a specialist and then made the pick almost irrelevant.
+    // Drilling with a finishing coach now leans your development towards finishing, through the same
+    // attrFocus channel the summer focus pick uses.
+    if (coachHit) for (const t of card.tags) {
+      if (this.coach!.specialty.includes(t)) this.attrFocus[t] = (this.attrFocus[t] ?? 0) + COACH_TAG_WEIGHT;
+    }
     // FATIGUE: running on empty saps a moment (below 35 energy it bites, up to −0.12 at flat 0). Makes
     // Rest and the energy-giving focus choices a real trade-off against a busy, big-moment-heavy chapter.
     const fatigue = this.energy < 35 ? ((35 - this.energy) / 35) * 0.12 : 0;
@@ -1828,7 +1837,11 @@ const BASELINE = 7, SPREAD = 12, PEAK = 1.5;
 // how much one summer's attribute-focus pick (see rollFocus) leans a tag's frequency — deliberately small:
 // comparable to one strong (epic, stakes-3) card play, so a handful of picks across a career nudges shape
 // without overriding the card-driven "earned, not chosen" development.
-const FOCUS_TAG_WEIGHT = 6;
+// DEAD, AND MINE. This fed `freq[t] += attrFocus[t] * FOCUS_TAG_WEIGHT` until the award fix moved attrFocus
+// out of `freq` entirely (adding to a tag there raises the normalising divisor and shrinks every OTHER
+// stat, so the lean read as a penalty). Removing that line left this constant referenced by nothing but the
+// three comments that still described it as live. The focus lean now runs through AWARD_WEIGHT below.
+const COACH_TAG_WEIGHT = 0.5;
 
 const AWARD_WEIGHT = 0.07;
 export function deriveStats(log: Choice[], seed: number, genes: Genes = rollGenes(seed), attrFocus?: Partial<Record<Tag, number>>): CareerPlayerAttrs {
@@ -1871,8 +1884,8 @@ export function deriveStats(log: Choice[], seed: number, genes: Genes = rollGene
   const out = {} as CareerPlayerAttrs;
   for (const stat of Object.keys(STAT_SOURCES) as (keyof typeof STAT_SOURCES)[]) {
     const src = STAT_SOURCES[stat];
-    // SHAPE CANNOT GO NEGATIVE. `freq` accumulates card power x stakes AND the focus lean
-    // (attrFocus[t] * FOCUS_TAG_WEIGHT), and neither term is sign-guarded — a negative contribution drives
+    // SHAPE CANNOT GO NEGATIVE. `freq` accumulates card power x stakes, which is not sign-guarded — a
+    // negative contribution drives
     // freq[t] below zero, and maxFreq's `Math.max(1, ...)` floor only guards the DIVISOR, not the numerator.
     // A negative shape then hits `Math.pow(shape, 1.5)`, and a negative base with a fractional exponent is
     // NaN. That NaN lands straight in a graduated player's attrs, and NaN attrs are the exact input the
