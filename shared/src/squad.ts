@@ -10,6 +10,7 @@ import type { Player } from './types.js';
 import { developAttrs } from './lifecycle.js';
 import { ageSquadAttrs, squadSeasonWage, SQUAD_CONTRACT_SEASONS, SQUAD_PEAK_AGE } from './transfermarket.js';
 import { overall, mintSquadPlayer } from './teams.js';
+import { eligibleTraits, MAX_TRAITS, type CareerPlayerAttrs } from './career.js';
 import { MIN_SQUAD } from './market.js';
 import { updateMorale, driftMorale, START_MORALE, type MoraleEvent } from './morale.js';
 
@@ -50,6 +51,7 @@ export interface SquadSeasonChange {
   expiring: boolean;   // contract runs out at the end of this rollover → keep-or-lose decision
   moraleBefore: number;
   moraleAfter: number;
+  earnedTraits?: string[]; // trait NAMES he grew into this season (see the re-check in advanceSquad)
 }
 /** How a season treated one squad player, morale-wise. A player who spent the year in the XI of a winning
  *  side is settled; one who never got a game and is out of contract is agitating. This is what turns a
@@ -123,6 +125,31 @@ export function advanceSquad(players: Player[], season: number, trainingLvl = 1,
     const ovrBefore = overall(p);
     wageBill += squadSeasonWage(ovrBefore, season); // he was on the books all season, priced in this season's money
     let adv = advanceSquadPlayer(p, trainingLvl);
+    // A PLAYER WHO GROWS INTO A TRAIT NOW GETS IT. `eligibleTraits` was only ever called at MINT time
+    // (graduate, mintSquadPlayer, the career preview), so a squad player's traits were decided by the
+    // stats he happened to be born with and never looked at again. Measured: a tier-6 founding squad on a
+    // maxed training ground reaches mean overall 13.07 by season 12 with six of fourteen players
+    // QUALIFYING for seven traits between them — and holding two. That is this repo's signature defect
+    // stated plainly: a mechanism that runs, produces a plausible result, and never delivers the thing it
+    // exists to deliver.
+    //
+    // Thresholds stay ABSOLUTE, so a trait still means "genuinely good at this" rather than "good for
+    // this division" — which also keeps trait EFFECTS honest, since they are flat bonuses and a relative
+    // gate would hand a basement keeper the same save suppression as a top-flight one.
+    const earnedTraits: string[] = [];
+    const held = adv.traits ?? [];
+    if (held.length < MAX_TRAITS) {
+      const now = eligibleTraits(adv.attrs as unknown as CareerPlayerAttrs, [], adv.role);
+      const gained = now.filter((t) => !held.includes(t.id)).slice(0, MAX_TRAITS - held.length);
+      if (gained.length) {
+        // `apply` bumps stats, so it must fire EXACTLY once per trait ever. `held` is the just-developed
+        // player's own list, and a trait already in it is filtered out above, so a re-run cannot double-bump.
+        const attrs = { ...adv.attrs };
+        for (const t of gained) t.apply?.(attrs as unknown as CareerPlayerAttrs);
+        adv = { ...adv, attrs, traits: [...held, ...gained.map((t) => t.id)] };
+        earnedTraits.push(...gained.map((t) => t.name));
+      }
+    }
     const isRetired = (adv.age ?? 0) >= squadRetireAge(adv);
     // `season` is ALREADY the upcoming season here — spSeasonReward bumps profile.season before the rollover
     // runs — so adding another +1 made every deal expire a season early (a 3-season contract lasted 2) (PT-601).
@@ -133,7 +160,7 @@ export function advanceSquad(players: Player[], season: number, trainingLvl = 1,
       wonSomething: !!ctx.wonSomething, goodSeason: !!ctx.goodSeason, expiring: isExpiring,
     });
     adv = { ...adv, morale: moraleAfter };
-    changes.push({ player: adv, ovrBefore, ovrAfter: overall(adv), retired: isRetired, expiring: isExpiring, moraleBefore, moraleAfter });
+    changes.push({ player: adv, ovrBefore, ovrAfter: overall(adv), retired: isRetired, expiring: isExpiring, moraleBefore, earnedTraits: earnedTraits.length ? earnedTraits : undefined, moraleAfter });
     if (isRetired) { retired.push(adv); continue; }
     // A DEAL THAT RAN OUT AND WASN'T RENEWED MEANS HE LEAVES. Without this the "expiring" list re-fired every
     // season forever, renewing was a pure coin sink with no downside for ignoring it, and the contract layer —

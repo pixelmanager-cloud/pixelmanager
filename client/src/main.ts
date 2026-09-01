@@ -1660,6 +1660,12 @@ class Game {
         + r.risers.slice(0, 5).map((x: any) => `${nm(x)} <b>${x.from}→${x.to}</b>`).join(' · ')
         + (r.risers.length > 5 ? ` <i>+${r.risers.length - 5} more</i>` : '') + `</span></div>`);
     }
+    if (r.earned?.length) {
+      // The payoff for developing a player: he grows into something the match engine actually reads.
+      rows.push(`<div class="sq-row up"><span class="sq-lbl">✨ Grew into</span><span class="sq-list">`
+        + (r.earned as any[]).slice(0, 5).map((x: any) => `${nm(x)} <b>${(x.traits ?? []).join(', ')}</b>`).join(' · ')
+        + (r.earned.length > 5 ? ` <i>+${r.earned.length - 5} more</i>` : '') + `</span></div>`);
+    }
     if (r.fallers?.length) {
       rows.push(`<div class="sq-row down"><span class="sq-lbl">📉 Fading</span><span class="sq-list">`
         + r.fallers.slice(0, 5).map((x: any) => `${nm(x)} <b>${x.from}→${x.to}</b>`).join(' · ')
@@ -2937,13 +2943,12 @@ class Game {
     this.showScreen('scouting');
     $('trial-pool').innerHTML = SPINNER;
     try {
-      const [d, st] = await Promise.all([api.trials(), api.scoutTiers()]);
+      const d = await api.trials();
       $('loan-cap').textContent = String(d.cap);
       $('loan-signed').textContent = String(d.signedCount);
       $('trial-pool').innerHTML = this.renderTrialPool(d.pool, d.signedCount >= d.cap);
       Array.from($('trial-pool').querySelectorAll('button[data-idx]')).forEach((b) =>
         b.addEventListener('click', () => this.signTrial(Number((b as HTMLElement).dataset.idx))));
-      this.renderScoutPanel(st.opp, st.player);
       await this.loadMissions();
     } catch {
       $('trial-pool').innerHTML = '<div class="muted">Could not load — please try again.</div>';
@@ -4225,39 +4230,6 @@ class Game {
     } catch (e: any) {
       toast(e?.status === 409 ? (String(e?.body?.error ?? '').includes('travel') ? 'Your scout is still travelling' : 'You\'ve hit your loanee limit') : 'Could not sign');
     }
-  }
-
-  /** Fill the "Your Scouts" cards with the current opposition/player scout tiers. */
-  private renderScoutPanel(opp: string, player: string) {
-    const oppDesc: Record<string, string> = {
-      base: "Reveals an opponent's likely formation + roster — ratings hidden.",
-      bronze: 'Now reveals their squad <b>ratings</b>. Likely XI at Silver.',
-      silver: 'Reveals ratings + the <b>likely XI</b>. Tactical intel at Gold.',
-      gold: 'Full intel: ratings, likely XI, and a <b>tactical read</b>.',
-    };
-    const playerDesc: Record<string, string> = {
-      base: 'Trialists: <b>73</b>/20/7/<b>1%</b> raw/squad/quality/gem. Market shows ratings only.',
-      // THESE USED TO QUOTE `SCOUT_TIERS` VERBATIM, AND THE GENERATOR DOES NOT DELIVER IT. That table is the
-      // input distribution for the ROLL; the badge the player then sees is re-derived from the realised
-      // overall, and the two disagree at every tier. Measured over 20,000 draws per tier:
-      //     declared        delivered
-      //   base    62/30/ 7/ 1   ->  73/20/ 7/1
-      //   bronze  45/38/14/ 3   ->  59/27/12/2
-      //   silver  28/44/22/ 6   ->  44/33/19/3
-      //   gold    12/43/33/12   ->  28/37/29/6
-      // Gold advertised a 12% gem rate and hands over 6%, and advertised 12% raw and hands over 28%. The
-      // roll itself is clean — it matches its table to within 0.25pp — so this is a display that quotes the
-      // wrong end of the pipeline. Numbers below are the DELIVERED ones, rounded, which is what the player
-      // will actually experience. (Making the generator hit the declared table instead would be a buff to
-      // prospect quality, i.e. a balance change — logged for CK rather than taken here.)
-      bronze: 'Better trialists (59/27/12/2) + <b>2 key stats</b> shown on listings.',
-      silver: 'Better trialists (44/33/19/3) + <b>5 stats</b> shown on listings.',
-      gold: 'Best trialists (28/37/29/6) + the <b>full stat sheet</b> on listings.',
-    };
-    const chip = (id: string, tier: string) => { const el = $(id); el.textContent = tier.toUpperCase(); el.className = `sn-tier tier-${tier}`; };
-    chip('opp-tier', opp); chip('player-tier', player);
-    $('opp-desc').innerHTML = oppDesc[opp] ?? '';
-    $('player-desc').innerHTML = playerDesc[player] ?? '';
   }
 
   private renderTrialPool(pool: Trialist[], capReached: boolean): string {

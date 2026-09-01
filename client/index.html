@@ -1168,20 +1168,7 @@
       .bt-name { font-family: var(--display); font-size: 16px; margin: 3px 0; color: var(--good); }
       .bt-meta { font-size: 12px; color: var(--muted); line-height: 1.4; }
       .bt-heir { font-size: 12px; color: #e6c76a; margin-top: 5px; }
-      #my-scouts { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 6px; }
-      .scout-net { border: 2px solid var(--line); background: var(--panel-2); padding: 9px 11px; }
-      .scout-net .sn-top { display: flex; align-items: center; gap: 8px; }
-      .scout-net .sn-icon { font-size: 19px; }
-      .scout-net .sn-name { font-family: var(--body); font-size: 15px; color: #fff; }
-      .scout-net .sn-tier { margin-left: auto; font-family: var(--body); font-size: 14px; padding: 3px 6px; border-radius: 4px; border: 1px solid; }
-      .scout-net .sn-tier.tier-base { color: var(--cyan); border-color: var(--cyan); }
-      .scout-net .sn-tier.tier-bronze { color: #f0a868; border-color: #cd7f32; }
-      .scout-net .sn-tier.tier-silver { color: #eaf1ff; border-color: #cdd6e6; }
-      .scout-net .sn-tier.tier-gold { color: var(--warn); border-color: var(--warn); background: rgba(255,206,58,0.12); }
-      .scout-net .sn-desc { font-size: 17px; color: #b6bede; margin-top: 6px; line-height: 1.4; }
-      .scout-net .sn-desc b { color: var(--good); }
       .scout-h4 { font-family: var(--body); font-size: 17px; color: var(--pink); margin: 14px 0 4px; letter-spacing: 0.5px; }
-      @media (max-width: 640px) { #my-scouts { grid-template-columns: 1fr; } }
       .trial { display: flex; align-items: center; gap: 12px; padding: 8px 10px; border: 2px solid var(--line); background: var(--panel-2); margin-bottom: 8px; font-size: 21px; }
       .trial.signed { opacity: 0.55; }
       .trial.band-gem { border-color: var(--warn); }
@@ -1867,22 +1854,12 @@
       <!-- SCOUTING (trial/loan academy) -->
       <div id="scouting" class="panel hidden">
         <div id="scouting-head"><h3>🔎 SCOUTING</h3><button id="scouting-back">← Back to hub</button></div>
-        <div id="my-scouts">
-          <div class="scout-net">
-            <div class="sn-top"><span class="sn-icon">🕵️</span><span class="sn-name">Opposition Scout</span><span id="opp-tier" class="sn-tier tier-base">BASE</span></div>
-            <div id="opp-desc" class="sn-desc"></div>
-          </div>
-          <div class="scout-net">
-            <div class="sn-top"><span class="sn-icon">🔎</span><span class="sn-name">Player Scout</span><span id="player-tier" class="sn-tier tier-base">BASE</span></div>
-            <div id="player-desc" class="sn-desc"></div>
-          </div>
-        </div>
         <h4 class="scout-h4">🥅 LOCAL TRYOUTS</h4>
         <div class="scout-sub">Walk-ups who turn up at your gate — free, but slim pickings. Sign from here or the network up to <b id="loan-cap">3</b> loanees this season (<span id="loan-signed">0</span> signed). They play this season only, then leave.</div>
         <div id="trial-pool"></div>
 
         <h4 class="scout-h4" style="margin-top:22px; display:flex; align-items:center; gap:12px;">🌍 SCOUTING NETWORK <span id="scout-coins" style="margin-left:auto; font-size: 13px; color:var(--warn);"></span></h4>
-        <div class="scout-sub">Send your scout on a trip for a small fee. Each place trades <b>how often</b> anyone signs against <b>how good</b> they might be — a far-flung academy rarely delivers, but when it does, it delivers. You get <b id="trips-per">3</b> trips a season (<span id="trips-used">0</span> used). Results are sealed the moment you dispatch and revealed once your scout travels back. A higher <b>Player Scout</b> tier lifts every trip's odds.</div>
+        <div class="scout-sub">Send your scout on a trip for a small fee. Each place trades <b>how often</b> anyone signs against <b>how good</b> they might be — a far-flung academy rarely delivers, but when it does, it delivers. You get <b id="trips-per">3</b> trips a season (<span id="trips-used">0</span> used). Results are sealed the moment you dispatch and revealed once your scout travels back. A better <b>Scouting HQ</b> lifts every trip's odds, discounts the fee, and buys you more trips a season.</div>
         <div id="missions-active"></div>
         <div id="scout-destinations"></div>
       </div>

@@ -121,10 +121,13 @@ An NFT player isn't a stat block, it's a *life*. Age is the through-line connect
   only unlock as you break into the first team. A draft + an age-milestone event fires each chapter.
   **Graduation at 25 = the player's PRIME.**
 - **Playing (manager), age 25 → 40** = the NFT's 15 pro seasons. The minted stats are the age-25 prime
-  (immutable on-chain); the Manager game applies a **read-time `ageCurve`**: raw physical (pace/strength/
-  stamina — the gene-capped stats) fades from ~29, while experience (composure/leadership/positioning)
-  rises into the 30s. So a player's ability/value *arcs* — buy a young star, they peak, then decline.
-  (Immutable base + deterministic curve = dynamic value with no on-chain writes.)
+  prime. The Manager game ages him **per season** — `developAttrs` (lifecycle.ts) raises the ten
+  physical/technical stats while he is young and `ageSquadAttrs` (transfermarket.ts) declines them as he
+  gets old — so ability and value still *arc*: buy a young star, he peaks, then declines. The MENTAL layer
+  does not move: temperament is career-forged and stays as the career made it.
+  (A read-time age curve was described here and removed on 2026-09-01: it never had a production caller,
+  and projecting from an immutable prime does not fit a manager phase that rewrites the stats every
+  season. See the note where it used to live in career.ts.)
 - **Retirement at 40** → lineage: the physical genes pass to a **son** who begins development at 10.
 
 This makes genes even more meaningful: the innate physical band is your *prime ceiling*, realised by 25
@@ -147,7 +150,8 @@ At graduation the in-development thing becomes the playable Player NFT. Three wa
 
 **Recommendation:** ship **#1** for v1 (mint finished players only), and add a prospect market later via
 #2 or #3 if trading in-progress youngsters proves desirable. All three keep the age-25 prime as the
-immutable base + the read-time `ageCurve` for the playing phase.
+graduation stats as the starting point, aged per season by `developAttrs`/`ageSquadAttrs`
+for the playing phase.
 
 ---
 

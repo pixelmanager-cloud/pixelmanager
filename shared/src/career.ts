@@ -1997,26 +1997,19 @@ export function graduate(log: Choice[], seed: number, genes: Genes = rollGenes(s
 }
 
 // ── AGE CURVE (playing phase, age 25 → 40) ──
-// The minted Player NFT's stats are the PRIME (age 25, graduation). The Manager game applies this
-// read-time curve so ability truly ARCS — RISE → PEAK → DECLINE — over the 15 pro seasons. The prime
-// isn't the top: PHYSICAL (pace/strength/stamina/workrate) peaks ~25 and then falls STEADILY (a
-// pace-merchant fades hard by his 30s), CRAFT (technique) matures a touch then plateaus, and WISDOM
-// (composure/leadership/positioning/keeping) keeps rising into the 30s. Net effect: athletic players
-// peak early and depreciate; cerebral players peak ~29-31 and age gracefully — so WHEN you sell, hold,
-// or retire a player actually matters (and young prospects appreciate). Immutable base + this curve.
-const PHYSICAL: (keyof CareerPlayerAttrs)[] = ['pace', 'strength', 'stamina', 'workrate'];
-const WISDOM: (keyof CareerPlayerAttrs)[] = ['composure', 'leadership', 'positioning', 'keeping'];
-const CRAFT: (keyof CareerPlayerAttrs)[] = ['passing', 'shooting', 'tackling', 'creativity', 'setPiece', 'teamwork'];
-export function ageCurve(prime: CareerPlayerAttrs, age: number): CareerPlayerAttrs {
-  const phys = age <= 26 ? 1 : clamp(1 - (age - 26) * 0.042, 0.4, 1);  // peaks ~25-26, then −4.2%/yr (floor .40)
-  const wis = clamp(1 + (age - 25) * 0.02, 1, 1.16);                   // experience rises +2%/yr into the 30s (cap +16%)
-  const craft = clamp(1 + (age - 25) * 0.01, 1, 1.05);                 // technique matures then plateaus (cap +5%)
-  const out = { ...prime };
-  for (const k of PHYSICAL) out[k] = clamp(Math.round(prime[k] * phys), 1, 20);
-  for (const k of WISDOM) out[k] = clamp(Math.round(prime[k] * wis), 1, 20);
-  for (const k of CRAFT) out[k] = clamp(Math.round(prime[k] * craft), 1, 20);
-  return out;
-}
+// AGE CURVE — REMOVED 2026-09-01. A read-time `ageCurve(prime, age)` used to live here, projecting a
+// player's stats from an immutable age-25 prime: physical falling, wisdom rising into the 30s. It had no
+// production caller in its life; its one consumer was `career_sim.ts`'s printout, inside `npm run verify`,
+// so every gate run advertised an arc the shipped game never applied.
+//
+// Removed rather than wired, on CK's call: a player's temperament is career-forged and does not drift with
+// age. The manager phase ages the physical/technical stats through `developAttrs` (lifecycle.ts) and
+// `ageSquadAttrs` (transfermarket.ts), and the mental layer stays as the career made it.
+//
+// It could not have been wired as written in any case: the signature projects from a PRIME the manager
+// phase does not keep — `api.ts` overwrites `attrs_json` with the developed attrs every rollover — so
+// applied per season it compounds, pinning composure and leadership at 20 by the mid-30s and flooring
+// pace at 1. Anything reviving this idea needs a bounded per-season delta, not a projection.
 
 // ── PROSPECT VALUATION (the market for in-development players) ──
 // A half-developed prospect is priced on: current ability, how much upside remains (age → turns left),

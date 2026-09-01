@@ -60,7 +60,8 @@ const RETIREMENT_NOTES: Record<'legendary' | 'great' | 'fond' | 'decorated' | 'd
 function hash32Legacy(...nums: number[]): number { let h = 2166136261 >>> 0; for (const n of nums) { h ^= (n >>> 0); h = Math.imul(h, 16777619); } return h >>> 0; }
 
 /** Build the legacy card for a player retiring at the end of his career. TEAM achievements only (fair
- *  across positions) + how good he actually got. `peakOverall` is the best overall the ageCurve produced.
+ *  across positions) + how good he actually got. `peakOverall` is the best overall he ever recorded — written at graduation
+ *  from `grad.overall` (tokens.ts) and maxed each rollover from `overall(player)` (api.ts).
  *  `seed`, if given, varies which of several notes is picked for the tier (deterministic, purely cosmetic). */
 export function legacyCard(role: Role, primeOverall: number, peakOverall: number, ach: PlayerAchievements, seed = 0): LegacyCard {
   const tierMult = 1 + ach.highestTierIdx * 0.3;                         // winning higher up counts for more

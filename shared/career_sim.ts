@@ -1,6 +1,6 @@
 // Career-sim harness. Validates: (1) different styles → distinct, specialised players + roles;
 // (2) skill → magnitude; (3) the turn-by-turn engine is deterministic. Run: `npx tsx career_sim.ts`.
-import { Career, simCareer, graduate, ageCurve, careerOverall, prospectValuation, contractCost, contractLength, releaseClause, breederRevenue, legacyBoost, AGENTS, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, STARTER_DECK, cardPower, activeSynergies, type Style, type CareerPlayerAttrs, type Role, type Genes, type PlayerAchievements, type Tag } from './src/career.js';
+import { Career, simCareer, graduate, careerOverall, prospectValuation, contractCost, contractLength, releaseClause, breederRevenue, legacyBoost, AGENTS, seedFrom, rollGenes, inheritGenes, mulberry32, TAGS, DECK, STARTER_DECK, cardPower, activeSynergies, type Style, type CareerPlayerAttrs, type Role, type Genes, type PlayerAchievements, type Tag } from './src/career.js';
 
 const STYLES: Style[] = [
   { name: 'Poacher',   pref: { composure: 1, flair: 0.8 },        skill: 0.85 },
@@ -205,11 +205,6 @@ console.log('\n=== a development life (age 10→25, seed arc) ===');
   console.log(`  big moments faced: ${big} big + ${huge} huge  |  delivered in ${bigWins}  |  serious injuries: ${c.seriousInjuries}`);
   console.log(`  graduates at 25 (PRIME): ${p.role} ovr ${p.overall}, durability ${p.attrs.durability}, ${p.personality}${p.traits.length ? ', ' + p.traits.join(', ') : ''}`);
 
-  // playing phase: the prime player's ability across ages 25→40 (read-time age curve)
-  console.log('  pro career (age → ovr):', [25, 28, 30, 33, 36, 40].map((age) => {
-    const aged = ageCurve(p.attrs, age); return `${age}:${careerOverall(aged, p.role)}`;
-  }).join('  '));
-  console.log(`  pace 25→40: ${p.attrs.pace} → ${ageCurve(p.attrs, 40).pace}   leadership 25→40: ${p.attrs.leadership} → ${ageCurve(p.attrs, 40).leadership}`);
 }
 
 // personality: temperament changes how the SAME big moments play out

@@ -1017,6 +1017,11 @@ export const api = {
       // the season's human headlines — who arrived, who faded, who's being circled (Phase 4)
       storylines: squadStorylines(roll, season),
       unhappy: roll.changes.filter((ch) => !ch.retired && moraleEffects(ch.moraleAfter).unsettled).map((ch) => ({ ...lite(ch.player), morale: ch.moraleAfter, moraleLabel: moraleEffects(ch.moraleAfter).label })),
+      // A PLAYER GROWING INTO A TRAIT IS A SEASON HEADLINE, not a silent stat edit. `advanceSquad` now
+      // re-checks eligibility after development; without this line the manager would never learn it
+      // happened, which is the same invisible-mechanism defect the re-check exists to fix.
+      earned: roll.changes.filter((ch) => !ch.retired && ch.earnedTraits?.length)
+        .map((ch) => ({ ...lite(ch.player), traits: ch.earnedTraits })),
       risers: roll.changes.filter((ch) => ch.ovrAfter > ch.ovrBefore && !ch.retired).map((ch) => ({ ...lite(ch.player), from: ch.ovrBefore, to: ch.ovrAfter })),
       fallers: roll.changes.filter((ch) => ch.ovrAfter < ch.ovrBefore && !ch.retired).map((ch) => ({ ...lite(ch.player), from: ch.ovrBefore, to: ch.ovrAfter })),
     };
