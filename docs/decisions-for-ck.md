@@ -2630,10 +2630,17 @@ weight, but it does **not** shrink the existing 117MB `.git` — those objects s
 that needs a history rewrite (`git filter-repo`), which rewrites every commit hash. That is a much bigger
 decision, and given this repo has CI and a remote, probably not worth it before launch.
 
-**My recommendation:** delete `contracts/out`, `contracts/cache` and `contracts/broadcast` outright (pure
-generated residue), and decide separately whether to keep `contracts/lib` + the deleted contracts in
-history as an archive of the abandoned direction. I have not touched any of it — 1,194 tracked files is not
-a change to make unilaterally.
+**RESOLVED — deleted, all 1,194 files.** Verified empirically before touching it rather than argued from
+static analysis: removing the whole directory in an isolated worktree and rebuilding produced a
+**byte-identical bundle** (SHA-256 `738d1cc…` with and without), with typecheck, `sim_stats` and
+`qa_branch_switch` all green. There is no `foundry.toml` or `remappings.txt` anywhere — the Foundry project
+config was already gone, so what remained was the vendored dependencies of a project that no longer exists.
+No submodules, no imports, no ABI or address usage anywhere in the game, and no reference in `ci.yml`.
+
+Nothing is lost: the 3 contract sources are in history at `ede061b`, and forge-std/OpenZeppelin are
+published packages that `forge install` restores. The 117MB `.git` is unchanged — those objects stay in
+history, and reclaiming them would need `git filter-repo` rewriting every commit hash, which is not worth
+doing before launch.
 
 ## 80. The Steam AI-content disclosure is already required — the capsule art triggered it
 
