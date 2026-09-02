@@ -18,10 +18,17 @@ is a silent no-op. Licensing/attribution: `/CREDITS.md` + `docs/licenses/`.
 | `international-1` | A Rising Power | national-team call-up |
 | `legends-1` | Recalling When | Trophy Room / Hall of Legends |
 
-## Still to choose (empty pools → silent for now)
-- `bigmatch-*` — cup final / World Finals
-- `emotional-*` — retirement / succession (the bloodline beat)
-- `scout-*` — new game / prospect scouting
+| `bigmatch-1` | *(title not recorded)* | cup final / World Finals (`main.ts:4913`) |
+| `emotional-1` | *(title not recorded)* | retirement / succession — the bloodline beat (`main.ts:2766`) |
+| `scout-1` | *(title not recorded)* | new game / prospect scouting (`main.ts:765`, `:3136`) |
 
-Drop the chosen files here named `<slot>-1.ogg` (add `-2`, `-3` for rotation), then add the pool
-to `MANIFEST` in `client/src/audio.ts`.
+Every one of the twelve `MusicContext` values in `client/src/audio.ts` has both a file on disk and at
+least one trigger in `main.ts` — checked by walking `audio.play()` / `audio.sting()` call sites, not by
+reading this table. `triumph` is the only one played as a STING over the current track rather than as a
+context switch, so a title win does not stop the music the next screen is about to want.
+
+To add a rotation slot, drop `<slot>-2.ogg` beside its `-1` and extend the pool array in `MANIFEST`.
+
+**Note:** the three titles above are missing because they were filled after this table was written. If you
+still have the itch.io download, record them here — `docs/licenses/README.md` treats the track list as part
+of the proof-of-rights trail.
