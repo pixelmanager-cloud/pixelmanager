@@ -1304,12 +1304,14 @@ export const api = {
     const tokens = getActiveModel().tokens;
     const legs = await localStore.legaciesFor(OWNER).catch(() => [] as any[]);
     const legendBy = new Map<string, any>();
+    const legendName = new Map<string, string>();
     for (const l of (legs as any[])) {
       // KEYED BY THE FULL id, generation suffix included. Stripping `:g<gen>` collapsed every generation
       // onto one key, and `legaciesFor` sorts NEWEST FIRST -- so last-write-wins left the FOUNDER's card
       // rendered under his great-grandson's name, permanently, on the one screen the whole dynasty fantasy
       // is displayed. The suffix is deliberate; saveLegacy writes it for exactly this reason.
       try { legendBy.set(String(l.player_id ?? l.playerId ?? ''), JSON.parse(l.card_json ?? l.cardJson ?? '{}')); } catch { /* skip */ }
+      legendName.set(String(l.player_id ?? l.playerId ?? ''), String(l.name ?? ''));
     }
     // HONOURS FOLLOW THE MAN ONTO THE TREE. An award won by a bloodline player is part of his record,
     // not just the club's, so the Family Record shows it against him. Squad players still win awards --
@@ -1320,8 +1322,54 @@ export const api = {
       list.push({ kind: a.kind, label: AWARD_LABEL[a.kind as AwardKind] ?? a.kind, season: a.season_number, value: a.value });
       wonBy.set(a.player_id, list);
     }
+    // THE FOREBEARS. `succeed()` reworks the played token IN PLACE — same id, generation +1 — so a save
+    // four generations deep holds exactly ONE token for the line the player actually played. Built from
+    // `tokens` alone the Family Record therefore showed the living star and the brothers he was picked
+    // over, and left out his father, his grandfather and the founder: the dynasty was missing from the
+    // dynasty screen, and the "founder at the base" layout had nobody to put there.
+    //
+    // Each retired generation does survive — as the legend snapshot `succeed()` writes under `<id>:g<gen>`
+    // — so the men are recoverable; they simply had no node. These are those nodes, chained father to son.
+    const ancestors = tokens.flatMap((t) => {
+      const gen = t.generation ?? 0;
+      const out: any[] = [];
+      for (let g = 0; g < gen; g++) {
+        const key = `${t.id}:g${g}`;
+        const card = legendBy.get(key);
+        if (!card) continue; // a generation with no snapshot (a pre-suffix save) simply has no node
+        out.push({
+          id: key, name: legendName.get(key) || t.name, generation: g,
+          awards: wonBy.get(key) ?? [],
+          // Chain to the nearest EARLIER generation that actually has a node, so one missing snapshot
+          // leaves a gap in the tree rather than breaking the line below it. The FIRST man of a chain is a
+          // root only if he is generation 0: when the line switches to a cousin, that cousin's own retired
+          // generations start partway up the tree and must still hang off the father he was born to, or
+          // the record renders as two unrelated families.
+          parentId: out.length ? out[out.length - 1].id : (g === 0 ? null : ((t as any).parent_id ?? null)),
+          fatherName: out.length ? out[out.length - 1].name : ((t as any).father_name ?? null),
+          branch: 'played', state: 'retired', overall: card.peak ?? card.overall ?? 0,
+          personality: null, honours: null, legend: card,
+        });
+      }
+      return out;
+    });
+    const lastAncestorOf = new Map<string, any>();
+    for (const a of ancestors) lastAncestorOf.set(a.id.split(':g')[0], a);
+    const ancestorIds = new Set(ancestors.map((a) => a.id));
+    // Sons hang off the man of the PREVIOUS generation. A sibling records his father as the bare token id,
+    // which now names whoever that line has reached — so a gen-1 brother pointed at his own great-grandson
+    // and drew a branch running backwards up the page.
+    const forefatherFor = (tokenId: string, generation: number): string | null => {
+      const key = `${tokenId}:g${generation - 1}`;
+      return ancestorIds.has(key) ? key : null;
+    };
+    // A forebear inherited his son's stored father id above; that id names a LINE, so resolve it to the man
+    // of the generation above him the same way a sibling's does.
+    for (const a of ancestors) {
+      if (a.parentId && !ancestorIds.has(a.parentId)) a.parentId = forefatherFor(a.parentId, a.generation) ?? a.parentId;
+    }
     return {
-      nodes: tokens.map((t) => {
+      nodes: [...ancestors, ...tokens.map((t) => {
         let honours: any = null;
         try { honours = t.career_honours_json ? JSON.parse(t.career_honours_json) : null; } catch { /* none */ }
         return {
@@ -1330,7 +1378,14 @@ export const api = {
           // handed the grandfather's medals to a ten-year-old who has never played -- and the men who
           // actually won them had no node to sit on. Same generation-qualified key as the legend card.
           awards: wonBy.get(`${t.id}:g${t.generation ?? 0}`) ?? wonBy.get(t.id) ?? [],
-          parentId: (t as any).parent_id ?? null,
+          // The living man's father is the last ancestor on his own line; a sibling's is the forefather of
+          // the generation above him, when that man has a node.
+          parentId: ((): string | null => {
+            const raw = (t as any).parent_id ?? null;
+            const gen = t.generation ?? 0;
+            if ((t as any).branch && (t as any).branch !== 'played') return (raw && forefatherFor(raw, gen)) || raw;
+            return lastAncestorOf.get(t.id)?.id ?? raw;
+          })(),
           // WHOSE SON HE IS. Token.father_name was written at every succession and read by NOTHING — the
           // succession screen's "Dane's boy" caption comes from a transient field on the response, so the
           // persisted column had no reader at all and field_wiring.ts flagged it. The Family Record is
@@ -1343,7 +1398,7 @@ export const api = {
           // suffix existed, so an old save keeps its legend cards.
           honours, legend: legendBy.get(`${t.id}:g${t.generation ?? 0}`) ?? legendBy.get(t.id) ?? null,
         };
-      }),
+      })],
     };
   },
   /** The house's renown, as a bare number, for the places it OPENS DOORS. Recomputed rather than cached:

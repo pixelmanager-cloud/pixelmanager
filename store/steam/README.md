@@ -53,10 +53,32 @@ breaks with it. Steam requires five.
 | `04-hub` | the shape of the game — your player, your club, scouting, dynasty |
 | `05-scouting` | the scouting board: local tryouts and four destinations with odds and fees |
 | `06-trophies` | The Houses of the Game — thirteen families ranked by renown, yours 13th. The long game. |
+| `07-family-record` | the game in one image: four generations on painted parchment, Nils → Leo → Milo → Enzo, with the sons you passed over branching off |
+| `08-houses-ladder` | the same ladder as `06` but nineteen seasons in — 7 titles, 3 legends, the name risen to 7th of 13 |
+| `09-hall-of-legends` | one card per retirement: an Immortal, two Cult Heroes, and the two ten-year-olds who could be next |
+| `10-club-season` | the manager half — a squad decision with no good answer, a sponsor choice, fixtures and the table |
+| `11-facilities` | what nineteen seasons buys: a maxed stadium and training ground, 2,534c a season to run, 66c in the bank |
+
+The first six are shot on a **fresh** save by `store_screenshots.mjs`. The last five need a save several
+generations deep, which is hours of play and not reproducible by hand — so `tools/dev_dynasty_save.ts`
+builds one by driving the **real offline facade** (the same calls the UI makes) through four generations,
+and `tools/store_dynasty_screenshots.mjs` plants that save in IndexedDB and photographs what it unlocks.
+Nothing in those five is mocked up: every stat, legend card, honour and renown figure is engine output.
+
+```
+npm run build --workspace client
+npx tsx tools/dev_dynasty_save.ts 4 > /tmp/dynasty.json
+node tools/store_dynasty_screenshots.mjs /tmp/dynasty.json store/steam/screenshots
+```
 
 Two things worth knowing before editing the capture script: the onboarding help panels cover the career
 screen **and swallow clicks** (without dismissing them an automated run stalls on turn 12 forever), and
-every panel has its own back button — there is no single "back to hub" selector.
+every panel has its own back button — there is no single "back to hub" selector. The player and prospect
+card overlays also intercept clicks and have to be removed, not just clicked away.
+
+Shooting the dynasty screens is also what surfaced bug #29 (`docs/bug-queue.md`): the Family Record was
+drawn from tokens alone, so it showed the living star and the brothers he was picked over and omitted his
+father, grandfather and the founder. It could not have been caught without a save this deep.
 
 ## Still to do
 

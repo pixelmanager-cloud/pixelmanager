@@ -142,3 +142,38 @@ a flag the career already holds, which takes it **63.6% → 82.3%** of careers.
 **#5's rate was overstated.** The sweep said 26% of second-yellow dismissals went to a player never booked;
 measured against the unfixed engine it is 1 in 10. The defect was real either way.
 
+
+---
+
+## Found after the sweep — the dynasty was missing from the dynasty screen
+
+**#29 — `api.bloodline()` omitted every forebear of the played line.** Found while driving the built game
+to screenshot the Family Record for the store page.
+
+`bloodline()` built its nodes from `getActiveModel().tokens`. But `succeed()` reworks the played token **in
+place** — same id, `generation + 1` — so a save four generations deep holds exactly **one** token for the
+line you actually played. The tree therefore rendered the living star and the brothers he was picked over,
+and left out his father, his grandfather and the founder. On a four-generation dynasty that is three of the
+four men you spent hours playing, absent from the one screen the whole fantasy is displayed on — and the
+"founder at the base" layout in `renderFamilyTree` had nobody to put at the base, so the lowest rank went
+to whichever passed-over brother happened to hold the lowest generation number.
+
+Two consequences fell out of the same root cause:
+- Every sibling records his father as the **bare token id**, which names a *line*, not a man — and that line
+  had since advanced. A generation-1 brother was drawn hanging off his own great-grandson, so his branch ran
+  backwards up the page.
+- A retired forebear had no node, so nothing displayed his legend tier. The medallions that did render for
+  retired men were blank ovals under a name.
+
+The men were never lost: `succeed()` has always written a legend snapshot under `<id>:g<gen>` (that suffix
+exists for exactly this reason). They simply had no node. The fix synthesises the ancestor chain from those
+snapshots, chains each man to his father, and resolves a bare token id to the forefather of the generation
+above. A chain that starts partway up the tree — which is what a **cousin switch** produces — hangs off the
+father that cousin was born to rather than floating as a second root; `qa_branch_switch.ts`'s "exactly one
+root" assertion caught that case after the first version of the fix, which is precisely its job.
+
+`tools/playtest/bloodline_tree.ts` is the new probe: it drives the real facade through four generations and
+asserts the record holds every generation from the founder to the living star, each hanging off a father
+exactly one generation above him, with a caption on every retired man. Against the unfixed tree it reports
+9 distinct failures; the sweep's existing bloodline harnesses all passed throughout, because every one of
+them measures a tree built from tokens and so shared the blind spot.
