@@ -50,8 +50,43 @@ how busy this laptop happened to be.
 have not loaded, because the fallback is close enough in size that a whole render in Courier New is easy to
 miss. (See decision 78 — the game itself has the same dependency, which matters more.)
 
+## The score
+
+Cut from two tracks the game already owns (Bit By Bit Sound — see `docs/licenses/README.md`, which confirms
+the licence covers trailer use). Nothing generated. `tools/trailer/score.mjs` renders it through Chromium's
+WebAudio, the same Vorbis decoder the game plays these files with.
+
+| trailer | source | why |
+|---|---|---|
+| 0:00–0:24 | `international-1` "A Rising Power" 0.000→24.000 | its band lands at second 6 — exactly the first picture cut; its accents fall on the 0:13 and 0:19 cuts, and its quietest second is 23, the breath before the drop |
+| 0:24–0:36 | `legends-1` "Recalling When" 0.000→12.000 | the Hall of Legends motif, alone. Its own 1.45s of true silence lands at 0:27, under "every career ends" |
+| 0:36–0:54 | `legends-1` 42.000→60.000 | **the centrepiece.** The track contains a built-in decay to −51 dB at 43.6 and a hard full-arrangement re-entry at 48.000 in the relative major. Placed here, the collapse runs under ONE / TWO / THREE and the re-entry lands on **FOUR** |
+| 0:54–0:57 | `legends-1` 0.000→3.000 | the motif alone again, bookending, under the title card |
+| 0:57–1:01 | `legends-1` 123.000→127.000 | the track's own final cadence; the last chord lands at 60.1s as the picture fades |
+
+**Why the joins hold:** `legends-1` is exactly 80.00 BPM with 3.000-second bars and downbeats on exact
+multiples of 3.000, so every splice above is on a bar line and stays in time. 123.000 is bar 41.
+
+**Why `legends-1` and not something more obviously "trailer":** it is the track the game actually plays in
+the Trophy Room and Hall of Legends — the screen the trailer's centrepiece is showing. The music is
+diegetically correct, which no bought or generated cue could be.
+
+**One thing that had to change from the measured plan:** the bookend was originally a single 7-second lift
+of `legends-1` 0.000→7.000, but that window contains the track's built-in 1.45s of silence. Under the title
+card that is two seconds of dead air at the very end of a trailer, which reads as the audio having broken.
+Ending on the real cadence fixes it.
+
+Rebuild and mux:
+
+```
+node tools/trailer/score.mjs /tmp/score.wav
+afconvert -f m4af -d aac -b 256000 /tmp/score.wav /tmp/score.m4a
+swiftc -O tools/trailer/MuxAudio.swift -o /tmp/mux_audio
+/tmp/mux_audio trailer.mp4 /tmp/score.m4a trailer-scored.mp4     # passthrough — no video re-encode
+```
+
 ## Still to do
 
-**Sound.** The cut is timed to hold on each beat long enough for music, but there is no audio track: the
-trailer is silent. It needs either a licensed track or something written for it, plus whatever stingers the
-dissolves want — a decision for you, not something to pick unilaterally.
+**Nothing blocking.** Two follow-ups are written up in `docs/decisions-for-ck.md`: §80 (the Steam AI-content
+disclosure, already required because of the capsule art) and §81 (a one-line email to the composer
+confirming trailer use — insurance, not a blocker).

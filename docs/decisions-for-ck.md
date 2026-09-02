@@ -2634,3 +2634,51 @@ decision, and given this repo has CI and a remote, probably not worth it before 
 generated residue), and decide separately whether to keep `contracts/lib` + the deleted contracts in
 history as an archive of the abandoned direction. I have not touched any of it — 1,194 tracked files is not
 a change to make unilaterally.
+
+## 80. The Steam AI-content disclosure is already required — the capsule art triggered it
+
+Checked while deciding the trailer music. Steam's AI disclosure lives in the Steamworks **Content Survey**
+(App Admin → Content Survey → "Generative Artificial Intelligence Content"), and the question is not limited
+to the shipped build:
+
+> *"Does this game use generative artificial intelligence to generate content for the game, either
+> pre-rendered or live-generated? This includes the game itself, the storepage, and any Steam community
+> assets or marketing materials."*
+
+The eight Steam capsule assets in `store/steam/` were generated with Retro Diffusion. That is pre-generated
+AI content in a store asset, so the answer is **yes**, and a short free-text description of what was AI
+generated has to go with it. **That description is published on the public store page.** So this is a live
+obligation regardless of what we do about music — it was triggered the moment we made the capsules, not by
+anything to do with the trailer.
+
+**What to do:** answer the Pre-Generated question yes and write one or two honest sentences — something like
+*"Store capsule artwork was generated with an AI image tool and edited by hand. All in-game art, text and
+audio are human-made."* Accuracy matters more than brevity here; it is a statement to players.
+
+**Worth knowing:** using AI music in the trailer would NOT have created a new obligation — it would just be
+another line in the same description. So AI disclosure was never a reason to prefer the licensed music. The
+reasons to prefer it are that it is already paid for, the licence covers the use, and `legends-1` is
+literally the track the game plays on the screen the trailer's centrepiece shows.
+
+## 81. Ask Bert for one line confirming trailer use — cheap insurance, not a blocker
+
+The Bit By Bit Sound EULA grants sync + master use for *"a game, film, or other media project including
+commercial projects"* and for any *"similar media project where music from the pack accompanies visual
+images"*. A trailer is plainly that, and there is no promotional carve-out (verified: *trailer*,
+*promotional*, *marketing*, *advertising*, *YouTube*, *stream* all appear zero times).
+
+But the agreement also contains a gap-filler: an unlisted use *"should be assumed not permitted ... without
+prior permission from the licensor **which will not be unreasonably withheld**"*, and it frames the pack's
+purpose as *"a video game stock music library"*. A strict reader could lean on that.
+
+The EULA itself offers the remedy — *"the licensor will, to all reasonable effort, assist the licensee in
+providing acceptable proof of this agreement"* — so one email to **bert_c@bitbybitsound.com** saying "I'm
+using tracks from the Ultimate Retro RPG Music Pack in my game's Steam/YouTube trailer, confirming that's
+within the licence" gets a written record for the price of two minutes. Do it before launch; do not wait
+for it to ship the trailer.
+
+**Separately, the practical risk is YouTube Content ID, not the licence.** The clause forbidding Content ID
+registration binds *you*; it does not stop the licensor or another licensee having fingerprinted the same
+tracks. If a claim lands, the trailer stays viewable — it redirects ad revenue you were not earning — and
+the fix is Bert's written proof plus a dispute. Never enrol the trailer in Content ID or claim the music as
+your own.

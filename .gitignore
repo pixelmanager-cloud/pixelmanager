@@ -37,3 +37,7 @@ store/steam/trailer/*.webm
 # fal.ai key — same rule as the Retro Diffusion key: never committed
 tools/.fal_key
 .fal_key
+
+# The rendered trailer score — derived from the licensed OGGs by tools/trailer/score.mjs
+store/steam/trailer/*.wav
+store/steam/trailer/*.m4a
