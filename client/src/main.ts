@@ -2661,16 +2661,20 @@ class Game {
     if (newTier !== tier) this.setClubTier(newTier);
     if (promoted) {
       toast(`⬆️ PROMOTED to ${tierName(newTier)}!`); audio.sting('triumph'); audio.chime('triumph');
-      this.feedEvent('promotion', '⬆️', undefined, { from: tierName(tier), to: tierName(newTier) });
+      // STAMPED WITH THE SEASON THE PLAYER IS ABOUT TO SEE. These four are written during the rollover,
+      // BEFORE `saveMgr` increments the season a few lines below, and `seasonFeedHtml` shows only entries
+      // matching the CURRENT season — so promotion, relegation, the title and the near-miss were written to
+      // the feed and then never displayed. The four biggest things that can happen to a club, silent.
+      this.feedEvent('promotion', '⬆️', undefined, { from: tierName(tier), to: tierName(newTier) }, m.season + 1);
     } else if (relegated) {
       toast(`⬇️ Relegated to ${tierName(newTier)}.`);
-      this.feedEvent('relegation', '⬇️', undefined, { from: tierName(tier), to: tierName(newTier) });
+      this.feedEvent('relegation', '⬇️', undefined, { from: tierName(tier), to: tierName(newTier) }, m.season + 1);
     } else if (t.pos === 1) {
-      this.feedEvent('title', '🏆', undefined, { from: tierName(tier), to: tierName(tier) });
+      this.feedEvent('title', '🏆', undefined, { from: tierName(tier), to: tierName(tier) }, m.season + 1);
     } else if (tier > 1 && t.pos <= 4) {
       // Missed the top two and the climb by a place or two. The season the dynasty nearly moved is worth
       // marking — it is the one finish that stings, and it had no line at all.
-      this.feedEvent('near_miss', '😖', undefined, { n: t.pos, from: tierName(tier), to: tierName(tier - 1) });
+      this.feedEvent('near_miss', '😖', undefined, { n: t.pos, from: tierName(tier), to: tierName(tier - 1) }, m.season + 1);
     }
     // THE OTHER FAMILIES REPORT IN. The Houses table used to move in silence: you opened the Trophy Room a
     // generation later and the order had changed, with no memory of it changing. A standing you never
@@ -3480,7 +3484,7 @@ class Game {
   private static readonly FEED_MAX = 240;
   /** Narrate a manager event through the context-tiered layer and put it in the season feed. The tiering is
    *  the point: selling an eleven-season servant and selling a summer signing produce different words. */
-  private feedEvent(event: Parameters<typeof narrateManager>[0], icon: string, person?: PersonCtx, vars?: Record<string, unknown>) {
+  private feedEvent(event: Parameters<typeof narrateManager>[0], icon: string, person?: PersonCtx, vars?: Record<string, unknown>, season?: number) {
     const m = this.loadMgr();
     const tier = this.clubTier();
     const line = narrateManager(event, {
@@ -3489,7 +3493,7 @@ class Game {
       club: { club: this.club?.name ?? 'the club', season: m.season, tier, tierName: tierName(tier) },
       vars: vars as any,
     });
-    if (line) this.pushFeed(icon, line);
+    if (line) this.pushFeed(icon, line, season);
   }
   /** feedEvent, but at most once for a given key. For events raised from a render path, where the same
    *  moment would otherwise be re-announced every time the screen is drawn. */
