@@ -27,7 +27,9 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done · `(design)` = des
 - [x] **Trophies** — 12 RD Plus silverware pieces. Wired into the Trophy Room (`trophy.ts`).
 - [x] **Scene backdrops** — 8 RD Plus environment scenes (stadium/pitch/dressing room/academy/office/trophy room/press/scouting). Wired as per-screen ambient backdrops.
 - [~] **RD UI icons** — 24 generated as candidates; NOT yet swapped in (need per-icon keep-vs-hand-pixeled decision). Hand-pixeled `sprites.ts` set still live.
-- [ ] **Capsule / header / library art** — Steam store visuals (RD Pro; needed for store page).
+- [x] **Capsule / header / library art** — DONE 2026-09-02. All eight assets at exact Steam sizes in
+      `store/steam/`, generated at RD Pro and integer-upscaled from native pixel-art resolution.
+      Concept: three number-12 shirts, one per era. $4.50 spent, $47.28 balance remaining.
 - [ ] **Screenshots + short trailer/GIF** — text match view, Trophy Room, bloodline tree, scouting board all show well.
 - [ ] **Art review from playthrough** — user noting weird art during their own playthrough; fix the flagged list after.
 
