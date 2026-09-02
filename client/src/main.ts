@@ -11,7 +11,7 @@ import { api, hasToken, setToken, clearToken, type Account, type StandingOrders,
 import { flushSave, getSaveHealth } from './save';
 import { sprite } from './sprites';
 import { crest, crestColors } from './crest';
-import { portraitImg, bandForAge } from './portrait';
+import { portraitImg, bandForAge, portraitUrl } from './portrait';
 import { flagImg } from './flag';
 import { trophyImg, type TrophyKey } from './trophy';
 import { kitTemplate, recolorKit } from './kit';
@@ -381,8 +381,11 @@ function statsTableHTML(players: Player[], highlight?: Set<string>, sort?: Squad
     const cells = cols.map(([, k]) => `<td class="stat" style="background:${statColor(p.attrs[k] ?? 0)}">${Math.round(p.attrs[k] ?? 0)}</td>`).join('');
     const mark = on ? '<td class="inxi-mark">●</td>' : '<td></td>';
     const nameCell = tier
-      ? `<td class="name nft-name tier-${tier.key}" data-card="${p.id}" title="Your star · ${tier.name} — click to view card">${tier.icon} ${p.name}</td>`
-      : `<td class="name" data-card="${p.id}" title="Click to view his card">${p.name}</td>`; // every squad player is a full character now — his card is worth opening (Living Squad)
+      // A FACE IN THE SQUAD TABLE. The Living Squad work gave every player an age, a personality, traits,
+      // morale and a contract — they are characters — and they were rendered as rows of text. The portraits
+      // already existed and were only ever shown on a card you had to open one at a time.
+      ? `<td class="name nft-name tier-${tier.key}" data-card="${p.id}" title="Your star · ${tier.name} — click to view card">${portraitImg(p.name, bandForAge((p as any).age), 22, 'sq-face')}${tier.icon} ${p.name}</td>`
+      : `<td class="name" data-card="${p.id}" title="Click to view his card">${portraitImg(p.name, bandForAge((p as any).age), 22, 'sq-face')}${p.name}</td>`; // every squad player is a full character now — his card is worth opening (Living Squad)
     return `<tr class="${on ? 'inxi' : ''}${nft ? ' nft-row' : ''}">${mark}<td class="pos role-${p.role}">${p.role}</td>${nameCell}<td class="stat" style="background:${statColor(overall(p))}">${overall(p)}</td><td class="stat age">${p.age ?? '–'}</td>${cells}</tr>`;
   }).join('');
   return `<table class="squad">${head}${rows}</table>`;
@@ -3792,10 +3795,35 @@ class Game {
       // The pop lives on an INNER group. A CSS transform on the outer one would override the SVG
       // `transform="translate(...)"` attribute that positions the node, and the whole tree would collapse
       // onto the origin.
+      // A FACE, NOT TWO LETTERS. This file's own description of the screen is "oval PORTRAIT medallions",
+      // after the illuminated genealogy it is modelled on — and those manuscripts are painted miniatures.
+      // The initials were a placeholder for portraits the game already had: 64 of them, in three age bands,
+      // hash-assigned stably per name, already used on the player and prospect cards.
+      //
+      // The band carries information the tree could not otherwise show: a man who played and retired reads
+      // as a veteran, a son who was never developed is still a boy, and the living star is in his prime —
+      // so the generations visibly age up the page. Falls back to the initials when a pool is empty, which
+      // is why the text is still drawn underneath.
+      const band = n.state === 'prospect' ? 'youth' : (n.legend || n.state === 'retired') ? 'veteran' : 'prime';
+      const face = portraitUrl(String(n.name ?? ''), band);
+      // A retired forebear has no live token to read `peak_overall` from — his record is the legend card
+      // `succeed()` snapshotted, which carries `peakOverall`: the SAME measure, so every man on the tree is
+      // scored on one scale. Reading `legendRating` here instead put a 0-100 career score next to the
+      // living star's 0-20 ability, and the founder's 28 read as better than the current star's 12.
+      // Stature is already carried by the tier word in the line below ("Cult Hero", "Club Great"); this
+      // badge is how good he actually got.
+      const ovr = Math.round(Number(n.legend?.peakOverall ?? n.overall) || 0);
       return `<g class="fr-node${cls}" transform="translate(${p.x},${p.y})"><g class="fr-in" style="--fr-g:${rankOf(n)}">`
         + `<title>${who}${honourLine}</title>`
         + `<ellipse rx="30" ry="34" class="fr-oval"/><ellipse rx="24" ry="28" class="fr-oval-inner"/>`
-        + `<text y="5" class="fr-init">${String(n.name ?? "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2)}</text>`
+        // Only when there is no face to draw. Left in as the fallback, but rendering it underneath a
+        // portrait made the initials ghost through — visibly so on passed-over sons, who are drawn paler.
+        + (face ? '' : `<text y="5" class="fr-init">${String(n.name ?? "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2)}</text>`)
+        + (face ? `<image class="fr-face" href="${face}" x="-24" y="-28" width="48" height="56" preserveAspectRatio="xMidYMid slice" clip-path="url(#fr-face-clip)"/>` : '')
+        // His peak, in one glyph. The tree's job is lineage at a glance — the full record is one click away
+        // on his card — so this is the single number worth carrying, opposite the honours count.
+        + (ovr > 0 ? `<g class="fr-ovr" transform="translate(-26,-26)"><circle r="11" class="fr-ovr-dot"/>`
+            + `<text y="4" class="fr-ovr-n">${ovr}</text></g>` : '')
         + `<rect x="-66" y="38" width="132" height="17" class="fr-banner"/>`
         + `<text y="50" class="fr-name">${String(n.name ?? "").slice(0, 20)}</text>`
         + (sub ? `<text y="68" class="fr-sub">${sub}</text>` : "")
@@ -3806,6 +3834,9 @@ class Game {
     host.innerHTML = `<div class="family-record"><div class="fr-frame">`
       + `<div class="fr-title">The Family Record</div>`
       + `<svg viewBox="0 0 ${W} ${H}" class="fr-svg" role="img" aria-label="An illuminated family tree of the bloodline, the founder at the base.">`
+      // userSpaceOnUse means this resolves in each node's own translated space, so one definition clips
+      // every medallion rather than needing one per person.
+      + `<defs><clipPath id="fr-face-clip" clipPathUnits="userSpaceOnUse"><ellipse rx="24" ry="28"/></clipPath></defs>`
       + trunk + links + medallions + `</svg>`
       + `<div class="fr-foot">${gens.length > 1
           ? 'The founder stands at the root. Sons who were passed over are shown paler — their line can still be taken up.'

@@ -1639,6 +1639,18 @@
         .fr-svg .fr-trunk, .fr-svg .fr-branch, .fr-svg .fr-in { animation: none; stroke-dashoffset: 0; opacity: 1; }
       }
       .fr-oval { fill: #f6ecd2; stroke: #a87f3c; stroke-width: 3; }
+      /* The painted miniature. Sits over the initials, which stay behind it as the fallback when a portrait
+         pool is empty. `image-rendering: pixelated` matters: these are small pixel-art faces and the
+         browser's default smoothing turns them to mush at this size. */
+      .fr-face { image-rendering: pixelated; opacity: 0.94; }
+      /* The squad table's faces. Small, inline, and pixelated rather than smoothed — at 22px the browser's
+         default interpolation turns a 64px pixel-art face into mush. */
+      .sq-face { image-rendering: pixelated; vertical-align: middle; margin-right: 7px;
+        border: 1px solid #2a2a4a; border-radius: 2px; background: #10101f; }
+      .fr-sib .fr-face { opacity: 0.55; }   /* passed-over sons stay paler, as the footnote promises */
+      .fr-ovr-dot { fill: #6b2b20; stroke: #f3e7c8; stroke-width: 1.5; }
+      .fr-ovr-n { text-anchor: middle; font-family: 'Iowan Old Style', Palatino, Georgia, serif;
+        font-size: 11px; font-weight: 700; fill: #f6ecd2; }
       .fr-oval-inner { fill: #fbf5e4; stroke: #c9a24d; stroke-width: 1.5; }
       .fr-init { text-anchor: middle; font-family: 'Iowan Old Style', Palatino, Georgia, serif; font-size: 20px; font-weight: 600; fill: #6b2b20; }
       .fr-banner { fill: #f3e7c8; stroke: #a87f3c; stroke-width: 1.2; }
