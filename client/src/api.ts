@@ -689,6 +689,16 @@ export const api = {
     // pedigree already means here. Sublinear, so a house that is already winning is not handed more.
     const houseBefore = houseRenown(membersOf(getActiveModel())).renown;
     rf.pedigree = Math.min(1, (rf.pedigree ?? 0) + renownPedigree(houseBefore));
+    // THE SON YOU PLAY WAS THE ONE SON WITH NO FAMILY RESEMBLANCE. mintHeirs models a family deliberately:
+    // each attribute gets a family mean shared by every brother, plus a per-child deviation that is tiny on
+    // the family attribute (KEEP_FAMILY 0.86, FAMILY_DEV 0.6) and wide on the others — "that is what makes
+    // it the family's, rather than merely a trait the brothers happen to share". It mints `nHeirs` of them
+    // and the sibling loop below consumes heirs[1..n-1], because heirs[0] IS the played heir. But his genes
+    // came from rebornFields' own plain inheritGenes roll instead, so every brother carried the family
+    // attribute and the boy the player actually embodies did not. The whole model, missing at its centre.
+    const nHeirs = heirCount(parentSeed, parentGen);
+    const heirs = mintHeirs(parentGenes, parentSeed, nHeirs);
+    rf.genes_json = JSON.stringify(heirs[0].genes);
     await localStore.updateToken(pid, rf);
     // ── THE BRANCHING BLOODLINE ────────────────────────────────────────────────────────────────────
     // A generation produces 1-3 heirs. The PLAYED line keeps the parent's token id (above), because the
@@ -712,8 +722,6 @@ export const api = {
       return foundingNameFor(seed, getActiveModel().profile.name);   // pool exhausted; a repeat beats a hang
     };
 
-    const nHeirs = heirCount(parentSeed, parentGen);
-    const heirs = mintHeirs(parentGenes, parentSeed, nHeirs);
     const siblings: Array<{ id: string; name: string; temper: string; potentialStars: number; familyTrait: string; fatherName: string; cousin: boolean }> = [];
     for (let i = 1; i < heirs.length; i++) {
       const h = heirs[i];
