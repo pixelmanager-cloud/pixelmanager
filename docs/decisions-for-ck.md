@@ -2606,3 +2606,31 @@ removes the last runtime network dependency in the game.
 
 I have not done it unilaterally because it means adding vendored third-party binaries to the repo and a
 licence file, which is your call rather than a bug fix. **Say the word and it is an hour's work.**
+
+## 79. 20MB of the removed web3 layer is still tracked — including build output and deploy logs
+
+`ede061b Remove web3/blockchain layer; run 100% off-chain` did its job: `contracts/src` is gone, and the
+web3 references left in `client/src` and `shared/src` are all *comments* explaining what was removed, which
+is exactly what should remain.
+
+What survived is the scaffolding around it. `contracts/` still holds **1,194 tracked files, 20MB**:
+
+| dir | files | what it is |
+|---|---|---|
+| `contracts/lib` | 1,105 | vendored forge-std + OpenZeppelin — Foundry dependencies for contracts that no longer exist |
+| `contracts/out` | 71 | **compiler output** — build artifacts, committed |
+| `contracts/cache` | 10 | **Foundry's build cache**, committed |
+| `contracts/broadcast` | 8 | **deployment broadcast logs** from on-chain deploys that no longer happen |
+
+Nothing in `client/`, `shared/`, the workspaces list or the build references any of it. `out/` and `cache/`
+are generated artifacts that should never have been committed in the first place.
+
+**One thing to be accurate about:** deleting these stops future clones from checking out 20MB of dead
+weight, but it does **not** shrink the existing 117MB `.git` — those objects stay in history. Reclaiming
+that needs a history rewrite (`git filter-repo`), which rewrites every commit hash. That is a much bigger
+decision, and given this repo has CI and a remote, probably not worth it before launch.
+
+**My recommendation:** delete `contracts/out`, `contracts/cache` and `contracts/broadcast` outright (pure
+generated residue), and decide separately whether to keep `contracts/lib` + the deleted contracts in
+history as an archive of the abandoned direction. I have not touched any of it — 1,194 tracked files is not
+a change to make unilaterally.
