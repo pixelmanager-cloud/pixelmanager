@@ -16,7 +16,14 @@ const MANIFEST: Record<MusicContext, string[]> = {
   scout: ['/audio/scout-1.ogg'],
   career: ['/audio/career-1.ogg', '/audio/career-2.ogg', '/audio/career-3.ogg', '/audio/career-4.ogg', '/audio/career-5.ogg'],
   hub: ['/audio/hub-1.ogg'],
-  match: ['/audio/match-1.ogg'],
+  // THREE TRACKS, BECAUSE A MATCH IS NINE REAL MINUTES. The clock advances 10 game-seconds per real second
+  // at 1x (engine TICK_SEC 0.5, accum +10/s), so a 90-minute fixture takes ~540s — and a single 74-second
+  // loop repeated 7.3 times inside one match, with no rotation, since the avoid-immediate-repeat branch
+  // only runs when a pool has more than one entry. Matches are the most repeated activity in the game.
+  // The pool is now 494s, which is 1.1 loops per match: effectively no repeat within a fixture.
+  // Both additions were picked on measurement rather than name — long, and flat enough (6 dB range) not to
+  // swell over the commentary the player is reading. match-3 is the pack's purpose-built LOOP variant.
+  match: ['/audio/match-1.ogg', '/audio/match-2.ogg', '/audio/match-3.ogg'],
   bigmatch: ['/audio/bigmatch-1.ogg'],
   triumph: ['/audio/triumph-1.ogg'],
   tension: ['/audio/tension-1.ogg'],

@@ -1,0 +1,25 @@
+{
+  "note": "Subsystem x lens. A wave takes a slice; the cursor advances so coverage is systematic rather than whatever an agent happened to think of. 9 x 8 = 72 cells.",
+  "cursor": 0,
+  "subsystems": [
+    { "key": "career",   "brief": "The card career: shared/src/career.ts, shared/src/storyarcs/*, and renderCareer in client/src/main.ts. 120 turns, the loop the player spends most of their time in." },
+    { "key": "match",    "brief": "The match engine: shared/src/engine.ts, and the matchwrap screen in client/src/main.ts. Deterministic, tick-based, TICK_SEC 0.5." },
+    { "key": "manager",  "brief": "The season and club layer: showSeason, spSeasonReward, the team talk, promotion/relegation, fixtures, the league table." },
+    { "key": "dynasty",  "brief": "Succession and bloodline: api.succeed/bloodline/legends/houses, renderFamilyTree, the heir choice, legend cards." },
+    { "key": "economy",  "brief": "shared/src/facilities.ts, contracts.ts, transfermarket.ts, morale.ts, and the squad lifecycle rollover." },
+    { "key": "save",     "brief": "client/src/save.ts, migrations, IndexedDB backend, slot management, and everything that has to survive a reload." },
+    { "key": "ui",       "brief": "client/index.html — 2,065 lines of CSS and markup — plus every DOM write in main.ts." },
+    { "key": "audio",    "brief": "client/src/audio.ts, the 12 MusicContext pools, stings, chimes, and every audio.play/sting call site." },
+    { "key": "content",  "brief": "shared/src/narrate.ts, storyarcs, commentary corpora, tier names, and all player-facing prose." }
+  ],
+  "lenses": [
+    { "key": "dead-wiring",   "brief": "Declared and never invoked; a check that cannot fail; a rule overridden into unreachability; a field written and never read; a branch no input can reach. THE HIGHEST-YIELD LENS ON THIS PROJECT — start here." },
+    { "key": "correctness",   "brief": "The code does not do what its name, comment or docs say. Off-by-one, wrong operand, inverted condition, a guard that lets the bad case through." },
+    { "key": "ux-friction",   "brief": "Something the player cannot understand, cannot find, or cannot undo. Silent failures. Actions with no feedback. Jargon leaking from the code into the UI." },
+    { "key": "visual",        "brief": "Layout that breaks, overlap, contrast, text that overflows or truncates, animation that fights other animation, a state with no visual treatment at all." },
+    { "key": "accessibility", "brief": "prefers-reduced-motion, colour as the only signal, keyboard reachability, what a screen reader would announce, text size." },
+    { "key": "content",       "brief": "Repetition across a career or a dynasty, tone that breaks the game's voice, placeholder text that shipped, {TOKENS} left unfilled." },
+    { "key": "performance",   "brief": "Work done per frame that need not be, layout thrash, O(n^2) over a growing list, assets loaded that are never shown." },
+    { "key": "determinism",   "brief": "Anything in shared/ that could vary between two runs of the same seed; save/reload divergence; ledger drift across generations." }
+  ]
+}

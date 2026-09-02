@@ -17,10 +17,30 @@ export function bandForAge(age: number | undefined, manager = false): Band {
   return 'prime';
 }
 
-/** The portrait image url for a person (stable per name within the band). '' if the pool is empty. */
+/** The portrait image url for a person. '' if the pool is empty.
+ *
+ *  ONE MAN KEEPS HIS FACE AS HE AGES. This hashed `name + band`, so the band was part of the key and each
+ *  life stage landed on an unrelated index: Nils Ashcombe was youth-10, then prime-18, then veteran-2 —
+ *  three different people. Nobody noticed on the Family Record, where each node is one man at one stage,
+ *  but it is glaring the moment faces appear in the squad: a nineteen-year-old you signed becomes somebody
+ *  else on his twentieth birthday, and again at thirty-eight.
+ *
+ *  The pools are now PARALLEL — index k is the same person in youth, prime and veteran, generated as an
+ *  aged triplet with the same heritage, skin and hair — so hashing the name ALONE picks one identity and
+ *  the band only chooses which age of him to show.
+ *
+ *  The modulo still uses each pool's own length so a mismatched or partially-loaded set degrades to the old
+ *  behaviour (a stable but unrelated face) rather than throwing. `sameIdentityAcrossBands` says whether the
+ *  guarantee currently holds; `qa_portraits.ts` asserts it does. */
 export function portraitUrl(name: string, band: Band): string {
   const pool = PORTRAITS[band] ?? [];
-  return pool.length ? `/portraits/${pool[h32(name + band) % pool.length]}` : '';
+  return pool.length ? `/portraits/${pool[h32(name) % pool.length]}` : '';
+}
+
+/** True when the three pools are parallel, which is what makes a face survive ageing. */
+export function sameIdentityAcrossBands(): boolean {
+  const lens = (['youth', 'prime', 'veteran'] as Band[]).map((b) => (PORTRAITS[b] ?? []).length);
+  return lens.every((n) => n > 0 && n === lens[0]);
 }
 
 /** An <img> for a face portrait; self-hides on load error so callers can keep a fallback behind it. */
