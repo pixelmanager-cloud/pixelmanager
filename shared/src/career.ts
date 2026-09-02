@@ -487,7 +487,7 @@ const PERSONALITY_GREED: Record<string, number> = { maverick: 3, mercurial: 2, b
 // Manager-side contract economics (contractCost / contractLength / releaseClause / Contract …) live in
 // contracts.ts so the Manager game gets them via the barrel without the Layer-1 sim. Re-exported here
 // for the career harness's convenience.
-export { contractCost, contractLength, releaseClause, breederRevenue, contractExpirySeason, contractActive, contractView, signContract, type Contract, type PlayerContractView } from './contracts.js';
+export { contractCost, contractLength, releaseClause, contractExpirySeason, contractActive, contractView, signContract, type Contract, type PlayerContractView } from './contracts.js';
 
 // ── FINANCIAL DECISIONS: at most age-chapter breaks (from the Academy on) an OFFER lands on the table.
 // This is the money layer of a player's life — and it MUST trade against the pitch. Chase the money and
@@ -1236,7 +1236,12 @@ export class Career {
     }
     this.energy = clamp(this.energy + opt.energy, 0, 100);
     for (const [k, d] of Object.entries(opt.effects)) this.standing[k as MeterKey] = clamp(this.standing[k as MeterKey] + (d ?? 0), 0, 100);
-    if (opt.tag) this.attrFocus[opt.tag] = (this.attrFocus[opt.tag] ?? 0) + 1; // the soft skill-tree lean
+    // WEIGHTED, because at +1 the whole screen was worth nothing. `attrFocus` reaches the player through
+    // AWARD_WEIGHT (0.07) and is AVERAGED across the stat's source tags first, so a single +1 moves a stat
+    // by a few hundredths. Measured end to end -- same careers, same seeds, only the focus policy differing
+    // -- taking the attribute focus at all six summers instead of resting was worth +0.048 overall. Six
+    // deliberate decisions, and the player could not have detected them.
+    if (opt.tag) this.attrFocus[opt.tag] = (this.attrFocus[opt.tag] ?? 0) + FOCUS_PICK_WEIGHT;
     // A proper summer off clears a lingering DIP: it lifts most of a negative form bonus and retires a
     // slump/knock banner, so a Rest & Recharge visibly resets confidence rather than carrying it over (PT-51).
     if (opt.id === 'rest' && this.formBonus < 0) {
@@ -1859,6 +1864,8 @@ const BASELINE = 7, SPREAD = 12, PEAK = 1.5;
 // stat, so the lean read as a penalty). Removing that line left this constant referenced by nothing but the
 // three comments that still described it as live. The focus lean now runs through AWARD_WEIGHT below.
 const COACH_TAG_WEIGHT = 0.5;
+/** What one summer's attribute focus is worth. See the note at its use site. */
+const FOCUS_PICK_WEIGHT = 10;
 
 const AWARD_WEIGHT = 0.07;
 export function deriveStats(log: Choice[], seed: number, genes: Genes = rollGenes(seed), attrFocus?: Partial<Record<Tag, number>>): CareerPlayerAttrs {

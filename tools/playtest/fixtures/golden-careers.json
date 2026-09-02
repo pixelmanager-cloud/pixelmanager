@@ -790,7 +790,7 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":7,\"strength\":4,\"stamina\":9,\"passing\":10,\"shooting\":9,\"tackling\":8,\"positioning\":13,\"workrate\":11,\"keeping\":4,\"setPiece\":8,\"composure\":10,\"aggression\":8,\"creativity\":6,\"teamwork\":13,\"leadership\":8,\"durability\":8}",
+        "attrs_json": "{\"pace\":7,\"strength\":4,\"stamina\":9,\"passing\":10,\"shooting\":9,\"tackling\":8,\"positioning\":13,\"workrate\":11,\"keeping\":4,\"setPiece\":8,\"composure\":10,\"aggression\":8,\"creativity\":6,\"teamwork\":13,\"leadership\":9,\"durability\":8}",
         "role": "MF",
         "traits_json": "[\"mercenary\",\"marketable\"]",
         "personality": "workhorse",
@@ -2380,7 +2380,7 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":8,\"strength\":7,\"stamina\":15,\"passing\":11,\"shooting\":11,\"tackling\":12,\"positioning\":11,\"workrate\":11,\"keeping\":6,\"setPiece\":12,\"composure\":15,\"aggression\":9,\"creativity\":10,\"teamwork\":9,\"leadership\":10,\"durability\":9}",
+        "attrs_json": "{\"pace\":8,\"strength\":7,\"stamina\":15,\"passing\":11,\"shooting\":11,\"tackling\":12,\"positioning\":11,\"workrate\":11,\"keeping\":6,\"setPiece\":12,\"composure\":15,\"aggression\":9,\"creativity\":10,\"teamwork\":9,\"leadership\":11,\"durability\":9}",
         "role": "MF",
         "traits_json": "[\"mercenary\",\"marketable\"]",
         "personality": "stoic",
@@ -3183,7 +3183,7 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":6,\"strength\":3,\"stamina\":8,\"passing\":7,\"shooting\":10,\"tackling\":7,\"positioning\":9,\"workrate\":7,\"keeping\":16,\"setPiece\":8,\"composure\":10,\"aggression\":7,\"creativity\":7,\"teamwork\":6,\"leadership\":6,\"durability\":5}",
+        "attrs_json": "{\"pace\":6,\"strength\":3,\"stamina\":8,\"passing\":7,\"shooting\":10,\"tackling\":7,\"positioning\":10,\"workrate\":7,\"keeping\":17,\"setPiece\":8,\"composure\":10,\"aggression\":7,\"creativity\":7,\"teamwork\":7,\"leadership\":6,\"durability\":5}",
         "role": "GK",
         "traits_json": "[\"wall\",\"injury_prone\",\"mercenary\",\"marketable\"]",
         "personality": "workhorse",
@@ -3974,7 +3974,7 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":14,\"strength\":10,\"stamina\":10,\"passing\":11,\"shooting\":11,\"tackling\":9,\"positioning\":14,\"workrate\":12,\"keeping\":6,\"setPiece\":11,\"composure\":16,\"aggression\":8,\"creativity\":6,\"teamwork\":15,\"leadership\":12,\"durability\":7}",
+        "attrs_json": "{\"pace\":14,\"strength\":10,\"stamina\":10,\"passing\":11,\"shooting\":12,\"tackling\":9,\"positioning\":14,\"workrate\":12,\"keeping\":6,\"setPiece\":11,\"composure\":16,\"aggression\":8,\"creativity\":6,\"teamwork\":16,\"leadership\":12,\"durability\":7}",
         "role": "FW",
         "traits_json": "[\"mercenary\"]",
         "personality": "perfectionist",
@@ -5592,9 +5592,9 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":11,\"strength\":10,\"stamina\":7,\"passing\":8,\"shooting\":11,\"tackling\":12,\"positioning\":10,\"workrate\":11,\"keeping\":3,\"setPiece\":10,\"composure\":12,\"aggression\":12,\"creativity\":8,\"teamwork\":6,\"leadership\":8,\"durability\":6}",
+        "attrs_json": "{\"pace\":11,\"strength\":10,\"stamina\":8,\"passing\":8,\"shooting\":11,\"tackling\":12,\"positioning\":10,\"workrate\":11,\"keeping\":3,\"setPiece\":10,\"composure\":12,\"aggression\":13,\"creativity\":8,\"teamwork\":6,\"leadership\":8,\"durability\":7}",
         "role": "DF",
-        "traits_json": "[\"injury_prone\",\"mercenary\",\"marketable\"]",
+        "traits_json": "[\"mercenary\",\"marketable\"]",
         "personality": "pro",
         "greed": 15,
         "marketability": 18,
@@ -6379,15 +6379,15 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":14,\"strength\":13,\"stamina\":11,\"passing\":13,\"shooting\":12,\"tackling\":11,\"positioning\":11,\"workrate\":10,\"keeping\":5,\"setPiece\":9,\"composure\":10,\"aggression\":9,\"creativity\":9,\"teamwork\":14,\"leadership\":9,\"durability\":12}",
-        "role": "DF",
+        "attrs_json": "{\"pace\":15,\"strength\":13,\"stamina\":12,\"passing\":13,\"shooting\":12,\"tackling\":11,\"positioning\":11,\"workrate\":10,\"keeping\":5,\"setPiece\":9,\"composure\":10,\"aggression\":9,\"creativity\":10,\"teamwork\":14,\"leadership\":9,\"durability\":12}",
+        "role": "MF",
         "traits_json": "[\"biggame\",\"loyal\",\"marketable\"]",
         "personality": "biggame",
         "greed": 2,
         "marketability": 17,
         "earnings": 9875,
-        "peak_overall": 11,
-        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[\"The Biggest Game in the Club’s History\",\"A Derby With the Title on the Line\",\"Title Decider\"],\"peakOverall\":11,\"careerScore\":387,\"turnsPlayed\":120}"
+        "peak_overall": 12,
+        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[\"The Biggest Game in the Club’s History\",\"A Derby With the Title on the Line\",\"Title Decider\"],\"peakOverall\":12,\"careerScore\":387,\"turnsPlayed\":120}"
       }
     }
   },
@@ -7181,7 +7181,7 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":15,\"strength\":8,\"stamina\":8,\"passing\":10,\"shooting\":13,\"tackling\":7,\"positioning\":12,\"workrate\":8,\"keeping\":19,\"setPiece\":10,\"composure\":17,\"aggression\":6,\"creativity\":6,\"teamwork\":9,\"leadership\":12,\"durability\":4}",
+        "attrs_json": "{\"pace\":15,\"strength\":8,\"stamina\":8,\"passing\":11,\"shooting\":13,\"tackling\":7,\"positioning\":12,\"workrate\":9,\"keeping\":19,\"setPiece\":10,\"composure\":17,\"aggression\":6,\"creativity\":6,\"teamwork\":10,\"leadership\":12,\"durability\":4}",
         "role": "GK",
         "traits_json": "[\"wall\",\"biggame\",\"injury_prone\",\"mercenary\",\"marketable\"]",
         "personality": "perfectionist",
@@ -7997,7 +7997,7 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":13,\"strength\":14,\"stamina\":13,\"passing\":13,\"shooting\":11,\"tackling\":8,\"positioning\":13,\"workrate\":13,\"keeping\":4,\"setPiece\":16,\"composure\":13,\"aggression\":9,\"creativity\":14,\"teamwork\":11,\"leadership\":8,\"durability\":14}",
+        "attrs_json": "{\"pace\":13,\"strength\":15,\"stamina\":13,\"passing\":13,\"shooting\":11,\"tackling\":9,\"positioning\":13,\"workrate\":13,\"keeping\":4,\"setPiece\":16,\"composure\":13,\"aggression\":10,\"creativity\":14,\"teamwork\":11,\"leadership\":8,\"durability\":14}",
         "role": "MF",
         "traits_json": "[\"deadball\"]",
         "personality": "workhorse",

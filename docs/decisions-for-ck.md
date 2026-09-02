@@ -2514,3 +2514,43 @@ model, so a wide ball cannot become a chance.
 breakaway.** Until it has one, neither width nor formation spread is independently fixable, and I would not
 spend more on either. That is now the highest-value engine project on the list, and it subsumes two of the
 open design questions rather than adding a third.
+
+## 76. THE FOCUS SCREEN AND THE LIFESTYLE ECONOMY — done 2026-09-02
+
+### The Focus screen was worth nothing, and the cause was a unit
+
+Six times a career the player spends a summer on an attribute family instead of resting. Measured end to
+end — same careers, same seeds, only the focus policy differing — that was worth **+0.048 overall**. Six
+deliberate decisions he could not possibly have detected.
+
+A pick added `+1` to `attrFocus`, which reaches the player through `AWARD_WEIGHT` (0.07) **and is averaged
+across a stat's source tags first**, so one pick moved a stat by hundredths. The coach adds 0.5 per
+specialty hit about 68 times a career: **the whole Focus screen was worth roughly a sixth of one coach
+appointment.**
+
+`FOCUS_PICK_WEIGHT = 10` now. Measured response is clean and linear (+0.048 → +0.280 → +0.388 → +0.648 →
++0.956 at weights 1/4/6/10/16); 10 puts the screen just under the coach's +0.73 and well under the card
+play's +4.15. Role split is unmoved (DF 29.5 / FW 28.0 / MF 42.5), which was the thing to watch — the last
+change to this channel broke it badly. Guarded two-sided by `tools/playtest/focus_screen.ts`: worth taking,
+and never rivalling the football.
+
+### The lifestyle economy — §9's claim was half right, and I got it wrong twice on the way
+
+§9 says "lifestyle spending is inert and hoarding is punished". Checking it properly:
+
+- **Spending is not inert, it is aimed elsewhere.** An item costs ~240 and buys `recovery` plus meter
+  perks (`{ peers: 8, school: -3 }`). It moves `overall` by +0.055 — which is *correct*: a games console
+  should not make you a better footballer, it should keep your mates happy and cost you school. The §9
+  measurement read the wrong axis. The screen's real decision is **which meters to buy**, and that works.
+- **Hoarding was punished with no upside, and that part was real.** `contractCost` charges up to +40% to
+  sign or extend a player who banked his earnings. The mechanism meant to reward banking —
+  `breederRevenue`, paying those earnings back "when a career-built NFT first sells" — was **dead code**:
+  defined, re-exported, imported by a harness, called by nothing, and a web3-era idea in a game where web3
+  is gone. Removed.
+
+**Worth recording how that went, because it is the argument for deleting dead code rather than leaving it.**
+While measuring, I twice read `breederRevenue` as live and inverted my conclusion — first "spending is a
+99% loss trap" (banking pays 8,744 back 1:1), then "hoarding is rewarded 52:1". Both were wrong, and I only
+found out by checking its callers. A dead mechanism does not merely fail to work; it actively misleads
+whoever reasons about the system it sits in. That is the third time in two days this codebase has done that
+to me.

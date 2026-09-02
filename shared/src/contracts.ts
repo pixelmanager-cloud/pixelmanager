@@ -15,9 +15,14 @@ export function contractCost(overall: number, age: number, greed: number, earnin
   return Math.round(overall * overall * 1.2 * ageFactor * greedFactor * wageMult);
 }
 
-/** The breeder's PAYOUT (coins) when a career-built NFT first sells: the earnings it banked in
- *  development — so developing a player well is itself rewarded (the breeder side of the economy). */
-export const breederRevenue = (earnings: number) => Math.max(0, Math.round(earnings));
+// `breederRevenue` REMOVED 2026-09-02. It paid a career-built NFT's banked earnings back to the player
+// "when it first sells" -- a web3-era mechanic, and web3 is gone. It had no production caller anywhere:
+// defined here, re-exported from career.ts, imported by career_sim.ts and called by nothing.
+//
+// It mattered because it was the ONLY upside to banking career earnings, and `contractCost` below charges
+// up to +40% to sign a player who banked them. With the payout dead, saving was pure cost -- and while
+// chasing that I twice read this function as live and inverted my own conclusion before checking its
+// callers. A dead mechanism does not just fail to work; it misleads whoever reasons about the economy.
 
 /** Deal LENGTH (seasons) a player commits to: a loyal one-club man signs long (5), a mercenary short
  *  (2) — so greed drives how often you face the expensive re-sign decision. */
