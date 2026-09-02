@@ -1,0 +1,239 @@
+{
+  "duration": 61.0,
+  "end": {
+    "in": 56.2
+  },
+  "shots": [
+    {
+      "src": "clip/hand",
+      "frames": {
+        "dir": "clip/hand",
+        "count": 240,
+        "fps": 30
+      },
+      "frameOffset": 0.0,
+      "in": 0.0,
+      "out": 6.4,
+      "fade": 0.7,
+      "crop": {
+        "x": 300,
+        "y": 80,
+        "w": 1320,
+        "h": 742
+      },
+      "scale": [
+        1.0,
+        1.04
+      ]
+    },
+    {
+      "src": "clip/hand",
+      "frames": {
+        "dir": "clip/hand",
+        "count": 240,
+        "fps": 30
+      },
+      "frameOffset": 3.9,
+      "in": 6.2,
+      "out": 15.6,
+      "fade": 0.7,
+      "crop": {
+        "x": 460,
+        "y": 540,
+        "w": 1060,
+        "h": 596
+      },
+      "scale": [
+        1.04,
+        1.0
+      ]
+    },
+    {
+      "src": "clip/match",
+      "frames": {
+        "dir": "clip/match",
+        "count": 421,
+        "fps": 30
+      },
+      "frameOffset": 0.0,
+      "in": 15.4,
+      "out": 23.2,
+      "fade": 0.7,
+      "crop": {
+        "x": 440,
+        "y": 70,
+        "w": 1040,
+        "h": 585
+      },
+      "scale": [
+        1.0,
+        1.05
+      ]
+    },
+    {
+      "src": "clip/match",
+      "frames": {
+        "dir": "clip/match",
+        "count": 421,
+        "fps": 30
+      },
+      "frameOffset": 7.8,
+      "in": 23.0,
+      "out": 32.2,
+      "fade": 0.7,
+      "crop": {
+        "x": 470,
+        "y": 230,
+        "w": 980,
+        "h": 551
+      },
+      "scale": [
+        1.05,
+        1.0
+      ]
+    },
+    {
+      "src": "shot/09-hall-of-legends.png",
+      "in": 32.0,
+      "out": 39.2,
+      "fade": 0.8,
+      "crop": {
+        "x": 300,
+        "y": 480,
+        "w": 1320,
+        "h": 742
+      },
+      "scale": [
+        1.0,
+        1.05
+      ]
+    },
+    {
+      "src": "tree/tree-g1.png",
+      "fit": "contain",
+      "in": 39.0,
+      "out": 44.2,
+      "fade": 0.9,
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "w": 1276,
+        "h": 402
+      },
+      "scale": [
+        1.0,
+        1.03
+      ]
+    },
+    {
+      "src": "clip/tree",
+      "frames": {
+        "dir": "clip/tree",
+        "count": 92,
+        "fps": 15
+      },
+      "frameOffset": 0.0,
+      "in": 44.0,
+      "out": 48.4,
+      "fade": 0.7,
+      "crop": {
+        "x": 0,
+        "y": 105,
+        "w": 1920,
+        "h": 870
+      },
+      "scale": [
+        1.0,
+        1.02
+      ]
+    },
+    {
+      "src": "tree/tree-g4.png",
+      "fit": "contain",
+      "in": 48.0,
+      "out": 53.6,
+      "fade": 0.55,
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "w": 1276,
+        "h": 1004
+      },
+      "scale": [
+        1.0,
+        1.03
+      ]
+    },
+    {
+      "src": "shot/08-houses-ladder.png",
+      "in": 53.4,
+      "out": 57.0,
+      "fade": 0.7,
+      "crop": {
+        "x": 300,
+        "y": 90,
+        "w": 1320,
+        "h": 742
+      },
+      "scale": [
+        1.0,
+        1.04
+      ]
+    }
+  ],
+  "captions": [
+    {
+      "in": 1.6,
+      "out": 6.0,
+      "line": "EVERY DYNASTY STARTS WITH ONE BOY",
+      "sub": "you pick him at ten, and you never get another founder"
+    },
+    {
+      "in": 7.0,
+      "out": 15.0,
+      "line": "YOU PLAY HIS WHOLE CAREER",
+      "sub": "one hand at a time, age 10 to 25 \u2014 no auto-sim, no sliders"
+    },
+    {
+      "in": 16.2,
+      "out": 22.8,
+      "line": "THEN YOU RUN THE CLUB HE PLAYS FOR",
+      "sub": "the squad, the season, the sponsor, the wage bill"
+    },
+    {
+      "in": 24.2,
+      "out": 31.6,
+      "line": "NINETY MINUTES, CALLED AS THEY HAPPEN",
+      "sub": "no scoreline rolled from a strength difference \u2014 the match is played"
+    },
+    {
+      "in": 32.8,
+      "out": 38.8,
+      "line": "EVERY CAREER ENDS",
+      "sub": "one legend card per retirement \u2014 then the name is handed on"
+    },
+    {
+      "in": 39.8,
+      "out": 44.0,
+      "line": "IT BEGINS WITH ONE NAME",
+      "sub": "the founder stands at the root"
+    },
+    {
+      "in": 44.8,
+      "out": 47.8,
+      "line": "AND THE RECORD FILLS",
+      "sub": "sons you passed over branch off \u2014 their line can still be taken up"
+    },
+    {
+      "in": 48.4,
+      "out": 53.2,
+      "line": "FOUR GENERATIONS",
+      "sub": "one save. one family. the same name, carried."
+    },
+    {
+      "in": 54.0,
+      "out": 56.4,
+      "line": "THIRTEEN FAMILIES CLIMB THE SAME LADDER"
+    }
+  ]
+}

@@ -1,0 +1,117 @@
+<!doctype html>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=block" rel="stylesheet" />
+<style>
+  /* Trailer stage, v2 — composites real captured FOOTAGE as well as stills.
+     As before nothing animates itself: renderAt(t) sets every style from the clock and, for a clip, swaps
+     the <img> to that instant's captured frame. The capture awaits decode, so a frame is never grabbed
+     half-loaded. */
+  :root { --bg:#07070f; --text:#eef0fb; --cyan:#46cfe6; --gold:#e6c76a; --pink:#e85c93;
+          --display:'Press Start 2P', monospace; --body:'VT323','Courier New',monospace; }
+  html,body { margin:0; width:1920px; height:1080px; overflow:hidden; background:#000; }
+  #stage { position:relative; width:1920px; height:1080px; background:var(--bg); overflow:hidden; }
+  /* THE FOOTAGE IS LETTERBOXED and the captions get a clean strip of their own. This game's screens are
+     dense with text — commentary, stat rows, narration — so a caption laid over the picture is text on top
+     of text, and both lose. A 2.2:1 scope band reads as a deliberate framing rather than a crop, and the
+     strip beneath it is the only place type ever sits. */
+  #band { position:absolute; left:0; top:0; width:1920px; height:870px; overflow:hidden; background:#04040a; }
+  .shot { position:absolute; inset:0; opacity:0; overflow:hidden; }
+  .shot img { position:absolute; transform-origin:top left; image-rendering:auto; }
+  /* A restrained vignette: the game's own UI is already dark, so this only shapes the edges. */
+  #vig { position:absolute; inset:0; pointer-events:none;
+         background:radial-gradient(ellipse 80% 76% at center, transparent 58%, rgba(3,3,9,.55) 100%); }
+  #capbg { position:absolute; left:0; right:0; bottom:0; height:210px; opacity:0; pointer-events:none;
+           background:linear-gradient(to top, rgba(4,4,10,1) 60%, rgba(4,4,10,.9) 100%); }
+  #cap { position:absolute; left:0; right:0; bottom:56px; text-align:center; opacity:0; padding:0 150px; }
+  #cap .line { font-family:var(--display); font-size:33px; line-height:1.7; color:var(--text);
+               text-shadow:0 4px 0 #04040a, 0 0 30px rgba(4,4,10,.95); letter-spacing:1.5px; }
+  #cap .sub { font-family:var(--body); font-size:30px; color:var(--cyan); margin-top:14px;
+              text-shadow:0 2px 0 #04040a, 0 0 20px rgba(4,4,10,.9); }
+  #end { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
+         justify-content:center; gap:28px; opacity:0; background:var(--bg); }
+  #end .title { font-family:var(--display); font-size:76px; color:var(--cyan); letter-spacing:7px;
+                text-shadow:0 6px 0 #0a1a24, 0 0 46px rgba(70,207,230,.36); }
+  #end .tag { font-family:var(--body); font-size:44px; color:var(--gold); letter-spacing:1px; }
+  #end .wish { font-family:var(--display); font-size:21px; color:var(--pink); letter-spacing:3px; margin-top:6px; }
+  #end .feet { font-family:var(--display); font-size:16px; color:#8b93b8; letter-spacing:2px; margin-top:14px; }
+  #scrim { position:absolute; inset:0; background:#03030a; opacity:0; }
+</style>
+<div id="stage">
+  <div id="band"><div id="shots"></div><div id="vig"></div></div>
+  <div id="capbg"></div>
+  <div id="cap"><div class="line"></div><div class="sub"></div></div>
+  <div id="end">
+    <div class="title">FOOTBALL ROYALTY</div>
+    <div class="tag">A football life. Then your son's.</div>
+    <div class="wish">WISHLIST ON STEAM</div>
+    <div class="feet">OFFLINE · NO LIVE SERVICE · ONE SAVE, MANY GENERATIONS</div>
+  </div>
+  <div id="scrim"></div>
+</div>
+<script>
+const $ = (s) => document.querySelector(s);
+const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+const ease  = (t) => t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2;
+const ramp  = (t,a,b) => clamp((t-a)/Math.max(1e-6, b-a), 0, 1);
+
+let SHOTS = [], CAPS = [], END = null, DUR = 0;
+function build(plan) {
+  SHOTS = plan.shots; CAPS = plan.captions; END = plan.end; DUR = plan.duration;
+  $('#shots').innerHTML = SHOTS.map((s,i) => `<div class="shot" id="sh${i}"><img id="im${i}"/></div>`).join('');
+}
+// Which source image this shot shows at time t. A clip walks its captured frames at its own fps and holds
+// on the last one rather than looping — a loop inside a 6-second cut reads as a stutter.
+function srcFor(s, t) {
+  if (!s.frames) return s.src;
+  const i = Math.min(s.frames.count - 1, Math.max(0, Math.floor((t - s.in + (s.frameOffset ?? 0)) * (s.frames.fps ?? 30))));
+  return `${s.frames.dir}/f${String(i).padStart(5,'0')}.jpg`;
+}
+async function renderAt(t) {
+  const pending = [];
+  SHOTS.forEach((s,i) => {
+    const el = document.getElementById('sh'+i), img = document.getElementById('im'+i);
+    const a = ease(ramp(t, s.in, s.in + s.fade)) * (1 - ease(ramp(t, s.out - s.fade, s.out)));
+    el.style.opacity = String(a);
+    if (a <= 0.001) return;
+    const want = srcFor(s, t);
+    if (img.getAttribute('src') !== want) { img.setAttribute('src', want); pending.push(img.decode().catch(()=>{})); }
+    // Crop-and-fill: the game's screens carry dead space (the match view's lower 45% is empty pitch), so a
+    // shot can name the rectangle worth showing and it is scaled to fill the frame.
+    const c = s.crop ?? { x:0, y:0, w:1920, h:1080 };
+    const p = ramp(t, s.in, s.out);
+    const zoom = (s.scale?.[0] ?? 1) + (((s.scale?.[1] ?? 1) - (s.scale?.[0] ?? 1)) * p);
+    // COVER fills the 2.2:1 band and lets the excess crop away; CONTAIN fits the whole thing inside it.
+    // Scaling on width alone (what this did first) silently guillotines anything taller than the band —
+    // the four-generation record lost its bottom two generations, which is the entire point of the shot.
+    const BAND_H = 870;
+    const base = s.fit === 'contain' ? Math.min(1920 / c.w, BAND_H / c.h) : Math.max(1920 / c.w, BAND_H / c.h);
+    const k = base * zoom;
+    const dx = (s.pan?.[0] ?? 0) * p, dy = (s.pan?.[1] ?? 0) * p;
+    // Scale relative to the image's OWN size. This read `1920 * k`, which is only right when the source
+    // happens to be a 1920-wide screenshot — the Family Record panels are 1276 wide, so they were blown up
+    // 30% and the founder fell out of the bottom of the band. The whole shot is "look how far the line
+    // goes", and it was quietly cropping off the man it starts from.
+    const nat = img.naturalWidth || 1920;
+    img.style.width = (nat * k) + 'px';
+    img.style.left = '0px'; img.style.top = '0px';
+    img.style.transform = `translate(${-c.x * k + (1920 - c.w * k)/2 + dx}px, ${-c.y * k + (BAND_H - c.h * k)/2 + dy}px)`;
+  });
+  if (pending.length) await Promise.all(pending);
+
+  const c = CAPS.find((c) => t >= c.in && t < c.out);
+  const cap = $('#cap');
+  if (!c) { cap.style.opacity = '0'; $('#capbg').style.opacity = '0'; }
+  else {
+    cap.querySelector('.line').textContent = c.line;
+    cap.querySelector('.sub').textContent = c.sub ?? '';
+    const a = ease(ramp(t, c.in, c.in + 0.4)) * (1 - ease(ramp(t, c.out - 0.4, c.out)));
+    cap.style.opacity = String(a); $('#capbg').style.opacity = String(a * 0.96);
+    cap.style.transform = `translateY(${(1-a) * 12}px)`;
+  }
+  $('#end').style.opacity = String(ease(ramp(t, END.in, END.in + 0.85)));
+  $('#scrim').style.opacity = String(Math.max(1 - ease(ramp(t, 0, 1.0)), ease(ramp(t, DUR - 0.9, DUR))));
+}
+window.build = build; window.renderAt = renderAt;
+</script>

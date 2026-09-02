@@ -52,38 +52,52 @@ miss. (See decision 78 — the game itself has the same dependency, which matter
 
 ## The score
 
-Cut from two tracks the game already owns (Bit By Bit Sound — see `docs/licenses/README.md`, which confirms
-the licence covers trailer use). Nothing generated. `tools/trailer/score.mjs` renders it through Chromium's
-WebAudio, the same Vorbis decoder the game plays these files with.
+**One track, no edits: `legends-1` "Recalling When", played straight from 0:00 to 1:01.**
 
-| trailer | source | why |
+The first cut spliced `international-1` into `legends-1` at 0:24 and it sounded wrong. It was wrong.
+Measured properly (`tools/trailer/analyse_music.mjs`):
+
+| | key | tempo | bar |
+|---|---|---|---|
+| `international-1` | **F minor** | 89.0 BPM | 2.697s |
+| `legends-1` | **C major** | 77.5 BPM | 3.097s |
+
+The join was a key change *and* landed at bar 8.900 — mid-bar. So was every other splice in that cut
+(12.000s = bar 3.875, 42.000s = bar 13.562, 123.000s = bar 39.719). An earlier note in this file claimed
+`legends-1` runs at "exactly 80.00 BPM with 3.000s bars, so every splice lands on a bar line". That was
+false, and it was caught by someone listening, not by any of the analysis.
+
+There is now nothing joined, so there is nothing to sound sudden. **The picture is cut to the track's
+landmarks instead of the other way round:**
+
+| in the track | what it does | what the picture does there |
 |---|---|---|
-| 0:00–0:24 | `international-1` "A Rising Power" 0.000→24.000 | its band lands at second 6 — exactly the first picture cut; its accents fall on the 0:13 and 0:19 cuts, and its quietest second is 23, the breath before the drop |
-| 0:24–0:36 | `legends-1` "Recalling When" 0.000→12.000 | the Hall of Legends motif, alone. Its own 1.45s of true silence lands at 0:27, under "every career ends" |
-| 0:36–0:54 | `legends-1` 42.000→60.000 | **the centrepiece.** The track contains a built-in decay to −51 dB at 43.6 and a hard full-arrangement re-entry at 48.000 in the relative major. Placed here, the collapse runs under ONE / TWO / THREE and the re-entry lands on **FOUR** |
-| 0:54–0:57 | `legends-1` 0.000→3.000 | the motif alone again, bookending, under the title card |
-| 0:57–1:01 | `legends-1` 123.000→127.000 | the track's own final cadence; the last chord lands at 60.1s as the picture fades |
+| 2.5–4.5s | near-total silence, down to −67 dB | the opening caption sits in it |
+| 6.0s | the full entry | cut to the cards |
+| 14–15s | a dip to −58 dB | cut to the match |
+| 21–22.5s | a deeper dip to −64 dB | — |
+| 24.0s | a hard hit | cut to the second half of the match |
+| **47.5s** | **the collapse, to −50 dB** | the record scrolling into view |
+| **48.0s** | **the payoff — full arrangement, sustained past 61s** | **the complete four-generation record** |
 
-**Why the joins hold:** `legends-1` is exactly 80.00 BPM with 3.000-second bars and downbeats on exact
-multiples of 3.000, so every splice above is on a bar line and stays in time. 123.000 is bar 41.
+### Why this track and not one of the other 1,014
 
-**Why `legends-1` and not something more obviously "trailer":** it is the track the game actually plays in
-the Trophy Room and Hall of Legends — the screen the trailer's centrepiece is showing. The music is
-diegetically correct, which no bought or generated cue could be.
+The full pack has 1,015 tracks. Thirteen candidates were measured — the five non-looping themes (the ones
+written with a beginning and an end rather than as loops) and the eight orchestral character themes:
 
-**One thing that had to change from the measured plan:** the bookend was originally a single 7-second lift
-of `legends-1` 0.000→7.000, but that window contains the track's built-in 1.45s of silence. Under the title
-card that is two seconds of dead air at the very end of a trailer, which reads as the audio having broken.
-Ending on the real cadence fixes it.
+- **`Hero's Bloodline`** has the perfect name for this game and the wrong shape entirely: it opens at
+  −14 dB, one decibel below its own median, with a 6 dB range. No arc to cut to.
+- **`Era`** has the most beautiful opening in the pack — it starts at **−54 dB**, forty below its median,
+  and crescendos for sixteen seconds. Then it plateaus at −14.5 dB and stays there. All its movement is
+  spent before the trailer needs any.
+- **`Roll Credits`** climbs steadily for 48 seconds from true silence and ends loudest — a textbook trailer
+  shape, and the strongest alternative if you want something smoother and more orchestral.
+- **`legends-1`** has the widest dynamic range of anything measured (18 dB against 5–15) and is the only
+  candidate with a genuine *collapse and payoff* rather than a smooth climb — landing exactly where the
+  trailer's reveal does.
 
-Rebuild and mux:
-
-```
-node tools/trailer/score.mjs /tmp/score.wav
-afconvert -f m4af -d aac -b 256000 /tmp/score.wav /tmp/score.m4a
-swiftc -O tools/trailer/MuxAudio.swift -o /tmp/mux_audio
-/tmp/mux_audio trailer.mp4 /tmp/score.m4a trailer-scored.mp4     # passthrough — no video re-encode
-```
+And it is the track the game itself plays in the Trophy Room and Hall of Legends, which is the screen the
+centrepiece is showing. No other cue can be diegetically right in that way.
 
 ## Still to do
 

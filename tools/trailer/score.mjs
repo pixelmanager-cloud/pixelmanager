@@ -30,16 +30,32 @@ import { join, extname } from 'node:path';
 const OUT = process.argv[2] ?? '/tmp/gr/trailer/score.wav';
 const AUDIO = 'client/public/audio';
 
+// ONE TRACK, NO SPLICES. The first cut spliced international-1 into legends-1 at 0:24 and it sounded
+// wrong, because it was: measured properly, international-1 is F minor at 89.0 BPM (bar 2.697s) and
+// legends-1 is C major at 77.5 BPM (bar 3.097s). The join was a key change AND landed at bar 8.900 —
+// mid-bar. Every other splice was mid-bar too. The earlier note claiming legends-1 runs at "exactly 80.00
+// BPM with 3.000s bars, so every splice lands on a bar line" was simply false, and a listener caught it
+// before any of the analysis did.
+//
+// legends-1 alone does the whole job and needs no edit at all. Of the eighteen bundled tracks it has by far
+// the widest dynamic range (18 dB against 5-13 for the rest), the quietest opening relative to its own
+// median, and the biggest lift. Its own shape is a trailer:
+//
+//   0.0-2.0   the motif, alone
+//   2.5-4.5   near-total silence, down to -67 dB — the cold open
+//   6.0       the full entry
+//   14-15     a dip to -58        21-22.5  a deeper dip to -64
+//   24.0      a hard hit
+//   47.5      THE COLLAPSE, to -50
+//   48.0      THE PAYOFF — full arrangement, and it sustains past 61s
+//
+// The picture is cut to those landmarks rather than the other way round.
 const SEGMENTS = [
-  { src: 'international-1.ogg', from: 0,  to: 24, at: 0 },
-  { src: 'legends-1.ogg',       from: 0,  to: 12, at: 24 },
-  { src: 'legends-1.ogg',       from: 42, to: 60, at: 36 },
-  { src: 'legends-1.ogg',       from: 0,   to: 3,   at: 54 },
-  { src: 'legends-1.ogg',       from: 123, to: 127, at: 57 },
+  { src: 'legends-1.ogg', from: 0, to: 61, at: 0 },
 ];
 const DUR = 61;
 // Short enough not to smear a bar line, long enough that a splice does not click.
-const JOIN_FADE = 0.012;
+const JOIN_FADE = 0.004; // only the top and tail exist now — there is no join left to hide
 
 for (const s of SEGMENTS) if (!existsSync(join(AUDIO, s.src))) { console.error(`missing ${s.src}`); process.exit(1); }
 
@@ -93,7 +109,7 @@ const b64 = await page.evaluate(async ({ SEGMENTS, DUR, JOIN_FADE }) => {
   const TRIM = 0.85;
   for (let ch = 0; ch < rendered.numberOfChannels; ch++) {
     const d = rendered.getChannelData(ch);
-    const inN = Math.floor(0.6 * SR), outN = Math.floor(0.8 * SR); // short out-fade: the cadence should be heard, not swallowed
+    const inN = Math.floor(0.35 * SR), outN = Math.floor(1.9 * SR); // the track is still going at 61s, so the tail is a fade under the title card
     for (let i = 0; i < d.length; i++) d[i] *= TRIM;
     for (let i = 0; i < inN; i++) d[i] *= i / inN;
     for (let i = 0; i < outN; i++) d[d.length - 1 - i] *= i / outN;
