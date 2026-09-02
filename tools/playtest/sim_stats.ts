@@ -39,7 +39,33 @@ ok(appsOk === N, `and each of them is credited with the appearance (${appsOk}/${
 ok(reconciled === N, `the goals in the rows reconcile with the scoreline (${reconciled}/${N})`);
 // The whole point of simming is that it is fast. A remaining season is ~20 fixtures; if one match costs
 // more than ~150ms the button stops being a shortcut and starts being a wait.
+//
+// THIS USED TO ASSERT A BARE `each < 150` AND IT WAS NOT A GATE, IT WAS A COIN FLIP. CI ran identical
+// engine code twice on consecutive commits — the second changed nothing but trailer tooling and markdown —
+// and it passed at 35 minutes and failed at 60. Nothing about the product moved; the shared runner was
+// simply busier. An assertion that flips on the load average tells you about GitHub's fleet, not about the
+// game, and once a gate has cried wolf the next real regression gets waved through.
+//
+// So the budget is scaled by how fast THIS machine is right now, measured in the same process moments
+// before. A genuine algorithmic regression — someone making the engine several times slower — still trips
+// it on any hardware; a loaded runner no longer does. The absolute figure is printed either way, because
+// that is the number with actual product meaning: what the player waits.
+// 60M iterations, not 4M: at 4M this machine measured 4ms with a 4-6ms spread, so timer granularity alone
+// moved the reading by 50% and the derived budget with it. At 60M the spread is 52-54ms — a calibration
+// that is itself noisy is no better than the flaky assertion it replaces.
+const CALIB_ITERS = 60_000_000;
+const CALIB_REFERENCE_MS = 53; // measured here: median of 5 runs (52, 53, 53, 54, 54)
+const c0 = Date.now();
+let sink = 0;
+for (let i = 1; i <= CALIB_ITERS; i++) sink += (i % 7) * (i % 13); // fixed arithmetic; no allocation, no I/O
+const calibMs = Math.max(1, Date.now() - c0);
+void sink;
+// Clamped: a wildly slow reading (a runner descheduled mid-calibration) must not licence an unlimited
+// budget, and a machine faster than the reference does not get a budget tighter than the one we tuned.
+const slowdown = Math.min(8, Math.max(1, calibMs / CALIB_REFERENCE_MS));
+const budget = 150 * slowdown;
 const each = ms / N;
-ok(each < 150, `a full ninety minutes sims fast enough to loop over a season (${each.toFixed(0)}ms each)`);
+console.log(`  ..   machine calibration ${calibMs}ms vs ${CALIB_REFERENCE_MS}ms reference → ${slowdown.toFixed(1)}x, budget ${budget.toFixed(0)}ms`);
+ok(each < budget, `a full ninety minutes sims fast enough to loop over a season (${each.toFixed(0)}ms each, budget ${budget.toFixed(0)}ms on this machine)`);
 console.log(fails ? `\n✗ ${fails} sim-stats check(s) failed` : `\n✓ a simmed season records what the honours are derived from`);
 if (fails) process.exitCode = 1;
