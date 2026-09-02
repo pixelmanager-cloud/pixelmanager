@@ -33,3 +33,7 @@ tools/.rd_key
 # The whole film is reproducible from the committed pipeline: see store/steam/trailer/README.md.
 store/steam/trailer/*.mp4
 store/steam/trailer/*.webm
+
+# fal.ai key — same rule as the Retro Diffusion key: never committed
+tools/.fal_key
+.fal_key

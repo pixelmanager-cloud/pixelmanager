@@ -33,6 +33,11 @@ const ARGS = {
   'generations.ts': ['12'],
   'objectives.ts': ['200'],
   'manager_career_real.ts': ['8', '12', '30'],
+  // Both drive real careers through the facade, which replays the whole career on every action — so the
+  // cost is superlinear in generations. Four is enough to exercise a founder, two successions and a
+  // living heir; six is for running by hand when chasing something.
+  'bloodline_tree.ts': ['4'],
+  'late_game.ts': ['4'],
 };
 
 const files = readdirSync(dir).filter((f) => f.endsWith('.ts') && !f.startsWith('_')).sort();

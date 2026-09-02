@@ -177,3 +177,35 @@ asserts the record holds every generation from the founder to the living star, e
 exactly one generation above him, with a caption on every retired man. Against the unfixed tree it reports
 9 distinct failures; the sweep's existing bloodline harnesses all passed throughout, because every one of
 them measures a tree built from tokens and so shared the blind spot.
+
+## The late game, swept — and it holds
+
+#29 raised an obvious question: what *else* has never been driven several generations deep? The whole
+late-game surface — the honours ledger, the renown ladder, award attribution across a token that is reborn
+under its own id, prestige, and whether any of it survives being closed and reopened — only accumulates
+across successions, so no existing harness could reach it.
+
+`tools/playtest/late_game.ts` drives six generations through the real facade and checks five things.
+**All of them hold.** Renown climbs 156 → 485 → 862 → 2223 → 2763 → 4031 and never falls, as the trophy
+room promises; the ledger banks each season exactly once; every bloodline award resolves to exactly one man
+on the record; nothing goes non-finite; and renown, legends, tree size and prestige all survive a
+save/reload byte-identical.
+
+A probe that passes on its first run is worth nothing until it has been shown to fail, so it was mutation
+tested against three separate reversions:
+
+- **Strip the ancestor nodes** (revert #29) → caught, and from a completely independent angle to
+  `bloodline_tree.ts`: the forebears' awards resolve to nobody, so it reports "the man who won it has no
+  node" rather than anything about tree shape.
+- **Bank every honour twice** → caught: all 20 seasons named as duplicated.
+- **Make renown an average rather than a sum**, so a wide generation dilutes the name → caught at the first
+  succession (156 → 140).
+
+Two of the checks were *vacuous* when first written, and both are worth recording because it is the same
+mistake in two costumes. The award assertion ran over an empty list — the harness never played matches, so
+no season stats existed and therefore no awards — and passed happily against a reverted fix. Recording
+per-player stats fixed that, except the star is not in `club.players` (he lives as a Token, merged in for
+reads), so the *bloodline* still won nothing and the check still measured only squad players. The probe now
+counts how many bloodline awards it actually examined and fails if the answer is zero. A check that cannot
+fail is the defect class this project keeps producing; it is worth assuming any new assertion is one until
+a mutation proves otherwise.

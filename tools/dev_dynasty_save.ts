@@ -56,7 +56,7 @@ function bestCard(s: any): string {
 /** Drive the facade through `gens` generations of one bloodline on a fresh save, and hand back the played
  *  token's id. The caller owns the backend (so a probe can run it in memory and a dev-save dump can print
  *  the model afterwards). */
-export async function buildDynasty(opts: { gens: number; familyName: string; slot: string }): Promise<string> {
+export async function buildDynasty(opts: { gens: number; familyName: string; slot: string; onGeneration?: (gen: number) => Promise<void> }): Promise<string> {
   // The new-game field asks for a FAMILY name ("e.g. Vance") — club, founder and every heir share it.
   await api.register('dynasty', 'x', opts.familyName, 20260902, opts.slot);
   const { candidates } = await api.scoutProspects(3) as any;
@@ -74,6 +74,24 @@ export async function buildDynasty(opts: { gens: number; familyName: string; slo
       const pos = Math.max(1, 6 - g * 2 - Math.floor(s / 3));
       if (pos === 1) titles++;
       await api.spSeasonReward({ pos, size: 14, wins: 20 - pos, draws: 8, losses: 10 + pos, tier: Math.max(1, 4 - g), starId: pid, kind: 'league' });
+      // A season with no per-player stats produces no awards, because seasonAwards derives them from
+      // seasonPlayerStats. A harness that skips this leaves the whole awards surface untested and any
+      // assertion about it vacuous — which is how the first version of late_game.ts passed while the
+      // attribution bug it was written for was reverted underneath it.
+      const me: any = await api.me();
+      const squad = (me.club?.players ?? []).slice(0, 11);
+      const rows = squad.map((p: any, i: number) => ({
+        id: p.id, name: p.name,
+        goals: (i * 7 + s * 3) % 14, assists: (i * 5 + s) % 9, apps: 30 - (i % 6), potm: (i + s) % 4 === 0 ? 2 : 0,
+      }));
+      // THE STAR HAS TO BE IN THE STATS or the bloodline wins no awards at all, and every assertion about
+      // award attribution measures nothing. He lives as a Token, not in club.players — `me()` merges him in
+      // for reads (mergedClub), so he is in the merged list but not necessarily inside the first eleven.
+      const star = (me.club?.players ?? []).find((p: any) => p.id === pid);
+      if (star && !rows.some((r: any) => r.id === pid)) {
+        rows.push({ id: pid, name: star.name, goals: 18 + s, assists: 9, apps: 34, potm: 6 });
+      }
+      if (rows.length) await api.recordMatchStats({ rows });
       await api.advanceSquadSeason({ trainingLvl: 2, wonSomething: pos === 1, goodSeason: pos <= 3 });
       // Build the club up the way prize money makes possible — a dynasty four generations deep with every
       // facility still on level 1 and six figures in the bank does not read as a club anyone has run.
@@ -82,6 +100,9 @@ export async function buildDynasty(opts: { gens: number; familyName: string; slo
         try { await api.upgradeFacility(f.key); } catch { /* priced out this season — build it next one */ }
       }
     }
+    // A caller sampling the dynasty over time (late_game.ts watches the renown curve) needs the reading
+    // taken at each generation, not just at the end.
+    await opts.onGeneration?.(g);
     if (g === opts.gens - 1) break; // the living star stays a star — no succession off the end
     // succeed() reborns the SAME token id as the heir, so `pid` follows the line down the generations.
     await api.succeed(pid, { seasons: SEASONS_PER_GEN, titles, cups: g, mentorship: 2, inheritance: 'name' });
