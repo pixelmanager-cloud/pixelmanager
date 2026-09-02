@@ -2590,3 +2590,19 @@ import would still break the page — and `browser_safe.ts` still catches those,
 (`(undefined as any).nope`), which the smoke test catches on all four checks and names in its output.
 
 CI installs chromium before the gate; without it the probe fails loudly rather than quietly passing.
+
+## 78. The game loads its two fonts from Google's CDN, and Steam builds have no network
+
+`client/index.html:9` pulls **Press Start 2P** and **VT323** from `fonts.googleapis.com`. Everything else
+about this build is offline-first — no server, no live service, IndexedDB saves — but the two typefaces that
+make it look like a pixel game are a network request. With no connection the CSS falls back to
+`monospace` / `'Courier New'`, so a Steam player opening the game offline gets the whole UI in a system
+terminal font: every heading, every stat, every banner. It still *works*, which is why nothing has caught it.
+
+Both faces are SIL Open Font License, so vendoring them is straightforward and legal — the OFL only asks
+that the licence ships alongside. The work is: download the two families, subset to Latin, drop them in
+`client/public/fonts/`, add `@font-face` rules with `font-display: block`, and include `OFL.txt`. That
+removes the last runtime network dependency in the game.
+
+I have not done it unilaterally because it means adding vendored third-party binaries to the repo and a
+licence file, which is your call rather than a bug fix. **Say the word and it is an hour's work.**
