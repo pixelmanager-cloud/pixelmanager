@@ -38,6 +38,16 @@ for (const [name, args] of legs) {
   results.push({ name, code });
   seen.add(`leg ${name} exits ${code}`);
   console.log(`[gate] ${name} exited ${code} in ${((Date.now() - t0) / 1000).toFixed(0)}s`);
+  // ECHO THE DIAGNOSTIC LINES EVEN WHEN THE LEG IS GREEN. The gate swallows each leg's stdout and prints
+  // only its own summary plus failures, which is right for signal — but it means a PASSING assertion tells
+  // you nothing about its margin. That bit after sim_stats.ts was changed to scale its budget by machine
+  // speed: the whole point of printing the calibration was to see what CI measures, and CI never showed it,
+  // because the probe passed. A budget you cannot observe is a budget you cannot tune.
+  //
+  // Probes mark such lines with a leading '  .. '. Nothing else uses that prefix.
+  for (const line of out.split('\n')) {
+    if (/^\s{2}\.\.\s/.test(line)) console.log(`[gate]   ${line.trim()}`);
+  }
 }
 
 const WRITE = process.argv.includes('--write-baseline');
