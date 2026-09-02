@@ -166,7 +166,15 @@ assert(info.baseWage > 0 && info.prefLength >= 2, 'star contract info is sane');
 const low = await api.negotiateStar(prospectId, Math.round(wageForLength(info, info.prefLength) * 0.5), info.prefLength);
 assert(low.outcome === 'reject', 'a lowball contract offer is rejected');
 assert(low.coins === (await api.me()).account.coins, 'a rejected offer does NOT charge coins');
-const fair = await api.negotiateStar(prospectId, wageForLength(info, info.prefLength), info.prefLength);
+// HIS ASK MOVED, BECAUSE THE LOWBALL ABOVE NOW COSTS HIM MORALE. tokenContract has always said "morale
+// bends the numbers: an unhappy player holds out for more to re-sign" (tokens.ts:101), but nothing ever
+// moved his morale during a negotiation — evaluateContractOffer's moraleDelta was computed and discarded —
+// so the path never fired. It fires now, which means `info`, fetched before we insulted him, is stale: the
+// figure it quotes is no longer his ask. Re-read it, so this still asserts what it says it asserts.
+const infoAfterLowball = await api.starContractInfo(prospectId);
+assert(infoAfterLowball.baseWage > info.baseWage,
+  `insulting him raises his price (${info.baseWage} -> ${infoAfterLowball.baseWage})`);
+const fair = await api.negotiateStar(prospectId, wageForLength(infoAfterLowball, infoAfterLowball.prefLength), infoAfterLowball.prefLength);
 assert(fair.outcome === 'accept', 'meeting his ask re-signs him');
 
 console.log('=== 9. honours recorded a title for the champion finish ===');

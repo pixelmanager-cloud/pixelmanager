@@ -9,6 +9,7 @@
 // one exception kept below — it still backs the single-player youth-scouting network's tier display.
 import type { Club, Lineup, Tactics, Team, Player, StandingOrders } from '@fm/shared';
 export type { StandingOrders };
+import { applyMorale } from '../../shared/src/managerarc.js';   // raw-delta morale — contract terms produce a number, not a named event
 import {
   makeClub as _makeClub, // re-exported nowhere — freshSave() (save.ts) already calls this; kept for reference
   validateLineup, cleanDuties,
@@ -287,6 +288,11 @@ async function bumpMoraleLocal(tokenId: string, event: Parameters<typeof updateM
   const t = await localStore.getToken(tokenId);
   if (t) await localStore.updateToken(tokenId, { morale: updateMorale(t.morale ?? 65, event) });
 }
+/** The same, for a raw delta rather than a named event — contract terms produce a number, not an event. */
+async function bumpMoraleByLocal(tokenId: string, delta: number): Promise<void> {
+  const t = await localStore.getToken(tokenId);
+  if (t) await localStore.updateToken(tokenId, { morale: applyMorale(t.morale ?? 65, delta) });
+}
 
 /** Serialise a stored scouting trip, hiding the outcome until travel completes — lifted from
  *  server/src/index.ts's `missionView`. */
@@ -548,6 +554,12 @@ export const api = {
     const lengthPremium = lengthPremiumFor(p);   // one copy of the rule, in contracts.ts
     const demand = { baseWage: ci.extendCost, prefLength: ci.lengthSeasons, minLength: 2, maxLength: 6, lengthPremium };
     const result = evaluateContractOffer(demand, Math.round(wage), Math.round(length));
+    // HOW YOU TREATED HIM COUNTED FOR NOTHING. evaluateContractOffer returns a moraleDelta — +6 for terms he
+    // is delighted with, +3 for terms he merely accepts, 0 for a counter, and -6 for an offer he is insulted
+    // by — and no caller had ever applied it. So a generous deal and a grudging one landed identically (both
+    // got only the flat `extended` +10), and walking your star to the table and lowballing him was entirely
+    // free: this function returns on the non-accept paths before any morale is touched at all.
+    if (result.moraleDelta) await bumpMoraleByLocal(playerId, result.moraleDelta);
     if (result.outcome !== 'accept') return { outcome: result.outcome, askWage: result.askWage, note: result.note, coins: model.profile.coins };
     // COST is the wage across the WHOLE deal (per-season wage × length), so a longer contract genuinely costs
     // more up front — length is a real trade-off (locks him in longer for more coins now), not a free choice (PT-32).
