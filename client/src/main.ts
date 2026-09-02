@@ -446,9 +446,14 @@ class Game {
   awayName = '';
 
   async boot() {
-    // unlock audio on the first user interaction (browsers block autoplay until then); once is enough
-    const unlock = () => { audio.unlock(); document.removeEventListener('pointerdown', unlock); };
-    document.addEventListener('pointerdown', unlock);
+    // Unlock audio on the first user interaction (browsers block autoplay until then); once is enough.
+    // POINTERDOWN ALONE IS NOT THE FIRST INTERACTION FOR EVERYONE. This game is playable from the keyboard —
+    // 1/2/3 set match speed, Escape closes overlays — and a player who never touches a pointer never fired
+    // this, so `unlocked` stayed false, every audio.play() returned at its first line, and they got no music
+    // and no chimes for the entire session. Silence with no error is the hardest kind of bug to notice.
+    const UNLOCK_ON = ['pointerdown', 'keydown', 'touchstart'] as const;
+    const unlock = () => { audio.unlock(); for (const ev of UNLOCK_ON) document.removeEventListener(ev, unlock); };
+    for (const ev of UNLOCK_ON) document.addEventListener(ev, unlock);
     this.loadPrefs(); // reduced-motion etc., applied before first paint
     this.wireStaticButtons();
     this.showScreen('login');
