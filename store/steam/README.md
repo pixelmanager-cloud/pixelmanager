@@ -38,6 +38,26 @@ thing. It is drawn with a hard pixel shadow and no anti-aliasing.
 Both take `--check` for a **free** dry run that prices a batch and generates nothing — use it first. The
 API key comes from `$RD_API_KEY` or the gitignored `tools/.rd_key` and is never printed or committed.
 
+## Screenshots
+
+Six at 1920×1080 in `screenshots/`, captured from the **built game in a real browser** by
+`tools/store_screenshots.mjs` — not mockups, and not a dev server. It serves `client/dist`, drives the
+shipped bundle through a real opening, and screenshots each screen. If a screen breaks, the screenshot
+breaks with it. Steam requires five.
+
+| shot | what it sells |
+|---|---|
+| `01-academy` | three ten-year-olds carrying your family name — the choice the whole game starts from |
+| `02-agents` | eight agents with real trade-offs; the game has decisions, not sliders |
+| `03-cardplay` | the core loop in one frame: matchday 2-1 at 27', a scenario, four tagged cards, energy and meters |
+| `04-hub` | the shape of the game — your player, your club, scouting, dynasty |
+| `05-scouting` | the scouting board: local tryouts and four destinations with odds and fees |
+| `06-trophies` | The Houses of the Game — thirteen families ranked by renown, yours 13th. The long game. |
+
+Two things worth knowing before editing the capture script: the onboarding help panels cover the career
+screen **and swallow clicks** (without dismissing them an automated run stalls on turn 12 forever), and
+every panel has its own back button — there is no single "back to hub" selector.
+
 ## Still to do
 
-Screenshots and the trailer. Steam wants at least 5 screenshots at 1920×1080.
+The trailer.

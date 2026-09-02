@@ -30,7 +30,10 @@ Legend: `[ ]` not started · `[~]` in progress · `[x]` done · `(design)` = des
 - [x] **Capsule / header / library art** — DONE 2026-09-02. All eight assets at exact Steam sizes in
       `store/steam/`, generated at RD Pro and integer-upscaled from native pixel-art resolution.
       Concept: three number-12 shirts, one per era. $4.50 spent, $47.28 balance remaining.
-- [ ] **Screenshots + short trailer/GIF** — text match view, Trophy Room, bloodline tree, scouting board all show well.
+- [x] **Screenshots** — DONE 2026-09-02. Six at 1920x1080 in `store/steam/screenshots/`, captured
+      from the BUILT game in a real browser by `tools/store_screenshots.mjs`: academy, agent choice,
+      a matchday moment, the hub, the scouting board, the trophy room. Steam needs five.
+- [ ] **Short trailer / GIF** — still to do.
 - [ ] **Art review from playthrough** — user noting weird art during their own playthrough; fix the flagged list after.
 
 ### Integration / QA (the highest-risk item)
