@@ -1391,6 +1391,24 @@ screen still offers does something. The sweeper-keeper idea survives where it is
 
 ## 68. KNOWN AND ACCEPTED — shipped deliberately, not a bug list
 
+> **ACCEPTED 2026-09-02, by CK: the formation gradient and the width shortfall both stay.** See §71 (width)
+> and §74 (formations) for the full investigations. Both were chased to their mechanism, both had working
+> fixes built and measured, and both fixes were backed out because they cost more than they bought. They
+> share one cause — the ×12 breakaway is the engine's only real scoring channel — so neither is fixable by
+> tuning, and a fourth attempt of that kind has low expected value.
+>
+> **Scale, for anyone re-opening this:** a 3-point squad-quality gap is worth ~1.04 goals/match, so the
+> 0.637-goal striker gradient is worth about **1.8 points of squad quality**. A handicap, not a wall. The
+> league stays competitive (`division_balance` 12%), the table is not distorted (rivals run on
+> `clubseason.ts`'s rolled model, so the gradient only touches the player's own matches), and the dynasty
+> loop does not pass through formation choice at all.
+>
+> **What it does cost is the tactics screen's promise** — eleven shapes are offered and three are
+> meaningfully better — and the visual read of matches, which is narrow because the ball genuinely rarely
+> goes wide. Do not market tactical depth on this engine. The one thing that would fix both is a second
+> scoring channel (a crossing/cutback model); until that is scoped as its own project, this is settled.
+
+
 **Read this before "fixing" anything below.** Each item is measured, understood, and left in on purpose.
 None is an unknown defect; every one was found by a probe that now guards it. Chasing them without reading
 the reasoning is how the previous two engine rebuilds died — and twice this session a "fix" for one of them
