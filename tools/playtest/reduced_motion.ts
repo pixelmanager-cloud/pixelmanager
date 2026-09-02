@@ -34,9 +34,27 @@ let m: RegExpExecArray | null;
 while ((m = re.exec(css))) rules.push({ sel: m[1].trim().replace(/\s+/g, ' '), body: m[2], at: m.index });
 
 // The reduced-motion block(s), and everything they mention.
-const rmStart = css.indexOf('@media (prefers-reduced-motion: reduce)');
-const rmBlocks = rules.filter((r) => r.at > rmStart && r.at < rmStart + 1400);
-const rmText = rmBlocks.map((r) => `${r.sel}{${r.body}}`).join('\n');
+// BOTH CLAMPS, NOT JUST THE OS ONE. The game has two: the `@media (prefers-reduced-motion)` block, and a
+// `body.reduced-motion` class driven by the in-game switch. The first version of this probe only knew about
+// the media query, so it went green while a player using the in-game setting still lost every toast in the
+// game — a fix that was half a fix, passed by a check that was half a check.
+// Find each @media block's real extent by brace-matching rather than guessing a window. Looking a fixed
+// number of characters back for the at-rule broke the moment a long comment was added between it and its
+// rules — the probe then reported the OS clamp uncovered when it was covered.
+const mediaSpans: Array<[number, number]> = [];
+for (let i = css.indexOf('@media (prefers-reduced-motion'); i >= 0; i = css.indexOf('@media (prefers-reduced-motion', i + 1)) {
+  const open = css.indexOf('{', i);
+  if (open < 0) break;
+  let depth = 0, j = open;
+  for (; j < css.length; j++) { if (css[j] === '{') depth++; else if (css[j] === '}' && --depth === 0) break; }
+  mediaSpans.push([open, j]);
+}
+const inMediaBlock = (at: number) => mediaSpans.some(([a2, b2]) => at > a2 && at < b2);
+const rmText = rules
+  .filter((r) => inMediaBlock(r.at) || /body\.reduced-motion/.test(r.sel))
+  .map((r) => `${r.sel}{${r.body}}`).join('\n');
+const clamps = [/@media \(prefers-reduced-motion: reduce\)/.test(css), /body\.reduced-motion \*/.test(css)].filter(Boolean).length;
+console.log(`  ..   ${clamps} motion clamp(s) in the sheet (OS media query and/or the in-game switch)`);
 
 // Elements that rest invisible.
 const invisible = rules.filter((r) => /opacity:\s*0\s*[;}]/.test(r.body) && /^[#.][\w-]+$/.test(r.sel));
@@ -54,9 +72,13 @@ console.log(`  ..   ${invisible.length} selector(s) rest at opacity:0; ${animOnl
 ok(animOnly.length > 0, 'the stylesheet actually contains animation-only-visible elements to check');
 
 for (const r of animOnly) {
-  const covered = new RegExp(`${r.sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}[\\w.\\-]*\\s*(,|\\{)`).test(rmText)
-    && /opacity:\s*1/.test(rmText);
-  ok(covered, `${r.sel} is restored under Reduce Motion (it is invisible at rest and only an animation reveals it)`);
+  const esc = r.sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  // Each clamp must exempt it INDEPENDENTLY — a player reaches reduced motion through either one.
+  const inMedia = new RegExp(`(?<!body\\.reduced-motion )${esc}[\\w.\\-]*\\s*(,|\\{)[^}]*opacity:\\s*1`, 's').test(rmText);
+  const inClass = new RegExp(`body\\.reduced-motion ${esc}[\\w.\\-]*\\s*(,|\\{)[^}]*opacity:\\s*1`, 's').test(rmText)
+    || new RegExp(`body\\.reduced-motion [^{]*${esc}[\\w.\\-]*[^{]*\\{[^}]*opacity:\\s*1`, 's').test(rmText);
+  ok(inMedia, `${r.sel} survives the OS reduced-motion clamp`);
+  ok(inClass, `${r.sel} survives the IN-GAME reduce-motion switch`);
 }
 
 console.log(fails ? `\n✗ ${fails} element(s) vanish entirely for a player who asked for less motion` : '\n✓ Reduce Motion calms the game down without deleting anything from it');

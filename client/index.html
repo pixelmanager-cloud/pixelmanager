@@ -279,9 +279,16 @@
       .set-sw.on::after { transform: translateX(22px); background: var(--good); }
       .cf-btns { display: flex; gap: 10px; margin-top: 16px; }
       .cf-btns button { flex: 1; }
-      /* reduced-motion: kill animations/transitions app-wide when the player opts in */
+      /* reduced-motion: kill animations/transitions app-wide when the player opts in.
+         THIS IS THE SECOND OF TWO CLAMPS AND THE FIRST FIX MISSED IT. The OS-level @media block above was
+         given an exemption so that elements which rest at opacity:0 and are only revealed BY their
+         animation (#toast, #goal-flash) stay visible — otherwise reducing motion does not calm them, it
+         deletes them, and the player loses every error, confirmation and rejected bid in the game plus any
+         notice that a goal was scored. This class-based twin, driven by the in-game switch, had exactly the
+         same hole: a player who used the setting rather than their OS still lost all of it. */
       body.reduced-motion *, body.reduced-motion *::before, body.reduced-motion *::after {
         animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+      body.reduced-motion #toast.show, body.reduced-motion #goal-flash.show { opacity: 1 !important; }
       .pc-card { position: relative; width: 320px; max-width: 92vw; padding: 20px 22px 22px; text-align: center; cursor: default;
         border: 3px solid var(--cyan); border-radius: 14px; overflow: hidden; isolation: isolate; animation: ftpop 0.35s ease-out;
         background: linear-gradient(160deg, #12122a 0%, #0a0a18 60%); box-shadow: 0 0 0 2px #000, 0 0 26px rgba(0,229,255,0.4), 10px 10px 0 rgba(0,0,0,0.5); }

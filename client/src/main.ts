@@ -415,6 +415,7 @@ class Game {
   engine?: MatchEngine;
   running = false;
   silent = false; // when true, flushing events shows no goal flash/shake (used by "skip")
+  private cmOpp = ''; // the side opposing the event being rendered — fills {opp} in authored lines
   private goalFlashTimer: ReturnType<typeof setTimeout> | undefined;
   speed = 1; accum = 0; eventsShown = 0;
 
@@ -5310,7 +5311,10 @@ class Game {
     // the same way or a pressing line lands on a tackle in the back four.
     if (key) {
       const extra = commentaryExtra(key, branch);
-      if (extra.length) arr = [...arr, ...extra.map((l: string) => fillCm(l, vars ?? {}) as unknown as T)];
+      // `opp` is defaulted from the event currently being rendered, so an authored line can name the
+      // opposition without every call site having to remember to pass it.
+      const withOpp = { opp: this.cmOpp, ...(vars ?? {}) };
+      if (extra.length) arr = [...arr, ...extra.map((l: string) => fillCm(l, withOpp) as unknown as T)];
     }
     if (arr.length <= 1) return arr[0];
     // Salts are hand-assigned and 18 of them are reused across different banks, so the bag is keyed by
@@ -5458,6 +5462,13 @@ class Game {
     if (key && Game.MINOR.has(e.type)) return;
     const idx = this.eventsShown;
     const team = e.teamIdx === 0 ? this.homeName : this.awayName;
+    // THE OTHER SIDE, for the authored lines that name them. 92 authored commentary lines carry a {opp}
+    // token — 24 on shot_saved alone, plus foul, woodwork, corner, chance, tackle_won, penalty, free_kick —
+    // and exactly one of the 24 cpickNR call sites (goal) ever passed it. fillCm leaves an unknown token
+    // untouched, so every one of those lines printed a literal "{opp}" at the player. Set it once per event
+    // here rather than threading it through two dozen call sites, each of which builds its own vars object
+    // and would be one omission away from the same bug.
+    this.cmOpp = e.teamIdx === 0 ? this.awayName : this.homeName;
     const opp = e.teamIdx === 0 ? this.awayName : this.homeName;
     const p = this.descriptor(e.playerName ?? 'someone');
     const zone = this.zoneWord(e.zone);

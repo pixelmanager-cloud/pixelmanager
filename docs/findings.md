@@ -17,9 +17,22 @@ it — kept so it is not re-raised).
 | F-004 | fixed | ui/dead-wiring | Four `transition: width` rules had never once fired; the nodes are rebuilt by innerHTML each render | `client/src/main.ts` |
 | F-005 | fixed | dynasty/visual | The heir card was hard-coded `tier-bronze`, the one tier that never turns the sheen layer on | `client/src/main.ts` |
 | F-006 | fixed | ui/dead-wiring | `scorepulse` was declared twice and overridden by `scorepop` — unreachable | `client/index.html` |
-| F-007 | open  | ui/visual | Portraits still hash `name + band`, so a player changes identity when he crosses an age band. Fix written; blocked on the parallel 800-per-band pools landing | `client/src/portrait.ts` |
-| F-008 | open  | ui/visual | Portraits are not shown in manager mode (lineup, squad table, transfer market) — the Living Squad players are characters rendered as text rows | `client/src/main.ts` |
+| F-007 | fixed | ui/visual | Portraits hashed `name + band`, so a player changes identity when he crosses an age band. Fix written; blocked on the parallel 800-per-band pools landing | `client/src/portrait.ts` |
+| F-008 | fixed | ui/visual | Portraits now shown in the squad stats table; lineup/market still pending (lineup, squad table, transfer market) — the Living Squad players are characters rendered as text rows | `client/src/main.ts` |
 | F-009 | decision | ui/accessibility | The game loads its two typefaces from Google Fonts; an offline Steam build falls back to Courier New (§78) | `client/index.html:9` |
 | F-010 | decision | manager/correctness | Width, formation and duty choices barely register in outcomes — the ×12 breakaway is the engine's only real scoring channel (§68) | `shared/src/engine.ts` |
 | F-011 | decision | ui/visual | Steam capsule art is AI-generated and publicly disclosed on the store page (§80) | `store/steam/` |
-| F-012 | open  | content/content | The existing 64 portraits contain 5 genuine near-duplicate pairs (colour distance < 12 on a face crop) | `client/public/portraits/` |
+| F-012 | fixed | content/content | The existing 64 portraits contain 5 genuine near-duplicate pairs (colour distance < 12 on a face crop) | `client/public/portraits/` |
+| F-013 | fixed | ui/dead-wiring | The IN-GAME "Reduce motion" switch still deleted every toast and the goal announcement — F-002 patched only the OS media query, not the `body.reduced-motion` twin | `client/index.html:283` |
+| F-014 | fixed | content/dead-wiring | 92 authored commentary lines printed a literal `{opp}` — 23 of 24 draw sites never supplied it, and `fillCm` leaves unknown tokens intact | `client/src/main.ts:5317` |
+| F-015 | open | career/dead-wiring | The whole `Establishing` summer bank is unreachable — `rollFocus` only ever sees the chapter that just ENDED, and Establishing never ends before the career does. 8 authored options never reach a player | `shared/src/career.ts:1490` |
+| F-016 | open | manager/dead-wiring | Every season-rollover feed line is stamped with the closing season, so none is ever rendered — promotion, relegation, the title, the near-miss | `client/src/main.ts:2658` |
+| F-017 | open | dynasty/dead-wiring | House renown FALLS at every succession — `membersOf()` reads only live tokens, dropping every ancestor. Contradicts the game's own "renown never falls" | `client/src/api.ts:327` |
+| F-018 | open | dynasty/dead-wiring | The played heir's genes are computed by `mintHeirs` and discarded, so the pre-selected son does not carry the family traits | `client/src/api.ts:704` |
+| F-019 | open | economy/dead-wiring | `evaluateContractOffer` computes `moraleDelta` and no caller applies it — lowballing the star is free, and 'Generous' is identical to 'Meet it' | `shared/src/contracts.ts:106` |
+| F-020 | open | audio/dead-wiring | `audio.unlock()` is bound to `pointerdown` only, so a keyboard or controller player gets no music and no chimes for the whole session | `client/src/main.ts:449` |
+| F-021 | open | career/dead-wiring | Summer tiles label the authority meter "🧑‍🏫 Coach" on the three senior screens where the dashboard calls it "👔 Gaffer"; the legend then lists it twice | `client/src/main.ts:4083` |
+| F-022 | open | match/dead-wiring | `resolveShot`'s `clear` parameter is `false` at every call site, so the clear-chance bonus and its miss-logging branch are unreachable | `shared/src/engine.ts:881` |
+| F-023 | open | save/dead-wiring | `IndexedDBBackend.open()` caches a rejected promise forever, so the retry its own comment describes cannot succeed | `client/src/save.ts:488` |
+| F-024 | open | content/dead-wiring | Three of five MILESTONE flourish banks are unreachable; the backroom-staff quip corpus and the ~305-line international call-up corpus have no production caller | `shared/src/tokens.ts:174` |
+| F-025 | decision | save/dead-wiring | `recoverOrphanedSaves` restores only the save index, so a recovered dynasty returns in the bottom division at manager season 1 | `client/src/main.ts:474` |
