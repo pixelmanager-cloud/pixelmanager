@@ -80,6 +80,10 @@ Shooting the dynasty screens is also what surfaced bug #29 (`docs/bug-queue.md`)
 drawn from tokens alone, so it showed the living star and the brothers he was picked over and omitted his
 father, grandfather and the founder. It could not have been caught without a save this deep.
 
-## Still to do
+## The trailer
 
-The trailer.
+`store/steam/trailer/` — 61 seconds, 1080p30, cut from the same screenshots plus four real saves at one,
+two, three and four generations deep. `store/steam/trailer/README.md` has the shot list and how to rebuild
+it. The masters are gitignored; the pipeline that makes them is not.
+
+**It is silent.** The cut holds on each beat long enough for music, but choosing a track is your call.

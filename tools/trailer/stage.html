@@ -1,0 +1,105 @@
+<!doctype html>
+<meta charset="utf-8" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=block" rel="stylesheet" />
+<style>
+  /* The trailer stage. Nothing here animates itself — `renderAt(t)` sets every style from the clock, so a
+     frame grabbed at t is identical however long the machine took to draw it. That determinism is the whole
+     point: the capture runs at whatever speed it manages and the output is still exactly 30fps. */
+  :root { --bg:#0a0a15; --text:#eef0fb; --cyan:#46cfe6; --gold:#e6c76a; --pink:#e85c93;
+          --display:'Press Start 2P', monospace; --body:'VT323','Courier New',monospace; }
+  html,body { margin:0; width:1920px; height:1080px; overflow:hidden; background:#000; }
+  #stage { position:relative; width:1920px; height:1080px; background:var(--bg); overflow:hidden; }
+  .shot { position:absolute; inset:0; opacity:0; will-change:opacity,transform; }
+  .shot img { position:absolute; left:50%; top:50%; transform-origin:center; image-rendering:auto; }
+  /* A dark vignette keeps the caption legible over a bright parchment shot without dimming the art. */
+  #vig { position:absolute; inset:0; pointer-events:none;
+         background:radial-gradient(ellipse at center, transparent 42%, rgba(6,6,14,.72) 100%); }
+  #scrim { position:absolute; inset:0; background:#05050c; opacity:0; }
+  /* A caption has to read over a busy UI screenshot as well as over blank parchment, so it carries its own
+     gradient band rather than relying on the shot underneath being dark in the right place. */
+  #capbg { position:absolute; left:0; right:0; bottom:0; height:330px; opacity:0; pointer-events:none;
+           background:linear-gradient(to top, rgba(5,5,12,.94) 0%, rgba(5,5,12,.80) 45%, transparent 100%); }
+  #cap { position:absolute; left:0; right:0; bottom:96px; text-align:center; opacity:0; padding:0 140px; }
+  #cap .line { font-family:var(--display); font-size:34px; line-height:1.75; color:var(--text);
+               text-shadow:0 4px 0 #05050c, 0 0 26px rgba(5,5,12,.95); letter-spacing:1px; }
+  #cap .sub { font-family:var(--body); font-size:30px; color:var(--cyan); margin-top:16px;
+              text-shadow:0 2px 0 #05050c, 0 0 18px rgba(5,5,12,.9); }
+  /* The end card is the only place the game's own title lockup appears at full size. */
+  #end { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center;
+         justify-content:center; gap:30px; opacity:0; background:var(--bg); }
+  #end .title { font-family:var(--display); font-size:78px; color:var(--cyan); letter-spacing:6px;
+                text-shadow:0 6px 0 #0a1a24, 0 0 40px rgba(70,207,230,.35); }
+  #end .tag { font-family:var(--body); font-size:42px; color:var(--gold); letter-spacing:1px; }
+  #end .feet { font-family:var(--display); font-size:17px; color:#8b93b8; letter-spacing:2px; margin-top:18px; }
+  #end .wish { font-family:var(--display); font-size:22px; color:var(--pink); letter-spacing:2px; }
+</style>
+<div id="stage">
+  <div id="shots"></div>
+  <div id="vig"></div>
+  <div id="capbg"></div>
+  <div id="cap"><div class="line"></div><div class="sub"></div></div>
+  <div id="end">
+    <div class="title">FOOTBALL ROYALTY</div>
+    <div class="tag">A football life. Then your son's.</div>
+    <div class="wish">WISHLIST ON STEAM</div>
+    <div class="feet">OFFLINE · NO LIVE SERVICE · ONE SAVE, MANY GENERATIONS</div>
+  </div>
+  <div id="scrim"></div>
+</div>
+<script>
+const $ = (s) => document.querySelector(s);
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+// Ease in/out — a linear fade reads as a video glitch, an eased one reads as a cut decision.
+const ease = (t) => t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2;
+const ramp = (t, a, b) => clamp((t - a) / Math.max(1e-6, b - a), 0, 1);
+
+let SHOTS = [], CAPS = [], END = null, DUR = 0;
+function build(plan) {
+  SHOTS = plan.shots; CAPS = plan.captions; END = plan.end; DUR = plan.duration;
+  $('#shots').innerHTML = SHOTS.map((s, i) =>
+    `<div class="shot" id="sh${i}"><img src="${s.src}" data-i="${i}"/></div>`).join('');
+}
+function renderAt(t) {
+  SHOTS.forEach((s, i) => {
+    const el = document.getElementById('sh' + i), img = el.firstElementChild;
+    // Fade in over `fade`, hold, fade out over `fade` — neighbouring shots overlap, so a dissolve is just
+    // two of these crossing.
+    const a = ease(ramp(t, s.in, s.in + s.fade)) * (1 - ease(ramp(t, s.out - s.fade, s.out)));
+    el.style.opacity = String(a);
+    if (a <= 0.001) return;
+    // Ken Burns: a slow push or drift across the shot's whole life, so nothing sits perfectly still.
+    const p = ramp(t, s.in, s.out);
+    const sc = s.scale[0] + (s.scale[1] - s.scale[0]) * p;
+    const dx = (s.pan?.[0] ?? 0) * p, dy = (s.pan?.[1] ?? 0) * p;
+    img.style.width = (1920 * s.fit) + 'px';
+    // The four Family Record shots share a width and grow downward from the founder at their base, so
+    // anchoring them by the BOTTOM edge holds the founder still while the tree grows up out of him. That
+    // is the one transition in the trailer that has to say something, and alignment is what says it.
+    if (s.anchorBottom) {
+      img.style.top = s.anchorBottom + 'px'; img.style.left = '50%';
+      img.style.transform = `translate(-50%,-100%) translate(${dx}px, ${dy}px) scale(${sc})`;
+    } else {
+      img.style.top = '50%'; img.style.left = '50%';
+      img.style.transform = `translate(-50%,-50%) translate(${dx}px, ${dy}px) scale(${sc})`;
+    }
+  });
+  const c = CAPS.find((c) => t >= c.in && t < c.out);
+  const cap = $('#cap');
+  if (!c) { cap.style.opacity = '0'; $('#capbg').style.opacity = '0'; }
+  else {
+    cap.querySelector('.line').textContent = c.line;
+    cap.querySelector('.sub').textContent = c.sub ?? '';
+    const a = ease(ramp(t, c.in, c.in + 0.45)) * (1 - ease(ramp(t, c.out - 0.45, c.out)));
+    cap.style.opacity = String(a);
+    $('#capbg').style.opacity = String(a);
+    cap.style.transform = `translateY(${(1 - a) * 14}px)`;
+    if (c.top) { cap.style.bottom = 'auto'; cap.style.top = '92px'; } else { cap.style.top = 'auto'; cap.style.bottom = '96px'; }
+  }
+  $('#end').style.opacity = String(ease(ramp(t, END.in, END.in + 0.9)));
+  // Open from black and close to black.
+  $('#scrim').style.opacity = String(Math.max(1 - ease(ramp(t, 0, 0.9)), ease(ramp(t, DUR - 0.8, DUR))));
+}
+window.build = build; window.renderAt = renderAt;
+</script>

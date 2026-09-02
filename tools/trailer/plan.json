@@ -1,0 +1,32 @@
+{
+  "duration": 61.0,
+  "end": { "in": 54.2 },
+  "shots": [
+    { "src": "shot/05-scouting.png",       "in": 0.0,  "out": 6.2,  "fade": 0.8, "fit": 1.06, "scale": [1.0, 1.075], "pan": [0, -26] },
+    { "src": "shot/03-cardplay.png",       "in": 5.6,  "out": 13.2, "fade": 0.8, "fit": 1.06, "scale": [1.09, 1.0],  "pan": [0, 22] },
+    { "src": "shot/10-club-season.png",    "in": 12.6, "out": 19.8, "fade": 0.8, "fit": 1.06, "scale": [1.0, 1.08],  "pan": [-30, -18] },
+    { "src": "shot/11-facilities.png",     "in": 19.2, "out": 24.8, "fade": 0.8, "fit": 1.06, "scale": [1.07, 1.0],  "pan": [26, 20] },
+    { "src": "shot/09-hall-of-legends.png","in": 24.2, "out": 30.2, "fade": 0.8, "fit": 1.06, "scale": [1.0, 1.07],  "pan": [0, -22] },
+
+    { "src": "tree/tree-g1.png", "in": 29.6, "out": 34.2, "fade": 0.9, "fit": 0.547, "scale": [1.0, 1.0], "anchorBottom": 826 },
+    { "src": "tree/tree-g2.png", "in": 33.6, "out": 38.2, "fade": 0.9, "fit": 0.547, "scale": [1.0, 1.0], "anchorBottom": 826 },
+    { "src": "tree/tree-g3.png", "in": 37.6, "out": 42.2, "fade": 0.9, "fit": 0.547, "scale": [1.0, 1.0], "anchorBottom": 826 },
+    { "src": "tree/tree-g4.png", "in": 41.6, "out": 48.6, "fade": 0.9, "fit": 0.547, "scale": [1.0, 1.0], "anchorBottom": 826 },
+
+    { "src": "shot/08-houses-ladder.png",  "in": 48.0, "out": 55.0, "fade": 0.9, "fit": 1.06, "scale": [1.0, 1.075], "pan": [0, -30] }
+  ],
+  "captions": [
+    { "in": 1.3,  "out": 5.6,  "line": "EVERY DYNASTY STARTS WITH ONE BOY", "sub": "you pick him at ten, and you never get another founder" },
+    { "in": 6.7,  "out": 12.6, "line": "YOU PLAY HIS WHOLE CAREER", "sub": "one hand at a time, age 10 to 25 — no auto-sim, no sliders" },
+    { "in": 13.7, "out": 19.4, "line": "THEN YOU RUN THE CLUB HE PLAYS FOR", "sub": "the season, the squad, the sponsor, the wage bill" },
+    { "in": 20.2, "out": 24.4, "line": "A BIG CLUB IS SOMETHING YOU KEEP AFFORDING", "sub": "2,534c a season to run — and 66c in the bank" },
+    { "in": 25.2, "out": 29.6, "line": "EVERY CAREER ENDS", "sub": "one legend card per retirement — then the name is handed on" },
+
+    { "in": 30.6, "out": 33.8, "line": "ONE GENERATION" },
+    { "in": 34.6, "out": 37.8, "line": "TWO" },
+    { "in": 38.6, "out": 41.8, "line": "THREE" },
+    { "in": 42.8, "out": 48.0, "line": "FOUR", "sub": "one save. one family. the same name, carried." },
+
+    { "in": 49.2, "out": 54.2, "line": "THIRTEEN FAMILIES CLIMB THE SAME LADDER", "sub": "renown never falls — a quiet generation simply adds nothing" }
+  ]
+}
