@@ -2131,12 +2131,11 @@ Two decisions for CK, and I have deliberately not taken either:
   `duty_power`/`tactical_power` already use, would stop the suite scoring noise. I did not touch it: every
   agent was forbidden from editing a bar to make its numbers look better, and that rule applies to me most
   of all. But a gate that measures noise is worse than no gate, because it launders luck as evidence.
-- **Should duties get a defensive positioning term at all?** Finding 1 says the defensive half of the duty
-  system does not exist. That is a feature decision, not a bug fix.
-
-### 4-2-2-2 — INVESTIGATED, NOT FIXED, AND THE ASSERTION IS ITSELF UNDERPOWERED
-
-This was the one `strategy_test` failure judged REAL and untouched by all four tactical approaches. I chased
+- ~~**Should duties get a defensive positioning term at all?**~~ — **DECLINED 2026-09-02 by CK.** `push`,
+  `come` and `hug` are read only on the attacking side, and the defensive half of the duty system does not
+  exist. It stays that way. Same reasoning as the width and formation acceptance directly above: this engine
+  has one real scoring channel, so a new defensive positioning term would be tuned against a model that
+  cannot express what it is for. Not a bug, not a backlog item — a declined feature.
 it and did not fix it. What is established:
 
 **On `main` the assertion is a coin flip.** 4-2-2-2 v 4-1-4-1 measures **23W-17D-20L** at N=60, with shots
