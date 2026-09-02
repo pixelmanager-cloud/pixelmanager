@@ -13,7 +13,8 @@ let fails = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? 'ok  ' : 'FAIL'} ${m}`); if (!c) fails++; };
 
 console.log('=== A simmed fixture leaves recordable per-player stats ===');
-let totalRows = 0, reconciled = 0, ms = 0, expectedRows = 0, appsOk = 0;
+let totalRows = 0, reconciled = 0, expectedRows = 0, appsOk = 0;
+const perMatch: number[] = [];
 const N = 12;
 for (let i = 0; i < N; i++) {
   const a = generateClub('sim-m' + i, 'Mine', 0x3b6bd2, 11, 5000 + i, true);
@@ -23,7 +24,7 @@ for (let i = 0; i < N; i++) {
   const e = new MatchEngine([buildXI(a, autoPickXI(a, ta.formation)), buildXI(b, autoPickXI(b, tb.formation))], (4242 ^ i) >>> 0, [ta, tb] as any);
   let guard = 0;
   while (!e.state.finished && guard++ < 40000) e.tick();
-  ms += Date.now() - t0;
+  perMatch.push(Date.now() - t0);
   const rows: any[] = deriveMatchStats(e.teams[0], e.teams[1], e.state.events, e.state.score as [number, number])[0];
   totalRows += rows.length;
   // Everyone who took the field: the XI plus every man brought on. A substituted player is on neither
@@ -64,8 +65,22 @@ void sink;
 // budget, and a machine faster than the reference does not get a budget tighter than the one we tuned.
 const slowdown = Math.min(8, Math.max(1, calibMs / CALIB_REFERENCE_MS));
 const budget = 150 * slowdown;
-const each = ms / N;
+
+// AND THE MEDIAN, NOT THE MEAN — the calibration alone was not enough, and the CI logs proved it. Across
+// the failing run and the two that passed, the verify leg took 1057s, 1030s and 1068s: the runner's
+// sustained speed was identical every time, and the calibration measures 2.4x, which puts a 26ms dev-box
+// match at ~62ms on CI, nowhere near the 150ms it blew. So the failure was never sustained slowness. It
+// was one match stalling — a GC pause, a descheduled core, a noisy neighbour — and a mean over 12 samples
+// carries that straight into the result.
+//
+// The median cannot be moved by one stalled sample, while a real regression slows EVERY match and moves it
+// immediately. Both numbers are printed: a large gap between them is itself the signature of a spike.
+const sorted = [...perMatch].sort((x, y) => x - y);
+const median = sorted[Math.floor(sorted.length / 2)];
+const mean = perMatch.reduce((a, b) => a + b, 0) / perMatch.length;
+const worst = sorted[sorted.length - 1];
 console.log(`  ..   machine calibration ${calibMs}ms vs ${CALIB_REFERENCE_MS}ms reference → ${slowdown.toFixed(1)}x, budget ${budget.toFixed(0)}ms`);
-ok(each < budget, `a full ninety minutes sims fast enough to loop over a season (${each.toFixed(0)}ms each, budget ${budget.toFixed(0)}ms on this machine)`);
+console.log(`  ..   sim cost per match: median ${median}ms, mean ${mean.toFixed(0)}ms, worst ${worst}ms over ${N} matches`);
+ok(median < budget, `a full ninety minutes sims fast enough to loop over a season (median ${median}ms, budget ${budget.toFixed(0)}ms on this machine)`);
 console.log(fails ? `\n✗ ${fails} sim-stats check(s) failed` : `\n✓ a simmed season records what the honours are derived from`);
 if (fails) process.exitCode = 1;
