@@ -17,6 +17,7 @@
   },
   "devDependencies": {
     "fake-indexeddb": "^6.2.5",
+    "playwright": "^1.62.1",
     "tsx": "^4.19.0"
   }
 }

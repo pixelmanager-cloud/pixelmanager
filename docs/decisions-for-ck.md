@@ -2554,3 +2554,39 @@ While measuring, I twice read `breederRevenue` as live and inverted my conclusio
 found out by checking its callers. A dead mechanism does not merely fail to work; it actively misleads
 whoever reasons about the system it sits in. That is the third time in two days this codebase has done that
 to me.
+
+## 77. THE BROWSER SMOKE TEST — done 2026-09-02
+
+`browser_safe.ts` parses the source for module-scope `process` / node-builtin references, because forty of
+those once made the game a **black rectangle while `npm run verify` was green** — vite type-checks and
+bundles without EXECUTING, and every other harness runs in Node. Its own header ends: *"This is still the
+cheap half. The expensive half is loading the built page in a headless browser, and this file does not
+pretend to be that."*
+
+`tools/playtest/browser_smoke.ts` is that half. It serves `client/dist`, opens it in headless chromium, and
+plays the opening of a real game — main menu → New Game → a family name → Start → the academy screen —
+collecting every `pageerror` and `console.error` along the way. It runs in **1 second** and is in the gate.
+
+**Three things it refuses to do**, each of which would make it the kind of check this project keeps finding:
+
+- it **fails** rather than skips when `client/dist` is missing;
+- it **fails** rather than skips when chromium cannot launch, and prints the install command;
+- it **fails** when `dist` is stale, walking every source under `client/src` and `shared/src`.
+
+That last one it earned. The first version compared only `client/src/main.ts` against the bundle — so when
+I broke `shared/src/engine.ts` to test detection and the build failed, `dist` stayed stale and the probe
+happily reported four passes on the **previous** build. It now walks both trees.
+
+### A finding worth keeping: the original bug can no longer recur through `process.env`
+
+Testing detection, I injected the exact historical defect — a module-scope `Number(process.env.X ?? 30)` —
+rebuilt, and the smoke test passed. Not because the test was weak: **vite compiles `process.env` to `var
+Wd={}`**, so `process.env.ANYTHING` now silently reads `undefined` and falls back to its default rather
+than throwing.
+
+So part of `browser_safe.ts`'s stated threat model is obsolete. A bare `process.cwd()` or a node-builtin
+import would still break the page — and `browser_safe.ts` still catches those, so it keeps its job — but
+`process.env` specifically is neutralised by the bundler. Verified by mutation with a real load-time throw
+(`(undefined as any).nope`), which the smoke test catches on all four checks and names in its output.
+
+CI installs chromium before the gate; without it the probe fails loudly rather than quietly passing.

@@ -30,5 +30,11 @@ jobs:
       # `npm run gate` now runs all three unconditionally and judges the result against
       # scripts/gate-baseline.txt: an accepted failure is not a gate failure, a NEW one is. It prints each
       # leg's exit code, so a break still names its leg.
+      # The browser smoke test needs a real chromium. Without this step tools/playtest/browser_smoke.ts
+      # FAILS rather than skipping, which is deliberate -- a browser gate that quietly skips reads as
+      # evidence that the game runs when nothing has checked.
+      - name: Install chromium for the browser smoke test
+        run: npx playwright install --with-deps chromium
+
       - name: Gate (verify + playtest + qa, judged against the accepted-failure baseline)
         run: npm run gate
