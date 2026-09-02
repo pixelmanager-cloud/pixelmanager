@@ -14,6 +14,10 @@ import { join, extname } from 'node:path';
 // Point it at any folder of .ogg — the game's bundled 18 by default, or a slice of the full 1,015-track
 // pack when hunting for a trailer cue.
 const AUDIO = process.argv[2] ?? 'client/public/audio';
+// --fast skips the chroma key estimate, which is the expensive part (a coarse DFT over the whole track).
+// For picking IN-GAME loop music, duration and dynamic range decide it; key barely matters when tracks are
+// crossfaded minutes apart rather than spliced.
+const FAST = process.argv.includes('--fast');
 const files = readdirSync(AUDIO).filter((f) => f.endsWith('.ogg')).sort();
 const server = createServer((req, res) => {
   const p = decodeURIComponent(req.url.split('?')[0]);
@@ -28,7 +32,7 @@ const browser = await chromium.launch();
 const page = await browser.newPage();
 await page.goto('http://localhost:4328/');
 
-const out = await page.evaluate(async (files) => {
+const out = await page.evaluate(async ({ files, FAST }) => {
   const KRUMHANSL_MAJ = [6.35,2.23,3.48,2.33,4.38,4.09,2.52,5.19,2.39,3.66,2.29,2.88];
   const KRUMHANSL_MIN = [6.33,2.68,3.52,5.38,2.60,3.53,2.54,4.75,3.98,2.69,3.34,3.17];
   const NAMES = ['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
@@ -78,6 +82,8 @@ const out = await page.evaluate(async (files) => {
     }
 
     // Key: chroma from a coarse DFT over the whole track, correlated against Krumhansl profiles.
+    if (FAST) { results.push({ f, secs: n/sr, bpm: bestBpm, bar: 4*60/bestBpm, key: '—', keyConf: 0,
+                               medDb: med, p10, p90, openDb, lift: bestLift, liftAt: bestAt }); continue; }
     const chroma = new Array(12).fill(0);
     const step = Math.floor(sr * 0.5), win = 4096;
     for (let s0 = 0; s0 + win < n; s0 += step) {
@@ -105,7 +111,7 @@ const out = await page.evaluate(async (files) => {
                    medDb: med, p10, p90, openDb, lift: bestLift, liftAt: bestAt });
   }
   return results;
-}, files);
+}, { files, FAST });
 
 console.log('track            len    bpm   bar    key            open   med   p90   dyn   biggest lift');
 console.log('-'.repeat(104));

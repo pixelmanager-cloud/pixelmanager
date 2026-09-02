@@ -412,6 +412,7 @@ class Game {
   engine?: MatchEngine;
   running = false;
   silent = false; // when true, flushing events shows no goal flash/shake (used by "skip")
+  private goalFlashTimer: ReturnType<typeof setTimeout> | undefined;
   speed = 1; accum = 0; eventsShown = 0;
 
   account!: Account;
@@ -1048,7 +1049,23 @@ class Game {
     const surname = p.name.trim().split(/\s+/).slice(1).join(' ') || p.name;
     const el = document.createElement('div');
     el.id = 'player-card-ov';
-    el.innerHTML = `<div class="pc-card tier-bronze">`
+    // THE HEIR WAS THE LEAST ANIMATED CARD IN THE GAME, on the beat this file's own comment calls the payoff
+    // of the whole dynasty loop. Every prospect was hard-coded `tier-bronze`, and bronze is the one tier that
+    // never turns on the sheen layer (`.pc-card::before` sits at opacity 0 and tier-silver is the first
+    // override) — so holoSheen was running on a fully transparent element. showPlayerCard emits a ring, a
+    // burst and sparks; this emitted none of them. A 62-overall squad player opened from the team sheet had
+    // more ceremony than the son carrying the family name.
+    //
+    // `tier-heir` is deliberately NOT the top of the ladder. He is a promise, not an achievement, so he gets
+    // the family's own green-gold rather than pulseLegend or legendBorder — those stay for what he earns.
+    const heir = born && gen > 0;
+    const heirSparks = heir ? Array.from({ length: 7 }, () => {
+      const x = Math.round(Math.random() * 90) + 5, y = Math.round(Math.random() * 86) + 7;
+      const delay = (Math.random() * 2).toFixed(2), dur = (0.9 + Math.random() * 0.8).toFixed(2);
+      return `<i class="pc-spark" style="left:${x}%;top:${y}%;animation-delay:${delay}s;animation-duration:${dur}s">✦</i>`;
+    }).join('') : '';
+    el.innerHTML = `<div class="pc-card ${heir ? 'tier-heir' : 'tier-bronze'}">`
+      + (heir ? '<div class="pc-ring"></div><div class="pc-burst"></div>' + heirSparks : '')
       + `<div class="pc-top"><div class="pc-ovr">10<span>YRS</span></div><div class="pc-tier">🌱<span>PROSPECT</span></div></div>`
       + `<div class="pc-crest role-${p.roleHint}">${portraitImg(p.name, 'youth', 84)}<span class="pc-crest-role">${p.roleHint}</span></div>`
       + `<div class="pc-name">${p.name}</div><div class="pc-role">Youth Prospect${gen ? ` · gen ${gen + 1}` : ''}</div>`
@@ -3746,11 +3763,16 @@ class Game {
     // The trunk only makes sense once the line has actually grown — with a single founder it renders as a
     // stalk sprouting out of his head. One generation gets a short root instead.
     const trunk = gens.length > 1
-      ? `<path d="M ${W / 2} ${H - PAD + 20} C ${W / 2 - 26} ${H * 0.66}, ${W / 2 + 26} ${H * 0.4}, ${W / 2} ${PAD - 12}" class="fr-trunk"/>`
-      : `<path d="M ${W / 2} ${H - PAD + 24} L ${W / 2} ${H - PAD - 4}" class="fr-trunk"/>`;
+      ? `<path d="M ${W / 2} ${H - PAD + 20} C ${W / 2 - 26} ${H * 0.66}, ${W / 2 + 26} ${H * 0.4}, ${W / 2} ${PAD - 12}" class="fr-trunk" pathLength="1"/>`
+      : `<path d="M ${W / 2} ${H - PAD + 24} L ${W / 2} ${H - PAD - 4}" class="fr-trunk" pathLength="1"/>`;
+    // THE RECORD DRAWS ITSELF, from the founder upward. Each branch and each medallion is stamped with its
+    // own rank (`--fr-g`), and the CSS staggers them off that — so the tree grows the way the dynasty did
+    // rather than arriving all at once. `pathLength="1"` normalises every curve so one dash animation fits
+    // them all whatever their real length.
+    const rankOf = (n: any) => Math.max(0, gens.indexOf(n.generation ?? 0));
     const links = nodes.filter((n) => n.parentId && pos.has(n.parentId) && pos.has(n.id)).map((n) => {
       const a = pos.get(n.parentId)!, b = pos.get(n.id)!;
-      return `<path d="M ${a.x} ${a.y - 26} C ${a.x} ${(a.y + b.y) / 2}, ${b.x} ${(a.y + b.y) / 2}, ${b.x} ${b.y + 26}" class="fr-branch"/>`;
+      return `<path d="M ${a.x} ${a.y - 26} C ${a.x} ${(a.y + b.y) / 2}, ${b.x} ${(a.y + b.y) / 2}, ${b.x} ${b.y + 26}" class="fr-branch" pathLength="1" style="--fr-g:${rankOf(n)}"/>`;
     }).join("");
     const medallions = nodes.map((n) => {
       const p = pos.get(n.id)!;
@@ -3767,7 +3789,10 @@ class Game {
       const honourLine = won.length
         ? ` · ${won.map((a) => `${a.label} (S${a.season}, ${a.value})`).join('; ')}`
         : '';
-      return `<g class="fr-node${cls}" transform="translate(${p.x},${p.y})">`
+      // The pop lives on an INNER group. A CSS transform on the outer one would override the SVG
+      // `transform="translate(...)"` attribute that positions the node, and the whole tree would collapse
+      // onto the origin.
+      return `<g class="fr-node${cls}" transform="translate(${p.x},${p.y})"><g class="fr-in" style="--fr-g:${rankOf(n)}">`
         + `<title>${who}${honourLine}</title>`
         + `<ellipse rx="30" ry="34" class="fr-oval"/><ellipse rx="24" ry="28" class="fr-oval-inner"/>`
         + `<text y="5" class="fr-init">${String(n.name ?? "?").split(" ").map((w: string) => w[0]).join("").slice(0, 2)}</text>`
@@ -3776,7 +3801,7 @@ class Game {
         + (sub ? `<text y="68" class="fr-sub">${sub}</text>` : "")
         + (won.length ? `<g class="fr-honours" transform="translate(26,-26)"><circle r="11" class="fr-hon-dot"/>`
             + `<text y="4" class="fr-hon-n">${won.length > 9 ? '9+' : won.length}</text></g>` : "")
-        + `</g>`;
+        + `</g></g>`;
     }).join("");
     host.innerHTML = `<div class="family-record"><div class="fr-frame">`
       + `<div class="fr-title">The Family Record</div>`
@@ -4086,7 +4111,33 @@ class Game {
     else content = narr + evt + body + `<div class="cg-context">` + this.objectiveHtml(s) + this.rivalHtml(s) + this.intlHtml(s) + this.lifeDashHtml(s) + lifeOutcome + conseq + recap + `</div>`;
     const help = this.careerTab === 'now' ? this.careerHelpCard(s) : '';
     const tut = this.careerTab === 'now' ? this.tutorialHint(s) : '';
+    // FOUR `transition: width` RULES WERE WRITTEN FOR THESE BARS AND NONE OF THEM HAS EVER FIRED.
+    // `.cg-bar > i`, `.cg-dash .cg-m-bar b`, `.cg-obj-bar b` and `.op-bar-fill` each declare one, but every
+    // bar carries its value as an inline width inside this innerHTML string — so each render destroys the
+    // old node and creates a new one *already at its final width*, and a brand-new element has no
+    // from-state to transition out of. Energy, the seven relationship meters, the stage objective and the
+    // public-image bar therefore teleport, on the screen where the player spends 120 turns watching those
+    // numbers move because of choices they made. The equivalents that DO animate — #pressure-home and
+    // #fit-fill — are static elements that are never rebuilt, which is exactly why they work.
+    //
+    // Snapshot the old widths, re-apply them to the new nodes, force a reflow, then stamp the real values
+    // one frame later so the transition has something to run from.
+    const BAR_SEL = '.cg-bar > i, .cg-dash .cg-m-bar b, .cg-obj-bar b, .op-bar-fill';
+    const beforeW = [...document.querySelectorAll<HTMLElement>(BAR_SEL)].map((el) => el.style.width);
     $('academy-body').innerHTML = head + scene + help + tut + tabBar + content;
+    const bars = [...document.querySelectorAll<HTMLElement>(BAR_SEL)];
+    // Bars are matched by position, so only animate when the dashboard has the same shape as last render.
+    // If a meter has appeared or gone the indices no longer line up and a bar would slide from a value that
+    // was never its own — better to render it correctly at rest than to animate a lie.
+    if (beforeW.length === bars.length && bars.length > 0) {
+      const toW = bars.map((el) => el.style.width);
+      bars.forEach((el, i) => { el.style.width = beforeW[i] || toW[i]; });
+      // Reading a layout property commits the from-state before it is changed again. This is the same
+      // idiom the file already uses for toast() and celebrateGoal(); it forces one extra synchronous layout
+      // per career render, which is a user-action cadence rather than a per-frame one.
+      void bars[0].offsetWidth;
+      requestAnimationFrame(() => bars.forEach((el, i) => { el.style.width = toW[i]; }));
+    }
     ($('cg-help-x') as any)?.addEventListener('click', () => { localStorage.setItem(this.onbKey('fm_career_help_done'), '1'); if (this.lastCareerState) this.renderCareer(this.lastCareerState); else ($('cg-help') as any)?.remove(); }); // re-render so the contextual hint takes its place (#2)
     ($('cg-tut-x') as any)?.addEventListener('click', () => { localStorage.setItem(this.onbKey('fm_tut_done'), '1'); ($('cg-tut') as any)?.remove(); });
     $('cg-back').addEventListener('click', () => this.showAcademy());
@@ -5482,10 +5533,23 @@ class Game {
 
   private celebrateGoal(e: MatchEvent) {
     const el = $('goal-flash');
-    el.textContent = `⚽ GOAL!  ${e.teamIdx === 0 ? this.homeName : this.awayName}`;
-    el.classList.remove('show');
+    // A GOAL AGAINST YOU IS NOT A CELEBRATION. This announced both goals identically — the same
+    // celebratory green, the same triumphant pop — so conceding a 90th-minute equaliser looked exactly
+    // like scoring one. `mySide` has been on the match view all along; it simply was not consulted here.
+    const mine = e.teamIdx === this.mySide;
+    el.textContent = mine
+      ? `⚽ GOAL!  ${e.teamIdx === 0 ? this.homeName : this.awayName}`
+      : `⚽ ${e.teamIdx === 0 ? this.homeName : this.awayName} score.`;
+    el.classList.remove('show', 'them');
     void el.offsetWidth; // restart the CSS animation
     el.classList.add('show');
+    if (!mine) el.classList.add('them');
+    // TAKE IT DOWN EXPLICITLY rather than leaning on the animation ending at opacity 0. That worked, right
+    // up until a player turned on Reduce Motion: the global rule clamps every animation to 0.001ms, so the
+    // flash raced to its final frame and a goal was never announced at all. The class now has a real
+    // lifetime, which reduced-motion CSS can show statically.
+    clearTimeout(this.goalFlashTimer);
+    this.goalFlashTimer = setTimeout(() => el.classList.remove('show', 'them'), mine ? 1700 : 1400);
   }
 }
 

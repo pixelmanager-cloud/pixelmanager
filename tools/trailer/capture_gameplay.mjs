@@ -189,6 +189,16 @@ const SHOTS = {
       await names[0].click({ timeout: 2000 }).catch(() => {});
     });
   },
+  // The record DRAWING ITSELF — the animation fires on render, so the recording has to start before the
+  // screen does.
+  treedraw: async () => {
+    await fresh();
+    await record('treedraw', 5, async () => {
+      await tap('#view-trophies', 300);
+      const el = await page.$('.family-record');
+      if (el) await el.scrollIntoViewIfNeeded();
+    });
+  },
   // The Family Record revealing itself as the page scrolls — the centrepiece, but as a move rather than a
   // held still.
   tree: async () => {
