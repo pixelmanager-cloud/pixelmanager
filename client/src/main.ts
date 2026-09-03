@@ -1694,7 +1694,7 @@ class Game {
         + `<span class="tm-name">${l.player.name}${house ? ` <b class="tm-crest" title="${house.blurb.replace(/"/g, '&quot;')}">👑 of the ${house.name}s</b>` : ''}</span>`
         + `<span class="tm-ov">OV ${l.ov} · age ${l.age}</span><button class="tm-buy primary" data-buy="${l.player.id}" title="${reason}" ${cantAfford || squadFull ? 'disabled' : ''}>Buy · ${l.fee.toLocaleString()}c</button></div>`;
     }).join('') : '<div class="muted">The market has cleared for this season.</div>';
-    const sellList = sellable.map((p) => { const ov = overall(p), v = squadSaleValue(ov, p.age ?? 26); return `<div class="tm-row"><span class="tm-pos tm-${p.role}">${p.role}</span><span class="tm-name">${p.name}</span><span class="tm-ov">OV ${ov}</span><button class="tm-sell" data-sell="${p.id}" title="${squadMin ? `Can't sell below ${MIN_SQUAD} players` : `Sell for +${v.toLocaleString()}c`}" ${squadMin ? 'disabled' : ''}>Sell · +${v.toLocaleString()}c</button></div>`; }).join('');
+    const sellList = sellable.map((p) => { const ov = overall(p), v = squadSaleValue(ov, p.age ?? 26, moraleEffects(p.morale ?? 65).sellMult); return `<div class="tm-row"><span class="tm-pos tm-${p.role}">${p.role}</span><span class="tm-name">${p.name}</span><span class="tm-ov">OV ${ov}</span><button class="tm-sell" data-sell="${p.id}" title="${squadMin ? `Can't sell below ${MIN_SQUAD} players` : `Sell for +${v.toLocaleString()}c`}" ${squadMin ? 'disabled' : ''}>Sell · +${v.toLocaleString()}c</button></div>`; }).join('');
     const season = this.season ?? 0;
     const wageBill = squad.reduce((n, p) => n + squadSeasonWage(overall(p), season), 0); // PT-500: the recurring cost of the squad, visible BEFORE you add to it
     body.innerHTML = `<div class="tm-head"><span class="tm-coins"><span class="ico-inline">${sprite('coin')}</span> ${coins.toLocaleString()}c</span> · Squad <b>${squad.length}</b>/${MAX_SQUAD} · ${tierName(tier)} · 💷 wages <b>~${wageBill.toLocaleString()}c</b> a season</div>`
@@ -1728,7 +1728,11 @@ class Game {
     // which has no age term, while the credit is `squadSaleValue` — −12%/yr past 30, floored at 20%. A
     // 35-year-old advertised at "Sell · +380c" banked 152c, and at 38 it was 76c. The game told the player
     // a price twice and then paid a fifth of it.
-    this.openConfirm(`Sell <b>${p?.name ?? 'this player'}</b> for +${(p ? squadSaleValue(overall(p), p.age ?? 26) : 0).toLocaleString()}c?`, 'Sell', async () => {
+    // ...and then it happened again, with the MORALE term. sellPlayer gained `moraleEffects().sellMult`
+    // afterwards and neither quote was revisited, so an unhappy man was still advertised at his neutral
+    // price and sold for up to 20% less — the exact swing the squad report promises in words. Both quotes
+    // now build the price the same way the credit does; tools/playtest/sale_quote_matches.ts holds them there.
+    this.openConfirm(`Sell <b>${p?.name ?? 'this player'}</b> for +${(p ? squadSaleValue(overall(p), p.age ?? 26, moraleEffects(p.morale ?? 65).sellMult) : 0).toLocaleString()}c?`, 'Sell', async () => {
       try { const r = await api.sellPlayer(playerId); if (this.account) this.account.coins = r.coins; this.setMe(await api.me()); toast(`💸 Sold · +${r.value.toLocaleString()}c`); if (p) this.feedEvent('transfer_out', '💸', this.personCtx(p, false), { fee: r.value }); this.renderTransferMarket(); }
       catch (e: any) { toast(e?.body?.error ?? 'Could not sell'); }
     });
@@ -2616,7 +2620,7 @@ class Game {
           wins: pres.record.wins, draws: pres.record.draws, losses: pres.record.losses,
           seasons: pres.record.seasons, honours: [], highestTierIdx: pres.highestTierIdx ?? 0,
         });
-        this.pushFeed(prestige.icon, `<b>${prestige.title}</b> — ${line}`);
+        this.pushFeed(prestige.icon, `<b>${prestige.title}</b> — ${line}`, m.season + 1);
         this.saveMgr({ ...this.loadMgr(), lastRankIdx: prestige.levelIdx });
       }
       // derive the COMING season's expectation from the season JUST ended (t.pos), incl. its tier move — not
@@ -2712,7 +2716,11 @@ class Game {
     // watched move is a scoreboard, not a rivalry.
     void api.houses().then((d) => {
       const news = houseNews(this.leagueSeed(), m.season, m.starGen ?? 0, d.mine.renown);
-      if (news) this.pushFeed('👑', news);
+      // Stamped explicitly even though this callback resolves AFTER the season increments and would
+      // therefore pick up the right season on its own. Depending on promise ordering for which season a
+      // line appears in is a coin-flip that happens to be landing heads; the sibling write four lines up
+      // was the same shape and landed tails for the entire life of the nine-rank ladder.
+      if (news) this.pushFeed('👑', news, m.season + 1);
     }).catch(() => { /* the season must never fail on a news line */ });
     const titles = (m.titles ?? 0) + (t.pos === 1 ? 1 : 0);
     const age = (m.starAge ?? 22) + 1;
@@ -2729,7 +2737,7 @@ class Game {
       //
       // `resetMgrForHeir` puts the season back to 1 when the heir is chosen; this only has to make the
       // state safe in the window between the send-off and that choice.
-      this.saveMgr({ ...this.loadMgr(), season: m.season + 1, results: [], arcCoins: 0, starAge: age, titles, sponsor: undefined, lastFinishPos: t.pos });
+      this.saveMgr({ ...this.loadMgr(), season: m.season + 1, results: [], arcLastMd: undefined, arcCoins: 0, starAge: age, titles, sponsor: undefined, lastFinishPos: t.pos });
       this.retireStar(titles, m.contTitles ?? 0, undefined, (promoted || relegated) ? { move: promoted ? 'promoted' : 'relegated', tier: tierName(newTier) } : undefined);
       return;
     }
@@ -2757,7 +2765,7 @@ class Game {
     // is the tell: the cause was never fixed, only the two symptoms someone noticed. Measured effect: the
     // upkeep bill, the disrepair announcement, the running-on-empty warning, the promotion/relegation
     // narration and the prestige rank-up were ALL deleted before the player could read any of them.
-    this.saveMgr({ ...this.loadMgr(), season: m.season + 1, results: [], arcCoins: 0, starAge: age, titles, sponsor: undefined, contElig: qualified, contRound: 0, contOut: false, contBlurb: undefined, wcStage: undefined, wcEdition: undefined, wcRun: undefined, lastBoard, lastFinishPos: t.pos, lastStrength: ef.raw, lastTierMove: promoted ? 'promoted' : relegated ? 'relegated' : undefined, arcBoard: 0 });
+    this.saveMgr({ ...this.loadMgr(), season: m.season + 1, results: [], arcLastMd: undefined, arcCoins: 0, starAge: age, titles, sponsor: undefined, contElig: qualified, contRound: 0, contOut: false, contBlurb: undefined, wcStage: undefined, wcEdition: undefined, wcRun: undefined, lastBoard, lastFinishPos: t.pos, lastStrength: ef.raw, lastTierMove: promoted ? 'promoted' : relegated ? 'relegated' : undefined, arcBoard: 0 });
     this.checkAchievements(); // titles / seasons / prestige milestones
     this.showSeason();
   }
@@ -3598,6 +3606,10 @@ class Game {
     // PACING: 4-6 a season across an 18-match campaign, so one every three matchdays. Without this they
     // all arrive at once at the season screen and the club's whole dramatic year happens in one sitting.
     const md = m.results?.length ?? 0;
+    // `md` is derived from m.results, which the season rollover clears, so arcLastMd must be cleared in
+    // the same breath or this gate compares this season's matchday against last season's mark and shuts.
+    // It did, for the whole life of the feature: from season 2 the test demanded md >= 21 out of 18.
+    // Enforced by tools/playtest/arc_pacing_reset.ts.
     if (md - (m.arcLastMd ?? -3) < 3) return;
     const fired = new Set(m.arcFired ?? []);
     const salt = (m.season * 7919 + (m.results?.length ?? 0) * 131) >>> 0;
@@ -4018,7 +4030,7 @@ class Game {
         // the family built is the whole point of the game and carries.
         this.saveMgr({
           ...prior,
-          season: 1, results: [], lastBoard: undefined, lastFinishPos: undefined, arcBoard: 0,
+          season: 1, results: [], arcLastMd: undefined, lastBoard: undefined, lastFinishPos: undefined, arcBoard: 0,
           sponsor: undefined, contElig: undefined, contRound: 0, contOut: false, contBlurb: undefined,
           wcStage: undefined, wcEdition: undefined, wcRun: undefined, squadReport: undefined,
           starId: s.prospectId, starName: s.name, starAge: s.age, starGen: (s as any).generation ?? 0,
