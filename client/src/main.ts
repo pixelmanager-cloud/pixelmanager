@@ -8,7 +8,7 @@ import {
 
   reconcileSheet,} from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type Trialist, type MissionsData, type ContractInfo } from './api';
-import { flushSave, getSaveHealth } from './save';
+import { flushSave, getSaveHealth, getActiveModel } from './save';
 import { sprite } from './sprites';
 import { crest, crestColors } from './crest';
 import { portraitImg, bandForAge, portraitUrl } from './portrait';
@@ -1418,7 +1418,38 @@ class Game {
         return m;
       }
     } catch { /* fall through */ }
-    return { season: 1, results: [] };
+    // NOTHING STORED — REBUILD WHAT CAN BE REBUILT INSTEAD OF STARTING OVER. The manager state lives in
+    // localStorage while the dynasty lives in IndexedDB, and localStorage is the far more evictable half
+    // (Safari clears it after seven idle days). recoverOrphanedSaves puts the save back in the list, but
+    // returning a blank `{ season: 1 }` here handed the player his own dynasty back in the bottom division
+    // at season one — every token, every legend and every honour intact underneath, and the manager career
+    // silently reset to zero.
+    //
+    // The durable half knows more than that. `profile.season` is the season, the honours ledger carries the
+    // tier and title count of every campaign, and the played token knows who the star is. Reconstruct from
+    // those rather than pretending it is a new save. Results and the feed are genuinely gone — they only
+    // ever lived in the evicted half — but the career's SHAPE survives.
+    return this.rebuiltMgrState();
+  }
+  /** Best-effort MgrState from the durable save, for when localStorage has been evicted. */
+  private rebuiltMgrState(): MgrState {
+    const blank: MgrState = { season: 1, results: [] };
+    try {
+      const model = getActiveModel() as any;
+      if (!model?.profile) return blank;
+      const season = Math.max(1, Number(model.profile?.season ?? 0) || 1);
+      const honours: Array<{ season_number: number; tier: string; title: number }> = model.honours ?? [];
+      const latest = honours.slice().sort((x, y) => y.season_number - x.season_number)[0];
+      const tier = Number(latest?.tier);
+      if (Number.isFinite(tier) && tier >= 1) this.setClubTier(tier);
+      const star = (model.tokens ?? []).find((t: any) => (t.branch ?? 'played') === 'played' && t.state === 'pro');
+      return {
+        ...blank,
+        season,
+        titles: honours.filter((h) => h.title === 1).length,
+        ...(star ? { starId: star.id, starName: star.name, starGen: star.generation ?? 0 } : {}),
+      } as MgrState;
+    } catch { return blank; }
   }
   private saveMgr(m: MgrState) { try { localStorage.setItem(this.mgrKey(), JSON.stringify(m)); } catch { /* ignore */ } }
   private planKey(): string { return `fm_plan_${this.account?.handle ?? 'x'}`; }

@@ -19,9 +19,9 @@ it — kept so it is not re-raised).
 | F-006 | fixed | ui/dead-wiring | `scorepulse` was declared twice and overridden by `scorepop` — unreachable | `client/index.html` |
 | F-007 | fixed | ui/visual | Portraits hashed `name + band`, so a player changes identity when he crosses an age band. Fix written; blocked on the parallel 800-per-band pools landing | `client/src/portrait.ts` |
 | F-008 | fixed | ui/visual | Portraits now shown in the squad stats table; lineup/market still pending (lineup, squad table, transfer market) — the Living Squad players are characters rendered as text rows | `client/src/main.ts` |
-| F-009 | decision | ui/accessibility | The game loads its two typefaces from Google Fonts; an offline Steam build falls back to Courier New (§78) | `client/index.html:9` |
-| F-010 | decision | manager/correctness | Width, formation and duty choices barely register in outcomes — the ×12 breakaway is the engine's only real scoring channel (§68) | `shared/src/engine.ts` |
-| F-011 | decision | ui/visual | Steam capsule art is AI-generated and publicly disclosed on the store page (§80) | `store/steam/` |
+| F-009 | fixed | ui/accessibility | The game loads its two typefaces from Google Fonts; an offline Steam build falls back to Courier New (§78) | `client/index.html:9` |
+| F-010 | closed (§82) | manager/correctness | Width, formation and duty choices barely register in outcomes — the ×12 breakaway is the engine's only real scoring channel (§68) | `shared/src/engine.ts` |
+| F-011 | closed (§83) | ui/visual | Steam capsule art is AI-generated and publicly disclosed on the store page (§80) | `store/steam/` |
 | F-012 | fixed | content/content | The existing 64 portraits contain 5 genuine near-duplicate pairs (colour distance < 12 on a face crop) | `client/public/portraits/` |
 | F-013 | fixed | ui/dead-wiring | The IN-GAME "Reduce motion" switch still deleted every toast and the goal announcement — F-002 patched only the OS media query, not the `body.reduced-motion` twin | `client/index.html:283` |
 | F-014 | fixed | content/dead-wiring | 92 authored commentary lines printed a literal `{opp}` — 23 of 24 draw sites never supplied it, and `fillCm` leaves unknown tokens intact | `client/src/main.ts:5317` |
@@ -35,4 +35,5 @@ it — kept so it is not re-raised).
 | F-022 | open | match/dead-wiring | `resolveShot`'s `clear` parameter is `false` at every call site, so the clear-chance bonus and its miss-logging branch are unreachable | `shared/src/engine.ts:881` |
 | F-023 | open | save/dead-wiring | `IndexedDBBackend.open()` caches a rejected promise forever, so the retry its own comment describes cannot succeed | `client/src/save.ts:488` |
 | F-024 | open | content/dead-wiring | Three of five MILESTONE flourish banks are unreachable; the backroom-staff quip corpus and the ~305-line international call-up corpus have no production caller | `shared/src/tokens.ts:174` |
-| F-025 | decision | save/dead-wiring | `recoverOrphanedSaves` restores only the save index, so a recovered dynasty returns in the bottom division at manager season 1 | `client/src/main.ts:474` |
+| F-025 | fixed | save/dead-wiring | `recoverOrphanedSaves` restores only the save index, so a recovered dynasty returns in the bottom division at manager season 1 | `client/src/main.ts:474` |
+| F-026 | open | manager/dead-wiring | `PICKABLE_FORMATIONS` is a stale eight-formation list with no consumers; the editor offers all eleven from `FORMATION_SHAPES` | `shared/src/game.ts:80` |

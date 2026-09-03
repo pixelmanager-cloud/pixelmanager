@@ -2689,3 +2689,46 @@ registration binds *you*; it does not stop the licensor or another licensee havi
 tracks. If a claim lands, the trailer stays viewable — it redirects ad revenue you were not earning — and
 the fix is Bert's written proof plus a dispute. Never enrol the trailer in Content ID or claim the music as
 your own.
+
+
+## 82. The 4-2-2-2 inversion: measured, not fixable as data, deliberately left alone
+
+CK asked whether the one substantive tactical inversion is fixable without touching the engine. Answer: no,
+and here is the evidence so nobody re-opens it on a hunch.
+
+**First, a correction to something I told CK.** I had said "width, formation and duty choices barely
+register in outcomes". That was wrong — I read the gate baseline's failure lines without running the test.
+The actual verdict is **8 confirmed · 7 no measurable effect · 2 refuted**. Tactics demonstrably work:
+inverted wingers edge possession over wide poachers; 4-1-4-1's extra central midfielder beats an equally
+narrow diamond; 5-4-1 concedes fewer than both 4-4-2 and 4-5-1 against a direct attack; an offside trap
+concedes fewer clear breakaways than a plain high line. "No measurable effect" at n=60 means the fixture
+cannot separate the claim from chance at that sample size — not that the effect is absent.
+
+**Only two claims are backwards, and they are wildly different in size:**
+- Wing-backs edge possession the wrong way by **0.007** — significant, and practically meaningless.
+- 4-2-2-2's two strikers lose to 4-1-4-1's one by **0.9 goals**. This is the real one.
+
+**The data hypothesis, tested and refuted.** 4-2-2-2's strikers sit at x=66; 4-1-4-1's lone striker at
+x=72, six units further advanced and dead centre. Since the engine's dominant scoring channel is the
+through-ball springing a forward behind the last defender, a higher striker should be better placed. Moving
+4-2-2-2's pair to x=71 moved the win-loss a long way (6W-34L → 15W-31L) and the goal difference almost not
+at all (-0.900 → -0.850). Still refuted. So striker depth is not the cause and no formation-coordinate
+change fixes it — the cause is in engine logic.
+
+**Decision: leave it.** CK's instruction was explicit — if it needs engine changes, skip, because breaking
+a working engine is worse than one inverted matchup. That is the right call and `engine.ts:704` is why: a
+full two-sided rebalance was already measured over ~1,600 mirrored matches, fixes shot realism dramatically
+(68 chances a match → 3.6, median shot distance 45.9m → 16.4m) and makes `shooting`, `homeBoost` and
+`computeZonal` live — and was rejected because it INVERTS the rock-paper-scissors that currently works
+(wide 3-4-3 vs narrow diamond 69W-28L → 9W-42L). "Tuning does not recover it." The 8 confirmed effects are
+what a rebuild would be trading away.
+
+**One loose end worth noting:** `PICKABLE_FORMATIONS` (`shared/src/game.ts:80`) is a stale eight-formation
+list with no consumers anywhere. The editor derives its list from `Object.keys(FORMATION_SHAPES)` — all
+eleven — so 4-2-2-2 IS player-selectable and this inversion is player-facing, not opponent-only. Logged as
+F-026.
+
+## 83. Steam capsule art stays AI-generated — CK's call, 2026-09-03
+
+Raised repeatedly as the one remaining public AI disclosure on the store page and the only launch-day
+reputational risk not engineered away. CK's decision: leave it. Recorded so it is not re-litigated.

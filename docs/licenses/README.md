@@ -38,3 +38,16 @@ credits screen).
     the raw files as a downloadable music pack. (A web build's `/audio/` OGGs being fetchable is normal
     game-asset serving, not a "standalone audio product"; the Steam desktop build bundles them internally.)
 - **TODO:** drop the **itch.io purchase receipt** into this folder too.
+
+## Press Start 2P and VT323 — the game's two typefaces
+- **Licence:** SIL Open Font License 1.1 (both). Text shipped at `client/public/fonts/OFL-*.txt`.
+- **Grant:** use, study, modify and redistribute freely, including commercially and embedded in a product.
+  **No fee, no royalty.**
+- **MUST do:** ship the licence text with the fonts (done — beside them in `client/public/fonts/`), and
+  credit is courtesy rather than obligation (see `/CREDITS.md`, which does it anyway).
+- **MUST NOT:** sell the fonts on their own, or release a modified version under the reserved font names.
+  Neither applies — they are embedded unmodified.
+- **Why they are vendored:** they used to come from `fonts.googleapis.com`. Everything else in this build is
+  offline-first, so a Steam player with no connection got the whole UI in Courier New. It still worked,
+  which is why nothing caught it. Latin subset only, 4.7KB + 7.2KB.
+  `tools/playtest/offline_assets.ts` fails the build if any external origin returns to the shipped HTML.

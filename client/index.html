@@ -4,9 +4,28 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Football Royalty</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet" />
+    <style>
+      /* ── SELF-HOSTED TYPEFACES ─────────────────────────────────────────────────────────────────────
+         These used to come from fonts.googleapis.com. Everything else about this build is offline-first —
+         no server, no live service, IndexedDB saves — but the two faces that make it look like a pixel game
+         were a network request, so a Steam player with no connection got the entire UI in Courier New. It
+         still WORKED, which is exactly why nothing caught it.
+
+         Both faces are SIL Open Font License 1.1; the licence text ships beside them in
+         client/public/fonts/, which is the whole of what the OFL asks. Latin subset only (the game is
+         English): 4.7KB + 7.2KB, against three network round-trips before first paint.
+
+         `font-display: block` rather than `swap` — a brief invisible moment beats the whole interface
+         reflowing from Courier to a pixel face after first paint. */
+      @font-face {
+        font-family: 'Press Start 2P'; font-style: normal; font-weight: 400; font-display: block;
+        src: url('/fonts/press-start-2p-latin.woff2') format('woff2');
+      }
+      @font-face {
+        font-family: 'VT323'; font-style: normal; font-weight: 400; font-display: block;
+        src: url('/fonts/vt323-latin.woff2') format('woff2');
+      }
+    </style>
     <style>
       /* ---- retro-arcade theme ---- */
       :root {
