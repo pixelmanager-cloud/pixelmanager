@@ -83,9 +83,7 @@ const BEHAVIOUR_ONLY = new Map<string, string>([
   ['bill', 'modifier on .sq-row — inert, base renders correctly (design pass pending)'],
   ['sf-wc-done', 'modifier on .sf-wc — inert, base renders correctly (design pass pending)'],
   ['ft-star', 'modifier on .scorers — inert, base renders correctly (design pass pending)'],
-  ['op-deal-strain', 'modifier on .op-deal — inert, base renders correctly (design pass pending)'],
   ['scout-board', 'pending: standalone container, renders unstyled (decisions-for-ck §90)'],
-  ['sf-leaders', 'pending: standalone container, renders unstyled (decisions-for-ck §90)'],
   ['li-tip', 'pending: standalone container, renders unstyled (decisions-for-ck §90)'],
   ['ach-txt', 'pending: standalone container, renders unstyled (decisions-for-ck §90)'],
 ]);

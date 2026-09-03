@@ -90,3 +90,20 @@ it — kept so it is not re-raised).
 | F-077 | fixed | career/visual | The `.cg-graduation` staged arrival held back `#cg-reveal`, which three of its four screens do not have | `client/index.html:636` |
 | F-078 | fixed | match/visual | The full-time card was `--good` green for every result — a 0-5 defeat read as a victory screen, against the sheet's own semantic-colour law | `client/index.html:1730` |
 | F-079 | fixed | economy/visual | `#me-coins` had no CSS rule, so the hub coin balance rendered at the 22px body default beside readouts at 17px and 15px, on its own line | `client/index.html:475` |
+| F-080 | fixed | save/correctness | `deleteSave` swallowed a rejecting durable delete, then swept localStorage, dropped the index row and toasted "Save deleted" — and `recoverOrphanedSaves` brought the save back at the next launch with its whole localStorage half destroyed | `client/src/main.ts:547` |
+| F-081 | fixed | manager/correctness | The board graded the finished season against an expectation derived FROM that finish, not the one the player was shown all season | `client/src/main.ts:2624` |
+| F-082 | fixed | manager/correctness | Every simmed fixture in a save was handed the save-constant league seed as its MatchEngine seed, so no season or matchday input reached it | `client/src/main.ts:2551` |
+| F-083 | fixed | content/correctness | A one-boy youth intake — 19% of intakes — drew from a 140-line bank written entirely in the plural: "1 boys sign scholarship forms" | `client/src/main.ts:1784` |
+| F-084 | fixed | ui/dead-wiring | The full-time card's "Gate receipts" line had no producer, so it could never render; gate money is already paid once a season | `client/src/main.ts:5241` |
+| F-085 | fixed | save/dead-wiring | `SaveModel.retiredNumbers` was declared, defaulted and migrated with no reader or writer — retired shirt numbers lived only in localStorage | `client/src/save.ts:40` |
+| F-086 | fixed | manager/correctness | On the retirement season the whole end-of-season report was filed under a season the player can never reach | `client/src/main.ts:2581` |
+| F-087 | fixed | ui/ux-friction | The lineup screen labelled up to seventeen players "Bench:" when the engine can only ever bring on seven | `client/src/main.ts:5130` |
+| F-088 | fixed | content/correctness | The gaffer's take threatened relegation in the bottom division, where the same screen says there is nowhere to go down to | `client/src/main.ts:2104` |
+| F-089 | fixed | economy/ux-friction | Manager-arc choices moved up to 900 coins with no price on the button | `client/src/main.ts:3781` |
+| F-090 | fixed | save/correctness | `newGame` and `continueSave` called `backend.save()` raw instead of `writeSlot()`, so a storage failure skipped the only code that sets saveHealth | `client/src/main.ts` |
+| F-091 | fixed | save/ux-friction | The save list dated each save from a `lastPlayed` stamped only on open, never on play | `client/src/main.ts:514` |
+| F-092 | fixed | manager/ux-friction | The Club Season screen quoted five prices with no coin balance anywhere — and the transfer market is an overlay, so both balances were on screen at once | `client/index.html:2006` |
+| F-093 | fixed | ui/visual | Twelve measured visual defects: the morale ramp painted inside the fill, the minute stamp at 3.89:1 in a width-less column, four unequal "equal" columns, the transfer-market name crush, the goal announcement with no width cap, the Upgrade button at 3.33:1, locked achievements at 1.71:1 | `client/index.html` |
+| F-094 | fixed | ui/visual | Media queries cannot see CSS `zoom`, so at uiScale 130% the main menu's compact block never fired and "Back" sat 20px past the fold (74px at 140%) | `client/index.html:229` |
+| F-095 | fixed | manager/correctness | `withArcPrestige` rewrote the rank but not the next-rank fields, so the card read "→ the rank you already hold" | `client/src/main.ts:1284` |
+| F-096 | decision §91 | career/correctness | `social_storm` and `media`'s good branch have no youth-stage consequence — the fix is a balance change that turns `golden_replay` red | `shared/src/career.ts:794` |

@@ -62,8 +62,20 @@ export type MgrEvent =
 
 /** CONTEXT TIER — the heart of it. An event plus who it happened to becomes a specific bank key, so a
  *  ten-year servant and a summer signing never share a line. Falls back to the plain event, so an
- *  un-tiered event still narrates rather than going silent. */
-export function tierFor(event: MgrEvent, p?: PersonCtx): string[] {
+ *  un-tiered event still narrates rather than going silent.
+ *
+ *  `vars` is read for exactly one thing: HOW MANY CAME UP FROM THE ACADEMY. Every one of the 140
+ *  `youth_intake` lines is written for a group — 45 of them count it out loud, and the other 95 say
+ *  'they', 'the new lot', 'a batch of boys'. But `advanceSquad` only tops the roster back up to
+ *  MIN_SQUAD, so the intake is simply whatever the squad lost that summer, and losing one man is the
+ *  commonest summer there is: measured over 40 saves x 25 seasons, 138 of the 735 intakes that fired
+ *  were a single boy (19%). Those printed '1 boys sign scholarship forms' and '1 lads, one dressing
+ *  room, and about four years to find out'. So a one-boy intake gets its own bank and — uniquely — does
+ *  NOT fall through to the general one, because falling through is exactly what produced the broken
+ *  line. Scoped to youth_intake deliberately: {n} is a run of seasons for contract_renewed and an age
+ *  for retirement, and neither wants this. */
+export function tierFor(event: MgrEvent, p?: PersonCtx, vars?: FillVars): string[] {
+  if (event === 'youth_intake' && Number(vars?.n) === 1) return ['youth_intake.one'];
   const keys: string[] = [];
   const yrs = p?.seasonsAtClub ?? 0;
   const age = p?.age ?? 0;
@@ -85,9 +97,15 @@ const BANK: Bank = mergeBanks(BASE_MGR, MGR_EXTRA_1, MGR_EXTRA_2, MGR_EXTRA_3, M
 
 /** Every line eligible for this event in this context — the specific tiers first, then the general bank,
  *  so a servant leaving draws from servant lines when they exist and never reads as generic. */
-export function eligible(event: MgrEvent, p?: PersonCtx): string[] {
+export function eligible(event: MgrEvent, p?: PersonCtx, vars?: FillVars): string[] {
   const out: string[] = [];
-  for (const k of tierFor(event, p)) for (const l of BANK[k] ?? []) out.push(l);
+  for (const k of tierFor(event, p, vars)) for (const l of BANK[k] ?? []) out.push(l);
+  // Belt and braces for the one tier that deliberately does not fall back (see tierFor). If a later edit
+  // ever empties `youth_intake.one`, a single-boy intake would go SILENT — an intake sitting in the
+  // season report with no line against it — and silence is a worse failure than a clumsy sentence. Fall
+  // back to the general bank minus the lines that count the group out loud, since those are the ones
+  // that read '1 boys'.
+  if (!out.length && event === 'youth_intake') for (const l of BANK[event] ?? []) if (!l.includes('{n}')) out.push(l);
   return out;
 }
 
@@ -112,7 +130,7 @@ export function fillMgr(line: string, v: FillVars): string {
 
 /** Narrate one manager event. Deterministic from (seed, event, who) so a replayed season reads the same. */
 export function narrateManager(event: MgrEvent, ctx: { seed: number; person?: PersonCtx; club?: ClubCtx; vars?: FillVars }): string | null {
-  const pool = eligible(event, ctx.person);
+  const pool = eligible(event, ctx.person, ctx.vars);
   if (!pool.length) return null;
   const idx = h32(ctx.seed >>> 0, strh(event), strh(ctx.person?.name ?? ''), ctx.club?.season ?? 0) % pool.length;
   return fillMgr(pool[idx], {

@@ -218,6 +218,16 @@ export function autoPickXI(club: Club, formation: Formation): Lineup {
   return { formation, playerIds };
 }
 
+/** How many substitutes a side actually takes to a match. `MatchEngine.makeSub` can only bring on a player
+ *  who is already in `Team.bench`, and `buildXI` below is where that list is cut — so a squad player ranked
+ *  eighth or worse outside the XI cannot appear in the match at any minute, for any reason.
+ *
+ *  EXPORTED because the lineup screen has to draw the SAME line and did not. It labelled every non-starter
+ *  "Bench:" — at MAX_SQUAD (28) that is seventeen names, ten of them unreachable — so a manager read a man
+ *  off the bench, held him back for the last twenty minutes, and waited for a change the engine had no way
+ *  to make. One constant now, so the screen and the match cannot drift apart again. */
+export const BENCH_SIZE = 7;
+
 /** Build a match-ready Team (11 players placed at formation anchors) from a club + lineup. */
 export function buildXI(club: Club, lineup: Lineup): Team {
   const slots = FORMATIONS[lineup.formation];
@@ -233,8 +243,10 @@ export function buildXI(club: Club, lineup: Lineup): Team {
       takesCorner: lineup.takers?.corner === i || undefined,
     };
   });
-  // bench: the best squad players outside the XI (up to 7), for the engine's late-game subs
+  // bench: the best squad players outside the XI (up to BENCH_SIZE), for the engine's late-game subs.
+  // The literal 7 that used to sit here was the only place the matchday squad size existed, which is how
+  // the lineup screen came to advertise seventeen substitutes against an engine that loads seven.
   const used = new Set(lineup.playerIds);
-  const bench = club.players.filter((p) => !used.has(p.id)).sort((a, b) => overall(b) - overall(a)).slice(0, 7);
+  const bench = club.players.filter((p) => !used.has(p.id)).sort((a, b) => overall(b) - overall(a)).slice(0, BENCH_SIZE);
   return { id: club.id, name: club.name, shirtColor: club.shirtColor, players, bench };
 }

@@ -123,6 +123,34 @@ export const BASE_MGR: Bank = {
   youth_intake: [
     '{n} come up from the academy, and one of them will matter. Nobody knows which.',
   ],
+  // A ONE-BOY INTAKE. This is not a stylistic tier like the ones above — it is the ONLY bank the engine
+  // draws from when n === 1 (see tierFor), because every other youth_intake line in every pack is written
+  // for a group: 45 of the 140 count it out loud and printed '1 boys sign scholarship forms', and most of
+  // the remaining 95 say 'they' or 'the new lot'. The intake is whatever the squad lost that summer, so
+  // one is 19% of intakes, not an edge case. KEEP THIS NON-EMPTY, and keep every line singular and free
+  // of {n}.
+  'youth_intake.one': [
+    'One boy comes up from the academy. The rest of his year group are told on the same afternoon that they are not.',
+    'A single scholar this year. He signs the forms at a table in the corridor because the office is being painted.',
+    'Just the one comes up. He gets a peg to himself, which is not the honour he thinks it is.',
+    'One lad up from the academy, and the youth coach is quietly relieved it is that one.',
+    'A thin year. One boy signs, and nobody says out loud what that means about the four before him.',
+    'One promotion from the academy. He turns up forty minutes early and sits in the car park until somebody lets him in.',
+    'A lone scholar. He trains with lads three years older from the first week, which will either finish him or make him.',
+    'One comes up. His mother takes the morning off work and stands where she thinks nobody can see her.',
+    'The academy sends up one. The paperwork takes the same fortnight it takes for six.',
+    'One boy, at {club} since he was nine, who has never been the best player in his age group. The coaches have started to find that interesting.',
+    'A single name goes up on the board in the academy corridor. It looks lonely there.',
+    'One lad signs scholarship terms. He asks, seriously, whether he has to give the kit back at the end.',
+    'Only one this year: a centre-half who has never been beaten in the air and has never been asked to run.',
+    'One up from below. He does the balls, the bibs and the cones on his own now, which is a lot of cones.',
+    'A single intake. The education officer has one file instead of six and still contrives to lose it.',
+    'One boy comes through, and nobody at the club will admit how much they have riding on him.',
+    'Just him. He is given a squad number in the sixties and looks at it the way other people look at a cap.',
+    'One lad comes up, and the first team are kinder to him than they would ever be to a group.',
+    'A quiet year. One scholar, a left-footer, and a coaching staff pretending that is enough.',
+    'One comes up from the academy. In four years he is either playing or he is fitting kitchens, and today neither is obvious.',
+  ],
 
   // ── SCOUTING ──────────────────────────────────────────────────────────────────────────────────
   scout_dispatched: [

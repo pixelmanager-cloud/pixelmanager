@@ -633,6 +633,31 @@ export function setSaveBackend(b: SaveBackend, opts?: { volatile?: boolean }): v
 export function getActiveSlotId(): string | null { return activeSlotId; }
 export function getActiveModel(): SaveModel { return modelBox.model; }
 
+/** THE DURABLE HALF OF THE RETIRED-SHIRT HONOUR — and until these two, nothing in the game touched it.
+ *  `SaveModel.retiredNumbers` was declared above, defaulted in `freshSave` and repaired in `migrate`, and
+ *  had no reader and no writer anywhere: the shipping retire button (main.ts, Trophy Room) read and wrote
+ *  `localStorage['fm_retired_' + handle]` instead, so the field was an always-empty array in every save
+ *  ever written. The two halves fail differently — the dynasty is in IndexedDB, localStorage is the
+ *  evictable one (Safari clears it after seven idle days, the same hazard `rebuiltMgrState` exists for).
+ *  A player who hangs #10 up for his Immortal, leaves the game a fortnight and comes back found the
+ *  bloodline, the honours and the trophy cabinet all intact and the RETIRED NUMBERS shelf empty, with the
+ *  shirt free to be worn again. `schedulePersist()` is called here because mutating `getActiveModel()`
+ *  alone only lives in memory — it would reach disk by luck, on whatever unrelated action `touch()`ed next. */
+export function retiredNumbers(): { n: number; name: string }[] {
+  const list = modelBox.model.retiredNumbers;
+  return Array.isArray(list) ? list.slice() : [];   // a COPY: callers render it, they must not edit the save through it
+}
+/** Retire a shirt in the durable save. Idempotent — the number is the identity, so re-retiring it (or
+ *  re-running the localStorage backfill on every Trophy Room render) is a no-op, not a duplicate shelf row. */
+export function retireNumber(n: number, name: string): void {
+  if (!Number.isFinite(n)) return;
+  const m = modelBox.model;
+  const list = Array.isArray(m.retiredNumbers) ? m.retiredNumbers : (m.retiredNumbers = []);
+  if (list.some((r) => r?.n === n)) return;
+  list.push({ n, name });
+  schedulePersist();
+}
+
 export async function listSaves(): Promise<SaveMeta[]> { return backend.list(); }
 
 /** Start a brand-new game: creates a fresh save, makes it active, and persists it immediately
@@ -646,7 +671,17 @@ export async function newGame(name: string, seed?: number, slotId?: string): Pro
   const id = slotId ?? crypto.randomUUID();
   modelBox.model = freshSave(name, seed);
   activeSlotId = id;
-  await backend.save(id, modelBox.model);
+  // THE FIRST WRITE OF A NEW GAME MUST GO THROUGH writeSlot LIKE EVERY OTHER WRITE. This was a bare
+  // `backend.save(...)` — the one write in this file that skipped the health flag, the single retry and
+  // the `inFlight` bookkeeping. A rejection propagated straight out of `newGame`, so `api.register` threw
+  // and `startNewGame` (main.ts) printed "Could not create your club — please try again." The player could
+  // not start a game AT ALL, and the banner written to explain exactly this — "your browser refused to
+  // store this save" — never appeared, because `saveHealth` is only ever touched inside `writeSlotInner`.
+  // Measured against a backend whose `save()` rejects: newGame threw, ONE attempt (writeSlotInner's retry,
+  // added for precisely this transient failure, never ran), `getSaveHealth()` still `{ok:true}`.
+  // With no IndexedDB at all this file already chooses "fall back to memory, raise the warning, play on"
+  // (see HAS_IDB above); a failing IndexedDB has to behave the same way instead of blocking the menu.
+  await writeSlot(id, modelBox.model);
   return id;
 }
 
@@ -668,7 +703,16 @@ export async function continueSave(id: string): Promise<SaveModel> {
   // schedule time closed one door and left this one open, because the pair was still updated across an await.
   modelBox.model = m;
   activeSlotId = id;
-  if (m.version !== raw.version) await backend.save(id, m);   // write the upgrade back once
+  // ...AND THE UPGRADE WRITE GOES THROUGH writeSlot TOO, for the same reason. As a bare `backend.save(...)`
+  // it bypassed `saveHealth`, the retry and `inFlight`. A full disk during the version write-back rejected
+  // `continueSave` AFTER the save had loaded and migrated perfectly, so `loadSave()` in main.ts told the
+  // player "Could not load that save — it may be corrupted" about an intact dynasty and cleared the token —
+  // with `saveHealth` reading `{ok:true}` and the banner silent. Measured: continueSave threw, one attempt,
+  // health untouched. And because the write was never registered in `inFlight`, `deleteSave`'s
+  // wait-for-the-in-flight-write guard could not see it: open a v1 save, delete it while the upgrade write
+  // is still going, and the slot is back on disk afterwards — "Delete forever" un-deleting itself, the
+  // exact bug that guard exists to prevent, reproduced through the one door it did not cover.
+  if (m.version !== raw.version) await writeSlot(id, m);   // write the upgrade back once
   return m;
 }
 

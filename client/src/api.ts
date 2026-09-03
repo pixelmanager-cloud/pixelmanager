@@ -151,7 +151,17 @@ export interface Facility {
 }
 export interface FacilitiesData { coins: number; facilities: Facility[]; upkeep: number }
 export interface MatchPayload {
-  matchId: string; seed: number; result: [number, number]; mySide: 0 | 1; coinsEarned?: number; gateIncome?: number; injuries?: Array<{ name: string; matches: number }>;
+  // NO `gateIncome` FIELD, DELIBERATELY. One was declared here and the full-time card carried the matching
+  // "🏟️ Gate receipts: +N coins" line (`#ft-gate` in client/index.html, `this.lastGate` in main.ts) — and
+  // nothing in the codebase ever WROTE it. `startMatch` has exactly one call site, the single-player kickoff
+  // in main.ts, and it builds this payload without the field, so `lastGate` fell through `?? 0` on every
+  // match and the line stayed hidden on every full-time card the game has ever shown. Wiring a value in is
+  // NOT the repair: gate money is already paid ONCE A SEASON by `seasonFacilityIncome().gate`
+  // (shared/src/facilities.ts), which derives the takings from that season's home record and result mix and
+  // reports them in the rollover income breakdown. Crediting it again per match pays the same crowd twice —
+  // the over-payment shape `shared/qa_facilities.ts` already guards against. A per-match gate line is a
+  // design change to the economy, not a missing assignment.
+  matchId: string; seed: number; result: [number, number]; mySide: 0 | 1; coinsEarned?: number; injuries?: Array<{ name: string; matches: number }>;
   home: { id: string; handle: string; rating?: number; team: Team; tactics: Tactics };
   away: { id: string; handle: string; rating?: number; team: Team; tactics: Tactics };
 }

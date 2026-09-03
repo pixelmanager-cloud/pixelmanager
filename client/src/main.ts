@@ -1,5 +1,5 @@
 import {
-  MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, resolveMatchXI, intentOf, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
+  MatchEngine, autoPickXI, buildXI, BENCH_SIZE, overall, TICK_SEC, resolveMatchXI, intentOf, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
   TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, deriveMatchStats, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry, tierName, TIERS, tierStrength,
   FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, moodFromScore, boardMessageFor, deriveExpectation, PRESTIGE_LEVELS, prestigeRankUpBlurb, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition, contTieBlurb, wcGroupDramaBlurb, wcKnockoutDramaBlurb, worldCupFinishBlurb,
   transferList, wageForLength, sellValue, squadSaleValue, squadSeasonWage, moraleEffects, incomingBid, MIN_SQUAD, MAX_SQUAD, SQUAD_CONTRACT_SEASONS, type Listing,
@@ -8,7 +8,7 @@ import {
 
   reconcileSheet,} from '@fm/shared';
 import { api, hasToken, setToken, clearToken, type Account, type StandingOrders, type MatchPayload, type Trialist, type MissionsData, type ContractInfo } from './api';
-import { flushSave, getSaveHealth, getActiveModel } from './save';
+import { flushSave, getSaveHealth, getActiveModel, retiredNumbers, retireNumber } from './save';
 import { sprite } from './sprites';
 import { crest, crestColors } from './crest';
 import { portraitImg, bandForAge, portraitUrl } from './portrait';
@@ -466,6 +466,7 @@ class Game {
     const unlock = () => { audio.unlock(); for (const ev of UNLOCK_ON) document.removeEventListener(ev, unlock); };
     for (const ev of UNLOCK_ON) document.addEventListener(ev, unlock);
     this.loadPrefs(); // reduced-motion etc., applied before first paint
+    this.watchViewport();  // ...and keep the effective-viewport class true as the window changes
     this.wireStaticButtons();
     this.showScreen('login');
     // Reconcile the durable half against the evictable index BEFORE drawing the menu.
@@ -487,7 +488,8 @@ class Game {
    *  === 0`: no Continue button, no list, while the complete dynasty sits untouched in IndexedDB. Not
    *  merely unreachable — invisible.
    *
-   *  `listSaves()` already existed to read the durable half and had no caller anywhere. It does now. */
+   *  `listSaves()` already existed to read the durable half and had no caller anywhere. It does now — and
+   *  it reconciles BOTH halves of what the index gets wrong: WHICH saves it lists, and HOW THEY ARE DATED. */
   private async recoverOrphanedSaves(): Promise<void> {
     try {
       // RECONCILE ON THE DURABLE KEY. `fm_saves` rows are keyed by the NAME-DERIVED handle while SaveMeta.id
@@ -497,15 +499,32 @@ class Game {
       const known = new Set(this.loadSaves().map((s) => s.token));
       const onDisk = await api.listSaves();
       const orphans = onDisk.filter((m: { id: string }) => !known.has(m.id));
-      if (!orphans.length) return;
       const merged = [...this.loadSaves(), ...orphans.map((m: { id: string; name?: string; lastPlayed?: number }) => ({
         id: m.id, token: m.id, name: m.name ?? 'Recovered save', lastPlayed: m.lastPlayed ?? 0,
       }))];
+      // ...AND RECONCILE THE DATE, NOT JUST THE MEMBERSHIP. `fm_saves.lastPlayed` was written in exactly two
+      // places — loadSave() and the startNewGame() push — so it recorded when a save was OPENED and never
+      // moved again. The durable half moves on every persisted write (IndexedDBBackend.save stamps
+      // `lastPlayed: Date.now()` each time), which makes it the one that knows when the save was actually
+      // PLAYED. Measured side by side against the real backend: continueSave() on a slot leaves the durable
+      // stamp untouched, one in-game change plus a flush advances it. The player met the consequence on the
+      // title screen — start a save at 20:00, play until 22:00, quit, and the row still read 20:00 — and
+      // because the same number is the SORT KEY, a save you opened and immediately backed out of jumped
+      // above (and became what ▶ Continue resumed) the one you had spent the evening in. The truthful
+      // number was already being fetched three lines up and thrown away for every row that wasn't an orphan.
+      const played = new Map<string, number>(onDisk.map((m: { id: string; lastPlayed?: number }) => [m.id, m.lastPlayed ?? 0]));
       // De-dupe by the durable key too, so a list that was already doubled heals itself on next launch.
       const seenTok = new Set<string>();
-      const rebuilt = merged.filter((r) => (seenTok.has(r.token) ? false : (seenTok.add(r.token), true)));
+      const rebuilt = merged
+        .filter((r) => (seenTok.has(r.token) ? false : (seenTok.add(r.token), true)))
+        // `||`, not `??`: a slot with no durable row (the in-memory fallback taken when IndexedDB is absent)
+        // and a zero stamp are equally useless, and both must keep whatever the index already had rather
+        // than date the dynasty to 1970 and bury it at the bottom of its own list.
+        .map((r) => ({ ...r, lastPlayed: played.get(r.token) || r.lastPlayed }));
       this.saveSaves(rebuilt);
-      toast(`↩️ Recovered ${orphans.length} save${orphans.length === 1 ? '' : 's'} the browser had lost track of`);
+      // The `if (!orphans.length) return` that used to sit above the merge is gone: with nothing orphaned
+      // there was still a date to correct, and that early exit is what left it stale on every ordinary launch.
+      if (orphans.length) toast(`↩️ Recovered ${orphans.length} save${orphans.length === 1 ? '' : 's'} the browser had lost track of`);
     } catch { /* recovery is best-effort — never block the menu on it */ }
   }
 
@@ -544,7 +563,25 @@ class Game {
     this.openConfirm(`Delete <b>${save?.name ?? 'this save'}</b>? This bloodline is gone for good — there's no undo.`, 'Delete forever', async () => {
       // "no undo" must mean it: remove the save MODEL from the backend, and sweep every per-handle localStorage
       // key (fm_mgr_/fm_tier_/fm_plan_/fm_ach_/fm_bought_/fm_biddismiss_/onboarding) — not just the index (PT-77)
-      try { if (save?.token) await api.deleteSave(save.token); } catch { /* best-effort */ }
+      //
+      // THE DURABLE DELETE IS THE GATE, NOT A BEST-EFFORT ASIDE. This was
+      // `try { if (save?.token) await api.deleteSave(save.token); } catch { /* best-effort */ }` and then it
+      // swept localStorage, dropped the `fm_saves` row and toasted "Save deleted" WHETHER OR NOT the model
+      // had actually gone. save.deleteSave really does reject — reproduced by rejecting `backend.remove`:
+      // it throws and `listSaves()` still returns the save afterwards — and IndexedDB refuses removals for
+      // ordinary reasons (a blocked upgrade, a corrupt DB, Safari private browsing, the cached failed open
+      // documented on IndexedDBBackend.open). recoverOrphanedSaves reconciles in ONE direction only: at the
+      // next launch it finds a model with no index row, calls it an orphan and puts it back. So the player
+      // was told the bloodline was gone for good, and it returned — with every fm_mgr_/fm_tier_/fm_ach_/
+      // fm_bought_ key already swept, i.e. handed back in the bottom division at season one (the exact
+      // wreck tools/playtest/mgr_state_recovery.ts was written about). Told deleted, came back, came back
+      // broken. So: durable half FIRST, and destroy the evictable half only if that actually succeeded.
+      // On failure change NOTHING and say so, so "delete" stays retryable instead of half-done.
+      // (A row with no token has no durable half to delete — dropping the index row IS the whole delete.)
+      if (save?.token) {
+        try { await api.deleteSave(save.token); }
+        catch { toast('Could not delete that save — nothing was removed'); return; }
+      }
       // sweep per-handle keys by the save's TOKEN, not its list id: every per-save key is suffixed with
       // account.handle, which equals the save's UUID token (api.register/me), NOT the name-derived list id —
       // so matching on `id` removed nothing and orphaned every fm_mgr_/tier/ach/heir/… key (PT-131, PT-77 regression)
@@ -570,8 +607,29 @@ class Game {
     document.body.classList.toggle('no-crt', !this.prefs.crt);
     // UI scale — zoom the whole document (supported in Chromium/WebView2/WKWebView, our Steam-wrapper targets)
     try { (document.documentElement.style as any).zoom = String(this.prefs.uiScale / 100); } catch { /* ignore */ }
+    this.applyEffectiveViewport();
+  }
+  /** MEDIA QUERIES CANNOT SEE `zoom`.
+   *
+   *  The whole document is scaled with CSS `zoom` (80-140%, default 110), but a media query is evaluated
+   *  against the UNZOOMED viewport — so every size breakpoint in the stylesheet keys on the raw window
+   *  while the content it is sizing is up to 1.4x larger. The short-viewport block that shrinks the main
+   *  menu is the one where that bites: measured on the built bundle at 1280x700, uiScale 130% gives an
+   *  effective 538px of height — well inside the 620px the block was written for — and the block does not
+   *  fire, so "Back" sits 20px past the fold. At 140% it is 74px past. The comment beside the block
+   *  records the author checking 110% and finding 2px of clearance; nobody checked 130.
+   *
+   *  This publishes the effective height as a class so those rules can key on what the layout actually
+   *  gets. It does not convert the rest of the sheet — thirteen breakpoints have the same mismatch, and
+   *  rewriting them all changes specificity across two thousand lines of CSS. See decisions-for-ck. */
+  private applyEffectiveViewport() {
+    const scale = Math.max(0.5, (this.prefs.uiScale || 100) / 100);
+    const h = window.innerHeight / scale;
+    document.documentElement.classList.toggle('fx-short', h <= 620);
   }
   private savePrefs() { try { localStorage.setItem(Game.PREFS_KEY, JSON.stringify(this.prefs)); } catch { /* ignore */ } }
+  /** The effective viewport changes when the WINDOW changes too, not only when the scale preference does. */
+  private watchViewport() { window.addEventListener('resize', () => this.applyEffectiveViewport()); }
 
   /** The settings dialog — reachable from the menu AND mid-game (top-bar ⚙). Music volume + mute and
    *  reduced-motion, applied live. (SFX volume joins here once the SFX set ships.) */
@@ -649,7 +707,10 @@ class Game {
     wireSw(byKey('motion'), () => { this.prefs.reducedMotion = !this.prefs.reducedMotion; this.savePrefs(); this.applyPrefs(); flip(byKey('motion'), this.prefs.reducedMotion); });
     wireSw(byKey('crt'), () => { this.prefs.crt = !this.prefs.crt; this.savePrefs(); this.applyPrefs(); flip(byKey('crt'), this.prefs.crt); });
     ov.querySelector('#set-help')?.addEventListener('click', () => { close(); this.openHowToPlay(); });
-    wireSw(byKey('hidestats'), () => { this.prefs.hideCardStats = !this.prefs.hideCardStats; this.savePrefs(); flip(byKey('hidestats'), this.prefs.hideCardStats); if (this.lastCareerState) this.renderCareer(this.lastCareerState); }); // re-render so the current hand masks/unmasks live (#3)
+    wireSw(byKey('hidestats'), () => { this.prefs.hideCardStats = !this.prefs.hideCardStats; this.savePrefs(); flip(byKey('hidestats'), this.prefs.hideCardStats); // ...but only when the cards are actually on screen. `lastCareerState` survives the whole session, so
+      // flipping this mid-match re-rendered the career into the academy panel behind the match — swapping
+      // the music context with it — and the player came back from Settings to a different screen.
+      if (this.lastCareerState && !$('academy').classList.contains('hidden')) this.renderCareer(this.lastCareerState); }); // re-render so the current hand masks/unmasks live (#3)
   }
 
   /** A read-only, always-available copy of both onboarding explainers — reached from Settings, so
@@ -779,7 +840,17 @@ class Game {
     Game.inertDepth++;
     document.getElementById('app')?.setAttribute('inert', '');
   }
-  private quitToMenu() { $('mm-saves').classList.remove('hidden'); this.showScreen('login'); this.renderMainMenu(); }
+  private quitToMenu() {
+    $('mm-saves').classList.remove('hidden'); this.showScreen('login'); this.renderMainMenu();
+    // RE-DATE THE LIST ON THE WAY OUT. This drew the menu straight from `fm_saves`, whose timestamp is only
+    // written when a save is OPENED — so quitting after a two-hour session put the player back on a title
+    // screen insisting they had last played at the moment they started. The durable stamp has advanced with
+    // every persist since then; the reconcile above reads it, so run it again here and redraw. Async and
+    // fire-and-forget (it swallows its own errors): the menu is already on screen, and a failed read simply
+    // leaves the old date rather than blocking the quit. Skipped when the New Game panel is up, so a late
+    // redraw can't yank a player out of the family-name field they clicked into inside the read window.
+    void this.recoverOrphanedSaves().then(() => { if ($('mm-newgame').classList.contains('hidden')) this.renderMainMenu(); });
+  }
 
   /** New Game: silently create a local profile (no handle/password shown) and drop the player in. */
   private async startNewGame(rawName: string) {
@@ -1281,7 +1352,16 @@ class Game {
     let levelIdx = 0;
     for (let i = 0; i < PRESTIGE_LEVELS.length; i++) if (score >= PRESTIGE_LEVELS[i].at) levelIdx = i;
     const lv = PRESTIGE_LEVELS[levelIdx];
-    return { ...pr, score, levelIdx, title: lv.title, icon: lv.icon };
+    // THE DERIVED FIELDS MOVE WITH THE RANK. This rewrote score/levelIdx/title/icon and left nextTitle,
+    // nextAt and progress as the caller computed them from the UNBOOSTED score — so once arc prestige
+    // pushed you over a threshold the card read "→ <the rank you are already>" with a progress bar
+    // measuring the rung you had just cleared. Recompute them from the same levelIdx.
+    const next = PRESTIGE_LEVELS[levelIdx + 1] ?? null;
+    const derived = 'nextTitle' in (pr as any)
+      ? { nextTitle: next?.title ?? null, nextAt: next?.at ?? null,
+          progress: next ? Math.max(0, Math.min(1, (score - lv.at) / (next.at - lv.at))) : 1 }
+      : {};
+    return { ...pr, score, levelIdx, title: lv.title, icon: lv.icon, ...derived };
   }
 
   /** The manager's own legacy — rank + title, from titles/wins/tier. Shown as a hub chip. */
@@ -1780,7 +1860,9 @@ class Game {
       this.setMe(await api.me()); audio.chime('confirm');
       this.feedEvent('transfer_in', '✍️', { name: l.player.name, seasonsAtClub: 0, age: l.age, overall: l.ov }, { fee: l.fee });
       toast(`✍️ Signed ${l.player.name} (OV ${l.ov}) · −${l.fee.toLocaleString()}c fee · ~${squadSeasonWage(l.ov, this.season ?? 0).toLocaleString()}c a season in wages`);
-      this.renderTransferMarket();
+      this.paintSeasonCoins(); /* the market is an OVERLAY over the season screen, not a screen change — so both
+          balances are on screen at once and repainting only the modal left the header behind it showing the
+          pre-purchase figure until something else re-entered showSeason() */ this.renderTransferMarket();
     } catch (e: any) { toast(e?.body?.error ?? 'Could not sign him'); }
   }
   private async sellPlayerFlow(playerId: string) {
@@ -1794,7 +1876,7 @@ class Game {
     // price and sold for up to 20% less — the exact swing the squad report promises in words. Both quotes
     // now build the price the same way the credit does; tools/playtest/sale_quote_matches.ts holds them there.
     this.openConfirm(`Sell <b>${p?.name ?? 'this player'}</b> for +${(p ? squadSaleValue(overall(p), p.age ?? 26, moraleEffects(p.morale ?? 65).sellMult) : 0).toLocaleString()}c?`, 'Sell', async () => {
-      try { const r = await api.sellPlayer(playerId); if (this.account) this.account.coins = r.coins; this.setMe(await api.me()); toast(`💸 Sold · +${r.value.toLocaleString()}c`); if (p) this.feedEvent('transfer_out', '💸', this.personCtx(p, false), { fee: r.value }); this.renderTransferMarket(); }
+      try { const r = await api.sellPlayer(playerId); if (this.account) this.account.coins = r.coins; this.setMe(await api.me()); toast(`💸 Sold · +${r.value.toLocaleString()}c`); if (p) this.feedEvent('transfer_out', '💸', this.personCtx(p, false), { fee: r.value }); this.paintSeasonCoins(); this.renderTransferMarket(); }
       catch (e: any) { toast(e?.body?.error ?? 'Could not sell'); }
     });
   }
@@ -1971,9 +2053,19 @@ class Game {
     return `<div class="cg-help" id="mgr-help"><div class="cg-help-head">📋 YOU'RE THE MANAGER NOW <button class="cg-help-x" id="mgr-help-x">Got it ✕</button></div>`
       + `<ul class="cg-help-list">` + this.managerHelpRows().map((r) => `<li>${r}</li>`).join('') + `</ul></div>`;
   }
+  /** The coin balance in the season header. This screen quotes five different prices and showed no
+   *  balance anywhere — see the note on #season-head in index.html. Painted on every showSeason(), which
+   *  covers every spend made here (hire, renew, release, sponsor, arc choice: each writes
+   *  this.account.coins and then re-renders), and called again from the async prize handlers, which bank
+   *  their coins AFTER that re-render has run and would otherwise leave the header contradicting the
+   *  toast that just announced the money. */
+  private paintSeasonCoins() {
+    $('season-coins').innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${(this.account?.coins ?? 0).toLocaleString()}`;
+  }
   private showSeason() {
     this.spFixture = null;
     this.showScreen('season');
+    this.paintSeasonCoins();
     // AND RE-OFFER THE ARC ONCE THEY LAND. `facLevels` starts empty and this is a promise, while
     // `maybeOfferArc()` below runs synchronously in this same call — so on the first season screen after any
     // page load, all thirty `when.facility` arc gates read level 1 and the arcs they gate cannot be offered.
@@ -2102,7 +2194,7 @@ class Game {
     // PT-512: keep the target on screen for the whole season it governs, and say what missing it costs
     // (nothing — the board judges the story, it never sacks you), so it stops reading as a live threat.
     const boardLine = lb && !done
-      ? `<div class="sf-board sf-board-${lb.mood}">🪑 <b>The board</b>${nextIdx <= 3 ? ` — on last season: “${lb.message}”` : ''} <span class="sf-board-exp">This season they expect ${this.expectationLabel(lb.expectation, tier)}.</span>`
+      ? `<div class="sf-board sf-board-${lb.mood}">🪑 <b>The board</b>${nextIdx <= 3 ? ` — on last season: “${lb.message}”` : ' —'} <span class="sf-board-exp">This season they expect ${this.expectationLabel(lb.expectation, tier)}.</span>`
         + ` <span class="cg-hint-inline">A target to chase, not a threat — they'll have their say either way, and your job is never on the line.</span></div>`
       : '';
     this.maybeOfferArc();   // arcs are offered at the season screen, paced across the campaign
@@ -2111,7 +2203,7 @@ class Game {
       + bidBanner
       + tierMove
       + boardLine
-      + `<div class="sf-gaffer">📔 ${this.gafferTake(played, t.pos, t.size, clubName)}</div>`
+      + `<div class="sf-gaffer">📔 ${this.gafferTake(played, t.pos, t.size, clubName, tier)}</div>`
       + this.managerArcHtml()
       + this.seasonFeedHtml()
       + this.squadReportHtml()
@@ -2315,16 +2407,16 @@ class Game {
         audio.sting('triumph'); audio.chime('triumph');   // Continental Cup — a trophy deserves the fanfare too
         toast(`🏆 CONTINENTAL CHAMPIONS! ${this.club?.name} win the cup${pens ? ' on penalties' : ''}`);
         // the flagship cup pays a clear PREMIUM over a league title: the honour (800c) + a 1000c winners' bonus (PT-96)
-        api.spSeasonReward({ pos: 1, size: 10, sponsor: undefined,   /* no tier: a cup is its own competition, not a division — see spSeasonReward */ kind: 'continental' }).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; }).catch(() => {}); // kind:'continental' — a cup, not a league title, and doesn't bump the season (PT-94)
+        api.spSeasonReward({ pos: 1, size: 10, sponsor: undefined,   /* no tier: a cup is its own competition, not a division — see spSeasonReward */ kind: 'continental' }).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; this.paintSeasonCoins(); }).catch(() => {}); // kind:'continental' — a cup, not a league title, and doesn't bump the season (PT-94)
         // REPORT WHAT IS ACTUALLY PAID. This toasted a hard-coded 1,800c — the honour's 800c plus the 1,000c
         // bonus — but spSeasonReward scales the honour by tierMult (exactly 1.6 for a cup, which defaults to
         // the top tier index) and again by the house's renown multiplier, so at least 2,280c is credited and
         // up to about 2,780c at high renown. The player was told a number that is never the number.
-        api.cupPrize(1000).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; toast(`💰 Continental winners' prize +${x.prize.toLocaleString()}c`); }).catch(() => {});
+        api.cupPrize(1000).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; this.paintSeasonCoins(); toast(`💰 Continental winners' prize +${x.prize.toLocaleString()}c`); }).catch(() => {}); // repaint: resolveContinental's showSeason() has already run by the time this resolves, so without it the header sits contradicting the toast on the same screen
       } else {
         this.saveMgr({ ...m, contRound: nextRound, contBlurb });
         const roundPrize = nextRound === 1 ? 250 : 500; // QF win → 250c, SF win → 500c (no longer 0 — PT-96)
-        api.cupPrize(roundPrize).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; }).catch(() => {});
+        api.cupPrize(roundPrize).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; this.paintSeasonCoins(); }).catch(() => {}); // same late-resolve as the winners' prize above — the round money lands after the re-render
         toast(`✅ ${label} won ${myGoals}-${oppGoals}${pens ? ' (pens)' : ''} — into the ${CONT_ROUNDS[nextRound]}! 💰 +${roundPrize}c`);
       }
     } else {
@@ -2468,6 +2560,7 @@ class Game {
    *  the seeded outcome; for a group-stage exit (or no played run) the full seeded bracket is shown instead. */
   private showWorldCup(wc: WCResult, playedFinish?: WCResult['myFinish'], finalFoe?: string) {
     this.showScreen('season');
+    this.paintSeasonCoins(); // this report renders into #season-body and so shares #season-head — and concludeWorldCup banks its payoff in the line immediately before it calls us
     audio.play('international'); // the World Finals — a national-team competition, gets the international theme
     const nation = wc.myNation;
     const finish = playedFinish ?? wc.myFinish;
@@ -2523,14 +2616,28 @@ class Game {
   }
 
   /** A seeded 'gaffer's take' on the season so far — composed from recent form + league position, so the
-   *  season reads as a story, not just a table. Deterministic (no rng). */
-  private gafferTake(played: PlayedResult[], pos: number, size: number, club: string): string {
+   *  season reads as a story, not just a table. Deterministic (no rng).
+   *  Takes the TIER because position alone does not say what a bad position COSTS: the basement has no
+   *  division under it, so the bottom two are not in a relegation fight there. Same rule as spTableHtml's
+   *  key and expectationLabel, which have been tier-aware since PT-65/67/123 — this line was not. */
+  private gafferTake(played: PlayedResult[], pos: number, size: number, club: string, tier: number): string {
     if (!played.length) return `A new season, a blank page. ${club} kick off with everything to play for.`;
     const last = played[played.length - 1], won = last.myGoals > last.oppGoals, lost = last.myGoals < last.oppGoals;
     let run = 0; for (let i = played.length - 1; i >= 0; i--) { const r = played[i]; if (r.myGoals >= r.oppGoals) run++; else break; }
     let lose = 0; for (let i = played.length - 1; i >= 0; i--) { const r = played[i]; if (r.myGoals < r.oppGoals) lose++; else break; }
     if (pos === 1) return `Top of the table — ${club} are the team to catch. Dare they dream of the title?`;
-    if (pos >= size - 1) return `Rooted near the foot of the table — this is a relegation scrap now for ${club}.`;
+    // THE ONE LINE ON THIS SCREEN THAT DID NOT KNOW WHAT DIVISION IT WAS IN. Bottom-two returned a
+    // "relegation scrap" at every tier, so in the basement (tier === TIERS) the take threatened a drop while
+    // the league table rendered a few blocks below it printed a key reading "■ promotion" and nothing else,
+    // and the board's target directly above it read "steady progress" — expectationLabel's own
+    // `tier >= TIERS && exp === 'survival'` branch, commented "basement — can't drop". Three surfaces in one
+    // innerHTML, two of them already tier-aware, disagreeing about whether the club could go down at all.
+    // The engine sided with the other two: nextSeason only relegates on `t.pos >= t.size - 1 && tier < TIERS`,
+    // so a tier-10 side finishing last stayed exactly where it was after being told all season it was
+    // fighting the drop. Same test here; the struggle is real in the basement, the stake is not.
+    if (pos >= size - 1) return tier < TIERS
+      ? `Rooted near the foot of the table — this is a relegation scrap now for ${club}.`
+      : `Rooted to the foot of the table — there's no division below this one, so ${club} can only climb back up.`;
     if (run >= 3) return `${run} unbeaten and climbing — ${club} are on a real roll.`;
     if (lose >= 2) return `${lose} defeats on the spin — the mood around ${club} has turned; a response is needed.`;
     if (won && last.myGoals - last.oppGoals >= 3) return `A statement win, ${last.myGoals}-${last.oppGoals} — the ${club} fans went home happy.`;
@@ -2588,8 +2695,13 @@ class Game {
    *
    *  A full ninety minutes costs about 27ms headless, so a whole remaining season is well under a second.
    *  Returns null when the fixture cannot be built at all (a squad too thin for an XI); the caller falls
-   *  back to the old roll rather than stranding the player mid-season. */
-  private simOneFixture(idx: number, seed: number): { myGoals: number; oppGoals: number; rows: any[] } | null {
+   *  back to the old roll rather than stranding the player mid-season.
+   *
+   *  TWO SEEDS, because there are two clocks here and they run at different speeds. `seed` is the LEAGUE:
+   *  which clubs are in the division, how strong they are, which weekend you meet them. It must NOT move,
+   *  or the division reshuffles under the player mid-dynasty. `matchSeed` is THIS ninety minutes, and it
+   *  must move on every fixture and every season, or the engine plays one match for a whole career. */
+  private simOneFixture(idx: number, seed: number, matchSeed: number): { myGoals: number; oppGoals: number; rows: any[] } | null {
     try {
       const clubName = this.club.name;
       const f = seasonFixtures(clubName, seed, this.clubTier())[idx];
@@ -2628,7 +2740,19 @@ class Game {
       const iAmHome = venue === 'home';
       const teams = iAmHome ? [myTeam, oppTeam] : [oppTeam, myTeam];
       const tac = iAmHome ? [this.standingOrders.tactics, oppTactics] : [oppTactics, this.standingOrders.tactics];
-      const e = new MatchEngine(teams as any, seed >>> 0, tac as any);
+      // THE ENGINE WAS HANDED THE LEAGUE SEED. `seed` is leagueSeed() -- a hash of the account handle and
+      // nothing else -- so it is one constant for the entire life of a save, with no season and no matchday
+      // in it. Every simmed fixture of every season therefore ran the identical mulberry32 stream. Scorelines
+      // still varied, because the opponents vary, and that is why this survived: what froze was everything
+      // the engine HASHES off `this.seed` instead of drawing from it. Measured over an 18-fixture simmed
+      // season at tier 5 -- handle "marlow": 11 injuries, every single one at 76' to the away side; handle
+      // "alice": 9, all at 76' or 60'; handle "ck": zero, and no season of that save could ever produce a
+      // simmed injury at all. That is precisely the failure manageBench in engine.ts records having fixed
+      // ("100% of them team0 min61, one distinct (team, minute) pair") -- its seeding varies between saves,
+      // and this path never varied within one, so the fix was nullified for every match nobody watched. The
+      // substitution window opened on the same two minutes in every match the save would ever sim.
+      // Mixed for the reason simFixtureResult mixes (PT-900): consecutive matchdays differ only in low bits.
+      const e = new MatchEngine(teams as any, mixSeed(matchSeed) >>> 0, tac as any);
       let guard = 0;
       while (!e.state.finished && guard++ < 40000) e.tick();
       const mine = iAmHome ? 0 : 1;
@@ -2652,7 +2776,10 @@ class Game {
       const mseed = ((seed >>> 0) ^ ((m.season * 131 + i) >>> 0)) >>> 0;
       // PLAY it, don't roll it -- see simOneFixture. The old roll stays as the fallback for a squad too
       // thin to field an XI, so a sim can never strand the player mid-season.
-      const played = this.simOneFixture(i, seed);
+      // `mseed` carries the season and the matchday, and it used to reach ONLY the fallback branch -- the
+      // branch that almost never runs -- so the branch that actually plays the match had no clock at all.
+      // Both advance on the same one now; `seed` stays the league, and only the league.
+      const played = this.simOneFixture(i, seed, mseed);
       if (played) { m.results.push({ myGoals: played.myGoals, oppGoals: played.oppGoals }); simRows.push(...played.rows); }
       else { rolled++; m.results.push(this.simFixtureResult(myStr + strDelta, opp.strength, mseed, homeTerm)); }
     }
@@ -2731,10 +2858,31 @@ class Game {
       // derive the COMING season's expectation from the season JUST ended (t.pos), incl. its tier move — not
       // from m.lastFinishPos (the season before that), which lagged the board a year behind reality (PT-64/66)
       const expectation = deriveExpectation({ prestigeLevelIdx: prestige.levelIdx, priorFinish: this.finishOf(t.pos, t.size, this.clubTier()) });
+      // AND THAT IS NEXT SEASON'S BAR, NOT THIS ONE'S. `expectation` is derived FROM the finish being graded
+      // below, and it was then handed straight to boardStanding — so the season was judged against a standard
+      // that had already moved because of it, while the standard actually promised to the player all year
+      // (m.lastBoard.expectation, written at the previous rollover and rendered by showSeason as "This season
+      // they expect …") was read nowhere in the grading path. The board graded you against a bar you were
+      // never shown.
+      // What that looked like: top flight, a Rookie Gaffer told all season "they expect you to stay up", club
+      // finishes 19th of 20. finishOf() calls that 'relegated', which nudges the standard UP to 'midtable',
+      // and the season is scored against THAT — board score -91 (furious) where the promised survival bar
+      // scores -15 (patient). Four mood bands of punishment for missing a target nobody set. It runs the
+      // other way too: go up, and finishOf()'s 'promotion' nudge (PT-122) drops the bar to consolidation, so
+      // the promotion season is marked against an EASIER standard than the one that was on screen. Sweeping
+      // every (tier, prestige, prior finish, final position) combination, 1874 land in a different mood band
+      // than the promised bar gives.
+      // So: judge on the promise, and keep the derived band purely for storage as next season's bar. Before
+      // the first rollover no promise exists (lastBoard is undefined in season 1 and in an heir's first
+      // season), so there the derived band stands in. The stored value is a plain string off the save, so it
+      // is checked against the five real bands rather than trusted — an old or hand-edited save must not
+      // reach boardScore, where an unknown band silently reads as mid-table with zero difficulty credit.
+      const shown = m.lastBoard?.expectation;
+      const promised = shown === 'title' || shown === 'promotion' || shown === 'playoffs' || shown === 'midtable' || shown === 'survival' ? shown : expectation;
       const gp = Math.max(1, rec.wins + rec.draws + rec.losses);
       const st = boardStanding((this.leagueSeed() ^ (m.season * 0x9e3779b1)) >>> 0, {
         position: t.pos, total: t.size, promote: 2, relegate: this.clubTier() < TIERS ? 2 : 0, // top-2 up / bottom-2 down (PT-28); no relegation in the basement, so the drop-zone penalty can't fire there (PT-123)
-        points: rec.wins * 3 + rec.draws, matchesPlayed: gp, totalMatches: gp, expectation,
+        points: rec.wins * 3 + rec.draws, matchesPlayed: gp, totalMatches: gp, expectation: promised,
       });
       // A season of arc decisions shifts the verdict. Each point of boardMood is worth 12 of board score,
       // which is about a third of a mood band — so one call never flips the room, and a season of them can.
@@ -2962,8 +3110,24 @@ class Game {
     const storyLine = sold
       ? `After ${era} at ${club}${honourLine}, ${m.starName} leaves for <b>${sold.club}</b> in a <b>${sold.fee.toLocaleString()}c</b> deal — a wrench for the fans, but the money reshapes the club’s future.`
       : `${farewell}${finalMoveLine}${headlinesLine}`;
+    // THE SEND-OFF IS THE LAST SCREEN THIS SEASON EVER GETS, so the season's report has to be read here.
+    // `nextSeason` writes the entire end-of-season report — prize money, the itemised facility income, the
+    // awards, upkeep, disrepair, running-on-empty, the prestige rank-up and the promotion/relegation/title
+    // narration, fourteen writes in all — stamped `m.season + 1`, saves that season, and then returns
+    // straight into this function. `seasonFeedHtml` filters `f.season === m.season && f.gen === starGen`,
+    // and every exit from this screen runs bringThroughHeir -> resetMgrForHeir, which puts the save back to
+    // `season: 1` before the heir moves `starGen` on a generation. So on the one season per generation that
+    // a dynasty actually retires, the whole report was written and then sealed behind a (season, gen) pair
+    // the save can never hold again: the club's final accounts, its last title, its parting promotion — all
+    // of it silent, with nothing failing. Re-stamping those writes cannot rescue it (every season number
+    // reachable after this point belongs to the next man, and tools/playtest/feed_season_stamp.ts enforces
+    // the `m.season + 1` stamp the normal rollover needs), so the report is READ here instead, on the card
+    // the player is already looking at. Retirement path only: the sold path (acceptStarBid) fires
+    // mid-season, and its lines have been sitting on the season screen all year.
+    const finalReport = sold ? '' : this.seasonFeedHtml('His last season');
     $('academy-body').innerHTML = `<div class="cg-graduation"><div class="cg-grad-title"><span class="ico-inline ico-lg">${sprite('banner')}</span> ${titleLine}</div>`
       + `<div class="cg-epilogue">${storyLine} But the <b>${surname}</b> name isn't done — the next of the line is about to kick a ball for the very first time.</div>`
+      + (finalReport ? `<div style="text-align:left;max-width:620px;margin:0 auto 22px;">${finalReport}</div>` : '')
       + `<div class="cg-prompt">What does ${m.starName} do next?</div>`
       + `<div class="cg-prompt cg-hint-sub">Only <b>mentoring</b> passes something to the heir — the others are his own next chapter. Your call (#56).</div>`
       + `<div id="cg-nextlife">` + (Object.keys(Game.NEXT_LIFE) as Array<'coaching' | 'media' | 'mentoring'>).map((k) => {
@@ -3367,7 +3531,17 @@ class Game {
         : `<div class="tr-cabinet"><div class="tr-empty"><div class="tr-empty-art">${trophyImg('league', 64)}</div><div class="muted">No trophies yet — win your league to lift your first title.</div></div></div><div class="troom-shelf"></div>`;
       // retired numbers (per-save honour for a top-tier 'Immortal' legend)
       const TOP_TIER = 'Immortal', rKey = 'fm_retired_' + (this.account?.handle ?? '');
-      let retired: Array<{ n: number; name: string }>; try { retired = JSON.parse(localStorage.getItem(rKey) || '[]'); } catch { retired = []; }
+      // THE RETIRED SHIRTS NOW LIVE IN THE SAVE. This read `fm_retired_<handle>` and the button below wrote
+      // it, while `SaveModel.retiredNumbers` — declared, defaulted in freshSave and repaired in migrate —
+      // had no reader or writer at all and was an empty array in every save ever written. localStorage is
+      // the evictable half (Safari clears it after seven idle days; the same eviction `rebuiltMgrState`
+      // was written for), so the honour disappeared while the bloodline that earned it survived: the
+      // RETIRED NUMBERS shelf emptied itself and the number went back into circulation.
+      // The old key is still READ and merged in, so an existing save's retired shirts survive the move.
+      // It is never written again; `retireNumber` de-duplicates, so re-running this on every render is free.
+      let evicted: Array<{ n: number; name: string }>; try { evicted = JSON.parse(localStorage.getItem(rKey) || '[]'); } catch { evicted = []; }
+      if (Array.isArray(evicted)) for (const r of evicted) if (r) retireNumber(Number(r.n), String(r.name ?? ''));
+      const retired = retiredNumbers();
       const retiredNums = new Set(retired.map((r) => r.n));
       // bloodlines: group legend cards by their base player id → a generational chain
       const byLine = new Map<string, typeof legends>();
@@ -3461,9 +3635,7 @@ class Game {
       if (frHost) void this.renderFamilyTree(frHost);   // async; the rest of the room renders immediately
       $('trophies-body').querySelectorAll('.tr-retire').forEach((el) => el.addEventListener('click', () => {
         const n = Number((el as HTMLElement).dataset.num); const name = (el as HTMLElement).dataset.name!;
-        let cur: Array<{ n: number; name: string }>; try { cur = JSON.parse(localStorage.getItem(rKey) || '[]'); } catch { cur = []; }
-        if (!cur.some((r) => r.n === n)) cur.push({ n, name });
-        localStorage.setItem(rKey, JSON.stringify(cur));
+        retireNumber(n, name);   // into the durable save, not localStorage — see the read path above
         toast(`🎽 #${n} retired forever in ${name}'s honour`);
         this.showTrophyRoom();
       }));
@@ -3718,8 +3890,11 @@ class Game {
     const feed = [...(m.feed ?? []), { season: season ?? m.season, gen: m.starGen ?? 0, icon, text }];
     this.saveMgr({ ...m, feed: feed.slice(-Game.FEED_MAX) });
   }
-  /** The feed for the CURRENT season, newest first. */
-  private seasonFeedHtml(): string {
+  /** The feed for the CURRENT season, newest first. `label` names the block, because this same reader is
+   *  now also the retirement send-off's end-of-season report (see retireStar) and "your season so far" is
+   *  the wrong tense for a career that has just ended. One reader, so the filter and the writers can never
+   *  drift apart again. */
+  private seasonFeedHtml(label = 'Your season so far'): string {
     const m = this.loadMgr();
     // Entries written before generations were stamped have no `gen`; treat them as this generation's so
     // an existing save does not lose its current-season feed on upgrade.
@@ -3727,7 +3902,7 @@ class Game {
     const rows = (m.feed ?? []).filter((f) => f.season === m.season && (f.gen ?? gen) === gen);
     if (!rows.length) return '';
     const items = rows.slice().reverse().map((f) => `<div class="sf-feed-row"><span class="sf-feed-ico">${f.icon}</span><span>${f.text}</span></div>`).join('');
-    return `<details class="sf-feed" open><summary>📰 Your season so far <span class="sf-feed-n">${rows.length}</span></summary>${items}</details>`;
+    return `<details class="sf-feed" open><summary>📰 ${label} <span class="sf-feed-n">${rows.length}</span></summary>${items}</details>`;
   }
   /** The club's situation, for arc gating. Everything here is already known at the season screen. */
   private mgrSituation(): MgrSituation {
@@ -3805,8 +3980,30 @@ class Game {
     const arc = managerArcById(m.arcNow.id);
     const beat = arc?.beats[m.arcNow.beat];
     if (!arc || !beat) return '';
-    const choices = beat.choices.map((c) =>
-      `<div class="mgr-arc-choice" data-arcchoice="${c.id}"><div class="cg-cname">${c.label}</div><div class="cg-cdescr">${c.desc}</div></div>`).join('');
+    const coins = this.account?.coins ?? 0;
+    // THE PRICE OF THE DECISION WAS INVISIBLE UNTIL IT HAD BEEN PAID. 1,029 of the 2,513 manager-arc options
+    // carry a `coins` effect — 612 of them a spend, as deep as −680, and as high as +900 the other way — and
+    // the option rendered nothing but its label and its prose. `applyArcEffect` mutates `this.account.coins`
+    // on the click and `resolveArcChoice` calls `showSeason` straight after, so the balance in the header
+    // simply jumped: "Sign him as agreed" (mgr-failed-medical) took 450c out of the club with no more warning
+    // than a line of fiction, and "Sign him and make it work" (mgr-marquee-forced) took 600c. Not one of those
+    // 1,029 options states a figure in its own label or desc, so the screen said nothing. Staff hires read
+    // "Hire · 💰350" and renewals "Renew · 1,200c"; an arc option now reads the same way.
+    // NOT DISABLED when the club cannot cover it, which is where this parts company with those two buttons:
+    // `resolveArcChoice` is the ONLY thing that clears `arcNow`, and `maybeOfferArc` refuses to offer while one
+    // is pending — so greying out unaffordable options would freeze the arc system for the rest of that career
+    // on the 35 beats where EVERY option costs coins. The spend already clamps at zero in `applyArcEffect`, so
+    // an option the bank cannot cover is priced and flagged, never blocked.
+    const choices = beat.choices.map((c) => {
+      const d = c.effect?.coins ?? 0;
+      const over = d < 0 && coins + d < 0;
+      const tag = d === 0 ? ''
+        : d < 0 ? ` · <span class="sq-warn">💰−${(-d).toLocaleString()}c</span>${over ? ` <span class="sq-warn">⚠ empties the bank</span>` : ''}`
+        : ` · <span class="sq-good">💰+${d.toLocaleString()}c</span>`;
+      const tip = d < 0 ? `Costs ${(-d).toLocaleString()}c of club money — you hold ${coins.toLocaleString()}c`
+        : d > 0 ? `Brings in ${d.toLocaleString()}c` : '';
+      return `<div class="mgr-arc-choice" data-arcchoice="${c.id}"${tip ? ` title="${tip}"` : ''}><div class="cg-cname">${c.label}${tag}</div><div class="cg-cdescr">${c.desc}</div></div>`;
+    }).join('');
     return `<div class="mgr-arc arc-${arc.category}">`
       + `<div class="mgr-arc-head">${arc.icon} ${arc.title.toUpperCase()}</div>`
       + `<div class="mgr-arc-prompt">${beat.prompt}</div>`
@@ -5051,14 +5248,35 @@ class Game {
     });
 
     const inXI = new Set(slots);
-    const bench = this.club.players.filter((p) => !inXI.has(p.id) && !this.injured.has(p.id)).sort((a, b) => overall(b) - overall(a));
+    // SEVEN GO TO THE GROUND, NOT SEVENTEEN. The match this screen is setting up is built by
+    // `buildXI(this.availableClub(), myLineup)`, which hands the engine a `bench` of the best BENCH_SIZE
+    // players outside the XI and nothing else; `MatchEngine.makeSub` splices its replacement out of that
+    // array, so a man who is not in it cannot come on at any minute of the match. This line used to print
+    // EVERY remaining squad player under one "Bench:" heading — at MAX_SQUAD (28) that is seventeen names,
+    // ten of which the engine had never been given. The manager saved his best reserve for the last twenty
+    // minutes and the substitution was never available to make; nothing on screen had said so.
+    // The pool is `availableClub()`'s, the same one the match builds from, so a contract-lapsed player is
+    // no longer listed as an option either — `availableClub()` drops him and the engine never sees him.
+    // He is not hidden, he moves to the reserves line below with everyone else who cannot play today.
+    const availIds = new Set(this.availableClub().players.map((p) => p.id));
+    const outside = this.club.players.filter((p) => !inXI.has(p.id) && !this.injured.has(p.id));
+    const pool = outside.filter((p) => availIds.has(p.id)).sort((a, b) => overall(b) - overall(a));
+    const bench = pool.slice(0, BENCH_SIZE);
+    const reserves = [...pool.slice(BENCH_SIZE), ...outside.filter((p) => !availIds.has(p.id))]
+      .sort((a, b) => overall(b) - overall(a));
     const hurt = this.club.players.filter((p) => this.injured.has(p.id)).sort((a, b) => overall(b) - overall(a));
-    const injuredHtml = hurt.length ? `<div class="bench-injured"><b>🤕 Injured:</b> ` + hurt.map((p) => `<span class="inj">${p.name} (${p.role} ${overall(p)}) · ${this.injured.get(p.id)}m</span>`).join(' · ') + '</div>' : '';
-    $('bench').innerHTML = `<b>Bench:</b> ` + bench.map((p) => {
+    // one renderer for both lists, so a bloodline star keeps his tier colour and his clickable card whether
+    // he made the seven or not — the reserves line must not become a second, poorer way of naming a player
+    const nameHtml = (p: Player) => {
       const t = isNftId(p.id) ? nftTier(overall(p)) : null;
       return t ? `<span class="bench-nft tier-${t.key}" data-card="${p.id}" title="Your star · ${t.name} — click to view card">${t.icon} ${p.name} (${p.role} ${overall(p)})</span>`
         : `${p.name} (${p.role} ${overall(p)})`;
-    }).join(' · ') + injuredHtml;
+    };
+    const injuredHtml = hurt.length ? `<div class="bench-injured"><b>🤕 Injured:</b> ` + hurt.map((p) => `<span class="inj">${p.name} (${p.role} ${overall(p)}) · ${this.injured.get(p.id)}m</span>`).join(' · ') + '</div>' : '';
+    // the reason is VISIBLE, not a tooltip (PT-502): a touch player never sees a title attribute
+    const reservesHtml = reserves.length ? `<div class="bench-reserves"><b>🚫 Not in the matchday squad:</b> ` + reserves.map(nameHtml).join(' · ')
+      + `<div class="br-why">Only ${BENCH_SIZE} substitutes travel — these ${reserves.length} are outside them and cannot be brought on.</div></div>` : '';
+    $('bench').innerHTML = `<b>Bench (${bench.length}/${BENCH_SIZE}):</b> ` + bench.map(nameHtml).join(' · ') + reservesHtml + injuredHtml;
     // NFT badges/names open the collectible card
     this.makeActivatable(document.querySelectorAll('#xi [data-card], #bench [data-card]'));
     Array.from(document.querySelectorAll<HTMLElement>('#xi [data-card], #bench [data-card]')).forEach((el) => {
@@ -5206,10 +5424,8 @@ class Game {
    *  a stale value here only ever costs one screen's accuracy, never a saved number. */
   private rebuildingMgr = false;   // guards the MgrState rebuild against an unbounded retry loop
   private houseBidMult = 1;
-  private lastGate = 0;
   private startMatch(payload: MatchPayload) {
     this.mySide = payload.mySide;
-    this.lastGate = payload.gateIncome ?? 0;
     this.homeName = payload.home.handle;
     this.awayName = payload.away.handle;
     // guarantee the two kits clearly contrast on the pitch even if the clubs' colours are similar
@@ -5432,9 +5648,11 @@ class Game {
       const line = pressConferenceLine(this.leagueSeed(), salt, { timing: 'post', competition, stakes, form, result: gd > 0 ? 'win' : gd < 0 ? 'loss' : 'draw' });
       $('ft-report').insertAdjacentHTML('beforeend', `<div class="ft-presser">🎙️ <b>At the presser</b> — “${line}”</div>`);
     }
-    $('ft-gate').classList.toggle('hidden', this.lastGate <= 0);
-    if (this.lastGate > 0) $('ft-gate-amt').textContent = String(this.lastGate);
 
+    // NO GATE-RECEIPTS LINE HERE ANY MORE. Two lines used to un-hide `#ft-gate` when a `lastGate` field was
+    // above zero; `lastGate` was fed from `MatchPayload.gateIncome`, which nothing anywhere ever set, so the
+    // line was hidden on every full-time card ever rendered. It is not re-addable as written: the season's
+    // gate is paid once, at rollover, from `seasonFacilityIncome().gate`. See MatchPayload in client/src/api.ts.
     const card = $('fulltime-card');
     card.classList.remove('hidden');
     let dismissed = false;

@@ -2928,3 +2928,46 @@ wrong entry of mine within a minute of being written).
 What I need from you is only whether these four want a look at all — several may be perfectly fine as plain
 containers, in which case the answer is "drop the class", which is a one-line change each. Say the word
 either way and I will do it.
+
+
+## 91. Two life events do nothing at the youth stages, and the fix is a balance change that moves the replay
+
+`shared/src/career.ts` states its own contract on the life-consequence table: a good/bad meter and earnings
+swing per life-kind is "what makes a life event mechanically distinct from an ordinary social scenario, not
+just a re-skin". Two rows break it.
+
+`social_storm` spends its entire payload on `fans` and `sponsors`; `media`'s good branch does the same. Those
+meters are not active until Breakthrough and First Team respectively — but life events start firing at
+Scholar, and both kinds are in `YOUTH_LIFE_KINDS`. `life()` silently drops a delta for an inactive meter. So
+across the youth chapters **`social_storm` has no mechanical consequence at all**, and `media`'s good outcome
+is worth nothing. An independent 400-career sweep fired `media` 69 times and `social_storm` 58 times inside
+Scholar and Youth Team, so this is the common case, not a corner.
+
+**Why I have not fixed it.** The obvious repair — give both rows a youth-active meter alongside the senior
+ones — makes `npm run verify` go red. `tools/playtest/golden_replay.ts` fails:
+
+    FAIL seed 4 (outfield), 192 actions: all 10 persisted graduation fields identical
+         — MOVED: marketability (11 -> 12)
+
+The mechanism is real and unavoidable: a bigger `agent` or `authority` standing feeds `computeConsequences()`
+(`if (active.has('agent')) { if (v.agent > 70) market += 1; }`, plus the `authority` thresholds), which
+moves `marketBonus`, which moves graduated marketability. Baseline on an unpatched tree: all eleven committed
+careers pass. So this is not a bug fix — it is a **balance change that alters what every existing career
+graduates as**, and the golden replay is doing exactly its job by refusing it.
+
+Three ways forward, none of which I should pick for you:
+
+1. **Take the balance change.** Give both rows a youth meter and re-baseline the golden replay. Honest, and
+   it makes two life events mean something for the ~28 turns where they currently mean nothing. Costs: every
+   in-flight save's replay diverges, and the eleven committed golden careers need regenerating.
+2. **Give them an earnings swing instead** (`earnGood`/`earnBad`), which no other row in the table has either.
+   Earnings are not gated by chapter, so it would work at every stage — but it makes a teenage media storm a
+   money event rather than a relationship one, which may be the wrong feel.
+3. **Leave it and correct the contract.** Narrow the comment to say that some life kinds are flavour at the
+   youth stages, so the file stops asserting something it does not do.
+
+My preference is (1) if you are willing to re-baseline — pre-release is exactly when that is cheap, and it is
+the only option that makes the mechanism match the promise. Say the word and I will do it with the
+re-baseline in one commit.
+
+The full analysis, including the reproduction, is in the patch-design run for `social-storm`.

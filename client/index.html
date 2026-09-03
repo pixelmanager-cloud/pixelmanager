@@ -53,7 +53,7 @@
          the one place a low-specificity global rule must always win over per-component animation. */
       @media (prefers-reduced-motion: reduce) {
         *, *::before, *::after {
-          animation-duration: 0.001ms !important; animation-iteration-count: 1 !important;
+          animation-duration: 0.001ms !important; animation-delay: 0.001ms !important; animation-iteration-count: 1 !important;
           transition-duration: 0.001ms !important; scroll-behavior: auto !important;
         }
         /* REDUCING MOTION MUST NOT REMOVE INFORMATION, and it was doing exactly that. #toast and
@@ -234,6 +234,18 @@
         #mm-name { font-size: 18px; padding: 7px 12px; }
         .mm-preview { min-height: 26px; }
       }
+      /* ...AND ON THE EFFECTIVE HEIGHT, which is what the layout actually gets. The media query above sees the
+         unzoomed viewport, so at uiScale 130% on a 1280x700 window it does not fire even though the content
+         has only 538 effective pixels to live in — and "Back" lands 20px past the fold (74px at 140%). The
+         `fx-short` class is set from applyEffectiveViewport() in main.ts. Duplicated rather than rewritten:
+         these selectors keep their existing specificity, and the class-prefixed copy simply wins when it
+         applies, so nothing changes at uiScale 100%. */
+      html.fx-short #mainmenu { padding-top: 10px; }
+      html.fx-short #mm-title { font-size: 26px; margin-bottom: 4px; }
+      html.fx-short #mm-tagline { font-size: 16px; margin-bottom: 12px; }
+      html.fx-short #mm-buttons button, html.fx-short #mm-newgame button { font-size: 14px; padding: 9px 16px; }
+      html.fx-short #mm-name { font-size: 18px; padding: 7px 12px; }
+      html.fx-short .mm-preview { min-height: 26px; }
       #mm-buttons, #mm-newgame { display: flex; flex-direction: column; gap: 12px; align-items: center; max-width: 320px; margin: 0 auto; }
       #mm-buttons button, #mm-newgame button { font-family: var(--display); font-size: 18px; padding: 14px 22px; width: 100%; cursor: pointer;
         background: var(--panel-2); color: var(--text); border: 2px solid var(--line); box-shadow: 3px 3px 0 rgba(0,0,0,0.6); }
@@ -306,7 +318,11 @@
          notice that a goal was scored. This class-based twin, driven by the in-game switch, had exactly the
          same hole: a player who used the setting rather than their OS still lost all of it. */
       body.reduced-motion *, body.reduced-motion *::before, body.reduced-motion *::after {
-        animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
+        /* animation-DELAY too. Zeroing only the duration leaves a staged reveal's 1.05s hold intact, so a
+           player who asked for less motion still waits out the choreography with nothing moving — the worst
+           of both. The two per-component exemption blocks achieve this with `animation: none`; this makes
+           the global clamp do it for everything else. */
+        animation-duration: 0.001ms !important; animation-delay: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; scroll-behavior: auto !important; }
       body.reduced-motion #toast.show, body.reduced-motion #goal-flash.show { opacity: 1 !important; }
       .pc-card { position: relative; width: 320px; max-width: 92vw; padding: 20px 22px 22px; text-align: center; cursor: default;
         border: 3px solid var(--cyan); border-radius: 14px; overflow: hidden; isolation: isolate; animation: ftpop 0.35s ease-out;
@@ -355,7 +371,12 @@
       .pc-card .pc-morale { display: flex; align-items: center; gap: 7px; justify-content: center; font-size: 12px; color: var(--muted); margin-bottom: 8px; }
       .pc-card .pc-morale i { font-style: normal; }
       .pc-card .pc-mbg { width: 70px; height: 5px; border-radius: 3px; background: #2a2a44; overflow: hidden; }
-      .pc-card .pc-mbg b { display: block; height: 100%; background: linear-gradient(90deg, #d06a6a, #e0c14a, #6ad06a); }
+      /* THE RAMP BELONGS TO THE TRACK, NOT THE FILL. Painting the full red-amber-green gradient inside the
+         fill means the fill always ends green, whatever its width — so morale 8 and morale 100 are the same
+         colour and the bar's only signal is its length. Anchoring the gradient to the fixed 70px track makes
+         a short fill show the red end and a full one reach the green. */
+      .pc-card .pc-mbg b { display: block; height: 100%; background-image: linear-gradient(90deg, #d06a6a, #e0c14a, #6ad06a);
+        background-size: 70px 100%; background-repeat: no-repeat; }
       .pc-card .pc-contract.retired { background: rgba(150,120,40,0.16); border-color: rgba(220,190,90,0.4); }
       .pc-card .pc-legend { font-size: 12px; color: #e8d9a0; text-align: center; margin-bottom: 7px; letter-spacing: 0.2px; }
       .pc-card .pc-reborn { font-family: var(--body); font-size: 15px; padding: 7px 12px; cursor: pointer; border-radius: 6px;
@@ -765,10 +786,13 @@
       .tm-sub { font-size: 12px; color: var(--muted); margin-bottom: 12px; }
       .tm-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
       @media (max-width: 640px) { .tm-cols { grid-template-columns: 1fr; } }
-      .tm-row { display: flex; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 8px; background: var(--panel-2, #1f1f4d); border: 1px solid var(--line); margin-bottom: 6px; }
+      /* The row could not give, so the name did: every BUY row crushed it to ~51px and wrapped it, and a
+         rival-house row overflowed the plate. Letting the row wrap costs a line on the widest rows and
+         gives the name ~196px on all of them. */
+      .tm-row { display: flex; flex-wrap: wrap; row-gap: 4px; align-items: center; gap: 8px; padding: 7px 9px; border-radius: 8px; background: var(--panel-2, #1f1f4d); border: 1px solid var(--line); margin-bottom: 6px; }
       .tm-pos { font-family: var(--display); font-size: 11px; padding: 2px 4px; border-radius: 4px; flex: none; min-width: 20px; text-align: center; }
       .tm-GK { background: #7cc46b; color: #06301a; } .tm-DF { background: #4d8bff; color: #001028; } .tm-MF { background: #39ff9e; color: #003118; } .tm-FW { background: #ff7a3c; color: #2a0f00; }
-      .tm-name { flex: 1; font-size: 13px; color: var(--text); }
+      .tm-name { flex: 1 1 130px; min-width: 0; font-size: 13px; color: var(--text); }
       .tm-ov { font-size: 12px; color: var(--muted); white-space: nowrap; }
       .tm-buy, .tm-sell { font-family: var(--display); font-size: 11px; padding: 5px 9px; flex: none; }
       .tm-sell { background: color-mix(in srgb, #e6c76a 16%, transparent); color: #f0d98a; border: 1px solid color-mix(in srgb, #e6c76a 45%, transparent); border-radius: 6px; }
@@ -782,17 +806,25 @@
       .cn-l { font-family: var(--display); font-size: 11px; padding: 5px 8px; }
       .cn-l.active { background: var(--accent); color: #10121a; }
       .cn-ask { font-size: 14px; color: #e2e8f0; text-align: center; margin-bottom: 12px; }
-      .cn-offers { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 8px; }
+      /* `1fr` is minmax(auto, 1fr), so a track never shrinks below its content: 'GENEROUS' widened its own
+         column and squeezed the other three. minmax(0, 1fr) is what four equal columns actually requires. */
+      .cn-offers { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
       .cn-offer { display: flex; flex-direction: column; align-items: center; gap: 2px; font-family: var(--display); font-size: 11px; padding: 8px 6px; }
       .cn-offer.cn-locked { opacity: .45; cursor: not-allowed; filter: grayscale(.5); } /* unaffordable offer (PT-63) */
       .cn-offer.cn-locked .cn-o-hint { color: var(--warn); }
       .cn-coins { font-family: var(--body); font-size: 14px; color: #ffd75e; }
-      .cn-offer .cn-o-lbl { font-family: var(--display); font-size: 11px; opacity: 1; }
+      .cn-offer .cn-o-lbl { font-family: var(--display); font-size: 11px; opacity: 1; letter-spacing: 0; }
       .cn-offer .cn-o-tot { font-family: var(--body); font-size: 12px; opacity: 0.9; }
       .cn-offer .cn-o-hint { font-family: var(--body); font-size: 11px; opacity: 0.6; text-transform: none; letter-spacing: 0; }
+      /* The recommended offer's own background darkens its hint to 3.93:1 while the other three sit near
+         7.6:1 — so the button the game is steering you towards is the one whose hint you cannot read. */
+      .cn-offer.primary .cn-o-hint { opacity: 0.85; }
       .cn-result { margin-top: 12px; font-size: 13px; text-align: center; min-height: 18px; line-height: 1.4; }
       .cn-result .cn-reject { color: var(--pink); } .cn-result .cn-counter { color: var(--warn); }
       #season-head { display: flex; align-items: center; gap: 12px; } #season-head h3 { margin: 0; } #season-back { margin-left: auto; }
+      /* the season screen's coin balance — mirrors #club-coins, which does the same job in #club-head.
+         tabular-nums because this number is repainted in place as you hire and renew. */
+      #season-coins { font-family: var(--display); font-size: 14px; color: var(--warn); font-variant-numeric: tabular-nums; }
       .season-summary { font-size: 17px; color: var(--text); margin: 4px 0 14px; padding: 10px 14px; background: color-mix(in srgb, var(--cyan) 8%, transparent); border: 1px solid var(--line); border-radius: 9px; }
       .season-summary b { color: var(--cyan); }
       .season-summary.done { background: color-mix(in srgb, var(--good) 10%, transparent); }
@@ -911,6 +943,9 @@
       .op-deal:last-child { border-bottom: none; }
       .op-deal-head { display: flex; align-items: center; gap: 8px; font-size: 14px; color: var(--text); }
       .op-deal-tier { font-family: var(--display); font-size: 11px; padding: 1px 5px; border-radius: 4px; background: rgba(255,255,255,0.08); color: var(--muted); }
+      /* Emitted with no rule, so the strain warning rendered at the 22px body default in full brightness —
+         louder than the deal it is a footnote to. Reuses the sheet's existing warning red. */
+      .op-deal-strain { font-size: 12px; color: #e58f8f; margin-top: 3px; }
       .op-deal-tier.global { background: color-mix(in srgb, #e6c76a 30%, transparent); color: #e6c76a; }
       .op-deal-tier.national { background: color-mix(in srgb, var(--accent) 25%, transparent); color: var(--accent); }
       .op-deal-pay { margin-left: auto; color: var(--good); font-family: var(--display); font-size: 11px; }
@@ -925,6 +960,11 @@
       .op-tempt-blurb { font-size: 13px; color: var(--text); margin-top: 6px; font-style: italic; }
       /* THE LIVING SQUAD — the season report: who grew, faded, retired, and whose deal is up */
       .sq-report { margin: 0 0 14px; padding: 10px 14px 12px; border-radius: 9px; background: linear-gradient(160deg, rgba(70,110,90,0.16), rgba(35,55,45,0.1)); border-left: 3px solid #57b98a; }
+      /* "📊 THIS SEASON" was emitted with no rule at all, so the season-leaders block had no card, no
+         padding and no separation from the panel above it — a heading and some rows floating in the page
+         while every sibling block on the same screen wears a plate. Matched to them. */
+      .sf-leaders { margin: 0 0 14px; padding: 10px 14px 12px; border-radius: 9px; background: rgba(255,255,255,0.03); border-left: 3px solid var(--cyan); }
+      .sf-leaders .scout-h4 { margin-top: 0; }
       .sq-head { display: flex; align-items: center; justify-content: space-between; font-size: 13px; letter-spacing: .08em; color: #bfe6cf; margin-bottom: 8px; }
       .sq-x { background: none; border: none; color: #8fae9c; font-size: 15px; cursor: pointer; padding: 0 2px; }
       .sq-x:hover { color: #e6f3ec; }
@@ -1203,7 +1243,9 @@
         background: linear-gradient(160deg, color-mix(in srgb, var(--gold) 13%, var(--hall-2)), var(--hall));
         box-shadow: inset 0 1px 0 color-mix(in srgb, var(--gold) 30%, transparent); }
       #trophies .ach.got .ach-name { color: var(--gold-lit); }
-      #trophies .ach.locked { opacity: 0.4; }
+      /* 0.4 here composited with the base .ach.locked 0.55 landed the text at 1.71:1 — the list telling the
+         player what there is left to chase was the least readable thing in the room. */
+      #trophies .ach.locked { opacity: 0.7; }
       #trophies .ach-desc { color: #8d825f; }
       #trophies .ach-count { color: var(--gold); }
       /* The bloodline spine and the houses table both sit in the hall, so they take its metal too. */
@@ -1292,6 +1334,10 @@
       /* injuries */
       .bench-injured { margin-top: 8px; font-size: 15px; color: #d78; }
       .bench-injured .inj { color: #c88; }
+      /* players outside the seven who travel — dimmer than #bench (#c1c5e4) on purpose, because the whole
+         point of splitting this list off is that these names are NOT an option in the coming match */
+      .bench-reserves { margin-top: 8px; font-size: 15px; color: #8b90ad; }
+      .br-why { margin-top: 3px; font-family: var(--body); font-size: 13px; color: #6f7490; }
       .squad-injured { font-size: 15px; color: #e08a8a; margin-bottom: 8px; padding: 6px 8px; border: 1px solid rgba(220,120,120,0.3); border-radius: 5px; background: rgba(220,120,120,0.08); }
       .squad-injured .m { font-family: var(--body); font-size: 14px; color: var(--warn); }
 
@@ -1347,6 +1393,9 @@
         .mm-emblem .mm-crown .px { width: 28px; height: 28px; margin-bottom: -6px; }
         .mm-emblem .mm-ball .px { width: 38px; height: 38px; }
       }
+      html.fx-short .mm-emblem { margin-bottom: 2px; }
+      html.fx-short .mm-emblem .mm-crown .px { width: 28px; height: 28px; margin-bottom: -6px; }
+      html.fx-short .mm-emblem .mm-ball .px { width: 38px; height: 38px; }
       .legacy-btn .legacy-ico .px { width: 34px; height: 34px; }
       .facility .fac-name { font-family: var(--body); font-size: 17px; color: #fff; }
       .facility .fac-lvl { margin-left: auto; font-family: var(--body); font-size: 14px; color: var(--warn); }
@@ -1358,7 +1407,9 @@
       .facility .fac-next { font-size: 14px; color: var(--muted); }
       .facility .fac-next b { color: var(--cyan); }
       .facility button.fac-up { font-family: var(--body); font-size: 14px; padding: 9px; cursor: pointer;
-        background: var(--accent, #2b6); color: #fff; border: none; border-radius: 6px; }
+        /* White on --accent is 3.33:1, under the floor this sheet holds itself to, on the primary action of
+           the whole screen. Every other element here already wears the room's own hue via --room. */
+        background: var(--room, var(--accent, #2b6)); color: var(--room-ink, #10121a); border: none; border-radius: 6px; }
       .facility button.fac-up:disabled { opacity: 0.4; cursor: not-allowed; }
       .facility.maxed { border-color: #d8a72a; }
       .facility .fac-maxed { font-family: var(--body); font-size: 14px; color: var(--warn); text-align: center; padding: 8px; }
@@ -1524,7 +1575,9 @@
       }
       #matchwrap { display: flex; flex-direction: column; align-items: center; gap: 10px; position: relative; }
       #goal-flash { position: absolute; top: 190px; left: 50%; transform: translateX(-50%); z-index: 30; pointer-events: none;
-        font-family: var(--display); font-size: 40px; color: var(--good); white-space: nowrap;
+        /* nowrap with no max-width made the announcement 1040-1320px wide for a long club name, clipped by
+           the viewport with no way to read it. Its siblings all cap; this one never did. */
+        font-family: var(--display); font-size: 40px; color: var(--good); white-space: normal; max-width: 96vw; text-align: center;
         text-shadow: 3px 3px 0 var(--pink), 0 0 20px var(--good); opacity: 0; }
       #goal-flash.show { animation: goalpop 1.7s ease-out; }
       /* A goal against you: their colour, no triumphant overshoot, and gone quicker. It should read as a
@@ -1566,7 +1619,11 @@
       #ticker { width: 840px; max-width: 96vw; height: 300px; overflow-y: auto; background: #0c0c22; border: 2px solid var(--line); border-radius: 8px; padding: 12px 16px; font-size: 18px; line-height: 1.5; display: flex; flex-direction: column; gap: 6px; }
       #ticker .cm-line { animation: cmfade 0.35s ease; }
       @keyframes cmfade { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-      #ticker .cm-min { color: #66708a; font-size: 14px; margin-right: 6px; }
+      /* Two defects in one rule. #66708a on the feed ground is 3.89:1 — the stamp sits on EVERY line of a
+         ~700-line feed and is the only thing telling you when something happened. And flushMove writes an
+         EMPTY <span class="cm-min"></span> to reserve the minute column on continuation lines, which a
+         zero-width inline span cannot do, so the column it was written to hold never existed. */
+      #ticker .cm-min { color: #8790ab; font-size: 14px; margin-right: 6px; display: inline-block; min-width: 34px; text-align: right; }
       #ticker .cm-goal { color: #ffd75e; font-weight: bold; } #ticker .cm-goal .cm-score { color: #fff; margin-left: 6px; }
       #ticker .cm-chance { color: #8ad0ff; } #ticker .cm-save { color: #9be6b0; } #ticker .cm-miss { color: #c9a8a8; }
       #ticker .cm-break { color: #cbd; border-top: 1px solid var(--line); padding-top: 6px; margin-top: 2px; }
@@ -1615,6 +1672,11 @@
       .mgr-arc-choices { display: grid; gap: 8px; }
       .mgr-arc-choice { padding: 9px 12px; border: 1px solid rgba(255,255,255,0.18); cursor: pointer; }
       .mgr-arc-choice:hover { border-color: var(--good); background: rgba(255,255,255,0.06); }
+      /* These emit .cg-cname and .cg-cdescr, and every rule for that pair is scoped to a different parent —
+         so the choice's label and its explanation rendered identically and the tile read as one flat blob.
+         Same defect as the heir cards; same one-line remedy. */
+      .mgr-arc-choice .cg-cname { font-family: var(--display); font-size: 13px; margin-bottom: 5px; }
+      .mgr-arc-choice .cg-cdescr { font-size: 13px; line-height: 1.4; color: #b8c0cc; }
       .cg-temper-q { margin: 16px 0 8px; font-family: var(--display); font-size: 14px; }
       .cg-tempers { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; margin-bottom: 14px; }
       .cg-temper { padding: 9px 11px; border: 1px solid rgba(255,255,255,0.18); cursor: pointer; text-align: left; }
@@ -1760,7 +1822,9 @@
       #fulltime-card .ft-head { font-family: var(--display); font-size: 18px; color: var(--text);
         text-shadow: 0 2px 0 #000; margin-bottom: 16px; }
       #fulltime-card .ft-teams { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 6px; }
-      #fulltime-card .ft-team { font-size: 26px; color: #fff; flex: 1; }
+      /* `flex: 1` with the default `min-width: auto` leaves ~122px for a 26px name, so every club in the
+         pool wraps to two lines and a long family name overflows the plate outright. */
+      #fulltime-card .ft-team { font-size: 26px; color: #fff; flex: 1; min-width: 0; overflow-wrap: anywhere; }
       #fulltime-card .ft-team.home { text-align: right; } #fulltime-card .ft-team.away { text-align: left; }
       #fulltime-card #ft-score { font-family: var(--display); font-size: 31px; letter-spacing: 2px; color: #fff;
         background: rgba(0,0,0,0.45); border: 1px solid var(--rule); padding: 8px 14px; white-space: nowrap;
@@ -1894,7 +1958,10 @@
         background: linear-gradient(180deg, var(--plate-2), var(--plate));
         box-shadow: inset 0 1px 0 rgba(255,255,255,0.04), 0 2px 0 rgba(0,0,0,0.45); }
       /* out of position keeps its amber wash — a warning that has to survive the plate */
-      .slot.slot-oop { background: linear-gradient(180deg,
+      /* The amber left rule at the earlier .slot.slot-oop is overridden by the `.slot.role-*` colours 26
+         lines below it, so the one marker telling you a man is out of position was invisible. This block
+         already carries !important on the background for the same reason. */
+      .slot.slot-oop { border-left-color: var(--warn) !important; background: linear-gradient(180deg,
         color-mix(in srgb, var(--warn) 14%, var(--plate-2)), var(--plate)) !important; }
 
       /* ── THE SCOREBOARD ──
@@ -2042,7 +2109,15 @@
 
       <!-- MANAGER SEASON (single-player fixture-by-fixture) -->
       <div id="season" class="panel hidden">
-        <div id="season-head"><h3>🧢 CLUB SEASON</h3><button id="season-back">← Back to hub</button></div>
+        <!-- FIVE PRICES, NO BALANCE. This screen quotes staff hires (350c and up), contract renewals, the
+             shirt-sponsor choice, the season wage-bill forecast and the manager-arc decisions — and the
+             game's only coin readout was #me-coins, which lives inside #hub and is hidden by showScreen()
+             the instant the season screen opens. Both purchase buttons render `disabled` when you cannot
+             afford them and put the reason in a `title` (staffHtml, squadReportHtml), so the player was
+             shown a price, a dead button, and — on touch, or any pointer that never hovers — nothing at
+             all to explain it. #club-head has carried #club-coins for exactly this reason since
+             facilities shipped; this header never got one. -->
+        <div id="season-head"><h3>🧢 CLUB SEASON</h3><span id="season-coins" title="Your coin balance — what you have to spend on hires, renewals and the transfer market"></span><button id="season-back">← Back to hub</button></div>
         <div id="season-body"></div>
       </div>
 
@@ -2128,7 +2203,10 @@
           </div>
           <div id="ft-report"></div>
           <div id="ft-potm" class="hidden"></div>
-          <div id="ft-gate" class="hidden" style="font-family:var(--display);font-size: 12px;color:var(--warn);margin-top:14px;">🏟️ Gate receipts: +<span id="ft-gate-amt">0</span> coins</div>
+          <!-- A "Gate receipts" line sat here and was hidden on every full-time card the game ever showed:
+               main.ts un-hid it on `lastGate > 0`, `lastGate` came from `MatchPayload.gateIncome`, and nothing
+               ever set that field. Removed rather than wired, because gate money is already paid once a season
+               by seasonFacilityIncome() — a per-match credit would double-pay. See client/src/api.ts. -->
           <div class="ft-tap">▶ Tap to continue</div>
         </div>
       </div>
