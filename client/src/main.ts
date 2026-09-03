@@ -1,7 +1,7 @@
 import {
   MatchEngine, autoPickXI, buildXI, BENCH_SIZE, overall, TICK_SEC, resolveMatchXI, intentOf, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
   TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, deriveMatchStats, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry, tierName, TIERS, tierStrength,
-  FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, moodFromScore, boardMessageFor, deriveExpectation, PRESTIGE_LEVELS, prestigeRankUpBlurb, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition, contTieBlurb, wcGroupDramaBlurb, wcKnockoutDramaBlurb, worldCupFinishBlurb,
+  FORMATIONS as FORMATION_SHAPES, staffRoster, staffQuip, type StaffMember, type StaffMoment, boardStanding, moodFromScore, boardMessageFor, deriveExpectation, PRESTIGE_LEVELS, prestigeRankUpBlurb, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition, contTieBlurb, wcGroupDramaBlurb, wcKnockoutDramaBlurb, worldCupFinishBlurb,
   transferList, wageForLength, sellValue, squadSaleValue, squadSeasonWage, moraleEffects, incomingBid, MIN_SQUAD, MAX_SQUAD, SQUAD_CONTRACT_SEASONS, type Listing,
   ACHIEVEMENTS, evaluateAchievements, achievementById, type AchSnapshot, lifeAction,
   type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
@@ -3350,8 +3350,34 @@ class Game {
   private renderStaff() {
     const el = $('club-staff'); if (!el) return;
     const roster = staffRoster(this.leagueSeed());
+    // THE BACKROOM SAYS SOMETHING. 40 authored quips — 4 roles x 5 moments x 2 — sat behind a combinator
+    // (`pressConferenceLineWithStaff`) that the client never invoked, so the four staff were four names and
+    // one fixed sentence each, unchanged from season 1 to the end of a dynasty, on a screen that otherwise
+    // reacts to everything.
+    //
+    // NOT wired through that combinator, deliberately. It returns one flat string and the full-time card
+    // wraps the presser in curly quotes, so dropping it in renders nested quotes AND double attribution —
+    // 12 of the 40 quips already carry their own "they say" / "is the message to the players". It also only
+    // ever reaches bigWin + bigLoss, 16 of the 40 lines, at under one sighting a season.
+    //
+    // One line on the staff card instead: the moment is chosen from the season the player is actually in,
+    // the speaker is the role that owns that moment, and the salt is the matchday count so it moves as the
+    // season does. No new state, no new surface, and all five moments become reachable.
+    const m0 = this.loadMgr();
+    const played = m0.results?.length ?? 0;
+    const last = played ? m0.results[played - 1] : null;
+    const moment: StaffMoment = !played ? 'preSeason'
+      : last && last.myGoals - last.oppGoals >= 2 ? 'bigWin'
+      : last && last.oppGoals - last.myGoals >= 2 ? 'bigLoss'
+      : (m0.titles ?? 0) > 0 ? 'milestone' : 'signing';
+    const SPEAKER: Record<StaffMoment, keyof typeof roster> = {
+      preSeason: 'fitnessCoach', signing: 'scout', bigWin: 'assistant', bigLoss: 'assistant', milestone: 'goalkeepingCoach',
+    };
+    const voice = roster[SPEAKER[moment]] as StaffMember;
+    const quip = staffQuip(this.leagueSeed(), voice.role, moment, played);
     const card = (s: StaffMember) => `<div class="cs-card"><span class="cs-role">${s.role}</span>`
-      + `<span class="cs-name">${s.name}</span><span class="cs-personality">“${s.personality}”</span></div>`;
+      + `<span class="cs-name">${s.name}</span><span class="cs-personality">“${s.personality}”</span>`
+      + (s.name === voice.name ? `<span class="cs-quip">${quip}</span>` : '') + `</div>`;
     // the coaches you have actually HIRED, and what each is doing — previously invisible
     const hired = this.loadMgr().staff ?? [];
     const EFF: Record<string, string> = {
@@ -4193,6 +4219,13 @@ class Game {
       const honourLine = won.length
         ? ` · ${won.map((a) => `${a.label} (S${a.season}, ${a.value})`).join('; ')}`
         : '';
+      // THE ONE HONOUR NO CLUB CAN GIVE. `callUpBlurb` holds ~305 authored lines and had no production
+      // caller anywhere — the international beat exists (caps accrue, the panel shows them) but the prose
+      // written for it was never shown to anybody. One line, frozen into careerHonours at graduation so it
+      // can never quietly become a different sentence, read out here beside the cap count it belongs to. In
+      // a game about a family name persisting, "the bloodline has produced a full international" is exactly
+      // the sort of thing the tree should be able to say.
+      const capLine = n.honours?.capLine ? ` · ${n.honours.capLine}` : '';
       // The pop lives on an INNER group. A CSS transform on the outer one would override the SVG
       // `transform="translate(...)"` attribute that positions the node, and the whole tree would collapse
       // onto the origin.
@@ -4215,7 +4248,7 @@ class Game {
       // badge is how good he actually got.
       const ovr = Math.round(Number(n.legend?.peakOverall ?? n.overall) || 0);
       return `<g class="fr-node${cls}" transform="translate(${p.x},${p.y})"><g class="fr-in" style="--fr-g:${rankOf(n)}">`
-        + `<title>${who}${honourLine}</title>`
+        + `<title>${who}${honourLine}${capLine}</title>`
         + `<ellipse rx="30" ry="34" class="fr-oval"/><ellipse rx="24" ry="28" class="fr-oval-inner"/>`
         // Only when there is no face to draw. Left in as the fallback, but rendering it underneath a
         // portrait made the initials ghost through — visibly so on passed-over sons, who are drawn paler.

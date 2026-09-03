@@ -114,3 +114,6 @@ it — kept so it is not re-raised).
 | F-101 | fixed (§91, CK) | career/correctness | `social_storm` had no youth-stage consequence and `media`'s good outcome was worth nothing there; golden careers rebaselined (2 of 11 moved) | `shared/src/career.ts:794` |
 | F-102 | fixed (§90, CK) | ui/visual | `.ach-txt` had no `flex: 1`/`min-width: 0` so long descriptions overflowed the plate; `.li-tip` rendered at the 22px body default | `client/index.html:1276` |
 | F-103 | fixed (§84a, CK) | career/dead-wiring | The last chapter never got a summer — the finished-check sat above the boundary check — so all eight `Establishing` focus options were unreachable, including the only main summer focus that raises the sponsors meter | `shared/src/career.ts:1488` |
+| F-104 | fixed (§86, CK) | content/dead-wiring | `first_start` wired at the Breakthrough boundary (4 lines; 2 deleted as unusable), `first_goal` kept permanently dead and now enforced by probe | `shared/src/tokens.ts:186` |
+| F-105 | fixed (§86, CK) | content/dead-wiring | The 40 backroom-staff quips had no production caller — four staff were four fixed sentences for a whole dynasty | `client/src/main.ts:3351` |
+| F-106 | fixed (§86, CK) | content/dead-wiring | `callUpBlurb`'s ~305-line corpus had no caller; one line now frozen into careerHonours and shown on the family tree | `shared/src/tokens.ts:575` |

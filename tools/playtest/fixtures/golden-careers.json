@@ -1645,7 +1645,7 @@
         "marketability": 12,
         "earnings": 12655,
         "peak_overall": 13,
-        "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"bigNights\":[\"The Game Your Whole Career Gets Judged On\",\"Title Decider\",\"A Derby With the Title on the Line\"],\"peakOverall\":13,\"careerScore\":382,\"turnsPlayed\":120}"
+        "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"capLine\":\"A steady evening in national colours. The coach will have noticed the things the crowd did not.\",\"bigNights\":[\"The Game Your Whole Career Gets Judged On\",\"Title Decider\",\"A Derby With the Title on the Line\"],\"peakOverall\":13,\"careerScore\":382,\"turnsPlayed\":120}"
       }
     }
   },
@@ -2472,7 +2472,7 @@
         "marketability": 15,
         "earnings": 13195,
         "peak_overall": 12,
-        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[\"A Continental Final\"],\"peakOverall\":12,\"careerScore\":245,\"turnsPlayed\":120}"
+        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"capLine\":\"Another international appearance, and he was involved in almost nothing and lost almost nothing.\",\"bigNights\":[\"A Continental Final\"],\"peakOverall\":12,\"careerScore\":245,\"turnsPlayed\":120}"
       }
     }
   },
@@ -4122,7 +4122,7 @@
         "marketability": 15,
         "earnings": 12745,
         "peak_overall": 12,
-        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[],\"peakOverall\":12,\"careerScore\":287,\"turnsPlayed\":120}"
+        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"capLine\":\"Another international appearance, and he was involved in almost nothing and lost almost nothing.\",\"bigNights\":[],\"peakOverall\":12,\"careerScore\":287,\"turnsPlayed\":120}"
       }
     }
   },
@@ -5796,7 +5796,7 @@
         "marketability": 19,
         "earnings": 13322,
         "peak_overall": 11,
-        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[\"A Comeback From the Brink\"],\"peakOverall\":11,\"careerScore\":251,\"turnsPlayed\":120}"
+        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"capLine\":\"Another international appearance, and he was involved in almost nothing and lost almost nothing.\",\"bigNights\":[\"A Comeback From the Brink\"],\"peakOverall\":11,\"careerScore\":251,\"turnsPlayed\":120}"
       }
     }
   },
@@ -6611,7 +6611,7 @@
         "marketability": 17,
         "earnings": 13835,
         "peak_overall": 12,
-        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[\"The Biggest Game in the Club’s History\",\"A Derby With the Title on the Line\",\"Title Decider\"],\"peakOverall\":12,\"careerScore\":387,\"turnsPlayed\":120}"
+        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"capLine\":\"Another international appearance, and he was involved in almost nothing and lost almost nothing.\",\"bigNights\":[\"The Biggest Game in the Club’s History\",\"A Derby With the Title on the Line\",\"Title Decider\"],\"peakOverall\":12,\"careerScore\":387,\"turnsPlayed\":120}"
       }
     }
   },
@@ -7441,7 +7441,7 @@
         "marketability": 20,
         "earnings": 13385,
         "peak_overall": 14,
-        "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"bigNights\":[\"A Comeback From the Brink\"],\"peakOverall\":14,\"careerScore\":688,\"turnsPlayed\":120}"
+        "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"capLine\":\"A steady evening in national colours. The coach will have noticed the things the crowd did not.\",\"bigNights\":[\"A Comeback From the Brink\"],\"peakOverall\":14,\"careerScore\":688,\"turnsPlayed\":120}"
       }
     }
   },
@@ -8285,7 +8285,7 @@
         "marketability": 5,
         "earnings": 13410,
         "peak_overall": 13,
-        "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"bigNights\":[\"The Match That Decides Who Goes Down\",\"Promotion Play-Off Final\",\"A Continental Final\"],\"peakOverall\":13,\"careerScore\":297,\"turnsPlayed\":120}"
+        "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"capLine\":\"A steady evening in national colours. The coach will have noticed the things the crowd did not.\",\"bigNights\":[\"The Match That Decides Who Goes Down\",\"Promotion Play-Off Final\",\"A Continental Final\"],\"peakOverall\":13,\"careerScore\":297,\"turnsPlayed\":120}"
       }
     }
   },
@@ -9134,7 +9134,7 @@
         "marketability": 16,
         "earnings": 13230,
         "peak_overall": 15,
-        "career_honours_json": "{\"caps\":24,\"nation\":\"Trentino\",\"bigNights\":[\"A Cup Semi Under the Lights\",\"A Continental Final\"],\"peakOverall\":15,\"careerScore\":357,\"turnsPlayed\":120}"
+        "career_honours_json": "{\"caps\":24,\"nation\":\"Trentino\",\"capLine\":\"Another shift in the national shirt, and he came off with a clean sheet and clean boots.\",\"bigNights\":[\"A Cup Semi Under the Lights\",\"A Continental Final\"],\"peakOverall\":15,\"careerScore\":357,\"turnsPlayed\":120}"
       }
     }
   }

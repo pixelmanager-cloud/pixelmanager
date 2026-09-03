@@ -7,7 +7,7 @@ import { overall } from './teams.js';
 import { contractView } from './contracts.js';
 import { legacyCard } from './legacy.js';
 import { moraleEffects } from './morale.js';
-import { homeNation, nationalFixture } from './intl.js';
+import { homeNation, nationalFixture, callUpBlurb } from './intl.js';
 import {
   Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, AGE_BANDS, bandAt, cardName, cardTags, CARD_DESC, LIFE_LABEL,
   legacyBoost, inheritGenes, rollGenes, graduate, rollPersonality,
@@ -179,6 +179,29 @@ function careerMilestone(c: Career): string | null {
   // that matters more than a league fixture. The other two need a concept the card career does not model —
   // it has no notion of a start or a goal — so they stay unreachable until that is defined (see §86).
   if (c.scenario.stakes === 2 && !c.log.some((l) => l.stakes >= 2)) return 'first_big_win';
+  // HIS FIRST START — at the one point in a card career where that phrase is honest.
+  //
+  // The career has no bench and no selection history: every turn is an appearance, so "his first start" has
+  // no referent anywhere except a transition the game itself already calls a breakthrough. Fired at the
+  // first MATCH-kind moment of the Breakthrough chapter it reads true, and measured across 200 careers it
+  // lands in every one of them (median turn 66, age 19) with no collision — first_big_win has already gone
+  // at ~turn 32 and cup_final does not arrive until ~77.
+  //
+  // Its sibling `first_goal` stays unreachable ON PURPOSE, and this is the reason it is not simply next in
+  // this list: the tag vocabulary has no shooting or finishing tag, and ACTION_NOUN keys off those same
+  // tags — so the sentence a goal flourish would sit on is STRUCTURALLY GUARANTEED to describe a pass, a
+  // challenge or a run. Measured over 200 careers, the turn that would be branded his first goal carries
+  // `teamwork` 98 times, rendering "⚽ His first-ever goal... he made the space for the option out wide
+  // because he saw the better option and it was not his" — a goal announced over a description of not
+  // shooting. On the goalkeeper track 111 of 120 such turns carry `keeping`: a keeper's first goal is a
+  // save. Making it honest needs a ninth tag, which moves `demand` -> `fit` -> `success` -> the phase
+  // sequence, the exact divergence recorded at career.ts:863. The real first-goal beat already exists as
+  // the `tri-first-senior-goal` story arc, with choices and consequences. See decisions-for-ck §86.
+  const band = bandAt(c.turn);
+  if (band.band.name === 'Breakthrough' && c.scenario.kind === 'match') {
+    const bandStart = AGE_BANDS.slice(0, band.index).reduce((n, b) => n + b.turns, 0);
+    if (!c.log.slice(bandStart).some((l) => l.kind === 'match')) return 'first_start';
+  }
   return null;
 }
 // Shared formulas for the CAREER SCORE / RIVAL headline (see careerState below) — factored out so the
@@ -517,6 +540,14 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
 
 export interface CareerHonours {
   caps: number; nation: string | null;
+  /** ONE call-up sentence, chosen at graduation and never re-derived. `callUpBlurb` holds a ~305-line
+   *  corpus that had no production caller at all — the international beat exists in the game (caps accrue,
+   *  the INTERNATIONAL panel renders "14 caps" and a scoreline) but the prose written for it was never
+   *  shown. Frozen rather than live: the panel is a HUD redrawn every turn and at a high overall the cap
+   *  count moves every ~2.4 turns, so a live sentence would quietly become a different sentence while the
+   *  player watched. Here it sits beside the caps and the nation on the legend card and the family tree,
+   *  where it is a permanent line about a man's career rather than a caption that shifts. */
+  capLine?: string;
   bigNights: string[];        // the stakes-3 occasions he actually played, deduplicated
   peakOverall: number; careerScore: number; turnsPlayed: number;
 }
@@ -539,6 +570,10 @@ export function careerHonours(t: Token, c: Career, peakOverall: number): CareerH
   const surname = (t.name || '').trim().split(/\s+/).slice(1).join(' ') || t.name || '';
   return {
     caps, nation: caps > 0 && surname ? homeNation(surname) : null,
+    // The sentence for the career he actually had. `capLine` is only meaningful if he was ever capped.
+    capLine: caps > 0 && surname
+      ? callUpBlurb(seedFrom(`${t.id}:capline`), caps, homeNation(surname), 0)
+      : undefined,
     bigNights: [...nights].slice(0, 12),
     peakOverall, careerScore: careerScoreOf(c), turnsPlayed: c.turn,
   };

@@ -954,7 +954,11 @@ export function fit(card: Card, sc: Scenario): number {
   return clamp(f, 0, 1);
 }
 
-export interface Choice { cardId: string; tags: Tag[]; power: number; fit: number; bestFit: number; success: number; scenario: string; stakes: number; matchedAsk: boolean }
+// `kind` is the scenario KIND ('match' | 'social' | 'training'), not its label — the log recorded fit,
+// success, stakes and tags but never what sort of moment it was, so "his first match of this chapter"
+// was not derivable from it. In-memory only: the log is rebuilt by replaying career_actions, so adding
+// a field here is replay-safe and changes no saved bytes.
+export interface Choice { cardId: string; tags: Tag[]; power: number; fit: number; bestFit: number; success: number; scenario: string; kind: Scenario['kind']; stakes: number; matchedAsk: boolean }
 
 // ── career config ──
 export const HAND_SIZE = 4;
@@ -1460,7 +1464,7 @@ export class Career {
     // did the played card carry ANY tag the moment actually called for (primary OR secondary)? — so a
     // called-for-but-secondary tag is never branded "wrong", only partial (PT-44)
     const matchedAsk = card.tags.some((t) => (this.scenario.demand[t] ?? 0) > 0);
-    const choice: Choice = { cardId: card.id, tags: card.tags, power: cardPower(card), fit: f, bestFit, success, scenario: this.scenario.label, stakes: this.scenario.stakes, matchedAsk };
+    const choice: Choice = { cardId: card.id, tags: card.tags, power: cardPower(card), fit: f, bestFit, success, scenario: this.scenario.label, kind: this.scenario.kind, stakes: this.scenario.stakes, matchedAsk };
     this.log.push(choice);
     // FORM is momentum, not a chapter-long stamp: a slump LIFTS as he strings good games together, and a
     // purple patch cools if results dip — so "Loss of Form" no longer brands every scenario for ~40 turns

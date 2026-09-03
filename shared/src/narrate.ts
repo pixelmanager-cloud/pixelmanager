@@ -3417,7 +3417,10 @@ const DEBUT_ROUGH = [
 ];
 
 // milestone flourishes — prepended when a beat marks a career-first
-const MILESTONE: Record<string, string[]> = {
+/** Exported so a probe can assert that every bank here can actually reach the player — and that the one
+ *  that must NOT (see careerMilestone in tokens.ts) stays unreachable. Four of these five were authored and
+ *  never once selected. */
+export const MILESTONE: Record<string, string[]> = {
   debut: [
     '🎬 His debut. ',
     '🎬 His first proper game. ',
@@ -3448,13 +3451,16 @@ const MILESTONE: Record<string, string[]> = {
     '🏟️ A day of a kind he has not had before. ',
     '🏟️ He has not stood in anything like this before. ',
   ],
+  // TWO LINES DELETED, DELIBERATELY: 'No bench for him today.' and 'In from the start, for once.' Both
+  // presuppose a bench and a selection history, and the card career has neither — every turn is an
+  // appearance, there is no squad status and nothing that is not a start. They were unusable under any
+  // definition of this milestone, so they are gone rather than left to fire as a small lie. The four that
+  // remain read true at the one moment this now fires: his first match of the Breakthrough chapter.
   first_start: [
     '📋 His first start. ',
     '📋 Named in the eleven for the first time. ',
     '📋 His first time starting one. ',
     '📋 On the sheet from the off. ',
-    '📋 No bench for him today. ',
-    '📋 In from the start, for once. ',
   ],
 };
 

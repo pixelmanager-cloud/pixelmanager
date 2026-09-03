@@ -2836,9 +2836,36 @@ Three bodies of authored text remain unreachable, and none is a mechanical fix:
   The international call-up beat exists in the game; this prose was written for a presentation of it that
   was never built.
 
-**None of these is a bug.** They are finished content waiting on a decision about where it goes. They are
-logged so they are not mistaken for dead code and deleted by someone tidying up — that would throw away
-several hundred authored lines.
+**DECIDED 2026-09-03 — CK took the cheap version of all three.** Assessed by a three-agent fan-out, each
+verdict then adversarially challenged; all three survived. The finding that mattered was that the
+complexity axis is the wrong one — none of these is expensive to wire. Honesty is the axis.
+
+- **`first_start`: WIRED**, at the first match-kind moment of the Breakthrough chapter — the one point in a
+  card career where "his first start" has a referent, since every turn is otherwise an appearance. Measured
+  turn 66, age 19, 200/200 careers, no collision. Two of its six lines were DELETED rather than fired:
+  "No bench for him today" and "In from the start, for once" presuppose a bench and a selection history the
+  game does not have.
+- **`first_goal`: PERMANENTLY DEAD, and now enforced.** The tag vocabulary has no shooting or finishing tag,
+  and ACTION_NOUN keys off those same tags, so the sentence a goal flourish sits on is structurally
+  guaranteed to describe a pass, a challenge or a run. Measured over 200 careers the branded turn carries
+  `teamwork` 98 times — "⚽ His first-ever goal... he made the space for the option out wide because he saw
+  the better option and it was not his". On the goalkeeper track 111 of 120 carry `keeping`: a keeper's
+  first goal is a save. An honest version needs a ninth tag, which moves demand → fit → success → the phase
+  sequence. `milestone_reach.ts` fails if anyone wires it, and that mutation is part of its test set.
+  **If you ever want more first-goal beat, widen the `tri-first-senior-goal` story arc** — a real goal with
+  choices, currently firing in 6.8% of careers.
+- **Backroom quips: WIRED CHEAPLY**, one attributed line on the club staff card, moment picked from the
+  season you are in and salted by matchday. Deliberately NOT through `pressConferenceLineWithStaff`: it
+  returns one flat string into a presser the client already wraps in curly quotes (nested quotes, and 12 of
+  the 40 quips carry their own attribution), and it only reaches 2 of the 5 moments at under one sighting a
+  season. All 40 lines and all five moments are now reachable.
+- **`callUpBlurb`: WIRED CHEAPLY**, one line frozen into `careerHonours` at graduation and shown on the
+  family tree. Frozen, not live: the INTERNATIONAL panel is a HUD redrawn every turn and at a high overall
+  the cap count moves every ~2.4 turns, so a live sentence would quietly become a different one mid-read.
+
+Golden careers rebaselined: 8 of 11 moved, ALL of them on `career_honours_json` alone and purely additively
+(caps and nation byte-identical, `capLine` added). The 3 uncapped careers did not move. No game logic
+changed.
 
 ## 87. The audit factory's fix lane needs the repo as its working directory
 
