@@ -2,7 +2,7 @@ import {
   MatchEngine, autoPickXI, buildXI, overall, TICK_SEC, resolveMatchXI, intentOf, defaultDuty, effectiveDuty, DUTY_LABEL, DUTY_DESC, DUTIES_BY_ROLE, isDutyForRole,
   TACTIC_PRESETS, generateClub, seasonFixtures, seededOpponents, liveTable, contOpponent, CONT_ROUNDS, homeNation, deriveMatchStats, worldCup, playerPath, seededOpponentTactics, LIFE_LABEL, gaffersDiaryEntry, tierName, TIERS, tierStrength,
   FORMATIONS as FORMATION_SHAPES, staffRoster, type StaffMember, boardStanding, moodFromScore, boardMessageFor, deriveExpectation, PRESTIGE_LEVELS, prestigeRankUpBlurb, type BoardMood, type PriorFinish, pressConferenceLine, type PressForm, type PressCompetition, contTieBlurb, wcGroupDramaBlurb, wcKnockoutDramaBlurb, worldCupFinishBlurb,
-  transferList, wageForLength, sellValue, squadSaleValue, squadSeasonWage, moraleEffects, incomingBid, MIN_SQUAD, MAX_SQUAD, type Listing,
+  transferList, wageForLength, sellValue, squadSaleValue, squadSeasonWage, moraleEffects, incomingBid, MIN_SQUAD, MAX_SQUAD, SQUAD_CONTRACT_SEASONS, type Listing,
   ACHIEVEMENTS, evaluateAchievements, achievementById, type AchSnapshot, lifeAction,
   type Tactics, type Formation, type MatchEvent, type Team, type Club, type Lineup, type Player, type Duty, type Fixture, type PlayedResult, type WCResult, type WCPlayerPath,
 
@@ -130,6 +130,17 @@ const STAT_FULL: Record<string, string> = { pace: 'Pace', strength: 'Strength', 
 /** Does this person carry the dynasty's surname? The founder and every heir do; a prospect bought off the
  *  street does not, which is the whole point of him being an outsider. Derived from the club name, which
  *  makeClub builds as "<family>'s Club", so it needs no async call. */
+/** A contract term as a bare noun phrase, for the {n} slot in the renewal bank.
+ *  The bank writes {n} as a duration inside its own connective — 'signs on for another {n}',
+ *  '{n} more', 'Another {n} for a man who has never played for anyone else' — so the value has to be
+ *  a plain span and nothing else. It was passed the literal string 'another spell', which produced
+ *  'signs on for another another spell' across roughly twenty of the forty-two lines carrying the
+ *  token. Spelled out rather than a numeral, because every line around it is prose. */
+const NUM_WORD = ['no', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'];
+function termWords(n: number): string {
+  const k = Math.max(0, Math.round(n));
+  return `${NUM_WORD[k] ?? k} season${k === 1 ? '' : 's'}`;
+}
 function carriesFamilyName(name: string | null | undefined, clubName: string | null | undefined): boolean {
   const fam = (clubName ?? '').replace(/['’`]s Club$/i, '').trim();
   if (!fam) return true;                       // unknown: fall back to the generous reading
@@ -1042,10 +1053,16 @@ class Game {
     // was leaking.) The listener is also registered AFTER dialogify now, as showProspectCard already did.
     const closeCard = this.dialogify(el);
     el.addEventListener('click', async (e) => {
-      const t = e.target as HTMLElement;
+      // RESOLVE THROUGH THE CONTROL. The Re-sign/Extend button contains a sprite — a real <svg> of
+      // <rect>s at 20x20 with no pointer-events rule — so a click landing on the icon rather than the
+      // label set e.target to the <rect>, which carries no data-extend, and the click did nothing. The
+      // backdrop test below deliberately stays on the ORIGINAL target: closest() would otherwise never
+      // report the overlay itself.
+      const raw = e.target as HTMLElement;
+      const t = (raw.closest('[data-extend],[data-stake],.pc-close') as HTMLElement) ?? raw;
       if (t.dataset.extend) { closeCard(); await this.extendPlayer(t.dataset.extend); return; }
       if (t.dataset.stake) { closeCard(); await this.stakePlayer(t.dataset.pid!, t.dataset.stake === 'on'); return; }
-      if (t === el || t.classList.contains('pc-close')) closeCard();
+      if (raw === el || t.classList.contains('pc-close')) closeCard();
     });
   }
 
@@ -1088,9 +1105,13 @@ class Game {
     document.body.appendChild(el);
     const closeProspect = this.dialogify(el);
     el.addEventListener('click', (e) => {
-      const t = e.target as HTMLElement;
+      // Same discipline as the player card above. These buttons happen to be text-only right now, so
+      // the raw target works — but that is a property of the markup, not of the handler, and the card
+      // one screen over shipped broken the moment an icon was added to it.
+      const raw = e.target as HTMLElement;
+      const t = (raw.closest('[data-dev],.pc-close') as HTMLElement) ?? raw;
       if (t.dataset.dev) { closeProspect(); void this.openCareer(t.dataset.dev); return; }
-      if (t === el || t.classList.contains('pc-close')) closeProspect();
+      if (raw === el || t.classList.contains('pc-close')) closeProspect();
     });
   }
 
@@ -1439,7 +1460,12 @@ class Game {
       if (!model?.profile) return blank;
       const season = Math.max(1, Number(model.profile?.season ?? 0) || 1);
       const honours: Array<{ season_number: number; tier: string; title: number }> = model.honours ?? [];
-      const latest = honours.slice().sort((x, y) => y.season_number - x.season_number)[0];
+      // THE NEWEST HONOUR THAT ACTUALLY NAMES A DIVISION. Cup honours are filed with an empty tier (a cup
+      // is its own competition, so the three cup call sites deliberately pass none) and share the league
+      // honour's season number, so `Number('')` is 0, the `>= 1` test fails and setClubTier never ran —
+      // rebuilding an evicted save in the bottom division for any club whose latest silverware was a cup.
+      const latest = honours.filter((h) => Number(h.tier) >= 1)
+        .sort((x, y) => y.season_number - x.season_number)[0];
       const tier = Number(latest?.tier);
       if (Number.isFinite(tier) && tier >= 1) this.setClubTier(tier);
       const star = (model.tokens ?? []).find((t: any) => (t.branch ?? 'played') === 'played' && t.state === 'pro');
@@ -1696,7 +1722,13 @@ class Game {
     }).join('') : '<div class="muted">The market has cleared for this season.</div>';
     const sellList = sellable.map((p) => { const ov = overall(p), v = squadSaleValue(ov, p.age ?? 26, moraleEffects(p.morale ?? 65).sellMult); return `<div class="tm-row"><span class="tm-pos tm-${p.role}">${p.role}</span><span class="tm-name">${p.name}</span><span class="tm-ov">OV ${ov}</span><button class="tm-sell" data-sell="${p.id}" title="${squadMin ? `Can't sell below ${MIN_SQUAD} players` : `Sell for +${v.toLocaleString()}c`}" ${squadMin ? 'disabled' : ''}>Sell · +${v.toLocaleString()}c</button></div>`; }).join('');
     const season = this.season ?? 0;
-    const wageBill = squad.reduce((n, p) => n + squadSeasonWage(overall(p), season), 0); // PT-500: the recurring cost of the squad, visible BEFORE you add to it
+    // BILLED, not merely present. `this.club` is the MERGED club — the pro tokens are appended for
+    // display — while the rollover charges the raw club.players, which never contains the bloodline
+    // star. Loan trialists are removed before the squad rollover too, so neither is ever paid. The
+    // season header already filters exactly this way; this screen, which is where the copy tells the
+    // manager to budget, was overstating the bill by the largest single wage at the club.
+    const billed = squad.filter((p) => !p.id.startsWith('nft:') && !p.id.startsWith('loan-'));
+    const wageBill = billed.reduce((n, p) => n + squadSeasonWage(overall(p), season), 0); // PT-500: the recurring cost of the squad, visible BEFORE you add to it
     body.innerHTML = `<div class="tm-head"><span class="tm-coins"><span class="ico-inline">${sprite('coin')}</span> ${coins.toLocaleString()}c</span> · Squad <b>${squad.length}</b>/${MAX_SQUAD} · ${tierName(tier)} · 💷 wages <b>~${wageBill.toLocaleString()}c</b> a season</div>`
       + `<div class="tm-sub">Buy players to strengthen the squad and climb — the market's quality is scaled to your division. Squad must stay between <b>${MIN_SQUAD}</b> and <b>${MAX_SQUAD}</b>. A signing costs a one-off fee <i>and</i> a wage every season after it, so leave yourself room for the bill.</div>`
       + `<div class="tm-cols"><div class="tm-col"><h4 class="scout-h4">🛒 BUY</h4>${buyList}</div><div class="tm-col"><h4 class="scout-h4">💸 SELL</h4>${sellList}</div></div>`;
@@ -1831,7 +1863,7 @@ class Game {
         { const mm = this.loadMgr(); this.saveMgr({ ...mm, squadReport: this.pendingSquadReport }); }
         this.setMe(await api.me()); audio.chime('confirm');
         toast(`✍️ ${name} re-signs · −${r.cost.toLocaleString()}c`);
-        { const rp = this.club?.players.find((x) => x.id === playerId); if (rp) this.feedEvent('contract_renewed', '✍️', this.personCtx(rp, rp.id === this.loadMgr().starId), { n: 'another spell' }); }
+        { const rp = this.club?.players.find((x) => x.id === playerId); if (rp) this.feedEvent('contract_renewed', '✍️', this.personCtx(rp, rp.id === this.loadMgr().starId), { n: termWords(SQUAD_CONTRACT_SEASONS) }); }
         this.showSeason();
       } catch (e: any) { toast(e?.body?.error ?? 'Could not renew'); }
     });
@@ -3437,7 +3469,14 @@ class Game {
     } else if (s.phase === 'focus') hint = '🌅 <b>Between seasons</b> — choose how he spends the summer to steer his relationships before the next chapter.';
     else if (s.phase === 'draft') hint = '🃏 <b>Draft cards</b> to build his identity — these are the moves he’ll bring to future moments.';
     else if (s.phase === 'coach') hint = '🧑‍🏫 <b>Appoint a coach</b> — he rescues moments in his specialty that your deck cannot answer cleanly.';
-    if (turn >= 11) localStorage.setItem(this.onbKey('fm_tut_done'), '1'); // graduate the tutorial after chapter 1
+    // GRADUATE ONLY ONCE ORDINARY PLAY RESUMES ON THE FAR SIDE OF THE BREAK. This read `turn >= 11`,
+    // and chapter 1 is turns 0-11 — so the flag was written on the last play turn and the very next
+    // render, the turn-12 focus screen, was already suppressed. The three hints written for the summer
+    // break (focus, draft, coach) could never appear, on the one screen sequence a first-time player has
+    // never seen: three phases and a shop arriving at once. A bare `turn >= 12` does not fix it either —
+    // focus, offer, coach and draft ALL report turn 12, so the flag would still kill the later ones
+    // mid-sequence. The phase test is the load-bearing half.
+    if (s.phase === 'play' && turn >= 12) localStorage.setItem(this.onbKey('fm_tut_done'), '1');
     return hint ? `<div class="cg-tut" id="cg-tut">${hint} <button class="cg-tut-x" id="cg-tut-x">Got it ✕</button></div>` : '';
   }
 
@@ -3549,7 +3588,12 @@ class Game {
     const m = this.loadMgr();
     return {
       name: p.name, role: p.role, age: p.age, morale: p.morale, overall: overall(p),
-      seasonsAtClub: p.signedSeason != null ? Math.max(0, m.season - p.signedSeason) : 0,
+      // THE SAME COUNTER signedSeason WAS STAMPED FROM. It is written from the profile season, which is
+      // monotonic across the whole dynasty; this subtracted MgrState.season, which resets to 1 at every
+      // succession. So from generation 2 the difference went negative, clamped to 0, and every squad
+      // player — a ten-year servant included — was narrated as a brand-new signing for the rest of the
+      // game. `this.season` is the profile season, set from api.me().
+      seasonsAtClub: p.signedSeason != null ? Math.max(0, (this.season ?? m.season) - p.signedSeason) : 0,
       isStar, wasRegular: (this.standingOrders?.playerIds ?? []).includes(p.id),
       personality: p.personality,
     };

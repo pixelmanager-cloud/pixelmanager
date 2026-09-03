@@ -253,10 +253,17 @@ export function seasonUpkeep(fac: Partial<Facilities> | undefined): number {
  */
 export const MAX_DISREPAIR = 3;
 export function facilityToDowngrade(fac: Partial<Facilities> | undefined): FacilityKey | null {
-  let best: FacilityKey | null = null, bestLvl = 1;
+  // RANKED ON COST, which is what the docstring above promises and what the caller needs — level and
+  // cost stopped being the same ordering when UPKEEP_WEIGHT was introduced. A club at L8 across the
+  // board with women and community at L10 was stripping the women's setup at 255c/season while the
+  // stadium at L8 cost 343c: the club shed the wrong department and recovered less for doing it.
+  // FACILITY_KEYS order remains the deterministic tie-break, so this stays replay-safe.
+  let best: FacilityKey | null = null, bestCost = 0;
   for (const k of FACILITY_KEYS) {
     const l = facLevel(fac, k);
-    if (l > bestLvl) { best = k; bestLvl = l; }
+    if (l < 2) continue;                                   // a level-1 facility has nothing to give back
+    const cost = facilityUpkeep(l, UPKEEP_WEIGHT[k] ?? 1);
+    if (cost > bestCost) { best = k; bestCost = cost; }
   }
   return best;
 }

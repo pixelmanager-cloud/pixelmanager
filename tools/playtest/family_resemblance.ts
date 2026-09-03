@@ -10,69 +10,105 @@
 // carried the family attribute and the boy the player actually embodies did not — the model missing at
 // exactly its centre, and invisible because he still had perfectly reasonable-looking genes.
 //
-// Measured, not read: across many successions, how far is the played heir from his brothers' mean on the
-// FAMILY attribute, versus on the other two?
+// ── WHY THIS PROBE WAS REWRITTEN ─────────────────────────────────────────────────────────────────────
+// The first version GUESSED which attribute was the family's, by picking the one the brothers happened to
+// agree on most, because reproducing succeed()'s seed derivation looked risky. Measured over 400 families,
+// that guess is wrong 23.5% of the time. The probe then compared 4 family samples against 8 others — so a
+// single misidentified family, which contributes a large distance to the wrong column, could flip the
+// verdict on its own.
+//
+// It duly did. An unrelated change to which OPERANDS the succession mints from turned the reading from
+// "family 0.44 vs other 1.81" into "family 1.56 vs other 1.13" and the probe went red, while the mechanism
+// it guards was measurably untouched: over 400 families under both sets of operands, family 0.313/0.320 vs
+// other 1.292/1.298. The probe had been passing on luck, and its failure was luck running out.
+//
+// There is no need to guess: `succeed()` RETURNS `familyTrait` — the real one, off the real parentSeed. So
+// this now measures the true column, and the sample size stops being load-bearing.
 //
 // Run: `npx tsx tools/playtest/family_resemblance.ts [successions]`
 import { api, __setBackendForTests } from '../../client/src/api.js';
 import { createInMemoryBackend, localStore } from '../../client/src/save.js';
-import { buildDynasty } from '../dev_dynasty_save.js';
 
-const N = Math.max(3, Math.min(20, Number(process.argv[2] ?? 8)));
+const N = Math.max(2, Math.min(12, Number(process.argv[2] ?? 5)));
 let fails = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? 'ok  ' : 'FAIL'} ${m}`); if (!c) fails++; };
 const mid = (g: any) => ((g?.floor ?? 0) + (g?.ceiling ?? 0)) / 2;
+const ATTRS = ['pace', 'strength', 'stamina'] as const;
+
+function bestCard(s: any): string {
+  const dem = s.scenario?.demand ?? {};
+  let best = s.hand[0], bestScore = -Infinity;
+  for (const c of s.hand) {
+    let score = 0;
+    for (const [tag, w] of Object.entries(dem)) score += (Number((c.tags ?? {})[tag]) || 0) * Number(w);
+    if (score > bestScore) { bestScore = score; best = c; }
+  }
+  return best.id;
+}
+async function playCareer(pid: string): Promise<void> {
+  for (let guard = 0; guard < 4000; guard++) {
+    const { state } = await api.getCareer(pid) as any;
+    if (!state || state.finished) return;
+    const s: any = state;
+    const act = s.phase === 'arc' ? { type: 'arc', cardId: s.arc.choices[0].id }
+      : s.phase === 'focus' ? { type: 'focus', cardId: s.focus[0].id }
+      : s.phase === 'offer' ? { type: 'offer', cardId: s.offers[0].id }
+      : s.phase === 'coach' ? { type: 'coach', cardId: s.coaches[0].id }
+      : s.phase === 'draft' ? { type: 'draft', cardId: s.options[0].id }
+      : { type: 'play', cardId: bestCard(s) };
+    if ((await api.careerAct(pid, act) as any).graduated) return;
+  }
+  throw new Error('career did not finish');
+}
 
 async function main() {
   console.log('=== The played heir carries the family attribute ===');
+  __setBackendForTests(createInMemoryBackend());
+  await api.register('dynasty', 'x', 'Ashcombe', 20260902, 'fam');
+  const { candidates } = await api.scoutProspects(3) as any;
+  const pid = (await api.signProspect(candidates[0].seed) as any).prospect.id;
+
   const famGaps: number[] = [], otherGaps: number[] = [];
-  let dynastiesWithBrothers = 0;
-  for (let run = 0; run < N; run++) {
-    __setBackendForTests(createInMemoryBackend());
-    // Four generations, not two: heirCount legitimately returns 1 at the early successions, so a shallow
-    // dynasty produces no brothers at all and this measures nothing.
-    const pid = await buildDynasty({ gens: 4, familyName: 'Ashcombe', slot: `fam-${run}` });
+  let withBrothers = 0, successions = 0;
+  for (let g = 0; g < N; g++) {
+    await api.startCareer(pid, null);
+    await playCareer(pid);
+    // Five seasons so the father has a record; heirCount legitimately returns 1 at the earliest
+    // successions, and a dynasty that never produces brothers measures nothing at all.
+    for (let s = 0; s < 5; s++) {
+      await api.spSeasonReward({ pos: s < 2 ? 3 : 1, size: 14, wins: 18, draws: 8, losses: 12, tier: 2, starId: pid, kind: 'league' });
+    }
+    const r: any = await api.succeed(pid, { seasons: 5, titles: 3, cups: 1, mentorship: 2, inheritance: 'name' });
+    successions++;
+    // THE TRUE COLUMN, returned by the succession itself rather than inferred from the brothers.
+    const fam = String(r.familyTrait ?? '');
     const played = await localStore.getToken(pid);
     const gen = (played as any)?.generation ?? 0;
-    // Read the brothers through localStore by their id convention rather than through getActiveModel().
-    // A dynamic import of save.js inside a tsx-run probe hands back a SEPARATE module instance with its own
-    // empty model — getActiveModel() reported zero tokens while localStore.getToken on the same ids worked.
-    // Same specifier, two module records; the mixed static/dynamic import is what splits them.
     const brothers: any[] = [];
     for (let i = 1; i <= 4; i++) {
-      const b2 = await localStore.getToken(`${pid}:b${gen}.${i}`);
-      if (b2) brothers.push(b2);
+      const b = await localStore.getToken(`${pid}:b${gen}.${i}`);
+      if (b) brothers.push(b);
     }
-    if (!played || brothers.length < 2) continue;
-    dynastiesWithBrothers++;
-
+    if (!played || !fam || brothers.length < 2) continue;
+    withBrothers++;
     const pg = JSON.parse((played as any).genes_json);
     const bg = brothers.map((b: any) => JSON.parse(b.genes_json));
-    // WHICH attribute is the family's is identified from the brothers themselves — it is by construction
-    // the one they agree on most. Recomputing it from a seed means reproducing succeed()'s exact seed
-    // derivation, and getting that subtly wrong would silently compare the wrong column.
-    const spread = (attr: string) => {
-      const vals = bg.map((g: any) => mid(g[attr]));
-      const m = vals.reduce((x: number, y: number) => x + y, 0) / vals.length;
-      return vals.reduce((s: number, v: number) => s + Math.abs(v - m), 0) / vals.length;
-    };
-    const attrs = ['pace', 'strength', 'stamina'] as const;
-    const fam = [...attrs].sort((a3, b3) => spread(a3) - spread(b3))[0];
-    for (const attr of attrs) {
-      const bmean = bg.reduce((s: number, g: any) => s + mid(g[attr]), 0) / bg.length;
-      (attr === fam ? famGaps : otherGaps).push(Math.abs(mid(pg[attr]) - bmean));
+    for (const a of ATTRS) {
+      const m = bg.reduce((n: number, x: any) => n + mid(x[a]), 0) / bg.length;
+      const d = Math.abs(mid(pg[a]) - m);
+      (a === fam ? famGaps : otherGaps).push(d);
     }
   }
-  console.log(`  ..   ${dynastiesWithBrothers}/${N} dynasties produced two or more brothers to compare against`);
 
-  const avg = (a: number[]) => a.reduce((x, y) => x + y, 0) / Math.max(1, a.length);
-  const f = avg(famGaps), o = avg(otherGaps);
+  const avg = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / (xs.length || 1);
+  console.log(`  ..   ${withBrothers}/${successions} successions produced two or more brothers to compare against`);
   console.log(`  ..   ${famGaps.length} family-attribute samples, ${otherGaps.length} other-attribute samples`);
-  console.log(`  ..   played heir's distance from his brothers' mean: family ${f.toFixed(2)}, other ${o.toFixed(2)}`);
+  console.log(`  ..   played heir's distance from his brothers' mean: family ${avg(famGaps).toFixed(2)}, other ${avg(otherGaps).toFixed(2)}`);
   ok(famGaps.length >= 3, 'enough successions produced brothers to measure (this is not an empty check)');
-  ok(f < o, `he resembles his brothers MORE on the family attribute than on the others (${f.toFixed(2)} < ${o.toFixed(2)})`);
+  ok(avg(famGaps) < avg(otherGaps),
+     `he resembles his brothers MORE on the family attribute than on the others (${avg(famGaps).toFixed(2)} < ${avg(otherGaps).toFixed(2)})`);
 
-  console.log(fails ? `\n✗ ${fails} failure(s) — the played heir is not part of his own family` : '\n✓ the boy you play looks like his brothers');
+  console.log(fails ? `\n✗ ${fails} failure(s) — the played heir is not part of his own family` : '\n✓ the boy you play is one of the brothers');
   if (fails) process.exitCode = 1;
 }
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => { console.error('FAILED: ' + (e?.stack ?? e)); process.exit(1); });

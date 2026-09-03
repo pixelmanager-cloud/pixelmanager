@@ -2829,3 +2829,63 @@ inherited the parent, which is not a git repo.
 
 **Before running a fix wave, confirm the working directory is the repo itself.** The audit lane is
 unaffected: its agents only read.
+
+## 88. The chance-creation gate measures the wrong defender — and correcting it is a balance change
+
+Wave 2 of the audit found this and I have reproduced it. `beatsLastDefender` (shared/src/engine.ts)
+carries this doc comment:
+
+> True if the receiver is beyond the opponent's last defender and can outrun the nearest one
+
+and a rebuild note eight lines down restates the gate as "is the receiver past the last defender, and
+faster?". The code picks `nearest` by straight-line distance and then uses **that same man** for the
+through-ball test. The deepest defender is never computed anywhere in the function.
+
+Instrumented over 200 matches across all six tactical presets: of ~80 "he is behind them" verdicts a
+match, **76.3 (95.7%) had the receiver NOT past the opponent's deepest outfielder**, with a mean of
+**3.7 defenders still goal-side of him**. The gate then fires ~62 times a match, each time emitting a
+chance event and handing the player CLEAR_RUN_APPETITE (×12) on his shot roll.
+
+So roughly sixty times a match the feed announces a big chance for a man with four defenders between
+him and the goal. This is also the most likely cause of the 67-chances-a-match volume recorded in
+section 68 — which was investigated twice before and never traced to this line.
+
+**What I have already done (no decision needed):** corrected the two engine comments, renamed the
+function to say what it measures, and corrected the player-facing Offside Trap copy in the tactics
+screen, which promised "a real pace edge on your last defender" while the code measures the nearest
+one. Zero behavioural risk; the codebase simply stops asserting a check it does not make.
+
+**What I have NOT done, and why it is yours:** testing `behind` against the deepest defender is a
+one-line geometry change with a large balance consequence. It is exactly the "make clear chances rare
+first" step the engine's own rebuild note prescribes — but section 68 records that dropping chance
+volume **inverts the formation and preset assertions in strategy_test**, and you have already ruled
+out engine changes once (section 82). Scoring, chance volume and the accepted gate baseline would all
+move together, and the ten accepted failures would need re-deriving.
+
+My recommendation: **leave it for now.** The realism gain is real but it re-opens the tactical
+balance question you deliberately closed, and it cannot be done without re-baselining. Worth doing in
+a dedicated pass where re-tuning the presets is the actual goal, not a side effect.
+
+## 89. The counter-attack window arms on loose balls, including for the team that lost the ball
+
+Same lens, same file, independent of the above. The engine reads `const prevTeam = s.carrier?.teamIdx`
+— which is `undefined` on any tick that began with the ball loose — and then tests `now !== prevTeam`
+to decide whether possession has just turned over. Against `undefined` that test is trivially true, so
+**any** pickup of a loose ball arms the counter window, under a comment reading "possession just turned
+over in open play … the winner is on the counter".
+
+Measured over 120 matches with both sides shaped so the gate is open: 1,184.7 counter armings a match,
+of which 669.1 (56.5%) come from a loose ball, and **389.5 — 32.9% of all armings — are the same team
+recovering a ball it had just knocked loose.** No turnover took place at all. In those cases the
+"loser" the gate is then checked against is a side that never had possession.
+
+The fix is two lines and draws no rng, so replays stay deterministic in the sense that they remain
+reproducible — but **match outcomes change**, so the golden replay needs re-baselining and the same
+strategy assertions as above are in scope.
+
+This one I think is a **more clearly a bug than a balance knob** — the mechanism is simply misfiring a
+third of the time — and the fix is much smaller than §88's. But it still moves match results, so it is
+your call whether it lands now or in the same dedicated pass as §88.
+
+My recommendation: **take this one, leave §88.** It is cheap, it is unambiguous, and it makes the
+counter mechanic mean what it says. Say the word and I will do it with the re-baseline in one commit.

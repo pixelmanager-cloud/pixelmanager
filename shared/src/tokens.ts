@@ -556,13 +556,36 @@ export function graduatedFields(t: Token, c: Career): Partial<Token> {
   };
 }
 
-// ── reborn: retired token → a fresh prospect of the NEXT generation (same id), inheriting genes + pedigree ──
-export function rebornFields(t: Token): Partial<Token> {
+/** WHAT A FATHER PASSES ON, derived once.
+ *
+ *  Two operands decide a son's genetic starting point, and both are EARNED — they are the channel through
+ *  which a father's career reaches his children at all:
+ *
+ *    parentGenes  bands taken from what the father BECAME (his realised attrs), not from the boy he was.
+ *                 His own genes_json is written at creation and never refreshed by a career, so reading it
+ *                 makes twenty years of football count for nothing.
+ *    ceilingLift  legacyBoost's earned +0..3 to the sons' physical ceilings — "athletic + winning
+ *                 bloodline" (career.ts) — scaled by how decorated and how durable the father was.
+ *
+ *  Exported because the succession mints the WHOLE sibling set through mintHeirs and must do it from these
+ *  same two values. It did not: it passed the father's birth genes and omitted the lift entirely, which
+ *  left legacyBoost().ceilingLift with no production consumer anywhere in the shipped game. A second
+ *  derivation is a second thing to drift, so there is now exactly one. */
+export function heirGeneBasis(t: Token): { parentGenes: Genes; ceilingLift: number } {
   const boost = legacyBoost(tokenAch(t));
   const parent: CareerPlayerAttrs = JSON.parse(t.attrs_json ?? '{}');
   const band = (s: number) => ({ floor: clamp(s - 6, 1, 15), ceiling: clamp(s + 2, clamp(s - 6, 1, 15) + 3, 20) });
-  const parentGenes: Genes = { pace: band(parent.pace ?? 10), strength: band(parent.strength ?? 10), stamina: band(parent.stamina ?? 10) };
-  const genes = inheritGenes(parentGenes, seedFrom(`${t.id}:heir:g${t.generation}`), 0.6, boost.ceilingLift);
+  return {
+    parentGenes: { pace: band(parent.pace ?? 10), strength: band(parent.strength ?? 10), stamina: band(parent.stamina ?? 10) },
+    ceilingLift: boost.ceilingLift,
+  };
+}
+
+// ── reborn: retired token → a fresh prospect of the NEXT generation (same id), inheriting genes + pedigree ──
+export function rebornFields(t: Token): Partial<Token> {
+  const boost = legacyBoost(tokenAch(t));
+  const { parentGenes, ceilingLift } = heirGeneBasis(t);
+  const genes = inheritGenes(parentGenes, seedFrom(`${t.id}:heir:g${t.generation}`), 0.6, ceilingLift);
   // BLOODLINE: the FAMILY NAME carries down the generations; each heir gets a fresh first name.
   const parts = t.name.trim().split(/\s+/);
   const surname = parts.length > 1 ? parts.slice(1).join(' ') : parts[0];
@@ -575,6 +598,14 @@ export function rebornFields(t: Token): Partial<Token> {
     attrs_json: null, traits_json: null, personality: null, greed: null, marketability: null, earnings: null,
     prime_season: null, peak_overall: 0, signed_season: null, length_seasons: null, staked_since: null,
     ach_seasons: 0, ach_apps: 0, ach_league: 0, ach_cup: 0, ach_promotions: 0, ach_tier: 0,
+    // ...AND the frozen honours card, which was the one piece of the father's record that stayed on the
+    // token. membersOf reads peakOverall/caps/bigNights straight out of it, so an heir who had not yet
+    // kicked a ball was scored as his father until he graduated — at which point graduatedFields wrote
+    // his own, smaller record over it and the house visibly shrank. That is the mechanism behind the
+    // graduation drop (F-017); the lineage term was never involved and does not move at that moment.
+    // Safe to clear ONLY because retired generations are now scored from their own legend snapshots
+    // (membersOf, client/src/api.ts) — clearing it alone would move the loss to the succession instead.
+    career_honours_json: null,
     ach_goals: 0, ach_assists: 0, ach_potm: 0,
   };
 }

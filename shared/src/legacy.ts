@@ -37,6 +37,11 @@ export interface LegacyCard {
   apps: number;
   leagueTitles: number;
   cupTitles: number;
+  // Carried so a RETIRED generation can be scored on its own record once the token has been reborn.
+  // Optional because cards written before this existed simply have no figure; they read as 0, which is
+  // what the house was already getting for them.
+  caps?: number;
+  bigNights?: number;
   legendRating: number;   // 0-100 career greatness (peak ability + trophies + longevity)
   tier: string;           // named tier from legendRating
   icon: string;

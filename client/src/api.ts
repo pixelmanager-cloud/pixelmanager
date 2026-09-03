@@ -28,7 +28,7 @@ import {
   seasonAwards, AWARD_LABEL, type AwardKind,
   houseRenown, branchCareer, rivalStandings, renownPedigree, renownBidMult, renownIncomeMult, type HouseMember,
   tokenToPlayer, tokenContract, legendCardOf, loadCareer, actWithNarration, careerState, graduatedFields, careerCast, fillArcText,
-  rebornFields, rebornPotential, prospectTemper, careerSeedFor, trackFor, agentsList, foundingNameFor, nameFor,
+  heirGeneBasis, rebornFields, rebornPotential, prospectTemper, careerSeedFor, trackFor, agentsList, foundingNameFor, nameFor,
   type FacilityKey, type MissionRow, type Token, type CareerAction,
   FORMATIONS,
 
@@ -328,8 +328,45 @@ function missionView(m: MissionRow, played: number) {
 /** Everyone the house is scored on, drawn straight off the tokens. Module-level because both the Houses
  *  table and the places renown OPENS DOORS need it, and a second derivation would be a second thing to
  *  drift. */
-function membersOf(model: ReturnType<typeof getActiveModel>): HouseMember[] {
-  return model.tokens.map((t) => {
+async function membersOf(model: ReturnType<typeof getActiveModel>): Promise<HouseMember[]> {
+  // EVERY GENERATION THE FAMILY EVER PLAYED, not just the one alive right now.
+  //
+  // The played line is ONE token, reused: succeed() reworks it in place with generation +1, and
+  // rebornFields zeroes ach_league / ach_cup / ach_seasons on the way through. So the retiring man's
+  // silverware — 100 renown per league title — left the house at the handover and nothing put it back,
+  // against a Houses screen that tells the player in as many words that renown never falls.
+  //
+  // The rows to score him from already existed: succeed() snapshots each generation as a legend card under
+  // `<id>:g<gen>` for the Family Record. Read them the same way bloodline() does, with the same `g < gen`
+  // bound — which is also what keeps the just-written card for the generation now retiring from being
+  // counted twice, since the token's generation has not been incremented yet at that call site.
+  const legs = await localStore.legaciesFor(OWNER).catch(() => [] as any[]);
+  const cardBy = new Map<string, any>();
+  const nameBy = new Map<string, string>();
+  for (const l of (legs as any[])) {
+    const key = String(l.player_id ?? l.playerId ?? '');
+    try { cardBy.set(key, JSON.parse(l.card_json ?? l.cardJson ?? '{}')); } catch { /* skip */ }
+    nameBy.set(key, String(l.name ?? ''));
+  }
+  const ancestors: HouseMember[] = model.tokens.flatMap((t) => {
+    const gen = t.generation ?? 0;
+    const out: HouseMember[] = [];
+    for (let g = 0; g < gen; g++) {
+      const card = cardBy.get(`${t.id}:g${g}`);
+      if (!card) continue; // a pre-suffix save has no snapshot for that generation; he scores nothing
+      out.push({
+        name: nameBy.get(`${t.id}:g${g}`) || t.name, generation: g, played: true,
+        peakOverall: Number(card.peakOverall) || 0,
+        caps: Number(card.caps) || 0,
+        leagueTitles: Number(card.leagueTitles) || 0,
+        cups: Number(card.cupTitles) || 0,
+        seasons: Number(card.seasons) || 0,
+        bigNights: Number(card.bigNights) || 0,
+      });
+    }
+    return out;
+  });
+  const live = model.tokens.map((t) => {
       let hon: any = null;
       try { hon = t.career_honours_json ? JSON.parse(t.career_honours_json) : null; } catch { /* none */ }
       const played = ((t as any).branch ?? 'played') !== 'sibling';
@@ -341,7 +378,11 @@ function membersOf(model: ReturnType<typeof getActiveModel>): HouseMember[] {
       }
       return {
         name: t.name, generation: t.generation ?? 0, played,
-        peakOverall: hon?.peakOverall ?? t.peak_overall ?? 0,
+        // Math.max, not `??`: hon.peakOverall is frozen at graduation while t.peak_overall keeps rising
+        // each rollover, so the `??` fallback could never be reached and a decade of development scored
+        // nothing. legendCardOf already takes this same max (shared/src/tokens.ts) — now the house does
+        // too, and the tree, the legend card and the Houses table finally read one man off one number.
+        peakOverall: Math.max(hon?.peakOverall ?? 0, t.peak_overall ?? 0),
         caps: hon?.caps ?? 0,
         leagueTitles: t.ach_league ?? 0,
         cups: t.ach_cup ?? 0,
@@ -349,6 +390,7 @@ function membersOf(model: ReturnType<typeof getActiveModel>): HouseMember[] {
         bigNights: hon?.bigNights?.length ?? 0,
       };
     });
+  return [...live, ...ancestors];
 }
 
 export const api = {
@@ -642,7 +684,13 @@ export const api = {
     // base id, splitting on ':g'). Without this the game's signature generational chain never fills (PT-18).
     let testimonial = 0; // the retirement send-off gate receipt — a bounded, greatness-scaled one-off (PT-116)
     try {
-      const card = legendCardOf(decorated);
+      const card = legendCardOf(decorated) as any;
+      // Fold the frozen honours onto the card BEFORE the token is reborn. rebornFields clears
+      // career_honours_json, so this is the last moment his caps and big nights exist anywhere.
+      try {
+        const h = decorated.career_honours_json ? JSON.parse(decorated.career_honours_json) : null;
+        if (h) { card.caps = Number(h.caps) || 0; card.bigNights = (h.bigNights?.length ?? 0) || 0; }
+      } catch { /* a card without them scores 0, which is what it scored before */ }
       testimonial = Math.max(0, Math.round(Number((card as any).testimonial) || 0));
       const retiredSeason = getActiveModel().profile.season ?? (decorated.generation ?? 0);
       await localStore.saveLegacy(`${pid}:g${decorated.generation ?? 0}`, OWNER, decorated.name, JSON.stringify(card), retiredSeason);
@@ -667,7 +715,10 @@ export const api = {
     // constant: heirCount saw the same number for every save at every playthrough, and it happens to be 1
     // at generations 1 and 2. The branching bloodline was inert in the shipping game, and the pure-maths
     // harness could never have seen it — only driving the real facade did.
-    const parentGenes = JSON.parse(decorated.genes_json);
+    // The father's bands and his earned ceiling lift, from the SINGLE derivation rebornFields uses.
+    // This used to read decorated.genes_json — the bands he was BORN with, which no career ever
+    // updates — so nothing a father did on the pitch reached his sons at all.
+    const { parentGenes, ceilingLift } = heirGeneBasis(decorated);
     const parentGen = decorated.generation ?? 0;
     // Same reason: rebornFields RENAMES the token to the heir, so reading it later gives the son's name
     // where the father's belongs and a cousin would be captioned with his own boy's name.
@@ -687,7 +738,7 @@ export const api = {
     // AND THE HOUSE'S OWN STANDING, on top and unconditionally. A famous surname gets a boy seen by the
     // right people at the right age; it does not make him better, it makes him NOTICED, which is what
     // pedigree already means here. Sublinear, so a house that is already winning is not handed more.
-    const houseBefore = houseRenown(membersOf(getActiveModel())).renown;
+    const houseBefore = houseRenown(await membersOf(getActiveModel())).renown;
     rf.pedigree = Math.min(1, (rf.pedigree ?? 0) + renownPedigree(houseBefore));
     // THE SON YOU PLAY WAS THE ONE SON WITH NO FAMILY RESEMBLANCE. mintHeirs models a family deliberately:
     // each attribute gets a family mean shared by every brother, plus a per-child deviation that is tiny on
@@ -697,7 +748,11 @@ export const api = {
     // came from rebornFields' own plain inheritGenes roll instead, so every brother carried the family
     // attribute and the boy the player actually embodies did not. The whole model, missing at its centre.
     const nHeirs = heirCount(parentSeed, parentGen);
-    const heirs = mintHeirs(parentGenes, parentSeed, nHeirs);
+    // ceilingLift passed, finally. Overwriting rf.genes_json below (so the played heir shares his
+    // brothers' family attribute) also discarded rebornFields' lift-bearing roll, which left the
+    // whole earned-inheritance mechanism dead in the shipped game — a fix that quietly severed
+    // another. mintHeirs threads it into famCeil for every sibling, so all of them get it now.
+    const heirs = mintHeirs(parentGenes, parentSeed, nHeirs, ceilingLift);
     rf.genes_json = JSON.stringify(heirs[0].genes);
     await localStore.updateToken(pid, rf);
     // ── THE BRANCHING BLOODLINE ────────────────────────────────────────────────────────────────────
@@ -813,7 +868,7 @@ export const api = {
     // THE COMMERCIAL PULL OF A FAMOUS HOUSE — sponsorship and gate follow the name, so the season's money
     // rises with the family's standing. Sublinear and capped at +39%: real money, never the reason you
     // can afford a squad.
-    const houseMult = renownIncomeMult(houseRenown(membersOf(model)).renown);
+    const houseMult = renownIncomeMult(houseRenown(await membersOf(model)).renown);
     const size = Math.max(2, Math.min(30, Math.floor(Number(body?.size) || 10)));
     const pos = Math.max(1, Math.min(size, Math.floor(Number(body?.pos) || 10)));
     const frac = (pos - 1) / (size - 1);
@@ -1428,7 +1483,7 @@ export const api = {
   houses: async () => {
     await ensureActive();
     const model = getActiveModel();
-    const members = membersOf(model);    const mine = houseRenown(members);
+    const members = await membersOf(model);    const mine = houseRenown(members);
     const generations = Math.max(0, ...model.tokens.map((t) => t.generation ?? 0));
     // The same derivation main.ts uses for the league, so the rival families belong to THIS save's world
     // rather than to a second, unrelated one.
