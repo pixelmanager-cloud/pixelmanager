@@ -133,3 +133,8 @@ it — kept so it is not re-raised).
 | F-120 | fixed | manager/accessibility | The Transfer Market was the last hand-rolled dialog: no inert, no focus move, no focus trap, so Tab walked out into the season screen behind it | `client/src/main.ts:1858` |
 | F-121 | fixed | economy/accessibility | Every Upgrade, Scale back, Buy and Sell button announced as its verb alone — the subject lives in a sibling span with no `aria-labelledby` | `client/src/main.ts:3479` |
 | F-122 | fixed | save/visual | A 17-character family name made the Continue button's text escape the button and vanish; and a corrupt save produced no visible feedback at all, its only message rendering below the fold | `client/index.html:250` |
+| F-123 | fixed | ui/accessibility | All five Settings toggles were `role="switch"` divs with no accessible name — the knob is a `::after`, so they announced as "switch, on" and nothing else | `client/src/main.ts:697` |
+| F-124 | fixed | ui/accessibility | Four higher-specificity `outline: none` rules cancelled the app-wide keyboard focus ring for every `<input>` in the game | `client/index.html:168` |
+| F-125 | fixed | career/accessibility | `makeActivatable` ran on an unfiltered `[data-act]`, so ~20 view-only deck cards became fake buttons for an action `doCareerAct` rejects | `client/src/main.ts:4724` |
+| F-126 | fixed | dynasty/correctness | `bloodline()` read an ancestor's ability off `card.peak ?? card.overall` — keys a LegacyCard has never carried — so every forebear on the family tree showed 0 | `client/src/api.ts:1433` |
+| F-127 | fixed | content/correctness | Two `title` lines promoted the champions of the top flight to a division above it; a `friend_rivalry` prompt compared a man to himself | `shared/src/manager/pack_1.ts:1216` |

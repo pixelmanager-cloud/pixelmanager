@@ -1202,7 +1202,7 @@ export const MGR_EXTRA_1: Bank = {
     'The last home game is a coronation, and coronations are strange to play in.',
     'A whole season without a bad month.',
     'The club has a trophy in the cabinet that means something to everybody who walks past it.',
-    'Champions, and the manager immediately starts talking about the standard of the division above.',
+    'Champions, and the manager immediately starts talking about next season before the ribbons are off.',
     'They win the league and the celebration goes on for four days.',
     'Nobody wrote about them in August. Everybody writes about them now.',
     'A title won on the training ground in January, when nobody was watching.',
@@ -1213,7 +1213,11 @@ export const MGR_EXTRA_1: Bank = {
     'They spend the last half hour of the last game passing it round and enjoying themselves.',
     'A title, and every single one of these players is now worth more than the club paid.',
     'The trophy is heavier than it looks. Everybody says that, and everybody is surprised.',
-    'Champions of {from}, promoted to {to}, and a genuine belief that they belong there.',
+    // `title` fires only in the `else if (t.pos === 1)` branch, which is reachable only when `promoted`
+    // is false — i.e. tier 1 — and the call passes {from} and {to} as the SAME tier. So a line about
+    // being promoted, and one about the division above, both described things that cannot exist where
+    // they fire: there is nothing above the top flight and a champion of it goes nowhere.
+    'Champions of {from}, and a genuine belief that they belong there.',
     'It is the top of the table in May, which is the only place anybody is ever really trying to be.',
     'A season that was decided by a run of nine wins from ten in the middle of winter.',
     'They win the league and there is not a soul who can say they did not deserve it.',

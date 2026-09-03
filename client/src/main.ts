@@ -694,26 +694,30 @@ class Game {
    *  reduced-motion, applied live. (SFX volume joins here once the SFX set ships.) */
   private openSettings() {
     document.getElementById('settings-ov')?.remove();
-    const sw = (on: boolean, key: string) => `<div class="set-sw${on ? ' on' : ''}" role="switch" aria-checked="${on}" tabindex="0" data-sw="${key}"></div>`;
+    // A role="switch" WITH NO NAME announces as "switch, on" and nothing else. The knob is drawn with a
+    // ::after pseudo-element so the div has no text content at all, and the visible label lives in a sibling
+    // span with no association — so all five settings toggles were unlabelled: a blind player could hear
+    // that something was on, and never what. The label each call site already prints beside it is passed in.
+    const sw = (on: boolean, key: string, label: string) => `<div class="set-sw${on ? ' on' : ''}" role="switch" aria-checked="${on}" aria-label="${label}" tabindex="0" data-sw="${key}"></div>`;
     const ov = document.createElement('div'); ov.id = 'settings-ov';
     ov.innerHTML = `<div class="tt-card set-card">`
       + `<div class="set-head"><div class="tt-title">⚙ SETTINGS</div><button class="set-x" aria-label="Close">✕</button></div>`
       + `<div class="set-row"><div class="set-lbl"><span>Music</span><span class="set-val" id="set-volval">${Math.round(audio.getVolume() * 100)}%</span></div>`
       + `<input type="range" id="set-vol" min="0" max="100" value="${Math.round(audio.getVolume() * 100)}" aria-label="Music volume"></div>`
-      + `<div class="set-row"><div class="set-lbl"><span>Mute music</span>${sw(audio.isMuted(), 'music')}</div>`
+      + `<div class="set-row"><div class="set-lbl"><span>Mute music</span>${sw(audio.isMuted(), 'music', 'Mute music')}</div>`
       + `<div class="set-hint">Silence the soundtrack. Your volume is remembered.</div></div>`
       + `<div class="set-row"><div class="set-lbl"><span>Sound effects</span><span class="set-val" id="set-sfxval">${Math.round(audio.getSfxVolume() * 100)}%</span></div>`
       + `<input type="range" id="set-sfx" min="0" max="100" value="${Math.round(audio.getSfxVolume() * 100)}" aria-label="Sound-effects volume"></div>`
-      + `<div class="set-row"><div class="set-lbl"><span>Mute sound effects</span>${sw(audio.isSfxMuted(), 'sfx')}</div>`
+      + `<div class="set-row"><div class="set-lbl"><span>Mute sound effects</span>${sw(audio.isSfxMuted(), 'sfx', 'Mute sound effects')}</div>`
       + `<div class="set-hint">The reward chimes on big moments. No routine click sounds.</div></div>`
-      + `<div class="set-row"><div class="set-lbl"><span>Reduce motion</span>${sw(this.prefs.reducedMotion, 'motion')}</div>`
+      + `<div class="set-row"><div class="set-lbl"><span>Reduce motion</span>${sw(this.prefs.reducedMotion, 'motion', 'Reduce motion')}</div>`
       + `<div class="set-hint">Tone down animations and screen transitions (card flips, moving effects).</div></div>`
-      + `<div class="set-row"><div class="set-lbl"><span>CRT screen effect</span>${sw(this.prefs.crt, 'crt')}</div>`
+      + `<div class="set-row"><div class="set-lbl"><span>CRT screen effect</span>${sw(this.prefs.crt, 'crt', 'CRT screen effect')}</div>`
       + `<div class="set-hint">The retro scanline + vignette overlay. Turn off for a flat, crisp picture.</div></div>`
       + `<div class="set-row"><div class="set-lbl"><span>UI scale</span><span class="set-val" id="set-scaleval">${this.prefs.uiScale}%</span></div>`
       + `<input type="range" id="set-scale" min="80" max="140" step="5" value="${this.prefs.uiScale}" aria-label="UI scale">`
       + `<div class="set-hint">Make everything bigger or smaller — handy on small screens or from the couch.</div></div>`
-      + `<div class="set-row"><div class="set-lbl"><span>Challenge: hide card stats</span>${sw(this.prefs.hideCardStats, 'hidestats')}</div>`
+      + `<div class="set-row"><div class="set-lbl"><span>Challenge: hide card stats</span>${sw(this.prefs.hideCardStats, 'hidestats', 'Challenge: hide card stats')}</div>`
       + `<div class="set-hint">Mask the stat pills on your choice cards each turn — read the action and work out what it trains. Harder and more immersive; “🎯 This calls for” stays visible.</div></div>`
       // PT-504: the onboarding explainers are dismiss-forever, so give them a permanent way back
       + `<div class="set-row"><div class="set-lbl"><span>How to play</span><button id="set-help">📖 Read the rules</button></div>`
@@ -4721,7 +4725,12 @@ class Game {
     $('cg-back').addEventListener('click', () => this.showAcademy());
     $('academy-body').querySelectorAll('.cg-tab').forEach((el) => el.addEventListener('click', () => { this.careerTab = (el as HTMLElement).dataset.tab as any; this.renderCareer(s); }));
     $('academy-body').querySelectorAll('[data-act]').forEach((el) => el.addEventListener('click', () => this.doCareerAct(s.prospectId, { type: (el as HTMLElement).dataset.act!, cardId: (el as HTMLElement).dataset.id! })));
-    this.makeActivatable($('academy-body').querySelectorAll('[data-act]')); // keyboard a11y: Tab to a card, Enter/Space to play
+    // NOT the view-only deck cards. deckHtml renders the whole deck with data-act="view", and this
+    // unfiltered selector stamped role="button", tabindex=0 and an Enter/Space handler on every one of
+    // them — around twenty fake buttons on the Player tab that announce as pressable and do nothing,
+    // because doCareerAct rejects the 'view' action. A keyboard player tabs through twenty dead controls
+    // to reach anything real. They keep their aria-label and lose the promise.
+    this.makeActivatable($('academy-body').querySelectorAll('[data-act]:not([data-act="view"])')); // keyboard a11y: Tab to a card, Enter/Space to play
     // #5: the summer two-step — Continue moves from spending to the focus choice; Back returns to spending
     document.getElementById('cg-summer-next')?.addEventListener('click', () => { this.summerStep = 'activities'; this.renderCareer(s); });
     document.getElementById('cg-summer-back')?.addEventListener('click', () => { this.summerStep = 'spend'; this.renderCareer(s); });

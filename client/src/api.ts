@@ -1459,7 +1459,12 @@ export const api = {
           // the record renders as two unrelated families.
           parentId: out.length ? out[out.length - 1].id : (g === 0 ? null : ((t as any).parent_id ?? null)),
           fatherName: out.length ? out[out.length - 1].name : ((t as any).father_name ?? null),
-          branch: 'played', state: 'retired', overall: card.peak ?? card.overall ?? 0,
+          branch: 'played', state: 'retired',
+          // `peak` and `overall` are keys a LegacyCard has never carried — legacyCard returns
+          // `peakOverall` (and `primeOverall`). So every forebear on the family tree rendered with an
+          // ability of 0, on the screen the dynasty exists to display. membersOf already reads the
+          // right key off the very same card a few hundred lines up.
+          overall: Number(card.peakOverall) || 0,
           personality: null, honours: null, legend: card,
         });
       }

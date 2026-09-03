@@ -2660,7 +2660,10 @@ const PART_FOUR: Bank = {
     'One of them is going to be sold this summer and everybody knows which one it should be.',
     'A shared agent who has been asked to push one of them at the expense of the other.',
     'Their fathers have fallen out.',
-    '{rival} has been made captain of a side he has played more games for than {rival} has.',
+    // 'he' bound to {rival}, not to the player — scenarioStory substitutes globally, so this rendered as
+    // "Danny Fisher has been made captain of a side he has played more games for than Danny Fisher has."
+    // The player is back in subject position.
+    'He has more appearances for the club than {rival}, and {rival} has just been handed the armband.',
     'A record they have both been chasing since they were boys is going to fall this month.',
     'The two of them have not been on the same pitch since a tackle in a reserve fixture in October.',
     '{rival} has asked him to be godfather and the timing could not be worse.',

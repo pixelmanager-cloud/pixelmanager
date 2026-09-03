@@ -165,7 +165,13 @@
       input:not([type="checkbox"]):not([type="radio"]) {
         font-family: var(--body); font-size: 18px; color: var(--text);
         background: var(--panel-2); border: 2px solid var(--line); border-radius: 0;
-        padding: 6px 10px; outline: none;
+        /* NO `outline: none` HERE. The sheet declares a global keyboard-focus ring twenty lines down —
+           "on every interactive element app-wide, so tabbing through the game is always trackable" — and
+           this rule's higher specificity silently cancelled it for every <input> in the game. A keyboard
+           player tabbing into a text field lost the ring entirely and could not tell where they were.
+           Chrome's UA outline only paints on :focus-visible, so removing this restores the game's own
+           cyan ring for keyboard users without putting one back for mouse users. */
+        padding: 6px 10px;
       }
       input:not([type="checkbox"]):not([type="radio"])::placeholder { color: #7a7ab0; }
       input:not([type="checkbox"]):not([type="radio"]):hover:not(:disabled) { border-color: var(--cyan); }
@@ -256,7 +262,7 @@
       #mm-buttons button.primary, #mm-newgame button.primary { background: var(--accent); color: #10121a; border-color: var(--accent); }
       #mm-buttons button:hover, #mm-newgame button:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 rgba(0,0,0,0.6); }
       #mm-name { font-family: var(--body); font-size: 22px; text-align: center; background: var(--panel-2); color: var(--text);
-        border: 2px solid var(--line); box-shadow: 3px 3px 0 rgba(0,0,0,0.6); padding: 10px 14px; outline: none; width: 100%; }
+        border: 2px solid var(--line); box-shadow: 3px 3px 0 rgba(0,0,0,0.6); padding: 10px 14px; width: 100%; }
       #mm-name:focus { border-color: var(--accent); }
       .mm-preview { min-height: 38px; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--display); font-size: 15px; color: var(--text); }
       .mm-preview .mp-hint { font-family: var(--body); font-size: 12px; color: var(--muted); letter-spacing: 0; }
@@ -272,7 +278,7 @@
       .mm-save-del { background: none; border: none; color: var(--muted); font-size: 15px; cursor: pointer; padding: 2px 6px; }
       .mm-save-del:hover { color: var(--home); }
       #handle-input, #password-input { font-family: var(--body); font-size: 24px; background: var(--panel-2); color: var(--text);
-        border: 2px solid var(--line); box-shadow: 3px 3px 0 rgba(0,0,0,0.6); padding: 8px 12px; outline: none; }
+        border: 2px solid var(--line); box-shadow: 3px 3px 0 rgba(0,0,0,0.6); padding: 8px 12px; }
       #handle-input::placeholder, #password-input::placeholder { color: #7a7ab0; }
       /* NFT collectible player card — effects escalate hard with tier */
       #player-card-ov, #teamtalk-ov { position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center;
@@ -1031,7 +1037,9 @@
       .cg-kit-row label { font-family: var(--display); font-size: 11px; letter-spacing: 0.5px; color: #bcc4d4; text-transform: uppercase; }
       .cg-kit-row .cg-kit-hint { color: var(--muted); text-transform: none; font-family: var(--body); font-size: 11px; }
       .cg-kit-row input, .cg-kit-row select { background: #14142a; border: 1px solid #34345c; border-radius: 7px; color: #e2e8f0; padding: 9px 11px; font-size: 15px; font-family: var(--body); }
-      .cg-kit-row input:focus, .cg-kit-row select:focus { outline: none; border-color: var(--cg-accent, #6ad06a); }
+      /* The border swap is a deliberate in-context treatment and stays; `outline: none` did not, because it
+         keyed on :focus rather than :focus-visible and so stripped the app-wide keyboard ring here too. */
+      .cg-kit-row input:focus, .cg-kit-row select:focus { border-color: var(--cg-accent, #6ad06a); }
       .cg-swatches { display: flex; gap: 8px; flex-wrap: wrap; }
       .cg-swatch { width: 34px; height: 34px; border-radius: 8px; border: 2px solid #34345c; cursor: pointer; padding: 0; transition: transform .1s; }
       .cg-swatch:hover { transform: scale(1.08); } .cg-swatch.on { border-color: #fff; box-shadow: 0 0 0 2px var(--cg-accent, #6ad06a); }
