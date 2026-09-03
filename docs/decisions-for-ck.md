@@ -2889,3 +2889,42 @@ your call whether it lands now or in the same dedicated pass as §88.
 
 My recommendation: **take this one, leave §88.** It is cheap, it is unambiguous, and it makes the
 counter mechanic mean what it says. Say the word and I will do it with the re-baseline in one commit.
+
+## 90. Eight classes render unstyled, and giving them a look is a design pass, not a patch
+
+A new probe — `tools/playtest/css_hooks.ts` — checks that every class the markup emits can reach a rule.
+This project keeps producing the same defect two different ways: a class defined nowhere at all, and a class
+defined only under a parent the element does not have. Both are silent. The element inherits whatever rule
+happens to reach it and the screen looks *plausible*, which is why they survive review.
+
+Two are already fixed and were real: `.tac-toggle` (the two tactics checkboxes fell through to a rule
+written for caption-above-a-select rows and stacked their label on top of the box) and `.cg-cname` /
+`.cg-cdescr` on the heir cards, where every one of the five and three rules was scoped to a parent the heir
+card does not have — so **the screen where you choose which son carries the family name rendered his name,
+his temperament and his family trait in the browser default**. On the single most consequential decision in
+the game. A third, `.cg-rival-news`, is fixed here: it is a `<div>` inside a `display:flex` row, so the news
+sentence became a third chip wedged onto the same line as the label and the gap. It gets its own row now.
+
+The probe then found **twelve** more. Three are harmless — grid children and an SVG transform container,
+laid out entirely by their parent. Four are inert modifiers sitting on an already-styled base (`.bill` on
+`.sq-row`, `.sf-wc-done` on `.sf-wc`, `.ft-star` on `.scorers`, `.op-deal-strain` on `.op-deal`): the element
+renders correctly, and someone clearly meant to give the modifier a treatment and never did.
+
+The remaining four are standalone containers that genuinely render as bare divs:
+
+| class | where | what it wraps |
+|---|---|---|
+| `.scout-board` | the scouting screen's intro panel | the whole board |
+| `.sf-leaders` | "📊 THIS SEASON" on the season screen | the leaders table |
+| `.li-tip` | the lineup screen | the "a better player is on your bench" hint |
+| `.ach-txt` | the achievements list | each achievement's name and description |
+
+**This is where I stop.** Inventing eight visual treatments is a design decision about how the game looks,
+and you have a consistent pixel-art language I would be guessing at. All twelve are recorded in the probe's
+allowlist with a reason each, so the gate stays green and *new* orphans are caught the day they appear; the
+allowlist itself fails if an entry later gains a rule, so it cannot rot into a dumping ground (it caught a
+wrong entry of mine within a minute of being written).
+
+What I need from you is only whether these four want a look at all — several may be perfectly fine as plain
+containers, in which case the answer is "drop the class", which is a one-line change each. Say the word
+either way and I will do it.

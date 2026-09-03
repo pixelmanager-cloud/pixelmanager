@@ -77,3 +77,11 @@ it — kept so it is not re-raised).
 | F-064 | fixed | ui/ux-friction | The hire-a-coach confirmation printed "He stays with the club for good." twice in the same dialog | `client/src/main.ts:2107` |
 | F-065 | fixed | ui/ux-friction | Three persistent coin readouts printed raw integers beside copy that formats the same value with thousands separators | `client/src/main.ts:1314` |
 | F-066 | fixed | career/ux-friction | The summer focus tile said choosing it "ends pre-season" with four-plus pre-season screens still to come | `client/src/main.ts:4184` |
+| F-067 | fixed | dynasty/visual | The heir-choice cards had NO typography: all five `.cg-cname` and three `.cg-cdescr` rules are scoped to parents the heir card does not have | `client/index.html:1014` |
+| F-068 | fixed | career/visual | `.cg-rival-news` is a div inside a `display:flex` row, so the news sentence became a chip on the header line | `client/index.html:685` |
+| F-069 | fixed | match/ux-friction | The commentary feed hard-snapped to the bottom on every line, so the player could never read back — ~700 lines into a nine-line window | `client/src/main.ts:5634` |
+| F-070 | fixed | manager/ux-friction | The shirt-sponsor deadline existed only in a code comment; a 450c deal vanished the moment matchday 1 was played, with nothing connecting the two | `client/src/main.ts:2206` |
+| F-071 | fixed | dynasty/ux-friction | A cousin heir carries his own father's inheritance, not the one just chosen, and neither screen said so | `client/src/main.ts:3824` |
+| F-072 | fixed | dynasty/ux-friction | The Family Record promised every pale forebear's line "can still be taken up" when only the current generation's brothers can | `client/src/main.ts:4017` |
+| F-073 | fixed | career/ux-friction | `openCareer` discarded the `replayIssue` the API computes so the UI can explain a truncated career; the player saw a reset star and was told nothing | `client/src/main.ts:3489` |
+| F-074 | decision §90 | ui/visual | Four standalone containers render unstyled (`.scout-board`, `.sf-leaders`, `.li-tip`, `.ach-txt`); giving them a look is a design pass | `tools/playtest/css_hooks.ts` |

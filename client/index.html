@@ -685,6 +685,10 @@
       .cg-rival { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 8px 14px; border-radius: 9px; background: rgba(255,255,255,0.03); border: 1px solid var(--line); font-size: 14px; }
       .cg-rival-lbl { font-family: var(--display); font-size: 11px; letter-spacing: 0.5px; color: var(--pink); }
       .cg-rival-name { flex: 1; color: var(--text); }
+      /* The news line is a DIV inside a flex row, so it became a third item on the same line as the label
+         and the gap, wedged between them. It is a sentence, not a chip: give it the whole width. */
+      .cg-rival { flex-wrap: wrap; }
+      .cg-rival-news { flex-basis: 100%; margin-top: 6px; font-size: 13px; color: var(--muted); }
       .cg-rival-gap { font-family: var(--display); font-size: 11px; }
       .cg-rival-gap.up { color: var(--good); } .cg-rival-gap.down { color: var(--home); }
       .cg-intl { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; padding: 8px 14px; border-radius: 9px; background: rgba(255,255,255,0.03); border: 1px solid var(--line); font-size: 14px; }
@@ -813,6 +817,7 @@
       .sf-staff-desc { font-size: 12px; color: var(--muted); }
       .sf-hire { font-family: var(--display); font-size: 11px; padding: 6px 10px; cursor: pointer; background: color-mix(in srgb, var(--warn) 14%, transparent); color: var(--warn); border: 1px solid color-mix(in srgb, var(--warn) 40%, transparent); border-radius: 6px; }
       .sf-sponsor { margin: 0 0 14px; padding: 10px 14px; border-radius: 9px; background: color-mix(in srgb, var(--pink) 8%, transparent); border: 1px solid color-mix(in srgb, var(--pink) 30%, transparent); }
+      .sf-sponsor.lapsed { color: var(--muted); font-size: 13px; }
       .sf-sponsor.active { font-size: 14px; color: var(--text); } .sf-sponsor.active b { color: var(--pink); }
       .sf-sponsor-lbl { font-family: var(--display); font-size: 11px; letter-spacing: 0.5px; color: var(--pink); margin-bottom: 8px; }
       .sf-sponsor-opt { display: inline-block; width: calc(50% - 5px); text-align: left; margin-right: 8px; padding: 10px 12px; cursor: pointer; vertical-align: top;
@@ -1010,8 +1015,13 @@
       .cg-card.epic .cg-rarity { background: linear-gradient(120deg, #c77dff, #ffd76a); }
       .cg-coach, .cg-offer { text-align: left; padding: 11px 13px; border-radius: 9px; background: #1b1b30; border: 1px solid #34345c; cursor: pointer; margin: 8px 0; }
       .cg-coach:hover, .cg-offer:hover { border-color: var(--cg-accent, #6ad06a); }
-      .cg-coach .cg-cname, .cg-offer .cg-cname { font-family: var(--display); font-size: 14px; }
+      .cg-coach .cg-cname, .cg-offer .cg-cname, .cg-heir-card .cg-cname { font-family: var(--display); font-size: 14px; }
       .cg-coach .cg-cdesc, .cg-offer .cg-cdesc { font-size: 13px; color: var(--muted); margin-top: 4px; }
+      /* The heir cards emit .cg-cname and .cg-cdescr, and EVERY rule for those two classes was scoped to a
+         parent they do not have — .cg-card, .cg-coach, .cg-offer, .cg-foc. There is no bare rule for either.
+         So the screen where you choose which son carries the family name rendered his name, his temperament
+         and his family trait in the browser default, on the game's single most consequential decision. */
+      .cg-heir-card .cg-cdescr { font-size: 13px; line-height: 1.4; color: #b8c0cc; margin-top: 4px; }
       .cg-offer .cg-effs { font-size: 12px; color: #9c9; margin-top: 5px; }
       /* between-seasons: end-of-chapter consequence report + summer focus choice */
       .cg-conseq { padding: 12px 15px; border-radius: 9px; margin-bottom: 12px; background: rgba(90,120,200,0.10); border: 1px solid rgba(120,150,220,0.28); }

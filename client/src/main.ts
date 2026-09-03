@@ -2203,8 +2203,15 @@ class Game {
   private sponsorHtml(): string {
     const m = this.loadMgr();
     if (m.sponsor) return `<div class="sf-sponsor active">📣 Shirt sponsor: <b>${m.sponsor === 'steady' ? 'Steady deal' : 'Performance deal — top-3 bonus pending'}</b></div>`;
-    if (m.results.length > 0) return ''; // the deal is chosen at the start of the season
-    return `<div class="sf-sponsor"><div class="sf-sponsor-lbl">📣 SHIRT SPONSOR — pick this season's deal:</div>`
+    // SAY THE DEADLINE, AND SAY IT PASSED. The cut-off lived only in this comment: the offer simply
+    // vanished once matchday 1 was played, with nothing to connect its disappearance to the fixture. It is
+    // worth 450c guaranteed — more than a title pays in the bottom tier, where 800c is scaled by a 0.4
+    // multiplier — so a player who clicked Play before reading the panel lost the season's largest
+    // certain sum and had no way to learn why.
+    if (m.results.length > 0) {
+      return `<div class="sf-sponsor lapsed">📣 <b>No shirt sponsor this season.</b> Deals are signed before the first fixture — the offer will come round again next pre-season.</div>`;
+    }
+    return `<div class="sf-sponsor"><div class="sf-sponsor-lbl">📣 SHIRT SPONSOR — pick this season's deal <b>before matchday 1</b>:</div>`
       + `<button class="sf-sponsor-opt" data-sponsor="steady"><b>📄 Steady deal</b><span>+450c now, guaranteed</span></button>`
       + `<button class="sf-sponsor-opt" data-sponsor="performance"><b>📈 Performance deal</b><span>+150c now, +400–700c bonus for a top-3 finish</span></button></div>`;
   }
@@ -3473,6 +3480,18 @@ class Game {
     } catch (e: any) { toast(e?.body?.error === 'supply cap reached' ? 'Supply cap reached — no new tokens' : e?.body?.error === 'not enough coins' ? `Not enough coins (need ${e.body.need})` : (e?.body?.error ?? 'Mint failed')); }
   }
 
+  /** A save whose recorded career cannot be fully replayed. Blocking and permanent, not a toast: playing
+   *  on would overwrite a record that is still intact, and every path back into this career lands here. */
+  private renderReplayIssue(prospectId: string, r: { applied: number; stored: number }) {
+    this.showScreen('academy');
+    $('academy-body').innerHTML = `<div class="cg-graduation">`
+      + `<div class="tt-title">⚠ THIS CAREER CANNOT BE CONTINUED</div>`
+      + `<div class="cg-handoff-note">Only <b>${r.applied}</b> of <b>${r.stored}</b> recorded moments could be replayed, so what is on screen is not the career you played.</div>`
+      + `<div class="cg-handoff-note"><b>Your record is intact and has not been changed.</b> Playing on from here would overwrite it, so the game will not let you.</div>`
+      + `<div class="cg-handoff-note">This happens when a game update shifts the order of career moments. Your other saves are unaffected.</div>`
+      + `<button id="ri-back" class="primary">← Back to the hub</button></div>`;
+    $('ri-back').addEventListener('click', () => void this.showHub());
+  }
   private async openCareer(prospectId: string) {
     this.lastNarration = '';
     this.lastOutcome = null;
@@ -3480,6 +3499,15 @@ class Game {
     $('academy-body').innerHTML = SPINNER;
     try {
       const cur = await api.getCareer(prospectId).catch(() => null); // 400 if not started yet
+      // A TRUNCATED REPLAY IS NOT AN ORDINARY CAREER. getCareer computes `replayIssue` for exactly this —
+      // its comment says the UI "can then say what happened instead of showing a 12-year-old where a
+      // 25-year-old international used to be" — and every caller threw it away. So after any content patch
+      // that shifts the action schedule the player opened his save, saw his star back at Grassroots aged
+      // 10 with his deck reset, and was told nothing. He learned only by playing a card, at which point
+      // assertReplayable throws and the explanation flashes past in a 2.2-second toast before the same
+      // wrong screen re-renders — repeating on every click.
+      const issue = (cur as any)?.replayIssue as { applied: number; stored: number } | undefined;
+      if (cur && issue) { this.renderReplayIssue(prospectId, issue); return; }
       if (cur) { this.renderCareer(cur.state); return; }
       // not started → choose an agent first
       const { agents } = await api.careerAgents();
@@ -3821,7 +3849,8 @@ class Game {
       const n = h.potentialStars;
       return `<div class="cg-heir-card${on ? ' on' : ''}" data-heir="${h.id}">`
         + `<div class="cg-cname">${h.name}</div>`
-        + (h.cousin && h.fatherName ? `<div class="cg-cdescr cg-cousin">👨‍👦 ${h.fatherName}'s boy</div>` : '')
+        + (h.cousin && h.fatherName ? `<div class="cg-cdescr cg-cousin">👨‍👦 ${h.fatherName}'s boy</div>`
+            + `<div class="cg-cdescr cg-cousin">📜 a different branch — he carries his own father's inheritance, not this one</div>` : '')
         + `<div class="cg-cdescr">🧠 ${PERSONALITY_LABEL[h.temper] ?? h.temper}</div>`
         + `<div class="cg-cdescr">🧬 the family ${h.familyTrait}</div>`
         + `<div class="cg-heir-stars">${'★'.repeat(n)}${'☆'.repeat(5 - n)} <span class="cg-heir-note">what the scouts can see so far</span></div></div>`;
@@ -4014,7 +4043,10 @@ class Game {
       + `<defs><clipPath id="fr-face-clip" clipPathUnits="userSpaceOnUse"><ellipse rx="24" ry="28"/></clipPath></defs>`
       + trunk + links + medallions + `</svg>`
       + `<div class="fr-foot">${gens.length > 1
-          ? 'The founder stands at the root. Sons who were passed over are shown paler — their line can still be taken up.'
+          // The old wording promised every pale node's line "can still be taken up". The cousin sweep only
+          // ever looks at the RETIRING star's own generation, and only while those brothers are still
+          // prospects — so an older branch has already had its one chance and cannot be picked up again.
+          ? 'The founder stands at the root. Sons who were passed over are shown paler — a brother of the current generation may still father an heir you can take.'
           : 'The first of the line. The record fills as the name is carried on.'}</div>`
       + `</div></div>`;
   }
@@ -5630,8 +5662,14 @@ class Game {
     div.className = `cm-line ${cls}`;
     div.innerHTML = html;
     const feed = $('ticker');
+    // ONLY FOLLOW IF THE PLAYER IS ALREADY AT THE BOTTOM. This snapped unconditionally on every appended
+    // line, and a match produces ~700 of them into a 300px window — about nine at a time — arriving every
+    // 0.8s at 1x. So scrolling back to re-read the goal you just missed lasted until the next line, and
+    // the ticker is wiped at kick-off and covered by the full-time card at the whistle: there is nowhere
+    // else that text exists.
+    const atBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 40;
     feed.appendChild(div);
-    feed.scrollTop = feed.scrollHeight;
+    if (atBottom) feed.scrollTop = feed.scrollHeight;
   }
   /** Render the buffered passage of play (consecutive same-team passes) as one flowing line. */
   private flushMove() {
