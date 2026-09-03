@@ -610,7 +610,11 @@ class Game {
     const saves = this.loadSaves(); const save = saves.find((s) => s.id === id); if (!save) return;
     setToken(save.token);
     try { this.setMe(await api.me()); save.lastPlayed = Date.now(); this.saveSaves(saves); await this.showHub(); }
-    catch { $('login-error').textContent = 'Could not load that save — it may be corrupted.'; clearToken(); }
+    // AND SAY IT WHERE IT CAN BE SEEN. #login-error is the last child of #mainmenu, below the save list,
+    // and nothing scrolls it into view — measured at 800x450 it renders below the fold, so clicking a
+    // save whose model cannot be read produced no visible feedback whatsoever: the click appeared to do
+    // nothing at all. The toast is fixed-position and always on screen.
+    catch { $('login-error').textContent = 'Could not load that save — it may be corrupted.'; toast('Could not load that save — it may be corrupted.'); clearToken(); }
   }
 
   private deleteSave(id: string) {
@@ -1851,11 +1855,14 @@ class Game {
     const ov = document.createElement('div'); ov.id = 'settings-ov'; // reuse the centred-overlay styling
     ov.innerHTML = `<div class="tt-card tm-card"><div class="set-head"><div class="tt-title">💰 TRANSFER MARKET</div><button class="set-x" aria-label="Close">✕</button></div><div id="tm-body">${SPINNER}</div></div>`;
     document.body.appendChild(ov);
-    const close = () => { ov.remove(); document.removeEventListener('keydown', onEsc); }; // clean up the ESC listener on every close path (PT-81)
+    // THE LAST HAND-ROLLED DIALOG. Every other overlay on this screen goes through dialogify — which marks
+    // #app inert, moves focus inside, wraps Tab at both ends and captures Escape — and this one, the screen
+    // where the player SPENDS, hand-rolled a close and an Escape listener and got none of it. Tab walked
+    // straight out of the market and into the season screen behind it, and focus never entered the dialog
+    // at all. Settings and How To Play were converted earlier in this same effort; this is the third.
+    const close = this.dialogify(ov);
     ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
     ov.querySelector('.set-x')!.addEventListener('click', close);
-    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); } };
-    document.addEventListener('keydown', onEsc);
     this.renderTransferMarket();
   }
   private renderTransferMarket() {
@@ -1882,9 +1889,9 @@ class Game {
       const house = houseOf(l.player.name);
       return `<div class="tm-row${house ? ' tm-house' : ''}"><span class="tm-pos tm-${l.player.role}">${l.player.role}</span>`
         + `<span class="tm-name">${l.player.name}${house ? ` <b class="tm-crest" title="${house.blurb.replace(/"/g, '&quot;')}">👑 of the ${house.name}s</b>` : ''}</span>`
-        + `<span class="tm-ov">OV ${l.ov} · age ${l.age}</span><button class="tm-buy primary" data-buy="${l.player.id}" title="${reason}" ${cantAfford || squadFull ? 'disabled' : ''}>Buy · ${l.fee.toLocaleString()}c</button></div>`;
+        + `<span class="tm-ov">OV ${l.ov} · age ${l.age}</span><button class="tm-buy primary" data-buy="${l.player.id}" aria-label="Buy ${l.player.name}, ${l.player.role}, overall ${l.ov}, for ${l.fee.toLocaleString()} coins" title="${reason}" ${cantAfford || squadFull ? 'disabled' : ''}>Buy · ${l.fee.toLocaleString()}c</button></div>`;
     }).join('') : '<div class="muted">The market has cleared for this season.</div>';
-    const sellList = sellable.map((p) => { const ov = overall(p), v = squadSaleValue(ov, p.age ?? 26, moraleEffects(p.morale ?? 65).sellMult); return `<div class="tm-row"><span class="tm-pos tm-${p.role}">${p.role}</span><span class="tm-name">${p.name}</span><span class="tm-ov">OV ${ov}</span><button class="tm-sell" data-sell="${p.id}" title="${squadMin ? `Can't sell below ${MIN_SQUAD} players` : `Sell for +${v.toLocaleString()}c`}" ${squadMin ? 'disabled' : ''}>Sell · +${v.toLocaleString()}c</button></div>`; }).join('');
+    const sellList = sellable.map((p) => { const ov = overall(p), v = squadSaleValue(ov, p.age ?? 26, moraleEffects(p.morale ?? 65).sellMult); return `<div class="tm-row"><span class="tm-pos tm-${p.role}">${p.role}</span><span class="tm-name">${p.name}</span><span class="tm-ov">OV ${ov}</span><button class="tm-sell" data-sell="${p.id}" aria-label="Sell ${p.name}, overall ${ov}, for ${v.toLocaleString()} coins" title="${squadMin ? `Can't sell below ${MIN_SQUAD} players` : `Sell for +${v.toLocaleString()}c`}" ${squadMin ? 'disabled' : ''}>Sell · +${v.toLocaleString()}c</button></div>`; }).join('');
     const season = this.season ?? 0;
     // BILLED, not merely present. `this.club` is the MERGED club — the pro tokens are appended for
     // display — while the rollover charges the raw club.players, which never contains the bloodline
@@ -3472,9 +3479,9 @@ class Game {
         : `<div class="fac-next">Next: <b>${f.nextEffect ?? ''}</b></div>`
           + (f.nextUpkeep != null && f.nextUpkeep > f.upkeep
             ? `<div class="fac-upkeep">Upkeep ${f.upkeep.toLocaleString()}c ▸ <b>${f.nextUpkeep.toLocaleString()}c</b> a season</div>` : '')
-          + `<button class="fac-up" data-key="${f.key}" ${f.canAfford ? '' : `disabled title="Not enough coins — you need ${(f.upgradeCost ?? 0).toLocaleString()}c"`}>${f.canAfford ? `Upgrade · 💰 ${f.upgradeCost} ▶` : `Need 💰 ${(f.upgradeCost ?? 0).toLocaleString()}c`}</button>`;
+          + `<button class="fac-up" data-key="${f.key}" aria-label="Upgrade ${f.name} to level ${(f.level ?? 0) + 1} for ${(f.upgradeCost ?? 0).toLocaleString()} coins" ${f.canAfford ? '' : `disabled title="Not enough coins — you need ${(f.upgradeCost ?? 0).toLocaleString()}c"`}>${f.canAfford ? `Upgrade · 💰 ${f.upgradeCost} ▶` : `Need 💰 ${(f.upgradeCost ?? 0).toLocaleString()}c`}</button>`;
       const scaleBack = f.level > 1
-        ? `<button class="fac-down" data-down="${f.key}" title="Scale back a level and recover part of what it cost">Scale back ▾</button>` : '';
+        ? `<button class="fac-down" data-down="${f.key}" aria-label="Scale back ${f.name} to level ${(f.level ?? 1) - 1}" title="Scale back a level and recover part of what it cost">Scale back ▾</button>` : '';
       return `<div class="facility ${maxed ? 'maxed' : ''}">`
         + `<div class="fac-top"><span class="fac-icon">${sprite(f.key) || f.icon}</span><span class="fac-name">${f.name}</span><span class="fac-lvl">LVL ${f.level}/${f.maxLevel}</span></div>`
         + `<div class="fac-pips">${pips}</div>`

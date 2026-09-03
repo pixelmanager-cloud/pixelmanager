@@ -8,7 +8,7 @@
 import {
   makeClub, DEFAULT_FACILITIES, type FacilityKey, type Facilities,
   type Club, type StandingOrders, type Token,
-  type GameStore, type HonourRow, type MissionRow, type ProspectRow, type PlayerSeasonStat, type Award,
+  type GameStore, type HonourRow, type MissionRow, type ProspectRow, type PlayerSeasonStat, type Award, type Player,
 
   autoPickXI, TACTIC_PRESETS, parseRoles, rolesJson,} from '@fm/shared';
 
@@ -126,6 +126,13 @@ export function migrate(m: SaveModel): SaveModel {
     honours: arr('honours', m.honours), awards: arr('awards', m.awards), missions: arr('missions', m.missions),
     loanees: arr('loanees', m.loanees), retiredNumbers: arr('retiredNumbers', m.retiredNumbers), playerStats: arr('playerStats', m.playerStats),
     facilities: { ...DEFAULT_FACILITIES, ...(m.facilities && typeof m.facilities === 'object' ? m.facilities : {}) },
+    // THE SQUAD WAS THE ONE ARRAY LEFT UNGUARDED. Nine collections above go through arr()'s
+    // recover-and-quarantine, facilities is defaulted and standingOrders is rebuilt below — under a comment
+    // that says "One absent array should never cost a dynasty" — while `club` rode through untouched on the
+    // `...m` spread. A save whose club.players was lost or arrived in one of the shapes arr() exists to
+    // recover reaches fieldablePlayers(), which throws, and the dynasty will not load at all. Same recovery
+    // as every sibling now, so a damaged squad costs the squad rather than the save.
+    club: { ...(m.club && typeof m.club === 'object' ? m.club : {}), players: arr<Player>('club.players', (m.club as any)?.players) } as SaveModel['club'],
     // THE ONE COLLECTION THIS REPAIR SKIPPED. Every array above is guarded and `facilities` is defaulted,
     // but `standingOrders` was passed through untouched — so a save that lost it loads with the field
     // `undefined`, survives a season rollover still undefined (the sheet reconciler early-returns it and

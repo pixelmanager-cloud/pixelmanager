@@ -398,8 +398,17 @@ export function seasonFacilityIncome(
   // treasury credit — even after facLevel itself was taught to clamp. A defensive helper only defends the
   // callers that use it.
   const gatePer = (outcome: 'win' | 'draw' | 'loss') => stadiumIncome(facLevel(fac, 'stadium'), tierIdx, outcome);
+  // TEN HOME MATCHES IN A NINE-HOME SEASON. `homeOf` was applied INDEPENDENTLY to each of the three
+  // buckets, and Math.round(n/2) rounds each one up on an odd count — so 9W/5D/4L paid gate for
+  // 5 + 3 + 2 = 10 home games out of the 9 a double round-robin actually stages. Measured across every
+  // reachable W/D/L split of an 18-game season, 71% of records overpaid, always by exactly one match.
+  // Rounding a split three times and adding the pieces does not preserve the total; the fix keeps the same
+  // documented half-the-fixtures simplification and gives losses the remainder so the parts sum to the whole.
+  const homeTotal = Math.round((record.wins + record.draws + record.losses) / 2);
+  const homeWins = homeOf(record.wins), homeDraws = homeOf(record.draws);
+  const homeLosses = Math.max(0, homeTotal - homeWins - homeDraws);
   const gate = Math.round(
-    (homeOf(record.wins) * gatePer('win') + homeOf(record.draws) * gatePer('draw') + homeOf(record.losses) * gatePer('loss'))
+    (homeWins * gatePer('win') + homeDraws * gatePer('draw') + homeLosses * gatePer('loss'))
     * fanIncomeMult(facLevel(fac, 'fanzone')));
   const sponsor = sponsorIncome(facLevel(fac, 'sponsor'), tierIdx, trophies, marketabilityAvg);
   // The five newer facilities are optional on the interface, so a save written before they existed reads

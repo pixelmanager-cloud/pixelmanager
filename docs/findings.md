@@ -126,3 +126,10 @@ it — kept so it is not re-raised).
 | F-113 | fixed | content/correctness | Seven authored manager-feed lines printed a literal `{fee}` / `{to}` at the player | `shared/src/managerNarrate.ts` |
 | F-114 | fixed | content/correctness | "Someone in a {team} shirt" printed "a Ashcombe Town shirt" for 21% of the club pool, in the heaviest-used commentary bank | `shared/src/commentary/pack_1.ts:219` |
 | F-115 | fixed | content/dead-wiring | `scout_found.young` and `.veteran` could never fire because `api.signMission`'s DTO dropped the player's age | `client/src/api.ts` |
+| F-116 | fixed | economy/correctness | Gate receipts were paid for ten home matches in a nine-home season — `homeOf` rounded each of wins/draws/losses up independently; 71% of possible records overpaid | `shared/src/facilities.ts:395` |
+| F-117 | fixed | save/correctness | `migrate()` guarded nine collections and skipped `club.players`, so a save that lost its squad throws in `fieldablePlayers` and will not load at all | `client/src/save.ts:128` |
+| F-118 | fixed | career/performance | `pickArcStart` built the full 414-arc eligibility list before the cheap gate that discards it — on 82.5% of turns | `shared/src/storyarc.ts:109` |
+| F-119 | fixed | economy/visual | The squad table's AGE column rendered near-black on the dark panel at ~1.1:1 — a `.age` rule stripped the background and never restored the colour | `client/index.html:1671` |
+| F-120 | fixed | manager/accessibility | The Transfer Market was the last hand-rolled dialog: no inert, no focus move, no focus trap, so Tab walked out into the season screen behind it | `client/src/main.ts:1858` |
+| F-121 | fixed | economy/accessibility | Every Upgrade, Scale back, Buy and Sell button announced as its verb alone — the subject lives in a sibling span with no `aria-labelledby` | `client/src/main.ts:3479` |
+| F-122 | fixed | save/visual | A 17-character family name made the Continue button's text escape the button and vanish; and a corrupt save produced no visible feedback at all, its only message rendering below the fold | `client/index.html:250` |

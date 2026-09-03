@@ -106,8 +106,12 @@ export function pickArcStart(seed: number, turn: number, fired: ReadonlySet<stri
     }
     return false;
   };
-  const eligible = ARCS.filter((a) => !fired.has(a.id) && turn >= a.minTurn && turn <= a.maxTurn && !conflictsWithFired(a));
-  if (!eligible.length) return null;
+  // THE CHEAP GATE RUNS FIRST. This block used to sit BELOW the ARCS.filter, so on every turn the
+  // scan built the full eligibility list over 414 arcs — and conflictsWithFired allocates a spread
+  // array per arc plus another per already-fired arc, so up to 414 x (1 + |fired|) allocations, with
+  // |fired| climbing 0 -> 20 across a career — and then threw all of it away. Measured: the gate
+  // discards the turn 82.5% of the time. It reads only seed, turn, fired.size and totalTurns, draws
+  // no rng, and returns null in exactly the same cases, so hoisting it changes nothing but the cost.
   // EVEN SPACING, not a flat per-turn dice roll. A constant probability clusters by luck — three arcs in one
   // chapter, then twenty barren turns — which reads as feast-or-famine. Instead the career is cut into
   // ARCS_PER_CAREER equal SLOTS and each slot fires exactly one arc, at a seed-jittered turn inside it. That
@@ -122,6 +126,9 @@ export function pickArcStart(seed: number, turn: number, fired: ReadonlySet<stri
   // up instead of silently losing that slot's story. Once a slot has delivered, fired.size outruns the slot
   // index and the gate closes until the next one.
   if (turn < fireTurn || fired.size > slot) return null;
+
+  const eligible = ARCS.filter((a) => !fired.has(a.id) && turn >= a.minTurn && turn <= a.maxTurn && !conflictsWithFired(a));
+  if (!eligible.length) return null;
   // CATEGORY-BALANCED PICK: choose a CATEGORY first, then an arc inside it. Picking straight from the flat
   // weighted pool let one category crowd out the rest — relationship arcs (widest windows, earliest start)
   // averaged ~4 per career while SIGNATURE arcs, all 34 of which carry `rare`, totalled 3.5% of the pool and

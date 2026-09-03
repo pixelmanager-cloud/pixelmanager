@@ -247,7 +247,11 @@
       html.fx-short #mm-name { font-size: 18px; padding: 7px 12px; }
       html.fx-short .mm-preview { min-height: 26px; }
       #mm-buttons, #mm-newgame { display: flex; flex-direction: column; gap: 12px; align-items: center; max-width: 320px; margin: 0 auto; }
-      #mm-buttons button, #mm-newgame button { font-family: var(--display); font-size: 18px; padding: 14px 22px; width: 100%; cursor: pointer;
+      /* overflow-wrap because the Continue button carries the family name — `▶ Continue — <name>` — and
+         #mm-name allows 18 characters. Measured at the default 110% scale: 15 characters fit exactly,
+         17 overflow by 20px, and Press Start 2P has no break opportunity inside a word, so the text
+         escaped the button and vanished against the page. The first screen a Steam player sees. */
+      #mm-buttons button, #mm-newgame button { font-family: var(--display); font-size: 18px; padding: 14px 22px; width: 100%; cursor: pointer; overflow-wrap: anywhere;
         background: var(--panel-2); color: var(--text); border: 2px solid var(--line); box-shadow: 3px 3px 0 rgba(0,0,0,0.6); }
       #mm-buttons button.primary, #mm-newgame button.primary { background: var(--accent); color: #10121a; border-color: var(--accent); }
       #mm-buttons button:hover, #mm-newgame button:hover { transform: translate(-1px,-1px); box-shadow: 4px 4px 0 rgba(0,0,0,0.6); }
@@ -1668,7 +1672,11 @@
       #lineup-firstrun { margin: 10px 0 14px; padding: 10px 12px; border-left: 3px solid var(--good);
         font-size: 13px; line-height: 1.5; opacity: 0.9; }
       #lineup-advanced { margin: 0 0 14px; }
-      td.stat.age { background: transparent; opacity: 0.75; }
+      /* `table.squad td.stat` sets a near-black ink because every OTHER stat cell gets an opaque
+         statColor() background painted inline. This rule strips that background and never restores the
+         colour, and its specificity beats the colour rule's — so the AGE number was near-black on the
+         dark panel at about 1.1:1. Invisible, in the column a manager reads to decide who to sell. */
+      td.stat.age { background: transparent; color: var(--muted); opacity: 0.75; }
       .cgp-stat { display: inline-flex; align-items: center; gap: 5px; margin: 3px 10px 3px 0; }
       .cgp-bar { display: inline-block; width: 46px; height: 7px; background: rgba(255,255,255,0.14); }
       .cgp-bar i { display: block; height: 100%; }
