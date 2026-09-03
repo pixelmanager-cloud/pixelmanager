@@ -4121,13 +4121,24 @@ class Game {
         + s.offers.map((o) => `<div class="cg-offer" data-act="offer" data-id="${o.id}"><div class="cg-cname">💷 ${o.name}</div><div class="cg-cdesc">${o.desc}</div>`
           + `<div class="cg-effs">${o.earn > 0 ? `+${o.earn.toLocaleString()}c ` : ''}${o.greed > 0 ? '· greedier ' : o.greed < 0 ? '· more loyal ' : ''}${o.market > 0 ? '· more famous ' : ''}${o.form > 0 ? '· sharper' : o.form < 0 ? '· distracted' : ''}</div></div>`).join('');
     } else if (s.phase === 'focus' && s.focus) {
-      const effLabel = (e: Record<string, number>) => Object.entries(e).map(([k, v]) => `<span title="${METER_NAME[k] ?? k}">${METER_ICON[k] ?? ''}${v > 0 ? '+' : ''}${v}</span>`).join(' · ');
-      const perkLabel = (p?: Record<string, number>) => p ? Object.entries(p).map(([k, v]) => `<span title="${METER_NAME[k] ?? k}">${METER_ICON[k] ?? ''}${v > 0 ? '+' : ''}${v}</span>`).join(' ') : '';
+      // THE SAME METER, TWO NAMES ON ONE SCREEN. METER_ICON/METER_NAME are flat tables with no stage
+      // awareness, but career.ts relabels this key as the career matures — `authority` is 🧑‍🏫 Coach as a
+      // boy and 👔 Gaffer once he is a professional — and `s.meters` carries the stage-correct icon and
+      // label that the dashboard below already uses. So on the three senior summers a tile literally titled
+      // "Court the Gaffer" showed 🧑‍🏫 +16 against a dashboard bar labelled 👔 Gaffer, and because the
+      // legend is keyed by ICON, 🧑‍🏫 and 👔 both survived into it as two separate relationships. Prefer
+      // what the dashboard is showing; fall back to the flat tables only for keys not active this chapter.
+      const stage = new Map<string, { icon: string; label: string }>();
+      for (const m of s.meters ?? []) if ((m as any).key) stage.set((m as any).key, { icon: m.icon, label: m.label });
+      const mIcon = (k: string) => stage.get(k)?.icon ?? METER_ICON[k];
+      const mName = (k: string) => stage.get(k)?.label ?? METER_NAME[k] ?? k;
+      const effLabel = (e: Record<string, number>) => Object.entries(e).map(([k, v]) => `<span title="${mName(k)}">${mIcon(k) ?? ''}${v > 0 ? '+' : ''}${v}</span>`).join(' · ');
+      const perkLabel = (p?: Record<string, number>) => p ? Object.entries(p).map(([k, v]) => `<span title="${mName(k)}">${mIcon(k) ?? ''}${v > 0 ? '+' : ''}${v}</span>`).join(' ') : '';
       // legend built from the icons ACTUALLY shown on this screen's tiles (focus effects + lifestyle perks),
       // union'd with the dashboard meters — so a tile can never show a 🏠/❤️ the legend doesn't decode (PT-48).
       const legendPairs = new Map<string, string>([['⚡', 'energy']]);
-      for (const f of s.focus) for (const k of Object.keys(f.effects ?? {})) if (METER_ICON[k]) legendPairs.set(METER_ICON[k], METER_NAME[k] ?? k);
-      for (const li of s.lifestyle ?? []) for (const k of Object.keys(li.perks ?? {})) if (METER_ICON[k]) legendPairs.set(METER_ICON[k], METER_NAME[k] ?? k);
+      for (const f of s.focus) for (const k of Object.keys(f.effects ?? {})) if (mIcon(k)) legendPairs.set(mIcon(k), mName(k));
+      for (const li of s.lifestyle ?? []) for (const k of Object.keys(li.perks ?? {})) if (mIcon(k)) legendPairs.set(mIcon(k), mName(k));
       for (const m of s.meters ?? []) legendPairs.set(m.icon, m.label);
       const legend = `<div class="cg-legend">${[...legendPairs].map(([i, l]) => `${i} ${l}`).join(' · ')}</div>`;
       // #5: the summer is TWO explicit steps — spend first (a Continue button moves on), then choose the focus.

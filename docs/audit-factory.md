@@ -54,7 +54,7 @@ refute: one checks the citation is real and the mechanism is reachable, the othe
 would care or whether it is noise. Default to refuted when uncertain. On this session's numbers, expect
 roughly four in five findings to need correction or die here. That is the lane working, not failing.
 
-**3 · FIX — one finding per agent, isolated.** Each fix agent runs in **its own git worktree** so parallel
+**3 · FIX — one finding per agent, isolated.** *(Run this from the repository root: worktree isolation fails outright if the working directory is the repo's parent — see §87.)* Each fix agent runs in **its own git worktree** so parallel
 edits cannot collide. The house rule applies without exception: **write the probe first, prove it fails
 against the unfixed tree, then fix it.** A fix without a failing probe is not accepted — that is precisely
 how four dead CSS transitions survived for months.

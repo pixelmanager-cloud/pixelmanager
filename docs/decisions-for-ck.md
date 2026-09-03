@@ -2732,3 +2732,100 @@ F-026.
 
 Raised repeatedly as the one remaining public AI disclosure on the store page and the only launch-day
 reputational risk not engineered away. CK's decision: leave it. Recorded so it is not re-litigated.
+
+## 84. Eight authored summer options can never be offered — and the fix is a design call, not a patch
+
+`rollFocus` is called once per band boundary with the chapter that just ENDED. `BAND_ENDS` is
+[12, 28, 46, 66, 86, 104, 120], and the call sits behind `if (this.turn >= TOTAL_TURNS) { finished }` — so
+turn 120 ends the career before the turn-120 boundary can raise a summer. `Establishing` (turns 104-120) is
+played, but no summer ever follows it.
+
+So the whole `FOCUS_BY_CHAPTER.Establishing` bank is unreachable: **Sponsor Duties** (the only main summer
+focus in the game that raises the sponsors meter — a meter on screen for the last 34 turns that pays
+±200/−120 coins at the turn-104 consequence check), **Icon of the Terraces**, **Settle Down**, **Think About
+Your Legacy**, **Coach a Grassroots Session**, plus two tag focuses and the goalkeeper's final keeping
+focus, *Become the Last Word*. Eight authored options no player has ever seen.
+
+**Two hypotheses tested and refuted, so nobody re-runs them:**
+1. *Merge the bank into `First Team`.* It collides two ids — both banks define `fans` and `partner` — and
+   `chooseFocus` resolves by first match, so tapping "Icon of the Terraces" would silently apply "Give Back
+   to the Fans"' effects. A silent mis-selection is worse than the missing options. Worse, `rollFocus`
+   returns the ENTIRE bank plus risk, tag, GK and Rest picks, so merging would make the last summer show
+   roughly twelve tiles where every other shows six.
+2. *The banks are authored for the chapter being ENTERED, so pass the upcoming chapter.* They are not.
+   `Grassroots` offers "Street Football Til Dark" and "Sunday Mornings With Your First Coach" — plainly the
+   chapter just left. `rollFocus(completed)` is correct.
+
+**Also worth knowing:** `FOCUS_BY_CHAPTER.Establishing` is not dead data — it is the `??` fallback at
+`career.ts:681` for an unrecognised chapter. Deleting it would remove the safety net.
+
+**The options, and my recommendation.**
+- **(a) Give the career a final summer.** Raise the boundary check before the finished-check so turn 120
+  fires one last time. Thematically it is the strongest beat available: "Think About Your Legacy" and
+  "Coach a Grassroots Session" land immediately before he graduates at 25. It adds one decision point to a
+  120-turn career and changes replay for every existing save.
+- **(b) Leave it.** Eight authored options stay unwritten-off but unseen, and Sponsor Duties means the
+  sponsors meter has no main summer lever at all.
+- **(c) Rehome selectively** — move only `sponsors`, `legacy`, `givingback` into `First Team`, drop the two
+  colliding near-duplicates, and accept an eight-option summer there.
+
+**I recommend (a)**, but it is a career-structure change and therefore yours. (c) is the cheap middle.
+
+## 85. `resolveShot`'s `clear` flag is unreachable — wiring it is a balance change, so it is yours
+
+`resolveShot(teamIdx, playerIdx, distGoal, clear, allowRebound)` has exactly two call sites,
+`engine.ts:668` and `:942`, and **both pass `false`**. The parameter is therefore inert, and three things
+it gates have never once executed:
+
+- `+0.15` shot quality on a clear chance,
+- `+0.12` goal probability on a clear chance,
+- the miss-logging branch `if (quality > 0.32 || clear)` — so a missed clear-cut chance is only reported
+  when it happens to clear the quality bar on its own, and the "only log clear-cut misses" comment
+  describes behaviour the code cannot produce.
+
+The obvious wiring is line 668, which is the clear-run/breakaway shot — `onClearRun` is already computed
+immediately above it. Passing that through would work mechanically.
+
+**But it is a straight balance change to the game's dominant scoring channel**, and CK's instruction on the
+4-2-2-2 inversion was explicit: no engine tinkering, breaking a working engine is worse than the defect. A
++0.15 quality and +0.12 probability bonus on breakaway shots would raise goals from exactly the channel
+`strategy_test` is already most sensitive to, and eight confirmed tactical effects are measured against
+current behaviour.
+
+**Options:** (a) leave it inert and delete nothing, so the intent stays visible in the source; (b) wire it
+at :668 and re-measure `strategy_test` and `division_balance` before accepting; (c) remove the parameter
+entirely as dead weight — cheap, zero behaviour change, but it discards a designed mechanic.
+
+**I recommend (a) for now and (b) only if you decide breakaway finishing feels weak in play.** This is one
+to answer with a controller in hand, not from the source.
+
+## 86. Three authored corpora still cannot be reached, and each needs a definition rather than a patch
+
+`first_big_win` is now wired (it mirrors the `cup_final` rule a rung down: the first scenario at stakes 2).
+Three bodies of authored text remain unreachable, and none is a mechanical fix:
+
+- **`first_start` and `first_goal`** (MILESTONE banks, `narrate.ts:3420`). The card career models neither.
+  There is no concept of a start, and no concept of a goal — a turn is a scenario answered with a card, and
+  the log records fit, success, stakes and tags. Making these fire means DEFINING what they mean: is a
+  "start" the first `match`-kind scenario after the debut? Is a "goal" a top-grade result on a match turn?
+  Both are reasonable and both are content decisions.
+- **The backroom-staff quip corpus** (`press.ts:185`). Its only caller is a combinator the client never
+  invokes. Reaching it means deciding WHERE backroom quips belong — the season screen, the feed, the squad
+  report — which is a design question about a surface that does not exist yet.
+- **`callUpBlurb` and its ~305-line international call-up corpus** (`intl.ts:254`). No production caller.
+  The international call-up beat exists in the game; this prose was written for a presentation of it that
+  was never built.
+
+**None of these is a bug.** They are finished content waiting on a decision about where it goes. They are
+logged so they are not mistaken for dead code and deleted by someone tidying up — that would throw away
+several hundred authored lines.
+
+## 87. The audit factory's fix lane needs the repo as its working directory
+
+Recorded because it cost a wave. `tools/factory/fix.mjs` uses `isolation: 'worktree'` so parallel fix agents
+cannot collide. All four agents failed instantly with "Cannot create agent worktree: not in a git
+repository" — the session's working directory alternates between the repo and its parent, and the workflow
+inherited the parent, which is not a git repo.
+
+**Before running a fix wave, confirm the working directory is the repo itself.** The audit lane is
+unaffected: its agents only read.

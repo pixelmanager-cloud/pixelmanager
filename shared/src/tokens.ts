@@ -173,6 +173,12 @@ export function loadCareer(t: Token): Career {
 function careerMilestone(c: Career): string | null {
   if (c.turn === 0) return 'debut';
   if (c.scenario.stakes === 3 && !c.log.some((l) => l.stakes >= 3)) return 'cup_final';
+  // HIS FIRST REAL OCCASION. narrate.ts authored five MILESTONE banks and this could only ever return two
+  // of them, so `first_big_win`, `first_start` and `first_goal` were written and never once selected.
+  // This one mirrors the cup_final rule exactly a rung down: the first time the career hands him something
+  // that matters more than a league fixture. The other two need a concept the card career does not model —
+  // it has no notion of a start or a goal — so they stay unreachable until that is defined (see §86).
+  if (c.scenario.stakes === 2 && !c.log.some((l) => l.stakes >= 2)) return 'first_big_win';
   return null;
 }
 // Shared formulas for the CAREER SCORE / RIVAL headline (see careerState below) — factored out so the

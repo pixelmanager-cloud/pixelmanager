@@ -497,6 +497,13 @@ export class IndexedDBBackend implements SaveBackend {
         req.onsuccess = () => resolve(req.result);
         req.onerror = () => reject(req.error);
       });
+      // A REJECTED PROMISE MUST NOT BE CACHED. Memoising the open is right for the success path, but if the
+      // first attempt REJECTS — a transient failure, a blocked upgrade, storage briefly unavailable — the
+      // rejected promise stayed in `this.dbp` forever, so every later call re-awaited the same old
+      // rejection. writeSlotInner has a retry written specifically for that failure and it could never
+      // succeed: the database was unreachable for the rest of the session no matter how quickly the
+      // underlying problem cleared. Drop the memo on rejection so the next caller genuinely retries.
+      this.dbp.catch(() => { this.dbp = null; });
     }
     return this.dbp;
   }

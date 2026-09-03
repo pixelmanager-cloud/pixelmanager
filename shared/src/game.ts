@@ -6,6 +6,7 @@ import { MatchEngine } from './engine.js';
 import { TACTIC_PRESETS } from './tactics.js';
 import { defaultDuty, isDutyForRole } from './duties.js';
 import type { Formation } from './formations.js';
+import { FORMATIONS } from './formations.js';   // the shapes themselves, so PICKABLE_FORMATIONS cannot drift from them
 import type { Tactics } from './tactics.js';
 import type { Duty, Team, MatchEvent } from './types.js';
 
@@ -77,4 +78,9 @@ export function runMatch(
 
 // Named PICKABLE_FORMATIONS to avoid colliding with formations.ts's FORMATIONS (the
 // full per-role pitch-anchor map) — this is just the subset offered as a lineup pick.
-export const PICKABLE_FORMATIONS: Formation[] = ['4-4-2', '4-3-3', '3-5-2', '4-2-3-1', '3-4-3', '4-1-2-1-2', '5-3-2', '4-5-1'];
+// DERIVED, NOT HAND-WRITTEN. This was a hand-maintained list of eight that nothing anywhere imported, and
+// it had drifted: it omitted 4-2-2-2, 4-1-4-1 and 5-4-1, all three of which the lineup editor offers,
+// because the editor takes its list from Object.keys(FORMATION_SHAPES). A second, stale copy of a list is
+// how the picker and the validator disagreed once before (see main.ts:222) and silently failed to save
+// three shapes. Deriving it means the two can never diverge again.
+export const PICKABLE_FORMATIONS: Formation[] = Object.keys(FORMATIONS) as Formation[];
