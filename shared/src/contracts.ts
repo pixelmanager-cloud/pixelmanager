@@ -1,3 +1,4 @@
+import { loyaltyDiscount } from './staking.js';
 // Manager-side player economics — what it costs to KEEP or SELL a player, and whether his contract
 // lets you pick him. The NFT is ALWAYS an owned asset in the wallet; a contract only gates SELECTION.
 // When a contract lapses the player stays owned but is BENCHED (unavailable) until you either extend it
@@ -61,8 +62,11 @@ export function contractView(
   overall: number, age: number, greed = 10, marketability = 10, personality: string | undefined,
   contract: Contract | null, currentSeason: number, earnings = 0, seasonsStaked = 0,
 ): PlayerContractView {
-  // continuous staking tenure with one account earns a loyalty discount on the re-sign cost (−4%/season, cap −25%)
-  const loyalty = clamp(1 - Math.max(0, seasonsStaked) * 0.04, 0.75, 1);
+  // continuous staking tenure with one account earns a loyalty discount on the re-sign cost (−4%/season, cap −25%).
+  // THE RULE LIVES IN staking.ts. It was inlined here twice, identically, while loyaltyDiscount sat there
+  // unimported carrying a docstring that says "Apply to contractCost / contractView's extendCost" — three
+  // copies of one rule, and the two that actually ran were the copies.
+  const loyalty = loyaltyDiscount(seasonsStaked);
   return {
     available: contract ? contractActive(contract, currentSeason) : false,
     seasonsLeft: contract ? Math.max(0, contractExpirySeason(contract) - currentSeason) : 0,
@@ -93,7 +97,7 @@ export function lengthPremiumFor(personality?: string): number {
   return merc ? 0.14 : loyal ? -0.07 : 0.05;
 }
 export function contractDemand(overall: number, age: number, greed = 10, personality?: string, earnings = 0, seasonsStaked = 0): ContractDemand {
-  const loyalty = clamp(1 - Math.max(0, seasonsStaked) * 0.04, 0.75, 1);
+  const loyalty = loyaltyDiscount(seasonsStaked);
   const baseWage = Math.round(contractCost(overall, age, greed, earnings) * loyalty);
   return { baseWage, prefLength: contractLength(greed, personality), minLength: 2, maxLength: 6, lengthPremium: lengthPremiumFor(personality) };
 }

@@ -20,7 +20,7 @@ import { commentaryExtra, fillCm, type CommentaryBranch } from '../../shared/src
 import { narrateManager, type PersonCtx } from '../../shared/src/managerNarrate.js';
 import { pickManagerArc, managerArcById, MGR_TEMPERS, applyMorale, type MgrSituation, type MgrArcEffect, type MgrTemper } from '../../shared/src/managerarc.js';
 import { goalPair, mixSeed } from '../../shared/src/clubseason.js';
-import { HOME_EDGE, facilityLevelStory, FACILITY_META, facilityUpkeep, mothballRefund, trainingConditioning, fanHomeBoost, dataEdge, dormIntakeBonus, type FacilityKey } from '../../shared/src/facilities.js';
+import { HOME_EDGE, facilityLevelStory, FACILITY_META, facilityUpkeep, UPKEEP_WEIGHT, mothballRefund, trainingConditioning, fanHomeBoost, dataEdge, dormIntakeBonus, type FacilityKey } from '../../shared/src/facilities.js';
 import { nextHouseTier, renownBidMult, renownPedigree, renownIncomeMult } from '../../shared/src/renown.js';
 import { houseListings, houseOf, seedHouseIntoSquad, houseNews } from '../../shared/src/houses.js';
 
@@ -1285,7 +1285,12 @@ class Game {
         // form, win streaks, promotion/relegation watch etc. (rebuilt offline; the old PvP feed is gone).
         const results = m.results ?? [];
         const t = liveTable(this.club.name, this.clubLeagueStrength(), 1, this.leagueSeed(), results, this.clubTier(), this.seasonResultSeed());
-        const matches = results.map((r, i) => ({ id: `s${m.season}-m${i}`, myScore: r.myGoals, oppScore: r.oppGoals, oppId: '', oppHandle: '', createdAt: i }));
+        // THE OPPONENT, because two of the diary's storylines are ABOUT one. rivalFirstWin and revengeWin both
+        // bail on a falsy oppId, and they carry the two highest weights in the whole picker (40 and 30,
+        // against 35 for the table zones and 6 for generic) — so hard-coding '' left the 13 best-weighted
+        // lines in the bank permanently unreachable while the picker looked perfectly healthy.
+        const dfx = seasonFixtures(this.club.name, this.leagueSeed(), this.clubTier());
+        const matches = results.map((r, i) => ({ id: `s${m.season}-m${i}`, myScore: r.myGoals, oppScore: r.oppGoals, oppId: dfx[i]?.oppName ?? '', oppHandle: dfx[i]?.oppName ?? '', createdAt: i }));
         const dtier = this.clubTier(); // tier-aware promotion/relegation spots so the diary matches spTableHtml's zones + the real rule, not a tier-blind top-3/bottom-2 (PT-120)
         const table = { position: t.pos, total: t.size, promote: dtier === 1 ? 3 : 2, relegate: dtier < TIERS ? 2 : 0, points: t.me.Pts, topFlight: dtier === 1 }; // top flight → continental/title wording, not "promotion" (PT-138)
         entry = gaffersDiaryEntry({ seasonNumber: m.season, matches, table });
@@ -2252,7 +2257,11 @@ class Game {
         toast(`🏆 CONTINENTAL CHAMPIONS! ${this.club?.name} win the cup${pens ? ' on penalties' : ''}`);
         // the flagship cup pays a clear PREMIUM over a league title: the honour (800c) + a 1000c winners' bonus (PT-96)
         api.spSeasonReward({ pos: 1, size: 10, sponsor: undefined,   /* no tier: a cup is its own competition, not a division — see spSeasonReward */ kind: 'continental' }).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; }).catch(() => {}); // kind:'continental' — a cup, not a league title, and doesn't bump the season (PT-94)
-        api.cupPrize(1000).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; toast(`💰 Continental winners' prize +1,800c`); }).catch(() => {});
+        // REPORT WHAT IS ACTUALLY PAID. This toasted a hard-coded 1,800c — the honour's 800c plus the 1,000c
+        // bonus — but spSeasonReward scales the honour by tierMult (exactly 1.6 for a cup, which defaults to
+        // the top tier index) and again by the house's renown multiplier, so at least 2,280c is credited and
+        // up to about 2,780c at high renown. The player was told a number that is never the number.
+        api.cupPrize(1000).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; toast(`💰 Continental winners' prize +${x.prize.toLocaleString()}c`); }).catch(() => {});
       } else {
         this.saveMgr({ ...m, contRound: nextRound, contBlurb });
         const roundPrize = nextRound === 1 ? 250 : 500; // QF win → 250c, SF win → 500c (no longer 0 — PT-96)
@@ -2732,16 +2741,16 @@ class Game {
       // BEFORE `saveMgr` increments the season a few lines below, and `seasonFeedHtml` shows only entries
       // matching the CURRENT season — so promotion, relegation, the title and the near-miss were written to
       // the feed and then never displayed. The four biggest things that can happen to a club, silent.
-      this.feedEvent('promotion', '⬆️', undefined, { from: tierName(tier), to: tierName(newTier) }, m.season + 1);
+      this.feedEvent('promotion', '⬆️', this.starCtx(), { from: tierName(tier), to: tierName(newTier) }, m.season + 1);
     } else if (relegated) {
       toast(`⬇️ Relegated to ${tierName(newTier)}.`);
-      this.feedEvent('relegation', '⬇️', undefined, { from: tierName(tier), to: tierName(newTier) }, m.season + 1);
+      this.feedEvent('relegation', '⬇️', this.starCtx(), { from: tierName(tier), to: tierName(newTier) }, m.season + 1);
     } else if (t.pos === 1) {
-      this.feedEvent('title', '🏆', undefined, { from: tierName(tier), to: tierName(tier) }, m.season + 1);
+      this.feedEvent('title', '🏆', this.starCtx(), { from: tierName(tier), to: tierName(tier) }, m.season + 1);
     } else if (tier > 1 && t.pos <= 4) {
       // Missed the top two and the climb by a place or two. The season the dynasty nearly moved is worth
       // marking — it is the one finish that stings, and it had no line at all.
-      this.feedEvent('near_miss', '😖', undefined, { n: t.pos, from: tierName(tier), to: tierName(tier - 1) }, m.season + 1);
+      this.feedEvent('near_miss', '😖', this.starCtx(), { n: t.pos, from: tierName(tier), to: tierName(tier - 1) }, m.season + 1);
     }
     // THE OTHER FAMILIES REPORT IN. The Houses table used to move in silence: you opened the Trophy Room a
     // generation later and the order had changed, with no memory of it changing. A standing you never
@@ -3178,7 +3187,7 @@ class Game {
       const back = f ? f.level - 1 : 0;
       b.addEventListener('click', () => this.openConfirm(
         `Scale <b>${f?.name ?? 'this facility'}</b> back to level ${back}?`
-        + ` It frees up <b>${((f?.upkeep ?? 0) - facilityUpkeep(back)).toLocaleString()}c a season</b> in upkeep.`
+        + ` It frees up <b>${((f?.upkeep ?? 0) - facilityUpkeep(back, UPKEEP_WEIGHT[key as FacilityKey] ?? 1)).toLocaleString()}c a season</b> in upkeep.`
         + `<br><span class="cf-sub">You recover ${mothballRefund(f?.level ?? 1).toLocaleString()}c of what the level cost. You can build it back later at the full price.</span>`,
         'Scale back', () => this.mothballFacility(key)));
     });
@@ -3583,6 +3592,14 @@ class Game {
     this.saveMgr({ ...m, feedFired: [...fired, key].slice(-400) });
     this.feedEvent(event, icon, person, vars);
   }
+  /** The bloodline star as a person, for narration about the club's season.
+   *  The four climb events — promotion, relegation, the title, the near miss — passed `undefined` here, and
+   *  tierFor only appends its person-tiered keys when a person is present. That left 30 authored lines
+   *  (promotion.star, relegation.servant, title.veteran and the rest) unreachable in every save. */
+  private starCtx(): PersonCtx | undefined {
+    const sp = this.club?.players.find((x) => x.id === this.loadMgr().starId);
+    return sp ? this.personCtx(sp, true) : undefined;
+  }
   /** Build the person context for a squad player — seasons at the club and morale are what the tiers key on. */
   private personCtx(p: Player, isStar = false): PersonCtx {
     const m = this.loadMgr();
@@ -3943,11 +3960,17 @@ class Game {
   /** `signProspect` mints `nft:${countTokens()+1}`, so the id is `nft:1` in a fresh save -- and `succeed()`
    *  REUSES it for every heir. Keyed on the id alone, one deferral silently suppressed the "Take the reins"
    *  offer for every later generation, and across save slots too. Scoped to the slot and the generation. */
-  private handoffKey(pid: string): string {
-    return `fm_handoff_defer_${this.account?.handle ?? 'x'}_g${this.loadMgr().starGen ?? 0}_${pid}`;
+  // THE GENERATION OF THE CAREER BEING OFFERED, passed in — not read back off manager state. `starGen` is
+  // written in exactly one place, inside the handoff itself, and resetMgrForHeir does not clear it. So the
+  // founder resolved `_g0_` (undefined) and, once his handoff had stamped starGen 0, so did the FIRST heir:
+  // same handle, same generation, and the same pid, because succeed() reuses the token id. Deferring the
+  // founder's offer therefore suppressed his son's — the exact collision the doc comment above says the
+  // scoping exists to prevent.
+  private handoffKey(pid: string, gen: number): string {
+    return `fm_handoff_defer_${this.account?.handle ?? 'x'}_g${gen}_${pid}`;
   }
-  private handoffDeferredAt(pid: string): number {
-    try { return Number(localStorage.getItem(this.handoffKey(pid)) || '-1'); } catch { return -1; }
+  private handoffDeferredAt(pid: string, gen: number): number {
+    try { return Number(localStorage.getItem(this.handoffKey(pid, gen)) || '-1'); } catch { return -1; }
   }
   private renderHandoff(s: import('./api').CareerState) {
     this.showScreen('academy');
@@ -3970,7 +3993,7 @@ class Game {
       // for CK — see docs/decisions-for-ck.md section 47.)
       + `<div class="cg-handoff-note">He'll keep playing to 25 — and this is the only time you'll be offered the reins, so taking them later is not an option.</div></div>`;
     $('cg-playon').addEventListener('click', async () => {
-      try { localStorage.setItem(this.handoffKey(s.prospectId), String(s.turn)); } catch { /* ignore */ }
+      try { localStorage.setItem(this.handoffKey(s.prospectId, (s as any).generation ?? 0), String(s.turn)); } catch { /* ignore */ }
       try { const cur = await api.getCareer(s.prospectId); if (cur?.state) this.renderCareer(cur.state); } catch { /* ignore */ }
     });
     // the chosen temperament gates which arcs fire and colours how the board and dressing room react
@@ -4096,7 +4119,7 @@ class Game {
     // promises "age 10→25". So the career was seized 14 turns and three years before the game said it
     // would end. It is still offered at every subsequent boundary, and graduation at 25 happens regardless;
     // the player simply gets to finish the career he was promised. (PT-1406)
-    if (s.handoff && this.handoffDeferredAt(s.prospectId) < s.turn) { this.renderHandoff(s); return; }
+    if (s.handoff && this.handoffDeferredAt(s.prospectId, (s as any).generation ?? 0) < s.turn) { this.renderHandoff(s); return; }
     // MUSIC follows the moment: a shock call-up gets tension, a life-event gets drama, else the career loop.
     audio.play(s.callupMoment ? 'tension' : (s.momentKind === 'life' || s.lifeEvent) ? 'drama' : 'career');
     const pct = Math.round((s.turn / s.totalTurns) * 100);
@@ -4597,7 +4620,7 @@ class Game {
       const r = await api.dispatchScout(destination);
       this.account.coins = r.coins;
       toast(`Scout dispatched to ${r.mission.destName} 🌍`);
-      this.feedEvent('scout_dispatched', '🔭', undefined, { to: r.mission.destName });
+      this.feedEvent('scout_dispatched', '🔭', this.starCtx(), { to: r.mission.destName });
       await this.loadMissions();
     } catch (e: any) {
       const msg = String(e?.body?.error ?? '');

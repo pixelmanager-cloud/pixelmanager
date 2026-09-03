@@ -19,7 +19,7 @@ import {
   signSquadContract, staggeredContractSeasons, advanceSquad, squadSeasonsLeft, squadRenewCost, squadSeasonWage, squadStorylines,
   contractDemand, evaluateContractOffer, wageForLength, lengthPremiumFor,
   FACILITY_KEYS, FACILITY_META, MAX_LEVEL, upgradeCost, effectAt, seasonFacilityIncome, squadMarketability,
-  seasonUpkeep, facilityUpkeep, applyDisrepair, mothballRefund, facLevel,
+  seasonUpkeep, facilityUpkeep, UPKEEP_WEIGHT, applyDisrepair, mothballRefund, facLevel,
   youthPoolBonus, youthUpgradeChance, dormIntakeBonus, scoutHitMult, scoutCostDiscount, scoutExtraTrips,
   generatePool, trialistAt, LOANEE_CAP, DESTINATIONS, destinationById, rollMission, travelMatchdays, previewOdds,
   gaffersDiaryEntry,
@@ -1597,7 +1597,12 @@ export const api = {
     const facilities: Facility[] = FACILITY_KEYS.map((key) => {
       const level = (fac as any)[key] as number;
       const cost = upgradeCost(level);
-      return { key, ...FACILITY_META[key], level, maxLevel: MAX_LEVEL, effect: effectAt(key, level), nextEffect: level < MAX_LEVEL ? effectAt(key, level + 1) : null, upgradeCost: cost, canAfford: cost != null && coins >= cost, upkeep: facilityUpkeep(level), nextUpkeep: level < MAX_LEVEL ? facilityUpkeep(level + 1) : null };
+      return { key, ...FACILITY_META[key], level, maxLevel: MAX_LEVEL, effect: effectAt(key, level), nextEffect: level < MAX_LEVEL ? effectAt(key, level + 1) : null, upgradeCost: cost, canAfford: cost != null && coins >= cost, // WEIGHTED, like the bill. The total on this same return object goes through seasonUpkeep, which
+        // applies UPKEEP_WEIGHT (women 0.45, community 0.25); these per-card figures did not. A Women's
+        // Team at L10 advertised 567c a season and was billed 255c, and the twelve cards summed to 6,804c
+        // under a "Season upkeep" header, rendered directly above them, reading 6,067c.
+        upkeep: facilityUpkeep(level, UPKEEP_WEIGHT[key] ?? 1),
+        nextUpkeep: level < MAX_LEVEL ? facilityUpkeep(level + 1, UPKEEP_WEIGHT[key] ?? 1) : null };
     });
     return { coins, facilities, upkeep: seasonUpkeep(fac) };
   },

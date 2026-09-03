@@ -1396,6 +1396,11 @@
       /* lineup editor */
       #lineup .tacrow { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
       #lineup .tacrow label { font-family: var(--body); font-size: 14px; color: var(--cyan); display: flex; flex-direction: column; gap: 5px; }
+      /* The two instruction CHECKBOXES ship a `.tac-toggle` class that was never defined, so they fell
+         through to the rule above — written for the caption-above-a-select rows — and stacked their label
+         on top of the box in a column. A checkbox belongs beside its label. Do not restyle the rule above:
+         the select rows genuinely want the column. */
+      #lineup .tacrow label.tac-toggle { flex-direction: row; align-items: center; gap: 8px; }
       #lineup select { width: 122px; }
       /* the tactics glossary — the same explanations that used to live only in hover tooltips (PT-502) */
       #tac-help { margin: -4px 0 12px; }
