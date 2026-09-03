@@ -2769,7 +2769,24 @@ focus, *Become the Last Word*. Eight authored options no player has ever seen.
 - **(c) Rehome selectively** — move only `sponsors`, `legacy`, `givingback` into `First Team`, drop the two
   colliding near-duplicates, and accept an eight-option summer there.
 
-**I recommend (a)**, but it is a career-structure change and therefore yours. (c) is the cheap middle.
+**DECIDED 2026-09-03 — CK took (a).** Shipped: the boundary check now precedes the finished-check, so turn
+120 raises one last summer, and `startNextChapter` closes the career when that summer's draft ends rather
+than dealing a 121st moment. All eight Establishing options are reachable and verified through the facade
+(`tools/playtest/final_summer.ts`, mutation-proven).
+
+**ONE SIDE-EFFECT WORTH A SECOND LOOK, CK.** A chapter boundary grants `earnings += 40 + turn * 20`, and the
+last boundary is the largest: **+2,440 coins**. Measured across the eleven golden careers, every one now
+graduates about 2,300-2,500 richer — roughly **+25% on a ~9,600 career**. Marketability also fell by 1 in
+several, because the summer's relationship drains (`partner -6, family -4, school -3`) and the consequence
+check both run one more time.
+
+I shipped it as-is because it is consistent: he *played* that chapter, and every other completed chapter pays
+for itself the same way. But it is a real economy shift — career earnings feed the retirement legacy that
+seeds the next generation — and it was not the point of the change. If you would rather the final summer be
+narrative-only, suppressing just the earnings line is a one-line change and I will re-baseline again. Say the
+word.
+
+The original recommendation, for the record: **(a)**, with (c) as the cheap middle.
 
 ## 85. `resolveShot`'s `clear` flag is unreachable — wiring it is a balance change, so it is yours
 
@@ -2796,8 +2813,11 @@ current behaviour.
 at :668 and re-measure `strategy_test` and `division_balance` before accepting; (c) remove the parameter
 entirely as dead weight — cheap, zero behaviour change, but it discards a designed mechanic.
 
-**I recommend (a) for now and (b) only if you decide breakaway finishing feels weak in play.** This is one
-to answer with a controller in hand, not from the source.
+**DECIDED 2026-09-03 — CK: leave it.** Option (a): the parameter stays, inert, so the designed intent stays
+visible in the source rather than being deleted as dead weight. Revisit only if breakaway finishing feels
+weak with a controller in hand — which is where this question belongs, not in a source read.
+
+The original recommendation, for the record: **(a) for now, (b) only if it feels weak in play.**
 
 ## 86. Three authored corpora still cannot be reached, and each needs a definition rather than a patch
 

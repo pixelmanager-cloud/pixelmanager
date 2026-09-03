@@ -1485,7 +1485,19 @@ export class Career {
     if (this.scenario.callup) this.applyCallupConsequence(success); // thrown in cold — a bigger swing than a routine big game
     this.discard.push(card);
     this.turn++;
-    if (this.turn >= TOTAL_TURNS) { this.finished = true; return choice; }
+    // THE BOUNDARY IS TESTED BEFORE THE END, so the last chapter gets a summer like every other one.
+    //
+    // These two checks were the other way round, and the last element of BAND_ENDS IS TOTAL_TURNS — so turn
+    // 120 ended the career before its own boundary could raise a summer. `Establishing` (turns 104-120) was
+    // played and no summer ever followed it, which made the whole FOCUS_BY_CHAPTER.Establishing bank
+    // unreachable: eight authored options no player has ever seen, including Sponsor Duties — the only main
+    // summer focus in the game that raises the sponsors meter, a meter on screen for the last 34 turns —
+    // and the goalkeeper's final keeping focus, Become the Last Word.
+    //
+    // Thematically it is also the strongest beat available: "Think About Your Legacy" and "Coach a
+    // Grassroots Session" land immediately before he graduates at 25.
+    //
+    // startNextChapter() closes the career when the draft that ends this summer finishes; see there.
     // at an age-chapter boundary: relationships pay off (or bite), a narrative EVENT fires, then you
     // choose a summer FOCUS, take a financial offer, appoint a coach and draft.
     if (BAND_ENDS.includes(this.turn)) {
@@ -1499,6 +1511,7 @@ export class Career {
       const completed = bandAt(Math.max(0, this.turn - 1)).band.name;
       this.pendingFocus = rollFocus(completed, this.standing, this.track, !!this.agent);
     }
+    else if (this.turn >= TOTAL_TURNS) { this.finished = true; return choice; }
     else {
       this.refillHand(); this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure, this.seed); this.ensurePlayableHand();
       // STORY ARC: a branching storyline may interject before the next routine moment (deterministic, no rng
@@ -1705,6 +1718,10 @@ export class Career {
   }
 
   private startNextChapter() {
+    // THERE IS NO CHAPTER AFTER THE LAST SUMMER. The final boundary now raises a summer (see playCard), and
+    // its draft ends here — with no turn left to build a scenario for. bandAt clamps out of range so this
+    // would not throw; it would silently deal a 121st moment in a 120-turn career.
+    if (this.turn >= TOTAL_TURNS) { this.finished = true; return; }
     this.refillHand();
     this.scenario = makeScenario(this.rng, this.turn, this.track, this.demandBias, bandAt(this.turn).band, this.exposure, this.seed);
     this.ensurePlayableHand();

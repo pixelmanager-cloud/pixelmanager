@@ -782,6 +782,34 @@
       {
         "type": "play",
         "cardId": "big-moment"
+      },
+      {
+        "type": "focus",
+        "cardId": "focus_flair"
+      },
+      {
+        "type": "focus",
+        "cardId": "boardroom"
+      },
+      {
+        "type": "offer",
+        "cardId": "brand"
+      },
+      {
+        "type": "coach",
+        "cardId": "discipline"
+      },
+      {
+        "type": "draft",
+        "cardId": "bricklayer"
+      },
+      {
+        "type": "draft",
+        "cardId": "vocal"
+      },
+      {
+        "type": "draft",
+        "cardId": "no-panic"
       }
     ],
     "expected": {
@@ -794,9 +822,9 @@
         "role": "MF",
         "traits_json": "[\"mercenary\",\"marketable\"]",
         "personality": "workhorse",
-        "greed": 17,
-        "marketability": 17,
-        "earnings": 11805,
+        "greed": 19,
+        "marketability": 18,
+        "earnings": 14665,
         "peak_overall": 10,
         "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"A Cup Semi Under the Lights\",\"Title Decider\"],\"peakOverall\":10,\"careerScore\":284,\"turnsPlayed\":120}"
       }
@@ -1573,6 +1601,34 @@
       {
         "type": "play",
         "cardId": "nerves-steel"
+      },
+      {
+        "type": "focus",
+        "cardId": "legacy"
+      },
+      {
+        "type": "focus",
+        "cardId": "boardroom"
+      },
+      {
+        "type": "offer",
+        "cardId": "brand"
+      },
+      {
+        "type": "coach",
+        "cardId": "veteran"
+      },
+      {
+        "type": "draft",
+        "cardId": "demand-ball"
+      },
+      {
+        "type": "draft",
+        "cardId": "drag-back"
+      },
+      {
+        "type": "draft",
+        "cardId": "counter-press"
       }
     ],
     "expected": {
@@ -1585,9 +1641,9 @@
         "role": "DF",
         "traits_json": "[\"biggame\"]",
         "personality": "workhorse",
-        "greed": 11,
+        "greed": 12,
         "marketability": 12,
-        "earnings": 9595,
+        "earnings": 12655,
         "peak_overall": 13,
         "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"bigNights\":[\"The Game Your Whole Career Gets Judged On\",\"Title Decider\",\"A Derby With the Title on the Line\"],\"peakOverall\":13,\"careerScore\":382,\"turnsPlayed\":120}"
       }
@@ -2372,6 +2428,34 @@
       {
         "type": "play",
         "cardId": "ice-veins"
+      },
+      {
+        "type": "focus",
+        "cardId": "risk_press"
+      },
+      {
+        "type": "focus",
+        "cardId": "charity"
+      },
+      {
+        "type": "offer",
+        "cardId": "money"
+      },
+      {
+        "type": "coach",
+        "cardId": "playmaker"
+      },
+      {
+        "type": "draft",
+        "cardId": "dictate"
+      },
+      {
+        "type": "draft",
+        "cardId": "slide"
+      },
+      {
+        "type": "draft",
+        "cardId": "showboat"
       }
     ],
     "expected": {
@@ -2384,9 +2468,9 @@
         "role": "MF",
         "traits_json": "[\"mercenary\",\"marketable\"]",
         "personality": "stoic",
-        "greed": 18,
+        "greed": 20,
         "marketability": 15,
-        "earnings": 9655,
+        "earnings": 13195,
         "peak_overall": 12,
         "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[\"A Continental Final\"],\"peakOverall\":12,\"careerScore\":245,\"turnsPlayed\":120}"
       }
@@ -3175,6 +3259,34 @@
       {
         "type": "play",
         "cardId": "shotstop-clinic"
+      },
+      {
+        "type": "focus",
+        "cardId": "risk_press"
+      },
+      {
+        "type": "focus",
+        "cardId": "boardroom"
+      },
+      {
+        "type": "offer",
+        "cardId": "brand"
+      },
+      {
+        "type": "coach",
+        "cardId": "nutrition"
+      },
+      {
+        "type": "draft",
+        "cardId": "stay-big"
+      },
+      {
+        "type": "draft",
+        "cardId": "parry"
+      },
+      {
+        "type": "draft",
+        "cardId": "fingertip"
       }
     ],
     "expected": {
@@ -3187,9 +3299,9 @@
         "role": "GK",
         "traits_json": "[\"wall\",\"injury_prone\",\"mercenary\",\"marketable\"]",
         "personality": "workhorse",
-        "greed": 17,
+        "greed": 19,
         "marketability": 20,
-        "earnings": 12365,
+        "earnings": 15465,
         "peak_overall": 10,
         "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"The Game Your Whole Career Gets Judged On\",\"A Derby With the Title on the Line\"],\"peakOverall\":10,\"careerScore\":555,\"turnsPlayed\":120}"
       }
@@ -3966,6 +4078,34 @@
       {
         "type": "play",
         "cardId": "lung-buster"
+      },
+      {
+        "type": "focus",
+        "cardId": "legacy"
+      },
+      {
+        "type": "focus",
+        "cardId": "boardroom"
+      },
+      {
+        "type": "offer",
+        "cardId": "brand"
+      },
+      {
+        "type": "coach",
+        "cardId": "talisman-m"
+      },
+      {
+        "type": "draft",
+        "cardId": "through-eye"
+      },
+      {
+        "type": "draft",
+        "cardId": "tracking-back"
+      },
+      {
+        "type": "draft",
+        "cardId": "slide"
       }
     ],
     "expected": {
@@ -3976,11 +4116,11 @@
         "state": "pro",
         "attrs_json": "{\"pace\":14,\"strength\":10,\"stamina\":10,\"passing\":11,\"shooting\":12,\"tackling\":9,\"positioning\":14,\"workrate\":12,\"keeping\":6,\"setPiece\":11,\"composure\":16,\"aggression\":8,\"creativity\":6,\"teamwork\":16,\"leadership\":12,\"durability\":7}",
         "role": "FW",
-        "traits_json": "[\"mercenary\"]",
+        "traits_json": "[\"mercenary\",\"marketable\"]",
         "personality": "perfectionist",
         "greed": 20,
-        "marketability": 14,
-        "earnings": 9685,
+        "marketability": 15,
+        "earnings": 12745,
         "peak_overall": 12,
         "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[],\"peakOverall\":12,\"careerScore\":287,\"turnsPlayed\":120}"
       }
@@ -4769,6 +4909,34 @@
       {
         "type": "play",
         "cardId": "trigger"
+      },
+      {
+        "type": "focus",
+        "cardId": "focus_flair"
+      },
+      {
+        "type": "focus",
+        "cardId": "boardroom"
+      },
+      {
+        "type": "offer",
+        "cardId": "brand"
+      },
+      {
+        "type": "coach",
+        "cardId": "mentality"
+      },
+      {
+        "type": "draft",
+        "cardId": "block-shot"
+      },
+      {
+        "type": "draft",
+        "cardId": "team-ethic"
+      },
+      {
+        "type": "draft",
+        "cardId": "never-say-die"
       }
     ],
     "expected": {
@@ -4782,8 +4950,8 @@
         "traits_json": "[\"injury_prone\",\"mercenary\"]",
         "personality": "showman",
         "greed": 20,
-        "marketability": 12,
-        "earnings": 10069,
+        "marketability": 13,
+        "earnings": 12809,
         "peak_overall": 10,
         "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"A Derby With the Title on the Line\"],\"peakOverall\":10,\"careerScore\":250,\"turnsPlayed\":120}"
       }
@@ -5584,6 +5752,34 @@
       {
         "type": "play",
         "cardId": "dictate"
+      },
+      {
+        "type": "focus",
+        "cardId": "sponsors"
+      },
+      {
+        "type": "focus",
+        "cardId": "boardroom"
+      },
+      {
+        "type": "offer",
+        "cardId": "brand"
+      },
+      {
+        "type": "coach",
+        "cardId": "finishing"
+      },
+      {
+        "type": "draft",
+        "cardId": "counter-press"
+      },
+      {
+        "type": "draft",
+        "cardId": "nerves-steel"
+      },
+      {
+        "type": "draft",
+        "cardId": "diagonal"
       }
     ],
     "expected": {
@@ -5596,9 +5792,9 @@
         "role": "DF",
         "traits_json": "[\"mercenary\",\"marketable\"]",
         "personality": "pro",
-        "greed": 15,
-        "marketability": 18,
-        "earnings": 10342,
+        "greed": 17,
+        "marketability": 19,
+        "earnings": 13322,
         "peak_overall": 11,
         "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[\"A Comeback From the Brink\"],\"peakOverall\":11,\"careerScore\":251,\"turnsPlayed\":120}"
       }
@@ -6371,6 +6567,34 @@
       {
         "type": "play",
         "cardId": "lofted"
+      },
+      {
+        "type": "focus",
+        "cardId": "partner"
+      },
+      {
+        "type": "focus",
+        "cardId": "charity"
+      },
+      {
+        "type": "offer",
+        "cardId": "money"
+      },
+      {
+        "type": "coach",
+        "cardId": "youth-guru"
+      },
+      {
+        "type": "draft",
+        "cardId": "diagonal"
+      },
+      {
+        "type": "draft",
+        "cardId": "win-header"
+      },
+      {
+        "type": "draft",
+        "cardId": "extra-yard"
       }
     ],
     "expected": {
@@ -6381,11 +6605,11 @@
         "state": "pro",
         "attrs_json": "{\"pace\":15,\"strength\":13,\"stamina\":12,\"passing\":13,\"shooting\":12,\"tackling\":11,\"positioning\":11,\"workrate\":10,\"keeping\":5,\"setPiece\":9,\"composure\":10,\"aggression\":9,\"creativity\":10,\"teamwork\":14,\"leadership\":9,\"durability\":12}",
         "role": "MF",
-        "traits_json": "[\"biggame\",\"loyal\",\"marketable\"]",
+        "traits_json": "[\"biggame\",\"marketable\"]",
         "personality": "biggame",
-        "greed": 2,
+        "greed": 6,
         "marketability": 17,
-        "earnings": 9875,
+        "earnings": 13835,
         "peak_overall": 12,
         "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"bigNights\":[\"The Biggest Game in the Club’s History\",\"A Derby With the Title on the Line\",\"Title Decider\"],\"peakOverall\":12,\"careerScore\":387,\"turnsPlayed\":120}"
       }
@@ -7173,6 +7397,34 @@
       {
         "type": "play",
         "cardId": "read-forward"
+      },
+      {
+        "type": "focus",
+        "cardId": "partner"
+      },
+      {
+        "type": "focus",
+        "cardId": "boardroom"
+      },
+      {
+        "type": "offer",
+        "cardId": "brand"
+      },
+      {
+        "type": "coach",
+        "cardId": "nutrition"
+      },
+      {
+        "type": "draft",
+        "cardId": "calm-high-ball"
+      },
+      {
+        "type": "draft",
+        "cardId": "parry"
+      },
+      {
+        "type": "draft",
+        "cardId": "narrow-ang"
       }
     ],
     "expected": {
@@ -7187,7 +7439,7 @@
         "personality": "perfectionist",
         "greed": 20,
         "marketability": 20,
-        "earnings": 10325,
+        "earnings": 13385,
         "peak_overall": 14,
         "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"bigNights\":[\"A Comeback From the Brink\"],\"peakOverall\":14,\"careerScore\":688,\"turnsPlayed\":120}"
       }
@@ -7989,6 +8241,34 @@
       {
         "type": "play",
         "cardId": "body-check"
+      },
+      {
+        "type": "focus",
+        "cardId": "sponsors"
+      },
+      {
+        "type": "focus",
+        "cardId": "boardroom"
+      },
+      {
+        "type": "offer",
+        "cardId": "brand"
+      },
+      {
+        "type": "coach",
+        "cardId": "defensive"
+      },
+      {
+        "type": "draft",
+        "cardId": "trigger"
+      },
+      {
+        "type": "draft",
+        "cardId": "shepherd"
+      },
+      {
+        "type": "draft",
+        "cardId": "dictate"
       }
     ],
     "expected": {
@@ -8001,9 +8281,9 @@
         "role": "MF",
         "traits_json": "[\"deadball\"]",
         "personality": "workhorse",
-        "greed": 11,
-        "marketability": 4,
-        "earnings": 10550,
+        "greed": 12,
+        "marketability": 5,
+        "earnings": 13410,
         "peak_overall": 13,
         "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"bigNights\":[\"The Match That Decides Who Goes Down\",\"Promotion Play-Off Final\",\"A Continental Final\"],\"peakOverall\":13,\"careerScore\":297,\"turnsPlayed\":120}"
       }
@@ -8810,6 +9090,34 @@
       {
         "type": "play",
         "cardId": "spatial-iq"
+      },
+      {
+        "type": "focus",
+        "cardId": "rest"
+      },
+      {
+        "type": "focus",
+        "cardId": "charity"
+      },
+      {
+        "type": "offer",
+        "cardId": "money"
+      },
+      {
+        "type": "coach",
+        "cardId": "pressing"
+      },
+      {
+        "type": "draft",
+        "cardId": "up-and-down"
+      },
+      {
+        "type": "draft",
+        "cardId": "switch"
+      },
+      {
+        "type": "draft",
+        "cardId": "rally"
       }
     ],
     "expected": {
@@ -8823,8 +9131,8 @@
         "traits_json": "[\"rock\",\"mercenary\",\"marketable\"]",
         "personality": "workhorse",
         "greed": 20,
-        "marketability": 15,
-        "earnings": 9690,
+        "marketability": 16,
+        "earnings": 13230,
         "peak_overall": 15,
         "career_honours_json": "{\"caps\":24,\"nation\":\"Trentino\",\"bigNights\":[\"A Cup Semi Under the Lights\",\"A Continental Final\"],\"peakOverall\":15,\"careerScore\":357,\"turnsPlayed\":120}"
       }
