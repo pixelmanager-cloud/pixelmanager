@@ -83,9 +83,7 @@ const BEHAVIOUR_ONLY = new Map<string, string>([
   ['bill', 'modifier on .sq-row — inert, base renders correctly (design pass pending)'],
   ['sf-wc-done', 'modifier on .sf-wc — inert, base renders correctly (design pass pending)'],
   ['ft-star', 'modifier on .scorers — inert, base renders correctly (design pass pending)'],
-  ['scout-board', 'pending: standalone container, renders unstyled (decisions-for-ck §90)'],
-  ['li-tip', 'pending: standalone container, renders unstyled (decisions-for-ck §90)'],
-  ['ach-txt', 'pending: standalone container, renders unstyled (decisions-for-ck §90)'],
+  ['scout-board', 'structural: wraps .scout-intro and .scout-cands, both of which carry their own plate — a rule here would double-plate them'],
 ]);
 const orphans = [...emitted].filter((c) => !declared.has(c) && !BEHAVIOUR_ONLY.has(c) && !cssWithComments.includes(c));
 // The allowlist must not rot into a dumping ground: every entry has to still be a real orphan, or it is

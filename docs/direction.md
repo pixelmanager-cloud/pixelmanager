@@ -120,8 +120,14 @@ the biggest client dependency. This is *not* "text-only game": the rest stays gr
   Same client build serves both web (Netlify) and desktop (wrapper).
 
 ## Phase 3 — Steam readiness (new track; after the game is solid)
-- [ ] **Desktop packaging:** wrap the web client as a desktop app — **Tauri** (light) or **Electron**
-      (mature, best Steamworks examples). Decide.
+- [x] **Desktop packaging: ELECTRON — decided 2026-09-03.** Wrap the web client as a desktop app.
+      Two reasons, and the second one is load-bearing:
+      1. Smoother Windows cross-build from macOS, and the best Steamworks examples.
+      2. **Electron bundles its own Chromium, so every platform runs one V8.** Tauri uses the SYSTEM
+         webview — JavaScriptCore on macOS, V8 on Windows — and the match engine's 21 `Math.hypot` calls
+         are implementation-approximated: a measured one-ULP difference changed 185 of 200 identical
+         seeded matches. Under Tauri a Mac player and a Windows player would get different seasons from
+         the same save seed. Under Electron they cannot. See decisions-for-ck.md §92.
 - [ ] **Steamworks integration:** app id, achievements, stats, cloud saves, overlay (greenworks/steamworks.js
       for Electron; Tauri has community plugins).
 - [ ] **Multiplayer:** keep the existing server (Railway/Postgres) — the desktop client talks to it; leagues
@@ -136,8 +142,8 @@ the biggest client dependency. This is *not* "text-only game": the rest stays gr
 - **Test the Windows build pre-launch** via a free **Windows VM** (UTM/Parallels; Windows-on-ARM on Apple
   Silicon is fine for testing) or a cheap Windows mini-PC (~$150–300). Only needed near launch.
 - **Steamworks tooling + upload run on Mac**; store setup is web-based. ($100 Steam Direct fee per app.)
-- **Wrapper lean for Mac-solo:** **Electron** (smoother Windows cross-build from macOS + best Steamworks
-  examples) unless bundle size becomes a priority (then Tauri).
+- **Wrapper: Electron. DECIDED 2026-09-03** (was "lean"). Bundle size is no longer the deciding axis —
+  cross-engine determinism is, and only Electron gives it. See above and decisions-for-ck.md §92.
 
 ## Ongoing — the game itself
 - Content depth continues (the overnight agents + us), steered by `growth-and-content-strategy.md`. This is

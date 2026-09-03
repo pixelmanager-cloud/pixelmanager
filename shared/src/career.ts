@@ -783,7 +783,14 @@ const LIFE_CONSEQUENCE: Record<LifeKind, { good: Partial<Record<MeterKey, number
   contract:         { good: { agent: 10, authority: 4 },  bad: { agent: -8, authority: -6 }, earnGood: 150 },
   loan:             { good: { authority: 8, agent: 4 },   bad: { authority: -6, peers: -4 } },
   setback:          { good: { fans: 6, authority: 6 },    bad: { fans: -8, authority: -8 } },
-  media:            { good: { fans: 8, sponsors: 4 },     bad: { fans: -6, agent: -4 } },
+  // A YOUTH-ACTIVE METER ON EVERY BRANCH. `life()` silently drops a delta for a meter the chapter has not
+  // activated, and fans/sponsors do not exist until Breakthrough/First Team — while life events start at
+  // Scholar and both of these kinds sit in YOUTH_LIFE_KINDS. So across the whole youth run `media`'s good
+  // outcome was worth nothing (its bad branch already touched `agent`, so only half the event worked) and
+  // `social_storm` had no mechanical consequence at all — the exact re-skin this table's own comment says
+  // a life event must not be. Measured over 400 careers: media fired 69 times and social_storm 58 times
+  // inside Scholar and Youth Team.
+  media:            { good: { fans: 8, sponsors: 4, agent: 6 }, bad: { fans: -6, agent: -4 } },
   loyalty:          { good: { fans: 10, family: 6 },      bad: { agent: -6, fans: -4 } },
   role:             { good: { authority: 8 },             bad: { authority: -10, peers: -4 } },
   fallout:          { good: { peers: 6, authority: 4 },   bad: { peers: -12, authority: -4 } },
@@ -791,7 +798,10 @@ const LIFE_CONSEQUENCE: Record<LifeKind, { good: Partial<Record<MeterKey, number
   transfer_rumour:  { good: { agent: 8, fans: -2 },       bad: { agent: -4, peers: -6 } },
   manager_fallout:  { good: { authority: 4, peers: 4 },   bad: { authority: -14 } },
   charity:          { good: { fans: 10, family: 4 },      bad: { fans: 2 } },
-  social_storm:     { good: { fans: 6, sponsors: 4 },     bad: { fans: -10, sponsors: -8 } },
+  // A storm reaches the coach and the dressing room long before it reaches a sponsor. Sized against the
+  // neighbours — fallout's -12 peers and manager_fallout's -14 authority are the heavy ones; this is a
+  // middling event and takes middling numbers.
+  social_storm:     { good: { fans: 6, sponsors: 4, authority: 4, peers: 4 }, bad: { fans: -10, sponsors: -8, authority: -6, peers: -6 } },
   family_illness:   { good: { family: 10 },               bad: { family: -14, authority: -4 } },
   romance:          { good: { partner: 16 },              bad: { partner: -10 } },
   mentor_crossroads: { good: { authority: 10, peers: 4 }, bad: { authority: -6, family: -4 } },

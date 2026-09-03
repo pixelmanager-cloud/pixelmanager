@@ -3019,6 +3019,14 @@ Three options:
    which matters for the web build and for anyone comparing seeds. `shared_purity.ts` now lists all 21 calls
    on every run so it cannot be quietly forgotten.
 
-My recommendation is **(3) for now, (1) before the web build is promoted as a seed-shareable thing.** It is a
+**DECIDED 2026-09-03 — CK: going with Electron, so leave it.** Electron bundles its own Chromium, so one
+V8 runs on Windows, Mac and Linux and no Steam player can diverge from another. The residual exposure is
+only the Netlify web build, where different browsers genuinely will produce different seasons from the same
+seed — so do not promote seed-sharing or "compare your dynasty" as a web feature, and do not expect a
+player's web bug report to reproduce from their seed on a desktop build. `shared_purity.ts` lists all 21
+calls on every gate run so this cannot be forgotten if the wrapper is ever revisited.
+
+The original recommendation, kept for the record: **(3) for now, (1) before the web build is promoted as a
+seed-shareable thing.** It is a
 real defect but it is invisible to a Steam player on one machine, and re-tuning the match engine is a project
 in itself rather than something to slip into a fix batch.
