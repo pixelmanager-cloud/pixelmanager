@@ -42,5 +42,11 @@ tools/.fal_key
 store/steam/trailer/*.wav
 store/steam/trailer/*.m4a
 
-# Audit agents render the stylesheet by copying index.html into the served tree. Never ship those.
+# Audit agents render the stylesheet by copying index.html somewhere a browser can load it. Two ~200KB
+# copies reached client/public — which Vite ships verbatim — and a third reached the repo root. None of
+# them is referenced by anything, so nothing had a reason to notice. Kept out by name, and by
+# tools/playtest/ship_hygiene.ts for the shipped tree.
 client/public/*.html
+__*probe*.html
+_probe*.html
+*_probe.html

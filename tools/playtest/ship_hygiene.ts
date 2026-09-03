@@ -48,5 +48,12 @@ walk(dir);
 console.log(`  ..   ${strays.length} html/source/log file(s) found under ${dir}`);
 ok(strays.length === 0, `no page or source file is sitting in the asset tree${strays.length ? ` (${strays.join(', ')})` : ''}`);
 
+// And nothing agent-shaped anywhere the repo tracks. The first sweep of this class caught two files under
+// client/public and missed a third sitting in the repo root, because the probe only looked where the last
+// incident happened. Look where the NEXT one will be.
+const rootStrays = readdirSync('.').filter((n) => /probe.*\.html?$/i.test(n) || /^_{1,2}.*\.html?$/i.test(n));
+console.log(`  ..   ${rootStrays.length} probe-shaped file(s) in the repo root`);
+ok(rootStrays.length === 0, `no scratch page is sitting in the repo root${rootStrays.length ? ` (${rootStrays.join(', ')})` : ''}`);
+
 console.log(fails ? `\n✗ ${fails} — something that is not a game asset would ship` : '\n✓ only declared game assets are in the bundle');
 if (fails) process.exitCode = 1;
