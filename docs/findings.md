@@ -117,3 +117,12 @@ it — kept so it is not re-raised).
 | F-104 | fixed (§86, CK) | content/dead-wiring | `first_start` wired at the Breakthrough boundary (4 lines; 2 deleted as unusable), `first_goal` kept permanently dead and now enforced by probe | `shared/src/tokens.ts:186` |
 | F-105 | fixed (§86, CK) | content/dead-wiring | The 40 backroom-staff quips had no production caller — four staff were four fixed sentences for a whole dynasty | `client/src/main.ts:3351` |
 | F-106 | fixed (§86, CK) | content/dead-wiring | `callUpBlurb`'s ~305-line corpus had no caller; one line now frozen into careerHonours and shown on the family tree | `shared/src/tokens.ts:575` |
+| F-107 | fixed | ui/accessibility | The game had NO ARIA live region anywhere, so `#toast` — its only channel for errors, refusals and confirmations — was never announced | `client/index.html:2228` |
+| F-108 | fixed | ui/accessibility | The main-menu save switcher rows were not keyboard-reachable; the only tab stop per row was the destructive Delete button, on a list labelled "Switch save" | `client/src/main.ts:543` |
+| F-109 | fixed | career/accessibility | Every career render replaced `academy-body` wholesale, destroying keyboard focus on all 120 turns — restored, with a keyboard-only guard and no positional restore across a phase change | `client/src/main.ts:4453` |
+| F-110 | fixed | match/accessibility | The full-time card had no focusable child, no Escape handler and unsafe centring, so it was mouse-only and clipped off-screen above 120% UI scale | `client/src/main.ts:5269` |
+| F-111 | fixed | ui/performance | `appendLine` forced a synchronous layout per commentary line; `skipToEnd` drained ~464 of them in one burst | `client/src/main.ts:5911` |
+| F-112 | fixed | content/correctness | `narrateRivalMoment` and `narrateCallupMoment` spliced the raw CARD TITLE into prose | `shared/src/narrate.ts` |
+| F-113 | fixed | content/correctness | Seven authored manager-feed lines printed a literal `{fee}` / `{to}` at the player | `shared/src/managerNarrate.ts` |
+| F-114 | fixed | content/correctness | "Someone in a {team} shirt" printed "a Ashcombe Town shirt" for 21% of the club pool, in the heaviest-used commentary bank | `shared/src/commentary/pack_1.ts:219` |
+| F-115 | fixed | content/dead-wiring | `scout_found.young` and `.veteran` could never fire because `api.signMission`'s DTO dropped the player's age | `client/src/api.ts` |

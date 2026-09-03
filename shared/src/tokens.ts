@@ -248,9 +248,9 @@ export function actWithNarration(c: Career, a: CareerAction): string | null {
     if (rivalMoment) {
       const rate = rivalRateOf((c as any).seed >>> 0);
       const payoff = { rivalName: careerCast((c as any).seed >>> 0, c.familyName).rival, leadBefore: csBefore - rivalScoreAt(turnBefore, rate), leadAfter: careerScoreOf(c) - rivalScoreAt(c.turn, rate) };
-      return narrateRivalMoment(cardName(a.cardId), choice.success, ctx, payoff);
+      return narrateRivalMoment(cardName(a.cardId), choice.success, ctx, payoff, choice.tags);
     }
-    if (callupMoment) return narrateCallupMoment(cardName(a.cardId), choice.success, ctx);
+    if (callupMoment) return narrateCallupMoment(cardName(a.cardId), choice.success, ctx, choice.tags);
     if (academyScare) return narrateAcademyScare(cardName(a.cardId), choice.success, ctx, cardTags(a.cardId), a.cardId);
     if (kindBefore === 'social' && !rivalMoment && !callupMoment) return narrateLifeEvent('social', cardName(a.cardId), choice.success, ctx, undefined, cardTags(a.cardId), a.cardId);
     return narratePlay(cardName(a.cardId), choice.tags, choice.success, ctx);

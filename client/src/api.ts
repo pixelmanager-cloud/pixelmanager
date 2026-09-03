@@ -1653,7 +1653,12 @@ export const api = {
     if (model.profile.coins < cost) throw apiErr(`not enough coins — upgrade costs ${cost}`, {}, 409);
     await localStore.addCoins(OWNER, -cost);
     await localStore.setFacilityLevel(OWNER, key, level + 1);
-    return { ok: true as const, key, level: level + 1, coins: getActiveModel().profile.coins };
+    // `cost` is returned as well as charged. Three of the 120 authored `facility_upgraded` narration
+    // lines quote the price — 'The club puts {fee}c into bricks.' — and the feed call site had no fee to
+    // hand them, because this return threw away the one number it had just computed. `fillMgr` leaves an
+    // unknown placeholder ALONE rather than blanking it (deliberately: an author's typo should be visible
+    // in review), so the season feed printed the braces at the player, verbatim.
+    return { ok: true as const, key, level: level + 1, cost, coins: getActiveModel().profile.coins };
   },
   /** Scale a facility back a level and recover part of what it cost — the player's own lever against a
    *  bill they cannot pay. Refuses at level 1: there is nothing below the neutral baseline. */
@@ -1749,7 +1754,17 @@ export const api = {
     await localStore.saveClub(OWNER, c.club, c.standingOrders);
     await localStore.addLoanee(OWNER, seasonId, player.id);
     await localStore.setMissionSigned(m.id);
-    return { ok: true as const, player: { name: player.name, role: player.role }, signedCount: await localStore.countLoanees(OWNER, seasonId) };
+    // `destName` and `fee` exist for the narration layer, which was given neither. Four of the ~87
+    // authored `scout_found` lines quote them — 'A find in {to}.' and '{p} is available for {fee}c, and
+    // the scout thinks that is a joke of a price.' — and this return handed the caller a name and a role,
+    // so roughly one signing in twenty put the raw braces into the season feed.
+    // The loanee signs for NOTHING (no addCoins on this path; he cannot even be sold — see sellPlayer),
+    // so there is no fee paid to report. `transferFee` is what this game charges for a player of that
+    // ability on the open market, which is the number those two lines are actually asking for ('worth',
+    // 'available for') and the one the transfer market already quotes the player for his equals.
+    return { ok: true as const, player: { name: player.name, role: player.role },
+      destName: destinationById(m.destination)?.name ?? m.destination, fee: transferFee(overall(player)),
+      signedCount: await localStore.countLoanees(OWNER, seasonId) };
   },
   diary: async () => {
     await ensureActive();

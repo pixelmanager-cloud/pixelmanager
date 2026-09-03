@@ -1822,7 +1822,19 @@
         100% { opacity: 0; transform: translateX(-50%) translateY(0); }
       }
       /* post-match summary card */
-      #fulltime-card { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
+      /* SAFE CENTRE, AND IT SCROLLS — the pattern #settings-ov/#confirm-ov/#pause-ov already use, and the
+         one full-screen overlay that never got it. Plain `align-items: center` on a fixed box with no
+         overflow centres an over-tall card by pushing half of it out through the TOP edge, where nothing
+         can reach it. Measured on this markup at 1280x700 with an ordinary continental semi-final report
+         (lead line, four scorers, assists, the star line, the fans' reaction, the presser quote, a POTM
+         chip) the card is ~743px tall, so `.ft-inner` sat at offsetTop -22 even at 100%, -53 at the SHIPPED
+         DEFAULT of 110% — "FULL TIME" and both team names off-screen — and -122 at 140%, with overflow
+         visible and scrollTop stuck at 0 at every one of those scales. The player could not scroll to what
+         had been cut off, and could not shrink it without leaving the card to open Settings. `safe center`
+         degrades to flex-start the moment the item overflows; `overflow-y: auto` reaches the rest. It still
+         centres exactly as before whenever the card fits (checked at 1280x1000). */
+      #fulltime-card { position: fixed; inset: 0; z-index: 40; display: flex; align-items: safe center; justify-content: center;
+        overflow-y: auto; padding: 16px 12px;
         background: rgba(4,4,12,0.82); cursor: pointer; animation: ftfade 0.25s ease-out; }
       /* NEUTRAL, because a scoreline is not "good". The sheet states the law itself a hundred lines down —
          "SEMANTIC colour, which is reserved and never decorative: green means good, red means bad" — and a
@@ -1847,7 +1859,12 @@
       #fulltime-card .ft-stats .v { font-size: 26px; color: var(--cyan); }
       #fulltime-card .ft-stats .v.home { text-align: right; } #fulltime-card .ft-stats .v.away { text-align: left; }
       #fulltime-card .ft-stats .lbl { font-family: var(--body); font-size: 14px; color: var(--warn); }
-      #fulltime-card .ft-tap { font-family: var(--body); font-size: 14px; color: var(--muted); margin-top: 18px; }
+      /* A REAL BUTTON NOW (see the markup), so reset the UA chrome: it should still read as the quiet caption
+         it always was, while getting the global `button:focus-visible` ring ~1650 lines up and native
+         Enter/Space activation for free. */
+      #fulltime-card .ft-tap { display: block; margin: 18px auto 0; font-family: var(--body); font-size: 14px; color: var(--muted);
+        background: none; border: 1px solid transparent; border-radius: 6px; padding: 6px 12px; cursor: pointer; }
+      #fulltime-card .ft-tap:hover { color: var(--text); border-color: var(--rule); }
       #ft-report { font-family: var(--body); font-size: 15px; line-height: 1.5; color: #cdd3e6; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); text-align: left; }
       #ft-report .scorers { color: var(--muted); font-size: 14px; margin-top: 6px; }
       /* Player of the Match can be the opposition's hat-trick scorer, so it is not a success chip either. */
@@ -2221,11 +2238,42 @@
                main.ts un-hid it on `lastGate > 0`, `lastGate` came from `MatchPayload.gateIncome`, and nothing
                ever set that field. Removed rather than wired, because gate money is already paid once a season
                by seasonFacilityIncome() — a per-match credit would double-pay. See client/src/api.ts. -->
-          <div class="ft-tap">▶ Tap to continue</div>
+          <!-- THIS WAS A <div>, AND IT WAS THE WHOLE PROBLEM. The card covers the viewport and its only exit
+               was a mouse click on the backdrop: no focusable child anywhere inside it, no Escape listener in
+               main.ts, and the match keyboard block (1/2/3/space/s/c) bails on `engine.state.finished`, which
+               is exactly the state this card is shown in. Once the 9-second auto-dismiss was removed the card
+               genuinely waits forever, so a player on a keyboard or a controller ended a match and sat on an
+               unresponsive full-screen card over their season. A <button> is focusable, carries the global
+               focus ring, and its native Enter/Space click bubbles to the same backdrop dismiss handler —
+               one exit path, not two. main.ts focuses it (preventScroll, so an over-tall card still opens at
+               the top rather than jumping to this line) and adds the Escape half. -->
+          <button type="button" id="ft-continue" class="ft-tap">▶ Tap or press Esc to continue</button>
         </div>
       </div>
     </div>
-    <div id="toast"></div>
+    <!-- role="status" IS THE ONLY THING THAT TELLS A SCREEN READER ANY OF THIS HAPPENED, and it was not
+         here. This div was plain markup, and a grep for aria-live / role="status" / role="alert" across
+         client/ and shared/ returned nothing at all: the game shipped with no ARIA live region anywhere.
+         #toast is the SOLE surface for a large class of outcomes that have no other UI — "Enter a family
+         name to begin your bloodline" on the very first screen, "Could not sign him", "Recovered N saves",
+         every rejected bid, every "Could not save". A blind player pressed Start with an empty name, heard
+         nothing whatsoever, and had no way to learn why the game would not begin.
+
+         The reduced-motion pass (two blocks of this stylesheet, at the @media rule and again at
+         body.reduced-motion) went to real trouble to keep this element VISIBLE, on the stated grounds that
+         losing it costs "every error, confirmation and rejected bid in the game". For assistive tech that
+         loss was total and unconditional — it did not need a motion preference to trigger it.
+
+         Measured in headless Chromium before writing this: the node reports live=polite, atomic=true and
+         ignored=false, and the text toast() writes is exposed as non-ignored StaticText — while the toast
+         is showing AND at rest afterwards, because #toast sits at opacity:0 and is never display:none or
+         visibility:hidden. No CSS change is needed, and none should be added: display:none would drop it
+         out of the accessibility tree and take the announcements with it.
+
+         "status", not "alert": these are confirmations and refusals, not interruptions, and alert would cut
+         off whatever the reader was mid-sentence on. status implies aria-atomic="true" (confirmed in the
+         tree above), so no explicit attribute is required. -->
+    <div id="toast" role="status"></div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

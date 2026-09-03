@@ -290,6 +290,19 @@ const TALK_FIERY = new Set(['biggame', 'leader', 'workhorse', 'maverick', 'showm
 const $ = (id: string) => document.getElementById(id)!;
 
 // Brief retro toast near top-centre; the CSS animation fades it out after ~2s.
+//
+// THE ELEMENT THIS WRITES INTO IS THE GAME'S ONLY ARIA LIVE REGION (`<div id="toast" role="status">` in
+// index.html, which carries the post-mortem). Three of its properties are load-bearing and none of them are
+// visible from this function:
+//   • it must stay a child of <body>, OUTSIDE #app — dialogify() marks #app inert, so moving the toast in
+//     would silently mute every message fired from a modal ("Talks broke down", "Not enough coins",
+//     "Could not delete that save");
+//   • it must never become display:none or visibility:hidden — opacity:0 keeps it in the accessibility
+//     tree, those two remove it, and a live region that isn't in the tree announces nothing;
+//   • it must be in the document at load rather than created on demand, because a live region only
+//     announces changes made after the reader has already seen the container.
+// Break any one of those and a blind player loses every error, confirmation and rejected bid in the game
+// with no visible symptom — which is exactly what shipped before the role was added.
 let toastTimer: ReturnType<typeof setTimeout> | undefined;
 function toast(msg: string) {
   const el = $('toast');
@@ -540,10 +553,52 @@ class Game {
     $('login-error').textContent = '';
     // the save list is a SWITCHER (only meaningful with 2+ saves); with one save it's just an info row + delete
     $('mm-saves').innerHTML = saves.length
-      ? `<div class="mm-saves-lbl">${multi ? 'Switch save' : 'Your save'}</div>` + saves.map((s) => `<div class="mm-save${multi ? ' load' : ''}" data-id="${s.id}"><span class="mm-save-name">${s.name}</span><span class="mm-save-meta">${new Date(s.lastPlayed).toLocaleDateString()} ${new Date(s.lastPlayed).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span><button class="mm-save-del" data-del="${s.id}" title="Delete save">✕</button></div>`).join('')
+      ? `<div class="mm-saves-lbl">${multi ? 'Switch save' : 'Your save'}</div>` + saves.map((s) => {
+        const when = `${new Date(s.lastPlayed).toLocaleDateString()} ${new Date(s.lastPlayed).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        const nm = s.name.replace(/"/g, '&quot;'); // a name going into an attribute — same guard as the retire button and the house crest
+        // THE ✕ WOULD NOT SAY WHAT IT DESTROYED. `title="Delete save"` was doing nothing for the name:
+        // name-from-content beats `title`, and the content is the glyph. So a screen-reader player tabbing a
+        // two-save list heard "✕ button", then "✕ button" — identical, indistinguishable, on the one action
+        // in this game with no undo ("This bloodline is gone for good"), in a list whose rows they could not
+        // even focus (see makeActivatable below). The label now names the bloodline; `title` stays for the
+        // mouse tooltip. The row gets one too, because with role="button" its name would otherwise be built
+        // from its own contents — the name, the date AND the delete button's label glued together.
+        return `<div class="mm-save${multi ? ' load' : ''}" data-id="${s.id}"${multi ? ` aria-label="Load ${nm}, last played ${when}"` : ''}>`
+          + `<span class="mm-save-name">${s.name}</span><span class="mm-save-meta">${when}</span>`
+          + `<button class="mm-save-del" data-del="${s.id}" title="Delete save" aria-label="Delete ${nm}">✕</button></div>`;
+      }).join('')
       : '';
-    if (multi) $('mm-saves').querySelectorAll('.mm-save').forEach((el) => el.addEventListener('click', (e) => { if ((e.target as HTMLElement).dataset.del) return; this.loadSave((el as HTMLElement).dataset.id!); }));
-    $('mm-saves').querySelectorAll('.mm-save-del').forEach((el) => el.addEventListener('click', (e) => { e.stopPropagation(); this.deleteSave((el as HTMLElement).dataset.del!); }));
+    if (multi) {
+      $('mm-saves').querySelectorAll('.mm-save').forEach((el) => el.addEventListener('click', (e) => { if ((e.target as HTMLElement).dataset.del) return; this.loadSave((el as HTMLElement).dataset.id!); }));
+      // A "SWITCH SAVE" LIST YOU COULD NOT SWITCH WITH.
+      //
+      // Each row was a bare <div class="mm-save load"> carrying a click listener and nothing else — no role,
+      // no tabindex — so the ONLY tab stop inside a row was the ✕ that deletes it. There is no arrow-key
+      // navigation anywhere in this app (grep ArrowUp/ArrowDown: no hits), so on the Steam build, driven by a
+      // keyboard or a controller, a player with two bloodlines had exactly two reachable actions on the title
+      // screen: ▶ Continue — which resumes `saves[0]` of this same lastPlayed sort, i.e. only ever the most
+      // recently played save (continueGame(), below) — and Delete, on either one. The older dynasty was drawn
+      // on screen, named and dated, under a label this very function prints as "Switch save", and could not be
+      // reached at all. The one thing the list exists to do was the one thing no keyboard could do, while the
+      // irreversible one sat a single Tab away.
+      //
+      // makeActivatable() was already guarding the card grid, the arc choices, the heir pick and the will — it
+      // had simply never been called on the menu, the first screen anybody touches. Guarded inside `if (multi)`
+      // deliberately: with one save the row has no click handler at all, and a focusable element that does
+      // nothing when you press Enter is a worse tab stop than no tab stop.
+      this.makeActivatable($('mm-saves').querySelectorAll('.mm-save'));
+    }
+    $('mm-saves').querySelectorAll('.mm-save-del').forEach((el) => {
+      el.addEventListener('click', (e) => { e.stopPropagation(); this.deleteSave((el as HTMLElement).dataset.del!); });
+      // ...AND THE SAME SHIELD ONE EVENT EARLIER, because the row above is now role="button" with a keydown
+      // that calls preventDefault() and re-fires click() on the ROW. Keydown bubbles: without this, the
+      // Enter/Space pressed on the focused ✕ would reach the row handler, preventDefault would cancel the
+      // button's own activation, and the row's click() would run instead — so the keyboard's "delete" would
+      // silently LOAD the save. This is the first makeActivatable() target in the file with a focusable child;
+      // every other one is a leaf, which is why the helper never needed to care. Nothing is preventDefaulted
+      // here, so the button still activates natively.
+      el.addEventListener('keydown', (e) => { const k = (e as KeyboardEvent).key; if (k === 'Enter' || k === ' ') e.stopPropagation(); });
+    });
     // pre-focus the most-used action (Continue if a save exists, else New Game) so Enter/Space just works
     const focusBtn = saves.length ? cont : $('mm-new');
     try { (focusBtn as HTMLElement).focus({ preventScroll: true }); } catch { /* not focusable yet */ } // don't auto-scroll the logo off the top of the title screen (PT-98)
@@ -3473,7 +3528,12 @@ class Game {
       if (story) this.pushFeed('🏗️', story);
       // The specific line above says what CHANGED about the place; this one is the club noticing. Both,
       // because the general bank had over a hundred authored lines and no call site at all.
-      this.feedEvent('facility_upgraded', '🏗️', undefined, { n: r.level, name: FACILITY_META[key as FacilityKey]?.name ?? key });
+      // {fee} was missing here for the same reason it was missing at the scouting call site: three of
+      // the 120 facility_upgraded lines quote the price, and with nothing to substitute the feed printed
+      // 'It costs {fee}c and it is the most sensible money the club has spent in years.' verbatim — 2.5%
+      // of upgrades. `upgradeCost` was computed and charged inside the facade and then discarded; it now
+      // comes back as `cost`.
+      this.feedEvent('facility_upgraded', '🏗️', undefined, { n: r.level, name: FACILITY_META[key as FacilityKey]?.name ?? key, fee: r.cost });
       this.renderFacilities(await api.facilities());
     } catch (e: any) {
       toast(e?.status === 409 ? (String(e?.body?.error ?? '').includes('max') ? 'Already at max level' : 'Not enough coins') : 'Could not upgrade');
@@ -4618,6 +4678,10 @@ class Game {
     else content = narr + evt + body + `<div class="cg-context">` + this.objectiveHtml(s) + this.rivalHtml(s) + this.intlHtml(s) + this.lifeDashHtml(s) + lifeOutcome + conseq + recap + `</div>`;
     const help = this.careerTab === 'now' ? this.careerHelpCard(s) : '';
     const tut = this.careerTab === 'now' ? this.tutorialHint(s) : '';
+    // Taken BEFORE the innerHTML write below, which destroys every node in #academy-body including the one
+    // holding keyboard focus. See keepFocus() for the post-mortem; restoreFocus() is the last thing this
+    // function does, because the new cards are only focusable once makeActivatable() has stamped them.
+    const restoreFocus = this.keepFocus($('academy-body'));
     // FOUR `transition: width` RULES WERE WRITTEN FOR THESE BARS AND NONE OF THEM HAS EVER FIRED.
     // `.cg-bar > i`, `.cg-dash .cg-m-bar b`, `.cg-obj-bar b` and `.op-bar-fill` each declare one, but every
     // bar carries its value as an inline width inside this innerHTML string — so each render destroys the
@@ -4655,6 +4719,7 @@ class Game {
     document.getElementById('cg-summer-next')?.addEventListener('click', () => { this.summerStep = 'activities'; this.renderCareer(s); });
     document.getElementById('cg-summer-back')?.addEventListener('click', () => { this.summerStep = 'spend'; this.renderCareer(s); });
     if (this.careerTab === 'kit') this.wireKitTab(s);
+    restoreFocus(); // LAST: must follow makeActivatable(), which is what gives the new cards their tabindex
   }
 
   /** The developing player's live identity panel — shows him taking shape as you play. */
@@ -4832,6 +4897,73 @@ class Game {
     });
   }
 
+  /** Snapshot which control inside `host` holds keyboard focus, so a wholesale innerHTML rebuild can hand it
+   *  back. Returns a restore fn the caller runs AFTER the new nodes are wired and made activatable.
+   *
+   *  KEYBOARD PLAY WAS UNPLAYABLE AND NOTHING SAID SO. renderCareer rebuilds #academy-body with one innerHTML
+   *  write per turn, and innerHTML throws the focused node away — so a keyboard or controller player tabbed
+   *  to a card, pressed Enter, and landed on <body>. To play the next card he had to tab past ← back, the
+   *  whole tab bar and every earlier card again. Every turn, for 120 turns. Measured in Chromium: focus the
+   *  third card, press Enter, activeElement === BODY.
+   *
+   *  Nodes cannot simply be preserved — this file rebinds every listener after the write, so a kept node is
+   *  a card that no longer does anything. Hence snapshot-and-restore.
+   *
+   *  TWO GUARDS, BOTH FOUND BY MEASURING THE FIRST VERSION OF THIS RATHER THAN BY READING IT:
+   *
+   *  1. KEYBOARD ONLY. Chromium focuses a tabindex=0 div on MOUSEDOWN, so a mouse click was captured and
+   *     restored too — silently, with no ring, because :focus-visible correctly does not match a mouse
+   *     focus. That arms an invisible activation target: makeActivatable preventDefaults Space and calls
+   *     click(), and Space is the reflex of anyone scrolling to read the outcome text that renders below the
+   *     fold on this very screen. Measured: click a card (turn 2), press Space, turn 3 — a second card
+   *     played, on an irreversible turn of a 120-turn career. The :focus-visible test at capture time means
+   *     mouse players keep exactly today's behaviour and only keyboard players get the restore.
+   *
+   *  2. NO POSITIONAL RESTORE ACROSS A PHASE CHANGE. The index was taken over every focusable in the host,
+   *     so when the next render is a different phase it landed somewhere arbitrary: playing the 3rd of 4
+   *     cards into a draft with 3 options focused the LAST draft option, and into a coach phase focused
+   *     coach 2 — each one Enter from another irreversible commit. The positional fallback is now scoped to
+   *     controls of the SAME KIND (same data-act), which cannot exist in a different phase; when there is no
+   *     match the restore lands on the tab bar, which is the one group of controls here that does nothing
+   *     destructive.
+   *
+   *  Identity is matched id -> data-tab -> same-kind position, in that order. A tab keeps its identity when
+   *  its index moves (Life and League come and go with the life stage); a card has no stable identity at all
+   *  — next turn is a new hand — so playing card 3 should land on card 3 of the new hand.
+   *
+   *  preventScroll because #pause-ov already taught this codebase what an autofocus that yanks the viewport
+   *  2,130px looks like. The containment guard is load-bearing rather than defensive noise: renderCareer is
+   *  re-entered from the settings overlay and from openCareer after a SPINNER write, and in both cases focus
+   *  lives elsewhere and must be left exactly where it is.
+   */
+  private keepFocus(host: HTMLElement): () => void {
+    const FOCUSABLE = 'button:not([disabled]), a[href], select, input, [tabindex]:not([tabindex="-1"])';
+    const was = document.activeElement as HTMLElement | null;
+    if (!was || !host.contains(was)) return () => { /* focus was never in here — never steal it */ };
+    // Guard 1: keyboard only. A mouse focus carries no ring, so restoring it hands the player a control
+    // they cannot see and Space can fire.
+    try { if (!was.matches(':focus-visible')) return () => { /* mouse focus — leave it exactly as it was */ }; }
+    catch { return () => { /* no :focus-visible support: do nothing rather than guess */ }; }
+    const id = was.id, tab = was.dataset.tab ?? '', act = was.dataset.act ?? '';
+    const sameKind = (el: HTMLElement) => (el.dataset.act ?? '') === act;
+    const idx = act ? [...host.querySelectorAll<HTMLElement>(FOCUSABLE)].filter(sameKind).indexOf(was) : -1;
+    return () => {
+      const list = [...host.querySelectorAll<HTMLElement>(FOCUSABLE)];
+      if (!list.length) return;
+      const kin = act ? list.filter(sameKind) : [];
+      const back = (id ? list.find((el) => el.id === id) : null)
+        || (tab ? list.find((el) => el.dataset.tab === tab) : null)
+        || (idx >= 0 && kin.length ? kin[Math.min(idx, kin.length - 1)] : null)
+        // Guard 2: the phase changed, so there is no control of the same kind. Land on the tab bar rather
+        // than on whatever happens to sit at that index — the tabs are the only controls on this screen
+        // that do nothing irreversible.
+        || list.find((el) => el.classList.contains('cg-tab'))
+        || null;
+      back?.focus({ preventScroll: true });
+    };
+  }
+
+
   private actInFlight = false; // guard: one career action resolves at a time (prevents "card not in hand" on a double/stale click)
   private async doCareerAct(prospectId: string, action: { type: string; cardId: string }) {
     if (!['play', 'draft', 'coach', 'offer', 'focus', 'lifestyle', 'arc'].includes(action.type)) return; // ignore view-only (deck) cards
@@ -4977,7 +5109,12 @@ class Game {
     try {
       const r = await api.signMission(id);
       toast(`Signed ${r.player.name} ✓`);
-      this.feedEvent('scout_found', '🌍', { name: r.player.name, seasonsAtClub: 0, age: (r.player as any).age }, {});
+      // WAS `{}` — no vars at all, on an event whose bank quotes both {fee} and {to}. `fillMgr` leaves
+      // an unknown placeholder in place rather than blanking it, so four of the ~87 eligible lines went
+      // into the feed with their braces showing: 'A find in {to}. Kofi Moreau has an awkward style and an
+      // unarguable end product.' At ~4.6% of the pool that is one scouted signing in twenty. The facade
+      // now returns the trip's destination and an open-market price for a player that good.
+      this.feedEvent('scout_found', '🌍', { name: r.player.name, seasonsAtClub: 0, age: (r.player as any).age }, { fee: r.fee, to: r.destName });
       this.setMe(await api.me());
       await this.showScouting();
     } catch (e: any) {
@@ -5689,10 +5826,30 @@ class Game {
     const card = $('fulltime-card');
     card.classList.remove('hidden');
     let dismissed = false;
+    // ESCAPE TOO, BECAUSE A MOUSE WAS THE ONLY WAY OFF THIS SCREEN. The card covers the whole viewport and
+    // had no focusable child, no Escape handler, and no coverage from the match shortcut block up in wire():
+    // that one returns early on `this.engine.state.finished`, which is precisely when this card is up, so
+    // every key in the game was dead here. It survived only because the 9-second auto-dismiss below used to
+    // bail the player out by accident; removing that timer (rightly) left a keyboard or controller player
+    // parked on a full-screen result card over their season with nothing that dismissed it.
+    //
+    // NOT dialogify, deliberately, for two independent reasons. Its close() ends in `ov.remove()`, and
+    // #fulltime-card is static markup in index.html that every later match re-fills by id through `$()` —
+    // one dismissal would delete it and the next full time would throw on a null element. And it sets
+    // `inert` on #app, which is this card's own PARENT: the card would inert itself and the button below
+    // could never take focus. So: the caption is a real <button> (Enter/Space fire its native click, which
+    // bubbles to the same `dismiss`), plus this capture-phase Escape, guarded by dialogify's own refcount so
+    // a genuine dialog stacked on top still wins the key.
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || Game.inertDepth > 0) return;
+      e.preventDefault();
+      dismiss();
+    };
     const dismiss = () => {
       if (dismissed) return;
       dismissed = true;
       card.removeEventListener('click', dismiss);
+      document.removeEventListener('keydown', onKey, true);
       card.classList.add('hidden');
       if (this.pendingCont) { const c = this.pendingCont; this.pendingCont = null; this.spFixture = null; this.resolveContinental(c.myGoals, c.oppGoals, c.oppStrength); return; } // continental tie → advance/out
       if (this.pendingWc) { const c = this.pendingWc; this.pendingWc = null; this.spFixture = null; this.resolveWorldCup(c.myGoals, c.oppGoals, c.oppName); return; } // World-Finals knockout tie → advance/out
@@ -5705,6 +5862,11 @@ class Game {
     // numbers: about thirty seconds of reading, given nine. A screen that tells the player how to leave
     // it should not also leave on its own.
     card.addEventListener('click', dismiss);
+    document.addEventListener('keydown', onKey, true);
+    // preventScroll MATTERS: #ft-continue is the LAST thing in the card, and the overlay now scrolls, so a
+    // plain focus() would scroll an over-tall card straight to its bottom and hide the lead narrative,
+    // scorers and press quote the player is meant to read first.
+    $('ft-continue').focus({ preventScroll: true });
   }
 
   // "Skip to full-time": run the deterministic engine straight to the end, flush the
@@ -5777,7 +5939,13 @@ class Game {
     // hue sweeps 0 (red) → 120 (green) with fitness, so the bar shifts green→amber→red as it drops
     fill.style.background = `hsl(${Math.round(fitAvg * 120)}, 70%, 45%)`;
     $('fit-label').textContent = `Your squad fitness: ${fitPct}%`;
-    while (this.eventsShown < s.events.length) this.pushTicker(s.events[this.eventsShown++]);
+    // Drain the unshown events as ONE feed burst: appendLine appends without measuring and endFeedBurst does
+    // the single read/write for the whole batch, instead of one forced layout per commentary line (see there).
+    // try/finally so a throw part-way through a drain cannot leave feedBurst latched true, which would leave
+    // the commentary permanently unable to follow the play.
+    this.beginFeedBurst();
+    try { while (this.eventsShown < s.events.length) this.pushTicker(s.events[this.eventsShown++]); }
+    finally { this.endFeedBurst(); }
   }
 
   private matchSeed = 0;
@@ -5908,6 +6076,31 @@ class Game {
     const [top, adj] = cand.sort((x, y) => y[0] - x[0])[0];
     return top >= 14 ? `the ${adj} ${name}` : name; // only genuine standouts earn an epithet
   }
+  // MEASURE ONCE PER DRAIN, NOT ONCE PER LINE. The `atBottom` read below asks for scrollHeight/scrollTop/
+  // clientHeight on a feed the previous line's appendChild has just dirtied, so every one of them forced a
+  // full re-layout of the flex column — and syncMatchHud does not append a line, it drains every unshown
+  // event in one synchronous loop. "Skip ▶▶" is the worst of it: the rest of the match lands at once, ~464
+  // lines onto the ~236 already there, so 464 forced layouts of a scroller growing to 700 children. Measured
+  // in the real page (headless chromium, the shipped #ticker CSS, 296px tall): 67ms of blocked main thread on
+  // that one tap — the button whose entire job is to END the match locked the game up for four frames first —
+  // and 54ms of that was spent for nothing when the player had scrolled up, because then not one pixel moves.
+  // Taking the reading once per burst instead: 67ms → 5.1ms, and 54ms → 0.3ms.
+  // The answer cannot change mid-burst, so the behaviour does not change either: nobody scrolls between two
+  // synchronous appends, a feed already at the bottom is still at the bottom after appending below it, and a
+  // feed the player has scrolled up in only gets further from the bottom. A 260-frame differential run
+  // (1,464 lines, 20 random scrollbar jumps, one 464-line burst) had the two versions' scrollTop equal on
+  // every single frame. The reading is taken on the FIRST line of the drain rather than at the top of it, so
+  // a frame that drains only buffered passes and emits no line still costs exactly zero reads, as it did.
+  private feedBurst = false;     // true while syncMatchHud is draining events
+  private feedMeasured = false;  // has this drain taken its one reading yet
+  private feedStick = false;     // ...and was the player at the bottom when it did
+  private beginFeedBurst() { this.feedBurst = true; this.feedMeasured = false; }
+  private endFeedBurst() {
+    this.feedBurst = false;
+    if (!this.feedMeasured || !this.feedStick) return;
+    const feed = $('ticker');
+    feed.scrollTop = feed.scrollHeight;
+  }
   private appendLine(html: string, cls = '') {
     const div = document.createElement('div');
     div.className = `cm-line ${cls}`;
@@ -5918,6 +6111,14 @@ class Game {
     // 0.8s at 1x. So scrolling back to re-read the goal you just missed lasted until the next line, and
     // the ticker is wiped at kick-off and covered by the full-time card at the whistle: there is nowhere
     // else that text exists.
+    if (this.feedBurst) {
+      // One reading for the whole drain; endFeedBurst does the single scroll. The node still goes straight
+      // onto the feed rather than into a fragment, because pushTicker reaches back for
+      // `ticker.lastElementChild` to put the .flash on a goal line.
+      if (!this.feedMeasured) { this.feedMeasured = true; this.feedStick = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 40; }
+      feed.appendChild(div);
+      return;
+    }
     const atBottom = feed.scrollHeight - feed.scrollTop - feed.clientHeight < 40;
     feed.appendChild(div);
     if (atBottom) feed.scrollTop = feed.scrollHeight;

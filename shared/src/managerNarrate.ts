@@ -19,7 +19,7 @@
 // paying attention.
 //
 // Pure + seeded: no rng draw, no wall clock, so a season replays identically.
-import { mergeBanks, type Bank } from './prompts/merge.js';
+import { mergeBanks, fillTokens, type Bank } from './prompts/merge.js';
 import { MGR_EXTRA_1 } from './manager/pack_1.js';
 import { MGR_EXTRA_2 } from './manager/pack_2.js';
 import { MGR_EXTRA_3 } from './manager/pack_3.js';
@@ -122,9 +122,15 @@ export interface FillVars { p?: string; club?: string; from?: string; to?: strin
 /** Substitute the supported placeholders. Anything unknown is LEFT ALONE rather than blanked, so an
  *  author's typo is visible in review instead of silently deleting half a sentence. */
 export function fillMgr(line: string, v: FillVars): string {
-  return line.replace(/\{(\w+)\}/g, (m, k) => {
+  // Same article repair as the commentary filler (see fillTokens). '{p} is a {club} player. Ink dries
+  // faster than a reputation.' is an authored transfer_in line, and {club} is the manager's OWN club,
+  // which he names himself — call it Ashcombe Town, or let it default to a handle starting with a vowel,
+  // and every signing that drew that line read "is a Ashcombe Town player" in the season log, for the
+  // whole save. Fixing it here rather than in the line, because the club name does not exist until this
+  // call and the next author to write 'a {club}' would reintroduce it.
+  return fillTokens(line, (k) => {
     const val = (v as Record<string, unknown>)[k];
-    return val == null ? m : String(val);
+    return val == null ? undefined : String(val);
   });
 }
 

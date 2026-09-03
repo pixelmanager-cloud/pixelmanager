@@ -14,9 +14,16 @@ export type CommentaryBank = Record<string, string[]>;
 export const CM_VARS = ['p', 'team', 'opp', 'zone', 'off', 'name'] as const;
 
 export function fillCm(line: string, vars: Record<string, string | undefined>): string {
-  return line.replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? String(vars[k]) : m));
+  // ARTICLE REPAIR RIDES ALONG WITH THE SUBSTITUTION (see fillTokens). This used to be a bare
+  // `line.replace(/\{(\w+)\}/g, ...)`, which meant the authored line 'Someone in a {team} shirt
+  // eventually settles it {zone}.' printed "Someone in a Ashcombe Town shirt" whenever the drawn club
+  // began with a vowel — 23 of the 108 clubs in LEAGUE_POOL, 21.3% of draws. It is the worst possible
+  // line to get wrong: loose_ball is the biggest authored bank there is (499 lines) against ~114
+  // loose_ball events a match, so the player reads it every few games for the whole save.
+  return fillTokens(line, (k) => (vars[k] != null ? String(vars[k]) : undefined));
 }
 
+import { fillTokens } from '../prompts/merge.js';
 import { CM_EXTRA_1 } from './pack_1.js';
 import { CM_EXTRA_2 } from './pack_2.js';
 import { CM_EXTRA_3 } from './pack_3.js';

@@ -3383,6 +3383,17 @@ export function scenarioStory(kind: string, topTag: string, moment: string | nul
 const band = (success: number) => (success >= 0.8 ? 'triumph' : success >= 0.62 ? 'good' : success >= 0.42 ? 'mixed' : success >= 0.24 ? 'poor' : 'dismal');
 const domTag = (tags: string[]) => tags.find((t) => VERBS[t]) ?? 'teamwork';
 
+/** The on-pitch ACT for a played card — "the reverse ball", "the fifty-fifty" — out of the same
+ *  ACTION_NOUN bank narratePlay uses, so every MATCHDAY resolution surface names the act instead of the
+ *  card. Falls back to the label only for a caller with no tags to hand (the qa lint harness). */
+function actionNoun(cardName: string, cardTags: string[] | undefined, ctx: NarrateCtx): string {
+  if (!cardTags || !cardTags.length) return cardName;
+  const bank = ACTION_NOUN[domTag(cardTags)];
+  // strided off the turn and salted by the career, exactly as narratePlay does it — consecutive turns walk
+  // the pool instead of colliding, and two careers do not narrate the same moment with the same words.
+  return bank ? pickByTurn(bank, ctx.turn ?? 0, 5, (ctx.careerSeed ?? ctx.seed) >>> 0) : cardName;
+}
+
 // ── DEBUT: research shows first-team debuts as visceral, almost drug-like highs ("floating across the
 // grass" — Steve Coppell, 1975) — and just as often a chastening night that DOESN'T end a career (Phil
 // Chisnall's 1961 debut ended 5-1, and he kept his place). A milestone flourish that reads either way.
@@ -4273,7 +4284,7 @@ export function rivalMomentStory(rivalName: string, moment: string | null, ctx: 
 }
 export interface RivalPayoff { rivalName: string; leadBefore: number; leadAfter: number }
 /** The RESOLUTION beat for a rivalry moment — names the actual lead swing (overtook him / fell behind). */
-export function narrateRivalMoment(cardName: string, success: number, ctx: NarrateCtx, payoff: RivalPayoff): string {
+export function narrateRivalMoment(cardName: string, success: number, ctx: NarrateCtx, payoff: RivalPayoff, cardTags?: string[]): string {
   const rng = mulberry32(ctx.seed >>> 0);
   const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
   const good = band(success) === 'triumph' || band(success) === 'good';
@@ -4281,7 +4292,14 @@ export function narrateRivalMoment(cardName: string, success: number, ctx: Narra
   const swing = payoff.leadBefore < 0 && payoff.leadAfter >= 0 ? ` He’s overtaken ${payoff.rivalName} in the race that matters most to him.`
     : payoff.leadBefore >= 0 && payoff.leadAfter < 0 ? ` ${payoff.rivalName} has just gone back ahead of him — and it stings.`
     : '';
-  return `He goes to work on ${cardName} ${resline}${swing}`;
+  // Named the CARD, not the act. Seed 2: "He goes to work on Defence-Splitter until Haines settles it in
+  // a way there is no arguing with." The rivalry payoff is one of the three or four lines a whole career
+  // is remembered by, and it handed the player a deck label in the middle of it — the exact collision the
+  // ACTION_NOUN post-mortem at the top of this file fixed for narratePlay and PT-43 fixed for the
+  // off-pitch path. This and narrateCallupMoment were the last two matchday resolutions still doing it.
+  // Same bank, same striding, and it consumes no rng, so every existing resline is unchanged.
+  const act = actionNoun(cardName, cardTags, ctx);
+  return `He goes to work on ${act} ${resline}${swing}`;
 }
 // ── SHOCK CALL-UP: the seeded reskin of a first-teamer going down hours before kickoff (see
 // career.ts Scenario.callup) — nervier framing than a routine big game, a bigger reward for standing up
@@ -4345,7 +4363,7 @@ export function callupMomentStory(moment: string | null, ctx: ScenarioCtx): stri
   return moment ? `It’s ${momentPhrase(moment)} — and ${setup.charAt(0).toLowerCase() + setup.slice(1)}` : setup;
 }
 /** The RESOLUTION beat for a shock call-up. */
-export function narrateCallupMoment(cardName: string, success: number, ctx: NarrateCtx): string {
+export function narrateCallupMoment(cardName: string, success: number, ctx: NarrateCtx, cardTags?: string[]): string {
   const rng = mulberry32(ctx.seed >>> 0);
   const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
   const good = band(success) === 'triumph' || band(success) === 'good';
@@ -4354,7 +4372,12 @@ export function narrateCallupMoment(cardName: string, success: number, ctx: Narr
   // was two hard-coded sentences, one for good and one for bad, on the single highest-stakes beat
   // in a career. Now a bank of twelve.
   const reax = cast && rng() < 0.3 ? ' ' + pick(CAST_REACT_CALLUP(cast)) : '';
-  return `Thrown in cold, he goes to work on ${cardName} ${resline}${reax}`;
+  // Same raw-label splice as narrateRivalMoment above. Seed 6: "Thrown in cold, he goes to work on Dark
+  // Arts while everyone quietly revises what preparation is worth." The shock call-up is the single
+  // highest-stakes beat a career has, and the sentence stopped being a life and became a card game
+  // halfway through. Names the act now, like narratePlay — see actionNoun.
+  const act = actionNoun(cardName, cardTags, ctx);
+  return `Thrown in cold, he goes to work on ${act} ${resline}${reax}`;
 }
 
 // ── ACADEMY KEEP-OR-CUT SCARE: a tense "will he be kept?" scholarship-decision beat at the Academy/
