@@ -20,12 +20,20 @@
 // quadratic). That suspicion is refuted here by construction: this probe reports the generation count at
 // every sample, and the fall happens with it unchanged.
 //
+// WIDENED after this probe missed one. It drove only the DIRECT-heir path — succeed(), which reworks the
+// same token — and never the other half of the succession screen, "or, from the brother you passed over".
+// Taking a brother or cousin runs startCareer on HIS token, which flips `branch` from 'sibling' to 'played'
+// one way and never back, and membersOf then stopped scoring him off his notional branch career: measured
+// 1239 -> 1033 on a gen-1 brother, 420 of renown gone at gen 2, persisting across a save and reload. An
+// invariant probe that exercises one of the two paths through the screen it guards is half a probe.
+//
 // This asserts the INVARIANT, not the mechanism — it drives the real facade and watches the number the
 // player would be looking at, so it stays honest if someone rewrites how renown is derived.
 //
 // Run: `npx tsx tools/playtest/renown_monotone.ts [generations]`
 import { api, __setBackendForTests } from '../../client/src/api.js';
 import { createInMemoryBackend } from '../../client/src/save.js';
+import { getActiveModel } from '../../client/src/save.js';
 
 const GENS = Math.max(2, Math.min(6, Number(process.argv[2] ?? 4)));
 const SEASONS = 5;
@@ -108,6 +116,23 @@ async function main() {
     console.log(`  ..   gen ${g} succession: ${pre.r} -> ${post.r} (generations ${pre.g} -> ${post.g}, ${titles} title(s) handed over)`);
     if (post.r < pre.r) drops++;
     ok(post.r >= pre.r, `gen ${g}: handing the name on does not shrink the house`);
+  }
+
+  // ── THE OTHER PATH THROUGH THE SUCCESSION SCREEN ────────────────────────────────────────────────────
+  // The player can decline the direct heir and take a passed-over brother instead. That is a click on the
+  // same screen, so it is bound by the same promise.
+  const model: any = getActiveModel();
+  const brothers = (model.tokens ?? []).filter((t: any) => (t.branch ?? 'played') === 'sibling' && t.state === 'prospect' && t.career_seed == null);
+  console.log(`  ..   ${brothers.length} passed-over brother(s) available to take`);
+  ok(brothers.length > 0, 'the dynasty produced a brother to take (otherwise this half measures nothing)');
+  for (const b of brothers.slice(0, 3)) {
+    const pre = await renown();
+    await api.startCareer(b.id, null);
+    const post = await renown();
+    samples++;
+    console.log(`  ..   taking ${b.name} (${b.id}): ${pre.r} -> ${post.r}`);
+    if (post.r < pre.r) drops++;
+    ok(post.r >= pre.r, `taking a passed-over brother onto the line does not shrink the house`);
   }
 
   // VACUITY GUARD. A run that never actually moved the number would satisfy "never fell" trivially.

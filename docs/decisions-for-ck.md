@@ -2971,3 +2971,54 @@ the only option that makes the mechanism match the promise. Say the word and I w
 re-baseline in one commit.
 
 The full analysis, including the reproduction, is in the patch-design run for `social-storm`.
+
+## 92. The match engine plays out differently in different browsers, and the fix needs a re-tune
+
+`Math.hypot` is marked **implementation-approximated** by ECMA-262: Chrome, Firefox and Safari may each
+legally return a different last bit. `Math.sqrt` is not — it is the correctly-rounded IEEE-754 root, and
+`*` and `+` are exact too. The match engine has **21 `Math.hypot` calls**, every one feeding a threshold
+comparison (`< 20`, `< tackleRange`, `< 4`, and the press ranking's sort), and the tick loop turns one
+flipped comparison into a different ninety minutes.
+
+This was measured, not reasoned about. Monkey-patching `Math.hypot` to return exactly **one unit in the last
+place** higher and replaying 200 identical seeded matches:
+
+    scorelines changed: 185 of 200
+
+The control matters: the same perturbation applied to `Math.exp` (the league Poisson) changed **nothing**, so
+this is specific to the match sim rather than a general float complaint.
+
+`shared/src/game.ts` states the contract it breaks: *"given the same seed and inputs, this always plays out
+identically."* The game ships to the web as well as to Steam, so today the same save seed produces a
+different season in a different browser. Nothing corrupts — results are stored in `m.results` and never
+re-simulated, and the player Career never calls hypot, so `golden-careers.json` is untouched.
+
+**The fix is one line and it works.** A local `planarDist = (dx, dy) => Math.sqrt(dx*dx + dy*dy)` replacing
+all 21 calls; shared typechecks, `golden_replay` and `division_balance` both stay green.
+
+**Why I have not applied it.** It moves the balance past a tuned threshold. Measured with and without, same
+seeds:
+
+| | without the fix | with the fix | limit |
+|---|---|---|---|
+| underdog wins the widest fixture | 3.0% | **1.5%** | must be > 0.6% baseline |
+| happens in N of 10 divisions | 7/10 | **4/10** | must be most divisions |
+| favourite wins | 90.5% | **92.5%** | ceiling **92%** |
+
+`league_competitiveness` goes red on three assertions. The engine's constants were tuned against hypot's
+exact rounding, so swapping in the exact function is not a no-op — it is a re-tune. That is a balance
+change, and you have ruled those out once already (§82), so it is yours.
+
+Three options:
+
+1. **Take it and re-tune.** Correct, and it is the only way the determinism contract is actually true. Costs
+   a tuning pass against `league_competitiveness` and probably a golden-replay rebaseline for the manager sim.
+2. **Take it and relax the competitiveness thresholds.** Cheaper, but it accepts a less competitive league to
+   buy determinism, and "the league wins, always" has been the standing constraint here.
+3. **Leave it.** The single-machine experience is unaffected; what you lose is cross-browser reproducibility,
+   which matters for the web build and for anyone comparing seeds. `shared_purity.ts` now lists all 21 calls
+   on every run so it cannot be quietly forgotten.
+
+My recommendation is **(3) for now, (1) before the web build is promoted as a seed-shareable thing.** It is a
+real defect but it is invisible to a Steam player on one machine, and re-tuning the match engine is a project
+in itself rather than something to slip into a fix batch.

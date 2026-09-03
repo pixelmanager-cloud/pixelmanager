@@ -26,7 +26,7 @@ import {
   rollGenes, updateMorale, moraleEffects, rollMatchInjuries, developAttrs,
   deriveMatchStats, type MatchPlayerStat,
   seasonAwards, AWARD_LABEL, type AwardKind,
-  houseRenown, branchCareer, rivalStandings, renownPedigree, renownBidMult, renownIncomeMult, type HouseMember,
+  houseRenown, manRenown, branchCareer, rivalStandings, renownPedigree, renownBidMult, renownIncomeMult, type HouseMember,
   tokenToPlayer, tokenContract, legendCardOf, loadCareer, actWithNarration, careerState, graduatedFields, careerCast, fillArcText,
   heirGeneBasis, rebornFields, rebornPotential, prospectTemper, careerSeedFor, trackFor, agentsList, foundingNameFor, nameFor,
   type FacilityKey, type MissionRow, type Token, type CareerAction,
@@ -380,13 +380,29 @@ async function membersOf(model: ReturnType<typeof getActiveModel>): Promise<Hous
       let hon: any = null;
       try { hon = t.career_honours_json ? JSON.parse(t.career_honours_json) : null; } catch { /* none */ }
       const played = ((t as any).branch ?? 'played') !== 'sibling';
-      if (!played && !hon) {
-        // He played somewhere; the game just never watched. Without this the branches sit at zero and
-        // contribute nothing, in the one place the design says they should count.
-        const c = branchCareer(((t as any).branch_seed ?? 0) >>> 0, t.pedigree ?? 0);
-        return { name: t.name, generation: t.generation ?? 0, played: false, ...c };
-      }
-      return {
+      // THE DERIVED CAREER IS A FLOOR, NOT AN ALTERNATIVE.
+      //
+      // This used to hand back the branchCareer row ONLY while `branch` still read 'sibling' — and
+      // startCareer flips that flag to 'played' the moment you take a brother or a cousin on the line, one
+      // way, never back. So the instant the player accepted the succession's headline invitation ("or, from
+      // the brother you passed over") the house lost everything that man was notionally worth: measured
+      // 1239 -> 1033 taking a gen-1 brother, 2901 -> 2481 at gen 2, 420 of renown gone on one click. It
+      // survives a save and reload, and even after he graduates his own record only reaches 1102 — still
+      // below where the family stood before the player chose him.
+      //
+      // The Houses screen carries the contradicted promise verbatim: "Renown never falls — a quiet
+      // generation adds little, it never takes anything back." So the branching bloodline, the feature the
+      // whole tree exists for, was priced as a penalty.
+      //
+      // Both rows are computed for anyone carrying a branch_seed and the better one wins. A man who has not
+      // played yet keeps the career the game never watched; once he has a real record that overtakes it, his
+      // own record scores. Nothing can go down.
+      const bseed = ((t as any).branch_seed ?? 0) >>> 0;
+      const branchRow = bseed
+        ? { name: t.name, generation: t.generation ?? 0, played: false, ...branchCareer(bseed, t.pedigree ?? 0) }
+        : null;
+      if (!played && !hon && branchRow) return branchRow;
+      const ownRow = {
         name: t.name, generation: t.generation ?? 0, played,
         // Math.max, not `??`: hon.peakOverall is frozen at graduation while t.peak_overall keeps rising
         // each rollover, so the `??` fallback could never be reached and a decade of development scored
@@ -399,6 +415,9 @@ async function membersOf(model: ReturnType<typeof getActiveModel>): Promise<Hous
         seasons: t.ach_seasons ?? 0,
         bigNights: hon?.bigNights?.length ?? 0,
       };
+      // Whichever the house is actually worth more for. manRenown is pure, so this cannot drift from the
+      // scoring the table itself uses.
+      return branchRow && manRenown(branchRow) > manRenown(ownRow) ? branchRow : ownRow;
     });
   return [...live, ...ancestors];
 }
