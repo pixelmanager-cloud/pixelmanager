@@ -85,3 +85,8 @@ it — kept so it is not re-raised).
 | F-072 | fixed | dynasty/ux-friction | The Family Record promised every pale forebear's line "can still be taken up" when only the current generation's brothers can | `client/src/main.ts:4017` |
 | F-073 | fixed | career/ux-friction | `openCareer` discarded the `replayIssue` the API computes so the UI can explain a truncated career; the player saw a reset star and was told nothing | `client/src/main.ts:3489` |
 | F-074 | decision §90 | ui/visual | Four standalone containers render unstyled (`.scout-board`, `.sf-leaders`, `.li-tip`, `.ach-txt`); giving them a look is a design pass | `tools/playtest/css_hooks.ts` |
+| F-075 | fixed | career/visual | The Player-tab position chip inherited pale text over the global `.role-*` backgrounds — GK 1.20:1, MF 1.33:1, FW 1.84:1, DF 2.29:1, all below the 3:1 non-text floor | `client/index.html:1077` |
+| F-076 | fixed | career/visual | The rarity badge painted over the card name: 9 of 47 rare/epic names collided in the hand, 24 of 47 in the deck view | `client/index.html:1009` |
+| F-077 | fixed | career/visual | The `.cg-graduation` staged arrival held back `#cg-reveal`, which three of its four screens do not have | `client/index.html:636` |
+| F-078 | fixed | match/visual | The full-time card was `--good` green for every result — a 0-5 defeat read as a victory screen, against the sheet's own semantic-colour law | `client/index.html:1730` |
+| F-079 | fixed | economy/visual | `#me-coins` had no CSS rule, so the hub coin balance rendered at the 22px body default beside readouts at 17px and 15px, on its own line | `client/index.html:475` |

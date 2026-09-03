@@ -472,6 +472,10 @@
       #me-name { font-family: var(--display); font-size: 17px; color: var(--good); }
       #me-rating { font-family: var(--body); font-size: 17px; color: var(--warn); }
       #me-prestige { font-family: var(--body); font-size: 15px; color: #d8c078; border: 1px solid #6a5a2a; border-radius: 5px; padding: 2px 8px; cursor: pointer; }
+      /* The coin balance had no rule at all, so it fell to the 22px VT323 body default and `display:block`
+         — a third larger than every readout beside it (17/17/15px) and on its own line instead of in the
+         row. It is the number the player checks before every purchase in the game. */
+      #me-coins { display: inline-flex; align-items: center; gap: 5px; font-family: var(--body); font-size: 17px; color: var(--warn); font-variant-numeric: tabular-nums; }
       .hub-actions { margin-left: auto; display: flex; gap: 10px; flex-wrap: wrap; }
       #skip { background: var(--pink); }
       #gaffers-diary { display: flex; align-items: flex-start; gap: 10px; font-family: var(--body); font-size: 14px;
@@ -633,11 +637,16 @@
         pointer-events: none; background: radial-gradient(ellipse at center, rgba(240,217,138,0.5), transparent 70%);
         animation: pcBurst 0.9s ease-out 0.62s both; }
       /* The button is the prize the screen opens — held back until the rest has landed, then it shimmers. */
-      .cg-graduation #cg-reveal { animation: ftpop 0.4s ease-out 1.05s both; }
+      /* The block's own comment says it covers graduation, the retirement send-off, the heir choice and the
+         manager handoff, and that "the button is the prize the screen opens — held back until the rest has
+         landed". `#cg-reveal` exists on the graduation screen alone; the other three name their CTAs
+         differently, so on the handoff the Take-the-reins button was simply present from t=0 while the
+         prose staged in around it — and the ghost button beneath it faded in a quarter-second later. */
+      .cg-graduation #cg-reveal, .cg-graduation button.primary { animation: ftpop 0.4s ease-out 1.05s both; }
       .cg-graduation button.ghost { animation: narrfade 0.4s ease 1.25s both; }
       @media (prefers-reduced-motion: reduce) {
         .cg-graduation .cg-grad-title, .cg-graduation .cg-epilogue, .cg-graduation .cg-grad-windfall,
-        .cg-graduation #cg-reveal, .cg-graduation button.ghost { animation: none; opacity: 1; }
+        .cg-graduation #cg-reveal, .cg-graduation button.primary, .cg-graduation button.ghost { animation: none; opacity: 1; }
         .cg-graduation .cg-grad-windfall::after { animation: none; opacity: 0; }
       }
       .cg-narrate { padding: 12px 16px; border-radius: 9px; margin-bottom: 12px; font-size: 15px; line-height: 1.5; font-style: italic;
@@ -1006,7 +1015,13 @@
       .cg-card.rare { border-color: color-mix(in srgb, var(--tc, #5aa9e6) 55%, #5aa9e6); }
       .cg-card.epic { border-color: #c77dff; box-shadow: 0 0 16px -2px rgba(199,125,255,0.4); }
       .cg-card.epic::after { background: radial-gradient(120% 70% at 15% 0%, rgba(199,125,255,0.16), transparent 62%), linear-gradient(115deg, transparent 40%, rgba(255,255,255,0.06) 50%, transparent 60%); }
-      .cg-card .cg-cname { font-family: var(--body); font-weight: 700; font-size: 16px; margin-bottom: 6px; line-height: 1.28; padding-left: 4px; }
+      /* padding-right reserves the rarity badge's gutter. The badge is absolutely positioned at right:10px
+         and is 29.6px wide, opaque and above the content — and the name had no right padding, so its first
+         line ran the full content box and straight under it: 9 of 47 rare/epic names collide in the 172px
+         hand and draft views, 24 of 47 in the 140px deck view, which is the screen for reading the deck.
+         Sized to the badge and no more — every extra pixel narrows EVERY line, not just the badge's. */
+      .cg-card .cg-cname { font-family: var(--body); font-weight: 700; font-size: 16px; margin-bottom: 6px; line-height: 1.28; padding-left: 4px; padding-right: 28px; }
+      .cg-cards.deck .cg-card .cg-cname { padding-right: 32px; } /* narrower card, same badge, so a wider gutter */
       .cg-card .cg-cdescr { font-size: 12.5px; line-height: 1.42; color: #b3bcd0; margin-bottom: 9px; flex: 1; padding-left: 4px; }
       .cg-card .cg-ctags { display: flex; gap: 5px; flex-wrap: wrap; padding-left: 4px; }
       .cg-card .cg-ctags-masked { opacity: .55; font-size: 15px; padding-left: 4px; } /* challenge mode: stat hidden (#3) */
@@ -1074,7 +1089,13 @@
       .legend-card .lc-note { font-size: 12px; color: #9c9; font-style: italic; }
       .cg-profile { padding: 10px 13px; border-radius: 9px; background: #14142a; border: 1px solid #2c2c50; margin-bottom: 12px; }
       .cgp-top { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 13px; color: #ced6ef; }
-      .cgp-role { font-family: var(--body); font-size: 17px; padding: 2px 8px; border-radius: 5px; background: #2a2a48; }
+      /* The dark plate set here is overridden by the global `.role-GK/DF/MF/FW` background rules 380 lines
+         below, which have equal specificity and come later — they were written for the 36px lineup chip.
+         The text colour was still inherited from `.cgp-top` (#ced6ef), so the two letters sat on bright
+         green/amber/orange/blue at 1.20-2.29:1: below even the 3:1 non-text floor, on the headline answer
+         to "what is he becoming?". Two sibling chips that take the same global backgrounds already set
+         #0a0a16 for exactly this reason (.trial .tr-role, table.squad td.pos). */
+      .cgp-role { font-family: var(--body); font-size: 17px; padding: 2px 8px; border-radius: 5px; background: #2a2a48; color: #0a0a16; font-weight: bold; }
       .cgp-ovr { font-family: var(--display); font-size: 14px; } .cgp-ovr i { color: #e6c76a; font-style: normal; font-size: 12px; }
       .cgp-pers { color: #bfa8e6; } .cgp-meta { color: #9aa; }
       .cgp-stats { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 8px; font-size: 13px; color: #cbd; }
@@ -1727,16 +1748,23 @@
       /* post-match summary card */
       #fulltime-card { position: fixed; inset: 0; z-index: 40; display: flex; align-items: center; justify-content: center;
         background: rgba(4,4,12,0.82); cursor: pointer; animation: ftfade 0.25s ease-out; }
-      #fulltime-card .ft-inner { width: 520px; max-width: 92vw; background: var(--panel); border: 3px solid var(--good);
-        box-shadow: 0 0 0 2px #000, 0 0 26px rgba(57,255,158,0.35), 8px 8px 0 rgba(0,0,0,0.5);
+      /* NEUTRAL, because a scoreline is not "good". The sheet states the law itself a hundred lines down —
+         "SEMANTIC colour, which is reserved and never decorative: green means good, red means bad" — and a
+         later pass rewrote `#hud .score` to a neutral broadcast plate for exactly this reason. It never
+         touched the full-time card, which stayed green for every result: a 0-5 home defeat was announced
+         inside a glowing green border, in success green, with the opposition's hat-trick scorer
+         celebrated in a solid green Player-of-the-Match chip. It read as a victory screen. */
+      #fulltime-card .ft-inner { width: 520px; max-width: 92vw; background: var(--panel); border: 3px solid var(--rule);
+        box-shadow: 0 0 0 2px #000, 0 0 26px rgba(0,0,0,0.55), 8px 8px 0 rgba(0,0,0,0.5);
         padding: 22px 24px 24px; text-align: center; animation: ftpop 0.35s ease-out; }
-      #fulltime-card .ft-head { font-family: var(--display); font-size: 18px; color: var(--good);
-        text-shadow: 0 2px 0 #000, 0 0 12px color-mix(in srgb, var(--good) 45%, transparent); margin-bottom: 16px; }
+      #fulltime-card .ft-head { font-family: var(--display); font-size: 18px; color: var(--text);
+        text-shadow: 0 2px 0 #000; margin-bottom: 16px; }
       #fulltime-card .ft-teams { display: flex; align-items: center; justify-content: center; gap: 16px; margin-bottom: 6px; }
       #fulltime-card .ft-team { font-size: 26px; color: #fff; flex: 1; }
       #fulltime-card .ft-team.home { text-align: right; } #fulltime-card .ft-team.away { text-align: left; }
-      #fulltime-card #ft-score { font-family: var(--display); font-size: 31px; letter-spacing: 2px; color: var(--good);
-        background: #04140b; border: 2px solid var(--good); padding: 8px 14px; text-shadow: 0 0 8px var(--good); white-space: nowrap; }
+      #fulltime-card #ft-score { font-family: var(--display); font-size: 31px; letter-spacing: 2px; color: #fff;
+        background: rgba(0,0,0,0.45); border: 1px solid var(--rule); padding: 8px 14px; white-space: nowrap;
+        font-variant-numeric: tabular-nums; }
       #fulltime-card .ft-stats { margin-top: 18px; display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px 12px; align-items: center; }
       #fulltime-card .ft-stats .v { font-size: 26px; color: var(--cyan); }
       #fulltime-card .ft-stats .v.home { text-align: right; } #fulltime-card .ft-stats .v.away { text-align: left; }
@@ -1744,7 +1772,8 @@
       #fulltime-card .ft-tap { font-family: var(--body); font-size: 14px; color: var(--muted); margin-top: 18px; }
       #ft-report { font-family: var(--body); font-size: 15px; line-height: 1.5; color: #cdd3e6; margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--line); text-align: left; }
       #ft-report .scorers { color: var(--muted); font-size: 14px; margin-top: 6px; }
-      #ft-potm { font-family: var(--body); font-size: 15px; color: #10210f; background: var(--good); border-radius: 6px; padding: 8px 12px; margin-top: 12px; font-weight: bold; }
+      /* Player of the Match can be the opposition's hat-trick scorer, so it is not a success chip either. */
+      #ft-potm { font-family: var(--body); font-size: 15px; color: var(--text); background: var(--plate-2); border: 1px solid var(--rule); border-radius: 6px; padding: 8px 12px; margin-top: 12px; font-weight: bold; }
       #ft-potm .potm-lbl { font-family: var(--display); font-size: 11px; letter-spacing: 1px; display: block; opacity: 0.8; }
       @keyframes ftfade { from { opacity: 0; } to { opacity: 1; } }
       @keyframes ftpop { 0% { opacity: 0; transform: scale(0.7); } 60% { transform: scale(1.05); } 100% { opacity: 1; transform: scale(1); } }

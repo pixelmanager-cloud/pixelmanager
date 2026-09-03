@@ -111,5 +111,19 @@ for (const cls of ['cg-cname', 'cg-cdescr']) {
      `.${cls} reaches the heir cards, which emit it (every rule for it demands an ancestor)`);
 }
 
+// ── 3. IDs, which the class scan cannot see ───────────────────────────────────────────────────────────
+// `#me-coins` — the hub's coin balance, the number the player checks before every purchase — had no rule
+// anywhere, so it rendered at the 22px body default beside readouts at 17px and 15px, and as a block on its
+// own line. An ID is a styling hook exactly like a class; nothing was looking at them.
+const ids = new Set<string>();
+for (const m of main.matchAll(/id="([a-z][a-z0-9-]{2,})"/gi)) ids.add(m[1]);
+for (const m of html.matchAll(/id="([a-z][a-z0-9-]{2,})"/gi)) ids.add(m[1]);
+// REPORTED, NOT ASSERTED — deliberately. Most unstyled ids are legitimate JS handles, and I cannot tell
+// those apart from a readout that needs a rule without knowing whether the element renders visible text. An
+// assertion I cannot make honestly would be a green light that means nothing, which is the failure mode
+// this whole probe exists to catch. The number is printed so a person can look when it moves.
+const styledIds = [...ids].filter((i) => cssWithComments.includes(`#${i}`));
+console.log(`  ..   ${ids.size} id(s) in the markup, ${styledIds.length} referenced by the stylesheet (informational — not asserted)`);
+
 console.log(fails ? `\n✗ ${fails} — markup emits a hook that cannot style anything` : '\n✓ every emitted class can reach a rule');
 if (fails) process.exitCode = 1;
