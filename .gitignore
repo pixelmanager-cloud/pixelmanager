@@ -41,3 +41,6 @@ tools/.fal_key
 # The rendered trailer score — derived from the licensed OGGs by tools/trailer/score.mjs
 store/steam/trailer/*.wav
 store/steam/trailer/*.m4a
+
+# Audit agents render the stylesheet by copying index.html into the served tree. Never ship those.
+client/public/*.html
