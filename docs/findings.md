@@ -53,3 +53,27 @@ it — kept so it is not re-raised).
 | F-040 | fixed | content/correctness | `contract_renewed` passed the literal 'another spell' into an `{n}` duration slot, producing 'signs on for another another spell' across ~20 lines | `client/src/main.ts:1830` |
 | F-041 | fixed | content/correctness | `personCtx` computed `seasonsAtClub` by subtracting MgrState.season from a profile-season stamp, so from generation 2 every squad player narrated as a newcomer | `client/src/main.ts:3552` |
 | F-042 | fixed | economy/correctness | `facilityToDowngrade` picked the highest-LEVEL facility while its docstring promised the most expensive to run — the club shed the wrong department and recovered less | `shared/src/facilities.ts:255` |
+| F-043 | fixed | manager/correctness | The four season-rollover climb events passed `person: undefined`, so 30 person-tiered promotion/relegation/title lines were unreachable — plus a fifth site, `scout_dispatched` | `client/src/main.ts:2735` |
+| F-044 | fixed | economy/correctness | Facility cards priced every level at weight 1 while the club is billed with UPKEEP_WEIGHT — a L10 women's team advertised 567c and was billed 255c | `client/src/api.ts:1600` |
+| F-045 | fixed | content/correctness | The Gaffer's Diary hard-coded a blank opponent, so its two highest-weighted storylines (13 lines) could never be selected | `client/src/main.ts:1288` |
+| F-046 | fixed | save/correctness | `handoffKey` resolved the same key for the founder and the first heir, so deferring one offer suppressed the other | `client/src/main.ts:3947` |
+| F-047 | fixed | ui/correctness | The Continental Cup toasted a hard-coded +1,800c while crediting at least 2,280c | `client/src/main.ts:2255` |
+| F-048 | fixed | content/correctness | Three `near_miss` lines described play-offs and a runners-up finish in a pyramid that has neither, on a branch that can only be 3rd or 4th | `shared/src/manager/pack_1.ts` |
+| F-049 | fixed | ui/correctness | `.tac-toggle` was emitted as a styling hook and defined nowhere, so both instruction checkboxes inherited a caption-above-a-select column layout | `client/index.html:1398` |
+| F-050 | fixed | economy/correctness | The loyalty discount existed in three copies; the two that ran were inlined, while `staking.ts`'s version sat unimported naming the exact call sites ignoring it | `shared/src/contracts.ts:65` |
+| F-051 | fixed | dynasty/ux-friction | Taking the reins while already managing silently wiped the live season, sponsor and cup run and swapped the bloodline star — no confirm, and the on-screen note pushed toward the button | `client/src/main.ts:4006` |
+| F-052 | fixed | manager/ux-friction | The squad report's ✕ destroyed the only UI that can renew expiring contracts, with no confirm and no way back | `client/src/main.ts:2094` |
+| F-053 | fixed | economy/ux-friction | Players force-sold at 60% to cover an unpayable wage bill were reported as contract expiries — "their deals ran out and weren't renewed" | `client/src/api.ts:1166` |
+| F-054 | fixed | match/ux-friction | The pause menu's "▶ Resume" restored the prior state, so it did not resume a match paused with the spacebar | `client/src/main.ts:747` |
+| F-055 | fixed | match/ux-friction | The full-time card auto-dismissed after 9s while instructing "▶ Tap to continue"; the match report exists nowhere else | `client/src/main.ts:5336` |
+| F-056 | fixed | ui/ux-friction | Settings neither paused the match nor blocked the match shortcuts, and Pause → Settings actively un-paused | `client/src/main.ts:578` |
+| F-057 | fixed | ui/ux-friction | The season prize money was the first of five toasts into a single 2.2s slot with no queue, and had no feed fallback | `client/src/main.ts:2617` |
+| F-058 | fixed | save/ux-friction | `refreshHubPlayer`'s early return fired on any truthy starId, so the eviction-recovery block behind `!mgr.starId` could never run | `client/src/main.ts:1361` |
+| F-059 | fixed | audio/ux-friction | The trophy fanfare sat on the MUSIC bus, so "Mute sound effects" left it playing and "Mute music" silenced it — both switches did the opposite of their label | `client/src/audio.ts:116` |
+| F-060 | fixed | audio/ux-friction | Winning a division below the top tier fired the triumph sting and chime TWICE in one synchronous tick — both branches match, with no return between them | `client/src/main.ts:2795` |
+| F-061 | fixed | audio/ux-friction | The career screen keyed its music on `momentKind === 'life'`, true for EVERY social turn, so the crisis pool played over routine turns — and over nothing else for the first 28 | `client/src/main.ts:4057` |
+| F-062 | fixed | ui/accessibility | Settings and How To Play were the only overlays never converted to `dialogify`: no focus move, no Tab trap, the page behind them reachable | `client/src/main.ts:578` |
+| F-063 | fixed | career/ux-friction | The financial-offer tile printed a negative branch for greed and form but not marketability, so the develop option's only cost was invisible | `client/src/main.ts:4134` |
+| F-064 | fixed | ui/ux-friction | The hire-a-coach confirmation printed "He stays with the club for good." twice in the same dialog | `client/src/main.ts:2107` |
+| F-065 | fixed | ui/ux-friction | Three persistent coin readouts printed raw integers beside copy that formats the same value with thousands separators | `client/src/main.ts:1314` |
+| F-066 | fixed | career/ux-friction | The summer focus tile said choosing it "ends pre-season" with four-plus pre-season screens still to come | `client/src/main.ts:4184` |

@@ -112,14 +112,23 @@ class AudioManager {
    *  also 3.65 seconds long against 37-188s for every other file: a fanfare, not a bed. Looping it would
    *  have replaced silence with a jingle repeating until the player changed screens.
    */
+  //  ON THE SFX BUS, which is what it is. This gated on the MUSIC mute and mixed at the MUSIC volume, so
+  //  "Mute sound effects" — whose own settings copy promises it covers "the reward chimes on big
+  //  moments" — left the trophy fanfare playing, and "Mute music", which promises only to "silence the
+  //  soundtrack", silenced it. Both switches did the opposite of what they say. Its sibling chime() has
+  //  always been on the SFX bus, and the two fire together on every celebration, so one of them obeyed
+  //  the player and the other did not.
+  //
+  //  Deliberately NOT pushed onto `tracked`: that list is what the crossfade pauses, and being killed
+  //  by the next screen's crossfade is the exact bug the note above records fixing.
   sting(context: MusicContext): void {
-    if (!this.unlocked || this.settings.muted) return;
+    if (!this.unlocked || this.settings.sfxMuted) return;
     const pool = MANIFEST[context];
     if (!pool || pool.length === 0) return;
     try {
       const a = new Audio(pool[Math.floor(frac01() * pool.length)]);
       a.loop = false;
-      a.volume = this.effectiveVolume();
+      a.volume = this.settings.sfxMuted ? 0 : this.settings.sfxVolume;
       a.addEventListener('ended', () => { try { a.pause(); } catch { /* done */ } });
       void a.play().catch(() => { /* silent, like every other load here */ });
     } catch { /* never let a cue break a celebration */ }

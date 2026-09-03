@@ -618,8 +618,11 @@ class Game {
     // scoreline.
     const wasRunning = this.running;
     this.running = false;
-    const dclose = this.dialogify(ov);
-    const close = () => { this.running = wasRunning; dclose(); ov.remove(); document.removeEventListener('keydown', onEsc); }; // clean up the ESC listener on EVERY close path (PT-81)
+    // ONE close path. dialogify captures Escape (capture phase, ahead of any bubble listener), removes the
+    // overlay and runs its onClose — so the clock has to be restored THERE. A hand-rolled Escape handler
+    // alongside it worked only because the bubble listener happened to fire afterwards and repair state
+    // dialogify had already left behind.
+    const close = this.dialogify(ov, () => { this.running = wasRunning; });
     ov.addEventListener('click', (e) => { if (e.target === ov) close(); }); // click backdrop to dismiss
     ov.querySelector('.set-x')!.addEventListener('click', close);
     ov.querySelector('#set-credits')!.addEventListener('click', () => { close(); this.showCredits(); });
@@ -647,8 +650,6 @@ class Game {
     wireSw(byKey('crt'), () => { this.prefs.crt = !this.prefs.crt; this.savePrefs(); this.applyPrefs(); flip(byKey('crt'), this.prefs.crt); });
     ov.querySelector('#set-help')?.addEventListener('click', () => { close(); this.openHowToPlay(); });
     wireSw(byKey('hidestats'), () => { this.prefs.hideCardStats = !this.prefs.hideCardStats; this.savePrefs(); flip(byKey('hidestats'), this.prefs.hideCardStats); if (this.lastCareerState) this.renderCareer(this.lastCareerState); }); // re-render so the current hand masks/unmasks live (#3)
-    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); } };
-    document.addEventListener('keydown', onEsc);
   }
 
   /** A read-only, always-available copy of both onboarding explainers — reached from Settings, so
@@ -665,11 +666,11 @@ class Game {
       + `<div class="set-head"><div class="tt-title">📖 HOW TO PLAY</div><button class="set-x" aria-label="Close">✕</button></div>`
       + body + `</div>`;
     document.body.appendChild(ov);
-    const close = () => { ov.remove(); document.removeEventListener('keydown', onEsc); };
+    // The other overlay that never got the shared helper: no focus move, no Tab trap, and the screen behind
+    // it stayed reachable by keyboard. dialogify exists for exactly this, and every other dialog uses it.
+    const close = this.dialogify(ov);
     ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
     ov.querySelector('.set-x')!.addEventListener('click', close);
-    const onEsc = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
-    document.addEventListener('keydown', onEsc);
   }
 
   private syncMuteBtn() { const at = $('audio-toggle'); at.innerHTML = audio.isMuted() ? ICON_MUTED : ICON_SPEAKER; at.classList.toggle('muted', audio.isMuted()); }
@@ -1355,7 +1356,7 @@ class Game {
     })();
     $('me-rating').textContent = ''; // PvP ELO — hidden: the game is single-player (multiplayer removed, see direction.md)
     if (this.account.coins != null) {
-      $('me-coins').innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${this.account.coins}`;
+      $('me-coins').innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${this.account.coins.toLocaleString()}`;
       $('hub-club-sub').textContent = `💰 ${this.account.coins.toLocaleString()} to invest — facilities, youth & scouting. Every level costs upkeep each season.`;
     }
     void this.refreshPrestige();
@@ -2193,7 +2194,7 @@ class Game {
         `Hire <b>${st?.name ?? 'this coach'}</b> for <b>💰 ${(st?.cost ?? 0).toLocaleString()}c</b>?`
         + (st?.desc ? `<br><span class="cf-sub">${st.desc}</span>` : '')
         + (EFFECT[id] ? `<br><span class="cf-sub">▸ ${EFFECT[id]} He stays with the club for good.</span>` : '')
-        + `<br><span class="cf-sub">You have ${(this.account?.coins ?? 0).toLocaleString()}c. He stays with the club for good.</span>`,
+        + `<br><span class="cf-sub">You have ${(this.account?.coins ?? 0).toLocaleString()}c.</span>`,
         `Hire · 💰 ${(st?.cost ?? 0).toLocaleString()}c`, () => this.hireStaff(id));
     }));
     $('season-body').querySelectorAll('[data-sponsor]').forEach((b) => b.addEventListener('click', () => this.chooseSponsor((b as HTMLElement).dataset.sponsor!)));
@@ -2792,7 +2793,11 @@ class Game {
     const newTier = promoted ? tier - 1 : relegated ? tier + 1 : tier;
     if (newTier !== tier) this.setClubTier(newTier);
     if (promoted) {
-      toast(`⬆️ PROMOTED to ${tierName(newTier)}!`); audio.sting('triumph'); audio.chime('triumph');
+      // The champions cue a few lines up already fired for a 1st-place finish, and there is no return
+      // between them — so going up AS CHAMPIONS, which is how most promotions happen, played the sting and
+      // the chime twice in the same synchronous tick, on the best moment a lower-division season has.
+      toast(`⬆️ PROMOTED to ${tierName(newTier)}!`);
+      if (t.pos !== 1) { audio.sting('triumph'); audio.chime('triumph'); }
       // STAMPED WITH THE SEASON THE PLAYER IS ABOUT TO SEE. These four are written during the rollover,
       // BEFORE `saveMgr` increments the season a few lines below, and `seasonFeedHtml` shows only entries
       // matching the CURRENT season — so promotion, relegation, the title and the near-miss were written to
@@ -3202,7 +3207,7 @@ class Game {
 
   private renderFacilities(d: { coins: number; facilities: import('./api').Facility[]; upkeep?: number }) {
     this.account.coins = d.coins;
-    $('club-coins').innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${d.coins}`;
+    $('club-coins').innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${d.coins.toLocaleString()}`;
     // THE RUNNING TOTAL, ALWAYS ON SCREEN. Upkeep is a decision only if you can see it accumulating as you
     // buy — a bill that appears once a season, after the spending, is a punishment instead.
     const upEl = document.getElementById('fac-upkeep');
@@ -4195,7 +4200,11 @@ class Game {
     // the player simply gets to finish the career he was promised. (PT-1406)
     if (s.handoff && this.handoffDeferredAt(s.prospectId, (s as any).generation ?? 0) < s.turn) { this.renderHandoff(s); return; }
     // MUSIC follows the moment: a shock call-up gets tension, a life-event gets drama, else the career loop.
-    audio.play(s.callupMoment ? 'tension' : (s.momentKind === 'life' || s.lifeEvent) ? 'drama' : 'career');
+    // `momentKind` is 'life' for EVERY social scenario, life event or not — a passing word with a team-mate
+    // included — and social is one turn in five. So the crisis pool played over routine turns; and in the
+    // first 28 turns, where no life event can fire at all, it played over NOTHING BUT routine turns.
+    // `lifeEvent` is the flag that means what the comment above says.
+    audio.play(s.callupMoment ? 'tension' : s.lifeEvent ? 'drama' : 'career');
     const pct = Math.round((s.turn / s.totalTurns) * 100);
     // re-theme the whole view for this life stage (accent + backdrop + scene banner)
     const th = CHAPTER_THEME[s.chapter] ?? CHAPTER_THEME.Grassroots;
@@ -4272,7 +4281,7 @@ class Game {
     } else if (s.phase === 'offer' && s.offers) {
       body = `<div class="cg-prompt">A decision off the pitch — money now, or development?</div>`
         + s.offers.map((o) => `<div class="cg-offer" data-act="offer" data-id="${o.id}"><div class="cg-cname">💷 ${o.name}</div><div class="cg-cdesc">${o.desc}</div>`
-          + `<div class="cg-effs">${o.earn > 0 ? `+${o.earn.toLocaleString()}c ` : ''}${o.greed > 0 ? '· greedier ' : o.greed < 0 ? '· more loyal ' : ''}${o.market > 0 ? '· more famous ' : ''}${o.form > 0 ? '· sharper' : o.form < 0 ? '· distracted' : ''}</div></div>`).join('');
+          + `<div class="cg-effs">${o.earn > 0 ? `+${o.earn.toLocaleString()}c ` : ''}${o.greed > 0 ? '· greedier ' : o.greed < 0 ? '· more loyal ' : ''}${o.market > 0 ? '· more famous ' : o.market < 0 ? '· out of the spotlight ' : ''}${o.form > 0 ? '· sharper' : o.form < 0 ? '· distracted' : ''}</div></div>`).join('');
     } else if (s.phase === 'focus' && s.focus) {
       // THE SAME METER, TWO NAMES ON ONE SCREEN. METER_ICON/METER_NAME are flat tables with no stage
       // awareness, but career.ts relabels this key as the career matures — `authority` is 🧑‍🏫 Coach as a
@@ -4321,8 +4330,8 @@ class Game {
       } else {
         // STEP 2 — the summer focus (or the side activity, or a chapter with no shop)
         const focusPrompt = s.side
-          ? '🤝 <b>One more thing</b> before pre-season — a smaller side activity, if you fancy it:'
-          : '🌅 <b>Choose ONE summer focus</b> — this <b>ends pre-season</b> and starts the next chapter.';
+          ? '🤝 <b>One more thing</b> this pre-season — a smaller side activity, if you fancy it:'
+          : '🌅 <b>Choose ONE summer focus</b> — the first of a few pre-season decisions.';
         const backLink = hasShop ? `<button id="cg-summer-back" class="cg-linkbtn">← back to spending (💷 ${budget.toLocaleString()}c left)</button>` : '';
         body = `<div class="cg-prompt">${focusPrompt}</div>` + backLink + legend + focusTiles;
       }
@@ -4607,7 +4616,7 @@ class Game {
       this.account.coins = d.coins;
       $('trips-per').textContent = String(d.tripsPerSeason);
       $('trips-used').textContent = String(d.tripsUsed);
-      $('scout-coins').innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${d.coins}`;
+      $('scout-coins').innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${d.coins.toLocaleString()}`;
       const haveTrips = d.tripsLeft > 0;
       // The loanee cap is the OTHER budget, and it used to be invisible here: the trip budget runs to 7 a
       // season at a maxed HQ against a cap of 3, and free walk-up trialists eat the same slots. A player
