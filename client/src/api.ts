@@ -1112,6 +1112,12 @@ export const api = {
     const unpaidWages = Math.max(0, Math.round(roll.wageBill) - charged);
     let wageCut: FacilityKey[] = [], wageSalvage = 0;
     const forcedOut: Player[] = [];
+    // WITH THE PRICE HE WENT FOR. These men were folded into `departed` and reported to the player as
+    // contract expiries — "their deals ran out and weren't renewed" — which is not what happened: the
+    // club could not pay its wages and sold them at 60% of value to cover the bill. The player was told
+    // an untruth about the one event that most needed explaining, and given no figure for what the fire
+    // sale actually raised.
+    const forcedSales: Array<{ p: Player; fee: number }> = [];
     if (unpaidWages > 0) {
       const model = getActiveModel();
       const dis = applyDisrepair(model.facilities, Math.max(0, seasonUpkeep(model.facilities) - unpaidWages));
@@ -1139,6 +1145,7 @@ export const api = {
           if (!p) break;
           const distressed = Math.round(squadSaleValue(overall(p), p.age ?? 26) * 0.6); // forced sale, forced price
           forcedOut.push(p);
+          forcedSales.push({ p, fee: distressed });
           // THE SALE PAYS THE WAGES. `owed` was decremented here and then never read again, while every
           // forced sale credited the club the full proceeds -- so a club that could not pay its bill sold
           // players, kept every coin, and had the shortfall written off. Being insolvent was strictly more
@@ -1163,7 +1170,8 @@ export const api = {
       wageBill: Math.round(roll.wageBill), charged, unpaid: Math.round(roll.wageBill) - charged,
       disrepair: wageCut, salvage: wageSalvage,
       retired: roll.retired.map(lite),
-      departed: [...roll.departed, ...forcedOut].map(lite),
+      departed: roll.departed.map(lite),
+      sold: forcedSales.map(({ p, fee }) => ({ ...lite(p), fee })),
       intake: roll.intake.map(lite),
       expiring: roll.expiring.map((p) => ({ ...lite(p), renewCost: Math.round(squadRenewCost(overall(p), season) * moraleEffects(p.morale ?? 65).extendMult), morale: p.morale ?? 65, moraleLabel: moraleEffects(p.morale ?? 65).label })),
       // the season's human headlines — who arrived, who faded, who's being circled (Phase 4)

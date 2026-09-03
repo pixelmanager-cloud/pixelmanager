@@ -608,7 +608,18 @@ class Game {
       + `<div class="set-hint">The people whose work is in the game.</div></div>`
       + `</div>`;
     document.body.appendChild(ov);
-    const close = () => { ov.remove(); document.removeEventListener('keydown', onEsc); }; // clean up the ESC listener on EVERY close path (PT-81)
+    // SETTINGS IS A MODAL, AND A MATCH BEHIND IT MUST STOP. openPauseMenu freezes the clock and marks the
+    // page inert for exactly the reason its own comment gives — "at x12, reading the three options for
+    // forty-five seconds played out the rest of the match behind the dialog" — and this dialog, reachable
+    // from the same place, did neither. The match shortcut handler gates only on `inertDepth > 0`, so with
+    // Settings open the speed keys, the spacebar and 's' (skip to the end) all still fired, and focus
+    // never moved off the button that opened it. Worse, Pause -> Settings closed the pause menu first,
+    // which RESTARTED the match: the player went to the settings screen and came back to a different
+    // scoreline.
+    const wasRunning = this.running;
+    this.running = false;
+    const dclose = this.dialogify(ov);
+    const close = () => { this.running = wasRunning; dclose(); ov.remove(); document.removeEventListener('keydown', onEsc); }; // clean up the ESC listener on EVERY close path (PT-81)
     ov.addEventListener('click', (e) => { if (e.target === ov) close(); }); // click backdrop to dismiss
     ov.querySelector('.set-x')!.addEventListener('click', close);
     ov.querySelector('#set-credits')!.addEventListener('click', () => { close(); this.showCredits(); });
@@ -744,8 +755,15 @@ class Game {
     }; // clean up the ESC listener on every close path (PT-81)
     ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
     ov.querySelector('.set-x')!.addEventListener('click', close);
-    ov.querySelector('#pm-resume')!.addEventListener('click', close);
-    ov.querySelector('#pm-settings')!.addEventListener('click', () => { close(); this.openSettings(); });
+    // RESUME MEANS RESUME. `close()` restores `wasRunning`, which is correct for Escape, the ✕ and the
+    // backdrop — they mean "put it back how it was". It is wrong for the one button labelled
+    // "▶ Resume / Back to the game": a player who paused with the spacebar and then opened this menu
+    // had wasRunning === false, so pressing Resume wrote false back and the match stayed frozen under a
+    // heading reading ⏸ PAUSED. The button is also pre-focused, so Enter did the same thing.
+    ov.querySelector('#pm-resume')!.addEventListener('click', () => { this.running = true; close(); });
+    // Close the pause menu WITHOUT letting it restore `running` on the way out, or stepping into Settings
+    // restarts the match the player just paused. Settings now holds its own pause for as long as it is up.
+    ov.querySelector('#pm-settings')!.addEventListener('click', () => { this.running = false; close(); this.running = false; this.openSettings(); });
     ov.querySelector('#pm-quit')!.addEventListener('click', () => {
       const midMatch = !$('matchwrap').classList.contains('hidden') && this.engine && !this.engine.state.finished;
       close();
@@ -1358,7 +1376,12 @@ class Game {
     const el = $('hub-player');
     // MANAGER PHASE: you've handed off — the home shows the managed star + Continue the season.
     const mgr = this.loadMgr();
-    if (mgr.starId) {
+    // A REBUILT STATE IS NOT A COMPLETE ONE. rebuiltMgrState() sets starId/starName/starGen but not
+    // starAge, retireAge or temper — and this early return fired on any truthy starId, so the recovery
+    // block below (the only code that fills those in, persists them and tells the player their save was
+    // rebuilt) had a `!mgr.starId` condition that could never be true. An evicted save came back
+    // half-built, in silence, with the star's age missing from the very line rendered here.
+    if (mgr.starId && mgr.starAge != null) {
       const seed = this.leagueSeed();
       const total = seasonFixtures(this.club?.name ?? "club", seed, this.clubTier()).length;
       const md = Math.min(mgr.results.length, total);
@@ -1822,6 +1845,19 @@ class Game {
       rows.push(`<div class="sq-row ret"><span class="sq-lbl">🚪 Left</span><span class="sq-list">`
         + r.departed.map((x: any) => nm(x)).join(' · ') + ` — their deals ran out and weren't renewed.</span></div>`);
     }
+    if (r.sold?.length) {
+      // SOLD TO PAY THE WAGES IS NOT A CONTRACT EXPIRY. These were merged into `departed` and narrated
+      // with 'contract_expired', so the club's most alarming financial event — a forced fire sale at 60%
+      // of value — reached the player as a routine end-of-deal note about men whose contracts were fine.
+      for (const x of r.sold as any[]) {
+        const sp = this.club?.players.find((q) => q.id === x.id);
+        this.feedOnce(`sold:${m0.season}:${x.id}`, 'transfer_out', '💸', sp ? this.personCtx(sp) : { name: x.name, seasonsAtClub: 0, age: x.age }, { fee: x.fee });
+      }
+      const raised = (r.sold as any[]).reduce((n: number, x: any) => n + (Number(x.fee) || 0), 0);
+      rows.push(`<div class="sq-row down"><span class="sq-lbl">💸 Sold</span><span class="sq-list">`
+        + (r.sold as any[]).map((x: any) => `${nm(x)} <b>${(Number(x.fee) || 0).toLocaleString()}c</b>`).join(' · ')
+        + ` — sold to cover the wage bill, raising <b>${raised.toLocaleString()}c</b>. A forced sale fetches about 60% of a player's value.</span></div>`);
+    }
     if (r.intake?.length) this.feedOnce(`intake:${m0.season}`, 'youth_intake', '🌱', undefined, { n: r.intake.length });
     if (r.intake?.length) {
       rows.push(`<div class="sq-row up"><span class="sq-lbl">🌱 Academy</span><span class="sq-list">`
@@ -2091,7 +2127,22 @@ class Game {
     $('season-body').querySelectorAll('[data-arcchoice]').forEach((el) =>
       el.addEventListener('click', () => this.resolveArcChoice((el as HTMLElement).dataset.arcchoice!)));
     ($('mgr-help-x') as any)?.addEventListener('click', () => { localStorage.setItem(this.onbKey('fm_mgr_help_done'), '1'); ($('mgr-help') as any)?.remove(); });
-    document.getElementById('sq-report-x')?.addEventListener('click', () => { this.pendingSquadReport = null; const mm = this.loadMgr(); this.saveMgr({ ...mm, squadReport: null }); document.getElementById('sq-report')?.remove(); });
+    // THE ✕ IS DESTRUCTIVE, and said nothing. This panel is the only surface in the game that emits the
+    // data-renew / data-release buttons — a comment further down this file says so in as many words —
+    // and an unrenewed man walks at the rollover. So dismissing it with deals still up forfeited every
+    // one of them, permanently, with no warning and nothing to undo it. Ask first when there is
+    // something to lose; stay silent when there is not.
+    document.getElementById('sq-report-x')?.addEventListener('click', () => {
+      const wipe = () => { this.pendingSquadReport = null; const mm = this.loadMgr(); this.saveMgr({ ...mm, squadReport: null }); document.getElementById('sq-report')?.remove(); };
+      const up = (this.pendingSquadReport?.expiring ?? []) as any[];
+      if (!up.length) return wipe();
+      const who = up.slice(0, 3).map((x: any) => x.name).join(', ') + (up.length > 3 ? ` and ${up.length - 3} more` : '');
+      this.openConfirm(
+        `<b>${up.length} player${up.length === 1 ? '' : 's'}</b> still ${up.length === 1 ? 'has a deal' : 'have deals'} up — ${who}.`
+        + ` This report is the only place you can re-sign them, and it does not come back.`
+        + `<br><span class="cf-sub">Dismiss it and they leave at the end of the season.</span>`,
+        'Dismiss anyway', wipe);
+    });
     document.querySelectorAll<HTMLElement>('[data-renew]').forEach((b) => b.addEventListener('click', () => this.renewSquadFlow(b.dataset.renew!, b.dataset.name ?? 'him', Number(b.dataset.cost || 0))));
     document.querySelectorAll<HTMLElement>('[data-release]').forEach((b) => b.addEventListener('click', () => this.releaseSquadFlow(b.dataset.release!, b.dataset.name ?? 'him')));
     $('sf-cont-play')?.addEventListener('click', () => this.playContinentalTie());
@@ -2614,7 +2665,7 @@ class Game {
     // this season's W/D/L (fed to the lifetime manager record that powers prestige)
     const rec = (m.results ?? []).reduce((a, r) => { r.myGoals > r.oppGoals ? a.wins++ : r.myGoals < r.oppGoals ? a.losses++ : a.draws++; return a; }, { wins: 0, draws: 0, losses: 0 });
     // bank the season prize money (coins → reinvest in facilities), closing the manager economy loop
-    try { const r = await api.spSeasonReward({ arcCoins: m.arcCoins ?? 0, pos: t.pos, size: t.size, sponsor: m.sponsor, tier: this.clubTier(), starId: m.starId, promoted: t.pos <= 2 && this.clubTier() > 1, ...rec })   /* the same test the tier move below uses; it is computed after this call */; if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 Season prize: +${r.prize.toLocaleString()}c${r.sponsorBonus ? ` + 📣 ${r.sponsorBonus.toLocaleString()}c sponsor bonus` : ''}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ` · ${this.ordinal(t.pos)}`}`);
+    try { const r = await api.spSeasonReward({ arcCoins: m.arcCoins ?? 0, pos: t.pos, size: t.size, sponsor: m.sponsor, tier: this.clubTier(), starId: m.starId, promoted: t.pos <= 2 && this.clubTier() > 1, ...rec })   /* the same test the tier move below uses; it is computed after this call */; if (this.account?.coins != null) this.account.coins = r.coins; const prizeLine = `💰 Season prize: +${r.prize.toLocaleString()}c${r.sponsorBonus ? ` + 📣 ${r.sponsorBonus.toLocaleString()}c sponsor bonus` : ''}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ` · ${this.ordinal(t.pos)}`}`; toast(prizeLine); this.pushFeed('💰', `<b>Season prize</b> — <b>${r.prize.toLocaleString()}c</b>${r.sponsorBonus ? ` plus a <b>${r.sponsorBonus.toLocaleString()}c</b> sponsor bonus` : ''}, for finishing ${t.pos === 1 ? 'as champions' : this.ordinal(t.pos)}.`, m.season + 1);
       // WHAT THE CLUB EARNED BY BEING A CLUB, itemised. The facilities pay for the first time, and an income
       // the player cannot see is exactly the invisible effect this fix exists to end — so the gate, the
       // sponsors, the shop and the women's team each report what they brought in.
@@ -2624,6 +2675,11 @@ class Game {
           fi.shop && `🛍️ shop ${fi.shop.toLocaleString()}c`, fi.womens && `⚽ women's team ${fi.womens.toLocaleString()}c`,
           fi.merit && `📺 division merit ${fi.merit.toLocaleString()}c`].filter(Boolean);
         this.pushFeed('🏟️', `The club earned <b>${fi.total.toLocaleString()}c</b> off the pitch this season — ${parts.join(' · ')}.`, m.season + 1);
+        // THE PRIZE MONEY NEEDS A SURFACE THAT SURVIVES. toast() is a single slot with a 2.2s timer and
+        // no queue, and one click of "Next season →" fires up to five of them — three from this same
+        // synchronous block. The prize was the first, so it was overwritten before it could be read, and
+        // unlike the awards, the upkeep and the disrepair lines it had no feed entry to fall back on. It
+        // is the single biggest number of the club's year.
       }
       // AND WHAT IT COST TO RUN. Reported next to the income and in the same breath, because upkeep is only
       // a decision if the player sees both halves of the ledger together.
@@ -4003,7 +4059,13 @@ class Game {
       chosenTemper = (el as HTMLElement).dataset.temper as MgrTemper;
       $('academy-body').querySelectorAll('[data-temper]').forEach((o) => o.classList.toggle('on', o === el));
     }));
-    $('cg-takereins').addEventListener('click', async () => {
+    // TAKING THE REINS A SECOND TIME IS A DESTRUCTIVE ACT IN A PROMOTION'S CLOTHING. The handler below
+    // rewrites manager state with `season: 1, results: [], sponsor: undefined, contElig: undefined, ...`
+    // and a different starId — so a manager ten matches into a season, with a sponsor signed and a cup run
+    // alive, loses every bit of it and another man becomes the bloodline star. Nothing on the screen said
+    // so, and the only note there pressures the player TOWARD the button by saying the offer will not come
+    // again. Ask, and name what it costs.
+    const doTakeReins = async () => {
       try {
         ($('cg-takereins') as HTMLButtonElement).textContent = 'Signing the contracts…';
         const { player } = await api.careerHandoff(s.prospectId);
@@ -4106,6 +4168,18 @@ class Game {
         toast(`🧢 You're the manager now — ${s.name} is in your squad`);
         this.showSeason();
       } catch (e: any) { toast(e?.body?.error ?? 'Handoff failed'); }
+    };
+    $('cg-takereins').addEventListener('click', () => {
+      const cur = this.loadMgr();
+      if (cur.starId && cur.starId !== s.prospectId) {
+        this.openConfirm(
+          `You are already managing${this.club?.name ? ` <b>${this.club.name}</b>` : ''}, with <b>${cur.starName ?? 'your current star'}</b> on the pitch.`
+          + ` Taking the reins with <b>${s.name}</b> ends the current season and starts again at season 1.`
+          + `<br><span class="cf-sub">Season ${cur.season} and its results, your sponsor and any cup run are lost. The club, its trophies and the family record are kept.</span>`,
+          'End the season and take over', () => { void doTakeReins(); });
+        return;
+      }
+      void doTakeReins();
     });
   }
 
@@ -5326,14 +5400,18 @@ class Game {
     const dismiss = () => {
       if (dismissed) return;
       dismissed = true;
-      clearTimeout(timer);
       card.removeEventListener('click', dismiss);
       card.classList.add('hidden');
       if (this.pendingCont) { const c = this.pendingCont; this.pendingCont = null; this.spFixture = null; this.resolveContinental(c.myGoals, c.oppGoals, c.oppStrength); return; } // continental tie → advance/out
       if (this.pendingWc) { const c = this.pendingWc; this.pendingWc = null; this.spFixture = null; this.resolveWorldCup(c.myGoals, c.oppGoals, c.oppName); return; } // World-Finals knockout tie → advance/out
       if (this.spFixture) this.showSeason(); else this.showHub(); // SP: back to the season fixture list
     };
-    const timer = setTimeout(dismiss, 9000); // longer — there's a match report to read
+    // THE CARD SAYS "▶ Tap to continue", SO IT WAITS FOR THE TAP. This ran a 9-second timer under that
+    // instruction, and renderMatchReport has exactly one caller — this card — so the lead narrative, the
+    // scorers, the manager's press quote, the Player of the Match and an eight-value stats grid all
+    // ceased to exist anywhere in the game the moment it fired. That is roughly 100-120 words plus eight
+    // numbers: about thirty seconds of reading, given nine. A screen that tells the player how to leave
+    // it should not also leave on its own.
     card.addEventListener('click', dismiss);
   }
 
