@@ -58,6 +58,8 @@ class AudioManager {
   private deck: HTMLAudioElement | null = null;      // the playing loop
   private tracked: HTMLAudioElement[] = [];          // every element we've started (so none can linger/overlap)
   private fadeTimer: number | null = null;
+  /** The pause-and-trim the in-flight fade would have run at t===1, so cancelling it does not leak the deck. */
+  private fadeCleanup: (() => void) | null = null;
   private actx: AudioContext | null = null;          // lazily-created, shared by all chimes
 
   constructor() {
@@ -174,10 +176,27 @@ class AudioManager {
   /** Fade the new deck in and EVERY other tracked element out — so rapid screen changes can never leave two
    *  tracks overlapping (only `next` survives the fade; all others are paused + dropped). */
   private crossfadeTo(next: HTMLAudioElement): void {
+    // SETTLE THE FADE ALREADY IN FLIGHT BEFORE STARTING A NEW ONE. The comment above promises that "rapid
+    // screen changes can never leave two tracks overlapping (only `next` survives the fade; all others are
+    // paused + dropped)" — but the pause-and-trim lives ONLY in the fade's own t===1 branch, and cancelling
+    // the frame throws away the closure that would have run it. So a screen change made during an 800ms fade
+    // left the outgoing track playing, and back-to-back changes stacked live HTMLAudioElements in `tracked`
+    // that nothing paused until some later fade happened to run to completion. Overlapping audio is exactly
+    // what the comment says cannot happen.
+    //
+    // This runs FIRST — before `deck` is reassigned and before `others` is captured — so the settled state is
+    // what the new fade reads. Doing it after would let the old cleanup's `tracked = [its next]` land on top
+    // of the new fade's bookkeeping.
+    if (this.fadeTimer != null) { cancelAnimationFrame(this.fadeTimer); this.fadeTimer = null; this.fadeCleanup?.(); }
+    this.fadeCleanup = null;
     this.deck = next;
     const others = this.tracked.filter((a) => a !== next).map((a) => ({ a, from: a.volume }));
+    // The same pause-and-trim the t===1 branch runs, kept reachable so an interrupted fade still performs it.
+    this.fadeCleanup = () => {
+      for (const o of others) { try { o.a.pause(); o.a.currentTime = 0; } catch { /* ignore */ } }
+      this.tracked = this.tracked.filter((a) => a === next || !others.some((o) => o.a === a));
+    };
     const start = performance_now();
-    if (this.fadeTimer != null) cancelAnimationFrame(this.fadeTimer);
     // THE LEVEL IS READ EVERY FRAME, NOT SNAPSHOTTED ONCE. This captured `const target = this.effectiveVolume()`
     // before the loop and then wrote `next.volume = target * t` on each of the ~48 frames of the 800ms fade.
     // `this.deck` is already `next` by this point, so the element the fade drives is the exact element
@@ -194,7 +213,7 @@ class AudioManager {
       try { next.volume = clamp01(this.effectiveVolume() * t); } catch { /* detached */ }
       for (const o of others) { try { o.a.volume = clamp01(o.from * (1 - t)); } catch { /* detached */ } }
       if (t < 1) { this.fadeTimer = requestAnimationFrame(step); }
-      else { for (const o of others) { try { o.a.pause(); o.a.currentTime = 0; } catch { /* ignore */ } } this.tracked = [next]; this.fadeTimer = null; this.applyVolume(); }
+      else { this.fadeCleanup?.(); this.fadeCleanup = null; this.tracked = [next]; this.fadeTimer = null; this.applyVolume(); }
     };
     this.fadeTimer = requestAnimationFrame(step);
   }

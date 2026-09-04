@@ -1703,7 +1703,7 @@ class Game {
   /** The Dynasty & Trophy Room summary line on the home hub. */
   private async refreshHubLegacy() {
     try {
-      const [h, l] = await Promise.all([api.honours().catch(() => ({ honours: [] })), api.legends().catch(() => ({ legends: [] }))]);
+      const [h, l] = await Promise.all([api.honours(9999).catch(() => ({ honours: [] })), api.legends().catch(() => ({ legends: [] }))]);  // lifetime, not the last 30 — the hub line counts titles off this
       const titles = h.honours.filter((x) => x.title === 1).length;
       const lines = new Set(l.legends.map((x) => x.playerId)).size;
       if (titles || lines || l.legends.length) {
@@ -3777,7 +3777,12 @@ class Game {
     this.showScreen('trophies');
     $('trophies-body').innerHTML = SPINNER;
     try {
-      const [{ honours }, { legends }] = await Promise.all([api.honours(), api.legends()]);
+      // THE LIFETIME LEDGER, not the last thirty. honoursFor defaults to `limit = 30` and sorts newest
+    // first, so the Trophy Room — the room the whole dynasty is built to fill — silently stopped counting
+    // at thirty rows. A five-generation family with a title most seasons passes that inside two
+    // generations and then watches its own cabinet shrink. The sibling call for the honours list already
+    // passes a lifetime limit for exactly this reason.
+    const [{ honours }, { legends }] = await Promise.all([api.honours(9999), api.legends()]);
       const titles = honours.filter((h) => h.title === 1);
       // pick a silverware image for an honour by its kind (self-hides if the file is ever missing)
       const trophyFor = (kind?: string): string => {
@@ -5107,11 +5112,37 @@ class Game {
   }
 
   /** Make click-only divs keyboard-operable (Steam a11y): focusable + Enter/Space triggers the click. */
+  /** Make a plain element operable from the keyboard: a tab stop, and Enter/Space to activate.
+   *
+   *  IT MUST NOT STEAL A ROLE THE MARKUP ALREADY CHOSE. This unconditionally wrote role="button", and its
+   *  idempotence guard tested for role==='button' — so anything that arrived with a role of its own fell
+   *  straight through the guard and had that role overwritten. Two of this file's own accessibility fixes
+   *  were silently undone by it:
+   *
+   *    the gaffer-temperament tiles ship role="radio" + aria-checked inside a role="radiogroup" — re-roled
+   *    to button, which does not support aria-checked, so the attribute was dropped and the radiogroup ended
+   *    up containing zero radios;
+   *
+   *    the squad table's sort headers ship aria-sort on a <th> — re-roled to button, which does not support
+   *    aria-sort either, so the column stopped announcing which way it was ordered.
+   *
+   *  Both looked correct in the markup and in the source diff. Only the live accessibility tree shows it.
+   *  So: assign the role only when the element has none, and key idempotence on the tabindex this actually
+   *  owns rather than on a role it may not have set.
+   */
   private makeActivatable(els: NodeListOf<Element> | Element[]): void {
     els.forEach((el) => {
       const h = el as HTMLElement;
-      if (h.getAttribute('role') === 'button') return; // already done
-      h.setAttribute('role', 'button'); h.setAttribute('tabindex', '0');
+      if (h.getAttribute('tabindex') === '0') return; // already done
+      // Only a GENERIC element gets the button role. An explicit role is the markup's own choice, and an
+      // element with a useful IMPLICIT role must keep it too — a <th> is a columnheader, and columnheader is
+      // what supports aria-sort. Testing hasAttribute('role') alone is not enough: a <th> carries no role
+      // attribute, so it looked generic and was re-roled to button, which silently dropped the aria-sort the
+      // sort headers had just been given. Verified in the live accessibility tree, which is the only place
+      // either of these shows.
+      const generic = /^(DIV|SPAN|LI|P)$/.test(h.tagName);
+      if (generic && !h.hasAttribute('role')) h.setAttribute('role', 'button');
+      h.setAttribute('tabindex', '0');
       h.addEventListener('keydown', (e) => { const k = (e as KeyboardEvent).key; if (k === 'Enter' || k === ' ') { e.preventDefault(); h.click(); } });
     });
   }
@@ -5450,8 +5481,11 @@ class Game {
       // when the talisman is 34.
       const myStr = this.clubLeagueStrength();
       const preStakes: 1 | 2 | 3 = this.spFixture.oppStrength >= myStr + 2 ? 3 : this.spFixture.oppStrength >= myStr ? 2 : 1;
-      const preLine = pressConferenceLine(this.leagueSeed(),
-        (this.loadMgr().results?.length ?? 0) * 31 + 7, { timing: 'pre', competition: 'league', stakes: preStakes, form: preForm });
+      // COMPETITION, NOT ALWAYS 'league'. This passed the literal, so a Continental Cup final and a World
+    // Finals semi both got routine league-week prose from the manager on the way out. The POST-match
+    // presser already derives it from spFixture.comp; only the pre-match one did not.
+    const preLine = pressConferenceLine(this.leagueSeed(),
+        (this.loadMgr().results?.length ?? 0) * 31 + 7, { timing: 'pre', competition: this.spFixture?.comp === 'cont' ? 'continental' : this.spFixture?.comp === 'wc' ? 'international' : 'league', stakes: preStakes, form: preForm });
       sc.innerHTML = `<div class="scout-head">🔍 ${this.spFixture.oppName}</div><div class="scout-sub">${this.spFixture.venue === 'away' ? 'Away' : 'Home'} fixture · squad rating ~${this.spFixture.oppStrength} <span style="color:#e6c76a">${stars}</span></div>`
         + `<div class="ft-presser">🎙️ <b>Before kick-off</b> — “${preLine}”</div>${dutyNote}`
         + `<div class="scout-sub scout-matchup" id="scout-matchup">📐 ${formationMatchupInsight(this.draftTactics.formation, this.spFixture.oppTactics.formation)}</div>`;

@@ -154,3 +154,7 @@ it — kept so it is not re-raised).
 | F-141 | fixed | match/visual | The squad-fitness label sat on the bar's own hue ramp at 1.66:1 worst case, with a text-shadow standing in for contrast | `client/index.html:1702` |
 | F-142 | fixed | economy/accessibility | Squad-table sort headers were click-only — no tabindex, no role, no `aria-sort` — so a keyboard player could open any card but not sort | `client/src/main.ts:422` |
 | F-143 | fixed | economy/accessibility | The player card's greed and fame meters carried their value only as an inline width on a 52px strip | `client/src/main.ts:1328` |
+| F-144 | fixed | ui/accessibility | `makeActivatable` overwrote roles the markup had chosen — killing the temperament tiles' `role="radio"`/`aria-checked` and the sort headers' `aria-sort`, both shipped an hour earlier | `client/src/main.ts:5113` |
+| F-145 | fixed | dynasty/correctness | The Trophy Room cabinet and the hub legacy line called `api.honours()` bare, and `honoursFor` defaults to the 30 most recent — the room the dynasty exists to fill truncates inside two generations | `client/src/main.ts:3780` |
+| F-146 | fixed | manager/content | The pre-match presser hard-coded `competition: 'league'`, so a Continental Cup final and a World Finals semi got routine league-week prose | `client/src/main.ts:5454` |
+| F-147 | fixed | audio/performance | A superseded crossfade never ran its cleanup, so a screen change during the 800ms fade left the outgoing track playing and stacked live audio elements in `tracked` | `client/src/audio.ts:188` |
