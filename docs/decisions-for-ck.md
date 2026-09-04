@@ -3282,6 +3282,19 @@ on the Transfer Market screen the next time it opens: a player mid-negotiation w
   **Recommended**, and best done before there are saves worth preserving.
 - **(b) Leave it** until after launch and treat it as a save-compatible patch later.
 
+**DECIDED 2026-09-05 — CK took (a).** Shipped: the call site passes `this.genSeed()`, the helper that already
+mixes `leagueSeed()` with `starGen`, rather than a bespoke mix — same shape, one instrument. An heir's twelve
+listings now share about one name in twelve with his father's, measured across tiers 1/5/10 × seasons 1-3.
+Listing ids do still repeat, and that is harmless for the reason §98 assumed but did not state: `buyPlayer`
+stamps `bought-${profile.season}-…`, and `profile.season` is the dynasty-LIFETIME clock, not the per-generation
+one, so two generations' signings never collide on an id.
+
+**The guard was the real work.** `tools/playtest/generation_scoped_seeds.ts` holds this rule for all seventeen
+sites, and it was GREEN over this one: it reads a two-line window, and the `gen` argument on the `houseListings`
+line directly above vouched for the `transferList` line below it. Reverting the fix left the probe passing. A
+seed that names `leagueSeed()` and a season on ONE line is now judged on that line alone, with a canary on the
+pre-fix spelling; mutation-proven both ways.
+
 ## §99 — the star's row in the squad table has no highlight, only a rule that looks like one
 
 `table.squad tr.nft-row td.pos, td.stat { filter: brightness(1.02); }` is the only row-scoped rule for the
@@ -3372,6 +3385,15 @@ columns. The season's *least* consequential control is drawn as its most promine
 The fix is one line (`font-size: 13px; padding: 3px 22px 3px 7px;`). It is here rather than in a commit only
 because it is a visual-hierarchy judgement — if you *want* the focus picker to be prominent, the current size
 is not a bug. Say the word and it is a one-line change either way.
+
+**DECIDED 2026-09-05 — CK took the fix.** `.sf-focus select` now carries `font-size: 13px; padding: 3px 22px
+3px 7px;`. Measured in headless chromium against the shipped sheet at the desktop layout: the control goes
+21px → 13px and 33px → 25px tall, and the row 76px → 63px, which is exactly what the row's own text costs —
+the picker no longer stretches it. The 4px off the right padding keeps the same 3px between the text and the
+dropdown arrow that `.slot select.duty-sel` already ships. Guarded by `tools/playtest/training_focus_size.ts`,
+which renders the row main.ts emits beside a copy of itself with the control drawn at the row's own
+font-size, so the reference is the row and not a number somebody picked; mutation-proven — drop the
+`font-size` and all four measurements go red.
 
 ## §104 — the narrated outcome of every career turn is never announced
 

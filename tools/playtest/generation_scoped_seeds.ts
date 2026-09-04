@@ -27,8 +27,32 @@ const ok = (c: boolean, m: string) => { console.log(`  ${c ? 'ok  ' : 'FAIL'} ${
 
 console.log('=== Every season-derived seed also carries the generation ===');
 
+/** The WINDOW lines of actual code either side of `i`, skipping comment-only and blank lines. A seed built
+ *  across two statements is two CODE lines apart however much explanation sits between them. */
+const isCodeLine = (l: string) => { const t = l.trim(); return t !== '' && !t.startsWith('//') && !t.startsWith('*') && !t.startsWith('/*'); };
+function codeWindow(all: string[], i: number, w: number): string {
+  const isCode = isCodeLine;
+  const out = [all[i]];
+  for (const dir of [-1, 1]) {
+    let taken = 0;
+    for (let j = i + dir; j >= 0 && j < all.length && taken < w - 1; j += dir) {
+      if (!isCode(all[j])) continue;
+      out.push(all[j]); taken++;
+    }
+  }
+  return out.join('\n');
+}
+const stripComments = (t: string) => t.replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/\/\/.*$/gm, ' ');
 const SEASON = /\bm\.season\b|\bmgr\.season\b|loadMgr\(\)\.season/;
 const GEN = /\bgen\b|starGen|\bgeneration\b|genSeed/;
+// A WINDOW THAT WAS TOO KIND. `transferList(this.leagueSeed(), m.season, tier)` sat ONE LINE under
+// `houseListings(this.leagueSeed(), m.season, tier, gen, …)` — the site the header above holds up as the
+// one that does it right — and that neighbour's `gen` argument fell inside the window and vouched for the
+// line below it. Mutation-tested: with the transfer market's fix (§98) reverted, this probe printed
+// `0 do not` and exited 0, green over the exact defect it was written for. So an expression that names
+// leagueSeed() and a per-generation season ON ONE LINE is self-contained and is judged on that line alone;
+// no neighbour answers for it. The window still covers the seeds genuinely built across two statements.
+const dropsGen = (line: string) => /leagueSeed\(\)/.test(line) && SEASON.test(line) && !GEN.test(line);
 
 // Anything listed here is a site where repeating across generations is INTENDED. Each needs a reason, not a
 // line number, so that moving the code does not silently widen the exemption.
@@ -49,24 +73,38 @@ const lines = readFileSync('client/src/main.ts', 'utf8').split('\n');
 // see either. A seed is routinely built across two or three statements, so the scan reads a small window and
 // the whole window has to carry the generation.
 const WINDOW = 2;
-let scoped = 0;
+let scoped = 0, selfLine = 0;
 const missing: string[] = [];
 for (let i = 0; i < lines.length; i++) {
   // BOTH DIRECTIONS. The first widening only looked FORWARD from the seed line, and the case it was written
   // for reads `const salt = (m.season * 7919 …)` on the line BEFORE `pickManagerArc((this.leagueSeed() ^
   // salt) …)`. Mutation-testing the widened probe caught that: reverting the arc fix left it green.
-  const win = lines.slice(Math.max(0, i - WINDOW + 1), i + WINDOW).join('\n');
+  // COMMENTS DO NOT COUNT AS CODE. This codebase deliberately quotes the old broken spelling in the
+  // comment that explains the fix — "genSeed, NOT leagueSeed" sits directly above the arc site — so a
+  // window that reads comments lets the post-mortem vouch for the code. Measured: reverting that site to
+  // leagueSeed left this probe GREEN on three of seventeen sites. Same trap phantom_mechanics and
+  // destructive_delete both fell into; strip them before asking whether the generation is carried.
+  // AND THE WINDOW COUNTS CODE LINES, NOT SOURCE LINES. Blanking a comment to spaces still leaves the LINE,
+  // and the two multi-line seed builds in this file carry six- and seven-line explanations between the salt
+  // and the seed — so a two-line window measured from the seed never reached the `m.season` above it.
+  // Mutation sweep over all 16 sites: 14 caught, and exactly those 2 missed until the window began skipping
+  // comment-only lines. It now walks outward past them, so the distance is in statements, not in prose.
+  const win = stripComments(codeWindow(lines, i, WINDOW));
   const here = lines[i];
   // Anchor on the line that names the seed, so one site is reported once rather than WINDOW times.
+  // The ANCHOR has to be code too — several comments in this file quote `leagueSeed()` while explaining
+  // why a site no longer calls it, and anchoring on one reports the post-mortem as the defect.
+  if (!isCodeLine(here)) continue;
   if (!/leagueSeed\(\)|genSeed\(\)/.test(here)) continue;
   if (/private (league|gen)Seed\(\)/.test(here)) continue;   // the helpers themselves
   if (!SEASON.test(win)) continue;
   if (INTENDED.some((x) => x.match.test(win))) continue;
   scoped++;
-  if (!GEN.test(win)) missing.push(`main.ts:${i + 1}  ${here.trim().slice(0, 112)}`);
+  if (SEASON.test(here)) selfLine++;
+  if (dropsGen(here) || !GEN.test(win)) missing.push(`main.ts:${i + 1}  ${here.trim().slice(0, 112)}`);
 }
 
-console.log(`  ..   ${scoped} expression(s) mix leagueSeed() with a per-generation season`);
+console.log(`  ..   ${scoped} expression(s) mix leagueSeed() with a per-generation season, ${selfLine} of them on one line`);
 // VACUITY GUARDS. If leagueSeed is renamed, or the manager state stops calling it `season`, this scan finds
 // nothing and passes having checked nothing — the failure mode the whole factory exists to catch.
 const whole = lines.join('\n');
@@ -79,6 +117,13 @@ ok(/private leagueSeed\(\)/.test(whole) && /private genSeed\(\)/.test(whole),
 const body = /private genSeed\(\)[^\n]*/.exec(whole)?.[0] ?? '';
 console.log(`  ..   genSeed body: ${body.replace(/^\s*/, '').slice(0, 110)}`);
 ok(/starGen|generation/.test(body), 'genSeed() mixes the generation in (a gutted helper would pass every check below)');
+// AND THE SAME-LINE RULE MUST STILL FIRE. `dropsGen` is the whole of the tightening and it matches on
+// vocabulary — rename leagueSeed, or stop calling the field `season`, and it accepts everything in silence.
+// The canary is the transfer-market line byte for byte as it read before §98 was fixed; the count below is
+// its other half, because a rule no line reaches is just as inert as a rule that matches nothing.
+ok(dropsGen('      ...transferList(this.leagueSeed(), m.season, tier),'),
+   'the same-line rule still fires on the transfer-market line as it read before the fix');
+ok(selfLine >= 2, `the same-line rule is not inert (${selfLine} self-contained seed expression(s) reach it)`);
 ok(scoped >= 10, `the scan actually matched season-derived seeds (${scoped}) — a low number here means the pattern moved, not that it was fixed`);
 for (const m of missing) console.log(`       ${m}`);
 ok(missing.length === 0, `every one of them also carries the generation (${missing.length} do not)`);

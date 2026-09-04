@@ -536,7 +536,20 @@
       @keyframes legendBorder { 0% { border-color: #ffd76a; } 33% { border-color: #ff5cc8; } 66% { border-color: #57e6ff; } 100% { border-color: #ffd76a; } }
       @media (prefers-reduced-motion: reduce) { .pc-card, .pc-card *, .pc-card::before { animation: none !important; } }
       /* NFT rows in the squad table + bench names */
-      table.squad tr.nft-row td.pos, table.squad tr.nft-row td.stat { filter: brightness(1.02); }
+      /* THE STAR'S ROW IS MARKED BY AN OVERLAY, NOT BY BRIGHTENING IT. This slot held
+         `filter: brightness(1.02)` on td.pos/td.stat, which moves an already-saturated opaque background by
+         2-4 values out of 255 — measured in chromium at deltaE00 0.00-1.14 per cell, QUIETER than the
+         sheet's own zebra stripe (`table tbody tr:nth-child(even) td`, 1.62). So the one row the player
+         scans for carried no row-level mark at all, and the slot where a real one would go was taken by a
+         rule that did nothing. Turning the multiplier up is NOT the fix: td.stat's background IS
+         statColor()'s five-step ramp, the OVR column's information channel, and past ~0.16 of white a
+         highlighted 17+ cell reads as the 14-16 band instead. A flat translucent white composites OVER the
+         inline background rather than replacing it, so at 0.10 every cell in the row clears the stripe
+         (deltaE00 1.95-7.41) while each step stays nearest its own colour by 1.8x. The !important is
+         load-bearing, not tidiness: the stat cells carry `style="background:..."`, an inline shorthand also
+         sets background-image: none, and inline beats any non-important rule — without the flag the overlay
+         dies on exactly the columns it matters in. Measured by tools/playtest/star_row_highlight.ts. */
+      table.squad tr.nft-row td { background-image: linear-gradient(rgba(255,255,255,0.10), rgba(255,255,255,0.10)) !important; }
       table.squad td.nft-name { cursor: pointer; font-weight: bold; text-decoration: underline dotted rgba(255,255,255,0.25); }
       td.nft-name.tier-bronze { color: #e0995a; } td.nft-name.tier-silver { color: #e6edf7; }
       td.nft-name.tier-gold { color: var(--warn); } td.nft-name.tier-diamond { color: #57e6ff; text-shadow: 0 0 8px rgba(87,230,255,0.6); }
@@ -936,7 +949,13 @@
       .sf-fx.derby { border-left: 2px solid var(--home); }
       .sf-records { font-size: 13px; color: var(--muted); margin-top: 10px; padding: 8px 10px; background: rgba(255,255,255,0.03); border-radius: 6px; }
       .sf-focus { font-size: 14px; color: var(--text); margin-top: 10px; padding: 9px 12px; background: color-mix(in srgb, var(--good) 8%, transparent); border: 1px solid color-mix(in srgb, var(--good) 30%, transparent); border-radius: 6px; }
-      .sf-focus select { margin: 0 4px; }
+      /* THE ONLY <select> IN THE GAME NEVER GIVEN A CLASS-SCOPED SIZE. It inherited the global 21px rule
+         inside this 14px row, in the narrower (1fr) of the two season columns, which pushed the row to
+         76px tall — taller than a fixture row or the records line above it, so the season's least
+         consequential control was drawn as its most prominent. Every other select already carries its
+         own: #lineup, .slot select.duty-sel, .cg-kit-row select. The padding shrinks with the size,
+         leaving the same 3px between the text and the arrow that duty-sel does. */
+      .sf-focus select { margin: 0 4px; font-size: 13px; padding: 3px 22px 3px 7px; }
       .sf-focus-hint { color: var(--muted); font-size: 12px; }
       .sf-staff-row { display: flex; align-items: center; gap: 10px; padding: 9px 10px; margin-bottom: 6px; background: rgba(255,255,255,0.03); border: 1px solid var(--line); border-radius: 8px; }
       .sf-staff-row.owned { border-color: color-mix(in srgb, var(--good) 40%, transparent); }

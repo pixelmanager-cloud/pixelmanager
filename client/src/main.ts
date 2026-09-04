@@ -328,8 +328,10 @@ function paintCoins(id: string, coins: number | undefined): void {
 
 // Brief retro toast near top-centre; the CSS animation fades it out after ~2s.
 //
-// THE ELEMENT THIS WRITES INTO IS THE GAME'S ONLY ARIA LIVE REGION (`<div id="toast" role="status">` in
-// index.html, which carries the post-mortem). Three of its properties are load-bearing and none of them are
+// THE ELEMENT THIS WRITES INTO IS THE GAME'S GENERAL-PURPOSE ARIA LIVE REGION (`<div id="toast"
+// role="status">` in index.html, which carries the post-mortem). It is no longer the only one — #mm-preview
+// speaks the club-name rule and `.cg-narrate` the outcome of a career turn — but it is the one every
+// message with no other UI goes through. Three of its properties are load-bearing and none of them are
 // visible from this function:
 //   • it must stay a child of <body>, OUTSIDE #app — dialogify() marks #app inert, so moving the toast in
 //     would silently mute every message fired from a modal ("Talks broke down", "Not enough coins",
@@ -5097,7 +5099,19 @@ class Game {
       + (s.careerScore != null ? `<span class="cg-score" title="Career score — climbs with every good moment; beat it next run">★ ${s.careerScore.toLocaleString('en-US')}</span>` : '') + `</div>`;
     const evt = s.seasonEvent ? `<div class="cg-event"><b>${s.seasonEvent.name}</b> — ${s.seasonEvent.desc}</div>` : '';
     const prof = s.profile ? this.careerProfileHtml(s.profile) : '';
-    const narr = this.lastNarration ? this.outcomeChipHtml() + `<div class="cg-narrate">“${this.lastNarration}”</div>` : '';
+    // THE PAYLOAD OF THE TURN, SPOKEN TO NOBODY. This block is the result of the decision the player has
+    // just committed, and it carried no role and no aria-live — so what a screen-reader player was told
+    // after a turn was the name of card N of the NEW hand, which restoreFocus() puts focus on a few lines
+    // below this, and never the outcome. ~120 turns a generation, on the core loop. (decisions-for-ck §104,
+    // option (a).) "status", not "alert": the innerHTML write below and that focus move are one synchronous
+    // stretch, so the reader speaks the focused card first and this politely behind it — an alert would cut
+    // that card off mid-word, every turn. The two verdict pills stay outside the region by the same
+    // decision; if they are ever wanted too they belong INSIDE this div, not in a second, racing region.
+    // KNOWN LIMIT, and the reason toast()'s post-mortem insists #toast is in the document at load: a region
+    // that enters the tree already holding its text is announced by Chromium readers but not by every
+    // engine. If a real screen-reader playtest hears nothing here, the answer is a permanent empty region
+    // written to after the render — never `alert`. Held by tools/playtest/turn_outcome_announced.ts.
+    const narr = this.lastNarration ? this.outcomeChipHtml() + `<div class="cg-narrate" role="status">“${this.lastNarration}”</div>` : '';
     const recap = s.recap ? `<div class="cg-recap"><span class="cg-recap-lbl">📖 The story so far</span>${s.recap}</div>` : '';
     const lifeOutcome = s.lastLifeOutcome ? `<div class="cg-conseq"><div class="cg-conseq-row">${s.lastLifeOutcome}</div></div>` : '';
     const conseq = s.consequences?.length
