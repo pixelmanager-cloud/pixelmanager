@@ -269,6 +269,12 @@ function rivalFirstWin(ordered: DiaryMatch[]): string | null {
   let rivalId: string | null = null, best = 1;
   for (const [id, c] of counts) if (c > best) { best = c; rivalId = id; }
   if (!rivalId) return null;
+  // ...AND THE MOST RECENT MATCH HAS TO BE THE ONE THAT DID IT, which is what the docstring above always
+  // promised. Judging `meetings[meetings.length - 1]` instead meant that once the matchday-10 rematch was a
+  // first win, this stayed a live candidate at weight 40 — the highest in the picker — for every remaining
+  // matchday, so "Finally — the hoodoo is over" kept firing for weeks, including on the night of a 1-4 loss
+  // to somebody else. revengeWin below reads `ordered[ordered.length - 1]` for exactly this reason.
+  if (ordered[ordered.length - 1].oppId !== rivalId) return null;
   const meetings = ordered.filter((m) => m.oppId === rivalId);
   const last = meetings[meetings.length - 1];
   if (!last.oppHandle || outcome(last) !== 'W') return null;

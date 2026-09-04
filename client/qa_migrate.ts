@@ -119,6 +119,58 @@ for (const [label, bad] of [
   if (JSON.stringify(fixed.standingOrders) !== before) fail('a valid team sheet was rewritten by the repair');
 }
 
+// ── AND BOTH AT ONCE — the case neither repair above was ever crossed with ────────────────────────────
+// Every standingOrders case above is built on a save with a full, healthy twenty-man squad, and there was
+// no malformed `club.players` case at all. So the seam between the two repairs was invisible: the sheet
+// fallback rebuilt the XI from `m.club`, the RAW parameter, not the club the line above it had just
+// recovered. `autoPickXI` does `[...club.players]` and then `pool.find(…)!.id`, so every one of these
+// combinations threw out of migrate itself — and `club` + `standingOrders` are the pair `saveClub` writes
+// together, so a corrupt write damaging both is the LIKELY shape, not an exotic one. The player was told
+// the dynasty "may be corrupted" about a save whose tokens, honours, legacies and coins had all been
+// recovered two lines earlier, and `recoverOrphanedSaves` could not clear the row either — it has an index
+// entry, so it is never treated as an orphan.
+{
+  const full: any = freshSave('Both', 11);   // seeded: a fixture that damages a squad must know what it damaged
+  const squad: any[] = full.club.players;
+  if (squad.length < 12) fail(`the cross fixture needs a real squad to damage, got ${squad.length}`);
+  const clubs: Array<[string, any]> = [
+    ['players as a record', { ...full.club, players: Object.fromEntries(squad.map((p, i) => [`p${i}`, p])) }],
+    ['players array-like', { ...full.club, players: { ...squad, length: squad.length } }],
+    ['players a string', { ...full.club, players: 'wrecked' }],
+    ['players an empty array', { ...full.club, players: [] }],
+    ['a five-man squad', { ...full.club, players: squad.slice(0, 5) }],
+    // eleven bodies but ten men: autoPickXI keys `used` on the id, so it runs the pool dry on the eleventh
+    // slot and throws. A length check alone does NOT cover this.
+    ['eleven men, two of them the same', { ...full.club, players: [...squad.slice(0, 10), { ...squad[0] }] }],
+    ['no club at all', undefined],
+  ];
+  const sheets: Array<[string, unknown]> = [
+    ['missing', undefined], ['null', null], ['a string', 'not a sheet'], ['an empty object', {}],
+  ];
+  let rebuilt11 = 0;
+  for (const [cl, club] of clubs) {
+    for (const [sl, so] of sheets) {
+      const raw: any = { ...freshSave('Both', 11), version: 1, club, standingOrders: so };
+      if (sl === 'missing') delete raw.standingOrders;
+      try {
+        const out: any = migrate(raw);
+        const ids = out.standingOrders?.playerIds;
+        const have = new Set((Array.isArray(out.club?.players) ? out.club.players : []).map((p: any) => p.id));
+        if (!Array.isArray(out.club?.players)) fail(`${cl} + sheet ${sl}: the squad was not repaired to an array`);
+        else if (!Array.isArray(ids)) fail(`${cl} + sheet ${sl}: no usable playerIds (got ${JSON.stringify(out.standingOrders)?.slice(0, 60)})`);
+        else if (new Set(ids).size !== ids.length) fail(`${cl} + sheet ${sl}: the rebuilt XI names the same man twice`);
+        else if (ids.some((id: string) => !have.has(id))) fail(`${cl} + sheet ${sl}: the rebuilt XI names a man the repaired squad does not have`);
+        else if (have.size >= 11 && ids.length !== 11) fail(`${cl} + sheet ${sl}: ${have.size} men survived but the XI is ${ids.length} long`);
+        else if (ids.length === 11) rebuilt11++;
+      } catch (e: any) { fail(`${cl} + sheet ${sl}: migrate threw ${e?.message}`); }
+    }
+  }
+  // MUTATION GUARD. Every assertion above is satisfied by an empty XI, so a fallback that quietly stopped
+  // picking anyone would pass all of them. Two of the seven damaged clubs still hold twenty whole men, so
+  // eight of these combinations must come back with a full eleven or this block is measuring nothing.
+  if (rebuilt11 < 8) fail(`only ${rebuilt11} of the damaged-club combinations rebuilt a full XI — the cross is asserting nothing`);
+}
+
 
 // ── A CORRUPT ROLE DESIGNATION MAY NOT SURVIVE THE LOAD ─────────────────────────────────────────────
 // `parseRoles`' doc-comment opens "THIS IS ON THE LOAD PATH, so it must never throw" — and until now it

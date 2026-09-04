@@ -87,7 +87,10 @@ type Row = { field: string; label: string; hint: string };
 const parsed: Row[] = [];
 for (const row of rows) {
   const id = (row.match(/<input\b[^>]*\bid="([\w-]+)"/) ?? [])[1] ?? '';
-  const label = ((row.match(/<label>([^<]*)/) ?? [])[1] ?? '').trim();
+  // `<label[^>]*>` because the labels now carry `for=` (F-257 named these two inputs). A literal `<label>`
+  // matched nothing the moment that landed: `label` fell to '' and every message below silently degraded
+  // from `the "Squad number" row's...` to `the "kit-number" row's...` without failing anything.
+  const label = ((row.match(/<label[^>]*>([^<]*)/) ?? [])[1] ?? '').trim();
   const hint = ((row.match(/class="cg-kit-hint">([\s\S]*?)<\/span>/) ?? [])[1] ?? '').trim();
   const field = fieldOf.get(id) ?? '';
   // An input that maps to no saved field is a row this probe cannot check — report it rather than skip it.

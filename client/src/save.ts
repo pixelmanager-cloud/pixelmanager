@@ -120,6 +120,19 @@ export function migrate(m: SaveModel): SaveModel {
     if (vals.length && vals.every((x) => x != null && typeof x === 'object')) { quarantine[key] = v; return clean(vals); }
     return vals.length ? park() : [];                                // an empty object held no rows
   };
+  // HOISTED OUT OF THE LITERAL BELOW, because the team-sheet fallback has to rebuild from the REPAIRED
+  // squad and did not. It called `autoPickXI(m.club, …)` — the raw parameter — sixteen lines under the line
+  // that had just recovered `club.players`, so a save damaged in BOTH (and `club` + `standingOrders` are the
+  // pair `saveClub` writes together, so joint damage is the likely shape) threw "club.players is not
+  // iterable" out of migrate itself. That save can never load, and it is not an orphan either, so
+  // `recoverOrphanedSaves` leaves it in the slot list forever — with its tokens, honours, legacies and coins
+  // all recovered intact one line earlier.
+  const club = { ...(m.club && typeof m.club === 'object' ? m.club : {}), players: arr<Player>('club.players', (m.club as any)?.players) } as SaveModel['club'];
+  // The men a rebuilt sheet is allowed to name. `autoPickXI` keys its `used` set on `p.id`, so it can fill
+  // only as many slots as there are DISTINCT ids and then dies on `pool.find(…)!.id` — a short squad AND an
+  // eleven-man squad holding one man twice both throw. Typed `string`, checked anyway: nothing about the
+  // bytes on disk is trustworthy, which is the premise of this whole function.
+  const squadIds = [...new Set(club.players.map((p) => p.id))].filter((id) => typeof id === 'string');
   const repaired: SaveModel = {
     ...m,
     tokens: arr<Token>('tokens', m.tokens), injuries: arr('injuries', m.injuries), legacies: arr('legacies', m.legacies),
@@ -131,8 +144,9 @@ export function migrate(m: SaveModel): SaveModel {
     // that says "One absent array should never cost a dynasty" — while `club` rode through untouched on the
     // `...m` spread. A save whose club.players was lost or arrived in one of the shapes arr() exists to
     // recover reaches fieldablePlayers(), which throws, and the dynasty will not load at all. Same recovery
-    // as every sibling now, so a damaged squad costs the squad rather than the save.
-    club: { ...(m.club && typeof m.club === 'object' ? m.club : {}), players: arr<Player>('club.players', (m.club as any)?.players) } as SaveModel['club'],
+    // as every sibling now, so a damaged squad costs the squad rather than the save. Computed just above the
+    // literal, because the sheet fallback below has to see the same repair.
+    club,
     // THE ONE COLLECTION THIS REPAIR SKIPPED. Every array above is guarded and `facilities` is defaulted,
     // but `standingOrders` was passed through untouched — so a save that lost it loads with the field
     // `undefined`, survives a season rollover still undefined (the sheet reconciler early-returns it and
@@ -148,7 +162,9 @@ export function migrate(m: SaveModel): SaveModel {
       // string, an array or a null is dropped rather than trusted — sat one call away from the only place
       // it could ever matter, with a 310-line harness proving it worked. This applies it.
       ? { ...m.standingOrders, ...normaliseRoles(m.standingOrders as StandingOrders) }
-      : { formation: '4-4-2', playerIds: autoPickXI(m.club, '4-4-2').playerIds, tactics: { ...TACTIC_PRESETS.Balanced } },
+      // Rebuilt from the REPAIRED squad, and only when there are eleven men to build it from. An XI short of
+      // eleven is something the manager can still be shown and asked to fix; a throw here is the dynasty.
+      : { formation: '4-4-2', playerIds: squadIds.length >= 11 ? autoPickXI(club, '4-4-2').playerIds : squadIds, tactics: { ...TACTIC_PRESETS.Balanced } },
   };
   // attached only when something was actually unreadable, so a clean save passes through untouched
   if (Object.keys(quarantine).length) repaired.__unreadable = quarantine;

@@ -741,6 +741,14 @@ export function rollCoaches(rng: () => number, track: Track, n = COACH_OFFER): C
 // stakes 1 (normal) / 2 (big) / 3 (huge). Big moments are worth MORE (shape you harder) and are
 // riskier (more variance) — this is where reputations are made and the Big-Game Player trait is earned.
 export interface Scenario { id: string; kind: 'match' | 'social' | 'training'; demand: Partial<Record<Tag, number>>; label: string; stakes: 1 | 2 | 3; life?: LifeKind | null; rival?: boolean; callup?: boolean }
+// THE ONE NUMBER THAT DECIDES WHETHER AN OFF-PITCH BEAT WENT WELL. The three consequence appliers below pay
+// the `.good` meters and `earnGood` off it, and persist it on lastLifeEvent/lastRivalMoment/lastCallupMoment
+// — which tokens.ts renders as the literal verdict "That went well — …, handled." The RESOLUTION PROSE in
+// narrate.ts has to grade off the same number. It didn't: it graded off `band(success)`, whose 'good' band
+// starts at 0.62, so every resolution in [0.55, 0.62) climbed the meters, credited the money and printed
+// "That went well" directly under a sentence drawn from the `.bad` bank. Exported so the two sides share one
+// threshold instead of agreeing by luck; tools/playtest/outcome_verdict_truth.ts holds them together. (W15-15)
+export const GOOD_OUTCOME = 0.55;
 // RIVALRY CONSEQUENCE: a real, distinct payoff when a big-stage MATCH scenario is framed as a head-to-head
 // against the seeded academy rival (see careerCast in narrate.ts — this module doesn't need his name, just
 // the mechanic). Bigger than a routine big-game swing: bragging rights are worth more than the occasion alone.
@@ -1537,7 +1545,7 @@ export class Career {
    *  if it doesn't. Anything else reads as the safe, documented "patient graded return" — no extra upside,
    *  but no extra risk either. */
   private applyLifeConsequence(kind: LifeKind, success: number, cardTags?: Tag[]) {
-    const good = success >= 0.55;
+    const good = success >= GOOD_OUTCOME;
     const cq = LIFE_CONSEQUENCE[kind];
     const eff = good ? cq.good : cq.bad;
     for (const [k, d] of Object.entries(eff)) this.life(k as MeterKey, d ?? 0);
@@ -1559,7 +1567,7 @@ export class Career {
   lastRivalMoment: { success: number; good: boolean } | null = null;
   /** A head-to-head vs the rival carries a bigger swing than a routine big-game moment — bragging rights. */
   private applyRivalConsequence(success: number) {
-    const good = success >= 0.55;
+    const good = success >= GOOD_OUTCOME;
     const eff = good ? RIVAL_CONSEQUENCE.good : RIVAL_CONSEQUENCE.bad;
     for (const [k, d] of Object.entries(eff)) this.life(k as MeterKey, d ?? 0);
     if (good && RIVAL_CONSEQUENCE.earnGood) this.earnings += RIVAL_CONSEQUENCE.earnGood;
@@ -1570,7 +1578,7 @@ export class Career {
   lastCallupMoment: { success: number; good: boolean } | null = null;
   /** Thrown in cold for a first-teamer — a bigger swing, good or bad, than a routine big-game moment. */
   private applyCallupConsequence(success: number) {
-    const good = success >= 0.55;
+    const good = success >= GOOD_OUTCOME;
     const eff = good ? CALLUP_CONSEQUENCE.good : CALLUP_CONSEQUENCE.bad;
     for (const [k, d] of Object.entries(eff)) this.life(k as MeterKey, d ?? 0);
     if (good && CALLUP_CONSEQUENCE.earnGood) this.earnings += CALLUP_CONSEQUENCE.earnGood;

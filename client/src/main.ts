@@ -45,6 +45,12 @@ interface MgrState { season: number; results: PlayedResult[]; starId?: string; s
    *  number — which is a hash input, not a label — has to count off something the succession does not reset. */
   wcHeld?: number;
   wcRun?: { round: string; my: number; opp: number; oppName: string; won: boolean }[];
+  /** Continental + World-Finals cups ALREADY BANKED onto an ancestor's legend card. `contTitles` and
+   *  `wcWins` are dynasty-LIFETIME counters that resetMgrForHeir deliberately carries, so banking their
+   *  raw sum at a succession credited every heir with his fathers' silverware: from generation 2 the
+   *  cups compound, through ach_cup into manRenown (40 renown each), the legend card's tier word, the
+   *  mintable gate and the testimonial purse. This high-water mark is what makes the banked number his. */
+  cupsBanked?: number;
   // Keys of feed events that have already fired. Several events are raised from RENDER paths (the squad
   // report, the scouting board, the season screen), which re-run on every refresh and every navigation
   // back — without a ledger the same retirement is announced half a dozen times.
@@ -1611,6 +1617,12 @@ class Game {
       el.classList.remove('hidden');
       el.textContent = `${pr.icon} ${pr.title}`;
       el.onclick = () => this.showPrestigeCard(pr);
+      // KEYBOARD/CONTROLLER: this chip is the Manager Legacy card's ONLY entry point, and it shipped as a
+      // bare <span> with an onclick — no role, no tab stop, nothing but `cursor: pointer` — so the score,
+      // the league/cup tally, the next rank and the progress toward it were unreachable without a mouse.
+      // makeActivatable early-returns on its own tabindex, so re-entering refreshPrestige cannot stack
+      // duplicate keydown listeners; it also leaves an existing role alone, and this span has none.
+      this.makeActivatable([el]);
     } catch { $('me-prestige').classList.add('hidden'); }
   }
 
@@ -1908,6 +1920,11 @@ class Game {
       // Same shape, different key space: `feedOnce` keys are `intake:${season}` and `bid:${season}`, and
       // the season resets to 1 here. Carried, they suppress every heir's first youth-intake line.
       feedFired: [],
+      // THE CUP HIGH-WATER MARK. `contTitles` and `wcWins` carry (see below), so the succession's `cups`
+      // — the silverware banked onto the retiring man's permanent legend card — has to subtract what his
+      // fathers already banked, or each generation is credited with the whole house's cups. Stamped here,
+      // AFTER succeed() has banked this man's, so the heir starts from the family's running total.
+      cupsBanked: (prior.contTitles ?? 0) + (prior.wcWins ?? 0),
       // titles, contTitles, wcWins, staff, arcPrestige, clubLegacy, arcTags, lastRankIdx, temper and the
       // feed itself all carry, because they are the dynasty rather than the season.
     } as MgrState);
@@ -3625,7 +3642,10 @@ class Game {
     const will = $('cg-will');
     if (will) will.outerHTML = `<div class="cg-grad-windfall">${w.icon} The heir inherits <b>${w.label}</b></div><button id="cg-heir" class="primary" disabled>Raising the next generation…</button>`;
     try {
-      const cups = (m.contTitles ?? 0) + (m.wcWins ?? 0); // continental + World-Finals silverware, onto the permanent legend card (PT-113)
+      // THIS MAN'S cups, not the house's: contTitles/wcWins are lifetime counters the handover carries,
+      // and `cupsBanked` is what his fathers' successions already banked. Without the subtraction every
+      // legend card from generation 2 on was stamped with the whole bloodline's silverware.
+      const cups = Math.max(0, (m.contTitles ?? 0) + (m.wcWins ?? 0) - (m.cupsBanked ?? 0)); // continental + World-Finals silverware, onto the permanent legend card (PT-113)
       const r = await api.succeed(m.starId!, { seasons, titles, cups, mentorship, inheritance, saleFee });
       if (this.account && typeof r.coins === 'number') this.account.coins = r.coins; // the sale fee + legacy are banked atomically inside succeed (PT-60)
       this.recordHeirloom(r.prospect.generation, `${w.icon} ${w.label}`); // remembered against the heir's generation
@@ -4050,13 +4070,18 @@ class Game {
       const familyName = (chain: typeof legends) => { const parts = (chain[0]?.name ?? '').trim().split(/\s+/); return parts.slice(1).join(' ') || parts[0] || 'the family'; };
       const heirlooms = this.loadHeirlooms(); // generation → the inheritance that generation was handed
       // one generation as a node on the lineage spine
-      const treeNode = (l: typeof legends[number], gi: number) => {
+      // NUMBERED OFF HIS OWN GENERATION, NOT HIS PLACE IN THE CHAIN. `recordHeirloom` files the inheritance
+      // under the heir's real generation, and the prospect card and the academy list both caption him "gen
+      // N" off the same number — so the chain index disagreed with all three the moment the line moved
+      // onto a brother or a cousin: those men were captioned a generation short, and each of them wore the
+      // PREVIOUS generation's heirloom.
+      const treeNode = (l: typeof legends[number]) => {
         const num = l.card.number, numTag = num ? ` <span class="tr-gen-num">#${num}</span>` : '';
         const eligible = l.card.tier === TOP_TIER && num && !retiredNums.has(num);
         const retireBtn = eligible ? `<button class="tr-retire" data-num="${num}" data-name="${l.name.replace(/"/g, '&quot;')}">🎽 Retire #${num}</button>` : '';
-        const heir = gi >= 1 && heirlooms[gi] ? `<div class="bt-heir">🎁 inherited ${heirlooms[gi]}</div>` : '';
+        const heir = l.generation >= 1 && heirlooms[l.generation] ? `<div class="bt-heir">🎁 inherited ${heirlooms[l.generation]}</div>` : '';
         return `<div class="bt-node"><div class="bt-dot">${l.card.icon}</div>`
-          + `<div class="bt-card"><div class="bt-genlbl">Generation ${gi + 1}</div>`
+          + `<div class="bt-card"><div class="bt-genlbl">Generation ${l.generation + 1}</div>`
           + `<div class="bt-badge">${l.card.tier}${numTag}</div><div class="bt-name">${l.name}</div>`
           + `<div class="bt-meta">${l.card.role} · rating ${l.card.legendRating} · ${l.card.leagueTitles}🏅 ${l.card.cupTitles}🏆 · ${l.card.apps} apps · ${l.card.seasons} seasons</div>${heir}${retireBtn}</div></div>`;
       };
@@ -4066,7 +4091,7 @@ class Game {
         return `<div class="bloodtree"><div class="bt-head"><span class="bt-crest">${sprite('crown')}</span>`
           + `<div><div class="bt-family">The ${familyName(chain)} Line</div>`
           + `<div class="bt-summary">${gens} generation${gens === 1 ? '' : 's'} · ${majorHonours} major honour${majorHonours === 1 ? '' : 's'} across the bloodline</div></div></div>`
-          + `<div class="bt-spine">${chain.map((l, i) => treeNode(l, i)).join('')}</div></div>`;
+          + `<div class="bt-spine">${chain.map((l) => treeNode(l)).join('')}</div></div>`;
       };
       const bloodlines = lines.length
         ? lines.map((chain) => bloodlineTree(chain)).join('')
@@ -5393,8 +5418,8 @@ class Game {
     // order. Purely-visual choices (boots, hairstyle, accessory, celebration) were cut — nothing renders them.
     return `<div class="cg-kit">`
       + `<div class="cg-prompt">🎽 <b>Identity</b> — this is a text game, so it is two details: the number his career actually uses, and a name you keep for him yourself.</div>`
-      + `<div class="cg-kit-row"><label>Squad number <span class="cg-kit-hint">(his for life — retired in his honour if he becomes a club legend)</span></label><input id="kit-number" type="number" min="1" max="99" value="${k.number}"></div>`
-      + `<div class="cg-kit-row"><label>Nickname <span class="cg-kit-hint">(yours alone — saved with his kit; every line in the game uses his real name)</span></label><input id="kit-nick" type="text" maxlength="20" placeholder="e.g. The Wolf" value="${(k.nickname ?? '').replace(/"/g, '&quot;')}"></div>`
+      + `<div class="cg-kit-row"><label for="kit-number">Squad number <span class="cg-kit-hint">(his for life — retired in his honour if he becomes a club legend)</span></label><input id="kit-number" type="number" min="1" max="99" value="${k.number}"></div>`
+      + `<div class="cg-kit-row"><label for="kit-nick">Nickname <span class="cg-kit-hint">(yours alone — saved with his kit; every line in the game uses his real name)</span></label><input id="kit-nick" type="text" maxlength="20" placeholder="e.g. The Wolf" value="${(k.nickname ?? '').replace(/"/g, '&quot;')}"></div>`
       + `<button id="kit-save" class="cg-kit-save">Save</button>`
       + `</div>`;
   }
@@ -5838,7 +5863,12 @@ class Game {
     if (this.editorMode !== 'match' || !this.spFixture) { host.innerHTML = ''; return; }
     const rows = MATCH_PLAN_RULES.map((r) => {
       const on = this.draftPlan.has(r.id);
-      return `<div class="mp-rule${on ? ' on' : ''}" data-plan="${r.id}"${r.note ? ` title="${r.note.replace(/"/g, '&quot;')}"` : ''}><span class="mp-check">✓</span><span class="mp-ico">${r.ico}</span>`
+      // ARMED IS A STATE, NOT A COLOUR. The ✓ is unconditionally in the DOM and only hidden by
+      // `.mp-check { color: transparent }`, which does not take text out of the accessibility tree — so all
+      // seven rules announced with a tick whether they were armed or not, and toggling one said nothing at
+      // all. aria-pressed is the state the role="button" makeActivatable stamps supports (aria-checked is
+      // not — see makeActivatable), the same fix the heir cards carry.
+      return `<div class="mp-rule${on ? ' on' : ''}" data-plan="${r.id}" aria-pressed="${on}"${r.note ? ` title="${r.note.replace(/"/g, '&quot;')}"` : ''}><span class="mp-check" aria-hidden="true">✓</span><span class="mp-ico">${r.ico}</span>`
         + `<span class="mp-body"><span class="mp-if">If ${r.ifText}</span> <span class="mp-then">→ ${r.thenText}</span></span></div>`;
     }).join('');
     host.innerHTML = `<div class="mp-head">📋 MATCH PLAN — conditional orders</div>`
@@ -5849,6 +5879,7 @@ class Game {
       if (this.draftPlan.has(id)) this.draftPlan.delete(id); else this.draftPlan.add(id);
       this.savePlan();
       el.classList.toggle('on');
+      el.setAttribute('aria-pressed', String(this.draftPlan.has(id))); // the spoken state moves with the class
     }));
   }
 
@@ -5941,7 +5972,11 @@ class Game {
         .map((d) => `<option value="${d}" title="${DUTY_DESC[d]}" ${d === this.draftDuties[i] ? 'selected' : ''}>${DUTY_LABEL[d]}</option>`).join('');
       const curDutyDesc = DUTY_DESC[this.draftDuties[i]] ?? '';
       const curDutyLabel = DUTY_LABEL[this.draftDuties[i]] ?? '';
-      const rb = (role: string, on: boolean, glyph: string, title: string) => `<button class="rb ${role}${on ? ' on' : ''}" data-role="${role}" data-i="${i}" title="${title}">${glyph}</button>`;
+      // WHO WEARS THE ARMBAND IS A STATE, NOT A BACKGROUND COLOUR. `.rb.cap.on` and its siblings paint the
+      // armed badge and nothing else marked it, so a screen-reader or high-contrast player could not tell the
+      // captain or the penalty/free-kick/corner takers from the ten men who are not. The editor re-renders on
+      // every click, so the markup alone keeps this true.
+      const rb = (role: string, on: boolean, glyph: string, title: string) => `<button class="rb ${role}${on ? ' on' : ''}" data-role="${role}" data-i="${i}" title="${title}" aria-pressed="${on}">${glyph}</button>`;
       const badges = `<span class="role-badges">`
         + rb('cap', this.draftCaptain === i, '©', 'Captain')
         + rb('pen', this.draftTakers.pen === i, 'P', 'Penalty taker')
@@ -6971,9 +7006,23 @@ setInterval(() => {
   saveWarned = true;
   const el = document.createElement('div');
   el.id = 'save-broken';
+  // AND IT HAS TO BE ANNOUNCED, NOT JUST DISPLAYED. The highest-stakes sentence in the game — your session
+  // is being lost — reached a screen reader through nothing at all: an unlabelled <div> appended to the END
+  // of <body>, heard only by a player who happened to browse down to it. The role goes on BEFORE
+  // appendChild, because a live region that enters the tree already carrying its text is announced
+  // dependably only when it arrives as an alert. "alert", not the "status" #toast uses, for the very reason
+  // index.html gives for preferring status everywhere else: that rule is about confirmations and refusals,
+  // and this one really does interrupt.
+  el.setAttribute('role', 'alert');
   el.innerHTML = `<b>⚠️ THE GAME IS NOT BEING SAVED.</b> Your browser refused to store this save${h.error ? ` (${h.error})` : ''}. `
     + `Progress since you started playing will be lost when you close this tab. This usually means private browsing, a full disk, or blocked site data.`;
   document.body.appendChild(el);
+  // AND SAY IT THROUGH #toast TOO. Readers commonly announce only mutations made to a region that was
+  // already in the accessibility tree when they met it, and #toast has been there since load (measured
+  // live=polite, ignored=false — index.html carries the numbers). This is the repair F-172 made for the
+  // failed-register path, never carried across to the one message that costs a save. It sits inside the
+  // `saveWarned` latch, so it speaks once per failure rather than every 4s.
+  toast('⚠️ The game is not being saved — your progress will be lost when you close this tab.');
 }, 4000);
 window.addEventListener('pagehide', settleSave);
 window.addEventListener('beforeunload', settleSave);

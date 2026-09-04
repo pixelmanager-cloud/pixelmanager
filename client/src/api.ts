@@ -409,11 +409,39 @@ async function membersOf(model: ReturnType<typeof getActiveModel>): Promise<Hous
       // generation adds little, it never takes anything back." So the branching bloodline, the feature the
       // whole tree exists for, was priced as a penalty.
       //
-      // Both rows are computed for anyone carrying a branch_seed and the better one wins. A man who has not
-      // played yet keeps the career the game never watched; once he has a real record that overtakes it, his
-      // own record scores. Nothing can go down.
+      // Both rows are computed for anyone MINTED as a passed-over branch and the better one wins. A man who
+      // has not played yet keeps the career the game never watched; once he has a real record that overtakes
+      // it, his own record scores. Nothing can go down.
+      //
+      // MINTED as one — not merely carrying a seed. `succeed()` stamps a branch_seed onto the PLAYED trunk
+      // as well ("the played line needs a branch seed of its own"), purely so HIS sons can be derived if he
+      // is ever the one passed over; it is not the record of an offscreen career. Scoring that stamp handed
+      // every newborn heir a full professional career on the day he was born — measured on a save that had
+      // never offered a single brother: 93 renown before the succession and 514 after, 298 of it credited to
+      // "the sons you passed over" on a Houses panel that prints that sentence in those exact words, and the
+      // greatest man in the family's history a ten-year-old with 29 caps. It then OUTLIVED the real career:
+      // the boy above played out a whole one and the house did not move by a point, because the shadow row
+      // still won the max(). `bloodline()` guards this same case and says why; this is the scorer's half.
+      //
+      // The tell is the legend snapshot, and it is exact rather than incidental: the same succeed() call
+      // that stamps the trunk's seed has ALREADY written his `<id>:g<gen>` card a few lines earlier, so a
+      // man who has ever been the line carries a card under an earlier generation of his own id, and a
+      // minted brother (`<id>:b<gen>.<i>`) never does until his own succession — by which point he IS the
+      // line. `branch` cannot say this (startCareer flips it one way and never back) and neither can
+      // `parent_id` (a taken brother keeps his for the rest of the dynasty, so every later newborn on that
+      // line would keep the fabrication), but the snapshot survives the switch — which is what leaves the
+      // brother you took his derived career as a floor.
+      //
+      // A trunk who WAS passed over is a branch after all: the succession bulk-retires him with the rest of
+      // his generation and his seasons are never simulated. That sweep is the only thing in the game that
+      // writes 'retired', and it is the same test bloodline() draws his medallion from, so both panels price
+      // him alike.
       const bseed = ((t as any).branch_seed ?? 0) >>> 0;
-      const branchRow = bseed
+      // nameBy, not cardBy: it is keyed for every legacy row that exists, including one whose card JSON
+      // failed to parse — and a missed snapshot here would fail OPEN, straight back into the fabrication.
+      let wasTheLine = false;
+      for (let g = 0; g < (t.generation ?? 0) && !wasTheLine; g++) wasTheLine = nameBy.has(`${t.id}:g${g}`);
+      const branchRow = bseed && (!wasTheLine || t.state === 'retired')
         ? { name: t.name, generation: t.generation ?? 0, played: false, ...branchCareer(bseed, t.pedigree ?? 0) }
         : null;
       if (!played && !hon && branchRow) return branchRow;
@@ -1415,7 +1443,23 @@ export const api = {
     // moment the trunk moves onto him — every candidate is minted as 'sibling' precisely because which one
     // becomes the played line is not decided until here. The brothers he was picked over keep 'sibling',
     // which is what the Family Record draws paler: present, and visibly a road not taken.
+    // Which branch he arrived on has to be read FIRST: `t` is the stored token itself and the update
+    // below writes through it, so after the flip there is nothing left to tell what he was.
+    const cameFrom = (t as any).branch ?? 'played';
     if ((t as any).branch !== 'played') await localStore.updateToken(pid, { branch: 'played' } as any);
+    // ...AND THE MAN HE WAS PICKED OVER COMES OFF IT. The trunk heir is the one candidate NOT minted as a
+    // sibling — succeed() reworks the father's own token in place and createToken stamped 'played' on it
+    // at birth — so taking a brother left TWO men on one rank reading 'played'. The Family Record drew
+    // neither of them paler, against its own footer "Sons who were passed over are shown paler", and its
+    // trunk centring is a findIndex: it put the boy the player had just declined on the centre line and
+    // pushed the line actually taken off to one side. Same rank, still 'played', and no career ever
+    // started on him names that man and nobody else.
+    if (cameFrom === 'sibling') {
+      for (const o of getActiveModel().tokens) {
+        if (o.id === pid || (o.generation ?? 0) !== (t.generation ?? 0)) continue;
+        if (((o as any).branch ?? 'played') === 'played' && o.career_seed == null) await localStore.updateToken(o.id, { branch: 'sibling' } as any);
+      }
+    }
     const fresh = (await localStore.getToken(pid))!;
     const clubName = getActiveModel().club.name ?? null;
     return { ok: true as const, state: careerState(fresh, loadCareer(fresh), clubName) };
@@ -1613,7 +1657,13 @@ export const api = {
           parentId: ((): string | null => {
             const raw = (t as any).parent_id ?? null;
             const gen = t.generation ?? 0;
-            if ((t as any).branch && (t as any).branch !== 'played') return (raw && forefatherFor(raw, gen)) || raw;
+            // The demoted trunk heir needs that last arm. When the line moves onto a brother the man
+            // passed over is marked 'sibling', but his token id is the FOUNDER's and its parent_id is null
+            // by construction — so he came back fatherless and the renderer, which draws a branch only
+            // when both ends are placed, dropped his line entirely: a medallion floating on its rank. His
+            // father is the last node of his own legend chain, which is where he hung before he was
+            // demoted. A minted brother has no legend rows under his own id, so this cannot fire for him.
+            if ((t as any).branch && (t as any).branch !== 'played') return (raw && forefatherFor(raw, gen)) || lastAncestorOf.get(t.id)?.id || raw;
             return lastAncestorOf.get(t.id)?.id ?? raw;
           })(),
           // WHOSE SON HE IS. Token.father_name was written at every succession and read by NOTHING — the
@@ -1653,7 +1703,17 @@ export const api = {
   legends: async () => {
     await ensureActive();
     const rows = await localStore.legaciesFor(OWNER);
-    return { legends: rows.map((r) => ({ playerId: r.player_id.split(':g')[0], name: r.name, card: JSON.parse(r.card_json), retiredSeason: r.retired_season })) };
+    // THE KEY IS THE LINE, NOT THE TOKEN. `player_id` is `<token id>:g<gen>`, and taking a brother or a
+    // cousin at a succession CHANGES the token id (`nft:1` → `nft:1:b3.1`, a nephew → `<uncle>.n0`) while
+    // the man is still the next generation of the same family. Splitting on ':g' alone therefore handed the
+    // Trophy Room a second key for one house: it drew the family as two unrelated bloodlines under the same
+    // surname, restarted the switched chain's generation labels at 1, and made the hub line count two.
+    // Truncating at the first branch marker folds every brother and cousin back onto the founder's id,
+    // while a bought outsider (`nft:2` — "a spare body with a life of his own") keeps a line of his own.
+    // The generation travels with the row because the chain INDEX is not the generation once one line root
+    // can hold two men of one generation: the Trophy Room's caption and its heirloom lookup need the real
+    // one, not a position in a list.
+    return { legends: rows.map((r) => ({ playerId: r.player_id.split(':g')[0].split(/:b|\.n/)[0], generation: Number(r.player_id.split(':g')[1]) || 0, name: r.name, card: JSON.parse(r.card_json), retiredSeason: r.retired_season })) };
   },
   prestige: async () => {
     await ensureActive();

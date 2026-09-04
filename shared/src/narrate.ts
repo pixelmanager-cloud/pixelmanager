@@ -6,6 +6,8 @@ import { CHILD_SETUP } from './prompts/child_setup.js';
 import { SETTINGS } from './prompts/settings.js';
 import { EVENT_PREFIX } from './prompts/event_prefix.js';
 import { BIG_SETTINGS } from './prompts/big_settings.js';
+// the engine's own "this went well" threshold — the three resolution beats below must not re-derive it
+import { GOOD_OUTCOME } from './career.js';
 
 const HUGE_SETTINGS = [
   'in the cup final, the whole ground holding its breath',
@@ -4241,12 +4243,17 @@ const INJURY_APPROACH_LINE: Record<'rush' | 'patient', { good: string[]; bad: st
   },
 };
 /** The resolution beat for a mid-chapter LIFE EVENT (contract standoff, loan call, media storm, etc.) —
- *  distinct from narratePlay: this reads like an off-pitch moment resolving, using the same success band.
+ *  distinct from narratePlay: this reads like an off-pitch moment resolving, graded on the SAME threshold
+ *  the consequence pays on (GOOD_OUTCOME) rather than narratePlay's `band` — see below.
  *  `approach` ('rush'/'patient') only ever arrives for injury_comeback (see career.ts's lastLifeEvent). */
 export function narrateLifeEvent(kind: string, cardName: string, success: number, ctx: NarrateCtx, approach?: 'rush' | 'patient', cardTags?: string[], cardId?: string): string {
   const rng = mulberry32(ctx.seed >>> 0);
   const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
-  const good = band(success) === 'triumph' || band(success) === 'good';
+  // GRADED ON THE CONSEQUENCE'S THRESHOLD, NOT narratePlay's BAND. `band`'s 'good' starts at 0.62 while
+  // career.ts pays the good outcome from GOOD_OUTCOME = 0.55, so on ~15% of life events, ~12% of rivalry
+  // moments and ~9% of shock call-ups the meters climbed, the earnings landed and tokens.ts printed "That
+  // went well — …, handled." in the same frame as a sentence picked out of the `.bad` bank. (W15-15)
+  const good = success >= GOOD_OUTCOME;
   const table = LIFE_RESOLUTION[kind] ?? LIFE_RESOLUTION.setback;
   const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed, ctx.castAvoid) : null;
   let resline = pick(good ? table.good : table.bad);
@@ -4332,7 +4339,8 @@ export interface RivalPayoff { rivalName: string; leadBefore: number; leadAfter:
 export function narrateRivalMoment(cardName: string, success: number, ctx: NarrateCtx, payoff: RivalPayoff, cardTags?: string[]): string {
   const rng = mulberry32(ctx.seed >>> 0);
   const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
-  const good = band(success) === 'triumph' || band(success) === 'good';
+  // the consequence's threshold, not narratePlay's band — see narrateLifeEvent above (W15-15)
+  const good = success >= GOOD_OUTCOME;
   const resline = pick(good ? RIVAL_RESOLUTION.good : RIVAL_RESOLUTION.bad).replace(/{rival}/g, payoff.rivalName);
   const swing = payoff.leadBefore < 0 && payoff.leadAfter >= 0 ? ` He’s overtaken ${payoff.rivalName} in the race that matters most to him.`
     : payoff.leadBefore >= 0 && payoff.leadAfter < 0 ? ` ${payoff.rivalName} has just gone back ahead of him — and it stings.`
@@ -4411,7 +4419,8 @@ export function callupMomentStory(moment: string | null, ctx: ScenarioCtx): stri
 export function narrateCallupMoment(cardName: string, success: number, ctx: NarrateCtx, cardTags?: string[]): string {
   const rng = mulberry32(ctx.seed >>> 0);
   const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(rng() * arr.length)];
-  const good = band(success) === 'triumph' || band(success) === 'good';
+  // the consequence's threshold, not narratePlay's band — see narrateLifeEvent above (W15-15)
+  const good = success >= GOOD_OUTCOME;
   const resline = pick(good ? CALLUP_RESOLUTION.good : CALLUP_RESOLUTION.bad);
   const cast = ctx.careerSeed != null ? careerCast(ctx.careerSeed, ctx.castAvoid) : null;
   // was two hard-coded sentences, one for good and one for bad, on the single highest-stakes beat
@@ -4840,8 +4849,16 @@ export function narrateDraft(cardName: string, _tags: string[], ctx: NarrateCtx)
 export function narrateOffer(name: string, effs: { earn: number; greed: number; market: number; form: number }, ctx: NarrateCtx): string {
   const rng = mulberry32(ctx.seed >>> 0);
   const money = effs.earn > 0, dev = effs.form > 0;
-  if (money && !dev) return pickFrom(rng, OFFER_MONEY(name));
-  if (dev && !money) return pickFrom(rng, OFFER_DEV(name));
+  // The develop signal is tested FIRST, and not as an exclusive. Every offer the game deals carries
+  // earn > 0 — DEVELOP_OFFERS still pay 90-140 for staying put — so `money` was always true and the old
+  // `dev && !money` could never fire: all nine OFFER_DEV lines were unreachable, and turning the payday
+  // down narrated from the archetype-neutral fallback, on the one screen that exists to dramatise that
+  // choice. `form > 0` is the thing only DEVELOP_OFFERS carry, so it is what names the archetype; BRAND
+  // offers (earn > 0, form < 0) share OFFER_MONEY with MONEY offers by design, both being a cash-in.
+  // OFFER_NEUTRAL is now the fallback it was written as — nothing in the offer data reaches it, and that
+  // is not a second bug to fix by editing offers. tools/playtest/offer_bank_reach.ts gates this. (W15-14)
+  if (dev) return pickFrom(rng, OFFER_DEV(name));
+  if (money) return pickFrom(rng, OFFER_MONEY(name));
   return pickFrom(rng, OFFER_NEUTRAL(name));
 }
 
