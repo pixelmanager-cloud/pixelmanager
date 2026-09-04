@@ -310,10 +310,19 @@ async function bumpMoraleByLocal(tokenId: string, delta: number): Promise<void> 
  *  server/src/index.ts's `missionView`. */
 /** Matches this dynasty has played, ever. The lifetime W/D/L on the profile only ever increments and is
  *  not reset at a season rollover or a succession, which makes it the one counter a scouting trip can be
- *  measured against without a season-boundary special case. */
-function matchesPlayed(): number {
+ *  measured against without a season-boundary special case.
+ *
+ *  ON ITS OWN IT ONLY MOVES AT THE ROLLOVER, and that alone made every scouting trip unreachable. The
+ *  lifetime W/D/L has exactly one writer — `spSeasonReward`, which `nextSeason()` calls once with the
+ *  whole campaign batched — so a trip priced at 1-9 matchdays sat on the same `matchdaysLeft` for the
+ *  entire season it was dispatched in, and then every outstanding trip landed together. The matchdays
+ *  played SO FAR THIS SEASON live in MgrState (localStorage), which the facade cannot see on its own, so
+ *  the caller passes them — weaker than owning the state, the same arrangement `hireStaff` uses. The two
+ *  terms hand over to each other at a rollover: the lifetime total goes up by exactly the season's result
+ *  count at the instant that count is reset to zero, so a trip in flight keeps its due date. */
+function matchesPlayed(mdThisSeason = 0): number {
   const p = getActiveModel().profile;
-  return (p.wins ?? 0) + (p.draws ?? 0) + (p.losses ?? 0);
+  return (p.wins ?? 0) + (p.draws ?? 0) + (p.losses ?? 0) + Math.max(0, Math.floor(Number(mdThisSeason) || 0));
 }
 
 /** `ready_at` IS NOW A MATCHDAY ORDINAL, NOT A TIMESTAMP. The unit changed; the column did not, so no save
@@ -1718,7 +1727,7 @@ export const api = {
     if (refund > 0) await localStore.addCoins(OWNER, refund);
     return { ok: true as const, key, level: level - 1, refund, coins: getActiveModel().profile.coins };
   },
-  missions: async () => {
+  missions: async (mdThisSeason = 0) => {
     await ensureActive();
     const model = getActiveModel();
     const seasonId = String(model.profile.season);
@@ -1748,10 +1757,10 @@ export const api = {
     return {
       season: model.profile.season, tier: TIER, tripsPerSeason, tripsUsed: count,
       tripsLeft: Math.max(0, tripsPerSeason - count), loaneeCap: LOANEE_CAP, loaneeCount, coins: model.profile.coins,
-      destinations, missions: trips.map((m) => missionView(m, matchesPlayed())),
+      destinations, missions: trips.map((m) => missionView(m, matchesPlayed(mdThisSeason))),
     };
   },
-  dispatchScout: async (destination: string) => {
+  dispatchScout: async (destination: string, mdThisSeason = 0) => {
     await ensureActive();
     const model = getActiveModel();
     const dest = destinationById(destination);
@@ -1779,22 +1788,22 @@ export const api = {
     const now = Date.now();
     const row: MissionRow = {
       id, account_id: OWNER, season_id: seasonId, destination: dest.id,
-      dispatched_at: now, ready_at: matchesPlayed() + travelMatchdays(dest),
+      dispatched_at: now, ready_at: matchesPlayed(mdThisSeason) + travelMatchdays(dest),
       found: outcome.found ? 1 : 0, player_json: outcome.player ? JSON.stringify(outcome.player) : null,
       band: outcome.band, status: 'travelling',
     };
     await localStore.createMission(row);
-    return { ok: true as const, mission: missionView(row, matchesPlayed()), coins: getActiveModel().profile.coins };
+    return { ok: true as const, mission: missionView(row, matchesPlayed(mdThisSeason)), coins: getActiveModel().profile.coins };
   },
-  signMission: async (id: string) => {
+  signMission: async (id: string, mdThisSeason = 0) => {
     await ensureActive();
     const model = getActiveModel();
     const seasonId = String(model.profile.season);
     const m = await localStore.missionById(id);
     if (!m) throw apiErr('no such trip', {}, 404);
     if (m.status === 'signed') throw apiErr('already signed', {}, 409);
-    if (m.ready_at <= LEGACY_TIMESTAMP && matchesPlayed() < m.ready_at) {
-      throw apiErr(`the scout is still travelling — ${m.ready_at - matchesPlayed()} more matchday(s)`, {}, 409);
+    if (m.ready_at <= LEGACY_TIMESTAMP && matchesPlayed(mdThisSeason) < m.ready_at) {
+      throw apiErr(`the scout is still travelling — ${m.ready_at - matchesPlayed(mdThisSeason)} more matchday(s)`, {}, 409);
     }
     if (!m.found || !m.player_json) throw apiErr('that trip came back empty-handed', {}, 409);
     if ((await localStore.countLoanees(OWNER, seasonId)) >= LOANEE_CAP) throw apiErr(`you can field at most ${LOANEE_CAP} loanees a season`, {}, 409);

@@ -117,7 +117,10 @@ function h32(...n: number[]): number {
 }
 const strh = (s: string): number => { let h = 0; for (let i = 0; i < s.length; i++) h = (Math.imul(h, 31) + s.charCodeAt(i)) | 0; return h >>> 0; };
 
-export interface FillVars { p?: string; club?: string; from?: string; to?: string; n?: string | number; fee?: string | number; }
+// `name` is what the event is ABOUT rather than a token any authored line substitutes today — the facility
+// being upgraded, the club that bid, the specialist hired. narrateManager hashes it to tell one firing of an
+// event from the next, so it is declared here instead of being smuggled past the type at the call sites.
+export interface FillVars { p?: string; club?: string; from?: string; to?: string; name?: string; n?: string | number; fee?: string | number; }
 
 /** Substitute the supported placeholders. Anything unknown is LEFT ALONE rather than blanked, so an
  *  author's typo is visible in review instead of silently deleting half a sentence. */
@@ -138,7 +141,19 @@ export function fillMgr(line: string, v: FillVars): string {
 export function narrateManager(event: MgrEvent, ctx: { seed: number; person?: PersonCtx; club?: ClubCtx; vars?: FillVars }): string | null {
   const pool = eligible(event, ctx.person, ctx.vars);
   if (!pool.length) return null;
-  const idx = h32(ctx.seed >>> 0, strh(event), strh(ctx.person?.name ?? ''), ctx.club?.season ?? 0) % pool.length;
+  // WHICH FIRING THIS IS has to reach the hash, or one season of one event is one sentence repeated.
+  // The index keyed on (seed, event, person, season) alone — and the club-side events pass no person at all
+  // (facility_upgraded, staff_hired, scout_empty) or the same bloodline star every time (scout_dispatched),
+  // so every upgrade, hire and scouting trip in a season landed on the SAME index. Measured: 1 distinct
+  // line out of the 120-line facility bank across the 13 upgradeable facilities, and the same collapse for
+  // a player hurt twice in a season. The vars already carry the discriminator — the facility's name and new
+  // level, the destination scouted, the fee — so they go in. Keys are sorted so the order a call site
+  // happened to build the object in cannot change the line, and values are stringified so a var added later
+  // discriminates without anyone having to remember this line. Still pure: vars are engine values, so a
+  // replayed season reads the same.
+  const v = (ctx.vars ?? {}) as Record<string, unknown>;
+  const about = Object.keys(v).sort().map((k) => `${k}=${String(v[k])}`).join('|');
+  const idx = h32(ctx.seed >>> 0, strh(event), strh(ctx.person?.name ?? ''), ctx.club?.season ?? 0, strh(about)) % pool.length;
   return fillMgr(pool[idx], {
     p: ctx.person?.name,
     club: ctx.club?.club,

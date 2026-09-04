@@ -912,8 +912,17 @@ class Game {
   private openConfirm(message: string, confirmLabel: string, onYes: () => void) {
     document.getElementById('confirm-ov')?.remove();
     const ov = document.createElement('div'); ov.id = 'confirm-ov';
-    ov.innerHTML = `<div class="tt-card"><div class="tt-title">⚠ ARE YOU SURE?</div>`
-      + `<div class="tt-sub" style="margin-bottom:6px">${message}</div>`
+    // AN UNNAMED DIALOG ANNOUNCES ONLY ITS FIRST BUTTON. This was an anonymous stack of divs — no role, no
+    // aria-modal, nothing tying the card to its title or to the line that carries the stakes — and dialogify
+    // moves focus to the first focusable, which is #cf-no. So the whole announcement a screen-reader player
+    // got for "Delete <b>the Wilders</b>? This bloodline is gone for good — there's no undo." was
+    // "Cancel, button": the family about to be erased was on screen and unreadable.
+    // alertdialog, not dialog: this is a message that interrupts and demands an answer, and it is the role
+    // whose aria-describedby is read out when the dialog opens. The role sits on the CARD, not on the
+    // full-screen backdrop — clicking the backdrop dismisses, so it is chrome, not the dialog.
+    ov.innerHTML = `<div class="tt-card" role="alertdialog" aria-modal="true" aria-labelledby="cf-title" aria-describedby="cf-msg">`
+      + `<div class="tt-title" id="cf-title">⚠ ARE YOU SURE?</div>`
+      + `<div class="tt-sub" id="cf-msg" style="margin-bottom:6px">${message}</div>`
       + `<div class="cf-btns"><button id="cf-no">Cancel</button><button id="cf-yes" class="danger">${confirmLabel}</button></div></div>`;
     document.body.appendChild(ov);
     const close = this.dialogify(ov);
@@ -2609,7 +2618,11 @@ class Game {
       if (this.account?.coins != null) this.account.coins = r.coins;
       const m = this.loadMgr(); this.saveMgr({ ...m, staff: [...(m.staff ?? []), id] });
       toast(`🧑‍🏫 Hired ${s.name} (−${r.cost.toLocaleString()}c)`);
-      this.feedEvent('staff_hired', '🧑‍🏫', undefined, {});
+      // WHO was hired, so the narration can tell one hire from the next. There are three specialists and
+      // 81 authored staff_hired lines, and with neither a person nor a var to hash on, every hire in the
+      // save drew the same index and printed the same sentence (see narrateManager). No authored line
+      // substitutes {name}; it is here purely as the discriminator.
+      this.feedEvent('staff_hired', '🧑‍🏫', undefined, { name: s.name });
       this.showSeason();
     } catch (e: any) { toast(e?.status === 409 ? 'Not enough coins' : 'Could not hire'); }
   }
@@ -5358,7 +5371,7 @@ class Game {
   private missionTimer: number | null = null;
   private async loadMissions() {
     try {
-      const d = await api.missions();
+      const d = await api.missions(this.loadMgr().results.length);
       this.account.coins = d.coins;
       $('trips-per').textContent = String(d.tripsPerSeason);
       $('trips-used').textContent = String(d.tripsUsed);
@@ -5446,7 +5459,7 @@ class Game {
 
   private async dispatchScout(destination: string) {
     try {
-      const r = await api.dispatchScout(destination);
+      const r = await api.dispatchScout(destination, this.loadMgr().results.length);
       this.account.coins = r.coins;
       toast(`Scout dispatched to ${r.mission.destName} 🌍`);
       this.feedEvent('scout_dispatched', '🔭', this.starCtx(), { to: r.mission.destName });
@@ -5459,7 +5472,7 @@ class Game {
 
   private async signMission(id: string) {
     try {
-      const r = await api.signMission(id);
+      const r = await api.signMission(id, this.loadMgr().results.length);
       toast(`Signed ${r.player.name} ✓`);
       // WAS `{}` — no vars at all, on an event whose bank quotes both {fee} and {to}. `fillMgr` leaves
       // an unknown placeholder in place rather than blanking it, so four of the ~87 eligible lines went

@@ -1843,10 +1843,23 @@
       @keyframes frDraw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
       @keyframes frStamp { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
       .fr-svg .fr-trunk { stroke-dasharray: 1; animation: frDraw 1.05s ease-out both; }
+      /* THE RAMP SATURATES AT THE SIXTH RANK. `--fr-g` is a rank among the generations present, so it
+         climbs by one at every succession and never comes back down. Unclamped, `rank * 0.26s` made the
+         wait a function of how long the dynasty had run — and because the tree is drawn founder-first, the
+         LIVING star, the one man the screen exists to show, was always last in the queue: 0.52s at
+         generation 0, 2.60s at generation 8, 4.42s at generation 15, worse forever. `both` holds
+         `frStamp`'s `from { opacity: 0 }` through the delay, so he is not merely late, he is absent — and
+         the Trophy Room replays the whole ramp on every visit, not once per save. The founder and the five
+         generations above him still arrive one rank at a time; everything past the sixth — the most RECENT
+         generations, the living star among them — now lands together at 2.08s. `min(rank, 6)` clamps the HIGH
+         ranks, and rank climbs with generation number while the founder sits at the base, so the men who now
+         share a delay are the newest, not the oldest. The record still grows from the founder upward, it just
+         stops charging the player for having played well. Both delays take the SAME cap, so a branch still draws
+         0.1s before the medallion it feeds. */
       .fr-svg .fr-branch { stroke-dasharray: 1; animation: frDraw 0.5s ease-out both;
-        animation-delay: calc(0.42s + var(--fr-g, 0) * 0.26s); }
+        animation-delay: calc(0.42s + min(var(--fr-g, 0), 6) * 0.26s); }
       .fr-svg .fr-in { animation: frStamp 0.34s steps(5, end) both;
-        animation-delay: calc(0.52s + var(--fr-g, 0) * 0.26s); }
+        animation-delay: calc(0.52s + min(var(--fr-g, 0), 6) * 0.26s); }
       /* A player who has asked for less motion still gets the record — just all at once, which is what it
          did before. 22 animations shipped with only two reduced-motion blocks; this one does not add to
          that debt. */
