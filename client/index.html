@@ -350,7 +350,15 @@
       .set-row:first-of-type { border-top: none; }
       .set-row .set-lbl { display: flex; align-items: center; justify-content: space-between; font-family: var(--display); font-size: 12px; color: var(--text); }
       .set-row .set-hint { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
-      .set-row input[type=range] { -webkit-appearance: none; appearance: none; box-sizing: border-box; width: 100%; height: 8px; margin-top: 12px; border-radius: 6px; background: var(--panel-2, #1f1f4d); cursor: pointer; }
+      /* `border: none; padding: 0` because this rule TIES with the generic
+         `input:not([type="checkbox"]):not([type="radio"])` rule above — both compute to (0,2,1), since
+         :not() contributes its argument's specificity — so it wins only the properties it RE-DECLARES and
+         inherited that rule's text-field box for the rest. Border-box plus a 2px border and 6px vertical
+         padding floors the box at 16px, so the 8px groove below could never render; the same rule's
+         :hover/:focus then painted a cyan and a green TEXT-INPUT border around a volume slider, and its
+         10px side padding inset the thumb so the UI-scale handle never reached its own 80%/140% stops.
+         The app-wide keyboard focus ring is unaffected — it is an outline, not this border. */
+      .set-row input[type=range] { -webkit-appearance: none; appearance: none; box-sizing: border-box; border: none; padding: 0; width: 100%; height: 8px; margin-top: 12px; border-radius: 6px; background: var(--panel-2, #1f1f4d); cursor: pointer; }
       .set-row input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; appearance: none; width: 18px; height: 18px; border-radius: 50%; background: var(--accent); border: 2px solid rgba(255,255,255,0.5); box-shadow: 0 1px 3px rgba(0,0,0,0.5); }
       .set-row input[type=range]::-moz-range-thumb { width: 18px; height: 18px; border: none; border-radius: 50%; background: var(--accent); box-shadow: 0 1px 3px rgba(0,0,0,0.5); }
       .set-val { font-family: var(--body); font-size: 14px; color: var(--accent); }
@@ -757,7 +765,10 @@
       /* STORY ARC beats — a weightier, distinct storyline moment */
       .cg-mtype.arc { color: var(--warn); }
       .cg-scenario.cg-arc { border: 1px solid color-mix(in srgb, var(--warn) 55%, var(--line)); background: color-mix(in srgb, var(--warn) 8%, var(--panel-2)); box-shadow: 0 0 22px color-mix(in srgb, var(--warn) 14%, transparent); }
-      .cg-arc-story { font-size: 16px; line-height: 1.5; }
+      /* The arc's prose is deliberately the same 17px as a routine turn's, and gets no rule of its own. A
+         bare single-class rule on that element is 0,1,0 and `.cg-scenario .cg-story` above is 0,2,0, so a
+         size set here never reaches the screen — it only reads as if arc prose were sized apart. What sets
+         the beat apart is the border, the tint and the glow on the line above. */
       .cg-arc-choices .arc-choice { border-color: color-mix(in srgb, var(--warn) 40%, var(--line)); }
       .cg-arc-choices .arc-choice:hover { border-color: var(--warn); box-shadow: 0 4px 16px color-mix(in srgb, var(--warn) 18%, transparent); }
       .cg-mtype.training { color: #7fd4a0; } .cg-mtype.life { color: #e6b45a; } .cg-mtype.social { color: #8fb8ff; }
@@ -1168,7 +1179,11 @@
          So the screen where you choose which son carries the family name rendered his name, his temperament
          and his family trait in the browser default, on the game's single most consequential decision. */
       .cg-heir-card .cg-cdescr { font-size: 13px; line-height: 1.4; color: #b8c0cc; margin-top: 4px; }
-      .cg-offer .cg-effs { font-size: 12px; color: #9c9; margin-top: 5px; }
+      /* .cg-coach is on this rule because the retirement "what does he do next?" tiles emit .cg-effs too,
+         and no rule reached them: the line disclosing the heir's mentality head-start — the one thing that
+         screen exists to disclose — fell through to the 22px body default, 69% larger than the 13px
+         .cg-cdesc directly above it in the same tile and the same face. */
+      .cg-coach .cg-effs, .cg-offer .cg-effs { font-size: 12px; color: #9c9; margin-top: 5px; }
       /* between-seasons: end-of-chapter consequence report + summer focus choice */
       .cg-conseq { padding: 12px 15px; border-radius: 9px; margin-bottom: 12px; background: rgba(90,120,200,0.10); border: 1px solid rgba(120,150,220,0.28); }
       .cg-conseq .cg-conseq-lbl { display: block; font-family: var(--display); font-size: 11px; color: #ced6ef; letter-spacing: 1px; margin-bottom: 7px; }
@@ -1738,7 +1753,13 @@
       #ticker .cm-corner, #ticker .cm-freekick { color: #86c5e0; } #ticker .cm-pen { color: #ff9de0; font-weight: bold; }
       #ticker .cm-sub { color: #a7e0a0; } #ticker .cm-injury { color: #e09090; }
       #ticker .cm-counter { color: #ffc98a; font-weight: bold; } #ticker .cm-press { color: #f2b06a; }
-      #ticker .cm-lull { color: #6a7088; font-style: italic; } #ticker .cm-momentum { color: #b0a0e0; font-style: italic; }
+      /* #6a7088 was 3.93:1 on the feed ground — the only ink in the ticker under the 4.5:1 readable floor,
+         and 18px regular italic is not WCAG large text, so the floor applies. The lull bank is three
+         authored lines and it fires in effectively every Full-mode match (lastAttackMin resets to 0 at
+         kick-off, so the first attacking beat after minute 12 trips the ten-minute guard), which made it
+         the one commentary line a low-vision player could not read. #7a8098 is 4.92:1 and still the
+         dimmest tier — the italic, not the darkness, is what carries the de-emphasis. */
+      #ticker .cm-lull { color: #7a8098; font-style: italic; } #ticker .cm-momentum { color: #b0a0e0; font-style: italic; }
       #ticker .cm-post { color: #e0c060; font-weight: bold; }
       #toggle-density.on { background: var(--accent, #6ad06a); color: #10210f; }
 
@@ -1778,9 +1799,12 @@
       .mgr-arc-choice:hover { border-color: var(--good); background: rgba(255,255,255,0.06); }
       /* These emit .cg-cname and .cg-cdescr, and every rule for that pair is scoped to a different parent —
          so the choice's label and its explanation rendered identically and the tile read as one flat blob.
-         Same defect as the heir cards; same one-line remedy. */
-      .mgr-arc-choice .cg-cname { font-family: var(--display); font-size: 13px; margin-bottom: 5px; }
-      .mgr-arc-choice .cg-cdescr { font-size: 13px; line-height: 1.4; color: #b8c0cc; }
+         Same defect as the heir cards; same one-line remedy. .cg-temper is the third tile to fall into it:
+         its name and its ~90-character blurb both landed on the 22px VT323 body default, so the six gaffer
+         temperaments — a one-way choice — had no heading and every blurb ran extra lines in a 190px cell.
+         Its padding is 9px 11px against this tile's 9px 12px, so the type that fits one fits the other. */
+      .mgr-arc-choice .cg-cname, .cg-temper .cg-cname { font-family: var(--display); font-size: 13px; margin-bottom: 5px; }
+      .mgr-arc-choice .cg-cdescr, .cg-temper .cg-cdescr { font-size: 13px; line-height: 1.4; color: #b8c0cc; }
       .cg-temper-q { margin: 16px 0 8px; font-family: var(--display); font-size: 14px; }
       .cg-tempers { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; margin-bottom: 14px; }
       .cg-temper { padding: 9px 11px; border: 1px solid rgba(255,255,255,0.18); cursor: pointer; text-align: left; }
@@ -2158,7 +2182,14 @@
       <div id="topbar">
         <span class="title" id="app-title" title="Home">FOOTBALL ROYALTY</span>
         <span class="spacer"></span>
-        <button id="audio-toggle" title="Music on/off" aria-label="Toggle music"></button>
+        <!-- IT ANNOUNCED "TOGGLE MUSIC, BUTTON" WHETHER THE MUSIC WAS PLAYING OR SILENCED. The two
+             states are drawn by ICON_SPEAKER / ICON_MUTED, and both SVGs are aria-hidden; the only other
+             cue is the stroke colour on #audio-toggle.muted. So the accessible name was a constant and
+             pressing the game's one always-visible audio control produced no announced change at all.
+             aria-pressed carries the state, and the name has to be the noun phrase for the SETTING to make
+             that state readable — "Toggle music, pressed" never says which way the press went, while
+             "Mute music, pressed" does. Same words as the Settings switch for the same bit (main.ts). -->
+        <button id="audio-toggle" title="Music on/off" aria-label="Mute music" aria-pressed="false"></button>
         <button id="settings-btn" title="Settings" aria-label="Open settings"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2.5 12h3M18.5 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg></button>
         <button id="logout" class="hidden">≡ Menu</button>
       </div>

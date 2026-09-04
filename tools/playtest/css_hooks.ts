@@ -113,6 +113,33 @@ for (const cls of ['cg-cname', 'cg-cdescr']) {
   ok(rules.some((r) => r.includes('.cg-heir-card')),
      `.${cls} reaches the heir cards, which emit it (every rule for it demands an ancestor)`);
 }
+// …and the same trap one tile further along. The check above names `.cg-heir-card`, so it only ever catches
+// the tile that already shipped broken. `.cg-temper` — the six "what kind of gaffer is he going to be?"
+// options on the one-way handoff screen — wraps both hooks, is named by no rule for either, and walked
+// straight past it: name and blurb both landed on the 22px VT323 body default, so the tile had no heading.
+// So ask the MARKUP which tiles wrap these hooks rather than listing them here.
+//
+// Only these two families, and only a direct `<div class="tile"><div class="cg-cname">` on one line, because
+// the container is then treated as THE styled tile. That holds for this family — every emit site is a
+// top-level tile — and does not hold in general: `.pc-top` sits inside `.pc-card`, so `.pc-card .pc-ovr`
+// reaches it and a parent-only scan would call that live rule dead. A tile whose opening tag is on the
+// previous line (the heir card) is not seen at all, which is why the by-name assertion above stays.
+const tiles = new Map<string, Set<string>>();
+for (const m of main.matchAll(/<div class="([a-z][a-z0-9 -]*)[^"]*"[^>]*><div class="(?:cg-cname|cg-cdescr)/g)) {
+  const at = m.index ?? 0, eol = main.indexOf('\n', at);
+  const line = main.slice(at, eol < 0 ? main.length : eol);
+  const hooks = tiles.get(m[1].trim()) ?? new Set<string>();
+  for (const c of line.matchAll(/<div class="(cg-cname|cg-cdescr)/g)) hooks.add(c[1]);
+  tiles.set(m[1].trim(), hooks);
+}
+console.log(`  ..   ${tiles.size} tile(s) wrap .cg-cname/.cg-cdescr as a same-line direct child`);
+ok(tiles.size >= 5, 'the tile scan found tiles to compare (a broken scan would make the checks below vacuous)');
+for (const [tile, hooks] of tiles) {
+  const classes = tile.split(/\s+/);
+  for (const hook of [...hooks].sort())
+    ok((declared.get(hook) ?? []).some((r) => classes.some((c) => new RegExp(`\\.${c}(?![a-z0-9-])`).test(r))),
+       `.${classes.join('.')} wraps .${hook} and a .${hook} rule names it`);
+}
 
 // ── 3. IDs, which the class scan cannot see ───────────────────────────────────────────────────────────
 // `#me-coins` — the hub's coin balance, the number the player checks before every purchase — had no rule

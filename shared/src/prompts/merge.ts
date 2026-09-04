@@ -11,17 +11,29 @@ export type Bank = Record<string, string[]>;
 export function mergeBanks(base: Bank, ...extras: Array<Bank | undefined>): Bank {
   const out: Bank = {};
   for (const [k, v] of Object.entries(base)) out[k] = [...v];
+  // ONE dedupe set per key, built on that key's first touch and kept. It used to be rebuilt from the whole
+  // accumulated bank once per (pack x key), with the merged array reallocated alongside it — quadratic in
+  // pack count, and every mergeBanks call in the game runs at MODULE SCOPE, so all of it lands on a cold
+  // start with no network wait to hide it behind: KIND_SETUP's 18 authored packs normalised 26,652 lines
+  // to place 10,205. The corpus is still being authored up ~30x (above), so that gets worse, not flat.
+  // Same shape as mergeList below. The ORDER is unchanged and must stay unchanged — it is what decides
+  // which line a seed draws, so a cheaper merge that moves a line is a content regression, not a fix
+  // (tools/playtest/merge_bank_cost.ts asserts both halves).
+  const seenByKey = new Map<string, Set<string>>();
   for (const ex of extras) {
     if (!ex) continue;
     for (const [k, lines] of Object.entries(ex)) {
-      const seen = new Set((out[k] ?? []).map((l) => l.toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim()));
-      const add: string[] = [];
+      let seen = seenByKey.get(k);
+      if (!seen) {
+        out[k] = out[k] ?? [];                  // an extra may introduce a key the base never had
+        seen = new Set(out[k].map((l) => l.toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim()));
+        seenByKey.set(k, seen);
+      }
       for (const l of lines) {
         const norm = l.toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
         if (!norm || seen.has(norm)) continue;
-        seen.add(norm); add.push(l);
+        seen.add(norm); out[k].push(l);
       }
-      out[k] = [...(out[k] ?? []), ...add];
     }
   }
   return out;

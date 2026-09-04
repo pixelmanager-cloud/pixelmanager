@@ -773,8 +773,10 @@ class Game {
   /** The effective viewport changes when the WINDOW changes too, not only when the scale preference does. */
   private watchViewport() { window.addEventListener('resize', () => this.applyEffectiveViewport()); }
 
-  /** The settings dialog — reachable from the menu AND mid-game (top-bar ⚙). Music volume + mute and
-   *  reduced-motion, applied live. (SFX volume joins here once the SFX set ships.) */
+  /** The settings dialog — reachable from the menu AND mid-game (top-bar ⚙). Audio, motion and display
+   *  preferences, applied live. Deliberately NOT a list of the rows: the sentence this replaces enumerated
+   *  the rows that existed when it was written, and went on calling the SFX slider unbuilt inside the very
+   *  function that renders it. Each row already explains itself in its own .set-hint. */
   private openSettings() {
     document.getElementById('settings-ov')?.remove();
     // A role="switch" WITH NO NAME announces as "switch, on" and nothing else. The knob is drawn with a
@@ -829,17 +831,30 @@ class Game {
     // overlay and runs its onClose — so the clock has to be restored THERE. A hand-rolled Escape handler
     // alongside it worked only because the bubble listener happened to fire afterwards and repair state
     // dialogify had already left behind.
-    const close = this.dialogify(ov, () => { this.running = wasRunning; });
+    // The SFX preview below is debounced, so a pending chime has to die with the dialog: arrow the slider
+    // and press Escape inside that window and a bare timer would sound a chime into a Settings screen that
+    // is already gone. This onClose is the one funnel every dismissal route goes through (✕, backdrop, Escape).
+    let previewT: number | null = null;
+    const close = this.dialogify(ov, () => { this.running = wasRunning; if (previewT !== null) clearTimeout(previewT); });
     ov.addEventListener('click', (e) => { if (e.target === ov) close(); }); // click backdrop to dismiss
     ov.querySelector('.set-x')!.addEventListener('click', close);
     ov.querySelector('#set-credits')!.addEventListener('click', () => { close(); this.showCredits(); });
     // music volume — live (mute stays a separate, authoritative switch: dragging volume never un-mutes)
     const vol = ov.querySelector('#set-vol') as HTMLInputElement;
     vol.addEventListener('input', () => { audio.setVolume(Number(vol.value) / 100); $('set-volval').textContent = `${vol.value}%`; });
-    // SFX volume — live; preview chime on release only when SFX isn't muted (so "mute SFX" is truly silent)
+    // SFX volume — live; one preview chime once the value SETTLES, and only when SFX isn't muted (so
+    // "mute SFX" is truly silent). "Once on release" was true of the mouse only: Chromium fires `change`
+    // on EVERY arrow-key step of a range input, so a keyboard-only player — adjusting sound effects the
+    // one way open to them — got a 0.23s two-note chime per keypress, and key-repeat stacked half a dozen
+    // overlapping oscillator pairs into a buzz on the very control they were reaching for to make the game
+    // quieter. chime() schedules at ctx.currentTime with no rate limit of its own, so the calls sum rather
+    // than replace. Debouncing collapses the burst to one preview on either input path.
     const sfx = ov.querySelector('#set-sfx') as HTMLInputElement;
     sfx.addEventListener('input', () => { audio.setSfxVolume(Number(sfx.value) / 100); $('set-sfxval').textContent = `${sfx.value}%`; });
-    sfx.addEventListener('change', () => { if (!audio.isSfxMuted()) audio.chime('confirm'); }); // preview once on release
+    sfx.addEventListener('change', () => {
+      if (previewT !== null) clearTimeout(previewT);
+      previewT = setTimeout(() => { previewT = null; if (!audio.isSfxMuted()) audio.chime('confirm'); }, 250);
+    });
     // UI scale — live
     const scale = ov.querySelector('#set-scale') as HTMLInputElement;
     scale.addEventListener('input', () => { this.prefs.uiScale = Number(scale.value); this.savePrefs(); this.applyPrefs(); $('set-scaleval').textContent = `${scale.value}%`; });
@@ -888,7 +903,10 @@ class Game {
     ov.querySelector('.set-x')!.addEventListener('click', close);
   }
 
-  private syncMuteBtn() { const at = $('audio-toggle'); at.innerHTML = audio.isMuted() ? ICON_MUTED : ICON_SPEAKER; at.classList.toggle('muted', audio.isMuted()); }
+  /** The picture and the colour are both invisible to a screen reader — ICON_SPEAKER / ICON_MUTED are
+   *  aria-hidden and .muted is a stroke colour — so the pressed state has to move with them, or the
+   *  top-bar button keeps announcing the same words whether the music is playing or silenced. */
+  private syncMuteBtn() { const at = $('audio-toggle'); at.innerHTML = audio.isMuted() ? ICON_MUTED : ICON_SPEAKER; at.classList.toggle('muted', audio.isMuted()); at.setAttribute('aria-pressed', String(audio.isMuted())); }
 
   /** MAKE AN OVERLAY BEHAVE LIKE A DIALOG: move focus into it, trap Tab inside it, close on Escape, mark
    *  the page behind it inert, and put focus back where it was on close.
@@ -1175,7 +1193,9 @@ class Game {
   private wireStaticButtons() {
     // MUSIC mute toggle (persists via audio.ts; icon reflects state)
     const at = $('audio-toggle');
-    const syncAudio = () => { at.innerHTML = audio.isMuted() ? ICON_MUTED : ICON_SPEAKER; at.classList.toggle('muted', audio.isMuted()); };
+    // the second copy of syncMuteBtn — the spoken state has to move here too, or the top-bar button is
+    // back to announcing the wrong way round the moment it is wired from this path instead of Settings
+    const syncAudio = () => { at.innerHTML = audio.isMuted() ? ICON_MUTED : ICON_SPEAKER; at.classList.toggle('muted', audio.isMuted()); at.setAttribute('aria-pressed', String(audio.isMuted())); };
     syncAudio();
     at.addEventListener('click', () => { audio.toggleMuted(); syncAudio(); });
     $('settings-btn').addEventListener('click', () => this.openSettings());
@@ -5088,18 +5108,26 @@ class Game {
     if (s.phase === 'arc' && (s as any).arc) {
       // STORY ARC beat — a branching storyline moment. Rendered as a distinct, weightier decision.
       const a = (s as any).arc;
-      body = `<div class="cg-scenario cg-arc arc-${a.category}"><div class="cg-mtype arc">${a.icon} ${a.title.toUpperCase()}</div><div class="cg-story cg-arc-story">${a.prompt}</div></div>`
+      body = `<div class="cg-scenario cg-arc arc-${a.category}"><div class="cg-mtype arc">${a.icon} ${a.title.toUpperCase()}</div><div class="cg-story">${a.prompt}</div></div>`
         + `<div class="cg-prompt">A moment that could shape his story — what does he do?</div>`
         + `<div class="cg-cards cg-arc-choices">` + a.choices.map((ch: any) => `<div class="cg-card arc-choice" data-act="arc" data-id="${ch.id}"><div class="cg-cname">${ch.label}</div><div class="cg-cdescr">${ch.desc}</div></div>`).join('') + `</div>`;
     } else if (s.phase === 'play' && s.scenario) {
       // the demand — what the moment is asking for. The top tag (biggest weight) is the primary thing to
       // match; render as distinct highlighted pills, labelled, so it never reads like just another card tag.
       const demandTags = Object.entries(s.scenario.demand).sort((a, b) => b[1] - a[1]);
-      const tags = demandTags.map(([t], i) => `<span class="cg-dtag${i === 0 ? ' primary' : ''}" title="${i === 0 ? 'The main thing this moment asks for. Matching it is good — but covering a second tag as well is what makes a play great' : 'Also asked for — cover this one too and the play reads far better'}">${t}</span>`).join('');
-      // legend so the green/amber pill colours aren't a mystery: green is the ideal card, amber ones still help (PT-44)
+      // THE RANK IS SAID, NOT ONLY PAINTED. The primary pill was `background: var(--good)` and the rest
+      // `var(--warn)` — one hue apart, plus a 15%-white inset ring that carries nothing — and the hint below
+      // then told the player to look for "green". This is the play phase, ~120 turns a generation and the
+      // central decision of the game, and the grade turns on which tag you answered (answeredAsk → 🎯 Right
+      // card vs matchedAsk → ◑ Partial match): a red/green-deficient or screen-reader player was being sent
+      // to read the one channel he does not have. The pills are already emitted in weight order, so the rank
+      // was there all along and only the wording was missing. Colour stays on as reinforcement. (F-244)
+      const tags = demandTags.map(([t], i) => `<span class="cg-dtag${i === 0 ? ' primary' : ''}" title="${i === 0 ? 'The main thing this moment asks for. Matching it is good — but covering a second tag as well is what makes a play great' : 'Also asked for — cover this one too and the play reads far better'}">${t} — ${i === 0 ? 'main ask' : 'also helps'}</span>`).join('');
+      // legend that names the words printed on the pills instead of their colours; the tint on each word
+      // still matches the pill it names, so colour reinforces the label rather than being the only way in (PT-44)
       const demandHint = demandTags.length > 1
-        ? '— <b class="cg-h-green">green</b> is the best match, <b class="cg-h-amber">amber</b> also helps; a rarer card develops him more when it fits'
-        : '— play a card carrying the <b class="cg-h-green">green</b> tag; a rarer card develops him more when it fits';
+        ? '— the <b class="cg-h-green">main ask</b> is the best match, an <b class="cg-h-amber">also helps</b> tag adds to it; a rarer card develops him more when it fits'
+        : '— play a card carrying the <b class="cg-h-green">main ask</b> tag; a rarer card develops him more when it fits';
       // distinct presentation per moment type — a matchday scoreboard, the training ground, or life off the pitch
       const mk = s.momentKind ?? (s.lifeEvent ? 'life' : 'training');
       let header: string; let prompt: string;
@@ -5315,9 +5343,17 @@ class Game {
     // The cards are the entire game and they were bare DIVs with a click handler: no role, no tab stop and
     // no accessible name, so to a screen reader the card game read as an unlabelled blank. The name, the
     // description and the qualities it draws on all belong in the label. (PT-160)
+    // ...AND THE VERB HAS TO BE THE ONE THIS SCREEN IS ASKING FOR. `Play` was hard-coded on the non-view
+    // branch, and the DRAFT options take that branch too — so on the screen that reads "Draft N cards into
+    // his deck" every option announced as "Play <card>". Because makeActivatable gives the card
+    // role="button", the aria-label IS the whole announcement: it replaces the visible name and description,
+    // so that was the only verb a keyboard player got, naming the reversible once-per-moment action over the
+    // irreversible pick that shapes the rest of the career. keepFocus's post-mortem below records what
+    // confusing draft with play costs: another irreversible commit.
+    const verb = act === 'draft' ? 'Draft' : 'Play';
     const aria = act === 'view'
       ? `${name}. ${desc ?? ''} ${c.tags.join(', ')}`
-      : `Play ${name}. ${desc ?? ''} Draws on ${c.tags.join(' and ')}.${rar ? ` ${rar} card.` : ''}`;
+      : `${verb} ${name}. ${desc ?? ''} Draws on ${c.tags.join(' and ')}.${rar ? ` ${rar} card.` : ''}`;
     return `<div class="cg-card ${rar}" data-tag="${primaryTag}" data-act="${act}" data-id="${c.id}"`
       // NOTE: role/tabindex are deliberately NOT set here. makeActivatable() early-returns on anything that
       // already has role="button", so setting it in the markup would have skipped the keydown handler and
