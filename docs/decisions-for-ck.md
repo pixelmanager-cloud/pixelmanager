@@ -3323,3 +3323,52 @@ is unfinished" signal a UI can send.
   reputation and the meters. That is the feature the copy already promises, and it is a genuine content
   project (ten dilemmas × two branches × outcomes), not a fix.
 - **(c) Leave it.** Not recommended: this one is visible, repeated, and reads as broken rather than thin.
+
+## §101 — the match soundtrack still repeats inside a fixture, and the pool it was bought for cannot fix it
+
+`audio.ts` justifies its three-track match pool by saying a single 74-second loop "repeated 7.3 times inside
+one match, with no rotation … The pool is now 494s, which is 1.1 loops per match: effectively no repeat
+within a fixture."
+
+**Two things in that are wrong.** The pool is **355.7s**, not 494s (measured on disk: match-1 73.59s, match-2
+148.00s, match-3 134.07s). And the playback code cannot rotate *within* a fixture at all: `play()` picks one
+url and sets `loop = true`, with no `ended` handler on the deck anywhere in the file. Rotation happens at
+context entry — between matches, not during. The anti-repeat branch also biases the pick toward `lastIdx + 1`
+(P = 2/3 on a 3-pool), so match-1 — the 73.6s file the comment names as the problem — still lands on roughly
+a third of fixtures and loops 7.3 times inside it at 1x speed.
+
+The **comment correction is a fix and I am landing it separately.** The behaviour question is yours:
+
+- **(a) Make the deck advance mid-fixture** — `next.loop = pool.length === 1`, plus an `ended` listener that
+  crossfades to the next track. The reviewer flagged two real risks: it changes *every* multi-track pool
+  (career's five tracks, drama's three), which is an ears-on call; and it re-enters a crossfade/reqSeq state
+  machine whose own comments record three bugs already fixed in it — if the handler is ever dropped, the
+  match goes **silent** for the rest of the fixture, which is worse than repeating.
+- **(b) Leave the playback alone and accept between-match rotation only.** Two-thirds of fixtures already get
+  a 148s or 134s bed (2.4–3.6 loops) rather than match-1 every time, so the premise was half-delivered rather
+  than not delivered. **Recommended unless you can hear the problem.**
+- **(c) Drop match-1 from the pool.** One line, no state machine, and the 74-second offender stops appearing.
+  Costs a third of the between-match variety.
+
+## §102 — the whole manager layer is played to one 
+track
+
+`hub: ['/audio/hub-1.ogg']` covers four of the nine screens — hub, lineup, club and season — which is where
+the manager layer spends nearly all its non-match time. One track, on loop, for a whole dynasty.
+
+This is not a defect; the system does exactly what it says. It is a content gap, and a cheap one: the
+licensed Bit By Bit pack is 400+ tracks, so this costs a listen and a file drop, exactly the way match-2 and
+match-3 were added. No code change beyond extending the array.
+
+**Recommendation: pick one or two more Positive/Town-mood tracks and drop them in as hub-2 / hub-3.** I have
+not chosen them because picking the music is a taste call, and because it touches the licensed pack.
+
+## §103 — the training-focus dropdown is the loudest thing in its column
+
+`.sf-focus select` is the only `<select>` in the game never given a class-scoped size, so it inherits the
+global 21px rule inside a 14px row — and pushes that row to 76px tall in the narrower of the two season-grid
+columns. The season's *least* consequential control is drawn as its most prominent one.
+
+The fix is one line (`font-size: 13px; padding: 3px 22px 3px 7px;`). It is here rather than in a commit only
+because it is a visual-hierarchy judgement — if you *want* the focus picker to be prominent, the current size
+is not a bug. Say the word and it is a one-line change either way.
