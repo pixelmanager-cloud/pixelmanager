@@ -393,7 +393,7 @@ export const LIFESTYLE: LifestyleItem[] = [
   { id: 'moveout',  icon: '🏡', name: 'Your Own Place',           blurb: 'Independence at last — your own space to recharge.',        cost: 1300, minChapterIdx: 3, recovery: 5, perks: { partner: 6 } },
   // Breakthrough — earning real money: marginal-gains, giving back, looking after family
   { id: 'chef',     icon: '🥗', name: 'Personal Chef & Trainer',  blurb: 'Marginal gains — you recover better and live right.',       cost: 1600, minChapterIdx: 4, recovery: 8 },
-  { id: 'charity',  icon: '🎗️', name: 'Start a Foundation',       blurb: 'Give back to where you came from — the people love him.',   cost: 2200, minChapterIdx: 4, market: 2, perks: { fans: 12 } },
+  { id: 'charity',  icon: '🎗️', name: 'Start a Foundation',       blurb: 'Give back to where you came from — the people notice.',   cost: 2200, minChapterIdx: 4, market: 2, perks: { fans: 12 } },
   { id: 'family',   icon: '💝', name: 'Buy Your Family a Home',    blurb: 'The dream — set the people who raised you up for life.',    cost: 2800, minChapterIdx: 4, market: 1, perks: { family: 22, partner: 4 } },
   // First Team / Establishing — a star: statement pieces, smart money, the mansion
   { id: 'watch',    icon: '⌚', name: 'A Statement Watch',         blurb: 'The one everyone clocks as you step off the coach.',        cost: 1500, minChapterIdx: 5, market: 1, greed: 1, perks: { sponsors: 6 } },

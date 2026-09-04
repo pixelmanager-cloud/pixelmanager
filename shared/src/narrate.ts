@@ -3648,10 +3648,14 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
   const action = adv ? `he, ${adv}${verb}` : `he ${verb}`; // "he, grinning, flew into …"
   // HUGE moments (stakes 3) get a genuine multi-beat sequence: tension build-up before, a remembered-by
   // aftermath after — the standout peaks a long career should have only a handful of.
-  const tension = ctx.stakes === 3 ? pick(HUGE_TENSION) + ' ' : '';
+  // GATED ON bigOccasion, NOT RAW STAKES. Every line in these three banks describes a match — the tunnel,
+  // ninety minutes, a stadium holding its breath — so a high-stakes TRAINING session was being given
+  // cup-final prose wrapped around a drill. The setting three lines up already had this guard and these
+  // three beats did not, which is the same bleed PT-15 fixed for moment labels and PT-147 for settings.
+  const tension = ctx.stakes === 3 && bigOccasion ? pick(HUGE_TENSION) + ' ' : '';
   // a stakes-3 match is a career-defining occasion — it must NEVER collapse to one flat sentence, so EVERY
   // grade (incl. the 'mixed' band that used to fall through to '') gets a remembered-by aftermath beat (PT-109).
-  const aftermath = ctx.stakes === 3
+  const aftermath = ctx.stakes === 3 && bigOccasion
     ? ' ' + (b === 'triumph' ? pick(HUGE_AFTERMATH.triumph) : b === 'good' || b === 'mixed' ? pick(HUGE_AFTERMATH.good) : pick(HUGE_AFTERMATH_BAD))
     : '';
   // DEBUT EUPHORIA / "a rough debut isn't the end": a distinct flourish on the career-first beat, coloured
@@ -3660,7 +3664,9 @@ export function narratePlay(cardName: string, cardTags: string[], success: numbe
     ? ' ' + (b === 'triumph' || b === 'good' ? pick(DEBUT_EUPHORIA) : b === 'poor' || b === 'dismal' ? pick(DEBUT_ROUGH) : '')
     : '';
   // BIG GAME (stakes 2) occasion-beat — bigger than routine, lighter than the HUGE stakes-3 sequence.
-  const bigBeat = ctx.stakes === 2 && rng() < 0.7
+  // rng() FIRST, bigOccasion after it: short-circuiting before the draw would consume a different number
+  // of rng values on a non-match turn and shift every downstream pick in the career.
+  const bigBeat = ctx.stakes === 2 && rng() < 0.7 && bigOccasion
     ? ' ' + (b === 'triumph' ? pick(BIG_BEAT.triumph) : b === 'good' || b === 'mixed' ? pick(BIG_BEAT.good) : pick(BIG_BEAT.bad)) // 'mixed' no longer falls through to nothing (PT-109)
     : '';
   // name the ACT, not the card — see ACTION_NOUN. Strided off the turn like every other repeating surface,
@@ -4949,11 +4955,38 @@ const RECAP_AHEAD = (ctx: { nextChapter?: string | null }): string[] => [
   ` He goes into ${ctx.nextChapter} with rather more to lose than he had.`,
 ];
 
+// A CHILD ON A PARK PITCH HAS A COACH, PARENTS AND RIVAL KIDS. The rule is stated at the top of this file
+// and two banks already obey it through the CHILD_CHAPTERS gate — CAST_SETUP_CHILD and CHILD_SETUP. The
+// chapter recap did not, and 8 of RECAP_MIDDLE's 16 lines name the club captain or the veteran mentor, so
+// 48% of Grassroots and Academy recaps told an eleven-year-old that "Captain Oduya says the makings are
+// there" or that "Crooked-nosed Teale was right about the bit he ignored". The recap is read at every
+// chapter boundary, seven times a generation, so it was one of the most-repeated places the game forgot how
+// old the boy was. Same cast, same voice as CAST_SETUP_CHILD: the gaffer is Coach, the rival is another kid,
+// and the mentor and captain are simply absent because at this age they do not exist yet.
+const CHILD_RECAP_MIDDLE = (cast: CareerCast): string[] => [
+  `Coach ${cast.gaffer} has pushed him hard.`,
+  `He’s measured himself against ${cast.rival} at every step.`,
+  `His mum has driven him to all of it, in the dark, both ways.`,
+  `Coach ${cast.gaffer} changed one small thing about him and it stuck.`,
+  `${cap(cast.rival)} is half a year ahead on paper and neither of them believes it.`,
+  `His dad has watched from the same stretch of touchline the whole time.`,
+  `Coach ${cast.gaffer} has told him almost nothing, which is how that works.`,
+  `He has spent the whole stretch a step behind ${cast.rival}, or a step in front.`,
+  `Coach ${cast.gaffer} put him on when nobody else would have.`,
+  `His parents have never once said the thing other parents say on the touchline.`,
+  `${cap(cast.rival)} got picked before him more than once, and he has not forgotten any of them.`,
+  `Coach ${cast.gaffer} started leaving the balls out for him afterwards.`,
+  `He has played through weather that sent other boys home.`,
+  `${cap(cast.rival)} has had the better afternoons and the worse year.`,
+  `Nobody at home has ever pretended to know what any of it means.`,
+  `Coach ${cast.gaffer} keeps him back for ten minutes and calls it nothing.`,
+];
+
 export function chapterRecap(ctx: RecapCtx): string {
   const rng = mulberry32(((ctx.careerSeed >>> 0) ^ Math.imul(ctx.age, 2654435761)) >>> 0);
   const cast = careerCast(ctx.careerSeed, ctx.castAvoid);
   const open = pickFrom(rng, RECAP_OPENERS[ctx.chapter] ?? RECAP_OPENERS.Academy);
-  const middle = pickFrom(rng, RECAP_MIDDLE(cast));
+  const middle = pickFrom(rng, CHILD_CHAPTERS.has(ctx.chapter) ? CHILD_RECAP_MIDDLE(cast) : RECAP_MIDDLE(cast));
   const ahead = ctx.nextChapter ? pickFrom(rng, RECAP_AHEAD(ctx)) : '';
   return `${open} ${middle}${ahead}`;
 }

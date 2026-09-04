@@ -8,6 +8,7 @@ import { CHILD_SETUP } from '../../shared/src/prompts/child_setup.js';
 import { SETTINGS } from '../../shared/src/prompts/settings.js';
 import { EVENT_PREFIX } from '../../shared/src/prompts/event_prefix.js';
 import { BIG_SETTINGS } from '../../shared/src/prompts/big_settings.js';
+import { LIFESTYLE, COACHES, AGENTS, CARD_DESC } from '../../shared/src/career.js';
 
 const all: Array<[string, string]> = [];
 for (const [bank, data] of Object.entries({ KIND_SETUP, DEMAND, FRAME_BY_CHAPTER, CHILD_SETUP, SETTINGS, EVENT_PREFIX })) {
@@ -92,6 +93,37 @@ const thirdPerson = (l: string) => /\b(he|him|his)\b/i.test(unquoted(l));
 const mixed = all.filter(([, l]) => secondPerson(l) && thirdPerson(l));
 say('no line mixes "you" and "he" about the same man', mixed.length === 0,
   mixed.length ? `${mixed.length}, e.g. "${mixed[0][1].slice(0, 70)}"` : '0');
+// 5b. THE OPTION COPY WAS OUTSIDE EVERY CHECK ABOVE. This probe loads seven PROMPT banks, and the ~300
+// player-facing strings on the things a player actually clicks — lifestyle purchases, coaches, agents, card
+// descriptions — live in career.ts and were read by nothing. That is how "Give back to where you came from
+// — the people love him." shipped: a single sentence that addresses the player as `you` and then talks
+// about him as `he`, which is the exact clash check 5 exists to catch. It matters more here than in a
+// prompt bank, because a lifestyle blurb is reused VERBATIM as the outcome narration and lands inside the
+// .cg-narrate quote box that every other turn fills with third-person prose.
+//
+// Three lines legitimately mix the two, because their "him/his" is a DIFFERENT man. They are named here
+// rather than pattern-matched away, so a fourth cannot join them quietly.
+const OTHER_MAN = new Set([
+  'A wise old pro takes you under his wing',                                  // the coach's wing, not the player's
+  'Use your frame, shoulder to shoulder, to knock him off it.',               // the opponent being knocked off the ball
+  'Stand your ground and block it at his feet, brave as they come.',          // the opponent's feet
+]);
+const optionCopy: Array<[string, string]> = [];
+const collect = (src: string, o: any) => {
+  for (const f of ['name', 'blurb', 'desc', 'perk']) if (typeof o?.[f] === 'string') optionCopy.push([`${src}.${f}`, o[f]]);
+};
+for (const it of LIFESTYLE) collect(`LIFESTYLE.${it.id}`, it);
+for (const it of COACHES as any[]) collect(`COACHES.${it.id}`, it);
+for (const it of AGENTS as any[]) collect(`AGENTS.${it.id}`, it);
+for (const [k, v] of Object.entries(CARD_DESC)) optionCopy.push([`CARD_DESC.${k}`, v]);
+console.log(`  note option copy scanned: ${optionCopy.length} string(s) across LIFESTYLE/COACHES/AGENTS/CARD_DESC`);
+// VACUITY GUARD: an import that resolved to undefined, or a renamed field, would scan nothing and pass.
+say('the option copy was actually loaded (not a zero-of-zero pass)', optionCopy.length > 200, `${optionCopy.length}`);
+const optMixed = optionCopy.filter(([, l]) => secondPerson(l) && thirdPerson(l) && !OTHER_MAN.has(l));
+for (const [k, l] of optMixed) console.log(`       ${k}: ${l}`);
+say('no option blurb switches person about the player himself', optMixed.length === 0,
+  optMixed.length ? `${optMixed.length}, e.g. "${optMixed[0][1].slice(0, 70)}"` : '0');
+
 // reported separately, not asserted: the impersonal-you count, so a drift toward second-person narration
 // is still visible in the output even though it does not fail the build.
 const impersonal = all.filter(([, l]) => secondPerson(l) && !thirdPerson(l));
