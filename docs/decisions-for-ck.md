@@ -3258,3 +3258,68 @@ three lines describe a returning ex-player, which the save cannot represent at a
 fresh (`mk:season:tier:i`), so a re-signed man is indistinguishable from a stranger. Either delete them, or
 keep them as a marker for a "he came back" feature that does not exist.
   - **Recommend deleting the 3**, and noting the returning-player beat in the ideas file instead.
+
+## §98 — an heir shops from the identical market his father did
+
+`renderTransferMarket` builds its listings from two sources and threads the generation into only one of
+them. `houseListings(seed, season, tier, gen, …)` gets it; `transferList(seed, season, tier)` does not, and
+takes no generation parameter at all. `m.season` **resets to 1 at every succession** and `leagueSeed()` is
+save-constant — so once a dynasty settles in a division, every generation is offered the same twelve players
+in the same season: the same names, ages, ratings and fees.
+
+Twelve lines above, the code already states the principle it then fails to apply: *"GENERATION-SCOPED.
+`season` resets to 1 at a succession, so without the generation every season number a player sees repeats."*
+
+In a game whose whole premise is that each heir is a fresh career, the squad-building lever — the main thing
+the season's coins are for — repeats verbatim, and a player who remembers last generation's market knows
+which name to wait for.
+
+**Why this is your call and not a fix.** The change is one line, but it alters what an existing save shows
+on the Transfer Market screen the next time it opens: a player mid-negotiation would find a different shop.
+
+- **(a) Mix the generation into the seed** — `transferList((leagueSeed() ^ Math.imul(gen + 1, 0x9e3779b1)) >>> 0, …)`.
+  Listing ids still repeat, but `buyPlayer` already de-duplicates them, so nothing else needs changing.
+  **Recommended**, and best done before there are saves worth preserving.
+- **(b) Leave it** until after launch and treat it as a save-compatible patch later.
+
+## §99 — the star's row in the squad table has no highlight, only a rule that looks like one
+
+`table.squad tr.nft-row td.pos, td.stat { filter: brightness(1.02); }` is the only row-scoped rule for the
+bloodline star's row. Every other rule in that block styles the *name cell* alone. A 1.02× multiplier on
+cells that already carry saturated opaque backgrounds moves them by **2–4 values out of 255** — invisible.
+So the one row the player is scanning for has no row-level mark, and the slot where a real highlight would
+go is occupied by a rule that does nothing.
+
+**Why this is your call.** The obvious fix — raise the multiplier — is wrong: `td.stat`'s background is
+`statColor(overall)`, a five-step ramp that is the column's information channel, and brightening it enough
+to read as a highlight washes that ramp out. So the highlight has to be a *different* channel.
+
+- **(a) A translucent white overlay on every cell in the row**
+  (`background-image: linear-gradient(rgba(255,255,255,0.10), rgba(255,255,255,0.10))`), which composites
+  over the inline background instead of replacing it and leaves `statColor` legible. **Recommended.**
+- **(b) A left border or marker on the first cell only** — cheaper, less obviously "this row", but it cannot
+  interfere with the stat ramp at all.
+- **(c) Delete the dead rule** and accept that the name cell alone marks the star.
+
+## §100 — a 🎲 badge that summons the player to a dilemma with no answer
+
+The Life tab is badged `🎲 TEMPTATION`, and the panel it opens renders a title and a blurb and **nothing
+else** — no button, no `data-act`, no handler. The blurbs are written as open questions: *"Easy money, or a
+story you don't want written."* *"Loyalty, or a slippery slope?"* *"No one would ever know… except you."*
+
+`offpitch.ts` admits in a comment that the whole thing is "presentational (the real choice rides the career's
+life-event card play)" — but nothing connects the two: the temptation is derived from `hash32(seed, 5300 +
+turn)` with no reference to the moment the player is in. Measured at **6.5 badged turns per career** for a
+clean-reputation player, ~14 for an edgy one.
+
+A badge on a tab is a promise that something is waiting. Six to fourteen times a career the player clicks
+through, reads a two-branch moral dilemma, and finds there is no branch to take — the loudest "this feature
+is unfinished" signal a UI can send.
+
+- **(a) Drop the badge and reword the ten blurbs** from open questions into observed flavour ("the card game
+  is running again in the players' lounge"), so the panel reads as colour rather than an unanswered prompt.
+  Cheap, honest, and it stops the game advertising a hole. **Recommended for now.**
+- **(b) Wire it properly** — make the temptation a real two-option choice with consequences on greed,
+  reputation and the meters. That is the feature the copy already promises, and it is a genuine content
+  project (ten dilemmas × two branches × outcomes), not a fix.
+- **(c) Leave it.** Not recommended: this one is visible, repeated, and reads as broken rather than thin.
