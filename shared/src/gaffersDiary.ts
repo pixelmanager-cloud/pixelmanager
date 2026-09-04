@@ -72,8 +72,12 @@ const PROMOTION_HUNT: Phrase[] = [
   (gap) => `${gap} place${gap === 1 ? '' : 's'} adrift of where we want to be. Fixable, but no room for slip-ups.`,
   () => `Close enough to smell it. Now it's about nerve as much as quality.`,
 ];
-const PLAYOFF_HUNT: Phrase[] = [
-  (pos) => `${pos}${ord(pos)} — outside the automatics, but well in the mix for a play-off run.`,
+// 5th-8th outside the top flight. This pool used to be called PLAYOFF_HUNT and promised "a play-off run"
+// in a pyramid whose whole promotion rule is top-two-automatic — so a player sitting 5th was told to chase
+// a competition that does not exist, and a 5th-place finish then looked like a bug rather than a near miss.
+// Same fault as PT-138 one pool down; that fix forked the top-flight variant and never re-read this one.
+const PROMOTION_CHASE: Phrase[] = [
+  (pos) => `${pos}${ord(pos)} — outside the automatic two, but close enough that a run puts us in them.`,
   () => `Not quite top of the pile, but a squad that could easily go on a run from here.`,
   (pos) => `Mid-table's not the story any more — ${pos}${ord(pos)} puts us firmly in the promotion conversation.`,
   () => `The kind of position where a good six weeks changes everything.`,
@@ -322,7 +326,7 @@ export function gaffersDiaryEntry(input: DiaryInput): string {
       if (t.position > t.total - t.relegate) add(35, RELEGATION_WATCH, t.position);
       else if (t.position <= t.promote) add(35, t.topFlight ? CONTINENTAL_PLACES : PROMOTION_PLACES, t.position);
       else if (t.position <= t.promote + 2) add(25, t.topFlight ? CONTINENTAL_HUNT : PROMOTION_HUNT, t.position - t.promote);
-      else if (t.position <= t.promote + 6) add(15, t.topFlight ? EUROPEAN_PUSH : PLAYOFF_HUNT, t.position);
+      else if (t.position <= t.promote + 6) add(15, t.topFlight ? EUROPEAN_PUSH : PROMOTION_CHASE, t.position);
     }
   }
 

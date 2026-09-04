@@ -215,7 +215,7 @@ export const MGR_EXTRA_2: Bank = {
     'It gets confirmed by a result somewhere else. Finding out that way is worse.',
     'They are down. Somebody in the boardroom uses the phrase "an opportunity to rebuild".',
     'The manager goes into the away dressing room and thanks the referee, of all people.',
-    'Down to {to}. Twelve months ago this club was talking about the play-offs.',
+    'Down to {to}. Twelve months ago this club was talking about going the other way.',
     'A photographer gets a picture of the bench that will run on every back page.',
     'Relegation. Everything that was funny in September is not funny now.',
     'They go down. A man who has run the supporters’ coach for thirty years says he will run it next year too.',

@@ -827,7 +827,10 @@ export const MGR_EXTRA_1: Bank = {
     'He signs, and there is a coaching clause in it for afterwards.',
     'A last contract, probably, and both sides sign it knowing that.',
     'At his age they are annual now, and he has made his peace with annual.',
-    'He wanted two years. He got {n}. He took it.',
+    // {n} is termWords(SQUAD_CONTRACT_SEASONS), a constant three seasons — so a line about being talked
+    // DOWN renders as "He wanted two years. He got three seasons.", which is a man getting more than he
+    // asked for while the sentence treats it as a climbdown. The number is the concession, not the shortfall.
+    'He asked for one more year. They gave him {n}, which surprised everybody including him.',
   ],
   'contract_renewed.young': [
     'His first professional deal. He is nineteen and he signs it like it is a bomb.',
@@ -1031,7 +1034,7 @@ export const MGR_EXTRA_1: Bank = {
     'Promoted, and there is a genuine argument about whether the squad is ready. Nobody is having it tonight.',
     'The last five minutes take about an hour.',
     'They go up as champions of nothing in particular and it counts the same.',
-    'Up through the play-offs, which is the most exhausting way of doing it.',
+    'Up automatically, with a game to spare, which is the least dramatic way of doing it and the surest.',
     'A whole club changes its expectations of itself in one afternoon.',
     'The ground announcer loses all professional composure and is forgiven.',
     'They get out of {from}. It is bigger than it looks on a table.',
@@ -1175,7 +1178,7 @@ export const MGR_EXTRA_1: Bank = {
   // ── CHAMPIONS ─────────────────────────────────────────────────────────────────────────────────
   title: [
     'Champions. Say it slowly, because the club has not had cause to say it much.',
-    'The title. Not the play-offs, not scraping up, the actual thing.',
+    'The title. Not second, not scraping up in the last week, the actual thing.',
     'They win the league, and being the best team over a whole year is very hard to argue with.',
     'A trophy with ribbons in the club colours, which somebody had to order in advance and hide.',
     'Champions of {from}. It goes on the wall and it never comes down.',
@@ -1266,7 +1269,7 @@ export const MGR_EXTRA_1: Bank = {
     'The players know how good this was and how little that counts.',
     'Nearly. The most expensive word there is.',
     'A great season by any measure except the only one that gets recorded.',
-    'They lose the semi-final and have to watch the other lot at the final.',
+    'They watch the other lot go up on the last afternoon, from a ground with nothing left to play for.',
     'The squad was two players short and everybody knew which two.',
     'It is not failure. It will feel like failure until about September.',
     'They finish outside it, having been inside it since Boxing Day.',
@@ -1278,10 +1281,10 @@ export const MGR_EXTRA_1: Bank = {
     'The manager is asked whether they can go again. He says yes, and looks tired.',
     'Close enough to touch, and touching is not the same.',
     'They led it going into the last month and could not carry it.',
-    'A penalty saved, and a division not reached.',
+    'A goal conceded in April, and a division not reached.',
     'It ends on a bad pitch on a wet night against a side with nothing to play for.',
     'Everybody says wait till next year. Next year has never once heard them.',
-    'They were the better side over the season and not over the ninety minutes that counted.',
+    'They were the better side in about thirty of the games and not in the eight that decided it.',
     'A near miss is a whole year of work and nothing on the wall to show for it.',
   ],
 
