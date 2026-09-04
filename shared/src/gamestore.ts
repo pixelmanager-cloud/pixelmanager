@@ -89,6 +89,9 @@ export interface GameStore {
   // per-season player stats (goals/assists/apps/potm) + individual season awards
   bumpPlayerStats(seasonId: string, accountId: string, playerId: string, playerName: string, d: { goals?: number; assists?: number; apps?: number; potm?: number }): Promise<void>;
   seasonPlayerStats(seasonId: string, accountIds: string[]): Promise<PlayerSeasonStat[]>;
+  /** Drop every per-season stat row outside `keepSeasonIds`. There was no delete path for `bumpPlayerStats`
+   *  anywhere in the tree; see the implementation in client/src/save.ts for what that cost a save. */
+  prunePlayerStats(keepSeasonIds: string[]): Promise<void>;
   addAward(a: Award): Promise<void>;
   awardsFor(accountId: string, limit?: number): Promise<Award[]>;
   // scouting network: dispatched trips (sealed at dispatch, revealed after travel) + loanees

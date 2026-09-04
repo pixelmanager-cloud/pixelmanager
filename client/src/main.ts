@@ -289,6 +289,29 @@ const TALK_FIERY = new Set(['biggame', 'leader', 'workhorse', 'maverick', 'showm
 
 const $ = (id: string) => document.getElementById(id)!;
 
+/** Paint one of the four coin-balance chips: the pixel coin, the number, and the unit it's counted in.
+ *
+ *  THE BALANCE ANNOUNCED AS A NAKED NUMBER. All four chips were built inline as
+ *  `<span class="ico-inline">${sprite('coin')}</span> ${n.toLocaleString()}` — an unnamed <svg> followed by
+ *  digits, inside a <span> carrying no label of its own. A screen reader on the season screen read out
+ *  "1,240" with nothing anywhere to say WHAT 1,240 was, on the one screen that quotes five different
+ *  prices in coins; #club-coins and #scout-coins don't even have the explanatory title= that #season-coins
+ *  and #me-coins carry, so there was no fallback to fall back to. Sighted players lost the unit too: every
+ *  other coin figure in the game is written "1,240c" — the transfer-market header, the upkeep lines, the
+ *  upgrade buttons — and these four headers alone printed the bare figure.
+ *
+ *  role="img" AND NOT aria-label ALONE: a plain <span> is role=generic, ARIA prohibits naming a generic
+ *  element, and browsers do drop the name — so a lone aria-label here would have been ignored by exactly
+ *  the readers it was written for. With the role, the label is the accessible name and the title= on the
+ *  two chips that have one survives as the description. */
+function paintCoins(id: string, coins: number | undefined): void {
+  const n = (coins ?? 0).toLocaleString();
+  const el = $(id);
+  el.setAttribute('role', 'img');
+  el.setAttribute('aria-label', `${n} coins`);
+  el.innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${n}c`;
+}
+
 // Brief retro toast near top-centre; the CSS animation fades it out after ~2s.
 //
 // THE ELEMENT THIS WRITES INTO IS THE GAME'S ONLY ARIA LIVE REGION (`<div id="toast" role="status">` in
@@ -680,11 +703,38 @@ class Game {
    *
    *  This publishes the effective height as a class so those rules can key on what the layout actually
    *  gets. It does not convert the rest of the sheet — thirteen breakpoints have the same mismatch, and
-   *  rewriting them all changes specificity across two thousand lines of CSS. See decisions-for-ck. */
+   *  rewriting them all changes specificity across two thousand lines of CSS. See decisions-for-ck.
+   *
+   *  `vw`/`vh` UNITS CANNOT SEE IT EITHER — same root cause, worse symptom, because a `vw` guard is what
+   *  the sheet reaches for to keep a card INSIDE the window. Chromium sizes an auto-width block against
+   *  the ZOOM-ADJUSTED containing block but resolves a viewport unit against the RAW viewport: measured
+   *  on the dev bundle at a 950x800 window at uiScale 110%, `document.body.clientWidth` is 864 (= 950/1.1,
+   *  correct) while a `width: 100vw` box computes to 950px and PAINTS 1045. `height: 100vh` computes 800
+   *  and paints 880. So every vw/vh in the stylesheet is inflated by exactly the scale factor, and a
+   *  max-width written to prevent overflow causes it instead.
+   *
+   *  That is what happened to the title screen. `.panel` carried `max-width: 96vw` as its only promise of
+   *  fitting the window; 96vw of 950 computed to 912px and painted 1003, and the panel's own 880px
+   *  `--app-w` painted 968 — so in a 950px window the first screen a Steam player sees started at x=-9
+   *  with its left border off the window and a horizontal scrollbar under it (documentElement.scrollWidth
+   *  959 against clientWidth 950). At 130% and 140%, both reachable from the scale slider, the panel was
+   *  1144px and 1232px wide, at x=-97 and x=-141.
+   *
+   *  So this now also publishes the effective WIDTH in CSS pixels as `--vw-eff`, for rules that need a
+   *  real fraction of the window rather than a fraction of the pre-zoom one. `documentElement.clientWidth`
+   *  and not `window.innerWidth`: it is the width a `vw` actually resolves against, it already excludes a
+   *  classic vertical scrollbar we cannot paint into, and it held steady at every zoom under test while
+   *  innerWidth did not. The CSS keeps `100vw` as the var() fallback, so the sheet paints exactly as it
+   *  does today before this first runs — and at uiScale 100% the value IS the viewport, measured as a
+   *  byte-for-byte no-op. Only `.panel` consumes it so far; the other ten viewport-unit rules in the
+   *  sheet (.tt-card, .pc-card, .tm-card incl. its 88vh, .cn-card, #meters, #ticker, #toast's
+   *  `calc(100vw - 32px)`, .ft-inner, the banner at 96vw, and #mm-title's 7.2vw) have the identical
+   *  defect and are still unconverted. */
   private applyEffectiveViewport() {
     const scale = Math.max(0.5, (this.prefs.uiScale || 100) / 100);
     const h = window.innerHeight / scale;
     document.documentElement.classList.toggle('fx-short', h <= 620);
+    document.documentElement.style.setProperty('--vw-eff', `${document.documentElement.clientWidth / scale}px`);
   }
   private savePrefs() { try { localStorage.setItem(Game.PREFS_KEY, JSON.stringify(this.prefs)); } catch { /* ignore */ } }
   /** The effective viewport changes when the WINDOW changes too, not only when the scale preference does. */
@@ -1179,7 +1229,24 @@ class Game {
         // show the TOTAL cost (wage × length), not one season's wage — talks charge the whole deal (PT-32/PT-124)
         + `<div class="pc-cactions"><button class="pc-extend" data-extend="${p.id}"><span class="ico-inline ico-lg">${sprite('seal')}</span> ${ci.available ? 'Re-sign' : 'Extend'} · ~${(ci.extendCost * ci.lengthSeasons).toLocaleString()}c over ${ci.lengthSeasons}y</button>`
         // the bloodline star has no release-clause sale path in single-player — he leaves only via a rival's bid (PT-125)
-        + (isNftId(p.id) ? `<span class="pc-sell">leaves only via a rival bid</span>` : `<span class="pc-sell">worth ~${ci.sellValue}c</span>`) + `</div>` + stakeHtml + `</div>`;
+        //
+        // THE `worth ~${ci.sellValue}c` ELSE-ARM IS GONE, AND WITH IT THE WHOLE sellValue PIPE BEHIND IT.
+        // PT-125 kept that arm "for squad players", but this block only renders when `ci =
+        // this.contracts[p.id]` exists, and `contracts` is built in api.me() by keying `model.tokens`.
+        // Every token id is minted as `nft:N` (signProspect / the genesis mint) or derived from one
+        // (`nft:1:b2.1`, `nft:1:b2.1.n0`), so isNftId was true at 100% of the evaluations that could reach
+        // here; a squad man or a loanee has no `contracts` entry and renders no contract block at all. The
+        // ternary had exactly one live arm, and a later audit had already written the dead one off as "a
+        // harmless dead fallback".
+        //
+        // It was not harmless — dead was the smaller half. The number it quoted was `releaseClause`
+        // (ov²·3, scaled by fame and greed), and NO sale path in this game pays that: the star leaves only
+        // on an incoming bid priced off `transferFee`, and a squad player is credited `squadSaleValue`
+        // (1.6·ov²+20, then −12%/yr past 30 and up to −20% on low morale). At OV16 that is 768c advertised
+        // against 430c paid at his peak and 172c at 35 — the same "told the player a price twice and then
+        // paid a fifth of it" bug the sellPlayerFlow post-mortem below was written for, sitting one wiring
+        // change away from live. So the price is deleted, not re-pointed.
+        + `<span class="pc-sell">leaves only via a rival bid</span>` + `</div>` + stakeHtml + `</div>`;
     }
     const el = document.createElement('div');
     el.id = 'player-card-ov';
@@ -1277,7 +1344,26 @@ class Game {
       const status = ci.staked === false ? `<span class="ns-tag idle">idle</span>`
         : ci.available ? `<span class="ns-tag ${ci.seasonsLeft <= 1 ? 'warn' : 'ok'}">${ci.seasonsLeft}y left</span>`
         : `<span class="ns-tag lapsed">lapsed</span>`;
-      const dot = ci.morale != null ? `<span class="ns-mood" title="morale: ${ci.moraleLabel}" style="background:${ci.morale >= 75 ? '#6ad06a' : ci.morale >= 45 ? '#e0c14a' : '#d06a6a'}"></span>` : '';
+      // MORALE WAS AN 8px COLOURED DOT AND NOTHING ELSE. The marker was an EMPTY `<span class="ns-mood">`
+      // painted by an inline `background`, so hue was the only channel it had, and its `title` sat on a
+      // non-focusable, non-interactive element. Three players got nothing at all from it: a keyboard user
+      // (a <span> with no tabindex never takes focus, so the tooltip is unreachable without a mouse), a
+      // screen-reader user (an empty span with no role and no accessible name is skipped outright — a bare
+      // `title` does not name it), and anyone with red/green colour blindness, for whom #6ad06a "settled
+      // and happy" and #d06a6a "wants to leave" collapse into the same muddy tone. The star agitating for a
+      // transfer looked identical to the contented one, on the panel whose own header promises "lifecycle
+      // at a glance".
+      // The band now travels three ways: a SHAPE (▲ ● ▼, which survives greyscale, a monochrome display and
+      // forced-colours mode — where an inline background is discarded anyway), the colour as reinforcement
+      // rather than as the signal, and role="img" + aria-label so it is announced as "morale: wants to leave".
+      // The thresholds had to move too. The old amber began at `>= 45`, but moraleEffects() flags a player
+      // `unsettled` at `<= 45` and only says 'content' above it — so at exactly 45 the dot showed the content
+      // colour next to a label reading "unsettled". That is the same off-by-one the post-mortem in
+      // shared/src/morale.ts was written about; the bands here now match it (>=75 / >45 / rest).
+      const mood = ci.morale == null ? null
+        : ci.morale >= 75 ? { k: 'high', g: '▲' } : ci.morale > 45 ? { k: 'ok', g: '●' } : { k: 'low', g: '▼' };
+      const moodTxt = `morale: ${ci.moraleLabel ?? `${ci.morale} of 100`}`; // never announce "morale: undefined"
+      const dot = mood ? `<span class="ns-mood ${mood.k}" role="img" aria-label="${moodTxt}" title="${moodTxt}">${mood.g}</span>` : '';
       const act = ci.staked === false ? `<button class="ns-act" data-nstake="${ci.playerId}">Register</button>`
         : `<button class="ns-act" data-nextend="${ci.playerId}">${ci.available ? 'Re-sign' : 'Extend'} ~${(ci.extendCost * ci.lengthSeasons).toLocaleString()}c</button>`; // total deal cost (wage × length), not one season (PT-124)
       return `<div class="ns-row" data-open="${ci.playerId}"><span class="ns-name">${dot}${name}</span><span class="ns-age">${ci.age}y</span>${status}${act}</div>`;
@@ -1355,6 +1441,16 @@ class Game {
     ov.querySelector('.set-x')!.addEventListener('click', close);
     const render = () => {
       const body = document.getElementById('cn-body'); if (!body) return;
+      // Taken BEFORE the innerHTML write below, which throws away every node in #cn-body — including the
+      // length button the player just pressed. Picking a term re-renders the whole panel, so a keyboard or
+      // controller player pressed Enter on "4y" and the ring simply vanished: measured in Chromium,
+      // activeElement === BODY, nothing announced, and the next Tab restarts at "2y" — so every term he
+      // tried cost him another walk through the whole row before he could reach the offer buttons. That is
+      // the same failure keepFocus() was written for on the career screen, so this is that helper reused
+      // rather than a second copy of it, which is why the length buttons below carry stable ids to match on.
+      // Both of its guards still hold here: a MOUSE click is left alone (measured: still BODY afterwards, so
+      // no ringless Space target is armed), and the restore is preventScroll.
+      const restoreFocus = this.keepFocus(body);
       const ask = wageForLength(demand, length); // per-season wage he wants for a deal this long
       // buttons pass the per-SEASON wage (that's what he judges), but show the TOTAL cost (wage × length) so
       // a longer deal visibly costs more (PT-32). Multipliers span all outcomes (PT-33): 0.8 insults him
@@ -1367,7 +1463,14 @@ class Game {
         return `<button class="cn-offer ${cls}${afford ? '' : ' cn-locked'}"${afford ? ` data-wage="${w}"` : ' disabled'}><span class="cn-o-lbl">${label}</span><span class="cn-o-tot">${total.toLocaleString()}c total</span><span class="cn-o-hint">${afford ? hint : `🔒 need ${(total - coins).toLocaleString()}c more`}</span></button>`;
       };
       body.innerHTML = `<div class="cn-sub">He’d prefer a <b>${demand.prefLength}-season</b> deal — a longer one asks ${demand.lengthPremium >= 0 ? 'a <b>higher</b> wage per season (he wants paid for the commitment)' : 'a <b>lower</b> wage per season (he values the security)'}, and every extra season adds to the <b>total</b> you pay now.</div>`
-        + `<div class="cn-row"><span class="cn-lbl">Deal length</span><div class="cn-len">${[2, 3, 4, 5, 6].map((L) => `<button class="cn-l ${L === length ? 'active' : ''}" data-len="${L}">${L}y</button>`).join('')}</div></div>`
+        // THE CHOSEN TERM WAS A BACKGROUND COLOUR AND NOTHING ELSE. `class="cn-l active"` repaints the
+        // button (`.cn-l.active { background: var(--accent) }`) and tells assistive tech nothing — measured,
+        // all five reported aria-pressed === null and the row had no role. A screen-reader player heard five
+        // bare buttons, "2y 3y 4y 5y 6y", with no way to hear which term he was about to sign, on the one
+        // screen where that number sets both the per-season wage and the total taken from his coins.
+        // aria-pressed makes them the toggle group they already look like, so the state is spoken with the
+        // button when focus lands back on it; the group role names the row the way the visible label does.
+        + `<div class="cn-row"><span class="cn-lbl">Deal length</span><div class="cn-len" role="group" aria-label="Deal length">${[2, 3, 4, 5, 6].map((L) => `<button class="cn-l ${L === length ? 'active' : ''}" id="cn-len-${L}" data-len="${L}" aria-pressed="${L === length}">${L}y</button>`).join('')}</div></div>`
         + `<div class="cn-ask">He’s asking <b>${ask.toLocaleString()}c/season</b> — <b>${(ask * length).toLocaleString()}c</b> over ${length} seasons. <span class="cn-coins">💷 you have ${coins.toLocaleString()}c</span></div>`
         + `<div class="cn-offers">`
         + offer('Lowball', 0.8, 'he may walk')
@@ -1378,6 +1481,7 @@ class Game {
         + `<div class="cn-result" id="cn-result"></div>`;
       body.querySelectorAll('[data-len]').forEach((b) => b.addEventListener('click', () => { length = Number((b as HTMLElement).dataset.len); render(); }));
       body.querySelectorAll('[data-wage]').forEach((b) => b.addEventListener('click', () => this.submitContractOffer(playerId, Number((b as HTMLElement).dataset.wage), length, close)));
+      restoreFocus(); // last, once the new buttons are wired — handing focus to a button that does nothing yet is worse than losing it
     };
     render();
   }
@@ -1499,7 +1603,7 @@ class Game {
     })();
     $('me-rating').textContent = ''; // PvP ELO — hidden: the game is single-player (multiplayer removed, see direction.md)
     if (this.account.coins != null) {
-      $('me-coins').innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${this.account.coins.toLocaleString()}`;
+      paintCoins('me-coins', this.account.coins);
       $('hub-club-sub').textContent = `💰 ${this.account.coins.toLocaleString()} to invest — facilities, youth & scouting. Every level costs upkeep each season.`;
     }
     void this.refreshPrestige();
@@ -1846,10 +1950,36 @@ class Game {
     const zone = (i: number) => i === 0 ? 'champ'
       : (tier > 1 && i <= 1) || (tier === 1 && i <= 2) ? 'promo'
       : tier < TIERS && i >= t.size - 2 ? 'releg' : '';
-    const rows = t.table.map((r, i) => `<tr class="lt-row ${r.mine ? 'mine' : ''} ${zone(i)}"><td class="lt-pos">${i + 1}</td><td class="lt-name"><span class="lt-crest">${crest(r.name, 16)}</span>${r.name}</td><td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GF}</td><td>${r.GD > 0 ? '+' : ''}${r.GD}</td><td class="lt-pts">${r.Pts}</td></tr>`).join('');
-    const key = tier === 1 ? '<span class="lt-key"><span class="lt-k promo">■</span> continental · <span class="lt-k releg">■</span> relegation</span>'
-      : tier === TIERS ? '<span class="lt-key"><span class="lt-k promo">■</span> promotion</span>'
-      : '<span class="lt-key"><span class="lt-k promo">■</span> promotion · <span class="lt-k releg">■</span> relegation</span>';
+    // THE ZONES WERE A COLOUR AND NOTHING ELSE. `zone()` handed back a class name and the class was cashed
+    // out entirely as hue in index.html — `.lt-row.champ .lt-pos { color: #ffd75e }`, `.promo` in --good,
+    // `.releg` in --home (green and red, the one pair a colour-blind player is likeliest to lose), over 7%
+    // row tints far too faint to read as a boundary on their own. No character, no title, no aria: a screen
+    // reader announced "1", "2", "3" down the whole table, and the key below it was two more coloured
+    // squares — which never mentioned the champion row at all. On the one screen the entire season is read
+    // from, a player who cannot separate those hues could not tell which rows go up, which go down, or who
+    // is champion. The fixture list a column away has always printed the venue as the CHARACTER "H"/"A"
+    // rather than trusting `.sf-v.home`'s colour; the table needed that more and had it least.
+    // So each zone now carries a SHAPE as well — ★ champions, ▲ up, ▼ down, told apart with no hue at all —
+    // named in `aria-label` for a screen reader and in `title` for a mouse, and the key teaches the same
+    // three shapes. The colours stay: the palette was never the defect, being the only channel was.
+    const ZONE_MARK: Record<string, { glyph: string; label: string }> = {
+      champ: { glyph: '★', label: tier === 1 ? 'Champions' : 'Champions, promoted' },
+      promo: { glyph: '▲', label: tier === 1 ? 'Continental place' : 'Promotion place' },
+      releg: { glyph: '▼', label: 'Relegation place' },
+    };
+    const mark = (z: string): string => {
+      const m = ZONE_MARK[z];
+      return m ? `<span class="lt-zn" role="img" aria-label="${m.label}" title="${m.label}">${m.glyph}</span>` : '';
+    };
+    const rows = t.table.map((r, i) => {
+      const z = zone(i);
+      return `<tr class="lt-row ${r.mine ? 'mine' : ''} ${z}"><td class="lt-pos">${i + 1}${mark(z)}</td><td class="lt-name"><span class="lt-crest">${crest(r.name, 16)}</span>${r.name}</td><td>${r.P}</td><td>${r.W}</td><td>${r.D}</td><td>${r.L}</td><td>${r.GF}</td><td>${r.GD > 0 ? '+' : ''}${r.GD}</td><td class="lt-pts">${r.Pts}</td></tr>`;
+    }).join('');
+    // the glyph is decoration in the key — the words beside it are the label a screen reader should read
+    const k = (z: string) => `<span class="lt-k ${z}" aria-hidden="true">${ZONE_MARK[z]?.glyph ?? ''}</span>`;
+    const key = tier === 1 ? `<span class="lt-key">${k('champ')} champions · ${k('promo')} continental · ${k('releg')} relegation</span>`
+      : tier === TIERS ? `<span class="lt-key">${k('champ')} champions (up) · ${k('promo')} promotion</span>`
+      : `<span class="lt-key">${k('champ')} champions (up) · ${k('promo')} promotion · ${k('releg')} relegation</span>`;
     return `<table class="lt-table"><thead><tr><th></th><th>Club</th><th>P</th><th>W</th><th>D</th><th>L</th><th title="Goals for — the tiebreak after points and goal difference">GF</th><th>GD</th><th>Pts</th></tr></thead><tbody>${rows}</tbody></table>${key}`;
   }
 
@@ -2126,7 +2256,7 @@ class Game {
    *  their coins AFTER that re-render has run and would otherwise leave the header contradicting the
    *  toast that just announced the money. */
   private paintSeasonCoins() {
-    $('season-coins').innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${(this.account?.coins ?? 0).toLocaleString()}`;
+    paintCoins('season-coins', this.account?.coins ?? 0);
   }
   private showSeason() {
     this.spFixture = null;
@@ -2254,7 +2384,19 @@ class Game {
     // TRAINING FOCUS — the stat your star works on this season (young grow it, veterans slow their decline)
     const FOCI = ['pace', 'shooting', 'passing', 'tackling', 'strength', 'positioning', 'stamina'];
     const curFocus = m.trainFocus ?? 'passing';
-    const focusSel = m.starName ? `<div class="sf-focus">🏋️ <b>Training focus</b> for ${m.starName}: <select id="sf-focus">${FOCI.map((f) => `<option ${f === curFocus ? 'selected' : ''}>${f}</option>`).join('')}</select> <span class="sf-focus-hint">applied when the season ends</span></div>` : '';
+    // ACCESSIBLE NAME — this select did not have one. The words "Training focus" sat in a plain <b>
+    // beside it with no for/id pairing, and the control itself carried no aria-label and no
+    // aria-labelledby, so a screen reader announced the whole widget as "combo box, passing": the
+    // current value and not one word about what it governs. Every other control on the season screen is
+    // a <button> that names itself from its own text, and the tactics dropdowns are wrapped in <label>,
+    // which is how the one bare form control on the screen went unnoticed — and it is the setting that
+    // decides which stat the bloodline star works on for the whole campaign, so a blind player could
+    // change his development by accident and never know which of the seven he had landed on.
+    // The star's name goes in the label because that is what the sighted line reads. It is
+    // attribute-escaped the same way every other interpolated name in this file is (the save-slot
+    // labels, the retire button, the house crest, the kit nickname): a name carrying a " would
+    // otherwise close the attribute early and spill the rest of the tag into the markup.
+    const focusSel = m.starName ? `<div class="sf-focus">🏋️ <b>Training focus</b> for ${m.starName}: <select id="sf-focus" aria-label="Training focus for ${m.starName.replace(/"/g, '&quot;')}">${FOCI.map((f) => `<option ${f === curFocus ? 'selected' : ''}>${f}</option>`).join('')}</select> <span class="sf-focus-hint">applied when the season ends</span></div>` : '';
     // the board's verdict on LAST season (set in nextSeason) — shown while the new season is still young
     const lb = m.lastBoard;
     // PT-512: keep the target on screen for the whole season it governs, and say what missing it costs
@@ -2976,7 +3118,20 @@ class Game {
       // current — right down to re-announcing players it had retired a year earlier. (PT-807)
       this.pendingSquadReport = null;
       try {
-        const sq = await api.advanceSquadSeason({ trainingLvl: this.facLevels.training ?? 1, wonSomething: t.pos === 1, goodSeason: t.pos <= Math.ceil(t.size / 2) });
+        // A LOSING SEASON HAS TO COST THE DRESSING ROOM SOMETHING. This sent `goodSeason: t.pos <=
+        // Math.ceil(t.size / 2)` — one boolean — and that is the whole reason squadMoraleAfterSeason could
+        // only ever emit played_win or played_draw: a relegation year paid every first-teamer +2 morale, and
+        // a regular at a permanently bottom-half club drifted UP from 65 to 69 and read 'content' forever.
+        // The club's real W/D/L is already in hand. `rec` is built at the top of this function and it is
+        // always a complete season — the "Next season →" button is only rendered once every league fixture
+        // has been played, so nextSeason is unreachable with the league part-finished — and it is the very
+        // record boardStanding grades the season on thirty lines above. So the dressing room and the
+        // boardroom now judge the year on the same evidence, instead of morale reading a positional proxy
+        // that had no room for a defeat in it.
+        // `goodSeason` is dropped here rather than passed alongside: seasonOutcome supersedes it, and an
+        // argument that no longer changes anything is exactly how the next reader gets misled.
+        const seasonOutcome = rec.wins > rec.losses ? 'win' : rec.wins < rec.losses ? 'loss' : 'draw';
+        const sq = await api.advanceSquadSeason({ trainingLvl: this.facLevels.training ?? 1, wonSomething: t.pos === 1, seasonOutcome });
         if (this.account?.coins != null) this.account.coins = sq.coins;
         this.setMe(await api.me());
         this.pendingSquadReport = sq;
@@ -3470,7 +3625,7 @@ class Game {
 
   private renderFacilities(d: { coins: number; facilities: import('./api').Facility[]; upkeep?: number }) {
     this.account.coins = d.coins;
-    $('club-coins').innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${d.coins.toLocaleString()}`;
+    paintCoins('club-coins', d.coins);
     // THE RUNNING TOTAL, ALWAYS ON SCREEN. Upkeep is a decision only if you can see it accumulating as you
     // buy — a bill that appears once a season, after the spending, is a punishment instead.
     const upEl = document.getElementById('fac-upkeep');
@@ -4050,8 +4205,25 @@ class Game {
     // on its own the delta evaporated. 1,031 arc options across the twelve packs carry a coins effect
     // and not one of them moved a coin, in either direction. Banked like arcPrestige and arcBoard.
     if (e.coins && this.account?.coins != null) { this.account.coins = Math.max(0, this.account.coins + e.coins); }
+    // ARC MORALE NEVER REACHED THE ONE MAN THE GAME IS ABOUT. A `club.players` row is a live reference
+    // into the durable save model, so writing morale straight onto one sticks. The bloodline star is not
+    // a row: he is a Token, and `mergedClub()` re-derives him through `tokenToPlayer(t)` — a brand-new
+    // object on every `api.me()` — so `pick.morale = ...` landed on a throwaway and died with the call.
+    // 109 of the library's 2,513 options aim `playerMorale.who === 'star'` squarely at him, and 1,523 more
+    // sweep him up in a live `squadMorale`; not one of them ever moved his save. `tokenToPlayer` does not
+    // even carry a `morale` field, so the `?? 65` fallback started every sum from a flat 65 however he
+    // actually felt. Tell your talisman on the Wednesday that he is dropped for the cup final he got them
+    // to (mgr-p09-got-them-there / 'tell-early', −18, and the outcome text says he never speaks to you
+    // again) and his mood dot, his re-sign price and his sale value were all exactly what they had been
+    // the minute before you told him. Token ids all start `nft:` — the same test the wage-bill forecast in
+    // showSeason() uses — and `api.bumpTokenMorale` writes through to the store.
+    const tokenBumps: Array<[string, number]> = [];
+    const bumpBody = (p: Player, delta: number) => {
+      if (p.id.startsWith('nft:')) { tokenBumps.push([p.id, delta]); return; }
+      p.morale = applyMorale(p.morale ?? 65, delta);
+    };
     if (e.squadMorale && this.club) {
-      for (const p of this.club.players) p.morale = applyMorale(p.morale ?? 65, e.squadMorale);
+      for (const p of this.club.players) bumpBody(p, e.squadMorale);
     }
     if (e.playerMorale && this.club?.players.length) {
       const sq = this.club.players;
@@ -4060,8 +4232,15 @@ class Game {
         : e.playerMorale.who === 'youngest' ? [...sq].sort((a, b) => (a.age ?? 24) - (b.age ?? 24))[0]
         : e.playerMorale.who === 'oldest' ? [...sq].sort((a, b) => (b.age ?? 24) - (a.age ?? 24))[0]
         : [...sq].sort((a, b) => overall(b) - overall(a))[0];
-      if (pick) pick.morale = applyMorale(pick.morale ?? 65, e.playerMorale.delta);
+      if (pick) bumpBody(pick, e.playerMorale.delta);
     }
+    // Drained IN ORDER, one await at a time, rather than fired off together. An option can carry a
+    // squadMorale AND a playerMorale aimed at the same man — 'tell-early' above is +3 to the room and −18
+    // to him — and `applyMorale` damps a RISE by how high morale already is, so two overlapping
+    // read-modify-write round trips against one token would not merely lose a delta, they would put the
+    // surviving one on the wrong curve. Not awaited by this method, which is called from a click handler
+    // that re-renders on the spot; the writes land long before the next `api.me()` reads them back.
+    if (tokenBumps.length) void (async () => { for (const [id, d] of tokenBumps) await api.bumpTokenMorale(id, d); })().catch(() => { /* offline — the arc still happened */ });
     const next = { ...this.loadMgr() };
     if (e.coins) next.arcCoins = (next.arcCoins ?? 0) + e.coins;
     if (e.prestige) next.arcPrestige = (next.arcPrestige ?? 0) + e.prestige;
@@ -5026,7 +5205,7 @@ class Game {
       this.account.coins = d.coins;
       $('trips-per').textContent = String(d.tripsPerSeason);
       $('trips-used').textContent = String(d.tripsUsed);
-      $('scout-coins').innerHTML = `<span class="ico-inline">${sprite('coin')}</span> ${d.coins.toLocaleString()}`;
+      paintCoins('scout-coins', d.coins);
       const haveTrips = d.tripsLeft > 0;
       // The loanee cap is the OTHER budget, and it used to be invisible here: the trip budget runs to 7 a
       // season at a maxed HQ against a cap of 3, and free walk-up trialists eat the same slots. A player

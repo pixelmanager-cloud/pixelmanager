@@ -410,6 +410,34 @@ export class LocalStore implements GameStore {
     const ids = new Set(accountIds);
     return this.m.playerStats.filter((s) => s.season_id === seasonId && ids.has(s.account_id));
   }
+  /** Keep only the named seasons' stat rows and drop the rest.
+   *
+   *  `bumpPlayerStats` PUSHED A ROW PER PLAYER PER SEASON AND NOTHING IN THE TREE EVER REMOVED ONE -- there
+   *  was no delete path at all, in this class or anywhere above it. Meanwhile all three readers of
+   *  `seasonPlayerStats` ask for exactly one season and never an older one: the season screen reads the
+   *  CURRENT season, and the league roll reads the season that just CLOSED, twice (once to derive the
+   *  awards, once to bank the star's goals and assists onto his token). Every row older than that sat in
+   *  the save being deep-cloned on each debounced persist and re-parsed on every load, for the life of the
+   *  dynasty, with no code able to reach it.
+   *
+   *  Measured on a real engine-built save -- `npx tsx tools/dev_dynasty_save.ts 5`, five generations,
+   *  twenty-five seasons: 300 rows, 38.7 KiB, FORTY-EIGHT PER CENT of the entire 80.6 KiB save, of which
+   *  276 rows (92%) were unreadable by anything that ships. And that harness records only twelve men a
+   *  season; the shipping sim path records everyone who took the field -- measured at 17 distinct men over
+   *  an eighteen-fixture season with a twenty-man squad -- so a played dynasty fills it half again faster,
+   *  and a squad at MAX_SQUAD faster still. The save is the one file a player cannot afford to lose, and
+   *  half of it was rows nothing could read.
+   *
+   *  REFUSES AN EMPTY KEEP LIST rather than emptying the table: a caller that computed no seasons to keep
+   *  is a caller with a bug, and a deleted season of stats cannot be recovered from the save. Only
+   *  `touch()`es when something actually went, so a prune with nothing to do costs no write. */
+  async prunePlayerStats(keepSeasonIds: string[]): Promise<void> {
+    const keep = new Set((keepSeasonIds ?? []).filter((s) => typeof s === 'string'));
+    if (!keep.size) { console.warn('[save] refused a playerStats prune with no seasons to keep'); return; }
+    const before = this.m.playerStats.length;
+    this.m.playerStats = this.m.playerStats.filter((s) => keep.has(s.season_id));
+    if (this.m.playerStats.length !== before) this.touch();
+  }
   async addAward(a: Award): Promise<void> { this.m.awards.push(a); this.touch(); }
   async awardsFor(accountId: string, limit = 50): Promise<Award[]> {
     return this.m.awards.filter((a) => a.account_id === accountId).sort((a, b) => b.awarded_at - a.awarded_at).slice(0, limit);
@@ -584,12 +612,33 @@ let saveHealth: { ok: boolean; error?: string } = HAS_IDB
 /** Whether the last write to disk succeeded. The UI polls this so a failing autosave cannot stay silent. */
 export function getSaveHealth(): { ok: boolean; error?: string } { return saveHealth; }
 
-/** Slots with a write in flight, so a delete that races one can re-remove after it lands. */
-const inFlight = new Set<string>();
+/** Slots with writes in flight, so a delete that races one can re-remove after they land.
+ *  A REFCOUNT, NOT A FLAG — because writes to a single slot OVERLAP. This was `new Set<string>()`, with
+ *  `inFlight.add(id)` on entry and `inFlight.delete(id)` in the finally, so the FIRST of two overlapping
+ *  writes to the same slot cleared the mark while the SECOND was still running. The overlap is routine,
+ *  not exotic: a fired debounce timer calls `void writeSlot(...)` unawaited, and any `flushSave()` landing
+ *  on top of it starts a second write to the same id — `visibilitychange`, `pagehide` and `beforeunload`
+ *  all call it (main.ts `settleSave`), and `newGame`/`continueSave` each open with one. `deleteSave` then
+ *  read `inFlight.has(id)`, saw false, and skipped BOTH the wait and the trailing `backend.remove`, so the
+ *  write still in flight landed AFTER the removal and wrote the slot back to disk. That is precisely the
+ *  bug the guard in `deleteSave` exists to prevent, walking in through the one door the Set left open —
+ *  and it lands worse than a plain resurrection: by then main.ts's delete flow has already swept every
+ *  fm_mgr_/fm_tier_/fm_ach_/fm_bought_ key for that handle, so `recoverOrphanedSaves` hands the "deleted"
+ *  dynasty back at the bottom of the pyramid in season one. Told deleted, came back, came back broken.
+ *  Reproduced against a backend whose save() takes 20ms then 300ms — two concurrent `flushSave()` calls,
+ *  then `deleteSave` once the first had landed: `listSaves()` was `[]` at the moment of the delete and
+ *  held the slot again after the second write settled, with the trace showing a single removal
+ *  (`save#0 DONE | remove | save#1 DONE`). With the refcount the guard fires and the trailing remove runs
+ *  (`save#0 DONE | remove | save#1 DONE | remove`), and the save stays deleted. */
+const inFlight = new Map<string, number>();
 
 async function writeSlot(id: string, model: SaveModel): Promise<void> {
-  inFlight.add(id);
-  try { await writeSlotInner(id, model); } finally { inFlight.delete(id); }
+  inFlight.set(id, (inFlight.get(id) ?? 0) + 1);
+  try { await writeSlotInner(id, model); }
+  finally {
+    const left = (inFlight.get(id) ?? 1) - 1;
+    if (left > 0) inFlight.set(id, left); else inFlight.delete(id);
+  }
 }
 
 async function writeSlotInner(id: string, model: SaveModel): Promise<void> {

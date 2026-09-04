@@ -41,7 +41,14 @@ function px(grid: string[], palette: Record<string, string> = PAL): string {
       if (fill) rects += `<rect x="${x}" y="${y}" width="1" height="1" fill="${fill}"/>`;
     }
   }
-  return `<svg class="px" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" preserveAspectRatio="xMidYMid meet">${rects}</svg>`;
+  // ARIA-HIDDEN BECAUSE A SPRITE IS NEVER THE ONLY THING SAYING IT. Every one of the twenty-three call
+  // sites pairs the icon with the words it illustrates — the coin sits beside a balance, the seal beside
+  // "Re-sign", the card beside "Booked!", the stadium inside a button whose own title reads YOUR CLUB.
+  // Until now each one went into the page as a nameless <svg>: no role, no aria-hidden, no <title>, so it
+  // landed in the accessibility tree as an anonymous graphic that a screen reader stopped on before every
+  // label in the game and could say nothing useful about. Hiding them loses nothing that isn't already
+  // written in text right next to them.
+  return `<svg class="px" aria-hidden="true" viewBox="0 0 ${w} ${h}" xmlns="http://www.w3.org/2000/svg" shape-rendering="crispEdges" preserveAspectRatio="xMidYMid meet">${rects}</svg>`;
 }
 
 // ── Sprite definitions (16×16 unless noted) ─────────────────────────────────

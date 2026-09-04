@@ -5,6 +5,7 @@
 // unavailableTokenIds — they need the Store) stays in server/src/tokens.ts and calls these helpers.
 import { overall } from './teams.js';
 import { contractView } from './contracts.js';
+import { stakingEligible } from './staking.js';
 import { legacyCard } from './legacy.js';
 import { moraleEffects } from './morale.js';
 import { homeNation, nationalFixture, callUpBlurb } from './intl.js';
@@ -88,18 +89,25 @@ export function tokenAch(t: Token): PlayerAchievements {
 }
 
 // ── contract / selection info for a PRO token ──
-export interface TokenContract { id: string; age: number; available: boolean; seasonsLeft: number; lengthSeasons: number; extendCost: number; sellValue: number; stakedSeasons: number; staked: boolean; morale: number; moraleLabel: string; retired?: boolean; careerGoals?: number; careerAssists?: number; careerPotm?: number; careerApps?: number }
+// `sellValue` dropped here too — this interface only forwarded contracts.ts's removed release clause to a
+// player-card branch that could not execute (post-mortem in contracts.ts).
+export interface TokenContract { id: string; age: number; available: boolean; seasonsLeft: number; lengthSeasons: number; extendCost: number; stakedSeasons: number; staked: boolean; morale: number; moraleLabel: string; retired?: boolean; careerGoals?: number; careerAssists?: number; careerPotm?: number; careerApps?: number }
 export function tokenContract(t: Token, season: number): TokenContract {
   const age = ageOf(t.prime_season ?? season, season);
   const me = moraleEffects(t.morale ?? 65);
   const career = { careerGoals: t.ach_goals ?? 0, careerAssists: t.ach_assists ?? 0, careerPotm: t.ach_potm ?? 0, careerApps: t.ach_apps ?? 0 };
-  if (t.state === 'retired') return { id: t.id, age, available: false, seasonsLeft: 0, lengthSeasons: 0, extendCost: 0, sellValue: 0, stakedSeasons: 0, staked: false, morale: t.morale ?? 65, moraleLabel: me.label, retired: true, ...career };
+  if (t.state === 'retired') return { id: t.id, age, available: false, seasonsLeft: 0, lengthSeasons: 0, extendCost: 0, stakedSeasons: 0, staked: false, morale: t.morale ?? 65, moraleLabel: me.label, retired: true, ...career };
   const isStaked = t.staked_since != null;                       // must be STAKED to be selectable
   const contract = t.signed_season != null ? { signedSeason: t.signed_season, lengthSeasons: t.length_seasons ?? 3 } : null;
   const stakedSeasons = isStaked ? Math.max(0, season - t.staked_since!) : 0;
   const v = contractView(overall(tokenToPlayer(t)), age, t.greed ?? 10, t.marketability ?? 10, t.personality ?? undefined, contract, season, t.earnings ?? 0, stakedSeasons);
   // morale bends the numbers: an unhappy player holds out for more to re-sign and sells for less
-  return { id: t.id, age, available: v.available && isStaked, seasonsLeft: v.seasonsLeft, lengthSeasons: v.lengthSeasons, extendCost: Math.round(v.extendCost * me.extendMult), sellValue: Math.round(v.sellValue * me.sellMult), stakedSeasons, staked: isStaked, morale: t.morale ?? 65, moraleLabel: me.label, ...career };
+  // Eligibility now goes through `stakingEligible` from staking.ts instead of the inline `v.available &&
+  // isStaked` that used to sit here. Identical truth table — but that inline was the ONLY live copy of the
+  // selection rule, while staking.ts's named version, the file that claims to own the rule, had zero callers
+  // in the whole repo. Same shape as F-050, where the loyalty discount ran as two inlined copies while
+  // `loyaltyDiscount` sat unimported one file away. The player-visible stake is which men he can pick.
+  return { id: t.id, age, available: stakingEligible(isStaked, v.available), seasonsLeft: v.seasonsLeft, lengthSeasons: v.lengthSeasons, extendCost: Math.round(v.extendCost * me.extendMult), stakedSeasons, staked: isStaked, morale: t.morale ?? 65, moraleLabel: me.label, ...career };
 }
 
 // ── career (prospect state) — the breeder card game ──

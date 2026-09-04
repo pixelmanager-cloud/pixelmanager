@@ -3077,3 +3077,49 @@ The original recommendation, kept for the record: **(3) for now, (1) before the 
 seed-shareable thing.** It is a
 real defect but it is invisible to a Steam player on one machine, and re-tuning the match engine is a project
 in itself rather than something to slip into a fix batch.
+
+
+## 93. `played_loss` re-tuned to -3 — CK took the balance change, and -4 was rejected on the ladder
+
+CK asked for the losing-season morale penalty as well as the wiring, so this is done and shipped. Recorded
+because the VALUE is a judgement and the reasoning should survive.
+
+Every MoraleEvent is applied at most once per season and then drifts 15% toward 60, so what a delta means is
+the fixed point it settles at, not the number in the table. Measured over 40 seasons of the same event:
+
+| event | delta | settles at | |
+|---|---|---|---|
+| `played_win` | +6 | 91 | settled and happy |
+| `played_draw` | +2 | 69 | content |
+| **`played_loss`** | **-3** | **46** | content, one point above the unsettled cut |
+| `benched` | -3 | 46 | content |
+| `unused` | -5 | 35 | unsettled |
+| `contract_lapsed` | -8 | 18 | wants to leave |
+
+**Why -3.** It was -1 (settling at 57) and, because it had no emitter at all, a losing season actually paid
+`played_draw`'s +2 and settled at **69** — a first-team regular at a club beaten every week for twelve years
+ended happier than the day he signed. -3 makes it cost something real: 69 → 46 is a 23-point swing, moving
+the club from a 5% discount and a 4% premium on that player to **paying 8% more to re-sign him and getting
+6% less when it sells** — about a 13% swing on the re-sign either side of a winning season.
+
+**Why not -4, which was the first recommendation.** -4 settles at 40, **below `benched`'s 46**. A player
+receives exactly ONE of these per season, so they share a scale and their order is a claim about the game —
+and that claim would be that a man who plays every week in a losing side is unhappier than one who is never
+picked at all. That inverts the selection axis, which is the thing the model is actually about. -3 sits
+level with `benched` instead: a season of losing is as corrosive as a season on the bench, and neither on
+its own makes him agitate.
+
+**The deliberate consequence, in case it reads as a miss.** At 46 a losing regular is ONE point above
+`unsettled` (≤ 45), so a losing season *alone* does not put him on the squad report's unhappy list — but a
+losing season plus anything else (a lapsed deal, a year out of the side) does. If you decide a losing spell
+should surface on its own, the honest change is to move the unsettled threshold or the selection half of the
+ladder, **not** to push `played_loss` underneath `benched`. That is a bigger re-tune and it is not this one.
+Say the word if you want it.
+
+`tools/playtest/morale_ladder.ts` guards all of it and is mutation-proven three ways: reverting to -1 fails
+on the size of the gap, -4 fails on the ordering, and unwiring the emitter fails on reachability.
+
+**Still knowingly unemitted, and asserted as such so the list cannot grow in silence:** `benched` (there is
+no persisted rollover bench — `Team.bench` is match-time only, so the rollover's only question is whether a
+man was in the XI) and `transfer_listed` (no player-listing mechanic exists; it is a feature hook, not a
+missing emitter).

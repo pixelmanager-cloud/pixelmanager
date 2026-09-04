@@ -5,10 +5,11 @@
 // stays CONTINUOUSLY staked with the same account, the cheaper he is to re-sign — a loyalty/tenure
 // discount, and a HODL incentive that discourages flipping (good for a stable NFT economy).
 //
-// BREEDER side: a prospect NFT staked while it develops earns a small "settled academy" bonus the
-// longer it's kept — patient development beats churning half-baked prospects.
+// There is no BREEDER side any more: a prospect cannot be registered at all — `api.stake` refuses with
+// "only pros can be staked" (client/src/api.ts:656) — so the academy-tenure bonus this header used to
+// promise had no path to a player. See the tombstone below.
 //
-// Pure + deterministic. On-chain locking + tenure tracking is the server/web3 piece; these are the rules.
+// Pure + deterministic. Registration + tenure state is just `staked_since` on the token; these are the rules.
 // Loyalty is a RETENTION reward available to everyone (hold long → pay less), not pay-to-win.
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
 
@@ -19,14 +20,27 @@ export const loyaltyDiscount = (seasonsStaked: number) => clamp(1 - Math.max(0, 
 /** Selectable this season? Requires BOTH: the NFT is staked to the club AND its contract is current. */
 export const stakingEligible = (staked: boolean, contractActive: boolean) => staked && contractActive;
 
-/** Fraction of a season's loyalty already accrued between renewals — for a UI progress bar (0..1). */
-export const loyaltyProgress = (seasonsStaked: number) => clamp((seasonsStaked % 1 === 0 ? 0 : seasonsStaked % 1), 0, 1);
-
-/** Development BONUS (0..0.10) for patiently developing a staked prospect: +2%/season kept, capped +10%.
- *  A prospect settled at one academy develops better than one flipped around. */
-export const prospectStakeBonus = (seasonsStaked: number) => clamp(Math.max(0, seasonsStaked) * 0.02, 0, 0.1);
-
-/** Human label for a staking tenure, for the squad UI. */
-export function loyaltyLabel(seasonsStaked: number): string {
-  return seasonsStaked >= 6 ? 'one-club loyalty' : seasonsStaked >= 3 ? 'settled' : seasonsStaked >= 1 ? 'bedding in' : 'new signing';
-}
+// `loyaltyProgress`, `prospectStakeBonus` and `loyaltyLabel` REMOVED 2026-09-04. Three declared rules with no
+// production caller between them: `shared/qa_economy_fuzz.ts` was the only file in the repo that imported any
+// of them, which is why fuzzing them stayed green for months while the game never ran a line of them.
+//
+// `loyaltyProgress` was `clamp(seasonsStaked % 1 === 0 ? 0 : seasonsStaked % 1, 0, 1)`, documented as "for a
+// UI progress bar (0..1)". It could not return anything but 0. The sole producer of `seasonsStaked` is
+// `tokenContract` in tokens.ts — `Math.max(0, season - t.staked_since)`, two integers — so the modulus is
+// always 0 and the first branch always wins. A probe over tenures 0..40, and over real `tokenContract` output,
+// got exactly one distinct value: 0. Had anyone ever bound it to a bar, a player would have watched that bar
+// sit empty for a forty-season dynasty. Nobody bound it, so nobody ever saw it fail.
+//
+// `prospectStakeBonus` (+2%/season, cap +10%, "for patiently developing a staked prospect") was unreachable by
+// construction, not merely uncalled: `staked_since` is written in exactly two places — `api.stake`, which
+// refuses anything that is not a pro, and graduation, where the token has already become a pro. No prospect
+// can ever hold tenure, so the settled-academy incentive this module advertised was never on offer.
+//
+// `loyaltyLabel` ('one-club loyalty' / 'settled' / 'bedding in' / 'new signing') said "for the squad UI"; the
+// squad UI writes its own tenure line (client/src/main.ts:1165) and never imported it. Not broken, just never
+// wired — and putting that word on the card is a copy decision, not a repair, so it goes with the rest.
+//
+// Deleted rather than left standing: this file is the stated home of the loyalty rules, and three of its five
+// exports described mechanics the game does not have. That shape has already cost this codebase twice —
+// `breederRevenue` (contracts.ts) was twice read as live while reasoning about the economy, and the loyalty
+// discount itself ran as two inlined copies (F-050) while the version here sat unimported one file away.

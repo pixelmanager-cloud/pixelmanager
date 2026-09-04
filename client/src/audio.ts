@@ -176,15 +176,25 @@ class AudioManager {
   private crossfadeTo(next: HTMLAudioElement): void {
     this.deck = next;
     const others = this.tracked.filter((a) => a !== next).map((a) => ({ a, from: a.volume }));
-    const target = this.effectiveVolume();
     const start = performance_now();
     if (this.fadeTimer != null) cancelAnimationFrame(this.fadeTimer);
+    // THE LEVEL IS READ EVERY FRAME, NOT SNAPSHOTTED ONCE. This captured `const target = this.effectiveVolume()`
+    // before the loop and then wrote `next.volume = target * t` on each of the ~48 frames of the 800ms fade.
+    // `this.deck` is already `next` by this point, so the element the fade drives is the exact element
+    // applyVolume() writes: a mute or volume change made during the fade was applied and then stomped on the
+    // very next frame, and the final frame (t === 1) left the element parked on the stale snapshot for good.
+    // The mute button lives in the HUD that calls play() on every showScreen(), so hitting the speaker icon
+    // just after a screen change unmuted into silence — the glyph flipped, the music stayed at 0 until some
+    // later screen happened to start a new fade. Probed headlessly against this file: unmute 32ms into the
+    // fade ended the deck at 0.000 instead of 0.500; the slider dragged to 100% mid-fade ended at 0.500
+    // instead of 1.000. The departing tracks keep their captured `from` — they are on the way out, and
+    // ramping them against a live level would make a mid-fade change audible in a track being discarded.
     const step = () => {
       const t = Math.min(1, (performance_now() - start) / FADE_MS);
-      try { next.volume = clamp01(target * t); } catch { /* detached */ }
+      try { next.volume = clamp01(this.effectiveVolume() * t); } catch { /* detached */ }
       for (const o of others) { try { o.a.volume = clamp01(o.from * (1 - t)); } catch { /* detached */ } }
       if (t < 1) { this.fadeTimer = requestAnimationFrame(step); }
-      else { for (const o of others) { try { o.a.pause(); o.a.currentTime = 0; } catch { /* ignore */ } } this.tracked = [next]; this.fadeTimer = null; }
+      else { for (const o of others) { try { o.a.pause(); o.a.currentTime = 0; } catch { /* ignore */ } } this.tracked = [next]; this.fadeTimer = null; this.applyVolume(); }
     };
     this.fadeTimer = requestAnimationFrame(step);
   }

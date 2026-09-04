@@ -56,10 +56,22 @@ export interface SquadSeasonChange {
 /** How a season treated one squad player, morale-wise. A player who spent the year in the XI of a winning
  *  side is settled; one who never got a game and is out of contract is agitating. This is what turns a
  *  squad list into a dressing room the manager has to actually manage. */
-export function squadMoraleAfterSeason(p: Player, opts: { inXI: boolean; wonSomething: boolean; goodSeason: boolean; expiring: boolean }): number {
+export function squadMoraleAfterSeason(p: Player, opts: { inXI: boolean; wonSomething: boolean; goodSeason: boolean; seasonOutcome?: 'win' | 'draw' | 'loss'; expiring: boolean }): number {
   let m = p.morale ?? START_MORALE;
   const ev: MoraleEvent[] = [];
-  ev.push(opts.inXI ? (opts.goodSeason ? 'played_win' : 'played_draw') : 'unused');
+  // LOSING WAS FREE. This push was the ONLY production emitter of a result-driven morale event in the whole
+  // game, and the boolean it read could name just two of them: `played_win` (+6) for the top half of the
+  // table, `played_draw` (+2) for everywhere else. `played_loss` (-1) is declared in morale.ts and fuzzed in
+  // qa_economy_fuzz.ts, and was reachable from nothing the player could actually do.
+  // Measured against driftMorale's fixed points: a first-team regular at a club finishing bottom-half every
+  // year goes 65 -> 69 by season twelve and stays there, reading 'content' — HAPPIER after twelve years of
+  // being beaten every week than the day he signed. Winning converged to 91, never being picked to 35, and
+  // losing to the same 69 as drawing. Selection was the entire relationship: the only ways to make a squad
+  // player unhappy were to stop picking him or to let his deal lapse, and the scoreline cost nothing.
+  // `seasonOutcome` carries the real three-way result. `goodSeason` is the old two-state form, still taken
+  // for the dev/QA harnesses that pass it — it has no way to say "beaten", so it maps to win-or-draw.
+  const outcome = opts.seasonOutcome ?? (opts.goodSeason ? 'win' : 'draw');
+  ev.push(!opts.inXI ? 'unused' : outcome === 'win' ? 'played_win' : outcome === 'loss' ? 'played_loss' : 'played_draw');
   if (opts.wonSomething) ev.push('won_trophy');
   if (opts.expiring) ev.push('contract_lapsed');
   for (const e of ev) m = updateMorale(m, e);
@@ -114,7 +126,7 @@ export function advanceSquadPlayer(p: Player, trainingLvl = 1): Player {
 
 /** Roll the WHOLE squad forward one season. Pure: returns the new squad + everything the season
  *  report needs (who grew, who faded, who retired, whose deal is up, and the wage bill). */
-export function advanceSquad(players: Player[], season: number, trainingLvl = 1, ctx: { xi?: ReadonlySet<string>; wonSomething?: boolean; goodSeason?: boolean; quality?: number } = {}): SquadRollover {
+export function advanceSquad(players: Player[], season: number, trainingLvl = 1, ctx: { xi?: ReadonlySet<string>; wonSomething?: boolean; goodSeason?: boolean; seasonOutcome?: 'win' | 'draw' | 'loss'; quality?: number } = {}): SquadRollover {
   const out: Player[] = [];
   const changes: SquadSeasonChange[] = [];
   const retired: Player[] = [];
@@ -157,7 +169,7 @@ export function advanceSquad(players: Player[], season: number, trainingLvl = 1,
     const moraleBefore = p.morale ?? START_MORALE;
     const moraleAfter = squadMoraleAfterSeason(p, {
       inXI: ctx.xi ? ctx.xi.has(p.id) : true,
-      wonSomething: !!ctx.wonSomething, goodSeason: !!ctx.goodSeason, expiring: isExpiring,
+      wonSomething: !!ctx.wonSomething, goodSeason: !!ctx.goodSeason, seasonOutcome: ctx.seasonOutcome, expiring: isExpiring,
     });
     adv = { ...adv, morale: moraleAfter };
     changes.push({ player: adv, ovrBefore, ovrAfter: overall(adv), retired: isRetired, expiring: isExpiring, moraleBefore, earnedTraits: earnedTraits.length ? earnedTraits : undefined, moraleAfter });

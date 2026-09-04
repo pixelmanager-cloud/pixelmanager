@@ -127,7 +127,9 @@ export interface CareerProfile {
   attrs: Record<string, number>; personality: { id: string; name: string; desc: string };
   agent: string | null; coach: string | null; earnings: number; traitsForming: string[];
 }
-export interface ContractInfo { playerId: string; age: number; available: boolean; seasonsLeft: number; lengthSeasons: number; extendCost: number; sellValue: number; stakedSeasons: number; staked?: boolean; morale?: number; moraleLabel?: string; retired?: boolean; legend?: LegacyCard | null; rebornId?: string | null; careerGoals?: number; careerAssists?: number; careerPotm?: number; careerApps?: number }
+// `sellValue` is gone from the wire shape too: me() spread it into every contract row on every refresh and
+// its only reader was a player-card branch that could not execute (post-mortem in shared/src/contracts.ts).
+export interface ContractInfo { playerId: string; age: number; available: boolean; seasonsLeft: number; lengthSeasons: number; extendCost: number; stakedSeasons: number; staked?: boolean; morale?: number; moraleLabel?: string; retired?: boolean; legend?: LegacyCard | null; rebornId?: string | null; careerGoals?: number; careerAssists?: number; careerPotm?: number; careerApps?: number }
 
 export interface Account { id: string; handle: string; rating: number; coins?: number }
 export interface Trialist { index: number; id: string; name: string; role: string; overall: number; band: 'raw' | 'squad' | 'quality' | 'gem'; signed: boolean }
@@ -642,6 +644,24 @@ export const api = {
     await bumpMoraleLocal(playerId, 'extended');
     return { outcome: 'accept' as const, askWage: result.askWage, note: result.note, coins: getActiveModel().profile.coins, lengthSeasons: Math.max(2, Math.min(6, Math.round(length))) };
   },
+  /** Nudge a TOKEN's morale by a raw delta, straight into the durable save.
+   *
+   *  Added because the manager arcs had no way to reach the bloodline star's feelings at all. He is a
+   *  Token, never a `club.players` row, and `mergedClub()` hands the caller a fresh `tokenToPlayer(t)`
+   *  object every single time — so `applyArcEffect`'s `pick.morale = ...` mutated a body that was thrown
+   *  away with the call that made it. The same shape `negotiateStar`'s moraleDelta already had to route
+   *  through `bumpMoraleByLocal` for, and for the same reason.
+   *
+   *  A caller may pass any squad id: a body the store does not know is a deliberate no-op, because those
+   *  objects ARE the durable model and the caller has already mutated them in place. A RETIRED token is
+   *  refused too — a man who has hung his boots up is not in the dressing room to be lifted or bruised. */
+  bumpTokenMorale: async (playerId: string, delta: number) => {
+    await ensureActive();
+    const t = await localStore.getToken(playerId);
+    if (!t || t.state !== 'pro' || !delta) return { ok: false as const, morale: t?.morale ?? 65 };
+    await bumpMoraleByLocal(playerId, delta);
+    return { ok: true as const, morale: (await localStore.getToken(playerId))?.morale ?? 65 };
+  },
   /** Accept a transfer bid for the star: bank the fee (the succession to the heir is handled client-side,
    *  the same reborn mechanic as retirement — his son carries the bloodline on). */
   // (sellStar removed: the incoming-bid fee is now banked atomically inside succeed(), so an abandoned
@@ -1040,6 +1060,18 @@ export const api = {
         ach_tier: Math.max(st.ach_tier ?? 0, tierIdx),
         ach_promotions: (st.ach_promotions ?? 0) + (body?.promoted ? 1 : 0),
       });
+      // AND NOW THROW AWAY THE SEASONS NOTHING WILL EVER READ AGAIN. Every reader has had its turn by this
+      // line: the awards read `season`, the star's record read `season`, and `seasonStats` reads whatever
+      // `profile.season` is now. `bumpPlayerStats` has no delete path anywhere in the tree, so the rows for
+      // every season before those two rode in the save for ever -- deep-cloned on every debounced persist,
+      // re-parsed on every load, reachable by nothing. Measured on a real five-generation dynasty
+      // (`npx tsx tools/dev_dynasty_save.ts 5`): 300 rows, 38.7 KiB, 48% of the whole 80.6 KiB save, and
+      // 276 of the 300 dead. Keeping TWO seasons is deliberately one more than any reader asks for, so a
+      // "last season" panel can be written later without this line becoming the bug that eats it.
+      // Swallowed like the awards above: a save that is merely fatter than it needs to be must never cost
+      // the player his season.
+      await localStore.prunePlayerStats([String(season), String(season + 1)])
+        .catch(() => { /* a tidy save is worth less than the result card */ });
     }
     // `arcCoins` is the season's banked manager-arc coin effects (see applyArcEffect). They were applied
     // to a display-only field and never persisted, so every one of the 1,031 arc options carrying a
@@ -1095,7 +1127,7 @@ export const api = {
   /** THE LIVING SQUAD season rollover: age the manager's whole squad a year, develop the young, fade the
    *  veterans, retire whoever is done, charge the season's wage bill, and report whose deal is now up.
    *  The bloodline star is NOT here — he keeps his own token path (developPlayer + MgrState.starAge). */
-  advanceSquadSeason: async (body: { trainingLvl?: number; wonSomething?: boolean; goodSeason?: boolean }) => {
+  advanceSquadSeason: async (body: { trainingLvl?: number; wonSomething?: boolean; goodSeason?: boolean; seasonOutcome?: 'win' | 'draw' | 'loss' }) => {
     await ensureActive();
     const c = await localStore.getClub(OWNER);
     if (!c) throw apiErr('club not found', {}, 404);
@@ -1121,8 +1153,16 @@ export const api = {
     // never got a game is agitating — that's what makes selection a relationship, not just a number (Phase 3)
     const xi = new Set(c.standingOrders?.playerIds ?? []);
     const avgOv = roster.length ? roster.reduce((t, p) => t + overall(p), 0) / roster.length : 8;
+    // AND HOW THE SEASON WENT, three-way — the axis that used to be one boolean, so a beaten team's regulars
+    // were credited played_draw (+2) and morale rose through a relegation. It arrives on a plain body object
+    // and the tools/ harnesses reach this through tsx, which strips types without checking them, so it is
+    // checked against the three real values rather than trusted: an old caller sending only `goodSeason`
+    // leaves it undefined and keeps the legacy win-or-draw mapping, instead of an unknown string landing as
+    // a defeat nobody asked for.
+    const rawOutcome = body?.seasonOutcome;
+    const seasonOutcome = rawOutcome === 'win' || rawOutcome === 'draw' || rawOutcome === 'loss' ? rawOutcome : undefined;
     const roll = advanceSquad(roster, season, Math.max(1, Math.floor(Number(body?.trainingLvl) || 1)),
-      { xi, wonSomething: !!body?.wonSomething, goodSeason: !!body?.goodSeason, quality: avgOv });
+      { xi, wonSomething: !!body?.wonSomething, goodSeason: !!body?.goodSeason, seasonOutcome, quality: avgOv });
     // wages are a real cost, but never bankrupt the club into a stuck state — charge what's affordable
     const coinsNow = getActiveModel().profile.coins;
     const charged = Math.max(0, Math.min(coinsNow, Math.round(roll.wageBill)));

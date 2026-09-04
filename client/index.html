@@ -206,7 +206,23 @@
         outline: 3px solid var(--cyan); outline-offset: 2px;
       }
 
-      .panel { width: var(--app-w); max-width: 96vw; background: var(--panel); border: 3px solid var(--line);
+      /* This panel's max-width used to be a flat `96vw`, and that was its ONLY promise of fitting the
+         window — a promise a viewport unit cannot keep here. The document is scaled with CSS `zoom`
+         (uiScale, default 110%), and a `vw` resolves against the UNZOOMED viewport before the layout is
+         scaled, so it paints `zoom` times wider than it computes. In a 950px window: 96vw computed 912px
+         and painted 1003, while the panel's own 880px `--app-w` painted 968. The player opened the title
+         screen at a perfectly ordinary half-screen size and the panel's left border was OFF the window at
+         x=-9, both edges clipped, with a horizontal scrollbar under a screen that is meant to be one
+         centred card (documentElement.scrollWidth 959 against clientWidth 950). At 130% and 140% — both
+         offered by the scale slider — it measured 1144px and 1232px wide, at x=-97 and x=-141. Anything
+         narrower than 968px overflowed at the DEFAULT scale.
+         `--vw-eff` is the effective viewport width published by applyEffectiveViewport() in main.ts, the
+         same helper that already publishes `fx-short` from the effective HEIGHT for this exact
+         zoom-vs-CSS blindness. The `100vw` fallback is literally the old behaviour, so nothing moves
+         before the script runs, and at uiScale 100% the value equals the viewport — measured no-op, 880px
+         at x=35 before and after. Measured after at 110/130/140%: 912px at x=19, every time.
+         The other ten vw/vh rules in this file have the same defect and are NOT converted here. */
+      .panel { width: var(--app-w); max-width: calc(var(--vw-eff, 100vw) * 0.96); background: var(--panel); border: 3px solid var(--line);
         box-shadow: 0 0 0 2px #000, 6px 6px 0 rgba(0,0,0,0.45); padding: 16px 18px; }
       h3 { font-family: var(--display); margin: 0 0 14px; font-size: 19px; line-height: 1.5; color: var(--cyan);
         text-shadow: 2px 2px 0 rgba(0,0,0,0.6); }
@@ -264,7 +280,31 @@
       #mm-name { font-family: var(--body); font-size: 22px; text-align: center; background: var(--panel-2); color: var(--text);
         border: 2px solid var(--line); box-shadow: 3px 3px 0 rgba(0,0,0,0.6); padding: 10px 14px; width: 100%; }
       #mm-name:focus { border-color: var(--accent); }
-      .mm-preview { min-height: 38px; display: flex; align-items: center; justify-content: center; gap: 8px; font-family: var(--display); font-size: 15px; color: var(--text); }
+      /* NOWRAP, IN A COLUMN SIZED FOR BUTTONS. This readout is four flex items — "Your club:", a 26px crest,
+         the bold club name, and "· the <name> bloodline" — and it never set flex-wrap, so it took the
+         default `nowrap` inside #mm-newgame, whose max-width is 320px because that is the width of the
+         Start/Back buttons. A nowrap flex line that cannot fit does not move an item to a second line; it
+         SHRINKS every item toward its min-content size, which for text is its longest word. So the labels
+         did not wrap, they shredded: "Your / club:" stacked into a 25px column, "Fitzgerald's / Club" broke
+         the club name in half, and "· the Fitzgerald bloodline" collapsed into a three-line 65px sliver.
+         This is the New Game screen — the first thing a Steam player types into.
+         Measured at the default uiScale 110%: the row's max-content width is 299.6px for a one-letter name
+         and grows 19.8px per character, because the family name is printed twice. It passes 320px at THREE
+         characters (339.2px for "Kim"); only a two-letter name ever fit, with 0.6px to spare. Every real
+         family name was broken, and an 18-character one (the input's maxlength) wants 636px.
+         The repair is room, not shrinking. The readout is a centred caption, not a control, so it is let out
+         of the button column up to 560px — a 14-character name on one unbroken line — and flex-wrap moves
+         whole items to a second line when even that is not enough, instead of chopping words. The vw term is
+         68 and not 88 because vw CANNOT SEE `zoom`, the same trap applyEffectiveViewport() in main.ts
+         documents for the media queries: 68vw x the 140% maximum UI scale is 95% of the window, so the
+         caption stays inside an 800px window at every scale we ship. The 320px floor keeps it no wider than
+         the column on a genuinely narrow window, where the old nowrap row escaped the viewport by 43px and
+         forced a horizontal scrollbar.
+         Re-measured at 800x450 / 110% (the reference minimum, fx-short active): "Back" now ends at 448px
+         against the 450px fold for names up to 12 characters — the same 2px of clearance the empty screen
+         has, where the broken row had already pushed it to 452/458/469px purely by typing. Do not put this
+         back inside the 320px column. */
+      .mm-preview { min-height: 38px; display: flex; align-items: center; justify-content: center; flex-wrap: wrap; width: clamp(320px, 68vw, 560px); gap: 8px; font-family: var(--display); font-size: 15px; color: var(--text); }
       .mm-preview .mp-hint { font-family: var(--body); font-size: 12px; color: var(--muted); letter-spacing: 0; }
       .mm-preview .crest-img, .mm-preview .crest { flex: none; vertical-align: middle; }
       #mm-saves { max-width: 360px; margin: 22px auto 0; }
@@ -563,7 +603,18 @@
       .ns-row { display: flex; align-items: center; gap: 10px; padding: 5px 6px; border-radius: 6px; cursor: pointer; }
       .ns-row:hover { background: rgba(255,255,255,0.04); }
       .ns-name { flex: 1; font-size: 14px; display: flex; align-items: center; gap: 7px; }
-      .ns-mood { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+      /* The morale marker used to be an empty 8px circle filled by an inline `background`, so its ONLY
+         signal was hue — and green "settled" against red "wants to leave" is precisely the pair a red/green
+         colour-blind player cannot separate; both read as one grey dot. It now carries a glyph
+         (▲ settled · ● content · ▼ unsettled) with colour as reinforcement, so the band still reads in
+         greyscale, on a monochrome display, and in forced-colours mode, where a background set from an
+         inline style is thrown away outright. Width/font-size/line-height are pinned because U+25B2/25CF/
+         25BC are absent from the latin-subset VT323 face and fall back to a system font — the same
+         per-glyph fallback ▶ and ▾ already rely on elsewhere — and the box must not resize with it.
+         `flex: none` because .ns-name is a flex row: a text glyph would otherwise be squeezed by a long
+         player name, which a fixed-size block never was. */
+      .ns-mood { flex: none; width: 12px; font-size: 12px; line-height: 1; text-align: center; display: inline-block; }
+      .ns-mood.high { color: #6ad06a; } .ns-mood.ok { color: #e0c14a; } .ns-mood.low { color: #d06a6a; }
       .ns-age { font-size: 13px; color: var(--muted); width: 34px; }
       .ns-tag { font-size: 11px; padding: 2px 7px; border-radius: 9px; }
       .ns-tag.ok { background: rgba(90,200,120,0.16); color: #a8e6b8; } .ns-tag.warn { background: rgba(220,180,80,0.18); color: #e6cf9a; }
@@ -773,9 +824,17 @@
       .lt-row.releg .lt-pos { color: var(--home); }
       .lt-row.promo { background: color-mix(in srgb, var(--good) 7%, transparent); }
       .lt-row.releg { background: color-mix(in srgb, var(--home) 7%, transparent); }
+      /* THE ZONE MARKER (★ champions / ▲ up / ▼ down), printed inside the position cell by spTableHtml.
+         Promotion, relegation and the title used to live in the three colour rules directly above and
+         nowhere else, so the table was unreadable to anyone who cannot separate those hues. The glyph is
+         the second, hue-independent channel — deliberately given NO colour of its own: it inherits the
+         zone's .lt-pos colour, so shape and hue always agree and the marker can never become just another
+         colour. Keep it legible; it is load-bearing. */
+      .lt-table .lt-pos .lt-zn { font-size: 11px; margin-left: 4px; vertical-align: middle; }
       .lt-key { display: block; font-size: 11px; color: var(--muted); margin-top: 6px; text-align: center; }
       .lt-key .lt-k { font-size: 11px; vertical-align: middle; }
       .lt-key .lt-k.promo { color: var(--good); } .lt-key .lt-k.releg { color: var(--home); }
+      .lt-key .lt-k.champ { color: #ffd75e; }
       /* promotion / relegation reveal banner (season screen) */
       .sf-tiermove { font-size: 14px; margin: 0 0 12px; padding: 11px 14px; border-radius: 9px; font-family: var(--body); }
       .sf-tiermove b { color: #fff; }

@@ -54,10 +54,23 @@ export interface PlayerContractView {
   seasonsLeft: number;   // seasons until the current deal lapses (0 = lapsed/unsigned → benched)
   lengthSeasons: number; // length of the deal he'll sign on renewal
   extendCost: number;    // coins to re-sign him now
-  sellValue: number;     // coins you'd get by selling the NFT instead
+  // `sellValue` REMOVED 2026-09-04. It carried `releaseClause(overall, marketability, greed)` out through
+  // TokenContract and ContractInfo to a single span on the player card — a branch that could not execute,
+  // because that span only renders for a player who has a `contracts` entry, and every one of those is an
+  // `nft:` id, which took the OTHER arm of the ternary. Nothing else in the repo read the field.
+  //
+  // This is not a saving. It is priced once per me() refresh (at most one `pro` token exists at a time —
+  // the played line reuses one id and rebornFields turns it back into a prospect for the heir, while every
+  // sibling and forebear is `retired` and returns before this function), and it measures 2.4ns a call.
+  // What is removed is A PRICE THE GAME DOES NOT PAY: every real sale runs through transfermarket.ts —
+  // `squadSaleValue` for a squad man, an `incomingBid` off `transferFee` for the bloodline star — and
+  // releaseClause sits 1.7x-4.6x above those. A dead number is not inert when the UI can quote it.
 }
 /** Compute a player's contract situation. `contract` is null for a never-signed / just-acquired NFT
- *  (benched until you sign him). greed/marketability default to neutral for non-career-built players. */
+ *  (benched until you sign him). greed/marketability default to neutral for non-career-built players.
+ *  `marketability` is VESTIGIAL here now that sellValue is gone — it only ever fed the release clause. It
+ *  stays in the signature because every call site passes it positionally, and it is a live attribute
+ *  elsewhere (sponsorIncome / squadMarketability); renaming it would be churn, not a cleanup. */
 export function contractView(
   overall: number, age: number, greed = 10, marketability = 10, personality: string | undefined,
   contract: Contract | null, currentSeason: number, earnings = 0, seasonsStaked = 0,
@@ -72,7 +85,6 @@ export function contractView(
     seasonsLeft: contract ? Math.max(0, contractExpirySeason(contract) - currentSeason) : 0,
     lengthSeasons: contractLength(greed, personality),
     extendCost: Math.round(contractCost(overall, age, greed, earnings) * loyalty),
-    sellValue: releaseClause(overall, marketability, greed),
   };
 }
 

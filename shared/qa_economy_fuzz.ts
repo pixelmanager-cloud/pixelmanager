@@ -8,7 +8,7 @@ import { contractCost, contractLength, releaseClause, contractView, signContract
 import { prestigeScore, managerPrestige, type ManagerRecord, type HonourLite } from './src/prestige.js';
 import { updateMorale, driftMorale, moraleEffects, START_MORALE, type MoraleEvent } from './src/morale.js';
 import { legacyCard, type PlayerAchievements } from './src/legacy.js';
-import { loyaltyDiscount, stakingEligible, loyaltyProgress, prospectStakeBonus, loyaltyLabel } from './src/staking.js';
+import { loyaltyDiscount, stakingEligible } from './src/staking.js';
 
 const MAX_LOGGED = 60;
 const failures: string[] = [];
@@ -64,7 +64,8 @@ console.log('\n[qa-economy] contracts.ts fuzz...');
     if (typeof view.available !== 'boolean') log(`contractView.available not boolean  ${ctx}`);
     if (!finite(view.seasonsLeft) || view.seasonsLeft < 0) log(`contractView.seasonsLeft invalid: ${view.seasonsLeft}  ${ctx}`);
     if (!finite(view.extendCost) || view.extendCost < 0) log(`contractView.extendCost invalid: ${view.extendCost}  ${ctx}`);
-    if (!finite(view.sellValue) || view.sellValue < 0) log(`contractView.sellValue invalid: ${view.sellValue}  ${ctx}`);
+    // the view.sellValue probe went with the field it guarded — contractView no longer prices a release
+    // clause, because no sale path in the game ever paid one. `releaseClause` itself is still fuzzed above.
 
     const viewNull = contractView(12, 27, greed, 10, personality, null, currentSeason);
     if (viewNull.available !== false) log(`contractView: null contract should never be available  ${ctx}`);
@@ -166,15 +167,13 @@ console.log('\n[qa-economy] legacy.ts (legacyCard) fuzz...');
 // ── STAKING ──────────────────────────────────────────────────────────────────
 console.log('\n[qa-economy] staking.ts fuzz...');
 {
+  // loyaltyProgress / prospectStakeBonus / loyaltyLabel removed 2026-09-04 — dead exports, and this harness
+  // was their only importer in the repo. Fuzzing them passed every run while not one of them ever executed in
+  // the game; see the tombstone in shared/src/staking.ts. Kept as a note: a green fuzz over an export with no
+  // production caller measures nothing at all.
   for (const s of [-100, -5, -0.5, 0, 0.5, 1, 3, 6, 6.5, 20, 1000]) {
     const ld = loyaltyDiscount(s);
     if (!finite(ld) || ld < 0.75 || ld > 1) log(`loyaltyDiscount out of [0.75,1] for seasonsStaked=${s}: ${ld}`);
-    const lp = loyaltyProgress(s);
-    if (!finite(lp) || lp < 0 || lp > 1) log(`loyaltyProgress out of [0,1] for seasonsStaked=${s}: ${lp}`);
-    const psb = prospectStakeBonus(s);
-    if (!finite(psb) || psb < 0 || psb > 0.1) log(`prospectStakeBonus out of [0,0.1] for seasonsStaked=${s}: ${psb}`);
-    const label = loyaltyLabel(s);
-    if (typeof label !== 'string' || !label) log(`loyaltyLabel invalid for seasonsStaked=${s}: "${label}"`);
   }
   for (const staked of [true, false]) for (const active of [true, false]) {
     const el = stakingEligible(staked, active);
