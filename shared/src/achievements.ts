@@ -64,9 +64,18 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   // — the long game —
   { id: 'seasons_ten',      name: 'A Decade in the Dugout',desc: 'Manage 10 seasons.',                                            icon: '📅', test: (s) => s.seasons >= 10 },
   { id: 'seasons_fifty',    name: 'A Life in Football',    desc: 'Manage 50 seasons.',                                            icon: '📅', test: (s) => s.seasons >= 50 },
+  // The number in each prestige test is an INDEX INTO PRESTIGE_LEVELS (prestige.ts), so it must be the
+  // index of the rank the achievement is NAMED after: 3 Established Manager, 6 Elite Manager, 8 Immortal
+  // Gaffer. 'The Immortal Gaffer' tested >= 7, which is 'Footballing Legend' — it toasted "the highest
+  // manager prestige rank" a full rank early, and then crossing the real top rank at 16,000 points, the
+  // longest grind in the game, unlocked nothing at all. 'Elite Company' was off by one the same way (idx 5
+  // is 'Trophy Winner'). The thresholds live here and the rank titles live in prestige.ts, so nothing stops
+  // them drifting apart again silently — tools/playtest/prestige_capstone.ts now pairs each threshold back
+  // to the rank title it actually fires on. Raising these does not un-earn anything: the client's unlock
+  // set is append-only (main.ts saveUnlockedAch), so a save that already banked one keeps it.
   { id: 'prestige_mid',     name: 'Established Name',       desc: 'Reach an established manager prestige rank.',                    icon: '📈', test: (s) => s.prestigeIdx >= 3 },
-  { id: 'prestige_elite',   name: 'Elite Company',         desc: 'Reach an elite manager prestige rank.',                         icon: '📈', test: (s) => s.prestigeIdx >= 5 },
-  { id: 'prestige_immortal',name: 'The Immortal Gaffer',   desc: 'Reach the highest manager prestige rank.',                      icon: '🐐', test: (s) => s.prestigeIdx >= 7 },
+  { id: 'prestige_elite',   name: 'Elite Company',         desc: 'Reach an elite manager prestige rank.',                         icon: '📈', test: (s) => s.prestigeIdx >= 6 },
+  { id: 'prestige_immortal',name: 'The Immortal Gaffer',   desc: 'Reach the highest manager prestige rank.',                      icon: '🐐', test: (s) => s.prestigeIdx >= 8 },
 ] as const;
 
 /** Which achievement ids the snapshot currently satisfies (earned-or-not is a pure function of progress). */

@@ -460,8 +460,21 @@ console.log('\n=== 9. Every level of every facility has a card and a story line,
   ok('the sponsor card prints exactly what sponsorIncome pays at its stated baseline',
     LEVELS.slice(1).every((l) => num(effectAt('sponsor', l)) === sponsorIncome(l, 0, 0, 10)),
     `L10 card ${fmt(num(effectAt('sponsor', MAX_LEVEL)))} vs ${fmt(sponsorIncome(MAX_LEVEL, 0, 0, 10))}`);
-  ok('the shop and women cards print exactly what their functions pay at the tier they quote',
-    LEVELS.slice(1).every((l) => num(effectAt('shop', l)) === shopIncome(l, 4) && num(effectAt('women', l)) === womensIncome(l, 4)));
+  // AND SO DO THE SHOP AND THE WOMEN'S TEAM. This check used to PIN the defect: it required the cards to
+  // equal shopIncome(l, 4)/womensIncome(l, 4), which is one division's figure, while seasonFacilityIncome
+  // pays both at the club's REAL tier — and the shop's "+" stated that single number as a floor, so a
+  // bottom-division L10 Club Shop advertised "≈ 697+ coins/season" and banked 405. Same range shape, same
+  // reason, as the stadium check below. The "+" is gated on its own line so the floor claim cannot come
+  // back on a card that happens to print a range as well.
+  ok('the shop and women cards print the real per-season range, worst division to best',
+    LEVELS.slice(1).every((l) => {
+      const sm = effectAt('shop', l).match(/(\d+)–(\d+)/), wm = effectAt('women', l).match(/(\d+)–(\d+)/);
+      return !!sm && Number(sm[1]) === shopIncome(l, 0) && Number(sm[2]) === shopIncome(l, TIERS - 1)
+        && !!wm && Number(wm[1]) === womensIncome(l, 0) && Number(wm[2]) === womensIncome(l, TIERS - 1);
+    }), `L10 shop: ${effectAt('shop', MAX_LEVEL)} | women: ${effectAt('women', MAX_LEVEL)}`);
+  ok('neither states a division-4 number as a floor — no "+" on a figure the bottom of the pyramid never sees',
+    !/\d\+/.test(effectAt('shop', MAX_LEVEL)) && !/\d\+/.test(effectAt('women', MAX_LEVEL)),
+    `${effectAt('shop', MAX_LEVEL)} / ${effectAt('women', MAX_LEVEL)}`);
   ok('the stadium card prints the real per-match range, worst division to best',
     LEVELS.slice(1).every((l) => {
       const m = effectAt('stadium', l).match(/(\d+)–(\d+)/);
@@ -569,11 +582,10 @@ console.log('\n=== 11. MEASURED (not gated) — findings ===');
   console.log(`      seasonFacilityIncome rounds W, D and L to home matches INDEPENDENTLY, so ${off} of ${tot} possible records (${(100 * off / tot).toFixed(0)}%)`);
   console.log(`      are paid for 10 home games instead of ${homeReal} — a systematic ~11% over-payment of gate receipts.`);
 
-  console.log('\n  D8  THE "+" ON THE SHOP AND SPONSOR CARDS IS NOT A FLOOR.');
-  console.log(`      shop L10 card "${effectAt('shop', MAX_LEVEL)}" — real income in the bottom division is ${fmt(shopIncome(MAX_LEVEL, 0))} (${((1 - shopIncome(MAX_LEVEL, 0) / shopIncome(MAX_LEVEL, 4)) * 100).toFixed(0)}% less).`);
+  console.log('\n  D8  THE "+" ON THE SPONSOR CARD IS NOT A FLOOR.');
   console.log(`      sponsor L10 card "${effectAt('sponsor', MAX_LEVEL)}" — with a low-marketability squad it pays ${fmt(sponsorIncome(MAX_LEVEL, 0, 0, 1))}.`);
-  console.log(`      women L10 card "${effectAt('women', MAX_LEVEL)}" — real bottom-division income is ${fmt(womensIncome(MAX_LEVEL, 0))}.`);
-  console.log('      The stadium card was fixed to print a RANGE for exactly this reason; the other three were not.');
+  console.log('      The stadium card prints a RANGE for exactly this reason, and the shop and women cards now do too');
+  console.log('      (gated in §9); the sponsor card is the last one quoting a single baseline with a "+" it cannot honour.');
 
   console.log('\n  D9  applyDisrepair is documented "Pure." and mutates its argument.');
   const p = allAt(6), snap = JSON.stringify(p);

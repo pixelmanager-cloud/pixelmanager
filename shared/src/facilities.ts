@@ -316,9 +316,15 @@ export function effectAt(key: FacilityKey, level: number): string {
     case 'medical':  return level === 1 ? 'Standard injury risk' : `−${Math.round((1 - injuryChanceMult(level)) * 100)}% injury chance${recoveryCut(level) ? `, −${recoveryCut(level)} match recovery` : ''}`;
     case 'sponsor':  return level === 1 ? 'No sponsors yet' : `≈ ${60 * (level - 1)}+ coins/season (more per division & trophy)`;
     case 'data':      return level === 1 ? 'No analysts yet' : `+${(dataEdge(level) * 100).toFixed(1)}% edge in tight matches from opposition prep`;
-    case 'shop':      return level === 1 ? 'A table and a cash box' : `≈ ${shopIncome(level, 4)}+ coins/season, more as the crowd grows`;
+    // A RANGE, LIKE THE STADIUM CARD ABOVE, AND FOR THE SAME REASON. This and the women's-team line below
+    // both quoted ONE division — tierIdx 4 — while seasonFacilityIncome pays shopIncome/womensIncome at the
+    // club's REAL tier, and the shop's "+" stated that single figure as a floor. A bottom-division club
+    // buying the L10 Club Shop was promised "≈ 697+ coins/season" and banked 405; the top flight, quietly,
+    // was under-quoted at 1,061. This string is what the player reads while spending 250-14,000 coins, and
+    // it is repeated as `nextEffect` in the upgrade confirm dialog, so it has to cover the whole pyramid.
+    case 'shop':      return level === 1 ? 'A table and a cash box' : `≈ ${shopIncome(level, 0)}–${shopIncome(level, 9)} coins/season (by division)`;
     case 'dorm':      return level === 1 ? 'The boys live at home' : `+${dormIntakeBonus(level)} academy intake place(s), and fewer lost to the travel`;
-    case 'women':     return level === 1 ? 'No second side yet' : `≈ ${womensIncome(level, 4)} coins/season, and a second side with stories of its own`;   // mid-table figure; the ladder now pays more at every level in the division it was built for
+    case 'women':     return level === 1 ? 'No second side yet' : `≈ ${womensIncome(level, 0)}–${womensIncome(level, 9)} coins/season (by division), and a second side with stories of its own`;
     // I WROTE THE OLD LINE THIS MORNING AND IT WAS FALSE ABOVE LEVEL 5. "More of them the deeper the trust
     // runs" describes a ladder that does not exist: the Community Trust has NO numeric effect function at
     // all, and its only wiring is `when.facility` arc gates, which run out at level 5. Levels 6-10 unlock

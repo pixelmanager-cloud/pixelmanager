@@ -1,7 +1,7 @@
 // Does the manager narration actually KNOW WHO IT IS TALKING ABOUT? That is the whole design claim —
 // selling an eleven-season servant and selling a summer signing must not draw the same line — so it is
 // tested rather than asserted.
-import { narrateManager, eligible, tierFor, type MgrEvent, type PersonCtx, type FillVars } from './src/managerNarrate.js';
+import { narrateManager, eligible, tierFor, fillMgr, type MgrEvent, type PersonCtx, type FillVars } from './src/managerNarrate.js';
 // THE FIXTURES ARE THE REAL CONTENT, NOT A LIKENESS OF IT. The first draft of this spread hand-wrote what
 // it believed the call sites pass — 13 facility names including a 'Car Park', and five invented scouting
 // destinations. The game has 12 facilities, none called that, and six destinations with entirely different
@@ -100,6 +100,48 @@ console.log('\n=== 5. two firings of one event in one season are not the same se
   ok('the same firing still reads the same, whatever order the vars were built in',
     narrateManager('facility_upgraded', { seed: 4, club, vars: { n: 3, name: 'Gym', fee: 400 } })
     === narrateManager('facility_upgraded', { seed: 4, club, vars: { fee: 400, name: 'Gym', n: 3 } }));
+}
+
+// The prose is the only channel in the game that prints money, and it was the only one printing it raw:
+// the filler stringified {fee} with String(), which has no grouping. A four-figure offer reached the season
+// log as '3058c on the table' with the bid banner directly above it reading '3,058c' — the same number,
+// twice, spelled two ways. bid_received is where the exposure is (25 of its authored lines carry {fee}, it
+// fires about one season in three, and its fees are four figures every time), not facility_upgraded, which
+// is the loudest case but only three lines.
+console.log('\n=== 6. money in the prose is punctuated like money everywhere else ===');
+{
+  const FEE = 14000, RAW = String(FEE), GROUPED = '14,000';   // the top rung of COST_TO_REACH, and an ordinary star bid
+  const MONEY: MgrEvent[] = ['bid_received', 'transfer_in', 'transfer_out', 'facility_upgraded', 'scout_found'];
+  const vars: FillVars = { fee: FEE, n: 4, name: 'Rivermouth Athletic', to: 'the north coast' };
+  // EVERY authored line, not a sample: one firing only ever shows one line, so `eligible` is the only way
+  // to know that all of them punctuate rather than that the ones this seed drew happened to.
+  let authored = 0;
+  const unpunctuated: string[] = [];
+  for (const e of MONEY) for (const line of eligible(e, star)) {
+    if (!line.includes('{fee}')) continue;
+    authored++;
+    if (!fillMgr(line, { p: star.name, club: club.club, ...vars }).includes(GROUPED)) unpunctuated.push(line);
+  }
+  // NOT VACUOUS, and this is the check that keeps it that way: if a later edit retires {fee} from these
+  // banks the assertion below would pass over an empty list. Mutation-test the pair by deleting the `fee`
+  // branch in fillMgr — `authored` stays where it is and the next line goes red.
+  ok('the money banks really do carry {fee}', authored >= 30, `${authored} authored lines carry {fee}`);
+  ok('every one of them prints the fee grouped', unpunctuated.length === 0,
+    unpunctuated.length ? `${unpunctuated.length} raw, e.g. "${unpunctuated[0].slice(0, 52)}…"` : `${authored} lines`);
+  // …and through the entry point the feed actually calls, so a filler that stopped being used would show.
+  let drew = 0, raw = 0;
+  for (const e of MONEY) for (let s = 0; s < 300; s++) {
+    const l = narrateManager(e, { seed: s, person: star, club, vars }) ?? '';
+    if (l.includes(GROUPED) || l.includes(RAW)) drew++;
+    if (l.includes(RAW)) raw++;
+  }
+  ok('these seeds really do reach the fee lines', drew >= 100, `${drew} of ${MONEY.length * 300} firings printed the fee`);
+  ok('no firing prints a bare 14000', raw === 0, `${raw} unpunctuated firings`);
+  // Both edges of the rule's SCOPE. {n} rides the same callback carrying a facility level and a player's
+  // age — counts, which must not be grouped — and a fee a call site already wrote out in words must reach
+  // the sentence unchanged.
+  ok('{n} is a count, not money', fillMgr('level {n}', { n: 1000 }) === 'level 1000');
+  ok('a fee written in words passes through', fillMgr('{fee} for him', { fee: 'a club record' }) === 'a club record for him');
 }
 
 console.log(fails ? `\n✗ ${fails} manager-narration check(s) failed` : '\n✓ the manager narration knows who it is talking about');

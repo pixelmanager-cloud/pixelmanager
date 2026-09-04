@@ -2858,7 +2858,14 @@ complexity axis is the wrong one — none of these is expensive to wire. Honesty
   season you are in and salted by matchday. Deliberately NOT through `pressConferenceLineWithStaff`: it
   returns one flat string into a presser the client already wraps in curly quotes (nested quotes, and 12 of
   the 40 quips carry their own attribution), and it only reaches 2 of the 5 moments at under one sighting a
-  season. All 40 lines and all five moments are now reachable.
+  season. All 40 lines stay authored, but only THREE of the five moments are ever selected. `signing` and
+  `milestone` each announce an EVENT — a new arrival, an occasion just reached — and the club screen has no
+  evidence either happened, so using them as the ladder's fallback had the Head Scout congratulating the club
+  on a transfer nobody made on roughly half of all matchdays. Dropping the two margin thresholds to the sign
+  of the result removes the residue they were catching; a draw falls to `preSeason`.
+  `staff_moment_truth.ts` fails if either is wired back in without evidence, and that mutation is part of its
+  test set. **If you want the scout's signing line back, gate it on the transfer market's bought-ids list**
+  (`boughtKey` in main.ts) — the moment then fires only when it is true.
 - **`callUpBlurb`: WIRED CHEAPLY**, one line frozen into `careerHonours` at graduation and shown on the
   family tree. Frozen, not live: the INTERNATIONAL panel is a HUD redrawn every turn and at a high overall
   the cap count moves every ~2.4 turns, so a live sentence would quietly become a different one mid-read.
@@ -3218,3 +3225,36 @@ no proper way to raise sponsors in the last third of a career.
 
 The two code edits are ready and verified; they are held only on this. Say which of (a)–(d) and I will
 apply it.
+
+## §97 — 33 transfer lines that cannot be reached, and no way to reach them that isn't a choice
+
+`transfer_in` has exactly one emit site. Measured against every listing the shop can produce — 864,000 from
+`transferList` (ages 18–32) and 164,740 from `houseListings` (21–28) — `tierFor` yields only two key sets:
+`.newcomer|.young|general` for 18–20, and `.newcomer|general` for 21–32. Three banks are therefore dark:
+**`.veteran` 18 lines, `.star` 12, `.established` 3 — 33 in total.**
+
+Each is dark for a different reason, and none of the three can be closed without a call from you.
+
+**`.veteran` (18 lines) — needs the market to list a 33+ player.** The obvious argument for widening the
+band is that the fee curve already prices old heads and the shop simply never stocks them. That argument is
+**false**, and the agent that checked it said so: ages 30–32 are listed today, about a fifth of the shop, and
+they take the same flat `0.8` `youthPremium` as everyone 30+. Widening does not activate a dormant rule — it
+extends an existing flatness by two more years to unlock prose. It also interacts badly with the squad
+lifecycle: `squadRetireAge` is 34–37, so a 34-year-old signing lasts about one season while costing a
+30-year-old's fee.
+  - **(a)** Widen to 34 and give 33+ a steeper discount so the price matches the shelf life. Real content,
+    real balance change.
+  - **(b)** Leave the band and delete the 18 lines.
+  - **(c)** Leave both. 18 lines stay dark. *(status quo)*
+
+**`.star` (12 lines) — deliberately dark already.** `star_retirement.ts:15-17` records the earlier decision:
+the star only ever joins at the take-the-reins handoff, where there is no fee, and 6 of those lines spend a
+`{fee}` the call site cannot supply. Deleting them would reverse a decision someone already made on purpose.
+**Recommend leaving.**
+
+**`.established` (3 lines) — structurally impossible, not mis-wired.** `.established` needs
+`seasonsAtClub >= 4`, and a man being transferred *in* has by definition been at the club zero seasons. The
+three lines describe a returning ex-player, which the save cannot represent at all: market ids are minted
+fresh (`mk:season:tier:i`), so a re-signed man is indistinguishable from a stranger. Either delete them, or
+keep them as a marker for a "he came back" feature that does not exist.
+  - **Recommend deleting the 3**, and noting the returning-player beat in the ideas file instead.

@@ -927,9 +927,13 @@ export const api = {
   spSeasonReward: async (body: { arcCoins?: number; pos: number; size: number; sponsor?: string; wins?: number; draws?: number; losses?: number; tier?: number; starId?: string; promoted?: boolean; kind?: 'league' | 'continental' | 'world' }) => {
     await ensureActive();
     const model = getActiveModel();
-    // THE COMMERCIAL PULL OF A FAMOUS HOUSE — sponsorship and gate follow the name, so the season's money
-    // rises with the family's standing. Sublinear and capped at +39%: real money, never the reason you
-    // can afford a squad.
+    // THE PULL OF A FAMOUS HOUSE, AT THE PRIZE-GIVING AND NOWHERE ELSE. This multiplies `prize` below and
+    // nothing else: `sponsorBonus` and every stream of `seasonFacilityIncome` reach `credit` raw. The line
+    // that stood here claimed "sponsorship and gate follow the name", and the Houses panel repeated it to
+    // the player — advertising the multiplier on the club's largest income (a summit club draws ~10,428 a
+    // season from facilities) while paying it on the smallest (~1,779 for a top-flight title). Scope the
+    // prose or extend the multiplier; do not ship one described as the other.
+    // Sublinear and capped at +39%: real money, never the reason you can afford a squad.
     const houseMult = renownIncomeMult(houseRenown(await membersOf(model)).renown);
     const size = Math.max(2, Math.min(30, Math.floor(Number(body?.size) || 10)));
     const pos = Math.max(1, Math.min(size, Math.floor(Number(body?.pos) || 10)));

@@ -24,7 +24,12 @@ ok(/recoverOrphanedSaves/.test(src), 'orphaned saves are still recovered from th
 
 const i = src.indexOf('private rebuiltMgrState()');
 ok(i > 0, 'loadMgr has a rebuild path rather than returning a blank state');
-const block = src.slice(i, i + 1400);
+// THE WHOLE METHOD, NOT A FIXED BYTE WINDOW. This was `i + 1400` against a method already 1408 bytes long,
+// so the next comment written inside it pushed the tier, titles and star assertions past the end of the
+// slice and three checks went red over code nobody had touched. An unfindable body slices to empty and
+// fails them all, which is the right way round for a probe.
+const mEnd = src.indexOf('\n  }', i);
+const block = src.slice(i, mEnd > i ? mEnd : i);
 
 // Each of these is a fact the durable save holds and the blank state threw away.
 ok(/getActiveModel\(\)/.test(block), 'the rebuild reads the durable save model');

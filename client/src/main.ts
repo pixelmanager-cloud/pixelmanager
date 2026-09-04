@@ -41,6 +41,9 @@ interface MgrState { season: number; results: PlayedResult[]; starId?: string; s
   contElig?: boolean; contRound?: number; contOut?: boolean; contTitles?: number; contBlurb?: string;
   // World-Finals national tournament — the star's nation's knockout run is playable
   wcSeen?: number; wcWins?: number; wcFinals?: number; wcEdition?: number; wcStage?: 'qf' | 'sf' | 'final' | 'done';
+  /** Editions STAGED BEFORE THIS GENERATION. `season` restarts at 1 at every succession, so the edition
+   *  number — which is a hash input, not a label — has to count off something the succession does not reset. */
+  wcHeld?: number;
   wcRun?: { round: string; my: number; opp: number; oppName: string; won: boolean }[];
   // Keys of feed events that have already fired. Several events are raised from RENDER paths (the squad
   // report, the scouting board, the season screen), which re-run on every refresh and every navigation
@@ -1787,7 +1790,18 @@ class Game {
     try {
       const model = getActiveModel() as any;
       if (!model?.profile) return blank;
-      const season = Math.max(1, Number(model.profile?.season ?? 0) || 1);
+      // THE SEASON OF THIS GENERATION, NOT OF THE DYNASTY. `profile.season` is a LIFETIME counter — it
+      // starts at 0, spSeasonReward bumps it at every league roll, and nothing resets it at a succession —
+      // while `MgrState.season` starts at 1 and IS reset to 1 by resetMgrForHeir. Read raw it rebuilt a
+      // save one season adrift in generation one and about ten more adrift per generation after that, and
+      // this field is not a caption: it seeds the league table, the transfer list, the incoming bid, the
+      // board's standing and `m.season % 4`, so a recovered third-generation save came back reading
+      // "Season 27" for a manager in his fourth year and staged the wrong World-Finals edition.
+      // `legacies[].retiredSeason` is stamped from `profile.season` at the succession itself (api.succeed),
+      // i.e. on the same clock, one row per generation — so the latest one dates the generation now being
+      // played. No legacies means generation one, where 0 gives back `profile.season + 1`.
+      const lastRet = Math.max(0, ...(model.legacies ?? []).map((l: any) => Number(l.retiredSeason) || 0));
+      const season = Math.max(1, (Number(model.profile?.season ?? 0) || 0) - lastRet + 1);
       const honours: Array<{ season_number: number; tier: string; title: number }> = model.honours ?? [];
       // THE NEWEST HONOUR THAT ACTUALLY NAMES A DIVISION. Cup honours are filed with an empty tier (a cup
       // is its own competition, so the three cup call sites deliberately pass none) and share the league
@@ -1850,6 +1864,11 @@ class Game {
       // returns '' when `wcSeen === edition`, the season counter resets to 1, and the heir reaching the
       // same staging season gets no teaser, no button and no explanation.
       wcStage: undefined, wcEdition: undefined, wcRun: undefined, wcSeen: undefined,
+      // ...and because the season counter resets with it, the EDITION NUMBER has to be carried across, or
+      // the heir replays his father's Edition 1 — same sixteen nations, same group, same champion. Count the
+      // stagings this generation reached: the World Finals comes round every 4 seasons whether or not he
+      // followed it, so a skipped one still advances the count, and no number is ever handed out twice.
+      wcHeld: (prior.wcHeld ?? 0) + Math.floor(prior.season / 4),
       // THE STORY LIBRARY RESETS WITH THE MAN. `arcFired` is this career's seen-list — `pickManagerArc`
       // filters on it and never repeats — so carrying it across successions spends the 819-arc library
       // ONCE, across the whole dynasty, and then runs dry. Measured over 10-season generations at the
@@ -2075,7 +2094,14 @@ class Game {
       ...transferList(this.leagueSeed(), m.season, tier),
     ].filter((l) => !bought.includes(l.player.id));
     const squad = this.club.players, sellable = squad.filter((p) => p.id !== m.starId); // the bloodline star can't be sold here
-    const squadFull = squad.length >= MAX_SQUAD, squadMin = squad.length <= MIN_SQUAD;
+    // REGISTERED, not merely listed. `this.club` is the MERGED club -- fieldablePlayers appends every
+    // pro/retired token that actually played a career -- while buyPlayer, sellPlayer and signTrial all bound
+    // the RAW `club.players`, which no `nft:` id ever enters. Counting the merged list put this screen ahead
+    // of the facade by at least the bloodline star: at MIN_SQUAD the Sell button stayed enabled and the click
+    // came back as the error toast, and short of MAX_SQUAD every Buy button rendered disabled with "Squad
+    // full" for a signing the facade would have taken. The wage-bill line below already filters this way.
+    const registered = squad.filter((p) => !p.id.startsWith('nft:'));
+    const squadFull = registered.length >= MAX_SQUAD, squadMin = registered.length <= MIN_SQUAD;
     const buyList = listings.length ? listings.map((l) => {
       const cantAfford = coins < l.fee;
       const reason = squadFull ? `Squad full (max ${MAX_SQUAD})` : cantAfford ? `Not enough coins (need ${l.fee.toLocaleString()}c)` : 'Sign him';
@@ -2093,7 +2119,7 @@ class Game {
     // manager to budget, was overstating the bill by the largest single wage at the club.
     const billed = squad.filter((p) => !p.id.startsWith('nft:') && !p.id.startsWith('loan-'));
     const wageBill = billed.reduce((n, p) => n + squadSeasonWage(overall(p), season), 0); // PT-500: the recurring cost of the squad, visible BEFORE you add to it
-    body.innerHTML = `<div class="tm-head"><span class="tm-coins"><span class="ico-inline">${sprite('coin')}</span> ${coins.toLocaleString()}c</span> · Squad <b>${squad.length}</b>/${MAX_SQUAD} · ${tierName(tier)} · 💷 wages <b>~${wageBill.toLocaleString()}c</b> a season</div>`
+    body.innerHTML = `<div class="tm-head"><span class="tm-coins"><span class="ico-inline">${sprite('coin')}</span> ${coins.toLocaleString()}c</span> · Squad <b>${registered.length}</b>/${MAX_SQUAD} · ${tierName(tier)} · 💷 wages <b>~${wageBill.toLocaleString()}c</b> a season</div>`
       + `<div class="tm-sub">Buy players to strengthen the squad and climb — the market's quality is scaled to your division. Squad must stay between <b>${MIN_SQUAD}</b> and <b>${MAX_SQUAD}</b>. A signing costs a one-off fee <i>and</i> a wage every season after it, so leave yourself room for the bill.</div>`
       + `<div class="tm-cols"><div class="tm-col"><h4 class="scout-h4">🛒 BUY</h4>${buyList}</div><div class="tm-col"><h4 class="scout-h4">💸 SELL</h4>${sellList}</div></div>`;
     body.querySelectorAll('[data-buy]').forEach((b) => b.addEventListener('click', () => { const l = listings.find((x) => x.player.id === (b as HTMLElement).dataset.buy); if (l) this.buyPlayerFlow(l, boughtKey); }));
@@ -2306,7 +2332,15 @@ class Game {
       // PT-2803 — upkeep is the SECOND recurring bill and the only one that can destroy owned assets, and
       // the explainer named neither it nor the lever against it. Wages and morale each had a bullet; the
       // thing that can take a facility off you did not.
-      `<b>🏛️ Upkeep.</b> Every facility level costs coins <b>every season</b>, and the cost climbs steeply — all twelve at level 5 runs about <b>1,344c</b> a season, at level 10 about <b>6,804c</b>, against a top-flight title prize of 1,280c. If the club can't pay, a facility <b>falls into disrepair and loses a level</b>. You can also <b>Scale back</b> a facility yourself on the Club screen to cut the bill and recover 40% of what the level cost. Climbing a division is what makes a big club affordable.`,
+      // The two figures are what `seasonUpkeep` CHARGES, not 12 x facilityUpkeep. They were written before
+      // UPKEEP_WEIGHT existed and quoted the flat total — 1,344c and 6,804c against a real 1,198c and
+      // 6,067c — so the one screen whose job is to let the manager budget for the bill that can destroy an
+      // owned asset overstated it by 12% at both anchors. That is F-044 (copy priced at weight 1 while the
+      // club is billed with UPKEEP_WEIGHT) surviving at the surface that fix did not reach, and this bullet
+      // is the permanent one — Settings → How to play re-shows it long after the card is dismissed. Do not
+      // re-derive these from the design note at facilities.ts:205, which still carries the stale 6,804;
+      // tools/playtest/help_upkeep_copy.ts prices them through seasonUpkeep on every run.
+      `<b>🏛️ Upkeep.</b> Every facility level costs coins <b>every season</b>, and the cost climbs steeply — all twelve at level 5 runs about <b>1,198c</b> a season, at level 10 about <b>6,067c</b>, against a top-flight title prize of 1,280c. If the club can't pay, a facility <b>falls into disrepair and loses a level</b>. You can also <b>Scale back</b> a facility yourself on the Club screen to cut the bill and recover 40% of what the level cost. Climbing a division is what makes a big club affordable.`,
       // PT-501 — morale drives renew cost and sale value, and nothing said what moved it
       `<b>🙂 Morale.</b> How settled a man is. Playing him lifts it, and so does winning something; leaving him out drops it, and letting his contract run down drops it further. It shows up at the deal table — an unsettled player holds out for up to <b>30% more</b> to re-sign, and sells for up to <b>20% less</b>. Rotating the fringe men into the XI is what keeps them cheap to keep.`,
     ];
@@ -2665,7 +2699,14 @@ class Game {
     if (!m.contElig || m.contOut || round >= 3) return;
     const tie = contOpponent(this.leagueSeed(), m.season, round as 0 | 1 | 2);
     const short = (tie.oppName.match(/[A-Z]/g) ?? ['C', 'O', 'N']).join('').slice(0, 3);
-    const oppSeed = (this.leagueSeed() ^ (round * 131)) >>> 0;
+    // Seed the opponent on WHO was drawn, not just which round. The season reaches generateClub only in its
+    // `id` argument, and `id` reaches no generator — teams.ts mints every row off `seed` — so a name-blind
+    // seed handed the whole 30-club pool the same THREE squads and three shapes for the life of the save:
+    // twenty-two different badges over twelve seasons, three different elevens behind them, and a quarter-
+    // final tactically solved after one playing. Keyed on the NAME and not the season, because a club has to
+    // keep one identity across seasons like every other opponent in the game (clubseason.ts is name-keyed;
+    // seededOpponentTactics: "same club always plays the same way"). Same 31-multiplier hash as leagueSeed().
+    const oppSeed = ((this.leagueSeed() ^ (round * 131)) ^ Math.imul([...tie.oppName].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7), 0x9e3779b1)) >>> 0;
     const oppClub = generateClub('cont-' + m.season + '-' + round, tie.oppName, 0x8844cc, tie.oppStrength, oppSeed, true);
     const venue: 'home' | 'away' = tie.neutral ? 'home' : (round % 2 === 0 ? 'home' : 'away'); // final on neutral ground, else alternate
     const oppTactics = seededOpponentTactics(oppSeed);
@@ -2723,7 +2764,13 @@ class Game {
   private wcEditionDue(): number | null {
     const m = this.loadMgr();
     if (m.season % 4 !== 0) return null;            // staged every 4th season
-    const edition = m.season / 4;                    // 1,2,3,…
+    // NOT `m.season / 4`. `m.season` is the PER-GENERATION counter — resetMgrForHeir puts it back to 1 at
+    // every succession — while `leagueSeed()` and the family's nation are fixed for the life of the save. So
+    // every generation was handed the same (seed, edition, nation) and replayed Edition 1: the same sixteen
+    // nations, the same group, the same rival strengths, the same seeded champion, under a header reading
+    // "Edition 1" for the fourth time sixty in-game years apart. `edition` seeds the field, the group offset
+    // and all three narration blurbs, so a repeated number is a repeated tournament, not just a stale label.
+    const edition = (m.wcHeld ?? 0) + m.season / 4;  // stagings before this generation, plus this one
     return m.wcSeen === edition ? null : edition;    // once per staging
   }
   private wcData(edition: number): { wc: WCResult; path: WCPlayerPath; nation: string } {
@@ -3703,14 +3750,22 @@ class Game {
     //
     // One line on the staff card instead: the moment is chosen from the season the player is actually in,
     // the speaker is the role that owns that moment, and the salt is the matchday count so it moves as the
-    // season does. No new state, no new surface, and all five moments become reachable.
+    // season does. No new state, no new surface, and every moment the save can verify is reachable.
     const m0 = this.loadMgr();
     const played = m0.results?.length ?? 0;
     const last = played ? m0.results[played - 1] : null;
+    // ONLY MOMENTS THE SAVE CAN SEE. 'signing' and 'milestone' were the fallbacks of this ladder — any
+    // matchday inside two goals took 'signing' before the club's first title and 'milestone' after it — and
+    // neither branch consulted whether anyone had been signed or anything reached, so on roughly half of all
+    // matchdays the Head Scout congratulated the club on a transfer nobody made. Those two banks announce an
+    // EVENT ("Delighted it's finally over the line"); bigWin/bigLoss describe a RESULT and read true at any
+    // margin ("That's the level we should be at every week" after a 1-0), so the two thresholds drop to the
+    // sign of the result and take the residue with them. A draw falls to preSeason, the one remaining bank
+    // that is standing-season colour rather than a claim about a particular day.
     const moment: StaffMoment = !played ? 'preSeason'
-      : last && last.myGoals - last.oppGoals >= 2 ? 'bigWin'
-      : last && last.oppGoals - last.myGoals >= 2 ? 'bigLoss'
-      : (m0.titles ?? 0) > 0 ? 'milestone' : 'signing';
+      : last && last.myGoals > last.oppGoals ? 'bigWin'
+      : last && last.oppGoals > last.myGoals ? 'bigLoss'
+      : 'preSeason';
     const SPEAKER: Record<StaffMoment, keyof typeof roster> = {
       preSeason: 'fitnessCoach', signing: 'scout', bigWin: 'assistant', bigLoss: 'assistant', milestone: 'goalkeepingCoach',
     };
@@ -4250,14 +4305,26 @@ class Game {
   /** Build the person context for a squad player — seasons at the club and morale are what the tiers key on. */
   private personCtx(p: Player, isStar = false): PersonCtx {
     const m = this.loadMgr();
+    // THE BLOODLINE STAR IS A TOKEN, NOT A SQUAD Player, AND ARRIVED HERE BLANK. `tokenToPlayer` builds
+    // him out of id/name/role/attrs/traits/personality/greed/marketability/earnings and stamps no age, no
+    // morale and no signedSeason, so the one man the whole game is about reached `tierFor` as
+    // {age: undefined, morale: undefined, seasonsAtClub: 0}. The cost was not only the `.servant`,
+    // `.veteran`, `.young` and `.unhappy` lines written for him going unreachable — `yrs <= 1` IS
+    // `.newcomer`, so an eleven-season servant got "He has been here five weeks" when he picked up a
+    // knock. The contract row me() already derives from his token carries all three. `stakedSeasons`
+    // counts from `staked_since`, which withdrawing him nulls, so it is his REGISTERED SERVICE rather
+    // than exactly his years at the club — a spell out of the squad costs him a tier he had earned, which
+    // is the safe direction to be wrong in. Squad players are not tokens and have no contract row, so the
+    // signedSeason path below still owns them.
+    const ci = this.contracts[p.id];
     return {
-      name: p.name, role: p.role, age: p.age, morale: p.morale, overall: overall(p),
+      name: p.name, role: p.role, age: p.age ?? ci?.age, morale: p.morale ?? ci?.morale, overall: overall(p),
       // THE SAME COUNTER signedSeason WAS STAMPED FROM. It is written from the profile season, which is
       // monotonic across the whole dynasty; this subtracted MgrState.season, which resets to 1 at every
       // succession. So from generation 2 the difference went negative, clamped to 0, and every squad
       // player — a ten-year servant included — was narrated as a brand-new signing for the rest of the
       // game. `this.season` is the profile season, set from api.me().
-      seasonsAtClub: p.signedSeason != null ? Math.max(0, (this.season ?? m.season) - p.signedSeason) : 0,
+      seasonsAtClub: p.signedSeason != null ? Math.max(0, (this.season ?? m.season) - p.signedSeason) : (ci?.stakedSeasons ?? 0),
       isStar, wasRegular: (this.standingOrders?.playerIds ?? []).includes(p.id),
       personality: p.personality,
     };
@@ -4553,7 +4620,15 @@ class Game {
       // Said as a percentage of the scouting range it is the same fact in the game's own language.
       + `<span>🧬 Heirs are scouted <b>+${Math.round(renownPedigree(d.mine.renown) * 100)}%</b> higher on the family name — a famous surname gets a boy seen by the right people</span>`
       + `<span>🤝 Bids for your star come in <b>×${renownBidMult(d.mine.renown).toFixed(2)}</b> — big clubs pay over the odds for a name their supporters know</span>`
-      + `<span>💰 Season prize money <b>×${renownIncomeMult(d.mine.renown).toFixed(2)}</b> — sponsorship and gate follow the family</span>`
+      // THE PRIZE, AND NOTHING BUT THE PRIZE. This said "sponsorship and gate follow the family" and
+      // api.ts's `houseMult` touches neither — it multiplies the season prize computed in spSeasonReward,
+      // which is also the payout path for the continental cup and the World Finals, while gate,
+      // sponsors, shop, women's and merit all reach the treasury raw (see spSeasonReward). The one panel
+      // whose stated job is to answer "what is renown FOR" was naming the two streams renown is exempt
+      // from, and the season card itemises both to the player under those exact names. On a summit club
+      // that advertised the ×1.39 on ~10,428 coins of facility income and paid it on a ~1,779 coin prize.
+      // Guarded by tools/playtest/renown_income_copy.ts.
+      + `<span>💰 Season prize money <b>×${renownIncomeMult(d.mine.renown).toFixed(2)}</b> — a famous name is worth more at the prize-giving</span>`
       + `</div>`;
     const foot = d.mine.greatest
       ? `<div class="hs-foot">The name rests on <b>${d.mine.greatest.name}</b>${d.mine.fromBranches > 0
@@ -5232,13 +5307,17 @@ class Game {
   /** KIT tab: cosmetic identity — squad number, boot colour, celebration, nickname (carries to the pro). */
   private kitTabHtml(s: import('./api').CareerState): string {
     const k = s.kit ?? { number: 10, boots: 'white', celebration: 'kneeslide', nickname: '', hairstyle: 'buzz', accessory: 'none' };
-    // Text engine: we only surface identity that actually appears in his STORY. Squad number is real (it's
-    // retired in his honour if he becomes a legend); the nickname is what the crowd/commentary calls him.
-    // Purely-visual choices (boots colour, hairstyle, accessory, celebration) were cut — nothing renders them.
+    // Text engine: we only surface identity the game can actually use. Squad number is real — legendCardOf
+    // pulls it out of kit_json for the retired shirt. THE NICKNAME IS NOT: nothing under shared/src, where
+    // every authored line the player reads is written, ever reads it, so the copy below must not sell it as
+    // something the crowd or the commentary says. It shipped doing exactly that, and a player who types
+    // "The Wolf", is told "Saved ✓" and never once hears it back reads the box as broken rather than as
+    // flavour (F-191). Wire it into a line first, then reword — tools/playtest/kit_promise.ts holds that
+    // order. Purely-visual choices (boots, hairstyle, accessory, celebration) were cut — nothing renders them.
     return `<div class="cg-kit">`
-      + `<div class="cg-prompt">🎽 <b>Identity</b> — this is a text game, so we keep it to the two details that actually show up in his story.</div>`
+      + `<div class="cg-prompt">🎽 <b>Identity</b> — this is a text game, so it is two details: the number his career actually uses, and a name you keep for him yourself.</div>`
       + `<div class="cg-kit-row"><label>Squad number <span class="cg-kit-hint">(his for life — retired in his honour if he becomes a club legend)</span></label><input id="kit-number" type="number" min="1" max="99" value="${k.number}"></div>`
-      + `<div class="cg-kit-row"><label>Nickname <span class="cg-kit-hint">(what the crowd and the commentary call him)</span></label><input id="kit-nick" type="text" maxlength="20" placeholder="e.g. The Wolf" value="${(k.nickname ?? '').replace(/"/g, '&quot;')}"></div>`
+      + `<div class="cg-kit-row"><label>Nickname <span class="cg-kit-hint">(yours alone — saved with his kit; every line in the game uses his real name)</span></label><input id="kit-nick" type="text" maxlength="20" placeholder="e.g. The Wolf" value="${(k.nickname ?? '').replace(/"/g, '&quot;')}"></div>`
       + `<button id="kit-save" class="cg-kit-save">Save</button>`
       + `</div>`;
   }

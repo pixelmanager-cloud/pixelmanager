@@ -122,6 +122,28 @@ const strh = (s: string): number => { let h = 0; for (let i = 0; i < s.length; i
 // event from the next, so it is declared here instead of being smuggled past the type at the call sites.
 export interface FillVars { p?: string; club?: string; from?: string; to?: string; name?: string; n?: string | number; fee?: string | number; }
 
+// {fee} IS MONEY, and the prose was the one place in the game that printed it without separators. Every
+// emit site hands over a raw number — `{ fee: bid.fee }` for an incoming offer, `{ fee: r.cost }` for a
+// facility rung — and String() has no grouping, so a four-figure bid reached the season log as '3058c on
+// the table' with the bid banner directly above it reading '3,058c'. bid_received is the worst of it: 25
+// of its authored lines carry {fee}, it fires about one season in three, and its fees are four figures.
+//
+// Grouped by hand rather than with toLocaleString, for the reason shared_purity gives about Math.hypot:
+// this engine ships to the web AND to Steam, and the same seed has to render identically everywhere.
+// Note the client is NOT the argument for that — its own coin sites call a bare toLocaleString(), so on a
+// de-DE browser the toast already reads '14.000c' and this line will now read '14,000c' beside it. That
+// mismatch is real and is worth its own pass over the client's formatting; what shared/ must not do is
+// make the SAME SEED render differently on two machines, which is exactly what a locale-dependent
+// formatter in the engine would do.
+/** 14000 -> '14,000'. Anything that is not a plain decimal number (NaN, Infinity, exponent form) comes back
+ *  untouched rather than mangled, because a garbled figure is worse than an ungrouped one. */
+function groupCoins(n: number): string {
+  const s = String(n);
+  const m = /^(-?)(\d+)(\.\d+)?$/.exec(s);
+  if (!m) return s;
+  return `${m[1]}${m[2].replace(/\B(?=(\d{3})+(?!\d))/g, ',')}${m[3] ?? ''}`;
+}
+
 /** Substitute the supported placeholders. Anything unknown is LEFT ALONE rather than blanked, so an
  *  author's typo is visible in review instead of silently deleting half a sentence. */
 export function fillMgr(line: string, v: FillVars): string {
@@ -133,7 +155,11 @@ export function fillMgr(line: string, v: FillVars): string {
   // call and the next author to write 'a {club}' would reintroduce it.
   return fillTokens(line, (k) => {
     const val = (v as Record<string, unknown>)[k];
-    return val == null ? undefined : String(val);
+    if (val == null) return undefined;
+    // Scoped to {fee}, and to numbers, on purpose. {n} rides the same callback carrying a facility LEVEL and
+    // a player's AGE — counts, which must never be grouped — and FillVars.fee is `string | number`, so a fee
+    // a call site has already written out in words has to pass through untouched.
+    return k === 'fee' && typeof val === 'number' ? groupCoins(val) : String(val);
   });
 }
 
