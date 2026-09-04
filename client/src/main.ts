@@ -510,7 +510,14 @@ class Game {
     this.wireStaticButtons();
     this.showScreen('login');
     // Reconcile the durable half against the evictable index BEFORE drawing the menu.
-    void this.recoverOrphanedSaves().then(() => this.renderMainMenu());
+    // GUARDED THE WAY quitToMenu's copy of this call is, and it matters more here. On a first launch there
+    // are no saves, so the synchronous render below pre-focuses ▶ New Game — one Enter opens the panel and
+    // drops the caret into #mm-name, while this reconcile is still awaiting the session's FIRST IndexedDB
+    // open. Unguarded, the late renderMainMenu() re-hid #mm-newgame, threw the player out of the
+    // family-name field mid-word and ate the keystroke; and since only the New Game opener hides #mm-saves
+    // and only Back/quitToMenu bring it back, the save list and its delete buttons stayed gone afterwards
+    // too. Reproduced in a real browser against client/dist with the first indexedDB.open slowed to 1.5s.
+    void this.recoverOrphanedSaves().then(() => { if ($('mm-newgame').classList.contains('hidden')) this.renderMainMenu(); });
     this.renderMainMenu();
   }
 
@@ -846,7 +853,12 @@ class Game {
     document.body.appendChild(ov);
     // The other overlay that never got the shared helper: no focus move, no Tab trap, and the screen behind
     // it stayed reachable by keyboard. dialogify exists for exactly this, and every other dialog uses it.
-    const close = this.dialogify(ov);
+    // It also has to hold its own pause: Settings restores `running` in its onClose, so the
+    // `close(); this.openHowToPlay()` hop handed the clock back and the match ticked on behind this
+    // full-screen explainer — which is the overlay a player reads longest.
+    const wasRunning = this.running;
+    this.running = false;
+    const close = this.dialogify(ov, () => { this.running = wasRunning; });
     ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
     ov.querySelector('.set-x')!.addEventListener('click', close);
   }
@@ -982,7 +994,16 @@ class Game {
       this.setMe({ account: r.account, club: r.club, standingOrders: r.standingOrders });
       const saves = this.loadSaves(); saves.push({ id: handle, token: r.token, name, lastPlayed: Date.now() }); this.saveSaves(saves);
       this.showScoutBoard(); // the FIRST decision: scout + pick your founding prospect (the unique hook)
-    } catch { $('login-error').textContent = 'Could not create your club — please try again.'; }
+    }
+    // AND SAY IT WHERE IT CAN BE SEEN, exactly as loadSave does above — this was the last failure path on
+    // the title screen still reporting only into #login-error. That div has no role and no aria-live, and it
+    // is the last child of #mainmenu, below the save list, with nothing to scroll it into view (measured at
+    // 800x450: below the fold). api.register really does reject — it writes the new save through IndexedDB,
+    // which refuses for the ordinary reasons deleteSave's comment lists: a blocked upgrade, a corrupt DB,
+    // Safari private browsing, the cached failed open. So pressing Start ⚽ on a create that failed did
+    // nothing a player could see and said nothing a screen reader could announce: the first button in the
+    // game appeared dead. The toast is fixed-position, always on screen, and is the app's only live region.
+    catch { $('login-error').textContent = 'Could not create your club — please try again.'; toast('Could not create your club — please try again.'); }
   }
 
   /** The founding-prospect scouting board — the player's very first choice. Deliberately mysterious: a
@@ -1926,6 +1947,12 @@ class Game {
   }
   private ordinal(n: number): string { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]); }
   private facLevels: Record<string, number> = {}; // cached club-facility levels — applied to single-player matches
+  /** Whether `facLevels` has been ANSWERED this page session — not merely whether it is non-empty. An arc
+   *  offered while this is false reads every `when.facility` gate as level 1; see showSeason. Set on the
+   *  failed read too, so a facilities() that rejects falls back to the old level-1 behaviour instead of
+   *  freezing the arc offers for the rest of the session — content that silently never appears is this
+   *  file's recurring failure, not a hypothetical one. Enforced by tools/playtest/arc_facility_gate.ts. */
+  private facLoaded = false;
   /** A player's retirement age varies with him: keepers last longest, pace-reliant forwards fade earliest;
    *  a strong, durable body plays on, a pacey one declines sooner; plus a small individual quirk. ~30–41. */
   /** Which division the bloodline star's career has earned the club. A career is 120 turns of real choices;
@@ -2234,7 +2261,15 @@ class Game {
       + `<div class="cr-line">To everyone who plays a whole dynasty through.</div>`
       + `</div></div>`;
     document.body.appendChild(ov);
-    const close = this.dialogify(ov);
+    // AND CREDITS HOLDS THE PAUSE TOO. Settings restores `running` in its own dialogify onClose, so
+    // `close(); this.showCredits()` handed the clock BACK before this overlay opened: at x12 the rest of
+    // the match played out behind a full-screen credits roll and the player came back to a different
+    // scoreline — the exact failure openSettings' comment describes, one hop later. Capturing it HERE
+    // rather than freezing it in the caller is what makes the pause survive the hop and still be given
+    // back when this closes; a caller-side freeze leaves the match stopped under no pause indicator.
+    const wasRunning = this.running;
+    this.running = false;
+    const close = this.dialogify(ov, () => { this.running = wasRunning; });
     ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
     ov.querySelector('.set-x')!.addEventListener('click', close);
   }
@@ -2276,11 +2311,15 @@ class Game {
     this.spFixture = null;
     this.showScreen('season');
     this.paintSeasonCoins();
-    // AND RE-OFFER THE ARC ONCE THEY LAND. `facLevels` starts empty and this is a promise, while
-    // `maybeOfferArc()` below runs synchronously in this same call — so on the first season screen after any
-    // page load, all thirty `when.facility` arc gates read level 1 and the arcs they gate cannot be offered.
-    // Re-running the offer after the levels arrive costs nothing when one has already been picked
-    // (`maybeOfferArc` returns immediately if `arcNow` is set) and closes the window when it has not.
+    // AND MAKE THE ARC OFFER HERE, not before. `facLevels` starts empty and this is a promise, while
+    // `maybeOfferArc()` below runs synchronously in this same call — a `.then` is a microtask, so the offer
+    // below ALWAYS won that race, `arcNow` was already set by the time this callback ran, and the re-offer
+    // guarded on `!arcNow` was dead from the day it was written. The offer that beat it was made against an
+    // empty `facLevels`, so all thirty `when.facility` gates read level 1: on the first season screen of
+    // every page load the pick came out of a pool 30 arcs short, and because `pickManagerArc` weights each
+    // category by `Math.sqrt(pool.length)` over the ELIGIBLE set, the hole moved which arc a seed offers in
+    // 44% of situations — not only the gated ones. The offer below now waits on `facLoaded`, so it is made
+    // here on the first season screen of a session and synchronously on every one after it.
     if (this.seasonLeaders == null) {
       api.seasonStats().then((d) => {
         this.seasonLeaders = d.stats ?? [];
@@ -2289,8 +2328,14 @@ class Game {
     }
     api.facilities().then((d) => {
       this.facLevels = Object.fromEntries(d.facilities.map((f) => [f.key, f.level]));
-      if (!$('season').classList.contains('hidden') && !this.loadMgr().arcNow) this.maybeOfferArc();
-    }).catch(() => {}); // cache for the match edges
+      this.facLoaded = true;
+      if ($('season').classList.contains('hidden') || this.loadMgr().arcNow) return;
+      this.maybeOfferArc();
+      // AND REPAINT, because the offer is drawn inline by `managerArcHtml()` in the body built below — an
+      // offer made after that paint is an arc the player is never shown. Bounded: the repaint's own
+      // facilities() callback finds `arcNow` set and returns at the line above.
+      if (this.loadMgr().arcNow) this.showSeason();
+    }).catch(() => { this.facLoaded = true; }); // cache for the match edges
     // ...AND RE-RENDER WHEN IT LANDS. `houseBidMult` defaults to 1 and `api.houses()` is called from
     // nowhere at boot, so the FIRST season screen of a page session priced the incoming bid at x1.00 while
     // the Houses screen was advertising x1.44. Unlike the facility-gate case this one is not merely a
@@ -2419,7 +2464,11 @@ class Game {
       ? `<div class="sf-board sf-board-${lb.mood}">🪑 <b>The board</b>${nextIdx <= 3 ? ` — on last season: “${lb.message}”` : ' —'} <span class="sf-board-exp">This season they expect ${this.expectationLabel(lb.expectation, tier)}.</span>`
         + ` <span class="cg-hint-inline">A target to chase, not a threat — they'll have their say either way, and your job is never on the line.</span></div>`
       : '';
-    this.maybeOfferArc();   // arcs are offered at the season screen, paced across the campaign
+    // Only once the facility levels have been answered — see the facilities() note at the top of this
+    // method. A pick made against an empty `facLevels` drops the 30 `when.facility` arcs from the eligible
+    // pool and re-weights every category around the hole; on the first season screen of a page session this
+    // is false and that callback makes the offer instead.
+    if (this.facLoaded) this.maybeOfferArc();   // arcs are offered at the season screen, paced across the campaign
     $('season-body').innerHTML = this.managerHelpCard()
       + header
       + bidBanner
@@ -2737,7 +2786,15 @@ class Game {
     // World-Finals ties are neutral: no home term (was an unearned +0.25), but training/staff still count (PT-129/130)
     const { strDelta } = this.simEdge('away');
     // starOverall() is an `overall()`; opp.oppStrength is a quality — same scale mismatch as above
-    const r = this.simFixtureResult(this.starOverall() - Game.XI_QUALITY_OFFSET + strDelta, opp.oppStrength, ((this.leagueSeed() >>> 0) ^ ((m.wcEdition * 977 + stage.length * 131) >>> 0)) >>> 0, 0);
+    // A ROUND INDEX, not `stage.length`. 'qf'.length and 'sf'.length are both 2, so the discriminator could
+    // only tell the FINAL apart: the quarter-final and the semi-final of one edition were handed the
+    // identical seed. One mixed seed drives both of goalPair's Poisson streams, so the two rounds drew the
+    // same numbers and only lambda moved — and a rival one or two strength points apart rarely moves a goal
+    // count. Measured over 230,400 (seed, edition, qf/sf strength) combinations they printed the byte-
+    // identical scoreline 52.8% of the time, against 6.6% once the rounds are indexed. simContinentalTie
+    // next door has always keyed on `round * 17` for exactly this reason.
+    const ri = stage === 'qf' ? 0 : stage === 'sf' ? 1 : 2;
+    const r = this.simFixtureResult(this.starOverall() - Game.XI_QUALITY_OFFSET + strDelta, opp.oppStrength, ((this.leagueSeed() >>> 0) ^ ((m.wcEdition * 977 + ri * 131) >>> 0)) >>> 0, 0);
     this.resolveWorldCup(r.myGoals, r.oppGoals, opp.opp);
   }
   /** Apply a knockout result: win → next round (or lift the trophy); level → seeded shootout; loss → out. */
@@ -2747,7 +2804,11 @@ class Game {
     if (myGoals === oppGoals) { // seeded shootout — lean to the stronger side, like the continental cup + the seeded bracket, not a flat coin-flip (PT-69)
       pens = true;
       const oppStrength = this.wcStageOpp(this.wcData(m.wcEdition).path, stage).oppStrength;
-      const h = ((this.leagueSeed() >>> 0) ^ ((m.wcEdition * 733 + stage.length * 29) >>> 0)) >>> 0;
+      // the round index the tie above now uses: on `stage.length` the QF and the SF hashed to the same
+      // number, so a level QF and a level SF of one edition turned on the same coin (resolveContinental
+      // keys on `round * 29` for the same reason)
+      const ri = stage === 'qf' ? 0 : stage === 'sf' ? 1 : 2;
+      const h = ((this.leagueSeed() >>> 0) ^ ((m.wcEdition * 733 + ri * 29) >>> 0)) >>> 0;
       won = ((h % 1000) / 1000) < (0.5 + (this.starOverall() - oppStrength) * 0.03);
     }
     const label = this.wcStageLabel(stage);
@@ -3392,13 +3453,23 @@ class Game {
       // everything they had built rather than handing it on. (PT-509)
       $('cg-nextlife').outerHTML = `<div class="cg-epilogue">${nl.blurb}</div>`
         + `<div class="cg-grad-windfall">🌳 The bloodline continues${windfall}</div>`
-        + `<div class="cg-succession-note">▸ Choosing here starts the heir's own career — around 120 card turns from age 10.`
+        + `<div id="cg-will-note" tabindex="-1" class="cg-succession-note">▸ Choosing here starts the heir's own career — around 120 card turns from age 10.`
         + ` <b>The club, its division, your facilities, staff and honours all stay yours</b>; you take the reins again when he breaks into the first team.</div>`
         + `<div class="cg-prompt">What does ${m.starName} pass down to his heir?</div>`
         + `<div id="cg-will">${willCards}</div>`;
       this.makeActivatable(document.querySelectorAll('#cg-will [data-will]'));   // the inheritance — irreversible
       document.querySelectorAll('#cg-will [data-will]').forEach((el) => el.addEventListener('click', () =>
         this.bringThroughHeir(m, seasons, titles, appliedMentorship, (el as HTMLElement).dataset.will as 'craft' | 'name' | 'fortune', sold?.fee ?? 0)));
+      // THIS WRITE DESTROYS THE TILE THAT WAS HOLDING FOCUS. The handler above runs ON the
+      // [data-nextlife] tile the player just pressed Enter on, and #cg-nextlife is that tile's own parent,
+      // so replacing it puts document.activeElement back on <body>: to reach the three will cards a
+      // keyboard or controller player had to tab past ← back, the tab bar and the whole send-off again —
+      // and a screen reader was told nothing, because #toast (the game's only live region) never fired.
+      // Landing on the note rather than the question is deliberate: it is the PT-509 warning about what
+      // choosing costs, and the question and the three cards follow it in both reading and tab order.
+      // preventScroll for the reason #ft-continue and #pause-ov both learned — this panel carries the
+      // entire final-season report, so a bare focus() would scroll the send-off off the top.
+      $('cg-will-note').focus({ preventScroll: true });
     }));
   }
 
@@ -4344,18 +4415,26 @@ class Game {
     // adjacent screens about the same child. Now both screens read the same number.
     const card = (h: typeof all[number], on: boolean) => {
       const n = h.potentialStars;
-      return `<div class="cg-heir-card${on ? ' on' : ''}" data-heir="${h.id}">`
+      // ARIA-PRESSED, NOT JUST A BORDER. makeActivatable stamps role="button" on this card, and the only
+      // thing that said which son was armed was the `.on` class — border-color: var(--good) and a 6% white
+      // wash. Hue is the one channel a colour-blind player does not have and a screen reader never had, on
+      // the single irreversible choice in the dynasty. aria-pressed is the state role="button" supports
+      // (aria-checked is not — see makeActivatable); the click handler below moves it with the class.
+      return `<div class="cg-heir-card${on ? ' on' : ''}" data-heir="${h.id}" aria-pressed="${on}">`
         + `<div class="cg-cname">${h.name}</div>`
         + (h.cousin && h.fatherName ? `<div class="cg-cdescr cg-cousin">👨‍👦 ${h.fatherName}'s boy</div>`
             + `<div class="cg-cdescr cg-cousin">📜 a different branch — he carries his own father's inheritance, not this one</div>` : '')
         + `<div class="cg-cdescr">🧠 ${PERSONALITY_LABEL[h.temper] ?? h.temper}</div>`
         + `<div class="cg-cdescr">🧬 the family ${h.familyTrait}</div>`
-        + `<div class="cg-heir-stars">${'★'.repeat(n)}${'☆'.repeat(5 - n)} <span class="cg-heir-note">what the scouts can see so far</span></div></div>`;
+        // role="img" AND NOT aria-label ALONE: a bare <div> is role=generic, ARIA prohibits naming a generic
+        // element and browsers drop the name — the same reason paintCoins carries the role. Unlabelled, the
+        // boy's ceiling reached a reader as five ★/☆ glyphs, and the ceiling is what this choice is FOR.
+        + `<div class="cg-heir-stars" role="img" aria-label="${n} of 5 stars — what the scouts can see so far">${'★'.repeat(n)}${'☆'.repeat(5 - n)} <span class="cg-heir-note">what the scouts can see so far</span></div></div>`;
     };
     const cards = direct.map((h, i) => card(h, i === 0)).join('')
       + (cousins.length ? `<div class="cg-heir-split">or, from the brother you passed over</div>` + cousins.map((h) => card(h, false)).join('') : '');
     $('academy-body').innerHTML = `<div class="cg-graduation">`
-      + `<div class="cg-grad-title">🌳 ${all.length === 1 ? 'The next of the line'
+      + `<div id="cg-heir-title" tabindex="-1" class="cg-grad-title">🌳 ${all.length === 1 ? 'The next of the line'
           : cousins.length ? `${all.length} of the family` : `${all.length} sons`}</div>`
       + `<div class="cg-epilogue">${all.length === 1
           ? 'One son, and the name goes with him.'
@@ -4363,12 +4442,25 @@ class Game {
           ? 'Your own boys, and a cousin from the brother you let go a generation ago. The name is the same either way — but the line you take is the one that carries it, and the others will make their own way.'
           : 'Brothers. They have their father in them somewhere, and they are not the same boy. Whichever one you take, the others will make their own way — and you may come back for a nephew one day.'}</div>`
       + `<div class="cg-heirs">${cards}</div>`
-      + `<button id="cg-heir-go" class="primary">Take him on →</button></div>`;
+      + `<button id="cg-heir-go" class="primary">Take ${all[0].name} on →</button></div>`;
     let chosen = all[0].id;
     this.makeActivatable($('academy-body').querySelectorAll('[data-heir]'));   // an irreversible dynasty choice
+    // AND THE PANEL IS THROWN AWAY A THIRD TIME. bringThroughHeir swapped the will cards for a DISABLED
+    // "Raising the next generation…" button — which cannot hold focus — and then awaited the network, so
+    // focus is already on <body> by the time the brothers arrive. Focus the title so the reveal announces
+    // itself and Tab carries straight on into the heir cards. Same preventScroll rule as the will step.
+    $('cg-heir-title').focus({ preventScroll: true });
+    // THE COMMIT BUTTON NAMED NOBODY. "Take him on →" was a constant, so the last thing you read before
+    // ending one life and starting another said nothing about WHICH son — the only confirmation was the
+    // border of a card you may already have looked away from. Name him on the button, and move aria-pressed
+    // with the class, so the armed choice is spoken and written and not only painted.
     $('academy-body').querySelectorAll('[data-heir]').forEach((el) => el.addEventListener('click', () => {
       chosen = (el as HTMLElement).dataset.heir!;
-      $('academy-body').querySelectorAll('[data-heir]').forEach((o) => o.classList.toggle('on', o === el));
+      $('academy-body').querySelectorAll('[data-heir]').forEach((o) => {
+        o.classList.toggle('on', o === el);
+        o.setAttribute('aria-pressed', String(o === el));
+      });
+      $('cg-heir-go').textContent = `Take ${all.find((h) => h.id === chosen)?.name ?? 'him'} on →`;
     }));
     $('cg-heir-go').addEventListener('click', async () => {
       try {
@@ -4483,8 +4575,8 @@ class Game {
       const yrs = n.honours?.turnsPlayed ? `${n.honours.caps ? `${n.honours.caps} caps` : "no caps"}` : (n.state === "prospect" ? "yet to play" : "");
       const sub = n.legend?.tier ? n.legend.tier : yrs;
       const cls = n.branch === "sibling" ? " fr-sib" : "";
-      // `<title>` is the SVG tooltip AND what a screen reader announces for the node — the natural home for
-      // the parentage the tree otherwise expresses only as a line between two ovals.
+      // `<title>` is the SVG tooltip, and it is also the text of the aria-label put on the node below — the
+      // natural home for the parentage the tree otherwise expresses only as a line between two ovals.
       const who = n.fatherName ? `${n.name} — ${n.fatherName}'s boy` : `${n.name} — the founder of the line`;
       // HONOURS BELONG TO THE MAN, NOT JUST THE CLUB. An award won by a bloodline player is part of his
       // record, so it shows against him here — a count on the medallion, the full list in the tooltip
@@ -4521,8 +4613,15 @@ class Game {
       // Stature is already carried by the tier word in the line below ("Cult Hero", "Club Great"); this
       // badge is how good he actually got.
       const ovr = Math.round(Number(n.legend?.peakOverall ?? n.overall) || 0);
-      return `<g class="fr-node${cls}" transform="translate(${p.x},${p.y})"><g class="fr-in" style="--fr-g:${rankOf(n)}">`
-        + `<title>${who}${honourLine}${capLine}</title>`
+      // ONE STRING, TWO AUDIENCES. `role="img"` on the <svg> below made this whole subtree Children
+      // Presentational — ARIA deletes the descendants of an img — so the <title> reached no screen reader at
+      // all, and the Family Record announced one sentence about a tree and named nobody on it. The role+label
+      // pair goes on each man instead (the same pairing paintCoins uses: a bare aria-label on a role=generic
+      // element is dropped by browsers), and the <title> stays as the mouse tooltip. `&quot;` because the
+      // same text now also has to survive inside an attribute.
+      const label = `${who}${honourLine}${capLine}`;
+      return `<g class="fr-node${cls}" transform="translate(${p.x},${p.y})"><g class="fr-in" role="img" aria-label="${label.replace(/"/g, '&quot;')}" style="--fr-g:${rankOf(n)}">`
+        + `<title>${label}</title>`
         + `<ellipse rx="30" ry="34" class="fr-oval"/><ellipse rx="24" ry="28" class="fr-oval-inner"/>`
         // Only when there is no face to draw. Left in as the fallback, but rendering it underneath a
         // portrait made the initials ghost through — visibly so on passed-over sons, who are drawn paler.
@@ -4541,7 +4640,10 @@ class Game {
     }).join("");
     host.innerHTML = `<div class="family-record"><div class="fr-frame">`
       + `<div class="fr-title">The Family Record</div>`
-      + `<svg viewBox="0 0 ${W} ${H}" class="fr-svg" role="img" aria-label="An illuminated family tree of the bloodline, the founder at the base.">`
+      // NOT role="img": that role is Children Presentational, and with it here every medallion, name, honour
+      // and cap line below was stripped from the accessibility tree — the whole dynasty screen said this one
+      // sentence and nothing else. `group` keeps the label and lets the men underneath it through.
+      + `<svg viewBox="0 0 ${W} ${H}" class="fr-svg" role="group" aria-label="An illuminated family tree of the bloodline, the founder at the base.">`
       // userSpaceOnUse means this resolves in each node's own translated space, so one definition clips
       // every medallion rather than needing one per person.
       + `<defs><clipPath id="fr-face-clip" clipPathUnits="userSpaceOnUse"><ellipse rx="24" ry="28"/></clipPath></defs>`
@@ -6139,13 +6241,24 @@ class Game {
   onFrame(dMs: number) {
     if (!this.engine || $('matchwrap').classList.contains('hidden')) return;
     if (this.running) {
+      // THE ARMED PLAN IS CHECKED PER TICK, NOT PER FRAME. This evalMatchPlan() sat AFTER the loop below,
+      // so an order was checked once per animation frame while the loop drains as many ticks as the frame
+      // delta bought: one at 1x, four at 12x, twenty-four when matchStep clamps a slow frame at 100ms, and
+      // 240 in a hidden tab (1000ms ceiling) — two game-minutes with no check inside them. skipToEnd() has
+      // always checked after EVERY tick, and evalMatchPlan() ends in setTactics, which re-derives the
+      // press/line mods and so changes how many rng() draws the very next tick makes: an order applied
+      // late does not merely arrive late, it shifts the whole rng stream from that tick on. So one seed,
+      // one lineup and one plan produced a DIFFERENT match per speed button and per tab visibility, and
+      // "skip to full-time" disagreed with the match the player had been watching — measured at up to 22
+      // scorelines changed in 27 planned matches. Bar: tools/playtest/match_plan_parity.ts.
+      const plan = this.spFixture && this.draftPlan.size;
       this.accum += (dMs / 1000) * 10 * this.speed;
       while (this.accum >= TICK_SEC && !this.engine.state.finished) {
         this.engine.tick();
         this.accum -= TICK_SEC;
+        if (plan) this.evalMatchPlan();
         if (this.engine.state.finished) { this.onFullTime(); break; }
       }
-      if (this.spFixture && this.draftPlan.size && !this.engine.state.finished) this.evalMatchPlan();
     }
     this.syncMatchHud();
   }

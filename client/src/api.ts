@@ -1722,9 +1722,20 @@ export const api = {
     await ensureActive();
     const model = getActiveModel();
     const seasonId = String(model.profile.season);
-    const [trips, count, loaneeCount] = await Promise.all([
-      localStore.missionsInSeason(OWNER, seasonId), localStore.countMissionsInSeason(OWNER, seasonId), localStore.countLoanees(OWNER, seasonId),
+    // A TRIP IS STAMPED WITH THE SEASON IT LEFT IN, AND `signMission` NEVER LOOKS AT THAT STAMP. Reading
+    // the list for the current season alone meant the rollover -- the one event that moves the lifetime
+    // match count far enough to REVEAL a late trip -- was also the event that filed that trip under last
+    // season, so it came home and dropped off this screen in the same instant. The row stayed live and
+    // signable in the save, and this screen is the only place it can be signed from. Last season's
+    // unsigned trips are therefore read alongside this season's, so the Sign button the facade still
+    // honours is actually drawn. The COUNTS stay current-season on purpose: the trip budget and the
+    // loanee cap are per-season allowances, and a carried trip was paid for out of the season it left in.
+    const carriedFrom = String(model.profile.season - 1);
+    const [current, carried, count, loaneeCount] = await Promise.all([
+      localStore.missionsInSeason(OWNER, seasonId), localStore.missionsInSeason(OWNER, carriedFrom),
+      localStore.countMissionsInSeason(OWNER, seasonId), localStore.countLoanees(OWNER, seasonId),
     ]);
+    const trips = [...current, ...carried.filter((m) => m.status !== 'signed')];
     const now = Date.now();
     const fac = model.facilities;
     const hqMult = scoutHitMult(fac.scouting), discount = scoutCostDiscount(fac.scouting);

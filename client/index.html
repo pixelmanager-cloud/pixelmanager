@@ -2148,8 +2148,24 @@
             <button id="mm-new">＋ New Game</button>
           </div>
           <div id="mm-newgame" class="hidden">
-            <input id="mm-name" placeholder="your family name (e.g. Vance)" maxlength="18" />
-            <div id="mm-preview" class="mm-preview"></div>
+            <!-- THE PLACEHOLDER WAS THIS FIELD'S ONLY LABEL, AND A PLACEHOLDER NAMES THE EXAMPLE RATHER
+                 THAN THE FIELD. Measured in headless Chromium on the old markup: accessible name = "your
+                 family name (e.g. Vance)", description = none. It is painted in the muted placeholder grey
+                 and leaves the screen on the first keystroke, so nobody — sighted or not — can get the
+                 prompt back, on the first screen of the game. aria-label survives typing; the placeholder
+                 stays as the visible example. aria-describedby points at #mm-preview because that div
+                 carries the only statement of what the name DOES — "your club becomes '<name>'s Club' and
+                 the name carries down the generations" (updateNamePreview in main.ts) — and nothing had
+                 ever joined the two. -->
+            <input id="mm-name" placeholder="your family name (e.g. Vance)" maxlength="18"
+                   aria-label="Family name" aria-describedby="mm-preview" />
+            <!-- role="status" because main.ts focuses the input BEFORE the first updateNamePreview() call,
+                 so a description computed at focus time reads this div while it is still empty and says
+                 nothing at all. As a live region the rule arrives when it is written, and each club-name
+                 echo is spoken the way a sighted player watches it change. status, not alert: this is a
+                 preview of your club, not an interruption. Both halves are held by
+                 tools/playtest/name_field_label.ts. -->
+            <div id="mm-preview" class="mm-preview" role="status"></div>
             <button id="mm-start" class="primary">Start ⚽</button>
             <button id="mm-cancel">Back</button>
           </div>
