@@ -3062,8 +3062,47 @@ const AGE_FRAME: Record<string, string[]> = {
   ],
 };
 
+// SIXTY-FIVE CHAPTER FRAMES OPEN BY DECLARING AN AGE — "Nineteen, and the youngest man in the room by five
+// years,". The chapter bands are two and three years wide, so before this the declared age was right about a
+// third of the time, and the HUD header on the same screen showed the real one. ageFraming was handed the
+// age all along and never looked at it, because the chapter branch returns first.
+//
+// The filter keeps every line and adds none: a frame is eligible if it states NO age, or states THIS one.
+// At any given age roughly a third of the age-stating frames survive alongside all ~300 neutral ones, so the
+// pool barely narrows and pickByTurn's stride still walks it. Parsed once per chapter and cached, because
+// this runs on every prompt; the parse is a plain word lookup on the opener, deterministic and host-free.
+const AGE_WORD: Record<string, number> = {
+  ten: 10, eleven: 11, twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17,
+  eighteen: 18, nineteen: 19, twenty: 20, 'twenty-one': 21, 'twenty-two': 22, 'twenty-three': 23,
+  'twenty-four': 24, 'twenty-five': 25, 'twenty-six': 26, 'twenty-seven': 27, 'twenty-eight': 28,
+  'twenty-nine': 29, thirty: 30, 'thirty-one': 31, 'thirty-two': 32, 'thirty-three': 33, 'thirty-four': 34,
+};
+/** The age a frame opens by declaring, or undefined if it declares none. Only the OPENER counts — a number
+ *  later in the sentence ("outrun by men eight years older") is about somebody else. */
+function frameStatedAge(line: string): number | undefined {
+  const m = /^([A-Za-z-]+)\s*,/.exec(line.trim());
+  return m ? AGE_WORD[m[1].toLowerCase()] : undefined;
+}
+const FRAMES_FOR_AGE = new Map<string, string[]>();
+function framesForAge(chapter: string, age: number): string[] {
+  const key = `${chapter}|${age}`;
+  let pool = FRAMES_FOR_AGE.get(key);
+  if (!pool) {
+    const all = FRAME_BY_CHAPTER[chapter];
+    pool = all.filter((l) => { const a = frameStatedAge(l); return a === undefined || a === age; });
+    // Never hand back an empty pool: if a chapter were ever authored as nothing but age-stating frames for
+    // ages this chapter cannot reach, a filtered-to-nothing pool would crash pickByTurn on an empty array.
+    if (!pool.length) pool = all;
+    FRAMES_FOR_AGE.set(key, pool);
+  }
+  return pool;
+}
+
 function ageFraming(turn: number, salt: number, age?: number, chapter?: string): string {
-  if (chapter && FRAME_BY_CHAPTER[chapter]) return pickByTurn(FRAME_BY_CHAPTER[chapter], turn, 7, salt);
+  if (chapter && FRAME_BY_CHAPTER[chapter]) {
+    const pool = age == null ? FRAME_BY_CHAPTER[chapter] : framesForAge(chapter, age);
+    return pickByTurn(pool, turn, 7, salt);
+  }
   if (age == null) return '';
   const band = age <= 12 ? 'age10to12' : age <= 15 ? 'age13to15' : age <= 18 ? 'age16to18' : age <= 21 ? 'age19to21' : 'age22plus';
   return pickByTurn(AGE_FRAME[band], turn, 7, salt);

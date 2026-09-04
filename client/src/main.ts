@@ -295,7 +295,7 @@ const $ = (id: string) => document.getElementById(id)!;
 /** Paint one of the four coin-balance chips: the pixel coin, the number, and the unit it's counted in.
  *
  *  THE BALANCE ANNOUNCED AS A NAKED NUMBER. All four chips were built inline as
- *  `<span class="ico-inline">${sprite('coin')}</span> ${n.toLocaleString()}` — an unnamed <svg> followed by
+ *  `<span class="ico-inline">${sprite('coin')}</span> ${n.toLocaleString('en-US')}` — an unnamed <svg> followed by
  *  digits, inside a <span> carrying no label of its own. A screen reader on the season screen read out
  *  "1,240" with nothing anywhere to say WHAT 1,240 was, on the one screen that quotes five different
  *  prices in coins; #club-coins and #scout-coins don't even have the explanatory title= that #season-coins
@@ -308,7 +308,12 @@ const $ = (id: string) => document.getElementById(id)!;
  *  the readers it was written for. With the role, the label is the accessible name and the title= on the
  *  two chips that have one survives as the description. */
 function paintCoins(id: string, coins: number | undefined): void {
-  const n = (coins ?? 0).toLocaleString();
+  // 'en-US' EXPLICITLY, not the host's locale. A bare toLocaleString() renders 14000 as '14.000' on a
+  // German machine and '14 000' on a French one, while every string around it stays English and the
+  // season feed — grouped by hand in shared/, which may not ask the host anything — reads '14,000c'. The
+  // game has no translations, so the only thing the host locale changed was whether two numbers on the
+  // same screen agreed. Pinned across all 104 call sites; guarded by locale_stable_numbers.ts.
+  const n = (coins ?? 0).toLocaleString('en-US');
   const el = $(id);
   el.setAttribute('role', 'img');
   el.setAttribute('aria-label', `${n} coins`);
@@ -1264,7 +1269,7 @@ class Game {
         + `<span>${ci.available ? `<span class="ico-inline ico-lg">${sprite('contract')}</span> ${ci.seasonsLeft} season${ci.seasonsLeft === 1 ? '' : 's'} left` : ci.staked === false ? '⭘ not registered — he can’t play' : '⛔ contract lapsed — benched'}</span></div>`
         + (ci.morale != null ? `<div class="pc-morale"><i>morale</i><span class="pc-mbg"><b style="width:${ci.morale}%"></b></span><span>${ci.moraleLabel}</span></div>` : '')
         // show the TOTAL cost (wage × length), not one season's wage — talks charge the whole deal (PT-32/PT-124)
-        + `<div class="pc-cactions"><button class="pc-extend" data-extend="${p.id}"><span class="ico-inline ico-lg">${sprite('seal')}</span> ${ci.available ? 'Re-sign' : 'Extend'} · ~${(ci.extendCost * ci.lengthSeasons).toLocaleString()}c over ${ci.lengthSeasons}y</button>`
+        + `<div class="pc-cactions"><button class="pc-extend" data-extend="${p.id}"><span class="ico-inline ico-lg">${sprite('seal')}</span> ${ci.available ? 'Re-sign' : 'Extend'} · ~${(ci.extendCost * ci.lengthSeasons).toLocaleString('en-US')}c over ${ci.lengthSeasons}y</button>`
         // the bloodline star has no release-clause sale path in single-player — he leaves only via a rival's bid (PT-125)
         //
         // THE `worth ~${ci.sellValue}c` ELSE-ARM IS GONE, AND WITH IT THE WHOLE sellValue PIPE BEHIND IT.
@@ -1411,7 +1416,7 @@ class Game {
       const moodTxt = `morale: ${ci.moraleLabel ?? `${ci.morale} of 100`}`; // never announce "morale: undefined"
       const dot = mood ? `<span class="ns-mood ${mood.k}" role="img" aria-label="${moodTxt}" title="${moodTxt}">${mood.g}</span>` : '';
       const act = ci.staked === false ? `<button class="ns-act" data-nstake="${ci.playerId}">Register</button>`
-        : `<button class="ns-act" data-nextend="${ci.playerId}">${ci.available ? 'Re-sign' : 'Extend'} ~${(ci.extendCost * ci.lengthSeasons).toLocaleString()}c</button>`; // total deal cost (wage × length), not one season (PT-124)
+        : `<button class="ns-act" data-nextend="${ci.playerId}">${ci.available ? 'Re-sign' : 'Extend'} ~${(ci.extendCost * ci.lengthSeasons).toLocaleString('en-US')}c</button>`; // total deal cost (wage × length), not one season (PT-124)
       return `<div class="ns-row" data-open="${ci.playerId}"><span class="ns-name">${dot}${name}</span><span class="ns-age">${ci.age}y</span>${status}${act}</div>`;
     }).join('');
     return `<div class="nft-status"><div class="ns-head">⭐ YOUR STARS — lifecycle at a glance</div>${rows}</div>`;
@@ -1472,7 +1477,7 @@ class Game {
       + (pers ? `<div class="pc-crow2">🧠 <b>${PERSONALITY_LABEL[pers] ?? pers}</b></div>` : '')
       + (perks.length || flags.length ? `<div class="pc-traits2">${perks.join('')}${flags.join('')}</div>` : '')
       + `<div class="pc-cbars">${greed != null ? bar('greed', greed, 'g') : ''}${market != null ? bar('fame', market, 'm') : ''}</div>`
-      + (earnings ? `<div class="pc-earn">💷 ${earnings.toLocaleString()}c career earnings</div>` : '')
+      + (earnings ? `<div class="pc-earn">💷 ${earnings.toLocaleString('en-US')}c career earnings</div>` : '')
       + `</div>`;
   }
 
@@ -1516,7 +1521,7 @@ class Game {
         const w = Math.round(ask * mult);
         const total = w * length;
         const afford = total <= coins; // disable an offer you can't pay the total for, up front (PT-63)
-        return `<button class="cn-offer ${cls}${afford ? '' : ' cn-locked'}"${afford ? ` data-wage="${w}"` : ' disabled'}><span class="cn-o-lbl">${label}</span><span class="cn-o-tot">${total.toLocaleString()}c total</span><span class="cn-o-hint">${afford ? hint : `🔒 need ${(total - coins).toLocaleString()}c more`}</span></button>`;
+        return `<button class="cn-offer ${cls}${afford ? '' : ' cn-locked'}"${afford ? ` data-wage="${w}"` : ' disabled'}><span class="cn-o-lbl">${label}</span><span class="cn-o-tot">${total.toLocaleString('en-US')}c total</span><span class="cn-o-hint">${afford ? hint : `🔒 need ${(total - coins).toLocaleString('en-US')}c more`}</span></button>`;
       };
       body.innerHTML = `<div class="cn-sub">He’d prefer a <b>${demand.prefLength}-season</b> deal — a longer one asks ${demand.lengthPremium >= 0 ? 'a <b>higher</b> wage per season (he wants paid for the commitment)' : 'a <b>lower</b> wage per season (he values the security)'}, and every extra season adds to the <b>total</b> you pay now.</div>`
         // THE CHOSEN TERM WAS A BACKGROUND COLOUR AND NOTHING ELSE. `class="cn-l active"` repaints the
@@ -1527,7 +1532,7 @@ class Game {
         // aria-pressed makes them the toggle group they already look like, so the state is spoken with the
         // button when focus lands back on it; the group role names the row the way the visible label does.
         + `<div class="cn-row"><span class="cn-lbl">Deal length</span><div class="cn-len" role="group" aria-label="Deal length">${[2, 3, 4, 5, 6].map((L) => `<button class="cn-l ${L === length ? 'active' : ''}" id="cn-len-${L}" data-len="${L}" aria-pressed="${L === length}">${L}y</button>`).join('')}</div></div>`
-        + `<div class="cn-ask">He’s asking <b>${ask.toLocaleString()}c/season</b> — <b>${(ask * length).toLocaleString()}c</b> over ${length} seasons. <span class="cn-coins">💷 you have ${coins.toLocaleString()}c</span></div>`
+        + `<div class="cn-ask">He’s asking <b>${ask.toLocaleString('en-US')}c/season</b> — <b>${(ask * length).toLocaleString('en-US')}c</b> over ${length} seasons. <span class="cn-coins">💷 you have ${coins.toLocaleString('en-US')}c</span></div>`
         + `<div class="cn-offers">`
         + offer('Lowball', 0.8, 'he may walk')
         + offer('Haggle', 0.92, 'he’ll push back')
@@ -1547,11 +1552,11 @@ class Game {
       if (r.coins != null && this.account) this.account.coins = r.coins;
       if (r.outcome === 'accept') {
         audio.chime('success');
-        toast(`✍️ ${r.note} · ${length}-season deal · −${(wage * length).toLocaleString()}c`); // the total charged (wage × length), matching the modal — not the per-season wage (PT-61)
+        toast(`✍️ ${r.note} · ${length}-season deal · −${(wage * length).toLocaleString('en-US')}c`); // the total charged (wage × length), matching the modal — not the per-season wage (PT-61)
         this.setMe(await api.me()); close();
       } else {
         const res = document.getElementById('cn-result');
-        if (res) res.innerHTML = `<div class="cn-${r.outcome}">${r.outcome === 'reject' ? '❌' : '🤝'} ${r.note}${r.outcome === 'counter' ? ` He’s holding out for <b>${r.askWage.toLocaleString()}c</b>.` : ''}</div>`;
+        if (res) res.innerHTML = `<div class="cn-${r.outcome}">${r.outcome === 'reject' ? '❌' : '🤝'} ${r.note}${r.outcome === 'counter' ? ` He’s holding out for <b>${r.askWage.toLocaleString('en-US')}c</b>.` : ''}</div>`;
       }
     } catch (e: any) { toast(e?.body?.error === 'not enough coins' ? `Not enough coins (need ${e.body.need})` : 'Talks broke down'); }
   }
@@ -1660,7 +1665,7 @@ class Game {
     $('me-rating').textContent = ''; // PvP ELO — hidden: the game is single-player (multiplayer removed, see direction.md)
     if (this.account.coins != null) {
       paintCoins('me-coins', this.account.coins);
-      $('hub-club-sub').textContent = `💰 ${this.account.coins.toLocaleString()} to invest — facilities, youth & scouting. Every level costs upkeep each season.`;
+      $('hub-club-sub').textContent = `💰 ${this.account.coins.toLocaleString('en-US')} to invest — facilities, youth & scouting. Every level costs upkeep each season.`;
     }
     void this.refreshPrestige();
     void this.refreshDiary();
@@ -2104,13 +2109,13 @@ class Game {
     const squadFull = registered.length >= MAX_SQUAD, squadMin = registered.length <= MIN_SQUAD;
     const buyList = listings.length ? listings.map((l) => {
       const cantAfford = coins < l.fee;
-      const reason = squadFull ? `Squad full (max ${MAX_SQUAD})` : cantAfford ? `Not enough coins (need ${l.fee.toLocaleString()}c)` : 'Sign him';
+      const reason = squadFull ? `Squad full (max ${MAX_SQUAD})` : cantAfford ? `Not enough coins (need ${l.fee.toLocaleString('en-US')}c)` : 'Sign him';
       const house = houseOf(l.player.name);
       return `<div class="tm-row${house ? ' tm-house' : ''}"><span class="tm-pos tm-${l.player.role}">${l.player.role}</span>`
         + `<span class="tm-name">${l.player.name}${house ? ` <b class="tm-crest" title="${house.blurb.replace(/"/g, '&quot;')}">👑 of the ${house.name}s</b>` : ''}</span>`
-        + `<span class="tm-ov">OV ${l.ov} · age ${l.age}</span><button class="tm-buy primary" data-buy="${l.player.id}" aria-label="Buy ${l.player.name}, ${l.player.role}, overall ${l.ov}, for ${l.fee.toLocaleString()} coins" title="${reason}" ${cantAfford || squadFull ? 'disabled' : ''}>Buy · ${l.fee.toLocaleString()}c</button></div>`;
+        + `<span class="tm-ov">OV ${l.ov} · age ${l.age}</span><button class="tm-buy primary" data-buy="${l.player.id}" aria-label="Buy ${l.player.name}, ${l.player.role}, overall ${l.ov}, for ${l.fee.toLocaleString('en-US')} coins" title="${reason}" ${cantAfford || squadFull ? 'disabled' : ''}>Buy · ${l.fee.toLocaleString('en-US')}c</button></div>`;
     }).join('') : '<div class="muted">The market has cleared for this season.</div>';
-    const sellList = sellable.map((p) => { const ov = overall(p), v = squadSaleValue(ov, p.age ?? 26, moraleEffects(p.morale ?? 65).sellMult); return `<div class="tm-row"><span class="tm-pos tm-${p.role}">${p.role}</span><span class="tm-name">${p.name}</span><span class="tm-ov">OV ${ov}</span><button class="tm-sell" data-sell="${p.id}" aria-label="Sell ${p.name}, overall ${ov}, for ${v.toLocaleString()} coins" title="${squadMin ? `Can't sell below ${MIN_SQUAD} players` : `Sell for +${v.toLocaleString()}c`}" ${squadMin ? 'disabled' : ''}>Sell · +${v.toLocaleString()}c</button></div>`; }).join('');
+    const sellList = sellable.map((p) => { const ov = overall(p), v = squadSaleValue(ov, p.age ?? 26, moraleEffects(p.morale ?? 65).sellMult); return `<div class="tm-row"><span class="tm-pos tm-${p.role}">${p.role}</span><span class="tm-name">${p.name}</span><span class="tm-ov">OV ${ov}</span><button class="tm-sell" data-sell="${p.id}" aria-label="Sell ${p.name}, overall ${ov}, for ${v.toLocaleString('en-US')} coins" title="${squadMin ? `Can't sell below ${MIN_SQUAD} players` : `Sell for +${v.toLocaleString('en-US')}c`}" ${squadMin ? 'disabled' : ''}>Sell · +${v.toLocaleString('en-US')}c</button></div>`; }).join('');
     const season = this.season ?? 0;
     // BILLED, not merely present. `this.club` is the MERGED club — the pro tokens are appended for
     // display — while the rollover charges the raw club.players, which never contains the bloodline
@@ -2119,7 +2124,7 @@ class Game {
     // manager to budget, was overstating the bill by the largest single wage at the club.
     const billed = squad.filter((p) => !p.id.startsWith('nft:') && !p.id.startsWith('loan-'));
     const wageBill = billed.reduce((n, p) => n + squadSeasonWage(overall(p), season), 0); // PT-500: the recurring cost of the squad, visible BEFORE you add to it
-    body.innerHTML = `<div class="tm-head"><span class="tm-coins"><span class="ico-inline">${sprite('coin')}</span> ${coins.toLocaleString()}c</span> · Squad <b>${registered.length}</b>/${MAX_SQUAD} · ${tierName(tier)} · 💷 wages <b>~${wageBill.toLocaleString()}c</b> a season</div>`
+    body.innerHTML = `<div class="tm-head"><span class="tm-coins"><span class="ico-inline">${sprite('coin')}</span> ${coins.toLocaleString('en-US')}c</span> · Squad <b>${registered.length}</b>/${MAX_SQUAD} · ${tierName(tier)} · 💷 wages <b>~${wageBill.toLocaleString('en-US')}c</b> a season</div>`
       + `<div class="tm-sub">Buy players to strengthen the squad and climb — the market's quality is scaled to your division. Squad must stay between <b>${MIN_SQUAD}</b> and <b>${MAX_SQUAD}</b>. A signing costs a one-off fee <i>and</i> a wage every season after it, so leave yourself room for the bill.</div>`
       + `<div class="tm-cols"><div class="tm-col"><h4 class="scout-h4">🛒 BUY</h4>${buyList}</div><div class="tm-col"><h4 class="scout-h4">💸 SELL</h4>${sellList}</div></div>`;
     body.querySelectorAll('[data-buy]').forEach((b) => b.addEventListener('click', () => { const l = listings.find((x) => x.player.id === (b as HTMLElement).dataset.buy); if (l) this.buyPlayerFlow(l, boughtKey); }));
@@ -2130,8 +2135,8 @@ class Game {
     // PT-500: signings DO carry a recurring wage — the old copy ("no wage, he's yours outright") taught the
     // opposite and left the season-end bill unexplained. State both halves of the cost up front.
     const wage = squadSeasonWage(l.ov, this.season ?? 0);
-    this.openConfirm(`Sign <b>${l.player.name}</b> (${l.player.role}, OV ${l.ov}) for a one-off <b>${l.fee.toLocaleString()}c</b> transfer fee?`
-      + ` <span class="cg-hint-inline">He then draws about <b>${wage.toLocaleString()}c a season</b> in wages, charged with the rest of the squad's bill when the season ends.</span>`, 'Sign him', () => this.doBuyPlayer(l, boughtKey));
+    this.openConfirm(`Sign <b>${l.player.name}</b> (${l.player.role}, OV ${l.ov}) for a one-off <b>${l.fee.toLocaleString('en-US')}c</b> transfer fee?`
+      + ` <span class="cg-hint-inline">He then draws about <b>${wage.toLocaleString('en-US')}c a season</b> in wages, charged with the rest of the squad's bill when the season ends.</span>`, 'Sign him', () => this.doBuyPlayer(l, boughtKey));
   }
   private async doBuyPlayer(l: Listing, boughtKey: string) {
     try {
@@ -2140,7 +2145,7 @@ class Game {
       try { const b = JSON.parse(localStorage.getItem(boughtKey) || '[]'); b.push(l.player.id); localStorage.setItem(boughtKey, JSON.stringify(b)); } catch { /* ignore */ }
       this.setMe(await api.me()); audio.chime('confirm');
       this.feedEvent('transfer_in', '✍️', { name: l.player.name, seasonsAtClub: 0, age: l.age, overall: l.ov }, { fee: l.fee });
-      toast(`✍️ Signed ${l.player.name} (OV ${l.ov}) · −${l.fee.toLocaleString()}c fee · ~${squadSeasonWage(l.ov, this.season ?? 0).toLocaleString()}c a season in wages`);
+      toast(`✍️ Signed ${l.player.name} (OV ${l.ov}) · −${l.fee.toLocaleString('en-US')}c fee · ~${squadSeasonWage(l.ov, this.season ?? 0).toLocaleString('en-US')}c a season in wages`);
       this.paintSeasonCoins(); /* the market is an OVERLAY over the season screen, not a screen change — so both
           balances are on screen at once and repainting only the modal left the header behind it showing the
           pre-purchase figure until something else re-entered showSeason() */ this.renderTransferMarket();
@@ -2156,8 +2161,8 @@ class Game {
     // afterwards and neither quote was revisited, so an unhappy man was still advertised at his neutral
     // price and sold for up to 20% less — the exact swing the squad report promises in words. Both quotes
     // now build the price the same way the credit does; tools/playtest/sale_quote_matches.ts holds them there.
-    this.openConfirm(`Sell <b>${p?.name ?? 'this player'}</b> for +${(p ? squadSaleValue(overall(p), p.age ?? 26, moraleEffects(p.morale ?? 65).sellMult) : 0).toLocaleString()}c?`, 'Sell', async () => {
-      try { const r = await api.sellPlayer(playerId); if (this.account) this.account.coins = r.coins; this.setMe(await api.me()); toast(`💸 Sold · +${r.value.toLocaleString()}c`); if (p) this.feedEvent('transfer_out', '💸', this.personCtx(p, false), { fee: r.value }); this.paintSeasonCoins(); this.renderTransferMarket(); }
+    this.openConfirm(`Sell <b>${p?.name ?? 'this player'}</b> for +${(p ? squadSaleValue(overall(p), p.age ?? 26, moraleEffects(p.morale ?? 65).sellMult) : 0).toLocaleString('en-US')}c?`, 'Sell', async () => {
+      try { const r = await api.sellPlayer(playerId); if (this.account) this.account.coins = r.coins; this.setMe(await api.me()); toast(`💸 Sold · +${r.value.toLocaleString('en-US')}c`); if (p) this.feedEvent('transfer_out', '💸', this.personCtx(p, false), { fee: r.value }); this.paintSeasonCoins(); this.renderTransferMarket(); }
       catch (e: any) { toast(e?.body?.error ?? 'Could not sell'); }
     });
   }
@@ -2219,8 +2224,8 @@ class Game {
       }
       const raised = (r.sold as any[]).reduce((n: number, x: any) => n + (Number(x.fee) || 0), 0);
       rows.push(`<div class="sq-row down"><span class="sq-lbl">💸 Sold</span><span class="sq-list">`
-        + (r.sold as any[]).map((x: any) => `${nm(x)} <b>${(Number(x.fee) || 0).toLocaleString()}c</b>`).join(' · ')
-        + ` — sold to cover the wage bill, raising <b>${raised.toLocaleString()}c</b>. A forced sale fetches about 60% of a player's value.</span></div>`);
+        + (r.sold as any[]).map((x: any) => `${nm(x)} <b>${(Number(x.fee) || 0).toLocaleString('en-US')}c</b>`).join(' · ')
+        + ` — sold to cover the wage bill, raising <b>${raised.toLocaleString('en-US')}c</b>. A forced sale fetches about 60% of a player's value.</span></div>`);
     }
     if (r.intake?.length) this.feedOnce(`intake:${m0.season}`, 'youth_intake', '🌱', undefined, { n: r.intake.length });
     if (r.intake?.length) {
@@ -2239,7 +2244,7 @@ class Game {
           const why = swing > 0 ? ` — <b class="sq-warn">+${swing}% to re-sign</b>, the price of him not being settled; more football brings it down`
             : swing < 0 ? ` — <b class="sq-good">${swing}% to re-sign</b>, a settled man comes cheaper` : '';
           return `<span class="sq-exp">${nm(x)}${x.moraleLabel ? ` <i class="sq-mood">${x.moraleLabel}</i>${why}` : ''} `
-            + `<button class="sq-btn" data-renew="${x.id}" data-name="${x.name}" data-cost="${x.renewCost}" ${afford ? '' : 'disabled'} title="${afford ? `Renew for ${x.renewCost.toLocaleString()}c` : `Not enough coins (need ${x.renewCost.toLocaleString()}c)`}">Renew · ${x.renewCost.toLocaleString()}c</button> `
+            + `<button class="sq-btn" data-renew="${x.id}" data-name="${x.name}" data-cost="${x.renewCost}" ${afford ? '' : 'disabled'} title="${afford ? `Renew for ${x.renewCost.toLocaleString('en-US')}c` : `Not enough coins (need ${x.renewCost.toLocaleString('en-US')}c)`}">Renew · ${x.renewCost.toLocaleString('en-US')}c</button> `
             + `<button class="sq-btn ghost" data-release="${x.id}" data-name="${x.name}" title="Let him leave on a free">Let go</button></span>`;
         }).join(' ') + `</span></div>`);
     }
@@ -2251,8 +2256,8 @@ class Game {
         + (r.unhappy.length > 5 ? ` <i>+${r.unhappy.length - 5} more</i>` : '')
         + ` — men who didn't play enough, or whose deal was left to run down. They hold out for more to re-sign (up to 30% more) and sell for less (up to 20% less). Give them games and it settles.</span></div>`);
     }
-    const bill = `<div class="sq-row bill"><span class="sq-lbl">💷 Wages</span><span class="sq-list">−${(r.charged ?? 0).toLocaleString()}c paid for the season`
-      + (r.unpaid > 0 ? ` · <b class="sq-warn">${r.unpaid.toLocaleString()}c unpaid — the books are stretched</b>` : '')
+    const bill = `<div class="sq-row bill"><span class="sq-lbl">💷 Wages</span><span class="sq-list">−${(r.charged ?? 0).toLocaleString('en-US')}c paid for the season`
+      + (r.unpaid > 0 ? ` · <b class="sq-warn">${r.unpaid.toLocaleString('en-US')}c unpaid — the books are stretched</b>` : '')
       + ` — the whole squad's wages, charged once a year. A bill like this is due again next summer.</span></div>`;
     if (!rows.length && !r.charged) return '';
     return `<div class="sq-report" id="sq-report"><div class="sq-head">👥 THE SQUAD, A YEAR ON<button class="sq-x" id="sq-report-x" title="Dismiss">✕</button></div>${rows.join('')}${bill}</div>`;
@@ -2260,14 +2265,14 @@ class Game {
 
   /** Pay to keep an out-of-contract squad player. */
   private async renewSquadFlow(playerId: string, name: string, cost: number) {
-    this.openConfirm(`Renew <b>${name}</b>'s contract for <b>${cost.toLocaleString()}c</b>?`, 'Renew', async () => {
+    this.openConfirm(`Renew <b>${name}</b>'s contract for <b>${cost.toLocaleString('en-US')}c</b>?`, 'Renew', async () => {
       try {
         const r = await api.renewSquadPlayer(playerId);
         if (this.account) this.account.coins = r.coins;
         this.pendingSquadReport = { ...this.pendingSquadReport, expiring: (this.pendingSquadReport?.expiring ?? []).filter((x: any) => x.id !== playerId) };
         { const mm = this.loadMgr(); this.saveMgr({ ...mm, squadReport: this.pendingSquadReport }); }
         this.setMe(await api.me()); audio.chime('confirm');
-        toast(`✍️ ${name} re-signs · −${r.cost.toLocaleString()}c`);
+        toast(`✍️ ${name} re-signs · −${r.cost.toLocaleString('en-US')}c`);
         { const rp = this.club?.players.find((x) => x.id === playerId); if (rp) this.feedEvent('contract_renewed', '✍️', this.personCtx(rp, rp.id === this.loadMgr().starId), { n: termWords(SQUAD_CONTRACT_SEASONS) }); }
         this.showSeason();
       } catch (e: any) { toast(e?.body?.error ?? 'Could not renew'); }
@@ -2447,7 +2452,7 @@ class Game {
     // transfer-market copy tells the manager to budget against.
     const billed = this.club.players.filter((p) => !p.id.startsWith('nft:'));
     const wageBill = billed.reduce((n, p) => n + squadSeasonWage(overall(p), this.season ?? 0), 0);
-    const wageLine = ` · <span class="sf-wages">💷 wage bill ~${wageBill.toLocaleString()}c, due at season's end</span>`;
+    const wageLine = ` · <span class="sf-wages">💷 wage bill ~${wageBill.toLocaleString('en-US')}c, due at season's end</span>`;
     const header = done
       ? `<div class="season-summary done"><span class="ss-crest">${crest(clubName, 20)}</span>✅ Season ${m.season} complete — <b>${clubName}</b> finished <b>${this.ordinal(t.pos)}</b> of ${t.size} in <b>${tierName(tier)}</b>${t.pos === 1 ? ' 🏆 CHAMPIONS!' : (t.pos <= 2 && tier > 1) ? ` ⬆️ PROMOTED to ${tierName(tier - 1)}!` : (t.pos >= t.size - 1 && tier < TIERS) ? ` ⬇️ RELEGATED to ${tierName(tier + 1)}` : ''}. <button class="primary" id="sf-next-season">Next season →</button></div>`
       : `<div class="season-summary"><span class="ss-crest">${crest(clubName, 20)}</span><b>${clubName}</b> · <b>${tierName(tier)}</b> · Season ${m.season} · MD ${nextIdx + 1}/${fixtures.length} · <b>${this.ordinal(t.pos)}</b>/${t.size}${formStrip}${starLine}${wageLine}</div>`;
@@ -2466,12 +2471,12 @@ class Game {
     // recorded a decision with nothing to decide about.
     if (bid && starP) this.feedOnce(`bid:${m.season}`, 'bid_received', '🤝', this.personCtx(starP, true), { fee: bid.fee, name: bid.club });
     const bidLead = bid ? [
-      `<b>🤝 ${bid.club}</b> have tabled a <b>${bid.fee.toLocaleString()}c</b> bid for ${m.starName}.`,
-      `<b>🤝 ${bid.club}</b> come calling with <b>${bid.fee.toLocaleString()}c</b> for ${m.starName}.`,
-      `<b>🤝 ${bid.club}</b> want ${m.starName} badly — <b>${bid.fee.toLocaleString()}c</b> on the table.`,
-      `<b>🤝 ${bid.club}</b> test your resolve with <b>${bid.fee.toLocaleString()}c</b> for ${m.starName}.`,
+      `<b>🤝 ${bid.club}</b> have tabled a <b>${bid.fee.toLocaleString('en-US')}c</b> bid for ${m.starName}.`,
+      `<b>🤝 ${bid.club}</b> come calling with <b>${bid.fee.toLocaleString('en-US')}c</b> for ${m.starName}.`,
+      `<b>🤝 ${bid.club}</b> want ${m.starName} badly — <b>${bid.fee.toLocaleString('en-US')}c</b> on the table.`,
+      `<b>🤝 ${bid.club}</b> test your resolve with <b>${bid.fee.toLocaleString('en-US')}c</b> for ${m.starName}.`,
     ][((this.leagueSeed() ^ Math.imul(m.season + 1, 40503)) >>> 0) % 4] : '';
-    const bidBanner = bid ? `<div class="sf-bid"><span class="sf-bid-txt">${bidLead} Cash in and bring the heir through early — or keep your dynasty player?</span><span class="sf-bid-btns"><button id="sf-bid-accept" class="primary">Accept ${bid.fee.toLocaleString()}c</button> <button id="sf-bid-reject">Reject</button></span></div>` : '';
+    const bidBanner = bid ? `<div class="sf-bid"><span class="sf-bid-txt">${bidLead} Cash in and bring the heir through early — or keep your dynasty player?</span><span class="sf-bid-btns"><button id="sf-bid-accept" class="primary">Accept ${bid.fee.toLocaleString('en-US')}c</button> <button id="sf-bid-reject">Reject</button></span></div>` : '';
     // PROMOTION / RELEGATION reveal — shown at the start of the season after a move (from nextSeason)
     const tierMove = m.lastTierMove && !done && nextIdx <= 2
       ? (() => {
@@ -2606,11 +2611,11 @@ class Game {
         assistant: 'A ~2% all-round edge, and slightly less fatigue.',
       };
       this.openConfirm(
-        `Hire <b>${st?.name ?? 'this coach'}</b> for <b>💰 ${(st?.cost ?? 0).toLocaleString()}c</b>?`
+        `Hire <b>${st?.name ?? 'this coach'}</b> for <b>💰 ${(st?.cost ?? 0).toLocaleString('en-US')}c</b>?`
         + (st?.desc ? `<br><span class="cf-sub">${st.desc}</span>` : '')
         + (EFFECT[id] ? `<br><span class="cf-sub">▸ ${EFFECT[id]} He stays with the club for good.</span>` : '')
-        + `<br><span class="cf-sub">You have ${(this.account?.coins ?? 0).toLocaleString()}c.</span>`,
-        `Hire · 💰 ${(st?.cost ?? 0).toLocaleString()}c`, () => this.hireStaff(id));
+        + `<br><span class="cf-sub">You have ${(this.account?.coins ?? 0).toLocaleString('en-US')}c.</span>`,
+        `Hire · 💰 ${(st?.cost ?? 0).toLocaleString('en-US')}c`, () => this.hireStaff(id));
     }));
     $('season-body').querySelectorAll('[data-sponsor]').forEach((b) => b.addEventListener('click', () => this.chooseSponsor((b as HTMLElement).dataset.sponsor!)));
   }
@@ -2635,7 +2640,7 @@ class Game {
       const r = await api.spSponsor(deal);
       if (this.account?.coins != null) this.account.coins = r.coins;
       const m = this.loadMgr(); this.saveMgr({ ...m, sponsor: deal });
-      toast(`📣 Sponsor signed (+${r.upfront.toLocaleString()}c upfront)`);
+      toast(`📣 Sponsor signed (+${r.upfront.toLocaleString('en-US')}c upfront)`);
       this.showSeason();
     } catch { toast('Could not sign the sponsor'); }
   }
@@ -2660,7 +2665,7 @@ class Game {
       const r = await api.hireStaff(id, this.loadMgr().staff ?? []);
       if (this.account?.coins != null) this.account.coins = r.coins;
       const m = this.loadMgr(); this.saveMgr({ ...m, staff: [...(m.staff ?? []), id] });
-      toast(`🧑‍🏫 Hired ${s.name} (−${r.cost.toLocaleString()}c)`);
+      toast(`🧑‍🏫 Hired ${s.name} (−${r.cost.toLocaleString('en-US')}c)`);
       // WHO was hired, so the narration can tell one hire from the next. There are three specialists and
       // 81 authored staff_hired lines, and with neither a person nor a var to hash on, every hire in the
       // save drew the same index and printed the same sentence (see narrateManager). No authored line
@@ -2746,7 +2751,7 @@ class Game {
         // bonus — but spSeasonReward scales the honour by tierMult (exactly 1.6 for a cup, which defaults to
         // the top tier index) and again by the house's renown multiplier, so at least 2,280c is credited and
         // up to about 2,780c at high renown. The player was told a number that is never the number.
-        api.cupPrize(1000).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; this.paintSeasonCoins(); toast(`💰 Continental winners' prize +${x.prize.toLocaleString()}c`); }).catch(() => {}); // repaint: resolveContinental's showSeason() has already run by the time this resolves, so without it the header sits contradicting the toast on the same screen
+        api.cupPrize(1000).then((x) => { if (this.account?.coins != null) this.account.coins = x.coins; this.paintSeasonCoins(); toast(`💰 Continental winners' prize +${x.prize.toLocaleString('en-US')}c`); }).catch(() => {}); // repaint: resolveContinental's showSeason() has already run by the time this resolves, so without it the header sits contradicting the toast on the same screen
       } else {
         this.saveMgr({ ...m, contRound: nextRound, contBlurb });
         const roundPrize = nextRound === 1 ? 250 : 500; // QF win → 250c, SF win → 500c (no longer 0 — PT-96)
@@ -2903,7 +2908,7 @@ class Game {
   /** After a played run ends, show the tournament with the star's ACTUAL result + bank the legacy payoff. */
   private async concludeWorldCup(finish: WCResult['myFinish'], finalFoe: string) {
     const m = this.loadMgr();
-    try { const r = await api.spSeasonReward({ pos: finish === 'Champions' ? 1 : finish === 'Runners-up' ? 2 : finish === 'Semi-finals' ? 3 : 4, size: 10, sponsor: undefined,   /* no tier: a cup is its own competition, not a division — see spSeasonReward */ kind: 'world' }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 World Finals payoff +${r.prize.toLocaleString()}c`); } catch { /* offline */ }
+    try { const r = await api.spSeasonReward({ pos: finish === 'Champions' ? 1 : finish === 'Runners-up' ? 2 : finish === 'Semi-finals' ? 3 : 4, size: 10, sponsor: undefined,   /* no tier: a cup is its own competition, not a division — see spSeasonReward */ kind: 'world' }); if (this.account?.coins != null) this.account.coins = r.coins; toast(`💰 World Finals payoff +${r.prize.toLocaleString('en-US')}c`); } catch { /* offline */ }
     const { wc } = this.wcData(m.wcEdition!);
     this.checkAchievements(); // World Finals final reached / won
     this.showWorldCup(wc, finish, finalFoe);
@@ -3152,16 +3157,16 @@ class Game {
     // this season's W/D/L (fed to the lifetime manager record that powers prestige)
     const rec = (m.results ?? []).reduce((a, r) => { r.myGoals > r.oppGoals ? a.wins++ : r.myGoals < r.oppGoals ? a.losses++ : a.draws++; return a; }, { wins: 0, draws: 0, losses: 0 });
     // bank the season prize money (coins → reinvest in facilities), closing the manager economy loop
-    try { const r = await api.spSeasonReward({ arcCoins: m.arcCoins ?? 0, pos: t.pos, size: t.size, sponsor: m.sponsor, tier: this.clubTier(), starId: m.starId, promoted: t.pos <= 2 && this.clubTier() > 1, ...rec })   /* the same test the tier move below uses; it is computed after this call */; if (this.account?.coins != null) this.account.coins = r.coins; const prizeLine = `💰 Season prize: +${r.prize.toLocaleString()}c${r.sponsorBonus ? ` + 📣 ${r.sponsorBonus.toLocaleString()}c sponsor bonus` : ''}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ` · ${this.ordinal(t.pos)}`}`; toast(prizeLine); this.pushFeed('💰', `<b>Season prize</b> — <b>${r.prize.toLocaleString()}c</b>${r.sponsorBonus ? ` plus a <b>${r.sponsorBonus.toLocaleString()}c</b> sponsor bonus` : ''}, for finishing ${t.pos === 1 ? 'as champions' : this.ordinal(t.pos)}.`, m.season + 1);
+    try { const r = await api.spSeasonReward({ arcCoins: m.arcCoins ?? 0, pos: t.pos, size: t.size, sponsor: m.sponsor, tier: this.clubTier(), starId: m.starId, promoted: t.pos <= 2 && this.clubTier() > 1, ...rec })   /* the same test the tier move below uses; it is computed after this call */; if (this.account?.coins != null) this.account.coins = r.coins; const prizeLine = `💰 Season prize: +${r.prize.toLocaleString('en-US')}c${r.sponsorBonus ? ` + 📣 ${r.sponsorBonus.toLocaleString('en-US')}c sponsor bonus` : ''}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ` · ${this.ordinal(t.pos)}`}`; toast(prizeLine); this.pushFeed('💰', `<b>Season prize</b> — <b>${r.prize.toLocaleString('en-US')}c</b>${r.sponsorBonus ? ` plus a <b>${r.sponsorBonus.toLocaleString('en-US')}c</b> sponsor bonus` : ''}, for finishing ${t.pos === 1 ? 'as champions' : this.ordinal(t.pos)}.`, m.season + 1);
       // WHAT THE CLUB EARNED BY BEING A CLUB, itemised. The facilities pay for the first time, and an income
       // the player cannot see is exactly the invisible effect this fix exists to end — so the gate, the
       // sponsors, the shop and the women's team each report what they brought in.
       const fi = (r as any).facilities as { gate: number; sponsor: number; shop: number; womens: number; merit: number; total: number } | undefined;
       if (fi?.total) {
-        const parts = [fi.gate && `🎟️ gate ${fi.gate.toLocaleString()}c`, fi.sponsor && `🤝 sponsors ${fi.sponsor.toLocaleString()}c`,
-          fi.shop && `🛍️ shop ${fi.shop.toLocaleString()}c`, fi.womens && `⚽ women's team ${fi.womens.toLocaleString()}c`,
-          fi.merit && `📺 division merit ${fi.merit.toLocaleString()}c`].filter(Boolean);
-        this.pushFeed('🏟️', `The club earned <b>${fi.total.toLocaleString()}c</b> off the pitch this season — ${parts.join(' · ')}.`, m.season + 1);
+        const parts = [fi.gate && `🎟️ gate ${fi.gate.toLocaleString('en-US')}c`, fi.sponsor && `🤝 sponsors ${fi.sponsor.toLocaleString('en-US')}c`,
+          fi.shop && `🛍️ shop ${fi.shop.toLocaleString('en-US')}c`, fi.womens && `⚽ women's team ${fi.womens.toLocaleString('en-US')}c`,
+          fi.merit && `📺 division merit ${fi.merit.toLocaleString('en-US')}c`].filter(Boolean);
+        this.pushFeed('🏟️', `The club earned <b>${fi.total.toLocaleString('en-US')}c</b> off the pitch this season — ${parts.join(' · ')}.`, m.season + 1);
         // THE PRIZE MONEY NEEDS A SURFACE THAT SURVIVES. toast() is a single slot with a 2.2s timer and
         // no queue, and one click of "Next season →" fires up to five of them — three from this same
         // synchronous block. The prize was the first, so it was overwritten before it could be read, and
@@ -3181,12 +3186,12 @@ class Game {
         toast(`🏅 ${aw[0].label}: ${aw[0].player_name}`);
       }
       const up = (r as any).upkeep as number | undefined;
-      if (up) this.pushFeed('🧾', `Keeping the club's facilities running cost <b>${up.toLocaleString()}c</b> this season — the upkeep on every stand, pitch and department you have built. Wages are billed separately.`, m.season + 1);
+      if (up) this.pushFeed('🧾', `Keeping the club's facilities running cost <b>${up.toLocaleString('en-US')}c</b> this season — the upkeep on every stand, pitch and department you have built. Wages are billed separately.`, m.season + 1);
       const dis = ((r as any).disrepair ?? []) as string[];
       if (dis.length) {
         const names = [...new Set(dis)].map((k) => FACILITY_META[k as FacilityKey]?.name ?? k);
         const sal = (r as any).salvage as number | undefined;
-        this.pushFeed('🚧', `<b>The club could not pay its bills.</b> ${names.join(' and ')} fell into disrepair — ${dis.length} level${dis.length > 1 ? 's' : ''} lost${sal ? `, and the sale of what was stripped out raised <b>${sal.toLocaleString()}c</b>` : ''}. Something has to give: scale back what the club is for, or climb far enough to afford it.`, m.season + 1);
+        this.pushFeed('🚧', `<b>The club could not pay its bills.</b> ${names.join(' and ')} fell into disrepair — ${dis.length} level${dis.length > 1 ? 's' : ''} lost${sal ? `, and the sale of what was stripped out raised <b>${sal.toLocaleString('en-US')}c</b>` : ''}. Something has to give: scale back what the club is for, or climb far enough to afford it.`, m.season + 1);
         toast(`🚧 ${names[0]} fell into disrepair — the club is living beyond its means`);
       }
     } catch { /* offline: no prize */ }
@@ -3286,7 +3291,7 @@ class Game {
         if (wd.length) {
           const names = [...new Set(wd)].map((k) => FACILITY_META[k as FacilityKey]?.name ?? k);
           const sal = (sq as any).salvage as number | undefined;
-          this.pushFeed('🚧', `<b>The wages could not be paid in full.</b> ${names.join(' and ')} fell into disrepair — ${wd.length} level${wd.length > 1 ? 's' : ''} lost${sal ? `, raising <b>${sal.toLocaleString()}c</b> from what was stripped out` : ''}. The squad costs more than the club earns: sell, let a contract run down, or scale the club back.`, m.season + 1);
+          this.pushFeed('🚧', `<b>The wages could not be paid in full.</b> ${names.join(' and ')} fell into disrepair — ${wd.length} level${wd.length > 1 ? 's' : ''} lost${sal ? `, raising <b>${sal.toLocaleString('en-US')}c</b> from what was stripped out` : ''}. The squad costs more than the club earns: sell, let a contract run down, or scale the club back.`, m.season + 1);
         }
         // RUNNING ON EMPTY — checked HERE, after wages, not at the season roll. It used to sit immediately
         // after spSeasonReward credited the season's income, which is the richest instant of the whole
@@ -3454,11 +3459,11 @@ class Game {
   };
   private acceptStarBid(bid: { club: string; fee: number }, m: MgrState) {
     const surname = (m.starName ?? '').trim().split(/\s+/).slice(1).join(' ') || 'the family';
-    this.openConfirm(`Sell <b>${m.starName}</b> to <b>${bid.club}</b> for <b>${bid.fee.toLocaleString()}c</b>? He leaves the club now — and the next of the <b>${surname}</b> line comes through early to carry the name on.`, 'Sell the star', () => {
+    this.openConfirm(`Sell <b>${m.starName}</b> to <b>${bid.club}</b> for <b>${bid.fee.toLocaleString('en-US')}c</b>? He leaves the club now — and the next of the <b>${surname}</b> line comes through early to carry the name on.`, 'Sell the star', () => {
       // The fee is NOT banked here — it lands only when the succession completes (bringThroughHeir → succeed),
       // so abandoning the will screen can't keep the cash while the star stays in the squad (PT-60).
       audio.chime('triumph');
-      toast(`🤝 ${bid.club} agree ${bid.fee.toLocaleString()}c for ${m.starName} — bring his heir through to seal it`);
+      toast(`🤝 ${bid.club} agree ${bid.fee.toLocaleString('en-US')}c for ${m.starName} — bring his heir through to seal it`);
       this.retireStar(m.titles ?? 0, m.contTitles ?? 0, { fee: bid.fee, club: bid.club });
     });
   }
@@ -3486,7 +3491,7 @@ class Game {
       `Some names become the club. After ${era}${honourLine}, ${m.starName} finally walks away from ${club} — a story that started with a boy's first touch and ended with a veteran's last team-talk.`,
     ][((this.leagueSeed() ^ Math.imul(seasons + 1, 2654435761)) >>> 0) % 4];
     const storyLine = sold
-      ? `After ${era} at ${club}${honourLine}, ${m.starName} leaves for <b>${sold.club}</b> in a <b>${sold.fee.toLocaleString()}c</b> deal — a wrench for the fans, but the money reshapes the club’s future.`
+      ? `After ${era} at ${club}${honourLine}, ${m.starName} leaves for <b>${sold.club}</b> in a <b>${sold.fee.toLocaleString('en-US')}c</b> deal — a wrench for the fans, but the money reshapes the club’s future.`
       : `${farewell}${finalMoveLine}${headlinesLine}`;
     // THE SEND-OFF IS THE LAST SCREEN THIS SEASON EVER GETS, so the season's report has to be read here.
     // `nextSeason` writes the entire end-of-season report — prize money, the itemised facility income, the
@@ -3569,7 +3574,7 @@ class Game {
       this.resetMgrForHeir(); // back to player phase — the heir's card-career begins, the club stays his father's
       this.setMe(await api.me());
       this.checkAchievements(); // a legend retired → new generation / legends / rating milestones
-      toast(`${w.icon} The heir inherits ${w.label}${(r as any).testimonial ? ` · 🎗️ +${(r as any).testimonial.toLocaleString()}c testimonial` : ''}${r.saleFee ? ` · 💰 +${r.saleFee.toLocaleString()}c from the sale` : ''}${r.legacy ? ` · +${r.legacy.toLocaleString()}c legacy` : ''}`);
+      toast(`${w.icon} The heir inherits ${w.label}${(r as any).testimonial ? ` · 🎗️ +${(r as any).testimonial.toLocaleString('en-US')}c testimonial` : ''}${r.saleFee ? ` · 💰 +${r.saleFee.toLocaleString('en-US')}c from the sale` : ''}${r.legacy ? ` · +${r.legacy.toLocaleString('en-US')}c legacy` : ''}`);
       // A generation produces 1-3 sons. With brothers, the player CHOOSES which one carries the name;
       // with one, we say so in words rather than letting a choice-less succession read as a bug.
       const sibs = (r as any).siblings as Array<{ id: string; name: string; temper: string; potentialStars: number; familyTrait: string; fatherName?: string; cousin?: boolean }> | undefined;
@@ -3804,16 +3809,16 @@ class Game {
     // THE RUNNING TOTAL, ALWAYS ON SCREEN. Upkeep is a decision only if you can see it accumulating as you
     // buy — a bill that appears once a season, after the spending, is a punishment instead.
     const upEl = document.getElementById('fac-upkeep');
-    if (upEl) upEl.innerHTML = d.upkeep ? `Season upkeep: <b>💰 ${d.upkeep.toLocaleString()}c</b>` : '';
+    if (upEl) upEl.innerHTML = d.upkeep ? `Season upkeep: <b>💰 ${d.upkeep.toLocaleString('en-US')}c</b>` : '';
     $('facilities-grid').innerHTML = d.facilities.map((f) => {
       const pips = Array.from({ length: f.maxLevel }, (_, i) => `<i class="${i < f.level ? 'on' : ''}"></i>`).join('');
       const maxed = f.level >= f.maxLevel;
       const action = maxed
-        ? `<div class="fac-maxed">★ MAX LEVEL</div><div class="fac-upkeep">Upkeep <b>${f.upkeep.toLocaleString()}c</b> a season</div>`
+        ? `<div class="fac-maxed">★ MAX LEVEL</div><div class="fac-upkeep">Upkeep <b>${f.upkeep.toLocaleString('en-US')}c</b> a season</div>`
         : `<div class="fac-next">Next: <b>${f.nextEffect ?? ''}</b></div>`
           + (f.nextUpkeep != null && f.nextUpkeep > f.upkeep
-            ? `<div class="fac-upkeep">Upkeep ${f.upkeep.toLocaleString()}c ▸ <b>${f.nextUpkeep.toLocaleString()}c</b> a season</div>` : '')
-          + `<button class="fac-up" data-key="${f.key}" aria-label="Upgrade ${f.name} to level ${(f.level ?? 0) + 1} for ${(f.upgradeCost ?? 0).toLocaleString()} coins" ${f.canAfford ? '' : `disabled title="Not enough coins — you need ${(f.upgradeCost ?? 0).toLocaleString()}c"`}>${f.canAfford ? `Upgrade · 💰 ${f.upgradeCost} ▶` : `Need 💰 ${(f.upgradeCost ?? 0).toLocaleString()}c`}</button>`;
+            ? `<div class="fac-upkeep">Upkeep ${f.upkeep.toLocaleString('en-US')}c ▸ <b>${f.nextUpkeep.toLocaleString('en-US')}c</b> a season</div>` : '')
+          + `<button class="fac-up" data-key="${f.key}" aria-label="Upgrade ${f.name} to level ${(f.level ?? 0) + 1} for ${(f.upgradeCost ?? 0).toLocaleString('en-US')} coins" ${f.canAfford ? '' : `disabled title="Not enough coins — you need ${(f.upgradeCost ?? 0).toLocaleString('en-US')}c"`}>${f.canAfford ? `Upgrade · 💰 ${f.upgradeCost} ▶` : `Need 💰 ${(f.upgradeCost ?? 0).toLocaleString('en-US')}c`}</button>`;
       const scaleBack = f.level > 1
         ? `<button class="fac-down" data-down="${f.key}" aria-label="Scale back ${f.name} to level ${(f.level ?? 1) - 1}" title="Scale back a level and recover part of what it cost">Scale back ▾</button>` : '';
       return `<div class="facility ${maxed ? 'maxed' : ''}">`
@@ -3829,11 +3834,11 @@ class Game {
       // Hundreds of coins on one unconfirmed click, with the effect written in club-speak. Confirm it, and
       // say what it actually does — the coins are a season's prize money. (PT-507)
       b.addEventListener('click', () => this.openConfirm(
-        `Upgrade <b>${f?.name ?? 'this facility'}</b> to level ${(f?.level ?? 0) + 1} for <b>💰 ${(f?.upgradeCost ?? 0).toLocaleString()}c</b>?`
-        + (f?.nextUpkeep != null && f.nextUpkeep > f.upkeep ? ` It will cost <b>${f.nextUpkeep.toLocaleString()}c a season</b> to run, up from ${f.upkeep.toLocaleString()}c.` : '')
+        `Upgrade <b>${f?.name ?? 'this facility'}</b> to level ${(f?.level ?? 0) + 1} for <b>💰 ${(f?.upgradeCost ?? 0).toLocaleString('en-US')}c</b>?`
+        + (f?.nextUpkeep != null && f.nextUpkeep > f.upkeep ? ` It will cost <b>${f.nextUpkeep.toLocaleString('en-US')}c a season</b> to run, up from ${f.upkeep.toLocaleString('en-US')}c.` : '')
         + (f?.nextEffect ? `<br><span class="cf-sub">It gets you: ${f.nextEffect}</span>` : '')
-        + `<br><span class="cf-sub">You have ${(this.account?.coins ?? 0).toLocaleString()}c. Levels carry to your heir — but a club that cannot pay its upkeep loses them.</span>`,
-        `Upgrade · 💰 ${(f?.upgradeCost ?? 0).toLocaleString()}c`, () => this.upgradeFacility(key)));
+        + `<br><span class="cf-sub">You have ${(this.account?.coins ?? 0).toLocaleString('en-US')}c. Levels carry to your heir — but a club that cannot pay its upkeep loses them.</span>`,
+        `Upgrade · 💰 ${(f?.upgradeCost ?? 0).toLocaleString('en-US')}c`, () => this.upgradeFacility(key)));
     });
     Array.from($('facilities-grid').querySelectorAll('button[data-down]')).forEach((b) => {
       const key = (b as HTMLElement).dataset.down!;
@@ -3841,8 +3846,8 @@ class Game {
       const back = f ? f.level - 1 : 0;
       b.addEventListener('click', () => this.openConfirm(
         `Scale <b>${f?.name ?? 'this facility'}</b> back to level ${back}?`
-        + ` It frees up <b>${((f?.upkeep ?? 0) - facilityUpkeep(back, UPKEEP_WEIGHT[key as FacilityKey] ?? 1)).toLocaleString()}c a season</b> in upkeep.`
-        + `<br><span class="cf-sub">You recover ${mothballRefund(f?.level ?? 1).toLocaleString()}c of what the level cost. You can build it back later at the full price.</span>`,
+        + ` It frees up <b>${((f?.upkeep ?? 0) - facilityUpkeep(back, UPKEEP_WEIGHT[key as FacilityKey] ?? 1)).toLocaleString('en-US')}c a season</b> in upkeep.`
+        + `<br><span class="cf-sub">You recover ${mothballRefund(f?.level ?? 1).toLocaleString('en-US')}c of what the level cost. You can build it back later at the full price.</span>`,
         'Scale back', () => this.mothballFacility(key)));
     });
   }
@@ -3852,7 +3857,7 @@ class Game {
     try {
       const r = await api.mothballFacility(key);
       const nm = FACILITY_META[key as FacilityKey]?.name ?? key;
-      toast(`▾ ${nm} scaled back to level ${r.level}${r.refund ? ` · +${r.refund.toLocaleString()}c recovered` : ''}`);
+      toast(`▾ ${nm} scaled back to level ${r.level}${r.refund ? ` · +${r.refund.toLocaleString('en-US')}c recovered` : ''}`);
       this.pushFeed('📉', `<b>${nm}</b> scaled back to level ${r.level}. The club is smaller, and cheaper to run.`);
       this.renderFacilities(await api.facilities());
     } catch { toast('Could not scale that back'); }
@@ -4157,7 +4162,7 @@ class Game {
       // working. It also names the consequence and the lever, since it silently taxes every moment. (PT-158)
       ? `<div class="cg-energy${low ? ' low' : ''}" title="Energy ${s.energy}/100${low ? ' — tired: moments suffer until he rests' : ''}"><span>⚡ ENERGY ${s.energy}<span class="cg-e-max">/100</span>${low ? ' · TIRED — moments suffer; rest in the summer' : ''}</span><span class="cg-e-bar"><b style="width:${s.energy}%"></b></span></div>`
       : '';
-    const money = s.earnings != null ? `<div class="cg-money">💷 ${s.earnings.toLocaleString()}</div>` : '';
+    const money = s.earnings != null ? `<div class="cg-money">💷 ${s.earnings.toLocaleString('en-US')}</div>` : '';
     return `<div class="cg-dash">${energy}${money}<div class="cg-meters">${meters}</div></div>`;
   }
   /** Per-SAVE onboarding flag key — so a brand-new bloodline (New Game) gets the onboarding again, instead
@@ -4247,7 +4252,7 @@ class Game {
       + `<div class="op-bar"><div class="op-bar-fill" style="width:${imgPct}%"></div></div>`
       + `<div class="op-rep">📣 Reputation: <b class="op-rep-${o.reputation.edge}">${o.reputation.label}</b></div></div>`;
     const deals = o.endorsements.length
-      ? `<div class="op-deals"><div class="op-sub">🤝 ENDORSEMENTS</div>${o.endorsements.map((d) => `<div class="op-deal"><div class="op-deal-head"><b>${d.brand}</b> <span class="op-deal-tier ${d.tier.toLowerCase()}">${d.tier}</span> <span class="op-deal-pay">+${d.payout.toLocaleString()}c</span></div><div class="op-deal-cat">${d.category}</div><div class="op-deal-obl">⚠ ${d.obligation}</div>${d.strain ? `<div class="op-deal-strain">💥 ${d.strain}</div>` : ''}</div>`).join('')}</div>`
+      ? `<div class="op-deals"><div class="op-sub">🤝 ENDORSEMENTS</div>${o.endorsements.map((d) => `<div class="op-deal"><div class="op-deal-head"><b>${d.brand}</b> <span class="op-deal-tier ${d.tier.toLowerCase()}">${d.tier}</span> <span class="op-deal-pay">+${d.payout.toLocaleString('en-US')}c</span></div><div class="op-deal-cat">${d.category}</div><div class="op-deal-obl">⚠ ${d.obligation}</div>${d.strain ? `<div class="op-deal-strain">💥 ${d.strain}</div>` : ''}</div>`).join('')}</div>`
       : `<div class="op-deals op-none">🤝 No endorsements yet — build your profile to attract brands.</div>`;
     const bootChips = o.boots.owned.map((b) => `<span class="op-boot" title="${b.edge}">👟 ${b.name}</span>`).join('');
     const nextBoot = o.boots.next ? `<div class="op-boot-next">🔒 Next: <b>${o.boots.next.boot.name}</b> — ${o.boots.next.boot.unlock} <span class="op-boot-prog">(${o.boots.next.progress}/${o.boots.next.target})</span></div>` : '';
@@ -4475,10 +4480,10 @@ class Game {
       const d = c.effect?.coins ?? 0;
       const over = d < 0 && coins + d < 0;
       const tag = d === 0 ? ''
-        : d < 0 ? ` · <span class="sq-warn">💰−${(-d).toLocaleString()}c</span>${over ? ` <span class="sq-warn">⚠ empties the bank</span>` : ''}`
-        : ` · <span class="sq-good">💰+${d.toLocaleString()}c</span>`;
-      const tip = d < 0 ? `Costs ${(-d).toLocaleString()}c of club money — you hold ${coins.toLocaleString()}c`
-        : d > 0 ? `Brings in ${d.toLocaleString()}c` : '';
+        : d < 0 ? ` · <span class="sq-warn">💰−${(-d).toLocaleString('en-US')}c</span>${over ? ` <span class="sq-warn">⚠ empties the bank</span>` : ''}`
+        : ` · <span class="sq-good">💰+${d.toLocaleString('en-US')}c</span>`;
+      const tip = d < 0 ? `Costs ${(-d).toLocaleString('en-US')}c of club money — you hold ${coins.toLocaleString('en-US')}c`
+        : d > 0 ? `Brings in ${d.toLocaleString('en-US')}c` : '';
       return `<div class="mgr-arc-choice" data-arcchoice="${c.id}"${tip ? ` title="${tip}"` : ''}><div class="cg-cname">${c.label}${tag}</div><div class="cg-cdescr">${c.desc}</div></div>`;
     }).join('');
     return `<div class="mgr-arc arc-${arc.category}">`
@@ -4604,12 +4609,12 @@ class Game {
         + `<span class="hs-rank">${rank}</span>`
         + `<span class="hs-name">${r.name}${r.you ? ' <b class="hs-you">you</b>' : ''}</span>`
         + `<span class="hs-tier">${r.tier.icon} ${r.tier.name}</span>`
-        + `<span class="hs-renown">${r.renown.toLocaleString()}</span></div>`;
+        + `<span class="hs-renown">${r.renown.toLocaleString('en-US')}</span></div>`;
     }).join('');
     // The header states the two things a standing is: where you are, and what it would take to move.
     const head = `<div class="hs-head"><span class="hs-mine">${d.mine.tier.icon} ${d.mine.tier.name}</span>`
-      + `<span class="hs-sub">${d.mine.renown.toLocaleString()} renown · ${myPlace}${myPlace === 1 ? 'st' : myPlace === 2 ? 'nd' : myPlace === 3 ? 'rd' : 'th'} of ${d.table.length}`
-      + (next ? ` · ${next.need.toLocaleString()} to ${next.tier.name}` : ' · nothing above this') + `</span></div>`;
+      + `<span class="hs-sub">${d.mine.renown.toLocaleString('en-US')} renown · ${myPlace}${myPlace === 1 ? 'st' : myPlace === 2 ? 'nd' : myPlace === 3 ? 'rd' : 'th'} of ${d.table.length}`
+      + (next ? ` · ${next.need.toLocaleString('en-US')} to ${next.tier.name}` : ' · nothing above this') + `</span></div>`;
     const bar = next ? `<div class="hs-bar"><b style="width:${Math.round(next.progress * 100)}%"></b></div>` : '';
     // What the branches contributed is worth saying out loud — it is the one number that tells the player
     // the brothers he passed over were not wasted.
@@ -4797,7 +4802,7 @@ class Game {
     $('academy-body').innerHTML = `<div class="cg-graduation cg-handoff">`
       + `<div class="cg-grad-title">🏆 ${s.name} — a first-team regular</div>`
       + `<div class="cg-epilogue">He's done it. After a full season in the first team — <b>${h.status}</b>, ${h.apps} appearances — ${s.name} is a fixture in the side. This is where his career becomes <b>your club's story</b>: it's time to take the reins. From here you pick the XI, set the tactics, and steer <b>${this.club?.name ?? 'the club'}</b> through the season, with ${s.name} your man on the pitch.</div>`
-      + `<div class="cg-grad-windfall">⚽ OVR ${h.overall} · ${h.status}${s.careerScore != null ? ` · ★ career score ${s.careerScore.toLocaleString()}` : ''}</div>`
+      + `<div class="cg-grad-windfall">⚽ OVR ${h.overall} · ${h.status}${s.careerScore != null ? ` · ★ career score ${s.careerScore.toLocaleString('en-US')}` : ''}</div>`
       + `<div class="cg-temper-q">What kind of gaffer is he going to be?</div>`
       + `<div class="cg-tempers" role="radiogroup" aria-label="What kind of gaffer is he going to be?">` + MGR_TEMPERS.map((t, i) =>
           // A RADIO GROUP THAT NEVER SAID WHICH ONE WAS PICKED. makeActivatable stamps role="button" on
@@ -4976,7 +4981,7 @@ class Game {
     const scene = `<div class="cg-scene"><span class="cg-scene-emoji">${th.scene}</span><span class="cg-scene-tag"><b>${s.chapter}</b> · ${th.tagline}</span></div>`;
     const head = `<div class="cg-head"><button id="cg-back">←</button><span class="cg-age">${s.name} · age ${s.age}</span>`
       + `<span class="cg-chapter">${s.chapter}</span><div class="cg-bar"><i style="width:${pct}%"></i></div><span class="pr-meta">${s.turn}/${s.totalTurns}</span>`
-      + (s.careerScore != null ? `<span class="cg-score" title="Career score — climbs with every good moment; beat it next run">★ ${s.careerScore.toLocaleString()}</span>` : '') + `</div>`;
+      + (s.careerScore != null ? `<span class="cg-score" title="Career score — climbs with every good moment; beat it next run">★ ${s.careerScore.toLocaleString('en-US')}</span>` : '') + `</div>`;
     const evt = s.seasonEvent ? `<div class="cg-event"><b>${s.seasonEvent.name}</b> — ${s.seasonEvent.desc}</div>` : '';
     const prof = s.profile ? this.careerProfileHtml(s.profile) : '';
     const narr = this.lastNarration ? this.outcomeChipHtml() + `<div class="cg-narrate">“${this.lastNarration}”</div>` : '';
@@ -5044,7 +5049,7 @@ class Game {
     } else if (s.phase === 'offer' && s.offers) {
       body = `<div class="cg-prompt">A decision off the pitch — money now, or development?</div>`
         + s.offers.map((o) => `<div class="cg-offer" data-act="offer" data-id="${o.id}"><div class="cg-cname">💷 ${o.name}</div><div class="cg-cdesc">${o.desc}</div>`
-          + `<div class="cg-effs">${o.earn > 0 ? `+${o.earn.toLocaleString()}c ` : ''}${o.greed > 0 ? '· greedier ' : o.greed < 0 ? '· more loyal ' : ''}${o.market > 0 ? '· more famous ' : o.market < 0 ? '· out of the spotlight ' : ''}${o.form > 0 ? '· sharper' : o.form < 0 ? '· distracted' : ''}</div></div>`).join('');
+          + `<div class="cg-effs">${o.earn > 0 ? `+${o.earn.toLocaleString('en-US')}c ` : ''}${o.greed > 0 ? '· greedier ' : o.greed < 0 ? '· more loyal ' : ''}${o.market > 0 ? '· more famous ' : o.market < 0 ? '· out of the spotlight ' : ''}${o.form > 0 ? '· sharper' : o.form < 0 ? '· distracted' : ''}</div></div>`).join('');
     } else if (s.phase === 'focus' && s.focus) {
       // THE SAME METER, TWO NAMES ON ONE SCREEN. METER_ICON/METER_NAME are flat tables with no stage
       // awareness, but career.ts relabels this key as the career matures — `authority` is 🧑‍🏫 Coach as a
@@ -5077,12 +5082,12 @@ class Game {
         // and exempting them left the one tile that stayed clickable and then failed with a terse error (PT-144)
         const locked = li.cost > budget;
         const effs = li.clubInvest
-          ? `<span class="cg-cost">💷 ${li.cost.toLocaleString()}c</span> · <span class="cg-invest-eff">🏛️ +${li.clubInvest.toLocaleString()}c to the club</span>`
-          : `<span class="cg-cost">💷 ${li.cost.toLocaleString()}c</span> ${li.recovery ? `· ⚡rec+${li.recovery} ` : ''}${li.market ? `· ⭐fame+${li.market} ` : ''}${perkLabel(li.perks)}`;
-        const lock = locked ? `<div class="cg-lock">🔒 need ${(li.cost - budget).toLocaleString()}c more</div>` : '';
+          ? `<span class="cg-cost">💷 ${li.cost.toLocaleString('en-US')}c</span> · <span class="cg-invest-eff">🏛️ +${li.clubInvest.toLocaleString('en-US')}c to the club</span>`
+          : `<span class="cg-cost">💷 ${li.cost.toLocaleString('en-US')}c</span> ${li.recovery ? `· ⚡rec+${li.recovery} ` : ''}${li.market ? `· ⭐fame+${li.market} ` : ''}${perkLabel(li.perks)}`;
+        const lock = locked ? `<div class="cg-lock">🔒 need ${(li.cost - budget).toLocaleString('en-US')}c more</div>` : '';
         return `<div class="cg-foc buy${li.clubInvest ? ' invest' : ''}${locked ? ' locked' : ''}"${locked ? '' : ` data-act="lifestyle" data-id="${li.id}"`}><div class="cg-cname">💷 ${li.icon} ${li.name}</div><div class="cg-cdescr">${li.blurb}</div><div class="cg-effs">${effs}</div>${lock}</div>`;
       }).join('') : '';
-      const budgetBar = hasShop ? `<div class="cg-budget">💷 <b>${budget.toLocaleString()}c</b> left to spend</div>` : '';
+      const budgetBar = hasShop ? `<div class="cg-budget">💷 <b>${budget.toLocaleString('en-US')}c</b> left to spend</div>` : '';
       const focusTiles = `<div class="cg-focus">` + s.focus.map((f) => `<div class="cg-foc commit" data-act="focus" data-id="${f.id}"><div class="cg-cname">${f.icon} ${f.name}</div><div class="cg-cdescr">${f.desc}</div>`
         + `<div class="cg-effs">${f.energy ? `⚡${f.energy > 0 ? '+' : ''}${f.energy} ` : ''}${effLabel(f.effects)}${f.tag ? `${TAG_ICON[f.tag] ?? ''} train ${f.tag}` : ''}</div></div>`).join('') + `</div>`;
       if (hasShop && this.summerStep === 'spend') {
@@ -5095,7 +5100,7 @@ class Game {
         const focusPrompt = s.side
           ? '🤝 <b>One more thing</b> this pre-season — a smaller side activity, if you fancy it:'
           : '🌅 <b>Choose ONE summer focus</b> — the first of a few pre-season decisions.';
-        const backLink = hasShop ? `<button id="cg-summer-back" class="cg-linkbtn">← back to spending (💷 ${budget.toLocaleString()}c left)</button>` : '';
+        const backLink = hasShop ? `<button id="cg-summer-back" class="cg-linkbtn">← back to spending (💷 ${budget.toLocaleString('en-US')}c left)</button>` : '';
         body = `<div class="cg-prompt">${focusPrompt}</div>` + backLink + legend + focusTiles;
       }
     }
@@ -5188,7 +5193,7 @@ class Game {
       + `<span class="cgp-pers" title="${p.personality.desc}">🧠 ${p.personality.name}</span>`
       + (p.agent ? `<span class="cgp-meta">🤝 ${p.agent}</span>` : '')
       + (p.coach ? `<span class="cgp-meta">📋 ${p.coach}</span>` : '')
-      + `<span class="cgp-meta">💷 ${p.earnings.toLocaleString()}c earned</span></div>`
+      + `<span class="cgp-meta">💷 ${p.earnings.toLocaleString('en-US')}c earned</span></div>`
       + `<div class="cgp-stats">${key.map(([k]) => stat(k)).join('')}</div>`
       + `<div class="cgp-scale">Every attribute runs 1–20. Around 10 is an ordinary senior pro; 15+ is genuinely top level.</div>${traits}</div>`;
   }
@@ -5457,7 +5462,7 @@ class Game {
         this.checkAchievements(); // first graduate milestone
         audio.chime('success'); // graduation — a real milestone beat
         const player = r.player;
-        const windfallLine = r.windfall && r.windfall > 0 ? `<div class="cg-grad-windfall">🏟️ +${r.windfall.toLocaleString()}c to the club — its share of his signing as he turns pro (it funded his rise)</div>` : '';
+        const windfallLine = r.windfall && r.windfall > 0 ? `<div class="cg-grad-windfall">🏟️ +${r.windfall.toLocaleString('en-US')}c to the club — its share of his signing as he turns pro (it funded his rise)</div>` : '';
         // an evocative epilogue of the whole journey, then the pro reveal
         $('academy-body').innerHTML = `<div class="cg-graduation">`
           + `<div class="cg-grad-title">🎓 ${player.name} — the journey's end</div>`
