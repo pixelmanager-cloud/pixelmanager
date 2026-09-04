@@ -240,7 +240,7 @@ it — kept so it is not re-raised).
 | F-227 | open | save/content | rebornFields never clears kit_json, so every heir inherits his father's squad number and nickname — against "his for life" and "no future player wears these" | `shared/src/tokens.ts:633` |
 | F-228 | open | save/content | The storage-failure banner wraps a whole prose sentence in a parenthetical meant for a raw exception string | `client/src/main.ts:6880, against client/src/save.ts:631-633` |
 | F-229 | open | content/determinism | Manager story arcs carry no generation in their seed, so an heir replays his father's exact arc sequence | `client/src/main.ts:4398` |
-| F-230 | open | content/determinism | The Continental Cup is seeded on the per-generation season, so every heir draws his father's opponents and reads his father's tie blurbs | `shared/src/intl.ts:60` |
+| F-230 | fixed | content/determinism | (closed by the genSeed sweep, F-238) The Continental Cup is seeded on the per-generation season, so every heir draws his father's opponents and reads his father's tie blurbs | `shared/src/intl.ts:60` |
 | F-231 | open | content/determinism | The three continental rounds are drawn independently, so a quarter-final you knocked out comes back in the final | `shared/src/intl.ts:59` |
 | F-232 | open | content/determinism | The pre-match presser's salt omits the season, so the manager says the same 18 sentences every season for the whole dynasty | `client/src/main.ts:5725` |
 | F-233 | open | manager/visual | The season screen's two-button action row sizes only one button — `.sf-tm #sf-transfers` is keyed to an id, so "Team Sheet" renders 64% larger than "Transfer Market" beside it | `client/index.html:850` |
