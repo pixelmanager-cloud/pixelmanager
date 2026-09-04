@@ -83,6 +83,20 @@ verify lane disagreed with itself.
 5. **As launch nears, invert the default.** Right now: find it, fix it. Closer in: find it, *record* it, fix
    only what is confirmed and material. Late churn on working code is how a regression ships.
 
+## Two ways to run the fix half
+
+`tools/factory/fix.mjs` gives each agent its own git worktree, so fifteen agents can edit `main.ts` at once
+without colliding, and merging happens afterwards one branch at a time behind a full gate. It is the better
+design — and it only works when the **session's** working directory is the repo itself. This session's cwd is
+the *parent* directory, `~/Clause Coding`, which is not a git repo, so worktree creation failed for all
+fifteen agents before any of them read a line of code.
+
+`tools/factory/patch.mjs` is the fallback for exactly that case. Agents are **read-only**: each returns exact
+`old`/`new` strings plus the probe, an independent reviewer greps every anchor for uniqueness, and the
+orchestrator applies the survivors **serially** against one tree. Serial application is not a compromise here,
+it is the point — parallel edits to `main.ts` are how a green tree becomes a broken one. The cost is that the
+anchors must be byte-exact, which is why the reviewer's first job is to count matches for each one.
+
 ## What this cannot do
 
 It cannot tell you whether hour two is boring. No agent can. Three strangers playing a full generation
