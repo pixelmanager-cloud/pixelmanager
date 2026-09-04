@@ -1,5 +1,10 @@
 # Music/audio drop folder
 
+This note lives in `docs/`, not beside the files it describes in `client/public/audio/`. Vite copies
+`public/` into the bundle verbatim, so a README left in the drop folder is served to a paying player at
+`/audio/README.md` — internal TODOs, `main.ts` line numbers and all. `tools/playtest/ship_hygiene.ts` fails
+the build if one comes back.
+
 Bundled music tracks, one file per slot. Vite serves `public/` at the site root, so
 `client/public/audio/career-1.ogg` loads as `/audio/career-1.ogg`. The audio manager
 (`client/src/audio.ts`) plays them per game context and rotates multi-track pools; a missing file

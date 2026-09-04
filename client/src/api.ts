@@ -34,7 +34,7 @@ import {
 
   reconcileSheet, isDutyForRole, defaultDuty,} from '@fm/shared';
 import {
-  localStore, getActiveModel, getActiveSlotId, newGame as newGameSlot, continueSave, listSaves, deleteSave as deleteSaveSlot, setSaveBackend, type SaveBackend,
+  localStore, getActiveModel, getActiveSlotId, newGame as newGameSlot, continueSave, listSaves, deleteSave as deleteSaveSlot, setSaveBackend, retiredNumbers, type SaveBackend,
 } from './save';
 
 void _makeClub; // silence unused-import — see comment above
@@ -1494,6 +1494,14 @@ export const api = {
       hairstyle: clean((kit as any)?.hairstyle, 16) || 'buzz',
       accessory: clean((kit as any)?.accessory, 16) || 'none',
     };
+    // A RETIRED SHIRT IS RETIRED. The Trophy Room hangs a number up "forever ... no future player wears
+    // these", and the only thing standing between that sentence and a living player was the 1..99 clamp
+    // above. kitTabHtml defaults a man with no kit to #10, so the son of a #10 whose shirt had just been
+    // hung up re-acquired it the first time the player pressed Save, without ever choosing it — and the
+    // Trophy Room's retire button, gated `!retiredNums.has(num)`, then denied him a retirement of his own.
+    // Refused rather than silently renumbered: the player has to be told WHOSE shirt he just reached for.
+    const hung = retiredNumbers().find((r) => r.n === clamped.number);
+    if (hung) throw apiErr(`#${clamped.number} is retired in ${hung.name}'s honour — pick another number`, {}, 409);
     await localStore.updateToken(pid, { kit_json: JSON.stringify(clamped) });
     return { ok: true as const, kit: clamped };
   },

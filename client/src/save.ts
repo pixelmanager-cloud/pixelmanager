@@ -627,10 +627,16 @@ const PERSIST_DEBOUNCE_MS = 500;
 
 /** Set when the last write to disk failed. The UI reads this to warn that play is not being saved.
  *  Starts UNHEALTHY when there is no IndexedDB at all, because in that state nothing will ever be written
- *  no matter how many times a write reports success. */
+ *  no matter how many times a write reports success.
+ *  `error` IS A CAUSE, NEVER A SENTENCE. Its one reader drops it into a parenthetical partway through the
+ *  banner — "...refused to store this save (<error>). Progress since you started playing will be lost..."
+ *  — a slot shaped for the raw exception message `writeSlotInner` puts here. This literal was a written-out
+ *  sentence, so the one environment that actually raises it (no `indexedDB` at all: a webview, a hardened
+ *  wrapper) got a full stop nested inside the brackets and the same fact three times over, on the one
+ *  banner whose whole job is to be read and believed. */
 let saveHealth: { ok: boolean; error?: string } = HAS_IDB
   ? { ok: true }
-  : { ok: false, error: 'This browser is not letting the game store saves, so your progress will be lost when you close it.' };
+  : { ok: false, error: 'no storage available' };
 /** Whether the last write to disk succeeded. The UI polls this so a failing autosave cannot stay silent. */
 export function getSaveHealth(): { ok: boolean; error?: string } { return saveHealth; }
 
@@ -704,8 +710,11 @@ export function setSaveBackend(b: SaveBackend, opts?: { volatile?: boolean }): v
   // persist should say so; a bare `setSaveBackend` used to clear a live "disk full" warning with no
   // evidence of anything, which is the same silent-success failure this file exists to prevent.
   volatileBackend = opts?.volatile ?? false;
+  // A cause, not a sentence — the banner brackets this mid-sentence (see `saveHealth`'s declaration). No
+  // in-app caller passes `volatile` today, so this string does not reach a player yet; it is shortened with
+  // the other one so the first in-app volatile backend does not walk into the nested-sentence render.
   saveHealth = volatileBackend
-    ? { ok: false, error: 'Progress is being kept in memory only and will be lost when you close the game.' }
+    ? { ok: false, error: 'in-memory backend' }
     : { ok: true };
 }
 export function getActiveSlotId(): string | null { return activeSlotId; }

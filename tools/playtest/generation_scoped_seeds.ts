@@ -33,18 +33,38 @@ const GEN = /\bgen\b|starGen|\bgeneration\b|genSeed/;
 // Anything listed here is a site where repeating across generations is INTENDED. Each needs a reason, not a
 // line number, so that moving the code does not silently widen the exemption.
 const INTENDED: Array<{ match: RegExp; why: string }> = [
-  // (empty — every site found so far was a defect. Add here only with a reason a player would agree with.)
+  { match: /seasonFixtures\(this\.club\.name, this\.leagueSeed\(\)/,
+    why: 'The fixture list is the DIVISION\'s, not the generation\'s — an heir inheriting the club inherits its ' +
+         'opponents, which is the point of a pyramid you climb. The m.season on the following line builds match ' +
+         'ids and never reaches the seed; the window sees it, the code does not use it.' },
+  { match: /const oppSeed = \(\(this\.leagueSeed\(\) \^ \(round \* 131\)\)/,
+    why: 'seededOpponentTactics, whose own comment is "same club always plays the same way". A club that changed ' +
+         'shape between generations would break the one thing this seed exists to guarantee.' },
 ];
 
 const lines = readFileSync('client/src/main.ts', 'utf8').split('\n');
+// A WINDOW, NOT A LINE. The first draft of this probe tested one line at a time, and the manager-arc site
+// slipped straight through it: `const salt = (m.season * 7919 + …)` on one line, `pickManagerArc((this.
+// leagueSeed() ^ salt) …)` on the next. The probe was green over both the defect and its fix — it could not
+// see either. A seed is routinely built across two or three statements, so the scan reads a small window and
+// the whole window has to carry the generation.
+const WINDOW = 2;
 let scoped = 0;
 const missing: string[] = [];
-lines.forEach((line, i) => {
-  if (!/leagueSeed\(\)|genSeed\(\)/.test(line) || !SEASON.test(line)) return;
-  if (INTENDED.some((x) => x.match.test(line))) return;
+for (let i = 0; i < lines.length; i++) {
+  // BOTH DIRECTIONS. The first widening only looked FORWARD from the seed line, and the case it was written
+  // for reads `const salt = (m.season * 7919 …)` on the line BEFORE `pickManagerArc((this.leagueSeed() ^
+  // salt) …)`. Mutation-testing the widened probe caught that: reverting the arc fix left it green.
+  const win = lines.slice(Math.max(0, i - WINDOW + 1), i + WINDOW).join('\n');
+  const here = lines[i];
+  // Anchor on the line that names the seed, so one site is reported once rather than WINDOW times.
+  if (!/leagueSeed\(\)|genSeed\(\)/.test(here)) continue;
+  if (/private (league|gen)Seed\(\)/.test(here)) continue;   // the helpers themselves
+  if (!SEASON.test(win)) continue;
+  if (INTENDED.some((x) => x.match.test(win))) continue;
   scoped++;
-  if (!GEN.test(line)) missing.push(`main.ts:${i + 1}  ${line.trim().slice(0, 118)}`);
-});
+  if (!GEN.test(win)) missing.push(`main.ts:${i + 1}  ${here.trim().slice(0, 112)}`);
+}
 
 console.log(`  ..   ${scoped} expression(s) mix leagueSeed() with a per-generation season`);
 // VACUITY GUARDS. If leagueSeed is renamed, or the manager state stops calling it `season`, this scan finds

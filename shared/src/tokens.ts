@@ -655,6 +655,14 @@ export function rebornFields(t: Token, world = ''): Partial<Token> {
     genes_json: JSON.stringify(genes), pedigree: boost.pedigree, dev_bonus_json: JSON.stringify(boost.devBonus),
     // clear pro + career + achievement state for the new generation (role kept as a track hint)
     career_seed: null, agent_id: null, track: null, career_actions: null,
+    // ...AND THE SHIRT, which is one man's identity and not the family's. The succession reuses the
+    // father's token id, so an uncleared kit_json handed a DIFFERENT PERSON his father's squad number and
+    // the nickname the player chose for him — pre-filled on the boy's Identity screen at birth. Worse for
+    // the number: the Trophy Room hangs an immortal's shirt up under "no future player wears these" and
+    // badges the bloodline node beside it with that same number, so one screen showed the retired #10 on a
+    // living heir, and `!retiredNums.has(num)` then refused to ever retire his own. Nothing is lost —
+    // legendCardOf freezes the father's number onto his legend card BEFORE succeed() reborns the token.
+    kit_json: null,
     attrs_json: null, traits_json: null, personality: null, greed: null, marketability: null, earnings: null,
     prime_season: null, peak_overall: 0, signed_season: null, length_seasons: null, staked_since: null,
     ach_seasons: 0, ach_apps: 0, ach_league: 0, ach_cup: 0, ach_promotions: 0, ach_tier: 0,

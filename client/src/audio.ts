@@ -20,7 +20,14 @@ const MANIFEST: Record<MusicContext, string[]> = {
   // at 1x (engine TICK_SEC 0.5, accum +10/s), so a 90-minute fixture takes ~540s — and a single 74-second
   // loop repeated 7.3 times inside one match, with no rotation, since the avoid-immediate-repeat branch
   // only runs when a pool has more than one entry. Matches are the most repeated activity in the game.
-  // The pool is now 494s, which is 1.1 loops per match: effectively no repeat within a fixture.
+  // The pool is 355.7s in all — 73.6s / 148.0s / 134.1s, measured from each Ogg's last granulepos and
+  // sample rate — but it does NOT play as a sequence. play() picks ONE entry per fixture and sets
+  // loop = true, and the only thing that enters the 'match' context is showScreen('match'), called once as
+  // the match starts. So three tracks cut the CHANCE of drawing the 73.6s one to a third (and never twice
+  // running, via that same branch); they do not remove in-fixture repetition, which is still 7.3, 3.6 or
+  // 4.0 loops of one track per fixture. Whether the deck should advance mid-fixture is open — F-221 (§101).
+  // 'bigmatch' never sees this pool: cup and World-Finals ties crossfade onto it straight after
+  // showScreen('match'), and it is one 70.7s track — 7.6 loops per tie, on the highest-stakes matches.
   // Both additions were picked on measurement rather than name — long, and flat enough (6 dB range) not to
   // swell over the commentary the player is reading. match-3 is the pack's purpose-built LOOP variant.
   match: ['/audio/match-1.ogg', '/audio/match-2.ogg', '/audio/match-3.ogg'],
@@ -190,7 +197,11 @@ class AudioManager {
     // This runs FIRST — before `deck` is reassigned and before `others` is captured — so the settled state is
     // what the new fade reads. Doing it after would let the old cleanup's `tracked = [its next]` land on top
     // of the new fade's bookkeeping.
-    if (this.fadeTimer != null) { cancelAnimationFrame(this.fadeTimer); this.fadeTimer = null; this.fadeCleanup?.(); }
+    // AND CANCELLED WITH THE CANCELLER THAT MATCHES ITS SCHEDULER. The fade below steps on setTimeout, so
+    // cancelAnimationFrame here would be a silent no-op: the superseded fade would keep stepping, and its
+    // t===1 branch would fire the NEW fade's cleanup, null the NEW fade's handle and overwrite `tracked`
+    // with its own dead deck — re-creating the very overlap this block exists to prevent.
+    if (this.fadeTimer != null) { clearTimeout(this.fadeTimer); this.fadeTimer = null; this.fadeCleanup?.(); }
     this.fadeCleanup = null;
     this.deck = next;
     const others = this.tracked.filter((a) => a !== next).map((a) => ({ a, from: a.volume }));
@@ -211,14 +222,22 @@ class AudioManager {
     // fade ended the deck at 0.000 instead of 0.500; the slider dragged to 100% mid-fade ended at 0.500
     // instead of 1.000. The departing tracks keep their captured `from` — they are on the way out, and
     // ramping them against a live level would make a mid-fade change audible in a track being discarded.
+    // STEPPED BY A TIMER, NOT BY A FRAME. requestAnimationFrame does not fire AT ALL in a hidden window —
+    // main.ts already knows this and moves the match clock onto a timer when the tab goes away (PT-1409) —
+    // but HTMLAudioElement keeps playing regardless, which is the whole point of letting a match run in the
+    // background. The pause-and-trim that keeps the promise above lives ONLY in the t===1 branch below, so
+    // hiding the window inside the 800ms fade froze the ramp where it stood and left the outgoing loop AND
+    // the incoming one playing, unpaused and still in `tracked`, until the player came back: tab away just
+    // after kick-off and hub-1.ogg ran over the match track for the whole nine-minute fixture. Background
+    // timers are throttled to about a second, but they DO fire, so the fade finishes and the cleanup runs.
     const step = () => {
       const t = Math.min(1, (performance_now() - start) / FADE_MS);
       try { next.volume = clamp01(this.effectiveVolume() * t); } catch { /* detached */ }
       for (const o of others) { try { o.a.volume = clamp01(o.from * (1 - t)); } catch { /* detached */ } }
-      if (t < 1) { this.fadeTimer = requestAnimationFrame(step); }
+      if (t < 1) { this.fadeTimer = setTimeout(step, 16); }
       else { this.fadeCleanup?.(); this.fadeCleanup = null; this.tracked = [next]; this.fadeTimer = null; this.applyVolume(); }
     };
-    this.fadeTimer = requestAnimationFrame(step);
+    this.fadeTimer = setTimeout(step, 16);
   }
 
   /** Stop all music (fade out). */
@@ -227,8 +246,10 @@ class AudioManager {
     const all = this.tracked.slice(); this.tracked = []; this.deck = null;
     if (!all.length) return;
     const froms = all.map((a) => a.volume), start = performance_now();
-    const step = () => { const t = Math.min(1, (performance_now() - start) / FADE_MS); all.forEach((d, i) => { try { d.volume = clamp01(froms[i] * (1 - t)); } catch { /* ignore */ } }); if (t < 1) requestAnimationFrame(step); else all.forEach((d) => { try { d.pause(); d.currentTime = 0; } catch { /* ignore */ } }); };
-    requestAnimationFrame(step);
+    // Timer, not frame, for the reason spelled out in crossfadeTo: a frame never arrives in a hidden
+    // window, and the pause lives only in this fade's own t===1 branch, so the tracks would never stop.
+    const step = () => { const t = Math.min(1, (performance_now() - start) / FADE_MS); all.forEach((d, i) => { try { d.volume = clamp01(froms[i] * (1 - t)); } catch { /* ignore */ } }); if (t < 1) setTimeout(step, 16); else all.forEach((d) => { try { d.pause(); d.currentTime = 0; } catch { /* ignore */ } }); };
+    setTimeout(step, 16);
   }
 
   private effectiveVolume(): number { return this.settings.muted ? 0 : this.settings.volume; }

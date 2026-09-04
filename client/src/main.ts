@@ -799,9 +799,12 @@ class Game {
       // PT-504: the onboarding explainers are dismiss-forever, so give them a permanent way back
       + `<div class="set-row"><div class="set-lbl"><span>How to play</span><button id="set-help">📖 Read the rules</button></div>`
       + `<div class="set-hint">The explainers you were shown once, kept here to re-read any time.</div></div>`
-      // CREDITS ARE A LICENSING OBLIGATION, not a courtesy. CREDITS.md says in terms that the music credit
-      // "MUST appear in the shipped game's credits", and the game had no credits screen at all — zero
-      // references to the word anywhere in the client. That is legal exposure on a paid release.
+      // THE CREDIT IS COURTESY, AND THE SCREEN IS HERE ANYWAY. The game shipped with no credits screen at
+      // all — zero references to the word anywhere in the client — which is why this button exists. The
+      // reason it used to give was false: CREDITS.md has never said the credit must appear, and both it
+      // and docs/licenses/README.md record that the EULA contains no attribution clause at all. Keep the
+      // screen because it is right and costs nothing; the one term the licence DOES bind is the negative
+      // one — never word the credit so the licensor reads as endorsing the game.
       + `<div class="set-row"><div class="set-lbl"><span>Credits</span><button id="set-credits">🎬 Who made this</button></div>`
       + `<div class="set-hint">The people whose work is in the game.</div></div>`
       + `</div>`;
@@ -2332,8 +2335,10 @@ class Game {
     });
   }
 
-  /** The credits screen. Kept in step with CREDITS.md, which is the source of truth and states that the
-   *  music credit is a licensing requirement — so this text is not free copy to trim. */
+  /** The credits screen. Kept in step with CREDITS.md, which is the source of truth: the music credit is
+   *  courtesy, not a contractual requirement — the EULA has no attribution clause — but it is kept because
+   *  it is right and costs nothing, so this is not free copy to trim either. The line the licence really
+   *  does bind is the negative one, which is why the note reads "A credit, not an endorsement". */
   private showCredits(): void {
     const ov = document.createElement('div'); ov.id = 'settings-ov';
     ov.innerHTML = `<div class="tt-card cn-card"><div class="set-head"><div class="tt-title">🎬 CREDITS</div>`
@@ -4453,7 +4458,13 @@ class Game {
     if (md - (m.arcLastMd ?? -3) < 3) return;
     const fired = new Set(m.arcFired ?? []);
     const salt = (m.season * 7919 + (m.results?.length ?? 0) * 131) >>> 0;
-    const id = pickManagerArc((this.leagueSeed() ^ salt) >>> 0, this.mgrSituation(), fired);
+    // genSeed, NOT leagueSeed. Every input to that salt resets at a succession — resetMgrForHeir puts back
+    // `season: 1, results: []` and empties `arcFired` — while leagueSeed is a fixed hash of the handle, so
+    // the heir was handed his father's stories in his father's order: 60/60 measured over a settled
+    // 10-season generation, and still 58/60 with the father's arcTags carried across. It is the same guard
+    // `wcHeld` gives the World Finals in that same reset, for the same reason — the arc salt never got it.
+    // Enforced by tools/playtest/arc_seed_dynasty.ts.
+    const id = pickManagerArc((this.genSeed() ^ salt) >>> 0, this.mgrSituation(), fired);
     if (!id) return;
     const arc = managerArcById(id);
     if (!arc) return;
@@ -5783,8 +5794,14 @@ class Game {
       // COMPETITION, NOT ALWAYS 'league'. This passed the literal, so a Continental Cup final and a World
     // Finals semi both got routine league-week prose from the manager on the way out. The POST-match
     // presser already derives it from spFixture.comp; only the pre-match one did not.
-    const preLine = pressConferenceLine(this.leagueSeed(),
-        (this.loadMgr().results?.length ?? 0) * 31 + 7, { timing: 'pre', competition: this.spFixture?.comp === 'cont' ? 'continental' : this.spFixture?.comp === 'wc' ? 'international' : 'league', stakes: preStakes, form: preForm });
+    // AND SALTED WITH THE SEASON AND THE GENERATION, NOT THE MATCHDAY ALONE. `results` is emptied at every
+    // rollover and at every succession, so `results.length` only ever runs 0..17 — and `pressConferenceLine`
+    // hashes the seed and the salt and nothing else about WHEN a fixture is. So matchday 5 of a routine
+    // league season read back the identical quote in season 1, in season 12, and again in the heir's first
+    // season, and 18 of the 128 authored routine lines were all a whole dynasty could ever hear. The
+    // post-match twin below already folds the season in; `genSeed()` carries the generation.
+    const preLine = pressConferenceLine(this.genSeed(),
+        ((this.loadMgr().season * 97 + (this.loadMgr().results?.length ?? 0)) * 31 + 7) >>> 0, { timing: 'pre', competition: this.spFixture?.comp === 'cont' ? 'continental' : this.spFixture?.comp === 'wc' ? 'international' : 'league', stakes: preStakes, form: preForm });
       sc.innerHTML = `<div class="scout-head">🔍 ${this.spFixture.oppName}</div><div class="scout-sub">${this.spFixture.venue === 'away' ? 'Away' : 'Home'} fixture · squad rating ~${this.spFixture.oppStrength} <span style="color:#e6c76a">${stars}</span></div>`
         + `<div class="ft-presser">🎙️ <b>Before kick-off</b> — “${preLine}”</div>${dutyNote}`
         + `<div class="scout-sub scout-matchup" id="scout-matchup">📐 ${formationMatchupInsight(this.draftTactics.formation, this.spFixture.oppTactics.formation)}</div>`;
@@ -6374,7 +6391,12 @@ class Game {
       const rivalName = rivals.length ? rivals[this.leagueSeed() % rivals.length].name : null;
       const stakes: 1 | 2 | 3 = this.spFixture.comp === 'wc' || this.spFixture.comp === 'cont' ? 3 : this.spFixture.oppName === rivalName ? 2 : 1;
       const salt = (this.loadMgr().season * 97 + (this.loadMgr().results?.length ?? 0)) >>> 0;
-      const line = pressConferenceLine(this.leagueSeed(), salt, { timing: 'post', competition, stakes, form, result: gd > 0 ? 'win' : gd < 0 ? 'loss' : 'draw' });
+      // genSeed, matching the PRE-match presser above. The pre-match call was fixed for this and the
+      // post-match one was not — its salt already carries the season, so it varies within a career, but
+      // leagueSeed() is save-constant and `season`/`results` both reset at a succession, so every heir
+      // gave his father's post-match answers word for word. Caught by widening generation_scoped_seeds
+      // to read a two-line window in BOTH directions, which is also how the salt above became visible.
+      const line = pressConferenceLine(this.genSeed(), salt, { timing: 'post', competition, stakes, form, result: gd > 0 ? 'win' : gd < 0 ? 'loss' : 'draw' });
       $('ft-report').insertAdjacentHTML('beforeend', `<div class="ft-presser">🎙️ <b>At the presser</b> — “${line}”</div>`);
     }
 

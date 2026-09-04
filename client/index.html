@@ -847,7 +847,10 @@
       .sf-bid-btns button { font-family: var(--display); font-size: 11px; padding: 6px 10px; }
       /* transfer market */
       .sf-tm { text-align: center; margin: 10px 0; }
-      .sf-tm #sf-transfers { font-family: var(--display); font-size: 11px; padding: 8px 16px; }
+      /* KEYED TO THE ROW, NOT TO ONE ID. This was `.sf-tm #sf-transfers`, so when the Team Sheet door was
+         added beside it the new button matched nothing and fell through to the base `button` rule — 18px
+         VT323 next to 11px Press Start 2P, a 41px-tall box next to a 34px one, in one two-button pair. */
+      .sf-tm button { font-family: var(--display); font-size: 11px; padding: 8px 16px; }
       .sf-tm-hint { font-size: 12px; color: var(--muted); margin-left: 8px; }
       /* The lineup screen's "a better player is on your bench" note. Emitted with no rule, so it rendered
          at the 22px body default in full brightness — louder than the team sheet it is a footnote to.
@@ -936,7 +939,11 @@
       .sf-sponsor.lapsed { color: var(--muted); font-size: 13px; }
       .sf-sponsor.active { font-size: 14px; color: var(--text); } .sf-sponsor.active b { color: var(--pink); }
       .sf-sponsor-lbl { font-family: var(--display); font-size: 11px; letter-spacing: 0.5px; color: var(--pink); margin-bottom: 8px; }
+      /* These two are prose cards, not labels — a <b> title over a <span> of terms — so they must drop the
+         global button rule's uppercase + 0.5px tracking, the way .mode-card and .slot .role-badges .rb do.
+         Without it the season's one-shot sponsor choice is painted "+450C NOW, GUARANTEED". */
       .sf-sponsor-opt { display: inline-block; width: calc(50% - 5px); text-align: left; margin-right: 8px; padding: 10px 12px; cursor: pointer; vertical-align: top;
+        text-transform: none; letter-spacing: 0;
         background: var(--panel-2, #1f1f4d); border: 1px solid var(--line); border-radius: 8px; }
       .sf-sponsor-opt:last-child { margin-right: 0; }
       .sf-sponsor-opt:hover { border-color: var(--pink); }
@@ -957,7 +964,12 @@
       .sf-cont-dot.now { background: color-mix(in srgb, var(--purple) 30%, transparent); color: #fff; border-color: transparent; }
       .sf-cont-tie { font-size: 14px; color: var(--text); margin-bottom: 9px; }
       .sf-cont-btns { display: flex; gap: 8px; }
-      .sf-cont-btns button { font-family: var(--display); font-size: 11px; padding: 7px 13px; }
+      /* …and the World Finals actions, which had no rule at all. `.sf-wc` below writes a box, a heading and
+         some text and stops, so "Follow the tournament" and "View the tournament report" fell through to the
+         global `button` rule at 18px VT323 / 41px tall, while the SAME tournament's knockout ties — which
+         borrow .sf-cont-btns — sat at 11px / 32px one stage later. The overlap is harmless: this also reaches
+         those two, at equal specificity with identical declarations. */
+      .sf-cont-btns button, .sf-wc button { font-family: var(--display); font-size: 11px; padding: 7px 13px; }
       /* World Cup panel + report */
       .sf-wc { margin: 0 0 14px; padding: 12px 15px; border-radius: 10px; background: linear-gradient(150deg, color-mix(in srgb, var(--accent) 18%, transparent), color-mix(in srgb, var(--purple) 12%, transparent)); border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); }
       .sf-wc-head { font-family: var(--display); font-size: 13px; color: var(--accent); margin-bottom: 6px; }
@@ -1337,7 +1349,6 @@
       #trophies .hs-you, #trophies .hs-mine { color: var(--gold-lit); }
       #trophies .hs-bar > b { background: linear-gradient(90deg, var(--gold-deep), var(--gold-lit)); }
       #trophies .hs-opens { border-left-color: var(--gold); background: rgba(230,199,106,0.05); }
-      #trophies .tm-crest { color: var(--gold); }
       @media (max-width: 620px) {
         .troom-stats { margin-left: 0; gap: 14px; }
         .troom-stat b { font-size: 15px; }

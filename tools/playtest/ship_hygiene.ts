@@ -35,18 +35,26 @@ for (const name of EXPECTED) {
 }
 
 // The specific shape that got through: an HTML file anywhere under public would be served as a page.
+//
+// `md` is in that list because the NEXT one through was a note, not a page. A drop-folder README sat in
+// client/public/audio and shipped to client/dist/audio/README.md — three `*(title not recorded)*`
+// placeholders, a developer TODO and three `main.ts:NNNN` source coordinates, served to a paying player at
+// /audio/README.md. It tripped neither test above: it IS a file, but it is nested inside a declared asset
+// directory, so the isDir check never sees it. The note now lives at docs/audio-tracks.md. Deliberately NOT
+// `txt` — client/public/fonts/OFL-*.txt must ship, because the SIL Open Font License requires its text to
+// travel with the fonts.
 const strays: string[] = [];
 const walk = (d: string, depth = 0) => {
   if (depth > 3) return;
   for (const n of readdirSync(d)) {
     const full = join(d, n);
     if (statSync(full).isDirectory()) walk(full, depth + 1);
-    else if (/\.(html?|ts|tsx|map|log)$/i.test(n)) strays.push(full);
+    else if (/\.(html?|ts|tsx|map|log|md)$/i.test(n)) strays.push(full);
   }
 };
 walk(dir);
-console.log(`  ..   ${strays.length} html/source/log file(s) found under ${dir}`);
-ok(strays.length === 0, `no page or source file is sitting in the asset tree${strays.length ? ` (${strays.join(', ')})` : ''}`);
+console.log(`  ..   ${strays.length} html/source/log/note file(s) found under ${dir}`);
+ok(strays.length === 0, `no page, source file or developer note is sitting in the asset tree${strays.length ? ` (${strays.join(', ')} — move it under docs/ and delete it here)` : ''}`);
 
 // And nothing agent-shaped anywhere the repo tracks. The first sweep of this class caught two files under
 // client/public and missed a third sitting in the repo root, because the probe only looked where the last
