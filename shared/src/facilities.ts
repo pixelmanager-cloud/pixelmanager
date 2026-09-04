@@ -53,7 +53,13 @@ export const FACILITY_META: Record<FacilityKey, { icon: string; name: string; bl
   youth:    { icon: '🎓', name: 'Youth Academy',   blurb: 'Home-grown talent. A better academy widens your Local Tryouts pool and raises the odds a walk-up is worth signing.' },
   scouting: { icon: '🔭', name: 'Scouting HQ',      blurb: 'A sharper scouting operation lifts every network trip: better odds, cheaper travel, and — at the top levels — extra trips per season.' },
   medical:  { icon: '🏥', name: 'Medical Centre',   blurb: 'Physios and sports science. Cuts how often your players pick up injuries and gets the injured back on the pitch sooner.' },
-  sponsor:  { icon: '📣', name: 'Commercial Dept',  blurb: 'Sponsors and merchandising. Pays a lump of income every season — more in a higher division and for every trophy in your cabinet.' },
+  // "EVERY TROPHY IN YOUR CABINET" NAMED A CABINET THIS TERM NEVER LOOKS IN. The trophy count fed to
+  // `sponsorIncome` filters the club's honours to `kind === 'league'` (api.ts's spSeasonReward), while the
+  // Trophy Cabinet draws EVERY title-carrying honour — so a Continental Cup or a World Finals is a trophy
+  // on the very screen this sentence pointed at, and worth nothing to the sponsors. The league weighting is
+  // deliberate (a Sunday League title must not price a top-flight deal), so the SENTENCE was the defect —
+  // the same failure as the Fan Zone line below, a card advertising a stream the arithmetic pays zero on.
+  sponsor:  { icon: '📣', name: 'Commercial Dept',  blurb: 'Sponsors and merchandising. Pays a lump of income every season — more in a higher division, and more for every league title you win, weighted by the division it came from. Cups do not count.' },
   data:      { icon: '📊', name: 'Data Department', blurb: 'Analysts, video, and numbers nobody used to keep. Sharper opposition scouting and a small edge in every tight match.' },
   shop:      { icon: '🛍️', name: 'Club Shop',       blurb: 'Shirts, scarves and a queue on matchday. Steady commercial income that grows with the crowd.' },
   dorm:      { icon: '🛏️', name: 'Academy Digs',    blurb: 'Somewhere for the young ones to live. Keeps the boys you would otherwise lose to the travel, and widens the intake.' },
@@ -314,7 +320,14 @@ export function effectAt(key: FacilityKey, level: number): string {
     case 'youth':    return level === 1 ? 'Standard walk-ups' : `+${youthPoolBonus(level)} tryout slot(s), ${Math.round(youthUpgradeChance(level) * 100)}% quality-upgrade chance`;
     case 'scouting': return level === 1 ? 'Standard trips' : `+${Math.round((scoutHitMult(level) - 1) * 100)}% odds, −${Math.round(scoutCostDiscount(level) * 100)}% cost${scoutExtraTrips(level) ? `, +${scoutExtraTrips(level)} trip(s)` : ''}`;
     case 'medical':  return level === 1 ? 'Standard injury risk' : `−${Math.round((1 - injuryChanceMult(level)) * 100)}% injury chance${recoveryCut(level) ? `, −${recoveryCut(level)} match recovery` : ''}`;
-    case 'sponsor':  return level === 1 ? 'No sponsors yet' : `≈ ${60 * (level - 1)}+ coins/season (more per division & trophy)`;
+    // DERIVED FROM sponsorIncome, AND WITHOUT THE "+", for the reason the three cards around it were
+    // rewritten. This hand-inlined `60 * (level - 1)` — only the FIRST term of the function — and stated it
+    // as a minimum, but sponsorIncome then multiplies the whole thing by a brand factor taken from the
+    // star's MARKETABILITY: the L10 card promised "≈ 540+ coins/season" and a low-brand star banks 410. The
+    // number is the function's own now, and the card names the brand, because nothing else on screen told
+    // the player why the sponsorship he bought the level for came in under the figure printed on it.
+    case 'sponsor':  return level === 1 ? 'No sponsors yet'
+      : `≈ ${sponsorIncome(level, 0, 0)} coins/season (more per division & trophy, up or down with your star's brand)`;
     case 'data':      return level === 1 ? 'No analysts yet' : `+${(dataEdge(level) * 100).toFixed(1)}% edge in tight matches from opposition prep`;
     // A RANGE, LIKE THE STADIUM CARD ABOVE, AND FOR THE SAME REASON. This and the women's-team line below
     // both quoted ONE division — tierIdx 4 — while seasonFacilityIncome pays shopIncome/womensIncome at the

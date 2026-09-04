@@ -578,20 +578,36 @@ console.log('\n=== MEASURED — defects found writing this file. Reported, NOT g
   console.log(`     the widest fee the game can quote is ${UNDER_MIN.widest} against a declared ceiling of ${PRICE_MAX}, and ${UNDER_MIN.n} of the amounts it really`);
   console.log(`     moves fall UNDER the declared floor of ${PRICE_MIN} anyway (e.g. ${UNDER_MIN.example}).`);
 
-  // ── D6 ── the same man, twice, in one squad — and the only thing stopping it is not in the save.
+  // ── D6 ── NOW BARS, because the defect it reported is FIXED. The same listing could be signed twice:
+  // transferList is pure and re-offers a signed man on every render — which is right — and the ONLY thing
+  // that hid him was main.ts filtering on a localStorage key (`fm_bought_<handle>_g<gen>_<season>`) that is
+  // not part of the save. A thrown setItem (quota, private browsing), cleared site data, or the save opened
+  // in another browser or on another machine put the whole season's signings back on the shelf, and
+  // `buyPlayer` de-collided the repeat into `bought-<season>-<id>-2` rather than refusing it: two of one
+  // man, two identical wages, out of one purchase. The refusal now lives in the facade, where the save is,
+  // and it comes before the charge. MUTATION-TEST it by restoring api.ts's de-collision loop (the repeat
+  // taking a `-2` suffix instead of throwing) — the second and third bars go red; move the refusal back
+  // below `addCoins` and the fourth goes red.
   await freshSave('QA Dupe FC');
   await api.cupPrize(100000);
   const l0 = transferList(12345, 0, 5)[0];
+  const beforeDupe = await coinsNow();
   await api.buyPlayer(l0.player, l0.fee);
-  await api.buyPlayer(l0.player, l0.fee);
-  const copies = (await squadNow()).filter((q) => q.name === l0.player.name);
+  const afterFirst = await coinsNow();
+  let dupeErr = '';
+  try { await api.buyPlayer(l0.player, l0.fee); } catch (e) { dupeErr = errOf(e); }
+  const signed = (await squadNow()).filter((q) => q.id.startsWith('bought-'));
   const relisted = transferList(12345, 0, 5).some((x) => x.player.id === l0.player.id);
-  console.log(`\n  D6 The same listing can be signed twice: the squad now holds ${copies.length} of "${l0.player.name}" (${copies.map((c) => c.id).join(', ')}),`);
-  console.log(`     identical age and rating, and the market still lists him afterwards (${relisted}). transferList is pure and has`);
-  console.log('     no memory of the club, which is right; but the ONLY thing that hides a signed player is main.ts filtering');
-  console.log('     on a localStorage key (`fm_bought_<handle>_<season>`) that is not part of the save. Clear site data, open');
-  console.log('     the save in another browser, or move it to another machine — offline-first, the save is the artefact —');
-  console.log('     and the men you already bought are back on the shelf.');
+  // WITHOUT THIS FIRST BAR THE NEXT THREE ARE VACUOUS — a buyPlayer that refused everything would satisfy
+  // "only one of him" perfectly.
+  ok('one signing of a listing goes through, and costs its fee', beforeDupe - afterFirst === l0.fee && signed.length >= 1,
+    `paid ${beforeDupe - afterFirst} of ${l0.fee} for "${l0.player.name}"`);
+  ok('signing the SAME listing again is refused by the SAVE, not de-collided into a second man', dupeErr !== '',
+    dupeErr || 'IT WENT THROUGH');
+  ok('...so the squad holds exactly one of him', signed.length === 1, `${signed.map((q) => q.id).join(', ')} — "${l0.player.name}"`);
+  ok('...and the refused signing takes no coins', (await coinsNow()) === afterFirst, `${afterFirst} -> ${await coinsNow()}`);
+  console.log(`\n  D6 The market still re-offers him afterwards (${relisted}), because transferList is pure and a market with`);
+  console.log('     memory would not be. The memory belongs in the save, and now is: the squad\'s own ids.');
 
   // ── D7 ── the facade computes what it PAYS you and trusts what it CHARGES you.
   await freshSave('QA Fee FC');
@@ -657,7 +673,7 @@ console.log('\n=== MEASURED — defects found writing this file. Reported, NOT g
   // ── NOT DEFECTS — checked, and they are the design working. Recorded so nobody re-opens them. ───────
   console.log('\n  NOT DEFECTS (checked, and they are the design working):');
   console.log('    · The market re-offers a player after you sign him — transferList is pure and seeded, and a market with');
-  console.log('      memory would not be. The defect is where the memory lives (D6), not that the function lacks it.');
+  console.log('      memory would not be. The defect was where the memory LIVED (D6, fixed and barred there now).');
   console.log('    · The youth premium (x1.25 under 24) makes a good young player dearer than a better old one. That is age');
   console.log('      pricing, and §4(d) confirms it is still not recoverable at sale, so it costs the player nothing but coins.');
   console.log('    · Free youth intake cannot be farmed: advanceSquad tops the squad up only TO MIN_SQUAD, and sellPlayer');

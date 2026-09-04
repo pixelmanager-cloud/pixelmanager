@@ -287,11 +287,15 @@ async function mintGenesisLocal(): Promise<Token> {
   // handing that name to every stranger you buy off the street guts the premise. The three candidates on
   // the NEW GAME scout board keep the family name, because one of them becomes the founder; this one is a
   // spare body with a life of his own.
-  const seed = seedFrom(id + ':genesis');
+  // The save id is mixed into EVERY draw below so two saves do not mint the same stranger — the id is a
+  // counter, not a UUID, so the first outsider a dynasty buys is `nft:2` in all of them. Only the NAME
+  // carried it: the genes and the position were keyed on the bare counter, so every player's first
+  // 300-coin prospect was the same boy — pace 10-20, strength 3-10, stamina 6-11, MF, 3 stars — under a
+  // different name. The purchase is sold as a gamble on an unknown; it has to actually be one.
+  const seed = seedFrom(`${getActiveSlotId() ?? OWNER}:${id}:genesis`);
   const genes = rollGenes(seed);
-  // The save id is mixed in so two saves do not mint the same stranger — the id is a counter, not a UUID.
   await localStore.createToken({ id, owner_id: OWNER, generation: 0, state: 'prospect', name: nameFor(seedFrom(`${getActiveSlotId() ?? OWNER}:${id}:genesis`)), genes_json: JSON.stringify(genes), pedigree: 0, dev_bonus_json: '{}' });
-  await localStore.updateToken(id, { role: seedFrom(id + ':gk') % 100 < 12 ? 'GK' : 'MF' });
+  await localStore.updateToken(id, { role: seedFrom(`${getActiveSlotId() ?? OWNER}:${id}:gk`) % 100 < 12 ? 'GK' : 'MF' });
   return (await localStore.getToken(id))!;
 }
 
@@ -568,7 +572,6 @@ export const api = {
     if (!c) throw apiErr('club not found', {}, 404);
     if (c.club.players.length >= MAX_SQUAD) throw apiErr(`your squad is full (max ${MAX_SQUAD})`, {}, 409);
     if (getActiveModel().profile.coins < f) throw apiErr('not enough coins', { need: f }, 402);
-    await localStore.addCoins(OWNER, -f);
     // Squad ids must be unique and STABLE. This used to STRIP the separators out of a listing id
     // (`mk:${season}:${tier}:${i}`), so `mk:1:1:11` and `mk:11:1:1` both collapsed to `mk1111` — and it
     // keyed off `players.length`, which moves as players leave. Two squad members could end up sharing an
@@ -576,8 +579,16 @@ export const api = {
     // check the squad rather than trusting the shape. (PT-304)
     const safe = String(player.id || 'p').replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
     const season = getActiveModel().profile.season;
-    let uid = `bought-${season}-${safe}`;
-    for (let n = 2; c.club.players.some((p) => p.id === uid); n++) uid = `bought-${season}-${safe}-${n}`;
+    const uid = `bought-${season}-${safe}`;
+    // ...and a listing already standing in the squad is REFUSED, not de-collided into `-2`. The only thing
+    // hiding a signed man from the shop was `fm_bought_…` in localStorage, which is not part of the save:
+    // a thrown setItem (quota, private browsing), cleared site data, or the save opened on another machine
+    // puts every listing bought this season back on the shelf, and signing him again appended `-2` — two of
+    // one man on the team sheet, two identical wages, out of one purchase. A dedupe the save does not carry
+    // is not a dedupe. Refused BEFORE the coins move, or the refusal would charge the fee it refused.
+    // (shared/qa_market.ts D6 demonstrated this; it is a bar there now.)
+    if (c.club.players.some((p) => p.id === uid)) throw apiErr(`${player.name || 'He'} is already in your squad`, {}, 409);
+    await localStore.addCoins(OWNER, -f);
     // A signing joins on a real CONTRACT (Living Squad): he keeps the age the listing advertised, and his
     // deal runs from this season — so he'll age, cost wages, and eventually force a renew-or-lose call
     // instead of being a free permanent asset (PT-90/PT-92).
@@ -700,7 +711,7 @@ export const api = {
     const legacy = Math.round((t.earnings ?? 0) * RETIREMENT_LEGACY_SHARE);
     await localStore.addCoins(OWNER, -REBORN_COST);
     if (legacy > 0) await localStore.addCoins(OWNER, legacy);
-    await localStore.updateToken(playerId, rebornFields(t));
+    await localStore.updateToken(playerId, rebornFields(t, getActiveSlotId() ?? OWNER));  // world-mixed, like succeed() below — see rebornFields
     const fresh = (await localStore.getToken(playerId))!;
     const pot = rebornPotential(fresh);
     return { ok: true as const, cost: REBORN_COST, legacy, coins: getActiveModel().profile.coins, prospect: { id: playerId, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: pot.pedigree, potentialStars: pot.stars, genes: JSON.parse(fresh.genes_json) } };
@@ -788,8 +799,20 @@ export const api = {
     // A career that ended without a seed still needs one, and it must be stable across replays and unique
     // per person: careerSeedFor is exactly that, and is what startCareer would have used.
     const parentSeed = ((decorated.career_seed ?? 0) >>> 0) || (careerSeedFor(decorated.id, parentGen, getActiveSlotId() ?? OWNER) >>> 0)  /* world-mixed, like startCareer — a bare two-arg call reinstates the constant-across-all-saves seed */;
+    // AND THE FAMILY ATTRIBUTE NEEDS A SEED THAT OUTLIVES HIM. `parentSeed` identifies the retiring MAN,
+    // and `rebornFields` nulls `career_seed` at every succession so a fresh one is minted per generation —
+    // keying `familyTrait` on it re-drew the family's defining attribute at each handover. Measured over 16
+    // real dynasties of five successions, five of them changed attribute mid-line, so the heir card named
+    // one family attribute in a generation and a different one in the next while mintHeirs' KEEP_FAMILY
+    // 0.86 compounded whichever was current. The played line keeps its token id for life, so its
+    // generation-0 seed identifies the bloodline with no new persisted field and no back-compat path — and
+    // it is the seed the FOUNDER's own succession already used, so a save mid-dynasty keeps the attribute
+    // its first succession showed rather than being handed a third one. (Taking the line onto a brother or
+    // a cousin is a different token id by construction and still founds a new trait; a trait that survives
+    // a branch switch is a separate design question, not this fix.)
+    const bloodlineSeed = careerSeedFor(decorated.id, 0, getActiveSlotId() ?? OWNER) >>> 0;
 
-    const rf = rebornFields(decorated);
+    const rf = rebornFields(decorated, getActiveSlotId() ?? OWNER);   /* world-mixed: a bare one-arg call names generation 1 "Leo" in every save on earth */
     const dev = JSON.parse(rf.dev_bonus_json ?? '{}');
     if (mentorship > 0) { const b = Math.min(3, Math.ceil(mentorship / 2)); dev.composure = (dev.composure ?? 0) + b; dev.leadership = (dev.leadership ?? 0) + b; }
     // THE CRAFT — his footballing brain passes down: a mental development head-start for the heir.
@@ -814,7 +837,7 @@ export const api = {
     // brothers' family attribute) also discarded rebornFields' lift-bearing roll, which left the
     // whole earned-inheritance mechanism dead in the shipped game — a fix that quietly severed
     // another. mintHeirs threads it into famCeil for every sibling, so all of them get it now.
-    const heirs = mintHeirs(parentGenes, parentSeed, nHeirs, ceilingLift);
+    const heirs = mintHeirs(parentGenes, parentSeed, nHeirs, ceilingLift, bloodlineSeed);
     rf.genes_json = JSON.stringify(heirs[0].genes);
     await localStore.updateToken(pid, rf);
     // ── THE BRANCHING BLOODLINE ────────────────────────────────────────────────────────────────────
@@ -917,7 +940,7 @@ export const api = {
         if (pruned !== cc.standingOrders) await localStore.saveClub(OWNER, cc.club, pruned);
       }
     }
-    return { ok: true as const, legacy, saleFee, testimonial, siblings, familyTrait: familyTrait(parentSeed), coins: getActiveModel().profile.coins, inheritance: inheritance ?? null, prospect: { id: pid, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: fresh.pedigree, careerStarted: false, potentialStars: pot.stars, temper: prospectTemper(fresh, getActiveSlotId() ?? OWNER), genes: JSON.parse(fresh.genes_json) } };
+    return { ok: true as const, legacy, saleFee, testimonial, siblings, familyTrait: familyTrait(bloodlineSeed), coins: getActiveModel().profile.coins, inheritance: inheritance ?? null, prospect: { id: pid, name: fresh.name, roleHint: fresh.role ?? 'MF', generation: fresh.generation, pedigree: fresh.pedigree, careerStarted: false, potentialStars: pot.stars, temper: prospectTemper(fresh, getActiveSlotId() ?? OWNER), genes: JSON.parse(fresh.genes_json) } };
   },
   // SP SEASON PRIZE — also where the local season counter advances (see docs note in save.ts's
   // profile.season) and where a league finish is banked as an honour (the old pod/wall-clock season
@@ -1662,7 +1685,16 @@ export const api = {
     // Academy Digs add intake places on top of the Youth academy's — the facility promised 'extra youth
     // intake places' on its card and delivered none.
     const extra = youthPoolBonus(model.facilities.youth) + dormIntakeBonus(model.facilities.dorm ?? 1), youthUp = youthUpgradeChance(model.facilities.youth);
-    const pool = generatePool(OWNER, model.profile.season, TIER, extra, youthUp).map((t) => ({ ...t, signed: signedSet.has(t.id) }));
+    // SEEDED ON THE SAVE, NOT ON `OWNER`. `OWNER` is the constant string 'local', and the pool's seed is
+    // `${accountId}:${season}:${tier}` (shared/src/scouting.ts) — so with a constant accountId and a constant
+    // TIER the season number was the ONLY world-varying input, and every dynasty ever played opened season 0
+    // on the same three walk-ups and season 1 on the same 9-overall keeper. Free squad additions (signTrial
+    // costs no coins) drawn from a table anyone could publish. The active slot id is the world handle the
+    // rest of the facade already mixes in (see `handle` in `houses`, and careerSeedFor at startCareer).
+    // Re-seeding re-rolls the UNSIGNED walk-ups of a save that is already mid-season — the caveat
+    // scouting.ts records. A loanee already signed keeps the man in the squad, because the loanee register
+    // keys on `loan-s<season>-<index>`, which carries no seed; only the card at that index is a new face.
+    const pool = generatePool(getActiveSlotId() ?? OWNER, model.profile.season, TIER, extra, youthUp).map((t) => ({ ...t, signed: signedSet.has(t.id) }));
     return { season: model.profile.season, cap: LOANEE_CAP, signedCount: count, pool };
   },
   signTrial: async (index: number) => {
@@ -1673,7 +1705,9 @@ export const api = {
     // Academy Digs add intake places on top of the Youth academy's — the facility promised 'extra youth
     // intake places' on its card and delivered none.
     const extra = youthPoolBonus(model.facilities.youth) + dormIntakeBonus(model.facilities.dorm ?? 1), youthUp = youthUpgradeChance(model.facilities.youth);
-    const player = trialistAt(OWNER, model.profile.season, index, TIER, extra, youthUp);
+    // The SAME world handle `trials` seeds the pool with — the two must agree or the man signed is not the
+    // man on the card.
+    const player = trialistAt(getActiveSlotId() ?? OWNER, model.profile.season, index, TIER, extra, youthUp);
     if (!player) throw apiErr('no such trialist', {}, 404);
     const c = await localStore.getClub(OWNER);
     if (!c) throw apiErr('club not found', {}, 404);

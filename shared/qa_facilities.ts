@@ -28,9 +28,10 @@
 //      leaves you poorer.
 //
 // AND THE CARDS MUST MATCH THE FUNCTIONS. `effectAt` promised "≈ 200–705 coins per match" for a stadium
-// that returned 0; the fix was to derive the string from the function. One case still inlines a constant
-// (`sponsor`, `60 * (level - 1)`), which is the same defect one function away from the scar tissue that
-// documents it, so §9 gates the card's number against the function that actually pays it.
+// that returned 0; the fix was to derive the string from the function. The sponsor card was the last one
+// still hand-inlining a constant (`60 * (level - 1)`, only the first term of `sponsorIncome`) and the only
+// one stating it as a floor with a `+` that the brand multiplier walks straight under, so §9 gates its
+// number against the function that pays it AND the absence of that `+`.
 //
 // HOUSE RULE, following shared/qa_mental.ts: the section marked MEASURED is deliberately NOT gated.
 // Those are defects found while writing this file. Pinning today's behaviour would turn this harness red
@@ -475,6 +476,19 @@ console.log('\n=== 9. Every level of every facility has a card and a story line,
   ok('neither states a division-4 number as a floor — no "+" on a figure the bottom of the pyramid never sees',
     !/\d\+/.test(effectAt('shop', MAX_LEVEL)) && !/\d\+/.test(effectAt('women', MAX_LEVEL)),
     `${effectAt('shop', MAX_LEVEL)} / ${effectAt('women', MAX_LEVEL)}`);
+  // AND NEITHER DOES THE SPONSOR CARD — the last one in the file making a floor claim. It printed
+  // "≈ 540+ coins/season": `60 * (level - 1)` hand-inlined, which is only the FIRST term of sponsorIncome,
+  // while the function goes on to multiply the lot by a brand factor read off the STAR'S MARKETABILITY. A
+  // below-neutral brand banks 410 against that advertised minimum of 540. The "+" is the false half; the
+  // star is the half the player could not see anywhere on screen, so the card has to name it. Every level,
+  // not just L10, because the "+" was on all nine of them.
+  ok('the sponsor card states no floor either — a low-brand star puts the income under any figure it prints',
+    LEVELS.every((l) => !/\d\+/.test(effectAt('sponsor', l))),
+    LEVELS.filter((l) => /\d\+/.test(effectAt('sponsor', l))).map((l) => `L${l} "${effectAt('sponsor', l)}"`).join('; ')
+      || `L10: ${effectAt('sponsor', MAX_LEVEL)}`);
+  ok('and it names the brand, so the one input that drags its number below the baseline is on the card',
+    LEVELS.slice(1).every((l) => /brand|marketab/i.test(effectAt('sponsor', l))),
+    `${effectAt('sponsor', MAX_LEVEL)} — baseline ${fmt(sponsorIncome(MAX_LEVEL, 0, 0, 10))}, low brand ${fmt(sponsorIncome(MAX_LEVEL, 0, 0, 1))}, p50 star ${fmt(sponsorIncome(MAX_LEVEL, 0, 0, 14))}`);
   ok('the stadium card prints the real per-match range, worst division to best',
     LEVELS.slice(1).every((l) => {
       const m = effectAt('stadium', l).match(/(\d+)–(\d+)/);
@@ -582,10 +596,11 @@ console.log('\n=== 11. MEASURED (not gated) — findings ===');
   console.log(`      seasonFacilityIncome rounds W, D and L to home matches INDEPENDENTLY, so ${off} of ${tot} possible records (${(100 * off / tot).toFixed(0)}%)`);
   console.log(`      are paid for 10 home games instead of ${homeReal} — a systematic ~11% over-payment of gate receipts.`);
 
-  console.log('\n  D8  THE "+" ON THE SPONSOR CARD IS NOT A FLOOR.');
-  console.log(`      sponsor L10 card "${effectAt('sponsor', MAX_LEVEL)}" — with a low-marketability squad it pays ${fmt(sponsorIncome(MAX_LEVEL, 0, 0, 1))}.`);
-  console.log('      The stadium card prints a RANGE for exactly this reason, and the shop and women cards now do too');
-  console.log('      (gated in §9); the sponsor card is the last one quoting a single baseline with a "+" it cannot honour.');
+  console.log('\n  D8  THE SPONSOR CARD QUOTES A BASELINE, AND A LOW-BRAND STAR STILL PAYS UNDER IT.');
+  console.log(`      sponsor L10 card "${effectAt('sponsor', MAX_LEVEL)}" — the figure is sponsorIncome at the neutral brand (10).`);
+  console.log(`      The bottom of the marketability scale pays ${fmt(sponsorIncome(MAX_LEVEL, 0, 0, 1))}, the p50 star ${fmt(sponsorIncome(MAX_LEVEL, 0, 0, 14))}, the top flight with 20 titles ${fmt(sponsorIncome(MAX_LEVEL, 9, 20, 20))}.`);
+  console.log('      The "+" that stated the baseline as a FLOOR is gone and the card now names the brand (both gated in §9),');
+  console.log('      but one ≈ figure still cannot show the pyramid the way the stadium, shop and women cards do with a range.');
 
   console.log('\n  D9  applyDisrepair is documented "Pure." and mutates its argument.');
   const p = allAt(6), snap = JSON.stringify(p);

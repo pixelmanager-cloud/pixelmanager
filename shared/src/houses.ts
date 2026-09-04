@@ -87,7 +87,13 @@ export function houseManAt(h: RivalHouse, generation: number, seed: number): Hou
   const titles = peak >= 18 ? 2 + Math.floor(r * 3) : peak >= 15 ? 1 + Math.floor(r * 2) : peak >= 13 ? Math.floor(r * 2) : 0;
   const caps = peak >= 16 ? 30 + Math.round(r * 60) : peak >= 13 ? Math.round(r * 25) : 0;
   return {
-    name: `${['Luca', 'Andre', 'Milo', 'Rafa', 'Jonas', 'Tomas', 'Elias', 'Kaito'][hash32(seed, generation, h.base) % 8]} ${h.name}`,
+    // The first name has to key on something DISTINCT per house, and `h.base` is not: it is 14 or 15 across
+    // all twelve entries of RIVAL_HOUSES, so it sorted them into two groups and every save named seven of
+    // them one thing and five the other — seed 1234, generation 0, called all twelve of them Kaito. The
+    // player meets these families one at a time across fifteen seasons, so that reads as one man with twelve
+    // surnames rather than as twelve dynasties. The INITIAL is distinct across all twelve, and is already
+    // what `era` above and the silverware roll below discriminate on. Guarded by tools/playtest/house_identity.ts.
+    name: `${['Luca', 'Andre', 'Milo', 'Rafa', 'Jonas', 'Tomas', 'Elias', 'Kaito'][hash32(seed, generation, h.name.charCodeAt(0)) % 8]} ${h.name}`,
     generation, played: true, peakOverall: peak, caps,
     leagueTitles: titles, cups: Math.floor(titles * 1.5),
     seasons: peak >= 14 ? 12 : peak >= 10 ? 9 : 6,
@@ -115,7 +121,12 @@ export function rivalStandings(seed: number, generations: number): HouseRow[] {
  *  of him, and it is how the player recognises a rival's boy on a team sheet. */
 export function houseManAsPlayer(h: RivalHouse, generation: number, seed: number, id: string, role: Role, age = 24): Player {
   const q = houseQualityAt(h, generation, seed);
-  const p = mintSquadPlayer(id, role, q, hash32(seed, generation * 2654435761, h.name.length), age);
+  // Same discriminator as the first name in `houseManAt`, and for the same reason: `h.name.length` takes
+  // five values across the twelve houses, so four of them shared a mint seed outright — and mintSquadPlayer
+  // draws `personality = rollPersonality(seed)` from that seed alone, so Vasquez, Okonkwo, Brandão and
+  // Sowande were one character in every generation of every save. Ability still diverges, because `q` comes
+  // from houseQualityAt, whose `era` term is genuinely per-house; the shared temperament was the tell.
+  const p = mintSquadPlayer(id, role, q, hash32(seed, generation * 2654435761, h.name.charCodeAt(0)), age);
   return { ...p, name: houseManAt(h, generation, seed).name };
 }
 

@@ -374,6 +374,14 @@ function statColor(v: number): string {
 // NFT rank tiers (LoL-style, escalating icons). Only NFT players get a tier — so the
 // presence of a badge differentiates paid stars from free filler players.
 const isNftId = (id: string) => id.startsWith('nft:');
+// A LOANEE, BY EITHER ROUTE IN. The season rollover removes everyone in the LOANEE REGISTER before it
+// builds the roster it charges (api.ts advanceSquadSeason), so no loanee's wage is ever taken — but the
+// two wage forecasts guessed at that register with a `loan-` prefix test instead, and a scouted loanee is
+// minted `scout-<missionId>` (missions.ts), not `loan-`. So both forecasts billed men the club is never
+// charged for, and the team sheet left them unbadged right up to the season end that sends them home.
+// One test, used everywhere the question is asked, so the sites cannot answer it differently again.
+// (The only other `scout-` id in the game is the career mentor `scout-m`, which is never a squad player.)
+const isLoaneeId = (id: string) => id.startsWith('loan-') || id.startsWith('scout-');
 interface Tier { key: string; name: string; icon: string }
 function nftTier(ov: number): Tier {
   if (ov >= 18) return { key: 'legend', name: 'LEGEND', icon: '👑' };
@@ -1709,15 +1717,27 @@ class Game {
       // handoff, which throws unless the token is a prospect — the one door needs a career you have already
       // finished. Rebuild the manager state from the durable half instead.
       const me = await api.me();
-      // The CURRENT star, not merely the first contracted man in array order: me().contracts covers every
-      // non-prospect token and mergedClub admits retired ones, so on a multi-generation save the first hit
-      // can be a retired legend. Prefer a 'pro'.
-      const star = me.club.players.find((p) => (me.contracts as any)?.[p.id]?.state === 'pro')
-        ?? me.club.players.find((p) => me.contracts?.[p.id]);
-      if (star && !mgr.starId && !this.rebuildingMgr) {
+      // THE MAN THE REBUILD ALREADY NAMED, BY ID — and only if this save has actually been managed. Two
+      // conditions here could never be true. `me.contracts[...].state` does not exist — tokenContract
+      // returns no `state` field on either branch — so the "prefer a 'pro'" find always missed and the
+      // fallback took the first contracted man in club.players order, which mergedClub fills with retired
+      // tokens too. And the gate tested `!mgr.starId`, which rebuiltMgrState has ALREADY made false for
+      // exactly the evicted save this block exists to rescue — so the only code that fills in starAge,
+      // retireAge and temper was unreachable, the early return above never fired, and the hub went on
+      // offering "Scout a prospect" over a live club with no way back.
+      // WHAT IS MISSING IS THE AGE, NOT THE MAN: `starAge == null` is the shape of a half-rebuilt save.
+      // `managed` is the durable proof the handoff really happened, because the handoff wrote nothing but
+      // localStorage otherwise: it forces the star into the standing XI (and openLineup('standing') is
+      // reachable only from the season screen), and every completed season files an honour. Without it this
+      // would also fire for a player who pressed "Play on — finish his career first" and let his man
+      // graduate, quietly making him a manager against the screen that told him the reins were gone.
+      const star = me.club.players.find((p) => p.id === mgr.starId);
+      const managed = (me.standingOrders?.playerIds ?? []).includes(star?.id ?? '')
+        || ((getActiveModel() as any)?.honours?.length ?? 0) > 0;
+      if (star && managed && mgr.starAge == null && !this.rebuildingMgr) {
         const ci: any = me.contracts?.[star.id];
         this.rebuildingMgr = true;   // one attempt only — saveMgr swallows a quota failure, so without this
-                                     // guard a failed write means loadMgr still has no starId and the
+                                     // guard a failed write means loadMgr still has no starAge and the
                                      // recursion below never terminates, one api.me() per turn of the loop.
         this.saveMgr({ ...mgr, starId: star.id, starName: star.name, starAge: ci?.age ?? star.age ?? 24,
           starGen: ci?.generation ?? (star as any).generation ?? mgr.starGen ?? 0,
@@ -1909,9 +1929,25 @@ class Game {
     return { ...lineup, playerIds: ids };
   }
   private leagueSeed(): number { const h = this.account?.handle ?? 'x'; return [...h].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) >>> 0; }
+  /** leagueSeed MIXED WITH THE GENERATION — use this for ANYTHING derived from `m.season`.
+   *
+   *  `leagueSeed()` is a hash of the account handle and is constant for the life of a save. `MgrState.season`
+   *  RESETS TO 1 at every succession. So a value built from those two and nothing else is byte-identical for
+   *  generation 1 season 3, generation 2 season 3 and generation 7 season 3 — in a game whose entire premise
+   *  is that each heir lives a fresh career.
+   *
+   *  The audit found that one instance at a time, in four subsystems, over three waves: the World Finals
+   *  edition, the transfer market, the manager arcs, the Continental Cup and its blurbs, the presser. Thirteen
+   *  more sites had it and had not been reported yet. It was never thirteen bugs — it was one habit, and
+   *  fixing the instances would have left the habit for the next person, so the seed itself now carries the
+   *  generation and `generation_scoped_seeds.ts` fails any new site that reaches past it for `leagueSeed()`.
+   *
+   *  NOT for anything deliberately save-constant — the fixture list, the seeded opponents and their tactics
+   *  are meant to repeat ("the same club always plays the same way"), and they take `leagueSeed()` directly. */
+  private genSeed(): number { return (this.leagueSeed() ^ Math.imul((this.loadMgr().starGen ?? 0) + 1, 0x85ebca6b)) >>> 0; }
   /** Per-SEASON seed for the OTHER clubs' league results — same division (leagueSeed), different table each
    *  season, so seasons don't replay byte-for-byte (PT-24). Stable within a season, changes at rollover. */
-  private seasonResultSeed(): number { return (this.leagueSeed() ^ Math.imul((this.loadMgr().season ?? 1) + 1, 0x9e3779b1)) >>> 0; }
+  private seasonResultSeed(): number { return (this.genSeed() ^ Math.imul((this.loadMgr().season ?? 1) + 1, 0x9e3779b1)) >>> 0; }
   // the club's current pyramid TIER (1 = top flight … 10 = bottom). A club property that survives the
   // bloodline hand-off (stored apart from the per-generation manager save), so the dynasty climbs one pyramid.
   private clubTier(): number { try { const t = Number(localStorage.getItem('fm_tier_' + (this.account?.handle ?? 'x'))); return t >= 1 && t <= TIERS ? Math.round(t) : TIERS; } catch { return TIERS; } }
@@ -2096,7 +2132,7 @@ class Game {
     const gen = m.starGen ?? 0;
     const listings = [
       ...houseListings(this.leagueSeed(), m.season, tier, gen, tierStrength(tier)),
-      ...transferList(this.leagueSeed(), m.season, tier),
+      ...transferList(this.genSeed(), m.season, tier),
     ].filter((l) => !bought.includes(l.player.id));
     const squad = this.club.players, sellable = squad.filter((p) => p.id !== m.starId); // the bloodline star can't be sold here
     // REGISTERED, not merely listed. `this.club` is the MERGED club -- fieldablePlayers appends every
@@ -2119,10 +2155,13 @@ class Game {
     const season = this.season ?? 0;
     // BILLED, not merely present. `this.club` is the MERGED club — the pro tokens are appended for
     // display — while the rollover charges the raw club.players, which never contains the bloodline
-    // star. Loan trialists are removed before the squad rollover too, so neither is ever paid. The
-    // season header already filters exactly this way; this screen, which is where the copy tells the
-    // manager to budget, was overstating the bill by the largest single wage at the club.
-    const billed = squad.filter((p) => !p.id.startsWith('nft:') && !p.id.startsWith('loan-'));
+    // star. Loanees are removed before the squad rollover too, so none of them is ever paid. This
+    // screen, which is where the copy tells the manager to budget, was overstating the bill by the
+    // largest single wage at the club.
+    // The parity with the season header that this comment used to claim was never true — that line
+    // filtered no loanee at all — and the `loan-` test here missed the scouted ones, whose ids are
+    // `scout-…`. Both sites now ask isLoaneeId, so the claim is enforceable instead of aspirational.
+    const billed = squad.filter((p) => !p.id.startsWith('nft:') && !isLoaneeId(p.id));
     const wageBill = billed.reduce((n, p) => n + squadSeasonWage(overall(p), season), 0); // PT-500: the recurring cost of the squad, visible BEFORE you add to it
     body.innerHTML = `<div class="tm-head"><span class="tm-coins"><span class="ico-inline">${sprite('coin')}</span> ${coins.toLocaleString('en-US')}c</span> · Squad <b>${registered.length}</b>/${MAX_SQUAD} · ${tierName(tier)} · 💷 wages <b>~${wageBill.toLocaleString('en-US')}c</b> a season</div>`
       + `<div class="tm-sub">Buy players to strengthen the squad and climb — the market's quality is scaled to your division. Squad must stay between <b>${MIN_SQUAD}</b> and <b>${MAX_SQUAD}</b>. A signing costs a one-off fee <i>and</i> a wage every season after it, so leave yourself room for the bill.</div>`
@@ -2450,7 +2489,11 @@ class Game {
     // bills the raw `club.players`, which by api.ts's own comment never contains the bloodline star.
     // So the forecast was overstated by the largest single wage at the club: the exact number the
     // transfer-market copy tells the manager to budget against.
-    const billed = this.club.players.filter((p) => !p.id.startsWith('nft:'));
+    // AND LOANEES ARE NOT ON THE PAYROLL EITHER. The rollover drops everyone in the loanee register
+    // before it builds the roster it charges, so a trialist's wage is never taken — and this line filtered
+    // none of them, while the Transfer Market's twin caught only the `loan-` half. Three loanees over-quote
+    // a season by about a quarter: a quarter of a budget the manager is then told not to spend.
+    const billed = this.club.players.filter((p) => !p.id.startsWith('nft:') && !isLoaneeId(p.id));
     const wageBill = billed.reduce((n, p) => n + squadSeasonWage(overall(p), this.season ?? 0), 0);
     const wageLine = ` · <span class="sf-wages">💷 wage bill ~${wageBill.toLocaleString('en-US')}c, due at season's end</span>`;
     const header = done
@@ -2465,7 +2508,7 @@ class Game {
     // A BIG CLUB PAYS OVER THE ODDS FOR A NAME its supporters already know, so the house's standing lifts
     // every offer for the star. It is the most legible of renown's effects — the same player is worth more
     // because of who his family are, which is the whole idea stated in one number.
-    const rawBid = (starP && m.starAge && !bidGone && !done) ? incomingBid(this.leagueSeed(), m.season, overall(starP), m.starAge) : null;
+    const rawBid = (starP && m.starAge && !bidGone && !done) ? incomingBid(this.genSeed(), m.season, overall(starP), m.starAge) : null;
     const bid = rawBid ? { ...rawBid, fee: Math.round(rawBid.fee * this.houseBidMult) } : null;
     // The REJECTION was in the feed and the offer itself was not, so a save read back a season later
     // recorded a decision with nothing to decide about.
@@ -2475,7 +2518,7 @@ class Game {
       `<b>🤝 ${bid.club}</b> come calling with <b>${bid.fee.toLocaleString('en-US')}c</b> for ${m.starName}.`,
       `<b>🤝 ${bid.club}</b> want ${m.starName} badly — <b>${bid.fee.toLocaleString('en-US')}c</b> on the table.`,
       `<b>🤝 ${bid.club}</b> test your resolve with <b>${bid.fee.toLocaleString('en-US')}c</b> for ${m.starName}.`,
-    ][((this.leagueSeed() ^ Math.imul(m.season + 1, 40503)) >>> 0) % 4] : '';
+    ][((this.genSeed() ^ Math.imul(m.season + 1, 40503)) >>> 0) % 4] : '';
     const bidBanner = bid ? `<div class="sf-bid"><span class="sf-bid-txt">${bidLead} Cash in and bring the heir through early — or keep your dynasty player?</span><span class="sf-bid-btns"><button id="sf-bid-accept" class="primary">Accept ${bid.fee.toLocaleString('en-US')}c</button> <button id="sf-bid-reject">Reject</button></span></div>` : '';
     // PROMOTION / RELEGATION reveal — shown at the start of the season after a move (from nextSeason)
     const tierMove = m.lastTierMove && !done && nextIdx <= 2
@@ -2488,7 +2531,7 @@ class Game {
             promoted ? 'A division higher, a division tougher. The club has earned its place.' : 'Down a division. The badge is the same; the job is to bounce straight back.',
             promoted ? 'Up among better sides now — savour it, then go again.' : 'A setback for the club. Regroup, and win it back.',
             promoted ? 'The hard yards paid off. New level, new challenge.' : "Relegated, and it stings — this is where a club's character shows.",
-          ][((this.leagueSeed() ^ Math.imul(m.season + 1, 2654435761)) >>> 0) % 4];
+          ][((this.genSeed() ^ Math.imul(m.season + 1, 2654435761)) >>> 0) % 4];
           // trophy-promotion.png was commissioned, shipped in client/public/trophies, and rendered
           // nowhere while this line used an emoji. trophyImg() hides itself if the file is missing, so the
           // emoji stays as the fallback rather than being replaced by a broken image.
@@ -2691,7 +2734,7 @@ class Game {
     const blurb = m.contBlurb ? ` <span class="sf-cont-blurb">${m.contBlurb}</span>` : '';
     if (m.contOut) return `<div class="sf-cont out"><span class="sf-cont-lbl">🌍 CONTINENTAL CUP</span> <span class="sf-cont-txt">Knocked out — the European run ends here. There's always next season.${blurb}</span></div>`;
     if (round >= 3) return `<div class="sf-cont won"><span class="sf-cont-lbl">🏆 CONTINENTAL CHAMPIONS</span> <span class="sf-cont-txt"><b>${this.club?.name}</b> are kings of the continent!${blurb}</span></div>`;
-    const tie = contOpponent(this.leagueSeed(), m.season, round as 0 | 1 | 2);
+    const tie = contOpponent(this.genSeed(), m.season, round as 0 | 1 | 2);
     const dots = CONT_ROUNDS.map((r, i) => `<span class="sf-cont-dot ${i < round ? 'won' : i === round ? 'now' : ''}">${['QF', 'SF', 'F'][i]}</span>`).join('');
     return `<div class="sf-cont"><div class="sf-cont-head"><span class="sf-cont-lbl">🌍 CONTINENTAL CUP</span>${dots}</div>`
       + (round === 0 ? `<div class="sf-cont-explain">You qualified by finishing <b>top-3 in the top flight</b> last season. It's a knockout against the best clubs from other nations — win three ties (<b>QF → SF → Final</b>) to be crowned champions of the continent, alongside your league season.</div>` : '')
@@ -2702,7 +2745,7 @@ class Game {
   private playContinentalTie() {
     const m = this.loadMgr(), round = m.contRound ?? 0;
     if (!m.contElig || m.contOut || round >= 3) return;
-    const tie = contOpponent(this.leagueSeed(), m.season, round as 0 | 1 | 2);
+    const tie = contOpponent(this.genSeed(), m.season, round as 0 | 1 | 2);
     const short = (tie.oppName.match(/[A-Z]/g) ?? ['C', 'O', 'N']).join('').slice(0, 3);
     // Seed the opponent on WHO was drawn, not just which round. The season reaches generateClub only in its
     // `id` argument, and `id` reaches no generator — teams.ts mints every row off `seed` — so a name-blind
@@ -2721,11 +2764,11 @@ class Game {
   private simContinentalTie() {
     const m = this.loadMgr(), round = m.contRound ?? 0;
     if (!m.contElig || m.contOut || round >= 3) return;
-    const tie = contOpponent(this.leagueSeed(), m.season, round as 0 | 1 | 2);
+    const tie = contOpponent(this.genSeed(), m.season, round as 0 | 1 | 2);
     // match the played tie's venue + club edges (PT-129): SF is away, final is neutral, both fold in facilities/staff
     const atHome = !tie.neutral && round % 2 === 0;
     const { strDelta, homeTerm } = this.simEdge(atHome ? 'home' : 'away');
-    const r = this.simFixtureResult(this.clubLeagueStrength() + strDelta, tie.oppStrength, ((this.leagueSeed() >>> 0) ^ ((m.season * 331 + round * 17) >>> 0)) >>> 0, homeTerm);
+    const r = this.simFixtureResult(this.clubLeagueStrength() + strDelta, tie.oppStrength, ((this.genSeed() >>> 0) ^ ((m.season * 331 + round * 17) >>> 0)) >>> 0, homeTerm);
     this.resolveContinental(r.myGoals, r.oppGoals, tie.oppStrength);
   }
   /** Apply a continental tie result: win → advance (or lift the cup); level → seeded shootout; loss → out. */
@@ -2733,10 +2776,10 @@ class Game {
     const m = this.loadMgr(), round = m.contRound ?? 0;
     let won = myGoals > oppGoals;
     let pens = false;
-    if (myGoals === oppGoals) { pens = true; const h = ((this.leagueSeed() >>> 0) ^ ((m.season * 733 + round * 29) >>> 0)) >>> 0; won = ((h % 1000) / 1000) < (0.5 + (this.clubLeagueStrength() - oppStrength) * 0.03); }
+    if (myGoals === oppGoals) { pens = true; const h = ((this.genSeed() >>> 0) ^ ((m.season * 733 + round * 29) >>> 0)) >>> 0; won = ((h % 1000) / 1000) < (0.5 + (this.clubLeagueStrength() - oppStrength) * 0.03); }
     const label = CONT_ROUNDS[round];
     // a "how the tie felt" line for the continental card (from @fm/shared intl.ts)
-    const contBlurb = contTieBlurb(this.leagueSeed(), m.season, round as 0 | 1 | 2, won, pens, myGoals - oppGoals);
+    const contBlurb = contTieBlurb(this.genSeed(), m.season, round as 0 | 1 | 2, won, pens, myGoals - oppGoals);
     if (won) {
       const nextRound = round + 1;
       if (nextRound >= 3) {
@@ -3093,6 +3136,16 @@ class Game {
       if (venue === 'home') myTeam.homeBoost *= HOME_EDGE * fanHomeBoost(this.facLevels.fanzone ?? 1);
       else oppTeam.homeBoost = (oppTeam.homeBoost ?? 1) * HOME_EDGE;
       myTeam.homeBoost *= 1 + dataEdge(this.facLevels.data ?? 1);
+      // BACKROOM STAFF, the same three edges startSpMatchWith applies and by the same factors -- coaching
+      // travels, so it counts home AND away. This block was simply missing, and a manager who had bought
+      // all three specialists (1,200c, on cards that promise "home and away" and "every match") got nothing
+      // for them in any fixture he simmed. simEdge folds the same coaches into a strength delta, which is
+      // why it went unnoticed -- but simRemainingFixtures only READS simEdge in the `else`, the fallback
+      // for a squad too thin to field an XI, so on every normal matchday the backroom was paid and binned.
+      const staff = this.loadMgr().staff ?? [];
+      if (staff.includes('fitness')) myTeam.conditioning = (myTeam.conditioning ?? 1) * 0.95;
+      if (staff.includes('attack')) myTeam.homeBoost = (myTeam.homeBoost ?? 1) * 1.03;
+      if (staff.includes('assistant')) { myTeam.homeBoost = (myTeam.homeBoost ?? 1) * 1.02; myTeam.conditioning = (myTeam.conditioning ?? 1) * 0.98; }
 
       const iAmHome = venue === 'home';
       const teams = iAmHome ? [myTeam, oppTeam] : [oppTeam, myTeam];
@@ -3237,7 +3290,7 @@ class Game {
       const shown = m.lastBoard?.expectation;
       const promised = shown === 'title' || shown === 'promotion' || shown === 'playoffs' || shown === 'midtable' || shown === 'survival' ? shown : expectation;
       const gp = Math.max(1, rec.wins + rec.draws + rec.losses);
-      const st = boardStanding((this.leagueSeed() ^ (m.season * 0x9e3779b1)) >>> 0, {
+      const st = boardStanding((this.genSeed() ^ (m.season * 0x9e3779b1)) >>> 0, {
         position: t.pos, total: t.size, promote: 2, relegate: this.clubTier() < TIERS ? 2 : 0, // top-2 up / bottom-2 down (PT-28); no relegation in the basement, so the drop-zone penalty can't fire there (PT-123)
         points: rec.wins * 3 + rec.draws, matchesPlayed: gp, totalMatches: gp, expectation: promised,
       });
@@ -3252,7 +3305,7 @@ class Game {
       // screen rendered a 'restless' style around a quote saying "steady as she goes". Re-derive both from
       // the shifted score rather than showing one number's mood beside another number's words.
       const shiftedMood = moodFromScore(shifted);
-      lastBoard = { message: shiftedMood === st.mood ? st.message : boardMessageFor(shiftedMood, (this.leagueSeed() ^ (m.season * 0x9e3779b1)) >>> 0), mood: shiftedMood, expectation };
+      lastBoard = { message: shiftedMood === st.mood ? st.message : boardMessageFor(shiftedMood, (this.genSeed() ^ (m.season * 0x9e3779b1)) >>> 0), mood: shiftedMood, expectation };
     } catch { /* offline / no prestige — skip the verdict */ }
     // TRAINING: the star develops per the focus (young grow it, veterans decline) — his overall shifts the club
     if (m.starId) {
@@ -4251,8 +4304,12 @@ class Game {
     const image = `<div class="op-fame"><div class="op-fame-top"><span class="op-lbl">🌟 PUBLIC IMAGE</span><span class="op-tier">${o.image.tier}</span></div>`
       + `<div class="op-bar"><div class="op-bar-fill" style="width:${imgPct}%"></div></div>`
       + `<div class="op-rep">📣 Reputation: <b class="op-rep-${o.reputation.edge}">${o.reputation.label}</b></div></div>`;
+    // THE FEE IS A VALUATION, NOT A CREDIT. Nothing in the engine ever adds an endorsement payout to
+    // `earnings` — the only commercial money that lands is the sponsors meter (career.ts, +200c above 68).
+    // Printed as `+17,949c` in the gain colour, the biggest number on this tab promised more money than a
+    // whole career earns, and the summer shop's budget never moved. Say what the number actually is.
     const deals = o.endorsements.length
-      ? `<div class="op-deals"><div class="op-sub">🤝 ENDORSEMENTS</div>${o.endorsements.map((d) => `<div class="op-deal"><div class="op-deal-head"><b>${d.brand}</b> <span class="op-deal-tier ${d.tier.toLowerCase()}">${d.tier}</span> <span class="op-deal-pay">+${d.payout.toLocaleString('en-US')}c</span></div><div class="op-deal-cat">${d.category}</div><div class="op-deal-obl">⚠ ${d.obligation}</div>${d.strain ? `<div class="op-deal-strain">💥 ${d.strain}</div>` : ''}</div>`).join('')}</div>`
+      ? `<div class="op-deals"><div class="op-sub">🤝 ENDORSEMENTS</div>${o.endorsements.map((d) => `<div class="op-deal"><div class="op-deal-head"><b>${d.brand}</b> <span class="op-deal-tier ${d.tier.toLowerCase()}">${d.tier}</span> <span class="op-deal-pay" title="What the deal is worth on paper — brand standing, not coins added to your career earnings; the sponsors meter is what pays out.">Worth ~${d.payout.toLocaleString('en-US')}c</span></div><div class="op-deal-cat">${d.category}</div><div class="op-deal-obl">⚠ ${d.obligation}</div>${d.strain ? `<div class="op-deal-strain">💥 ${d.strain}</div>` : ''}</div>`).join('')}</div>`
       : `<div class="op-deals op-none">🤝 No endorsements yet — build your profile to attract brands.</div>`;
     const bootChips = o.boots.owned.map((b) => `<span class="op-boot" title="${b.edge}">👟 ${b.name}</span>`).join('');
     const nextBoot = o.boots.next ? `<div class="op-boot-next">🔒 Next: <b>${o.boots.next.boot.name}</b> — ${o.boots.next.boot.unlock} <span class="op-boot-prog">(${o.boots.next.progress}/${o.boots.next.target})</span></div>` : '';
@@ -5081,9 +5138,13 @@ class Game {
         // every spend tile gates on cost — the Back the Club tiles spend the same earnings as a treat does,
         // and exempting them left the one tile that stayed clickable and then failed with a terse error (PT-144)
         const locked = li.cost > budget;
+        // GREED IS NOT A PERK, so `perkLabel` cannot reach it: it is a top-level LifestyleItem field, and
+        // seven items (the watch, the wardrobe, the mansion…) add `greed: 1` that buyLifestyle applies for
+        // good — ~+5.7% on every future extension wage and a shorter deal, from a tile whose effect list
+        // read like the whole story. Named in the financial offer's own words, which prints the same field.
         const effs = li.clubInvest
           ? `<span class="cg-cost">💷 ${li.cost.toLocaleString('en-US')}c</span> · <span class="cg-invest-eff">🏛️ +${li.clubInvest.toLocaleString('en-US')}c to the club</span>`
-          : `<span class="cg-cost">💷 ${li.cost.toLocaleString('en-US')}c</span> ${li.recovery ? `· ⚡rec+${li.recovery} ` : ''}${li.market ? `· ⭐fame+${li.market} ` : ''}${perkLabel(li.perks)}`;
+          : `<span class="cg-cost">💷 ${li.cost.toLocaleString('en-US')}c</span> ${li.recovery ? `· ⚡rec+${li.recovery} ` : ''}${li.market ? `· ⭐fame+${li.market} ` : ''}${li.greed ? '· greedier ' : ''}${perkLabel(li.perks)}`;
         const lock = locked ? `<div class="cg-lock">🔒 need ${(li.cost - budget).toLocaleString('en-US')}c more</div>` : '';
         return `<div class="cg-foc buy${li.clubInvest ? ' invest' : ''}${locked ? ' locked' : ''}"${locked ? '' : ` data-act="lifestyle" data-id="${li.id}"`}><div class="cg-cname">💷 ${li.icon} ${li.name}</div><div class="cg-cdescr">${li.blurb}</div><div class="cg-effs">${effs}</div>${lock}</div>`;
       }).join('') : '';
@@ -5847,7 +5908,9 @@ class Game {
     const xiHtml = slots.map((pid, i) => {
       const roleForSlot = SLOT_ROLES[this.draftTactics.formation][i];
       const used = usedElsewhere(i);
-      const isLoan = (id: string) => id.startsWith('loan-');
+      // BOTH ROUTES IN, or a scouted loanee wears no LOAN badge and reads as a permanent squad member
+      // right up to the rollover that sends him home — the same `loan-`-only guess the wage bill made.
+      const isLoan = isLoaneeId;
       const tagText = (p: Player) => isLoan(p.id) ? ' · LOAN' : isNftId(p.id) ? ` ${nftTier(overall(p)).icon}` : '';
       const opts = this.club.players
         .filter((p) => p.id === pid || (!used.has(p.id) && !this.injured.has(p.id) && !benched.has(p.id))) // hide injured + contract-lapsed/retired
@@ -6493,21 +6556,28 @@ class Game {
     // `branch` narrows that to one rendered beat of the event: an event like tackle_won draws a ⚡ pressing
     // turnover and a 🦵 ordinary challenge from separate live banks, and the authored bank has to be split
     // the same way or a pressing line lands on a tackle in the back four.
-    if (key) {
-      const extra = commentaryExtra(key, branch);
-      // `opp` is defaulted from the event currently being rendered, so an authored line can name the
-      // opposition without every call site having to remember to pass it.
-      const withOpp = { opp: this.cmOpp, ...(vars ?? {}) };
-      if (extra.length) arr = [...arr, ...extra.map((l: string) => fillCm(l, withOpp) as unknown as T)];
-    }
-    if (arr.length <= 1) return arr[0];
+    // DRAW FIRST, THEN FILL THE ONE LINE THAT WON. This used to token-fill the WHOLE authored bank and
+    // throw all but one line away: loose_ball is 499 authored lines against ~114 loose_ball events a
+    // match, so a match ran ~100,000 fillCm calls — a global unicode regex each — to print ~340 lines.
+    // Live that is spread thin and invisible; skipToEnd drains every unshown event in ONE synchronous
+    // burst, so the whole of it lands on the tap whose only job is to end the match. The bag never needed
+    // the merged CONTENT, only the merged SIZE, so `total` keys it exactly as the merged `arr.length`
+    // did and every seed still draws the same line.
+    const extra = key ? commentaryExtra(key, branch) : [];
+    // `opp` is defaulted from the event currently being rendered, so an authored line can name the
+    // opposition without every call site having to remember to pass it.
+    const withOpp = { opp: this.cmOpp, ...(vars ?? {}) };
+    const total = arr.length + extra.length;
+    // Not a bare `arr[0]`: the early return fires on the MERGED size, so when the only line is an
+    // authored one it is still a raw template and returning it unfilled prints a literal {p} at the player.
+    if (total <= 1) return extra.length ? (fillCm(extra[0], withOpp) as unknown as T) : arr[0];
     // Salts are hand-assigned and 18 of them are reused across different banks, so the bag is keyed by
     // salt AND bank size — otherwise a 4-line bank and a 14-line bank sharing salt 6 would refill each
     // other's bag on every alternating draw and the even-coverage guarantee would evaporate.
-    const bagKey = `${salt}:${arr.length}`;
+    const bagKey = `${salt}:${total}`;
     let bag = this.cmBag[bagKey];
     if (!bag || bag.length === 0) {
-      bag = arr.map((_, i) => i);
+      bag = Array.from({ length: total }, (_, i) => i);
       for (let i = bag.length - 1; i > 0; i--) {           // seeded Fisher-Yates
         const j = this.cidx(i + 1, this.cmSeq++, salt);
         const t = bag[i]; bag[i] = bag[j]; bag[j] = t;
@@ -6520,7 +6590,9 @@ class Game {
     }
     const i = bag.pop()!;
     this.lastPick[bagKey] = i;
-    return arr[i];
+    // Indices below arr.length are the live bank; the rest index the authored bank in the same order the
+    // merged array used to hold them, which is why the drawn line is unchanged.
+    return i < arr.length ? arr[i] : (fillCm(extra[i - arr.length], withOpp) as unknown as T);
   }
   // running match context for narration (reset each match in startMatch)
   private liveScore: [number, number] = [0, 0];

@@ -630,14 +630,26 @@ export function heirGeneBasis(t: Token): { parentGenes: Genes; ceilingLift: numb
 }
 
 // ── reborn: retired token → a fresh prospect of the NEXT generation (same id), inheriting genes + pedigree ──
-export function rebornFields(t: Token): Partial<Token> {
+/** `world` is the save's slot id, and BOTH rolls below have to be mixed with it.
+ *
+ *  They hashed the token id alone, and the played line's id is the constant `nft:1` in every save ever
+ *  created — `signProspect` mints `nft:${countTokens()+1}` into a `tokens: []` fresh save, and `succeed()`
+ *  reuses that id for every generation. So generation 1's heir was `Leo <surname>` in 100% of saves, and
+ *  the direct line ran Leo → Milo → Enzo → Ravi → Jude → Yuki in all of them: the seed advances by exactly
+ *  16777619 per generation and 16777619 % 16 === 3, a fixed stride through FIRST. Two strangers comparing
+ *  dynasties found the same sons, and `portraitUrl` hashes the name, so the faces were correlated too.
+ *  Same defect `careerSeedFor` above documents and fixes for `career_seed`.
+ *
+ *  Existing saves are untouched: this is called once, at the succession, and the name is then persisted on
+ *  the token and never recomputed — a boy the player already knows as Milo is still Milo. */
+export function rebornFields(t: Token, world = ''): Partial<Token> {
   const boost = legacyBoost(tokenAch(t));
   const { parentGenes, ceilingLift } = heirGeneBasis(t);
-  const genes = inheritGenes(parentGenes, seedFrom(`${t.id}:heir:g${t.generation}`), 0.6, ceilingLift);
+  const genes = inheritGenes(parentGenes, seedFrom(`${world}:${t.id}:heir:g${t.generation}`), 0.6, ceilingLift);
   // BLOODLINE: the FAMILY NAME carries down the generations; each heir gets a fresh first name.
   const parts = t.name.trim().split(/\s+/);
   const surname = parts.length > 1 ? parts.slice(1).join(' ') : parts[0];
-  const heirFirst = FIRST[(seedFrom(`${t.id}:heirname:g${t.generation}`) >>> 0) % FIRST.length];
+  const heirFirst = FIRST[(seedFrom(`${world}:${t.id}:heirname:g${t.generation}`) >>> 0) % FIRST.length];
   return {
     generation: t.generation + 1, state: 'prospect', name: `${heirFirst} ${surname}`,
     genes_json: JSON.stringify(genes), pedigree: boost.pedigree, dev_bonus_json: JSON.stringify(boost.devBonus),

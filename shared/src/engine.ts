@@ -874,17 +874,6 @@ export class MatchEngine {
     // edge to spring it clean — a marginal one just gets caught. Bounded to this one decision, so a
     // side without a genuine outlet threat gets far fewer clear breakaways; a side with real pace
     // (e.g. a poacher/pressing-forward with a big gap) still tears the trap open exactly as before.
-    // STEP 1 OF THE REBUILD: A CLEAR CHANCE HAS TO BE NEAR THE GOAL.
-    // This gate asked only "is the receiver past the last defender, and faster?" — never "is he anywhere
-    // dangerous?" — and it fires about 67 times a match, supplying 97.6% of every shot in the game. The
-    // shot then resolves from wherever the receiver was STANDING when the pass arrived: a median of 45.8
-    // metres, past the halfway line, with 2.4% of all shots taken from inside the box. That is the whole
-    // shape of the defect, and every downstream symptom (an inflated shoot-from-range constant, `shooting`
-    // clamped inert on 97% of attempts, an empty penalty area) hangs off it.
-    //
-    // A ball played in behind at 46 metres is a pass into space, not a chance. CHANCE_RANGE says how close
-    // the receiver must be to the goal he is attacking for it to count as one. Rarity FIRST, exactly as
-    // engine.ts's own note prescribes — the finish cannot be unclamped while the gate fires 67 times.
     const trap = !!this.tactics[defTeam].offsideTrap && this.tactics[defTeam].line >= 1;
     if (!trap) return behind && paceGap > 0;
     if (paceGap > TRAP_BEATS) return behind;              // real pace tears a set trap open, as before

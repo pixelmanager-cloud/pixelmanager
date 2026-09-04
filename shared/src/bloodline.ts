@@ -73,10 +73,19 @@ export function heirSeed(parentSeed: number, childIndex: number): number {
   return (h ^ (h >>> 16)) >>> 0;
 }
 
-/** Which physical attribute runs in THIS family. Fixed per bloodline, not per child — that is the point. */
-export function familyTrait(parentSeed: number): keyof Genes {
+/** Which physical attribute runs in THIS family. Fixed per bloodline, not per child — that is the point.
+ *
+ *  THE SEED HAS TO NAME THE BLOODLINE, NOT THE MAN. This is uniform over arbitrary seeds, so keying it on
+ *  anything that is re-minted at a succession silently RE-DRAWS the family's defining attribute at every
+ *  handover — which is what the succession did, passing the retiring star's per-generation career seed.
+ *  Measured by driving the real facade over 16 dynasties of five successions: five of them changed
+ *  attribute mid-line, so the heir card promised "🧬 the family pace" in one generation and "the family
+ *  stamina" in the next, and mintHeirs' KEEP_FAMILY compounded a different attribute either side of the
+ *  flip. It only ever LOOKED stable by hash correlation on the generation suffix, never by design. The
+ *  parameter is named for what it has to be, because the old name is what invited the wrong seed. */
+export function familyTrait(bloodlineSeed: number): keyof Genes {
   const keys: Array<keyof Genes> = ['pace', 'strength', 'stamina'];
-  return keys[(Math.imul(parentSeed >>> 3, 2654435761) >>> 0) % keys.length];
+  return keys[(Math.imul(bloodlineSeed >>> 3, 2654435761) >>> 0) % keys.length];
 }
 
 export interface Heir {
@@ -89,9 +98,15 @@ export interface Heir {
 }
 
 /** The heirs a retiring player leaves behind. `keepPct` is how strongly the father shows through on the
- *  NON-family attributes; the family trait is inherited far harder (see FAMILY_KEEP). */
-export function mintHeirs(parent: Genes, parentSeed: number, count = MAX_HEIRS, ceilingLift = 0): Heir[] {
-  const trait = familyTrait(parentSeed);
+ *  NON-family attributes; the family trait is inherited far harder (see FAMILY_KEEP).
+ *
+ *  `traitSeed` is the BLOODLINE's seed. It defaults to `parentSeed` only because a passed-over branch's
+ *  seed already qualifies — `branch_seed` is stamped once when that son is born and never re-minted — so
+ *  the cousin path is right as it stands. The PLAYED line's seed is not: it is a per-generation career
+ *  seed, so the direct line has to hand in something that survives a succession or the family attribute is
+ *  re-rolled at every handover. */
+export function mintHeirs(parent: Genes, parentSeed: number, count = MAX_HEIRS, ceilingLift = 0, traitSeed = parentSeed): Heir[] {
+  const trait = familyTrait(traitSeed);
   // The variance is controlled HERE rather than inside inheritGenes, because that function applies a fixed
   // ±2 jitter on every call: `keepPct` governs how far a son regresses from his FATHER, and says nothing
   // about how much two BROTHERS differ. Rolling it per child made siblings vary on the family attribute

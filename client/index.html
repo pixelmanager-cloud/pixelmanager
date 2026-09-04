@@ -1023,7 +1023,9 @@
       .op-deal-strain { font-size: 12px; color: #e58f8f; margin-top: 3px; }
       .op-deal-tier.global { background: color-mix(in srgb, #e6c76a 30%, transparent); color: #e6c76a; }
       .op-deal-tier.national { background: color-mix(in srgb, var(--accent) 25%, transparent); color: var(--accent); }
-      .op-deal-pay { margin-left: auto; color: var(--good); font-family: var(--display); font-size: 11px; }
+      /* Not var(--good): this is the deal's headline VALUE, never coins credited — nothing in the engine
+         adds a payout to earnings. In the gain colour beside a + it read as five figures already banked. */
+      .op-deal-pay { margin-left: auto; color: var(--muted); cursor: help; font-family: var(--display); font-size: 11px; }
       .op-deal-cat { font-size: 12px; color: var(--muted); margin-top: 1px; }
       .op-deal-obl { font-size: 12px; color: #ffb454; margin-top: 3px; }
       .op-boot { display: inline-block; font-size: 12px; padding: 4px 9px; margin: 0 5px 5px 0; border-radius: 6px; background: color-mix(in srgb, var(--purple) 14%, transparent); border: 1px solid color-mix(in srgb, var(--purple) 35%, transparent); color: var(--text); cursor: help; }
