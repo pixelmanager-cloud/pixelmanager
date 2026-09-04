@@ -149,3 +149,8 @@ it — kept so it is not re-raised).
 | F-136 | fixed | economy/accessibility | The star's morale was an 8px coloured dot with a title on a non-focusable span; the deal-length selector marked its choice with colour alone and threw focus away on every click | `client/src/main.ts:1217` |
 | F-137 | fixed | manager/performance | `playerStats` accumulated one row per player per season for the life of the dynasty and nothing ever read a season older than the last | `client/src/save.ts:398` |
 | F-138 | fixed | save/visual | The new-game club preview was a nowrap flex row in a 320px column; and `max-width: 96vw` resolves before CSS zoom, so at 110% the title panel was wider than the window below ~1010px | `client/index.html:257` |
+| F-139 | fixed | career/accessibility | The six relationship meters exposed their value only as a CSS width and a `title` on a non-focusable div — now a real `progressbar` | `client/src/main.ts:3971` |
+| F-140 | fixed | career/accessibility | The gaffer-temperament tiles never exposed which was selected, on a choice the code calls the one that gates which arcs fire | `client/src/main.ts:4567` |
+| F-141 | fixed | match/visual | The squad-fitness label sat on the bar's own hue ramp at 1.66:1 worst case, with a text-shadow standing in for contrast | `client/index.html:1702` |
+| F-142 | fixed | economy/accessibility | Squad-table sort headers were click-only — no tabindex, no role, no `aria-sort` — so a keyboard player could open any card but not sort | `client/src/main.ts:422` |
+| F-143 | fixed | economy/accessibility | The player card's greed and fame meters carried their value only as an inline width on a 52px strip | `client/src/main.ts:1328` |

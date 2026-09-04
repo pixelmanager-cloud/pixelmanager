@@ -419,7 +419,11 @@ function statsTableHTML(players: Player[], highlight?: Set<string>, sort?: Squad
   }
   const arrow = (key: string) => (sort?.key === key ? (sort.dir === 'asc' ? ' ▲' : ' ▼') : '');
   const th = (label: string, key: string, style = '', title = '') =>
-    `<th class="sortable" data-sort="${key}"${title ? ` title="${title}"` : ''}${style ? ` style="${style}"` : ''}>${label}${arrow(key)}</th>`;
+    // aria-sort SO THE COLUMN SAYS WHAT IT IS DOING. These are click-only <th>s: no tabindex, no role, and
+    // the sort direction lived entirely in a ▲/▼ glyph appended to the label. makeActivatable is called on
+    // [data-card] in this same function and never on these, so a keyboard player could open any player's
+    // card and could not sort the table at all.
+    `<th class="sortable" data-sort="${key}" aria-sort="${sort?.key === key ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}"${title ? ` title="${title}"` : ''}${style ? ` style="${style}"` : ''}>${label}${arrow(key)}</th>`;
   const head = `<tr><th></th>${th('Pos', 'pos', '', 'Position')}${th('Name', 'name', 'text-align:left')}${th('OVR', 'ovr', '', 'Overall rating')}${th('AGE', 'age', '', 'Age — decides growth, decline and when he retires')}${cols.map(([l, k]) => th(l, k, '', STAT_FULL[k] ?? String(k))).join('')}</tr>`;
   const rows = sorted.map((p) => {
     const on = !!highlight?.has(p.id);
@@ -1411,7 +1415,17 @@ class Game {
     const flaws = new Set(['injury_prone', 'mercenary', 'loyal', 'marketable']);
     const perks = traits.filter((t) => !flaws.has(t)).map((t) => `<span class="pc-trait perk">${TRAIT[t] ?? t}</span>`);
     const flags = traits.filter((t) => flaws.has(t)).map((t) => `<span class="pc-trait flag">${TRAIT[t] ?? t}</span>`);
-    const bar = (label: string, v: number, cls: string) => `<span class="pc-cbar"><i>${label}</i><span class="pc-cbg"><b class="${cls}" style="width:${v * 5}%"></b></span></span>`;
+    // A METER WITH NO NUMBER ON IT. greed and fame were carried ONLY by `style="width:${v * 5}%"` on a
+    // 52px-wide, 5px-tall strip — nothing on the card said "18", and nothing said the scale runs 1-20. Both
+    // are money: greed sets contract cost, deal LENGTH and the release clause; fame sets sponsorship income.
+    // So the one screen where a player compares two stars asked him to eyeball coloured strips in which one
+    // point of greed is 2.6px of width at 5px tall — greed 12 and greed 14 are the same picture. The morale
+    // row on this same card already prints its value beside its bar, and PT-158 (energy) and PT-160 (career
+    // stats) fixed exactly this defect elsewhere in this file; these two were the last mute meters left.
+    // Measured in the live card: label + bar + value is 195px of the 203px row at the full 320px card, so it
+    // still fits on one line — see the wrap note on .pc-cbars in index.html for the narrow-phone case.
+    // Math.round mirrors what the stat row above already does, in case a legacy save carries a fraction.
+    const bar = (label: string, v: number, cls: string) => `<span class="pc-cbar" title="${label}: ${Math.round(v)} out of 20"><i>${label}</i><span class="pc-cbg"><b class="${cls}" style="width:${v * 5}%"></b></span><span>${Math.round(v)}</span></span>`;
     return `<div class="pc-char">`
       + (pers ? `<div class="pc-crow2">🧠 <b>${PERSONALITY_LABEL[pers] ?? pers}</b></div>` : '')
       + (perks.length || flags.length ? `<div class="pc-traits2">${perks.join('')}${flags.join('')}</div>` : '')
@@ -3958,7 +3972,12 @@ class Game {
     const meterColor = (v: number) => v >= 66 ? '#5bd06a' : v >= 33 ? '#ffd75e' : '#ff6d6d';
     // stage-aware: the meters you juggle change with age (coach/parents/mates → gaffer/fans/sponsors/partner)
     const meters = (s.meters ?? []).map((m) =>
-      `<div class="cg-meter" title="${m.label}: ${m.value}/100 — ${METER_WHAT[m.key] ?? ''}"><span class="cg-m-icon">${m.icon}</span>`
+      // A METER WITH NO VALUE ON IT. The six relationships the career is actually ABOUT carried their
+      // number only as `style="width:${m.value}%"` on a `<b>` with no text — the sole text nodes were the
+      // icon and the label, and the figure lived in a `title` on a non-focusable div, which is unreachable
+      // by keyboard and unread by most screen readers. role="progressbar" with the aria-value triple is the
+      // element the platform already has for exactly this, and it costs no pixels.
+      `<div class="cg-meter" title="${m.label}: ${m.value}/100 — ${METER_WHAT[m.key] ?? ''}" role="progressbar" aria-label="${m.label}" aria-valuenow="${m.value}" aria-valuemin="0" aria-valuemax="100"><span class="cg-m-icon">${m.icon}</span>`
       + `<span class="cg-m-lbl">${m.label}</span>`
       + `<span class="cg-m-bar"><b style="width:${m.value}%;background:${meterColor(m.value)}"></b></span></div>`).join('');
     const low = s.energy != null && s.energy < 35;
@@ -4553,8 +4572,13 @@ class Game {
       + `<div class="cg-epilogue">He's done it. After a full season in the first team — <b>${h.status}</b>, ${h.apps} appearances — ${s.name} is a fixture in the side. This is where his career becomes <b>your club's story</b>: it's time to take the reins. From here you pick the XI, set the tactics, and steer <b>${this.club?.name ?? 'the club'}</b> through the season, with ${s.name} your man on the pitch.</div>`
       + `<div class="cg-grad-windfall">⚽ OVR ${h.overall} · ${h.status}${s.careerScore != null ? ` · ★ career score ${s.careerScore.toLocaleString()}` : ''}</div>`
       + `<div class="cg-temper-q">What kind of gaffer is he going to be?</div>`
-      + `<div class="cg-tempers">` + MGR_TEMPERS.map((t, i) =>
-          `<div class="cg-temper${i === 0 ? ' on' : ''}" data-temper="${t.id}"><div class="cg-cname">${t.name}</div><div class="cg-cdescr">${t.blurb}</div></div>`).join('') + `</div>`
+      + `<div class="cg-tempers" role="radiogroup" aria-label="What kind of gaffer is he going to be?">` + MGR_TEMPERS.map((t, i) =>
+          // A RADIO GROUP THAT NEVER SAID WHICH ONE WAS PICKED. makeActivatable stamps role="button" on
+          // each of these, and the selected state lived only in the `on` class and the colour it draws — so
+          // on a choice the code calls the one that "gates which arcs fire and colours how the board and
+          // dressing room react", assistive tech was told there were N buttons and nothing about which was
+          // chosen. aria-checked is kept in step by the click handler below.
+          `<div class="cg-temper${i === 0 ? ' on' : ''}" role="radio" aria-checked="${i === 0}" data-temper="${t.id}"><div class="cg-cname">${t.name}</div><div class="cg-cdescr">${t.blurb}</div></div>`).join('') + `</div>`
       + `<button id="cg-takereins" class="primary">🧢 Take the reins as manager →</button>`
       + `<button id="cg-playon" class="ghost">Play on — finish his career first</button>`
       // "You'll be offered the reins again at the next stage" WAS FALSE. A re-offer needs a fresh `handoff`
@@ -4574,7 +4598,7 @@ class Game {
     this.makeActivatable($('academy-body').querySelectorAll('[data-temper]'));
     $('academy-body').querySelectorAll('[data-temper]').forEach((el) => el.addEventListener('click', () => {
       chosenTemper = (el as HTMLElement).dataset.temper as MgrTemper;
-      $('academy-body').querySelectorAll('[data-temper]').forEach((o) => o.classList.toggle('on', o === el));
+      $('academy-body').querySelectorAll('[data-temper]').forEach((o) => { o.classList.toggle('on', o === el); o.setAttribute('aria-checked', String(o === el)); });
     }));
     // TAKING THE REINS A SECOND TIME IS A DESTRUCTIVE ACT IN A PROMOTION'S CLOTHING. The handler below
     // rewrites manager state with `season: 1, results: [], sponsor: undefined, contElig: undefined, ...`
@@ -5685,6 +5709,7 @@ class Game {
       });
     });
     this.makeActivatable(panel.querySelectorAll('[data-card]'));   // the player card holds contract, morale and the career record
+    this.makeActivatable(panel.querySelectorAll('th.sortable'));   // ...and the columns it is sorted by, which were mouse-only
     panel.querySelectorAll<HTMLElement>('[data-card]').forEach((td) => {
       td.addEventListener('click', () => {
         const p = this.club.players.find((x) => x.id === td.dataset.card);
@@ -6132,7 +6157,16 @@ class Game {
     const fill = $('fit-fill') as HTMLElement;
     fill.style.width = `${fitPct}%`;
     // hue sweeps 0 (red) → 120 (green) with fitness, so the bar shifts green→amber→red as it drops
-    fill.style.background = `hsl(${Math.round(fitAvg * 120)}, 70%, 45%)`;
+    // BRIGHT BAR, DARK INK. #fit-label is painted over this fill and set no colour of its own, so it
+    // inherited --text (#eef0fb) — and against the old 45% sweep from red to green the reading "Your squad
+    // fitness: 62%" never cleared 4.5:1 anywhere on the ramp, worst 1.66:1 at yellow. A text-shadow outline
+    // was doing the work, and an outline is not contrast.
+    //
+    // Measured both ways across the whole 0-120 sweep before choosing: keeping the light label needs the
+    // fill down at 24% lightness (5.17:1) which drains the hue signal the bar exists for, while a dark ink
+    // on a 60% fill clears it at 5.15:1 while making the bar BRIGHTER than it was. The ink is the same
+    // #0a0a16 this sheet already puts on the position chip and the trialist role chip for the same reason.
+    fill.style.background = `hsl(${Math.round(fitAvg * 120)}, 70%, 60%)`;
     $('fit-label').textContent = `Your squad fitness: ${fitPct}%`;
     // Drain the unshown events as ONE feed burst: appendLine appends without measuring and endFeedBurst does
     // the single read/write for the whole batch, instead of one forced layout per commentary line (see there).
