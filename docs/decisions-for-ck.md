@@ -3123,3 +3123,60 @@ on the size of the gap, -4 fails on the ordering, and unwiring the emitter fails
 no persisted rollover bench — `Team.bench` is match-time only, so the rollover's only question is whether a
 man was in the XI) and `transfer_listed` (no player-listing mechanic exists; it is a feature hook, not a
 missing emitter).
+
+## §94 — 57 finished press lines that have never once been shown
+
+`pressConferenceLine` has four competition pools. Three of them are reachable. The fourth,
+`PRE_CUP`, is gated at `shared/src/press.ts:146` on `input.competition === 'cup'` — and nothing in
+the game can produce that value. `spFixture.comp` is typed `'league' | 'cont' | 'wc'`, and both
+production callers (`main.ts:5488` pre-match, `main.ts:6067` post-match) map it as
+`comp === 'cont' ? 'continental' : comp === 'wc' ? 'international' : 'league'`. There is no fourth
+branch. The pool is 2 base lines plus 55 across the four author packs: **57 lines, never rendered.**
+
+They are not written for a domestic cup. They are written for a knockout tie, and read exactly like
+the Continental Cup's single-leg quarter-final, semi-final and final:
+
+> "Cup week. The questions get more romantic and the answers stay resolutely practical."
+> "One game. No second leg, no second chance. That's the beauty and the terror of it."
+
+**The options.**
+
+- **(a) Widen the gate to the knockouts the game actually has.** One line: fire `PRE_CUP` for
+  `'continental'` and `'international'` as well, so it rides alongside `PRE_CONTINENTAL` and
+  `PRE_INTERNATIONAL`. 57 lines enter circulation on the surface this project already calls its
+  thinnest, and they fit the fixture they would be describing. **Recommended.**
+- **(b) Delete the pool** and keep `'cup'` reserved for a domestic cup that does not exist yet.
+  Honest, and it stops the corpus lying about its own size.
+- **(c) Leave it.** The pool costs nothing at runtime, but it is 57 lines of finished writing sitting
+  in the dark, and the same shape (F-024, F-104, F-105, F-106) has now been found four times.
+
+This is a decision rather than a fix because (a) changes what the game says on two real screens, and
+that is a voice call, not a bug.
+
+## §95 — every club in a ten-tier pyramid is equally hard to break into
+
+`careerState(t, c, clubName?, clubLevel = 0)` takes a club level. **No caller anywhere passes one** —
+all three production sites (`client/src/api.ts:1372`, `:1386`, `:1433`) pass three arguments. So
+`firstTeamReady`'s `const threshold = 9 + clubLevel * 1.2;` is permanently 9, and the comment beside
+it — "a higher-level club is harder to break into" — describes something that has never run.
+
+That gate controls two visible things: whether the manager-handoff offer appears at a chapter
+boundary, and whether the club-season league panel appears at all. Today a prospect at a basement
+club and a prospect at a top-flight club face the identical overall ≥ 9 bar. The one place the club's
+standing was meant to push back on the boy is inert.
+
+**The catch, and why this is not a one-line fix.** The scale has to be chosen, not passed through.
+With ten tiers, `9 + 10 × 1.2 = 21` exceeds the attribute cap of 20 — thread the raw tier in and a
+top-flight debut becomes mathematically impossible. Either normalise the tier to roughly 0–4, or drop
+the coefficient well below 1.2.
+
+**The options.**
+
+- **(a) Wire it with a normalised tier** (say `(TIERS - tier) / 2.5`, giving a 9–12.6 spread). The
+  dynasty's climb starts to mean something for the next boy: breaking into the side your father took
+  to the top flight is genuinely harder than breaking into the side he started at. **Recommended, but
+  it is a difficulty change and wants playtesting** — it makes late-dynasty generations slower to
+  arrive, which is the opposite direction from the pacing trim in the plan.
+- **(b) Delete the parameter** and the comment. The bar is a flat 9 and the code says so.
+- **(c) Leave it** until the pacing question in `docs/direction.md` is settled, since (a) pushes
+  against it.
