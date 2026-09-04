@@ -29,7 +29,9 @@ const check = (ok: boolean, msg: string) => { if (ok) console.log(`  ok   ${msg}
  *  `play` only, so every seed died at turn 1-4 on `resolve the story beat first`, was swallowed by the
  *  `catch { break }`, and recorded 1-4 actions where a real career is ~198. The contract was therefore
  *  being asserted over 1.1% of a career, and five of the seven action types — `arc`, `focus`, `offer`,
- *  `coach`, `lifestyle` — were never emitted and never replayed.
+ *  `coach`, `lifestyle` — were never emitted and never replayed. Four came back with the phase dispatch
+ *  below; `lifestyle` did NOT, because it is not a phase — it is a side action offered inside `focus`, so
+ *  the `st.phase === 'lifestyle'` branch that stood here was dead code that read as coverage.
  *
  *  The phase set is `simCareer`'s (shared/src/career.ts); this mirrors its structure deliberately so the
  *  two cannot drift apart silently. And the action list is READ BACK from `career.actions` rather than
@@ -46,11 +48,20 @@ function record(seed: number, maxSteps = 600): { token: Token; finalTurn: number
     const pick = (xs: any[]): any => xs[step % xs.length];
     try {
       if (st.phase === 'arc') c.resolveArc(pick(st.arc.choices).id);
-      else if (st.phase === 'focus') c.chooseFocus(pick(st.focus).id);
+      // SPENDING IS NOT A PHASE, so the shelf has to be answered here. This dispatch used to carry an
+      // `st.phase === 'lifestyle'` branch reading `st.items`; `current()` returns neither — it hands the
+      // shelf out INSIDE the focus phase as `st.lifestyle`, and `buyLifestyle` is a side action that does
+      // not advance the phase. The branch was dead, so `lifestyle` was the one action type this contract
+      // never recorded and never replayed. Buy only what he can afford — `lifestyleOffer` deliberately
+      // lists items he cannot pay for yet, so a blind buy throws and the `catch` below would eat the career.
+      else if (st.phase === 'focus') {
+        const afford = (st.lifestyle as any[]).filter((i) => st.earnings >= i.cost);
+        if (afford.length) c.buyLifestyle(pick(afford).id);
+        c.chooseFocus(pick(st.focus).id);
+      }
       else if (st.phase === 'offer') c.resolveOffer(pick(['develop', 'money', 'brand']) as string);
       else if (st.phase === 'coach') c.appointCoach(pick(st.coaches).id);
       else if (st.phase === 'draft') c.draft(pick(st.options).id);
-      else if (st.phase === 'lifestyle') c.buyLifestyle(pick(st.items).id);
       else {
         const hand = c.hand;
         if (!hand.length) break;
@@ -72,14 +83,23 @@ function record(seed: number, maxSteps = 600): { token: Token; finalTurn: number
 {
   let short = 0;
   const depths: number[] = [];
+  const seen = new Set<string>();
   for (const seed of [11, 2027, 90210, 7, 123456]) {
     const { token, finalTurn, finished } = record(seed);
-    const n = (JSON.parse(token.career_actions!) as unknown[]).length;
-    depths.push(n);
-    if (n < 100 || !finished) short++;
+    const acts = JSON.parse(token.career_actions!) as CareerAction[];
+    depths.push(acts.length);
+    for (const a of acts) seen.add(a.type);
+    if (acts.length < 100 || !finished) short++;
     void finalTurn;
   }
   check(short === 0, `every fixture drives a WHOLE career (action counts: ${depths.join(', ')})`);
+  // ...and it has to reach every KIND of action, not merely a lot of them. A depth of 200 says nothing
+  // about WHICH types were exercised: `lifestyle` was missing from all five records while this block
+  // reported healthy, so the contract was never asserted over the action that moves earnings and standing.
+  const KINDS = ['play', 'draft', 'coach', 'offer', 'focus', 'lifestyle', 'arc'];
+  const never = KINDS.filter((k) => !seen.has(k));
+  check(never.length === 0 && seen.size === KINDS.length,
+    `the record emits all ${KINDS.length} action types (missing: ${never.join(', ') || 'none'})`);
 }
 
 console.log('[qa-replay] a clean replay must be exact, and must not flag itself...');

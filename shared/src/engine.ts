@@ -165,15 +165,19 @@ export class MatchEngine {
   /** Emit a throttled commentary "flow" event (add-only; reads decided state, consumes no rng).
    *  The gap is PRESSURE-SENSITIVE so the feed breathes like real radio: chatter tightens near
    *  either box (where play matters) and thins right out during midfield knock-abouts. Net effect
-   *  is far fewer lines than a flat throttle, with density that tracks where the ball is. */
-  private flow(type: 'pass' | 'tackle_won' | 'loose_ball', teamIdx: 0 | 1, x: number, playerName?: string, playerName2?: string) {
+   *  is far fewer lines than a flat throttle, with density that tracks where the ball is.
+   *  Carries the players' IDS as well as their names. These three types are ~83% of the named lines in
+   *  the feed, and a name is not an identity here (see MatchEvent.playerId): without the id the client
+   *  cannot tell which of two same-named men a line is about, so it described the wrong one. Reading
+   *  `.id` off a Player already in hand costs no rng draw and changes no control flow. */
+  private flow(type: 'pass' | 'tackle_won' | 'loose_ball', teamIdx: 0 | 1, x: number, playerName?: string, playerName2?: string, playerId?: string, playerId2?: string) {
     const sec = Math.floor(this.state.clockSec);
     const zone = this.zoneOf(teamIdx, x);
     // minimum seconds between flow lines by where the action is (att = busiest, def = sparsest)
     const gap = zone === 'att' ? 5 : zone === 'mid' ? 11 : 16;
     if (sec - this.lastFlowSec < gap) return;
     this.lastFlowSec = sec;
-    this.state.events.push({ minute: this.minute(), type, teamIdx, playerName, playerName2, zone });
+    this.state.events.push({ minute: this.minute(), type, teamIdx, playerName, playerName2, playerId, playerId2, zone });
   }
 
   constructor(public teams: [Team, Team], seed: number, tactics?: [Tactics, Tactics]) {
@@ -636,7 +640,7 @@ export class MatchEngine {
             this.awardFoul(defTeam, teamIdx, i, playerIdx, { x: cs.x, y: cs.y });
             return;
           }
-          this.flow('tackle_won', defTeam, ds.x, def.name); // commentary: a turnover won
+          this.flow('tackle_won', defTeam, ds.x, def.name, undefined, def.id); // commentary: a turnover won
           s.carrier = { teamIdx: defTeam, playerIdx: i };
           s.ball = { ...ds };
           return;
@@ -701,7 +705,7 @@ export class MatchEngine {
         );
         if (this.rng() < completion) {
           // commentary: a completed pass in the mid/final third (skip defensive knock-abouts to reduce noise)
-          if (this.zoneOf(teamIdx, recS.x) !== 'def') this.flow('pass', teamIdx, recS.x, carrier.name, rec.name);
+          if (this.zoneOf(teamIdx, recS.x) !== 'def') this.flow('pass', teamIdx, recS.x, carrier.name, rec.name, carrier.id, rec.id);
           this.lastPass[teamIdx] = { passer: playerIdx, receiver: pick.idx, sec: s.clockSec }; // for assist credit
           s.carrier = { teamIdx, playerIdx: pick.idx };
           this.clearRun[teamIdx] = -1;
@@ -771,7 +775,7 @@ export class MatchEngine {
             x: clamp((cs.x + dx) / 2 + (this.rng() - 0.5) * 6, 0, PITCH.w),
             y: clamp((cs.y + recS.y) / 2 + (this.rng() - 0.5) * 6, 0, PITCH.h),
           };
-          this.flow('loose_ball', teamIdx, s.ball.x, carrier.name); // commentary: pass cut out / loose ball
+          this.flow('loose_ball', teamIdx, s.ball.x, carrier.name, undefined, carrier.id); // commentary: pass cut out / loose ball
           s.carrier = null;
         }
         return;

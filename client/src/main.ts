@@ -1322,7 +1322,7 @@ class Game {
 
   /** A prospect card — a 10-year-old about to live his career. For an heir (gen > 0) this is the payoff
    *  beat of the whole dynasty loop: the family name carries on, and you can develop him on the spot. */
-  private showProspectCard(p: import('./api').Prospect, born = false) {
+  private showProspectCard(p: import('./api').Prospect, born = false, soleHeir = false) {
     const stars = '★'.repeat(p.potentialStars) + '☆'.repeat(5 - p.potentialStars);
     const gen = p.generation ?? 0;
     const isGenesis = gen === 0;
@@ -1352,6 +1352,15 @@ class Game {
       + (born ? `<div class="pc-flash">${isGenesis ? '🌱 A NEW BLOODLINE BEGINS' : `🌳 THE ${surname.toUpperCase()} NAME LIVES ON`}</div>` : '')
       + `<div class="pc-contract retired"><div class="pc-legend">Potential ${stars} · ${pedigreeText(p.pedigree, gen, carriesFamilyName(p.name, this.club?.name))}</div>`
       + (gen ? `<div class="pc-stake">Generation ${gen + 1} of the bloodline — a fresh 10-year-old carrying the family name into a whole new career.</div>` : '')
+      // A ONE-SON GENERATION HAS TO BE SAID OUT LOUD. `heirCount` gives a generation a single boy 20% of
+      // the time, and bringThroughHeir opens the heir-choice screen ONLY when there is a brother or a
+      // passed-over cousin to pick between — so that succession drops straight onto this card, which was
+      // byte-for-byte the card a three-brother pick produces. The two sentences written for it were
+      // stranded on the other screen behind `all.length === 1`, a test that function can never pass: it is
+      // only ever entered with the played son PLUS at least one sibling, so neither string had ever
+      // reached a player. Silent, a choice-less succession reads as a bug rather than a fact of the family
+      // — which is the failure heirCount's own doc comment in shared/src/bloodline.ts names.
+      + (soleHeir ? `<div class="pc-stake">The next of the line — one son, and the name goes with him.</div>` : '')
       + (p.note ? `<div class="pc-stake">${p.note}</div>` : '')
       + `</div>`
       + `<div class="pc-foot">🌱 Youth prospect · his story starts at age 10</div>`
@@ -3304,6 +3313,19 @@ class Game {
       // `resetMgrForHeir` puts the season back to 1 when the heir is chosen; this only has to make the
       // state safe in the window between the send-off and that choice.
       this.saveMgr({ ...this.loadMgr(), season: m.season + 1, results: [], arcLastMd: undefined, arcCoins: 0, starAge: age, titles, sponsor: undefined, lastFinishPos: t.pos });
+      // AND THE FEED SAYS WHOSE RETIREMENT IT WAS. `retirement` had exactly one emitter — the squad
+      // report's per-player loop — and that loop narrates `advanceSquad`'s retired list, which is built
+      // from the raw `club.players`. The bloodline star is a Token and is never in that array (he is
+      // merged in for display by `mergedClub`), so no man it can name is ever him: `retirement.star`, 23
+      // authored lines written for this exact moment, could not be reached from anywhere in the game.
+      // Written HERE, after the save above has moved the counter on, so the stamp matches the filter
+      // `seasonFeedHtml` uses — the send-off's own end-of-season report is the only screen this line is
+      // ever read on. The season is passed EXPLICITLY rather than left to pushFeed's default, because
+      // feed_season_stamp.ts requires every feed write inside the rollover to name its season, and because
+      // a later edit that moved this line back above the saveMgr would otherwise file it under the season
+      // just played, where nothing will ever read it. The value is the same either way today.
+      // Retirement path only: `acceptStarBid` renders no report, and its send-off is a sale.
+      this.feedEvent('retirement', '🎽', this.starCtx(), { n: age }, m.season + 1);
       this.retireStar(titles, m.contTitles ?? 0, undefined, (promoted || relegated) ? { move: promoted ? 'promoted' : 'relegated', tier: tierName(newTier) } : undefined);
       return;
     }
@@ -3505,7 +3527,7 @@ class Game {
       // with one, we say so in words rather than letting a choice-less succession read as a bug.
       const sibs = (r as any).siblings as Array<{ id: string; name: string; temper: string; potentialStars: number; familyTrait: string; fatherName?: string; cousin?: boolean }> | undefined;
       if (sibs?.length) this.showHeirChoice(r.prospect, sibs, (r as any).familyTrait);
-      else this.showProspectCard(r.prospect, true);
+      else this.showProspectCard(r.prospect, true, true); // no brothers, no cousins — the card itself has to say so
     } catch (e: any) {
       toast(e?.body?.error ?? 'Succession failed');
       const b = $('cg-heir') as HTMLButtonElement | null; if (b) { b.disabled = false; b.textContent = 'Try again →'; b.addEventListener('click', () => this.bringThroughHeir(m, seasons, titles, mentorship, inheritance, saleFee)); }
@@ -3840,8 +3862,12 @@ class Game {
         const stars = '★'.repeat(p.potentialStars) + '☆'.repeat(5 - p.potentialStars);
         const gen = p.generation ? ` · gen ${p.generation + 1}` : ''; // 1-indexed to match the Bloodline Tree (PT-136)
         const btn = `<button class="primary" data-dev="${p.id}">${p.careerStarted ? 'Continue' : 'Develop'} →</button>`;
+        // THE THIRD ARGUMENT IS NOT OPTIONAL HERE. `isFounder` defaults to true, so leaving it off billed
+        // every 300-coin purchase as "first of the line · his heirs will inherit his pedigree" — on the one
+        // screen that lists him beside the actual founder. mintGenesisLocal already stopped the stranger
+        // taking the family NAME (api.ts); this stops him taking the founder's caption.
         return `<div class="prospect-row"><span class="pr-sprite">${sprite('youth')}</span><div><div class="pr-name">${p.name} <span class="pr-stars" title="His potential — how high he could develop with the right career">${stars}</span></div>`
-          + `<div class="pr-meta">${p.roleHint}${gen} · ${pedigreeText(p.pedigree, p.generation)} ${p.careerStarted ? '· in development' : '· age 10, ready to develop'}</div></div>${btn}</div>`;
+          + `<div class="pr-meta">${p.roleHint}${gen} · ${pedigreeText(p.pedigree, p.generation, carriesFamilyName(p.name, this.club?.name))} ${p.careerStarted ? '· in development' : '· age 10, ready to develop'}</div></div>${btn}</div>`;
       }).join('') : '<div class="muted">No prospects yet — scout one above to begin.</div>';
       const { legends } = await api.legends().catch(() => ({ legends: [] as any[] }));
       const hall = legends.length ? `<h4 class="scout-h4" style="margin-top:22px;"><span class="ico-inline ico-lg">${sprite('laurel')}</span> HALL OF LEGENDS</h4>`
@@ -4447,11 +4473,13 @@ class Game {
     const cards = direct.map((h, i) => card(h, i === 0)).join('')
       + (cousins.length ? `<div class="cg-heir-split">or, from the brother you passed over</div>` + cousins.map((h) => card(h, false)).join('') : '');
     $('academy-body').innerHTML = `<div class="cg-graduation">`
-      + `<div id="cg-heir-title" tabindex="-1" class="cg-grad-title">🌳 ${all.length === 1 ? 'The next of the line'
-          : cousins.length ? `${all.length} of the family` : `${all.length} sons`}</div>`
-      + `<div class="cg-epilogue">${all.length === 1
-          ? 'One son, and the name goes with him.'
-          : cousins.length
+      // NO `all.length === 1` ARM ON THIS SCREEN. `all` is the played son PLUS `siblings`, and
+      // bringThroughHeir only routes here when that list is non-empty, so a one-heir branch is copy no
+      // player can ever reach — it sat here unread while the choice-less succession it was written for
+      // went out in silence. That sentence lives on the prospect card now, which is where a lone heir
+      // actually lands.
+      + `<div id="cg-heir-title" tabindex="-1" class="cg-grad-title">🌳 ${cousins.length ? `${all.length} of the family` : `${all.length} sons`}</div>`
+      + `<div class="cg-epilogue">${cousins.length
           ? 'Your own boys, and a cousin from the brother you let go a generation ago. The name is the same either way — but the line you take is the one that carries it, and the others will make their own way.'
           : 'Brothers. They have their father in them somewhere, and they are not the same boy. Whichever one you take, the others will make their own way — and you may come back for a nephew one day.'}</div>`
       + `<div class="cg-heirs">${cards}</div>`
@@ -4604,7 +4632,11 @@ class Game {
       // can never quietly become a different sentence, read out here beside the cap count it belongs to. In
       // a game about a family name persisting, "the bloodline has produced a full international" is exactly
       // the sort of thing the tree should be able to say.
-      const capLine = n.honours?.capLine ? ` · ${n.honours.capLine}` : '';
+      // Off the legend card as well as off `honours`: `rebornFields` nulls career_honours_json at the
+      // succession, so every forebear's node arrives with `honours: null` and reading it there alone meant
+      // the sentence existed for the living man and for none of his fathers.
+      const frozenCap = n.honours?.capLine ?? n.legend?.capLine;
+      const capLine = frozenCap ? ` · ${frozenCap}` : '';
       // The pop lives on an INNER group. A CSS transform on the outer one would override the SVG
       // `transform="translate(...)"` attribute that positions the node, and the whole tree would collapse
       // onto the origin.
@@ -5595,7 +5627,14 @@ class Game {
       // every other consumer uses, and its star-age modifier belongs here too: a fixture really is harder
       // when the talisman is 34.
       const myStr = this.clubLeagueStrength();
-      const preStakes: 1 | 2 | 3 = this.spFixture.oppStrength >= myStr + 2 ? 3 : this.spFixture.oppStrength >= myStr ? 2 : 1;
+      // THE OCCASION FIRST, THEN THE STRENGTH GAP. A squad-strength diff can never say "cup final", and
+      // `stakes >= 3` is the only door into PRE_STAKES_HIGH (press.ts) — so a Continental or World-Finals
+      // tie against a side less than 2 stronger than us was scored 1, which PressInput itself calls a
+      // "routine fixture", and the manager walked into the biggest night of the season talking team news.
+      // The full-time presser on the SAME tie already reads `comp` and scores it 3, so the two ends of one
+      // night disagreed about what it was. This mirrors that test exactly. Not `spFixture.stakes` — that is
+      // a 0.5-1 match-pressure multiplier on a different scale, consumed by the sim, not by the press.
+      const preStakes: 1 | 2 | 3 = this.spFixture.comp === 'wc' || this.spFixture.comp === 'cont' ? 3 : this.spFixture.oppStrength >= myStr + 2 ? 3 : this.spFixture.oppStrength >= myStr ? 2 : 1;
       // COMPETITION, NOT ALWAYS 'league'. This passed the literal, so a Continental Cup final and a World
     // Finals semi both got routine league-week prose from the manager on the way out. The POST-match
     // presser already derives it from spFixture.comp; only the pre-match one did not.
@@ -5978,10 +6017,14 @@ class Game {
     this.engine = new MatchEngine([payload.home.team, payload.away.team], payload.seed, [payload.home.tactics, payload.away.tactics]);
     this.matchSeed = payload.seed >>> 0;
     this.cmSeq = 0; this.cmBag = {}; this.lastPick = {};   // fresh banks each match
+    // KEYED BY ID, NOT BY NAME. One flat map spans both squads, and a name is not an identity here
+    // (MatchEvent.playerId says why): keyed by name, whoever was written LAST won, so the away squad
+    // overwrote the home side's duplicates and the commentary handed a player another man's attributes.
+    // Measured over 120 fixtures: 77% contained a shared name the descriptor would have split.
     this.playerAttrs = new Map();
     for (const t of [payload.home.team, payload.away.team]) {
-      for (const p of t.players) this.playerAttrs.set(p.name, p.attrs);
-      for (const p of (t.bench ?? [])) this.playerAttrs.set(p.name, p.attrs); // subs appear later
+      for (const p of t.players) this.playerAttrs.set(p.id, p.attrs);
+      for (const p of (t.bench ?? [])) this.playerAttrs.set(p.id, p.attrs); // subs appear later
     }
     this.move = null;
     this.liveScore = [0, 0]; this.scorerTally = new Map();
@@ -6426,8 +6469,16 @@ class Game {
     this.liveScore[e.teamIdx]++;
     const us = this.liveScore[e.teamIdx], them = this.liveScore[1 - e.teamIdx];
     const raw = e.playerName ?? 'someone';
-    const n = (this.scorerTally.get(raw) ?? 0) + 1; this.scorerTally.set(raw, n);
-    const p = this.descriptor(raw);
+    // TALLY THE MAN, NOT THE NAME. This count fires the loudest note in the game (“HAT-TRICK!!”), and keyed
+    // on the bare name it merged namesakes — generateClub draws a twenty-man roster from 18×18 names, so a
+    // namesake ANYWHERE on the pitch, his own side included, pushed the count past what the man had scored.
+    // Over 400 fixtures: 4 goal lines of 1,188 shouted a tally the scorer had not reached — a first goal
+    // called “His second!”, his second called a hat-trick, on a night the full-time report listed him on one.
+    // All four were same-side namesakes, so renderMatchReport's `teamIdx|name` key would not have caught
+    // them either. `playerId` is on every goal event (engine.ts:936); the name is for reading, not counting.
+    const tkey = `${e.teamIdx}|${e.playerId ?? raw}`;
+    const n = (this.scorerTally.get(tkey) ?? 0) + 1; this.scorerTally.set(tkey, n);
+    const p = this.descriptor(raw, e.playerId);
     // The goal call is the loudest line in the game and it drew from these EIGHT strings, while 179
     // authored goal lines sat in the packs unread — goalLine is the one commentary beat that never went
     // through cpickNR, so the merge that every other event got had simply never reached it. (The corpus
@@ -6458,9 +6509,12 @@ class Game {
   private static MINOR = new Set(['pass', 'tackle_won', 'loose_ball', 'foul', 'free_kick', 'corner', 'fatigue']);
   private move: { teamIdx: 0 | 1; names: string[]; zone?: string } | null = null;
   private zoneWord(z?: string) { return z === 'att' ? 'in the final third' : z === 'def' ? 'deep in their own half' : 'in midfield'; }
-  /** A stat-flavoured descriptor for a standout player (deterministic — their highest attribute). */
-  private descriptor(name: string): string {
-    const a = this.playerAttrs.get(name); if (!a) return name;
+  /** A stat-flavoured descriptor for a standout player (deterministic — their highest attribute).
+   *  Resolved by ID, because two men on one teamsheet are routinely called the same thing and a name
+   *  lookup then printed one player's epithet against the other. An event with no id falls back to the
+   *  bare name, exactly as an unknown player always did. */
+  private descriptor(name: string, id?: string): string {
+    const a = id ? this.playerAttrs.get(id) : undefined; if (!a) return name;
     const cand: Array<[number, string]> = [[a.pace ?? 0, 'lightning-quick'], [a.shooting ?? 0, 'sharp-shooting'], [a.strength ?? 0, 'powerful'], [a.passing ?? 0, 'classy'], [a.tackling ?? 0, 'combative'], [a.composure ?? 0, 'ice-cool'], [a.creativity ?? 0, 'inventive'], [a.leadership ?? 0, 'commanding']];
     const [top, adj] = cand.sort((x, y) => y[0] - x[0])[0];
     return top >= 14 ? `the ${adj} ${name}` : name; // only genuine standouts earn an epithet
@@ -6566,7 +6620,7 @@ class Game {
     // and would be one omission away from the same bug.
     this.cmOpp = e.teamIdx === 0 ? this.awayName : this.homeName;
     const opp = e.teamIdx === 0 ? this.awayName : this.homeName;
-    const p = this.descriptor(e.playerName ?? 'someone');
+    const p = this.descriptor(e.playerName ?? 'someone', e.playerId);
     const zone = this.zoneWord(e.zone);
     const min = `<span class="cm-min">${e.minute}'</span>`;
     const sc = this.liveScore; // running tally (correct in live AND skip-to-end flush)

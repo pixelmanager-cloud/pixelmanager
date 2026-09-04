@@ -100,6 +100,9 @@ export interface GameStore {
   missionById(id: string): Promise<MissionRow | undefined>;
   setMissionSigned(id: string): Promise<void>;
   countMissionsInSeason(accountId: string, seasonId: string): Promise<number>;
+  /** Drop every dispatched trip outside `keepSeasonIds`. `createMission` had no delete path anywhere in
+   *  the tree while every reader is season-scoped; see the implementation in client/src/save.ts. */
+  pruneMissions(keepSeasonIds: string[]): Promise<void>;
   addLoanee(ownerId: string, seasonId: string, playerId: string): Promise<void>;
   countLoanees(ownerId: string, seasonId: string): Promise<number>;
   loaneeIds(ownerId: string, seasonId: string): Promise<string[]>;

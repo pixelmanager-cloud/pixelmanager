@@ -35,6 +35,22 @@ console.log(`=== Match commentary — ${total} authored lines across ${KEYS.leng
 console.log('  thinnest events:');
 for (const [k, n] of rows.slice(0, 8)) console.log(`    ${String(n).padStart(5)}  ${k}`);
 
+// THE OTHER DIRECTION, which the header above promises and this file did not do. The loop only ever asks
+// for keys it already scraped out of main.ts, so a bank opened under a key no cpickNR call draws was
+// invisible here: the probe printed its cheerful total and a green tick over lines no player can ever be
+// shown. That is the `red_card_second` miss pointing the other way. So enumerate the packs themselves.
+const packKeys = [...new Set(RAW_PACKS.flatMap((p) => Object.keys(p)))].sort();
+const orphans = packKeys.filter((k) => !KEYS.includes(k));
+// Printed even when green, because a reconciliation of two sets is worthless if you cannot see that both
+// were non-empty — nothing against nothing passes exactly as loudly as a real match.
+console.log(`  ..   ${packKeys.length} authored key(s) in the packs vs ${KEYS.length} drawn by main.ts — ${orphans.length} orphaned`);
+for (const k of orphans) {
+  // Count in parentheses so the gate's norm() strips it: the KEY is the failure's identity, the line
+  // total drifts with every edit to the pack.
+  console.log(`  FAIL '${k}' is authored but no cpickNR call site draws it (${RAW_PACKS.flatMap((p) => p[k] ?? []).length} lines) — dead weight`);
+}
+if (orphans.length) process.exitCode = 1;
+
 // Branch splits: an event that renders as two distinct beats has its bank divided by the leading icon,
 // and a branch that ends up starved is a repetition bug that the flat total hides completely.
 const BRANCHES: Array<[string, string, boolean]> = [['tackle_won', '⚡', false], ['tackle_won', '🦵', true]];

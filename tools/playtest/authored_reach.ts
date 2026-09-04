@@ -59,6 +59,11 @@ async function main() {
   const main_ts = readFileSync('client/src/main.ts', 'utf8').replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ');
   ok(/staffQuip\(/.test(main_ts), 'the client calls staffQuip — the quips have a production caller');
   ok(/honours\?\.capLine/.test(main_ts), 'the family tree reads the frozen call-up line');
+  // ...AND off the legend card, which is the only copy a RETIRED man has. The assertion above was true and
+  // useless on its own: `rebornFields` nulls career_honours_json at the succession, so every forebear's
+  // node carries `honours: null` and the sentence reached exactly the one man still playing — on the screen
+  // that exists to be the family's permanent record.
+  ok(/legend\?\.capLine/.test(main_ts), 'the tree falls back to the legend card, so a retired forebear keeps his call-up line');
   const tokens_ts = readFileSync('shared/src/tokens.ts', 'utf8').replace(/\/\*[\s\S]*?\*\//g, ' ').replace(/^\s*\/\/.*$/gm, ' ');
   ok(/callUpBlurb\(/.test(tokens_ts), 'careerHonours calls callUpBlurb — the corpus has a production caller');
 

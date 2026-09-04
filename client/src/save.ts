@@ -456,6 +456,28 @@ export class LocalStore implements GameStore {
   async countMissionsInSeason(accountId: string, seasonId: string): Promise<number> {
     return this.m.missions.filter((x) => x.account_id === accountId && x.season_id === seasonId).length;
   }
+  /** Drop every dispatched trip outside `keepSeasonIds` — `prunePlayerStats` above, for the other
+   *  push-only collection.
+   *
+   *  `createMission` had no delete path anywhere in the tree, and every reader of `missions` is
+   *  season-scoped: the Scouting screen reads the current season plus last season's unsigned trips, and
+   *  `profile.season` has exactly one writer (`spSeasonReward`) which only ever increments it. So a row's
+   *  season stamp leaves that window two rollovers after dispatch and can never come back, while the row
+   *  — carrying a whole serialized Player in `player_json` — stays in the save for the life of the
+   *  dynasty, deep-cloned on every debounced persist and re-parsed on every load. Measured over
+   *  twenty-five seasons of three trips each (tools/playtest/scout_trip_prune.ts): 75 rows, 46.6 KiB of a
+   *  57.0 KiB save, 72 of them unreachable by anything that ships.
+   *
+   *  Same two guards as `prunePlayerStats`: REFUSES AN EMPTY KEEP LIST, because a caller that computed no
+   *  seasons to keep is a caller with a bug and a deleted trip is a paid-for signing the player can never
+   *  make; and only `touch()`es when something actually went, so a prune with nothing to do costs no write. */
+  async pruneMissions(keepSeasonIds: string[]): Promise<void> {
+    const keep = new Set((keepSeasonIds ?? []).filter((s) => typeof s === 'string'));
+    if (!keep.size) { console.warn('[save] refused a missions prune with no seasons to keep'); return; }
+    const before = this.m.missions.length;
+    this.m.missions = this.m.missions.filter((x) => keep.has(x.season_id));
+    if (this.m.missions.length !== before) this.touch();
+  }
   async addLoanee(ownerId: string, seasonId: string, playerId: string): Promise<void> {
     if (!this.m.loanees.some((l) => l.seasonId === seasonId && l.playerId === playerId)) {
       this.m.loanees.push({ seasonId, playerId }); this.touch();

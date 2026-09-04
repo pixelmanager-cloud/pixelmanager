@@ -9,7 +9,7 @@
 // kind is a one-line change here and should be a deliberate one; a stray file is caught the same day.
 //
 // Run: `npx tsx tools/playtest/ship_hygiene.ts`
-import { readdirSync, statSync } from 'node:fs';
+import { readdirSync, statSync, lstatSync } from 'node:fs';
 import { join } from 'node:path';
 
 let fails = 0;
@@ -54,6 +54,27 @@ ok(strays.length === 0, `no page or source file is sitting in the asset tree${st
 const rootStrays = readdirSync('.').filter((n) => /probe.*\.html?$/i.test(n) || /^_{1,2}.*\.html?$/i.test(n));
 console.log(`  ..   ${rootStrays.length} probe-shaped file(s) in the repo root`);
 ok(rootStrays.length === 0, `no scratch page is sitting in the repo root${rootStrays.length ? ` (${rootStrays.join(', ')})` : ''}`);
+
+// AND NO SYMLINKS IN THE SOURCE TREE. An agent working in a scratch clone left `shared/shared -> shared`
+// behind in the real repo — a self-referential loop. It ships nothing and git does not track it, so it was
+// invisible to every check here, but it made field_wiring.ts's directory walk recurse until the OS threw
+// ELOOP, which failed the playtest leg and cost a full gate cycle to diagnose. A source tree has no
+// legitimate symlinks in it; node_modules is where they belong and is excluded.
+const links: string[] = [];
+const linkWalk = (d: string, depth = 0) => {
+  if (depth > 4) return;
+  for (const n of readdirSync(d)) {
+    if (n === 'node_modules' || n === '.git' || n === 'dist') continue;
+    const full = join(d, n);
+    let st;
+    try { st = lstatSync(full); } catch { continue; }
+    if (st.isSymbolicLink()) { links.push(full); continue; }   // never follow it — that is the failure mode
+    if (st.isDirectory()) linkWalk(full, depth + 1);
+  }
+};
+linkWalk('.');
+console.log(`  ..   ${links.length} symlink(s) in the source tree (node_modules excluded)`);
+ok(links.length === 0, `no symlink is sitting in the source tree${links.length ? ` (${links.join(', ')})` : ''}`);
 
 console.log(fails ? `\n✗ ${fails} — something that is not a game asset would ship` : '\n✓ only declared game assets are in the bundle');
 if (fails) process.exitCode = 1;

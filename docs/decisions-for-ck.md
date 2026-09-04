@@ -3180,3 +3180,41 @@ the coefficient well below 1.2.
 - **(b) Delete the parameter** and the comment. The bar is a flat 9 and the code says so.
 - **(c) Leave it** until the pacing question in `docs/direction.md` is settled, since (a) pushes
   against it.
+
+## §96 — the side-focus round is keyed to the wrong chapter, and fixing it costs sponsors
+
+**The defect is real and confirmed.** At a summer, the game offers two focus rounds. The main one is
+keyed on the chapter that just *ended*; the side one beside it is keyed on the chapter about to
+*start*. Measured: **20 of 24 side rounds offer a bank belonging to the wrong chapter**, four careers
+are offered the identical side bank twice, and four authored side banks — Scholar, Youth Team,
+Breakthrough, First Team — are **never reachable from their own summer at all**. This is the same
+shape as F-1xx and the fix is two small edits.
+
+**Why I have not applied it.** An independent reviewer measured what the fix does downstream, and it
+turns a currently-green gate probe red: `sponsor_meter.ts` goes from **57/150 to 98/150** careful
+careers dipping under 30, against a `<= 90` bar. Growing `scripts/gate-baseline.txt` is forbidden, so
+this cannot simply ship.
+
+**The cause is precise, and it is a design gap rather than a bug in the fix.** The only sponsors-raising
+*main* focus (Sponsor Duties) lives in `FOCUS_BY_CHAPTER.Establishing` and is reachable only at the
+turn-120 summer. Between turn 86 — when the sponsors meter first appears — and the end of the career,
+the only levers are the *side* options `signing` and `boardroom`. Re-keying moves those from turns
+86/104/120 to 104/120, deleting the one that lands at the exact moment the meter debuts. So the
+mis-keying has been quietly propping up the sponsors economy, and correcting it exposes that there is
+no proper way to raise sponsors in the last third of a career.
+
+**The options.**
+
+- **(a) Fix the keying and give the First Team / Breakthrough side bank a sponsors option.** Corrects
+  the defect and fills the real gap it exposes. **Recommended** — but it is new authored content and a
+  balance change, which is why it is here and not in a commit.
+- **(b) Fix the keying and author an `Academy` side bank,** restoring the sixth side round the turn-28
+  summer would otherwise lose. Complementary to (a) rather than an alternative; on its own it does not
+  address the turn-86 hole.
+- **(c) Fix the keying and re-tune the sponsor decay** so 98/150 sits back under the bar. Cheapest, and
+  the most likely to be wrong: the probe's bar is the thing telling you the economy is working.
+- **(d) Leave the keying wrong.** Four authored banks stay unreachable and every side round keeps
+  offering the next chapter's choices, but the sponsors economy is undisturbed.
+
+The two code edits are ready and verified; they are held only on this. Say which of (a)–(d) and I will
+apply it.

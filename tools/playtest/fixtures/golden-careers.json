@@ -68,6 +68,10 @@
         "cardId": "ice-veins"
       },
       {
+        "type": "lifestyle",
+        "cardId": "boots"
+      },
+      {
         "type": "focus",
         "cardId": "family"
       },
@@ -168,8 +172,16 @@
         "cardId": "lung-buster"
       },
       {
+        "type": "lifestyle",
+        "cardId": "invest-club-sm"
+      },
+      {
         "type": "focus",
         "cardId": "impress"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "bike"
       },
       {
         "type": "focus",
@@ -300,8 +312,16 @@
         "cardId": "splitter"
       },
       {
+        "type": "lifestyle",
+        "cardId": "driving"
+      },
+      {
         "type": "focus",
         "cardId": "school"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "private-tutor"
       },
       {
         "type": "focus",
@@ -432,8 +452,16 @@
         "cardId": "anchor"
       },
       {
+        "type": "lifestyle",
+        "cardId": "agent-din"
+      },
+      {
         "type": "focus",
         "cardId": "loan"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "invest-club-lg"
       },
       {
         "type": "focus",
@@ -564,8 +592,16 @@
         "cardId": "nerves-steel"
       },
       {
+        "type": "lifestyle",
+        "cardId": "wheels"
+      },
+      {
         "type": "focus",
         "cardId": "risk_press"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "prank-fund"
       },
       {
         "type": "focus",
@@ -676,8 +712,16 @@
         "cardId": "big-moment"
       },
       {
+        "type": "lifestyle",
+        "cardId": "invest"
+      },
+      {
         "type": "focus",
         "cardId": "focus_leadership"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "flash-jewellery"
       },
       {
         "type": "focus",
@@ -784,8 +828,16 @@
         "cardId": "big-moment"
       },
       {
+        "type": "lifestyle",
+        "cardId": "charity"
+      },
+      {
         "type": "focus",
         "cardId": "focus_flair"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "moveout"
       },
       {
         "type": "focus",
@@ -818,15 +870,15 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":7,\"strength\":4,\"stamina\":9,\"passing\":10,\"shooting\":9,\"tackling\":8,\"positioning\":13,\"workrate\":11,\"keeping\":4,\"setPiece\":8,\"composure\":10,\"aggression\":8,\"creativity\":6,\"teamwork\":13,\"leadership\":9,\"durability\":8}",
+        "attrs_json": "{\"pace\":7,\"strength\":4,\"stamina\":9,\"passing\":10,\"shooting\":10,\"tackling\":8,\"positioning\":13,\"workrate\":11,\"keeping\":4,\"setPiece\":8,\"composure\":10,\"aggression\":8,\"creativity\":7,\"teamwork\":13,\"leadership\":9,\"durability\":8}",
         "role": "MF",
         "traits_json": "[\"mercenary\",\"marketable\"]",
         "personality": "workhorse",
-        "greed": 19,
-        "marketability": 18,
-        "earnings": 14665,
+        "greed": 20,
+        "marketability": 20,
+        "earnings": 3085,
         "peak_overall": 10,
-        "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"A Cup Semi Under the Lights\",\"Title Decider\"],\"peakOverall\":10,\"careerScore\":284,\"turnsPlayed\":120}"
+        "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"A Cup Semi Under the Lights\",\"Title Decider\"],\"peakOverall\":10,\"careerScore\":290,\"turnsPlayed\":120}"
       }
     }
   },
@@ -893,6 +945,10 @@
       {
         "type": "play",
         "cardId": "stepover"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "invest-club-sm"
       },
       {
         "type": "focus",
@@ -999,8 +1055,16 @@
         "cardId": "lung-buster"
       },
       {
+        "type": "lifestyle",
+        "cardId": "bike"
+      },
+      {
         "type": "focus",
         "cardId": "impress"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "boots"
       },
       {
         "type": "focus",
@@ -1119,8 +1183,16 @@
         "cardId": "lead-press"
       },
       {
+        "type": "lifestyle",
+        "cardId": "road-trip"
+      },
+      {
         "type": "focus",
         "cardId": "rest"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "driving"
       },
       {
         "type": "focus",
@@ -1247,8 +1319,16 @@
         "cardId": "rabona"
       },
       {
+        "type": "lifestyle",
+        "cardId": "chef"
+      },
+      {
         "type": "focus",
         "cardId": "rest"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "flash-jewellery"
       },
       {
         "type": "focus",
@@ -1383,8 +1463,16 @@
         "cardId": "lung-buster"
       },
       {
+        "type": "lifestyle",
+        "cardId": "wardrobe"
+      },
+      {
         "type": "focus",
         "cardId": "agent"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "invest-club-sm"
       },
       {
         "type": "focus",
@@ -1499,8 +1587,16 @@
         "cardId": "crunch"
       },
       {
+        "type": "lifestyle",
+        "cardId": "invest-club-lg"
+      },
+      {
         "type": "focus",
         "cardId": "oldfriend"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "testim"
       },
       {
         "type": "focus",
@@ -1603,8 +1699,16 @@
         "cardId": "nerves-steel"
       },
       {
+        "type": "lifestyle",
+        "cardId": "invest"
+      },
+      {
         "type": "focus",
         "cardId": "legacy"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "invest-club-lg"
       },
       {
         "type": "focus",
@@ -1639,13 +1743,13 @@
         "state": "pro",
         "attrs_json": "{\"pace\":10,\"strength\":11,\"stamina\":12,\"passing\":9,\"shooting\":13,\"tackling\":14,\"positioning\":13,\"workrate\":10,\"keeping\":6,\"setPiece\":12,\"composure\":12,\"aggression\":15,\"creativity\":8,\"teamwork\":11,\"leadership\":9,\"durability\":11}",
         "role": "DF",
-        "traits_json": "[\"biggame\"]",
+        "traits_json": "[\"biggame\",\"marketable\"]",
         "personality": "workhorse",
-        "greed": 12,
-        "marketability": 12,
-        "earnings": 12655,
+        "greed": 14,
+        "marketability": 15,
+        "earnings": 645,
         "peak_overall": 13,
-        "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"capLine\":\"A steady evening in national colours. The coach will have noticed the things the crowd did not.\",\"bigNights\":[\"The Game Your Whole Career Gets Judged On\",\"Title Decider\",\"A Derby With the Title on the Line\"],\"peakOverall\":13,\"careerScore\":382,\"turnsPlayed\":120}"
+        "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"capLine\":\"A steady evening in national colours. The coach will have noticed the things the crowd did not.\",\"bigNights\":[\"The Game Your Whole Career Gets Judged On\",\"Title Decider\",\"A Derby With the Title on the Line\"],\"peakOverall\":13,\"careerScore\":384,\"turnsPlayed\":120}"
       }
     }
   },
@@ -1716,6 +1820,10 @@
       {
         "type": "play",
         "cardId": "ice-veins"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "boots"
       },
       {
         "type": "focus",
@@ -1822,8 +1930,16 @@
         "cardId": "splitter"
       },
       {
+        "type": "lifestyle",
+        "cardId": "bike"
+      },
+      {
         "type": "focus",
         "cardId": "mates"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "gift-fam"
       },
       {
         "type": "focus",
@@ -1946,8 +2062,16 @@
         "cardId": "switch"
       },
       {
+        "type": "lifestyle",
+        "cardId": "invest-club-sm"
+      },
+      {
         "type": "focus",
         "cardId": "impress"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "wheels"
       },
       {
         "type": "focus",
@@ -2070,8 +2194,16 @@
         "cardId": "ice-veins"
       },
       {
+        "type": "lifestyle",
+        "cardId": "invest-club-lg"
+      },
+      {
         "type": "focus",
         "cardId": "partner"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "invest-club-sm"
       },
       {
         "type": "focus",
@@ -2194,8 +2326,16 @@
         "cardId": "step-up"
       },
       {
+        "type": "lifestyle",
+        "cardId": "moveout"
+      },
+      {
         "type": "focus",
         "cardId": "partner"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "nightclub"
       },
       {
         "type": "focus",
@@ -2326,8 +2466,16 @@
         "cardId": "stepover"
       },
       {
+        "type": "lifestyle",
+        "cardId": "prank-fund"
+      },
+      {
         "type": "focus",
         "cardId": "focus_leadership"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "flash-jewellery"
       },
       {
         "type": "focus",
@@ -2430,8 +2578,16 @@
         "cardId": "ice-veins"
       },
       {
+        "type": "lifestyle",
+        "cardId": "charity"
+      },
+      {
         "type": "focus",
         "cardId": "risk_press"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "wardrobe"
       },
       {
         "type": "focus",
@@ -2469,10 +2625,10 @@
         "traits_json": "[\"mercenary\",\"marketable\"]",
         "personality": "stoic",
         "greed": 20,
-        "marketability": 15,
-        "earnings": 13195,
+        "marketability": 17,
+        "earnings": 4235,
         "peak_overall": 12,
-        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"capLine\":\"Another international appearance, and he was involved in almost nothing and lost almost nothing.\",\"bigNights\":[\"A Continental Final\"],\"peakOverall\":12,\"careerScore\":245,\"turnsPlayed\":120}"
+        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"capLine\":\"Another international appearance, and he was involved in almost nothing and lost almost nothing.\",\"bigNights\":[\"A Continental Final\"],\"peakOverall\":12,\"careerScore\":247,\"turnsPlayed\":120}"
       }
     }
   },
@@ -2543,6 +2699,10 @@
       {
         "type": "play",
         "cardId": "claim-cross"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "boots"
       },
       {
         "type": "focus",
@@ -2645,8 +2805,16 @@
         "cardId": "one-handed"
       },
       {
+        "type": "lifestyle",
+        "cardId": "invest-club-sm"
+      },
+      {
         "type": "focus",
         "cardId": "focus_teamwork0"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "bike"
       },
       {
         "type": "focus",
@@ -2777,8 +2945,16 @@
         "cardId": "organise"
       },
       {
+        "type": "lifestyle",
+        "cardId": "driving"
+      },
+      {
         "type": "focus",
         "cardId": "school"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "private-tutor"
       },
       {
         "type": "focus",
@@ -2909,8 +3085,16 @@
         "cardId": "wonder-save"
       },
       {
+        "type": "lifestyle",
+        "cardId": "invest-club-lg"
+      },
+      {
         "type": "focus",
         "cardId": "rest"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "dressing-room-mvp"
       },
       {
         "type": "focus",
@@ -3041,8 +3225,16 @@
         "cardId": "brave-block"
       },
       {
+        "type": "lifestyle",
+        "cardId": "agent-din"
+      },
+      {
         "type": "focus",
         "cardId": "partner"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "supercar"
       },
       {
         "type": "focus",
@@ -3153,8 +3345,16 @@
         "cardId": "shot-stop"
       },
       {
+        "type": "lifestyle",
+        "cardId": "mansion"
+      },
+      {
         "type": "focus",
         "cardId": "focus_keeping3"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "prank-fund"
       },
       {
         "type": "focus",
@@ -3261,8 +3461,16 @@
         "cardId": "shotstop-clinic"
       },
       {
+        "type": "lifestyle",
+        "cardId": "testim"
+      },
+      {
         "type": "focus",
         "cardId": "risk_press"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "nightclub"
       },
       {
         "type": "focus",
@@ -3299,11 +3507,11 @@
         "role": "GK",
         "traits_json": "[\"wall\",\"injury_prone\",\"mercenary\",\"marketable\"]",
         "personality": "workhorse",
-        "greed": 19,
+        "greed": 20,
         "marketability": 20,
-        "earnings": 15465,
+        "earnings": 585,
         "peak_overall": 10,
-        "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"The Game Your Whole Career Gets Judged On\",\"A Derby With the Title on the Line\"],\"peakOverall\":10,\"careerScore\":555,\"turnsPlayed\":120}"
+        "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"The Game Your Whole Career Gets Judged On\",\"A Derby With the Title on the Line\"],\"peakOverall\":10,\"careerScore\":556,\"turnsPlayed\":120}"
       }
     }
   },
@@ -3370,6 +3578,10 @@
       {
         "type": "play",
         "cardId": "lung-buster"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "invest-club-sm"
       },
       {
         "type": "focus",
@@ -3476,8 +3688,16 @@
         "cardId": "stepover"
       },
       {
+        "type": "lifestyle",
+        "cardId": "bike"
+      },
+      {
         "type": "focus",
         "cardId": "impress"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "boots"
       },
       {
         "type": "focus",
@@ -3588,8 +3808,16 @@
         "cardId": "crunch"
       },
       {
+        "type": "lifestyle",
+        "cardId": "invest-club-lg"
+      },
+      {
         "type": "focus",
         "cardId": "focus_composure0"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "agent-din"
       },
       {
         "type": "focus",
@@ -3720,8 +3948,16 @@
         "cardId": "gas-tank"
       },
       {
+        "type": "lifestyle",
+        "cardId": "moveout"
+      },
+      {
         "type": "focus",
         "cardId": "focus_teamwork"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "invest-club-sm"
       },
       {
         "type": "focus",
@@ -3852,8 +4088,16 @@
         "cardId": "team-ethic"
       },
       {
+        "type": "lifestyle",
+        "cardId": "nightclub"
+      },
+      {
         "type": "focus",
         "cardId": "partner"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "counselling"
       },
       {
         "type": "focus",
@@ -3968,8 +4212,16 @@
         "cardId": "lung-buster"
       },
       {
+        "type": "lifestyle",
+        "cardId": "youth-coach-gift"
+      },
+      {
         "type": "focus",
         "cardId": "partner"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "watch"
       },
       {
         "type": "focus",
@@ -4080,8 +4332,16 @@
         "cardId": "lung-buster"
       },
       {
+        "type": "lifestyle",
+        "cardId": "invest"
+      },
+      {
         "type": "focus",
         "cardId": "legacy"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "prank-fund"
       },
       {
         "type": "focus",
@@ -4114,15 +4374,15 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":14,\"strength\":10,\"stamina\":10,\"passing\":11,\"shooting\":12,\"tackling\":9,\"positioning\":14,\"workrate\":12,\"keeping\":6,\"setPiece\":11,\"composure\":16,\"aggression\":8,\"creativity\":6,\"teamwork\":16,\"leadership\":12,\"durability\":7}",
+        "attrs_json": "{\"pace\":14,\"strength\":10,\"stamina\":10,\"passing\":11,\"shooting\":12,\"tackling\":9,\"positioning\":14,\"workrate\":12,\"keeping\":6,\"setPiece\":11,\"composure\":17,\"aggression\":8,\"creativity\":6,\"teamwork\":16,\"leadership\":12,\"durability\":7}",
         "role": "FW",
         "traits_json": "[\"mercenary\",\"marketable\"]",
         "personality": "perfectionist",
         "greed": 20,
-        "marketability": 15,
-        "earnings": 12745,
+        "marketability": 18,
+        "earnings": 2635,
         "peak_overall": 12,
-        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"capLine\":\"Another international appearance, and he was involved in almost nothing and lost almost nothing.\",\"bigNights\":[],\"peakOverall\":12,\"careerScore\":287,\"turnsPlayed\":120}"
+        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"capLine\":\"Another international appearance, and he was involved in almost nothing and lost almost nothing.\",\"bigNights\":[],\"peakOverall\":12,\"careerScore\":290,\"turnsPlayed\":120}"
       }
     }
   },
@@ -4189,6 +4449,10 @@
       {
         "type": "play",
         "cardId": "anchor"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "invest-club-sm"
       },
       {
         "type": "focus",
@@ -4299,8 +4563,16 @@
         "cardId": "captain"
       },
       {
+        "type": "lifestyle",
+        "cardId": "console"
+      },
+      {
         "type": "focus",
         "cardId": "mates"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "bike"
       },
       {
         "type": "focus",
@@ -4413,6 +4685,10 @@
       {
         "type": "play",
         "cardId": "elastico"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "moveout"
       },
       {
         "type": "focus",
@@ -4547,8 +4823,16 @@
         "cardId": "legs-of-steel"
       },
       {
+        "type": "lifestyle",
+        "cardId": "charity"
+      },
+      {
         "type": "focus",
         "cardId": "partner"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "invest-club-sm"
       },
       {
         "type": "focus",
@@ -4675,8 +4959,16 @@
         "cardId": "red-mist"
       },
       {
+        "type": "lifestyle",
+        "cardId": "nightclub"
+      },
+      {
         "type": "focus",
         "cardId": "fans"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "invest-club-sm"
       },
       {
         "type": "focus",
@@ -4803,8 +5095,16 @@
         "cardId": "samba"
       },
       {
+        "type": "lifestyle",
+        "cardId": "prank-fund"
+      },
+      {
         "type": "focus",
         "cardId": "focus_leadership"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "flash-jewellery"
       },
       {
         "type": "focus",
@@ -4911,8 +5211,16 @@
         "cardId": "trigger"
       },
       {
+        "type": "lifestyle",
+        "cardId": "club-legend-lunch"
+      },
+      {
         "type": "focus",
         "cardId": "focus_flair"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "wardrobe"
       },
       {
         "type": "focus",
@@ -4947,13 +5255,13 @@
         "state": "pro",
         "attrs_json": "{\"pace\":13,\"strength\":5,\"stamina\":14,\"passing\":8,\"shooting\":11,\"tackling\":10,\"positioning\":7,\"workrate\":8,\"keeping\":4,\"setPiece\":10,\"composure\":8,\"aggression\":10,\"creativity\":8,\"teamwork\":8,\"leadership\":7,\"durability\":5}",
         "role": "FW",
-        "traits_json": "[\"injury_prone\",\"mercenary\"]",
+        "traits_json": "[\"injury_prone\",\"mercenary\",\"marketable\"]",
         "personality": "showman",
         "greed": 20,
-        "marketability": 13,
-        "earnings": 12809,
+        "marketability": 15,
+        "earnings": 4989,
         "peak_overall": 10,
-        "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"A Derby With the Title on the Line\"],\"peakOverall\":10,\"careerScore\":250,\"turnsPlayed\":120}"
+        "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"A Derby With the Title on the Line\"],\"peakOverall\":10,\"careerScore\":246,\"turnsPlayed\":120}"
       }
     }
   },
@@ -5016,6 +5324,10 @@
       {
         "type": "play",
         "cardId": "splitter"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "console"
       },
       {
         "type": "focus",
@@ -5130,8 +5442,16 @@
         "cardId": "lung-buster"
       },
       {
+        "type": "lifestyle",
+        "cardId": "boots"
+      },
+      {
         "type": "focus",
         "cardId": "mates"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "gift-fam"
       },
       {
         "type": "focus",
@@ -5250,8 +5570,16 @@
         "cardId": "lung-buster"
       },
       {
+        "type": "lifestyle",
+        "cardId": "agent-din"
+      },
+      {
         "type": "focus",
         "cardId": "agent"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "invest-club-sm"
       },
       {
         "type": "focus",
@@ -5382,8 +5710,16 @@
         "cardId": "captain-arm"
       },
       {
+        "type": "lifestyle",
+        "cardId": "flash-jewellery"
+      },
+      {
         "type": "focus",
         "cardId": "agent"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "invest-club-lg"
       },
       {
         "type": "focus",
@@ -5510,8 +5846,16 @@
         "cardId": "drag-back"
       },
       {
+        "type": "lifestyle",
+        "cardId": "charity"
+      },
+      {
         "type": "focus",
         "cardId": "agent"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "youth-coach-gift"
       },
       {
         "type": "focus",
@@ -5638,8 +5982,16 @@
         "cardId": "box-crash"
       },
       {
+        "type": "lifestyle",
+        "cardId": "family"
+      },
+      {
         "type": "focus",
         "cardId": "focus_aggression"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "moveout"
       },
       {
         "type": "focus",
@@ -5754,8 +6106,16 @@
         "cardId": "dictate"
       },
       {
+        "type": "lifestyle",
+        "cardId": "entourage"
+      },
+      {
         "type": "focus",
         "cardId": "sponsors"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "club-legend-lunch"
       },
       {
         "type": "focus",
@@ -5792,11 +6152,11 @@
         "role": "DF",
         "traits_json": "[\"mercenary\",\"marketable\"]",
         "personality": "pro",
-        "greed": 17,
-        "marketability": 19,
-        "earnings": 13322,
+        "greed": 20,
+        "marketability": 20,
+        "earnings": 852,
         "peak_overall": 11,
-        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"capLine\":\"Another international appearance, and he was involved in almost nothing and lost almost nothing.\",\"bigNights\":[\"A Comeback From the Brink\"],\"peakOverall\":11,\"careerScore\":251,\"turnsPlayed\":120}"
+        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"capLine\":\"Scored in a national shirt, and there is a bar at home that has not calmed down yet.\",\"bigNights\":[\"A Comeback From the Brink\"],\"peakOverall\":11,\"careerScore\":254,\"turnsPlayed\":120}"
       }
     }
   },
@@ -5859,6 +6219,10 @@
       {
         "type": "play",
         "cardId": "crunch"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "console"
       },
       {
         "type": "focus",
@@ -5961,8 +6325,16 @@
         "cardId": "overlap"
       },
       {
+        "type": "lifestyle",
+        "cardId": "agent-din"
+      },
+      {
         "type": "focus",
         "cardId": "rest"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "bike"
       },
       {
         "type": "focus",
@@ -6085,8 +6457,16 @@
         "cardId": "dressing-voice"
       },
       {
+        "type": "lifestyle",
+        "cardId": "prank-fund"
+      },
+      {
         "type": "focus",
         "cardId": "focus_creativity0"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "driving"
       },
       {
         "type": "focus",
@@ -6217,8 +6597,16 @@
         "cardId": "outside-boot"
       },
       {
+        "type": "lifestyle",
+        "cardId": "chef"
+      },
+      {
         "type": "focus",
         "cardId": "rest"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "invest-club-sm"
       },
       {
         "type": "focus",
@@ -6353,8 +6741,16 @@
         "cardId": "big-moment"
       },
       {
+        "type": "lifestyle",
+        "cardId": "entourage"
+      },
+      {
         "type": "focus",
         "cardId": "agent"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "invest-club-sm"
       },
       {
         "type": "focus",
@@ -6461,8 +6857,16 @@
         "cardId": "last-ditch"
       },
       {
+        "type": "lifestyle",
+        "cardId": "family"
+      },
+      {
         "type": "focus",
         "cardId": "partner"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "club-legend-lunch"
       },
       {
         "type": "focus",
@@ -6569,8 +6973,16 @@
         "cardId": "lofted"
       },
       {
+        "type": "lifestyle",
+        "cardId": "trusted-voice"
+      },
+      {
         "type": "focus",
         "cardId": "partner"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "invest-club-sm"
       },
       {
         "type": "focus",
@@ -6607,11 +7019,11 @@
         "role": "MF",
         "traits_json": "[\"biggame\",\"marketable\"]",
         "personality": "biggame",
-        "greed": 6,
-        "marketability": 17,
-        "earnings": 13835,
+        "greed": 8,
+        "marketability": 18,
+        "earnings": 4245,
         "peak_overall": 12,
-        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"capLine\":\"Another international appearance, and he was involved in almost nothing and lost almost nothing.\",\"bigNights\":[\"The Biggest Game in the Club’s History\",\"A Derby With the Title on the Line\",\"Title Decider\"],\"peakOverall\":12,\"careerScore\":387,\"turnsPlayed\":120}"
+        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"capLine\":\"Another international appearance, and he was involved in almost nothing and lost almost nothing.\",\"bigNights\":[\"The Biggest Game in the Club’s History\",\"A Derby With the Title on the Line\",\"Title Decider\"],\"peakOverall\":12,\"careerScore\":391,\"turnsPlayed\":120}"
       }
     }
   },
@@ -6689,6 +7101,10 @@
       {
         "type": "play",
         "cardId": "calm-back"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "invest-club-sm"
       },
       {
         "type": "focus",
@@ -6795,8 +7211,16 @@
         "cardId": "organise"
       },
       {
+        "type": "lifestyle",
+        "cardId": "bike"
+      },
+      {
         "type": "focus",
         "cardId": "focus_teamwork0"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "boots"
       },
       {
         "type": "focus",
@@ -6907,8 +7331,16 @@
         "cardId": "claim-cross"
       },
       {
+        "type": "lifestyle",
+        "cardId": "invest-club-lg"
+      },
+      {
         "type": "focus",
         "cardId": "focus_creativity0"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "agent-din"
       },
       {
         "type": "focus",
@@ -7039,8 +7471,16 @@
         "cardId": "command"
       },
       {
+        "type": "lifestyle",
+        "cardId": "charity"
+      },
+      {
         "type": "focus",
         "cardId": "loan"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "invest-club-sm"
       },
       {
         "type": "focus",
@@ -7171,8 +7611,16 @@
         "cardId": "sweeper"
       },
       {
+        "type": "lifestyle",
+        "cardId": "entourage"
+      },
+      {
         "type": "focus",
         "cardId": "risk_press"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "road-trip"
       },
       {
         "type": "focus",
@@ -7287,8 +7735,16 @@
         "cardId": "calm-back"
       },
       {
+        "type": "lifestyle",
+        "cardId": "invest-club-lg"
+      },
+      {
         "type": "focus",
         "cardId": "oldfriend"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "flash-jewellery"
       },
       {
         "type": "focus",
@@ -7399,8 +7855,16 @@
         "cardId": "read-forward"
       },
       {
+        "type": "lifestyle",
+        "cardId": "moveout"
+      },
+      {
         "type": "focus",
         "cardId": "partner"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "supercar"
       },
       {
         "type": "focus",
@@ -7439,7 +7903,7 @@
         "personality": "perfectionist",
         "greed": 20,
         "marketability": 20,
-        "earnings": 13385,
+        "earnings": 1725,
         "peak_overall": 14,
         "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"capLine\":\"A steady evening in national colours. The coach will have noticed the things the crowd did not.\",\"bigNights\":[\"A Comeback From the Brink\"],\"peakOverall\":14,\"careerScore\":688,\"turnsPlayed\":120}"
       }
@@ -7509,6 +7973,10 @@
       {
         "type": "play",
         "cardId": "crunch"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "invest-club-sm"
       },
       {
         "type": "focus",
@@ -7619,8 +8087,16 @@
         "cardId": "crunch"
       },
       {
+        "type": "lifestyle",
+        "cardId": "console"
+      },
+      {
         "type": "focus",
         "cardId": "mates"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "bike"
       },
       {
         "type": "focus",
@@ -7733,6 +8209,10 @@
       {
         "type": "play",
         "cardId": "lung-buster"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "moveout"
       },
       {
         "type": "focus",
@@ -7879,8 +8359,16 @@
         "cardId": "late-run"
       },
       {
+        "type": "lifestyle",
+        "cardId": "invest-club-lg"
+      },
+      {
         "type": "focus",
         "cardId": "loan"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "agent-din"
       },
       {
         "type": "focus",
@@ -8011,8 +8499,16 @@
         "cardId": "cool-finish"
       },
       {
+        "type": "lifestyle",
+        "cardId": "invest-club-lg"
+      },
+      {
         "type": "focus",
         "cardId": "risk_press"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "testim"
       },
       {
         "type": "focus",
@@ -8127,8 +8623,16 @@
         "cardId": "anchor"
       },
       {
+        "type": "lifestyle",
+        "cardId": "supercar"
+      },
+      {
         "type": "focus",
         "cardId": "focus_aggression"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "wardrobe"
       },
       {
         "type": "focus",
@@ -8243,8 +8747,16 @@
         "cardId": "body-check"
       },
       {
+        "type": "lifestyle",
+        "cardId": "flash-jewellery"
+      },
+      {
         "type": "focus",
         "cardId": "sponsors"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "nightclub"
       },
       {
         "type": "focus",
@@ -8277,15 +8789,15 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":13,\"strength\":15,\"stamina\":13,\"passing\":13,\"shooting\":11,\"tackling\":9,\"positioning\":13,\"workrate\":13,\"keeping\":4,\"setPiece\":16,\"composure\":13,\"aggression\":10,\"creativity\":14,\"teamwork\":11,\"leadership\":8,\"durability\":14}",
+        "attrs_json": "{\"pace\":13,\"strength\":15,\"stamina\":13,\"passing\":13,\"shooting\":11,\"tackling\":9,\"positioning\":13,\"workrate\":13,\"keeping\":4,\"setPiece\":16,\"composure\":13,\"aggression\":10,\"creativity\":15,\"teamwork\":12,\"leadership\":8,\"durability\":14}",
         "role": "MF",
-        "traits_json": "[\"deadball\"]",
+        "traits_json": "[\"deadball\",\"mercenary\"]",
         "personality": "workhorse",
-        "greed": 12,
-        "marketability": 5,
-        "earnings": 13410,
+        "greed": 15,
+        "marketability": 7,
+        "earnings": 2140,
         "peak_overall": 13,
-        "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"capLine\":\"A steady evening in national colours. The coach will have noticed the things the crowd did not.\",\"bigNights\":[\"The Match That Decides Who Goes Down\",\"Promotion Play-Off Final\",\"A Continental Final\"],\"peakOverall\":13,\"careerScore\":297,\"turnsPlayed\":120}"
+        "career_honours_json": "{\"caps\":15,\"nation\":\"Trentino\",\"capLine\":\"Scored in a national shirt, and there is a bar at home that has not calmed down yet.\",\"bigNights\":[\"The Match That Decides Who Goes Down\",\"Promotion Play-Off Final\",\"A Continental Final\"],\"peakOverall\":13,\"careerScore\":301,\"turnsPlayed\":120}"
       }
     }
   },
@@ -8366,6 +8878,10 @@
       {
         "type": "play",
         "cardId": "ice-veins"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "boots"
       },
       {
         "type": "focus",
@@ -8472,8 +8988,16 @@
         "cardId": "stepover"
       },
       {
+        "type": "lifestyle",
+        "cardId": "bike"
+      },
+      {
         "type": "focus",
         "cardId": "mates"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "gift-fam"
       },
       {
         "type": "focus",
@@ -8596,8 +9120,16 @@
         "cardId": "gas-tank"
       },
       {
+        "type": "lifestyle",
+        "cardId": "invest-club-sm"
+      },
+      {
         "type": "focus",
         "cardId": "impress"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "wheels"
       },
       {
         "type": "focus",
@@ -8720,8 +9252,16 @@
         "cardId": "crunch"
       },
       {
+        "type": "lifestyle",
+        "cardId": "driving"
+      },
+      {
         "type": "focus",
         "cardId": "partner"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "invest-club-lg"
       },
       {
         "type": "focus",
@@ -8852,8 +9392,16 @@
         "cardId": "hold-up"
       },
       {
+        "type": "lifestyle",
+        "cardId": "prank-fund"
+      },
+      {
         "type": "focus",
         "cardId": "agent"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "family"
       },
       {
         "type": "focus",
@@ -8972,8 +9520,16 @@
         "cardId": "box-crash"
       },
       {
+        "type": "lifestyle",
+        "cardId": "testimonial-seat"
+      },
+      {
         "type": "focus",
         "cardId": "risk_press"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "club-legend-lunch"
       },
       {
         "type": "focus",
@@ -9092,8 +9648,16 @@
         "cardId": "spatial-iq"
       },
       {
+        "type": "lifestyle",
+        "cardId": "invest"
+      },
+      {
         "type": "focus",
         "cardId": "rest"
+      },
+      {
+        "type": "lifestyle",
+        "cardId": "wardrobe"
       },
       {
         "type": "focus",
@@ -9131,10 +9695,10 @@
         "traits_json": "[\"rock\",\"mercenary\",\"marketable\"]",
         "personality": "workhorse",
         "greed": 20,
-        "marketability": 16,
-        "earnings": 13230,
+        "marketability": 19,
+        "earnings": 1770,
         "peak_overall": 15,
-        "career_honours_json": "{\"caps\":24,\"nation\":\"Trentino\",\"capLine\":\"Another shift in the national shirt, and he came off with a clean sheet and clean boots.\",\"bigNights\":[\"A Cup Semi Under the Lights\",\"A Continental Final\"],\"peakOverall\":15,\"careerScore\":357,\"turnsPlayed\":120}"
+        "career_honours_json": "{\"caps\":24,\"nation\":\"Trentino\",\"capLine\":\"A goal for his country, and it broke a deadlock the whole nation had been enduring for an hour.\",\"bigNights\":[\"A Cup Semi Under the Lights\",\"A Continental Final\"],\"peakOverall\":15,\"careerScore\":359,\"turnsPlayed\":120}"
       }
     }
   }

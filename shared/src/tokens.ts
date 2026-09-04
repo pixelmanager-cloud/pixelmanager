@@ -579,8 +579,13 @@ export function careerHonours(t: Token, c: Career, peakOverall: number): CareerH
   return {
     caps, nation: caps > 0 && surname ? homeNation(surname) : null,
     // The sentence for the career he actually had. `capLine` is only meaningful if he was ever capped.
+    // `scored` was a literal 0 here, so callUpBlurb's 93-line CALLUP_SCORED bank had no reachable caller
+    // anywhere in the game and every capped man in every dynasty read as having had a quiet night for his
+    // country. Take it from the same seeded `nationalFixture` careerState surfaces as `lastCap`, so the
+    // frozen sentence agrees with the last call-up the player was actually shown.
     capLine: caps > 0 && surname
-      ? callUpBlurb(seedFrom(`${t.id}:capline`), caps, homeNation(surname), 0)
+      ? callUpBlurb(seedFrom(`${t.id}:capline`), caps, homeNation(surname),
+          nationalFixture((c as any).seed >>> 0, caps, homeNation(surname), peakOverall).scored)
       : undefined,
     bigNights: [...nights].slice(0, 12),
     peakOverall, careerScore: careerScoreOf(c), turnsPlayed: c.turn,

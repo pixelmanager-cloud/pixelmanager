@@ -41,11 +41,22 @@ function drive(seed: number, track: Track, agentId?: string) {
     const pick = (xs: any[]): any => xs[step % xs.length];
     try {
       if (st.phase === 'arc') c.resolveArc(pick(st.arc.choices).id);
-      else if (st.phase === 'focus') c.chooseFocus(pick(st.focus).id);
+      // SPENDING IS NOT A PHASE, so the shelf has to be answered here. This dispatch used to carry an
+      // `st.phase === 'lifestyle'` branch reading `st.items`; `current()` returns neither — it hands the
+      // shelf out INSIDE the focus phase as `st.lifestyle`, and `buyLifestyle` is a side action that does
+      // not advance the phase. So the branch was dead, all 11 committed careers recorded ZERO lifestyle
+      // actions, and the one gate whose job is "an earlier build's save no longer replays the same way" was
+      // blind to the action the player spends money on: multiplying every LIFESTYLE cost by 10 moved 0 of
+      // 11 careers before this and 11 of 11 (40 persisted graduation fields) after. Buy only what he can
+      // afford — `lifestyleOffer` deliberately lists items he cannot pay for yet, so a blind buy throws.
+      else if (st.phase === 'focus') {
+        const afford = (st.lifestyle as any[]).filter((i) => st.earnings >= i.cost);
+        if (afford.length) c.buyLifestyle(pick(afford).id);
+        c.chooseFocus(pick(st.focus).id);
+      }
       else if (st.phase === 'offer') c.resolveOffer(pick(['develop', 'money', 'brand']) as string);
       else if (st.phase === 'coach') c.appointCoach(pick(st.coaches).id);
       else if (st.phase === 'draft') c.draft(pick(st.options).id);
-      else if (st.phase === 'lifestyle') c.buyLifestyle(pick(st.items).id);
       else { if (!c.hand.length) break; c.play(c.hand[step % c.hand.length].id); }
     } catch { break; }
     step++;
@@ -168,6 +179,17 @@ if (WRITE) {
   check(withLegacy >= 1, `at least one committed career inherited a legacy bonus (got ${withLegacy}) — with none, zeroing the bloodline's dev_bonus changes nothing here`);
   check(Math.max(...peaks) >= 15, `at least one committed career graduates at peak overall >= 15 (max ${Math.max(...peaks)}) — careerHonours' elite-caps branch is unreachable below it`);
   check(Math.max(...caps) > 0, `at least one committed career earned international caps (max ${Math.max(...caps)})`);
+  // ── AND HE HAS TO SPEND IT. `buyLifestyle` is the only action that turns earnings back into greed,
+  // marketability, energy recovery and standing, and all four reach graduation through `finContext()`. The
+  // driver above could not reach it — it waited on a `lifestyle` phase `current()` never returns — so every
+  // committed career held zero lifestyle actions and a 10x retune of every LIFESTYLE cost moved 0 of 11
+  // careers through this entire gate. The distinct-item floor is what stops a narrowed regeneration (one
+  // cheap item, eleven times) from reporting the same coverage as a real shopping list.
+  const lifeActs = golden.flatMap(g => g.actions.filter(a => a.type === 'lifestyle'));
+  const lifeItems = new Set(lifeActs.map(a => a.cardId));
+  console.log(`  ..   ${lifeActs.length} lifestyle purchases across ${golden.length} careers, ${lifeItems.size} distinct items`);
+  check(golden.every(g => g.actions.some(a => a.type === 'lifestyle')) && lifeItems.size >= 8,
+    `every committed career spends earnings on lifestyle (${lifeActs.length} purchases, ${lifeItems.size} distinct items) — with none, retuning a LIFESTYLE cost or perk changes nothing here`);
   const greeds = grads.map(g => Number(g.greed ?? 0));
   check(Math.max(...greeds) - Math.min(...greeds) >= 8,
     `the committed careers span a real range of agent greed (${Math.min(...greeds)}-${Math.max(...greeds)}) — a narrow spread means the agent axis is barely exercised`);

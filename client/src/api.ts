@@ -747,7 +747,11 @@ export const api = {
       // career_honours_json, so this is the last moment his caps and big nights exist anywhere.
       try {
         const h = decorated.career_honours_json ? JSON.parse(decorated.career_honours_json) : null;
-        if (h) { card.caps = Number(h.caps) || 0; card.bigNights = (h.bigNights?.length ?? 0) || 0; }
+        // The call-up line travels with the caps it belongs to. It is the one sentence the game ever writes
+        // about a man's international career, and the Family Record reads it off this card for every
+        // generation but the living one — left off here it died with career_honours_json at the succession,
+        // so a five-man tree could show it for exactly the one man still playing.
+        if (h) { card.caps = Number(h.caps) || 0; card.bigNights = (h.bigNights?.length ?? 0) || 0; if (h.capLine) card.capLine = String(h.capLine); }
       } catch { /* a card without them scores 0, which is what it scored before */ }
       testimonial = Math.max(0, Math.round(Number((card as any).testimonial) || 0));
       const retiredSeason = getActiveModel().profile.season ?? (decorated.generation ?? 0);
@@ -1080,6 +1084,15 @@ export const api = {
       // Swallowed like the awards above: a save that is merely fatter than it needs to be must never cost
       // the player his season.
       await localStore.prunePlayerStats([String(season), String(season + 1)])
+        .catch(() => { /* a tidy save is worth less than the result card */ });
+      // AND THE SCOUTING TRIPS, the other push-only collection: `createMission` has no delete path either,
+      // and every dead row carries a whole serialized Player in `player_json`. Measured over twenty-five
+      // seasons of three trips each, 72 of 75 rows were unreachable — 46.6 KiB of a 57.0 KiB save.
+      // THE KEEP LIST IS NOT SPARE THE WAY THE ONE ABOVE IS; it is exactly the window `missions()` reads.
+      // `profile.season` was advanced to `season + 1` at the top of this handler, so `season + 1` is the
+      // current season and `season` is the `carriedFrom` whose unsigned trips are still drawn on the
+      // Scouting screen and still signable. Dropping `String(season)` would delete a paid-for trip.
+      await localStore.pruneMissions([String(season), String(season + 1)])
         .catch(() => { /* a tidy save is worth less than the result card */ });
     }
     // `arcCoins` is the season's banked manager-arc coin effects (see applyArcEffect). They were applied
@@ -1538,6 +1551,22 @@ export const api = {
       nodes: [...ancestors, ...tokens.map((t) => {
         let honours: any = null;
         try { honours = t.career_honours_json ? JSON.parse(t.career_honours_json) : null; } catch { /* none */ }
+        // Try the generation-qualified key first, then the bare id for rows written before the
+        // suffix existed, so an old save keeps its legend cards.
+        const legend = legendBy.get(`${t.id}:g${t.generation ?? 0}`) ?? legendBy.get(t.id) ?? null;
+        // THE CAREER THE BROTHER HAD OFFSCREEN, ON THE SCREEN THAT EXISTS TO SHOW IT. `branchCareer` was
+        // written so a passed-over son is not worth nothing, and its only caller was membersOf -- the renown
+        // scorer. So the Houses footer told the player "x% of it was earned by the sons you passed over"
+        // while the Family Record drew those same men with peak_overall 0, which suppresses the ability
+        // badge entirely (main.ts gates it on `ovr > 0`): a face, a name, and nothing else.
+        //
+        // Retired, no legend card, no graduation honours, and a branch seed is exactly the man whose seasons
+        // the game never simulated and never will -- the succession bulk-retires his whole generation. It
+        // deliberately does NOT catch a prospect: the played line's newborn carries a branch seed too, and he
+        // must keep reading "yet to play" rather than wear a fabricated peak at ten years old.
+        const bseed = ((t as any).branch_seed ?? 0) >>> 0;
+        const branchPeak = t.state === 'retired' && !legend && !honours && bseed
+          ? branchCareer(bseed, t.pedigree ?? 0).peakOverall : 0;
         return {
           id: t.id, name: t.name, generation: t.generation ?? 0,
           // `succeed()` rewrites the retired token IN PLACE and keeps the same id, so a bare id lookup
@@ -1558,11 +1587,9 @@ export const api = {
           // where it earns its place: the tree draws lineage as lines, and this says it in words.
           fatherName: (t as any).father_name ?? null,
           branch: (t as any).branch ?? 'played',
-          state: t.state, overall: t.peak_overall ?? 0,
+          state: t.state, overall: branchPeak || (t.peak_overall ?? 0),
           personality: t.personality ?? null,
-          // Try the generation-qualified key first, then the bare id for rows written before the
-          // suffix existed, so an old save keeps its legend cards.
-          honours, legend: legendBy.get(`${t.id}:g${t.generation ?? 0}`) ?? legendBy.get(t.id) ?? null,
+          honours, legend,
         };
       })],
     };

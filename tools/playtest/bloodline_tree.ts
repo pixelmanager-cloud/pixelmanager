@@ -51,6 +51,21 @@ async function main() {
     if (n.generation < GENS - 1 && !n.legend?.tier) fails.push(`${n.name} (gen ${n.generation}) retired with no legend card — his medallion has no caption`);
   }
 
+  // 5 — AND HE MUST KEEP HIS CAPS SENTENCE. `careerHonours` freezes ONE call-up line onto the token at
+  //     graduation, and `rebornFields` then nulls `career_honours_json` — so unless `succeed()` folds that
+  //     line onto the legend card beside the caps, it dies at the succession. The Family Record is the only
+  //     permanent record this family has, and it was the one screen a full international's sentence could
+  //     never appear on: it showed for the living star and for nobody who came before him.
+  //     THE CAPPED COUNT IS ASSERTED FIRST. With nobody capped the loop below runs over an empty list and
+  //     reports green having measured nothing, which is the shape of check this repo keeps being bitten by.
+  const cappedForebears = (played as any[]).filter((n) => n.generation < GENS - 1 && Number(n.legend?.caps) > 0);
+  const capSentence = (n: any) => n.honours?.capLine ?? n.legend?.capLine ?? null;
+  console.log(`  ..   ${cappedForebears.length}/${GENS - 1} forebear(s) won caps; ${cappedForebears.filter(capSentence).length} still carry their call-up line`);
+  if (!cappedForebears.length) fails.push(`no forebear of these ${GENS} generations was ever capped — the call-up check measured nothing`);
+  for (const n of cappedForebears) {
+    if (!capSentence(n)) fails.push(`${n.name} (gen ${n.generation}) won ${n.legend.caps} caps and his call-up line did not survive the succession`);
+  }
+
   void pid;
   console.log(fails.length ? `\n  FAIL ${fails.length} problem(s):` : `\n  OK   the Family Record holds all ${GENS} generations, each hanging off his father`);
   for (const f of fails) console.log(`    - ${f}`);
