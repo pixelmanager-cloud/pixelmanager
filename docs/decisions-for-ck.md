@@ -3372,3 +3372,26 @@ columns. The season's *least* consequential control is drawn as its most promine
 The fix is one line (`font-size: 13px; padding: 3px 22px 3px 7px;`). It is here rather than in a commit only
 because it is a visual-hierarchy judgement — if you *want* the focus picker to be prominent, the current size
 is not a bug. Say the word and it is a one-line change either way.
+
+## §104 — the narrated outcome of every career turn is never announced
+
+`doCareerAct` stores the outcome narration, `renderCareer` places it first in the content, and then
+`restoreFocus()` puts focus back on card N of the *new* hand — which sits **below** it. `.cg-narrate` has
+no role and no `aria-live`, and the toast comment states outright that `#toast` is "THE GAME'S ONLY ARIA
+LIVE REGION". So what a screen-reader player hears after committing a turn is the newly focused card, not
+the two outcome pills ("🎯 Right card" / "⭐ Brilliant") and not the narrated result.
+
+The narration is the payload of every one of ~120 career turns — the thing the turn was *for*.
+
+**Why this is a judgement and not a straight defect:** it is not lost. It stays in the DOM until the next
+action, so a reader can navigate back up to it. Making it a live region means **every turn interrupts** —
+120 forced announcements a career, on top of the card the player just focused. That may be exactly right,
+or it may be the most annoying thing in the game.
+
+- **(a) Add `role="status"` to the `.cg-narrate` wrapper.** One attribute; it is rebuilt fresh each render,
+  which is what a status region needs. The outcome is spoken the moment it happens. **Recommended** — this
+  is the game's core loop and hearing the result of your own decision is not optional detail.
+- **(b) Announce only the outcome pills**, not the full narration — shorter interruption, keeps the verdict,
+  loses the prose.
+- **(c) Leave it and record the decision**, so a later wave does not re-raise it. Defensible: the text is
+  reachable, and a player who wants it can navigate to it.
