@@ -103,7 +103,11 @@ export interface Team {
    *  Optional so default matches (tests, CPU) behave exactly as before. */
   conditioning?: number;
   /** Fan Zone home advantage: an attacking-chance multiplier for the HOME side only
-   *  (1 = none, >1 = boosted). Set on teams[0] by runMatch; optional so tests are unchanged. */
+   *  (1 = none, >1 = boosted). Optional so tests are unchanged.
+   *  WHO ACTUALLY SETS IT: the team talk, on `myTeam` before the engine is constructed (see the note at
+   *  facilities.ts:132). `runMatch` also accepts it, but `runMatch` has no production caller — the client
+   *  drives MatchEngine directly — so a reader following this comment to game.ts lands on a path the
+   *  shipped game never takes. Named here so the next person looks in the right place. */
   homeBoost?: number;
   /** Substitutes available from the bench (best squad players outside the XI). When present the
    *  engine makes deterministic fitness-driven subs late on; absent (tests/CPU) => no subs. */

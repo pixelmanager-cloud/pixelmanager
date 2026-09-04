@@ -130,7 +130,10 @@ class AudioManager {
     try {
       const a = new Audio(pool[Math.floor(frac01() * pool.length)]);
       a.loop = false;
-      a.volume = this.settings.sfxMuted ? 0 : this.settings.sfxVolume;
+      // The mute check is the guard at the top of this method, which has already returned. Keeping a second
+      // `sfxMuted ? 0 : …` here read as a belt-and-braces safety and was in fact an unreachable branch —
+      // the kind of check that cannot fail, and that makes the next reader think there are two mute gates.
+      a.volume = clamp01(this.settings.sfxVolume);
       a.addEventListener('ended', () => { try { a.pause(); } catch { /* done */ } });
       void a.play().catch(() => { /* silent, like every other load here */ });
     } catch { /* never let a cue break a celebration */ }

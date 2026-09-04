@@ -876,7 +876,7 @@ export const SAGA_ARCS: StoryArc[] = [
     beats: {
       open: {
         id: 'open',
-        prompt: 'The unthinkable offer has landed on the table: {RIVAL}, the bitter rivals he was raised to despise and whose fans have jeered him for years, want to sign him. It would be the greatest betrayal his own supporters could imagine — and the biggest deal of his life. Does he cross the divide?',
+        prompt: 'The unthinkable offer has landed on the table: {RIVAL}\'s lot, the bitter rivals he was raised to despise and whose fans have jeered him for years, want to sign him. It would be the greatest betrayal his own supporters could imagine — and the biggest deal of his life. Does he cross the divide?',
         choices: [
           { id: 'defect', label: 'Take their shirt', desc: 'Sign for the enemy and damn the consequences', outcome: 'He pulls on the colours he swore he never would, and by nightfall his old effigy is burning in a car park across the city.', effect: { market: 3, greed: 1, earnings: 800, meters: { fans: -24, authority: -6 }, tag: 'defected' }, next: 'reception' },
           { id: 'refuse', label: 'Refuse on principle', desc: 'Turn the enemy down flat, whatever the money', outcome: 'He tells the rivals there isn’t a number on earth that buys him, and his own terraces roar a loyalty song for a week.', effect: { attr: { leadership: 1 }, meters: { fans: 22, authority: 8 }, form: 0.05, tag: 'loyal-refuser' }, next: 'stayed-hero' },
@@ -892,7 +892,7 @@ export const SAGA_ARCS: StoryArc[] = [
       },
       'stayed-hero': {
         id: 'stayed-hero',
-        prompt: 'His refusal has made him a folk hero, and the club rewards the loyalty by naming him the emotional heart of the derby fixture forever after. But {RIVAL} come back with an even more obscene bid the following summer, and the whispers about his ambition return. Does the loyalty hold twice?',
+        prompt: 'His refusal has made him a folk hero, and the club rewards the loyalty by naming him the emotional heart of the derby fixture forever after. But {RIVAL}\'s lot come back with an even more obscene bid the following summer, and the whispers about his ambition return. Does the loyalty hold twice?',
         choices: [
           { id: 'anchor', label: 'Anchor himself for good', desc: 'Reject them again and sign a deal to end his days here', outcome: 'He commits his prime to the badge and lets the enemy know the door is bricked shut. A one-club legend is written into the walls.', effect: { attr: { leadership: 1 }, meters: { fans: 20, authority: 10 }, earnings: 200 } },
           { id: 'human', label: 'Admit he’s tempted', desc: 'Be honest that even loyalty has a breaking point', outcome: 'He tells the press he’s only human and the money is dizzying, and the terraces, uneasy now, wonder how long the fairytale can last.', effect: { greed: 1, market: 2, meters: { fans: -6, agent: 8 } } },
@@ -1066,7 +1066,7 @@ export const SAGA_ARCS: StoryArc[] = [
       },
       'goal-glut': {
         id: 'goal-glut',
-        prompt: 'They have gone for the jugular and it is raining goals at both ends of the country — word filters through that {RIVAL} are matching them strike for strike, the title swinging on a knife with every net rippling. Deep in stoppage time it stands level on difference and he is through on goal. This kick is the title. What does he do?',
+        prompt: 'They have gone for the jugular and it is raining goals at both ends of the country — word filters through that {RIVAL}\'s lot are matching them strike for strike, the title swinging on a knife with every net rippling. Deep in stoppage time it stands level on difference and he is through on goal. This kick is the title. What does he do?',
         choices: [
           { id: 'smash', label: 'Go for glory', desc: 'Back himself to score the goal that wins the league on difference', outcome: 'He steadies, picks his spot, and lashes it in on the last kick — champions by a single goal of difference, decided by his boot alone.', effect: { form: 0.14, attr: { aggression: 1 }, meters: { fans: 26, authority: 10 }, market: 3, energy: -12 } },
           { id: 'square', label: 'Square the certain goal', desc: 'Roll it to the open man rather than gamble on the angle', outcome: 'He resists the hero’s swing and slides it across for the tap-in that seals the arithmetic. Not his name, but his nerve, that won the league.', effect: { form: 0.1, attr: { teamwork: 2, composure: 1 }, meters: { peers: 14, fans: 16 }, market: -3 } },
@@ -1074,7 +1074,7 @@ export const SAGA_ARCS: StoryArc[] = [
       },
       'clean-sheet': {
         id: 'clean-sheet',
-        prompt: 'They have shut up shop to guard the margin, but news crackles round the ground that {RIVAL} have found a goal and drawn the difference dead level — one concession now and the title is gone. There are nervy minutes left and the whole back line is looking to him to hold the line. How does he see it out?',
+        prompt: 'They have shut up shop to guard the margin, but news crackles round the ground that {RIVAL}\'s lot have found a goal and drawn the difference dead level — one concession now and the title is gone. There are nervy minutes left and the whole back line is looking to him to hold the line. How does he see it out?',
         choices: [
           { id: 'wall', label: 'Marshal the rearguard', desc: 'Drop deep, organise, and refuse them a single sniff', outcome: 'He conducts the defence like a maestro of the ugly arts, blocks the last shot with his face, and the clean sheet crowns them champions on difference.', effect: { form: 0.11, attr: { teamwork: 2, leadership: 1 }, meters: { authority: 10, fans: 18 }, injury: true, energy: -10 } },
           { id: 'nick', label: 'Nick one to be sure', desc: 'Break the siege and hunt the goal that ends all doubt', outcome: 'He decides sitting on it is death and springs upfield to steal the goal that puts the title beyond arithmetic. Bold, and vindicated.', effect: { form: 0.12, attr: { flair: 2, aggression: 1 }, meters: { fans: 20, sponsors: 6, peers: -8 }, market: 2 } },

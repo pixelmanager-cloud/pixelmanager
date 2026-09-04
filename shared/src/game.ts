@@ -55,7 +55,12 @@ export function cleanDuties(club: Club, lineup: Lineup): Duty[] | undefined {
 /** Run a full match on the authoritative engine and return the deterministic result.
  *  `seed` is the caller's job (fresh random draw server-side, fixed in a replay/test) —
  *  given the same seed and inputs, this always plays out identically.
- *  Optional per-side conditioning (training-ground fitness-drain multiplier, 1 = normal). */
+ *  Optional per-side conditioning (training-ground fitness-drain multiplier, 1 = normal).
+ *
+ *  NO PRODUCTION CALLER. The client builds its own MatchEngine and drives the tick loop itself, because it
+ *  animates the match rather than resolving it in one call. This wrapper is kept because it is the clearest
+ *  single statement of the determinism contract and because the fuzz and sim harnesses read like it — but
+ *  it is NOT the shipped path, and a change made here alone changes nothing a player sees. */
 export function runMatch(
   homeClub: Club, homeLineup: Lineup, homeTactics: Tactics,
   awayClub: Club, awayLineup: Lineup, awayTactics: Tactics,
