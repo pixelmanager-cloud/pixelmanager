@@ -714,7 +714,7 @@
         background: var(--panel-2); border: 1px solid var(--line); border-radius: 9px; }
       .cg-dash .cg-energy { display: flex; align-items: center; gap: 8px; font-family: var(--display); font-size: 11px; letter-spacing: 0.5px; color: var(--warn); }
       .cg-dash .cg-e-bar { display: inline-block; width: 110px; height: 10px; background: #0c0c22; border: 1px solid #000; border-radius: 5px; overflow: hidden; }
-      .cg-dash .cg-e-bar b { display: block; height: 100%; background: linear-gradient(90deg,#ffb347,#ffd75e); }
+      .cg-dash .cg-e-bar b { display: block; height: 100%; transition: width .3s ease; background: linear-gradient(90deg,#ffb347,#ffd75e); } /* energy slides like the meters beside it; without this it was the one bar on the dashboard that snapped (renderCareer's BAR_SEL must list it too, or there is no from-state to slide from) */
       .cg-dash .cg-money { font-family: var(--body); font-size: 16px; color: #9c9; }
       .cg-dash .cg-meters { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-left: auto; }
       .cg-dash .cg-meter { display: flex; align-items: center; gap: 5px; }

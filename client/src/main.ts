@@ -936,6 +936,9 @@ class Game {
    *  pattern, finished, in one place. Returns a close function the caller should use.
    */
   private static inertDepth = 0;
+  // THE OPEN DIALOGS, innermost last. The refcount above says HOW MANY are up; it cannot say WHICH one is
+  // on top, and Escape has to know — see onKey below.
+  private static dialogStack: HTMLElement[] = [];
   private dialogify(ov: HTMLElement, onClose?: () => void): () => void {
     let closed = false;
     const app = document.getElementById('app');
@@ -944,12 +947,23 @@ class Game {
     // setAttribute/removeAttribute pair meant the inner one's close un-inerted the page while the outer
     // was still up, silently losing modality.
     Game.inertDepth++;
+    Game.dialogStack.push(ov);
     app?.setAttribute('inert', '');
     const focusables = () => Array.from(ov.querySelectorAll<HTMLElement>(
       'button:not([disabled]), a[href], select, input, [tabindex]:not([tabindex="-1"])'));
     focusables()[0]?.focus();
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') { e.preventDefault(); close(); return; }
+      // ONLY THE INNERMOST DIALOG ANSWERS ESCAPE. Every dialogify'd overlay adds its own capture-phase
+      // listener to the SAME `document` node, so one Escape ran all of them in registration order —
+      // outermost first — and cancelling a Transfer Market purchase tore the market down along with the
+      // confirm, then dropped focus to <body> because the button the confirm would have restored had just
+      // been detached with it. Compared by IDENTITY rather than by capturing inertDepth: only #app is
+      // inerted while the overlays are siblings under <body>, so closes are not guaranteed to be LIFO, and
+      // a depth test would leave the inner dialog with a dead Escape after an out-of-order outer close.
+      if (e.key === 'Escape') {
+        if (Game.dialogStack[Game.dialogStack.length - 1] !== ov) return;
+        e.preventDefault(); close(); return;
+      }
       if (e.key !== 'Tab') return;
       const f = focusables(); if (!f.length) return;
       const first = f[0], last = f[f.length - 1];
@@ -961,6 +975,8 @@ class Game {
       if (closed) return;                       // idempotent: a double close must not unbalance the refcount
       closed = true;
       document.removeEventListener('keydown', onKey, true);
+      const at = Game.dialogStack.indexOf(ov);
+      if (at >= 0) Game.dialogStack.splice(at, 1);   // spliced by identity, not popped: an outer dialog can close first
       if (--Game.inertDepth <= 0) { Game.inertDepth = 0; app?.removeAttribute('inert'); }
       ov.remove();
       previously?.focus?.();
@@ -1009,10 +1025,18 @@ class Game {
       + `<button class="tt-opt" id="pm-resume"><b>▶ Resume</b><span>Back to the game</span></button>`
       + `<button class="tt-opt" id="pm-settings"><b>⚙ Settings</b><span>Music, motion, screen effects</span></button>`
       + `<button class="tt-opt" id="pm-quit"><b>≡ Quit to menu</b><span>Your progress is saved</span></button></div>`;
+    // GIVE THE ≡ BUTTON ITS FOCUS BACK. This is the one overlay never converted to dialogify, and the half
+    // it is missing is the last line of dialogify's close: `previously?.focus?.()`. Without it a keyboard or
+    // controller player who opens the menu from the top bar and backs out lands on <body>, so every
+    // accidental ≡ costs a full re-tab of the screen to reach the button they just pressed — the defect
+    // already fixed for the career screen and the succession chain. Captured before #pm-resume takes focus
+    // below, restored LAST: `#app` holds the opener and `.focus()` inside an inert subtree is a no-op.
+    const previously = document.activeElement as HTMLElement | null;
     document.body.appendChild(ov);
     const close = () => {
       this.running = wasRunning; ov.remove(); document.removeEventListener('keydown', onEsc);
       if (--Game.inertDepth <= 0) { Game.inertDepth = 0; document.getElementById('app')?.removeAttribute('inert'); }
+      previously?.focus?.();
     }; // clean up the ESC listener on every close path (PT-81)
     ov.addEventListener('click', (e) => { if (e.target === ov) close(); });
     ov.querySelector('.set-x')!.addEventListener('click', close);
@@ -2750,9 +2774,22 @@ class Game {
       const mm = this.loadMgr();
       const contPending = mm.contElig && !mm.contOut && (mm.contRound ?? 0) < 3;
       const wcPending = mm.wcStage != null && mm.wcStage !== 'done';
-      if (contPending || wcPending) {
+      // AND THIS BUTTON IS THE DEADLINE THE ✕'s OWN CONFIRM NAMES. "Dismiss it and they leave at the end of
+      // the season" — the rollover IS the end of the season: advanceSquadSeason moves every man still on
+      // `expiring` into `departed`. So the ✕ asked before forfeiting those deals while this button, up in
+      // the header above a report the player may not have scrolled to in weeks, forfeited the same men on
+      // one unconfirmed click — the guarded door on the rare path, the silent one on the path every save
+      // takes. Same loss, same ask. (Like the ✕'s, the count runs one high for a man sold in the Transfer
+      // Market: `expiring` is pruned on renew and release only.)
+      const up = (this.pendingSquadReport?.expiring ?? []) as any[];
+      if (contPending || wcPending || up.length) {
         const what = wcPending && contPending ? 'your Continental Cup run and your World Finals' : wcPending ? 'your World Finals' : `<b>${['the Quarter-Final', 'the Semi-Final', 'the Final'][mm.contRound ?? 0] ?? 'a continental tie'}</b> of the Continental Cup`;
-        this.openConfirm(`You still have ${what} to play. Rolling into next season forfeits ${wcPending && contPending ? 'them' : 'it'}. Continue anyway?`, 'Forfeit & continue', () => this.nextSeason());
+        const who = up.slice(0, 3).map((x) => x.name).join(', ') + (up.length > 3 ? ` and ${up.length - 3} more` : '');
+        const cup = contPending || wcPending ? `You still have ${what} to play. Rolling into next season forfeits ${wcPending && contPending ? 'them' : 'it'}.` : '';
+        // A sentence of its own, not a suffix: `cup` is empty when the deals are the only thing outstanding.
+        const deals = up.length ? `<b>${up.length} player${up.length === 1 ? '' : 's'}</b> still ${up.length === 1 ? 'has a deal' : 'have deals'} up — ${who}. Roll over and ${up.length === 1 ? 'he leaves' : 'they leave'} on a free — the squad report is the only place to re-sign them, and it does not come back.` : '';
+        this.openConfirm(`${cup}${cup && deals ? '<br>' : ''}${deals} Continue anyway?`,
+          cup ? 'Forfeit & continue' : 'Roll over anyway', () => this.nextSeason());
       } else this.nextSeason();
     });
     ($('sf-focus') as any)?.addEventListener('change', (e: Event) => { const mm = this.loadMgr(); this.saveMgr({ ...mm, trainFocus: (e.target as HTMLSelectElement).value }); });
@@ -5227,7 +5264,11 @@ class Game {
     const acad = $('academy'); acad.dataset.chapter = th.slug;
     acad.style.setProperty('--cg-accent', th.accent); acad.style.setProperty('--cg-bg', th.bg);
     const scene = `<div class="cg-scene"><span class="cg-scene-emoji">${th.scene}</span><span class="cg-scene-tag"><b>${s.chapter}</b> · ${th.tagline}</span></div>`;
-    const head = `<div class="cg-head"><button id="cg-back">←</button><span class="cg-age">${s.name} · age ${s.age}</span>`
+    // The ← is this screen's only exit and, with #academy-head hidden above, the first control in the
+    // panel — unlabelled, its accessible name was the glyph itself, so a reader announced "left arrow,
+    // button" every one of ~120 turns and never said where it went. aria-label, the same convention the
+    // set-x ✕ buttons already use. (F-321)
+    const head = `<div class="cg-head"><button id="cg-back" aria-label="Back to the academy">←</button><span class="cg-age">${s.name} · age ${s.age}</span>`
       + `<span class="cg-chapter">${s.chapter}</span><div class="cg-bar"><i style="width:${pct}%"></i></div><span class="pr-meta">${s.turn}/${s.totalTurns}</span>`
       + (s.careerScore != null ? `<span class="cg-score" title="Career score — climbs with every good moment; beat it next run">★ ${s.careerScore.toLocaleString('en-US')}</span>` : '') + `</div>`;
     const evt = s.seasonEvent ? `<div class="cg-event"><b>${s.seasonEvent.name}</b> — ${s.seasonEvent.desc}</div>` : '';
@@ -5388,7 +5429,15 @@ class Game {
     if (s.clubSeason) TABS.push(['league', '🏆 League']);
     if (this.careerTab === 'league' && !s.clubSeason) this.careerTab = 'now'; // league tab only exists in senior stages
     if (this.careerTab === 'life' && !s.offPitch) this.careerTab = 'now';       // life tab only exists in senior stages
-    const tabBar = `<div class="cg-tabs">` + TABS.map(([t, label]) => `<button class="cg-tab${this.careerTab === t ? ' on' : ''}" data-tab="${t}">${label}</button>`).join('') + `</div>`;
+    // WHICH VIEW IS SHOWING REACHED THE READER THROUGH NOTHING BUT A HUE AND A 2px UNDERLINE. `.cg-tab.on`
+    // sets a colour and a border-bottom-colour and that was the whole signal, so all five tabs reported
+    // aria-pressed === null: a screen-reader player heard five identical plain buttons on the one control
+    // group that changes what the entire screen is. Same defect and same cure as the deal-length selector
+    // (§1584) and the heir cards. NOT role="tab": that vocabulary owes the player a roving tabindex, arrow
+    // keys between the tabs and a role="tabpanel" for aria-controls, none of which exists here — these are
+    // real <button>s Tab already reaches one at a time. Unconditional, because an OMITTED aria-pressed makes
+    // the four unselected tabs plain buttons again rather than unpressed toggles.
+    const tabBar = `<div class="cg-tabs">` + TABS.map(([t, label]) => `<button class="cg-tab${this.careerTab === t ? ' on' : ''}" data-tab="${t}" aria-pressed="${this.careerTab === t}">${label}</button>`).join('') + `</div>`;
     let content: string;
     if (this.careerTab === 'player') content = prof + this.deckHtml(s);
     else if (this.careerTab === 'kit') content = this.kitTabHtml(s);
@@ -5404,18 +5453,26 @@ class Game {
     // holding keyboard focus. See keepFocus() for the post-mortem; restoreFocus() is the last thing this
     // function does, because the new cards are only focusable once makeActivatable() has stamped them.
     const restoreFocus = this.keepFocus($('academy-body'));
-    // FOUR `transition: width` RULES WERE WRITTEN FOR THESE BARS AND NONE OF THEM HAS EVER FIRED.
-    // `.cg-bar > i`, `.cg-dash .cg-m-bar b`, `.cg-obj-bar b` and `.op-bar-fill` each declare one, but every
-    // bar carries its value as an inline width inside this innerHTML string — so each render destroys the
-    // old node and creates a new one *already at its final width*, and a brand-new element has no
-    // from-state to transition out of. Energy, the seven relationship meters, the stage objective and the
-    // public-image bar therefore teleport, on the screen where the player spends 120 turns watching those
-    // numbers move because of choices they made. The equivalents that DO animate — #pressure-home and
-    // #fit-fill — are static elements that are never rebuilt, which is exactly why they work.
+    // FIVE `transition: width` RULES WERE WRITTEN FOR THESE BARS AND NONE OF THEM HAS EVER FIRED.
+    // `.cg-bar > i`, `.cg-dash .cg-m-bar b`, `.cg-obj-bar b`, `.op-bar-fill` and `.cg-dash .cg-e-bar b`
+    // each declare one, but every bar carries its value as an inline width inside this innerHTML string —
+    // so each render destroys the old node and creates a new one *already at its final width*, and a
+    // brand-new element has no from-state to transition out of. Chapter progress, energy, the seven
+    // relationship meters, the stage objective and the public-image bar therefore teleport, on the screen
+    // where the player spends 120 turns watching those numbers move because of choices they made. The
+    // equivalents that DO animate — #pressure-home and #fit-fill — are static elements that are never
+    // rebuilt, which is exactly why they work.
+    //
+    // `.cg-dash .cg-e-bar b` was named by this comment long before it was covered by it: the inventory
+    // above said energy, but the selector list said `.cg-bar > i`, which is the header's chapter-progress
+    // bar. So the one number the dashboard's own copy tells the player to watch stayed the only bar on the
+    // screen that snapped while its four neighbours slid. It needs BOTH halves — the rule in index.html
+    // and the entry below — because a declared transition with no from-state does nothing, and a
+    // snapshotted from-state with no declared transition does nothing either.
     //
     // Snapshot the old widths, re-apply them to the new nodes, force a reflow, then stamp the real values
     // one frame later so the transition has something to run from.
-    const BAR_SEL = '.cg-bar > i, .cg-dash .cg-m-bar b, .cg-obj-bar b, .op-bar-fill';
+    const BAR_SEL = '.cg-bar > i, .cg-dash .cg-m-bar b, .cg-obj-bar b, .op-bar-fill, .cg-dash .cg-e-bar b';
     const beforeW = [...document.querySelectorAll<HTMLElement>(BAR_SEL)].map((el) => el.style.width);
     $('academy-body').innerHTML = head + scene + help + tut + tabBar + content;
     const bars = [...document.querySelectorAll<HTMLElement>(BAR_SEL)];
@@ -5502,9 +5559,15 @@ class Game {
     // irreversible pick that shapes the rest of the career. keepFocus's post-mortem below records what
     // confusing draft with play costs: another irreversible commit.
     const verb = act === 'draft' ? 'Draft' : 'Play';
+    // ...AND CHALLENGE MODE HAS TO REACH THE LABEL, NOT JUST THE PILLS. Masking the pills while this string
+    // still said "Draws on flair and technique" was not a mask at all: the aria-label being the WHOLE
+    // announcement, a screen-reader player who turned on "hide card stats" was handed the exact answer the
+    // 🎲 exists to withhold, so the game's one difficulty setting did nothing for him. Same `showTags` gate
+    // as the pills so the two cannot drift apart. Rarity stays outside it — .cg-rarity below renders it
+    // visibly either way, so announcing it is parity with what a sighted player sees, not a leak.
     const aria = act === 'view'
       ? `${name}. ${desc ?? ''} ${c.tags.join(', ')}`
-      : `${verb} ${name}. ${desc ?? ''} Draws on ${c.tags.join(' and ')}.${rar ? ` ${rar} card.` : ''}`;
+      : `${verb} ${name}. ${desc ?? ''} ${showTags ? `Draws on ${c.tags.join(' and ')}.` : ''}${rar ? ` ${rar} card.` : ''}`;
     return `<div class="cg-card ${rar}" data-tag="${primaryTag}" data-act="${act}" data-id="${c.id}"`
       // NOTE: role/tabindex are deliberately NOT set here. makeActivatable() early-returns on anything that
       // already has role="button", so setting it in the markup would have skipped the keydown handler and
@@ -5749,10 +5812,18 @@ class Game {
         const windfallLine = r.windfall && r.windfall > 0 ? `<div class="cg-grad-windfall">🏟️ +${r.windfall.toLocaleString('en-US')}c to the club — its share of his signing as he turns pro (it funded his rise)</div>` : '';
         // an evocative epilogue of the whole journey, then the pro reveal
         $('academy-body').innerHTML = `<div class="cg-graduation">`
-          + `<div class="cg-grad-title">🎓 ${player.name} — the journey's end</div>`
+          + `<div id="cg-grad-title" tabindex="-1" class="cg-grad-title">🎓 ${player.name} — the journey's end</div>`
           + `<div class="cg-epilogue">${r.epilogue ?? ''}</div>${windfallLine}`
           + `<button id="cg-reveal">Reveal the pro →</button></div>`;
         $('cg-reveal').addEventListener('click', () => { this.showPlayerCard(player, true); this.showAcademy(); });
+        // THIS WRITE DESTROYS THE CARD THE PLAYER JUST PRESSED ENTER ON, and this branch returns instead of
+        // calling renderCareer — so keepFocus(), which hands focus on for every other turn of the career,
+        // never runs here and document. The live region is not silent here — checkAchievements three lines above can fire a toast on a first graduation — but it speaks about an achievement, not about the screen having been replaced. Same fix the succession chain
+        // already carries at #cg-will-note and #cg-heir-title.
+        // The TITLE and not #cg-reveal: index.html delays that button's ftpop by 1.05s with `both`, so it
+        // is still in its from-state when this runs. preventScroll for the #pause-ov reason — a bare
+        // focus() would scroll the epilogue above it off the top.
+        $('cg-grad-title').focus({ preventScroll: true });
       } else if (r.state) {
         this.renderCareer(r.state);
         if (r.clubGain && r.clubGain > 0) toast(`🏟️ +${r.clubGain}c to the club — its development cut of what he earned`);

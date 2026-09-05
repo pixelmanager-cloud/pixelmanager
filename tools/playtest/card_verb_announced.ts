@@ -18,7 +18,8 @@
 //
 // MUTATION TEST — each of these must turn a line below red: put `Play` back on the else branch; change the
 // draft verb to a word the draft prompt does not use ("Take"); drop `${name}` out of the label; delete the
-// `'draft'` call site (the coverage check goes red rather than passing over an empty list). Every
+// `'draft'` call site (the coverage check goes red rather than passing over an empty list); drop the
+// `showTags` gate off the `Draws on …` clause, or invert it so the label never names the tags. Every
 // announcement is echoed on a `..` line, so a check that measured an empty string shows up in the log
 // instead of passing as a green tick over nothing.
 //
@@ -65,22 +66,25 @@ for (const a of new Set(acts)) {
 }
 
 // ── render the real label ─────────────────────────────────────────────────────────────────────────────
-// Lifted from cardHtml between the showTags line and the return, so it carries whatever the file really
-// computes for the label, comments and all — not a paraphrase of it.
+// Lifted from cardHtml from the showTags line to the return, so it carries whatever the file really
+// computes for the label, comments and all — not a paraphrase of it. The lift starts ON `const showTags`
+// (it used to start on the line after) because challenge mode's mask has to reach the label as well as the
+// pills, and a gate outside the lifted span is a gate this probe cannot see. `this` is not the app inside
+// `new Function`, so the one `this.prefs` on that line is rewritten to a `prefs` argument the caller
+// supplies — lifting it verbatim would make every announce() throw instead of measuring anything.
 const from = card.indexOf('const showTags');
-const start = from < 0 ? -1 : card.indexOf('\n', from) + 1;
 const end = card.indexOf('return `<div class="cg-card');
-const labelSrc = start > 0 && end > start ? card.slice(start, end) : '';
+const labelSrc = from >= 0 && end > from ? card.slice(from, end).replace(/this\.prefs\b/g, 'prefs') : '';
 console.log(`  ..   lifted label source: ${labelSrc.replace(/\s+/g, ' ').trim().slice(0, 160) || '(none)'}`);
 ok(/\bconst aria\b/.test(labelSrc), 'the accessible-name expression was lifted out of cardHtml');
 
 const C = { id: 'shoulder_drop', name: 'Drop of the shoulder', desc: 'He shifts his weight and goes.',
             tags: ['flair', 'technique'], rarity: 'rare' };
-function announce(act: string): string {
+function announce(act: string, hideCardStats = false): string {
   try {
-    const f = new Function('act', 'name', 'desc', 'c', 'rar', `${labelSrc}\nreturn aria;`);
+    const f = new Function('act', 'name', 'desc', 'c', 'rar', 'prefs', `${labelSrc}\nreturn aria;`);
     // cardHtml collapses whitespace on its way into the attribute; a reader hears the collapsed string.
-    return String(f(act, C.name, C.desc, C, C.rarity)).replace(/\s+/g, ' ').trim();
+    return String(f(act, C.name, C.desc, C, C.rarity, { hideCardStats })).replace(/\s+/g, ' ').trim();
   } catch (e) { return `(threw: ${(e as Error).message})`; }
 }
 
@@ -108,6 +112,24 @@ for (const a of new Set(acts)) {
     ok(!/\bPlay\b/.test(heard[a]), `act '${a}' does not tell the player he is PLAYING the card`);
   }
 }
+
+// ── and challenge mode has to reach the announcement, not just the pills ──────────────────────────────
+// "Challenge: hide card stats" masks the tag pills on the PLAY cards so you read the action and work out
+// what it trains. The pills were the only thing it masked: the aria-label being the whole announcement,
+// the label went on saying "Draws on flair and technique" and handed a screen-reader player the exact
+// answer the 🎲 exists to withhold — the game's one difficulty setting did nothing for him. Rendering BOTH
+// states is what keeps this honest: a label that never named the qualities would be a deletion rather than
+// a mask, and the OFF check below is what catches that.
+const shown = announce('play', false);
+const masked = announce('play', true);
+console.log(`  ..   play, "hide card stats" OFF: "${shown}"`);
+console.log(`  ..   play, "hide card stats" ON:  "${masked}"`);
+ok(C.tags.every((t) => shown.includes(t)),
+   `with "hide card stats" off the label still names what the card draws on (${C.tags.join(', ')})`);
+ok(C.tags.every((t) => !masked.includes(t)),
+   'with "hide card stats" ON the label masks them too — the pills and the announcement hide the same thing');
+ok(masked.includes(C.name) && masked.includes(C.desc),
+   'the masked label still names and describes the card — challenge mode hides the stats, not the card');
 
 // ── and the spoken verb has to be the one on screen ───────────────────────────────────────────────────
 // Without this the probe only asserts "not Play", which any word satisfies. The draft screen states its own

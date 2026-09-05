@@ -26,11 +26,18 @@ const ok = (c: boolean, m: string) => { console.log(`  ${c ? 'ok  ' : 'FAIL'} ${
 
 console.log('=== The career dashboard bars animate rather than teleport ===');
 
-// The rules whose whole purpose this is.
-const declared = ['.cg-bar > i', '.cg-dash .cg-m-bar b', '.cg-obj-bar b', '.op-bar-fill']
+// The rules whose whole purpose this is. `.cg-dash .cg-e-bar b` is the fifth, and it is listed here
+// because it once was not: this list was hardcoded from the same four selectors as BAR_SEL, so when the
+// energy bar turned out to be missing from both the CSS and BAR_SEL — named in renderCareer's comment but
+// never actually covered by it — the probe inherited that blind spot and stayed green while energy
+// teleported alone. Both halves of that fix are load-bearing, so each is asserted separately: the count
+// below fails if the rule loses its transition, and the BAR_SEL check at the bottom fails if the selector
+// is dropped from the snapshot. The count is exact rather than a floor, so a selector that stops matching
+// fails loudly instead of quietly shrinking the list the coverage check then runs over.
+const declared = ['.cg-bar > i', '.cg-dash .cg-m-bar b', '.cg-obj-bar b', '.op-bar-fill', '.cg-dash .cg-e-bar b']
   .filter((sel) => new RegExp(`${sel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{[^}]*transition:[^}]*width`).test(css));
-console.log(`  ..   ${declared.length} of 4 bar rules still declare a width transition`);
-ok(declared.length === 4, 'all four bars still declare the transition the fix exists to make usable');
+console.log(`  ..   ${declared.length} of 5 bar rules still declare a width transition`);
+ok(declared.length === 5, 'all five bars still declare the transition the fix exists to make usable');
 
 const i = src.indexOf("const BAR_SEL = ");
 ok(i > 0, 'renderCareer snapshots the bars through a BAR_SEL selector');
