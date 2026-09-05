@@ -143,7 +143,15 @@ export function pressConferenceLine(seed: number, roundSalt: number, input: Pres
     else pools.push(PRE_ROUTINE);
     if (input.competition === 'continental') pools.push(PRE_CONTINENTAL);
     if (input.competition === 'international') pools.push(PRE_INTERNATIONAL);
-    if (input.competition === 'cup') pools.push(PRE_CUP);
+    // EVERY KNOCKOUT TIE, NOT JUST A DOMESTIC CUP THIS GAME DOES NOT HAVE. `spFixture.comp` is typed
+    // 'league' | 'cont' | 'wc' and both call sites map it to league/continental/international, so gating
+    // this pool on 'cup' alone left the entire bank dark for the life of the project — finished lines
+    // nothing could ever draw. They are written for a single-game knockout ("No second leg, no second
+    // chance"), which is exactly what the Continental Cup QF/SF/Final and the World Finals knockouts
+    // are, so the pool now rides ALONGSIDE PRE_CONTINENTAL / PRE_INTERNATIONAL rather than replacing
+    // either: three pools on those nights, so each is drawn about a third of the time.
+    // See docs/decisions-for-ck.md section 94, option (a). 'cup' is kept for a domestic cup later.
+    if (input.competition === 'cup' || input.competition === 'continental' || input.competition === 'international') pools.push(PRE_CUP);
   } else {
     const result = input.result ?? 'draw';
     if (result === 'win') {

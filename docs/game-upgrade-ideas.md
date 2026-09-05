@@ -49,6 +49,7 @@ without money," and they create the *surface* consumables later attach to.
 | **Formation depth: fluid shapes** | Let a formation shift between an in-possession and out-of-possession shape (still locked pre-kickoff). | More tactical expression without breaking the no-subs rule. | **M** | `shared/src/formations.ts`, `tactics.ts`, `engine.ts` |
 | **Team chemistry / familiarity** | A seeded squad-cohesion factor (same XI played together → small passing/positioning bonus) computed from the lineup, deterministic. | Rewards squad continuity; a natural home for a consumable later (see §4). | **M** | `shared/src/engine.ts`, `teams.ts` |
 | **Difficulty / "manager mode" toggles** | Solo-play modifiers (harder CPU, no scouting, ironman season) for the single-player ladder. | Retention for solo players; zero economy risk. | **S** | `client/src/main.ts` |
+| **A returning ex-player** | Re-sign a man the club once sold and the game knows it: the listing is marked as a homecoming and the signing narrates as one, instead of as a stranger's first day. | The prose for this was written and then deleted (§97): `transfer_in.established` could never fire, because market ids are minted fresh each season (`mk:season:tier:i`, `hs:season:name`) so a man you sold and re-signed is indistinguishable from a stranger, and the one `transfer_in` emit site passes `seasonsAtClub: 0`. Needs the shop to remember who left. | **M** | `shared/src/transfermarket.ts` (listing identity), `client/src/main.ts` (the `transfer_in` person ctx), a new bank |
 
 ---
 
@@ -162,5 +163,34 @@ pay-to-win the ladder can't absorb).
   sink) or purely cosmetic upkeep? Affects whether energy refill is core or optional.
 - **Boost magnitude + budget:** exact caps / diminishing-returns curve for §4b–4c so the
   tuned 1–20 ladder (see `shared/ladder_sim.ts`) holds.
+
+---
+
+## Deferred — designed, decided, not built
+
+Features the shipped game has deliberately **stopped advertising**, with the real version
+recorded here so it is not lost. A line earns a place here the day the UI stops promising it.
+
+### Off-pitch temptations as a real two-option choice (§100, deferred 2026-09-05)
+
+`computeOffPitch` fires a temptation on ~12% of turns for a clean reputation and ~26% for an
+edgy one — 6.5 and ~14 turns a career. The Life tab badged those turns with a 🎲, and the panel
+behind it rendered a heading and a blurb and **nothing else**: no `data-act`, no button, no
+handler. The blurbs were written as two-branch dilemmas ("Easy money, or a story you don't want
+written."), so the badge summoned the player to a moral choice with no branch to take. §100
+option (a) shipped instead — no badge, and ten observations in place of ten unanswered prompts.
+
+**The real version, for whoever has the content budget.** Each of the ten kinds (`gamble`,
+`bribe`, `nightlife`, `invest`, `old-mates`, `prank`, `secret-tab`, `ghost-post`, `freebie`,
+`curfew`) gets two options whose costs are **stated before you pick**: coins and image against
+reputation edge, the meters, and the `greed` the summer shop already moves. Resolve the outcome
+from the same seeded hash the temptation is drawn with (`hash32(seed, 5300 + turn)`) so it stays
+deterministic and replays identically — no wall clock, no rng. Ten dilemmas x two branches x an
+outcome line each, plus a `data-act` and a handler on the career facade of the kind the life-event
+cards already carry. **Effort: M–L, and most of it is writing.**
+
+Bring the 🎲 and the dilemma wording back the same day the button lands, not before —
+`tools/playtest/tempt_panel_copy.ts` guards exactly that gap, and it should be **retired** when
+the choice is wired rather than loosened.
 </content>
 </invoke>

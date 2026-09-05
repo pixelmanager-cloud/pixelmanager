@@ -144,21 +144,27 @@ export function computeOffPitch(input: {
     next = { boot: { id: nextBoot.id, name: nextBoot.name, edge: nextBoot.edge, unlock: nextBoot.unlock }, progress: Math.min(progress, target), target };
   }
 
-  // RISKY LIFESTYLE (item 6): an occasional temptation beat — edgier players are courted more often. Seeded,
-  // presentational (the real choice rides the career's life-event card play); a moral-hazard flavour layer.
+  // RISKY LIFESTYLE (item 6): an occasional off-pitch beat — edgier players are courted more often. Seeded,
+  // and OBSERVED FLAVOUR: nothing renders a button for it, so these ten lines describe something happening
+  // around him rather than putting a choice to him. They used to be two-branch dilemmas ("Easy money, or a
+  // story you don't want written."), which the Life tab badged with a die — 6.5 badged turns a career for a
+  // clean reputation, each one summoning the player to a moral choice with no branch to take (§100). The real
+  // two-option version is deferred and written up in docs/game-upgrade-ideas.md so it is not lost; until it
+  // exists, keep these observational — no question marks, no either/or, no second person. Guarded by
+  // tools/playtest/tempt_panel_copy.ts.
   const tGate = hash32(seed, 5300 + turn) % 100;
   const tempted = tGate < (edge === 'edgy' ? 26 : 12);
   const TEMPT = [
-    { kind: 'gamble', title: 'The card game', blurb: 'A high-stakes card game in the players’ lounge — a week’s wages on the table. Easy money, or a story you don’t want written.' },
-    { kind: 'bribe', title: 'A quiet word', blurb: 'A stranger offers a fat envelope to "take it easy" in a dead-rubber game. No one would ever know… except you.' },
-    { kind: 'nightlife', title: 'One more night out', blurb: 'The lads want a big night before a huge week. Fun and bonding — or a back-page photo and a heavy-legged performance.' },
-    { kind: 'invest', title: 'A can’t-miss tip', blurb: 'A mate swears a risky investment is a sure thing. Double your money, or learn an expensive lesson about "sure things".' },
-    { kind: 'old-mates', title: 'The old crew comes calling', blurb: 'Mates from before the money want a favour — a loan, a job, a “quick word” with your agent. Loyalty, or a slippery slope?' },
-    { kind: 'prank', title: 'A dressing-room prank goes too far', blurb: 'The lads want you in on a stitch-up of the new signing. Harmless fun — or the sort of thing that ends up online.' },
-    { kind: 'secret-tab', title: 'A tab nobody’s meant to see', blurb: 'A late-night order somewhere that really shouldn’t be discreet about it. Nothing illegal — but the receipt would raise eyebrows.' },
-    { kind: 'ghost-post', title: 'A ghost-written hot take', blurb: 'Your agent wants to post something spicy from your account “to build the brand.” It’s not really you talking.' },
-    { kind: 'freebie', title: 'A gift with strings attached', blurb: 'A watch turns up, “no strings attached,” from someone who clearly wants something eventually.' },
-    { kind: 'curfew', title: 'Breaking curfew the night before a big one', blurb: 'One quiet drink turns into a late one, the night before the biggest game of the season.' },
+    { kind: 'gamble', title: 'The card game', blurb: 'The card game is running again in the players’ lounge, and there’s a week’s wages sitting in the middle of the table.' },
+    { kind: 'bribe', title: 'A quiet word', blurb: 'A stranger has been in the players’ car park twice this week, asking around about a dead rubber and who might take it easy.' },
+    { kind: 'nightlife', title: 'A big night in the diary', blurb: 'The lads have a big one planned before a huge week, and half the squad has already said yes.' },
+    { kind: 'invest', title: 'A can’t-miss tip', blurb: 'A mate has spent the week talking up a can’t-miss investment, and two of the reserves have already put money in.' },
+    { kind: 'old-mates', title: 'The old crew comes calling', blurb: 'Mates from before the money keep ringing the agent’s office — a loan here, a job there, a quick word that never stays quick.' },
+    { kind: 'prank', title: 'A stitch-up in the dressing room', blurb: 'The lads have a stitch-up lined up for the new signing, and somebody has already got a camera out.' },
+    { kind: 'secret-tab', title: 'A tab nobody’s meant to see', blurb: 'There’s a tab running at a place that keeps no names, and the club’s press officer has no idea it exists.' },
+    { kind: 'ghost-post', title: 'A ghost-written hot take', blurb: 'The agent has drafted something spicy to go out from the account tonight, in a voice nobody in the family would recognise.' },
+    { kind: 'freebie', title: 'A gift with strings attached', blurb: 'A watch arrived at the training ground with no invoice and no note, from somebody who will want something eventually.' },
+    { kind: 'curfew', title: 'The night before a big one', blurb: 'Curfew is ten o’clock, the hotel bar is open until one, and half the squad has done the maths.' },
   ];
   const temptation = tempted ? TEMPT[hash32(seed, 5400 + turn) % TEMPT.length] : null;
 

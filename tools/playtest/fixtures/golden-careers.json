@@ -185,7 +185,7 @@
       },
       {
         "type": "focus",
-        "cardId": "letters"
+        "cardId": "homework"
       },
       {
         "type": "offer",
@@ -325,7 +325,7 @@
       },
       {
         "type": "focus",
-        "cardId": "digsparty"
+        "cardId": "letters"
       },
       {
         "type": "offer",
@@ -465,7 +465,7 @@
       },
       {
         "type": "focus",
-        "cardId": "charity"
+        "cardId": "digsparty"
       },
       {
         "type": "offer",
@@ -593,7 +593,7 @@
       },
       {
         "type": "lifestyle",
-        "cardId": "wheels"
+        "cardId": "invest-club-sm"
       },
       {
         "type": "focus",
@@ -601,11 +601,11 @@
       },
       {
         "type": "lifestyle",
-        "cardId": "prank-fund"
+        "cardId": "wardrobe"
       },
       {
         "type": "focus",
-        "cardId": "charity"
+        "cardId": "mediaday"
       },
       {
         "type": "offer",
@@ -713,7 +713,7 @@
       },
       {
         "type": "lifestyle",
-        "cardId": "invest"
+        "cardId": "invest-club-lg"
       },
       {
         "type": "focus",
@@ -721,11 +721,11 @@
       },
       {
         "type": "lifestyle",
-        "cardId": "flash-jewellery"
+        "cardId": "prank-fund"
       },
       {
         "type": "focus",
-        "cardId": "boardroom"
+        "cardId": "signing"
       },
       {
         "type": "offer",
@@ -829,7 +829,7 @@
       },
       {
         "type": "lifestyle",
-        "cardId": "charity"
+        "cardId": "invest-club-sm"
       },
       {
         "type": "focus",
@@ -837,7 +837,7 @@
       },
       {
         "type": "lifestyle",
-        "cardId": "moveout"
+        "cardId": "invest-club-lg"
       },
       {
         "type": "focus",
@@ -870,15 +870,15 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":7,\"strength\":4,\"stamina\":9,\"passing\":10,\"shooting\":10,\"tackling\":8,\"positioning\":13,\"workrate\":11,\"keeping\":4,\"setPiece\":8,\"composure\":10,\"aggression\":8,\"creativity\":7,\"teamwork\":13,\"leadership\":9,\"durability\":8}",
+        "attrs_json": "{\"pace\":7,\"strength\":4,\"stamina\":9,\"passing\":10,\"shooting\":9,\"tackling\":8,\"positioning\":13,\"workrate\":11,\"keeping\":4,\"setPiece\":8,\"composure\":10,\"aggression\":8,\"creativity\":6,\"teamwork\":13,\"leadership\":9,\"durability\":8}",
         "role": "MF",
         "traits_json": "[\"mercenary\",\"marketable\"]",
         "personality": "workhorse",
         "greed": 20,
-        "marketability": 20,
-        "earnings": 3085,
+        "marketability": 19,
+        "earnings": 9725,
         "peak_overall": 10,
-        "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"A Cup Semi Under the Lights\",\"Title Decider\"],\"peakOverall\":10,\"careerScore\":290,\"turnsPlayed\":120}"
+        "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"A Cup Semi Under the Lights\",\"Title Decider\"],\"peakOverall\":10,\"careerScore\":286,\"turnsPlayed\":120}"
       }
     }
   },
@@ -1068,7 +1068,7 @@
       },
       {
         "type": "focus",
-        "cardId": "letters"
+        "cardId": "homework"
       },
       {
         "type": "offer",
@@ -1196,7 +1196,7 @@
       },
       {
         "type": "focus",
-        "cardId": "digsparty"
+        "cardId": "letters"
       },
       {
         "type": "offer",
@@ -1476,7 +1476,7 @@
       },
       {
         "type": "focus",
-        "cardId": "charity"
+        "cardId": "bootshoot"
       },
       {
         "type": "offer",
@@ -1943,7 +1943,7 @@
       },
       {
         "type": "focus",
-        "cardId": "trial"
+        "cardId": "soccerschool"
       },
       {
         "type": "offer",
@@ -2207,7 +2207,7 @@
       },
       {
         "type": "focus",
-        "cardId": "charity"
+        "cardId": "digsparty"
       },
       {
         "type": "offer",
@@ -2339,7 +2339,7 @@
       },
       {
         "type": "focus",
-        "cardId": "signing"
+        "cardId": "charity"
       },
       {
         "type": "offer",
@@ -2479,7 +2479,7 @@
       },
       {
         "type": "focus",
-        "cardId": "boardroom"
+        "cardId": "signing"
       },
       {
         "type": "offer",
@@ -2818,7 +2818,7 @@
       },
       {
         "type": "focus",
-        "cardId": "letters"
+        "cardId": "homework"
       },
       {
         "type": "offer",
@@ -2958,7 +2958,7 @@
       },
       {
         "type": "focus",
-        "cardId": "digsparty"
+        "cardId": "letters"
       },
       {
         "type": "offer",
@@ -3086,7 +3086,7 @@
       },
       {
         "type": "lifestyle",
-        "cardId": "invest-club-lg"
+        "cardId": "agent-din"
       },
       {
         "type": "focus",
@@ -3094,11 +3094,11 @@
       },
       {
         "type": "lifestyle",
-        "cardId": "dressing-room-mvp"
+        "cardId": "moveout"
       },
       {
         "type": "focus",
-        "cardId": "charity"
+        "cardId": "digsparty"
       },
       {
         "type": "offer",
@@ -3226,7 +3226,7 @@
       },
       {
         "type": "lifestyle",
-        "cardId": "agent-din"
+        "cardId": "invest-club-lg"
       },
       {
         "type": "focus",
@@ -3234,11 +3234,11 @@
       },
       {
         "type": "lifestyle",
-        "cardId": "supercar"
+        "cardId": "prank-fund"
       },
       {
         "type": "focus",
-        "cardId": "charity"
+        "cardId": "mediaday"
       },
       {
         "type": "offer",
@@ -3346,7 +3346,7 @@
       },
       {
         "type": "lifestyle",
-        "cardId": "mansion"
+        "cardId": "supercar"
       },
       {
         "type": "focus",
@@ -3354,11 +3354,11 @@
       },
       {
         "type": "lifestyle",
-        "cardId": "prank-fund"
+        "cardId": "testim"
       },
       {
         "type": "focus",
-        "cardId": "boardroom"
+        "cardId": "signing"
       },
       {
         "type": "offer",
@@ -3462,7 +3462,7 @@
       },
       {
         "type": "lifestyle",
-        "cardId": "testim"
+        "cardId": "charity"
       },
       {
         "type": "focus",
@@ -3470,7 +3470,7 @@
       },
       {
         "type": "lifestyle",
-        "cardId": "nightclub"
+        "cardId": "wheels"
       },
       {
         "type": "focus",
@@ -3503,15 +3503,15 @@
       "replayShortfall": null,
       "grad": {
         "state": "pro",
-        "attrs_json": "{\"pace\":6,\"strength\":3,\"stamina\":8,\"passing\":7,\"shooting\":10,\"tackling\":7,\"positioning\":10,\"workrate\":7,\"keeping\":17,\"setPiece\":8,\"composure\":10,\"aggression\":7,\"creativity\":7,\"teamwork\":7,\"leadership\":6,\"durability\":5}",
+        "attrs_json": "{\"pace\":6,\"strength\":3,\"stamina\":8,\"passing\":7,\"shooting\":10,\"tackling\":8,\"positioning\":10,\"workrate\":7,\"keeping\":17,\"setPiece\":8,\"composure\":11,\"aggression\":7,\"creativity\":7,\"teamwork\":7,\"leadership\":6,\"durability\":5}",
         "role": "GK",
-        "traits_json": "[\"wall\",\"injury_prone\",\"mercenary\",\"marketable\"]",
+        "traits_json": "[\"wall\",\"biggame\",\"injury_prone\",\"mercenary\",\"marketable\"]",
         "personality": "workhorse",
         "greed": 20,
         "marketability": 20,
-        "earnings": 585,
+        "earnings": 3185,
         "peak_overall": 10,
-        "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"The Game Your Whole Career Gets Judged On\",\"A Derby With the Title on the Line\"],\"peakOverall\":10,\"careerScore\":556,\"turnsPlayed\":120}"
+        "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"The Game Your Whole Career Gets Judged On\",\"A Derby With the Title on the Line\"],\"peakOverall\":10,\"careerScore\":558,\"turnsPlayed\":120}"
       }
     }
   },
@@ -3701,7 +3701,7 @@
       },
       {
         "type": "focus",
-        "cardId": "letters"
+        "cardId": "homework"
       },
       {
         "type": "offer",
@@ -3821,7 +3821,7 @@
       },
       {
         "type": "focus",
-        "cardId": "reserves"
+        "cardId": "trial"
       },
       {
         "type": "offer",
@@ -3961,7 +3961,7 @@
       },
       {
         "type": "focus",
-        "cardId": "mediaday"
+        "cardId": "reserves"
       },
       {
         "type": "offer",
@@ -4101,7 +4101,7 @@
       },
       {
         "type": "focus",
-        "cardId": "signing"
+        "cardId": "charity"
       },
       {
         "type": "offer",
@@ -4576,7 +4576,7 @@
       },
       {
         "type": "focus",
-        "cardId": "trial"
+        "cardId": "soccerschool"
       },
       {
         "type": "offer",
@@ -4696,7 +4696,7 @@
       },
       {
         "type": "focus",
-        "cardId": "digsparty"
+        "cardId": "letters"
       },
       {
         "type": "offer",
@@ -4836,7 +4836,7 @@
       },
       {
         "type": "focus",
-        "cardId": "charity"
+        "cardId": "digsparty"
       },
       {
         "type": "offer",
@@ -4972,7 +4972,7 @@
       },
       {
         "type": "focus",
-        "cardId": "side_skip"
+        "cardId": "mediaday"
       },
       {
         "type": "offer",
@@ -5108,7 +5108,7 @@
       },
       {
         "type": "focus",
-        "cardId": "boardroom"
+        "cardId": "signing"
       },
       {
         "type": "offer",
@@ -5261,7 +5261,7 @@
         "marketability": 15,
         "earnings": 4989,
         "peak_overall": 10,
-        "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"A Derby With the Title on the Line\"],\"peakOverall\":10,\"careerScore\":246,\"turnsPlayed\":120}"
+        "career_honours_json": "{\"caps\":0,\"nation\":null,\"bigNights\":[\"A Derby With the Title on the Line\"],\"peakOverall\":10,\"careerScore\":245,\"turnsPlayed\":120}"
       }
     }
   },
@@ -5455,7 +5455,7 @@
       },
       {
         "type": "focus",
-        "cardId": "trial"
+        "cardId": "soccerschool"
       },
       {
         "type": "offer",
@@ -5583,7 +5583,7 @@
       },
       {
         "type": "focus",
-        "cardId": "reserves"
+        "cardId": "trial"
       },
       {
         "type": "offer",
@@ -5723,7 +5723,7 @@
       },
       {
         "type": "focus",
-        "cardId": "mediaday"
+        "cardId": "reserves"
       },
       {
         "type": "offer",
@@ -5859,7 +5859,7 @@
       },
       {
         "type": "focus",
-        "cardId": "charity"
+        "cardId": "bootshoot"
       },
       {
         "type": "offer",
@@ -6156,7 +6156,7 @@
         "marketability": 20,
         "earnings": 852,
         "peak_overall": 11,
-        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"capLine\":\"Scored in a national shirt, and there is a bar at home that has not calmed down yet.\",\"bigNights\":[\"A Comeback From the Brink\"],\"peakOverall\":11,\"careerScore\":254,\"turnsPlayed\":120}"
+        "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"capLine\":\"Scored in a national shirt, and there is a bar at home that has not calmed down yet.\",\"bigNights\":[\"A Comeback From the Brink\"],\"peakOverall\":11,\"careerScore\":255,\"turnsPlayed\":120}"
       }
     }
   },
@@ -6338,7 +6338,7 @@
       },
       {
         "type": "focus",
-        "cardId": "trial"
+        "cardId": "soccerschool"
       },
       {
         "type": "offer",
@@ -6754,7 +6754,7 @@
       },
       {
         "type": "focus",
-        "cardId": "charity"
+        "cardId": "bootshoot"
       },
       {
         "type": "offer",
@@ -6866,7 +6866,7 @@
       },
       {
         "type": "lifestyle",
-        "cardId": "club-legend-lunch"
+        "cardId": "invest-club-sm"
       },
       {
         "type": "focus",
@@ -6974,7 +6974,7 @@
       },
       {
         "type": "lifestyle",
-        "cardId": "trusted-voice"
+        "cardId": "watch"
       },
       {
         "type": "focus",
@@ -6982,7 +6982,7 @@
       },
       {
         "type": "lifestyle",
-        "cardId": "invest-club-sm"
+        "cardId": "invest-club-lg"
       },
       {
         "type": "focus",
@@ -7019,9 +7019,9 @@
         "role": "MF",
         "traits_json": "[\"biggame\",\"marketable\"]",
         "personality": "biggame",
-        "greed": 8,
-        "marketability": 18,
-        "earnings": 4245,
+        "greed": 9,
+        "marketability": 19,
+        "earnings": 3515,
         "peak_overall": 12,
         "career_honours_json": "{\"caps\":7,\"nation\":\"Trentino\",\"capLine\":\"Another international appearance, and he was involved in almost nothing and lost almost nothing.\",\"bigNights\":[\"The Biggest Game in the Club’s History\",\"A Derby With the Title on the Line\",\"Title Decider\"],\"peakOverall\":12,\"careerScore\":391,\"turnsPlayed\":120}"
       }
@@ -7224,7 +7224,7 @@
       },
       {
         "type": "focus",
-        "cardId": "letters"
+        "cardId": "homework"
       },
       {
         "type": "offer",
@@ -7344,7 +7344,7 @@
       },
       {
         "type": "focus",
-        "cardId": "reserves"
+        "cardId": "trial"
       },
       {
         "type": "offer",
@@ -7484,7 +7484,7 @@
       },
       {
         "type": "focus",
-        "cardId": "mediaday"
+        "cardId": "reserves"
       },
       {
         "type": "offer",
@@ -7624,7 +7624,7 @@
       },
       {
         "type": "focus",
-        "cardId": "signing"
+        "cardId": "charity"
       },
       {
         "type": "offer",
@@ -8100,7 +8100,7 @@
       },
       {
         "type": "focus",
-        "cardId": "trial"
+        "cardId": "soccerschool"
       },
       {
         "type": "offer",
@@ -8220,7 +8220,7 @@
       },
       {
         "type": "focus",
-        "cardId": "digsparty"
+        "cardId": "letters"
       },
       {
         "type": "offer",
@@ -8372,7 +8372,7 @@
       },
       {
         "type": "focus",
-        "cardId": "charity"
+        "cardId": "digsparty"
       },
       {
         "type": "offer",
@@ -8512,7 +8512,7 @@
       },
       {
         "type": "focus",
-        "cardId": "charity"
+        "cardId": "mediaday"
       },
       {
         "type": "offer",
@@ -9001,7 +9001,7 @@
       },
       {
         "type": "focus",
-        "cardId": "trial"
+        "cardId": "soccerschool"
       },
       {
         "type": "offer",
@@ -9265,7 +9265,7 @@
       },
       {
         "type": "focus",
-        "cardId": "charity"
+        "cardId": "digsparty"
       },
       {
         "type": "offer",
@@ -9405,7 +9405,7 @@
       },
       {
         "type": "focus",
-        "cardId": "charity"
+        "cardId": "bootshoot"
       },
       {
         "type": "offer",
@@ -9521,7 +9521,7 @@
       },
       {
         "type": "lifestyle",
-        "cardId": "testimonial-seat"
+        "cardId": "testim"
       },
       {
         "type": "focus",
@@ -9529,7 +9529,7 @@
       },
       {
         "type": "lifestyle",
-        "cardId": "club-legend-lunch"
+        "cardId": "dressing-room-mvp"
       },
       {
         "type": "focus",
@@ -9649,7 +9649,7 @@
       },
       {
         "type": "lifestyle",
-        "cardId": "invest"
+        "cardId": "moveout"
       },
       {
         "type": "focus",
@@ -9695,8 +9695,8 @@
         "traits_json": "[\"rock\",\"mercenary\",\"marketable\"]",
         "personality": "workhorse",
         "greed": 20,
-        "marketability": 19,
-        "earnings": 1770,
+        "marketability": 17,
+        "earnings": 2080,
         "peak_overall": 15,
         "career_honours_json": "{\"caps\":24,\"nation\":\"Trentino\",\"capLine\":\"A goal for his country, and it broke a deadlock the whole nation had been enduring for an hour.\",\"bigNights\":[\"A Cup Semi Under the Lights\",\"A Continental Final\"],\"peakOverall\":15,\"careerScore\":359,\"turnsPlayed\":120}"
       }

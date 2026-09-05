@@ -703,11 +703,18 @@ function riskFocusFor(chapter: string, standing: Record<MeterKey, number>): Focu
   };
 }
 
-// ── SIDE FOCUS: from Breakthrough onward, a smaller SECOND summer pick alongside the main one — a
-// public-facing extra with a tiny nudge, on top of (not instead of) the main focus. Same deterministic,
-// development-neutral contract as the main focus (energy + relationships only, no rng).
+// ── SIDE FOCUS: from the summer after Academy onward, a smaller SECOND summer pick alongside the main
+// one — a public-facing extra with a tiny nudge, on top of (not instead of) the main focus. Same
+// deterministic, development-neutral contract as the main focus (energy + relationships only, no rng).
+// EACH BANK PLAYS AT THE SUMMER THAT FOLLOWS ITS OWN CHAPTER, because chooseFocus keys it on the chapter
+// that just ended like the main bank does — which sits every bank one summer later than it used to. The
+// ACADEMY bank exists so that re-keying does not silently cost the turn-28 summer half its screen.
 const FOCUS_SIDE_SKIP: FocusOption = { id: 'side_skip', icon: '➖', name: 'Nothing Else', desc: 'Keep it simple this summer — no extra commitments.', energy: 0, effects: {} };
 const SIDE_FOCUS_BY_CHAPTER: Record<string, FocusOption[]> = {
+  Academy: [
+    { id: 'homework',     icon: '📚', name: 'Get the Summer Homework Out of the Way', desc: 'An hour every morning before the ball comes out — it keeps school off your back all season.', energy: -2, effects: { school: +6 } },
+    { id: 'soccerschool', icon: '⚽', name: 'Help Out at the Club\'s Soccer School',  desc: 'A week of handing out bibs to seven-year-olds — the coaches notice which of their lads turned up.', energy: -4, effects: { authority: +6 } },
+  ],
   Scholar: [
     { id: 'letters',  icon: '✉️', name: 'Write Home',          desc: 'A quick letter back to the people who can\'t make every game.', energy: -2, effects: { family: +6 } },
     { id: 'trial',    icon: '🎽', name: 'Turn Out for a Trial Game', desc: 'An extra, unpaid ninety minutes in front of a watching scout.', energy: -4, effects: { authority: +6 } },
@@ -719,6 +726,13 @@ const SIDE_FOCUS_BY_CHAPTER: Record<string, FocusOption[]> = {
   Breakthrough: [
     { id: 'charity',  icon: '🤝', name: 'Charity Five-a-Side', desc: 'A low-key kickabout for a good cause — the fans notice the little things.', energy: -3, effects: { fans: +6 } },
     { id: 'mediaday', icon: '📷', name: 'A Media Day',         desc: 'An hour of interviews and photos squeezed in between the main plans.',        energy: -3, effects: { agent: +6 } },
+    // THE SPONSORS LEVER AT THE MOMENT THE METER APPEARS. This bank plays at the turn-86 summer, which is
+    // where CHAPTER_METERS['First Team'] puts sponsors on screen for the first time; the only other ways
+    // to raise it are the turn-104/120 side picks and Establishing's Sponsor Duties at turn 120. Without
+    // this option, keying the side round correctly hands the player a brand-new meter with no summer lever
+    // for a whole chapter: sponsor_meter.ts went 57/150 to 98/150 careful careers dipping under 30 against
+    // its <= 90 bar. With it, 55/150.
+    { id: 'bootshoot', icon: '👟', name: 'A First Boot Shoot',  desc: 'A brand wants an afternoon of him in a studio — the first time anyone has paid for his face.',    energy: -3, effects: { sponsors: +6 } },
   ],
   'First Team': [
     { id: 'charity', icon: '🤝', name: 'Charity Five-a-Side', desc: 'A low-key kickabout for a good cause — the fans notice the little things.', energy: -3, effects: { fans: +6 } },
@@ -1241,7 +1255,11 @@ export class Career {
             .map((c) => ({ id: c.id, label: c.label, desc: c.desc })) } };
       this.pendingArc = null; // corrupt reference → drop the arc, fall through
     }
-    if (this.pendingFocus) return { phase: 'focus' as const, age: this.age, chapter: this.chapter, focus: this.pendingFocus, side: this.sideFocusFor === this.chapter, lifestyle: this.lifestyleOffer, earnings: this.earnings, seasonEvent: this.seasonEvent, consequences: this.chapterConsequences, energy: this.energy, deck: this.deck, finished: this.finished };
+    // `side` marks the SECOND round of the same summer, and main.ts reads it to suppress the lifestyle
+    // shop and swap the prompt — so it has to be keyed the way chooseFocus keys the bank, on the chapter
+    // the summer FOLLOWS. Left on `this.chapter` it stops matching the round it marks and puts the shop
+    // back on a screen that has none.
+    if (this.pendingFocus) return { phase: 'focus' as const, age: this.age, chapter: this.chapter, focus: this.pendingFocus, side: this.sideFocusFor === bandAt(Math.max(0, this.turn - 1)).band.name, lifestyle: this.lifestyleOffer, earnings: this.earnings, seasonEvent: this.seasonEvent, consequences: this.chapterConsequences, energy: this.energy, deck: this.deck, finished: this.finished };
     if (this.pendingOffer) return { phase: 'offer' as const, age: this.age, chapter: this.chapter, offers: this.pendingOffer, earnings: this.earnings, deck: this.deck, finished: this.finished };
     if (this.pendingCoaches) return { phase: 'coach' as const, age: this.age, chapter: this.chapter, coaches: this.pendingCoaches, deck: this.deck, finished: this.finished };
     if (this.pendingDraft) return { phase: 'draft' as const, age: this.age, chapter: this.chapter, options: this.pendingDraft.options, picksLeft: this.pendingDraft.picksLeft, deck: this.deck, finished: this.finished };
@@ -1274,10 +1292,17 @@ export class Career {
     }
     this.actions.push({ type: 'focus', cardId: focusId });
     this.pendingFocus = null;
-    // Breakthrough onward: a second, smaller SIDE focus round follows the main pick (once per chapter).
-    const sideOpts = SIDE_FOCUS_BY_CHAPTER[this.chapter];
-    if (sideOpts && this.sideFocusFor !== this.chapter) {
-      this.sideFocusFor = this.chapter;
+    // A second, smaller SIDE focus round follows the main pick (once per chapter) — keyed on THE CHAPTER
+    // THAT JUST ENDED, exactly like the main bank beside it (`completed`, in play()). It was keyed on
+    // `this.chapter`, which reads the band the turn has already crossed INTO, so the two rounds of one
+    // summer described two different chapters: 20 of 24 side rounds offered the next chapter's bank,
+    // Establishing's was offered twice (turns 104 and 120), and Scholar / Youth Team / Breakthrough /
+    // First Team were never reachable from their own summer at all — four authored banks nobody had seen.
+    // Same defect the main bank had and the same fix (see final_summer.ts); side_focus_chapter.ts holds it.
+    const completed = bandAt(Math.max(0, this.turn - 1)).band.name;
+    const sideOpts = SIDE_FOCUS_BY_CHAPTER[completed];
+    if (sideOpts && this.sideFocusFor !== completed) {
+      this.sideFocusFor = completed;
       this.pendingFocus = [...sideOpts, FOCUS_SIDE_SKIP];
     } else {
       this.sideFocusFor = null;

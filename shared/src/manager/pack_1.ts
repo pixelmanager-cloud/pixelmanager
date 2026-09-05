@@ -545,11 +545,13 @@ export const MGR_EXTRA_1: Bank = {
     'He is here now, and the whole business of belonging starts from zero.',
     'First morning, and he is already worrying about the accent and the weather.',
   ],
-  'transfer_in.established': [
-    'He is back at the club he left, which is a rarer and stranger thing than it should be.',
-    'A familiar face signs again, and the supporters are cautiously pleased.',
-    'He knows the building, the staff and the shortcuts, which saves everybody a month.',
-  ],
+  // NO `transfer_in.established` BANK, and this is where it was. `tierFor` gates that tier on
+  // `seasonsAtClub >= 4`, and `transfer_in`'s one emit site hardcodes `seasonsAtClub: 0` — a man signed IN
+  // has been at the club no seasons — so nothing could ever draw from it. Its three lines described a
+  // returning ex-player, a beat the save cannot represent either: market ids are minted fresh
+  // (`mk:season:tier:i`, `hs:season:name`), so a man the club sold and re-signed is indistinguishable from
+  // a stranger. Deleted per §97, kept as an idea in docs/game-upgrade-ideas.md, and held dark by
+  // tools/playtest/transfer_in_reach.ts.
 
   // ── RELEASED ──────────────────────────────────────────────────────────────────────────────────
   released: [

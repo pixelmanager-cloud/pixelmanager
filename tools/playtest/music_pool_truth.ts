@@ -7,7 +7,7 @@
 // track 7.3, 3.6 or 4.0 times over. The comment described the repetition as SOLVED on the game's most
 // repeated screen, which is exactly the reader it would mislead.
 //
-// Two things are checked, because a comment can lie in two ways:
+// Three things are checked, because a comment can lie in more than one way:
 //   NUMBERS — every duration the block states must be a quantity that actually exists (a track's length,
 //   the pool's sum, or a fixture's real-time length), and every loop count must be a fixture divided by a
 //   real track. Read from the Ogg headers, not from a table someone maintains by hand.
@@ -15,12 +15,16 @@
 //   in-fixture repeats or that the deck advances. The ban is GATED on the code: if the deck is ever given
 //   an advance-on-ended (F-221, the open half, §101), the premise assertions go red naming the change and the
 //   ban stops running, rather than forbidding prose about behaviour that has arrived.
+//   LENGTH — and since one entry is looped for the whole fixture, the pool may not contain a bed short
+//   enough to grind. This is the half §101 acted on: match-1.ogg was 73.6s, 7.3 loops of one phrase in a
+//   540s fixture, and CK dropped it from the pool. The rule is stated as a length, not as a filename, so a
+//   future short track is caught the same way rather than only the one we already know about.
 //
 // SCOPE: the `match:` comment block only. The header above MANIFEST and the other contexts carry their own
 // prose, and widening this would produce a red that this probe cannot explain in one sentence.
 //
 // Run: `npx tsx tools/playtest/music_pool_truth.ts`
-import { readFileSync } from 'node:fs';
+import { readFileSync, readdirSync } from 'node:fs';
 
 let fails = 0;
 const ok = (c: boolean, m: string) => { console.log(`  ${c ? 'ok  ' : 'FAIL'} ${m}`); if (!c) fails++; };
@@ -57,7 +61,7 @@ function contextOf(key: string): { urls: string[]; comment: string; lines: numbe
 
 const match = contextOf('match');
 const big = contextOf('bigmatch');
-ok(match.urls.length === 3, `the match pool still holds three tracks (found ${match.urls.length})`);
+ok(match.urls.length === 2, `the match pool still holds its two tracks (found ${match.urls.length})`);
 // VACUITY GUARD. If the block-scrape breaks, `comment` empties and every filter below passes over nothing —
 // the zero-of-zero green. Mutation-tested by stripping the block: the count reads 0 and three go red here.
 console.log(`  ..   ${match.lines} comment line(s) read above match:, ${match.comment.length} chars`);
@@ -66,6 +70,13 @@ ok(match.lines >= 5, "the match: comment block was actually read (not a zero-of-
 const secs = (u: string) => oggSeconds('client/public' + u);   // MANIFEST urls are site-root ('/audio/x.ogg')
 const pool = match.urls.map(secs);
 const bigPool = big.urls.map(secs);
+// A DURATION THE COMMENT NAMES MAY BELONG TO A FILE THAT IS ON DISK BUT OUT OF THE POOL. §101 dropped
+// match-1.ogg from `match:` and deliberately KEPT the file, and the block has to be able to say how long it
+// was and how hard it looped — that is the entire reason it was dropped. Scoped to match-*.ogg actually
+// present in the drop folder, so the invented-number check below still refuses a duration nobody can point
+// at; it does not turn into "any number goes".
+const onDisk = readdirSync('client/public/audio').filter((n) => /^match-\d+\.ogg$/.test(n))
+  .map((n) => oggSeconds('client/public/audio/' + n));
 ok(pool.length > 0 && pool.every((d) => d > 1), `every match track was decoded (${pool.map((d) => d.toFixed(1)).join(' / ')}s)`);
 ok(bigPool.length > 0 && bigPool.every((d) => d > 1), `and every bigmatch track (${bigPool.map((d) => d.toFixed(1)).join(' / ')}s)`);
 const sum = pool.reduce((a, b) => a + b, 0);
@@ -82,8 +93,8 @@ const fixtures = speeds.map((s) => matchSec / perSec / s);   // 540 / 135 / 45
 
 const TOL_S = 0.5;      // the comment quotes to 1 dp; anything further out is a different number
 const TOL_LOOPS = 0.1;
-const legalSecs = [...pool, sum, ...bigPool, ...fixtures];
-const legalLoops = [...pool, ...bigPool].map((d) => (matchSec / perSec) / d);
+const legalSecs = [...pool, sum, ...bigPool, ...fixtures, ...onDisk];
+const legalLoops = [...pool, ...bigPool, ...onDisk].map((d) => (matchSec / perSec) / d);
 const near = (v: number, set: number[], tol: number) => set.some((x) => Math.abs(x - v) <= tol);
 
 // Only a number carrying a SECONDS unit ("355.7s", "74-second"). "10 game-seconds per real second" and
@@ -101,6 +112,24 @@ ok(badSecs.length === 0, `every duration the comment states exists on disk (${ba
 const badLoops = claimedLoops.filter((v) => !near(v, legalLoops, TOL_LOOPS));
 for (const v of badLoops) console.log(`       ${v} loops — real per-track counts are ${legalLoops.map((l) => l.toFixed(1)).join(', ')}`);
 ok(badLoops.length === 0, `every loop count is a fixture over a real track (${badLoops.length} invented)`);
+
+console.log('\n=== ...and no bed in the pool is short enough to grind ===');
+
+// THE POOL DECIDES WHICH BED A FIXTURE GETS, NOT HOW OFTEN IT COMES ROUND — so the shortest entry sets the
+// worst experience the game can hand a player, and no amount of rotation dilutes it. match-1.ogg at 73.6s
+// was 7.3 loops of one phrase inside a 540s fixture and landed on about a third of them; the two that
+// stayed are 3.6 and 4.0, which is ordinary game music. The ceiling is five, deliberately between those two
+// clusters: four would fail match-3 by 0.03 of a loop, which is not a difference anyone can hear, and the
+// number being excluded is 7.3. Loops, not seconds, because the fixture length is read from the engine — if
+// full-time or the clock rate moves, the bar moves with it.
+const MAX_LOOPS = 5;
+const loops1x = pool.map((d) => (matchSec / perSec) / d);
+// VACUITY GUARD. every() over an empty pool is the zero-of-zero green. The pool-size assertion above goes
+// red first if the scrape breaks; this line then reports 0 tracks rather than a silent pass. Mutation-tested
+// by putting '/audio/match-1.ogg' back in `match:` — this goes red at 7.3 loops.
+console.log(`  ..   ${pool.length} pool track(s), worst ${(pool.length ? Math.max(...loops1x) : 0).toFixed(2)} loops per fixture against a ceiling of ${MAX_LOOPS}`);
+ok(pool.length >= 2 && loops1x.every((l) => l <= MAX_LOOPS),
+   `every match bed survives a fixture in ${MAX_LOOPS} loops or fewer (${loops1x.map((l) => l.toFixed(1)).join(' / ')})`);
 
 console.log('\n=== ...and about what play() does with the pool ===');
 
@@ -121,7 +150,7 @@ if (advances || !picksOne || !loopsIt) {
   // Each pattern is tied to the code fact that refutes it, so the reader checks the CLAIM, not the regex.
   const REFUTED: { re: RegExp; what: string }[] = [
     { re: /\b(?:no|zero|without)\b[^.]{0,40}repeat[^.]{0,40}within (?:a|one) (?:fixture|match)/i,
-      what: 'that a fixture hears no repeat — one track is picked and looped, so it repeats 3.6-7.3 times' },
+      what: 'that a fixture hears no repeat — one track is picked and looped, so it repeats 3.6-4.0 times' },
     { re: /the deck (?:advances|rotates|cycles|moves on)/i,
       what: 'that the deck advances — it does not; whether it should is the open half of F-221 (§101)' },
   ];

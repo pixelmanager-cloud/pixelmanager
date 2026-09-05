@@ -4366,7 +4366,11 @@ class Game {
     const bootChips = o.boots.owned.map((b) => `<span class="op-boot" title="${b.edge}">👟 ${b.name}</span>`).join('');
     const nextBoot = o.boots.next ? `<div class="op-boot-next">🔒 Next: <b>${o.boots.next.boot.name}</b> — ${o.boots.next.boot.unlock} <span class="op-boot-prog">(${o.boots.next.progress}/${o.boots.next.target})</span></div>` : '';
     const boots = `<div class="op-boots"><div class="op-sub">👟 SIGNATURE BOOTS ${o.boots.owned.length ? `<span class="op-count">${o.boots.owned.length} earned</span>` : ''}</div>${bootChips || '<span class="op-none-inline">None earned yet</span>'}${nextBoot}</div>`;
-    const tempt = o.temptation ? `<div class="op-tempt"><span class="op-tempt-lbl">🎲 TEMPTATION — ${o.temptation.title}</span><div class="op-tempt-blurb">${o.temptation.blurb}</div></div>` : '';
+    // NO 🎲, AND NO "TEMPTATION". This panel renders a heading and a blurb and nothing else — no data-act,
+    // no button, no handler — so a die and a dilemma advertised a choice the player was never offered (§100).
+    // The blurbs are observed flavour now; the die and the wording come back only WITH the two-option choice
+    // behind them (deferred — written up in docs/game-upgrade-ideas.md). Guarded by tools/playtest/tempt_panel_copy.ts.
+    const tempt = o.temptation ? `<div class="op-tempt"><span class="op-tempt-lbl">🌙 OFF THE PITCH — ${o.temptation.title}</span><div class="op-tempt-blurb">${o.temptation.blurb}</div></div>` : '';
     return `<div class="cg-offpitch">${image}${deals}${boots}${tempt}</div>`;
   }
 
@@ -5247,7 +5251,11 @@ class Game {
     // TABS declutter the view: NOW (the current decision + your life dashboard), PLAYER (full identity +
     // deck), KIT (cosmetic customization). The chapter header + scene banner stay above the tabs.
     const TABS: Array<['now' | 'player' | 'kit' | 'league' | 'life', string]> = [['now', '⚽ Now'], ['player', '👤 Player'], ['kit', '🎽 Kit']];
-    if (s.offPitch) TABS.push(['life', `💼 Life${s.offPitch.temptation ? ' 🎲' : ''}`]); // fame/deals/boots — senior stages
+    // NO BADGE ON THIS TAB. It wore a 🎲 whenever a temptation was live — 6.5 badged turns a career for a clean
+    // reputation, ~14 for an edgy one — and the panel behind it has nothing to press (§100). A badge is a promise
+    // that something is waiting; this one sent the player to read a dilemma he had no way to answer. It comes back
+    // only WITH the choice wired (deferred — docs/game-upgrade-ideas.md).
+    if (s.offPitch) TABS.push(['life', '💼 Life']); // fame/deals/boots — senior stages
     if (s.clubSeason) TABS.push(['league', '🏆 League']);
     if (this.careerTab === 'league' && !s.clubSeason) this.careerTab = 'now'; // league tab only exists in senior stages
     if (this.careerTab === 'life' && !s.offPitch) this.careerTab = 'now';       // life tab only exists in senior stages

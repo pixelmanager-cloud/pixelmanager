@@ -16,21 +16,28 @@ const MANIFEST: Record<MusicContext, string[]> = {
   scout: ['/audio/scout-1.ogg'],
   career: ['/audio/career-1.ogg', '/audio/career-2.ogg', '/audio/career-3.ogg', '/audio/career-4.ogg', '/audio/career-5.ogg'],
   hub: ['/audio/hub-1.ogg'],
-  // THREE TRACKS, BECAUSE A MATCH IS NINE REAL MINUTES. The clock advances 10 game-seconds per real second
-  // at 1x (engine TICK_SEC 0.5, accum +10/s), so a 90-minute fixture takes ~540s — and a single 74-second
-  // loop repeated 7.3 times inside one match, with no rotation, since the avoid-immediate-repeat branch
-  // only runs when a pool has more than one entry. Matches are the most repeated activity in the game.
-  // The pool is 355.7s in all — 73.6s / 148.0s / 134.1s, measured from each Ogg's last granulepos and
-  // sample rate — but it does NOT play as a sequence. play() picks ONE entry per fixture and sets
-  // loop = true, and the only thing that enters the 'match' context is showScreen('match'), called once as
-  // the match starts. So three tracks cut the CHANCE of drawing the 73.6s one to a third (and never twice
-  // running, via that same branch); they do not remove in-fixture repetition, which is still 7.3, 3.6 or
-  // 4.0 loops of one track per fixture. Whether the deck should advance mid-fixture is open — F-221 (§101).
+  // TWO TRACKS, BECAUSE A MATCH IS NINE REAL MINUTES. The clock advances 10 game-seconds per real second
+  // at 1x (engine TICK_SEC 0.5, accum +10/s), so a 90-minute fixture takes ~540s — and the pool does NOT
+  // play as a sequence across it. play() picks ONE entry per fixture and sets loop = true, and the only
+  // thing that enters the 'match' context is showScreen('match'), called once as the match starts, so the
+  // pool decides WHICH bed a fixture gets and not how often that bed comes round. Rotation is BETWEEN
+  // matches. The pool is 282.1s in all — 148.0s / 134.1s, measured from each Ogg's last granulepos and
+  // sample rate — which is 3.6 and 4.0 loops per fixture: ordinary game music on the game's most repeated
+  // screen.
+  // match-1.ogg WAS the third entry and was DROPPED from the pool (§101, CK's call). At 73.6s it was 7.3
+  // loops of one phrase inside a single fixture, and the avoid-immediate-repeat branch in play() biases the
+  // pick toward lastIdx + 1, so it still landed on about a third of fixtures. The alternative — an 'ended'
+  // handler that advances the deck mid-fixture — was rejected because it re-enters the crossfade/reqSeq
+  // state machine whose own comments below record three bugs already fixed in it, and a handler lost to the
+  // next one leaves the match SILENT for the rest of the fixture, which is worse than repeating.
+  // THE FILE STAYS ON DISK, unreferenced, so a later decision can put it back: no probe requires an Ogg to
+  // be referenced, and the bar that keeps it out is a LENGTH, not this filename — tools/playtest/
+  // music_pool_truth.ts fails a pool holding a bed that loops more than five times in one fixture.
   // 'bigmatch' never sees this pool: cup and World-Finals ties crossfade onto it straight after
   // showScreen('match'), and it is one 70.7s track — 7.6 loops per tie, on the highest-stakes matches.
-  // Both additions were picked on measurement rather than name — long, and flat enough (6 dB range) not to
-  // swell over the commentary the player is reading. match-3 is the pack's purpose-built LOOP variant.
-  match: ['/audio/match-1.ogg', '/audio/match-2.ogg', '/audio/match-3.ogg'],
+  // Both were picked on measurement rather than name — long, and flat enough (6 dB range) not to swell
+  // over the commentary the player is reading. match-3 is the pack's purpose-built LOOP variant.
+  match: ['/audio/match-2.ogg', '/audio/match-3.ogg'],
   bigmatch: ['/audio/bigmatch-1.ogg'],
   triumph: ['/audio/triumph-1.ogg'],
   tension: ['/audio/tension-1.ogg'],

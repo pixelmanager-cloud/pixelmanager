@@ -40,7 +40,7 @@ console.log('=== The bloodline player retires, and the feed has words for it ===
 // last one's lines — which would report this bank as 10 lines rather than 23.
 const BANK = mergeBanks(BASE_MGR, MGR_EXTRA_1, MGR_EXTRA_2, MGR_EXTRA_3, MGR_EXTRA_4, MGR_EXTRA_5, MGR_EXTRA_6);
 console.log(`  ..   ${Object.keys(BANK).length} bank key(s) merged from base + six packs`);
-ok(Object.keys(BANK).length > 60, 'the packs actually loaded (base alone is 35 keys; with all six it is 100)');
+ok(Object.keys(BANK).length > 60, 'the packs actually loaded (base alone is 35 keys; with all six it is 99)');
 
 /** The Nth argument of the call whose '(' is at `open`, respecting nesting. A `[^,)]+` capture would read
  *  `this.personCtx(rp, rp.id === this.loadMgr().starId)` as `this.personCtx(rp` — and the half it throws

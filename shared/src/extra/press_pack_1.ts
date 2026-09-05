@@ -397,7 +397,12 @@ export const PRESS_EXTRA_1: Record<string, string[]> = {
     `A reporter from abroad asks what the club's ambition in this competition is. It gets a bold reply.`,
     `"These games are why players sign for clubs like this one," the manager says.`,
     `The tactical questions run long, and the manager clearly enjoys every one of them.`,
-    `"Two legs changes everything. You manage the tie, not the game," is the lesson offered.`,
+    // ONE LINE REMOVED HERE for the same reason as the small-ground line below, and it was wrong before
+    // this change rather than because of it: the Continental Cup has no two-legged tie. CONT_ROUNDS is
+    // Quarter-final / Semi-final / Final and every one is settled in a single game — simContinentalTie
+    // resolves each round in one call and takes it to penalties when level. So "you manage the tie, not
+    // the game" described a competition format the game has never had, in the bank that fires on the one
+    // it does have. Widening PRE_CUP onto these nights is what made it worth reading again.
     `A formal, well-attended briefing with the sort of decorum the league games never get.`,
     `Somebody asks about the atmosphere expected. The manager smiles and says he's looking forward to it.`,
     `"Continental football punishes anything sloppy. That's what we've drilled all week."`,
@@ -518,7 +523,13 @@ export const PRESS_EXTRA_1: Record<string, string[]> = {
     `The room enjoys cup week, and the briefing is warmer than most.`,
     `Somebody asks whether the club needs a trophy. The answer is honest and a little pointed.`,
     `"Cups are how ordinary seasons become good ones," is the phrase the manager keeps returning to.`,
-    `A question about the atmosphere at a smaller ground gets a genuinely enthusiastic reply.`,
+    // ONE LINE REMOVED HERE, not moved: the giant-killing beat that put the tie at a smaller ground.
+    // This bank was gated on a domestic cup the game does not have and now fires on the Continental Cup
+    // and the World Finals knockouts instead (shared/src/press.ts, docs section 94) — and neither can be
+    // at a small ground: the continental away tie is at a club that finished top-3 in another country,
+    // and every World-Finals tie is played on neutral ground. A line that lies about where the fixture
+    // is being played is worse than a line nobody sees. tools/playtest/press_cup_reach.ts keeps the
+    // removed sentence as its control string, so the check that holds it out cannot go vacuous.
     `"You've got to match their intensity first and worry about the football second," is the plan.`,
     `The manager is asked about his own cup memories and gives the room something real.`,
     `"It's a different competition and a different mentality. We've adjusted all week," he says.`,

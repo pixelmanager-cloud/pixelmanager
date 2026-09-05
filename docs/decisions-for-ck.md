@@ -3226,6 +3226,22 @@ no proper way to raise sponsors in the last third of a career.
 The two code edits are ready and verified; they are held only on this. Say which of (a)–(d) and I will
 apply it.
 
+**DECIDED 2026-09-05 — CK took (a)+(b).** Shipped: `chooseFocus` keys the side bank and the `sideFocusFor`
+marker on `bandAt(this.turn - 1)` like the main bank does, `current()`'s `side:` flag with it; the
+Breakthrough side bank gains `bootshoot` (energy -3, sponsors +6, the same shape as `signing` and
+`boardroom`); an `Academy` side bank restores the turn-28 round. `sponsor_meter.ts` reads **55/150**
+careful careers under 30 — better than the 57/150 it read before the fix, and nowhere near the 98/150 the
+keying fix alone produced. `tools/playtest/side_focus_chapter.ts` holds all of it: the keying, the marker,
+no bank offered twice, no bank left dark, a side round at every summer past Grassroots, and a sponsors
+option at every side round where the meter is on screen.
+
+**The cost, paid deliberately.** `tools/playtest/fixtures/golden-careers.json` was regenerated
+(`GOLDEN_WRITE=1 npx tsx tools/playtest/golden_replay.ts`). It had to be: an existing save records a
+side-focus id that is no longer on offer at that turn, so the tolerant replay path degrades it to Rest and
+9 of the 11 committed careers graduated differently. Every save with a side-focus action past turn 28
+replays to a slightly different player. No subset of the fix avoids this — the keying edit alone breaks
+the fixture — and per §98 this is the moment to do it, before there are saves worth preserving.
+
 ## §97 — 33 transfer lines that cannot be reached, and no way to reach them that isn't a choice
 
 `transfer_in` has exactly one emit site. Measured against every listing the shop can produce — 864,000 from
@@ -3336,6 +3352,20 @@ is unfinished" signal a UI can send.
   reputation and the meters. That is the feature the copy already promises, and it is a genuine content
   project (ten dilemmas × two branches × outcomes), not a fix.
 - **(c) Leave it.** Not recommended: this one is visible, repeated, and reads as broken rather than thin.
+
+**DECIDED 2026-09-05 — CK took (a).** The 🎲 is gone from the Life tab label and from the panel's own
+heading, which now reads `🌙 OFF THE PITCH — <title>`, and the ten blurbs are observations rather than
+dilemmas — "The card game is running again in the players' lounge, and there's a week's wages sitting in
+the middle of the table." Three titles that read as prompts rather than scenes went with them. The real
+two-option version is **not lost**: it is written up in `docs/game-upgrade-ideas.md` under "Deferred",
+with the ten kinds, what each branch would cost, and the seeded hash it must resolve from. Guarded by
+`tools/playtest/tempt_panel_copy.ts`, which pins the SHAPE of the promise rather than the wording — the tab
+label may not vary on whether a temptation is live, neither label nor heading may wear the 🎲, and no
+temptation string may carry a question, an either/or, or a second person (the "you" of an offer he cannot
+accept; endorsement obligations keep theirs, being terms of a deal he signed). Mutation-proven: restoring
+the badge, the heading's die, or ONE of the ten dilemma blurbs takes it red, and so does emptying the
+corpus. Its first check goes red if the choice is ever WIRED — at which point the probe wants retiring and
+the badge is honest again.
 
 ## §101 — the match soundtrack still repeats inside a fixture, and the pool it was bought for cannot fix it
 

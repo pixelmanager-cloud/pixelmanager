@@ -16,7 +16,7 @@ is a silent no-op. Licensing/attribution: `/CREDITS.md` + `docs/licenses/`.
 | `menu-1` | New Beginnings (LOOP) | main menu |
 | `career-1..5` | Youth · Times of Peace · Feels Like Home · A Little R n R · Building Strength | academy/development (rotates) |
 | `hub-1` | Looking Forward | hub / season planning |
-| `match-1..3` | A Worthy Challenge (LOOP) · Clashing Forces · Duel of the Dark Knight (LOOP) | matchday (rotates) |
+| `match-2..3` | Clashing Forces · Duel of the Dark Knight (LOOP) | matchday (rotates) |
 | `triumph-1` | Over Achievers (32-Bit) | title win |
 | `tension-1` | Meeting The Call (LOOP) | shock call-up / big career moment |
 | `drama-1..3` | Unexpected Turn · Minor Complications · In Dire Need (LOOP) | life-events (rotates) |
@@ -26,6 +26,15 @@ is a silent no-op. Licensing/attribution: `/CREDITS.md` + `docs/licenses/`.
 | `bigmatch-1` | It's Bossin Time | cup final / World Finals (`main.ts:4913`) |
 | `emotional-1` | The Journey So Far | retirement / succession — the bloodline beat (`main.ts:2766`) |
 | `scout-1` | Enter Your Name | new game / prospect scouting (`main.ts:765`, `:3136`) |
+
+**`match-1` — *A Worthy Challenge* (LOOP) — is on disk but NOT in the pool.** `play()` picks one entry per
+fixture and loops it, so rotation happens between matches and cannot dilute what a single fixture hears: at
+73.6s against a 540s fixture that was 7.3 loops of one phrase, where the two that stayed are 3.6 and 4.0.
+§101 dropped it from `MANIFEST` rather than teach the deck to advance mid-fixture, which would have
+re-entered the crossfade state machine and risked a silent match. The file is deliberately kept so a later
+decision can put it back without going near the licensed pack again — no probe requires an Ogg to be
+referenced, and the bar that keeps it out is a length: `tools/playtest/music_pool_truth.ts` fails a pool
+holding a bed that loops more than five times in one fixture.
 
 Every one of the twelve `MusicContext` values in `client/src/audio.ts` has both a file on disk and at
 least one trigger in `main.ts` — checked by walking `audio.play()` / `audio.sting()` call sites, not by
