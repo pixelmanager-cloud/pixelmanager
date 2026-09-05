@@ -51,6 +51,15 @@ interface MgrState { season: number; results: PlayedResult[]; starId?: string; s
    *  cups compound, through ach_cup into manRenown (40 renown each), the legend card's tier word, the
    *  mintable gate and the testimonial purse. This high-water mark is what makes the banked number his. */
   cupsBanked?: number;
+  /** The same high-water mark, split per honour, for the RETIREMENT SEND-OFF's prose. `cupsBanked` made
+   *  the legend card his own; the sentence the player actually READS at the send-off still counted
+   *  `titles`, `contTitles` and `wcWins` raw, so from generation 2 it pinned the whole house's
+   *  silverware on one man — beside an `era` that counts only his own seasons ("retires after 9 seasons
+   *  and 12 league titles"), and contradicting the legend card the same succession writes. A combined
+   *  total cannot be split back out, and the prose names each trophy separately, so the mark is kept per
+   *  honour. `cupsBanked` stays as it is: saves written before this carry only it, and the legend card
+   *  reads it. */
+  titlesBanked?: number; contBanked?: number; wcBanked?: number;
   // Keys of feed events that have already fired. Several events are raised from RENDER paths (the squad
   // report, the scouting board, the season screen), which re-run on every refresh and every navigation
   // back — without a ledger the same retirement is announced half a dozen times.
@@ -1573,7 +1582,14 @@ class Game {
         + `<div class="cn-row"><span class="cn-lbl">Deal length</span><div class="cn-len" role="group" aria-label="Deal length">${[2, 3, 4, 5, 6].map((L) => `<button class="cn-l ${L === length ? 'active' : ''}" id="cn-len-${L}" data-len="${L}" aria-pressed="${L === length}">${L}y</button>`).join('')}</div></div>`
         + `<div class="cn-ask">He’s asking <b>${ask.toLocaleString('en-US')}c/season</b> — <b>${(ask * length).toLocaleString('en-US')}c</b> over ${length} seasons. <span class="cn-coins">💷 you have ${coins.toLocaleString('en-US')}c</span></div>`
         + `<div class="cn-offers">`
-        + offer('Lowball', 0.8, 'he may walk')
+        // "HE MAY WALK" PROMISED A DEPARTURE THIS GAME CANNOT PRODUCE, AND A GAMBLE THAT DOES NOT EXIST.
+        // Nothing ends the talks on a reject — submitContractOffer below calls close() only on 'accept', so
+        // the panel stays fully live and the same man can be signed a second later — and moraleEffects()'s
+        // `wantsAway`, the one flag that could ever turn a morale collapse into a departure, has no consumer
+        // anywhere in shared/ or client/. Nor is 0.8 a risk you take: it is under evaluateContractOffer's
+        // 0.9 reject line at every length, so it ALWAYS rejects. What does fire is the -6 morale, which is
+        // what makes him dearer to re-sign (see the Morale bullet in managerHelpRows) — so say that instead.
+        + offer('Lowball', 0.8, 'he refuses — costs morale')
         + offer('Haggle', 0.92, 'he’ll push back')
         + offer('Meet it', 1.0, 'deal done', 'primary')
         + offer('Generous', 1.18, 'delighted + loyal')
@@ -1595,7 +1611,11 @@ class Game {
         this.setMe(await api.me()); close();
       } else {
         const res = document.getElementById('cn-result');
-        if (res) res.innerHTML = `<div class="cn-${r.outcome}">${r.outcome === 'reject' ? '❌' : '🤝'} ${r.note}${r.outcome === 'counter' ? ` He’s holding out for <b>${r.askWage.toLocaleString('en-US')}c</b>.` : ''}</div>`;
+        // The ONLY thing a rejected offer actually costs him is morale, and the panel showed no morale at
+        // all — so a lowball read as a wasted click while it quietly made him dearer to re-sign, and could
+        // be stacked (managerarc.ts damps morale GAINS by headroom but applies losses in full).
+        const moodLine = r.moraleDelta ? ` <b>Morale ${r.moraleDelta > 0 ? '+' : ''}${r.moraleDelta}</b>.` : '';
+        if (res) res.innerHTML = `<div class="cn-${r.outcome}">${r.outcome === 'reject' ? '❌' : '🤝'} ${r.note}${moodLine}${r.outcome === 'counter' ? ` He’s holding out for <b>${r.askWage.toLocaleString('en-US')}c</b>.` : ''}</div>`;
       }
     } catch (e: any) { toast(e?.body?.error === 'not enough coins' ? `Not enough coins (need ${e.body.need})` : 'Talks broke down'); }
   }
@@ -1947,6 +1967,10 @@ class Game {
       // fathers already banked, or each generation is credited with the whole house's cups. Stamped here,
       // AFTER succeed() has banked this man's, so the heir starts from the family's running total.
       cupsBanked: (prior.contTitles ?? 0) + (prior.wcWins ?? 0),
+      // ...and the same mark per honour, for the send-off prose, which names each trophy on its own line
+      // and so has nothing to subtract a combined total from. Stamped here beside `cupsBanked`, from the
+      // same `prior`, so the sentence and the legend card can never drift apart.
+      titlesBanked: prior.titles ?? 0, contBanked: prior.contTitles ?? 0, wcBanked: prior.wcWins ?? 0,
       // titles, contTitles, wcWins, staff, arcPrestige, clubLegacy, arcTags, lastRankIdx, temper and the
       // feed itself all carry, because they are the dynasty rather than the season.
     } as MgrState);
@@ -2176,7 +2200,13 @@ class Game {
       ...houseListings(this.leagueSeed(), m.season, tier, gen, tierStrength(tier)),
       ...transferList(this.genSeed(), m.season, tier),
     ].filter((l) => !bought.includes(l.player.id));
-    const squad = this.club.players, sellable = squad.filter((p) => p.id !== m.starId); // the bloodline star can't be sold here
+    // OWNABLE, not merely present. Loanees are in `club.players` by both routes in — signTrial pushes the
+    // walk-up trialist (`loan-s<n>-<i>`) and signMission the scouted one (`scout-<missionId>`) — and
+    // sellPlayer refuses exactly those ids: "he's only here on trial — you can't sell a player you don't
+    // own". The column quoted up to LOANEE_CAP men a season a firm "Sell · +Nc", with no LOAN badge to say
+    // he isn't yours, so a manager budgeting a signing counted in money the game will never pay and the
+    // click came back as an error toast. Same test the wage-bill line below already uses.
+    const squad = this.club.players, sellable = squad.filter((p) => p.id !== m.starId && !isLoaneeId(p.id)); // the bloodline star can't be sold here, and a loanee isn't ours to sell
     // REGISTERED, not merely listed. `this.club` is the MERGED club -- fieldablePlayers appends every
     // pro/retired token that actually played a career -- while buyPlayer, sellPlayer and signTrial all bound
     // the RAW `club.players`, which no `nft:` id ever enters. Counting the merged list put this screen ahead
@@ -2812,7 +2842,13 @@ class Game {
     // match the played tie's venue + club edges (PT-129): SF is away, final is neutral, both fold in facilities/staff
     const atHome = !tie.neutral && round % 2 === 0;
     const { strDelta, homeTerm } = this.simEdge(atHome ? 'home' : 'away');
-    const r = this.simFixtureResult(this.clubLeagueStrength() + strDelta, tie.oppStrength, ((this.genSeed() >>> 0) ^ ((m.season * 331 + round * 17) >>> 0)) >>> 0, homeTerm);
+    // THE FINAL IS ON NEUTRAL GROUND, so neither side gets a venue term. simEdge only speaks 'home' and
+    // 'away', and its away branch is an ACTIVE -0.25 PENALTY, not merely a missing bonus — so simming the
+    // club's biggest match handed the opponent the host edge the played path gives to nobody (`!sp.neutral`
+    // guards both venue lines in startSpMatchWith). Measured over 200,000 seeds across strength gaps -4..+4
+    // that cost the player up to 11 points of win probability, against the neutral ground the card above
+    // the button says the tie is on. simWorldCupTie passes a literal 0 here for the same reason.
+    const r = this.simFixtureResult(this.clubLeagueStrength() + strDelta, tie.oppStrength, ((this.genSeed() >>> 0) ^ ((m.season * 331 + round * 17) >>> 0)) >>> 0, tie.neutral ? 0 : homeTerm);
     this.resolveContinental(r.myGoals, r.oppGoals, tie.oppStrength);
   }
   /** Apply a continental tie result: win → advance (or lift the cup); level → seeded shootout; loss → out. */
@@ -3227,7 +3263,13 @@ class Game {
     for (let i = m.results.length; i < fixtures.length; i++) {
       const opp = opps.find((o) => o.name === fixtures[i].oppName)!;
       const { strDelta, homeTerm } = this.simEdge(fixtures[i].venue === 'H' ? 'home' : 'away'); // fold in facilities/staff + the correct venue edge
-      const mseed = ((seed >>> 0) ^ ((m.season * 131 + i) >>> 0)) >>> 0;
+      // genSeed(), NOT the `seed` local -- that alias is leagueSeed(), one constant for the life of the save,
+      // and `m.season` resets to 1 at every succession, so those two alone are byte-identical for the heir's
+      // season 3 and his father's. What repeats is not the scoreline -- the opponent squads are already
+      // generation-scoped -- but everything manageBench in engine.ts hashes off the seed and the minute
+      // alone: which man is injured, whether the injury fires, and the minute the substitution window opens.
+      // That is the same half of F-082 the comment below records having fixed once already, one clock short.
+      const mseed = ((this.genSeed() >>> 0) ^ ((m.season * 131 + i) >>> 0)) >>> 0;
       // PLAY it, don't roll it -- see simOneFixture. The old roll stays as the fallback for a squad too
       // thin to field an XI, so a sim can never strand the player mid-season.
       // `mseed` carries the season and the matchday, and it used to reach ONLY the fallback branch -- the
@@ -3475,7 +3517,9 @@ class Game {
       // just played, where nothing will ever read it. The value is the same either way today.
       // Retirement path only: `acceptStarBid` renders no report, and its send-off is a sale.
       this.feedEvent('retirement', '🎽', this.starCtx(), { n: age }, m.season + 1);
-      this.retireStar(titles, m.contTitles ?? 0, undefined, (promoted || relegated) ? { move: promoted ? 'promoted' : 'relegated', tier: tierName(newTier) } : undefined);
+      // `m.season` is nextSeason's own snapshot, taken before the save above advanced the counter, so it is
+      // the season he has just finished — the number of seasons he served. Passed, not re-read in there.
+      this.retireStar(titles, m.contTitles ?? 0, undefined, (promoted || relegated) ? { move: promoted ? 'promoted' : 'relegated', tier: tierName(newTier) } : undefined, m.season);
       return;
     }
     // THE NUMBER THAT DECIDES THE SEASON, said out loud once a year. Placed AFTER the retirement early
@@ -3564,14 +3608,29 @@ class Game {
       this.retireStar(m.titles ?? 0, m.contTitles ?? 0, { fee: bid.fee, club: bid.club });
     });
   }
-  private retireStar(titles: number, contTitles = 0, sold?: { fee: number; club: string }, finalMove?: { move: 'promoted' | 'relegated'; tier: string }) {
+  private retireStar(titles: number, contTitles = 0, sold?: { fee: number; club: string }, finalMove?: { move: 'promoted' | 'relegated'; tier: string }, seasonsServed?: number) {
     const m = this.loadMgr();
-    const seasons = m.season;
+    // SEASONS SERVED, NOT THE COUNTER SITTING IN THE SAVE. The retirement path closes the season BEFORE it
+    // hands over — the `season: m.season + 1` write above the call, the one that stops the send-off being
+    // re-entered for a second prize and a duplicate title — so `loadMgr()` here returns a counter that has
+    // ALREADY moved on, and the headline figure of the whole card counted one campaign too many: a man whose
+    // last season was 12 retired "after 13 seasons", on every retirement the game will ever stage. The
+    // caller passes the season he actually played. `acceptStarBid` fires mid-season with the counter
+    // untouched and passes nothing, so the sale send-off keeps reading exactly as it shipped.
+    const seasons = seasonsServed ?? m.season;
     const mentorship = Math.max(0, (m.starAge ?? 30) - 30); // veteran years spent passing on the game to the next gen — only banked if he chooses to mentor
     this.showScreen('academy');
     audio.play('emotional'); // the retirement/succession beat — the bloodline moment (its track carries the weight)
     const surname = (m.starName ?? '').trim().split(/\s+/).slice(1).join(' ') || m.starName || 'the family';
-    const honours = [titles ? `${titles} league title${titles === 1 ? '' : 's'}` : '', contTitles ? `${contTitles} continental cup${contTitles === 1 ? '' : 's'}` : '', (m.wcWins ?? 0) ? `${m.wcWins} World Finals title${(m.wcWins ?? 0) === 1 ? '' : 's'}` : ''].filter(Boolean);
+    // HIS honours, not the house's — the same subtraction bringThroughHeir makes before it stamps the
+    // legend card. `titles`, `contTitles` and `wcWins` are dynasty-LIFETIME counters resetMgrForHeir
+    // carries on purpose, so read raw they put every ancestor's silverware in one man's send-off, against
+    // an `era` of only his own seasons — "retires after 9 seasons and 12 league titles", which is
+    // impossible on its face and contradicts his legend card. (PT-113's sibling site.)
+    const ownTitles = Math.max(0, titles - (m.titlesBanked ?? 0));
+    const ownCont = Math.max(0, contTitles - (m.contBanked ?? 0));
+    const ownWc = Math.max(0, (m.wcWins ?? 0) - (m.wcBanked ?? 0));
+    const honours = [ownTitles ? `${ownTitles} league title${ownTitles === 1 ? '' : 's'}` : '', ownCont ? `${ownCont} continental cup${ownCont === 1 ? '' : 's'}` : '', ownWc ? `${ownWc} World Finals title${ownWc === 1 ? '' : 's'}` : ''].filter(Boolean);
     const honourLine = honours.length ? ` and ${honours.join(', ')}` : '';
     // THE HEADLINES STOP: real retired pros describe the abruptness of the press/media drop-off — front
     // pages one day, silence the next, the game already moved on (research §11, Joe Thompson's own words).
@@ -3918,7 +3977,13 @@ class Game {
         : `<div class="fac-next">Next: <b>${f.nextEffect ?? ''}</b></div>`
           + (f.nextUpkeep != null && f.nextUpkeep > f.upkeep
             ? `<div class="fac-upkeep">Upkeep ${f.upkeep.toLocaleString('en-US')}c ▸ <b>${f.nextUpkeep.toLocaleString('en-US')}c</b> a season</div>` : '')
-          + `<button class="fac-up" data-key="${f.key}" aria-label="Upgrade ${f.name} to level ${(f.level ?? 0) + 1} for ${(f.upgradeCost ?? 0).toLocaleString('en-US')} coins" ${f.canAfford ? '' : `disabled title="Not enough coins — you need ${(f.upgradeCost ?? 0).toLocaleString('en-US')}c"`}>${f.canAfford ? `Upgrade · 💰 ${f.upgradeCost} ▶` : `Need 💰 ${(f.upgradeCost ?? 0).toLocaleString('en-US')}c`}</button>`;
+          // GROUPED, like the five other prints of this same price. The affordable label was the only raw
+          // one on the card, so a level-10 upgrade read "Upgrade · 💰 14000 ▶" while the disabled twin on
+          // the card beside it read "Need 💰 14,000c" and the confirm that same click opens said "14,000c"
+          // — one price, two shapes, on one control. locale_stable_numbers.ts audits the calls that ARE
+          // toLocaleString, so a figure with no call at all was invisible to it; facility_price_grouped.ts
+          // is the probe that sees this one.
+          + `<button class="fac-up" data-key="${f.key}" aria-label="Upgrade ${f.name} to level ${(f.level ?? 0) + 1} for ${(f.upgradeCost ?? 0).toLocaleString('en-US')} coins" ${f.canAfford ? '' : `disabled title="Not enough coins — you need ${(f.upgradeCost ?? 0).toLocaleString('en-US')}c"`}>${f.canAfford ? `Upgrade · 💰 ${(f.upgradeCost ?? 0).toLocaleString('en-US')} ▶` : `Need 💰 ${(f.upgradeCost ?? 0).toLocaleString('en-US')}c`}</button>`;
       const scaleBack = f.level > 1
         ? `<button class="fac-down" data-down="${f.key}" aria-label="Scale back ${f.name} to level ${(f.level ?? 1) - 1}" title="Scale back a level and recover part of what it cost">Scale back ▾</button>` : '';
       return `<div class="facility ${maxed ? 'maxed' : ''}">`
@@ -5054,6 +5119,19 @@ class Game {
           season: 1, results: [], arcLastMd: undefined, lastBoard: undefined, lastFinishPos: undefined, arcBoard: 0,
           sponsor: undefined, contElig: undefined, contRound: 0, contOut: false, contBlurb: undefined,
           wcStage: undefined, wcEdition: undefined, wcRun: undefined, squadReport: undefined,
+          // ...AND THE LEDGERS THE SEASON COUNTER INDEXES INTO, which is the half this literal was missing.
+          // resetMgrForHeir is the other place `season: 1` is written, and it spells the rule out — but its
+          // one caller is succeed(), and nobody retires when you simply take the reins with another line, so
+          // on this path nothing else covers for it. Without these three the new man's season 4 restages a
+          // World Finals edition the save has already played (wcData seeds off leagueSeed + edition + nation,
+          // so it is the same sixteen nations and the same bracket), his season 8 collides with the last
+          // man's `wcSeen` and worldCupHtml returns '' — no teaser, no button, no explanation — and
+          // `feedFired`, whose keys are `intake:${season}` and `bid:${season}`, silently eats the youth
+          // intake and the incoming bid for as many seasons as the man he replaced had already played.
+          // NOT `cupsBanked`: that is stamped at a succession only because succeed() has just banked the
+          // retiring man's cups onto his legend card. Nobody retires here, so advancing it would subtract
+          // silverware from the next legend card that had never been credited to anyone.
+          wcSeen: undefined, wcHeld: (prior.wcHeld ?? 0) + Math.floor(prior.season / 4), feedFired: [],
           starId: s.prospectId, starName: s.name, starAge: s.age, starGen: (s as any).generation ?? 0,
           retireAge, temper: chosenTemper,
         }); // enter manager phase
@@ -5750,11 +5828,22 @@ class Game {
       // into the feed with their braces showing: 'A find in {to}. Kofi Moreau has an awkward style and an
       // unarguable end product.' At ~4.6% of the pool that is one scouted signing in twenty. The facade
       // now returns the trip's destination and an open-market price for a player that good.
-      this.feedEvent('scout_found', '🌍', { name: r.player.name, seasonsAtClub: 0, age: (r.player as any).age }, { fee: r.fee, to: r.destName });
+      // The `as any` this used to read the age through is deleted on purpose: it was hiding the fact that
+      // the facade never sent one, which is how F-115 came to be recorded as fixed with only this half of
+      // the wire in the tree. Read typed, the compiler holds the other half up.
+      this.feedEvent('scout_found', '🌍', { name: r.player.name, seasonsAtClub: 0, age: r.player.age }, { fee: r.fee, to: r.destName });
       this.setMe(await api.me());
       await this.showScouting();
     } catch (e: any) {
-      toast(e?.status === 409 ? (String(e?.body?.error ?? '').includes('travel') ? 'Your scout is still travelling' : 'You\'ve hit your loanee limit') : 'Could not sign');
+      // A squad at MAX_SQUAD is refused here too -- api.signMission bounds `c.club.players.length` exactly
+      // as buyPlayer does -- and it came back as the loanee-limit line: the wrong cap, and the wrong remedy,
+      // for a manager this same screen shows 0 of 3 loanees signed. Named the way the Buy button names it.
+      const msg = String(e?.body?.error ?? '');
+      toast(e?.status === 409
+        ? (msg.includes('travel') ? 'Your scout is still travelling'
+          : msg.includes('squad is full') ? `Squad full (max ${MAX_SQUAD}) — sell or release someone first`
+          : 'You\'ve hit your loanee limit')
+        : 'Could not sign');
     }
   }
 
@@ -5793,7 +5882,16 @@ class Game {
       this.setMe(await api.me()); // refresh squad so the loanee is selectable in your XI
       await this.showScouting();
     } catch (e: any) {
-      toast(e?.status === 409 ? 'You\'ve hit your loanee limit this season' : 'Could not sign');
+      // TWO different caps come back as 409 on this path, and naming the wrong one hands the manager the
+      // wrong remedy. api.signTrial refuses a squad at MAX_SQUAD with `your squad is full (max 28)` -- the
+      // bound the Buy button already names -- and this catch answered every 409 with the loanee line, on a
+      // screen whose own counter three lines up reads "up to 3 loanees this season (0 signed)". Told to
+      // wait for next season when what he needs is to sell or release someone. Branch on the error text,
+      // the way signMission already does for 'travel'.
+      const msg = String(e?.body?.error ?? '');
+      toast(e?.status === 409
+        ? (msg.includes('squad is full') ? `Squad full (max ${MAX_SQUAD}) — sell or release someone first` : 'You\'ve hit your loanee limit this season')
+        : 'Could not sign');
     }
   }
 

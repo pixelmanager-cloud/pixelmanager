@@ -423,8 +423,20 @@ export function seasonFacilityIncome(
   // reachable W/D/L split of an 18-game season, 71% of records overpaid, always by exactly one match.
   // Rounding a split three times and adding the pieces does not preserve the total; the fix keeps the same
   // documented half-the-fixtures simplification and gives losses the remainder so the parts sum to the whole.
+  // GIVING THE REMAINDER TO LOSSES ONLY REPAIRS THE RECORDS THAT HAVE ONE. `homeOf` rounds .5 up and
+  // nothing stopped homeWins and homeDraws from exceeding homeTotal between them, so an UNBEATEN season
+  // with an odd win count — 1W/17D, 3W/15D … 17W/1D, nine records, and 17W/1D/0L is an ordinary dominant
+  // season — went on buying a tenth home match: 1,314c at a maxed top-flight ground where nine home wins,
+  // the most a nine-home season can possibly be worth, cap out at 1,223c.
+  //
+  // ONLY DRAWS NEEDS THE CLAMP, and the missing second one is deliberate. Math.round is monotone, so
+  // homeOf(wins) cannot exceed homeTotal on its own — measured, 0 of 4,708 records across eleven fixture
+  // counts — and clamping it as well would be a bound nothing can reach. This file's own qa harness logs
+  // exactly that shape as a defect one module over, so adding it here to look symmetrical would be
+  // shipping the thing we police.
   const homeTotal = Math.round((record.wins + record.draws + record.losses) / 2);
-  const homeWins = homeOf(record.wins), homeDraws = homeOf(record.draws);
+  const homeWins = homeOf(record.wins);
+  const homeDraws = Math.min(homeOf(record.draws), homeTotal - homeWins);
   const homeLosses = Math.max(0, homeTotal - homeWins - homeDraws);
   const gate = Math.round(
     (homeWins * gatePer('win') + homeDraws * gatePer('draw') + homeLosses * gatePer('loss'))

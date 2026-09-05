@@ -588,13 +588,22 @@ console.log('\n=== 11. MEASURED (not gated) — findings ===');
   console.log('        The comment three lines further down says "L5 0.63" — the file disagrees with itself.');
   console.log(`      recoveryCut: docstring says "0 at L1 → 2 at L5"; the ladder is ${LEVELS.map(recoveryCut).join(',')} — L5 is ${recoveryCut(5)}.`);
 
-  console.log('\n  D7  THE GATE PAYS FOR TEN HOME MATCHES IN AN EIGHTEEN-FIXTURE SEASON.');
-  let off = 0, tot = 0;
-  for (let w = 0; w <= 18; w++) for (let d = 0; d + w <= 18; d++) { const l = 18 - w - d; tot++; if (Math.round(w / 2) + Math.round(d / 2) + Math.round(l / 2) !== 9) off++; }
+  console.log('\n  D7  THE GATE PAID FOR TEN HOME MATCHES IN AN EIGHTEEN-FIXTURE SEASON. Closed twice, now gated.');
+  // MEASURED THROUGH seasonFacilityIncome. This entry used to re-implement the old independent-rounding
+  // formula inline, so it kept reporting the historical 71% long after the shipped function had changed —
+  // and it was blind to what that change MISSED: losses were given the remainder, but nothing clamped wins
+  // and draws to the whole, so the nine unbeaten odd-win records (1W/17D … 17W/1D) still bought a tenth
+  // home match. A check that re-implements the thing it checks cannot see the thing it checks change.
   const homeReal = seasonFixtures('Marlow', 7, 1).filter((x) => x.venue === 'H').length;
+  const capGate = Math.round(homeReal * stadiumIncome(MAX_LEVEL, TIERS - 1, 'win') * fanIncomeMult(MAX_LEVEL));
+  let topGate = 0, topRec = '';
+  for (let w = 0; w <= 18; w++) for (let d = 0; d + w <= 18; d++) {
+    const g = seasonFacilityIncome(MAXF, TIERS - 1, 0, 10, { wins: w, draws: d, losses: 18 - w - d }).gate;
+    if (g > topGate) { topGate = g; topRec = `${w}W/${d}D/${18 - w - d}L`; }
+  }
   console.log(`      seasonFixtures returns ${seasonFixtures('Marlow', 7, 1).length} fixtures, ${homeReal} of them at home.`);
-  console.log(`      seasonFacilityIncome rounds W, D and L to home matches INDEPENDENTLY, so ${off} of ${tot} possible records (${(100 * off / tot).toFixed(0)}%)`);
-  console.log(`      are paid for 10 home games instead of ${homeReal} — a systematic ~11% over-payment of gate receipts.`);
+  console.log(`      Best-paid record at a maxed ground is ${topRec} at ${fmt(topGate)}, against the ${fmt(capGate)} that ${homeReal} home wins are worth.`);
+  console.log('      tools/playtest/gate_home_matches.ts recovers the home split from the money and holds it at nine.');
 
   console.log('\n  D8  THE SPONSOR CARD QUOTES A BASELINE, AND A LOW-BRAND STAR STILL PAYS UNDER IT.');
   console.log(`      sponsor L10 card "${effectAt('sponsor', MAX_LEVEL)}" — the figure is sponsorIncome at the neutral brand (10).`);

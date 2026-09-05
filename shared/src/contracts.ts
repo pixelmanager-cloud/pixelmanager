@@ -129,5 +129,8 @@ export function evaluateContractOffer(d: ContractDemand, offerWage: number, leng
     return { outcome: 'accept', askWage: ask, note: generous ? 'He’s delighted with the terms — signs on the spot.' : 'He’s happy with that — deal done.', moraleDelta: generous ? 6 : 3 };
   }
   if (ratio >= 0.9) return { outcome: 'counter', askWage: ask, note: `Close, but he’s holding out for his number.`, moraleDelta: 0 };
-  return { outcome: 'reject', askWage: ask, note: 'He’s insulted by the offer and walks away from the table.', moraleDelta: -6 };
+  // NOT "walks away from the table": no caller ends the negotiation on a reject, and nothing reads
+  // moraleEffects().wantsAway, so there is no route by which he leaves. The note must describe what this
+  // return actually does — insult him, and dock the morale that prices his next contract.
+  return { outcome: 'reject', askWage: ask, note: 'He’s insulted by the offer — and he will remember it.', moraleDelta: -6 };
 }

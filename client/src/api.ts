@@ -681,7 +681,9 @@ export const api = {
     // got only the flat `extended` +10), and walking your star to the table and lowballing him was entirely
     // free: this function returns on the non-accept paths before any morale is touched at all.
     if (result.moraleDelta) await bumpMoraleByLocal(playerId, result.moraleDelta);
-    if (result.outcome !== 'accept') return { outcome: result.outcome, askWage: result.askWage, note: result.note, coins: model.profile.coins };
+    // moraleDelta rides along on the non-accept paths too: it is the ONLY consequence a rejected offer has,
+    // and the modal had no way to show the player what pressing Lowball actually cost him.
+    if (result.outcome !== 'accept') return { outcome: result.outcome, askWage: result.askWage, note: result.note, moraleDelta: result.moraleDelta, coins: model.profile.coins };
     // COST is the wage across the WHOLE deal (per-season wage × length), so a longer contract genuinely costs
     // more up front — length is a real trade-off (locks him in longer for more coins now), not a free choice (PT-32).
     const L = Math.max(2, Math.min(6, Math.round(length)));
@@ -1960,7 +1962,13 @@ export const api = {
     // so there is no fee paid to report. `transferFee` is what this game charges for a player of that
     // ability on the open market, which is the number those two lines are actually asking for ('worth',
     // 'available for') and the one the transfer market already quotes the player for his equals.
-    return { ok: true as const, player: { name: player.name, role: player.role },
+    // AND THE AGE — recorded as fixed and not in the tree. `tierFor` reads `p.age ?? 0`, and 0 clears
+    // neither gate, so `scout_found.young` (4 lines) and `.veteran` (2) were unreachable for every find
+    // ever made: a scout home with a nineteen-year-old and a scout home with a thirty-four-year-old drew
+    // from the same general bank and read identically. Only main.ts's half of that wire was ever written,
+    // and the `as any` it read the missing field through is what kept tsc quiet about it; that cast is
+    // gone now, so dropping `age` from this DTO again is a compile error, not a silent `undefined`.
+    return { ok: true as const, player: { name: player.name, role: player.role, age: player.age },
       destName: destinationById(m.destination)?.name ?? m.destination, fee: transferFee(overall(player)),
       signedCount: await localStore.countLoanees(OWNER, seasonId) };
   },

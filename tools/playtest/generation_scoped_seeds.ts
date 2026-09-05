@@ -67,13 +67,25 @@ const INTENDED: Array<{ match: RegExp; why: string }> = [
 ];
 
 const lines = readFileSync('client/src/main.ts', 'utf8').split('\n');
+// AND AN ALIAS IS STILL A CALL. simRemainingFixtures wrote `const seed = this.leagueSeed()` and built the
+// match seed off `seed` four code lines later. That site was invisible in BOTH directions: the seed line
+// names no leagueSeed() so it was never an anchor, and the declaration, which is one, carries no season in
+// its own window — so this probe was green over a match seed with no generation in it. Annotating the
+// DECLARATION fixes nothing; the USE has to become an anchor in its own right or the same-line rule never
+// gets to judge it. So resolve one-hop locals and substitute them at every use.
+// Mutation-tested: swapping each of the 17 genSeed() call sites for a bare `seed` local caught 0 of 17
+// before this, and 17 of 17 after. The direct revert to leagueSeed() stayed at 17 of 17 throughout.
+const ALIAS = /^\s*(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*this\.leagueSeed\(\)/;
+const aliasNames = [...new Set(lines.map((l) => ALIAS.exec(l)?.[1]).filter(Boolean) as string[])];
+const ALIAS_USE = aliasNames.length ? new RegExp(`\\b(?:${aliasNames.join('|')})\\b`, 'g') : null;
+const deAlias = (t: string) => (ALIAS_USE ? t.replace(ALIAS_USE, 'this.leagueSeed()') : t);
 // A WINDOW, NOT A LINE. The first draft of this probe tested one line at a time, and the manager-arc site
 // slipped straight through it: `const salt = (m.season * 7919 + …)` on one line, `pickManagerArc((this.
 // leagueSeed() ^ salt) …)` on the next. The probe was green over both the defect and its fix — it could not
 // see either. A seed is routinely built across two or three statements, so the scan reads a small window and
 // the whole window has to carry the generation.
 const WINDOW = 2;
-let scoped = 0, selfLine = 0;
+let scoped = 0, selfLine = 0, viaAlias = 0;
 const missing: string[] = [];
 for (let i = 0; i < lines.length; i++) {
   // BOTH DIRECTIONS. The first widening only looked FORWARD from the seed line, and the case it was written
@@ -89,19 +101,21 @@ for (let i = 0; i < lines.length; i++) {
   // and the seed — so a two-line window measured from the seed never reached the `m.season` above it.
   // Mutation sweep over all 16 sites: 14 caught, and exactly those 2 missed until the window began skipping
   // comment-only lines. It now walks outward past them, so the distance is in statements, not in prose.
-  const win = stripComments(codeWindow(lines, i, WINDOW));
-  const here = lines[i];
+  const win = deAlias(stripComments(codeWindow(lines, i, WINDOW)));
+  const raw = lines[i];
+  const here = deAlias(raw);
   // Anchor on the line that names the seed, so one site is reported once rather than WINDOW times.
   // The ANCHOR has to be code too — several comments in this file quote `leagueSeed()` while explaining
   // why a site no longer calls it, and anchoring on one reports the post-mortem as the defect.
-  if (!isCodeLine(here)) continue;
+  if (!isCodeLine(raw)) continue;
   if (!/leagueSeed\(\)|genSeed\(\)/.test(here)) continue;
   if (/private (league|gen)Seed\(\)/.test(here)) continue;   // the helpers themselves
+  if (!/leagueSeed\(\)|genSeed\(\)/.test(raw)) viaAlias++;   // an anchor only because the alias resolved
   if (!SEASON.test(win)) continue;
   if (INTENDED.some((x) => x.match.test(win))) continue;
   scoped++;
   if (SEASON.test(here)) selfLine++;
-  if (dropsGen(here) || !GEN.test(win)) missing.push(`main.ts:${i + 1}  ${here.trim().slice(0, 112)}`);
+  if (dropsGen(here) || !GEN.test(win)) missing.push(`main.ts:${i + 1}  ${raw.trim().slice(0, 112)}`);
 }
 
 console.log(`  ..   ${scoped} expression(s) mix leagueSeed() with a per-generation season, ${selfLine} of them on one line`);
@@ -124,6 +138,13 @@ ok(/starGen|generation/.test(body), 'genSeed() mixes the generation in (a gutted
 ok(dropsGen('      ...transferList(this.leagueSeed(), m.season, tier),'),
    'the same-line rule still fires on the transfer-market line as it read before the fix');
 ok(selfLine >= 2, `the same-line rule is not inert (${selfLine} self-contained seed expression(s) reach it)`);
+// AND THE ALIAS RESOLUTION MUST STILL REACH. Its canary is simRemainingFixtures' match seed byte for byte
+// as it read before this was fixed — `seed`, the local, not the call — because with the alias unresolved
+// that line is not an anchor at all and nothing else in this file would notice.
+console.log(`  ..   one-hop leagueSeed() aliases resolved: ${aliasNames.join(', ') || '(none)'}`);
+ok(dropsGen(deAlias('      const mseed = ((seed >>> 0) ^ ((m.season * 131 + i) >>> 0)) >>> 0;')),
+   'the alias rule still fires on the simmed-fixture match seed as it read before the fix');
+ok(viaAlias >= 4, `the alias rule is not inert (${viaAlias} anchor(s) reached only by resolving an alias)`);
 ok(scoped >= 10, `the scan actually matched season-derived seeds (${scoped}) — a low number here means the pattern moved, not that it was fixed`);
 for (const m of missing) console.log(`       ${m}`);
 ok(missing.length === 0, `every one of them also carries the generation (${missing.length} do not)`);
