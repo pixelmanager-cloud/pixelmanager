@@ -463,7 +463,13 @@ function statsTableHTML(players: Player[], highlight?: Set<string>, sort?: Squad
     // the sort direction lived entirely in a ▲/▼ glyph appended to the label. makeActivatable is called on
     // [data-card] in this same function and never on these, so a keyboard player could open any player's
     // card and could not sort the table at all.
-    `<th class="sortable" data-sort="${key}" aria-sort="${sort?.key === key ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}"${title ? ` title="${title}"` : ''}${style ? ` style="${style}"` : ''}>${label}${arrow(key)}</th>`;
+    // AND AN id, WHICH IS LOAD-BEARING AND NOT DECORATION. renderSquadPanel rebuilds the whole panel with
+    // innerHTML on every sort, so the <th> the player pressed Enter on is destroyed; keepFocus() hands the
+    // focus back by matching id -> data-tab -> same-data-act position -> .cg-tab, and a sort header has no
+    // data-tab and no data-act while #squad-panel renders no .cg-tab — so with no id the restore falls
+    // through every link of that chain to null. Measured in chromium: wrapper but no id, activeElement ===
+    // BODY, exactly as before the wrapper.
+    `<th class="sortable" id="sq-th-${key}" data-sort="${key}" aria-sort="${sort?.key === key ? (sort.dir === 'asc' ? 'ascending' : 'descending') : 'none'}"${title ? ` title="${title}"` : ''}${style ? ` style="${style}"` : ''}>${label}${arrow(key)}</th>`;
   const head = `<tr><th></th>${th('Pos', 'pos', '', 'Position')}${th('Name', 'name', 'text-align:left')}${th('OVR', 'ovr', '', 'Overall rating')}${th('AGE', 'age', '', 'Age — decides growth, decline and when he retires')}${cols.map(([l, k]) => th(l, k, '', STAT_FULL[k] ?? String(k))).join('')}</tr>`;
   const rows = sorted.map((p) => {
     const on = !!highlight?.has(p.id);
@@ -1114,7 +1120,7 @@ class Game {
         + `<div class="sc-head"><span class="sc-name">${c.name}</span><span class="sc-age">age 10</span></div>`
         + `<div class="sc-role">Looks like ${ROLE_LABEL[c.roleHint] ?? 'a player'} · <span class="sc-glimpse">${c.glimpse}</span></div>`
         + `<div class="sc-note">“${c.note}”</div>`
-        + `<button class="primary sc-sign" data-seed="${c.seed}">Sign him →</button></div>`).join('');
+        + `<button class="primary sc-sign" data-seed="${c.seed}" aria-label="Sign ${c.name}, the ten-year-old who takes the family name">Sign him →</button></div>`).join('');
       $('academy-body').innerHTML = `<div class="scout-board"><div class="scout-intro">`
         + `<b>Three kids are on trial.</b> They're ten years old — nobody can tell you how far any of them will go. `
         + `Trust your eye, pick the one to carry the family name, and <b>make</b> him into a star.</div>`
@@ -1294,16 +1300,34 @@ class Game {
     $('season-back').addEventListener('click', () => this.showHub());
     $('view-scouting')?.addEventListener('click', () => void this.showScouting());
     this.makeActivatable([$('app-title')]);
-    $('app-title').addEventListener('click', () => { if (hasToken()) void this.showHub(); });
+    // THE OTHER DOOR OUT OF A LIVE MATCH, AND ONLY THIS ONE DIDN'T ASK. #pm-quit above already computes
+    // `midMatch` and confirms before it leaves a running game; this wordmark went to the same place on a
+    // bare hasToken(). showHub() runs showScreen('hub'), which hides #matchwrap, and onFrame early-returns
+    // on that with nothing anywhere to re-enter the match — so at ×1 nine real minutes of sim and the
+    // scoreline on screen are gone, replayed from a fresh seed. Worse from the keyboard: makeActivatable
+    // above makes #app-title the first Tab stop on the match screen and turns Space into a click, so the
+    // player who tabbed here and pressed Space to PAUSE abandoned the match instead.
+    $('app-title').addEventListener('click', () => {
+      if (!hasToken()) return;
+      const midMatch = !$('matchwrap').classList.contains('hidden') && this.engine && !this.engine.state.finished;
+      if (midMatch) this.openConfirm('Leave the match and go home? This match won\'t be saved — your season is, and the fixture is still there to play from the season screen.', 'Leave match', () => void this.showHub());
+      else void this.showHub();
+    });
     $('academy-back').addEventListener('click', () => this.showHub());
     $('club-back').addEventListener('click', () => this.showHub());
     $('skip').addEventListener('click', () => this.skipToEnd());
     // ('set-team' lives in the manager layer, unlinked from the home for now — see linear-life note in showHub)
     $('autopick').addEventListener('click', () => { this.draftLineup = this.starGuarded(autoPickXI(this.availableClub(), this.draftTactics.formation)); this.rebuildDuties(); this.renderLineupEditor(); });
     $('save-team').addEventListener('click', () => (this.editorMode === 'standing' ? this.saveTeam() : this.kickOffMatch()));
-    $('lineup-back').addEventListener('click', () => {
-      if (this.lineupReturn === 'season') { this.lineupReturn = 'hub'; this.showSeason(); } else void this.showHub();
-    });
+    // BACK GOES WHERE HE CAME FROM. This consulted a `lineupReturn` flag that only the "⚙ Team sheet"
+    // button ever set to 'season'. The other three doors into this editor are the "Play ▶" ties, and they
+    // left it at its 'hub' default -- so backing out of a league fixture, a Continental tie or a World-
+    // Finals tie teleported the manager to the Club & Dynasty hub and charged him a second hop through
+    // "Continue the season →" to get back to the fixture he was standing on. All four doors are on the
+    // season screen, so there is nothing to remember: tools/playtest/lineup_back_season.ts holds that
+    // premise and goes red if a hub-side door is ever wired, which is when a destination flag earns its
+    // keep again. Keeping the flag instead would have left both `else … showHub()` branches unreachable.
+    $('lineup-back').addEventListener('click', () => this.showSeason());
     $('toggle-squad').addEventListener('click', () => {
       const panel = $('squad-panel');
       const show = panel.classList.contains('hidden');
@@ -1336,9 +1360,17 @@ class Game {
     const ring = tier.key === 'gold' || tier.key === 'diamond' || tier.key === 'legend' ? '<div class="pc-ring"></div>' : '';
     // contract situation (NFT players only): age, deal status, extend/sell — the NFT stays owned either way
     const ci = this.contracts[p.id];
+    // BOTH ARMS ARE BUTTONS, and the register one was not. It shipped as `<a class="pc-link"
+    // data-stake="on">` with no href, and an <a> without href is not focusable at all — so inside the trap
+    // this card opens in (dialogify, whose focusables() selects `a[href]`, not `a`) it was in neither the
+    // initial focus nor the Tab cycle: the ring held only .pc-extend and .pc-close and rotated between
+    // them forever. The mouse never noticed, because the click is delegated via closest('[data-stake]').
+    // Its sibling one line up IS reachable, and withdrawing is the only write of `staked_since: null` in
+    // the game — so a keyboard player could un-register his star from this card and had no way back: the
+    // fallback .ns-act Register lives in #squad-panel, which simple mode display:none's outright.
     const stakeHtml = ci ? (ci.staked
-      ? `<div class="pc-stake">📋 registered ${ci.stakedSeasons} season${ci.stakedSeasons === 1 ? '' : 's'} — long service earns him a loyalty discount · <button type="button" class="pc-link" data-stake="off" data-pid="${p.id}">withdraw from the squad</button></div>`
-      : `<div class="pc-stake">⭘ not registered — <a class="pc-link" data-stake="on" data-pid="${p.id}">register him for the season</a></div>`) : '';
+      ? `<div class="pc-stake">📋 registered ${ci.stakedSeasons} season${ci.stakedSeasons === 1 ? '' : 's'} — long service earns him a loyalty discount · <button type="button" class="pc-link" data-stake="off" data-pid="${p.id}" aria-label="Withdraw ${p.name} from the squad">withdraw from the squad</button></div>`
+      : `<div class="pc-stake">⭘ not registered — <button type="button" class="pc-link" data-stake="on" data-pid="${p.id}" aria-label="Register ${p.name} for the season">register him for the season</button></div>`) : '';
     let contractHtml = '';
     // NOTE: single-player has no 'retired' token state — succession goes pro→prospect directly via rebornFields,
     // so the old NFT-era "retired keepsake + Reborn" card branch was unreachable and has been removed (PT-115).
@@ -1348,7 +1380,7 @@ class Game {
         + `<span>${ci.available ? `<span class="ico-inline ico-lg">${sprite('contract')}</span> ${ci.seasonsLeft} season${ci.seasonsLeft === 1 ? '' : 's'} left` : ci.staked === false ? '⭘ not registered — he can’t play' : '⛔ contract lapsed — benched'}</span></div>`
         + (ci.morale != null ? `<div class="pc-morale"><i>morale</i><span class="pc-mbg"><b style="width:${ci.morale}%"></b></span><span>${ci.moraleLabel}</span></div>` : '')
         // show the TOTAL cost (wage × length), not one season's wage — talks charge the whole deal (PT-32/PT-124)
-        + `<div class="pc-cactions"><button class="pc-extend" data-extend="${p.id}"><span class="ico-inline ico-lg">${sprite('seal')}</span> ${ci.available ? 'Re-sign' : 'Extend'} · ~${(ci.extendCost * ci.lengthSeasons).toLocaleString('en-US')}c over ${ci.lengthSeasons}y</button>`
+        + `<div class="pc-cactions"><button class="pc-extend" data-extend="${p.id}" aria-label="${ci.available ? 'Re-sign' : 'Extend'} ${p.name} for about ${(ci.extendCost * ci.lengthSeasons).toLocaleString('en-US')} coins over ${ci.lengthSeasons} seasons"><span class="ico-inline ico-lg">${sprite('seal')}</span> ${ci.available ? 'Re-sign' : 'Extend'} · ~${(ci.extendCost * ci.lengthSeasons).toLocaleString('en-US')}c over ${ci.lengthSeasons}y</button>`
         // the bloodline star has no release-clause sale path in single-player — he leaves only via a rival's bid (PT-125)
         //
         // THE `worth ~${ci.sellValue}c` ELSE-ARM IS GONE, AND WITH IT THE WHOLE sellValue PIPE BEHIND IT.
@@ -1451,7 +1483,7 @@ class Game {
       + (p.note ? `<div class="pc-stake">${p.note}</div>` : '')
       + `</div>`
       + `<div class="pc-foot">🌱 Youth prospect · his story starts at age 10</div>`
-      + `<div class="pc-cta"><button class="pc-dev primary" data-dev="${p.id}">Develop him →</button><button class="pc-close">${born ? 'Later' : 'Close'}</button></div></div>`;
+      + `<div class="pc-cta"><button class="pc-dev primary" data-dev="${p.id}" aria-label="Develop ${p.name} through his career">Develop him →</button><button class="pc-close">${born ? 'Later' : 'Close'}</button></div></div>`;
     document.body.appendChild(el);
     const closeProspect = this.dialogify(el);
     el.addEventListener('click', (e) => {
@@ -1494,8 +1526,8 @@ class Game {
         : ci.morale >= 75 ? { k: 'high', g: '▲' } : ci.morale > 45 ? { k: 'ok', g: '●' } : { k: 'low', g: '▼' };
       const moodTxt = `morale: ${ci.moraleLabel ?? `${ci.morale} of 100`}`; // never announce "morale: undefined"
       const dot = mood ? `<span class="ns-mood ${mood.k}" role="img" aria-label="${moodTxt}" title="${moodTxt}">${mood.g}</span>` : '';
-      const act = ci.staked === false ? `<button class="ns-act" data-nstake="${ci.playerId}">Register</button>`
-        : `<button class="ns-act" data-nextend="${ci.playerId}">${ci.available ? 'Re-sign' : 'Extend'} ~${(ci.extendCost * ci.lengthSeasons).toLocaleString('en-US')}c</button>`; // total deal cost (wage × length), not one season (PT-124)
+      const act = ci.staked === false ? `<button class="ns-act" data-nstake="${ci.playerId}" aria-label="Register ${name} in the squad">Register</button>`
+        : `<button class="ns-act" data-nextend="${ci.playerId}" aria-label="${ci.available ? 'Re-sign' : 'Extend'} ${name} for about ${(ci.extendCost * ci.lengthSeasons).toLocaleString('en-US')} coins">${ci.available ? 'Re-sign' : 'Extend'} ~${(ci.extendCost * ci.lengthSeasons).toLocaleString('en-US')}c</button>`; // total deal cost (wage × length), not one season (PT-124)
       return `<div class="ns-row" data-open="${ci.playerId}"><span class="ns-name">${dot}${name}</span><span class="ns-age">${ci.age}y</span>${status}${act}</div>`;
     }).join('');
     return `<div class="nft-status"><div class="ns-head">⭐ YOUR STARS — lifecycle at a glance</div>${rows}</div>`;
@@ -1573,7 +1605,13 @@ class Game {
     let length = demand.prefLength;
     document.getElementById('settings-ov')?.remove();
     const ov = document.createElement('div'); ov.id = 'settings-ov';
-    ov.innerHTML = `<div class="tt-card cn-card"><div class="set-head"><div class="tt-title">✍️ CONTRACT TALKS — ${name}</div><button class="set-x" aria-label="Close">✕</button></div><div id="cn-body"></div></div>`;
+    // NAME THE DIALOG OR IT ANNOUNCES "CLOSE, BUTTON". dialogify moves focus to focusables()[0], which here
+    // is the ✕, and the name of the man being negotiated with sat in a .tt-title nothing referenced — so on
+    // the screen where coins are committed, the one piece of context that makes the wage figures mean
+    // anything was never spoken. Same fix openConfirm carries: the role sits on the CARD, not on the
+    // full-screen backdrop (clicking the backdrop dismisses, so it is chrome), and it is dialog rather than
+    // alertdialog — alertdialog is the confirm that interrupts and demands an answer, not a screen you enter.
+    ov.innerHTML = `<div class="tt-card cn-card" role="dialog" aria-modal="true" aria-labelledby="cn-title"><div class="set-head"><div class="tt-title" id="cn-title">✍️ CONTRACT TALKS — ${name}</div><button class="set-x" aria-label="Close">✕</button></div><div id="cn-body"></div></div>`;
     document.body.appendChild(ov);
     // A full-screen negotiation whose only exit was a mouse click on the ✕ — no Escape, no focus move.
     const close = this.dialogify(ov);
@@ -1861,7 +1899,7 @@ class Game {
       const more = prospects.length > 1 ? `<div class="hp-meta" style="margin-top:6px;">+${prospects.length - 1} more in the academy</div>` : '';
       el.innerHTML = `<div class="hub-prow"><div class="hp-main"><div class="hp-name">🌱 ${active.name} <span class="hp-stars">${stars}</span></div>`
         + `<div class="hp-meta">${active.roleHint}${gen} · ${pedigreeText(active.pedigree, active.generation, carriesFamilyName(active.name, this.club?.name))} ${active.careerStarted ? '· in development' : '· age 10, ready to develop'}</div>${more}</div>`
-        + `<button class="primary hp-go" data-dev="${active.id}">${active.careerStarted ? 'Continue his story' : 'Develop'} →</button></div>`;
+        + `<button class="primary hp-go" data-dev="${active.id}" aria-label="${active.careerStarted ? 'Continue' : 'Develop'} ${active.name}'s career">${active.careerStarted ? 'Continue his story' : 'Develop'} →</button></div>`;
       el.querySelector('[data-dev]')!.addEventListener('click', () => this.openCareer(active.id));
     } catch { el.innerHTML = '<div class="muted">Could not load your player — please try again.</div>'; }
   }
@@ -2234,7 +2272,13 @@ class Game {
   private openTransferMarket() {
     document.getElementById('settings-ov')?.remove();
     const ov = document.createElement('div'); ov.id = 'settings-ov'; // reuse the centred-overlay styling
-    ov.innerHTML = `<div class="tt-card tm-card"><div class="set-head"><div class="tt-title">💰 TRANSFER MARKET</div><button class="set-x" aria-label="Close">✕</button></div><div id="tm-body">${SPINNER}</div></div>`;
+    // NAME THE DIALOG OR IT ANNOUNCES "CLOSE, BUTTON". dialogify moves focus to focusables()[0], which here
+    // is the ✕ — #tm-body still holds only the spinner at that moment, so there is nothing else to match —
+    // and a screen-reader player who opened the screen where he SPENDS was never told he was in the market.
+    // Same fix openConfirm carries: the role sits on the CARD, not on the full-screen backdrop (clicking the
+    // backdrop dismisses, so it is chrome), and it is dialog rather than alertdialog — alertdialog is the
+    // confirm that interrupts and demands an answer, not a screen you enter.
+    ov.innerHTML = `<div class="tt-card tm-card" role="dialog" aria-modal="true" aria-labelledby="tm-title"><div class="set-head"><div class="tt-title" id="tm-title">💰 TRANSFER MARKET</div><button class="set-x" aria-label="Close">✕</button></div><div id="tm-body">${SPINNER}</div></div>`;
     document.body.appendChild(ov);
     // THE LAST HAND-ROLLED DIALOG. Every other overlay on this screen goes through dialogify — which marks
     // #app inert, moves focus inside, wraps Tab at both ends and captures Escape — and this one, the screen
@@ -2417,8 +2461,8 @@ class Game {
           const why = swing > 0 ? ` — <b class="sq-warn">+${swing}% to re-sign</b>, the price of him not being settled; more football brings it down`
             : swing < 0 ? ` — <b class="sq-good">${swing}% to re-sign</b>, a settled man comes cheaper` : '';
           return `<span class="sq-exp">${nm(x)}${x.moraleLabel ? ` <i class="sq-mood">${x.moraleLabel}</i>${why}` : ''} `
-            + `<button class="sq-btn" data-renew="${x.id}" data-name="${x.name}" data-cost="${x.renewCost}" ${afford ? '' : 'disabled'} title="${afford ? `Renew for ${x.renewCost.toLocaleString('en-US')}c` : `Not enough coins (need ${x.renewCost.toLocaleString('en-US')}c)`}">Renew · ${x.renewCost.toLocaleString('en-US')}c</button> `
-            + `<button class="sq-btn ghost" data-release="${x.id}" data-name="${x.name}" title="Let him leave on a free">Let go</button></span>`;
+            + `<button class="sq-btn" data-renew="${x.id}" data-name="${x.name}" data-cost="${x.renewCost}" aria-label="Renew ${x.name} for ${x.renewCost.toLocaleString('en-US')} coins" ${afford ? '' : 'disabled'} title="${afford ? `Renew for ${x.renewCost.toLocaleString('en-US')}c` : `Not enough coins (need ${x.renewCost.toLocaleString('en-US')}c)`}">Renew · ${x.renewCost.toLocaleString('en-US')}c</button> `
+            + `<button class="sq-btn ghost" data-release="${x.id}" data-name="${x.name}" aria-label="Let ${x.name} leave on a free" title="Let him leave on a free">Let go</button></span>`;
         }).join(' ') + `</span></div>`);
     }
     if (r.unhappy?.length) {
@@ -2759,7 +2803,7 @@ class Game {
     // pass 'match' -- so `saveTeam()`, the whole 'standing' editor mode and one of the two
     // `api.setStandingOrders` call sites were dead, and the only way to change your team sheet was to walk
     // into a fixture and change it there. This is the door.
-    $('sf-teamsheet')?.addEventListener('click', () => { this.lineupReturn = 'season'; this.openLineup('standing'); });
+    $('sf-teamsheet')?.addEventListener('click', () => this.openLineup('standing'));
     if (bid) {
       $('sf-bid-accept')?.addEventListener('click', () => this.acceptStarBid(bid, m));
       $('sf-bid-reject')?.addEventListener('click', () => { try { localStorage.setItem(bidKey, '1'); } catch { /* ignore */ } toast('Bid rejected — he stays.'); { const sp = this.club?.players.find((x) => x.id === this.loadMgr().starId); this.feedEvent('bid_rejected', '🤝', sp ? this.personCtx(sp, true) : undefined); } this.showSeason(); });
@@ -2844,9 +2888,17 @@ class Game {
     const coins = this.account?.coins ?? 0; // gate unaffordable hires like the transfer market + facilities do (PT-126)
     const rows = BACKROOM_STAFF.map((s) => {
       const has = owned.includes(s.id);
+      // TWO OF THESE ANNOUNCE THE SAME WORDS. BACKROOM_STAFF prices `fitness` and `attack` at 350 apiece, so
+      // a screen-reader player heard "Hire · 💰350, button" twice with nothing to say WHICH coach: the name is
+      // only in the sibling `.sf-staff-name`, on a 350-coin spend the panel bills as "Paid for once, yours for
+      // good". This is F-121's rule, which `.tm-buy`/`.tm-sell`/`.fac-up`/`.fac-down` already carry and which
+      // stopped at those four. On the unaffordable branch too, because `.fac-up` and `.tm-buy` both keep their
+      // label through `disabled` and a disabled button is still read in browse mode.
+      // tools/playtest/roster_action_named.ts sweeps every button of this shape, so the rule cannot stop at
+      // the ones a finding happened to name a seventh time.
       const hireBtn = coins < s.cost
-        ? `<button class="sf-hire" disabled title="Not enough coins (need ${s.cost}c)">Hire · 💰${s.cost}</button>`
-        : `<button class="sf-hire" data-staff="${s.id}">Hire · 💰${s.cost}</button>`;
+        ? `<button class="sf-hire" disabled aria-label="Hire ${s.name} for ${s.cost} coins" title="Not enough coins (need ${s.cost}c)">Hire · 💰${s.cost}</button>`
+        : `<button class="sf-hire" data-staff="${s.id}" aria-label="Hire ${s.name} for ${s.cost} coins">Hire · 💰${s.cost}</button>`;
       return `<div class="sf-staff-row${has ? ' owned' : ''}"><span class="sf-staff-ico">${s.icon}</span><div class="sf-staff-body"><div class="sf-staff-name">${s.name}${has ? ' ✓' : ''}</div><div class="sf-staff-desc">${s.desc}</div></div>`
         + (has ? '' : hireBtn) + `</div>`;
     }).join('');
@@ -4174,7 +4226,7 @@ class Game {
       const rows = prospects.length ? prospects.map((p) => {
         const stars = '★'.repeat(p.potentialStars) + '☆'.repeat(5 - p.potentialStars);
         const gen = p.generation ? ` · gen ${p.generation + 1}` : ''; // 1-indexed to match the Bloodline Tree (PT-136)
-        const btn = `<button class="primary" data-dev="${p.id}">${p.careerStarted ? 'Continue' : 'Develop'} →</button>`;
+        const btn = `<button class="primary" data-dev="${p.id}" aria-label="${p.careerStarted ? 'Continue' : 'Develop'} ${p.name}'s career">${p.careerStarted ? 'Continue' : 'Develop'} →</button>`;
         // THE THIRD ARGUMENT IS NOT OPTIONAL HERE. `isFounder` defaults to true, so leaving it off billed
         // every 300-coin purchase as "first of the line · his heirs will inherit his pedigree" — on the one
         // screen that lists him beside the actual founder. mintGenesisLocal already stopped the stranger
@@ -5868,7 +5920,7 @@ class Game {
           + `<div class="d-blurb">${dest.blurb}</div>`
           + `<div class="d-odds"><span class="pill hit">🎯 <b>${hit}%</b> sign a player</span>${upPill}<span class="pill cost">💰 ${dest.cost}</span></div>`
           + `<div class="d-band" title="quality mix if a player is found">${seg('raw')}${seg('squad')}${seg('quality')}${seg('gem')}</div>`
-          + `<button class="dispatch" data-dest="${dest.id}" ${canSend ? '' : 'disabled'}>${label}</button>`
+          + `<button class="dispatch" data-dest="${dest.id}" aria-label="${dest.name} — ${label}" ${canSend ? '' : 'disabled'}>${label}</button>`
           + `</div>`;
       }).join('');
       Array.from($('scout-destinations').querySelectorAll('button[data-dest]')).forEach((b) =>
@@ -5905,7 +5957,10 @@ class Game {
       const signed = m.status === 'signed';
       const action = signed ? '<span class="tr-done" style="font-family:var(--body);font-size:17px;color:var(--good)">✓ Signed</span>'
         : capReached ? '<span class="muted">loanee cap</span>'
-        : `<button class="sign-m" data-mid="${m.id}">Sign ▶</button>`;
+        // THREE OF THESE AT ONCE, ALL SAYING "Sign ▶", AND NO CONFIRM BEHIND ANY OF THEM. The prospect is
+        // named only in the sibling `.m-name`, and each press spends one of the LOANEE_CAP (3) loanee places
+        // the season has. Same aria-label shape `.tm-buy` uses one screen over.
+        : `<button class="sign-m" data-mid="${m.id}" aria-label="Sign ${p.name}, ${p.role}, overall ${p.overall}">Sign ▶</button>`;
       return `<div class="mission hit" data-id="${m.id}">`
         + `<span class="m-dest">🌍 ${m.destName}</span>`
         + `<span class="m-band band-${m.band}">${(m.band ?? '').toUpperCase()}</span>`
@@ -5989,7 +6044,10 @@ class Game {
     return pool.map((t) => {
       const action = t.signed ? '<span class="tr-done">✓ Signed</span>'
         : capReached ? '<span class="muted">cap reached</span>'
-        : `<button data-idx="${t.index}">Sign ▶</button>`;
+        // THE SAME BARE "Sign ▶" AS THE MISSION ROW, on the other screen that spends a loanee place — the
+        // sibling every previous pass at this rule walked past, because no finding had named it. The name is
+        // in `.tr-name` and nowhere the button can be heard from.
+        : `<button data-idx="${t.index}" aria-label="Sign ${t.name}, ${t.role}, overall ${t.overall}">Sign ▶</button>`;
       return `<div class="trial ${t.signed ? 'signed' : ''} band-${t.band}">`
         + `<span class="tr-band band-${t.band}">${label[t.band] ?? t.band}</span>`
         + `<span class="tr-role role-${t.role}">${t.role}</span>`
@@ -6020,9 +6078,6 @@ class Game {
   // ---- lineup editor (my standing orders) ----
   // Opens the pixel lineup editor either to save your standing orders, or to set a
   // one-off lineup + tactics for a specific match (prefilled from your standing orders).
-  /** Where to go back to when the team sheet is saved or abandoned -- the hub, or the season screen
-   *  the manager opened it from. */
-  private lineupReturn: 'hub' | 'season' = 'hub';
   private openLineup(mode: 'standing' | 'match', opp?: { id: string; handle: string; venue: 'home' | 'away' }) {
     this.editorMode = mode;
     this.draftPlan = this.loadPlan(); // armed conditional match-plan orders
@@ -6363,6 +6418,13 @@ class Game {
     const panel = $('squad-panel');
     const hurt = this.club.players.filter((p) => this.injured.has(p.id)).sort((a, b) => (this.injured.get(a.id)! - this.injured.get(b.id)!));
     const injHtml = hurt.length ? `<div class="squad-injured">🤕 <b>Injured:</b> ${hurt.map((p) => `${p.name} <span class="m">${this.injured.get(p.id)}m</span>`).join(' · ')}</div>` : '';
+    // THIS WRITE DESTROYS THE SORT HEADER THE PLAYER JUST PRESSED ENTER ON. The header click handler ends
+    // in renderSquadPanel, so every keyboard sort threw focus to <body> and the player had to tab back into
+    // #squad-panel past the tactics selects and every player/duty select in the XI to sort a second column —
+    // on a repeated, non-destructive action, which made the tab stop F-142 added cost more than it gave.
+    // Same failure keepFocus() was written for on the career screen; restoreFocus() runs last, once the
+    // rebuilt headers are tab stops again.
+    const restoreFocus = this.keepFocus(panel);
     panel.innerHTML = this.nftStatusHtml() + injHtml + statsTableHTML(this.club.players, new Set(this.draftLineup.playerIds), this.squadSort);
     panel.querySelectorAll<HTMLElement>('.ns-act').forEach((b) => b.addEventListener('click', async (e) => {
       e.stopPropagation();
@@ -6387,6 +6449,9 @@ class Game {
         if (p) this.showPlayerCard(p);
       });
     });
+    // LAST, after makeActivatable: a restore that runs before it targets a <th> with no tabindex yet, which
+    // is not in keepFocus's FOCUSABLE list, so it would miss and land the player on <body> all the same.
+    restoreFocus();
   }
 
   private updateEditorInsight() {
@@ -6416,7 +6481,7 @@ class Game {
     await this.persistTeamSheet();
     if (this.standingOrders === before) { $('lineup-insight').innerHTML = '<span style="color:var(--home)">Could not save — check your XI.</span>'; return; }
     toast('Team saved ✓');
-    if (this.lineupReturn === 'season') { this.lineupReturn = 'hub'; this.showSeason(); } else await this.showHub();
+    this.showSeason(); // back to the fixture list he opened the sheet from — every door into the editor is on it
   }
 
   // ---- match ----

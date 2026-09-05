@@ -54,7 +54,12 @@ for (const body of handlers) {
 
 // VACUITY GUARD 2: the specific control that shipped broken must still contain an icon, or the regression
 // this was written for can no longer be reproduced and the probe is guarding nothing.
-ok(/class="pc-extend" data-extend="\$\{p\.id\}"><span class="ico-inline/.test(src),
+// The tag carries an aria-label between the data attribute and the `>` now — naming the subject on this
+// control, because its own text is a seal glyph, a verb and a price and never said WHO the deal was for.
+// Pinned on the sprite and the data attribute rather than on their adjacency, so naming it did not blind
+// the guard: what this assertion is for is that the control still contains an ICON, which is the shape
+// that made the original regression possible.
+ok(/class="pc-extend" data-extend="\$\{p\.id\}"[^>]*><span class="ico-inline/.test(src),
    'the Re-sign/Extend button still contains a sprite (the case that made this fail)');
 
 console.log(fails ? `\n✗ ${fails} handler(s) can be defeated by clicking the icon inside the button` : '\n✓ every delegated handler resolves through its control');

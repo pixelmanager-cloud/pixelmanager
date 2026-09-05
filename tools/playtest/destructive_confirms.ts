@@ -1,9 +1,9 @@
 // AN ACTION THAT DESTROYS SOMETHING THE PLAYER CANNOT GET BACK MUST ASK FIRST.
 //
 // The game already has openConfirm and uses it well in places — quitting mid-match, scaling a facility
-// back, selling a player. Four of the most expensive actions in the game did not ask honestly — two never
-// went through it at all, the third asked without saying what it would cost, and the fourth asked about
-// the wrong loss:
+// back, selling a player. Five of the most expensive actions in the game did not ask honestly — two never
+// went through it at all, the third asked without saying what it would cost, the fourth asked about the
+// wrong loss, and the fifth was the unguarded twin of a door that already confirmed:
 //
 //   The squad report's ✕. That panel is the ONLY surface in the game that emits the data-renew /
 //   data-release buttons — a comment in main.ts says so in as many words — and a man left unrenewed walks
@@ -28,7 +28,14 @@
 //   and this button IS the end of the season. It sits in the header above a report the player may not have
 //   scrolled to in weeks, on the path every save takes rather than the one they rarely do.
 //
-// All four now ask, and all four name what is lost. This probe holds them there, and is written as a rule
+//   The top-bar wordmark, mid-match. The ≡ pause menu's "Quit to menu" computes `midMatch` and confirms
+//   before it leaves a running game; #app-title went to the same place — showHub() hides #matchwrap and
+//   onFrame early-returns on that, so nothing re-enters the match — on nothing but a hasToken() check. One
+//   stray click on what reads as the brand threw away nine real minutes of sim and the scoreline on screen,
+//   and makeActivatable makes it the first Tab stop on the match screen and turns Space into a click, so
+//   the keyboard player pressing Space to PAUSE was the likeliest of all to hit it.
+//
+// All five now ask, and all five name what is lost. This probe holds them there, and is written as a rule
 // about the class rather than about these buttons.
 //
 // Run: `npx tsx tools/playtest/destructive_confirms.ts`
@@ -176,6 +183,46 @@ ok(/World Finals/.test(bothMsg) && /Ade Fisher/.test(bothMsg), 'when both are ou
 const squadSrc = readFileSync('shared/src/squad.ts', 'utf8');
 ok(/if \(p\.signedSeason != null && p\.contractSeasons != null && p\.signedSeason \+ p\.contractSeasons < season\) \{ departed\.push\(adv\); continue; \}/.test(squadSrc),
    'an un-renewed deal still ends his time at the club on the next rollover (the loss being announced)');
+
+// ── leaving a live match by clicking the top-bar wordmark ──
+// The ≡ pause menu's Quit already asks exactly this question mid-match; #app-title was the same door with
+// no lock on it. The guard is RUN rather than grepped, the way the rollover guard above is: a `midMatch`
+// that evaluates false during a match is a confirm that never opens, and grep cannot tell the two apart.
+const title = handlerFor('app-title');
+ok(title.length > 0, 'the top-bar title handler was found');
+ok(/openConfirm/.test(title), 'clicking the title during a live match asks first');
+const midAt = title.indexOf('const midMatch'), hubAt = title.indexOf('showHub');
+ok(midAt >= 0 && midAt < hubAt, 'the mid-match test is made BEFORE anything goes home (a hub call above it is the bug)');
+ok(/'Leave match', \(\) => void this\.showHub\(\)\)/.test(title), 'the match is left only as the confirmation\'s callback');
+// PRESENCE IS NOT REACHABILITY, the lesson the squad report's ✕ above is already carrying: a handler that
+// opens the confirm and then walks home anyway keeps every grep on this page green. Two ways home, no third.
+const hubCalls = (title.match(/this\.showHub\(\)/g) ?? []).length;
+console.log(`  ..   the title handler calls showHub() ${hubCalls} time(s)`);
+ok(hubCalls === 2, 'exactly two ways home: the confirmation\'s callback, and the else for when no match is on');
+ok(/else void this\.showHub\(\);/.test(title), '...and the unconfirmed one is the else branch of the mid-match test');
+const tcond = /const midMatch = ([^;]+);/.exec(title)?.[1] ?? '';
+console.log(`  ..   title guard: ${tcond || '(not found)'}`);
+const tgate = tcond ? new Function('$', 'engine', `const self = { engine }; return !!(${tcond.replace(/this\./g, 'self.')});`) : null;
+ok(tgate !== null, 'the mid-match guard was lifted from source (it is what decides whether the player is asked)');
+const stub$ = (hidden: boolean) => () => ({ classList: { contains: () => hidden } });
+const titleAsks = (onScreen: boolean, engine: unknown) => !!tgate?.(stub$(!onScreen), engine);
+ok(titleAsks(true, { state: { finished: false } }), 'a match in progress: the title asks before throwing it away');
+ok(!titleAsks(true, { state: { finished: true } }), 'a finished match: no dialog — there is nothing left to lose');
+ok(!titleAsks(false, { state: { finished: false } }), 'off the match screen the title is a plain home button');
+ok(!titleAsks(false, null), 'no engine at all: no dialog — a confirm on a harmless click is its own friction');
+// And it has to SAY what it costs, exactly as the pause menu's twin does.
+const tAt = title.indexOf('this.openConfirm(');
+const tEnd = tAt >= 0 ? title.indexOf(", 'Leave match'", tAt) : -1;
+const tmsg = tEnd > tAt ? title.slice(tAt, tEnd) : '';
+console.log(`  ..   title confirm: "${plain(tmsg)}"`);
+ok(tmsg.length > 0 && tmsg.length < 400, 'the title confirmation was found (openConfirm, up to its own label)');
+for (const [word, re] of [['the match', /\bmatch\b/i], ['that it is not saved', /won\S{0,2}t be saved/i], ['the season surviving', /\bseason\b/i]] as const) {
+  ok(re.test(tmsg), `the title confirmation names what is lost ('${word}')`);
+}
+// AND THE WARNING MUST STAY TRUE, as above: the match really is unrecoverable once the screen is gone —
+// onFrame stops on the hidden #matchwrap and only startMatch ever brings it back.
+ok(/onFrame\(dMs: number\) \{\n\s*if \(!this\.engine \|\| \$\('matchwrap'\)\.classList\.contains\('hidden'\)\) return;/.test(src),
+   'hiding the match screen still stops the sim dead (the loss being announced)');
 
 console.log(fails ? `\n✗ ${fails} — something irreversible happens without asking` : '\n✓ every irreversible action asks, and says what it costs');
 if (fails) process.exitCode = 1;
