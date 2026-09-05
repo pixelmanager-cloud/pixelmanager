@@ -1276,7 +1276,7 @@ export const MGR_EXTRA_1: Bank = {
     'It is not failure. It will feel like failure until about September.',
     'They finish outside it, having been inside it since Boxing Day.',
     'A last-day defeat, and nine hundred people who travelled in hope going home in silence.',
-    'One point. Nine months, forty-odd games, one point.',
+    'One point. Nine months, every game of it, one point.',
     'They get beaten by a better team on the day, which is no comfort whatever.',
     'The club will have to do all of it again and there is no guarantee of another year like this.',
     'A season that will be remembered fondly by everyone except the men who played it.',
@@ -1286,7 +1286,7 @@ export const MGR_EXTRA_1: Bank = {
     'A goal conceded in April, and a division not reached.',
     'It ends on a bad pitch on a wet night against a side with nothing to play for.',
     'Everybody says wait till next year. Next year has never once heard them.',
-    'They were the better side in about thirty of the games and not in the eight that decided it.',
+    'They were the better side in most of the games and not in the few that decided it.',
     'A near miss is a whole year of work and nothing on the wall to show for it.',
   ],
 

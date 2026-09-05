@@ -413,7 +413,16 @@ export const PRESS_EXTRA_1: Record<string, string[]> = {
     `The manager is asked about the competition's history and gives a surprisingly romantic answer.`,
     `A packed continental room. The occasion is doing half the talking already.`,
     `"Nobody here is intimidated. Impressed by them, yes. Intimidated, no," the manager insists.`,
-    `Somebody asks about the away goal. The manager says he's not planning the tie around one.`,
+    // ONE LINE REMOVED HERE, and this bank is clean now: "Somebody asks about the away goal. The manager
+    // says he is not planning the tie around one." An away goal only exists across two legs and this
+    // competition has none — the same reason as the note higher up this bank, so rather than fix a
+    // second one-off, all 57 merged lines (2 base + 55 here) were read against the single-leg format.
+    // This was the only one left; the three others that say "tie" mean the ordinary single knockout
+    // fixture, not a leg of one, and stay. 56 lines, none of them claiming a second leg. Not reworded
+    // into a penalties beat because PRE_CUP already brings two of those to the same night and all three
+    // pools fire on a continental presser. No apostrophes in this comment: press_cup_reach.ts reads the
+    // bank by scanning for quoted strings, so one here would swallow the lines below it. That probe now
+    // holds the whole class with a matcher, keeping this sentence as its control, so it cannot come back.
     `"Patience is the biggest thing in Europe. Chase it and you get punished," is the warning.`,
     `A reporter asks whether the squad is deep enough for the extra fixtures. Cautiously: yes.`,
     `"Different opposition, different problems, same standards from us," is the closing thought.`,

@@ -198,7 +198,7 @@ export const MGR_EXTRA_2: Bank = {
     'They go down. The catering contract is renegotiated within a fortnight.',
     'The assistant sits with his head back against the wall and says nothing for twenty minutes.',
     'Down, and the ones who came up with this club two years ago look older than they did in August.',
-    'A relegation is not one bad day. It is thirty-eight of them stacked up.',
+    'A relegation is not one bad day. It is a whole season of them stacked up.',
     'The board thank the manager publicly, which is not always a good sign.',
     'Relegated. Two of the youth lads will get a run next year because of it, which is nobody’s idea of a silver lining.',
     'They are down to {to}. The travelling will be cheaper, at least.',

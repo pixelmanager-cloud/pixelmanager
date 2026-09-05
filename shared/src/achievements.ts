@@ -44,9 +44,19 @@ export const ACHIEVEMENTS: readonly Achievement[] = [
   { id: 'first_title',      name: 'Champions',             desc: 'Win your first domestic league title.',                        icon: '🏅', test: (s) => s.leagueTitles >= 1 },
   { id: 'title_treble',     name: 'A Dynasty Forms',       desc: 'Win 3 domestic league titles.',                                icon: '🏅', test: (s) => s.leagueTitles >= 3 },
   { id: 'title_dynasty',    name: 'Kings of the League',   desc: 'Win 10 domestic league titles.',                               icon: '👑', test: (s) => s.leagueTitles >= 10 },
-  // — the pyramid climb (every bloodline starts in the basement) —
+  // — the pyramid climb (the founding club is seeded MID-pyramid: startingTierFor returns tiers 3-9) —
   { id: 'first_promotion',  name: 'Up We Go',              desc: 'Win promotion out of your starting division.',                 icon: '⬆️', test: (s) => s.promotions >= 1 },
-  { id: 'climb_half',       name: 'Climbing the Pyramid',  desc: 'Reach the middle tiers of the football pyramid.',               icon: '⛰️', test: (s) => s.promotions >= 4 },
+  // `promotions` is `startTier - clubTier` — a climb FROM where the club was founded, not a place in the
+  // pyramid — so this line must not promise a place. It read "Reach the middle tiers of the football
+  // pyramid", which only holds for a club founded in tier 9: clubTier floors at 1, so from the ordinary
+  // founding tiers of 5/6/7 the fourth promotion lands in tier 1/2/3 — the top flight, where 'The Big
+  // Time' fires in the same instant, or a division or two below it — and from a founding tier of 3 or 4
+  // (startingTierFor's floor) it can never fire at all. Only the sentence changed: the predicate is
+  // untouched, so no save gains or loses this mark — and the unlock set is append-only anyway
+  // (main.ts saveUnlockedAch). Whether 4 is the right ask from those founding tiers is a balance
+  // question, deliberately left open. tools/playtest/pyramid_achievement_place.ts now fails any
+  // promotions-gated description that names a place instead of a climb.
+  { id: 'climb_half',       name: 'Climbing the Pyramid',  desc: 'Climb four divisions from where the club was founded.',         icon: '⛰️', test: (s) => s.promotions >= 4 },
   { id: 'top_flight',       name: 'The Big Time',          desc: 'Take the club all the way to the top flight.',                  icon: '🏟️', test: (s) => s.topTier >= 9 },
   // — continental —
   { id: 'cont_win',         name: 'Kings of the Continent',desc: 'Win the Continental Cup.',                                     icon: '🌍', test: (s) => s.contTitles >= 1 },

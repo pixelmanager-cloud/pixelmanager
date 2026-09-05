@@ -22,6 +22,7 @@
 // Run: `npx tsx tools/playtest/phantom_mechanics.ts`
 import { readFileSync } from 'node:fs';
 import { mergeBanks } from '../../shared/src/prompts/merge.js';
+import { seasonFixtures } from '../../shared/src/clubseason.js';
 import { BASE_MGR } from '../../shared/src/manager/base.js';
 import { MGR_EXTRA_1 } from '../../shared/src/manager/pack_1.js';
 import { MGR_EXTRA_2 } from '../../shared/src/manager/pack_2.js';
@@ -54,6 +55,28 @@ const PHANTOM: { re: RegExp; what: string }[] = [
   { re: /\bthe ninety minutes that counted\b|\bon the day\b.*\bfinal\b/i, what: 'a single decisive tie rather than a 46-game table' },
 ];
 
+// ── 2b. AND THE SEASON'S OWN LENGTH. Same class as the phantom competitions above: prose that states a
+// game count the league cannot reach. The pyramid plays a 10-club double round-robin — 18 fixtures at
+// every tier — and the hub counts them out loud all season ("Matchday 7/18"). A relegation line that
+// calls the season "thirty-eight of them" or a near-miss line that says "forty-odd games" is describing
+// somebody else's division, in the same four banks, to a player who has just watched the counter stop
+// at 18. Read the real number from the same function the hub renders from, so this moves with
+// LEAGUE_SIZE instead of quietly asserting a stale 18.
+const SEASON_GAMES = seasonFixtures('Marlow', 1, 1).length;
+// NOT an equality check, deliberately. "the last five games", "two games left", "a run of one point from
+// eight games" are all true of an 18-game season and there are seven such lines in these banks — a probe
+// that reddened on those would be ignored inside a week. Only a count the season cannot contain is wrong.
+const COUNT_WORD: Record<string, number> = {
+  one: 1, two: 2, three: 3, four: 4, five: 5, six: 6, seven: 7, eight: 8, nine: 9, ten: 10, eleven: 11,
+  twelve: 12, thirteen: 13, fourteen: 14, fifteen: 15, sixteen: 16, seventeen: 17, eighteen: 18,
+  nineteen: 19, twenty: 20, thirty: 30, forty: 40, fifty: 50, sixty: 60,
+};
+// Longest-first so "sixteen" is not eaten by "six". Only a number bound to a GAMES noun ("forty-odd
+// games", "thirty of the games", "thirty-eight of them") is read as a game count — "forty years", "nine
+// months" and "forty people join in" are legitimate prose in these same banks and must not match.
+const NW = Object.keys(COUNT_WORD).sort((a, b) => b.length - a.length).join('|');
+const GAME_COUNT = new RegExp(`\\b(${NW})(?:-(${NW}))?(-odd)?\\s+(?:of\\s+(?:the\\s+)?)?(?:games|matches|fixtures|them)\\b`, 'gi');
+
 // The banks whose ONLY emitters are league-position events (main.ts:3195-3204). Each is listed with the
 // emitter that reaches it so the scope is auditable rather than a guess.
 const LEAGUE_EVENTS = [
@@ -75,13 +98,20 @@ const banks: Record<string, string[]> =
 ok(Object.keys(banks).length > 60, `the packs actually loaded (${Object.keys(banks).length} keys merged)`);
 
 let scanned = 0;
+let counted = 0; // game counts the parser actually read — the vacuity guard for the season-length check
 const bad: string[] = [];
+const overlong: string[] = [];
 for (const [key, lines] of Object.entries(banks)) {
   const ev = key.includes('.') ? key.slice(0, key.lastIndexOf('.')) : key;
   if (!LEAGUE_EVENTS.includes(ev)) continue;
   for (const line of lines) {
     scanned++;
     for (const p of PHANTOM) if (p.re.test(line)) bad.push(`${key}: "${line}" — implies ${p.what}`);
+    for (const m of line.matchAll(GAME_COUNT)) {
+      const n = COUNT_WORD[m[1].toLowerCase()] + (m[2] ? COUNT_WORD[m[2].toLowerCase()] : 0);
+      counted++;
+      if (n > SEASON_GAMES) overlong.push(`${key}: "${line}" — claims ${n}${m[3] ? '-odd' : ''} games; the season is ${SEASON_GAMES} fixtures long`);
+    }
   }
 }
 console.log(`  ..   ${scanned} line(s) scanned across ${LEAGUE_EVENTS.length} league-table event bank(s)`);
@@ -90,6 +120,13 @@ console.log(`  ..   ${scanned} line(s) scanned across ${LEAGUE_EVENTS.length} le
 ok(scanned > 40, 'the league-table banks were actually found and read (not a zero-of-zero pass)');
 for (const b of bad) console.log(`       ${b}`);
 ok(bad.length === 0, `no league-table line describes a competition the pyramid does not run (${bad.length} found)`);
+// VACUITY GUARD for the count parser specifically. `overlong` is empty both when the prose is clean and
+// when the regex stopped matching anything at all (a renamed noun, a mangled alternation) — so assert the
+// parser is still reading the seven legitimate counts that live in these banks before trusting its silence.
+console.log(`  ..   ${counted} game count(s) parsed against the ${SEASON_GAMES}-fixture season`);
+ok(counted >= 5, `the game-count parser still reads counts out of the banks (${counted} found)`);
+for (const o of overlong) console.log(`       ${o}`);
+ok(overlong.length === 0, `no league-table line claims more games than the season has (${overlong.length} found)`);
 
 // ── 3. THE GAFFER'S DIARY table-zone pools. These are plain arrow functions in a module scope, not an
 // exported bank, so they are read as source. The zone that fires for 5th-8th outside the top flight is the

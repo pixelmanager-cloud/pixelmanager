@@ -5935,7 +5935,15 @@ class Game {
         $('cg-grad-title').focus({ preventScroll: true });
       } else if (r.state) {
         this.renderCareer(r.state);
-        if (r.clubGain && r.clubGain > 0) toast(`🏟️ +${r.clubGain}c to the club — its development cut of what he earned`);
+        // Two mechanics fund clubGain and only one of them ran here. A Back-the-Club buy goes through
+        // `buyLifestyle`, which SPENDS earnings — so careerAct's wage-cut term (Math.max(0, the earnings
+        // delta) * CLUB_WAGE_CUT) is exactly 0 on this path and every coin is clubInvestOf(): his own
+        // savings, handed over by choice. Reporting that as the club's "development cut of what he earned"
+        // told him the club had skimmed his wages at the moment he backed it — the inverse of the
+        // decision he had just taken.
+        if (r.clubGain && r.clubGain > 0) toast(action.type === 'lifestyle'
+          ? `🏟️ +${r.clubGain}c to the club — every coin from his own pocket`
+          : `🏟️ +${r.clubGain}c to the club — its development cut of what he earned`);
       }
     } catch (e: any) {
       toast(e?.body?.error ?? 'Move failed');
@@ -6611,14 +6619,17 @@ class Game {
     this.mySide = payload.mySide;
     this.homeName = payload.home.handle;
     this.awayName = payload.away.handle;
-    // guarantee the two kits clearly contrast on the pitch even if the clubs' colours are similar
-    const dist = (a: number, b: number) => {
-      const dr = ((a >> 16) & 255) - ((b >> 16) & 255), dg = ((a >> 8) & 255) - ((b >> 8) & 255), db = (a & 255) - (b & 255);
-      return dr * dr + dg * dg + db * db;
-    };
-    if (dist(payload.home.team.shirtColor, payload.away.team.shirtColor) < 9000) {
-      payload.away.team.shirtColor = dist(payload.home.team.shirtColor, 0x3b6bd2) > 9000 ? 0x3b6bd2 : 0xd23b3b;
-    }
+    // KIT-CLASH ROUTINE REMOVED. It read both sides' shirtColor and, on a squared-RGB distance under 9000,
+    // rewrote the away side's to a stock blue or red "to guarantee the two kits clearly contrast on the
+    // pitch". There is no pitch — the 2D engine is gone — and nothing on any screen paints THIS field:
+    // the only thing that says which side is which is the scoreboard's two stripes, and those are the
+    // fixed --home/--away tokens (client/index.html). So it read a field, wrote it back into the throwaway
+    // Team buildXI had just minted, and nothing ever looked at the result. Same shape as the shortName
+    // removal recorded over the field's own declaration (shared/src/types.ts). If per-club stripes are
+    // ever wanted, build them on crestColors(name) — the per-club colour that already exists and is
+    // already painted — because every opponent is minted with a literal colour per COMPETITION (0xcc4444
+    // league, 0x8844cc continental, 0x3a7bd5 World Finals), so this field carries no club identity to
+    // show. Gated by tools/playtest/kit_colour_reach.ts.
     this.engine = new MatchEngine([payload.home.team, payload.away.team], payload.seed, [payload.home.tactics, payload.away.tactics]);
     this.matchSeed = payload.seed >>> 0;
     this.cmSeq = 0; this.cmBag = {}; this.lastPick = {};   // fresh banks each match

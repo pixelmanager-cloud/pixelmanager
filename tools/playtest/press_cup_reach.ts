@@ -131,5 +131,28 @@ ok(lying.length === 0, lying.length
   ? `${lying.length} line(s) put a continental or World-Finals tie at a small ground, e.g. “${lying[0].slice(0, 64)}…”`
   : 'no reachable knockout line puts the tie at a ground the fixture cannot be at');
 
+// ── AND NO LINE INVENTS A SECOND LEG ─────────────────────────────────────────────────────────────
+// Second time a PRE_CONTINENTAL line has had to be deleted for describing a two-legged tie (F-269, then
+// the away-goal line), so the class gets a matcher rather than a third one-off. A continental round is
+// one game: CONT_ROUNDS is Quarter-final / Semi-final / Final (shared/src/intl.ts) and `knockout()`
+// sends a level score straight to seeded penalties, so an away goal, an aggregate or a return leg names
+// a format this game has never had. CONTROL_LEG is the deleted sentence, kept the way the venue check
+// above keeps its own. SINGLE_GAME is not tidying: PRE_CUP's '"One game. No second leg, no second
+// chance."' is reachable on exactly these nights and is TRUE, so a bare /second leg/ would redden a
+// green tree — and `spared` holds that exclusion to a real reachable line so it cannot quietly widen
+// into a hole the next lie fits through.
+const TWO_LEG = /away goals?|on aggregate|first leg|return leg|two legs|two-legged|second leg/i;
+const SINGLE_GAME = /\bno second leg\b/i;
+const CONTROL_LEG = "Somebody asks about the away goal. The manager says he's not planning the tie around one.";
+ok(TWO_LEG.test(CONTROL_LEG) && !SINGLE_GAME.test(CONTROL_LEG), 'the two-leg matcher still fires on the line this fix removed (it is not mis-spelled)');
+const knockoutLines = [...(BY_COMP.get('continental') ?? []), ...(BY_COMP.get('international') ?? [])];
+const spared = knockoutLines.filter((l) => TWO_LEG.test(l) && SINGLE_GAME.test(l));
+ok(spared.length > 0, `the "no second leg" exclusion is exercised by a reachable line, not dead (${spared.length} of ${knockoutLines.length})`);
+const twoLegged = knockoutLines.filter((l) => TWO_LEG.test(l) && !SINGLE_GAME.test(l));
+console.log(`  ..   ${twoLegged.length} of ${knockoutLines.length} reachable knockout line(s) describe a two-legged tie`);
+ok(twoLegged.length === 0, twoLegged.length
+  ? `${twoLegged.length} line(s) give a single-game knockout a second leg, e.g. “${twoLegged[0].slice(0, 64)}…”`
+  : 'no reachable knockout line invents a second leg');
+
 console.log(fails ? `\n✗ ${fails} check(s) failed — the cup-tie press bank is still dark, or it is lying about the fixture` : '\n✓ the cup-tie bank rides with the continental and World-Finals ties, and tells the truth about them');
 if (fails) process.exitCode = 1;
