@@ -3482,3 +3482,29 @@ or it may be the most annoying thing in the game.
   loses the prose.
 - **(c) Leave it and record the decision**, so a later wave does not re-raise it. Defensible: the text is
   reachable, and a player who wants it can navigate to it.
+
+## §105 — the only irreversible action in the game with no confirmation
+
+`Retire #N` in the Trophy Room hangs a shirt up **forever** on one unconfirmed click. The whole handler is
+five lines: read the number, `retireNumber(n, name)`, toast, redraw. No `openConfirm`. `retireNumber` pushes
+into `retiredNumbers` and persists, and **there is no un-retire path anywhere in the tree** — it is enforced
+downstream, so every future heir is refused that number for the life of the save.
+
+**Why I think this is barely a judgement call.** Every comparably irreversible action in the same file is
+confirmed first: deleting a save, simming the rest of a season, dismissing the squad report, upgrading a
+facility, buying, selling, renewing, releasing. The facility confirm was added specifically because spending
+"hundreds of coins on one unconfirmed click" was judged unacceptable — and that one is *recoverable*, you
+can earn the coins again. This is the only action in the game that cannot be undone at all, and it is the
+only one with no confirmation. It also has no coin cost, so nothing signals weight before the click lands.
+A stray click on a dense Trophy Room grid silently takes a number away from every son you will ever have.
+
+The one sentence that warns it is permanent — "Shirts hung up forever" — only appears *after* it is done.
+
+- **(a) Route it through `openConfirm`,** naming the man and saying no future player in the family can ever
+  wear the number. Exactly the pattern the facility upgrade and the squad-report dismissal already use.
+  **Recommended — this is the house rule, and this action is the strongest case for it in the game.**
+- **(b) Leave it,** if the friction on a flourish-y, celebratory action is deliberate and you would rather a
+  player retire a number impulsively than deliberate over it.
+
+It is in the queue rather than in a commit because it adds a click to a moment that is meant to feel good.
+That is a real cost and it is yours to weigh — but I would take (a).
