@@ -3611,3 +3611,25 @@ Wrap both handlers in `this.openConfirm(...)` the way `sf-sim` is, naming the ro
 **The options.**
 
 Apply each firing rule's shift to the RUNNING plan tactics rather than to the kickoff snapshot — keep a `planTactics` that starts as `planBaseTactics` and is reassigned to `nt` after each fire — so orders compound (and `clampTac` still bounds them) instead of replacing each other.
+
+## §110 — The full-time card's team-name column is still 120px, the exact width its own comment names as the defect — 107 of 108 club names wrap to two lines and an 11+ character family name is sheared mid-word
+
+**Where:** `client/index.html:2037-2039`  ·  ledger F-339
+
+The rule and its comment, verbatim:
+
+  /* `flex: 1` with the default `min-width: auto` leaves ~122px for a 26px name, so every club in the
+     pool wraps to two lines and a long family name overflows the plate outright. */
+  #fulltime-card .ft-team { font-size: 26px; color: #fff; flex: 1; min-width: 0; overflow-wrap: anywhere; }
+
+`min-width: 0` and `overflow-wrap: anywhere` change what happens on overflow; neither gives the column a pixel more room. Measured in headless Chromium with the shipped VT323/Press Start 2P at 1280x900, `.ft-inner` at its 520px, `#ft-score` = "2 - 3", crest included exactly as `main.ts:6757-6758` emits it (`<span class="ft-crest">…</span>` + name): the name column resolves to **120px** — the comment's own "~122px", unmoved. Across the full 108-name club pool in shared/src/clubseason.ts:43-64, **107 of 108 (99%) wrap to two lines**; only "Redhaven" fits. Line-by-line breaks for the player's own club ("<family>'s Club", family name maxlength 18 at client/index.html:2276):
+  "Featherstone's Club" -> ["Featherston", "e's Club"]
+  "Bartholomew's Club" -> ["Bartholomew", "'s Club"]
+  "Li's Club"          -> ["Li's ", "Club"]
+Even a 9-character name wraps. The cause is arithmetic, not overflow policy: 472px of content width minus a nowrap `#ft-score` at 31px Press Start 2P (~185px) minus two 16px gaps leaves 255px for two `flex: 1` names.
+
+**Why it matters.** The full-time card is the game's headline post-match moment and the only place the match report exists (F-055). The bloodline surname — the thing the whole dynasty is named for — is cut in half across two lines on it whenever the family name is 11 characters or longer, and every club in the game but one renders as a two-line stack beside a single-line scoreline.
+
+**The options.**
+
+The column must clear the longest single word plus the inline crest — measured 153px for a 14-character family name at 26px, plus 28px for `.ft-crest`. Smallest change that reaches it: widen `#fulltime-card .ft-inner` from 520px (it is already capped at `max-width: 92vw`, so nothing overflows on a narrow window), or drop `#ft-score`'s 31px display font, and re-measure the pool. Then correct the comment so it stops describing a state that is still shipping.
