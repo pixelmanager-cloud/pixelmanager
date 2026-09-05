@@ -3575,3 +3575,39 @@ saves no longer replay the same way.
   does not exist. Cheapest, changes no balance and no saves — and it is the honest version of leaving it.
 
 Whichever way: (a) and (b) need `GOLDEN_WRITE=1` and a regenerated fixture in the same commit.
+
+## §107 — A block of the stylesheet styles hooks the game no longer emits, and two comments point the next author at those dead rules as live precedent
+
+**Where:** `client/index.html:92-106 (.mode-card / #mode-grid), :330, :332, :570, :571 (#handle-input / #password-input), plus :164 and :994 (the comments that cite them)`  ·  ledger F-316
+
+Scanning every `class="..."` in client/src/*.ts and the static markup in client/index.html against the stylesheet's selectors: `#mode-grid`, `.mode-card/.mode-career/.mode-manager/.mode-icon/.mode-title/.mode-desc/.mode-stat/.mode-go`, `#handle-input`, `#password-input`, `#login-row`, `#login-tagline`, `#hub-cols`, `#opp-panel`, `#toggle-opp`, `#select-head`, `#select-legacy`, `#select-tagline`, `#scout-summary`, `.lb-row`, `.mm-row`, `.legacy-menu`, `.hub-actions`, `.fx-play`, `.fx-progress`, `.cn-counter`, `.cn-reject`, `.tr-summary`, `.tr-line`, `.tr-arrow`, `.cg-swatch(es)`, `.cg-rival-name`, `.cg-md-comp`, `.cg-label`, `.cg-focus-warn` and `.pc-reborn` appear ONLY inside `<style>` — grep across client/src/main.ts, api.ts, save.ts, sprites.ts and the markup half of index.html returns 0 hits for each. They are residue of the removed mode-select menu and the removed handle/password login. Two comments then use them as authority: index.html:164 justifies a focus-ring decision with "Dedicated rules like #handle-input keep winning by specificity", and index.html:994 tells the next author to avoid the global uppercase "the way .mode-card and .slot .role-badges .rb do". `css_hooks.ts` only asserts emitted-class -> rule; its own output line "200 id(s) in the markup, 84 referenced by the stylesheet (informational — not asserted)" states that it never checks this direction.
+
+**Why it matters.** Nothing visible to a player. The cost is to the next author: two comments cite rules that can never match as working examples, which is precisely how this codebase keeps producing unreachable styling hooks (F-049, F-067, F-237, F-249, F-252).
+
+**The options.**
+
+Delete the rules for hooks nothing emits and repoint the two comments at live examples; then add a reverse assertion to tools/playtest/css_hooks.ts — every class/id the stylesheet declares must be emitted somewhere, with an explicit allow-list for the handful built from variables.
+
+## §108 — The Continental Cup and World Finals "⏩ Sim it" buttons resolve the tie irreversibly on one unconfirmed click, beside a league sim on the same screen that does confirm
+
+**Where:** `client/src/main.ts:2727`  ·  ledger F-328
+
+`$('sf-cont-sim')?.addEventListener('click', () => this.simContinentalTie());` and `$('sf-wc-sim')?.addEventListener('click', () => this.simWorldCupTie());` (main.ts:2731) — no confirm on either. `simContinentalTie` ends in `this.resolveContinental(r.myGoals, r.oppGoals, tie.oppStrength)` (main.ts:2893), which writes state immediately and unconditionally: `this.saveMgr({ ...m, contRound: nextRound, contBlurb })` on a win, `this.saveMgr({ ...m, contOut: true, contBlurb })` on a loss (main.ts:2923). `simWorldCupTie` does the same through `resolveWorldCup` (main.ts:3035). The button sits directly beside the primary action in the same markup: `<button class="primary" id="sf-cont-play">Play the tie ▶</button> <button id="sf-cont-sim">⏩ Sim it</button>` (main.ts:2857; the World Finals twin at main.ts:2990). Two guards on the very same screen do confirm the same class of loss: `$('sf-sim')` opens `'Sim the remaining <b>N</b> matches? You won't get to play them.'` under a comment reading "PT-505: it eats every remaining fixture in one click, so it gets the same guard as selling a player" (main.ts:2743-2746), and `sf-next-season` confirms `'You still have <the Final> of the Continental Cup to play. Rolling into next season forfeits it.'` (main.ts:2753-2755).
+
+**Why it matters.** A misclick one button-width from "Play the tie ▶" permanently plays out the biggest single match in the dynasty — the Continental Final or a World Finals knockout — and writes advance-or-eliminated straight to the save. There is no undo, and the player also loses the team talk, the match plan, the commentary and the full-time report for that tie. The season screen already treats a pending continental tie as valuable enough to warrant a confirm when it is about to be forfeited; the button that forfeits the *playing* of it has none.
+
+**The options.**
+
+Wrap both handlers in `this.openConfirm(...)` the way `sf-sim` is, naming the round — e.g. "Sim the Final of the Continental Cup? You won't get to play it." — with the existing `simContinentalTie` / `simWorldCupTie` call as the onYes.
+
+## §109 — A later match-plan order overwrites an earlier stronger one from the kickoff snapshot, so the side is pulled back at the exact moment the toast announces "all-out attack"
+
+**Where:** `client/src/main.ts:6758`  ·  ledger F-329
+
+`evalMatchPlan` recomputes every firing rule from the KICKOFF snapshot, never from what is on the pitch: `const base = this.planBaseTactics ?? this.draftTactics; const nt: Tactics = { ...base }; for (const k in r.shift) (nt as any)[k] = clampTac((base as any)[k] + (r.shift as any)[k]!); this.engine!.setTactics(this.mySide, nt); toast(r.fired);` (main.ts:6758-6762). `MatchEngine.setTactics` replaces wholesale — `this.tactics[teamIdx] = t; this.mods[teamIdx] = deriveMods(t);` (shared/src/engine.ts:211-213) — so the second rule to fire discards the first entirely. The shifts are not monotone across rules: `chase-ht-big` is `{ mentality: +2, line: +2, press: +1, tempo: +2 }` (main.ts:255) while `chase-late`, which fires 25 minutes later, is only `{ mentality: +2, line: +1, press: +1, tempo: +1 }` (main.ts:248). From the shipped default `Balanced: { mentality: 0, line: 0, press: 0, tempo: 0 }` (shared/src/tactics.ts:43), arming both and going 2 down gives (mentality 2, line 2, press 1, tempo 2) at 45', then (2, 1, 1, 1) at 70' — line drops Very High → High and tempo Very Direct → Direct against `LEVELS` (main.ts:226,228) — under the toast `'📋 Chasing the game — all-out attack'`. The defensive direction is the same shape: `blowout-lead` (-2,-2 tempo,-2 press, main.ts:254) at 55' is undone at 60' by `manage-2up` (-1,-1,-1, main.ts:252) toasting `'📋 Comfortable — managing the game out'`, and again at 75' by `hold-lead` (main.ts:249). `planFired` is per rule id (main.ts:6755), so noth
+
+**Why it matters.** The Match Plan panel sells itself as "Arm the moves your side makes automatically as the game unfolds" (main.ts:6088) and each rule states an escalation — "Still losing at 70′ → all-out attack for the comeback". A player who arms both chase rules, which read as a natural pair, gets a side that becomes measurably less aggressive at 70' than it was at 45', announced by a toast claiming the opposite. The only feedback channel is that toast, so the contradiction is invisible.
+
+**The options.**
+
+Apply each firing rule's shift to the RUNNING plan tactics rather than to the kickoff snapshot — keep a `planTactics` that starts as `planBaseTactics` and is reassigned to `nt` after each fire — so orders compound (and `clampTac` still bounds them) instead of replacing each other.
