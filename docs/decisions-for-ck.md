@@ -3376,6 +3376,41 @@ match-3 were added. No code change beyond extending the array.
 **Recommendation: pick one or two more Positive/Town-mood tracks and drop them in as hub-2 / hub-3.** I have
 not chosen them because picking the music is a taste call, and because it touches the licensed pack.
 
+### The shortlist (2026-09-05) — STILL OPEN, CK is coming back to this
+
+Measured against the pack on disk at `~/Desktop/GAMEDEVMUSIC` (398 tracks). **I cannot listen to these** —
+the ranking is duration (hard data), the pack author's own mood folder, what is already used elsewhere in
+the game, and title semantics. Audition before committing.
+
+`hub-1` is *Looking Forward* (2. Exploration / 1. Overworld), **187.7s**. It covers hub, lineup, club and
+season — the manager layer's whole non-match life. So a candidate wants to be LONG (a short track on loop is
+exactly the §101 mistake), warm and purposeful rather than triumphant or mournful, and calm enough to read a
+table over.
+
+**Top three — the first two share `hub-1`'s own folder, so they are most likely to sit beside it:**
+
+| Track | Length | Folder | Why |
+|---|---|---|---|
+| **Peace Amidst the Storm** | **251.2s** | Overworld | Longest track in the entire pack. The title is also exactly what a manager between matches is. |
+| **Northern Dreams** | 210.0s | Overworld | Long, same folder, ambition-flavoured — fits a dynasty. |
+| **Tulito** | 205.7s | Towns & Cities | The club as a *place* rather than a journey — a different colour from the two above. |
+
+**Also worth hearing:** *By the Brooke* (158.3s, Towns & Cities), *Past, Present, Future* (128.0s,
+Sentimental — shortish, but the title is the game's whole premise), *People of the Land* (142.5s, Towns &
+Cities).
+
+**Avoid despite good durations:** *First Frost*, *Freezing Rain*, *Winter's Peak*, *Hidden in Snow*, *Lost
+Tundra*, *Inner Conflict* — a cold, melancholy cluster, wrong register for a club hub. And *Banana Life* /
+*Tro-Pi-Ka* are too jokey for a screen the player plans on.
+
+Path: `~/Desktop/GAMEDEVMUSIC/2. Exploration/1. Overworld/<name>/<name>.ogg`, or
+`~/Desktop/GAMEDEVMUSIC/1. Settlements/1. Towns & Cities/<name>/<name>.ogg`.
+
+**To land it:** copy the OGG to `client/public/audio/hub-2.ogg` (and `hub-3.ogg`), extend the `hub` array in
+`client/src/audio.ts`'s MANIFEST, and add the rows to `docs/audio-tracks.md`. No other code changes — the
+pool rotation already works. Note the rotation is BETWEEN screen entries, not within one (see §101), so the
+benefit is that entering the hub picks a different track each visit.
+
 ## §103 — the training-focus dropdown is the loudest thing in its column
 
 `.sf-focus select` is the only `<select>` in the game never given a class-scoped size, so it inherits the
