@@ -111,8 +111,8 @@ assert(up.coins === facBefore.coins - (stadium.upgradeCost ?? 0), 'coins debited
 
 const coinsBeforeReward = (await api.me()).account.coins;
 const reward = await api.spSeasonReward({ pos: 1, size: 10, wins: 24, draws: 8, losses: 6 });
-// The base champion prize is 800, LIFTED by the house's renown — sponsorship and gate follow a famous
-// name. Asserting the relationship rather than the old literal, so the check keeps meaning something if
+// The base champion prize is 800, LIFTED by the house's renown at the prize-giving and nowhere else.
+// Asserting the relationship rather than the old literal, so the check keeps meaning something if
 // either the base or the multiplier is retuned; a hard-coded 800 just encodes today's numbers.
 assert(reward.houseMult >= 1 && reward.houseMult <= 1.4, `renown income multiplier in range (${reward.houseMult})`);
 // THESE TWO CHECKS USED TO BE VACUOUS, AND THE COMMENT ABOVE THEM WAS BACKWARDS.

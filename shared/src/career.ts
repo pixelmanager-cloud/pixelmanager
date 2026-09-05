@@ -1062,8 +1062,11 @@ export function bandAt(turn: number): { index: number; band: AgeBand; age: numbe
 /** Re-word a season event for the life stage it lands in — the mechanics (form/rng) never change, only
  *  how it's told: a kid's "new gaffer" is a new coach his mum hears about at the school gates; a
  *  20-something's is the same event but about a real manager and real transfer speculation. Keeps each
- *  age band feeling distinctly lived-in without touching a single number. */
-const EVENT_FLAVOR: Record<string, Partial<Record<'kid' | 'teen', (bias?: string | null) => { name: string; desc: string }>>> = {
+ *  age band feeling distinctly lived-in without touching a single number.
+ *  EXPORTED for tools/playtest/event_flavor_reach.ts, which plays real careers and checks that every entry
+ *  below actually prints — the whole `kid` half was unreachable for as long as it existed and no gate in the
+ *  tree could tell, because an unrendered ALTERNATIVE wording leaves nothing wrong on screen. */
+export const EVENT_FLAVOR: Record<string, Partial<Record<'kid' | 'teen', (bias?: string | null) => { name: string; desc: string }>>> = {
   'new-gaffer': {
     kid:  (bias) => ({ name: 'New Coach', desc: `The club brings in a new coach for the season — he wants to see more ${bias} out on the pitch.` }),
     teen: (bias) => ({ name: 'New Coach', desc: `The academy appoints a new coach — he's made it clear he wants more ${bias} from your game.` }),
@@ -1158,8 +1161,12 @@ export class Career {
    *  the career (opens/closes later beats)" and is written on 732 of 1,650 arc options — 44% — and was
    *  discarded on arrival, because applyArcEffect had no branch for it. `ArcChoice.requires` was marked
    *  "(reserved)" and evaluated nowhere. Both are live now, so a choice can genuinely close a door later.
-   *  Safe for replay: zero arcs currently use `requires`, so nothing that exists changes behaviour until
-   *  content is written against it. Consumes no rng — arc selection is a pure hash, not a draw. */
+   *  NOT inert, and no longer safe to read as inert: 116 choices across 89 flags carry `requires`, so the
+   *  filter in current() decides what a beat offers on EVERY arc. Changing how this set is populated
+   *  changes a replayed career's offered choices, and deleting the filter — which the replay-safety note
+   *  that stood here invited — would silently un-gate all 116 authored choices. arc_payoff_reach.ts holds
+   *  the reachability floor; arc_gate_comment_truth.ts goes red when these counts drift again.
+   *  Consumes no rng — arc selection is a pure hash, not a draw. */
   arcTags = new Set<string>();
   /** When set, the career pauses at a chapter break for a FOCUS choice: how to spend the summer. */
   pendingFocus: FocusOption[] | null = null;
@@ -1249,8 +1256,9 @@ export class Career {
       const arc = arcByIdOf(this.pendingArc.arcId), beat = arc?.beats[this.pendingArc.beatId];
       if (arc && beat) return { phase: 'arc' as const, age: this.age, chapter: this.chapter, deck: this.deck, energy: this.energy, finished: this.finished,
         arc: { id: arc.id, title: arc.title, icon: arc.icon, category: arc.category, prompt: beat.prompt, // {RIVAL} filled in careerState (has the seeded rival name)
-          // A choice gated on a flag the career never earned is not offered. Nothing filters today — zero
-          // arcs carry `requires` — so this changes no existing content; it makes the gate usable.
+          // A choice gated on a flag the career never earned is not offered. This filter is LIVE, not a
+          // placeholder waiting on content: 116 authored choices carry `requires`, so removing it un-gates
+          // every one of them and shows payoffs the career never earned. See arc_gate_comment_truth.ts.
           choices: beat.choices.filter((c) => !c.requires || this.arcTags.has(c.requires))
             .map((c) => ({ id: c.id, label: c.label, desc: c.desc })) } };
       this.pendingArc = null; // corrupt reference → drop the arc, fall through
@@ -1727,7 +1735,17 @@ export class Career {
       else { this.seasonEvent = { id: 'steady', name: 'Steady Progress', desc: 'A solid, unremarkable season of graft.' }; }
     }
     // reword for the stage it lands in (pure narration — the id, and every mechanical effect above, is untouched)
-    const tier = flavorTier(this.chapter);
+    // THE BAND JUST FINISHED, not the one being entered — the same off-by-one `completed` was added to fix
+    // for the summer focus bank in play(), which is what calls this. `this.turn` is incremented before the
+    // call, so at a boundary `this.chapter` already reads as the NEXT band; flavorTier answers 'kid' only
+    // for Grassroots, which is never the band at a boundary. So all ELEVEN authored kid rewrites — the whole
+    // child voice of the season event, and the reason the bank's docstring talks about a new coach his mum
+    // hears about at the school gates — could never render: 0 of 11 kid lines across 250 played careers,
+    // against 11 of 11 teen. Re-tiering flavorTier onto the band being ENTERED instead is the same function
+    // (Academy -> kid, Scholar|Youth Team -> teen) and prints byte-identical text; keying on the band just
+    // finished is the form that keeps flavorTier's own "an age band's events" reading true.
+    // Held by tools/playtest/event_flavor_reach.ts.
+    const tier = flavorTier(bandAt(Math.max(0, this.turn - 1)).band.name);
     const flavor = tier && this.seasonEvent ? EVENT_FLAVOR[this.seasonEvent.id]?.[tier] : undefined;
     if (flavor && this.seasonEvent) this.seasonEvent = { ...this.seasonEvent, ...flavor(this.demandBias) };
     this.formBonus = form + conseq.form; // relationships tilt the coming chapter on top of its event

@@ -3508,3 +3508,31 @@ The one sentence that warns it is permanent — "Shirts hung up forever" — onl
 
 It is in the queue rather than in a commit because it adds a click to a moment that is meant to feel good.
 That is a real cost and it is yours to weigh — but I would take (a).
+
+---
+
+## §106 — the brother you pass over is a record on the tree, not a man you can sign
+
+The spec's §3 (`docs/branching-bloodline-spec.md`) asks for three things from a passed-over brother: he is
+**signable into your squad**, he **turns up at rival clubs**, and he has **a career record on the tree**.
+Only the third shipped. `succeed()` mints him as a Token with genes, a pedigree and a `branch_seed`, and
+what the player sees is a DERIVED `branchCareer` row on the Family Record and in the renown table. He is
+deliberately kept out of the squad by `fieldablePlayers`' attrs_json guard — a man on the tree has no
+attributes, and merging those men in put a NaN body in the club every generation, which is why that guard
+exists. `heirAsPlayer` (`shared/src/bloodline.ts`) is the unbuilt half: it would mint him properly, and its
+only caller in the repo is `shared/qa_bloodline.ts`.
+
+Four comments claimed he was already a full squad man; those are corrected and
+`tools/playtest/branch_player_comment_truth.ts` now holds the line. **This entry is the product question the
+comments were standing in for.**
+
+- **(a) Build it.** Wire `heirAsPlayer` into the transfer market as a family-flagged listing and into
+  `seedHouseIntoSquad`, so a brother can be signed or can knock you out of a cup. It is the strongest form
+  of "squad players feel personal" the mode has, and the genetics are already there to make him distinctive.
+  It is also the larger job: he needs a squad lifecycle, a wage, and a rule for what happens to the tree when
+  he retires inside your club.
+- **(b) Leave it as the record it is,** and cut the two unbuilt bullets from spec §3 so the contract matches
+  the game. The tree already prices him — the Houses table scores branches, and the Family Record draws his
+  medallion — and the succession already gives him a future through his sons.
+
+I did not choose, because (a) is a feature and (b) is a retreat from something you asked for by name.

@@ -462,13 +462,28 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
   const prof = careerProfile(t, c);
   // CHAPTER RECAP: at an age-chapter boundary, a short "the story so far" beat about the chapter just closed
   const prevChapter = c.turn > 0 ? bandAt(c.turn - 1).band.name : null;
-  if (prevChapter && prevChapter !== c.chapter && !c.finished) {
-    st.recap = chapterRecap({ chapter: prevChapter, nextChapter: c.chapter, age: c.age, careerSeed: (c as any).seed >>> 0, castAvoid: c.familyName, personalityId: c.personality.id, seasonEventId: c.seasonEvent?.id ?? null });
+  // THE LAST CHAPTER IS A BOUNDARY TOO, and comparing chapter NAMES cannot see it. `c.chapter` clamps at
+  // TOTAL_TURNS - 1 (career.ts's getter), so at the final boundary — turn 120, which now raises a summer of
+  // its own — prevChapter and c.chapter both read 'Establishing' and `prevChapter !== c.chapter` is false by
+  // construction. Establishing therefore closed with no recap: the chapter that ends in graduation was the
+  // only one the player never got a story-so-far for, and RECAP_OPENERS.Establishing's thirteen authored
+  // lines could not be reached at all. Ask what this code means — is this a boundary — not what it compares.
+  const boundary = prevChapter !== c.chapter;
+  const finalBoundary = !boundary && c.turn >= TOTAL_TURNS;
+  if (prevChapter && (boundary || finalBoundary) && !c.finished) {
+    // nextChapter is null at the final boundary: nothing follows this chapter, and RECAP_AHEAD would
+    // otherwise promise "Now comes the Establishing chapter" at the END of Establishing. chapterRecap drops
+    // the ahead-clause when nextChapter is falsy.
+    st.recap = chapterRecap({ chapter: prevChapter, nextChapter: boundary ? c.chapter : null, age: c.age, careerSeed: (c as any).seed >>> 0, castAvoid: c.familyName, personalityId: c.personality.id, seasonEventId: c.seasonEvent?.id ?? null });
     // HANDOFF: if he just completed a full season as a first-team REGULAR (Regular starter+), the game is
     // ready to switch to manager mode — you take the reins with him as your star. Offered once, at the boundary.
+    // A REAL chapter change only (`boundary`), never the final one: main.ts's renderHandoff replaces the whole
+    // career render and returns early, so raising it here would hide the recap above from every career that
+    // reached the end as a regular — all of them, when it was measured — and would offer the reins on the turn
+    // the career ends, under copy promising "He'll keep playing to 25". tools/playtest/final_chapter_recap.ts.
     const prevBand = bandAt(c.turn - 1).index;
     const prevRole = squadRole(prevBand, prof.currentOverall);
-    if (clubName && firstTeamReady(prevBand, prof.currentOverall, clubLevel) && prevRole.apps >= 11) {
+    if (boundary && clubName && firstTeamReady(prevBand, prof.currentOverall, clubLevel) && prevRole.apps >= 11) {
       st.handoff = { season: prevChapter, apps: prevRole.apps, status: prevRole.status, overall: prof.currentOverall };
     }
   }

@@ -876,9 +876,13 @@ export const api = {
     // contiguous. The BROTHERS are new tokens hanging off it by `parent_id`, so the save becomes a forest
     // without breaking anything that walks the old chain.
     //
-    // A brother is a FULL PLAYER, not a summary row — the user was explicit. He is minted through the same
-    // path every rich squad player takes, so he can be scouted, signed, played against, and can father the
-    // next generation himself.
+    // WHAT A BROTHER ACTUALLY IS, because this comment used to promise something else and nothing ever
+    // built it: he is a Token — genes, a pedigree, a temperament and a `branch_seed`, and no attrs_json —
+    // so `fieldablePlayers` above leaves him out of the squad by design and no market ever lists him. He
+    // reaches the player as a DERIVED record instead: `branchCareer` drawn on the Family Record and scored
+    // in the renown table. The one consequence that IS wired is the one the succession screen sells — he
+    // can father the next generation himself, and the cousins sweep below mints his sons off that
+    // `branch_seed`. `heirAsPlayer` (shared/src/bloodline.ts) is the other reading, and only QA calls it.
     // TWO BROTHERS CALLED MILO. The played heir is named by rebornFields and the brothers by
     // foundingNameFor, independently, out of the same first-name pool — so a sibling set could and did
     // come out with duplicates, which on the succession screen reads as a rendering fault rather than as

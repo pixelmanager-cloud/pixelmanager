@@ -88,8 +88,12 @@ export function computeOffPitch(input: {
   const { careerScore, caps, seed, turn, tags, bigWins, flair } = input;
   // IMAGE (marketability 0-100): the size of his spotlight — score, caps, big moments, and natural flair.
   // MATURITY GATE (PT-112): public fame builds through the teens, not before. A pre-debut academy kid with
-  // natural flair used to land National brand deals; now marketability ramps from ~mid-teens (turn 90) to full
-  // by the First-Team years (turn 150), so endorsements/spotlight tiers stay off players who haven't broken through.
+  // natural flair used to land National brand deals; now marketability ramps from the Youth Team years
+  // (turn 54, age 17) to full by the First Team (turn 90, age 21), so endorsements/spotlight tiers stay off
+  // players who haven't broken through. Those figures are the clamp's own endpoints and have to track it: the
+  // 202→120 band rescale retuned the formula and left the prose quoting 90 and 150 — a far end 30 turns past
+  // the end of a 120-turn career — as the only record of when fame is allowed to build, so
+  // tools/playtest/offpitch_maturity_doc.ts now re-derives both from the line below. (F-293)
   const maturity = clamp((turn - 54) / 36, 0, 1);
   const imageScore = clamp(Math.round((careerScore / 12 + caps * 4 + bigWins * 2 + flair * 1.5) * maturity), 0, 100);
   const imageTier = imageScore >= 80 ? 'Global icon' : imageScore >= 60 ? 'Household name' : imageScore >= 40 ? 'Rising name' : imageScore >= 20 ? 'Known locally' : 'Unknown quantity';

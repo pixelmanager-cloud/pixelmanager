@@ -136,11 +136,12 @@ export function houseRenown(members: HouseMember[]): HouseStanding {
 
 /** The career a PASSED-OVER BROTHER had offscreen.
  *
- *  He is a real professional somewhere — the spec is explicit that a brother is a full player, not a
- *  summary row — but the game never simulates his seasons, so without this he sits on the Family Record
- *  with a peak of zero and contributes nothing. That would make the branches worthless in exactly the
- *  place the design says they should count. Derived from his own seed and the family's standing, so it is
- *  stable across reloads and a strong bloodline's brothers are good players too. */
+ *  He is a real professional somewhere — the spec asks for a brother who amounts to more than a stat line
+ *  (§3, unimplemented in every other respect: nothing mints him into a squad) — but the game never
+ *  simulates his seasons, so without this he sits on the Family Record with a peak of zero and contributes
+ *  nothing. That would make the branches worthless in exactly the place the design says they should count.
+ *  Derived from his own seed and the family's standing, so it is stable across reloads and a strong
+ *  bloodline's brothers are good players too. */
 export function branchCareer(branchSeed: number, pedigree: number): { peakOverall: number; caps: number; leagueTitles: number; cups: number; seasons: number; bigNights: number } {
   let h = (branchSeed ^ 0x2c1b3c6d) >>> 0;
   h = Math.imul(h ^ (h >>> 15), 0x85ebca6b) >>> 0;
@@ -187,7 +188,9 @@ export function renownBidMult(renown: number): number {
   return Math.round((1 + curve(renown, 0.45)) * 100) / 100;
 }
 
-/** Extra coins on the season prize — the commercial pull of a famous house, in sponsorship and gate.
+/** Extra coins on the season prize — the commercial pull of a famous house. It lifts that prize and
+ *  nothing else; this line used to add "in sponsorship and gate", the false mechanic F-186 struck off the
+ *  Houses panel and missed here (client/src/api.ts's `spSeasonReward` shows what reaches the treasury raw).
  *  Caps at +40%, which is real money without ever being the reason you can afford a squad. */
 export function renownIncomeMult(renown: number): number {
   return Math.round((1 + curve(renown, 0.40)) * 100) / 100;

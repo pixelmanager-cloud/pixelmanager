@@ -18,7 +18,9 @@ export interface ArcChoice {
   outcome: string;                                // the resolution prose shown after picking
   effect?: ArcEffect;
   next?: string | null;                           // next beat id (branch), or null/undefined = the arc ends here
-  requires?: string;                              // (reserved) only offered if this state flag was set earlier in the arc
+  requires?: string;                              // only offered if the CAREER already holds this flag — it can be set by
+                                                  // ANY earlier arc, not just this one (pickArcStart weights cross-arc
+                                                  // payoffs). Live and load-bearing, not reserved: see career.ts arcTags.
 }
 export interface ArcBeat { id: string; prompt: string; choices: ArcChoice[] }
 export interface StoryArc {
@@ -92,8 +94,10 @@ export const ARCS_PER_CAREER = 20;
 /** `tags` is the career's earned arc-tag set. Passing it lets the scheduler PREFER an arc that pays off a
  *  flag this career actually set. Without it, a cross-arc payoff needed both the flag-setting arc and the
  *  paying-off arc to land in the same twenty-arc career, in order, out of a 414-arc library: 88 of the 90
- *  `requires` choices were offered in under 1% of careers, mean offer rate 0.388%. The content was written
- *  and then made statistically unreachable by the scheduler. Optional, so callers that do not track tags
+ *  `requires` choices THE LIBRARY HELD WHEN THAT WAS MEASURED were offered in under 1% of careers, mean
+ *  offer rate 0.388%. Read that 90 as a snapshot, not a current count: authoring has since taken it to 116
+ *  gated choices across 89 flags. The content was written and then made statistically unreachable by the
+ *  scheduler. Optional, so callers that do not track tags
  *  behave exactly as before. */
 export function pickArcStart(seed: number, turn: number, fired: ReadonlySet<string>, totalTurns = 120, tags?: ReadonlySet<string>): string | null {
   const conflictsWithFired = (a: StoryArc): boolean => {

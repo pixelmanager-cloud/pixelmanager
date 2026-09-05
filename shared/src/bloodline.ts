@@ -161,14 +161,17 @@ export function mintHeirs(parent: Genes, parentSeed: number, count = MAX_HEIRS, 
 }
 
 
-/** An unplayed brother as a FULL PLAYER — the user's requirement, in their words: "they become full players,
- *  the same as other generated players with their own stats, mentalities, characteristics, etc."
+/** An heir rendered as a squad player: `mintSquadPlayer`'s 15 stats, personality, earned traits, age,
+ *  durability and morale, with his three PHYSICAL attributes then pulled into the gene bands he actually
+ *  inherited — otherwise the genetics would be invisible the moment he walked onto a pitch.
  *
- *  So he goes through `mintSquadPlayer`, the same path every rich squad player takes: 15 stats, a
- *  personality, earned traits, an age, durability and morale. He is not a summary row and not a card career.
- *  His three PHYSICAL attributes are then pulled toward the gene bands he actually inherited, so the family
- *  attribute shows up in the player you can scout, sign and play — otherwise the genetics would be invisible
- *  the moment he walked onto a pitch. */
+ *  IT IS NOT HOW A PASSED-OVER BROTHER REACHES THE GAME, and this header used to say that it was. Nothing
+ *  outside `shared/qa_bloodline.ts` calls it. `succeed()` mints a brother as a Token — genes, a pedigree, a
+ *  temperament and a `branch_seed`, no attrs_json — and he reaches the player as a DERIVED record instead:
+ *  `branchCareer` (shared/src/renown.ts) on the Family Record and in the renown scorer, while
+ *  `fieldablePlayers` (client/src/api.ts) keeps an attribute-less token out of the squad on purpose.
+ *  Whether brothers should become real signings is a product call nobody has taken; a header that says they
+ *  already are is how the next author builds on a mechanism the tree does not have. */
 export function heirAsPlayer(heir: Heir, id: string, role: Role, age: number): Player {
   const mid = (k: keyof Genes) => (heir.genes[k].floor + heir.genes[k].ceiling) / 2;
   // his overall quality follows his inheritance rather than being independent of it

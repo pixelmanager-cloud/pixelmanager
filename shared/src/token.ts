@@ -34,7 +34,11 @@ export interface Token {
    *  keeps working — siblings are new tokens hanging off that id. */
   parent_id?: string | null;
   /** 'played' = a line the player has taken; 'sibling' = a brother who exists but was not chosen. A sibling
-   *  is a FULL player (mintSquadPlayer) who ages, can be signed, and can father the next generation. */
+   *  is a Token and only that: he has no attrs_json, so `fieldablePlayers` (client/src/api.ts) keeps him out
+   *  of the squad, and the succession retires his whole generation without ever simulating a season of it.
+   *  His career is DERIVED — `branchCareer` off his `branch_seed` — and the one thing he really does is
+   *  father the next generation, through the cousins sweep in `succeed()`. This used to say he was a minted
+   *  squad man instead, which is the reading a type definition spreads fastest. */
   branch?: 'played' | 'sibling';
   /** An unplayed brother's own heir seed, kept so his sons can be derived at the NEXT succession. It cannot
    *  be recomputed from his father: the played line reuses its token id and `career_seed` is overwritten

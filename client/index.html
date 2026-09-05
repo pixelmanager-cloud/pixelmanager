@@ -185,8 +185,18 @@
          already set: zebra striping and a row hover, so any table — present or future — reads a
          little more premium/scannable without each screen having to opt in separately. */
       table { border-collapse: collapse; width: 100%; }
-      table tbody tr:nth-child(even) td { background: rgba(255,255,255,0.025); }
-      table tbody tr:hover td { background: rgba(255,255,255,0.05); }
+      /* …EXCEPT a cell that paints its own role colour, which is what the :not() is protecting. The squad
+         table's position chip is `<td class="pos role-GK">` and its colour comes from the bare
+         `.role-GK { background: var(--gk) }` near the bottom of this sheet — 0,1,0 against these two rules'
+         0,1,4, so the stripe REPLACED the chip instead of tinting it. statsTableHTML emits no <thead>, so
+         the header <tr> is nth-child(1) and every other DATA row lost its position colour outright; the
+         letters are inked #0a0a16 by `table.squad td.pos` BECAUSE they are meant to sit on a bright chip,
+         so they fell to 1.25:1 near-black on near-black, and the :hover twin did the same to whichever row
+         the pointer was over. Both lines need it: fixing only the stripe leaves the hover wiping the chip
+         on the row you are actually reading. :where() carries no specificity, so the exclusion moves
+         nothing else in the cascade. Measured by tools/playtest/pos_chip_colour.ts. */
+      table tbody tr:nth-child(even) td:not(:where(.role-GK, .role-DF, .role-MF, .role-FW)) { background: rgba(255,255,255,0.025); }
+      table tbody tr:hover td:not(:where(.role-GK, .role-DF, .role-MF, .role-FW)) { background: rgba(255,255,255,0.05); }
       /* Generic chip/badge base classes — a lot of screens hand-roll their own one-off pill CSS
          (`.pill`, `.tag`, `.cg-oc-pill`, `.op-deal-tier`…). These are reusable defaults any future
          screen can reach for directly instead of inventing another bespoke pill class; existing
@@ -912,8 +922,15 @@
          column and squeezed the other three. minmax(0, 1fr) is what four equal columns actually requires. */
       .cn-offers { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
       .cn-offer { display: flex; flex-direction: column; align-items: center; gap: 2px; font-family: var(--display); font-size: 11px; padding: 8px 6px; }
-      .cn-offer.cn-locked { opacity: .45; cursor: not-allowed; filter: grayscale(.5); } /* unaffordable offer (PT-63) */
-      .cn-offer.cn-locked .cn-o-hint { color: var(--warn); }
+      /* .45 here composited with the hint's own 0.6 landed "🔒 need 433c more" — the only place the shortfall
+         is ever stated, on a `disabled` button no screen reader will reach — at 1.89:1, and dragged the tier
+         and the total down with it (4.47:1, 3.93:1). .7 is what `#trophies .ach.locked` already uses for the
+         same "dimmed but still legible" job; grayscale and not-allowed still carry the lock. */
+      .cn-offer.cn-locked { opacity: .7; cursor: not-allowed; filter: grayscale(.5); } /* unaffordable offer (PT-63) */
+      /* NOT on .primary: that tile is filled with var(--room) cyan, where warn yellow measures 1.05:1 at any
+         opacity — the warn override was hiding the number it was meant to flag. Left alone, that hint keeps
+         button.primary's own --room-ink and reads 5.20:1. */
+      .cn-offer.cn-locked:not(.primary) .cn-o-hint { color: var(--warn); }
       .cn-coins { font-family: var(--body); font-size: 14px; color: #ffd75e; }
       .cn-offer .cn-o-lbl { font-family: var(--display); font-size: 11px; opacity: 1; letter-spacing: 0; }
       .cn-offer .cn-o-tot { font-family: var(--body); font-size: 12px; opacity: 0.9; }
@@ -921,6 +938,10 @@
       /* The recommended offer's own background darkens its hint to 3.93:1 while the other three sit near
          7.6:1 — so the button the game is steering you towards is the one whose hint you cannot read. */
       .cn-offer.primary .cn-o-hint { opacity: 0.85; }
+      /* AFTER both rules above, not beside the colour up at .cn-offer.cn-locked: opacity multiplies down the
+         tree, and all three of these selectors are specificity 0,3,0 — so placed earlier this would lose to
+         the 0.85 on source order and a locked "Meet it" would keep compounding to 0.85 x .7. */
+      .cn-offer.cn-locked .cn-o-hint { opacity: 1; }
       .cn-result { margin-top: 12px; font-size: 13px; text-align: center; min-height: 18px; line-height: 1.4; }
       .cn-result .cn-reject { color: var(--pink); } .cn-result .cn-counter { color: var(--warn); }
       #season-head { display: flex; align-items: center; gap: 12px; } #season-head h3 { margin: 0; } #season-back { margin-left: auto; }
@@ -1340,9 +1361,15 @@
       #trophies .scout-h4::after { content: ''; flex: 1; height: 1px;
         background: linear-gradient(90deg, color-mix(in srgb, var(--gold) 45%, transparent), transparent); }
       #trophies .scout-sub { color: #8d825f; }
-      /* THE CABINET. Trophies stand on a shelf under a light, and each one throws a reflection down the
-         front of it. This single device does most of the work of making the room feel expensive, and it
-         is only a gradient, a rule and a mirrored copy. */
+      /* THE CABINET. Trophies stand on a shelf under a light. This single device does most of the work of
+         making the room feel expensive, and it is only a gradient and a rule. It counted "a mirrored copy"
+         as a third device until that was checked: the ::after under .tr-trophy-ico meant to draw the
+         reflection declared `content: ''` and nothing else, so it painted a 0px transparent box in every
+         build it ever shipped in. CSS cannot repair it — .tr-trophy-ico holds an image child here and plain
+         `#N` text on the retired-shirts cabinet below, and a pseudo-element cannot clone a child — so the
+         rule and the comment promising it are deleted rather than left as a stub, which is the state that
+         sends the next author to edit a line the browser has never used.
+         tools/playtest/pseudo_paints.ts now refuses any generated box with no ink in it. */
       #trophies .tr-cabinet { position: relative; gap: 0; padding: 26px 18px 0;
         background:
           radial-gradient(ellipse 80% 90% at 50% 0%, rgba(247,227,168,0.16) 0%, transparent 70%),
@@ -1352,9 +1379,6 @@
       #trophies .tr-trophy { background: none; border: none; border-radius: 0; padding: 0 18px 18px;
         min-width: 132px; position: relative; }
       #trophies .tr-trophy-ico { filter: drop-shadow(0 4px 10px rgba(0,0,0,0.6)); }
-      /* The reflection: the same trophy, flipped, faded into the shelf. Pointer-events off — it is an
-         image of a thing, not a thing. */
-      #trophies .tr-trophy-ico::after { content: ''; display: block; }
       #trophies .tr-trophy-name { color: var(--gold-lit); font-size: 11px; margin-top: 10px; }
       #trophies .tr-trophy-sub { color: #85794f; }
       /* The shelf edge the silverware stands on. */
@@ -1368,10 +1392,19 @@
         background: linear-gradient(160deg, color-mix(in srgb, var(--gold) 13%, var(--hall-2)), var(--hall));
         box-shadow: inset 0 1px 0 color-mix(in srgb, var(--gold) 30%, transparent); }
       #trophies .ach.got .ach-name { color: var(--gold-lit); }
-      /* 0.4 here composited with the base .ach.locked 0.55 landed the text at 1.71:1 — the list telling the
-         player what there is left to chase was the least readable thing in the room. */
+      /* The fade and the ink are two separate fixes and the room needs both. This ID rule OVERRIDES the
+         plain `.ach.locked` 0.55 further down — same element, same property, so specificity picks one value
+         rather than multiplying the two — and the 0.4 it used to carry left the descriptions at 1.71:1.
+         Raising it to 0.7 only reached 2.94:1, and the fade could never finish the job on either half. It
+         does not touch the earned cards at all — they carry no opacity, and the old ink left them at
+         4.17:1 — and on the locked half the group washes the card's own ground toward the page at the same
+         rate as the ink, so #8d825f only reaches the floor at opacity 1 (4.85:1), which is the exact point
+         where earned and locked stop looking different. The ink is the only lever that reaches both halves. #bfb283 measures
+         4.77:1 locked and 7.47:1 earned, where #8d825f was 2.94:1 and 4.17:1 — the list telling the player
+         what there is left to chase was the least readable thing in the room, on both halves of it.
+         Measured through the compositing, not off this sheet: tools/playtest/achievement_desc_contrast.ts. */
       #trophies .ach.locked { opacity: 0.7; }
-      #trophies .ach-desc { color: #8d825f; }
+      #trophies .ach-desc { color: #bfb283; }
       #trophies .ach-count { color: var(--gold); }
       /* The bloodline spine and the houses table both sit in the hall, so they take its metal too. */
       #trophies .bloodtree { background: linear-gradient(160deg, var(--hall-2), var(--hall));
@@ -1584,7 +1617,10 @@
       .dest .d-band .b-raw { background: #556; } .dest .d-band .b-squad { background: var(--df); }
       .dest .d-band .b-quality { background: var(--good); } .dest .d-band .b-gem { background: var(--warn); }
       .dest button.dispatch { font-family: var(--body); font-size: 14px; padding: 8px; cursor: pointer;
-        background: var(--accent, #2b6); color: #fff; border: none; border-radius: 5px; }
+        /* White on --accent is 3.33:1 — the same defect .fac-up records above, on the Scouting Network's
+           only action, six of them on screen at once. This screen's primary action wears the room's own
+           hue like every other one does; #scouting already supplies both halves. */
+        background: var(--room, var(--accent, #2b6)); color: var(--room-ink, #10121a); border: none; border-radius: 5px; }
       .dest button.dispatch:disabled { opacity: 0.4; cursor: not-allowed; }
       #missions-active { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
       .mission { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 2px solid var(--line);
@@ -1795,10 +1831,14 @@
         font-size: 13px; line-height: 1.5; opacity: 0.9; }
       #lineup-advanced { margin: 0 0 14px; }
       /* `table.squad td.stat` sets a near-black ink because every OTHER stat cell gets an opaque
-         statColor() background painted inline. This rule strips that background and never restores the
-         colour, and its specificity beats the colour rule's — so the AGE number was near-black on the
-         dark panel at about 1.1:1. Invisible, in the column a manager reads to decide who to sell. */
-      td.stat.age { background: transparent; color: var(--muted); opacity: 0.75; }
+         statColor() background painted inline. The age cell gets none, so that ink lands on the dark
+         panel. THE SCOPE IS THE FIX: this rule was first written bare as `td.stat.age`, which is (0,2,1)
+         against the column rule's (0,2,2) — two classes each, one type selector against two — so it LOST,
+         the AGE number stayed near-black at a measured 1.15:1, and the comment here claimed the opposite
+         relation as fact while the ledger carried the row as repaired. Scoped to the table it was always
+         written for it is (0,3,2) and wins, at 5.40:1. tools/playtest/squad_age_contrast.ts renders the
+         row and asserts the COMPUTED colour, because a stylesheet grep finds this rule either way. */
+      table.squad td.stat.age { background: transparent; color: var(--muted); opacity: 0.75; }
       .cgp-stat { display: inline-flex; align-items: center; gap: 5px; margin: 3px 10px 3px 0; }
       .cgp-bar { display: inline-block; width: 46px; height: 7px; background: rgba(255,255,255,0.14); }
       .cgp-bar i { display: block; height: 100%; }

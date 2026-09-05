@@ -61,6 +61,14 @@ one's father.
 
 ## 3. The brothers are FULL PLAYERS — not summary rows
 
+> **STATUS 2026-09-05: NOT IMPLEMENTED, apart from the third bullet.** A passed-over brother ships as a
+> Token with no `attrs_json`; `fieldablePlayers` (client/src/api.ts) deliberately keeps him out of the
+> squad, so he is neither signable nor in an opponent's XI and `advanceSquad` never touches him. What IS
+> shipped is the career record: a derived `branchCareer` row (shared/src/renown.ts) on the Family Record and
+> in the renown scorer. `heirAsPlayer` (shared/src/bloodline.ts) is the unbuilt half and only
+> `shared/qa_bloodline.ts` calls it. Annotated rather than rewritten, because this file is the contract and
+> not a status report — building it is §106 of the CK queue.
+
 **The user was explicit: "they become full players, the same as other generated players with their own
 stats, mentalities, characteristics, etc."** So an unplayed brother is minted through `mintSquadPlayer`
 (15 stats + personality + earned traits + age + durability + morale) from HIS OWN genes — the same path
