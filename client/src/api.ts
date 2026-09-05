@@ -856,7 +856,11 @@ export const api = {
     // THE CRAFT — his footballing brain passes down: a mental development head-start for the heir.
     if (inheritance === 'craft') { dev.composure = (dev.composure ?? 0) + 2; dev.leadership = (dev.leadership ?? 0) + 2; }
     rf.dev_bonus_json = JSON.stringify(dev);
-    // THE NAME — the family renown opens doors: a pedigree (potential) head-start for the heir.
+    // THE NAME — the family renown opens doors: a head-start on the family's STANDING, and only that.
+    // This line was billed as a head-start on POTENTIAL, which the code has never honoured — rebornPotential
+    // (shared/src/tokens.ts) averages the heir's inherited gene ceilings and never reads pedigree, so +0.15
+    // moves no ★ on any prospect card, and the Academy intro repeated the same false edge beside it. What
+    // the bump really buys is renown: the heirOfLegend gate at pedigree >= 0.6, and each brother's branchCareer.
     if (inheritance === 'name') rf.pedigree = Math.min(1, (rf.pedigree ?? 0) + 0.15);
     // AND THE HOUSE'S OWN STANDING, on top and unconditionally. A famous surname gets a boy seen by the
     // right people at the right age; it does not make him better, it makes him NOTICED, which is what
@@ -1441,7 +1445,10 @@ export const api = {
     // surname, the same pedigree and the same generation as the heir he was minted beside. Without it the
     // hub's "the bloodline you're living" row fell back to the newest prospect, which succeed() guarantees
     // is a brother or a cousin. `?? 'played'` because a pre-branching save has no field on its tokens.
-    return { supply: model.tokens.length, cap: SUPPLY_CAP, prospects: tokens.map((t) => { const pot = rebornPotential(t); return { id: t.id, name: t.name, roleHint: t.role ?? 'MF', generation: t.generation, pedigree: t.pedigree, careerStarted: t.career_seed != null, potentialStars: pot.stars, branch: t.branch ?? 'played', genes: JSON.parse(t.genes_json) }; }) };
+    // `coins` and `cost` ride along because the academy is where they are SPENT: without them the
+    // 300-coin scout button had no balance to print beside it and no price to gate on, so it rendered live
+    // at full price whatever the club held and the facade refused the click after the fact.
+    return { supply: model.tokens.length, cap: SUPPLY_CAP, coins: model.profile.coins, cost: GENESIS_COST, prospects: tokens.map((t) => { const pot = rebornPotential(t); return { id: t.id, name: t.name, roleHint: t.role ?? 'MF', generation: t.generation, pedigree: t.pedigree, careerStarted: t.career_seed != null, potentialStars: pot.stars, branch: t.branch ?? 'played', genes: JSON.parse(t.genes_json) }; }) };
   },
   genesis: async () => {
     await ensureActive();

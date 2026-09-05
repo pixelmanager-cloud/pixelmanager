@@ -22,7 +22,9 @@
 // spec the comments were written from.
 //
 // SCOPE, deliberately narrow: comments under shared/src and client/src, plus §3 of the one spec file those
-// comments are derived from. Other docs are a different review lane.
+// comments are derived from, plus the headings shared/qa_bloodline.ts prints — by name, because that is the
+// one place the claim actually survived: a string literal, one directory above the scan. Other docs, other
+// qa_*.ts harnesses and in-game copy are a different review lane.
 //
 // Run: `npx tsx tools/playtest/branch_player_comment_truth.ts`
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -109,6 +111,21 @@ const REFUTED: { re: RegExp; what: string }[] = [
 const restated = about.flatMap((b) => REFUTED.filter((r) => r.re.test(b.t)).map((r) => ({ ...b, r })));
 for (const x of restated) console.log(`       ${x.p} — a comment still claims ${x.r.what}`);
 ok(restated.length === 0, `no comment claims a brother the succession does not mint (${restated.length} found)`);
+
+// The claim's last survivor was not a comment and not under shared/src: it was the §7 heading `npm run verify`
+// printed out of shared/qa_bloodline.ts — the harness §1 above already opens and asserts on. Four green ticks
+// under a heading asserting a property the game does not have misleads the next author exactly as a false
+// comment does, one lane over. Checked on THAT ONE FILE's printed headings by name, not by widening the scan
+// above: policing every qa_*.ts and every string literal would re-point these four patterns at in-game copy
+// under client/src, which is a call about this guard's lane rather than part of the repair.
+const qaHeadings = [...codeOf(qa).matchAll(/console\.log\((['"`])([\s\S]*?)\1\)/g)].map((m) => flat(m[2]));
+console.log(`  ..   ${qaHeadings.length} printed heading(s) read from shared/qa_bloodline.ts`);
+// VACUITY GUARD, same reason as above: if the heading match ever breaks, the filter below runs over nothing
+// and reports green. Mutating `console.log(` in that file drops this to 0 and reds here first.
+ok(qaHeadings.length >= 6, 'the QA harness headings were actually parsed (not a zero-of-zero pass)');
+const qaRestated = qaHeadings.flatMap((t) => REFUTED.filter((r) => r.re.test(t)).map((r) => ({ t, r })));
+for (const x of qaRestated) console.log(`       shared/qa_bloodline.ts — a printed heading still claims ${x.r.what}`);
+ok(qaRestated.length === 0, `no heading verify prints claims a brother the succession does not mint (${qaRestated.length} found)`);
 
 // ── 3. AND THE READER STILL HAS TO BE TOLD WHERE HE DOES TURN UP. Deleting the sentence would clear §2 and
 // leave the next author with no account of the branch at all, which is the same trap one step quieter. Each

@@ -686,9 +686,36 @@ class Game {
 
   private continueGame() { const s = this.loadSaves().sort((a, b) => b.lastPlayed - a.lastPlayed)[0]; if (s) this.loadSave(s.id); }
 
+  /** Drop everything cached for the save being left. These are fields on the single page-lifetime `Game`,
+   *  but each holds data belonging to ONE dynasty, and each is read behind an "already have it" guard — so
+   *  without this, opening a second save showed the first save's screens. `pendingSquadReport` was the bad
+   *  one: save A's rollover report rendered over save B's squad, loadMgr's rehydrate
+   *  (`&& !this.pendingSquadReport`) then refused to load B's own report, and the panel's ✕ wrote
+   *  `squadReport: null` into B's key — forfeiting B's renewals while the confirm named A's players.
+   *  `seasonLeaders` is refetched only while null, and a `facLoaded` left true offers B's first arc against
+   *  A's facility levels; `facLevels` goes with it, because the `?? 1` fallbacks that read it are written
+   *  for the not-yet-answered state and another dynasty's numbers are not that. Not `squadSort`: a sort key
+   *  carried between saves is a preference, not another family's data. */
+  private resetPerSaveState() {
+    this.pendingSquadReport = null;
+    this.seasonLeaders = null;
+    this.facLoaded = false;
+    this.facLevels = {};
+  }
+
   private async loadSave(id: string) {
     const saves = this.loadSaves(); const save = saves.find((s) => s.id === id); if (!save) return;
+    this.resetPerSaveState();   // before the new save's token, so nothing can repaint save A's screens into B
     setToken(save.token);
+    // ONE ATTEMPT PER SAVE OPENED, NOT PER APP SESSION. `rebuildingMgr` (declared below) bounds the MgrState
+    // rebuild in refreshHubPlayer against an unbounded retry loop, but nothing ever cleared it — and
+    // localStorage eviction is ORIGIN-wide, so every dynasty loses its `fm_mgr_*` at once. The first save
+    // opened therefore spent the session's only attempt, and the next one came back to a hub offering a
+    // prospect over a live club — squad, coins and honours intact, and no `#hub-continue-season` door,
+    // because only that rebuild writes the `starAge` it is gated on. It came back only if the player quit
+    // the app and opened THAT save first, which nothing on screen says. Cleared here, where the active save
+    // changes: the retry loop stays bounded (one attempt per open) and every dynasty gets an attempt.
+    this.rebuildingMgr = false;
     try { this.setMe(await api.me()); save.lastPlayed = Date.now(); this.saveSaves(saves); await this.showHub(); }
     // AND SAY IT WHERE IT CAN BE SEEN. #login-error is the last child of #mainmenu, below the save list,
     // and nothing scrolls it into view — measured at 800x450 it renders below the fold, so clicking a
@@ -1088,6 +1115,7 @@ class Game {
     const handle = ((name.replace(/[^a-zA-Z0-9]/g, '').slice(0, 12) || 'club') + '-' + Math.random().toString(36).slice(2, 6)).toLowerCase();
     const password = Math.random().toString(36).slice(2) + 'Aa1'; // random; the player never sees or types it
     $('login-error').textContent = 'Creating your club…';
+    this.resetPerSaveState();   // a New Game founded mid-session must not inherit the last save's cached screens
     try {
       const r = await api.register(handle, password, name);
       setToken(r.token);
@@ -3426,6 +3454,14 @@ class Game {
     const rec = (m.results ?? []).reduce((a, r) => { r.myGoals > r.oppGoals ? a.wins++ : r.myGoals < r.oppGoals ? a.losses++ : a.draws++; return a; }, { wins: 0, draws: 0, losses: 0 });
     // bank the season prize money (coins → reinvest in facilities), closing the manager economy loop
     try { const r = await api.spSeasonReward({ arcCoins: m.arcCoins ?? 0, pos: t.pos, size: t.size, sponsor: m.sponsor, tier: this.clubTier(), starId: m.starId, promoted: t.pos <= 2 && this.clubTier() > 1, ...rec })   /* the same test the tier move below uses; it is computed after this call */; if (this.account?.coins != null) this.account.coins = r.coins; const prizeLine = `💰 Season prize: +${r.prize.toLocaleString('en-US')}c${r.sponsorBonus ? ` + 📣 ${r.sponsorBonus.toLocaleString('en-US')}c sponsor bonus` : ''}${t.pos === 1 ? ' 🏆 CHAMPIONS!' : ` · ${this.ordinal(t.pos)}`}`; toast(prizeLine); this.pushFeed('💰', `<b>Season prize</b> — <b>${r.prize.toLocaleString('en-US')}c</b>${r.sponsorBonus ? ` plus a <b>${r.sponsorBonus.toLocaleString('en-US')}c</b> sponsor bonus` : ''}, for finishing ${t.pos === 1 ? 'as champions' : this.ordinal(t.pos)}.`, m.season + 1);
+      // AND WHAT THE SEASON'S DECISIONS COST, named. `arcCoins` is banked by applyArcEffect and folded into
+      // the SAME credit as the prize by spSeasonReward, so a season the player bought his way through
+      // arrived as a short payout with nothing anywhere saying why -- he read a bad prize rather than a bill
+      // he had agreed to. Itemised like the facility streams below, for the same reason.
+      // Enforced by tools/playtest/arc_coin_deferral.ts.
+      if (m.arcCoins) this.pushFeed('⚖️', m.arcCoins < 0
+        ? `<b>Your decisions cost the club ${(-m.arcCoins).toLocaleString('en-US')}c</b> this season — the price of every arc choice you took, settled out of this season's money rather than on the day.`
+        : `<b>Your decisions brought the club ${m.arcCoins.toLocaleString('en-US')}c</b> this season, settled into this season's money rather than on the day.`, m.season + 1);
       // WHAT THE CLUB EARNED BY BEING A CLUB, itemised. The facilities pay for the first time, and an income
       // the player cannot see is exactly the invisible effect this fix exists to end — so the gate, the
       // sponsors, the shop and the women's team each report what they brought in.
@@ -4215,14 +4251,23 @@ class Game {
     audio.play('scout'); // the academy scouting board — scout/pick a prospect (career play switches to 'career' in renderCareer)
     $('academy-body').innerHTML = SPINNER;
     try {
-      const { prospects } = await api.prospects();
+      const { prospects, coins, cost } = await api.prospects();
+      // THE ONE PRICED BUTTON WITH NO BALANCE, NO DEAD STATE AND NO QUESTION. Scouting a prospect takes
+      // 300c — about a quarter of a top-flight title prize — off a screen that showed no coin figure at
+      // all, so a short club got a live full-price button and learnt the price from the facade's error
+      // toast AFTER the click, and a club that could pay lost the coins to one press. The facility
+      // upgrade, the hire, the signing and the renewal all carry these same three; this is the fourth.
+      // `cost` comes from the facade rather than being retyped here, so the figure the button quotes, the
+      // figure it gates on and the figure the dialog names are the one api.genesis actually charges.
+      paintCoins('academy-coins', coins);
+      const canScout = coins >= cost;
       const welcome = this.onboarding
         ? `<div class="onboard-welcome"><b>Welcome to ${this.club.name}.</b> Every legend starts as a kid. Here's your first prospect — <b>develop him</b> through his career (age 10→25), graduate him into your squad, and one day his bloodline carries on. Hit <b>Develop →</b> to begin.</div>`
         : '';
       this.onboarding = false;
-      const intro = `<div class="scout-sub">Your <b>academy</b> — young players to <b>develop</b> through a full career (age 10→25): play to each chapter's demands, appoint coaches, make the big calls. At 25 they graduate into a pro for your squad — and when they retire, their <b>bloodline</b> lives on through the next generation. <span class="scout-note">A prospect's <b>pedigree %</b> is the quality his bloodline passes down — a higher pedigree means a stronger natural ceiling to develop toward.</span></div>`
-        + `<div style="margin:10px 0 14px;"><button id="mint-genesis" class="primary">🔎 Scout a new prospect · 300c</button>`
-        + `<div class="scout-sub" style="margin:6px 0 0;">Bring another 10-year-old into your academy to develop alongside your bloodline. The <b>300c</b> is <b>coins</b> — the currency you earn from running your club — so this is you choosing to invest in extra youth.</div></div>`;
+      const intro = `<div class="scout-sub">Your <b>academy</b> — young players to <b>develop</b> through a full career (age 10→25): play to each chapter's demands, appoint coaches, make the big calls. At 25 they graduate into a pro for your squad — and when they retire, their <b>bloodline</b> lives on through the next generation. <span class="scout-note">A prospect's <b>pedigree %</b> is his family's standing — what the name is worth, earned by the careers before him. His <b>★ potential</b> is the ceiling in the genes he inherited, which a father's own long, decorated career lifts — so brothers share one pedigree but rate their own stars.</span></div>`
+        + `<div style="margin:10px 0 14px;"><button id="mint-genesis" class="primary" aria-label="Scout a new prospect for ${cost.toLocaleString('en-US')} coins" ${canScout ? '' : `disabled title="Not enough coins — you need ${cost.toLocaleString('en-US')}c"`}>${canScout ? `🔎 Scout a new prospect · ${cost.toLocaleString('en-US')}c` : `Need 💰 ${cost.toLocaleString('en-US')}c`}</button>`
+        + `<div class="scout-sub" style="margin:6px 0 0;">Bring another 10-year-old into your academy to develop alongside your bloodline. The <b>${cost.toLocaleString('en-US')}c</b> is <b>coins</b> — the currency you earn from running your club — so this is you choosing to invest in extra youth.</div></div>`;
       const rows = prospects.length ? prospects.map((p) => {
         const stars = '★'.repeat(p.potentialStars) + '☆'.repeat(5 - p.potentialStars);
         const gen = p.generation ? ` · gen ${p.generation + 1}` : ''; // 1-indexed to match the Bloodline Tree (PT-136)
@@ -4242,7 +4287,11 @@ class Game {
           + `<div class="lc-honours">${l.card.leagueTitles}🏅 ${l.card.cupTitles}🏆 · ${l.card.apps} apps · ${l.card.seasons} seasons</div>`
           + `<div class="lc-note">${l.card.note}</div></div>`).join('') + `</div>` : '';
       $('academy-body').innerHTML = welcome + intro + rows + hall;
-      $('mint-genesis').addEventListener('click', () => this.mintGenesis());
+      $('mint-genesis').addEventListener('click', () => this.openConfirm(
+        `Scout a new prospect for <b>💰 ${cost.toLocaleString('en-US')}c</b>?`
+        + `<br><span class="cf-sub">A fresh 10-year-old for the academy — a new line of his own, not yours, and the coins do not come back.</span>`
+        + `<br><span class="cf-sub">You have ${coins.toLocaleString('en-US')}c.</span>`,
+        `Scout · 💰 ${cost.toLocaleString('en-US')}c`, () => this.mintGenesis()));
       $('academy-body').querySelectorAll('[data-dev]').forEach((b) => b.addEventListener('click', () => this.openCareer((b as HTMLElement).dataset.dev!)));
     } catch { $('academy-body').innerHTML = '<div class="muted">Could not load — please try again.</div>'; }
   }
@@ -4730,11 +4779,14 @@ class Game {
   private applyArcEffect(e: MgrArcEffect | undefined) {
     if (!e) return;
     const m = this.loadMgr();
-    // The display update stays -- the player should see it move -- but `this.account` is rebuilt fresh by
-    // `api.me()` and `setMe()` replaces it after every buy, sell, renew, release, hire and rollover, so
-    // on its own the delta evaporated. 1,031 arc options across the twelve packs carry a coins effect
-    // and not one of them moved a coin, in either direction. Banked like arcPrestige and arcBoard.
-    if (e.coins && this.account?.coins != null) { this.account.coins = Math.max(0, this.account.coins + e.coins); }
+    // NO COIN WRITE ON THE CLICK. The line that stood here moved the delta onto `this.account.coins`, which
+    // is a RENDER MIRROR and not the treasury: `setMe(await api.me())` replaces the whole object at 19 sites
+    // -- including settleInjuries, which runs after EVERY league fixture -- and renderFacilities writes the
+    // store's balance straight back over it. So the header dropped 680c on the click and silently climbed
+    // back one match later, and the most expensive call on the season screen read as free. The price is real
+    // but DEFERRED: banked in `arcCoins` below and charged at the roll by api.ts's spSeasonReward. Nothing
+    // here may touch the mirror; the tooltip says when the money goes, and nextSeason says when it went.
+    // Enforced by tools/playtest/arc_coin_deferral.ts.
     // ARC MORALE NEVER REACHED THE ONE MAN THE GAME IS ABOUT. A `club.players` row is a live reference
     // into the durable save model, so writing morale straight onto one sticks. The bloodline star is not
     // a row: he is a Token, and `mergedClub()` re-derives him through `tokenToPlayer(t)` — a brand-new
@@ -4804,10 +4856,15 @@ class Game {
       const d = c.effect?.coins ?? 0;
       const over = d < 0 && coins + d < 0;
       const tag = d === 0 ? ''
-        : d < 0 ? ` · <span class="sq-warn">💰−${(-d).toLocaleString('en-US')}c</span>${over ? ` <span class="sq-warn">⚠ empties the bank</span>` : ''}`
+        : d < 0 ? ` · <span class="sq-warn">💰−${(-d).toLocaleString('en-US')}c</span>${over ? ` <span class="sq-warn">⚠ more than the club holds</span>` : ''}`
         : ` · <span class="sq-good">💰+${d.toLocaleString('en-US')}c</span>`;
-      const tip = d < 0 ? `Costs ${(-d).toLocaleString('en-US')}c of club money — you hold ${coins.toLocaleString('en-US')}c`
-        : d > 0 ? `Brings in ${d.toLocaleString('en-US')}c` : '';
+      // WHEN, not just how much. The click banks the price in `arcCoins` and moves no coins (see
+      // applyArcEffect); it is taken at the season roll. Without that sentence a header that does not budge
+      // reads as the click having failed -- which is exactly what the old phantom decrement was papering
+      // over. `over` is likewise only ever "the price is bigger than the balance today": the roll clamps the
+      // credit at `-profile.coins`, so no arc option can empty a bank, and the badge must not say it does.
+      const tip = d < 0 ? `Costs ${(-d).toLocaleString('en-US')}c of club money, taken at the end of the season — you hold ${coins.toLocaleString('en-US')}c today`
+        : d > 0 ? `Brings in ${d.toLocaleString('en-US')}c at the end of the season` : '';
       return `<div class="mgr-arc-choice" data-arcchoice="${c.id}"${tip ? ` title="${tip}"` : ''}><div class="cg-cname">${c.label}${tag}</div><div class="cg-cdescr">${c.desc}</div></div>`;
     }).join('');
     return `<div class="mgr-arc arc-${arc.category}">`

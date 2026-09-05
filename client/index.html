@@ -654,6 +654,10 @@
       .ns-act { font-size: 11px; padding: 4px 8px; }
       /* ── Academy / Career game ── */
       #academy-head { display: flex; align-items: center; gap: 12px; } #academy-head h3 { margin: 0; } #academy-back { margin-left: auto; }
+      /* the academy's coin balance — the same job #club-coins and #season-coins do in their own headers.
+         With no rule of its own it renders at the body default, which is how #me-coins came to sit at 22px
+         on its own line beside readouts at 17px. */
+      #academy-coins { font-family: var(--display); font-size: 14px; color: var(--warn); font-variant-numeric: tabular-nums; }
       /* Trophy Room reuses #academy-head but its back button has a different id — without this it
          sits right next to the title instead of at the far right like every other screen's back button. */
       #trophies-back { margin-left: auto; }
@@ -2343,7 +2347,10 @@
 
       <!-- ACADEMY: the Career game (Layer 1) — develop 10yo prospects into pro players -->
       <div id="academy" class="panel hidden">
-        <div id="academy-head"><h3>🎓 ACADEMY</h3><button id="academy-back">← Back to hub</button></div>
+        <!-- THE COIN CHIP BELONGS TO *THIS* #academy-head. The Trophy Room below reuses the same id and
+             getElementById returns the first, so paintCoins('academy-coins') writes here — on the screen
+             that quotes a 300c price and had no balance on it at all — and the trophies header is left be. -->
+        <div id="academy-head"><h3>🎓 ACADEMY</h3><span id="academy-coins" title="Your coin balance — what you have to spend on scouting a new prospect"></span><button id="academy-back">← Back to hub</button></div>
         <div id="academy-body"></div>
       </div>
 

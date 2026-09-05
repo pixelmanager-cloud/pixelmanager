@@ -9,17 +9,23 @@ import { BIG_SETTINGS } from './prompts/big_settings.js';
 // the engine's own "this went well" threshold — the three resolution beats below must not re-derive it
 import { GOOD_OUTCOME } from './career.js';
 
+// ATMOSPHERE ONLY — never a fixture identity, exactly as big_settings.ts says for the stakes-2 bank
+// beside it. That sweep (PT-155/PT-808) stopped at BIG_SETTINGS, and this bank — the other arm of the
+// same ternary below — kept six lines that named the competition. The ★ label is an INDEPENDENT draw
+// from HUGE_MOMENTS and is on screen as the matchday COMPETITION field (tokens.ts `comp = big ?? …`),
+// so "The Match That Decides Who Goes Down" was resolving "In the cup final, …". Tone is safe; facts
+// are not. Guarded by tools/playtest/huge_setting_fixture.ts.
 const HUGE_SETTINGS = [
-  'in the cup final, the whole ground holding its breath',
-  'with the title on the line',
+  'in the kind of game people take the day off work for',
+  'with no next week to put it right',
   'on the grandest stage of his young life',
   'as sixty thousand roared',
   'in the last minute of the biggest game of the season',
   'in front of a nation watching at home',
-  'in the derby to end all derbies',
-  'with promotion, the title, everything riding on ninety minutes',
-  'on a European night the whole city will remember',
-  'with the trophy close enough to touch',
+  'in a noise with real spite in it',
+  'with everything riding on ninety minutes',
+  'on a night the whole city will remember',
+  'with a whole year of work sitting on one game',
   'in a winner-takes-all decider',
   'under the weight of it',
   'the air heavy in a way it never is on a Tuesday',

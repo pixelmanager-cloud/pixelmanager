@@ -104,7 +104,7 @@ console.log('\n=== 6. how many sons a generation gives (1-3, weighted 20/40/40) 
   ok('the count is deterministic', heirCount(12345, 2) === heirCount(12345, 2));
 }
 
-console.log('\n=== 7. an unplayed brother is a FULL PLAYER, not a stat line ===');
+console.log('\n=== 7. heirAsPlayer returns a full Player, not a stat line (QA-only helper; see F-288 — this is not how a brother reaches the game) ===');
 {
   let withPersonality = 0, withMentals = 0, inBand = 0, n = 0, unusable = 0;
   const roles = ['GK', 'DF', 'MF', 'FW'] as const;

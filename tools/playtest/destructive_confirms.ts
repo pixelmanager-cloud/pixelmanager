@@ -1,9 +1,10 @@
 // AN ACTION THAT DESTROYS SOMETHING THE PLAYER CANNOT GET BACK MUST ASK FIRST.
 //
 // The game already has openConfirm and uses it well in places — quitting mid-match, scaling a facility
-// back, selling a player. Five of the most expensive actions in the game did not ask honestly — two never
+// back, selling a player. Six of the most expensive actions in the game did not ask honestly — two never
 // went through it at all, the third asked without saying what it would cost, the fourth asked about the
-// wrong loss, and the fifth was the unguarded twin of a door that already confirmed:
+// wrong loss, the fifth was the unguarded twin of a door that already confirmed, and the sixth was a
+// priced button that neither asked, nor said what the club had, nor went dead when it could not pay:
 //
 //   The squad report's ✕. That panel is the ONLY surface in the game that emits the data-renew /
 //   data-release buttons — a comment in main.ts says so in as many words — and a man left unrenewed walks
@@ -35,7 +36,13 @@
 //   and makeActivatable makes it the first Tab stop on the match screen and turns Space into a click, so
 //   the keyboard player pressing Space to PAUSE was the likeliest of all to hit it.
 //
-// All five now ask, and all five name what is lost. This probe holds them there, and is written as a rule
+//   The academy's "Scout a new prospect · 300c". The other five lose a thing; this one loses MONEY, and it
+//   was the only priced control in the game carrying none of the three guards the rest have: no balance
+//   anywhere on the screen, no disabled state, no dialog. A club that was short got a live full-price
+//   button and learnt the price from the facade's error toast after the click; a club that could pay lost
+//   300c — about a quarter of a top-flight title prize — to a single press.
+//
+// All six now ask, and all six name what is lost. This probe holds them there, and is written as a rule
 // about the class rather than about these buttons.
 //
 // Run: `npx tsx tools/playtest/destructive_confirms.ts`
@@ -223,6 +230,121 @@ for (const [word, re] of [['the match', /\bmatch\b/i], ['that it is not saved', 
 // onFrame stops on the hidden #matchwrap and only startMatch ever brings it back.
 ok(/onFrame\(dMs: number\) \{\n\s*if \(!this\.engine \|\| \$\('matchwrap'\)\.classList\.contains\('hidden'\)\) return;/.test(src),
    'hiding the match screen still stops the sim dead (the loss being announced)');
+
+// ── scouting a new prospect out of the academy for 300 coins ──
+// The five above lose a thing; this one loses MONEY, and it is here because it failed the same test in the
+// same way. Every other priced control in the game does three things — prints the balance, goes dead when
+// the club cannot pay, asks before it spends — and the academy's "Scout a new prospect" did none of them:
+// a live full-price button on the one screen with no coin readout anywhere, whose only feedback when the
+// club was short was the facade's error toast AFTER the click. main.ts already writes the rule out for the
+// scouting trips: "the button says so before he spends, rather than the facade refusing after the coins
+// are gone." 300c is roughly a quarter of a top-flight title prize, on one unconfirmed press.
+//
+// MUTATION-TESTED, because four of these could otherwise be vacuous: dropping the `disabled` branch from
+// the button turns the four markup checks red; changing `canScout` to `coins >= 0` turns the lifted guard
+// red at 0 and 299; replacing the openConfirm with a bare `this.mintGenesis()` leaves the rendered dialog
+// empty and turns the four message checks red; and moving the `<span id="academy-coins">` into the Trophy
+// Room's copy of #academy-head turns the index.html checks red.
+
+/** The whole `addEventListener(...)` call registered on `id`, PAREN-matched. handlerFor above is
+ *  brace-matched and is wrong for this one: an arrow with no block body has no braces of its own, so that
+ *  scan runs straight past the registration and returns whatever block comes next — a slice that could
+ *  contain someone else's `openConfirm` and pass this whole section on it. */
+function clickCallOf(id: string): string {
+  const at = src.indexOf(`$('${id}').addEventListener('click'`);
+  const open = at >= 0 ? src.indexOf('(', src.indexOf('addEventListener', at)) : -1;
+  if (open < 0) return '';
+  let depth = 0;
+  for (let i = open; i < src.length; i++) {
+    if (src[i] === '(') depth++;
+    else if (src[i] === ')') { depth--; if (depth === 0) return src.slice(open, i + 1); }
+  }
+  return '';
+}
+const mint = clickCallOf('mint-genesis');
+console.log(`  ..   the Scout-a-prospect registration is ${mint.length} char(s) of source`);
+ok(mint.length > 0, 'the academy Scout-a-prospect click registration was found');
+ok(mint.length < 900, '...and the slice is one registration, not a runaway span of the file');
+ok(/openConfirm/.test(mint), 'scouting a new prospect asks before it takes the coins');
+// PRESENCE IS NOT REACHABILITY, the lesson the squad report's ✕ carries above: one call to the spend, and
+// it is the confirmation's callback — a dialog that opens over a purchase already made is worse than none.
+const mintCalls = (mint.match(/this\.mintGenesis\(\)/g) ?? []).length;
+console.log(`  ..   the registration calls mintGenesis() ${mintCalls} time(s)`);
+ok(mintCalls === 1, 'the 300-coin spend is CALLED once, and nowhere but inside openConfirm');
+ok(/openConfirm\([\s\S]*\(\) => this\.mintGenesis\(\)\)\)/.test(mint), '...as the confirmation\'s onYes callback, not before it');
+
+// And it has to SAY the price and the balance, the way the facility upgrade's confirm does. The dialog is
+// BUILT from the facade's own numbers, so it is lifted and evaluated rather than grepped — the way the
+// rollover message above is. A slice that stops being evaluable comes back empty and goes red here rather
+// than passing on a string nobody checked.
+const cfFrom = mint.indexOf('this.openConfirm(');
+const cfTo = mint.indexOf('() => this.mintGenesis()', cfFrom);
+const cfBlock = cfFrom >= 0 && cfTo > cfFrom
+  ? 'return [' + mint.slice(cfFrom + 'this.openConfirm('.length, cfTo).replace(/,\s*$/, '') + '];' : '';
+const scoutConfirm = (cost: number, coins: number): [string, string] => {
+  if (!cfBlock) return ['', ''];
+  try { return new Function('cost', 'coins', cfBlock)(cost, coins); }
+  catch (e) { console.log(`  ..   the scout confirm would not evaluate: ${(e as Error).message}`); return ['', '']; }
+};
+const [scoutMsg, scoutLabel] = scoutConfirm(300, 1234);
+console.log(`  ..   scout confirm: "${plain(scoutMsg)}" [${scoutLabel}]`);
+ok(scoutMsg.length > 0, 'the scout confirmation was rendered from source');
+ok(/\b300c\b/.test(plain(scoutMsg)), 'it names the price it is about to take');
+ok(/\b1,234c\b/.test(plain(scoutMsg)), '...and the balance it comes out of — the figure this screen never showed at all');
+ok(/300c/.test(scoutLabel), 'the confirm button carries the price too, like Upgrade · 💰 and Hire · 💰 do');
+
+// The other half of the rule: the button must not sit there live at full price when the club cannot pay
+// it. The guard is RUN rather than grepped, exactly as the rollover's is — a `canScout` that is true at
+// nought coins renders a button the facade will always refuse, and grep cannot tell that from a good one.
+const acadFrom = src.indexOf('private async showAcademy()');
+const acadTo = acadFrom >= 0 ? src.indexOf(`$('mint-genesis').addEventListener`, acadFrom) : -1;
+const acad = acadFrom >= 0 && acadTo > acadFrom ? src.slice(acadFrom, acadTo) : '';
+console.log(`  ..   showAcademy renders in ${acad.length} char(s) of source`);
+ok(acad.length > 0 && acad.length < 8000, 'the academy render was located (showAcademy, down to the button it wires)');
+ok(/paintCoins\('academy-coins',/.test(acad), 'the academy paints a coin balance into its header — the readout this screen never had');
+const guard = /const canScout = ([^;]+);/.exec(acad)?.[1] ?? '';
+console.log(`  ..   scout guard: canScout = ${guard || '(not found)'}`);
+const canScout = guard ? new Function('coins', 'cost', `return !!(${guard});`) : null;
+ok(canScout !== null, 'the affordability guard was lifted from source (it is what decides whether the button is live)');
+ok(!!canScout && !canScout(0, 300), 'a club with nothing: the button is not offered at full price');
+ok(!!canScout && !canScout(299, 300), 'one coin short: still not offered — the facade would refuse this exact click');
+ok(!!canScout && canScout(300, 300), 'exactly the price: offered');
+ok(!!canScout && canScout(5000, 300), 'a club that can easily pay: offered');
+const btn = /<button id="mint-genesis"[\s\S]*?<\/button>/.exec(acad)?.[0] ?? '';
+console.log(`  ..   scout button: ${btn.replace(/\s+/g, ' ').slice(0, 220)}`);
+ok(btn.length > 0, 'the Scout-a-prospect button markup was found');
+ok(/canScout/.test(btn), 'the button is rendered FROM that guard, not unconditionally');
+ok(/disabled/.test(btn), '...going dead when the club cannot pay');
+ok(/Need 💰/.test(btn), '...and saying "Need 💰" on its face, the way the facility card already does');
+ok(/title="Not enough coins/.test(btn), '...with the reason in a title, for the pointer that does hover');
+// The disabled face says only "Need 💰 300c" — the verb is gone from it — so the accessible name has to
+// carry the action in BOTH states, which is the shape .fac-up already uses on its own disabled twin.
+ok(/aria-label="Scout a new prospect for /.test(btn), '...and an accessible name that still names the action when the face stops doing so');
+
+// The balance has to land on the ACADEMY header and not the Trophy Room's. #academy-head is a duplicated
+// id — index.html gives it to both panels and the stylesheet comment says so — and getElementById returns
+// the first, so a chip dropped into the wrong copy would paint a coin figure over the trophies and leave
+// the screen that quotes the price exactly as bare as it was.
+const html = readFileSync('client/index.html', 'utf8');
+const acadPanel = html.slice(html.indexOf('<div id="academy" class="panel'), html.indexOf('<div id="academy-body">'));
+console.log(`  ..   #academy-head appears ${(html.match(/id="academy-head"/g) ?? []).length} time(s) in index.html, #academy-coins ${(html.match(/id="academy-coins"/g) ?? []).length} time(s)`);
+ok(acadPanel.length > 0 && acadPanel.length < 900, 'the academy panel header was located in index.html');
+ok(/id="academy-coins"/.test(acadPanel), 'the ACADEMY header carries the #academy-coins chip paintCoins writes into');
+ok((html.match(/id="academy-coins"/g) ?? []).length === 1, '...exactly once, so the duplicated #academy-head cannot swallow it');
+ok(acadPanel.includes('academy-coins') && acadPanel.indexOf('academy-coins') < acadPanel.indexOf('academy-back'),
+   '...ahead of the back button, which is what #academy-back{margin-left:auto} pushes to the right');
+ok(/#academy-coins\s*\{/.test(html), 'and the chip has a rule of its own — #me-coins rendered at the body default for want of one');
+
+// AND NO SECOND ONE. The brief that opened this section asked whether another priced spend sits in the
+// same position, so the census is asserted rather than remembered: nine calls in the facade can refuse for
+// want of coins, and a tenth cannot ship without someone coming back here to say which guards it carries.
+// Today — buyPlayer, renewSquadPlayer, negotiateStar, hireStaff, genesis, upgradeFacility and dispatchScout
+// all print a balance and go dead when short; extendPlayer and reborn have no live caller at all. Only
+// dispatchScout skips the dialog on purpose: a trip is 15–140c and its own header carries #scout-coins.
+const apiSrc = readFileSync('client/src/api.ts', 'utf8');
+const refusals = (apiSrc.match(/not enough coins/g) ?? []).length;
+console.log(`  ..   ${refusals} call(s) in the facade refuse for want of coins`);
+ok(refusals === 9, 'the priced-spend census is still nine — a tenth needs its verdict written here before it ships');
 
 console.log(fails ? `\n✗ ${fails} — something irreversible happens without asking` : '\n✓ every irreversible action asks, and says what it costs');
 if (fails) process.exitCode = 1;
