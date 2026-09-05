@@ -641,6 +641,13 @@ export class MatchEngine {
             return;
           }
           this.flow('tackle_won', defTeam, ds.x, def.name, undefined, def.id); // commentary: a turnover won
+          // THE RUN DIES WITH THE POSSESSION — the rule the failed-pass branch below states, at the sibling
+          // site that was left out of it. A forward played in behind and then TACKLED stayed flagged, so
+          // the moment his side won the ball back his `shootP` was still multiplied by CLEAR_RUN_APPETITE
+          // (x12) from anywhere inside 30m. Measured over 90 DEFAULT_TACTICS mirrors: 13.7 armed runs a
+          // match outlived a turnover, 23.8% of every arming, worth 0.05 goals a match on the 6,000-match
+          // fuzz aggregate. Consumes no rng. tools/playtest/clear_run_possession.ts holds the line.
+          this.clearRun[teamIdx] = -1;
           s.carrier = { teamIdx: defTeam, playerIdx: i };
           s.ball = { ...ds };
           return;
@@ -785,7 +792,11 @@ export class MatchEngine {
     // dribble toward goal
     const speed = (1.6 + norm(carrier.attrs.pace) * 3.0) * (hasTrait(carrier, 'livewire') ? 1.06 : 1) * fit(cs.fitness) * TICK_SEC;
     this.stepToward(cs, goal.x, goal.y + (this.rng() - 0.5) * 10, speed);
-    this.drain(cs, carrier, this.mods[teamIdx], 1.2);
+    // Hand the carry the same team conditioning `movePlayers` hands both of its drain sites. Leaving it off
+    // silently took `drain`'s `conditioning = 1` default — an omitted optional argument is not a compile
+    // error and not a runtime one — so the 3.4% of drains that are a man running with the ball ignored the
+    // Training Ground curve, the fitness coach's ×0.95 and the team talk, about 5% of a match's fitness.
+    this.drain(cs, carrier, this.mods[teamIdx], 1.2, this.teams[teamIdx].conditioning ?? 1);
     s.ball = { x: cs.x, y: cs.y };
     // DESIGN D -- LINK 2 OF 2: a carry. Note the y-jitter above means a pace-3.0 dribble is worth well
     // under its own step length in ground actually GAINED, which is why the floor bites hardest here.
@@ -1039,6 +1050,11 @@ export class MatchEngine {
     // restart — not every foul in the box is given; the ref often waves it on / the keeper gathers
     if (this.inBoxOf(defTeam, at)) {
       if (this.rng() < 0.22) { this.takePenalty(atkTeam, defTeam, minute); return; }
+      // Same rule as the tackle branch: the keeper gathering ends the attack, so the run ends with it.
+      // Deliberately NOT done for the ordinary restart at the foot of this function — there the fouled
+      // side keeps the ball with the same man, so possession never changed and the run is still live.
+      // Whether a whistle should also kill a break is a design question, not this defect. No rng.
+      this.clearRun[atkTeam] = -1;
       s.carrier = { teamIdx: defTeam, playerIdx: 0 };
       s.ball = { ...s.players[defTeam][0] };
       return;
@@ -1074,6 +1090,7 @@ export class MatchEngine {
       this.giveKickoff(defTeam);
     } else {
       s.events.push({ minute, type: 'penalty_missed', teamIdx: atkTeam, playerName: taker.name, playerId: taker.id });
+      this.clearRun[atkTeam] = -1; // the keeper restarts: the possession is gone, so the run goes with it
       s.carrier = { teamIdx: defTeam, playerIdx: 0 };
       s.ball = { ...gks };
     }
@@ -1096,6 +1113,7 @@ export class MatchEngine {
     }
     // off target vs saved — either way the keeper restarts
     s.events.push({ minute, type: this.rng() < 0.5 ? 'shot_saved' : 'shot_missed', teamIdx: atkTeam, playerName: taker.name, playerId: taker.id });
+    this.clearRun[atkTeam] = -1; // the keeper restarts: the possession is gone, so the run goes with it
     s.carrier = { teamIdx: defTeam, playerIdx: 0 };
     s.ball = { ...gks };
   }

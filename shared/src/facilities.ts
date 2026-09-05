@@ -100,14 +100,19 @@ export function scoutHitMult(level: number): number { return 1 + (level - 1) * 0
 export function scoutCostDiscount(level: number): number { return (level - 1) * 0.06; }
 /** Scouting HQ: extra scouting trips per season (0 at L1-2, 1 at L3-4, 2 at L5). */
 export function scoutExtraTrips(level: number): number { return Math.floor((level - 1) / 2); }
-/** Medical Centre: injury-chance multiplier (1.0 at L1 → 0.40 at L5). */
+/** Medical Centre: injury-chance multiplier (1.00 at L1 → 0.63 at L5 → 0.35 at L10). */
 // A LINE written for the old five-level cap. When MAX_LEVEL went to 10 this was not rescaled, so it
 // crossed zero at level 8: a maxed Medical Centre made injuries mathematically impossible (measured — 0.0
 // per season against 7.8 at level 1), deleting squad depth, the treatment room and the injury feed
 // outright, and the effect string offered the player "−135% injury chance". Decay instead of a line, so
 // every level is worth buying and none of them ends the system: L1 1.00 → L5 0.63 → L10 0.35.
+// AND THE TWO DOCSTRINGS AROUND THIS NOTE WERE NOT REWRITTEN WITH THE FORMULAS THEY SUMMARISE. They kept
+// the five-level figures ("0.40 at L5", "2 at L5") against a real 0.63 and 1, so the file's own summary of
+// the Medical Centre contradicted the correction printed two lines under it, and whoever priced the
+// facility next read the stale pair. Held now by tools/playtest/facility_comment_truth.ts, which parses
+// every effect docstring in this file and evaluates it against the function beneath it.
 export function injuryChanceMult(level: number): number { return Math.pow(0.89, Math.max(0, level - 1)); }
-/** Medical Centre: matches shaved off a fresh injury's recovery (0 at L1 → 2 at L5). */
+/** Medical Centre: matches shaved off a fresh injury's recovery (0 at L1-3, 1 at L4-6, 2 at L7-10). */
 // Capped at 2 for the same reason: at the 10-level cap this reached 4, which is the longest injury the
 // roll can produce, so every knock healed before the next match.
 export function recoveryCut(level: number): number { return Math.min(2, Math.floor((level - 1) / 3)); }
@@ -126,7 +131,12 @@ export function sponsorIncome(level: number, tierIdx: number, trophies: number, 
   return Math.round(base * brandMult);
 }
 const clampNum = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
-/** Average marketability of a squad (career-built players carry it; ordinary players read neutral). */
+/** Average marketability of a squad (career-built players carry it; ordinary players read neutral).
+ *  NOTHING IN PRODUCTION CALLS THIS. It was `sponsorIncome`'s brand input until that was re-pointed at the
+ *  bloodline star's own token marketability (client/src/api.ts): no mint path sets `marketability` on a
+ *  squad player and the star is not in `club.players`, so over a real squad this returns exactly 10 for
+ *  every club forever. Kept standing because shared/qa_facilities.ts asserts on it — but read it as a
+ *  neutral-average helper, not as the game's brand multiplier, and do not wire it back without a mint path. */
 export function squadMarketability(players: Array<{ marketability?: number }>): number {
   if (!players.length) return 10;
   return players.reduce((s, p) => s + (p.marketability ?? 10), 0) / players.length;
@@ -188,9 +198,15 @@ export function womensIncome(level: number, tierIdx: number): number { return Ma
 //
 // RECALIBRATED, because the first cut of this was wrong and wrong in the way that matters. It claimed the
 // summit earned "roughly 15,100" a season. MEASURED THROUGH THE ACTUAL SEASON ROLL, a club with all twelve
-// at level 10, winning the top flight, with the sponsor trophy term saturated, earns 10,686:
+// at level 10, winning the top flight unbeaten, with the sponsor trophy term saturated, earned 10,449:
 //
 //   prize 1,280 + gate 1,223 + sponsor 5,623 + shop 1,061 + women's 562 + sponsor bonus 700 = 10,449
+//
+// — AND THAT BASKET IS NOW 5,400 LIGHT. It predates DIVISION_MERIT (declared further down this file: 600
+// a division, so 5,400 at the summit), which the league roll pays and which appears in no figure in this
+// paragraph. The same club today earns 15,849 — seasonFacilityIncome pays 13,869 of it, the prize and the
+// sponsor bonus the other 1,980. Everything from here down to the fit is the pre-merit history that
+// produced it; read it as history, and take the live pair from the ANCHOR line.
 //
 // The 15,100 was assembled two mistakes deep: it used seasonPlacementReward (2,886) where the real prize
 // is 1,280, and it added 2,810 of per-match WIN/DRAW/LOSS earnings that the manager season roll does not
@@ -208,10 +224,31 @@ export function womensIncome(level: number, tierIdx: number): number { return Ma
 // at level 5 forever), and a relegated club sat on exactly 0 coins for sixty consecutive seasons with
 // every purchase in the game disabled.
 //
-// Fitted to the real figure: all twelve at maximum now costs 6,804 a season against 10,686 of income, so
-// a champion clears its bill and its wages with something left, a mid-table side has to choose, and
-// nothing below the top flight can hold all twelve. Relegation still has teeth, because upkeep does not
-// fall with the division while income does.
+// Fitted to the real figure — RE-MEASURED 2026-09-05 (F-303), because the pair that stood here (6,804
+// against 10,686) were both numbers this module had stopped producing, and this is the block a balance
+// pass reads before it touches UPKEEP_COEFF. 6,804 was 12 x facilityUpkeep(10) at weight 1 — the flat
+// total, frozen before UPKEEP_WEIGHT (declared below) took women to 0.45 and community to 0.25 — and
+// 10,686 was the merit-free income the paragraph above already calls wrong. Priced through seasonUpkeep
+// and seasonFacilityIncome themselves:
+//
+//   ANCHOR — all twelve at level 10, tierIdx 9, 20 league titles, neutral brand, 18W/0D/0L:
+//   costs 6,067 a season against 13,869 of facility income
+//   (gate 1,223 + sponsor 5,623 + shop 1,061 + women's 562 + merit 5,400), and the season roll pays the
+//   1,280 prize and the 700 sponsor bonus on top of that.
+//
+// So a champion clears its bill and its wages with plenty left, and a mid-table side has to choose. The
+// third claim that stood here — that only the top flight could hold all twelve — went stale with the other
+// two: DIVISION_MERIT pays in every division, so on this same record a maxed club with five league titles
+// clears the bill from tierIdx 4 up (6,257 against 6,067), and one with the trophy term saturated breaks
+// even in the basement (6,241 at tierIdx 0). Relegation still has teeth — upkeep does not fall with the
+// division while income does, and a relegated champion sheds 5,400 of merit alone — but the bill is not
+// what keeps all twelve out of the lower divisions.
+//
+// DO NOT RE-FIT UPKEEP_COEFF AGAINST ANY FIGURE IN THIS BLOCK WITHOUT RE-RUNNING IT. The 6,804 stood here
+// for months, F-193 found the How to play copy quoting it and routed the copy AROUND this note rather
+// than correcting it, and shared/qa_facilities.ts §11 D3 reported the stale income on every qa run without
+// ever failing. tools/playtest/facilities_note_anchors.ts now prices the ANCHOR line above through the
+// real functions and goes red when it drifts.
 //
 // Level 1 is free, like every other neutral baseline in this module, so a young club feels none of this.
 export const UPKEEP_COEFF = 7;
@@ -396,8 +433,11 @@ export function facilityLevelStory(key: FacilityKey, level: number): string | nu
  *  around season 100, leaving the final thirty seasons with nothing to decide.
  *
  *  Three fixes were measured. Cutting the top-end costs reaches those levels but empties the ladder by
- *  season 91. Flattening upkeep does nothing at all — a summit club earns 10,428 against 6,804 of upkeep,
- *  so the running cost was never the constraint; the 14,000 capital cost was. Income that scales with the
+ *  season 91. Flattening upkeep does nothing at all — a summit club earned 10,428 against 6,804 of upkeep
+ *  WHEN THIS WAS MEASURED, which was before this constant existed and before UPKEEP_WEIGHT; the same club
+ *  today is 13,869 against 6,067 (F-303 — the ANCHOR line in the UPKEEP block carries the live pair). The
+ *  conclusion survives either way: the running cost was never the constraint; the 14,000 capital cost was.
+ *  Income that scales with the
  *  CLIMB is the only lever that moved it: at +600 a division, level 9 arrives around season 28 and level 10
  *  around season 66, while seven of twelve facilities are still unbuilt at season 130 and purchases are
  *  still arriving at season 117.

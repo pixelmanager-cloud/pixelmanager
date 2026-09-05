@@ -18,7 +18,7 @@ import {
   transferList, transferFee, sellValue, squadSaleValue, incomingBid, MIN_SQUAD, MAX_SQUAD,
   signSquadContract, staggeredContractSeasons, advanceSquad, squadSeasonsLeft, squadRenewCost, squadSeasonWage, squadStorylines,
   contractDemand, evaluateContractOffer, wageForLength, lengthPremiumFor,
-  FACILITY_KEYS, FACILITY_META, MAX_LEVEL, upgradeCost, effectAt, seasonFacilityIncome, squadMarketability,
+  FACILITY_KEYS, FACILITY_META, MAX_LEVEL, upgradeCost, effectAt, seasonFacilityIncome,
   seasonUpkeep, facilityUpkeep, UPKEEP_WEIGHT, applyDisrepair, mothballRefund, facLevel,
   youthPoolBonus, youthUpgradeChance, dormIntakeBonus, scoutHitMult, scoutCostDiscount, scoutExtraTrips,
   generatePool, trialistAt, LOANEE_CAP, DESTINATIONS, destinationById, rollMission, travelMatchdays, previewOdds,
@@ -1173,7 +1173,10 @@ export const api = {
       // bills out of what it has once the prize money is in, which is what a real one does. A prior review
       // called this a bug on the grounds that disrepair almost never fires — it does not, 9 times in 4,680
       // measured seasons — but the cause is that upkeep is not a binding constraint on the income curve
-      // (6,804 a season against 10,428 at the summit), not that the test reads the wrong number. Logged as
+      // (6,067 a season against 13,869 of facility income at the summit — RE-MEASURED 2026-09-05, F-303;
+      // the 6,804/10,428 that stood here were the pre-UPKEEP_WEIGHT flat bill and a merit-free income, so
+      // correcting both only widens the gap this rests on), not that the test reads the wrong number.
+      // Logged as
       // an economy-balance item rather than patched here, where it would make the club pay bills it can
       // afford out of money it does not yet have.
       const have = getActiveModel().profile.coins;

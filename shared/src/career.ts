@@ -2070,11 +2070,15 @@ export interface Trait { id: string; roles?: Role[]; name: string; desc: string;
 //   - utility described relief from an out-of-position penalty that does not exist. `buildXI` reassigns
 //     only the anchor and keeps every player's own role; nothing anywhere punishes a mis-slotted man. The
 //     trait could not be given an effect, only a penalty invented for it to remove.
-//   - showstopper's natural hook is `squadMarketability` -> `sponsorIncome`, and that chain is BROKEN
+//   - showstopper's natural hook was `squadMarketability` -> `sponsorIncome`, and that chain WAS broken
 //     upstream: no mint path sets `marketability` on a squad player and the bloodline star is not in
-//     `club.players`, so `squadMarketability` returns exactly 10 for every club forever and `brandMult`
-//     is pinned at 1.0. Wiring the trait would have hooked it to a dead number. Repair that chain first
-//     and showstopper is the obvious trait to hang off it.
+//     `club.players`, so `squadMarketability(club.players)` still returns exactly 10 for every club
+//     forever. Commercial income stopped reading it. api.ts looks the STAR's own token marketability up
+//     from the `starId` main.ts passes in, and hands THAT to `sponsorIncome` — so `brandMult` is live:
+//     measured at L10 in the top flight with the trophy term capped, sponsorship pays 4,105 a season at
+//     marketability 1 against 7,310 at 20, a 78% spread. The dead number the trait would have hung off is
+//     a real one now, so showstopper is a design call rather than a blocked one. Do not re-cut it on this
+//     paragraph's old reasoning — tools/playtest/sponsor_brand_comment_truth.ts re-measures the spread.
 // The client keeps display names for both (main.ts's TRAIT map is deliberately a superset of this
 // catalogue) so a save that already carries one still renders it properly instead of a raw slug.
 export const TRAITS: Trait[] = [

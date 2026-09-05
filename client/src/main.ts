@@ -30,8 +30,15 @@ const ICON_MUTED = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3.
 
 /** Single-player manager-season state (per save, in localStorage). `starId` present ⇒ manager phase. */
 interface MgrState { season: number; results: PlayedResult[]; starId?: string; starName?: string; starAge?: number; starGen?: number; retireAge?: number; titles?: number; trainFocus?: string; staff?: string[]; sponsor?: string;
-  // board verdict on the season just gone + that finishing position (feeds next season's expectation)
-  lastBoard?: { message: string; mood: BoardMood; expectation: string }; lastFinishPos?: number;
+  // Board verdict on the season just gone, `expectation` being the bar promised for the NEXT one —
+  // showSeason renders it as "This season they expect …", and the next rollover grades the season against
+  // that promise rather than the band it derives (nextSeason's `shown`/`promised` pair).
+  // The finishing position used to be stored beside it and deliberately is not: its only reader derived
+  // next season's bar from it, a year behind the table, and PT-64/66 replaced that with the just-ended
+  // `t.pos` (the note above `deriveExpectation` in nextSeason says so) — which left a field four sites
+  // wrote and nothing read, under a comment here still promising it fed the expectation. Do not re-add it;
+  // the promised bar is `lastBoard.expectation`.
+  lastBoard?: { message: string; mood: BoardMood; expectation: string };
   /** The club's league strength at the last rollover, so "stronger than last season" has something to
    *  diff against. On the QUALITY scale (clubLeagueStrength), stored UNROUNDED — the interesting deltas
    *  are fractional, and rounding both ends first would hide the drift the line exists to reveal. */
@@ -1884,7 +1891,7 @@ class Game {
       // played. No legacies means generation one, where 0 gives back `profile.season + 1`.
       const lastRet = Math.max(0, ...(model.legacies ?? []).map((l: any) => Number(l.retiredSeason) || 0));
       const season = Math.max(1, (Number(model.profile?.season ?? 0) || 0) - lastRet + 1);
-      const honours: Array<{ season_number: number; tier: string; title: number }> = model.honours ?? [];
+      const honours: Array<{ season_number: number; tier: string; title: number; kind: string }> = model.honours ?? [];
       // THE NEWEST HONOUR THAT ACTUALLY NAMES A DIVISION. Cup honours are filed with an empty tier (a cup
       // is its own competition, so the three cup call sites deliberately pass none) and share the league
       // honour's season number, so `Number('')` is 0, the `>= 1` test fails and setClubTier never ran —
@@ -1897,7 +1904,27 @@ class Game {
       return {
         ...blank,
         season,
-        titles: honours.filter((h) => h.title === 1).length,
+        // A LEAGUE TITLE IS `title === 1` AND `kind === 'league'`. `addHonour` derives `title` from the
+        // finishing position whatever the competition was, and all three cup call sites pass `pos: 1` on a
+        // win — so continental and World Finals wins are filed with `title: 1` and an empty tier, and this
+        // count read them back as league titles while the cup lines themselves said nothing (contTitles and
+        // wcWins are not rebuilt). Same predicate the sponsorship weighting uses (api.ts, `h.title && h.kind === 'league'`).
+        titles: honours.filter((h) => h.title === 1 && h.kind === 'league').length,
+        // ...AND THE OFFSET THAT MAKES THAT COUNT ONE MAN'S AGAIN. `titles` is a dynasty-LIFETIME counter
+        // that resetMgrForHeir carries on purpose, and the send-off prints `titles - titlesBanked`. Only
+        // resetMgrForHeir ever stamps that mark and it does not run on a recovery — so restoring the count
+        // without it put every ancestor's silverware into one man's send-off against an `era` of his own
+        // seasons ("9 seasons and 12 league titles"), the impossible sentence send_off_honours.ts exists to
+        // prevent, walking back in through the eviction door.
+        // `<`, NOT `<=`: an honour is stamped with profile.season BEFORE the league roll advances it while
+        // `retiredSeason` is read after it, so the HEIR's first title is filed at exactly `lastRet` and
+        // `<=` would bank it onto his father — the same wrong number in the other direction.
+        titlesBanked: honours.filter((h) => h.title === 1 && h.kind === 'league' && h.season_number < lastRet).length,
+        // Stated rather than defaulted: contTitles/wcWins are NOT restored, so a rebuilt send-off names no
+        // cups at all. That under-count is deliberate — silence beats a false claim — but anyone who later
+        // restores a cup counter has to move these with it, or the send-off starts crediting one man with
+        // the whole house's cups exactly the way it did with its titles.
+        contBanked: 0, wcBanked: 0, cupsBanked: 0,
         ...(star ? { starId: star.id, starName: star.name, starGen: star.generation ?? 0 } : {}),
       } as MgrState;
     } catch { return blank; }
@@ -1938,7 +1965,7 @@ class Game {
       ...prior,
       // the season, the man, and everything scoped to the career just ended
       season: 1, results: [], starId: undefined, starName: undefined, starAge: undefined,
-      sponsor: undefined, lastBoard: undefined, lastFinishPos: undefined, lastTierMove: undefined,
+      sponsor: undefined, lastBoard: undefined, lastTierMove: undefined,
       arcNow: null, arcLastMd: undefined, arcBoard: 0,
       squadReport: undefined, squadReportSeason: undefined,
       contElig: undefined, contRound: 0, contOut: false, contBlurb: undefined,
@@ -2456,7 +2483,9 @@ class Game {
       // owned asset overstated it by 12% at both anchors. That is F-044 (copy priced at weight 1 while the
       // club is billed with UPKEEP_WEIGHT) surviving at the surface that fix did not reach, and this bullet
       // is the permanent one — Settings → How to play re-shows it long after the card is dismissed. Do not
-      // re-derive these from the design note at facilities.ts:205, which still carries the stale 6,804;
+      // re-derive these from the design note in facilities.ts either: routing this copy AROUND a wrong
+      // comment left the comment wrong, and it carried the same stale 6,804 for months afterwards
+      // (corrected in F-303, and gated now by tools/playtest/facilities_note_anchors.ts).
       // tools/playtest/help_upkeep_copy.ts prices them through seasonUpkeep on every run.
       `<b>🏛️ Upkeep.</b> Every facility level costs coins <b>every season</b>, and the cost climbs steeply — all twelve at level 5 runs about <b>1,198c</b> a season, at level 10 about <b>6,067c</b>, against a top-flight title prize of 1,280c. If the club can't pay, a facility <b>falls into disrepair and loses a level</b>. You can also <b>Scale back</b> a facility yourself on the Club screen to cut the bill and recover 40% of what the level cost. Climbing a division is what makes a big club affordable.`,
       // PT-501 — morale drives renew cost and sale value, and nothing said what moved it
@@ -3503,7 +3532,7 @@ class Game {
       //
       // `resetMgrForHeir` puts the season back to 1 when the heir is chosen; this only has to make the
       // state safe in the window between the send-off and that choice.
-      this.saveMgr({ ...this.loadMgr(), season: m.season + 1, results: [], arcLastMd: undefined, arcCoins: 0, starAge: age, titles, sponsor: undefined, lastFinishPos: t.pos });
+      this.saveMgr({ ...this.loadMgr(), season: m.season + 1, results: [], arcLastMd: undefined, arcCoins: 0, starAge: age, titles, sponsor: undefined });
       // AND THE FEED SAYS WHOSE RETIREMENT IT WAS. `retirement` had exactly one emitter — the squad
       // report's per-player loop — and that loop narrates `advanceSquad`'s retired list, which is built
       // from the raw `club.players`. The bloodline star is a Token and is never in that array (he is
@@ -3546,7 +3575,7 @@ class Game {
     // is the tell: the cause was never fixed, only the two symptoms someone noticed. Measured effect: the
     // upkeep bill, the disrepair announcement, the running-on-empty warning, the promotion/relegation
     // narration and the prestige rank-up were ALL deleted before the player could read any of them.
-    this.saveMgr({ ...this.loadMgr(), season: m.season + 1, results: [], arcLastMd: undefined, arcCoins: 0, starAge: age, titles, sponsor: undefined, contElig: qualified, contRound: 0, contOut: false, contBlurb: undefined, wcStage: undefined, wcEdition: undefined, wcRun: undefined, lastBoard, lastFinishPos: t.pos, lastStrength: ef.raw, lastTierMove: promoted ? 'promoted' : relegated ? 'relegated' : undefined, arcBoard: 0 });
+    this.saveMgr({ ...this.loadMgr(), season: m.season + 1, results: [], arcLastMd: undefined, arcCoins: 0, starAge: age, titles, sponsor: undefined, contElig: qualified, contRound: 0, contOut: false, contBlurb: undefined, wcStage: undefined, wcEdition: undefined, wcRun: undefined, lastBoard, lastStrength: ef.raw, lastTierMove: promoted ? 'promoted' : relegated ? 'relegated' : undefined, arcBoard: 0 });
     this.checkAchievements(); // titles / seasons / prestige milestones
     this.showSeason();
   }
@@ -5116,7 +5145,7 @@ class Game {
         // the family built is the whole point of the game and carries.
         this.saveMgr({
           ...prior,
-          season: 1, results: [], arcLastMd: undefined, lastBoard: undefined, lastFinishPos: undefined, arcBoard: 0,
+          season: 1, results: [], arcLastMd: undefined, lastBoard: undefined, arcBoard: 0,
           sponsor: undefined, contElig: undefined, contRound: 0, contOut: false, contBlurb: undefined,
           wcStage: undefined, wcEdition: undefined, wcRun: undefined, squadReport: undefined,
           // ...AND THE LEDGERS THE SEASON COUNTER INDEXES INTO, which is the half this literal was missing.
@@ -6473,12 +6502,16 @@ class Game {
   private renderMatchReport(events: MatchEvent[], score: [number, number]) {
     const [h, a] = score;
     const home = this.homeName, away = this.awayName;
-    // Key everyone by teamIdx+name, NOT name alone — both squads draw from the same 18×18 name pool, so a
-    // namesake across the two sides would otherwise merge into one scorer/assister/POTM on the wrong team (PT-117).
-    const nkey = (team: 0 | 1, name: string) => `${team}|${name}`;
+    // KEY EVERYONE BY teamIdx+ID, NOT BY NAME. `generateClub` draws a twenty-man roster from 18 first names
+    // × 18 surnames, so a squad routinely carries two different men under one name and a `teamIdx|name` key
+    // merged them: the full-time card credited a brace, an assist or Player of the Match to a man who had
+    // done it once, while the commentary feed one screen earlier — id-keyed since goalLine's `tkey` — named
+    // the right man about the same match. The scorer's id is `playerId` and the assister's is `playerId2`;
+    // the name stays as the display field the map values already carry (PT-117).
+    const nkey = (team: 0 | 1, id: string) => `${team}|${id}`;
     const goalsBy = new Map<string, { team: 0 | 1; name: string; mins: number[] }>();
     for (const e of events) if (e.type === 'goal' && e.playerName) {
-      const k = nkey(e.teamIdx, e.playerName);
+      const k = nkey(e.teamIdx, e.playerId ?? e.playerName);
       const g = goalsBy.get(k) ?? { team: e.teamIdx, name: e.playerName, mins: [] };
       g.mins.push(e.minute); goalsBy.set(k, g);
     }
@@ -6510,19 +6543,24 @@ class Game {
     const names = [...goalsBy.values()];
     const scLine = names.length ? 'Scorers: ' + names.map((g) => `${g.name} (${g.mins.map((m) => m + "'").join(', ')})`).join(' · ') : 'A goalless stalemate.';
     const assists = new Map<string, { name: string; count: number }>();
-    for (const e of events) if (e.type === 'goal' && e.playerName2) { const k = nkey(e.teamIdx, e.playerName2); const a2 = assists.get(k) ?? { name: e.playerName2, count: 0 }; a2.count++; assists.set(k, a2); }
+    for (const e of events) if (e.type === 'goal' && e.playerName2) { const k = nkey(e.teamIdx, e.playerId2 ?? e.playerName2); const a2 = assists.get(k) ?? { name: e.playerName2, count: 0 }; a2.count++; assists.set(k, a2); }
     const asLine = assists.size ? `<div class="scorers">🅰 Assists: ${[...assists.values()].map((a2) => a2.count > 1 ? `${a2.name} ×${a2.count}` : a2.name).join(' · ')}</div>` : '';
     // CONTRIBUTIONS: goals (×2) + assists (×1), with each player's side — so a playmaker's or a non-scoring
     // game is visible, POTM can be an assister (0-0s + assist-only games get a POTM), and your OWN star isn't
-    // upstaged on his own report by the opponent's scorer (PT-74). Keyed by teamIdx+name so namesakes don't merge (PT-117).
+    // upstaged on his own report by the opponent's scorer (PT-74). Keyed by teamIdx+id so namesakes don't
+    // merge — and `bump` takes the id separately from the display name because the ASSISTER's id is
+    // `playerId2`: passing the scorer's `playerId` for both would file every assist under its own goal (PT-117).
     const contrib = new Map<string, { pts: number; team: 0 | 1; name: string; goals: number; assists: number }>();
-    const bump = (name: string, team: 0 | 1, dg: number, da: number) => { const k = nkey(team, name); const e = contrib.get(k) ?? { pts: 0, team, name, goals: 0, assists: 0 }; e.goals += dg; e.assists += da; e.pts += dg * 2 + da; contrib.set(k, e); };
-    for (const e of events) if (e.type === 'goal') { if (e.playerName) bump(e.playerName, e.teamIdx, 1, 0); if (e.playerName2) bump(e.playerName2, e.teamIdx, 0, 1); }
+    const bump = (id: string, name: string, team: 0 | 1, dg: number, da: number) => { const k = nkey(team, id); const e = contrib.get(k) ?? { pts: 0, team, name, goals: 0, assists: 0 }; e.goals += dg; e.assists += da; e.pts += dg * 2 + da; contrib.set(k, e); };
+    for (const e of events) if (e.type === 'goal') { if (e.playerName) bump(e.playerId ?? e.playerName, e.playerName, e.teamIdx, 1, 0); if (e.playerName2) bump(e.playerId2 ?? e.playerName2, e.playerName2, e.teamIdx, 0, 1); }
     // spotlight the bloodline star when HE features — goals AND assists (not goals only) (PT-21/PT-74). The star
     // is on the manager's side, which is home (teamIdx 0) at home and away (teamIdx 1) away — see mySide in startMatch.
-    const starName = this.loadMgr().starName;
+    // His key moves to his id with everyone else's, or it can never match a contrib key again: the ⭐ line
+    // below would silently stop rendering on every report and the POTM tie-break at `ranked` would become a
+    // comparison that is always false. `starId` is the same roster id the engine stamps on the events.
+    const { starId, starName } = this.loadMgr();
     const myTeamIdx: 0 | 1 = this.spFixture?.venue === 'home' ? 0 : 1;
-    const starKey = starName ? nkey(myTeamIdx, starName) : undefined;
+    const starKey = starName ? nkey(myTeamIdx, starId ?? starName) : undefined;
     const sc = starKey ? contrib.get(starKey) : undefined;
     const starLineFt = sc && (sc.goals || sc.assists)
       ? `<div class="scorers ft-star">⭐ <b>${starName}</b> ${sc.goals ? `got on the scoresheet${sc.goals >= 2 ? ` — ${sc.goals} goals` : ''}${sc.assists ? ` and set up ${sc.assists}` : ''}` : `set up ${sc.assists} goal${sc.assists > 1 ? 's' : ''}`}</div>`

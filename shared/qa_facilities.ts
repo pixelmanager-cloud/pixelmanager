@@ -556,13 +556,18 @@ console.log('\n=== 11. MEASURED (not gated) — findings ===');
   console.log(`      (Whole-library census: the highest facility gate in all ${FACILITY_GATED_ARCS.length} gated arcs is L${maxGate}.`);
   console.log('      Levels 6-10 unlock no story content for ANY facility; the other eleven have a multiplier to grow.)');
 
-  console.log('\n  D3  THE UPKEEP COMMENT BLOCK IS WRONG ABOUT SUMMIT INCOME FOR THE THIRD TIME.');
+  // WAS wrong, past tense, and REPORTING IT HERE IS WHAT LET IT STAND. This entry printed the real summit
+  // income on every qa run while the block above it kept quoting 10,686, because §11 is not gated by
+  // house rule — so the one thing that had measured the defect could not fail on it. Corrected in F-303,
+  // and the block now carries an ANCHOR line that tools/playtest/facilities_note_anchors.ts prices through
+  // seasonUpkeep and seasonFacilityIncome and goes red on. Kept here because the drift is worth showing.
+  console.log('\n  D3  THE UPKEEP COMMENT BLOCK WAS WRONG ABOUT SUMMIT INCOME FOR THE THIRD TIME — NOW GATED.');
   const summit = seasonFacilityIncome(MAXF, TIERS - 1, 20, 10, RECORDS[0]);
-  console.log(`      It states 10,686 (and corrects an earlier 15,100 and a 10,449). Computed today: ${fmt(summit.total)}`);
+  console.log(`      It stated 10,686 (having already corrected a 15,100 and a 10,449). Computed today: ${fmt(summit.total)}`);
   console.log(`      = gate ${fmt(summit.gate)} + sponsor ${fmt(summit.sponsor)} + shop ${fmt(summit.shop)} + women ${fmt(summit.womens)} + merit ${fmt(summit.merit)}.`);
   console.log(`      The DIVISION_MERIT term (+${fmt(DIVISION_MERIT)}/division, ${fmt(summit.merit)} at the summit) was added BELOW the block`);
   console.log(`      and the coefficient fitted above it was never redone. Understated by ${fmt(summit.total - 10686)} (+${((summit.total / 10686 - 1) * 100).toFixed(0)}%).`);
-  console.log('      Its design claim "nothing below the top flight can hold all twelve" is measured false:');
+  console.log('      Its design claim that nothing below the top flight could hold all twelve is measured false:');
   for (const t of TIER_IDXS) {
     const i = seasonFacilityIncome(MAXF, t, 0, 10, RECORDS[1]).total;
     if (i > seasonUpkeep(MAXF)) console.log(`        tierIdx ${t} (division ${TIERS - t}) clears the bill: ${fmt(i)} vs ${fmt(seasonUpkeep(MAXF))} on a 12-3-3 season with no trophies`);
@@ -583,10 +588,10 @@ console.log('\n=== 11. MEASURED (not gated) — findings ===');
   console.log(`      effectAt = "${effectAt('stadium', facLevel(corrupt, 'stadium'))}"`);
   console.log('      seasonFacilityIncome reads fac.stadium / fac.sponsor / fac.fanzone RAW while the five newer keys get `?? 1`.');
 
-  console.log('\n  D6  TWO DOCSTRINGS CONTRADICT THE CODE ON THE LINE BELOW THEM.');
-  console.log(`      injuryChanceMult: docstring says "1.0 at L1 → 0.40 at L5"; it returns ${injuryChanceMult(5).toFixed(3)} at L5.`);
-  console.log('        The comment three lines further down says "L5 0.63" — the file disagrees with itself.');
-  console.log(`      recoveryCut: docstring says "0 at L1 → 2 at L5"; the ladder is ${LEVELS.map(recoveryCut).join(',')} — L5 is ${recoveryCut(5)}.`);
+  console.log('\n  D6  TWO DOCSTRINGS CONTRADICTED THE CODE ON THE LINE BELOW THEM. Corrected, now gated.');
+  console.log(`      injuryChanceMult said "0.40 at L5" and returns ${injuryChanceMult(5).toFixed(3)}; recoveryCut said "2 at L5" and the ladder is ${LEVELS.map(recoveryCut).join(',')}.`);
+  console.log('      Both now state the curve the code has. tools/playtest/facility_comment_truth.ts parses every effect');
+  console.log('      docstring in facilities.ts and evaluates it against the function beneath it — printing a defect is not gating it.');
 
   console.log('\n  D7  THE GATE PAID FOR TEN HOME MATCHES IN AN EIGHTEEN-FIXTURE SEASON. Closed twice, now gated.');
   // MEASURED THROUGH seasonFacilityIncome. This entry used to re-implement the old independent-rounding
