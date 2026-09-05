@@ -819,7 +819,13 @@ const LIFE_CONSEQUENCE: Record<LifeKind, { good: Partial<Record<MeterKey, number
   injury_comeback:  { good: { authority: 6, family: 4 },  bad: { authority: -4, family: -4 } },
   transfer_rumour:  { good: { agent: 8, fans: -2 },       bad: { agent: -4, peers: -6 } },
   manager_fallout:  { good: { authority: 4, peers: 4 },   bad: { authority: -14 } },
-  charity:          { good: { fans: 10, family: 4 },      bad: { fans: 2 } },
+  // The same two rules as the block above, broken by one row. `bad` was `{ fans: 2 }`: dropped whole at
+  // Scholar/Youth Team, where `fans` is not an active meter and there is no `earnBad` to fall back on, and
+  // from Breakthrough on it PAID +2 fans for the outcome narrate.ts prints "that didn't land" prose over —
+  // the only positive-signed bad branch in this table. Now mirrors its own good branch, sized under media's
+  // -6, a fumbled community day being the lightest way to be publicly disappointing.
+  // tools/playtest/life_branch_bites.ts crosses every row with the chapters it can actually fire in. (F-312)
+  charity:          { good: { fans: 10, family: 4 },      bad: { fans: -4, family: -4 } },
   // A storm reaches the coach and the dressing room long before it reaches a sponsor. Sized against the
   // neighbours — fallout's -12 peers and manager_fallout's -14 authority are the heavy ones; this is a
   // middling event and takes middling numbers.
@@ -2233,6 +2239,42 @@ export function prospectValuation(c: Career, genes: Genes): ProspectValue {
   const potential = Math.round(current + remaining * (ceiling - current)); // projected prime if developed well
   const stars = clamp(Math.round((potential + remaining * 3) / 4.2 * (c.agent?.valueMod ?? 1)), 1, 5); // a good agent markets the prospect (higher perceived value)
   return { age: c.age, chapter: c.chapter, role, currentOverall: current, potential, physicalCeiling: Math.round(geneCeil), stars };
+}
+
+/** THE BEST HE HAS EVER BEEN AS A SENIOR — a peak, re-derived from the log, not a snapshot of today.
+ *
+ *  `prospectValuation().currentOverall` is NOT monotonic: `deriveStats` re-reads the WHOLE log every turn
+ *  (shape through `norm`, magnitude through `avgSuccess`), so a flat fortnight can cost a point. Anything
+ *  that multiplies a career-long SPAN by a THRESHOLDED function of it therefore counts backwards, and the
+ *  international cap total did: `round((turn - 60) * rate(currentOverall))` fell in 37 of the 80 careers
+ *  tools/playtest/caps_monotonic.ts drives, 89 times, by as much as 8 caps in a single turn, and at 0 it
+ *  dropped a capped man back to "Uncapped". A career record cannot go down.
+ *
+ *  Two details make this monotonic BY CONSTRUCTION rather than by luck, and both were measured first:
+ *
+ *  - The window starts at the senior turn, never at turn 1. `norm` divides every tag by the career's own
+ *    strongest, so a two-card log has one tag at 1.0 and grades out at 15 overall; a peak taken over the
+ *    whole log finds that artefact rather than a career high (measured: the argmax sat at k=2 and k=4) and
+ *    doubled the cap count. Only prefixes long enough to mean anything are considered.
+ *  - `attrFocus` is deliberately NOT passed. It is the one `deriveStats` input that changes underneath a
+ *    re-derivation of the PAST — the active coach adds COACH_TAG_WEIGHT every turn his specialty is
+ *    played, an arc's `attr` effect can subtract — so it is not monotonic itself (measured: composure
+ *    27 -> 26 across one summer). Feed it in and an earlier term shrinks and the maximum falls — still 1
+ *    fall over a wider 320-career sweep, which is the screenshot this exists to prevent. Every term here
+ *    is frozen instead, so a maximum over a growing window can only rise.
+ *
+ *  It reads about 0.7 low against the live number, which is what a count that never goes down costs here.
+ *  tools/playtest/caps_monotonic.ts holds it to that. */
+export function peakSeniorOverall(c: Career, genes: Genes): number {
+  let peak = 0;
+  // 60 is the senior turn the cap window itself starts at — see careerState's `(c.turn - 60) * rate`.
+  // Bound by the log, not by `turn`: never derive a prefix longer than the career has actually played.
+  for (let k = 60; k <= c.log.length; k++) {
+    const a = deriveStats(c.log.slice(0, k), c.seed, genes);
+    const ov = careerOverall(a, deriveRole(a));
+    if (ov > peak) peak = ov;
+  }
+  return peak;
 }
 
 // ── balance helper: auto-play a career under a "style" policy (picks the best hand card) ──

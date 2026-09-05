@@ -3536,3 +3536,42 @@ comments were standing in for.**
   medallion — and the succession already gives him a future through his sons.
 
 I did not choose, because (a) is a feature and (b) is a retreat from something you asked for by name.
+
+## §106 — a mechanic the panel narrates and the code cancels, and un-cancelling it makes the game easier
+
+Two chapter-consequence notes promise an energy swing — "❤️ Settled and happy at home" (+12) and "💔 a
+draining few months" (−18). `career.ts` folds that swing *inside* the PT-158 summer-restore floor, so it
+only reaches the player when the restore would have overshot 85 anyway.
+
+**Measured, 240 paired summers per direction, same seed played three times with the partner meter pinned
+high / neutral / low:** the +12 left the player a mean of **0.05 energy** better off than the control and
+moved him at all in **2 of 240** summers. The −18 cost **0.01 of 18**, biting in 1 of 240. The realised
+fraction is, to two decimal places, zero. The panel narrates a consequence the code cancels.
+
+The one-line fix (apply the consequence *after* the floor) works exactly: 12.00 of 12 in 240/240, 18.01 of
+18 in 240/240, and the floor still protects — the worst a summer can leave him on becomes 67, nowhere near
+the permanent hole PT-158 was written against.
+
+**So why it is here and not in a commit — two things, and the first is the real one.**
+
+**It is a one-way difficulty softening.** Over 400 careers each on identical seeds, turns carrying the
+sub-35 fatigue penalty fall **28.21% → 22.39%** — a 21% relative cut in the *only* mechanical consumer of
+energy. Brilliant outcomes 19.40% → 20.32%, mean energy 52.14 → 56.42. That is not a neutral repair,
+because the consequence table is overwhelmingly positive in practice: 250 neutral careers produced 517
+firings of +8, 22 of +12, 119 of +20 and **zero** negatives. Reviving the mechanic makes the game easier,
+in exactly the direction PT-158's author deliberately moved away from ("difficulty now comes from the
+intended lever rather than from the player being exhausted").
+
+**And it breaks save compatibility.** 6 of the 11 committed golden careers graduate a different player, so
+`golden_replay` goes red until the fixture is regenerated — which is a deliberate act meaning existing
+saves no longer replay the same way.
+
+- **(a) Ship the fix and shrink the authored deltas** so the post-floor swing is smaller. Keeps the mechanic
+  honest without handing back 6 points of fatigue pressure. **Recommended** — it is the only option where
+  the panel tells the truth *and* the difficulty curve survives.
+- **(b) Ship the fix as-is** and accept the softening. Simplest, and defensible if you think the fatigue
+  penalty bites too hard today.
+- **(c) Delete the energy promise from the two note strings**, so the panel stops narrating a mechanic that
+  does not exist. Cheapest, changes no balance and no saves — and it is the honest version of leaving it.
+
+Whichever way: (a) and (b) need `GOLDEN_WRITE=1` and a regenerated fixture in the same commit.

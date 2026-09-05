@@ -1,7 +1,8 @@
 // AN ACTION THAT DESTROYS SOMETHING THE PLAYER CANNOT GET BACK MUST ASK FIRST.
 //
 // The game already has openConfirm and uses it well in places — quitting mid-match, scaling a facility
-// back, selling a player. Two of the most expensive actions in the game did not go through it:
+// back, selling a player. Three of the most expensive actions in the game did not ask honestly — two
+// never went through it at all, and the third asked without saying what it would cost:
 //
 //   The squad report's ✕. That panel is the ONLY surface in the game that emits the data-renew /
 //   data-release buttons — a comment in main.ts says so in as many words — and a man left unrenewed walks
@@ -14,8 +15,14 @@
 //   star. The only note on that screen pushes the player TOWARD the button, saying the offer will not come
 //   again.
 //
-// Both now ask, and both name what is lost. This probe holds them there, and is written as a rule about
-// the class rather than about these two buttons.
+//   "Sell the star" on a mid-season bid. Its banner is offered ONLY while the season is running, and
+//   accepting reaches the SAME reset through retireStar → bringThroughHeir → resetMgrForHeir. On top of the
+//   erased fixtures the year's money goes: the league prize, the sponsor bonus and the whole of
+//   seasonFacilityIncome are paid once, by nextSeason, and that call is never reached. The confirm named
+//   only the star leaving — a fee on screen, and no mention of the campaign it ends.
+//
+// All three now ask, and all three name what is lost. This probe holds them there, and is written as a rule
+// about the class rather than about these buttons.
 //
 // Run: `npx tsx tools/playtest/destructive_confirms.ts`
 import { readFileSync } from 'node:fs';
@@ -76,5 +83,27 @@ for (const word of ['season', 'sponsor']) {
   ok(new RegExp(word, 'i').test(reins), `the confirmation names what is lost ('${word}')`);
 }
 
-console.log(fails ? `\n✗ ${fails} — something irreversible happens without asking` : '\n✓ both irreversible actions ask, and say what they cost');
+// ── selling the star out of a running season ──
+// The message, not the whole method: bounded by `this.openConfirm(` and the confirm's own label, so a
+// mis-slice can only come back empty (loud) and can never swallow enough of main.ts for these words to be
+// found somewhere else and pass vacuously. 'season' and 'sponsor' appear all over this file; inside a
+// 450-character dialog they mean what they say.
+const bidAt = src.indexOf('private acceptStarBid(');
+const msgAt = bidAt >= 0 ? src.indexOf('this.openConfirm(', bidAt) : -1;
+const msgEnd = msgAt >= 0 ? src.indexOf(", 'Sell the star'", msgAt) : -1;
+const sell = msgEnd > msgAt ? src.slice(msgAt, msgEnd) : '';
+console.log(`  ..   the sell-the-star confirm message is ${sell.length} char(s) of source`);
+ok(sell.length > 0, 'the sell-the-star confirmation was found (openConfirm, up to its own label)');
+ok(sell.length < 1200, '...and the slice is one dialog, not a runaway span of the file');
+// It has to SAY what it costs, exactly as the take-the-reins confirm above does — the write is the same one.
+for (const [word, re] of [['season', /\bseason\b/i], ['results', /\bresult/i], ['the money', /\bprize\b|\bincome\b/i], ['sponsor', /\bsponsor\b/i], ['cup run', /\bcup run\b/i]] as const) {
+  ok(re.test(sell), `the sale confirmation names what is lost ('${word}')`);
+}
+// AND THE WARNING MUST STAY TRUE. If the sale ever stops tearing the season down, this copy becomes a lie
+// and has to be rewritten with it; that is why the destructive write is asserted here and not assumed.
+const heirReset = src.slice(src.indexOf('private resetMgrForHeir()'), src.indexOf('private resetMgrForHeir()') + 900);
+ok(/season: 1, results: \[\]/.test(heirReset) && /sponsor: undefined/.test(heirReset),
+   'the succession the sale runs into still clears the season, its results and the sponsor (the loss being announced)');
+
+console.log(fails ? `\n✗ ${fails} — something irreversible happens without asking` : '\n✓ every irreversible action asks, and says what it costs');
 if (fails) process.exitCode = 1;

@@ -1819,8 +1819,19 @@ class Game {
         $('hub-scout').addEventListener('click', () => this.showAcademy());
         return;
       }
-      // active bloodline = the one already in development, else the newest prospect
-      const active = prospects.find((p) => p.careerStarted) ?? prospects[prospects.length - 1];
+      // active bloodline = the one already in development, else THE MAN ON THE LINE, else the newest
+      // prospect. The middle arm is not optional: for the whole window between a succession and the first
+      // "Develop him →", nothing in the pool is `careerStarted` (rebornFields leaves the heir's career_seed
+      // null) and `prospects[length - 1]` is by construction a brother or a cousin — succeed() reworks the
+      // trunk token IN PLACE and mints the branches after it. So this row named a man the player had just
+      // passed over, under a heading that promises the one he is living, with his own "Develop" button
+      // under it. `branch` still moves when the player takes a brother: startCareer flips HIM to 'played'
+      // and demotes the heir he was chosen over, so there is only ever one man here to find.
+      // STILL WRONG FOR ONE MAN, and measured: `createToken` stamps 'played' on a bought 300-coin outsider
+      // too, so an outsider bought before the line moved onto a brother sits ahead of the heir in token
+      // order and wins this find. The expression above him got that case wrong as well — it is a defect
+      // about strangers rather than about brothers, and it wants its own fix.
+      const active = prospects.find((p) => p.careerStarted) ?? prospects.find((p) => p.branch === 'played') ?? prospects[prospects.length - 1];
       const stars = '★'.repeat(active.potentialStars) + '☆'.repeat(5 - active.potentialStars);
       const gen = active.generation ? ` · gen ${active.generation + 1}` : ''; // 1-indexed to match the Bloodline Tree (founder = gen 1) (PT-136)
       const more = prospects.length > 1 ? `<div class="hp-meta" style="margin-top:6px;">+${prospects.length - 1} more in the academy</div>` : '';
@@ -3629,7 +3640,18 @@ class Game {
   };
   private acceptStarBid(bid: { club: string; fee: number }, m: MgrState) {
     const surname = (m.starName ?? '').trim().split(/\s+/).slice(1).join(' ') || 'the family';
-    this.openConfirm(`Sell <b>${m.starName}</b> to <b>${bid.club}</b> for <b>${bid.fee.toLocaleString('en-US')}c</b>? He leaves the club now — and the next of the <b>${surname}</b> line comes through early to carry the name on.`, 'Sell the star', () => {
+    // SAY WHAT THE SALE COSTS. The bid banner is offered ONLY mid-season (`!done` in its guard), so accepting
+    // runs retireStar → bringThroughHeir → resetMgrForHeir, which writes `season: 1, results: [], sponsor:
+    // undefined, contElig: undefined` — the running campaign, its fixtures, the sponsor deal and any cup run,
+    // gone. The season's money goes with them: the league prize, the sponsor bonus and the whole of
+    // seasonFacilityIncome are paid ONCE, by nextSeason → spSeasonReward, and that call is never reached (on a
+    // summit club the facility half alone is ~10,428c a season). This confirm named only the star leaving, and
+    // the will screen's `cg-will-note` lists what SURVIVES without mentioning the season — so both gates were
+    // silent about the biggest thing the sale destroys. The sentence the take-the-reins confirm was given for
+    // this identical write, extended to name the money, so the two destructive paths cannot drift apart.
+    const played = m.results?.length ?? 0;
+    this.openConfirm(`Sell <b>${m.starName}</b> to <b>${bid.club}</b> for <b>${bid.fee.toLocaleString('en-US')}c</b>? He leaves the club now — and the next of the <b>${surname}</b> line comes through early to carry the name on.`
+      + `<br><span class="cf-sub">Season ${m.season} ends here — its ${played} result${played === 1 ? '' : 's'}, the season's prize and facility income, your sponsor and any cup run are lost. The club, its trophies and the family record are kept.</span>`, 'Sell the star', () => {
       // The fee is NOT banked here — it lands only when the succession completes (bringThroughHeir → succeed),
       // so abandoning the will screen can't keep the cash while the star stays in the squad (PT-60).
       audio.chime('triumph');
@@ -6023,8 +6045,14 @@ class Game {
     // FIRST VISIT: show the XI and a safe way out, and put the nine tactical controls behind a disclosure.
     // The handoff drops a player into this screen one click after a career whose whole interaction was
     // "choose 1 of 4 cards". Once they open the tactics (or come back later) they get the full screen. (PT-503)
+    // PER SAVE, through onbKey like the other three gates. This was a bare global key — the exact shape PT-11
+    // already fixed once — so the simplified view was a once-per-MACHINE event: the second bloodline, every
+    // one after it, and the same one restarted after "Delete forever" all landed on the full nine-control
+    // screen at the handoff, the one moment the comment above says is too much. A key with no handle in it
+    // also carries no token for deleteSave's `k.includes(suffix)` sweep to match, so deleting could not
+    // reset it either.
     let seen = false;
-    try { seen = localStorage.getItem('fm_lineup_seen') === '1'; } catch { seen = true; }
+    try { seen = localStorage.getItem(this.onbKey('fm_lineup_seen')) === '1'; } catch { seen = true; }
     $('lineup').classList.toggle('simple', !seen);
     $('lineup-firstrun').classList.toggle('hidden', seen);
     $('lineup-advanced').classList.toggle('hidden', seen);
@@ -6033,10 +6061,10 @@ class Game {
         $('lineup').classList.remove('simple');
         $('lineup-firstrun').classList.add('hidden');
         $('lineup-advanced').classList.add('hidden');
-        try { localStorage.setItem('fm_lineup_seen', '1'); } catch { /* ignore */ }
+        try { localStorage.setItem(this.onbKey('fm_lineup_seen'), '1'); } catch { /* ignore */ }
       };
       // saving from the simple view also counts as having met the screen
-      $('save-team').addEventListener('click', () => { try { localStorage.setItem('fm_lineup_seen', '1'); } catch { /* ignore */ } }, { once: true });
+      $('save-team').addEventListener('click', () => { try { localStorage.setItem(this.onbKey('fm_lineup_seen'), '1'); } catch { /* ignore */ } }, { once: true });
     }
     this.showScreen('lineup');
   }

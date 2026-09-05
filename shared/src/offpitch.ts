@@ -140,12 +140,41 @@ export function computeOffPitch(input: {
     (b.needCaps == null || caps >= b.needCaps) && (b.needBigWin == null || bigWins > 0) &&
     (b.needScore == null || careerScore >= b.needScore) && (b.needImage == null || imageScore >= b.needImage);
   const owned = BOOT_CATALOG.filter(met).map(({ id, name, edge: e, unlock }) => ({ id, name, edge: e, unlock }));
-  const nextBoot = BOOT_CATALOG.find((b) => !met(b));
+  // "the closest unmet" has to MEAN closest. This was `BOOT_CATALOG.find((b) => !met(b))` — the FIRST unmet
+  // in DECLARATION order — and the catalogue is authored by theme, not difficulty: `century` (score 900)
+  // sits four entries ahead of `homecoming` (300), `iron-will` (600), `silverware` (700) and `people-choice`
+  // (image 60). Those four could therefore NEVER be named, in any state: reaching them in declaration order
+  // requires century/signature to be met first, which already meets them. Four of eleven boots were a
+  // progress hint that could not fire, and the bar the player watched fill was almost never the one about
+  // to complete. (F-311)
+  //
+  // Closeness is the FRACTION of the gate done, never the raw distance left — the four gates are in four
+  // different units, so "3 caps short" would otherwise always beat "488 career-score short". A boot with
+  // two gates (silverware: a big win AND score 700) is only as close as its WORST gate, and reports THAT
+  // gate's numbers: keying on needScore first, the way the old target/progress pair did, would render
+  // "(700/700)" for a boot a missing big win still locks. Ties keep catalogue order, so the pick stays
+  // deterministic. Guarded by tools/playtest/boot_next_closest.ts.
+  const gauge = (b: typeof BOOT_CATALOG[number]) => {
+    const gates: { progress: number; target: number }[] = [];
+    if (b.needScore != null) gates.push({ progress: careerScore, target: b.needScore });
+    if (b.needCaps != null) gates.push({ progress: caps, target: b.needCaps });
+    if (b.needImage != null) gates.push({ progress: imageScore, target: b.needImage });
+    if (b.needBigWin != null) gates.push({ progress: bigWins > 0 ? 1 : 0, target: 1 });
+    let worst = gates[0] ?? { progress: 0, target: 1 };
+    for (const g of gates) if (g.progress / g.target < worst.progress / worst.target) worst = g;
+    return worst;
+  };
+  let nextBoot: typeof BOOT_CATALOG[number] | undefined;
+  let nextGauge = { progress: 0, target: 1 };
+  for (const b of BOOT_CATALOG) {
+    if (met(b)) continue;
+    const g = gauge(b);
+    if (!nextBoot || g.progress / g.target > nextGauge.progress / nextGauge.target) { nextBoot = b; nextGauge = g; }
+  }
   let next: OffPitch['boots']['next'] = null;
   if (nextBoot) {
-    const target = nextBoot.needScore ?? (nextBoot.needCaps != null ? nextBoot.needCaps : nextBoot.needImage ?? 1);
-    const progress = nextBoot.needScore != null ? careerScore : nextBoot.needCaps != null ? caps : nextBoot.needImage != null ? imageScore : (bigWins > 0 ? 1 : 0);
-    next = { boot: { id: nextBoot.id, name: nextBoot.name, edge: nextBoot.edge, unlock: nextBoot.unlock }, progress: Math.min(progress, target), target };
+    next = { boot: { id: nextBoot.id, name: nextBoot.name, edge: nextBoot.edge, unlock: nextBoot.unlock },
+      progress: Math.min(nextGauge.progress, nextGauge.target), target: nextGauge.target };
   }
 
   // RISKY LIFESTYLE (item 6): an occasional off-pitch beat — edgier players are courted more often. Seeded,

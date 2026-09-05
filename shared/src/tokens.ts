@@ -11,7 +11,7 @@ import { moraleEffects } from './morale.js';
 import { homeNation, nationalFixture, callUpBlurb } from './intl.js';
 import {
   Career, TOTAL_TURNS, prospectValuation, deriveStats, eligibleTraits, AGENTS, AGE_BANDS, bandAt, cardName, cardTags, CARD_DESC, LIFE_LABEL,
-  legacyBoost, inheritGenes, rollGenes, graduate, rollPersonality,
+  legacyBoost, inheritGenes, rollGenes, graduate, rollPersonality, peakSeniorOverall,
   type Track, type Genes, type CareerPlayerAttrs, type LifeKind, type PlayerAchievements,
 } from './career.js';
 import {
@@ -516,7 +516,15 @@ export function careerState(t: Token, c: Career, clubName?: string | null, clubL
   // aspirational ceiling to chase. Presentational, from overall × stage (only the good get capped).
   let international: { capped: boolean; caps: number; nation?: string; lastCap?: ReturnType<typeof nationalFixture> } | null = null;
   if (bandIdx >= 4) {
-    const ov = prof.currentOverall;
+    // A CAREER RECORD CANNOT COUNT BACKWARDS. This read `prof.currentOverall`, which `deriveStats`
+    // re-derives from the whole log every turn and which is not monotonic, so one flat fortnight across a
+    // rate threshold re-priced every cap already won: measured over 80 driven careers the count fell 89
+    // times, by up to 8 in a single turn, and reaching 0 flipped `capped` back to main.ts's "Uncapped —
+    // keep impressing at this level" on the screen that said "Called up for his country" the turn before.
+    // It is not only this panel: `caps` feeds computeOffPitch, where it sets the PUBLIC IMAGE bar and
+    // gates the `cap-pride` and `road-warrior` signature boots, so the fall un-earned boots he had
+    // already collected. See peakSeniorOverall and tools/playtest/caps_monotonic.ts.
+    const ov = peakSeniorOverall(c, JSON.parse(t.genes_json));
     const rate = ov >= 15 ? 0.4 : ov >= 13 ? 0.25 : ov >= 11 ? 0.12 : 0;
     const caps = Math.max(0, Math.round((c.turn - 60) * rate));
     // the surname decides the fictional home nation; the most recent call-up is surfaced as a career moment
@@ -587,7 +595,14 @@ export function careerHonours(t: Token, c: Career, peakOverall: number): CareerH
     if (ch.scenario.includes(':')) continue;          // "training: …" / "social: …" are kinds, not occasions
     nights.add(ch.scenario.replace(/^★\s*/, ''));
   }
-  // mirrors the live derivation in careerState so the frozen record agrees with what the player was shown
+  // MIRRORS THE SHAPE of the live derivation in careerState, but deliberately not its overall. This reads
+  // the GRADUATED overall — graduatedFields passes `grad.overall`, which adds traits, the focus award and
+  // any inherited legacy bonus — and the live panel can see none of that; careerState now runs the ladder
+  // on the monotone `peakSeniorOverall` instead. So the two numbers can differ, as they already did:
+  // committed career seed 12 (golden-careers.json) freezes 24 caps against a panel that never showed more
+  // than 15. Do NOT re-point this line to match without regenerating that fixture — it rewrites the caps,
+  // the nation and the call-up sentence of every career already recorded (measured: 4 of the 11 committed
+  // careers move, and seed 5 loses his caps and his nation outright).
   const rate = peakOverall >= 15 ? 0.4 : peakOverall >= 13 ? 0.25 : peakOverall >= 11 ? 0.12 : 0;
   const caps = Math.max(0, Math.round((c.turn - 60) * rate));
   const surname = (t.name || '').trim().split(/\s+/).slice(1).join(' ') || t.name || '';

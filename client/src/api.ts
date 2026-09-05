@@ -80,7 +80,7 @@ function apiErr(error: string, extra: Record<string, any> = {}, status = 400): A
 }
 
 export interface LegacyCard { role: string; primeOverall: number; peakOverall: number; seasons: number; apps: number; leagueTitles: number; cupTitles: number; legendRating: number; tier: string; icon: string; testimonial: number; mintable: boolean; note: string; number?: number | null }
-export interface Prospect { id: string; name: string; roleHint: string; pedigree: number; potentialStars: number; generation?: number; bornSeason?: number; developed?: boolean; note?: string; genes?: any; careerStarted?: boolean; developedPlayerId?: string | null }
+export interface Prospect { id: string; name: string; roleHint: string; pedigree: number; potentialStars: number; generation?: number; bornSeason?: number; developed?: boolean; note?: string; genes?: any; careerStarted?: boolean; developedPlayerId?: string | null; branch?: 'played' | 'sibling' }
 export interface CareerCard { id: string; name: string; tags: string[]; rarity?: string; desc?: string }
 export interface Kit { number: number; boots: string; celebration: string; nickname: string; hairstyle?: string; accessory?: string }
 /** Immediate feedback on a moment just played: how well the card fit the demand, and how it went. */
@@ -394,7 +394,15 @@ async function membersOf(model: ReturnType<typeof getActiveModel>): Promise<Hous
   const live = model.tokens.map((t) => {
       let hon: any = null;
       try { hon = t.career_honours_json ? JSON.parse(t.career_honours_json) : null; } catch { /* none */ }
-      const played = ((t as any).branch ?? 'played') !== 'sibling';
+      // ...OR HAS A CAREER OF HIS OWN, WHATEVER THE TREE NOW CALLS HIM. `branch` answers "who is the
+      // line", and startCareer moves it OFF a man the moment the player takes his brother instead —
+      // including a man whose career the player had already started and lived. Read off that flag alone,
+      // `played` repriced his real record as a notional passed-over branch at the click that demoted him
+      // (BRANCH_SHARE 0.55: measured 1331 -> 1320 on a taken brother, 4359 -> 4173 on a four-generation
+      // trunk), which is renown falling at the succession — the one thing the Houses screen promises
+      // cannot happen. `career_seed` is written by startCareer and by nothing else, so it says the thing
+      // scoring actually cares about: this career was LIVED, and a later demotion cannot shrink it.
+      const played = ((t as any).branch ?? 'played') !== 'sibling' || t.career_seed != null;
       // THE DERIVED CAREER IS A FLOOR, NOT AN ALTERNATIVE.
       //
       // This used to hand back the branchCareer row ONLY while `branch` still read 'sibling' — and
@@ -1429,7 +1437,11 @@ export const api = {
     await ensureActive();
     const model = getActiveModel();
     const tokens = model.tokens.filter((t) => t.state === 'prospect');
-    return { supply: model.tokens.length, cap: SUPPLY_CAP, prospects: tokens.map((t) => { const pot = rebornPotential(t); return { id: t.id, name: t.name, roleHint: t.role ?? 'MF', generation: t.generation, pedigree: t.pedigree, careerStarted: t.career_seed != null, potentialStars: pot.stars, genes: JSON.parse(t.genes_json) }; }) };
+    // WHICH OF THESE BOYS IS THE LINE. Nothing else in the row can say: a brother carries the same family
+    // surname, the same pedigree and the same generation as the heir he was minted beside. Without it the
+    // hub's "the bloodline you're living" row fell back to the newest prospect, which succeed() guarantees
+    // is a brother or a cousin. `?? 'played'` because a pre-branching save has no field on its tokens.
+    return { supply: model.tokens.length, cap: SUPPLY_CAP, prospects: tokens.map((t) => { const pot = rebornPotential(t); return { id: t.id, name: t.name, roleHint: t.role ?? 'MF', generation: t.generation, pedigree: t.pedigree, careerStarted: t.career_seed != null, potentialStars: pot.stars, branch: t.branch ?? 'played', genes: JSON.parse(t.genes_json) }; }) };
   },
   genesis: async () => {
     await ensureActive();
@@ -1461,12 +1473,21 @@ export const api = {
     // at birth — so taking a brother left TWO men on one rank reading 'played'. The Family Record drew
     // neither of them paler, against its own footer "Sons who were passed over are shown paler", and its
     // trunk centring is a findIndex: it put the boy the player had just declined on the centre line and
-    // pushed the line actually taken off to one side. Same rank, still 'played', and no career ever
-    // started on him names that man and nobody else.
+    // pushed the line actually taken off to one side. Same rank and still 'played' names that man and
+    // nobody else — `o.id === pid` and the generation filter already spare everyone this is not about.
+    //
+    // AND NOT "...AND WAS NEVER DEVELOPED". This test also read `o.career_seed == null`, which names only
+    // the heir the player never touched — and both the Academy list and the hub invite him to be developed
+    // FIRST and reconsidered at the brother afterwards. Taken in that order the demotion never fired: two
+    // 'played' men on the rank again, the trunk centre-line on the boy whose career had just been
+    // abandoned, i.e. the exact drawing the paragraph above exists to prevent, one click further along. A
+    // man who was developed and then passed over is off the trunk like any other brother; what that career
+    // is WORTH to the house is a different question, answered where renown is scored (`membersOf`, and the
+    // `played` flag there reads `career_seed`, not this one) rather than by leaving him on the line.
     if (cameFrom === 'sibling') {
       for (const o of getActiveModel().tokens) {
         if (o.id === pid || (o.generation ?? 0) !== (t.generation ?? 0)) continue;
-        if (((o as any).branch ?? 'played') === 'played' && o.career_seed == null) await localStore.updateToken(o.id, { branch: 'sibling' } as any);
+        if (((o as any).branch ?? 'played') === 'played') await localStore.updateToken(o.id, { branch: 'sibling' } as any);
       }
     }
     const fresh = (await localStore.getToken(pid))!;
